@@ -1,5 +1,5 @@
 procedure f(x: int, y: int) returns (z:int) { 
-  var x: int;
+  localvar x: int;
   assume (x > 0); 
   assert (x < 1); 
   havoc x; 
