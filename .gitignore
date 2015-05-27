@@ -3,3 +3,4 @@ bin/*
 .cache-main
 project/project/*
 project/target/*
+test/test.ucl4
