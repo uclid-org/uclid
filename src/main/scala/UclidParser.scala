@@ -92,10 +92,21 @@ case class UclLhs(id: UclIdentifier, op: Option[UclMapSelectOperator]) {
 abstract class UclType
 case class UclBoolType() extends UclType { override def toString = "bool" }
 case class UclIntType() extends UclType { override def toString = "int" }
+case class UclEnumType(ids: List[UclIdentifier]) extends UclType {
+  override def toString = "enum {" + 
+    ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i.toString} + "}"
+}
+case class UclRecordType(fields: List[(UclIdentifier,UclType)]) extends UclType {
+  override def toString = "record {" + 
+    fields.tail.foldLeft(fields.head.toString) {(acc,i) => acc + "," + i.toString} + "}"
+}
 //class UclBitvectorType extends UclType
 case class UclMapType(inTypes: List[UclType], outType: UclType) extends UclType {
   override def toString = "[" + inTypes.tail.fold(inTypes.head.toString)
   { (acc,i) => acc + "," + i.toString } + "] " + outType
+}
+case class UclSynonymType(id: UclIdentifier) extends UclType {
+  override def toString = id.toString
 }
 
 /** Statements **/
@@ -184,6 +195,8 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val KwProcedure = "procedure"
   lazy val KwBool = "bool"
   lazy val KwInt = "int"
+  lazy val KwEnum = "enum"
+  lazy val KwRecord = "record"
   lazy val KwReturns = "returns"
   lazy val KwAssume = "assume"
   lazy val KwAssert = "assert"
@@ -209,7 +222,8 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat, OpNeg, OpMinus,
     "false", "true", "bv", KwProcedure, KwBool, KwInt, KwReturns,
     KwAssume, KwAssert, KwVar, KwLocalVar, KwHavoc, KwCall, KwIf, KwElse,
-    KwFor, KwIn, KwRange, KwLocalVar, KwType, KwInput, KwOutput, KwModule)
+    KwFor, KwIn, KwRange, KwLocalVar, KwType, KwInput, KwOutput, KwModule,
+    KwEnum, KwRecord)
 
   lazy val ast_binary: UclExpr ~ String ~ UclExpr => UclExpr = {
     case x ~ OpBiImpl ~ y => UclEquivalence(x, y)
@@ -293,11 +307,16 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
 
   /** Examples of allowed types are bool | int | [int,int,bool] int **/
   lazy val PrimitiveType : PackratParser[UclType] =
-    "bool" ^^ {case _ => UclBoolType()} | "int" ^^ {case _ => UclIntType()}
+    KwBool ^^ {case _ => UclBoolType()} | KwInt ^^ {case _ => UclIntType()}
+  lazy val EnumType : PackratParser[UclEnumType] =
+    KwEnum ~> ("{" ~> Id) ~ rep("," ~> Id) <~ "}" ^^ { case id ~ ids => UclEnumType(id::ids) }
+  lazy val RecordType : PackratParser[UclRecordType] =
+    KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) <~ "}" ^^ { case id ~ ids => UclRecordType(id::ids) }
   lazy val MapType : PackratParser[UclMapType] =
     "[" ~> PrimitiveType ~ (rep ("," ~> PrimitiveType) <~ "]") ~ PrimitiveType ^^
       { case t ~ ts ~ rt => UclMapType(t :: ts, rt)}
-  lazy val Type : PackratParser[UclType] = PrimitiveType | MapType
+  lazy val SynonymType : PackratParser[UclSynonymType] = Id ^^ { case id => UclSynonymType(id) }
+  lazy val Type : PackratParser[UclType] = PrimitiveType | MapType | EnumType | RecordType | SynonymType
 
   lazy val IdType : PackratParser[(UclIdentifier,UclType)] =
     Id ~ (":" ~> Type) ^^ { case id ~ typ => (id,typ)}
