@@ -102,7 +102,11 @@ case class UclRecordType(fields: List[(UclIdentifier,UclType)]) extends UclType 
 }
 //class UclBitvectorType extends UclType
 case class UclMapType(inTypes: List[UclType], outType: UclType) extends UclType {
-  override def toString = "[" + inTypes.tail.fold(inTypes.head.toString)
+  override def toString = "map [" + inTypes.tail.fold(inTypes.head.toString)
+  { (acc,i) => acc + "," + i.toString } + "] " + outType
+}
+case class UclArrayType(inTypes: List[UclType], outType: UclType) extends UclType {
+  override def toString = "array [" + inTypes.tail.fold(inTypes.head.toString)
   { (acc,i) => acc + "," + i.toString } + "] " + outType
 }
 case class UclSynonymType(id: UclIdentifier) extends UclType {
@@ -223,6 +227,8 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val KwInput = "input"
   lazy val KwOutput = "output"
   lazy val KwModule = "module"
+  lazy val KwMap = "map"
+  lazy val KwArray = "array"
 
   lexical.delimiters ++= List("(", ")", ",", "[", "]", ":=", ":", 
     "bv", "{", "}", ";", "=",
@@ -233,7 +239,7 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     "false", "true", "bv", KwProcedure, KwBool, KwInt, KwReturns,
     KwAssume, KwAssert, KwVar, KwLocalVar, KwHavoc, KwCall, KwIf, KwElse,
     KwCase, KwEsac, KwFor, KwIn, KwRange, KwLocalVar, KwInput, KwOutput,
-    KwModule, KwType, KwEnum, KwRecord, KwSkip)
+    KwModule, KwType, KwEnum, KwRecord, KwSkip, KwMap, KwArray)
 
   lazy val ast_binary: UclExpr ~ String ~ UclExpr => UclExpr = {
     case x ~ OpBiImpl ~ y => UclEquivalence(x, y)
@@ -323,11 +329,14 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val RecordType : PackratParser[UclRecordType] =
     KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) <~ "}" ^^ { case id ~ ids => UclRecordType(id::ids) }
   lazy val MapType : PackratParser[UclMapType] =
-    "[" ~> PrimitiveType ~ (rep ("," ~> PrimitiveType) <~ "]") ~ PrimitiveType ^^
+    (KwMap ~> "[") ~> PrimitiveType ~ (rep ("," ~> PrimitiveType) <~ "]") ~ PrimitiveType ^^
       { case t ~ ts ~ rt => UclMapType(t :: ts, rt)}
+  lazy val ArrayType : PackratParser[UclArrayType] =
+    (KwArray ~> "[") ~> PrimitiveType ~ (rep ("," ~> PrimitiveType) <~ "]") ~ PrimitiveType ^^
+      { case t ~ ts ~ rt => UclArrayType(t :: ts, rt)}
   lazy val SynonymType : PackratParser[UclSynonymType] = Id ^^ { case id => UclSynonymType(id) }
   lazy val Type : PackratParser[UclType] = 
-    PrimitiveType | MapType | EnumType | RecordType | SynonymType
+    PrimitiveType | MapType | ArrayType | EnumType | RecordType | SynonymType
 
   lazy val IdType : PackratParser[(UclIdentifier,UclType)] =
     Id ~ (":" ~> Type) ^^ { case id ~ typ => (id,typ)}
