@@ -1,16 +1,18 @@
-procedure f(x: int, y: int) returns (z:int) { 
-  localvar x: int;
-  assume (x > 0); 
-  assert (x < 1); 
-  havoc x; 
-  x,y := y,x; 
-  if (x && 1) { 
-    x := 2; call (x) := g(); 
-  } else {  
-    y:= 2; call (x) := f(x+1,2); 
-    x := h(x,u);
-  }
-  for i in range(0,4) { 
-    call () := print(s); 
+module test {
+  procedure f(x: int, y: int) returns (z:int) { 
+    localvar x: int;
+    assume (x > 0); 
+    assert (x < 1); 
+    havoc x; 
+    x,y := y,x; 
+    if (x && 1) { 
+      x := 2; call (x) := g(); 
+    } else {  
+      y:= 2; call (x) := f(x+1,2); 
+      x := h(x,u);
+    }
+    for i in range(0,4) { 
+      call () := print(s); 
+    }
   }
 }
