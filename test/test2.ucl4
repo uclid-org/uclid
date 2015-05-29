@@ -1,6 +1,6 @@
 module testModule {
   var y: int;
-  input mem_in : [int] int;
+  input mem_in : map [int] int;
   type t = bool;
   type t = enum {red, green, blue};
   type t = record {a: int, b: int, c: bool};
@@ -13,6 +13,10 @@ module testModule {
     assert (x < 1); 
     havoc x; 
     x,y := y,x; 
+    case 
+        i > 0 : { x := 1; x := 2; }
+        i < 0 : { x := 2; }
+    esac 
   }
-  output mem_out : [int] int;
+  output mem_out : array [int] int;
 }
