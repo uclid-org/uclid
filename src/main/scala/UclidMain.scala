@@ -8,6 +8,7 @@ object UclidMain {
     println("Input File: " + args(0))
     val input = scala.io.Source.fromFile(args(0)).mkString
     val module = UclidParser.parseModule(input)
-    println("Parse Result: " + module)
+    //println("Parse Result: " + module)
+    UclidSemanticAnalyzer.checkSemantics(module)
   }
 }
