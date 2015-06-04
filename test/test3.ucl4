@@ -1,6 +1,6 @@
 module testModule {
   var y: int;
-  input mem_in : int -> int;
+  input mem_in : int * int -> int;
   type t = bool;
   type t = enum {red, green, blue};
   type t = record {a: int, b: int, c: bool};
@@ -19,4 +19,16 @@ module testModule {
     esac 
   }
   output mem_out : [int] int;
+
+  init {
+    for i in range(0,1024) {
+      x[i] := 1;
+    }
+  }
+  next {
+    for i in range(0,1024) {
+      x[i] := ITE(i > 1000,1,2);
+    }
+    havoc x;
+  }
 }
