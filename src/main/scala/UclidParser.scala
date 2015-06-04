@@ -94,10 +94,11 @@ case class UclLambda(ids: List[(UclIdentifier,UclType)], e: UclExpr) extends Ucl
 case class UclLhs(id: UclIdentifier, 
                   arraySelect: Option[UclArraySelectOperator], 
                   recordSelect: Option[List[UclRecordSelectOperator]]) {
-  override def toString = arraySelect match {
-    case Some(as) => id.toString + as.toString
-    case None => id.toString
-  }
+  val t1 = arraySelect match 
+    { case Some(as) => as.toString; case None => "" }
+  val t2 = recordSelect match 
+    { case Some(rs) => rs.fold(""){(acc,i) => acc + "." + i}; case None => ""}
+  override def toString = id.toString + t1 + t2
 }
 
 abstract class UclType
@@ -187,7 +188,8 @@ case class UclIfElseStmt(cond: UclExpr, ifblock: List[UclStatement], elseblock: 
 case class UclForStmt(id: UclIdentifier, range: (UclNumber,UclNumber), body: List[UclStatement])
   extends UclStatement
 {
-  override def toString = "for " + id + " in range(" + range._1 +"," + range._2 + ") {\n" + body + "}"
+  override def toString = "for " + id + " in range(" + range._1 +"," + range._2 + ") {\n" + 
+    body.fold(""){(acc,i) => acc + i.toString} + "}"
 }
 case class UclCaseStmt(body: List[(UclExpr,List[UclStatement])]) extends UclStatement {
   override def toString = "case" +
