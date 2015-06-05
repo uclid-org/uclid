@@ -172,19 +172,30 @@ object UclidSemanticAnalyzer {
       }
     } else if (typ.isInstanceOf[UclRecordType]) {
       val t = typ.asInstanceOf[UclRecordType]
-      //assert no map type
-      //TODO: assert that synonym types dont lead to maps or arrays
       t.fields.foreach { i => 
         //assert no maps
-        UclidUtils.assert(!(i._2.isInstanceOf[UclMapType] || i._2.isInstanceOf[UclArrayType]), 
+        UclidUtils.assert(!(transitiveType(i._2,c).isInstanceOf[UclMapType] || 
+            transitiveType(i._2,c).isInstanceOf[UclArrayType]), 
             "Records cannot contain maps or arrays")
         check(i._2, c)
       }
     } else if (typ.isInstanceOf[UclMapType]) {
-      typ.asInstanceOf[UclMapType].inTypes.foreach { i => check(i,c) }
+      typ.asInstanceOf[UclMapType].inTypes.foreach { i => 
+        UclidUtils.assert(!(transitiveType(i,c).isInstanceOf[UclMapType]), 
+            "Map types cannot be indexed by maps: " + typ);
+        check(i,c) 
+        }
+      UclidUtils.assert(!(transitiveType(typ.asInstanceOf[UclMapType].outType,c).isInstanceOf[UclMapType]), 
+          "Map types cannot produce maps: " + typ)
       check(typ.asInstanceOf[UclMapType].outType, c)
     } else if (typ.isInstanceOf[UclArrayType]) {
-      typ.asInstanceOf[UclArrayType].inTypes.foreach { i => check(i,c) }
+      typ.asInstanceOf[UclArrayType].inTypes.foreach { i => 
+        UclidUtils.assert(!(transitiveType(i,c).isInstanceOf[UclArrayType]), 
+            "Array types cannot be indexed by arrays: " + typ);
+        check(i,c) 
+        }
+      UclidUtils.assert(!(transitiveType(typ.asInstanceOf[UclArrayType].outType,c).isInstanceOf[UclArrayType]), 
+          "Array types cannot produce arrays: " + typ)
       check(typ.asInstanceOf[UclArrayType].outType, c)
     } else if (typ.isInstanceOf[UclSynonymType]) {
       UclidUtils.assert(c.types.keys.exists { x => x.value == typ.asInstanceOf[UclSynonymType].id.value }, 
@@ -308,7 +319,15 @@ object UclidSemanticAnalyzer {
       case UclRelationOperation(_,l,r) => assertIntArgs(List(l,r)); return UclBoolType()
       case UclAddOperation(l,r) => assertIntArgs(List(l,r)); return UclIntType()
       case UclMulOperation(l,r) => assertIntArgs(List(l,r)); return UclIntType()
-      case UclUnaryOperation(_,expr) => assertIntArgs(List(expr)); return UclIntType()
+      case UclUnaryOperation(op,expr) => 
+        val t = transitiveType(typeOf(expr,c),c);
+        op match {
+          case UclUnaryOperator(UclidParser.OpNeg) => 
+            UclidUtils.assert(t == UclBoolType(), "Expected Boolean type: " + e);
+          case UclUnaryOperator(UclidParser.OpMinus) => 
+            UclidUtils.assert(t == UclIntType(), "Expected Int type: " + e);
+        }
+        return t
       case UclArraySelectOperation(a,op) =>
         UclidUtils.assert(transitiveType(typeOf(a,c),c).isInstanceOf[UclArrayType], 
             "expected array type: " + e)
