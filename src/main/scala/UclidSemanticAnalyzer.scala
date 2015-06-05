@@ -143,6 +143,26 @@ object UclidSemanticAnalyzer {
     }
   }
   
+  def transitiveType(typ: UclType, c: Context) : UclType = {
+    val externalDecls : List[UclIdentifier] = c.externalDecls()
+    if (typ.isInstanceOf[UclEnumType]) {
+      return typ
+    } else if (typ.isInstanceOf[UclRecordType]) {
+      val t = typ.asInstanceOf[UclRecordType]
+      return UclRecordType(t.fields.map(i => (i._1, transitiveType(i._2,c))))
+    } else if (typ.isInstanceOf[UclMapType]) {
+      val t = typ.asInstanceOf[UclMapType]
+      return UclMapType(t.inTypes.map(i => transitiveType(i,c)), transitiveType(t.outType,c))
+    } else if (typ.isInstanceOf[UclArrayType]) {
+      val t = typ.asInstanceOf[UclArrayType]
+      return UclArrayType(t.inTypes.map(i => transitiveType(i,c)), 
+          transitiveType(t.outType,c))
+    } else if (typ.isInstanceOf[UclSynonymType]) {
+      val t = typ.asInstanceOf[UclSynonymType]
+      return transitiveType(c.types(t.id),c)
+    } else { return typ }
+  }
+  
   def check(typ: UclType, c: Context) : Unit = {
     val externalDecls : List[UclIdentifier] = c.externalDecls()
     if (typ.isInstanceOf[UclEnumType]) {
@@ -173,46 +193,49 @@ object UclidSemanticAnalyzer {
   }
   
   def typeOf(lhs: UclLhs, c: Context) : UclType = {
-    var intermediateType = (c.outputs ++ c.variables)(lhs.id)
+    var intermediateType : UclType = (c.outputs ++ c.variables)(lhs.id)
     lhs.arraySelect match {
       case Some(as) => 
-        intermediateType = intermediateType.asInstanceOf[UclArrayType].outType
+        UclidUtils.assert(transitiveType(intermediateType,c).isInstanceOf[UclArrayType],
+            "Cannot use select on non-array " + lhs.id)
+        intermediateType = transitiveType(intermediateType,c).asInstanceOf[UclArrayType].outType
       case None => ()
     }
     lhs.recordSelect match {
       case Some(rs) => 
-        UclidUtils.assert(intermediateType.isInstanceOf[UclRecordType], "Expected record type")
+        UclidUtils.assert(transitiveType(intermediateType,c).isInstanceOf[UclRecordType], 
+            "Expected record type: " + intermediateType)
         rs.foreach { x =>
-          intermediateType.asInstanceOf[UclRecordType].fields.find(i => i._1.value == x.id.value) 
-              match { case Some(x) => intermediateType = x._2; 
+          transitiveType(intermediateType,c).asInstanceOf[UclRecordType].fields.find(i => i._1.value == x.id.value) 
+              match { case Some(x) => intermediateType = x._2
                       case None => UclidUtils.assert(false, "Should not get here") }
         }
-        intermediateType
-      case None => intermediateType
+        return intermediateType
+      case None => return intermediateType
     }
   }
   
   def check(lhs: UclLhs, c: Context) : Unit = {
     UclidUtils.assert((c.outputs.keys ++ c.variables.keys).exists { x => x.value == lhs.id.value }, 
         "LHS variable " + lhs.id + " does not exist")
-    var intermediateType = (c.outputs ++ c.variables)(lhs.id)
+    var intermediateType = transitiveType((c.outputs ++ c.variables)(lhs.id),c)
     lhs.arraySelect match {
       case Some(as) => 
         //assert that lhs.id is a map or array
         UclidUtils.assert(intermediateType.isInstanceOf[UclArrayType],
             "Cannot use select on non-array " + lhs.id)
-        intermediateType = intermediateType.asInstanceOf[UclArrayType].outType
+        intermediateType = transitiveType(intermediateType.asInstanceOf[UclArrayType].outType,c)
         as.index.foreach { x => check(x,c) }
       case None => ()
     }
     lhs.recordSelect match {
       case Some(rs) => 
-        UclidUtils.assert(intermediateType.isInstanceOf[UclRecordType], "Expected record type")
+        UclidUtils.assert(intermediateType.isInstanceOf[UclRecordType], "Expected record type: " + intermediateType)
         rs.foreach { x => 
           UclidUtils.assert(intermediateType.asInstanceOf[UclRecordType].fields.
               exists { i => i._1.value == x.id.value }, "Field " + x + " not found")
           intermediateType.asInstanceOf[UclRecordType].fields.find(i => i._1.value == x.id.value) 
-              match { case Some(x) => intermediateType = x._2; 
+              match { case Some(x) => intermediateType = transitiveType(x._2,c)
                       case None => UclidUtils.assert(false, "Should not get here") }
         }
       case None => ()
@@ -278,45 +301,47 @@ object UclidSemanticAnalyzer {
       }
     }
     e match {
-      case UclEquivalence(l,r) => assertBoolArgs(List(l,r)); UclBoolType()
-      case UclImplication(l,r) => assertBoolArgs(List(l,r)); UclBoolType()
-      case UclConjunction(l,r) => assertBoolArgs(List(l,r)); UclBoolType()
-      case UclDisjunction(l,r) => assertBoolArgs(List(l,r)); UclBoolType()
-      case UclRelationOperation(_,l,r) => assertIntArgs(List(l,r)); UclBoolType()
-      case UclAddOperation(l,r) => assertIntArgs(List(l,r)); UclIntType()
-      case UclMulOperation(l,r) => assertIntArgs(List(l,r)); UclIntType()
-      case UclUnaryOperation(_,expr) => assertIntArgs(List(expr)); UclIntType()
+      case UclEquivalence(l,r) => assertBoolArgs(List(l,r)); return UclBoolType()
+      case UclImplication(l,r) => assertBoolArgs(List(l,r)); return UclBoolType()
+      case UclConjunction(l,r) => assertBoolArgs(List(l,r)); return UclBoolType()
+      case UclDisjunction(l,r) => assertBoolArgs(List(l,r)); return UclBoolType()
+      case UclRelationOperation(_,l,r) => assertIntArgs(List(l,r)); return UclBoolType()
+      case UclAddOperation(l,r) => assertIntArgs(List(l,r)); return UclIntType()
+      case UclMulOperation(l,r) => assertIntArgs(List(l,r)); return UclIntType()
+      case UclUnaryOperation(_,expr) => assertIntArgs(List(expr)); return UclIntType()
       case UclArraySelectOperation(a,op) =>
-        UclidUtils.assert(typeOf(a,c).isInstanceOf[UclArrayType], "expected array type: " + e)
+        UclidUtils.assert(transitiveType(typeOf(a,c),c).isInstanceOf[UclArrayType], 
+            "expected array type: " + e)
         UclidUtils.assert((typeOf(a,c).asInstanceOf[UclArrayType].inTypes zip op.index).
             forall { x => x._1 == typeOf(x._2,c) }, "Array Select operand type mismatch: " + e)
-        typeOf(a,c).asInstanceOf[UclArrayType].outType //select returns the range type
+        return typeOf(a,c).asInstanceOf[UclArrayType].outType //select returns the range type
       case UclArrayStoreOperation(a,op) =>
-        UclidUtils.assert(typeOf(a,c).isInstanceOf[UclArrayType], "expected array type: " + e)
+        UclidUtils.assert(transitiveType(typeOf(a,c),c).isInstanceOf[UclArrayType], "expected array type: " + e)
         UclidUtils.assert((a.asInstanceOf[UclArrayType].inTypes zip op.index).
             forall { x => x._1 == typeOf(x._2,c) }, "Array Store operand type mismatch: " + e)
         UclidUtils.assert(a.asInstanceOf[UclArrayType].outType == typeOf(op.value,c), 
             "Array Store value type mismatch")
-        typeOf(a,c) //store returns the new array
+        return typeOf(a,c) //store returns the new array
       case UclFuncAppOperation(f,op) =>
-        UclidUtils.assert(typeOf(f,c).isInstanceOf[UclMapType],"Expected Map Type " + e);
+        UclidUtils.assert(transitiveType(typeOf(f,c),c).isInstanceOf[UclMapType],"Expected Map Type " + e);
         val t = typeOf(f,c).asInstanceOf[UclMapType];
         UclidUtils.assert((t.inTypes.size == op.args.size), 
           "Function application has bad number of arguments: " + e);
         UclidUtils.assert((t.inTypes zip op.args).forall{i => i._1 == typeOf(i._2,c)}, 
           "Function application has bad types of arguments: " + e)
-        t.outType
+        return t.outType
       case UclITE(cond,t,f) =>
         assertBoolArgs(List(cond));
         UclidUtils.assert(typeOf(t,c) == typeOf(f,c), 
             "ITE true and false expressions have different types: " + e)
-        typeOf(t,c)
+        return typeOf(t,c)
       case UclLambda(ids,le) =>
         var c2: Context = c.copyContext()
         c2.inputs = c.inputs ++ (ids.map(i => i._1 -> i._2).toMap)
-        UclidUtils.assert(typeOf(le,c2) == UclBoolType() || typeOf(le,c2) == UclIntType(), 
+        UclidUtils.assert(ids.forall { i => transitiveType(i._2,c) == UclBoolType() || 
+          transitiveType(i._2,c) == UclIntType() }, 
             "Cannot construct Lambda expressions of non-primitive types: " + le)
-        UclMapType(ids.map(i => i._2), typeOf(le,c2)) //Lambda expr returns a map type
+        return UclMapType(ids.map(i => i._2), typeOf(le,c2)) //Lambda expr returns a map type
       case UclIdentifier(id) => (c.constants ++ c.variables ++ c.inputs ++ c.outputs)(UclIdentifier(id))
       case UclNumber(n) => UclIntType()
       case UclBoolean(b) => UclBoolType()
@@ -343,7 +368,8 @@ object UclidSemanticAnalyzer {
        case UclITE(cond,t,f) => check(cond,c); check(t,c); check(f,c);
        case UclLambda(ids,le) => ids.foreach { 
            x => check(x._2,c);
-           UclidUtils.assert(x._2.isInstanceOf[UclIntType] || x._2.isInstanceOf[UclBoolType],
+           UclidUtils.assert(transitiveType(x._2,c).isInstanceOf[UclIntType] || 
+               transitiveType(x._2,c).isInstanceOf[UclBoolType],
              "Lambda indexed by non-primitive type");
          }
          ids.foreach{ x => UclidUtils.assert((externalDecls ++ ids.map(i => i._1)).
