@@ -7,45 +7,35 @@ import scala.util.parsing.combinator.PackratParsers
 
 
 abstract class UclOperator
-case class UclRelationOperator(value : String) extends UclOperator {
-  override def toString = value
-}
-case class UclUnaryOperator(value: String) extends UclOperator {
-  override def toString = value
-}
-case class UclExtractOperator(high: UclNumber, low: UclNumber) {
+case class UclLTOperator() extends UclOperator { override def toString = "<" }
+case class UclLEOperator() extends UclOperator { override def toString = "<=" }
+case class UclGTOperator() extends UclOperator { override def toString = ">" }
+case class UclGEOperator() extends UclOperator { override def toString = ">=" }
+case class UclAddOperator() extends UclOperator { override def toString = "+" }
+case class UclMulOperator() extends UclOperator { override def toString = "*" }
+case class UclExtractOperator(high: UclNumber, low: UclNumber) extends UclOperator {
   override def toString = "[" + high.toString + ":" + low.toString + "]"
 }
-case class UclRecordSelectOperator(id: UclIdentifier) {
+case class UclConcatOperator() extends UclOperator { override def toString = "++" }
+case class UclRecordSelectOperator(id: UclIdentifier) extends UclOperator {
   override def toString = "." + id.toString
-}
-case class UclArraySelectOperator(index: List[UclExpr]) extends UclOperator {
-  override def toString = "[" + index.tail.fold(index.head.toString)
-    { (acc,i) => acc + "," + i.toString } + "]"
-}
-case class UclArrayStoreOperator(index: List[UclExpr], value: UclExpr) extends UclOperator {
-  override def toString = "[" + index.tail.fold(index.head.toString)
-    { (acc,i) => acc + "," + i.toString } + " := " + value.toString + "]"
-}
-case class UclFuncAppOperator(args: List[UclExpr]) extends UclOperator {
-  override def toString = "(" + args.tail.fold(args.head.toString)
-    { (acc,i) => acc + "," + i.toString } + ")"
 }
 
 abstract class UclExpr
 case class UclIdentifier(value: String) extends UclExpr {
-  override def toString = "@" + value.toString
-}
-case class UclNumber(value: Int) extends UclExpr {
   override def toString = value.toString
 }
-case class UclBitVector(value: Int, width: Int) extends UclExpr {
-  override def toString = value.toString + "bv" + width.toString
+case class UclNumber(value: BigInt) extends UclExpr {
+  override def toString = value.toString
+}
+//TODO: check that value can be expressed using "width" bits
+case class UclBitVector(value: BigInt, width: BigInt) extends UclExpr {
+  override def toString = value.toString + "bv" + width.toString //TODO: print in hex
 }
 case class UclBoolean(value: Boolean) extends UclExpr {
   override def toString = value.toString
 }
-case class UclEquivalence(left: UclExpr, right: UclExpr) extends UclExpr {
+case class UclBiImplication(left: UclExpr, right: UclExpr) extends UclExpr {
   override def toString = "(" + left.toString + " <==> " + right.toString + ")"
 }
 case class UclImplication(left: UclExpr, right: UclExpr) extends UclExpr {
@@ -57,32 +47,28 @@ case class UclConjunction(left: UclExpr, right: UclExpr) extends UclExpr {
 case class UclDisjunction(left: UclExpr, right: UclExpr) extends UclExpr {
   override def toString = "(" + left.toString + " \\/ " + right.toString + ")"
 }
-case class UclRelationOperation(op: UclRelationOperator, left: UclExpr, right: UclExpr) extends UclExpr {
-  override def toString = "(" + left.toString + " " + op.toString + " " + right.toString + ")"
+case class UclNegation(expr: UclExpr) extends UclExpr {
+  override def toString = "! " + expr.toString
 }
-case class UclConcatOperation(left: UclExpr, right: UclExpr) extends UclExpr {
-  override def toString = "(" + left.toString + " ++ " + right.toString + ")"
+case class UclEquality(left: UclExpr, right: UclExpr) extends UclExpr {
+  override def toString = "(" + left.toString + " = " + right.toString + ")"
 }
-case class UclAddOperation(left: UclExpr, right: UclExpr) extends UclExpr {
-  override def toString = "(" + left.toString + " + " + right.toString + ")"
+//for symbols interpreted by underlying Theory solvers
+case class UclIFuncApplication(op: UclOperator, operands: List[UclExpr]) extends UclExpr {
+  override def toString = op + "(" + operands.foldLeft(""){(acc,i) => acc + "," + i} + ")"
 }
-case class UclMulOperation(left: UclExpr, right: UclExpr) extends UclExpr {
-  override def toString = "(" + left.toString + " * " + right.toString + ")"
+case class UclArraySelectOperation(e: UclExpr, index: List[UclExpr]) extends UclExpr {
+  override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
+    { (acc,i) => acc + "," + i.toString } + "]"
 }
-case class UclUnaryOperation(op: UclUnaryOperator, e: UclExpr) extends UclExpr {
-  override def toString = "(" + op.toString + " " + e.toString + ")"
+case class UclArrayStoreOperation(e: UclExpr, index: List[UclExpr], value: UclExpr) extends UclExpr {
+  override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
+    { (acc,i) => acc + "," + i.toString } + "]" + " := " + value.toString
 }
-case class UclArraySelectOperation(e: UclExpr, op: UclArraySelectOperator) extends UclExpr {
-  override def toString = e.toString + op.toString
-}
-case class UclArrayStoreOperation(e: UclExpr, op: UclArrayStoreOperator) extends UclExpr {
-  override def toString = e.toString + op.toString
-}
-case class UclExtractOperation(e: UclExpr, op: UclExtractOperator) extends UclExpr {
-  override def toString = e.toString + op.toString
-}
-case class UclFuncAppOperation(e: UclExpr, op: UclFuncAppOperator) extends UclExpr {
-  override def toString = e.toString + op.toString
+//for uninterpreted function symbols or anonymous functions defined by Lambda expressions
+case class UclFuncApplication(e: UclExpr, args: List[UclExpr]) extends UclExpr {
+  override def toString = e.toString + "(" + args.tail.fold(args.head.toString)
+    { (acc,i) => acc + "," + i.toString } + ")"
 }
 case class UclITE(e: UclExpr, t: UclExpr, f: UclExpr) extends UclExpr {
   override def toString = "ITE(" + e.toString + "," + t.toString + "," + f.toString + ")"
@@ -92,8 +78,8 @@ case class UclLambda(ids: List[(UclIdentifier,UclType)], e: UclExpr) extends Ucl
 }
 
 case class UclLhs(id: UclIdentifier, 
-                  arraySelect: Option[UclArraySelectOperator], 
-                  recordSelect: Option[List[UclRecordSelectOperator]]) {
+                  arraySelect: Option[List[UclExpr]], 
+                  recordSelect: Option[List[UclIdentifier]]) {
   val t1 = arraySelect match 
     { case Some(as) => as.toString; case None => "" }
   val t2 = recordSelect match 
@@ -319,44 +305,36 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     KwInit, KwNext, KwITE, KwLambda)
 
   lazy val ast_binary: UclExpr ~ String ~ UclExpr => UclExpr = {
-    case x ~ OpBiImpl ~ y => UclEquivalence(x, y)
+    case x ~ OpBiImpl ~ y => UclBiImplication(x, y)
     case x ~ OpImpl ~ y => UclImplication(x, y)
     case x ~ OpAnd ~ y => UclConjunction(x, y)
     case x ~ OpOr ~ y => UclDisjunction(x, y)
-    case x ~ OpLT ~ y => UclRelationOperation(UclRelationOperator(OpLT), x, y)
-    case x ~ OpGT ~ y => UclRelationOperation(UclRelationOperator(OpGT), x, y)
-    case x ~ OpLE ~ y => UclRelationOperation(UclRelationOperator(OpLE), x, y)
-    case x ~ OpGE ~ y => UclRelationOperation(UclRelationOperator(OpGE), x, y)
-    case x ~ OpEQ ~ y => UclRelationOperation(UclRelationOperator(OpEQ), x, y)
-    case x ~ OpNE ~ y => UclRelationOperation(UclRelationOperator(OpNE), x, y)
-    case x ~ OpConcat ~ y => UclConcatOperation(x, y)
-    case x ~ OpAdd ~ y => UclAddOperation(x, y)
-    case x ~ OpMul ~ y => UclMulOperation(x, y)
-  }
-
-  lazy val ast_unary: String ~ UclExpr => UclExpr = {
-    case OpNeg ~ x => UclUnaryOperation(UclUnaryOperator(OpNeg), x)
-    case OpMinus ~ x => UclUnaryOperation(UclUnaryOperator(OpMinus), x)
+    case x ~ OpLT ~ y => UclIFuncApplication(UclLTOperator(), List(x,y))
+    case x ~ OpGT ~ y => UclIFuncApplication(UclLTOperator(), List(x,y))
+    case x ~ OpLE ~ y => UclIFuncApplication(UclLTOperator(), List(x,y))
+    case x ~ OpGE ~ y => UclIFuncApplication(UclLTOperator(), List(x,y))
+    case x ~ OpEQ ~ y => UclEquality(x, y)
+    case x ~ OpNE ~ y => UclNegation(UclEquality(x, y))
+    case x ~ OpConcat ~ y => UclIFuncApplication(UclConcatOperator(), List(x,y))
+    case x ~ OpAdd ~ y => UclIFuncApplication(UclAddOperator(), List(x,y))
+    case x ~ OpMul ~ y => UclIFuncApplication(UclMulOperator(), List(x,y))
   }
 
   lazy val RelOp: Parser[String] = OpGT | OpLT | OpEQ | OpNE | OpGE | OpLE
   lazy val UnOp: Parser[String] = OpNeg | OpMinus
-  lazy val RecordSelectOp: Parser[UclRecordSelectOperator] =
-    ("." ~> Id) ^^ {case id => UclRecordSelectOperator(id)}
-  lazy val ArraySelectOp: Parser[UclArraySelectOperator] =
+  lazy val RecordSelectOp: Parser[UclIdentifier] = ("." ~> Id)
+  lazy val ArraySelectOp: Parser[List[UclExpr]] =
     ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ 
-    {case e ~ es => UclArraySelectOperator(e :: es)}
-  lazy val ArrayStoreOp: Parser[UclArrayStoreOperator] =
+    {case e ~ es => (e :: es)}
+  lazy val ArrayStoreOp: Parser[(List[UclExpr],UclExpr)] =
     ("[" ~> (Expr ~ rep("," ~> Expr) ~ (":=" ~> Expr)) <~ "]") ^^ 
-    {case e ~ es ~ r => UclArrayStoreOperator(e :: es, r)}
+    {case e ~ es ~ r => (e :: es, r)}
   lazy val ExtractOp: Parser[UclExtractOperator] =
     ("[" ~> Number ~ ":" ~ Number <~ "]") ^^ { case x ~ ":" ~ y => UclExtractOperator(x, y) }
-  lazy val FuncApp: Parser[UclFuncAppOperator] =
-    ExprList ^^ { case es => UclFuncAppOperator(es) }
   lazy val Id: PackratParser[UclIdentifier] = ident ^^ {case i => UclIdentifier(i)}
   lazy val Bool: PackratParser[UclBoolean] =
     "false" ^^ { _ => UclBoolean(false) } | "true" ^^ { _ => UclBoolean(true) }
-  lazy val Number: PackratParser[UclNumber] = numericLit ^^ { case i => UclNumber(i.toInt) }
+  lazy val Number: PackratParser[UclNumber] = numericLit ^^ { case i => UclNumber(BigInt(i)) }
   //lazy val Bitvector: PackratParser[UclBitVector] = (numericLit ~ "bv" ~ numericLit) ^^
   //  { case h ~ "bv" ~ l => UclBitVector(h.toInt, l.toInt) }
   /** E0 := E1 OpEquiv E0 | E1  **/
@@ -374,13 +352,13 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   /** E6 := E7 OpMul E6 | E7 **/
   lazy val E6: PackratParser[UclExpr] = E7 ~ OpMul ~ E6 ^^ ast_binary | E7
   /** E7 := UnOp E8 | E8 **/
-  lazy val E7: PackratParser[UclExpr] = UnOp ~ E8 ^^ ast_unary | E8
+  lazy val E7: PackratParser[UclExpr] = OpNeg ~> E8 ^^ { case e => UclNegation(e) } | E8
   /** E8 := E9 MapOp | E9 **/
   lazy val E8: PackratParser[UclExpr] =
-      E9 ~ FuncApp ^^ { case e ~ f => UclFuncAppOperation(e, f) } |
+      E9 ~ ExprList ^^ { case e ~ f => UclFuncApplication(e, f) } |
       E9 ~ ArraySelectOp ^^ { case e ~ m => UclArraySelectOperation(e, m) } |
-      E9 ~ ArrayStoreOp ^^ { case e ~ m => UclArrayStoreOperation(e, m) } |
-      E9 ~ ExtractOp ^^ { case e ~ m => UclExtractOperation(e, m) } |
+      E9 ~ ArrayStoreOp ^^ { case e ~ m => UclArrayStoreOperation(e, m._1, m._2) } |
+      E9 ~ ExtractOp ^^ { case e ~ m => UclIFuncApplication(m, List(e)) } |
       E9
   /** E9 := false | true | Number | Bitvector | Id FuncApplication | (Expr) **/
   lazy val E9: PackratParser[UclExpr] =
