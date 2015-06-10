@@ -2,7 +2,7 @@
  */
 
 class Context {
-  var procedures: Map[UclIdentifier, UclProcedureSig] = _
+  var procedures: Map[UclIdentifier, UclProcedureDecl] = _
   var functions: Map[UclIdentifier, UclFunctionSig] = _
   var variables: Map[UclIdentifier, UclType] = _
   var inputs: Map[UclIdentifier, UclType] = _
@@ -19,7 +19,7 @@ class Context {
     val m_procs = m.decls.filter { x => x.isInstanceOf[T1] }
     UclidUtils.assert(m_procs.map(i => i.asInstanceOf[T1].id).distinct.size == 
       m_procs.map(i => i.asInstanceOf[T1].id).size, "Multiple procedures with identical names")
-    procedures = m_procs.map(x => x.asInstanceOf[T1].id -> x.asInstanceOf[T1].sig).toMap
+    procedures = m_procs.map(x => x.asInstanceOf[T1].id -> x.asInstanceOf[T1]).toMap
     
     type T2 = UclFunctionDecl
     val m_funcs = m.decls.filter { x => x.isInstanceOf[T2] }
@@ -124,9 +124,13 @@ object UclidSemanticAnalyzer {
      
         decls.foreach { i => {
           //check that name is not reused
-          UclidUtils.assert(UclidUtils.existsOnce(
-              externalDecls ++ decls.map(j => j.id) ++ sig.inParams.map(j => j._1) ++ sig.outParams.map(j => j._1), i.id), 
+          UclidUtils.assert(UclidUtils.existsNone(
+              externalDecls ++ sig.inParams.map(x => x._1) ++ sig.outParams.map(x => x._1), i.id), 
               "Local variable " + i + " redeclared")
+          c.procedures.keys.
+            filter{j => id.value != j.value}.
+            foreach{ j => UclidUtils.assert(UclidUtils.existsNone(c.procedures(j).decls.map(k => k.id), i.id), 
+                "Local variable " + i + " redeclared as a local variable of procedure " + j ) }
           check(i.typ,c)
         } }
         
@@ -141,7 +145,7 @@ object UclidSemanticAnalyzer {
             "Signature of function " + id + " contains arguments of the same name")
         sig.args.foreach(i => { 
           //check that name is not reused
-          UclidUtils.assert(UclidUtils.existsOnce(externalDecls ++ sig.args.map(j => j._1), i._1), 
+          UclidUtils.assert(UclidUtils.existsNone(externalDecls, i._1), 
               "Signature of function " + id + " contains redeclaration: " + i)
           check(i._2, c)
         })
@@ -179,8 +183,7 @@ object UclidSemanticAnalyzer {
     val externalDecls : List[UclIdentifier] = c.externalDecls()
     if (typ.isInstanceOf[UclEnumType]) {
       typ.asInstanceOf[UclEnumType].ids.foreach { i => 
-        UclidUtils.assert(UclidUtils.existsOnce(
-            externalDecls ++ typ.asInstanceOf[UclEnumType].ids,i), "Enum " + typ + " has a redeclaration")
+        UclidUtils.assert(UclidUtils.existsNone(externalDecls, i), "Enum " + typ + " has a redeclaration")
       }
     } else if (typ.isInstanceOf[UclRecordType]) {
       val t = typ.asInstanceOf[UclRecordType]
@@ -300,14 +303,14 @@ object UclidSemanticAnalyzer {
             "Calling unknown procedure " + id)
         lhss.foreach{ x => check(x,c) }
         args.foreach{ x => check(x,c) }
-        UclidUtils.assert(lhss.size == c.procedures(id).outParams.size, 
+        UclidUtils.assert(lhss.size == c.procedures(id).sig.outParams.size, 
             "Calling procedure " + id + " with incorrect number of results")
-        UclidUtils.assert((lhss zip c.procedures(id).outParams.map(i => i._2)).
+        UclidUtils.assert((lhss zip c.procedures(id).sig.outParams.map(i => i._2)).
             forall { i => typeOf(i._1, c) == i._2 }, 
             "Calling procedure " + id + " with results of incorrect type");
-        UclidUtils.assert(args.size == c.procedures(id).inParams.size, 
+        UclidUtils.assert(args.size == c.procedures(id).sig.inParams.size, 
             "Calling procedure " + id + " with incorrect number of arguments")
-        UclidUtils.assert((args zip c.procedures(id).inParams.map(i => i._2)).
+        UclidUtils.assert((args zip c.procedures(id).sig.inParams.map(i => i._2)).
             forall { i => typeOf(i._1, c) == i._2 }, 
             "Calling procedure " + id + " with arguments of incorrect type")
     }
