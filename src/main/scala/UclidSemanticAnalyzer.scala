@@ -217,7 +217,7 @@ object UclidSemanticAnalyzer {
           "Synonym Type " + typ + " does not exist.")
     }
   }
-  
+
   def typeOf(lhs: UclLhs, c: Context) : UclType = {
     var intermediateType : UclType = (c.outputs ++ c.variables)(lhs.id)
     lhs.arraySelect match {
@@ -316,71 +316,109 @@ object UclidSemanticAnalyzer {
     }
   }
   
-  def typeOf(e: UclExpr, c: Context) : UclType = {
-    def assertBoolArgs(l: Iterable[UclExpr]) : Unit = {
-      l.foreach{ i => UclidUtils.assert(typeOf(i,c) == UclBoolType(), 
-          "Expected expression " + i + " to have type Bool");
-      }
+  /**
+   * Returns the type and the fact whether the expression contains a temporal operator.
+   */
+  def typeOf(e: UclExpr, c: Context) : (UclType, Boolean) = {
+    def assertBoolArgs(t: UclType) : Unit = {
+      UclidUtils.assert(t == UclBoolType() || t == UclTemporalType(), 
+          "Expected expression " + t + " to have type Bool (or be a temporal formula).")
     }
     def assertIntArgs(l: Iterable[UclExpr]) : Unit = {
       l.foreach{ i => UclidUtils.assert(typeOf(i,c) == UclIntType(), 
           "Expected expression " + i + " to have type Int");
       }
     }
+    def typeOfBinaryBooleanOperator (l: UclExpr, r: UclExpr) : (UclType, Boolean) = {
+        val (typeL, tempL) = typeOf(l,c)
+        assertBoolArgs(typeL)
+        val (typeR, tempR) = typeOf(r,c)
+        assertBoolArgs(typeR)
+        return (UclBoolType(), tempL || tempR)
+    }
+    
     e match {
-      case UclBiImplication(l,r) => assertBoolArgs(List(l,r)); return UclBoolType()
-      case UclImplication(l,r) => assertBoolArgs(List(l,r)); return UclBoolType()
-      case UclConjunction(l,r) => assertBoolArgs(List(l,r)); return UclBoolType()
-      case UclDisjunction(l,r) => assertBoolArgs(List(l,r)); return UclBoolType()
-      case UclNegation(e) => assertBoolArgs(List(e)); return UclBoolType()
-      case UclEquality(l,r) => assertIntArgs(List(l,r)); return UclBoolType()
+      case UclBiImplication(l,r) =>
+        return typeOfBinaryBooleanOperator(l,r)
+      case UclImplication(l,r) =>
+        return typeOfBinaryBooleanOperator(l,r)
+      case UclConjunction(l,r) => 
+        return typeOfBinaryBooleanOperator(l,r)
+      case UclDisjunction(l,r) => 
+        return typeOfBinaryBooleanOperator(l,r)
+      case UclNegation(e) => 
+        val (typeE, tempE) = typeOf(e,c)
+        assertBoolArgs(typeE);
+        return (UclBoolType(), tempE)
+      case UclEquality(l,r) => 
+        return typeOfBinaryBooleanOperator(l,r)
       case UclIFuncApplication(op,es) =>
-        op match {
-          case UclLTOperator() => return UclBoolType()
-          case UclLEOperator() => return UclBoolType()
-          case UclGTOperator() => return UclBoolType()
-          case UclGEOperator() => return UclBoolType()
-          case UclAddOperator() => return UclIntType()
-          case UclMulOperator() => return UclIntType()
-          case UclExtractOperator(_,_) => throw new UclidUtils.UnimplementedException("bvextract unimplemented")
-          case UclConcatOperator() => throw new UclidUtils.UnimplementedException("bvconcat unimplemented")
+        lazy val types = es.map { e => typeOf (e,c) }
+        /**
+         * assert types are equal and comparable
+         */
+        types.head._1 match { 
+          case x : UclIntType => ()
+          case x => assert(false, "Comparison operator " + op + " requires Int arguments.")
         }
+        if (types.tail.exists { x => types.head._1 != x._1}) {
+          assert(false, "Comparison operator " + op + " has arguments with unequal types: " + types.map {x => x._1})
+        }
+        val temporal = types.exists { x => x._2}
+        return (op match {
+            case UclLTOperator() | UclLEOperator() | UclGTOperator() | UclGEOperator() => UclBoolType()
+            case UclAddOperator() | UclMulOperator() => UclIntType()
+            case UclExtractOperator(_,_) => throw new UclidUtils.UnimplementedException("bvextract unimplemented")
+            case UclConcatOperator() => throw new UclidUtils.UnimplementedException("bvconcat unimplemented")
+          },
+          temporal)
       case UclArraySelectOperation(a,index) =>
-        UclidUtils.assert(transitiveType(typeOf(a,c),c).isInstanceOf[UclArrayType], 
+        val t = typeOf(a,c)
+        assert(!t._2, "Array types may not have temporal subformulas")
+        UclidUtils.assert(transitiveType(t._1,c).isInstanceOf[UclArrayType],
             "expected array type: " + e)
         UclidUtils.assert((typeOf(a,c).asInstanceOf[UclArrayType].inTypes zip index).
             forall { x => x._1 == typeOf(x._2,c) }, "Array Select operand type mismatch: " + e)
-        return typeOf(a,c).asInstanceOf[UclArrayType].outType //select returns the range type
+        return (t.asInstanceOf[UclArrayType].outType, false) //select returns the range type
       case UclArrayStoreOperation(a,index,value) =>
-        UclidUtils.assert(transitiveType(typeOf(a,c),c).isInstanceOf[UclArrayType], "expected array type: " + e)
+        val t = typeOf(a,c)
+        assert(!t._2, "Array types may not have temporal subformulas")
+        UclidUtils.assert(transitiveType(t._1,c).isInstanceOf[UclArrayType], "expected array type: " + e)
         UclidUtils.assert((a.asInstanceOf[UclArrayType].inTypes zip index).
             forall { x => x._1 == typeOf(x._2,c) }, "Array Store operand type mismatch: " + e)
         UclidUtils.assert(a.asInstanceOf[UclArrayType].outType == typeOf(value,c), 
             "Array Store value type mismatch")
-        return typeOf(a,c) //store returns the new array
+        return (t._1, false) //store returns the new array
       case UclFuncApplication(f,args) =>
-        UclidUtils.assert(transitiveType(typeOf(f,c),c).isInstanceOf[UclMapType],"Expected Map Type " + e);
-        val t = typeOf(f,c).asInstanceOf[UclMapType];
-        UclidUtils.assert((t.inTypes.size == args.size), 
+        val t = typeOf(f,c)
+        assert(!t._2, "Array types may not have temporal subformulas")
+        UclidUtils.assert(transitiveType(t._1,c).isInstanceOf[UclMapType],"Expected Map Type " + e);
+        val t1 = t._1.asInstanceOf[UclMapType];
+        UclidUtils.assert((t1.inTypes.size == args.size), 
           "Function application has bad number of arguments: " + e);
-        UclidUtils.assert((t.inTypes zip args).forall{i => i._1 == typeOf(i._2,c)}, 
+        UclidUtils.assert((t1.inTypes zip args).forall{i => i._1 == typeOf(i._2,c)}, 
           "Function application has bad types of arguments: " + e)
-        return t.outType
+        return (t1.outType, false)
       case UclITE(cond,t,f) =>
-        assertBoolArgs(List(cond));
-        UclidUtils.assert(typeOf(t,c) == typeOf(f,c), 
+        val condType = typeOf (cond,c)
+        assertBoolArgs(condType._1);
+        val tType = typeOf (t,c)
+        val fType = typeOf (f,c)
+        UclidUtils.assert(tType._1 == fType._1, 
             "ITE true and false expressions have different types: " + e)
-        return typeOf(t,c)
+        return (tType._1, tType._2 || fType._2)
       case UclLambda(ids,le) =>
         var c2: Context = c.copyContext()
         c2.inputs = c.inputs ++ (ids.map(i => i._1 -> i._2).toMap)
         UclidUtils.assert(ids.forall { i => transitiveType(i._2,c) == UclBoolType() || 
           transitiveType(i._2,c) == UclIntType() }, 
             "Cannot construct Lambda expressions of non-primitive types: " + le)
-        return UclMapType(ids.map(i => i._2), typeOf(le,c2)) //Lambda expr returns a map type
-      case UclIdentifier(id) => (c.constants ++ c.variables ++ c.inputs ++ c.outputs)(UclIdentifier(id))
-      case UclNumber(n) => UclIntType()
-      case UclBoolean(b) => UclBoolType()
+        val t = typeOf(le,c2)
+        assert(!t._2, "What do you need a Lambda expression with temporal type for!?")
+        return (UclMapType(ids.map(i => i._2), t._1), false) //Lambda expr returns a map type
+      case UclIdentifier(id) => ((c.constants ++ c.variables ++ c.inputs ++ c.outputs)(UclIdentifier(id)), false)
+      case UclNumber(n) => (UclIntType(), false)
+      case UclBoolean(b) => (UclBoolType(), false)
     }    
   }
   

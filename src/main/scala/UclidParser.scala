@@ -51,6 +51,14 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val KwITE = "ITE"
   lazy val KwLambda = "Lambda"
   lazy val KwFunction = "function"
+  
+  lazy val KwDefineProp = "property"
+  lazy val TemporalOpGlobally = "G"
+  lazy val TemporalOpFinally = "F"
+  lazy val TemporalOpNext = "Next"
+  lazy val TemporalOpUntil = "U"
+  lazy val TemporalOpWUntil = "W"
+  lazy val TemporalOpRelease = "R"
 
   lexical.delimiters ++= List("(", ")", ",", "[", "]", 
     "bv", "{", "}", ";", "=", ":=", ":", ".", "->", "*",
@@ -65,6 +73,9 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     KwInit, KwNext, KwITE, KwLambda)
 
   lazy val ast_binary: UclExpr ~ String ~ UclExpr => UclExpr = {
+    case x ~ TemporalOpUntil   ~ y => UclTemporalOpUntil(x, y)
+    case x ~ TemporalOpWUntil  ~ y => UclTemporalOpWUntil(x, y)
+    case x ~ TemporalOpRelease ~ y => UclTemporalOpRelease(x, y)
     case x ~ OpBiImpl ~ y => UclBiImplication(x, y)
     case x ~ OpImpl ~ y => UclImplication(x, y)
     case x ~ OpAnd ~ y => UclConjunction(x, y)
@@ -95,8 +106,22 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val Bool: PackratParser[UclBoolean] =
     "false" ^^ { _ => UclBoolean(false) } | "true" ^^ { _ => UclBoolean(true) }
   lazy val Number: PackratParser[UclNumber] = numericLit ^^ { case i => UclNumber(BigInt(i)) }
-  //lazy val Bitvector: PackratParser[UclBitVector] = (numericLit ~ "bv" ~ numericLit) ^^
-  //  { case h ~ "bv" ~ l => UclBitVector(h.toInt, l.toInt) }
+//  lazy val Bitvector: PackratParser[UclBitVector] = (numericLit ~ "bv" ~ numericLit) ^^
+//    { case h ~ "bv" ~ l => UclBitVector(h.toInt, l.toInt) }
+
+  lazy val TemporalExpr0: PackratParser[UclExpr] = 
+      TemporalExpr1 ~ TemporalOpUntil  ~ TemporalExpr0 ^^ ast_binary | TemporalExpr1 
+  lazy val TemporalExpr1: PackratParser[UclExpr] =
+    TemporalExpr2 ~ TemporalOpWUntil  ~ TemporalExpr1 ^^ ast_binary | TemporalExpr2
+  lazy val TemporalExpr2: PackratParser[UclExpr] =
+    TemporalExpr3 ~ TemporalOpRelease  ~ TemporalExpr2 ^^ ast_binary | TemporalExpr3
+  lazy val TemporalExpr3: PackratParser[UclExpr] = 
+    TemporalOpFinally ~> TemporalExpr4 ^^ { case expr => UclTemporalOpFinally(expr) } | TemporalExpr4
+  lazy val TemporalExpr4: PackratParser[UclExpr] = 
+    TemporalOpGlobally ~> TemporalExpr5 ^^ { case expr => UclTemporalOpGlobally(expr) } | TemporalExpr5
+  lazy val TemporalExpr5: PackratParser[UclExpr] = 
+    TemporalOpNext ~> E0 ^^ { case expr => UclTemporalOpNext(expr) } | E0
+    
   /** E0 := E1 OpEquiv E0 | E1  **/
   lazy val E0: PackratParser[UclExpr] = E1 ~ OpBiImpl ~ E0 ^^ ast_binary | E1
   /** E1 := E2 OpImpl E1 | E2  **/
@@ -128,8 +153,8 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
       KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => UclLambda(idtyps, expr) } |
       "(" ~> Expr <~ ")" |
       Id
-  /** Expr := E0 **/
-  lazy val Expr: PackratParser[UclExpr] = E0
+  /** Expr := TemporalExpr0 **/
+  lazy val Expr: PackratParser[UclExpr] = TemporalExpr0
   lazy val ExprList: Parser[List[UclExpr]] =
     ("(" ~> Expr ~ rep("," ~> Expr) <~ ")") ^^ { case e ~ es => e::es } |
     "(" ~> ")" ^^ { case _ => List.empty[UclExpr] }
@@ -231,11 +256,18 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     { case b => UclNextDecl(b) }
     
   lazy val Decl: PackratParser[UclDecl] = 
-    (TypeDecl | ConstDecl | FuncDecl | VarDecl | InputDecl | OutputDecl | ProcedureDecl | InitDecl | NextDecl)
+    (TypeDecl | ConstDecl | FuncDecl | VarDecl | InputDecl | OutputDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl)
   
   lazy val Module: PackratParser[UclModule] =
     KwModule ~> Id ~ ("{" ~> rep(Decl) <~ "}") ^^ { case id ~ decls => UclModule(id, decls) }
+
+  lazy val SpecDecl: PackratParser[UclSpecDecl] =
+    KwDefineProp ~> Id ~ ("=" ~> Expr) <~ ";" ^^ { case id ~ expr => UclSpecDecl(id,expr) }
     
+//  lazy val Spec: PackratParser[UclSpec] =
+//    KwSpec ~> "{" ~> rep(SpecDecl) <~ "}" ^^ { case specDecls => UclSpec(specDecls) }
+    
+  
   def parseExpr(input: String): UclExpr = {
     val tokens = new PackratReader(new lexical.Scanner(input))
     phrase(Expr)(tokens) match {
@@ -251,5 +283,4 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
       case e: NoSuccess => throw new IllegalArgumentException(e.toString)
     }
   }
-
 }
