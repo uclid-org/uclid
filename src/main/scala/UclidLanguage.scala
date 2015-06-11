@@ -21,6 +21,7 @@ case class UclRecordSelectOperator(id: UclIdentifier) extends UclOperator {
 abstract class UclExpr
 case class UclIdentifier(value: String) extends UclExpr {
   override def toString = value.toString
+  override def equals (other : Any) = isInstanceOf[UclIdentifier] 
 }
 case class UclNumber(value: BigInt) extends UclExpr {
   override def toString = value.toString
@@ -103,7 +104,19 @@ case class UclLhs(id: UclIdentifier,
 }
 
 abstract class UclType
-case class UclBoolType() extends UclType { 
+
+/**
+ * Temporal types
+ */
+case class UclTemporalType() extends UclType {
+  override def toString = "temporal" 
+  override def equals(other: Any) = other.isInstanceOf[UclTemporalType]
+}
+
+/**
+ * Regular types
+ */
+case class UclBoolType() extends UclType {
   override def toString = "bool" 
   override def equals(other: Any) = other.isInstanceOf[UclBoolType]
 }

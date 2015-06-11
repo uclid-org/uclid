@@ -153,7 +153,7 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
       KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => UclLambda(idtyps, expr) } |
       "(" ~> Expr <~ ")" |
       Id
-  /** Expr := E0 **/
+  /** Expr := TemporalExpr0 **/
   lazy val Expr: PackratParser[UclExpr] = TemporalExpr0
   lazy val ExprList: Parser[List[UclExpr]] =
     ("(" ~> Expr ~ rep("," ~> Expr) <~ ")") ^^ { case e ~ es => e::es } |
