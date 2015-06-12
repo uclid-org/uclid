@@ -12,6 +12,6 @@ object UclidMain {
     UclidSemanticAnalyzer.checkSemantics(module)
     println("Semantic Checking Succeeded")
     //Control module
-    println(UclidSymbolicSimulator.simulate_steps(module,2))
+//    println(UclidSymbolicSimulator.simulate_steps(module,2))
   }
 }
