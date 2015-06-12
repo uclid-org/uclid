@@ -13,9 +13,12 @@ object UclidSymbolicSimulator {
   
   type SymbolTable = Map[UclIdentifier, SMTExpr];
   
-  def newHavocSymbol(name: String, t: SMTType) = new SMTSymbol("_ucl_" + name + UniqueIdGenerator.unique(), t)
-  def newInputSymbol(name: String, step: Int, t: SMTType) = new SMTSymbol("_ucl_" + step +"_" + name, t)
-  def newConstantSymbol(name: String, t: SMTType) = new SMTSymbol(name,t)
+  def newHavocSymbol(name: String, t: SMTType) = 
+    new SMTSymbol("_ucl_" + UniqueIdGenerator.unique() + "_" + name, t)
+  def newInputSymbol(name: String, step: Int, t: SMTType) = 
+    new SMTSymbol("_ucl_" + step +"_" + name, t)
+  def newConstantSymbol(name: String, t: SMTType) = 
+    new SMTSymbol(name,t)
   
   def simulate_steps(m: UclModule, number_of_steps: Int) : SymbolTable = {
     var st : SymbolTable = Map.empty;
@@ -32,6 +35,8 @@ object UclidSymbolicSimulator {
       st = c.inputs.foldLeft(st)((acc,i) => st.updated(i._1, 
           newInputSymbol(i._1.value, step, toSMT(c.inputs(i._1)))));
       st = simulate(m, st, c);
+      println("****** After step# " + step + " ******")
+      println(st)
     }
     
     return st
@@ -57,7 +62,7 @@ object UclidSymbolicSimulator {
     }
   }
   
-  case class SMTIntLTOperator() extends SMTOperator { override def toString = "<" }
+case class SMTIntLTOperator() extends SMTOperator { override def toString = "<" }
 case class SMTIntLEOperator() extends SMTOperator { override def toString = "<=" }
 case class SMTIntGTOperator() extends SMTOperator { override def toString = ">" }
 case class SMTIntGEOperator() extends SMTOperator { override def toString = ">=" }
@@ -98,6 +103,7 @@ case class SMTIntMulOperator() extends SMTOperator { override def toString = "*"
   
   def simulate(s: UclStatement, symbolTable: SymbolTable, c: Context) : SymbolTable = {
     def simulateAssign(lhss: List[UclLhs], args: List[SMTExpr], input: SymbolTable) : SymbolTable = {
+      println("Invoking simulateAssign with " + lhss + " := " + args + " and symboltable " + symbolTable)
       var st : SymbolTable = input;
       def lhs(i: (UclLhs,SMTExpr)) = { i._1 }
       def rhs(i: (UclLhs,SMTExpr)) = { i._2 }
@@ -112,12 +118,13 @@ case class SMTIntMulOperator() extends SMTOperator { override def toString = "*"
           case None => st = st.updated(lhs(x).id, rhs(x))
         }
       }
+      println("returning " + st)
       return st
     }
     s match {
       case UclSkipStmt() => return symbolTable
-      case UclAssertStmt(e) => throw new UclidUtils.UnimplementedException("err");
-      case UclAssumeStmt(e) => throw new UclidUtils.UnimplementedException("err");
+      case UclAssertStmt(e) => return symbolTable
+      case UclAssumeStmt(e) => return symbolTable
       case UclHavocStmt(id) => 
         return symbolTable.updated(id, newHavocSymbol(id.value, toSMT(c.variables(id))))
       case UclAssignStmt(lhss,rhss) =>
@@ -145,7 +152,7 @@ case class SMTIntMulOperator() extends SMTOperator { override def toString = "*"
         c2.variables = c2.variables ++ (proc.decls.map(i => i.id -> i.typ).toMap)
         st = proc.decls.foldLeft(st)((acc,i) => acc.updated(i.id, newHavocSymbol(i.id.value, toSMT(i.typ))));
         st = simulate(proc.body, st, c2)
-        return simulateAssign(lhss, proc.sig.outParams.map(i => st(i._1)), symbolTable)
+        return simulateAssign(lhss, proc.sig.outParams.map(i => st(i._1)), st)
       case _ => return symbolTable
     }
   }

@@ -17,44 +17,44 @@ class Context {
   def extractContext(m: UclModule) = {    
     type T1 = UclProcedureDecl
     val m_procs = m.decls.filter { x => x.isInstanceOf[T1] }
-    UclidUtils.assert(m_procs.map(i => i.asInstanceOf[T1].id).distinct.size == 
-      m_procs.map(i => i.asInstanceOf[T1].id).size, "Multiple procedures with identical names")
+    UclidUtils.assert(UclidUtils.allUnique(m_procs.map(i => i.asInstanceOf[T1].id)), 
+        "Multiple procedures with identical names")
     procedures = m_procs.map(x => x.asInstanceOf[T1].id -> x.asInstanceOf[T1]).toMap
     
     type T2 = UclFunctionDecl
     val m_funcs = m.decls.filter { x => x.isInstanceOf[T2] }
-    UclidUtils.assert(m_funcs.map(i => i.asInstanceOf[T2].id).distinct.size == 
-      m_funcs.map(i => i.asInstanceOf[T2].id).size, "Multiple functions with identical names")
+    UclidUtils.assert(UclidUtils.allUnique(m_funcs.map(i => i.asInstanceOf[T2].id)),
+        "Multiple functions with identical names")
     functions = m_funcs.map(x => x.asInstanceOf[T2].id -> x.asInstanceOf[T2].sig).toMap
     
     type T3 = UclStateVarDecl
     val m_vars = m.decls.filter { x => x.isInstanceOf[T3] }
-    UclidUtils.assert(m_vars.map(i => i.asInstanceOf[T3].id).distinct.size == 
-      m_vars.map(i => i.asInstanceOf[T3].id).size, "Multiple variables with identical names")
+    UclidUtils.assert(UclidUtils.allUnique(m_vars.map(i => i.asInstanceOf[T3].id)), 
+        "Multiple variables with identical names")
     variables = m_vars.map(x => x.asInstanceOf[T3].id -> x.asInstanceOf[T3].typ).toMap
     
     type T4 = UclInputVarDecl
     val m_inputs = m.decls.filter { x => x.isInstanceOf[T4] }
-    UclidUtils.assert(m_inputs.map(i => i.asInstanceOf[T4].id).distinct.size == 
-      m_inputs.map(i => i.asInstanceOf[T4].id).size, "Multiple inputs with identical names")
+    UclidUtils.assert(UclidUtils.allUnique(m_inputs.map(i => i.asInstanceOf[T4].id)), 
+        "Multiple inputs with identical names")
     inputs = m_inputs.map(x => x.asInstanceOf[T4].id -> x.asInstanceOf[T4].typ).toMap
     
     type T5 = UclOutputVarDecl
     val m_outputs = m.decls.filter { x => x.isInstanceOf[T5] }
-    UclidUtils.assert(m_outputs.map(i => i.asInstanceOf[T5].id).distinct.size == 
-      m_outputs.map(i => i.asInstanceOf[T5].id).size, "Multiple outputs with identical names")
+    UclidUtils.assert(UclidUtils.allUnique(m_outputs.map(i => i.asInstanceOf[T5].id)), 
+        "Multiple outputs with identical names")
     outputs = m_outputs.map(x => x.asInstanceOf[T5].id -> x.asInstanceOf[T5].typ).toMap
     
     type T6 = UclConstantDecl
     val m_consts = m.decls.filter { x => x.isInstanceOf[T6] }
-    UclidUtils.assert(m_consts.map(i => i.asInstanceOf[T6].id).distinct.size == 
-      m_consts.map(i => i.asInstanceOf[T6].id).size, "Multiple constants with identical names")
+    UclidUtils.assert(UclidUtils.allUnique(m_consts.map(i => i.asInstanceOf[T6].id)), 
+        "Multiple constants with identical names")
     constants = m_consts.map(x => x.asInstanceOf[T6].id -> x.asInstanceOf[T6].typ).toMap
 
     type T7 = UclTypeDecl
     val m_typedecls = m.decls.filter { x => x.isInstanceOf[T7] }
-    UclidUtils.assert(m_typedecls.map(i => i.asInstanceOf[T7].id).distinct.size == 
-      m_typedecls.map(i => i.asInstanceOf[T7].id).size, "Multiple typedecls with identical names")
+    UclidUtils.assert(UclidUtils.allUnique(m_typedecls.map(i => i.asInstanceOf[T7].id)), 
+        "Multiple typedecls with identical names")
     types = m_typedecls.map(x => x.asInstanceOf[T7].id -> x.asInstanceOf[T7].typ).toMap
     
     val m_nextdecl = m.decls.filter { x => x.isInstanceOf[UclNextDecl] }
@@ -113,7 +113,7 @@ object UclidSemanticAnalyzer {
     val externalDecls : List[UclIdentifier] = c.externalDecls()
     d match {
       case UclProcedureDecl(id,sig,decls,body) =>
-        UclidUtils.assert(UclidUtils.hasDuplicates(sig.inParams.map(i => i._1) ++ sig.outParams.map(i => i._1)),
+        UclidUtils.assert(UclidUtils.allUnique(sig.inParams.map(i => i._1) ++ sig.outParams.map(i => i._1)),
           "Signature of procedure " + id + " contains arguments of the same name")
         (sig.inParams ++ sig.outParams).foreach(i => { 
           UclidUtils.assert(UclidUtils.existsOnce(
@@ -141,7 +141,7 @@ object UclidSemanticAnalyzer {
         body.foreach { x => check(x,c2) }
         
       case UclFunctionDecl(id,sig) =>
-        UclidUtils.assert(UclidUtils.hasDuplicates(sig.args.map(i => i._1)), 
+        UclidUtils.assert(UclidUtils.allUnique(sig.args.map(i => i._1)), 
             "Signature of function " + id + " contains arguments of the same name")
         sig.args.foreach(i => { 
           //check that name is not reused
@@ -350,7 +350,9 @@ object UclidSemanticAnalyzer {
         assertBoolType(typeE);
         return (UclBoolType(), tempE)
       case UclEquality(l,r) => 
-        return typeOfBinaryBooleanOperator(l,r)
+        UclidUtils.assert(typeOf(l,c)._1 == typeOf(r,c)._1 && transitiveType(typeOf(l,c)._1,c) == UclIntType(),
+            "Equality operator requires Int arguments.")
+        return (UclBoolType(), typeOf(l,c)._2 || typeOf(r,c)._2) //TODO: consult Markus
       case UclIFuncApplication(op,es) =>
         lazy val types = es.map { e => typeOf (e,c) }
         /**
@@ -358,10 +360,10 @@ object UclidSemanticAnalyzer {
          */
         types.head._1 match { 
           case x : UclIntType => ()
-          case x => assert(false, "Comparison operator " + op + " requires Int arguments.")
+          case x => UclidUtils.assert(false, "Comparison operator " + op + " requires Int arguments.")
         }
         if (types.tail.exists { x => types.head._1 != x._1}) {
-          assert(false, "Comparison operator " + op + " has arguments with unequal types: " + types.map {x => x._1})
+          UclidUtils.assert(false, "Comparison operator " + op + " has arguments with unequal types: " + types.map {x => x._1})
         }
         val temporal = types.exists { x => x._2}
         return (op match {
@@ -372,32 +374,31 @@ object UclidSemanticAnalyzer {
           },
           temporal)
       case UclArraySelectOperation(a,index) =>
-        val t = typeOf(a,c)
-        assert(!t._2, "Array types may not have temporal subformulas")
-        UclidUtils.assert(transitiveType(t._1,c).isInstanceOf[UclArrayType],
+        val (typ,temporal) = typeOf(a,c)
+        UclidUtils.assert(!temporal, "Array types may not have temporal subformulas")
+        UclidUtils.assert(transitiveType(typ,c).isInstanceOf[UclArrayType],
             "expected array type: " + e)
-        UclidUtils.assert((typeOf(a,c).asInstanceOf[UclArrayType].inTypes zip index).
+        UclidUtils.assert((typ.asInstanceOf[UclArrayType].inTypes zip index).
             forall { x => x._1 == typeOf(x._2,c)._1 }, "Array Select operand type mismatch: " + e)
-        return (t.asInstanceOf[UclArrayType].outType, false) //select returns the range type
+        return (typ.asInstanceOf[UclArrayType].outType, false) //select returns the range type
       case UclArrayStoreOperation(a,index,value) =>
-        val t = typeOf(a,c)
-        assert(!t._2, "Array types may not have temporal subformulas")
-        UclidUtils.assert(transitiveType(t._1,c).isInstanceOf[UclArrayType], "expected array type: " + e)
-        UclidUtils.assert((a.asInstanceOf[UclArrayType].inTypes zip index).
+        val (typ,temporal) = typeOf(a,c)
+        UclidUtils.assert(!temporal, "Array types may not have temporal subformulas")
+        UclidUtils.assert(transitiveType(typ,c).isInstanceOf[UclArrayType], "expected array type: " + e)
+        UclidUtils.assert((typ.asInstanceOf[UclArrayType].inTypes zip index).
             forall { x => x._1 == typeOf(x._2,c)._1 }, "Array Store operand type mismatch: " + e)
-        UclidUtils.assert(a.asInstanceOf[UclArrayType].outType == typeOf(value,c)._1, 
+        UclidUtils.assert(typ.asInstanceOf[UclArrayType].outType == typeOf(value,c)._1, 
             "Array Store value type mismatch")
-        return (t._1, false) //store returns the new array
+        return (typ, false) //store returns the new array
       case UclFuncApplication(f,args) =>
-        val t = typeOf(f,c)
-        assert(!t._2, "Array types may not have temporal subformulas")
-        UclidUtils.assert(transitiveType(t._1,c).isInstanceOf[UclMapType],"Expected Map Type " + e);
-        val t1 = t._1.asInstanceOf[UclMapType];
-        UclidUtils.assert((t1.inTypes.size == args.size), 
+        val (typ,temporal) = typeOf(f,c)
+        UclidUtils.assert(!temporal, "Array types may not have temporal subformulas")
+        UclidUtils.assert(transitiveType(typ,c).isInstanceOf[UclMapType],"Expected Map Type " + e);
+        UclidUtils.assert((typ.asInstanceOf[UclMapType].inTypes.size == args.size), 
           "Function application has bad number of arguments: " + e);
-        UclidUtils.assert((t1.inTypes zip args).forall{i => i._1 == typeOf(i._2,c)._1}, 
+        UclidUtils.assert((typ.asInstanceOf[UclMapType].inTypes zip args).forall{i => i._1 == typeOf(i._2,c)._1}, 
           "Function application has bad types of arguments: " + e)
-        return (t1.outType, false)
+        return (typ.asInstanceOf[UclMapType].outType, false)
       case UclITE(cond,t,f) =>
         val condType = typeOf (cond,c)
         assertBoolType(condType._1);
@@ -413,7 +414,7 @@ object UclidSemanticAnalyzer {
           transitiveType(i._2,c) == UclIntType() }, 
             "Cannot construct Lambda expressions of non-primitive types: " + le)
         val t = typeOf(le,c2)
-        assert(!t._2, "What do you need a Lambda expression with temporal type for!?")
+        UclidUtils.assert(!t._2, "What do you need a Lambda expression with temporal type for!?")
         return (UclMapType(ids.map(i => i._2), t._1), false) //Lambda expr returns a map type
       case UclIdentifier(id) => ((c.constants ++ c.variables ++ c.inputs ++ c.outputs)(UclIdentifier(id)), false)
       case UclNumber(n) => (UclIntType(), false)
