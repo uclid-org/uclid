@@ -165,7 +165,7 @@ object UclidSemanticAnalyzer {
       case UclConstantDecl(id, typ)  => checkType(typ, c)
       case UclSpecDecl(id, expr)     => 
         checkExpr(expr, c)
-        UclidUtils.assert(transitiveType(typeOf(expr, c)._1, c) == UclBoolType, 
+        UclidUtils.assert(transitiveType(typeOf(expr, c)._1, c).isInstanceOf[UclBoolType], 
             "Expressions in specification declarations must have Boolean type.")
       case UclInitDecl(body)         => body.foreach{x => checkStmt(x,c)}
       case UclNextDecl(body)         => body.foreach{x => checkStmt(x,c)}
@@ -369,14 +369,14 @@ object UclidSemanticAnalyzer {
         return (UclBoolType(), tempE)
       case UclEquality(l,r) => 
         val (typeL, tempL) = typeOf(l,c)
-        UclidUtils.assert(transitiveType(typeL,c) == UclIntType(), 
+        UclidUtils.assert(transitiveType(typeL,c).isInstanceOf[UclIntType], 
             "Equality operator requires Int arguments. Lefthand argument side is of type " + typeL + "instead")
         val (typeR, tempR) = typeOf(r,c)
-        UclidUtils.assert(transitiveType(typeR,c) == UclIntType(), 
+        UclidUtils.assert(transitiveType(typeR,c).isInstanceOf[UclIntType], 
             "Equality operator requires Int arguments. Righthand argument side is of type " + typeR + "instead")
-//        UclidUtils.assert(typeL == typeR,
-//            "Equality operator requires equally typed arguments.")
-        return (UclBoolType(), tempL || tempR) //TODO: consult Markus
+        UclidUtils.assert(typeL == typeR,
+            "Equality operator requires equally typed arguments.")
+        return (UclBoolType(), tempL || tempR)
       case UclIFuncApplication(op,es) =>
         lazy val types = es.map { e => typeOf (e,c) }
         /**
