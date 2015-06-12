@@ -42,7 +42,13 @@ case class SMTEquality(left: SMTExpr, right: SMTExpr) extends SMTExpr {
 }
 //for symbols interpreted by underlying Theory solvers
 case class SMTIFuncApplication(op: SMTOperator, operands: List[SMTExpr]) extends SMTExpr {
-  override def toString = op + "(" + operands.foldLeft(""){(acc,i) => acc + "," + i} + ")"
+  override def toString = {
+    if (operands.size == 1) {
+      "(" + op + " " + operands(0) + ")"
+    } else if (operands.size == 2) {
+      "(" + operands(0) + " " + op + " " + operands(1) + ")"
+    } else { op + "(" + operands.foldLeft(""){(acc,i) => acc + "," + i} + ")" }
+  }
 }
 case class SMTArraySelectOperation(e: SMTExpr, index: List[SMTExpr]) extends SMTExpr {
   override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
