@@ -10,6 +10,8 @@ module testModule {
   type t1 = record {a: int, b: int, c: bool};
   var tmp2: t1;
   
+  property phi : G (F 3 < 5);
+  
   procedure p1(a1: int, a2: t1) {
     localvar tmp1: t1;
     tmp1.a := 1; tmp1.b := 2; tmp1.c := false;

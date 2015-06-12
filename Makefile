@@ -13,5 +13,6 @@ run:
 	sbt "run ./test/test5.ucl4"
 	sbt "run ./test/test6.ucl4"
 
+specs:
 	sbt "run ./test/spec1.ucl4"
 	
