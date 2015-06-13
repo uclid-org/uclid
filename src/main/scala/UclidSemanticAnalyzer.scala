@@ -89,7 +89,7 @@ class Context {
   def externalDecls() : List[UclIdentifier] = {
     return this.constants.keys.toList ++ this.functions.keys.toList ++ this.inputs.keys.toList ++ 
       this.outputs.keys.toList ++ this.types.keys.toList ++ this.variables.keys.toList ++ 
-      this.procedures.keys.toList
+      this.procedures.keys.toList ++ this.specifications.keys.toList
   }
 }
 
@@ -104,7 +104,7 @@ object UclidSemanticAnalyzer {
     //check module level stuff
     def checkRedeclarationAndTypes(decls: Map[UclIdentifier, Any]) : Unit = {
       decls.foreach(i => { UclidUtils.assert(UclidUtils.existsOnce(c.externalDecls(), i._1), 
-          "Declaration " + i + " has conflicting name") })
+          "Declaration " + i + " has conflicting name.") })
     }
     checkRedeclarationAndTypes(c.constants)
     checkRedeclarationAndTypes(c.inputs)
@@ -163,7 +163,7 @@ object UclidSemanticAnalyzer {
       case UclConstantDecl(id, typ)  => checkType(typ, c)
       case UclSpecDecl(id, expr)     => 
         checkExpr(expr, c)
-        UclidUtils.assert(transitiveType(typeOf(expr, c)._1, c) == UclBoolType, 
+        UclidUtils.assert(transitiveType(typeOf(expr, c)._1, c).isInstanceOf[UclBoolType], 
             "Expressions in specification declarations must have Boolean type.")
       case UclInitDecl(body)         => body.foreach{x => checkStmt(x,c)}
       case UclNextDecl(body)         => body.foreach{x => checkStmt(x,c)}
@@ -355,26 +355,46 @@ object UclidSemanticAnalyzer {
         assertBoolType(typeR)
         return (UclBoolType(), tempL || tempR)
     }
+    def typeOfUnaryBooleanOperator(e: UclExpr) : (UclType, Boolean) = {
+      val (typeE, tempE) = typeOf(e,c)
+      assertBoolType(typeE)
+      return (UclBoolType(), tempE)
+    }
     
     e match {
+      // Temporal operators
+      case UclTemporalOpGlobally(e)  => 
+        val t = typeOfUnaryBooleanOperator(e)
+        return (t._1, true)
+      case UclTemporalOpFinally(e)   => 
+        val t = typeOfUnaryBooleanOperator(e)
+        return (t._1, true)
+      case UclTemporalOpUntil(l,r)   =>
+        val t = typeOfBinaryBooleanOperator(l,r)
+        return (t._1, true)
+      case UclTemporalOpWUntil(l,r)  =>
+        val t = typeOfBinaryBooleanOperator(l,r)
+        return (t._1, true)
+      case UclTemporalOpRelease(l,r) =>
+        val t = typeOfBinaryBooleanOperator(l,r)
+        return (t._1, true)
+      // Boolean operators
       case UclBiImplication(l,r) => return typeOfBinaryBooleanOperator(l,r)
       case UclImplication(l,r)   => return typeOfBinaryBooleanOperator(l,r)
       case UclConjunction(l,r)   => return typeOfBinaryBooleanOperator(l,r)
       case UclDisjunction(l,r)   => return typeOfBinaryBooleanOperator(l,r)
       case UclNegation(e) => 
-        val (typeE, tempE) = typeOf(e,c)
-        assertBoolType(typeE);
-        return (UclBoolType(), tempE)
+        return typeOfUnaryBooleanOperator(e)
       case UclEquality(l,r) => 
         val (typeL, tempL) = typeOf(l,c)
-        UclidUtils.assert(transitiveType(typeL,c) == UclIntType(), 
+        UclidUtils.assert(transitiveType(typeL,c).isInstanceOf[UclIntType], 
             "Equality operator requires Int arguments. Lefthand argument side is of type " + typeL + "instead")
         val (typeR, tempR) = typeOf(r,c)
-        UclidUtils.assert(transitiveType(typeR,c) == UclIntType(), 
+        UclidUtils.assert(transitiveType(typeR,c).isInstanceOf[UclIntType], 
             "Equality operator requires Int arguments. Righthand argument side is of type " + typeR + "instead")
-//        UclidUtils.assert(typeL == typeR,
-//            "Equality operator requires equally typed arguments.")
-        return (UclBoolType(), tempL || tempR) //TODO: consult Markus
+        UclidUtils.assert(typeL == typeR,
+            "Equality operator requires equally typed arguments.")
+        return (UclBoolType(), tempL || tempR)
       case UclIFuncApplication(op,es) =>
         lazy val types = es.map { e => typeOf (e,c) }
         /**

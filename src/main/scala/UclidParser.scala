@@ -70,7 +70,9 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     KwAssume, KwAssert, KwVar, KwLocalVar, KwHavoc, KwCall, KwIf, KwElse,
     KwCase, KwEsac, KwFor, KwIn, KwRange, KwLocalVar, KwInput, KwOutput,
     KwModule, KwType, KwEnum, KwRecord, KwSkip, KwFunction, 
-    KwInit, KwNext, KwITE, KwLambda)
+    KwInit, KwNext, KwITE, KwLambda, 
+    KwDefineProp, TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
+    TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
 
   lazy val ast_binary: UclExpr ~ String ~ UclExpr => UclExpr = {
     case x ~ TemporalOpUntil   ~ y => UclTemporalOpUntil(x, y)
@@ -262,11 +264,7 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     KwModule ~> Id ~ ("{" ~> rep(Decl) <~ "}") ^^ { case id ~ decls => UclModule(id, decls) }
 
   lazy val SpecDecl: PackratParser[UclSpecDecl] =
-    KwDefineProp ~> Id ~ ("=" ~> Expr) <~ ";" ^^ { case id ~ expr => UclSpecDecl(id,expr) }
-    
-//  lazy val Spec: PackratParser[UclSpec] =
-//    KwSpec ~> "{" ~> rep(SpecDecl) <~ "}" ^^ { case specDecls => UclSpec(specDecls) }
-    
+    KwDefineProp ~> Id ~ (":" ~> Expr) <~ ";" ^^ { case id ~ expr => UclSpecDecl(id,expr) }
   
   def parseExpr(input: String): UclExpr = {
     val tokens = new PackratReader(new lexical.Scanner(input))
