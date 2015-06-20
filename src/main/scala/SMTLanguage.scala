@@ -20,7 +20,7 @@ case class SMTBoolean(value: Boolean) extends SMTLiteral {
   override def toString = value.toString
 }
 case class SMTSymbol(id: String, typ: SMTType) extends SMTExpr {
-  override def toString = "(" + id.toString + "," + typ.toString + ")"
+  override def toString = id.toString
 }
 case class SMTBiImplication(left: SMTExpr, right: SMTExpr) extends SMTExpr {
   override def toString = "(" + left.toString + " <==> " + right.toString + ")"
@@ -51,12 +51,12 @@ case class SMTIFuncApplication(op: SMTOperator, operands: List[SMTExpr]) extends
   }
 }
 case class SMTArraySelectOperation(e: SMTExpr, index: List[SMTExpr]) extends SMTExpr {
-  override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
+  override def toString = "(" + e.toString + ")" + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + "]"
 }
 case class SMTArrayStoreOperation(e: SMTExpr, index: List[SMTExpr], value: SMTExpr) extends SMTExpr {
   override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
-    { (acc,i) => acc + "," + i.toString } + "]" + " := " + value.toString
+    { (acc,i) => acc + "," + i.toString } + " := " + value.toString + "]"
 }
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class SMTFuncApplication(e: SMTExpr, args: List[SMTExpr]) extends SMTExpr {
