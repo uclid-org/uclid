@@ -151,6 +151,7 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val E9: PackratParser[UclExpr] =
       Bool |
       Number |
+      "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => UclRecord(e::es)} |
       KwITE ~> ("(" ~> Expr ~ ("," ~> Expr) ~ ("," ~> Expr) <~ ")") ^^ { case e ~ t ~ f => UclITE(e,t,f) } |
       KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => UclLambda(idtyps, expr) } |
       "(" ~> Expr <~ ")" |
