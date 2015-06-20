@@ -18,6 +18,11 @@ module testModule {
     v3 := Lambda(i:int). ITE(i == a1, true, v3(i));
   }
 
+  init {
+    havoc v1;
+    havoc v2;
+    v3 := Lambda(i: int). (i > 0);
+  }
   next {
     case
        in_b : { mem_out[1] := mem_in[1]; } 
