@@ -3,7 +3,6 @@ module testModule {
   var v1: int;
   var arr: [int] int;
   type t1 = int;
-  type t2 = record{f1: int, f2: bool};
 
   procedure p1(a1: int, a2: int) {
     v1 := v1 + a1 + arr[a2];
@@ -14,9 +13,11 @@ module testModule {
 
   init {
     havoc v1;
+    havoc arr;
   }
   next {
     call () := p1(1,2);
     call () := p2(7);
+    assert v1 < 5;
   }
 }

@@ -12,6 +12,12 @@ object UclidMain {
     UclidSemanticAnalyzer.checkSemantics(module)
     println("Semantic Checking Succeeded")
     //Control module
-    UclidSymbolicSimulator.simulate_steps(module,2)
+    val asserts = UclidSymbolicSimulator.simulate_steps(module,2)._2
+    asserts.foreach { x => 
+      println("*************** Formula Start ***************")
+      println(SMTInterface.generateSMTFormula(x))
+      println("*************** Formula End ***************")
+      }
+    
   }
 }

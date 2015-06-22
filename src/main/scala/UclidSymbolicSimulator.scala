@@ -25,7 +25,7 @@ object UclidSymbolicSimulator {
     c.extractContext(m);
     
     var st : SymbolTable = Map.empty;
-    st = c.constants.foldLeft(st)((acc,i) => acc + (i._1 -> newConstantSymbol(i._1.value, toSMT(c.constants(i._1)))));
+    st = c.constants.foldLeft(st)((acc,i) => acc + (i._1 -> newConstantSymbol(i._1.value, toSMT(c.constants(i._1),c))));
     st = simulate(c.init, st, c);
     (c.variables ++ c.outputs).foreach { i => 
       UclidUtils.assert(st contains i._1, "Init Block does not assign to " + i)  
@@ -33,23 +33,24 @@ object UclidSymbolicSimulator {
     return st
   }
   
-  def simulate_steps(m: UclModule, number_of_steps: Int) : SymbolTable = {
+  def simulate_steps(m: UclModule, number_of_steps: Int) : (SymbolTable,List[SMTExpr]) = 
+  {
     var c : Context = new Context();
     c.extractContext(m);
     
     var st : SymbolTable = initialize(m);
     //st = c.variables.foldLeft(st)((acc,i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(c.variables(i._1)))));
     for (step <- 1 to number_of_steps) {
-      st = c.inputs.foldLeft(st)((acc,i) => acc + (i._1 -> newInputSymbol(i._1.value, step, toSMT(c.inputs(i._1)))));
+      st = c.inputs.foldLeft(st)((acc,i) => acc + (i._1 -> newInputSymbol(i._1.value, step, toSMT(c.inputs(i._1),c))));
       st = simulate(m, st, c);
       println("****** After step# " + step + " ******");
       println(st)
     }
     
-    return st
+    return (st,asserts)
   }
   
-  def toSMT(t: UclType) : SMTType = {
+  def toSMT(t: UclType, c: Context) : SMTType = {
     def dealWithFunc(inTypes: List[UclType], outType: UclType) : Unit = {
       if (inTypes.filter { x => !(x.isInstanceOf[UclBoolType] || x.isInstanceOf[UclIntType]) }.size > 0 ||
           !(outType.isInstanceOf[UclBoolType] || outType.isInstanceOf[UclIntType])
@@ -61,30 +62,26 @@ object UclidSymbolicSimulator {
       case UclIntType() => return SMTIntType()
       case UclBoolType() => return SMTBoolType()
       case UclMapType(inTypes,outType) => 
-        dealWithFunc(inTypes, outType); 
-        return SMTMapType(inTypes.map(t => toSMT(t)), toSMT(outType))
+        //dealWithFunc(inTypes, outType);
+        return SMTMapType(inTypes.map(t => 
+          toSMT(UclidSemanticAnalyzer.transitiveType(t,c),c)), 
+          toSMT(UclidSemanticAnalyzer.transitiveType(outType,c),c))
       case UclArrayType(inTypes,outType) => 
-        dealWithFunc(inTypes, outType); 
-        return SMTArrayType(inTypes.map(t => toSMT(t)), toSMT(outType))
+        //dealWithFunc(inTypes, outType);
+        return SMTArrayType(inTypes.map(t => 
+          toSMT(UclidSemanticAnalyzer.transitiveType(t,c),c)), 
+          toSMT(UclidSemanticAnalyzer.transitiveType(outType,c),c))
     }
   }
   
-case class SMTIntLTOperator() extends SMTOperator { override def toString = "<" }
-case class SMTIntLEOperator() extends SMTOperator { override def toString = "<=" }
-case class SMTIntGTOperator() extends SMTOperator { override def toString = ">" }
-case class SMTIntGEOperator() extends SMTOperator { override def toString = ">=" }
-case class SMTIntAddOperator() extends SMTOperator { override def toString = "+" }
-case class SMTIntSubOperator() extends SMTOperator { override def toString = "-" }
-case class SMTIntMulOperator() extends SMTOperator { override def toString = "*" }
-  
-  def toSMT(op: UclOperator) : SMTOperator = {
+  def toSMT(op: UclOperator, c: Context) : SMTOperator = {
     op match {
       case UclLTOperator() => return SMTIntLTOperator()
       case UclLEOperator() => return SMTIntLEOperator()
       case UclGTOperator() => return SMTIntGTOperator()
       case UclGEOperator() => return SMTIntGEOperator()
-      case UclAddOperator () => return SMTIntAddOperator()
-      case UclMulOperator () => return SMTIntMulOperator()
+      case UclAddOperator() => return SMTIntAddOperator()
+      case UclMulOperator() => return SMTIntMulOperator()
     }
   }
   
@@ -121,10 +118,12 @@ case class SMTIntMulOperator() extends SMTOperator { override def toString = "*"
     }
     s match {
       case UclSkipStmt() => return symbolTable
-      case UclAssertStmt(e) => return symbolTable
+      case UclAssertStmt(e) => 
+        this.asserts = this.asserts ++ List(evaluate(e,symbolTable,c))
+        return symbolTable
       case UclAssumeStmt(e) => return symbolTable
       case UclHavocStmt(id) => 
-        return symbolTable.updated(id, newHavocSymbol(id.value, toSMT(c.variables(id))))
+        return symbolTable.updated(id, newHavocSymbol(id.value, toSMT(c.variables(id),c)))
       case UclAssignStmt(lhss,rhss) =>
         val es = rhss.map(i => evaluate(i, symbolTable, c));
         return simulateAssign(lhss, es, symbolTable)
@@ -148,7 +147,7 @@ case class SMTIntMulOperator() extends SMTOperator { override def toString = "*"
         c2.inputs = c.inputs ++ (proc.sig.inParams.map(i => i._1 -> i._2).toMap)
         c2.variables = c.variables ++ (proc.sig.outParams.map(i => i._1 -> i._2).toMap)
         c2.variables = c2.variables ++ (proc.decls.map(i => i.id -> i.typ).toMap)
-        st = proc.decls.foldLeft(st)((acc,i) => acc + (i.id -> newHavocSymbol(i.id.value, toSMT(i.typ))));
+        st = proc.decls.foldLeft(st)((acc,i) => acc + (i.id -> newHavocSymbol(i.id.value, toSMT(i.typ,c))));
         st = simulate(proc.body, st, c2)
         st = simulateAssign(lhss, proc.sig.outParams.map(i => st(i._1)), st)
         //remove procedure arguments
@@ -229,7 +228,7 @@ case class SMTIntMulOperator() extends SMTOperator { override def toString = "*"
        case UclEquality(l,r) => 
          return SMTEquality(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c))
        case UclIFuncApplication(op,args) =>
-         return SMTIFuncApplication(toSMT(op), args.map(i => evaluate(i, symbolTable, c)))
+         return SMTIFuncApplication(toSMT(op,c), args.map(i => evaluate(i, symbolTable, c)))
        case UclArraySelectOperation(a,index) => 
          if (index.size > 1) throw new UclidUtils.UnimplementedException("Not handling multiple array indices")
          var index0 = evaluate(index(0), symbolTable, c);
@@ -248,7 +247,7 @@ case class SMTIntMulOperator() extends SMTOperator { override def toString = "*"
        case UclITE(cond,t,f) =>
          return SMTITE(evaluate(cond,symbolTable,c), evaluate(t,symbolTable,c), evaluate(f,symbolTable,c))
        case UclLambda(ids,le) => 
-         return SMTLambda(ids.map(i => SMTSymbol(i._1.value, toSMT(i._2))), evaluate(le,symbolTable,c))
+         return SMTLambda(ids.map(i => SMTSymbol(i._1.value, toSMT(i._2,c))), evaluate(le,symbolTable,c))
        case UclNumber(n) => SMTNumber(n)
        case UclBoolean(b) => SMTBoolean(b)
        case UclIdentifier(id) => symbolTable(UclIdentifier(id))
