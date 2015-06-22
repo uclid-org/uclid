@@ -109,7 +109,7 @@ object SMTInterface {
           translateExpr(t) + " " +
           translateExpr(f) +")"
       case SMTLambda(_,_) =>
-        throw new Exception("lambdas in assertions should have been beta-reduced")
+        throw new Exception("yo lambdas in assertions should have been beta-reduced")
       case SMTNumber(value) => value.toString()
       case SMTBitVector(_,_) =>
         throw new UclidUtils.UnimplementedException("Bitvectors unimplemented")
@@ -118,12 +118,12 @@ object SMTInterface {
     }
   }
   
-  def generateSMTFormula(e : SMTExpr) : String = {
+  def checkFormulaZ3(e : SMTExpr) : String = {
+    println("Asserting: " + e)
     val symbols: Set[SMTSymbol] = findSymbolicVariables(e);
     val decl = symbols.foldLeft(""){(acc,x) => acc + generateDeclaration(x)}
-    //val datatypes = symbols.foldLeft(""){(acc,x) => acc + generateDatatype(x)}
     val datatypes = generateDatatypes(symbols)
-    val formula = "(assert " + translateExpr(e) + ")\n"
+    val formula = "(assert (not " + translateExpr(e) + "))\n"
     return datatypes + decl + formula + "(check-sat)\n"
   }
   

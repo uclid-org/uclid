@@ -181,6 +181,7 @@ object UclidSymbolicSimulator {
     return stmts.foldLeft(Set.empty[UclIdentifier]){(acc,s) => acc ++ stmtWriteSet(s,c)}
   }
 
+  //TODO: get rid of this and use subtituteSMT instead
   def substitute(e: UclExpr, id: UclIdentifier, arg: UclExpr) : UclExpr = {
      e match {
        case UclBiImplication(l,r) => 
@@ -214,6 +215,40 @@ object UclidSymbolicSimulator {
      }
   }
   
+  
+  def substituteSMT(e: SMTExpr, s: SMTSymbol, arg: SMTExpr) : SMTExpr = {
+     e match {
+       case SMTBiImplication(l,r) => 
+         return SMTBiImplication(substituteSMT(l,s,arg), substituteSMT(r,s,arg))
+       case SMTImplication(l,r) =>
+         return SMTImplication(substituteSMT(l,s,arg), substituteSMT(r,s,arg))
+       case SMTConjunction(l,r) => 
+         return SMTConjunction(substituteSMT(l,s,arg), substituteSMT(r,s,arg))
+       case SMTDisjunction(l,r) => 
+         return SMTDisjunction(substituteSMT(l,s,arg), substituteSMT(r,s,arg))
+       case SMTNegation(l) => return SMTNegation(substituteSMT(l,s,arg))
+       case SMTEquality(l,r) => 
+         return SMTEquality(substituteSMT(l,s,arg), substituteSMT(r,s,arg))
+       case SMTIFuncApplication(op,args) =>
+         return SMTIFuncApplication(op, args.map(x => substituteSMT(x, s, arg)))
+       case SMTArraySelectOperation(a,index) => 
+         return SMTArraySelectOperation(a, index.map(x => substituteSMT(x, s, arg)))
+       case SMTArrayStoreOperation(a,index,value) => 
+         return SMTArrayStoreOperation(a, index.map(x => substituteSMT(x, s, arg)), substituteSMT(value, s, arg))
+       case SMTFuncApplication(f,args) => 
+         return SMTFuncApplication(substituteSMT(f,s,arg), args.map(x => substituteSMT(x,s,arg)))
+       case SMTITE(cond,t,f) =>
+         return SMTITE(substituteSMT(cond,s,arg), substituteSMT(t,s,arg), substituteSMT(f,s,arg))
+       case SMTLambda(idtypes, le) =>
+         UclidUtils.assert(idtypes.exists(x => x.id == s.id), "Lambda arguments of the same name")
+         return SMTLambda(idtypes, substituteSMT(le, s, arg))
+       case SMTNumber(n) => return e
+       case SMTBoolean(b) => return e
+       case SMTSymbol(id,typ) => return (if (id == s.id) arg else e)
+       case _ => throw new UclidUtils.UnimplementedException("Should not get here")
+     }
+  }
+  
   def evaluate(e: UclExpr, symbolTable: SymbolTable, c: Context) : SMTExpr = {
      e match { //check that all identifiers in e have been declared
        case UclBiImplication(l,r) => 
@@ -238,10 +273,20 @@ object UclidSymbolicSimulator {
              evaluate(value, symbolTable,c))
        case UclFuncApplication(f,args) => f match {
          case UclIdentifier(id) => 
-           return SMTFuncApplication(evaluate(f, symbolTable,c), args.map(i => evaluate(i,symbolTable,c)))
+           if (c.constants.contains(UclIdentifier(id))) {
+             return SMTFuncApplication(evaluate(f, symbolTable,c), args.map(i => evaluate(i,symbolTable,c))) 
+           } else if (c.variables.contains(UclIdentifier(id))) {
+             symbolTable(UclIdentifier(id)) match {
+               case SMTLambda(ids,e) => return (ids zip args.map(x => evaluate(x,symbolTable,c))).
+               foldLeft(e){(acc,x) => substituteSMT(acc, x._1, x._2)}
+             }
+           } else {
+             throw new Exception("How did i get here?") //should either be a lambda or an identifier
+           }
          case UclLambda(idtypes,le) => //do beta sub
            var le_sub = (idtypes.map(x => x._1) zip args).foldLeft(le){(acc,x) => substitute(acc, x._1, x._2)}
            return evaluate(le_sub, symbolTable, c)
+         case _ => throw new Exception("How did i get here?")
        }
        case UclITE(cond,t,f) =>
          return SMTITE(evaluate(cond,symbolTable,c), evaluate(t,symbolTable,c), evaluate(f,symbolTable,c))
