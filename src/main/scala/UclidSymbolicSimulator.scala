@@ -230,13 +230,12 @@ object UclidSymbolicSimulator {
        case UclIFuncApplication(op,args) =>
          return SMTIFuncApplication(toSMT(op,c), args.map(i => evaluate(i, symbolTable, c)))
        case UclArraySelectOperation(a,index) => 
-         if (index.size > 1) throw new UclidUtils.UnimplementedException("Not handling multiple array indices")
-         var index0 = evaluate(index(0), symbolTable, c);
-         return SMTArraySelectOperation(evaluate(a, symbolTable, c), List(index0))
+         return SMTArraySelectOperation(evaluate(a, symbolTable, c), 
+             index.map { x => evaluate(x,symbolTable,c) })
        case UclArrayStoreOperation(a,index,value) => 
-         if (index.size > 1) throw new UclidUtils.UnimplementedException("Not handling multiple array indices")
-         var index0 = evaluate(index(0), symbolTable, c);
-         return SMTArrayStoreOperation(evaluate(a, symbolTable, c), List(index0), evaluate(value, symbolTable,c))
+         return SMTArrayStoreOperation(evaluate(a, symbolTable, c), 
+             index.map { x => evaluate(x,symbolTable,c) }, 
+             evaluate(value, symbolTable,c))
        case UclFuncApplication(f,args) => f match {
          case UclIdentifier(id) => 
            return SMTFuncApplication(evaluate(f, symbolTable,c), args.map(i => evaluate(i,symbolTable,c)))
