@@ -14,4 +14,5 @@ An example is:
 
 # More Information
 
-    Coming soon!
+Coming soon!
+

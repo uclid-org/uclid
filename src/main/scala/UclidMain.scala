@@ -14,6 +14,7 @@ object UclidMain {
     println("Parse Result: " + module)
     UclidSemanticAnalyzer.checkSemantics(module)
     println("Semantic Checking Succeeded")
+    
     //Control module
     val asserts = UclidSymbolicSimulator.simulate_steps(module,2)._2 //simulate for 2 steps
     def getCurrentDirectory = new java.io.File( "." ).getCanonicalPath
@@ -27,6 +28,5 @@ object UclidMain {
       println("Z3 says: " + z3_output)
       println("*************** Formula End ***************")
       }
-    
   }
 }

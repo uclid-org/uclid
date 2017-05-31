@@ -51,6 +51,8 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val KwITE = "ITE"
   lazy val KwLambda = "Lambda"
   lazy val KwFunction = "function"
+  lazy val KwControl = "control"
+  lazy val KwSimulate = "simulate"
   
   lazy val KwDefineProp = "property"
   lazy val TemporalOpGlobally = "G"
@@ -70,6 +72,7 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     KwAssume, KwAssert, KwVar, KwLocalVar, KwHavoc, KwCall, KwIf, KwElse,
     KwCase, KwEsac, KwFor, KwIn, KwRange, KwLocalVar, KwInput, KwOutput,
     KwModule, KwType, KwEnum, KwRecord, KwSkip, KwFunction, 
+    KwSimulate, KwControl,
     KwInit, KwNext, KwITE, KwLambda, 
     KwDefineProp, TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
     TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
@@ -260,9 +263,22 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     
   lazy val Decl: PackratParser[UclDecl] = 
     (TypeDecl | ConstDecl | FuncDecl | VarDecl | InputDecl | OutputDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl)
+
+  // control commands.
+    
+  lazy val SimulateCmd : PackratParser[UclSimulateCmd] =
+    KwSimulate ~> Number <~ ";" ^^ { case num => UclSimulateCmd(num) }
+  
+  lazy val Cmd : PackratParser[UclCmd] =
+    ( SimulateCmd )
+  
+  lazy val BlockCmd : PackratParser[List[UclCmd]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
   
   lazy val Module: PackratParser[UclModule] =
-    KwModule ~> Id ~ ("{" ~> rep(Decl) <~ "}") ^^ { case id ~ decls => UclModule(id, decls) }
+    KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( BlockCmd ? ) <~ "}") ^^ { 
+      case id ~ (decls ~ Some(cs)) => UclModule(id, decls, cs)
+      case id ~ (decls ~ None) => UclModule(id, decls, List[UclCmd]())
+    }
 
   lazy val SpecDecl: PackratParser[UclSpecDecl] =
     KwDefineProp ~> Id ~ (":" ~> Expr) <~ ";" ^^ { case id ~ expr => UclSpecDecl(id,expr) }

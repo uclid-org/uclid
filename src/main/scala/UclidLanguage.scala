@@ -3,6 +3,12 @@
  * @author rohitsinha
  */
 
+object UclPrettyPrinter
+{
+  val indentSeq = "  "
+  def indent(n : Int) = indentSeq * n
+}
+
 abstract class UclOperator
 case class UclLTOperator() extends UclOperator { override def toString = "<" }
 case class UclLEOperator() extends UclOperator { override def toString = "<=" }
@@ -240,7 +246,10 @@ abstract class UclDecl
 case class UclProcedureDecl(id: UclIdentifier, sig: UclProcedureSig, 
     decls: List[UclLocalVarDecl], body: List[UclStatement]) extends UclDecl {
   override def toString = "procedure " + id + sig +
-    " {\n" + body.foldLeft("") { case (acc,i) => acc + "\t" + i + "\n" } + "}"
+    UclPrettyPrinter.indent(1) + "{\n" + body.foldLeft("") { 
+      case (acc,i) => acc + UclPrettyPrinter.indent(2) + i + "\n" 
+    } + 
+    UclPrettyPrinter.indent(1) + "}"
 }
 case class UclTypeDecl(id: UclIdentifier, typ: UclType) extends UclDecl {
   override def toString = "type " + id + " = " + typ 
@@ -263,17 +272,36 @@ extends UclDecl {
 }
 case class UclInitDecl(body: List[UclStatement]) extends UclDecl {
   override def toString = 
-    "init {\n" + body.foldLeft("") { case (acc,i) => acc + "\t" + i + "\n" } + "}"
+    UclPrettyPrinter.indent(1) + "init {\n" + 
+    body.foldLeft("") { 
+      case (acc,i) => acc + UclPrettyPrinter.indent(2) + i + "\n" 
+    } + 
+    UclPrettyPrinter.indent(1) + "}"
 }
 case class UclNextDecl(body: List[UclStatement]) extends UclDecl {
   override def toString = 
-    "next {\n" + body.foldLeft("") { case (acc,i) => acc + "\t" + i + "\n" } + "}"
+    UclPrettyPrinter.indent(1) + "next {\n" + 
+    body.foldLeft("") { 
+      case (acc,i) => acc + UclPrettyPrinter.indent(2) + i + "\n" 
+    } + 
+    UclPrettyPrinter.indent(1) + "}"
 }
 case class UclSpecDecl(id: UclIdentifier, expr: UclExpr) extends UclDecl {
   override def toString = "property " + id + ":" + expr + ";"
 }
 
-case class UclModule(id: UclIdentifier, decls: List[UclDecl]) {
-  override def toString = "\nmodule " + id + "{\n" + 
-  decls.foldLeft("") { case (acc,i) => acc + i + "\n" } + "}\n"
+abstract class UclCmd
+case class UclSimulateCmd(steps : UclNumber) extends UclCmd {
+  override def toString = "simulate " + steps.toString + ";"
 }
+
+case class UclModule(id: UclIdentifier, decls: List[UclDecl], cmds : List[UclCmd]) {
+  override def toString = 
+    "\nmodule " + id + " {\n" + 
+      decls.foldLeft("") { case (acc,i) => acc + UclPrettyPrinter.indent(1) + i + "\n" } +
+      UclPrettyPrinter.indent(1) + "control {" + "\n" + 
+        cmds.foldLeft("")  { case (acc,i) => acc + UclPrettyPrinter.indent(2) + i + "\n" } +
+      UclPrettyPrinter.indent(1) + "}\n" + 
+    "}\n"
+}
+
