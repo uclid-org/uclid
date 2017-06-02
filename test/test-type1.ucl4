@@ -1,0 +1,31 @@
+module test {
+  var a : int;
+  var b : int;
+  procedure fib(x: int, y: int) returns (z:int, w:int) { 
+    z, w := y, x + y;
+  }
+  init {
+    a := 0;
+    b := 1;
+  }
+  next {
+    call (a, b) := fib(a, b);
+  }
+  
+  control {
+  	simulate 5;
+  }
+}
+
+module test {
+  var y: int;
+  var z : bool;
+
+  init {
+    y := 0;
+  }
+  next {
+    y := y + 1;
+    z := !z;
+  }
+}
