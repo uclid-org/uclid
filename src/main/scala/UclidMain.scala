@@ -41,7 +41,8 @@ object UclidMain {
     return UclidOptions(help, mainModule, srcFiles)
   }
   
-  
+  type ModuleMap = Map[UclIdentifier, UclModule]
+
   val usage = """
     Usage: UclidMain [options] filename [filenames]
     Options:
@@ -56,16 +57,20 @@ object UclidMain {
       println(usage)
       sys.exit(0)
     }
-    
-    process(opts.mainModule, opts.srcFiles)
+    val modules = compile(opts.srcFiles)
+    val mainModuleName = UclIdentifier(opts.mainModule)
+    UclidUtils.assert(modules.contains(mainModuleName), "Main module (" + opts.mainModule + ") does not exist.")
+    val mainModule = modules.get(mainModuleName)
+    mainModule match {
+      case Some(m) => execute(m)
+      case None    => 
+    }
   }
   
-  def process(main : String, srcFiles : List[String]) : Unit = {
-    type ModuleMap = Map[UclIdentifier, UclModule]
+  def compile(srcFiles : List[String]) : ModuleMap = {
     type NameCountMap = Map[UclIdentifier, Int]
     var modules : ModuleMap = Map()
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
-    println("Main module: " + main)
     
     for (srcFile <- srcFiles) {
       println("Input File: " + srcFile)
@@ -81,8 +86,12 @@ object UclidMain {
       modules = fileModules.foldLeft(modules)((ms: ModuleMap, m : UclModule) => ms + (m.id -> m)) 
     }
     println("Total number of modules is: " + modules.size)
+    return modules
+  }
+  
+  def execute(module : UclModule) {
       //Control module
-      /*
+      println("Found main module: " + module.id)      
       val asserts = UclidSymbolicSimulator.simulate_steps(module,2)._2 //simulate for 2 steps
       def getCurrentDirectory = new java.io.File( "." ).getCanonicalPath
       asserts.foreach { x => 
@@ -95,6 +104,5 @@ object UclidMain {
         println("Z3 says: " + z3_output)
         println("*************** Formula End ***************")
         }
-       */
   }
 }

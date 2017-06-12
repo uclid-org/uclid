@@ -10,9 +10,12 @@ module test {
   }
   next {
     call (a, b) := fib(a, b);
+    assert (a <= b);
   }
   
   control {
-  	simulate 5;
+    initialize;
+    unroll(5);
+  	simulate ( 5 );
   }
 }

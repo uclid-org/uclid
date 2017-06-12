@@ -76,12 +76,12 @@ object UclidSymbolicSimulator {
   
   def toSMT(op: UclOperator, c: Context) : SMTOperator = {
     op match {
-      case UclLTOperator() => return SMTIntLTOperator()
-      case UclLEOperator() => return SMTIntLEOperator()
-      case UclGTOperator() => return SMTIntGTOperator()
-      case UclGEOperator() => return SMTIntGEOperator()
-      case UclAddOperator() => return SMTIntAddOperator()
-      case UclMulOperator() => return SMTIntMulOperator()
+      case UclLTOperator() => return SMTIntLTOperator
+      case UclLEOperator() => return SMTIntLEOperator
+      case UclGTOperator() => return SMTIntGTOperator
+      case UclGEOperator() => return SMTIntGEOperator
+      case UclAddOperator() => return SMTIntAddOperator
+      case UclMulOperator() => return SMTIntMulOperator
     }
   }
   
@@ -215,22 +215,10 @@ object UclidSymbolicSimulator {
      }
   }
   
-  
   def substituteSMT(e: SMTExpr, s: SMTSymbol, arg: SMTExpr) : SMTExpr = {
      e match {
-       case SMTBiImplication(l,r) => 
-         return SMTBiImplication(substituteSMT(l,s,arg), substituteSMT(r,s,arg))
-       case SMTImplication(l,r) =>
-         return SMTImplication(substituteSMT(l,s,arg), substituteSMT(r,s,arg))
-       case SMTConjunction(l,r) => 
-         return SMTConjunction(substituteSMT(l,s,arg), substituteSMT(r,s,arg))
-       case SMTDisjunction(l,r) => 
-         return SMTDisjunction(substituteSMT(l,s,arg), substituteSMT(r,s,arg))
-       case SMTNegation(l) => return SMTNegation(substituteSMT(l,s,arg))
-       case SMTEquality(l,r) => 
-         return SMTEquality(substituteSMT(l,s,arg), substituteSMT(r,s,arg))
-       case SMTIFuncApplication(op,args) =>
-         return SMTIFuncApplication(op, args.map(x => substituteSMT(x, s, arg)))
+       case SMTOperatorApplication(op,args) =>
+         return SMTOperatorApplication(op, args.map(x => substituteSMT(x, s, arg)))
        case SMTArraySelectOperation(a,index) => 
          return SMTArraySelectOperation(a, index.map(x => substituteSMT(x, s, arg)))
        case SMTArrayStoreOperation(a,index,value) => 
@@ -248,22 +236,23 @@ object UclidSymbolicSimulator {
        case _ => throw new UclidUtils.UnimplementedException("Should not get here")
      }
   }
-  
+
   def evaluate(e: UclExpr, symbolTable: SymbolTable, c: Context) : SMTExpr = {
      e match { //check that all identifiers in e have been declared
        case UclBiImplication(l,r) => 
-         return SMTBiImplication(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c))
+         return SMTOperatorApplication(SMTBoolIffOperator, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
        case UclImplication(l,r) =>
-         return SMTImplication(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c))
+         return SMTOperatorApplication(SMTBoolImplicationOperator, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
        case UclConjunction(l,r) => 
-         return SMTConjunction(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c))
+         return SMTOperatorApplication(SMTBoolConjunctionOperator, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
        case UclDisjunction(l,r) => 
-         return SMTDisjunction(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c))
-       case UclNegation(l) => return SMTNegation(evaluate(l,symbolTable,c))
+         return SMTOperatorApplication(SMTBoolDisjunctionOperator, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
+       case UclNegation(l) => 
+         return SMTOperatorApplication(SMTBoolNegationOperator, List(evaluate(l,symbolTable,c)))
        case UclEquality(l,r) => 
-         return SMTEquality(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c))
+         return SMTOperatorApplication(SMTBoolEqualityOperator, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
        case UclIFuncApplication(op,args) =>
-         return SMTIFuncApplication(toSMT(op,c), args.map(i => evaluate(i, symbolTable, c)))
+         return SMTOperatorApplication(toSMT(op,c), args.map(i => evaluate(i, symbolTable, c)))
        case UclArraySelectOperation(a,index) => 
          return SMTArraySelectOperation(evaluate(a, symbolTable, c), 
              index.map { x => evaluate(x,symbolTable,c) })
@@ -298,5 +287,4 @@ object UclidSymbolicSimulator {
        case _ => throw new UclidUtils.UnimplementedException("Should not get here")
     }
   }
-  
 }

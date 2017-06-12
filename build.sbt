@@ -1,3 +1,3 @@
-// scalacOptions += "-feature"
+scalacOptions += "-feature"
 // scalacOptions += "-deprecation"
 
