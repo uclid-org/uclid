@@ -2,7 +2,6 @@
 /**
  * @author rohitsinha
  */
-
 package uclid {
   package lang {
     object UclPrettyPrinter
@@ -205,8 +204,7 @@ package uclid {
       override def toString = lhss.tail.foldLeft(lhss.head.toString) { (acc,i) => acc + "," + i } +
         " := " +rhss.tail.foldLeft(rhss.head.toString) { (acc,i) => acc + "," + i } + ";"
     }
-    case class UclIfElseStmt(cond: UclExpr, ifblock: List[UclStatement], elseblock: List[UclStatement])
-      extends UclStatement {
+    case class UclIfElseStmt(cond: UclExpr, ifblock: List[UclStatement], elseblock: List[UclStatement]) extends UclStatement {
       override def toString = "if " + cond + " {\n" + ifblock + "\n} else {\n" + elseblock + "\n}"
     }
     case class UclForStmt(id: UclIdentifier, range: (UclNumber,UclNumber), body: List[UclStatement])
