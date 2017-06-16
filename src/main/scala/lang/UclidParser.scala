@@ -11,6 +11,7 @@ package uclid {
       lazy val OpAnd = "&&"
       lazy val OpOr = "||"
       lazy val OpAdd = "+"
+      lazy val OpSub = "-"
       lazy val OpMul = "*"
       lazy val OpBiImpl = "<==>"
       lazy val OpImpl = "==>"
@@ -68,9 +69,9 @@ package uclid {
     
       lexical.delimiters ++= List("(", ")", ",", "[", "]", 
         "bv", "{", "}", ";", "=", ":=", ":", ".", "->", "*",
-        OpAnd, OpOr, OpAdd, OpMul, OpBiImpl, OpImpl,
+        OpAnd, OpOr, OpAdd, OpSub, OpMul, OpBiImpl, OpImpl,
         OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat, OpNeg, OpMinus)
-      lexical.reserved += (OpAnd, OpOr, OpAdd, OpMul, OpBiImpl, OpImpl,
+      lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul, OpBiImpl, OpImpl,
         OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat, OpNeg, OpMinus,
         "false", "true", "bv", KwProcedure, KwBool, KwInt, KwReturns,
         KwAssume, KwAssert, KwVar, KwLocalVar, KwHavoc, KwCall, KwIf, KwElse,
@@ -97,6 +98,7 @@ package uclid {
         case x ~ OpNE ~ y => UclNegation(UclEquality(x, y))
         case x ~ OpConcat ~ y => UclIFuncApplication(ConcatOp(), List(x,y))
         case x ~ OpAdd ~ y => UclIFuncApplication(AddOp(), List(x,y))
+        case x ~ OpSub ~ y => UclIFuncApplication(SubOp(), List(x,y))
         case x ~ OpMul ~ y => UclIFuncApplication(MulOp(), List(x,y))
       }
     
@@ -143,19 +145,21 @@ package uclid {
       lazy val E4: PackratParser[Expr] = E5 ~ OpConcat ~ E4 ^^ ast_binary | E5
       /** E5 := E6 OpAdd E5 | E6 **/
       lazy val E5: PackratParser[Expr] = E6 ~ OpAdd ~ E5 ^^ ast_binary | E6
+      /** E6 := E6 OpSub E6 | E7 **/
+      lazy val E6: PackratParser[Expr] = E7 ~ OpSub ~ E7 ^^ ast_binary | E7
       /** E6 := E7 OpMul E6 | E7 **/
-      lazy val E6: PackratParser[Expr] = E7 ~ OpMul ~ E6 ^^ ast_binary | E7
-      /** E7 := UnOp E8 | E8 **/
-      lazy val E7: PackratParser[Expr] = OpNeg ~> E8 ^^ { case e => UclNegation(e) } | E8
-      /** E8 := E9 MapOp | E9 **/
-      lazy val E8: PackratParser[Expr] =
-          E9 ~ ExprList ^^ { case e ~ f => UclFuncApplication(e, f) } |
-          E9 ~ ArraySelectOp ^^ { case e ~ m => UclArraySelectOperation(e, m) } |
-          E9 ~ ArrayStoreOp ^^ { case e ~ m => UclArrayStoreOperation(e, m._1, m._2) } |
-          E9 ~ ExtractOp ^^ { case e ~ m => UclIFuncApplication(m, List(e)) } |
-          E9
-      /** E9 := false | true | Number | Bitvector | Id FuncApplication | (Expr) **/
+      lazy val E7: PackratParser[Expr] = E8 ~ OpMul ~ E8 ^^ ast_binary | E8
+      /** E8 := UnOp E9 | E9 **/
+      lazy val E8: PackratParser[Expr] = OpNeg ~> E9 ^^ { case e => UclNegation(e) } | E9
+      /** E9 := E10 MapOp | E10 **/
       lazy val E9: PackratParser[Expr] =
+          E10 ~ ExprList ^^ { case e ~ f => UclFuncApplication(e, f) } |
+          E10 ~ ArraySelectOp ^^ { case e ~ m => UclArraySelectOperation(e, m) } |
+          E10 ~ ArrayStoreOp ^^ { case e ~ m => UclArrayStoreOperation(e, m._1, m._2) } |
+          E10 ~ ExtractOp ^^ { case e ~ m => UclIFuncApplication(m, List(e)) } |
+          E10
+      /** E10 := false | true | Number | Bitvector | Id FuncApplication | (Expr) **/
+      lazy val E10: PackratParser[Expr] =
           Bool |
           Number |
           "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Record(e::es)} |

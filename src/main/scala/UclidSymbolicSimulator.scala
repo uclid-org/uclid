@@ -126,6 +126,7 @@ package uclid {
         case GTOp() => return smt.IntGTOp
         case GEOp() => return smt.IntGEOp
         case AddOp() => return smt.IntAddOp
+        case SubOp() => return smt.IntSubOp
         case MulOp() => return smt.IntMulOp
       }
     }

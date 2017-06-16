@@ -18,29 +18,26 @@ package uclid {
       val ctx = z3Ctx
       /** The Z3 solver. */
       val solver = z3Solver
-      /** The symbol map. */
-      var symbolMap : Map[Symbol, z3.Expr] = Map()
       /* Prefix for all  tuple names. */
       val tupleNamePrefix = "__ucl_tuple_"
       /* Counter for unique tuple names. */
       var tupleNameSuffix = 0
-      // Get a unique tuple name. 
+      /** Returns a unique tuple name. */ 
       def getTupleName() : z3.Symbol = { 
         tupleNameSuffix = tupleNameSuffix + 1
         return ctx.mkSymbol(tupleNamePrefix + tupleNameSuffix)
       }
-      // Get tuple field names.
+      /** Returns tuple field names. */
       val getTupleFieldNames = new Memo[Int, Array[z3.Symbol]]((n : Int) => {
         (1 to n).map((i => ctx.mkSymbol("__ucl_field" + i.toString))).toArray
       })
       
-      // Utility function to cast to subtypes of z3.AST
-      def castArgs[T <: z3.AST](args : List[z3.AST]) : List[T] = { 
+      /** Utility function to cast to subtypes of z3.AST */
+      def typecastAST[T <: z3.AST](args : List[z3.AST]) : List[T] = { 
         args.map((arg => arg.asInstanceOf[T]))
       }
 
       // Methods to convert uclid.smt.Type values into Z3 sorts.
-      // Begin memoization functions for Z3 sorts.  //
       val getBoolSort = new Memo[Unit, z3.BoolSort](Unit => ctx.mkBoolSort())
       val getIntSort = new Memo[Unit, z3.IntSort](Unit => ctx.mkIntSort())
       val getBitVectorSort = new Memo[Int, z3.BitVecSort]((w : Int) => ctx.mkBitVecSort(w))
@@ -53,8 +50,7 @@ package uclid {
       val getArraySort = new Memo[(List[Type], Type), z3.ArraySort]((arrayType : (List[Type], Type)) => {
         ctx.mkArraySort(getTupleSort(arrayType._1), getZ3Sort(arrayType._2))
       })
-      // End of memoization functions. //
-      // function to convert uclid.smt types to Z3 sorts.
+      /** Convert uclid.smt types to Z3 sorts. */
       def getZ3Sort (typ : smt.Type) : z3.Sort = {
         typ  match {
           case BoolType()       => getBoolSort()
@@ -64,19 +60,26 @@ package uclid {
           case ArrayType(rs, d) => getArraySort(rs, d)
         }
       }
-      // function to create a tuple expression.
+
+      /** Create a Z3 tuple AST. */
       def getTuple(values : List[z3.AST], tupleMemberTypes : List[Type]) : z3.Expr = {
         val tupleType = TupleType.t(tupleMemberTypes)
         val tupleSort = getZ3Sort(tupleType).asInstanceOf[z3.TupleSort]
         val tupleCons = tupleSort.mkDecl()
-        tupleCons.apply(castArgs[z3.Expr](values).toSeq : _*) 
+        tupleCons.apply(typecastAST[z3.Expr](values).toSeq : _*) 
       }
       
+      /** Create a boolean literal. */
       val getBoolLit = new Memo[Boolean, z3.BoolExpr](b => ctx.mkBool(b))
+      
+      /** Create an integer literal. */
       val getIntLit = new Memo[BigInt, z3.IntExpr](i => ctx.mkInt(i.toString))
+      
+      /** Create a bitvector literal. */
       val getBitVectorLit = new Memo[(BigInt, Int), z3.BitVecExpr]((arg) => ctx.mkBV(arg._1.toString, arg._2))
       
-      def createZ3Symbol (sym : Symbol) : z3.AST = {
+      /** Convert a smt.Symbol object into a Z3 AST. */
+      def symbolToZ3 (sym : Symbol) : z3.AST = {
         abstract class ExprSort
         case class VarSort(sort : z3.Sort) extends ExprSort
         case class MapSort(ins : List[Type], out : Type) extends ExprSort
@@ -97,94 +100,50 @@ package uclid {
             ctx.mkFuncDecl(sym.id, ins.map(getZ3Sort _).toArray, getZ3Sort(out))
         }
       }
-      // TODO: Monadify this.
-      def z3BinaryArithOpFunction(op : Operator, args : List[z3.AST]) : Option[z3.Expr] = {
-        lazy val arithArgs = castArgs[z3.ArithExpr](args)
+      
+      /** Convert an OperatorApplication into a Z3 AST.  */
+      def opToZ3(op : Operator, args : List[z3.AST]) : Option[z3.Expr]  = {
+        // These values need to be lazy so that they are only evaluated when the appropriate ctx.mk* functions
+        // are called. If they were eager, the casts would fail at runtime.
+        lazy val arithArgs = typecastAST[z3.ArithExpr](args)
+        lazy val boolArgs = typecastAST[z3.BoolExpr](args)
         op match {
-          case IntLTOp  => Some(ctx.mkLt (arithArgs(0), arithArgs(1)))
-          case IntLEOp  => Some(ctx.mkLe (arithArgs(0), arithArgs(1)))
-          case IntGTOp  => Some(ctx.mkGt (arithArgs(0), arithArgs(1)))
-          case IntGEOp  => Some(ctx.mkGe (arithArgs(0), arithArgs(1)))
-          case _        => None
-        }
-      }
-      def z3NaryArithOpFunction(op : Operator, args : List[z3.AST]) : Option[z3.Expr] = {
-        lazy val arithArgs = castArgs[z3.ArithExpr](args)
-        op match {
-          case IntAddOp  => Some(ctx.mkAdd (arithArgs : _*))
-          case IntSubOp  => Some(ctx.mkSub (arithArgs: _*))
-          case IntMulOp  => Some(ctx.mkMul (arithArgs : _*))
-          case _         => None
-        }
-      }
-      def z3UnaryBoolOpFunction(op : Operator, args : List[z3.AST]) : Option[z3.Expr]  = {
-        lazy val boolArgs = castArgs[z3.BoolExpr](args)
-        op match {
-          case NegationOp => Some(ctx.mkNot (boolArgs(0)))
-          case _          => None
-        }
-      }
-      def z3BinaryBoolOpFunction(op : Operator, args : List[z3.AST]) : Option[z3.Expr]  = {
-        lazy val boolArgs = castArgs[z3.BoolExpr](args)
-        op match {
+          case IntLTOp       => Some(ctx.mkLt (arithArgs(0), arithArgs(1)))
+          case IntLEOp       => Some(ctx.mkLe (arithArgs(0), arithArgs(1)))
+          case IntGTOp       => Some(ctx.mkGt (arithArgs(0), arithArgs(1)))
+          case IntGEOp       => Some(ctx.mkGe (arithArgs(0), arithArgs(1)))
+          case IntAddOp      => Some(ctx.mkAdd (arithArgs : _*))
+          case IntSubOp      => Some(ctx.mkSub (arithArgs: _*))
+          case IntMulOp      => Some(ctx.mkMul (arithArgs : _*))
+          case NegationOp    => Some(ctx.mkNot (boolArgs(0)))
           case IffOp         => Some(ctx.mkIff (boolArgs(0), boolArgs(1)))
           case ImplicationOp => Some(ctx.mkImplies (boolArgs(0), boolArgs(1)))
           case EqualityOp    => Some(ctx.mkEq (boolArgs(0), boolArgs(1)))
-          case _             => None
-        }
-      }
-      
-      def z3NaryBoolOpFunction(op : Operator, args : List[z3.AST]) : Option[z3.Expr]  = {
-        lazy val boolArgs = castArgs[z3.BoolExpr](args)
-        op match {
           case ConjunctionOp => Some(ctx.mkAnd (boolArgs : _*))
           case DisjunctionOp => Some(ctx.mkOr (boolArgs : _*))
           case _             => None
         }
       }
       
-      def opToZ3(op : Operator, args : List[z3.AST]) : Option[z3.Expr]  = {
-        val binaryArith = z3BinaryArithOpFunction (op, args)
-        val naryArith = z3NaryArithOpFunction (op, args)
-        val unaryBool = z3UnaryBoolOpFunction (op, args)
-        val binaryBool = z3BinaryBoolOpFunction (op, args)
-        val naryBool = z3NaryBoolOpFunction (op, args)
-        
-        // FIXME: Monadify
-        binaryArith match {
-          case Some(_) => binaryArith
-          case None => naryArith match {
-            case Some(_) => naryArith
-            case None => unaryBool match {
-              case Some(_) => unaryBool
-              case None => binaryBool match {
-                case Some(_) => binaryBool
-                case None => naryBool
-              }
-            }
-          }
-        }
-      }
-      
-      
-      val toZ3 : Memo[Expr, z3.AST] = new Memo[Expr, z3.AST]((e) => {
-        e match {
+      /** Convert an smt.Expr object into a Z3 AST.  */
+      val exprToZ3 : Memo[Expr, z3.AST] = new Memo[Expr, z3.AST]((e) => {
+        val z3AST = e match {
           case Symbol(id, typ) => 
-            createZ3Symbol(Symbol(id, typ))
+            symbolToZ3(Symbol(id, typ))
           case OperatorApplication(op,operands) =>
-            opToZ3(op, operands.map((arg) => toZ3(arg))).get
+            opToZ3(op, operands.map((arg) => exprToZ3(arg))).get
           case ArraySelectOperation(e, index) => {
             val arrayType = e.typ.asInstanceOf[ArrayType]
             val arrayIndexType = arrayType.inTypes
-            val indexTuple = getTuple(index.map((arg) => toZ3(arg)), arrayIndexType)
-            ctx.mkSelect(toZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple)
+            val indexTuple = getTuple(index.map((arg) => exprToZ3(arg)), arrayIndexType)
+            ctx.mkSelect(exprToZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple)
           }
           case ArrayStoreOperation(e, index, value) => {
             val arrayType = e.typ.asInstanceOf[ArrayType]
             val arrayIndexType = arrayType.inTypes
-            val indexTuple = getTuple(index.map((arg) => toZ3(arg)), arrayIndexType)
-            val data = toZ3(value).asInstanceOf[z3.Expr]
-            ctx.mkStore(toZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple, data)
+            val indexTuple = getTuple(index.map((arg) => exprToZ3(arg)), arrayIndexType)
+            val data = exprToZ3(value).asInstanceOf[z3.Expr]
+            ctx.mkStore(exprToZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple, data)
           }
           case FunctionApplication(e, args) =>
             throw new UnsupportedOperationException("not implemented.")
@@ -198,12 +157,18 @@ package uclid {
           case _ =>
             throw new RuntimeException("Error!")
         }
+        if (z3AST.isInstanceOf[z3.Expr])
+          z3AST.asInstanceOf[z3.Expr].simplify()
+        else
+          z3AST
       })
       
+      
+      /** Check whether a particular expression is satisfiable.  */      
       def check (e : Expr) : Option[Boolean] = {
         
         println("expr: " + e.toString())
-        val z3Expr = toZ3(e)
+        val z3Expr = exprToZ3(e)
         println("z3: " + z3Expr.toString())
         
         solver.push()

@@ -12,6 +12,9 @@ module test {
     call (a, b) := fib(a, b);
     assert (a <= b);
     assert (a < b);
+    // These weird assertions are to check the +/- arithmetic operators.
+    assert (a+b <= b+b);
+    assert (a-a <= b-a);
   }
   
   control {
