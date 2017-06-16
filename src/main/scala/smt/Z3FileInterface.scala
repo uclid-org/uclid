@@ -109,7 +109,7 @@ package uclid {
         val symbols: Set[Symbol] = findSymbols(e);
         val decl = symbols.foldLeft(""){(acc,x) => acc + generateDeclaration(x)}
         val datatypes = generateDatatypes(symbols)
-        val assertion = "(assert (not " + translateExpr(e) + "))\n"
+        val assertion = "(assert " + translateExpr(e) + ")\n"
         val formula = datatypes + decl + assertion + "(check-sat)\n"
         def getCurrentDirectory = new java.io.File( "." ).getCanonicalPath
 
