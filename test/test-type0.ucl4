@@ -6,7 +6,8 @@ module test {
   }
   init {
     a := 0;
-    b := 1;
+    // test out hexadecimal lexing
+    b := 0x1;
   }
   next {
     call (a, b) := fib(a, b);
