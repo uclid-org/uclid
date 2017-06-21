@@ -5,9 +5,8 @@ module test {
     z, w := y, x + y;
   }
   init {
-    a := 0;
-    // test out hexadecimal lexing
-    b := 0x1;
+    a := 0b0; // binary literal
+    b := 0x1; // hexadecimal literal
   }
   next {
     call (a, b) := fib(a, b);

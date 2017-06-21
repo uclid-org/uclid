@@ -10,10 +10,15 @@ package uclid {
       def indent(n : Int) = indentSeq * n
     }
     
-    abstract class Operator
+    abstract class Operator {
+      def isInfix = false
+    }
+    abstract class InfixOperator extends Operator {
+      override def isInfix = true
+    }
     // This is the polymorphic operator type. The FixOperatorTypes pass converts these operators
     // to either the integer or bitvector versions.
-    abstract class PolymorphicOperator extends Operator
+    abstract class PolymorphicOperator extends InfixOperator
     case class LTOp() extends PolymorphicOperator { override def toString = "<" }
     case class LEOp() extends PolymorphicOperator { override def toString = "<=" }
     case class GTOp() extends PolymorphicOperator { override def toString = ">" }
@@ -53,15 +58,17 @@ package uclid {
     case class Identifier(value: String) extends Expr {
       override def toString = value.toString
     }
-    case class IntLit(value: BigInt) extends Expr {
+
+    abstract class Literal extends Expr
+    case class BoolLit(value: Boolean) extends Literal {
+      override def toString = value.toString
+    }
+    case class IntLit(value: BigInt) extends Literal {
       override def toString = value.toString
     }
     //TODO: check that value can be expressed using "width" bits
-    case class BitVectorLit(value: BigInt, width: BigInt) extends Expr {
-      override def toString = value + "bv" + width //TODO: print in hex
-    }
-    case class BoolLit(value: Boolean) extends Expr {
-      override def toString = value.toString
+    case class BitVectorLit(value: BigInt, width: Int) extends Literal {
+      override def toString = value.toString + "bv" + width.toString
     }
     case class Record(value: List[Expr]) extends Expr {
       override def toString = "{" + value.foldLeft(""){(acc,i) => acc + i} + "}"
@@ -86,7 +93,13 @@ package uclid {
     }
     //for symbols interpreted by underlying Theory solvers
     case class UclOperatorApplication(op: Operator, operands: List[Expr]) extends Expr {
-      override def toString = op + "(" + operands.foldLeft(""){(acc,i) => acc + "," + i} + ")"
+      override def toString = {
+        if (op.isInfix) {
+          "(" + Utils.join(operands.map(_.toString), " " + op + " ") + ")"
+        } else {
+          op + "(" + Utils.join(operands.map(_.toString), ", ") + ")"
+        }
+      }
     }
     case class UclArraySelectOperation(e: Expr, index: List[Expr]) extends Expr {
       override def toString = e + "[" + index.tail.fold(index.head.toString)
@@ -151,11 +164,12 @@ package uclid {
      */
     case class UclBoolType() extends UclType {
       override def toString = "bool" 
-      override def equals(other: Any) = other.isInstanceOf[UclBoolType]
     }
     case class UclIntType() extends UclType { 
       override def toString = "int" 
-      override def equals(other: Any) = other.isInstanceOf[UclIntType]  
+    }
+    case class UclBitVectorType(width: Int) extends UclType {
+      override def toString = "bv" + width.toString
     }
     case class UclEnumType(ids: List[Identifier]) extends UclType {
       override def toString = "enum {" + 
@@ -225,8 +239,8 @@ package uclid {
       override def toString = "havoc " + id + ";"
     }
     case class UclAssignStmt(lhss: List[UclLhs], rhss: List[Expr]) extends UclStatement {
-      override def toString = lhss.tail.foldLeft(lhss.head.toString) { (acc,i) => acc + "," + i } +
-        " := " +rhss.tail.foldLeft(rhss.head.toString) { (acc,i) => acc + "," + i } + ";"
+      override def toString = 
+        Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + ";"
     }
     case class UclIfElseStmt(cond: Expr, ifblock: List[UclStatement], elseblock: List[UclStatement]) extends UclStatement {
       override def toString = "if " + cond + " {\n" + ifblock + "\n} else {\n" + elseblock + "\n}"
@@ -244,8 +258,8 @@ package uclid {
     case class UclProcedureCallStmt(id: Identifier, callLhss: List[UclLhs], args: List[Expr])
       extends UclStatement {
       override def toString = "call (" +
-        callLhss.foldLeft("") { (acc,i) => acc + "," + i } + ") := " + id + "(" +
-        args.foldLeft("") { (acc,i) => acc + "," + i } + ")"
+        Utils.join(callLhss.map(_.toString), ", ") + ") := " + id + "(" +
+        Utils.join(args.map(_.toString), ", ") + ")"
     }
     
     case class UclLocalVarDecl(id: Identifier, typ: UclType) {
@@ -254,15 +268,15 @@ package uclid {
     
     case class UclProcedureSig(inParams: List[(Identifier,UclType)], outParams: List[(Identifier,UclType)]) {
       type T = (Identifier,UclType)
-      val printfn = {(a: T) => a._1.toString + ":" + a._2}
+      val printfn = {(a: T) => a._1.toString + ": " + a._2}
       override def toString =
-        "(" + inParams.foldLeft("") { (acc, i) => acc + "," + printfn(i) } + ")" +
-        " returns " + "(" + outParams.foldLeft("") { (acc,i) => acc + "," + printfn(i) } + ")"
+        "(" + Utils.join(inParams.map(printfn(_)), ", ") + ")" +
+        " returns " + "(" + Utils.join(outParams.map(printfn(_)), ", ") + ")"
     }
     case class UclFunctionSig(args: List[(Identifier,UclType)], retType: UclType) {
       type T = (Identifier,UclType)
-      val printfn = {(a: T) => a._1.toString + ":" + a._2}
-      override def toString = "(" + args.tail.foldLeft(printfn(args.head)) { (acc, i) => acc + "," + printfn(i) } + ")" +
+      val printfn = {(a: T) => a._1.toString + ": " + a._2}
+      override def toString = "(" + Utils.join(args.map(printfn(_)), ", ") + ")" +
         ": " + retType
     }
     
@@ -296,7 +310,7 @@ package uclid {
     }
     case class UclInitDecl(body: List[UclStatement]) extends UclDecl {
       override def toString = 
-        PrettyPrinter.indent(1) + "init {\n" + 
+        "init {\n" + 
         body.foldLeft("") { 
           case (acc,i) => acc + PrettyPrinter.indent(2) + i + "\n" 
         } + 
@@ -304,7 +318,7 @@ package uclid {
     }
     case class UclNextDecl(body: List[UclStatement]) extends UclDecl {
       override def toString = 
-        PrettyPrinter.indent(1) + "next {\n" + 
+        "next {\n" + 
         body.foldLeft("") { 
           case (acc,i) => acc + PrettyPrinter.indent(2) + i + "\n" 
         } + 

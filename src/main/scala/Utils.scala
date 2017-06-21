@@ -18,6 +18,8 @@ package uclid {
         a.count { x => x.value == b.value } == n
       
       def allUnique(a: List[lang.Identifier]) : Boolean = a.distinct.size == a.size
+      
+      def join(things: List[String], sep: String) = things.head + things.tail.foldLeft(""){(acc,i) => acc + sep + i}
   }
   
   class Memo[I, O](f : I => O) {
