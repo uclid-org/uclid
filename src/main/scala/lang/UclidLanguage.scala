@@ -85,7 +85,7 @@ package uclid {
       override def toString = "(" + left + " = " + right + ")"
     }
     //for symbols interpreted by underlying Theory solvers
-    case class UclIFuncApplication(op: Operator, operands: List[Expr]) extends Expr {
+    case class UclOperatorApplication(op: Operator, operands: List[Expr]) extends Expr {
       override def toString = op + "(" + operands.foldLeft(""){(acc,i) => acc + "," + i} + ")"
     }
     case class UclArraySelectOperation(e: Expr, index: List[Expr]) extends Expr {

@@ -16,9 +16,13 @@ run:
 specs:
 	sbt "run ./test/spec1.ucl4"
 	
-t0: 
+test-type0: 
 	sbt "run -m test ./test/test-type0.ucl4"
-t1: 
+
+test-bv0: 
+	sbt "run -m test ./test/test-bv0.ucl4"
+
+test-type1: 
 	sbt "run -m test ./test/test-type1.ucl4"
 
-.PHONY: all build run specs t0 t1
+.PHONY: all build run specs test-type0 test-type1 test-bv0

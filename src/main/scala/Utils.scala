@@ -9,7 +9,8 @@ package uclid {
         if (!b) { println("ERROR: " + err); System.exit(0); } //throw new Exception(err); }
       }
       
-      class UnimplementedException (msg:String=null, cause:Throwable=null) extends java.lang.Exception (msg, cause) {}
+      class UnimplementedException (msg:String=null, cause:Throwable=null) extends java.lang.UnsupportedOperationException (msg, cause) {}
+      class RuntimeError (msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
       
       def existsOnce(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,1)
       def existsNone(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,0)

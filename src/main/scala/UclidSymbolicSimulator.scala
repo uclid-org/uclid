@@ -26,7 +26,7 @@ package uclid {
   import lang.UclIfElseStmt
   import lang.Identifier
   import lang.UclITE
-  import lang.UclIFuncApplication
+  import lang.UclOperatorApplication
   import lang.UclHavocStmt
   import lang.GTOp
   import lang.GEOp
@@ -241,8 +241,8 @@ package uclid {
          case UclNegation(l) => return UclNegation(substitute(l,id,arg))
          case UclEquality(l,r) => 
            return UclEquality(substitute(l,id,arg), substitute(r,id,arg))
-         case UclIFuncApplication(op,args) =>
-           return UclIFuncApplication(op, args.map(x => substitute(x, id, arg)))
+         case UclOperatorApplication(op,args) =>
+           return UclOperatorApplication(op, args.map(x => substitute(x, id, arg)))
          case UclArraySelectOperation(a,index) => 
            return UclArraySelectOperation(a, index.map(x => substitute(x, id, arg)))
          case UclArrayStoreOperation(a,index,value) => 
@@ -297,7 +297,7 @@ package uclid {
            return smt.OperatorApplication(smt.NegationOp, List(evaluate(l,symbolTable,c)))
          case UclEquality(l,r) => 
            return smt.OperatorApplication(smt.EqualityOp, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
-         case UclIFuncApplication(op,args) =>
+         case UclOperatorApplication(op,args) =>
            return smt.OperatorApplication(toSMT(op,c), args.map(i => evaluate(i, symbolTable, c)))
          case UclArraySelectOperation(a,index) => 
            return smt.ArraySelectOperation(evaluate(a, symbolTable, c), 

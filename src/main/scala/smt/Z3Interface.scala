@@ -127,7 +127,7 @@ package uclid {
       
       /** Convert an smt.Expr object into a Z3 AST.  */
       val exprToZ3 : Memo[Expr, z3.AST] = new Memo[Expr, z3.AST]((e) => {
-        val z3AST = e match {
+        val z3AST : z3.AST = e match {
           case Symbol(id, typ) => 
             symbolToZ3(Symbol(id, typ))
           case OperatorApplication(op,operands) =>
@@ -146,21 +146,19 @@ package uclid {
             ctx.mkStore(exprToZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple, data)
           }
           case FunctionApplication(e, args) =>
-            throw new UnsupportedOperationException("not implemented.")
+            throw new Utils.UnimplementedException("Not implemented.")
           case ITE(e,t,f) =>
-            throw new UnsupportedOperationException("not implemented.")
+            throw new Utils.UnimplementedException("Not implemented.")
           case Lambda(_,_) =>
-            throw new RuntimeException("lambdas in assertions should have been beta-reduced")
+            throw new Utils.RuntimeError("Lambdas in assertions should have been beta-reduced.")
           case IntLit(i) => getIntLit(i)
           case BitVectorLit(bv,w) => getBitVectorLit(bv, w)
           case BooleanLit(b) => getBoolLit(b)
           case _ =>
             throw new RuntimeException("Error!")
         }
-        if (z3AST.isInstanceOf[z3.Expr])
-          z3AST.asInstanceOf[z3.Expr].simplify()
-        else
-          z3AST
+        if (z3AST.isInstanceOf[z3.Expr]) z3AST.asInstanceOf[z3.Expr].simplify()
+        else z3AST
       })
       
       
