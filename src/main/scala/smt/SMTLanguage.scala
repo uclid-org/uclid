@@ -150,6 +150,10 @@ package uclid {
       override def toString = "=" 
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
     }
+    object InequalityOp extends BoolResultOp {
+      override def toString = "distinct"
+      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
+    }
     object IntLTOp extends BoolResultOp { 
       override def toString = "<"
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }

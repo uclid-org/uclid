@@ -12,13 +12,16 @@ package uclid {
     
     abstract class Operator {
       def isInfix = false
+      def isPolymorphic = false
     }
     abstract class InfixOperator extends Operator {
       override def isInfix = true
     }
     // This is the polymorphic operator type. The FixOperatorTypes pass converts these operators
     // to either the integer or bitvector versions.
-    abstract class PolymorphicOperator extends InfixOperator
+    abstract class PolymorphicOperator extends InfixOperator {
+      override def isPolymorphic = true
+    }
     case class LTOp() extends PolymorphicOperator { override def toString = "<" }
     case class LEOp() extends PolymorphicOperator { override def toString = "<=" }
     case class GTOp() extends PolymorphicOperator { override def toString = ">" }
@@ -44,6 +47,20 @@ package uclid {
     case class BVAddOp() extends BVArgOperator { override def toString ="+" }
     case class BVSubOp() extends BVArgOperator { override def toString = "-" }
     case class BVMulOp() extends BVArgOperator { override def toString = "*" }
+    // Boolean operators.
+    abstract class BooleanOperator() extends Operator { override def isInfix = true }
+    case class ConjunctionOp() extends BooleanOperator { override def toString = "/\\" }
+    case class DisjunctionOp() extends BooleanOperator { override def toString = "\\/" }
+    case class IffOp() extends BooleanOperator { override def toString = "<==>" }
+    case class ImplicationOp() extends BooleanOperator { override def toString = "==>" }
+    case class NegationOp() extends BooleanOperator { 
+      override def toString = "!"
+      override def isInfix = false
+    }
+    // (In-)equality operators.
+    abstract class ComparisonOperator() extends InfixOperator
+    case class EqualityOp() extends ComparisonOperator { override def toString = "==" }
+    case class InequalityOp() extends ComparisonOperator { override def toString = "!=" } 
     
     
     case class ExtractOp(high: IntLit, low: IntLit) extends Operator {
@@ -72,24 +89,6 @@ package uclid {
     }
     case class Record(value: List[Expr]) extends Expr {
       override def toString = "{" + value.foldLeft(""){(acc,i) => acc + i} + "}"
-    }
-    case class UclBiImplication(left: Expr, right: Expr) extends Expr {
-      override def toString = "(" + left + " <==> " + right + ")"
-    }
-    case class UclImplication(left: Expr, right: Expr) extends Expr {
-      override def toString = "(" + left + " ==> " + right + ")"
-    }
-    case class UclConjunction(left: Expr, right: Expr) extends Expr {
-      override def toString = "(" + left + " /\\ " + right + ")"
-    }
-    case class UclDisjunction(left: Expr, right: Expr) extends Expr {
-      override def toString = "(" + left + " \\/ " + right + ")"
-    }
-    case class UclNegation(expr: Expr) extends Expr {
-      override def toString = "! " + expr
-    }
-    case class UclEquality(left: Expr, right: Expr) extends Expr {
-      override def toString = "(" + left + " = " + right + ")"
     }
     //for symbols interpreted by underlying Theory solvers
     case class UclOperatorApplication(op: Operator, operands: List[Expr]) extends Expr {

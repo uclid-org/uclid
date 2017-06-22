@@ -141,16 +141,16 @@ package uclid {
         case x ~ TemporalOpUntil   ~ y => UclTemporalOpUntil(x, y)
         case x ~ TemporalOpWUntil  ~ y => UclTemporalOpWUntil(x, y)
         case x ~ TemporalOpRelease ~ y => UclTemporalOpRelease(x, y)
-        case x ~ OpBiImpl ~ y => UclBiImplication(x, y)
-        case x ~ OpImpl ~ y => UclImplication(x, y)
-        case x ~ OpAnd ~ y => UclConjunction(x, y)
-        case x ~ OpOr ~ y => UclDisjunction(x, y)
+        case x ~ OpBiImpl ~ y => UclOperatorApplication(IffOp(), List(x, y))
+        case x ~ OpImpl ~ y => UclOperatorApplication(ImplicationOp(), List(x, y))
+        case x ~ OpAnd ~ y => UclOperatorApplication(ConjunctionOp(), List(x, y))
+        case x ~ OpOr ~ y => UclOperatorApplication(DisjunctionOp(), List(x, y))
         case x ~ OpLT ~ y => UclOperatorApplication(LTOp(), List(x,y))
         case x ~ OpGT ~ y => UclOperatorApplication(GTOp(), List(x,y))
         case x ~ OpLE ~ y => UclOperatorApplication(LEOp(), List(x,y))
         case x ~ OpGE ~ y => UclOperatorApplication(GEOp(), List(x,y))
-        case x ~ OpEQ ~ y => UclEquality(x, y)
-        case x ~ OpNE ~ y => UclNegation(UclEquality(x, y))
+        case x ~ OpEQ ~ y => UclOperatorApplication(EqualityOp(), List(x, y))
+        case x ~ OpNE ~ y => UclOperatorApplication(InequalityOp(), List(x, y))
         case x ~ OpConcat ~ y => UclOperatorApplication(ConcatOp(), List(x,y))
         case x ~ OpAdd ~ y => UclOperatorApplication(AddOp(), List(x,y))
         case x ~ OpSub ~ y => UclOperatorApplication(SubOp(), List(x,y))
@@ -204,7 +204,7 @@ package uclid {
       /** E6 := E7 OpMul E6 | E7 **/
       lazy val E7: PackratParser[Expr] = E8 ~ OpMul ~ E8 ^^ ast_binary | E8
       /** E8 := UnOp E9 | E9 **/
-      lazy val E8: PackratParser[Expr] = OpNeg ~> E9 ^^ { case e => UclNegation(e) } | E9
+      lazy val E8: PackratParser[Expr] = OpNeg ~> E9 ^^ { case e => UclOperatorApplication(NegationOp(), List(e)) } | E9
       /** E9 := E10 MapOp | E10 **/
       lazy val E9: PackratParser[Expr] =
           E10 ~ ExprList ^^ { case e ~ f => UclFuncApplication(e, f) } |

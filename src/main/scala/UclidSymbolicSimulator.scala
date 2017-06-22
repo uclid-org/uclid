@@ -4,49 +4,6 @@
  */
 package uclid {
   import uclid.lang._
-  import lang.UclidSemanticAnalyzer
-  import lang.Context
-  import lang.UclType
-  import lang.UclStatement
-  import lang.UclSkipStmt
-  import lang.UclProcedureDecl
-  import lang.UclProcedureCallStmt
-  import lang.Operator
-  import lang.IntLit
-  import lang.UclNegation
-  import lang.MulOp
-  import lang.UclModule
-  import lang.UclMapType
-  import lang.UclLhs
-  import lang.UclLambda
-  import lang.LTOp
-  import lang.LEOp
-  import lang.UclIntType
-  import lang.UclImplication
-  import lang.UclIfElseStmt
-  import lang.Identifier
-  import lang.UclITE
-  import lang.UclOperatorApplication
-  import lang.UclHavocStmt
-  import lang.GTOp
-  import lang.GEOp
-  import lang.UclFuncApplication
-  import lang.UclForStmt
-  import lang.Expr
-  import lang.UclEquality
-  import lang.UclDisjunction
-  import lang.UclConjunction
-  import lang.UclCaseStmt
-  import lang.BoolLit
-  import lang.UclBoolType
-  import lang.UclBiImplication
-  import lang.UclAssumeStmt
-  import lang.UclAssignStmt
-  import lang.UclAssertStmt
-  import lang.UclArrayType
-  import lang.UclArrayStoreOperation
-  import lang.UclArraySelectOperation
-  import lang.AddOp
   
   object UniqueIdGenerator {
     var i : Int = 0;
@@ -121,6 +78,7 @@ package uclid {
     
     def toSMT(op: Operator, c: Context) : smt.Operator = {
       op match {
+        // Integer operators.
         case LTOp() => return smt.IntLTOp
         case LEOp() => return smt.IntLEOp
         case GTOp() => return smt.IntGTOp
@@ -128,6 +86,16 @@ package uclid {
         case AddOp() => return smt.IntAddOp
         case SubOp() => return smt.IntSubOp
         case MulOp() => return smt.IntMulOp
+        // TODO: bitvector operators.
+        // Boolean operators.
+        case ConjunctionOp() => return smt.ConjunctionOp
+        case DisjunctionOp() => return smt.DisjunctionOp
+        case IffOp() => return smt.IffOp
+        case ImplicationOp() => return smt.ImplicationOp
+        case NegationOp() => return smt.NegationOp
+        // Comparison operators.
+        case EqualityOp() => return smt.EqualityOp
+        case InequalityOp() => return smt.InequalityOp
       }
     }
     
@@ -230,17 +198,6 @@ package uclid {
     //TODO: get rid of this and use subtituteSMT instead
     def substitute(e: Expr, id: Identifier, arg: Expr) : Expr = {
        e match {
-         case UclBiImplication(l,r) => 
-           return UclBiImplication(substitute(l,id,arg), substitute(r,id,arg))
-         case UclImplication(l,r) =>
-           return UclImplication(substitute(l,id,arg), substitute(r,id,arg))
-         case UclConjunction(l,r) => 
-           return UclConjunction(substitute(l,id,arg), substitute(r,id,arg))
-         case UclDisjunction(l,r) => 
-           return UclDisjunction(substitute(l,id,arg), substitute(r,id,arg))
-         case UclNegation(l) => return UclNegation(substitute(l,id,arg))
-         case UclEquality(l,r) => 
-           return UclEquality(substitute(l,id,arg), substitute(r,id,arg))
          case UclOperatorApplication(op,args) =>
            return UclOperatorApplication(op, args.map(x => substitute(x, id, arg)))
          case UclArraySelectOperation(a,index) => 
@@ -285,18 +242,6 @@ package uclid {
   
     def evaluate(e: Expr, symbolTable: SymbolTable, c: Context) : smt.Expr = {
        e match { //check that all identifiers in e have been declared
-         case UclBiImplication(l,r) => 
-           return smt.OperatorApplication(smt.IffOp, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
-         case UclImplication(l,r) =>
-           return smt.OperatorApplication(smt.ImplicationOp, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
-         case UclConjunction(l,r) => 
-           return smt.OperatorApplication(smt.ConjunctionOp, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
-         case UclDisjunction(l,r) => 
-           return smt.OperatorApplication(smt.DisjunctionOp, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
-         case UclNegation(l) => 
-           return smt.OperatorApplication(smt.NegationOp, List(evaluate(l,symbolTable,c)))
-         case UclEquality(l,r) => 
-           return smt.OperatorApplication(smt.EqualityOp, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
          case UclOperatorApplication(op,args) =>
            return smt.OperatorApplication(toSMT(op,c), args.map(i => evaluate(i, symbolTable, c)))
          case UclArraySelectOperation(a,index) => 
