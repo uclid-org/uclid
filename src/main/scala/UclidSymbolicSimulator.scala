@@ -63,6 +63,7 @@ package uclid {
       t match {
         case UclIntType() => return smt.IntType()
         case UclBoolType() => return smt.BoolType()
+        case UclBitVectorType(w) => return smt.BitVectorType(w)
         case UclMapType(inTypes,outType) => 
           //dealWithFunc(inTypes, outType);
           return smt.MapType(inTypes.map(t => 
@@ -73,6 +74,7 @@ package uclid {
           return smt.ArrayType(inTypes.map(t => 
             toSMT(UclidSemanticAnalyzer.transitiveType(t,c),c)), 
             toSMT(UclidSemanticAnalyzer.transitiveType(outType,c),c))
+        case _ => throw new Utils.UnimplementedException("Need to handle more types here.")
       }
     }
     
@@ -96,6 +98,8 @@ package uclid {
         // Comparison operators.
         case EqualityOp() => return smt.EqualityOp
         case InequalityOp() => return smt.InequalityOp
+        // FIXME
+        case _ => throw new Utils.UnimplementedException("Operator not supported yet.")
       }
     }
     

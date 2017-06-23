@@ -138,9 +138,9 @@ package uclid {
         TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
     
       lazy val ast_binary: Expr ~ String ~ Expr => Expr = {
-        case x ~ TemporalOpUntil   ~ y => UclTemporalOpUntil(x, y)
-        case x ~ TemporalOpWUntil  ~ y => UclTemporalOpWUntil(x, y)
-        case x ~ TemporalOpRelease ~ y => UclTemporalOpRelease(x, y)
+        case x ~ TemporalOpUntil   ~ y => UclOperatorApplication(UntilTemporalOp(), List(x, y))
+        case x ~ TemporalOpWUntil  ~ y => UclOperatorApplication(WUntilTemporalOp(), List(x, y))
+        case x ~ TemporalOpRelease ~ y => UclOperatorApplication(ReleaseTemporalOp(), List(x, y))
         case x ~ OpBiImpl ~ y => UclOperatorApplication(IffOp(), List(x, y))
         case x ~ OpImpl ~ y => UclOperatorApplication(ImplicationOp(), List(x, y))
         case x ~ OpAnd ~ y => UclOperatorApplication(ConjunctionOp(), List(x, y))
@@ -181,11 +181,11 @@ package uclid {
       lazy val TemporalExpr2: PackratParser[Expr] =
         TemporalExpr3 ~ TemporalOpRelease  ~ TemporalExpr2 ^^ ast_binary | TemporalExpr3
       lazy val TemporalExpr3: PackratParser[Expr] = 
-        TemporalOpFinally ~> TemporalExpr4 ^^ { case expr => UclTemporalOpFinally(expr) } | TemporalExpr4
+        TemporalOpFinally ~> TemporalExpr4 ^^ { case expr => UclOperatorApplication(FinallyTemporalOp(), List(expr)) } | TemporalExpr4
       lazy val TemporalExpr4: PackratParser[Expr] = 
-        TemporalOpGlobally ~> TemporalExpr5 ^^ { case expr => UclTemporalOpGlobally(expr) } | TemporalExpr5
+        TemporalOpGlobally ~> TemporalExpr5 ^^ { case expr => UclOperatorApplication(GloballyTemporalOp(), List(expr)) } | TemporalExpr5
       lazy val TemporalExpr5: PackratParser[Expr] = 
-        TemporalOpNext ~> E0 ^^ { case expr => UclTemporalOpNext(expr) } | E0
+        TemporalOpNext ~> E0 ^^ { case expr => UclOperatorApplication(NextTemporalOp(), List(expr)) } | E0
         
       /** E0 := E1 OpEquiv E0 | E1  **/
       lazy val E0: PackratParser[Expr] = E1 ~ OpBiImpl ~ E0 ^^ ast_binary | E1

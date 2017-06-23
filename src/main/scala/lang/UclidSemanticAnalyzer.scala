@@ -95,155 +95,20 @@ class Context {
   }
 }
 
-trait ModuleReadOnlyVisitor {
-  def visitModule(module : UclModule) {
-    visitIdentifier(module.id)
-    module.decls.foreach(visitDecl(_))
-    // TODO: commands.
-  }
-  def visitDecl(decl : UclDecl) {
-    decl match {
-      case UclProcedureDecl(id, sig, vars, body) => visitProcedure(decl.asInstanceOf[UclProcedureDecl])
-      case UclTypeDecl(id, typ) => visitTypeDecl(decl.asInstanceOf[UclTypeDecl])
-      case UclStateVarDecl(id, typ) => visitStateVar(decl.asInstanceOf[UclStateVarDecl])
-      case UclInputVarDecl(id, typ) => visitInputVar(decl.asInstanceOf[UclInputVarDecl])
-      case UclOutputVarDecl(id, typ) => visitOutputVar(decl.asInstanceOf[UclOutputVarDecl])
-      case UclConstantDecl(id, typ) => visitConstant(decl.asInstanceOf[UclConstantDecl])
-      case UclFunctionDecl(id, sig) => visitFunction(decl.asInstanceOf[UclFunctionDecl])
-      case UclInitDecl(body) => visitInit(decl.asInstanceOf[UclInitDecl])
-      case UclNextDecl(body) => visitNext(decl.asInstanceOf[UclNextDecl])
-      case UclSpecDecl(id, expr) => visitSpec(decl.asInstanceOf[UclSpecDecl])
-    }
-  }
-  def visitProcedure(proc : UclProcedureDecl) {
-    visitIdentifier(proc.id)
-    visitProcedureSig(proc.sig)
-    proc.decls.foreach(visitLocalVar(_))
-    proc.body.foreach(visitStatement(_))
-  }
-  def visitFunction(func : UclFunctionDecl) {
-    visitIdentifier(func.id)
-    visitFunctionSig(func.sig)
-  }
-  def visitStateVar(stvar : UclStateVarDecl) {
-    visitIdentifier(stvar.id)
-    visitType(stvar.typ)
-  }
-  def visitInputVar(inpvar : UclInputVarDecl) {
-    visitIdentifier(inpvar.id)
-    visitType(inpvar.typ)
-  }
-  def visitOutputVar(outvar : UclOutputVarDecl) {
-    visitIdentifier(outvar.id)
-    visitType(outvar.typ)
-  }
-  def visitConstant(cnst : UclConstantDecl) {
-    visitIdentifier(cnst.id)
-    visitType(cnst.typ)
-  }
-  def visitSpec(spec : UclSpecDecl) {
-    visitIdentifier(spec.id)
-    visitExpr(spec.expr)
-  }
-  def visitTypeDecl(typDec : UclTypeDecl) {
-    visitIdentifier(typDec.id)
-    visitType(typDec.typ)
-  }
-  def visitInit(init : UclInitDecl) {
-    init.body.foreach(visitStatement(_))
-  }
-  def visitNext(next : UclNextDecl) {
-    next.body.foreach(visitStatement(_))
-  }
-
-  def visitType(typ: UclType) {}
-  
-  def visitProcedureSig(sig : UclProcedureSig) {
-    sig.inParams.foreach((inparam) => visitIdentifier(inparam._1))
-    sig.inParams.foreach((inparam) => visitType(inparam._2))
-    sig.outParams.foreach((outparam) => visitIdentifier(outparam._1))
-    sig.outParams.foreach((outparam) => visitType(outparam._2))
-  }
-  def visitFunctionSig(sig : UclFunctionSig) {
-    sig.args.foreach((arg) => visitIdentifier(arg._1))
-    sig.args.foreach((arg) => visitType(arg._2))
-    visitType(sig.retType)
-  }
-  def visitLocalVar(lvar : UclLocalVarDecl) {}
-  def visitStatement(st : UclStatement) {
-    st match {
-      case UclSkipStmt() => visitSkipStatement(st.asInstanceOf[UclSkipStmt])
-      case UclAssertStmt(e) => visitAssertStatement(st.asInstanceOf[UclAssertStmt])
-      case UclAssumeStmt(e) => visitAssumeStatement(st.asInstanceOf[UclAssumeStmt])
-      case UclHavocStmt(id) => visitHavocStatement(st.asInstanceOf[UclHavocStmt])
-      case UclAssignStmt(lhss, rhss) => visitAssignStatement(st.asInstanceOf[UclAssignStmt])
-      case UclIfElseStmt(cond, ifblock, elseblock) => visitIfElseStatement(st.asInstanceOf[UclIfElseStmt])
-      case UclForStmt(id, range, body) => visitForStatement(st.asInstanceOf[UclForStmt])
-      case UclCaseStmt(body) => visitCaseStatement(st.asInstanceOf[UclCaseStmt])
-      case UclProcedureCallStmt(id, callLhss, args) => visitProcedureCallStatement(st.asInstanceOf[UclProcedureCallStmt])
-    }
-  }
-  
-  def visitSkipStatement(st : UclSkipStmt) {}
-  def visitAssertStatement(st : UclAssertStmt) { visitExpr(st.e) }
-  def visitAssumeStatement(st : UclAssumeStmt) { visitExpr(st.e) }
-  def visitHavocStatement(st: UclHavocStmt) { visitIdentifier(st.id) }
-  def visitAssignStatement(st : UclAssignStmt) {
-    st.lhss.foreach(visitLhs(_))
-    st.rhss.foreach(visitExpr(_))
-  }
-  def visitIfElseStatement(st : UclIfElseStmt) {
-    visitExpr(st.cond)
-    st.ifblock.foreach(visitStatement(_))
-    st.elseblock.foreach(visitStatement(_))
-  }
-  def visitForStatement(st : UclForStmt) {
-    visitIdentifier(st.id)
-    visitLiteral(st.range._1)
-    visitLiteral(st.range._2)
-    st.body.foreach(visitStatement(_))
-  }
-  def visitCaseStatement(st : UclCaseStmt) {
-    st.body.foreach( 
-      (cases) => {
-        visitExpr(cases._1)
-        cases._2.foreach(visitStatement(_))
-      }
-    )
-  }
-  def visitProcedureCallStatement(st : UclProcedureCallStmt) {
-    visitIdentifier(st.id)
-    st.callLhss.foreach(visitLhs(_))
-    st.args.foreach(visitExpr(_))
-  }
-  def visitLhs(lhs : UclLhs) {
-    lhs.arraySelect match {
-      case Some(as) => as.foreach(visitExpr(_))
-      case None => {}
-    }
-    lhs.recordSelect match {
-      case Some(rs) => rs.foreach(visitIdentifier(_))
-      case None => {}
-    }
-  }
-  def visitExpr(expr : Expr) {}
-  def visitIdentifier(id : Identifier) {}
-  def visitLiteral(lit : Literal) {
-    lit match {
-      case BoolLit(b) => visitBoolLiteral(lit.asInstanceOf[BoolLit])
-      case IntLit(i) => visitIntLiteral(lit.asInstanceOf[IntLit])
-      case BitVectorLit(bv, w) => visitBitVectorLiteral(lit.asInstanceOf[BitVectorLit])
-    }
-  }
-  def visitBoolLiteral(b : BoolLit) {}
-  def visitIntLiteral(i : IntLit) {}
-  def visitBitVectorLiteral(bv : BitVectorLit) {}
-  def visitRecord(rec : Record) {
-    rec.value.foreach(visitExpr(_))
-  }
-}
 
 object UclidSemanticAnalyzer {
+  def hasPolymorphicOperators(m : UclModule) : Boolean = {
+    val visitor = new FoldingVisitor((new FoldingASTVisitor[Boolean] {
+        override def applyOnOperator(op : Operator, in : Boolean) : Boolean = { 
+          op match {
+            case p : PolymorphicOperator => true
+            case _ => in
+          }
+        }
+      }), true)
+    return visitor.visitModule(m, false)
+  }
+  
   def checkSemantics(m: UclModule) : Unit = {
     var c: Context = new Context()
     c.extractContext(m)
@@ -369,8 +234,7 @@ object UclidSemanticAnalyzer {
       checkType(typ.asInstanceOf[UclMapType].outType, c)
     } else if (typ.isInstanceOf[UclArrayType]) {
       typ.asInstanceOf[UclArrayType].inTypes.foreach { i => 
-        Utils.assert(!(transitiveType(i,c).isInstanceOf[UclArrayType]), 
-            "Array types cannot be indexed by arrays: " + typ);
+        Utils.assert(!(transitiveType(i,c).isInstanceOf[UclArrayType]), "Array types cannot be indexed by arrays: " + typ);
         checkType(i,c) 
         }
       Utils.assert(!(transitiveType(typ.asInstanceOf[UclArrayType].outType,c).isInstanceOf[UclArrayType]), 
@@ -438,6 +302,7 @@ object UclidSemanticAnalyzer {
   def checkStmt(s: UclStatement, c: Context) : Unit = {
     val externalDecls : List[Identifier] = c.externalDecls()
     s match {
+      case UclSkipStmt() => 
       case UclAssertStmt(e) => checkExpr(e,c)
       case UclAssumeStmt(e) => checkExpr(e,c)
       case UclHavocStmt(id) => 
@@ -513,48 +378,49 @@ object UclidSemanticAnalyzer {
     
     e match {
       // Temporal operators
-      case UclTemporalOpGlobally(e)  => 
-        val t = typeOfUnaryBooleanOperator(e)
-        return (t._1, true)
-      case UclTemporalOpFinally(e)   => 
-        val t = typeOfUnaryBooleanOperator(e)
-        return (t._1, true)
-      case UclTemporalOpUntil(l,r)   =>
-        val t = typeOfBinaryBooleanOperator(l,r)
-        return (t._1, true)
-      case UclTemporalOpWUntil(l,r)  =>
-        val t = typeOfBinaryBooleanOperator(l,r)
-        return (t._1, true)
-      case UclTemporalOpRelease(l,r) =>
-        val t = typeOfBinaryBooleanOperator(l,r)
-        return (t._1, true)
       case UclOperatorApplication(op,es) =>
         lazy val types = es.map { e => typeOf (e,c) }
-        val temporal = types.exists { x => x._2}
-        val resultType = op match {
+        val temporalArgs = types.exists { x => x._2}
+        return op match {
           case AddOp() | SubOp() | MulOp() => {
+            Utils.assert(types.size == 2, "Expected two arguments to arithmetic operators.")
             Utils.assert(types(0) == types(1), "Operands to arithmetic operators must be of the same type.")
-            types.head._1
+            (types.head._1, temporalArgs)
           }
           case LTOp() | LEOp() | GTOp() | GEOp() => {
-            // FIXME: Can't compare booleans, maps and so on. This must be restricted to numeric types.
-            Utils.assert(types(0) == types(1), "Operands to the comparison operators must be of the same type.")
-            UclBoolType()
+            Utils.assert(types.size == 2, "Expected two arguments to comparison operators.")
+            Utils.assert(types.forall(_._1.isNumeric), "Arguments to comparison operators must be numeric.")
+            (UclBoolType(), temporalArgs)
           }
           case ConjunctionOp() | DisjunctionOp() | IffOp() | ImplicationOp() => {
+            Utils.assert(types.size == 2, "Expected two arguments to Boolean operators.")
             Utils.assert(types(0) == UclBoolType(), "First operand to Boolean operator must be of Boolean type.")
             Utils.assert(types(1) == UclBoolType(), "Second operand to Boolean operator must be of Boolean type.")
-            UclBoolType()
+            (UclBoolType(), temporalArgs)
           }
           case EqualityOp() | InequalityOp() => {
+            Utils.assert(types.size == 2, "Expected two arguments to comparison operators.")
             Utils.assert(types(0) == types(1), "Operands to equality/inequality must be of the same type.")
-            UclBoolType()
+            (UclBoolType(), temporalArgs)
+          }
+          case UntilTemporalOp() | WUntilTemporalOp() | ReleaseTemporalOp() => {
+            Utils.assert(types.size == 2, "Expected two operand to temporal operator: " + op)
+            Utils.assert(types.forall((t) => t._1.isTemporal || t._1.isBool), "Operands to temporal operator " + op + " must be Boolean or temporal.")
+            (UclTemporalType(), true)
+          }
+          case FinallyTemporalOp() | GloballyTemporalOp() | NextTemporalOp() => {
+            Utils.assert(types.size == 1, "Expected one operand to temporal operator: " + op)
+            Utils.assert(types.forall((t) => t._1.isTemporal || t._1.isBool), "Operand to temporal operator " + op + " must be Boolean or temporal.")
+            (UclTemporalType(), true)
           }
           case _ => {
             throw new Utils.UnimplementedException("Operator not implemented yet!")
           }
         }
-        return (resultType, temporal)
+      case Record(values) => 
+        val valTypes = values.map(typeOf(_,c))
+        val temporal = valTypes.exists(_._2)
+        return (UclRecordType.getTuple(valTypes.map(_._1)), temporal)
       case UclArraySelectOperation(a,index) =>
         val (typ,temporal) = typeOf(a,c)
         Utils.assert(!temporal, "Array types may not have temporal subformulas")

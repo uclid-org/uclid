@@ -1,6 +1,7 @@
 
 /**
  * @author rohitsinha
+ * With modifications by pramod.
  */
 package uclid {
   package lang {
@@ -10,16 +11,16 @@ package uclid {
       def indent(n : Int) = indentSeq * n
     }
     
-    abstract class Operator {
+    sealed abstract class Operator {
       def isInfix = false
       def isPolymorphic = false
     }
-    abstract class InfixOperator extends Operator {
+    sealed abstract class InfixOperator extends Operator {
       override def isInfix = true
     }
     // This is the polymorphic operator type. The FixOperatorTypes pass converts these operators
     // to either the integer or bitvector versions.
-    abstract class PolymorphicOperator extends InfixOperator {
+    sealed abstract class PolymorphicOperator extends InfixOperator {
       override def isPolymorphic = true
     }
     case class LTOp() extends PolymorphicOperator { override def toString = "<" }
@@ -30,7 +31,7 @@ package uclid {
     case class SubOp() extends PolymorphicOperator { override def toString = "-" }
     case class MulOp() extends PolymorphicOperator { override def toString = "*" }
     // These are operators with integer operators.
-    abstract class IntArgOperator extends Operator
+    sealed abstract class IntArgOperator extends Operator
     case class IntLTOp() extends IntArgOperator { override def toString = "<" }
     case class IntLEOp() extends IntArgOperator { override def toString = "<=" }
     case class IntGTOp() extends IntArgOperator { override def toString = ">" }
@@ -39,7 +40,7 @@ package uclid {
     case class IntSubOp() extends IntArgOperator { override def toString = "-" }
     case class IntMulOp() extends IntArgOperator { override def toString = "*" }
     // These operators take bitvector operands.
-    abstract class BVArgOperator extends Operator
+    sealed abstract class BVArgOperator extends Operator
     case class BVLTOp() extends BVArgOperator { override def toString = "<" }
     case class BVLEOp() extends BVArgOperator { override def toString = "<=" }
     case class BVGTOp() extends BVArgOperator { override def toString = ">" }
@@ -48,9 +49,9 @@ package uclid {
     case class BVSubOp() extends BVArgOperator { override def toString = "-" }
     case class BVMulOp() extends BVArgOperator { override def toString = "*" }
     // Boolean operators.
-    abstract class BooleanOperator() extends Operator { override def isInfix = true }
-    case class ConjunctionOp() extends BooleanOperator { override def toString = "/\\" }
-    case class DisjunctionOp() extends BooleanOperator { override def toString = "\\/" }
+    sealed abstract class BooleanOperator() extends Operator { override def isInfix = true }
+    case class ConjunctionOp() extends BooleanOperator { override def toString = "&&" }
+    case class DisjunctionOp() extends BooleanOperator { override def toString = "||" }
     case class IffOp() extends BooleanOperator { override def toString = "<==>" }
     case class ImplicationOp() extends BooleanOperator { override def toString = "==>" }
     case class NegationOp() extends BooleanOperator { 
@@ -58,10 +59,19 @@ package uclid {
       override def isInfix = false
     }
     // (In-)equality operators.
-    abstract class ComparisonOperator() extends InfixOperator
+    sealed abstract class ComparisonOperator() extends InfixOperator
     case class EqualityOp() extends ComparisonOperator { override def toString = "==" }
     case class InequalityOp() extends ComparisonOperator { override def toString = "!=" } 
     
+    sealed abstract class TemporalOperator() extends Operator
+    sealed abstract class TemporalInfixOperator() extends TemporalOperator { override def isInfix = true }
+    sealed abstract class TemporalPrefixOperator() extends TemporalOperator { override def isInfix = false }
+    case class UntilTemporalOp() extends TemporalInfixOperator { override def toString = "U" }
+    case class WUntilTemporalOp() extends TemporalInfixOperator { override def toString = "W" }
+    case class ReleaseTemporalOp() extends TemporalInfixOperator { override def toString = "R" }
+    case class FinallyTemporalOp() extends TemporalPrefixOperator { override def toString = "F" }
+    case class GloballyTemporalOp() extends TemporalPrefixOperator { override def toString = "G" }
+    case class NextTemporalOp() extends TemporalPrefixOperator { override def toString = "X" }
     
     case class ExtractOp(high: IntLit, low: IntLit) extends Operator {
       override def toString = "[" + high + ":" + low + "]"
@@ -71,12 +81,12 @@ package uclid {
       override def toString = "." + id
     }
     
-    abstract class Expr
+    sealed abstract class Expr
     case class Identifier(value: String) extends Expr {
       override def toString = value.toString
     }
 
-    abstract class Literal extends Expr
+    sealed abstract class Literal extends Expr
     case class BoolLit(value: Boolean) extends Literal {
       override def toString = value.toString
     }
@@ -119,24 +129,6 @@ package uclid {
     case class UclLambda(ids: List[(Identifier,UclType)], e: Expr) extends Expr {
       override def toString = "Lambda(" + ids + "). " + e
     }
-    case class UclTemporalOpUntil(left: Expr, right: Expr) extends Expr {
-      override def toString = "(" + left + " U " + right + ")"
-    }
-    case class UclTemporalOpWUntil(left: Expr, right: Expr) extends Expr {
-      override def toString = "(" + left + " W " + right + ")"
-    }
-    case class UclTemporalOpRelease(left: Expr, right: Expr) extends Expr {
-      override def toString = "(" + left + " R " + right + ")"
-    }
-    case class UclTemporalOpFinally(expr: Expr) extends Expr {
-      override def toString = "(F " + expr + ")"
-    }
-    case class UclTemporalOpGlobally(expr: Expr) extends Expr {
-      override def toString = "(G " + expr + ")"
-    }
-    case class UclTemporalOpNext(expr: Expr) extends Expr {
-      override def toString = "(Next " + expr + ")"
-    }
     
     case class UclLhs(id: Identifier, 
                       arraySelect: Option[List[Expr]], 
@@ -148,26 +140,38 @@ package uclid {
       override def toString = id.toString + t1 + t2
     }
     
-    abstract class UclType
+    sealed abstract class UclType {
+      def isBool = false
+      def isNumeric = false
+      def isTemporal = false
+    }
+
+    /** 
+     *  Numeric types base class. 
+     */
+    sealed abstract class UclNumericType extends UclType {
+      override def isNumeric = true
+    }
     
     /**
-     * Temporal types
+     * Temporal types.
      */
     case class UclTemporalType() extends UclType {
-      override def toString = "temporal" 
-      override def equals(other: Any) = other.isInstanceOf[UclTemporalType]
+      override def toString = "temporal"
+      override def isTemporal = true
     }
     
     /**
-     * Regular types
+     * Regular types.
      */
     case class UclBoolType() extends UclType {
-      override def toString = "bool" 
+      override def toString = "bool"
+      override def isBool = true
     }
-    case class UclIntType() extends UclType { 
-      override def toString = "int" 
+    case class UclIntType() extends UclNumericType { 
+      override def toString = "int"
     }
-    case class UclBitVectorType(width: Int) extends UclType {
+    case class UclBitVectorType(width: Int) extends UclNumericType {
       override def toString = "bv" + width.toString
     }
     case class UclEnumType(ids: List[Identifier]) extends UclType {
@@ -192,6 +196,11 @@ package uclid {
           case _ => false
         }
     }
+    object UclRecordType {
+      def getTuple(types: List[UclType]) : UclRecordType = {
+        UclRecordType(((Stream from 1).map((i) => Identifier("_" + i.toString))).zip(types).toList)
+      }
+    }
     //class UclBitvectorType extends UclType
     case class UclMapType(inTypes: List[UclType], outType: UclType) extends UclType {
       override def toString = "map [" + inTypes.tail.fold(inTypes.head.toString)
@@ -215,7 +224,7 @@ package uclid {
           case _ => false
         }
     }
-    case class UclSynonymType(id: Identifier) extends UclType {
+    case class UclSynonymType(id: Identifier /* FIXME: needs another argument? */) extends UclType {
       override def toString = id.toString
       override def equals(other: Any) = other match {
         case that: UclSynonymType => that.id.value == this.id.value
@@ -224,7 +233,7 @@ package uclid {
     }
     
     /** Statements **/
-    abstract class UclStatement
+    sealed abstract class UclStatement
     case class UclSkipStmt() extends UclStatement {
       override def toString = "skip;"
     }
@@ -279,7 +288,7 @@ package uclid {
         ": " + retType
     }
     
-    abstract class UclDecl
+    sealed abstract class UclDecl
     case class UclProcedureDecl(id: Identifier, sig: UclProcedureSig, 
         decls: List[UclLocalVarDecl], body: List[UclStatement]) extends UclDecl {
       override def toString = "procedure " + id + sig +
@@ -327,7 +336,7 @@ package uclid {
       override def toString = "property " + id + ":" + expr + ";"
     }
     
-    abstract class UclCmd
+    sealed abstract class UclCmd
     case class UclInitializeCmd() extends UclCmd {
       override def toString = "initialize;"
     }
