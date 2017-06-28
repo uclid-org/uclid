@@ -1,6 +1,8 @@
 package uclid
 package lang
 
+import scala.collection.mutable.Map
+
 /* AST visitor that walks through the AST and collects information. */
 trait FoldingASTVisitor[T] {
   def applyOnModule(module : UclModule, in : T) : T = { in }
@@ -790,4 +792,80 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     }).flatten
     return visitExpr(lambda.e).flatMap((e) => v.rewriteLambda(UclLambda(idP, e)))
   }
+}
+
+class TypingVisitor extends FoldingASTVisitor[Unit]
+{
+  type M = Map[Expr, UclType]
+  var memo : Map[Expr, UclType] = Map.empty[Expr, UclType]
+  
+  override def applyOnExpr(e : Expr, in : Unit) : Unit = {
+    if (!memo.contains(e)) {
+      val t = typeOf(e)
+    }
+  }
+  
+  def typeOf(e : Expr) : UclType = {
+    def typeOfOpApp(opapp : UclOperatorApplication) : UclType = {
+      val argTypes = opapp.operands.map(typeOf(_))
+      opapp.op match {
+        case polyOp : PolymorphicOperator => {
+          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+          Utils.assert(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type.")
+          Utils.assert(argTypes.forall(_.isNumeric), "Arguments to operator '" + opapp.op.toString + "' must be of a numeric type.")
+          typeOf(opapp.operands(0))
+        }
+        case intOp : IntArgOperator => {
+          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+          Utils.assert(argTypes.forall(_.isInstanceOf[UclIntType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer.")
+          new UclIntType()
+        }
+        case bvOp : BVArgOperator => {
+          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+          Utils.assert(argTypes.forall(_.isInstanceOf[UclBitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
+          typeOf(opapp.operands(0))
+        }
+        case boolOp : BooleanOperator => {
+          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+          Utils.assert(argTypes.forall(_.isInstanceOf[UclBoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
+          new UclBoolType()
+        }
+        case cmpOp : ComparisonOperator => {
+          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+          Utils.assert(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type.")
+          new UclBoolType()
+        }
+        case tOp : TemporalOperator => new UclTemporalType()
+        case ExtractOp(hi, lo) => {
+          Utils.assert(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.")
+          Utils.assert(argTypes(0).isInstanceOf[UclBitVectorType], "Operand to operator '" + opapp.op.toString + "' must be of type BitVector.") 
+          Utils.assert(argTypes(0).asInstanceOf[UclBitVectorType].width > hi.value.toInt, "Operand to operator '" + opapp.op.toString + "' must have width > "  + hi.value.toString + ".") 
+          Utils.assert(hi.value >= lo.value , "High-operand must be greater than or equal to low operand for operator '" + opapp.op.toString + "'.") 
+          Utils.assert(hi.value.toInt >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
+          Utils.assert(lo.value.toInt >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
+          new UclBitVectorType(hi.value.toInt - lo.value.toInt + 1)
+        }
+        case ConcatOp() => {
+          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+          Utils.assert(argTypes.forall(_.isInstanceOf[UclBitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
+          new UclBitVectorType(argTypes(0).asInstanceOf[UclBitVectorType].width + argTypes(1).asInstanceOf[UclBitVectorType].width)
+        }
+      }
+    }
+    val cachedType = memo.get(e)
+    if (cachedType.isEmpty) {
+      val typ = e match {
+        case b : BoolLit => new UclBoolType()
+        case i : IntLit => new UclIntType()
+        case bv : BitVectorLit => new UclBitVectorType(bv.width)
+        case r : Record => throw new Utils.UnimplementedException("Need to implement anonymous record types.")
+        case opapp : UclOperatorApplication => typeOfOpApp(opapp)
+      }
+      memo.put(e, typ)
+      return typ
+    } else {
+      return cachedType.get
+    }
+  }
+  
 }
