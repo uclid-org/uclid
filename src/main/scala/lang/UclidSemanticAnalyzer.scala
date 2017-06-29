@@ -15,7 +15,7 @@ class Context {
   var next: List[UclStatement] = _
   var init: List[UclStatement] = _
   
-  def extractContext(m: UclModule) = {
+  def extractContext(m: Module) = {
     type T1 = UclProcedureDecl
     val m_procs = m.decls.filter { x => x.isInstanceOf[T1] }
     Utils.assert(Utils.allUnique(m_procs.map(i => i.asInstanceOf[T1].id)), 
@@ -97,25 +97,32 @@ class Context {
 
 
 object UclidSemanticAnalyzer {
-  def hasPolymorphicOperators(m : UclModule) : Boolean = {
+  def hasPolymorphicOperators(m : Module) : Boolean = {
     val visitor = new FoldingVisitor((new FoldingASTVisitor[Boolean] {
-        override def applyOnOperator(op : Operator, in : Boolean) : Boolean = { 
-          op match {
-            case p : PolymorphicOperator => true
-            case _ => in
+        override def applyOnOperator(d : TraversalDirection.T, op : Operator, in : Boolean) : Boolean = {
+          if (d == TraversalDirection.Up) { 
+            in
+          } else {
+            op match {
+              case p : PolymorphicOperator => {
+                println("op: " + p.toString + "; reifiedOp: " + p.reifiedOp.toString)
+                true
+              }
+              case _ => in
+            }
           }
         }
-      }), true)
+      }))
     return visitor.visitModule(m, false)
   }
   
-  def checkSemantics(m: UclModule) : Unit = {
+  def checkSemantics(m: Module) : Unit = {
     var c: Context = new Context()
     c.extractContext(m)
     checkModule(m,c)
   }
   
-  def checkModule(m: UclModule, c: Context) : Unit = {
+  def checkModule(m: Module, c: Context) : Unit = {
     //check module level stuff
     def checkRedeclarationAndTypes(decls: Map[Identifier, Any]) : Unit = {
       decls.foreach(i => { Utils.assert(Utils.existsOnce(c.externalDecls(), i._1), 

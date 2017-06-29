@@ -3,7 +3,7 @@ package uclid {
   import scala.collection.immutable._
   import uclid.lang._
   import lang.UclidSemanticAnalyzer
-  import lang.UclModule
+  import lang.Module
   import lang.Identifier
   
   /**
@@ -43,7 +43,7 @@ package uclid {
       return UclidOptions(help, mainModule, srcFiles)
     }
     
-    type ModuleMap = Map[Identifier, UclModule]
+    type ModuleMap = Map[Identifier, Module]
   
     val usage = """
       Usage: UclidMain [options] filename [filenames]
@@ -81,21 +81,24 @@ package uclid {
         for(module <- fileModules) {
           UclidSemanticAnalyzer.checkSemantics(module)
         }
-        nameCnt = fileModules.foldLeft(nameCnt)((cnts : NameCountMap, m : UclModule) => (cnts + (m.id -> (cnts(m.id) + 1))))
+        nameCnt = fileModules.foldLeft(nameCnt)((cnts : NameCountMap, m : Module) => (cnts + (m.id -> (cnts(m.id) + 1))))
         val repeatedNameCnt = nameCnt.filter{ case (name, cnt) => cnt > 1 }
         val repeatedNames = repeatedNameCnt.foldLeft(""){ case (str, (name, cnt)) => str + " " + name }
         Utils.assert(repeatedNameCnt.size == 0, "Repeated module names: " + repeatedNames)
-        modules = fileModules.foldLeft(modules)((ms: ModuleMap, m : UclModule) => ms + (m.id -> m)) 
+        modules = fileModules.foldLeft(modules)((ms: ModuleMap, m : Module) => ms + (m.id -> m)) 
       }
       println("Total number of modules is: " + modules.size)
       return modules
     }
     
-    def execute(module : UclModule) {
+    def execute(module : Module) {
       //Control module
       println("Found main module: " + module.id)
       println(module.toString)
-      println("Polymorphic operators: " + UclidSemanticAnalyzer.hasPolymorphicOperators(module)) 
+      println("Polymorphic operators: " + UclidSemanticAnalyzer.hasPolymorphicOperators(module))
+      val module_p = Typechecker.checkAndRewrite(module)
+      println(module_p.toString)
+      println("Polymorphic operators: " + UclidSemanticAnalyzer.hasPolymorphicOperators(module_p))
       /*
       val asserts = UclidSymbolicSimulator.simulate_steps(module,2)._2 //simulate for 2 steps
       var z3Interface = smt.Z3Interface.newInterface()

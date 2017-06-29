@@ -18,9 +18,10 @@ package uclid {
     sealed abstract class InfixOperator extends Operator {
       override def isInfix = true
     }
-    // This is the polymorphic operator type. The FixOperatorTypes pass converts these operators
+    // This is the polymorphic operator type. The FixOperatorTypes pass will convert these operators
     // to either the integer or bitvector versions.
     sealed abstract class PolymorphicOperator extends InfixOperator {
+      var reifiedOp : Option[Operator] = None
       override def isPolymorphic = true
     }
     case class LTOp() extends PolymorphicOperator { override def toString = "<" }
@@ -31,7 +32,7 @@ package uclid {
     case class SubOp() extends PolymorphicOperator { override def toString = "-" }
     case class MulOp() extends PolymorphicOperator { override def toString = "*" }
     // These are operators with integer operators.
-    sealed abstract class IntArgOperator extends Operator
+    sealed abstract class IntArgOperator extends InfixOperator
     case class IntLTOp() extends IntArgOperator { override def toString = "<" }
     case class IntLEOp() extends IntArgOperator { override def toString = "<=" }
     case class IntGTOp() extends IntArgOperator { override def toString = ">" }
@@ -40,14 +41,14 @@ package uclid {
     case class IntSubOp() extends IntArgOperator { override def toString = "-" }
     case class IntMulOp() extends IntArgOperator { override def toString = "*" }
     // These operators take bitvector operands.
-    sealed abstract class BVArgOperator extends Operator
-    case class BVLTOp() extends BVArgOperator { override def toString = "<" }
-    case class BVLEOp() extends BVArgOperator { override def toString = "<=" }
-    case class BVGTOp() extends BVArgOperator { override def toString = ">" }
-    case class BVGEOp() extends BVArgOperator { override def toString = ">=" }
-    case class BVAddOp() extends BVArgOperator { override def toString ="+" }
-    case class BVSubOp() extends BVArgOperator { override def toString = "-" }
-    case class BVMulOp() extends BVArgOperator { override def toString = "*" }
+    sealed abstract class BVArgOperator extends InfixOperator
+    case class BVLTOp(w : Int) extends BVArgOperator { override def toString = "<_" + w.toString }
+    case class BVLEOp(w : Int) extends BVArgOperator { override def toString = "<=_" + w.toString }
+    case class BVGTOp(w : Int) extends BVArgOperator { override def toString = ">_" + w.toString }
+    case class BVGEOp(w : Int) extends BVArgOperator { override def toString = ">=_" + w.toString }
+    case class BVAddOp(w : Int) extends BVArgOperator { override def toString ="+_" + w.toString }
+    case class BVSubOp(w : Int) extends BVArgOperator { override def toString = "-_" + w.toString }
+    case class BVMulOp(w : Int) extends BVArgOperator { override def toString = "*_" + w.toString }
     // Boolean operators.
     sealed abstract class BooleanOperator() extends Operator { override def isInfix = true }
     case class ConjunctionOp() extends BooleanOperator { override def toString = "&&" }
@@ -261,6 +262,7 @@ package uclid {
     }
     case class UclFunctionSig(args: List[(Identifier,Type)], retType: Type) {
       type T = (Identifier,Type)
+      val typ = MapType(args.map(_._2), retType)
       val printfn = {(a: T) => a._1.toString + ": " + a._2}
       override def toString = "(" + Utils.join(args.map(printfn(_)), ", ") + ")" +
         ": " + retType
@@ -325,7 +327,7 @@ package uclid {
       override def toString = "simulate (" + steps.toString + ");"
     }
     
-    case class UclModule(id: Identifier, decls: List[UclDecl], cmds : List[UclCmd]) {
+    case class Module(id: Identifier, decls: List[UclDecl], cmds : List[UclCmd]) {
       override def toString = 
         "\nmodule " + id + " {\n" + 
           decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +
