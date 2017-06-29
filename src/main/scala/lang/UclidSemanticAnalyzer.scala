@@ -6,12 +6,12 @@ package lang;
 class Context {
   var procedures: Map[Identifier, UclProcedureDecl] = _
   var functions: Map[Identifier, UclFunctionSig] = _
-  var variables: Map[Identifier, UclType] = _
-  var inputs: Map[Identifier, UclType] = _
-  var outputs: Map[Identifier, UclType] = _
-  var constants: Map[Identifier, UclType] = _
+  var variables: Map[Identifier, Type] = _
+  var inputs: Map[Identifier, Type] = _
+  var outputs: Map[Identifier, Type] = _
+  var constants: Map[Identifier, Type] = _
   var specifications: Map[Identifier, Expr] = _
-  var types : Map[Identifier, UclType] = _
+  var types : Map[Identifier, Type] = _
   var next: List[UclStatement] = _
   var init: List[UclStatement] = _
   
@@ -178,7 +178,7 @@ object UclidSemanticAnalyzer {
       case UclConstantDecl(id, typ)  => checkType(typ, c)
       case UclSpecDecl(id, expr)     => 
         checkExpr(expr, c)
-        Utils.assert(transitiveType(typeOf(expr, c)._1, c).isInstanceOf[UclBoolType], 
+        Utils.assert(transitiveType(typeOf(expr, c)._1, c).isInstanceOf[BoolType], 
             "Expressions in specification declarations must have Boolean type.")
       case UclInitDecl(body)         => body.foreach{x => checkStmt(x,c)}
       case UclNextDecl(body)         => body.foreach{x => checkStmt(x,c)}
@@ -188,79 +188,79 @@ object UclidSemanticAnalyzer {
   /* 
    * Replaces type synonyms until only base types appear
    */
-  def transitiveType(typ: UclType, c: Context) : UclType = {
+  def transitiveType(typ: Type, c: Context) : Type = {
     val externalDecls : List[Identifier] = c.externalDecls()
-    if (typ.isInstanceOf[UclEnumType]) {
+    if (typ.isInstanceOf[EnumType]) {
       return typ
-    } else if (typ.isInstanceOf[UclRecordType]) {
-      val t = typ.asInstanceOf[UclRecordType]
-      return UclRecordType(t.fields.map(i => (i._1, transitiveType(i._2,c))))
-    } else if (typ.isInstanceOf[UclMapType]) {
-      val t = typ.asInstanceOf[UclMapType]
-      return UclMapType(t.inTypes.map(i => transitiveType(i,c)), transitiveType(t.outType,c))
-    } else if (typ.isInstanceOf[UclArrayType]) {
-      val t = typ.asInstanceOf[UclArrayType]
-      return UclArrayType(t.inTypes.map(i => transitiveType(i,c)), 
+    } else if (typ.isInstanceOf[RecordType]) {
+      val t = typ.asInstanceOf[RecordType]
+      return RecordType(t.fields.map(i => (i._1, transitiveType(i._2,c))))
+    } else if (typ.isInstanceOf[MapType]) {
+      val t = typ.asInstanceOf[MapType]
+      return MapType(t.inTypes.map(i => transitiveType(i,c)), transitiveType(t.outType,c))
+    } else if (typ.isInstanceOf[ArrayType]) {
+      val t = typ.asInstanceOf[ArrayType]
+      return ArrayType(t.inTypes.map(i => transitiveType(i,c)), 
           transitiveType(t.outType,c))
-    } else if (typ.isInstanceOf[UclSynonymType]) {
-      val t = typ.asInstanceOf[UclSynonymType]
+    } else if (typ.isInstanceOf[SynonymType]) {
+      val t = typ.asInstanceOf[SynonymType]
       return transitiveType(c.types(t.id),c)
     } else { return typ }
   }
   
-  def checkType(typ: UclType, c: Context) : Unit = {
+  def checkType(typ: Type, c: Context) : Unit = {
     val externalDecls : List[Identifier] = c.externalDecls()
-    if (typ.isInstanceOf[UclEnumType]) {
-      typ.asInstanceOf[UclEnumType].ids.foreach { i => 
+    if (typ.isInstanceOf[EnumType]) {
+      typ.asInstanceOf[EnumType].ids.foreach { i => 
         Utils.assert(Utils.existsNone(externalDecls, i), "Enum " + typ + " has a redeclaration")
       }
-    } else if (typ.isInstanceOf[UclRecordType]) {
-      val t = typ.asInstanceOf[UclRecordType]
+    } else if (typ.isInstanceOf[RecordType]) {
+      val t = typ.asInstanceOf[RecordType]
       t.fields.foreach { i => 
         //assert no maps
-        Utils.assert(!(transitiveType(i._2,c).isInstanceOf[UclMapType] || 
-            transitiveType(i._2,c).isInstanceOf[UclArrayType]), 
+        Utils.assert(!(transitiveType(i._2,c).isInstanceOf[MapType] || 
+            transitiveType(i._2,c).isInstanceOf[ArrayType]), 
             "Records cannot contain maps or arrays")
         checkType(i._2, c)
       }
-    } else if (typ.isInstanceOf[UclMapType]) {
-      typ.asInstanceOf[UclMapType].inTypes.foreach { i => 
-        Utils.assert(!(transitiveType(i,c).isInstanceOf[UclMapType]), 
+    } else if (typ.isInstanceOf[MapType]) {
+      typ.asInstanceOf[MapType].inTypes.foreach { i => 
+        Utils.assert(!(transitiveType(i,c).isInstanceOf[MapType]), 
             "Map types cannot be indexed by maps: " + typ);
         checkType(i,c) 
         }
-      Utils.assert(!(transitiveType(typ.asInstanceOf[UclMapType].outType,c).isInstanceOf[UclMapType]), 
+      Utils.assert(!(transitiveType(typ.asInstanceOf[MapType].outType,c).isInstanceOf[MapType]), 
           "Map types cannot produce maps: " + typ)
-      checkType(typ.asInstanceOf[UclMapType].outType, c)
-    } else if (typ.isInstanceOf[UclArrayType]) {
-      typ.asInstanceOf[UclArrayType].inTypes.foreach { i => 
-        Utils.assert(!(transitiveType(i,c).isInstanceOf[UclArrayType]), "Array types cannot be indexed by arrays: " + typ);
+      checkType(typ.asInstanceOf[MapType].outType, c)
+    } else if (typ.isInstanceOf[ArrayType]) {
+      typ.asInstanceOf[ArrayType].inTypes.foreach { i => 
+        Utils.assert(!(transitiveType(i,c).isInstanceOf[ArrayType]), "Array types cannot be indexed by arrays: " + typ);
         checkType(i,c) 
         }
-      Utils.assert(!(transitiveType(typ.asInstanceOf[UclArrayType].outType,c).isInstanceOf[UclArrayType]), 
+      Utils.assert(!(transitiveType(typ.asInstanceOf[ArrayType].outType,c).isInstanceOf[ArrayType]), 
           "Array types cannot produce arrays: " + typ)
-      checkType(typ.asInstanceOf[UclArrayType].outType, c)
-    } else if (typ.isInstanceOf[UclSynonymType]) {
-      Utils.assert(c.types.keys.exists { x => x.value == typ.asInstanceOf[UclSynonymType].id.value }, 
+      checkType(typ.asInstanceOf[ArrayType].outType, c)
+    } else if (typ.isInstanceOf[SynonymType]) {
+      Utils.assert(c.types.keys.exists { x => x.value == typ.asInstanceOf[SynonymType].id.value }, 
           "Synonym Type " + typ + " does not exist.")
     }
   }
 
-  def typeOfLHS(lhs: UclLhs, c: Context) : UclType = {
-    var intermediateType : UclType = (c.outputs ++ c.variables)(lhs.id)
+  def typeOfLHS(lhs: UclLhs, c: Context) : Type = {
+    var intermediateType : Type = (c.outputs ++ c.variables)(lhs.id)
     lhs.arraySelect match {
       case Some(as) => 
-        Utils.assert(transitiveType(intermediateType,c).isInstanceOf[UclArrayType],
+        Utils.assert(transitiveType(intermediateType,c).isInstanceOf[ArrayType],
             "Cannot use select on non-array " + lhs.id)
-        intermediateType = transitiveType(intermediateType,c).asInstanceOf[UclArrayType].outType
+        intermediateType = transitiveType(intermediateType,c).asInstanceOf[ArrayType].outType
       case None => ()
     }
     lhs.recordSelect match {
       case Some(rs) => 
-        Utils.assert(transitiveType(intermediateType,c).isInstanceOf[UclRecordType], 
+        Utils.assert(transitiveType(intermediateType,c).isInstanceOf[RecordType], 
             "Expected record type: " + intermediateType)
         rs.foreach { field =>
-          transitiveType(intermediateType,c).asInstanceOf[UclRecordType].fields.find(i => i._1.value == field.value) 
+          transitiveType(intermediateType,c).asInstanceOf[RecordType].fields.find(i => i._1.value == field.value) 
               match { case Some(field_type) => intermediateType = field_type._2
                       case None => Utils.assert(false, "Should not get here") }
         }
@@ -276,19 +276,19 @@ object UclidSemanticAnalyzer {
     lhs.arraySelect match {
       case Some(index) => 
         //assert that lhs.id is a map or array
-        Utils.assert(intermediateType.isInstanceOf[UclArrayType],
+        Utils.assert(intermediateType.isInstanceOf[ArrayType],
             "Cannot use select on non-array " + lhs.id)
-        intermediateType = transitiveType(intermediateType.asInstanceOf[UclArrayType].outType,c)
+        intermediateType = transitiveType(intermediateType.asInstanceOf[ArrayType].outType,c)
         index.foreach { x => checkExpr(x,c) }
       case None => ()
     }
     lhs.recordSelect match {
       case Some(rs) => 
-        Utils.assert(intermediateType.isInstanceOf[UclRecordType], "Expected record type: " + intermediateType)
+        Utils.assert(intermediateType.isInstanceOf[RecordType], "Expected record type: " + intermediateType)
         rs.foreach { field => 
-          Utils.assert(intermediateType.asInstanceOf[UclRecordType].fields.
+          Utils.assert(intermediateType.asInstanceOf[RecordType].fields.
               exists { i => i._1.value == field.value }, "Field " + field + " not found")
-          intermediateType.asInstanceOf[UclRecordType].fields.find(i => i._1.value == field.value) 
+          intermediateType.asInstanceOf[RecordType].fields.find(i => i._1.value == field.value) 
               match { case Some(y) => intermediateType = transitiveType(y._2,c)
                       case None => Utils.assert(false, "Should not get here") }
         }
@@ -296,7 +296,7 @@ object UclidSemanticAnalyzer {
     }
   }
   
-  def assertNoTemporalType(t: (UclType, Boolean), e: Expr) : Unit = 
+  def assertNoTemporalType(t: (Type, Boolean), e: Expr) : Unit = 
     Utils.assert(!t._2, "No temporal operators allowed in expression " + e)
   
   def checkStmt(s: UclStatement, c: Context) : Unit = {
@@ -321,19 +321,19 @@ object UclidSemanticAnalyzer {
         checkExpr(e,c); 
         val eType = typeOf(e,c)
         assertNoTemporalType(eType,e)
-        Utils.assert(transitiveType(eType._1,c) == UclBoolType(), 
+        Utils.assert(transitiveType(eType._1,c) == BoolType(), 
             "Conditionals in if statements must have boolean type.");
         (t ++ f).foreach { x => checkStmt(x,c) };
       case UclForStmt(id,_,body) => 
         Utils.assert(!(externalDecls.exists { x => x.value == id.value }), 
             "For Loop counter " + id + " redeclared");
         var c2: Context = c.copyContext();
-        c2.inputs = c.inputs ++ Map(id -> UclIntType());
+        c2.inputs = c.inputs ++ Map(id -> IntType());
         body.foreach{x => checkStmt(x,c2)}
       case UclCaseStmt(body) => body.foreach { x =>
         checkExpr(x._1,c);
         val xType = typeOf(x._1,c)
-        Utils.assert(transitiveType(xType._1,c) == UclBoolType() && !xType._2, 
+        Utils.assert(transitiveType(xType._1,c) == BoolType() && !xType._2, 
             "Expected boolean conditional within case statement guard");
         x._2.foreach { y => checkStmt(y,c) } 
         }
@@ -358,22 +358,22 @@ object UclidSemanticAnalyzer {
   /**
    * Returns the type and the fact whether the expression contains a temporal operator.
    */
-  def typeOf(e: Expr, c: Context) : (UclType, Boolean) = {
-    def assertBoolType(t: UclType) : Unit = {
-      Utils.assert(transitiveType(t,c) == UclBoolType() || t == UclTemporalType(), 
+  def typeOf(e: Expr, c: Context) : (Type, Boolean) = {
+    def assertBoolType(t: Type) : Unit = {
+      Utils.assert(transitiveType(t,c) == BoolType() || t == TemporalType(), 
           "Expected expression " + t + " to have type Bool (or be a temporal formula).")
     }
-    def typeOfBinaryBooleanOperator (l: Expr, r: Expr) : (UclType, Boolean) = {
+    def typeOfBinaryBooleanOperator (l: Expr, r: Expr) : (Type, Boolean) = {
         val (typeL, tempL) = typeOf(l,c)
         assertBoolType(typeL)
         val (typeR, tempR) = typeOf(r,c)
         assertBoolType(typeR)
-        return (UclBoolType(), tempL || tempR)
+        return (BoolType(), tempL || tempR)
     }
-    def typeOfUnaryBooleanOperator(e: Expr) : (UclType, Boolean) = {
+    def typeOfUnaryBooleanOperator(e: Expr) : (Type, Boolean) = {
       val (typeE, tempE) = typeOf(e,c)
       assertBoolType(typeE)
-      return (UclBoolType(), tempE)
+      return (BoolType(), tempE)
     }
     
     e match {
@@ -390,28 +390,28 @@ object UclidSemanticAnalyzer {
           case LTOp() | LEOp() | GTOp() | GEOp() => {
             Utils.assert(types.size == 2, "Expected two arguments to comparison operators.")
             Utils.assert(types.forall(_._1.isNumeric), "Arguments to comparison operators must be numeric.")
-            (UclBoolType(), temporalArgs)
+            (BoolType(), temporalArgs)
           }
           case ConjunctionOp() | DisjunctionOp() | IffOp() | ImplicationOp() => {
             Utils.assert(types.size == 2, "Expected two arguments to Boolean operators.")
-            Utils.assert(types(0) == UclBoolType(), "First operand to Boolean operator must be of Boolean type.")
-            Utils.assert(types(1) == UclBoolType(), "Second operand to Boolean operator must be of Boolean type.")
-            (UclBoolType(), temporalArgs)
+            Utils.assert(types(0) == BoolType(), "First operand to Boolean operator must be of Boolean type.")
+            Utils.assert(types(1) == BoolType(), "Second operand to Boolean operator must be of Boolean type.")
+            (BoolType(), temporalArgs)
           }
           case EqualityOp() | InequalityOp() => {
             Utils.assert(types.size == 2, "Expected two arguments to comparison operators.")
             Utils.assert(types(0) == types(1), "Operands to equality/inequality must be of the same type.")
-            (UclBoolType(), temporalArgs)
+            (BoolType(), temporalArgs)
           }
           case UntilTemporalOp() | WUntilTemporalOp() | ReleaseTemporalOp() => {
             Utils.assert(types.size == 2, "Expected two operand to temporal operator: " + op)
             Utils.assert(types.forall((t) => t._1.isTemporal || t._1.isBool), "Operands to temporal operator " + op + " must be Boolean or temporal.")
-            (UclTemporalType(), true)
+            (TemporalType(), true)
           }
           case FinallyTemporalOp() | GloballyTemporalOp() | NextTemporalOp() => {
             Utils.assert(types.size == 1, "Expected one operand to temporal operator: " + op)
             Utils.assert(types.forall((t) => t._1.isTemporal || t._1.isBool), "Operand to temporal operator " + op + " must be Boolean or temporal.")
-            (UclTemporalType(), true)
+            (TemporalType(), true)
           }
           case _ => {
             throw new Utils.UnimplementedException("Operator not implemented yet!")
@@ -420,33 +420,33 @@ object UclidSemanticAnalyzer {
       case Record(values) => 
         val valTypes = values.map(typeOf(_,c))
         val temporal = valTypes.exists(_._2)
-        return (UclRecordType.getTuple(valTypes.map(_._1)), temporal)
+        return (TupleType(valTypes.map(_._1)), temporal)
       case UclArraySelectOperation(a,index) =>
         val (typ,temporal) = typeOf(a,c)
         Utils.assert(!temporal, "Array types may not have temporal subformulas")
-        Utils.assert(transitiveType(typ,c).isInstanceOf[UclArrayType],
+        Utils.assert(transitiveType(typ,c).isInstanceOf[ArrayType],
             "expected array type: " + e)
-        Utils.assert((typ.asInstanceOf[UclArrayType].inTypes zip index).
+        Utils.assert((typ.asInstanceOf[ArrayType].inTypes zip index).
             forall { x => x._1 == typeOf(x._2,c)._1 }, "Array Select operand type mismatch: " + e)
-        return (typ.asInstanceOf[UclArrayType].outType, false) //select returns the range type
+        return (typ.asInstanceOf[ArrayType].outType, false) //select returns the range type
       case UclArrayStoreOperation(a,index,value) =>
         val (typ,temporal) = typeOf(a,c)
         Utils.assert(!temporal, "Array types may not have temporal subformulas")
-        Utils.assert(transitiveType(typ,c).isInstanceOf[UclArrayType], "expected array type: " + e)
-        Utils.assert((typ.asInstanceOf[UclArrayType].inTypes zip index).
+        Utils.assert(transitiveType(typ,c).isInstanceOf[ArrayType], "expected array type: " + e)
+        Utils.assert((typ.asInstanceOf[ArrayType].inTypes zip index).
             forall { x => x._1 == typeOf(x._2,c)._1 }, "Array Store operand type mismatch: " + e)
-        Utils.assert(typ.asInstanceOf[UclArrayType].outType == typeOf(value,c)._1, 
+        Utils.assert(typ.asInstanceOf[ArrayType].outType == typeOf(value,c)._1, 
             "Array Store value type mismatch")
         return (typ, false) //store returns the new array
       case UclFuncApplication(f,args) =>
         val (typ,temporal) = typeOf(f,c)
         Utils.assert(!temporal, "Array types may not have temporal subformulas")
-        Utils.assert(transitiveType(typ,c).isInstanceOf[UclMapType],"Expected Map Type " + e);
-        Utils.assert((typ.asInstanceOf[UclMapType].inTypes.size == args.size), 
+        Utils.assert(transitiveType(typ,c).isInstanceOf[MapType],"Expected Map Type " + e);
+        Utils.assert((typ.asInstanceOf[MapType].inTypes.size == args.size), 
           "Function application has bad number of arguments: " + e);
-        Utils.assert((typ.asInstanceOf[UclMapType].inTypes zip args).forall{i => i._1 == typeOf(i._2,c)._1}, 
+        Utils.assert((typ.asInstanceOf[MapType].inTypes zip args).forall{i => i._1 == typeOf(i._2,c)._1}, 
           "Function application has bad types of arguments: " + e)
-        return (typ.asInstanceOf[UclMapType].outType, false)
+        return (typ.asInstanceOf[MapType].outType, false)
       case UclITE(cond,t,f) =>
         val condType = typeOf (cond,c)
         assertBoolType(condType._1);
@@ -458,16 +458,16 @@ object UclidSemanticAnalyzer {
       case UclLambda(ids,le) =>
         var c2: Context = c.copyContext()
         c2.inputs = c.inputs ++ (ids.map(i => i._1 -> i._2).toMap)
-        Utils.assert(ids.forall { i => transitiveType(i._2,c) == UclBoolType() || 
-          transitiveType(i._2,c) == UclIntType() }, 
+        Utils.assert(ids.forall { i => transitiveType(i._2,c) == BoolType() || 
+          transitiveType(i._2,c) == IntType() }, 
             "Cannot construct Lambda expressions of non-primitive types: " + le)
         val t = typeOf(le,c2)
         Utils.assert(!t._2, "What do you need a Lambda expression with temporal type for!?")
-        return (UclMapType(ids.map(i => i._2), t._1), false) //Lambda expr returns a map type
+        return (MapType(ids.map(i => i._2), t._1), false) //Lambda expr returns a map type
       case Identifier(id) => ((c.constants ++ c.variables ++ c.inputs ++ c.outputs)(Identifier(id)), false)
-      case IntLit(n) => (UclIntType(), false)
-      case BoolLit(b) => (UclBoolType(), false)
-      case BitVectorLit(bv, w) => (UclBitVectorType(w), false)
+      case IntLit(n) => (IntType(), false)
+      case BoolLit(b) => (BoolType(), false)
+      case BitVectorLit(bv, w) => (BitVectorType(w), false)
     }    
   }
   
@@ -482,7 +482,7 @@ object UclidSemanticAnalyzer {
        case UclITE(cond,t,f) => 
          checkExpr(cond,c) 
          val tTypeCond = transitiveType(typeOf(cond, c)._1, c)
-         Utils.assert(tTypeCond.isInstanceOf[UclBoolType], 
+         Utils.assert(tTypeCond.isInstanceOf[BoolType], 
              "Conditional must have boolean type in expression " + e + " but has type " + tTypeCond)
          checkExpr(t,c) 
          checkExpr(f,c)
@@ -490,8 +490,8 @@ object UclidSemanticAnalyzer {
              "The branches in the ITE expression " + e + " have different types.")
        case UclLambda(ids,le) => ids.foreach { 
            x => checkType(x._2,c);
-           Utils.assert(transitiveType(x._2,c).isInstanceOf[UclIntType] || 
-               transitiveType(x._2,c).isInstanceOf[UclBoolType],
+           Utils.assert(transitiveType(x._2,c).isInstanceOf[IntType] || 
+               transitiveType(x._2,c).isInstanceOf[BoolType],
              "Lambda indexed by non-primitive type in expression " + e);
          }
          ids.foreach{ x => Utils.assert((externalDecls ++ ids.map(i => i._1)).

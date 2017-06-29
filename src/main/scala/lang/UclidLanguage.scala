@@ -77,7 +77,7 @@ package uclid {
       override def toString = "[" + high + ":" + low + "]"
     }
     case class ConcatOp() extends Operator { override def toString = "++" }
-    case class UclRecordSelectOperator(id: Identifier) extends Operator {
+    case class RecordSelect(id: Identifier) extends Operator {
       override def toString = "." + id
     }
     
@@ -126,7 +126,7 @@ package uclid {
     case class UclITE(e: Expr, t: Expr, f: Expr) extends Expr {
       override def toString = "ITE(" + e + "," + t + "," + f + ")"
     }
-    case class UclLambda(ids: List[(Identifier,UclType)], e: Expr) extends Expr {
+    case class UclLambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
       override def toString = "Lambda(" + ids + "). " + e
     }
     
@@ -140,7 +140,7 @@ package uclid {
       override def toString = id.toString + t1 + t2
     }
     
-    sealed abstract class UclType {
+    sealed abstract class Type {
       def isBool = false
       def isNumeric = false
       def isTemporal = false
@@ -149,14 +149,14 @@ package uclid {
     /** 
      *  Numeric types base class. 
      */
-    sealed abstract class UclNumericType extends UclType {
+    sealed abstract class NumericType extends Type {
       override def isNumeric = true
     }
     
     /**
      * Temporal types.
      */
-    case class UclTemporalType() extends UclType {
+    case class TemporalType() extends Type {
       override def toString = "temporal"
       override def isTemporal = true
     }
@@ -164,70 +164,48 @@ package uclid {
     /**
      * Regular types.
      */
-    case class UclBoolType() extends UclType {
+    case class BoolType() extends Type {
       override def toString = "bool"
       override def isBool = true
     }
-    case class UclIntType() extends UclNumericType { 
+    case class IntType() extends NumericType { 
       override def toString = "int"
     }
-    case class UclBitVectorType(width: Int) extends UclNumericType {
+    case class BitVectorType(width: Int) extends NumericType {
       override def toString = "bv" + width.toString
     }
-    case class UclEnumType(ids: List[Identifier]) extends UclType {
+    case class EnumType(ids: List[Identifier]) extends Type {
       override def toString = "enum {" + 
         ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i} + "}"
-      override def equals(other: Any) = other match {
-          case that: UclEnumType =>
-            if (that.ids.size == this.ids.size) {
-              (that.ids zip this.ids).forall(i => i._1.value == i._2.value)
-            } else { false }
-          case _ => false
-        }
     }
-    case class UclRecordType(fields: List[(Identifier,UclType)]) extends UclType {
-      override def toString = "record {" + 
-        fields.tail.foldLeft(fields.head.toString) {(acc,i) => acc + "," + i} + "}"
-      override def equals(other: Any) = other match {
-          case that: UclRecordType =>
-            if (that.fields.size == this.fields.size) {
-              (that.fields zip this.fields).forall(i => i._1._1.value == i._2._1.value && i._1._2 == i._2._2)
-            } else { false }
-          case _ => false
-        }
+    case class TupleType(fieldTypes: List[Type]) extends Type {
+      override def toString = "tuple {" + Utils.join(fieldTypes.map(_.toString), ", ") + "}" 
     }
-    object UclRecordType {
-      def getTuple(types: List[UclType]) : UclRecordType = {
-        UclRecordType(((Stream from 1).map((i) => Identifier("_" + i.toString))).zip(types).toList)
+    case class RecordType(fields: List[(Identifier,Type)]) extends Type {
+      Utils.assert(Utils.allUnique(fields.map(_._1)), "Record field names must be unique.")
+      def fieldType(fieldName: Identifier) : Option[Type] = {
+        fields.find((f) => f._1 == fieldName).flatMap((fp) => Some(fp._2))
       }
+      override def toString = "record {" + Utils.join(fields.map((f) => f._1.toString + " : " + f._2.toString), ", ")  + "}"
     }
-    //class UclBitvectorType extends UclType
-    case class UclMapType(inTypes: List[UclType], outType: UclType) extends UclType {
+    case class MapType(inTypes: List[Type], outType: Type) extends Type {
       override def toString = "map [" + inTypes.tail.fold(inTypes.head.toString)
       { (acc,i) => acc + "," + i } + "] " + outType
       override def equals(other: Any) = other match {
-          case that: UclMapType =>
+          case that: MapType =>
             if (that.inTypes.size == this.inTypes.size) {
               (that.outType == this.outType) && (that.inTypes zip this.inTypes).forall(i => i._1 == i._2)
             } else { false }
           case _ => false
         }
     }
-    case class UclArrayType(inTypes: List[UclType], outType: UclType) extends UclType {
-      override def toString = "array [" + inTypes.tail.fold(inTypes.head.toString)
-      { (acc,i) => acc + "," + i } + "] " + outType
-      override def equals(other: Any) = other match {
-          case that: UclArrayType =>
-            if (that.inTypes.size == this.inTypes.size) {
-              (that.outType == this.outType) && (that.inTypes zip this.inTypes).forall(i => i._1 == i._2)
-            } else { false }
-          case _ => false
-        }
+    case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
+      override def toString = "array [" + Utils.join(inTypes.map(_.toString), ", ") + "]" + outType.toString
     }
-    case class UclSynonymType(id: Identifier /* FIXME: needs another argument? */) extends UclType {
+    case class SynonymType(id: Identifier /* FIXME: needs another argument? */) extends Type {
       override def toString = id.toString
       override def equals(other: Any) = other match {
-        case that: UclSynonymType => that.id.value == this.id.value
+        case that: SynonymType => that.id.value == this.id.value
         case _ => false
       }
     }
@@ -270,19 +248,19 @@ package uclid {
         Utils.join(args.map(_.toString), ", ") + ")"
     }
     
-    case class UclLocalVarDecl(id: Identifier, typ: UclType) {
+    case class UclLocalVarDecl(id: Identifier, typ: Type) {
       override def toString = "localvar " + id + ": " + typ + ";"
     }
     
-    case class UclProcedureSig(inParams: List[(Identifier,UclType)], outParams: List[(Identifier,UclType)]) {
-      type T = (Identifier,UclType)
+    case class UclProcedureSig(inParams: List[(Identifier,Type)], outParams: List[(Identifier,Type)]) {
+      type T = (Identifier,Type)
       val printfn = {(a: T) => a._1.toString + ": " + a._2}
       override def toString =
         "(" + Utils.join(inParams.map(printfn(_)), ", ") + ")" +
         " returns " + "(" + Utils.join(outParams.map(printfn(_)), ", ") + ")"
     }
-    case class UclFunctionSig(args: List[(Identifier,UclType)], retType: UclType) {
-      type T = (Identifier,UclType)
+    case class UclFunctionSig(args: List[(Identifier,Type)], retType: Type) {
+      type T = (Identifier,Type)
       val printfn = {(a: T) => a._1.toString + ": " + a._2}
       override def toString = "(" + Utils.join(args.map(printfn(_)), ", ") + ")" +
         ": " + retType
@@ -297,19 +275,19 @@ package uclid {
         } + 
         PrettyPrinter.indent(1) + "}"
     }
-    case class UclTypeDecl(id: Identifier, typ: UclType) extends UclDecl {
+    case class UclTypeDecl(id: Identifier, typ: Type) extends UclDecl {
       override def toString = "type " + id + " = " + typ 
     }
-    case class UclStateVarDecl(id: Identifier, typ: UclType) extends UclDecl {
+    case class UclStateVarDecl(id: Identifier, typ: Type) extends UclDecl {
       override def toString = "var " + id + ": " + typ + ";"
     }
-    case class UclInputVarDecl(id: Identifier, typ: UclType) extends UclDecl {
+    case class UclInputVarDecl(id: Identifier, typ: Type) extends UclDecl {
       override def toString = "input " + id + ": " + typ + ";"
     }
-    case class UclOutputVarDecl(id: Identifier, typ: UclType) extends UclDecl {
+    case class UclOutputVarDecl(id: Identifier, typ: Type) extends UclDecl {
       override def toString = "output " + id + ": " + typ + ";"
     }
-    case class UclConstantDecl(id: Identifier, typ: UclType) extends UclDecl {
+    case class UclConstantDecl(id: Identifier, typ: Type) extends UclDecl {
       override def toString = "constant " + id + ": " + typ + ";"
     }
     case class UclFunctionDecl(id: Identifier, sig: UclFunctionSig)
