@@ -77,7 +77,7 @@ package uclid {
       for (srcFile <- srcFiles) {
         println("Input File: " + srcFile)
         val text = scala.io.Source.fromFile(srcFile).mkString
-        val fileModules = UclidParser.parseModel(text)
+        val fileModules = UclidParser.parseModel(text).map(Typechecker.checkAndRewrite(_))
         for(module <- fileModules) {
           UclidSemanticAnalyzer.checkSemantics(module)
         }
@@ -95,11 +95,6 @@ package uclid {
       //Control module
       println("Found main module: " + module.id)
       println(module.toString)
-      println("Polymorphic operators: " + UclidSemanticAnalyzer.hasPolymorphicOperators(module))
-      val module_p = Typechecker.checkAndRewrite(module)
-      println(module_p.toString)
-      println("Polymorphic operators: " + UclidSemanticAnalyzer.hasPolymorphicOperators(module_p))
-      /*
       val asserts = UclidSymbolicSimulator.simulate_steps(module,2)._2 //simulate for 2 steps
       var z3Interface = smt.Z3Interface.newInterface()
       asserts.foreach { x => 
@@ -114,7 +109,6 @@ package uclid {
           case None        => println("Assertion INDETERMINATE.")
         }
       }
-      */
       //smt.SMTTester.testInts()
     }
   }

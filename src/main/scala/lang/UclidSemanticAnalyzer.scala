@@ -389,13 +389,18 @@ object UclidSemanticAnalyzer {
         lazy val types = es.map { e => typeOf (e,c) }
         val temporalArgs = types.exists { x => x._2}
         return op match {
-          case AddOp() | SubOp() | MulOp() => {
+          case AddOp() | SubOp() | MulOp() | LTOp() | LEOp() | GTOp() | GEOp() => 
+            throw new Utils.RuntimeError("Polymorphic operators not expected here.")
+          case IntAddOp() | IntSubOp() | IntMulOp() | BVAddOp(_) | BVSubOp(_) | BVMulOp(_) => {
             Utils.assert(types.size == 2, "Expected two arguments to arithmetic operators.")
             Utils.assert(types(0) == types(1), "Operands to arithmetic operators must be of the same type.")
             (types.head._1, temporalArgs)
           }
-          case LTOp() | LEOp() | GTOp() | GEOp() => {
+          // FIXME: Remove these polymorphic operators.
+          case IntLTOp() | IntLEOp() | IntGTOp() | IntGEOp() |
+               BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) => {
             Utils.assert(types.size == 2, "Expected two arguments to comparison operators.")
+            Utils.assert(types(0) == types(1), "Operands to comparison operators must be of the same type.")
             Utils.assert(types.forall(_._1.isNumeric), "Arguments to comparison operators must be numeric.")
             (BoolType(), temporalArgs)
           }

@@ -102,26 +102,34 @@ package uclid {
       }
       
       /** Convert an OperatorApplication into a Z3 AST.  */
-      def opToZ3(op : Operator, args : List[z3.AST]) : Option[z3.Expr]  = {
+      def opToZ3(op : Operator, args : List[z3.AST]) : z3.Expr  = {
         // These values need to be lazy so that they are only evaluated when the appropriate ctx.mk* functions
         // are called. If they were eager, the casts would fail at runtime.
         lazy val arithArgs = typecastAST[z3.ArithExpr](args)
         lazy val boolArgs = typecastAST[z3.BoolExpr](args)
+        lazy val bvArgs = typecastAST[z3.BitVecExpr](args)
         op match {
-          case IntLTOp       => Some(ctx.mkLt (arithArgs(0), arithArgs(1)))
-          case IntLEOp       => Some(ctx.mkLe (arithArgs(0), arithArgs(1)))
-          case IntGTOp       => Some(ctx.mkGt (arithArgs(0), arithArgs(1)))
-          case IntGEOp       => Some(ctx.mkGe (arithArgs(0), arithArgs(1)))
-          case IntAddOp      => Some(ctx.mkAdd (arithArgs : _*))
-          case IntSubOp      => Some(ctx.mkSub (arithArgs: _*))
-          case IntMulOp      => Some(ctx.mkMul (arithArgs : _*))
-          case NegationOp    => Some(ctx.mkNot (boolArgs(0)))
-          case IffOp         => Some(ctx.mkIff (boolArgs(0), boolArgs(1)))
-          case ImplicationOp => Some(ctx.mkImplies (boolArgs(0), boolArgs(1)))
-          case EqualityOp    => Some(ctx.mkEq (boolArgs(0), boolArgs(1)))
-          case ConjunctionOp => Some(ctx.mkAnd (boolArgs : _*))
-          case DisjunctionOp => Some(ctx.mkOr (boolArgs : _*))
-          case _             => None
+          case IntLTOp       => ctx.mkLt (arithArgs(0), arithArgs(1))
+          case IntLEOp       => ctx.mkLe (arithArgs(0), arithArgs(1))
+          case IntGTOp       => ctx.mkGt (arithArgs(0), arithArgs(1))
+          case IntGEOp       => ctx.mkGe (arithArgs(0), arithArgs(1))
+          case IntAddOp      => ctx.mkAdd (arithArgs : _*)
+          case IntSubOp      => ctx.mkSub (arithArgs: _*)
+          case IntMulOp      => ctx.mkMul (arithArgs : _*)
+          case BVLTOp(_)     => ctx.mkBVSLT(bvArgs(0), bvArgs(1))
+          case BVLEOp(_)     => ctx.mkBVSLE(bvArgs(0), bvArgs(1))
+          case BVGTOp(_)     => ctx.mkBVSGT(bvArgs(0), bvArgs(1))
+          case BVGEOp(_)     => ctx.mkBVSGE(bvArgs(0), bvArgs(1))
+          case BVAddOp(_)    => ctx.mkBVAdd(bvArgs(0), bvArgs(1))
+          case BVSubOp(_)    => ctx.mkBVSub(bvArgs(0), bvArgs(1))
+          case BVMulOp(_)    => ctx.mkBVMul(bvArgs(0), bvArgs(1))
+          case NegationOp    => ctx.mkNot (boolArgs(0))
+          case IffOp         => ctx.mkIff (boolArgs(0), boolArgs(1))
+          case ImplicationOp => ctx.mkImplies (boolArgs(0), boolArgs(1))
+          case EqualityOp    => ctx.mkEq (boolArgs(0), boolArgs(1))
+          case ConjunctionOp => ctx.mkAnd (boolArgs : _*)
+          case DisjunctionOp => ctx.mkOr (boolArgs : _*)
+          case _             => throw new Utils.UnimplementedException("Operator not yet implemented: " + op.toString())
         }
       }
       
@@ -131,7 +139,7 @@ package uclid {
           case Symbol(id, typ) => 
             symbolToZ3(Symbol(id, typ))
           case OperatorApplication(op,operands) =>
-            opToZ3(op, operands.map((arg) => exprToZ3(arg))).get
+            opToZ3(op, operands.map((arg) => exprToZ3(arg)))
           case ArraySelectOperation(e, index) => {
             val arrayType = e.typ.asInstanceOf[ArrayType]
             val arrayIndexType = arrayType.inTypes

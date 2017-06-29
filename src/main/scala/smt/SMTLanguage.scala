@@ -102,18 +102,32 @@ package uclid {
     abstract class IntResultOp extends Operator {
       override def resultType(args: List[Expr]) : Type = { IntType.t }
       override def fixity = { PREFIX }
+      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
     }
     object IntAddOp extends IntResultOp { 
       override def toString = "+" 
-      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
     }
     object IntSubOp extends IntResultOp { 
       override def toString = "-" 
-      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
     }
     object IntMulOp extends IntResultOp { 
       override def toString = "*" 
-      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
+    }
+    
+    // Operators that return bitvectors.
+    abstract class BVResultOp(width : Int) extends Operator {
+      override def resultType(args: List[Expr]) : Type = { BitVectorType.t(width) }
+      override def fixity = PREFIX
+      override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(width)) }
+    }
+    case class BVAddOp(w : Int) extends BVResultOp(w) {
+      override def toString = "bvadd"
+    }
+    case class BVSubOp(w : Int) extends BVResultOp(w) {
+      override def toString = "bvsub"
+    }
+    case class BVMulOp(w : Int) extends BVResultOp(w) {
+      override def toString = "bvmul"
     }
     
     // Operators that return Booleans.
@@ -154,6 +168,7 @@ package uclid {
       override def toString = "distinct"
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
     }
+    // Integer comparison.
     object IntLTOp extends BoolResultOp { 
       override def toString = "<"
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
@@ -174,6 +189,27 @@ package uclid {
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
       override def fixity = PREFIX
     }
+    // Bitvector comparison.
+    case class BVLTOp(w : Int) extends BoolResultOp { 
+      override def toString = "bvslt"
+      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
+      override def fixity = PREFIX
+    }
+    case class BVLEOp(w : Int) extends BoolResultOp { 
+      override def toString = "bvsle" 
+      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
+      override def fixity = PREFIX
+    }
+    case class BVGTOp(w : Int) extends BoolResultOp { 
+      override def toString = "bvugt" 
+      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
+      override def fixity = PREFIX
+    }
+    case class BVGEOp(w : Int) extends BoolResultOp { 
+      override def toString = "bvuge" 
+      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
+      override def fixity = PREFIX
+    }
     
     // Expressions
     abstract class Expr(exprType: Type) {
@@ -188,7 +224,7 @@ package uclid {
     
     case class BitVectorLit(value: BigInt, width: Int) extends Literal (BitVectorType.t(width)) {
       Utils.assert(value.bitCount + 1 <= width, "Value (" + value.toString + ") too big for BitVector of width " + width + " bits.")
-      override def toString = value.toString + "bv" + width.toString //TODO: print in hex
+      override def toString = "(_ bv" + value.toString + " " + width.toString +")"
     }
     
     case class BooleanLit(value: Boolean) extends Literal (BoolType.t) {
