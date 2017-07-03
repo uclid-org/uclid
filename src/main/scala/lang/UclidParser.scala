@@ -3,6 +3,9 @@
  */
 
 package uclid {
+
+import uclid.lang.UclDecideCmd
+
   package lang {
     import scala.util.parsing.combinator.token._
     import scala.util.parsing.combinator.syntactical._
@@ -113,6 +116,7 @@ package uclid {
       lazy val KwControl = "control"
       lazy val KwSimulate = "simulate"
       lazy val KwUnroll = "unroll"
+      lazy val KwDecide = "decide"
       
       lazy val KwDefineProp = "property"
       lazy val TemporalOpGlobally = "G"
@@ -132,7 +136,7 @@ package uclid {
         KwAssume, KwAssert, KwVar, KwLocalVar, KwHavoc, KwCall, KwIf, KwElse,
         KwCase, KwEsac, KwFor, KwIn, KwRange, KwLocalVar, KwInput, KwOutput,
         KwModule, KwType, KwEnum, KwRecord, KwSkip, KwFunction, 
-        KwInitialize, KwUnroll, KwSimulate, KwControl,
+        KwInitialize, KwUnroll, KwSimulate, KwDecide, KwControl,
         KwInit, KwNext, KwITE, KwLambda, 
         KwDefineProp, TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
         TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
@@ -333,6 +337,9 @@ package uclid {
       // control commands.
       lazy val InitializeCmd : PackratParser[UclInitializeCmd] = 
         KwInitialize <~ ";" ^^ { case _ => UclInitializeCmd() }
+    
+      lazy val DecideCmd : PackratParser[UclDecideCmd] = 
+        KwDecide <~ ";" ^^ { case _ => UclDecideCmd() }
       
       lazy val UnrollCmd : PackratParser[UclUnrollCmd] = 
         KwUnroll ~ "(" ~> Number <~ ")" ~ ";" ^^ { case num => UclUnrollCmd(num) }
@@ -341,7 +348,7 @@ package uclid {
         KwSimulate ~ "(" ~> Number <~ ")" ~ ";" ^^ { case num => UclSimulateCmd(num) }
       
       lazy val Cmd : PackratParser[UclCmd] =
-        ( InitializeCmd | UnrollCmd | SimulateCmd )
+        ( InitializeCmd | UnrollCmd | SimulateCmd | DecideCmd )
       
       lazy val BlockCmd : PackratParser[List[UclCmd]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
       
