@@ -20,7 +20,7 @@ class TypecheckingVisitor extends FoldingASTVisitor[Unit]
   var moduleConstants : List[UclConstantDecl] = List.empty
   var moduleFunctions : List[UclFunctionDecl] = List.empty
   
-  override def applyOnModule(d : TraversalDirection.T, m : Module, in : Unit) : Unit = {
+  override def applyOnModule(d : TraversalDirection.T, m : Module, in : Unit, ctx : ScopeMap) : Unit = {
     if (d == TraversalDirection.Down) {
       // FIXME: Make sure identifiers are not repeated in procedures, types, state vars, etc.
       moduleProcedures = moduleProcedures ++ (m.decls.collect({ case p : UclProcedureDecl => p }))
@@ -48,7 +48,7 @@ class TypecheckingVisitor extends FoldingASTVisitor[Unit]
     }
   }
   
-  override def applyOnProcedure(d : TraversalDirection.T, p : UclProcedureDecl, in : Unit) : Unit = {
+  override def applyOnProcedure(d : TraversalDirection.T, p : UclProcedureDecl, in : Unit, ctx : ScopeMap) : Unit = {
     if (d == TraversalDirection.Down) {
       context = p.sig.inParams.foldRight(context)((arg, ctx) => ctx + (arg._1 -> arg._2))
       context = p.sig.outParams.foldRight(context)((arg, ctx) => ctx + (arg._1 -> arg._2))
@@ -59,7 +59,7 @@ class TypecheckingVisitor extends FoldingASTVisitor[Unit]
       context = p.decls.foldRight(context)((v, ctx) => ctx - v.id)
     }
   }
-  override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : Unit) : Unit = {
+  override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : Unit, ctx : ScopeMap) : Unit = {
     typeOf(e, context)
   }
   
