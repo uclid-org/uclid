@@ -6,64 +6,15 @@ import scala.collection.immutable.{Map => ImmutableMap}
 
 class TypecheckingVisitor extends FoldingASTVisitor[Unit]
 {
-  type Context = ImmutableMap[Identifier, Type]
-  type MemoKey = (Expr, Context)
+  type MemoKey = (Expr, ScopeMap)
   type Memo = MutableMap[MemoKey, Type]
   var memo : Memo = MutableMap.empty
-  var context : Context = ImmutableMap.empty
   
-  var moduleProcedures : List[UclProcedureDecl] = List.empty
-  var moduleTypes : List[UclTypeDecl] = List.empty
-  var moduleStateVars : List[UclStateVarDecl] = List.empty
-  var moduleInputVars : List[UclInputVarDecl] = List.empty
-  var moduleOutputVars : List[UclOutputVarDecl] = List.empty
-  var moduleConstants : List[UclConstantDecl] = List.empty
-  var moduleFunctions : List[UclFunctionDecl] = List.empty
-  
-  override def applyOnModule(d : TraversalDirection.T, m : Module, in : Unit, ctx : ScopeMap) : Unit = {
-    if (d == TraversalDirection.Down) {
-      // FIXME: Make sure identifiers are not repeated in procedures, types, state vars, etc.
-      moduleProcedures = moduleProcedures ++ (m.decls.collect({ case p : UclProcedureDecl => p }))
-      moduleTypes = moduleTypes ++ (m.decls.collect({case t : UclTypeDecl => t }))
-      moduleStateVars = moduleStateVars ++ (m.decls.collect({case s : UclStateVarDecl => s }))
-      moduleInputVars = moduleInputVars ++ (m.decls.collect({case i : UclInputVarDecl => i }))
-      moduleOutputVars = moduleOutputVars ++ (m.decls.collect({case o : UclOutputVarDecl => o}))
-      moduleFunctions = moduleFunctions ++ (m.decls.collect({case f : UclFunctionDecl => f}))
-      
-      context = ImmutableMap.empty
-      context = moduleStateVars.foldRight(context)((sv, ctx) => ctx + (sv.id -> sv.typ))
-      context = moduleInputVars.foldRight(context)((iv, ctx) => ctx + (iv.id -> iv.typ))
-      context = moduleOutputVars.foldRight(context)((ov, ctx) => ctx + (ov.id -> ov.typ))
-      context = moduleConstants.foldRight(context)((c, ctx) => ctx + (c.id -> c.typ))
-      context = moduleFunctions.foldRight(context)((f, ctx) => ctx + (f.id -> f.sig.typ))
-    } else {
-      moduleProcedures = List.empty
-      moduleTypes = List.empty
-      moduleStateVars = List.empty
-      moduleInputVars = List.empty
-      moduleOutputVars = List.empty
-      moduleConstants = List.empty
-      moduleFunctions = List.empty
-      context = ImmutableMap.empty
-    }
-  }
-  
-  override def applyOnProcedure(d : TraversalDirection.T, p : UclProcedureDecl, in : Unit, ctx : ScopeMap) : Unit = {
-    if (d == TraversalDirection.Down) {
-      context = p.sig.inParams.foldRight(context)((arg, ctx) => ctx + (arg._1 -> arg._2))
-      context = p.sig.outParams.foldRight(context)((arg, ctx) => ctx + (arg._1 -> arg._2))
-      context = p.decls.foldRight(context)((v, ctx) => ctx + (v.id -> v.typ))
-    } else {
-      context = p.sig.inParams.foldRight(context)((arg, ctx) => ctx - arg._1)
-      context = p.sig.outParams.foldRight(context)((arg, ctx) => ctx - arg._1)
-      context = p.decls.foldRight(context)((v, ctx) => ctx - v.id)
-    }
-  }
   override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : Unit, ctx : ScopeMap) : Unit = {
-    typeOf(e, context)
+    typeOf(e, ctx)
   }
   
-  def typeOf(e : Expr, c : Context) : Type = {
+  def typeOf(e : Expr, c : ScopeMap) : Type = {
     def polyToInt(op : PolymorphicOperator) : IntArgOperator = {
       op match {
         case LTOp() => IntLTOp()
@@ -182,14 +133,13 @@ class TypecheckingVisitor extends FoldingASTVisitor[Unit]
     }
     
     def lambdaType(lambda : UclLambda) : Type = {
-      val lambdaCtx = lambda.ids.foldRight(c)((arg, ctx) => ctx + (arg._1 -> arg._2))
-      return MapType(lambda.ids.map(_._2), typeOf(lambda.e, lambdaCtx))
+      return MapType(lambda.ids.map(_._2), typeOf(lambda.e, c))
     }
     
     val cachedType = memo.get((e,c))
     if (cachedType.isEmpty) {
       val typ = e match {
-        case i : Identifier => (c.get(i).get)
+        case i : Identifier => (c.typeOf(i).get)
         case b : BoolLit => new BoolType()
         case i : IntLit => new IntType()
         case bv : BitVectorLit => new BitVectorType(bv.width)
