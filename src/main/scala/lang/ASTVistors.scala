@@ -7,7 +7,7 @@ object TraversalDirection extends Enumeration {
 }
 
 /* AST visitor that walks through the AST and collects information. */
-trait FoldingASTVisitor[T] {
+trait ReadOnlyPass[T] {
   def applyOnModule(d : TraversalDirection.T, module : Module, in : T, context : ScopeMap) : T = { in }
   def applyOnDecl(d : TraversalDirection.T, decl : UclDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnProcedure(d : TraversalDirection.T, proc : UclProcedureDecl, in : T, context : ScopeMap) : T = { in }
@@ -52,7 +52,7 @@ trait FoldingASTVisitor[T] {
   def applyOnCmd(d : TraversalDirection.T, cmd : UclCmd, in : T, context : ScopeMap) : T = { in }
 }
 
-class FoldingVisitor[T] (v: FoldingASTVisitor[T]) {
+class ASTAnalyzer[T] (v: ReadOnlyPass[T]) {
   def visitModule(module : Module, in : T) : T = {
     var result : T = in
     val emptyContext = new ScopeMap()
@@ -429,7 +429,7 @@ class FoldingVisitor[T] (v: FoldingASTVisitor[T]) {
 
 /* AST Visitor that rewrites and generates a new AST. */
 
-trait RewritingASTVisitor {
+trait RewritePass {
   def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = { Some(module) }
   def rewriteDecl(decl : UclDecl, ctx : ScopeMap) : Option[UclDecl] = { Some(decl) }
   def rewriteCommand(cmd : UclCmd, ctx : ScopeMap) : Option[UclCmd] = { Some(cmd) }
@@ -475,7 +475,7 @@ trait RewritingASTVisitor {
 }
 
 
-class RewritingVisitor (v: RewritingASTVisitor) {
+class ASTRewriter (v: RewritePass) {
   def visitModule(module : Module) : Option[Module] = {
     val emptyContext = new ScopeMap()
     val context = emptyContext + module

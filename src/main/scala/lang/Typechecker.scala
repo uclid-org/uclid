@@ -4,7 +4,7 @@ package lang
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.immutable.{Map => ImmutableMap}
 
-class TypecheckingVisitor extends FoldingASTVisitor[Unit]
+class TypecheckingVisitor extends ReadOnlyPass[Unit]
 {
   type MemoKey = (Expr, ScopeMap)
   type Memo = MutableMap[MemoKey, Type]
@@ -165,12 +165,12 @@ class TypecheckingVisitor extends FoldingASTVisitor[Unit]
 
 class Typechecker () {
   val typeMap = new TypecheckingVisitor()
-  val visitor = new FoldingVisitor(typeMap)
+  val visitor = new ASTAnalyzer(typeMap)
   def check(m : Module) = {
     visitor.visitModule(m, Unit)
   }
   def rewrite(m : Module) : Module = {
-    return (new RewritingVisitor(new RewritingASTVisitor {
+    return (new ASTRewriter(new RewritePass {
       override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = { 
         op match {
           case p : PolymorphicOperator => {
