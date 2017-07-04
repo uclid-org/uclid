@@ -15,7 +15,25 @@ object PrettyPrinter
   def indent(n : Int) = indentSeq * n
 }
 
-sealed abstract class Operator {
+/** Singleton that generates unique ids for AST nodes. */
+object IdGenerator {
+  type Id = Int
+  var idCounter : Id = 0
+  def newId() : Id = {
+    val id = idCounter
+    idCounter = idCounter + 1
+    return id
+  }
+}
+
+/** All elements in the AST are derived from this class.
+ *  The plan is to stick an ID into this later so that we can use the ID to store auxiliary information.
+ */
+sealed abstract class ASTNode {
+  val astNodeId = IdGenerator.newId()
+}
+
+sealed abstract class Operator extends ASTNode {
   def isInfix = false
   def isPolymorphic = false
 }
@@ -25,7 +43,6 @@ sealed abstract class InfixOperator extends Operator {
 // This is the polymorphic operator type. Typerchecker.rewrite converts these operators
 // to either the integer or bitvector versions.
 sealed abstract class PolymorphicOperator extends InfixOperator {
-  var reifiedOp : Option[Operator] = None
   override def isPolymorphic = true
 }
 case class LTOp() extends PolymorphicOperator { override def toString = "<" }
@@ -86,7 +103,7 @@ case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
 }
 
-sealed abstract class Expr
+sealed abstract class Expr extends ASTNode
 case class Identifier(value: String) extends Expr {
   override def toString = value.toString
 }
@@ -137,7 +154,9 @@ case class UclLambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
 
 case class UclLhs(id: Identifier, 
                   arraySelect: Option[List[Expr]], 
-                  recordSelect: Option[List[Identifier]]) {
+                  recordSelect: Option[List[Identifier]]) 
+     extends ASTNode
+{
   val t1 = arraySelect match 
     { case Some(as) => as.toString; case None => "" }
   val t2 = recordSelect match 
@@ -216,7 +235,7 @@ case class SynonymType(id: Identifier /* FIXME: needs another argument? */) exte
 }
 
 /** Statements **/
-sealed abstract class UclStatement
+sealed abstract class UclStatement extends ASTNode
 case class UclSkipStmt() extends UclStatement {
   override def toString = "skip;"
 }
@@ -253,11 +272,14 @@ case class UclProcedureCallStmt(id: Identifier, callLhss: List[UclLhs], args: Li
     Utils.join(args.map(_.toString), ", ") + ")"
 }
 
-case class UclLocalVarDecl(id: Identifier, typ: Type) {
+case class UclLocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
   override def toString = "localvar " + id + ": " + typ + ";"
 }
 
-case class UclProcedureSig(inParams: List[(Identifier,Type)], outParams: List[(Identifier,Type)]) {
+case class UclProcedureSig(inParams: List[(Identifier,Type)], 
+                           outParams: List[(Identifier,Type)]) 
+           extends ASTNode
+{
   type T = (Identifier,Type)
   val printfn = {(a: T) => a._1.toString + ": " + a._2}
   val typ = MapType(inParams.map(_._2), TupleType(outParams.map(_._2)))
@@ -265,7 +287,7 @@ case class UclProcedureSig(inParams: List[(Identifier,Type)], outParams: List[(I
     "(" + Utils.join(inParams.map(printfn(_)), ", ") + ")" +
     " returns " + "(" + Utils.join(outParams.map(printfn(_)), ", ") + ")"
 }
-case class UclFunctionSig(args: List[(Identifier,Type)], retType: Type) {
+case class UclFunctionSig(args: List[(Identifier,Type)], retType: Type) extends ASTNode {
   type T = (Identifier,Type)
   val typ = MapType(args.map(_._2), retType)
   val printfn = {(a: T) => a._1.toString + ": " + a._2}
@@ -273,7 +295,7 @@ case class UclFunctionSig(args: List[(Identifier,Type)], retType: Type) {
     ": " + retType
 }
 
-sealed abstract class UclDecl
+sealed abstract class UclDecl extends ASTNode
 case class UclProcedureDecl(id: Identifier, sig: UclProcedureSig, 
     decls: List[UclLocalVarDecl], body: List[UclStatement]) extends UclDecl {
   override def toString = "procedure " + id + sig +
@@ -321,7 +343,7 @@ case class UclSpecDecl(id: Identifier, expr: Expr) extends UclDecl {
   override def toString = "property " + id + ":" + expr + ";"
 }
 
-sealed abstract class UclCmd
+sealed abstract class UclCmd extends ASTNode
 case class UclInitializeCmd() extends UclCmd {
   override def toString = "initialize;"
 }
@@ -335,7 +357,7 @@ case class UclDecideCmd() extends UclCmd {
   override def toString = "decide; "
 }
 
-case class Module(id: Identifier, decls: List[UclDecl], cmds : List[UclCmd]) {
+case class Module(id: Identifier, decls: List[UclDecl], cmds : List[UclCmd]) extends ASTNode {
   override def toString = 
     "\nmodule " + id + " {\n" + 
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +

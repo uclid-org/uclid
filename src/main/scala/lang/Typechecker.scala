@@ -10,6 +10,10 @@ class TypecheckingVisitor extends FoldingASTVisitor[Unit]
   type Memo = MutableMap[MemoKey, Type]
   var memo : Memo = MutableMap.empty
   
+  type PolymorphicOpMapKey = (IdGenerator.Id, Operator)
+  type PolymorphicOpMap = MutableMap[IdGenerator.Id, Operator]
+  var polyOpMap : PolymorphicOpMap = MutableMap.empty
+  
   override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : Unit, ctx : ScopeMap) : Unit = {
     typeOf(e, ctx)
   }
@@ -46,10 +50,10 @@ class TypecheckingVisitor extends FoldingASTVisitor[Unit]
           Utils.assert(argTypes.forall(_.isNumeric), "Arguments to operator '" + opapp.op.toString + "' must be of a numeric type.")
           typeOf(opapp.operands(0), c) match {
             case i : IntType =>
-              polyOp.reifiedOp = Some(polyToInt(polyOp))
+              polyOpMap.put(polyOp.astNodeId, polyToInt(polyOp))
               i
             case bv : BitVectorType =>
-              polyOp.reifiedOp = Some(polyToBV(polyOp, bv.width))
+              polyOpMap.put(polyOp.astNodeId, polyToBV(polyOp, bv.width))
               bv
             case _ => throw new Utils.UnimplementedException("Unknown operand type to polymorphic operator '" + opapp.op.toString + "'.")
           }
@@ -160,7 +164,8 @@ class TypecheckingVisitor extends FoldingASTVisitor[Unit]
 }
 
 class Typechecker () {
-  val visitor = new FoldingVisitor(new TypecheckingVisitor())
+  val typeMap = new TypecheckingVisitor()
+  val visitor = new FoldingVisitor(typeMap)
   def check(m : Module) = {
     visitor.visitModule(m, Unit)
   }
@@ -169,9 +174,10 @@ class Typechecker () {
       override def rewriteOperator(op : Operator) : Option[Operator] = { 
         op match {
           case p : PolymorphicOperator => {
-            Utils.assert(!p.reifiedOp.isEmpty, "No reified operator available.")
-            println("replacing " + p.toString + " with " + p.reifiedOp.toString)
-            p.reifiedOp
+            val reifiedOp = typeMap.polyOpMap.get(p.astNodeId)
+            Utils.assert(!reifiedOp.isEmpty, "No reified operator available!")
+            println("replacing " + p.toString + " with " + reifiedOp.toString)
+            reifiedOp
           }
           case _ => Some(op)
         }
