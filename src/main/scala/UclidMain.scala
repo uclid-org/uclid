@@ -74,10 +74,14 @@ package uclid {
       var modules : ModuleMap = Map()
       var nameCnt : NameCountMap = Map().withDefaultValue(0)
       
+      val passManager = new PassManager()
+      passManager.addPass(new Typechecker())
+      passManager.addPass(new PolymorphicTypeRewriter())
+      
       for (srcFile <- srcFiles) {
         println("Input File: " + srcFile)
         val text = scala.io.Source.fromFile(srcFile).mkString
-        val fileModules = UclidParser.parseModel(text).map(Typechecker.checkAndRewrite(_))
+        val fileModules = UclidParser.parseModel(text).map(passManager.run(_).get)
         for(module <- fileModules) {
           UclidSemanticAnalyzer.checkSemantics(module)
         }

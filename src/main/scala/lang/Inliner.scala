@@ -20,7 +20,7 @@ object FindLeafProcedures {
       }
     }
     val emptyList : ProcedureList = List.empty
-    val visitor = (new ASTAnalyzer(pass))
+    val visitor = (new ASTAnalyzer("FindLeafProcedures", pass))
     return visitor.visitModule(module, emptyList)
   }
 }
