@@ -174,13 +174,13 @@ class Typechecker extends ASTAnalyzer("Typechecker", new TypecheckPass())  {
 }
 
 class PolymorphicTypeRewriterPass extends RewritePass {
+  lazy val manager : PassManager = analysis.manager
+  lazy val typeCheckerPass = manager.pass("Typechecker").asInstanceOf[Typechecker].pass
   override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = {
-    val manager : PassManager = pass.get.manager.get
-    val typeChecker = manager.getPass("Typechecker").get.asInstanceOf[Typechecker].pass
     
     op match {
       case p : PolymorphicOperator => {
-        val reifiedOp = typeChecker.polyOpMap.get(p.astNodeId)
+        val reifiedOp = typeCheckerPass.polyOpMap.get(p.astNodeId)
         Utils.assert(!reifiedOp.isEmpty, "No reified operator available!")
         println("replacing " + p.toString + " with " + reifiedOp.toString)
         reifiedOp
@@ -191,14 +191,3 @@ class PolymorphicTypeRewriterPass extends RewritePass {
 }
 class PolymorphicTypeRewriter extends ASTRewriter(
     "PolymorphicTypeRewriter", new PolymorphicTypeRewriterPass())
-
-
-/*
-object Typechecker {
-  def checkAndRewrite(m : Module) : Module = {
-    val typechecker = new Typechecker()
-    val typerewriter = new PolymorphicTypeRewriter()
-    return typerewriter.visit(typechecker.visit(m).get).get
-  }
-}
-*/

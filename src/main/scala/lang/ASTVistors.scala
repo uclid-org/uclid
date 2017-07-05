@@ -2,7 +2,9 @@ package uclid
 package lang
 
 abstract class ASTAnalysis {
-  var manager : Option[PassManager] = None
+  var _manager : Option[PassManager] = None
+  def manager : PassManager = { _manager.get }
+  
   def passName : String
   def reset() {}
   def visit (module : Module) : Option[Module]
@@ -15,7 +17,8 @@ object TraversalDirection extends Enumeration {
 
 /* AST visitor that walks through the AST and collects information. */
 trait ReadOnlyPass[T] {
-  var pass : Option[ASTAnalysis] = None
+  var _analysis : Option[ASTAnalysis] = None
+  def analysis : ASTAnalysis = _analysis.get
   def reset() {}
   
   def applyOnModule(d : TraversalDirection.T, module : Module, in : T, context : ScopeMap) : T = { in }
@@ -64,7 +67,7 @@ trait ReadOnlyPass[T] {
 
 class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAnalysis {
   // Set a backpointer to the pass from here.
-  _pass.pass = Some(this)
+  _pass._analysis = Some(this)
   
   /** The pass itself. */
   def pass : ReadOnlyPass[T] = _pass
@@ -468,7 +471,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
 /* AST Visitor that rewrites and generates a new AST. */
 
 trait RewritePass {
-  var pass : Option[ASTAnalysis] = None
+  var _analysis : Option[ASTAnalysis] = None
+  def analysis : ASTAnalysis = _analysis.get
   def reset() { }
   
   def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = { Some(module) }
@@ -518,7 +522,7 @@ trait RewritePass {
 
 class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   // Set a backpointer to here from the pass.
-  _pass.pass = Some(this)
+  _pass._analysis = Some(this)
   
   def pass = _pass
   override def passName = _passName
