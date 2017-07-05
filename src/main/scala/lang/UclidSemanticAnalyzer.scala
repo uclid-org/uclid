@@ -388,8 +388,8 @@ object UclidSemanticAnalyzer {
           }
           case ConjunctionOp() | DisjunctionOp() | IffOp() | ImplicationOp() => {
             Utils.assert(types.size == 2, "Expected two arguments to Boolean operators.")
-            Utils.assert(types(0) == BoolType(), "First operand to Boolean operator must be of Boolean type.")
-            Utils.assert(types(1) == BoolType(), "Second operand to Boolean operator must be of Boolean type.")
+            Utils.assert(types(0)._1.isBool, "First operand to Boolean operator must be of Boolean type. Instead got: " + types(0).toString + "; expression: " + e.toString)
+            Utils.assert(types(1)._1.isBool, "Second operand to Boolean operator must be of Boolean type. Instead got: " + types(0).toString + "; expression: " + e.toString)
             (BoolType(), temporalArgs)
           }
           case EqualityOp() | InequalityOp() => {

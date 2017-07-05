@@ -24,6 +24,12 @@ class TypecheckPass extends ReadOnlyPass[Unit]
   }
   
   def typeOf(e : Expr, c : ScopeMap) : Type = {
+    def polyResultType(op : PolymorphicOperator, argType : Type) : Type = {
+      op match {
+        case LTOp() | LEOp() | GTOp() | GEOp() => new BoolType()
+        case AddOp() | SubOp() | MulOp() => argType
+      }
+    }
     def polyToInt(op : PolymorphicOperator) : IntArgOperator = {
       op match {
         case LTOp() => IntLTOp()
@@ -56,22 +62,29 @@ class TypecheckPass extends ReadOnlyPass[Unit]
           typeOf(opapp.operands(0), c) match {
             case i : IntType =>
               polyOpMap.put(polyOp.astNodeId, polyToInt(polyOp))
-              i
+              polyResultType(polyOp, i)
             case bv : BitVectorType =>
               polyOpMap.put(polyOp.astNodeId, polyToBV(polyOp, bv.width))
-              bv
+              polyResultType(polyOp, bv)
             case _ => throw new Utils.UnimplementedException("Unknown operand type to polymorphic operator '" + opapp.op.toString + "'.")
           }
         }
         case intOp : IntArgOperator => {
           Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
           Utils.assert(argTypes.forall(_.isInstanceOf[IntType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer.")
-          new IntType()
+          intOp match {
+            case IntLTOp() | IntLEOp() | IntGTOp() | IntGEOp() => new BoolType()
+            case IntAddOp() | IntSubOp() | IntMulOp() => new IntType()
+          }
         }
         case bvOp : BVArgOperator => {
           Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
           Utils.assert(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
           typeOf(opapp.operands(0), c)
+          bvOp match {
+            case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) => new BoolType()
+            case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) => new BitVectorType(bvOp.w)
+          }
         }
         case boolOp : BooleanOperator => {
           Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")

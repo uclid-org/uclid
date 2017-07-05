@@ -62,14 +62,14 @@ case class IntAddOp() extends IntArgOperator { override def toString ="+" }
 case class IntSubOp() extends IntArgOperator { override def toString = "-" }
 case class IntMulOp() extends IntArgOperator { override def toString = "*" }
 // These operators take bitvector operands.
-sealed abstract class BVArgOperator extends InfixOperator
-case class BVLTOp(w : Int) extends BVArgOperator { override def toString = "<_" + w.toString }
-case class BVLEOp(w : Int) extends BVArgOperator { override def toString = "<=_" + w.toString }
-case class BVGTOp(w : Int) extends BVArgOperator { override def toString = ">_" + w.toString }
-case class BVGEOp(w : Int) extends BVArgOperator { override def toString = ">=_" + w.toString }
-case class BVAddOp(w : Int) extends BVArgOperator { override def toString ="+_" + w.toString }
-case class BVSubOp(w : Int) extends BVArgOperator { override def toString = "-_" + w.toString }
-case class BVMulOp(w : Int) extends BVArgOperator { override def toString = "*_" + w.toString }
+sealed abstract class BVArgOperator(val w : Int) extends InfixOperator
+case class BVLTOp(override val w : Int) extends BVArgOperator(w) { override def toString = "<_" + w.toString }
+case class BVLEOp(override val w : Int) extends BVArgOperator(w) { override def toString = "<=_" + w.toString }
+case class BVGTOp(override val w : Int) extends BVArgOperator(w) { override def toString = ">_" + w.toString }
+case class BVGEOp(override val w : Int) extends BVArgOperator(w) { override def toString = ">=_" + w.toString }
+case class BVAddOp(override val w : Int) extends BVArgOperator(w) { override def toString ="+_" + w.toString }
+case class BVSubOp(override val w : Int) extends BVArgOperator(w) { override def toString = "-_" + w.toString }
+case class BVMulOp(override val w : Int) extends BVArgOperator(w) { override def toString = "*_" + w.toString }
 // Boolean operators.
 sealed abstract class BooleanOperator() extends Operator { override def isInfix = true }
 case class ConjunctionOp() extends BooleanOperator { override def toString = "&&" }

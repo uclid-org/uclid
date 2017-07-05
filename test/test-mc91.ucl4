@@ -7,14 +7,14 @@ module main {
     procedure mtaux(x: int, y: int) returns (z:int, w: int) {
         if (y == 0) {
             z := x;
-            y := 0;
+            w := 0;
         } else {
         	if (x > 100) {
             	z := x - 10;
-            	y := y - 1;
+            	w := y - 1;
         	} else {
             	z := x + 11;
-            	y := y + 1;
+            	w := y + 1;
         	}
     	}
     }
