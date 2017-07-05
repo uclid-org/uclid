@@ -42,7 +42,7 @@ trait UclidTokens extends Tokens {
 class UclidLexical extends Lexical with UclidTokens {
   override def token: Parser[Token] = 
     ( 'b' ~ 'v' ~> rep(digit)                             ^^ { case chars => BitVectorTypeLit(chars.mkString("")) } 
-    | letter ~ rep( letter | digit )                      ^^ { case first ~ rest => processIdent(first :: rest mkString "") }
+    | letter ~ rep( letter | '_' | digit )                ^^ { case first ~ rest => processIdent(first :: rest mkString "") }
     | digit ~ rep(digit) ~ 'b' ~ 'v' ~ digit ~ rep(digit) ^^ { case (f1 ~ r1 ~ 'b' ~ 'v' ~ f2 ~ r2) => BitVectorLit(f1 :: r1 mkString "", 10, (f2 :: r2 mkString "").toInt) }  
     | '0' ~ 'x' ~> hexDigit ~ rep( hexDigit )             ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 16) }
     | '0' ~ 'b' ~> bit ~ rep( bit )                       ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 2) }
