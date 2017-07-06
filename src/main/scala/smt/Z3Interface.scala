@@ -202,59 +202,5 @@ package uclid {
         return new Z3Interface(ctx, solver)
       }
     }
-    
-    object SMTTester
-    {
-      def test() : Unit = {
-        var cfg = new HashMap[String, String]()
-        cfg.put("model", "true")
-        var ctx = new z3.Context(cfg)
-        val bv4Type = ctx.mkBitVecSort(4);
-        val a = ctx.mkFreshConst("a", bv4Type).asInstanceOf[z3.BitVecExpr]
-        val b = ctx.mkFreshConst("b", bv4Type).asInstanceOf[z3.BitVecExpr]
-        val zero = ctx.mkNumeral(0, bv4Type).asInstanceOf[z3.BitVecExpr]
-        val ones = ctx.mkBVNot(zero)
-    
-        val s = ctx.mkSolver()
-        s.add(ctx.mkDistinct(a, zero))
-        s.add(ctx.mkDistinct(b, zero))
-        s.add(ctx.mkDistinct(a, ones))
-        s.add(ctx.mkDistinct(b, ones))
-        s.add(ctx.mkDistinct(a, b))
-        s.add(ctx.mkEq(ctx.mkBVOR(a, b), ones))
-        val result = s.check()
-        println ("result = " + result)
-        if (result == z3.Status.SATISFIABLE) {
-            println("model = " + s.getModel.toString)
-        }
-      }
-      
-      def testInts() : Unit = {
-        var cfg = new HashMap[String, String]()
-        cfg.put("model", "true")
-        var ctx = new z3.Context(cfg)
-        val intSort = ctx.mkIntSort()
-        val a = ctx.mkFreshConst("a", intSort).asInstanceOf[z3.ArithExpr]
-        val b = ctx.mkFreshConst("b", intSort).asInstanceOf[z3.ArithExpr]
-        val zero = ctx.mkNumeral(0, intSort).asInstanceOf[z3.ArithExpr]
-        val ten = ctx.mkNumeral(10, intSort).asInstanceOf[z3.ArithExpr]
-        
-        val args = List(a, b, b, a)
-        val func = ctx.mkAdd _
-    
-        val s = ctx.mkSolver()
-        s.add(ctx.mkDistinct(a, zero))
-        s.add(ctx.mkDistinct(b, zero))
-        s.add(ctx.mkGt(a, zero))
-        s.add(ctx.mkGt(b, zero))
-        s.add(ctx.mkEq(func(args : _*), ten))
-        val result = s.check()
-        println ("result = " + result)
-        if (result == z3.Status.SATISFIABLE) {
-            println("model = " + s.getModel.toString)
-        }
-        
-      }
-    }
   }
 }

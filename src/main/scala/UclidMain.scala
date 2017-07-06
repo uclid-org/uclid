@@ -104,23 +104,6 @@ package uclid {
       var symbolicSimulator = new UclidSymbolicSimulator(module)
       var z3Interface = smt.Z3Interface.newInterface()
       symbolicSimulator.execute(z3Interface)
-//      symbolicSimulator.initialize()
-//      val asserts = symbolicSimulator.simulate(2)._2 //simulate for 2 steps
-//      var z3Interface = smt.Z3Interface.newInterface()
-//      var z3FInterface = smt.Z3FileInterface.newInterface()
-//      asserts.foreach { x => 
-//        val assert = smt.OperatorApplication(smt.NegationOp, List(x))
-//        var result = z3FInterface.check(assert)
-//        var result2 = z3Interface.check(assert)
-//        println("results = " + result + "/" + result2)
-//        Utils.assert(result == result2, "Z3FileInterface and Z3Interface are producing differing results.")
-//        result match {
-//          case Some(false) => println("Assertion HOLDS.")
-//          case Some(true)  => println("Assertion FAILED.")
-//          case None        => println("Assertion INDETERMINATE.")
-//        }
-//      }
-      //smt.SMTTester.testInts()
     }
   }
 }

@@ -33,6 +33,8 @@ class FindLeafProcedures extends ASTAnalyzer("FindLeafProcedures", new FindLeafP
   override def reset() {
     in = Some(Set.empty)
   }
+  
+  // Mainly for debugging.
   def printLeafProcedures() {
     out match {
       case Some(list) => println("Found some leaf procedures.")
