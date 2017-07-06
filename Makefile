@@ -16,11 +16,15 @@ run:
 specs:
 	sbt "run ./test/spec1.ucl4"
 	
-test-type0: 
-	sbt "run ./test/test-type0.ucl4"
+test-int-fib: 
+	sbt "run ./test/test-int-fib.ucl4"
 
-test-bv0: 
-	sbt "run -m test ./test/test-bv0.ucl4"
+test-bv-fib: 
+	sbt "run -m test ./test/test-bv-fib.ucl4"
+
+test-mc91: 
+	sbt "run -m test ./test/test-mc91.ucl4"
+
 
 test-type1: 
 	sbt "run -m test ./test/test-type1.ucl4"

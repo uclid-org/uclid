@@ -1,10 +1,11 @@
 module main {
-    var n : int;
-    var n_init : int;
-    var c : int;
+	type number = int;
+    var n : number;
+    var n_init : number;
+    var c : number;
 
     // taken from a tail-recurisve definition of the mccarthy 91 function.
-    procedure mtaux(x: int, y: int) returns (z:int, w: int) {
+    procedure mtaux(x: number, y: number) returns (z:number, w: number) {
         if (y == 0) {
             z := x;
             w := 0;
