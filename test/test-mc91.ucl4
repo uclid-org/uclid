@@ -31,7 +31,7 @@ module main {
 
     control {
         initialize;
-        simulate (20);
+        simulate (5);
         decide;
     }
 }

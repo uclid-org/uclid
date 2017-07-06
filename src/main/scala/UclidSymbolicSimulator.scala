@@ -50,7 +50,7 @@ package uclid {
       val initSymbolTable = context.constants.foldLeft(Map.empty[Identifier, smt.Expr]){
         (acc,i) => acc + (i._1 -> newConstantSymbol(i._1.value, toSMT(context.constants(i._1),context)))
       };
-      symbolTable = simulate(context.init, initSymbolTable);
+      symbolTable = simulate(context.init, initSymbolTable, context);
       (context.variables ++ context.outputs).foreach { i => 
         Utils.assert(symbolTable.contains(i._1), "Init Block does not assign to " + i)  
       }
@@ -138,15 +138,15 @@ package uclid {
       }
     }
     
-    def simulate(stmts: List[UclStatement], symbolTable: SymbolTable) : SymbolTable = {
-      return stmts.foldLeft(symbolTable)((acc,i) => simulate(i, acc));
+    def simulate(stmts: List[UclStatement], symbolTable: SymbolTable, c : Context) : SymbolTable = {
+      return stmts.foldLeft(symbolTable)((acc,i) => simulate(i, acc, c));
     }
     
     def simulate(symbolTable: SymbolTable) : SymbolTable = {
-      return simulate(context.next, symbolTable)
+      return simulate(context.next, symbolTable, context)
     }
     
-    def simulate(s: UclStatement, symbolTable: SymbolTable) : SymbolTable = {
+    def simulate(s: UclStatement, symbolTable: SymbolTable, c : Context) : SymbolTable = {
       def simulateAssign(lhss: List[UclLhs], args: List[smt.Expr], input: SymbolTable) : SymbolTable = {
         //println("Invoking simulateAssign with " + lhss + " := " + args + " and symboltable " + symbolTable)
         var st : SymbolTable = input;
@@ -160,7 +160,7 @@ package uclid {
             st = st + (lhs(x).id -> rhs(x))
           } else if (arraySelectOp != null && recordSelectOp == null) {
             st = st + (lhs(x).id -> smt.ArrayStoreOperation(st(lhs(x).id), 
-                arraySelectOp.map(i => evaluate(i, st, context)), rhs(x)))
+                arraySelectOp.map(i => evaluate(i, st, c)), rhs(x)))
           } else if (arraySelectOp == null && recordSelectOp != null) {
             throw new Utils.UnimplementedException("No support for records")
           } else if (arraySelectOp != null && recordSelectOp != null) {
@@ -172,36 +172,37 @@ package uclid {
       s match {
         case UclSkipStmt() => return symbolTable
         case UclAssertStmt(e) => 
-          this.asserts = this.asserts ++ List(evaluate(e,symbolTable,context))
+          this.asserts = this.asserts ++ List(evaluate(e,symbolTable,c))
           return symbolTable
         case UclAssumeStmt(e) => return symbolTable
         case UclHavocStmt(id) => 
-          return symbolTable.updated(id, newHavocSymbol(id.value, toSMT(context.variables(id),context)))
+          return symbolTable.updated(id, newHavocSymbol(id.value, toSMT(c.variables(id),c)))
         case UclAssignStmt(lhss,rhss) =>
-          val es = rhss.map(i => evaluate(i, symbolTable, context));
+          val es = rhss.map(i => evaluate(i, symbolTable, c));
           return simulateAssign(lhss, es, symbolTable)
         case UclIfElseStmt(e,then_branch,else_branch) =>
-          var then_modifies : Set[Identifier] = writeSet(then_branch,context)
-          var else_modifies : Set[Identifier] = writeSet(else_branch,context)
+          var then_modifies : Set[Identifier] = writeSet(then_branch,c)
+          var else_modifies : Set[Identifier] = writeSet(else_branch,c)
           //compute in parallel
-          var then_st : SymbolTable = simulate(then_branch, symbolTable)
-          var else_st : SymbolTable = simulate(else_branch, symbolTable)
+          var then_st : SymbolTable = simulate(then_branch, symbolTable, c)
+          var else_st : SymbolTable = simulate(else_branch, symbolTable, c)
           return symbolTable.keys.filter { id => then_modifies.contains(id) || else_modifies.contains(id) }.
             foldLeft(symbolTable){ (acc,id) => 
-              acc.updated(id, smt.ITE(evaluate(e, symbolTable,context), then_st(id), else_st(id)))
+              acc.updated(id, smt.ITE(evaluate(e, symbolTable,c), then_st(id), else_st(id)))
             }
         case UclForStmt(id, range, body) => throw new Utils.UnimplementedException("Cannot symbolically execute For loop")
         case UclCaseStmt(body) => throw new Utils.UnimplementedException("Cannot symbolically execute Case stmt")
         case UclProcedureCallStmt(id,lhss,args) =>
-          var st : SymbolTable = (context.procedures(id).sig.inParams zip args).
-            foldLeft(symbolTable){(acc,x) => acc.updated(x._1._1, evaluate(x._2, symbolTable, context) )}
-          var c2: Context = context.copyContext()
-          val proc: UclProcedureDecl = context.procedures(id)
-          c2.inputs = context.inputs ++ (proc.sig.inParams.map(i => i._1 -> i._2).toMap)
-          c2.variables = context.variables ++ (proc.sig.outParams.map(i => i._1 -> i._2).toMap)
+          var st : SymbolTable = (c.procedures(id).sig.inParams zip args).
+            foldLeft(symbolTable){(acc,x) => acc.updated(x._1._1, evaluate(x._2, symbolTable, c) )}
+          var c2: Context = c.copyContext()
+          val proc: UclProcedureDecl = c.procedures(id)
+          c2.inputs = c.inputs ++ (proc.sig.inParams.map(i => i._1 -> i._2).toMap)
+          c2.variables = c.variables ++ (proc.sig.outParams.map(i => i._1 -> i._2).toMap)
           c2.variables = c2.variables ++ (proc.decls.map(i => i.id -> i.typ).toMap)
-          st = proc.decls.foldLeft(st)((acc,i) => acc + (i.id -> newHavocSymbol(i.id.value, toSMT(i.typ,context))));
-          st = simulate(proc.body, st)
+          st = proc.decls.foldLeft(st)((acc,i) => acc + (i.id -> newHavocSymbol(i.id.value, toSMT(i.typ,c2))));
+          st = proc.sig.outParams.foldLeft(st)((acc, i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(i._2, c2))))
+          st = simulate(proc.body, st, c2)
           st = simulateAssign(lhss, proc.sig.outParams.map(i => st(i._1)), st)
           //remove procedure arguments
           st = proc.sig.inParams.foldLeft(st)((acc,i) => acc - i._1)
@@ -210,8 +211,8 @@ package uclid {
       }
     }
     
-    def writeSet(stmts: List[UclStatement], context: Context) : Set[Identifier] = {
-      def stmtWriteSet(stmt: UclStatement, context: Context) : Set[Identifier] = stmt match {
+    def writeSet(stmts: List[UclStatement], c: Context) : Set[Identifier] = {
+      def stmtWriteSet(stmt: UclStatement, c: Context) : Set[Identifier] = stmt match {
         case UclSkipStmt() => Set.empty
         case UclAssertStmt(e) => Set.empty
         case UclAssumeStmt(e) => Set.empty
@@ -225,13 +226,13 @@ package uclid {
             }
           }.toSet
         case UclIfElseStmt(e,then_branch,else_branch) => 
-          return writeSet(then_branch,context) ++ writeSet(else_branch,context)
-        case UclForStmt(id, range, body) => return writeSet(body,context)
+          return writeSet(then_branch,c) ++ writeSet(else_branch,c)
+        case UclForStmt(id, range, body) => return writeSet(body,c)
         case UclCaseStmt(body) => 
-          return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2,context) }
-        case UclProcedureCallStmt(id,lhss,args) => return writeSet(context.procedures(id).body,context)
+          return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2,c) }
+        case UclProcedureCallStmt(id,lhss,args) => return writeSet(c.procedures(id).body,c)
       }
-      return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ stmtWriteSet(s,context)}
+      return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ stmtWriteSet(s,c)}
     }
   
     //TODO: get rid of this and use subtituteSMT instead
