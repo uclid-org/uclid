@@ -168,12 +168,19 @@ sealed abstract class Type {
   def isBool = false
   def isNumeric = false
   def isTemporal = false
+  def isPrimitive = false
 }
 
-/** 
- *  Numeric types base class. 
+/**
+ * Primitive types: Int, Bool and BitVector.
  */
-sealed abstract class NumericType extends Type {
+sealed abstract class PrimitiveType extends Type {
+  override def isPrimitive = true
+}
+/** 
+ *  Numeric types base class. All numeric types are also primitive types.
+ */
+sealed abstract class NumericType extends PrimitiveType {
   override def isNumeric = true
 }
 
@@ -188,7 +195,7 @@ case class TemporalType() extends Type {
 /**
  * Regular types.
  */
-case class BoolType() extends Type {
+case class BoolType() extends PrimitiveType {
   override def toString = "bool"
   override def isBool = true
 }
