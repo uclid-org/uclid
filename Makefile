@@ -7,7 +7,7 @@ build:
 
 run:
 	sbt "run ./test/test1.ucl4"
-	sbt "run ./test/test2.ucl4"
+	sbt "run ./test/test-types-0.ucl4"
 	sbt "run ./test/test3.ucl4"
 	sbt "run ./test/test4.ucl4"
 	sbt "run ./test/test5.ucl4"
@@ -25,8 +25,10 @@ test-bv-fib:
 test-mc91: 
 	sbt "run -m test ./test/test-mc91.ucl4"
 
+test-types-0: 
+	sbt "run ./test/test-types-0.ucl4"
 
 test-type1: 
 	sbt "run -m test ./test/test-type1.ucl4"
 
-.PHONY: all build run specs test-type0 test-type1 test-bv0
+.PHONY: all build run specs test-int-fib test-types-0 test-type1 test-bv-fib

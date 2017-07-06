@@ -1,0 +1,34 @@
+module main {
+  type t1 = bool;
+  type t2 = enum {red, green, blue};
+  type t3 = record {a: int, b: int, c: bool};
+  type t4 = record {a: int, b: int, c: record {d: bool, e: t3}};
+
+  var y_global: int;
+  var z_global : int;
+
+  input mem_in : int -> int;
+
+  procedure f(x: int, y: int) returns (z:int) { 
+    localvar x_local: int;
+    assume (x_local > 0); 
+    assert (x_local <= 1); 
+    havoc x_local; 
+    case 
+        x_local == 0 : { z := x + y; }
+        x_local != 0 : { z := x - y; }
+    esac 
+  }
+  
+  output mem_out : [int] int;
+  
+  init {
+    havoc y_global;
+    havoc z_global;
+  }
+  
+  next {
+    call (y_global) := f(y_global, z_global);
+    z_global := y_global + 1;  
+  }
+}

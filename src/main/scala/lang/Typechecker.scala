@@ -198,7 +198,7 @@ class PolymorphicTypeRewriterPass extends RewritePass {
     op match {
       case p : PolymorphicOperator => {
         val reifiedOp = typeCheckerPass.polyOpMap.get(p.astNodeId)
-        Utils.assert(!reifiedOp.isEmpty, "No reified operator available!")
+        Utils.assert(!reifiedOp.isEmpty, "No reified operator available for: " + p.toString)
         println("replacing " + p.toString + " with " + reifiedOp.toString)
         reifiedOp
       }
