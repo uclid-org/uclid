@@ -23,7 +23,7 @@ test-bv-fib:
 	sbt "run -m test ./test/test-bv-fib.ucl4"
 
 test-mc91: 
-	sbt "run -m test ./test/test-mc91.ucl4"
+	sbt "run ./test/test-mc91.ucl4"
 
 test-types-0: 
 	sbt "run ./test/test-types-0.ucl4"

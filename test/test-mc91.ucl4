@@ -1,11 +1,14 @@
 module main {
-	type number = int;
-    var n : number;
-    var n_init : number;
-    var c : number;
+    type Number = int;
+    type AnotherNumber = Number;
+    type YetAnotherNumber = AnotherNumber;
+
+    var n : YetAnotherNumber;
+    var n_init : YetAnotherNumber;
+    var c : YetAnotherNumber;
 
     // taken from a tail-recursive definition of the McCarthy 91 function.
-    procedure mc91(x: number, y: number) returns (z:number, w: number) {
+    procedure mc91(x: YetAnotherNumber, y: YetAnotherNumber) returns (z:YetAnotherNumber, w: YetAnotherNumber) {
         if (y == 0) {
             z := x;
             w := 0;
