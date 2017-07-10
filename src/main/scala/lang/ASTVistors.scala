@@ -322,8 +322,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnCase(TraversalDirection.Down, st, result, context)
     result = st.body.foldLeft(result)(
-      (arg, cases) => {
-        cases._2.foldLeft(visitExpr(cases._1, arg, context))((arg, i) => visitStatement(i, arg, context))
+      (arg1, cases) => {
+        cases._2.foldLeft(visitExpr(cases._1, arg1, context))((arg2, i) => visitStatement(i, arg2, context))
       }
     )
     result = pass.applyOnCase(TraversalDirection.Up, st, result, context)
@@ -892,3 +892,18 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     return visitExpr(lambda.e, context).flatMap((e) => pass.rewriteLambda(UclLambda(idP, e), contextIn))
   }
 }
+
+class ExprRewriterPass(expr: Expr, repl: Expr) extends RewritePass
+{
+  override def rewriteExpr(e: Expr, context: ScopeMap) : Option[Expr] = {
+    if (e == expr) {
+      Some(repl)
+    } else {
+      Some(e)
+    }
+  }
+}
+
+class ExprRewriter(name: String, expr: Expr, repl: Expr) 
+  extends ASTRewriter(name, new ExprRewriterPass(expr, repl))
+

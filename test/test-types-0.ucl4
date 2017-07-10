@@ -15,8 +15,8 @@ module main {
     assert (x_local <= 1); 
     havoc x_local; 
     case 
-        x_local == 0 : { z := x + y; }
-        x_local != 0 : { z := x - y; }
+        x_local > 0 : { z := x + y; }
+        x_local <= 0 : { z := x - y; }
     esac 
   }
   
