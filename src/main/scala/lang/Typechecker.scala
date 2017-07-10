@@ -20,7 +20,6 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
     if (d == TraversalDirection.Up) {
       validateSynonyms()
       simplifySynonyms()
-      printTypeDeclMap()
     }
   }
   override def applyOnTypeDecl(d : TraversalDirection.T, typDec : UclTypeDecl, in : Unit, context : ScopeMap) : Unit = {
@@ -65,7 +64,7 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
     typeDeclMap.foreach {
       case (name, decl) => println (name.toString + " --> " + decl.toString)
     }
-    println("synonyms: " + Utils.join(typeSynonyms.map(_.toString).toList, " "))
+    println("synonyms: " + typeSynonyms)
   }
 }
 
@@ -278,7 +277,6 @@ class PolymorphicTypeRewriterPass extends RewritePass {
       case p : PolymorphicOperator => {
         val reifiedOp = typeCheckerPass.polyOpMap.get(p.astNodeId)
         Utils.assert(!reifiedOp.isEmpty, "No reified operator available for: " + p.toString)
-        println("replacing " + p.toString + " with " + reifiedOp.toString)
         reifiedOp
       }
       case _ => Some(op)
