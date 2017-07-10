@@ -70,17 +70,25 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
 
 class TypeSynonymFinder extends ASTAnalyzer("TypeSynonymFinder", new TypeSynonymFinderPass())  {
   override def pass = super.pass.asInstanceOf[TypeSynonymFinderPass]
+  override def iteratedApply = true
   in = Some(Unit)
 }
 
 class TypeSynonymRewriterPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
   lazy val typeSynonymFinderPass = manager.pass("TypeSynonymFinder").asInstanceOf[TypeSynonymFinder].pass
-  override def rewriteType(typ : Type, ctx : ScopeMap) : Option[Type] = {
+  def rewriteType(typ: Type) : Type = {
     typ match {
-      case SynonymType(name) => typeSynonymFinderPass.typeDeclMap.get(name)
-      case _ => Some(typ)
+      case SynonymType(name) => typeSynonymFinderPass.typeDeclMap.get(name).get
+      case ArrayType(inTypes, outType) => ArrayType(inTypes.map(rewriteType(_)), rewriteType(outType))
+      case MapType(inTypes, outType) => MapType(inTypes.map(rewriteType(_)), rewriteType(outType))
+      case RecordType(fields) => RecordType(fields.map((f) => (f._1, rewriteType(f._2))))
+      case TupleType(fields) => TupleType(fields.map(rewriteType(_)))
+      case _ => typ
     }
+  }
+  override def rewriteType(typ : Type, ctx : ScopeMap) : Option[Type] = {
+    Some(rewriteType(typ))
   }
 }
 
@@ -102,7 +110,6 @@ class TypecheckPass extends ReadOnlyPass[Unit]
   }
   
   override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : Unit, ctx : ScopeMap) : Unit = {
-    println("visiting Expression: " + e.toString)
     typeOf(e, ctx)
   }
   

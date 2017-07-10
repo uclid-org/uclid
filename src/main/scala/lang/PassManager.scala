@@ -19,8 +19,17 @@ class PassManager {
     passes.foreach{ _.reset() }
     
     val init : Option[Module] = Some(module)
+    def applyPass(pass: ASTAnalysis, m: Module) : Option[Module] = {
+      val mP = pass.visit(m)
+      if (pass.astChanged && !mP.isEmpty) {
+        applyPass(pass, mP.get)
+      } else {
+        mP
+      }
+    }
+    
     return passes.foldLeft(init){
-      (mod, pass) => mod.flatMap((m) => pass.visit(m))
+      (mod, pass) => mod.flatMap(applyPass(pass, _))
     }
   }
 

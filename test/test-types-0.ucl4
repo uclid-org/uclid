@@ -1,16 +1,17 @@
 module main {
+  type t0 = int;
   type t1 = bool;
   type t2 = enum {red, green, blue};
-  type t3 = record {a: int, b: int, c: bool};
-  type t4 = record {a: int, b: int, c: record {d: bool, e: t3}};
+  type t3 = record {a: t0, b: t0, c: bool};
+  type t4 = record {a: t0, b: t0, c: record {d: bool, e: t3}};
 
-  var y_global: int;
-  var z_global : int;
+  var y_global: t0;
+  var z_global : t0;
 
   input mem_in : int -> int;
 
-  procedure f(x: int, y: int) returns (z:int) { 
-    localvar x_local: int;
+  procedure f(x: t0, y: t0) returns (z:t0) { 
+    localvar x_local: t0;
     assume (x_local > 0); 
     assert (x_local <= 1); 
     havoc x_local; 

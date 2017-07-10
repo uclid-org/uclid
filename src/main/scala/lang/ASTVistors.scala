@@ -9,6 +9,7 @@ abstract class ASTAnalysis {
   def reset() {}
   def visit (module : Module) : Option[Module]
   def astChanged : Boolean
+  def iteratedApply = false
 }
 
 object TraversalDirection extends Enumeration {
@@ -534,7 +535,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   var astChangeFlag = false
   override def astChanged = astChangeFlag
 
-  override def reset { 
+  override def reset() { 
     pass.reset()
     astChangeFlag = false
   }
@@ -595,73 +596,93 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   def visitStateVar(stvar : UclStateVarDecl, context : ScopeMap) : Option[UclStateVarDecl] = {
     val idP = visitIdentifier(stvar.id, context)
     val typP = visitType(stvar.typ, context)
-    (idP, typP) match {
+    val stateVarP = (idP, typP) match {
       case (Some(id), Some(typ)) => pass.rewriteStateVar(UclStateVarDecl(id, typ), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (stateVarP != Some(stvar))
+    return stateVarP
   }
   
   def visitInputVar(inpvar : UclInputVarDecl, context : ScopeMap) : Option[UclInputVarDecl] = {
     val idP = visitIdentifier(inpvar.id, context)
     var typP = visitType(inpvar.typ, context)
-    (idP, typP) match {
+    val inpVarP = (idP, typP) match {
       case (Some(id), Some(typ)) => pass.rewriteInputVar(UclInputVarDecl(id, typ), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (inpVarP != Some(inpvar))
+    return inpVarP
   }
   
   def visitOutputVar(outvar : UclOutputVarDecl, context : ScopeMap) : Option[UclOutputVarDecl] = {
     val idP = visitIdentifier(outvar.id, context)
     val typP = visitType(outvar.typ, context)
-    (idP, typP) match {
+    val outVarP = (idP, typP) match {
       case (Some(id), Some(typ)) => pass.rewriteOutputVar(UclOutputVarDecl(id, typ), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (outVarP != Some(outvar))
+    return outVarP
   }
   
   def visitConstant(cnst : UclConstantDecl, context : ScopeMap) : Option[UclConstantDecl] = {
     val idP = visitIdentifier(cnst.id, context)
     val typP = visitType(cnst.typ, context)
-    (idP, typP) match {
+    val cnstP = (idP, typP) match {
       case (Some(id), Some(typ)) => pass.rewriteConstant(UclConstantDecl(id, typ), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (cnstP != Some(cnst))
+    return cnstP
   }
   
   def visitSpec(spec : UclSpecDecl, context : ScopeMap) : Option[UclSpecDecl] = {
     val idP = visitIdentifier(spec.id, context)
     val exprP = visitExpr(spec.expr, context)
-    (idP, exprP) match {
+    val specP = (idP, exprP) match {
       case (Some(id), Some(expr)) => pass.rewriteSpec(UclSpecDecl(id, expr), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (specP != Some(spec))
+    return specP
   }
   
   def visitTypeDecl(typDec : UclTypeDecl, context : ScopeMap) : Option[UclTypeDecl] = {
     val idP = visitIdentifier(typDec.id, context)
     val typeP = visitType(typDec.typ, context)
-    (idP, typeP) match {
+    val typDecP = (idP, typeP) match {
       case (Some(id), Some(typ)) => pass.rewriteTypeDecl(UclTypeDecl(id, typ), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (typDecP != Some(typDec))
+    return typDecP
   }
   
   def visitInit(init : UclInitDecl, context : ScopeMap) : Option[UclInitDecl] = {
     val body = init.body.map(visitStatement(_, context)).flatten
-    return pass.rewriteInit(UclInitDecl(body), context)
+    val initP = pass.rewriteInit(UclInitDecl(body), context)
+    astChangeFlag = astChangeFlag || (initP != Some(init))
+    return initP
   }
   
   def visitNext(next : UclNextDecl, context : ScopeMap) : Option[UclNextDecl] = {
     val body = next.body.map(visitStatement(_, context)).flatten
-    return pass.rewriteNext(UclNextDecl(body), context)
+    val nextP = pass.rewriteNext(UclNextDecl(body), context)
+    astChangeFlag = astChangeFlag || (nextP != Some(next))
+    return nextP
   }
   
   def visitCommand(cmd : UclCmd, context : ScopeMap) : Option[UclCmd] = {
-    return pass.rewriteCommand(cmd, context)
+    val cmdP = pass.rewriteCommand(cmd, context)
+    astChangeFlag = astChangeFlag || (cmdP != Some(cmd))
+    return cmdP
   }
   
   def visitType(typ: Type, context : ScopeMap) : Option[Type] = {
-    return pass.rewriteType(typ, context)
+    val typP = pass.rewriteType(typ, context)
+    astChangeFlag = astChangeFlag || (typP != Some(typ))
+    return typP
   }
 
   def visitProcedureSig(sig : UclProcedureSig, context : ScopeMap) : Option[UclProcedureSig] = {
@@ -679,10 +700,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       }
     }).flatten
     
-    return (inParamsP, outParamsP) match {
+    val sigP = (inParamsP, outParamsP) match {
       case (in, out) => pass.rewriteProcedureSig(UclProcedureSig(in, out), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (sigP != Some(sig))
+    return sigP
   }
   
   def visitFunctionSig(sig : UclFunctionSig, context : ScopeMap) : Option[UclFunctionSig] = {
@@ -692,17 +715,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
         case _ => None
       }
     }).flatten
-    return visitType(sig.retType, context).flatMap((t) => pass.rewriteFunctionSig(UclFunctionSig(args, t), context))
+    val sigP = visitType(sig.retType, context).flatMap((t) => pass.rewriteFunctionSig(UclFunctionSig(args, t), context))
+    astChangeFlag = astChangeFlag || (sigP != Some(sig))
+    return sigP
   }
   
   def visitLocalVar(lvar : UclLocalVarDecl, context : ScopeMap) : Option[UclLocalVarDecl] = {
-    visitIdentifier(lvar.id, context).flatMap((id) => {
+    val varP = visitIdentifier(lvar.id, context).flatMap((id) => {
       visitType(lvar.typ, context).flatMap((t) => pass.rewriteLocalVar(UclLocalVarDecl(id, t), context))
     })
+    astChangeFlag = astChangeFlag || (varP != Some(lvar))
+    return varP
   }
   
   def visitStatement(st : UclStatement, context : ScopeMap) : Option[UclStatement] = {
-    return (st match {
+    val stP = (st match {
       case skipStmt : UclSkipStmt => visitSkipStatement(skipStmt, context)
       case assertStmt : UclAssertStmt => visitAssertStatement(assertStmt, context)
       case assumeStmt : UclAssumeStmt => visitAssumeStatement(assumeStmt, context)
@@ -713,44 +740,58 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case caseStmt : UclCaseStmt => visitCaseStatement(caseStmt, context)
       case procCallStmt : UclProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
     }).flatMap(pass.rewriteStatement(_, context))
+    astChangeFlag = astChangeFlag || (stP != Some(st))
+    return stP
   }
 
   def visitSkipStatement(st : UclSkipStmt, context : ScopeMap) : Option[UclSkipStmt] = {
-    return pass.rewriteSkip(st, context)
+    val stP = pass.rewriteSkip(st, context)
+    astChangeFlag = astChangeFlag || (stP != Some(st))
+    return stP
   }
   
   def visitAssertStatement(st : UclAssertStmt, context : ScopeMap) : Option[UclAssertStmt] = {
-    visitExpr(st.e, context).flatMap((e) => {
+    val stP = visitExpr(st.e, context).flatMap((e) => {
       pass.rewriteAssert(UclAssertStmt(e), context)
     })
+    astChangeFlag = astChangeFlag || (stP != Some(st))
+    return stP
   }
   
   def visitAssumeStatement(st : UclAssumeStmt, context : ScopeMap) : Option[UclAssumeStmt] = {
-    visitExpr(st.e, context).flatMap((e) => {
+    val stP = visitExpr(st.e, context).flatMap((e) => {
       pass.rewriteAssume(UclAssumeStmt(e), context)
     })
+    astChangeFlag = astChangeFlag || (stP != Some(st))
+    return stP
   }
   
   def visitHavocStatement(st: UclHavocStmt, context : ScopeMap) : Option[UclHavocStmt] = {
-    visitIdentifier(st.id, context).flatMap((id) => {
+    val stP = visitIdentifier(st.id, context).flatMap((id) => {
       pass.rewriteHavoc(UclHavocStmt(id), context)
     })
+    astChangeFlag = astChangeFlag || (stP != Some(st))
+    return stP
   }
   
   def visitAssignStatement(st : UclAssignStmt, context : ScopeMap) : Option[UclAssignStmt] = {
     val lhss = st.lhss.map(visitLhs(_, context)).flatten
     val rhss = st.rhss.map(visitExpr(_, context)).flatten
-    return pass.rewriteAssign(UclAssignStmt(lhss, rhss), context)
+    val stP = pass.rewriteAssign(UclAssignStmt(lhss, rhss), context)
+    astChangeFlag = astChangeFlag || (stP != Some(st))
+    return stP
   }
   
   def visitIfElseStatement(st : UclIfElseStmt, context : ScopeMap) : Option[UclIfElseStmt] = {
     val cond = visitExpr(st.cond, context)
     val ifblock = st.ifblock.map(visitStatement(_, context)).flatten
     val elseblock = st.elseblock.map(visitStatement(_, context)).flatten
-    cond match {
+    val stP = cond match {
       case Some(c) => pass.rewriteIfElse(UclIfElseStmt(c, ifblock, elseblock), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (stP != Some(st))
+    return stP
   }
   
   def visitForStatement(st : UclForStmt, context : ScopeMap) : Option[UclForStmt] = {
@@ -759,10 +800,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     val lit2P = visitIntLiteral(st.range._2, context)
     val stmts = st.body.map(visitStatement(_, context)).flatten
     
-    return (idP, lit1P, lit2P) match {
+    val stP = (idP, lit1P, lit2P) match {
       case (Some(id), Some(lit1), Some(lit2)) => pass.rewriteFor(UclForStmt(id, (lit1, lit2), stmts), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (stP != Some(st))
+    return stP
   }
   
   def visitCaseStatement(st : UclCaseStmt, context : ScopeMap) : Option[UclCaseStmt] = {
@@ -773,27 +816,33 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
         Some(e, c._2.map(visitStatement(_, context)).flatten)
       })
     }).flatten // and finally get rid of all the Options.
-    return pass.rewriteCase(UclCaseStmt(bodyP), context)
+    val stP = pass.rewriteCase(UclCaseStmt(bodyP), context)
+    astChangeFlag = astChangeFlag || (stP != Some(st))
+    return stP
   }
   
   def visitProcedureCallStatement(st : UclProcedureCallStmt, context : ScopeMap) : Option[UclProcedureCallStmt] = {
     val idP = visitIdentifier(st.id, context)
     val lhssP = st.callLhss.map(visitLhs(_, context)).flatten
     val argsP = st.args.map(visitExpr(_, context)).flatten
-    idP.flatMap((id) => pass.rewriteProcedureCall(UclProcedureCallStmt(id, lhssP, argsP), context))
+    val stP = idP.flatMap((id) => pass.rewriteProcedureCall(UclProcedureCallStmt(id, lhssP, argsP), context))
+    astChangeFlag = astChangeFlag || (stP != Some(st))
+    return stP
   }
   
   def visitLhs(lhs : UclLhs, context : ScopeMap) : Option[UclLhs] = {
     val idP = visitIdentifier(lhs.id, context)
     val arraySelectP = lhs.arraySelect.flatMap((as) => Some(as.map((e) => visitExpr(e, context)).flatten))
     val recordSelectP = lhs.recordSelect.flatMap((rs) => Some(rs.map((i) => visitIdentifier(i, context)).flatten))
-    idP.flatMap((id) => {
+    val lhsP = idP.flatMap((id) => {
       Some(UclLhs(id, arraySelectP, recordSelectP))
     })
+    astChangeFlag = astChangeFlag || (lhsP != Some(lhs))
+    return lhsP
   }
   
   def visitExpr(e : Expr, context : ScopeMap) : Option[Expr] = {
-    return (e match {
+    val eP = (e match {
       case i : Identifier => visitIdentifier(i, context)
       case lit : Literal => visitLiteral(lit, context)
       case rec : Record => visitRecord(rec, context)
@@ -804,70 +853,94 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case ite : UclITE => visitITE(ite, context)
       case lambda : UclLambda => visitLambda(lambda, context)
     }).flatMap(pass.rewriteExpr(_, context))
+    astChangeFlag = astChangeFlag || (eP != Some(e))
+    return eP
   }
   
   def visitIdentifier(id : Identifier, context : ScopeMap) : Option[Identifier] = {
-    return pass.rewriteIdentifier(id, context)
+    val idP = pass.rewriteIdentifier(id, context)
+    astChangeFlag = astChangeFlag || (idP != Some(id))
+    return idP
   }
   
   def visitLiteral(lit : Literal, context : ScopeMap) : Option[Literal] = {
-    return (lit match {
+    val litP = (lit match {
       case b : BoolLit => visitBoolLiteral(b, context)
       case i : IntLit => visitIntLiteral(i, context)
       case bv : BitVectorLit => visitBitVectorLiteral(bv, context)
     }).flatMap(pass.rewriteLit(_, context))
+    astChangeFlag = astChangeFlag || (litP != Some(lit))
+    return litP
   }
   
   def visitBoolLiteral(b : BoolLit, context : ScopeMap) : Option[BoolLit] = {
-    return pass.rewriteBoolLit(b, context)
+    val bP = pass.rewriteBoolLit(b, context)
+    astChangeFlag = astChangeFlag || (bP != Some(b))
+    return bP
   }
   
   def visitIntLiteral(i : IntLit, context : ScopeMap) : Option[IntLit] = {
-    return pass.rewriteIntLit(i, context)
+    val iP = pass.rewriteIntLit(i, context)
+    astChangeFlag = astChangeFlag || (iP != Some(i))
+    return iP
   }
   
   def visitBitVectorLiteral(bv : BitVectorLit, context : ScopeMap) : Option[BitVectorLit] = {
-    return pass.rewriteBitVectorLit(bv, context)
+    val bvP = pass.rewriteBitVectorLit(bv, context)
+    astChangeFlag = astChangeFlag || (bvP != Some(bv))
+    return bvP
   }
   
   def visitRecord(rec : Record, context : ScopeMap) : Option[Record] = {
-    pass.rewriteRecord(Record(rec.value.map(visitExpr(_, context)).flatten), context)
+    val recP = pass.rewriteRecord(Record(rec.value.map(visitExpr(_, context)).flatten), context)
+    astChangeFlag = astChangeFlag || (recP != Some(rec))
+    return recP
   }
   
   def visitOperatorApp(opapp : UclOperatorApplication, context : ScopeMap) : Option[UclOperatorApplication] = {
-    return visitOperator(opapp.op, context).flatMap((op) => {
+    val opAppP = visitOperator(opapp.op, context).flatMap((op) => {
       pass.rewriteOperatorApp(UclOperatorApplication(op, opapp.operands.map(visitExpr(_, context)).flatten), context)
     })
+    astChangeFlag = astChangeFlag || (opAppP != Some(opapp))
+    return opAppP
   }
   
   def visitOperator(op : Operator, context : ScopeMap) : Option[Operator] = {
-    return pass.rewriteOperator(op, context)
+    val opP = pass.rewriteOperator(op, context)
+    astChangeFlag = astChangeFlag || (opP != Some(op))
+    return opP
   }
   
   def visitArraySelectOp(arrSel : UclArraySelectOperation, context : ScopeMap) : Option[UclArraySelectOperation] = {
-    return visitExpr(arrSel.e, context) match {
+    val arrSelP = visitExpr(arrSel.e, context) match {
       case Some(e) => pass.rewriteArraySelect(UclArraySelectOperation(e, arrSel.index.map(visitExpr(_, context)).flatten), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (arrSelP != Some(arrSel))
+    return arrSelP
   }
   
   def visitArrayStoreOp(arrStore : UclArrayStoreOperation, context : ScopeMap) : Option[UclArrayStoreOperation] = {
     val eP = visitExpr(arrStore.e, context)
     val ind = arrStore.index.map(visitExpr(_, context)).flatten
     val valP = visitExpr(arrStore.value, context)
-    return (eP, valP) match {
+    val arrStoreP = (eP, valP) match {
       case (Some(e), Some(value)) => pass.rewriteArrayStore(UclArrayStoreOperation(e, ind, value), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (arrStoreP != Some(arrStore))
+    return arrStoreP
   }
   
   def visitFuncApp(fapp : UclFuncApplication, context : ScopeMap) : Option[UclFuncApplication] = {
     val eP = visitExpr(fapp.e, context)
     val args = fapp.args.map(visitExpr(_, context)).flatten
-    eP match {
+    val fappP = eP match {
       case Some(e) => pass.rewriteFuncApp(UclFuncApplication(e, args), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (fappP != Some(fapp))
+    return fappP
   }
   
   def visitITE(ite: UclITE, context : ScopeMap) : Option[UclITE] = {
@@ -875,10 +948,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     val tP = visitExpr(ite.t, context)
     val fP = visitExpr(ite.f, context)
     
-    (condP, tP, fP) match {
+    val iteP = (condP, tP, fP) match {
       case (Some(cond), Some(t), Some(f)) => pass.rewriteITE(UclITE(cond, t, f), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (iteP != Some(ite))
+    return iteP
   }
   
   def visitLambda(lambda: UclLambda, contextIn : ScopeMap) : Option[UclLambda] = {
@@ -889,7 +964,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
         case _ => None
       }
     }).flatten
-    return visitExpr(lambda.e, context).flatMap((e) => pass.rewriteLambda(UclLambda(idP, e), contextIn))
+    val lambdaP = visitExpr(lambda.e, context).flatMap((e) => pass.rewriteLambda(UclLambda(idP, e), contextIn))
+    astChangeFlag = astChangeFlag || (lambdaP != Some(lambda))
+    return lambdaP
   }
 }
 
