@@ -119,16 +119,21 @@ case class IntLit(value: BigInt) extends Literal {
 case class BitVectorLit(value: BigInt, width: Int) extends Literal {
   override def toString = value.toString + "bv" + width.toString
 }
-case class Record(value: List[Expr]) extends Expr {
-  override def toString = "{" + value.foldLeft(""){(acc,i) => acc + i} + "}"
+case class Tuple(values: List[Expr]) extends Expr {
+  override def toString = "{" + Utils.join(values.map(_.toString), ", ") + "}"
 }
 //for symbols interpreted by underlying Theory solvers
 case class UclOperatorApplication(op: Operator, operands: List[Expr]) extends Expr {
   override def toString = {
-    if (op.isInfix) {
-      "(" + Utils.join(operands.map(_.toString), " " + op + " ") + ")"
-    } else {
-      op + "(" + Utils.join(operands.map(_.toString), ", ") + ")"
+    op match {
+      case RecordSelect(r) => 
+        operands(0).toString + "." + r.toString
+      case _ => 
+        if (op.isInfix) {
+          "(" + Utils.join(operands.map(_.toString), " " + op + " ") + ")"
+        } else {
+          op + "(" + Utils.join(operands.map(_.toString), ", ") + ")"
+        }
     }
   }
 }
@@ -169,6 +174,9 @@ sealed abstract class Type {
   def isNumeric = false
   def isTemporal = false
   def isPrimitive = false
+  def isRecord = false
+  def isTuple = false
+  def matches (t2 : Type) = (this == t2)
 }
 
 /**
@@ -210,14 +218,27 @@ case class EnumType(ids: List[Identifier]) extends Type {
     ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i} + "}"
 }
 case class TupleType(fieldTypes: List[Type]) extends Type {
-  override def toString = "{" + Utils.join(fieldTypes.map(_.toString), ", ") + "}" 
+  override def toString = "{" + Utils.join(fieldTypes.map(_.toString), ", ") + "}"
+  override def isTuple = true
 }
 case class RecordType(fields: List[(Identifier,Type)]) extends Type {
   Utils.assert(Utils.allUnique(fields.map(_._1)), "Record field names must be unique.")
   def fieldType(fieldName: Identifier) : Option[Type] = {
     fields.find((f) => f._1 == fieldName).flatMap((fp) => Some(fp._2))
   }
+  def hasField(fieldName: Identifier) : Boolean = {
+    fields.exists((f) => f._1 == fieldName)
+  }
   override def toString = "record {" + Utils.join(fields.map((f) => f._1.toString + " : " + f._2.toString), ", ")  + "}"
+  override def isRecord = true
+  override def matches(t2 : Type) : Boolean = {
+    t2 match {
+      case tup : TupleType => 
+          fields.size == tup.fieldTypes.size && 
+          (fields.map(_._2) zip tup.fieldTypes).forall( tpair => tpair._1.matches(tpair._2))
+      case _ => this == t2
+    }
+  }
 }
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = Utils.join(inTypes.map(_.toString), " * ") + " -> " + outType.toString

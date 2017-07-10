@@ -1,0 +1,30 @@
+module main {
+  type num = bv8;
+  type bit = bool;
+  type tuple1 = {num, num, bit};
+  type rec1 = record {a : num, b : num, c : bit };
+  
+  var st : rec1;
+
+  procedure foo(stIn : rec1) returns (stOut: rec1) {
+    stOut.a := stIn.a + 1bv8;
+    stOut.b := stIn.b + stIn.a;
+    stOut.c := !stIn.c; 
+  }
+  
+  init {
+    st := {0bv8, 0bv8, true}; 
+  }
+  
+  next {
+    call (st) := foo(st);
+    
+    assert (st.a <= st.b);
+  }
+  
+  control {
+   initialize;
+   simulate (5);
+   decide;
+  }
+}

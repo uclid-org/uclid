@@ -66,7 +66,7 @@ trait ReadOnlyPass[T] {
   def applyOnBoolLit(d : TraversalDirection.T, b : BoolLit, in : T, context : ScopeMap) : T = { in }
   def applyOnIntLit(d : TraversalDirection.T, i : IntLit, in : T, context : ScopeMap) : T = { in }
   def applyOnBitVectorLit(d : TraversalDirection.T, bv : BitVectorLit, in : T, context : ScopeMap) : T = { in }
-  def applyOnRecord(d : TraversalDirection.T, rec : Record, in : T, context : ScopeMap) : T = { in }
+  def applyOnTuple(d : TraversalDirection.T, rec : Tuple, in : T, context : ScopeMap) : T = { in }
   def applyOnOperatorApp(d : TraversalDirection.T, opapp : UclOperatorApplication, in : T, context : ScopeMap) : T = { in }
   def applyOnOperator(d : TraversalDirection.T, op : Operator, in : T, context : ScopeMap) : T = { in }
   def applyOnArraySelect(d : TraversalDirection.T, arrSel : UclArraySelectOperation, in : T, context : ScopeMap) : T = { in }
@@ -448,7 +448,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = e match {
       case i : Identifier => visitIdentifier(i, result, context)
       case lit : Literal => visitLiteral(lit, result, context)
-      case rec : Record => visitRecord(rec, result, context)
+      case rec : Tuple => visitTuple(rec, result, context)
       case opapp : UclOperatorApplication => visitOperatorApp(opapp, result, context)
       case arrSel : UclArraySelectOperation => visitArraySelectOp(arrSel, result, context)
       case arrUpd : UclArrayStoreOperation => visitArrayStoreOp(arrUpd, result, context)
@@ -494,11 +494,11 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnBitVectorLit(TraversalDirection.Up, bv, result, context)
     return result
   }
-  def visitRecord(rec : Record, in : T, context : ScopeMap) : T = {
+  def visitTuple(rec : Tuple, in : T, context : ScopeMap) : T = {
     var result : T = in
-    result = pass.applyOnRecord(TraversalDirection.Down, rec, result, context)
-    result = rec.value.foldLeft(result)((acc, i) => visitExpr(i, acc, context))
-    result = pass.applyOnRecord(TraversalDirection.Up, rec, result, context)
+    result = pass.applyOnTuple(TraversalDirection.Down, rec, result, context)
+    result = rec.values.foldLeft(result)((acc, i) => visitExpr(i, acc, context))
+    result = pass.applyOnTuple(TraversalDirection.Up, rec, result, context)
     return result
   }
   def visitOperatorApp(opapp : UclOperatorApplication, in : T, context : ScopeMap) : T = {
@@ -612,7 +612,7 @@ trait RewritePass {
   def rewriteBoolLit(b : BoolLit, ctx : ScopeMap) : Option[BoolLit] = { Some(b) }
   def rewriteIntLit(i : IntLit, ctx : ScopeMap) : Option[IntLit] = { Some(i) }
   def rewriteBitVectorLit(bv : BitVectorLit, ctx : ScopeMap) : Option[BitVectorLit] = { Some(bv) }
-  def rewriteRecord(rec : Record, ctx : ScopeMap) : Option[Record] = { Some(rec) }
+  def rewriteTuple(rec : Tuple, ctx : ScopeMap) : Option[Tuple] = { Some(rec) }
   def rewriteOperatorApp(opapp : UclOperatorApplication, ctx : ScopeMap) : Option[UclOperatorApplication] = { Some(opapp) }
   def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = { Some(op) }
   def rewriteArraySelect(arrSel : UclArraySelectOperation, ctx : ScopeMap) : Option[UclArraySelectOperation] = { Some(arrSel) }
@@ -1031,7 +1031,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     val eP = (e match {
       case i : Identifier => visitIdentifier(i, context)
       case lit : Literal => visitLiteral(lit, context)
-      case rec : Record => visitRecord(rec, context)
+      case rec : Tuple => visitTuple(rec, context)
       case opapp : UclOperatorApplication => visitOperatorApp(opapp, context)
       case arrSel : UclArraySelectOperation => visitArraySelectOp(arrSel, context)
       case arrUpd : UclArrayStoreOperation => visitArrayStoreOp(arrUpd, context)
@@ -1077,8 +1077,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     return bvP
   }
   
-  def visitRecord(rec : Record, context : ScopeMap) : Option[Record] = {
-    val recP = pass.rewriteRecord(Record(rec.value.map(visitExpr(_, context)).flatten), context)
+  def visitTuple(rec : Tuple, context : ScopeMap) : Option[Tuple] = {
+    val recP = pass.rewriteTuple(Tuple(rec.values.map(visitExpr(_, context)).flatten), context)
     astChangeFlag = astChangeFlag || (recP != Some(rec))
     return recP
   }

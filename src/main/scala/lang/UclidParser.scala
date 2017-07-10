@@ -211,6 +211,7 @@ import uclid.lang.UclDecideCmd
       /** E9 := E10 MapOp | E10 **/
       lazy val E9: PackratParser[Expr] =
           E10 ~ ExprList ^^ { case e ~ f => UclFuncApplication(e, f) } |
+          E10 ~ RecordSelectOp ^^ { case e ~ r => UclOperatorApplication(RecordSelect(r), List(e)) } |
           E10 ~ ArraySelectOp ^^ { case e ~ m => UclArraySelectOperation(e, m) } |
           E10 ~ ArrayStoreOp ^^ { case e ~ m => UclArrayStoreOperation(e, m._1, m._2) } |
           E10 ~ ExtractOp ^^ { case e ~ m => UclOperatorApplication(m, List(e)) } |
@@ -220,7 +221,7 @@ import uclid.lang.UclDecideCmd
           Bool |
           Number |
           BitVector |
-          "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Record(e::es)} |
+          "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
           KwITE ~> ("(" ~> Expr ~ ("," ~> Expr) ~ ("," ~> Expr) <~ ")") ^^ { case e ~ t ~ f => UclITE(e,t,f) } |
           KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => UclLambda(idtyps, expr) } |
           "(" ~> Expr <~ ")" |
