@@ -210,7 +210,7 @@ case class EnumType(ids: List[Identifier]) extends Type {
     ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i} + "}"
 }
 case class TupleType(fieldTypes: List[Type]) extends Type {
-  override def toString = "tuple {" + Utils.join(fieldTypes.map(_.toString), ", ") + "}" 
+  override def toString = "{" + Utils.join(fieldTypes.map(_.toString), ", ") + "}" 
 }
 case class RecordType(fields: List[(Identifier,Type)]) extends Type {
   Utils.assert(Utils.allUnique(fields.map(_._1)), "Record field names must be unique.")
@@ -220,18 +220,11 @@ case class RecordType(fields: List[(Identifier,Type)]) extends Type {
   override def toString = "record {" + Utils.join(fields.map((f) => f._1.toString + " : " + f._2.toString), ", ")  + "}"
 }
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
-  override def toString = "map [" + inTypes.tail.fold(inTypes.head.toString)
-  { (acc,i) => acc + "," + i } + "] " + outType
-  override def equals(other: Any) = other match {
-      case that: MapType =>
-        if (that.inTypes.size == this.inTypes.size) {
-          (that.outType == this.outType) && (that.inTypes zip this.inTypes).forall(i => i._1 == i._2)
-        } else { false }
-      case _ => false
-    }
+  override def toString = Utils.join(inTypes.map(_.toString), " * ") + " -> " + outType.toString
 }
+
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
-  override def toString = "array [" + Utils.join(inTypes.map(_.toString), ", ") + "]" + outType.toString
+  override def toString = "[" + Utils.join(inTypes.map(_.toString), " * ") + "] " + outType.toString
 }
 case class SynonymType(id: Identifier) extends Type {
   override def toString = id.toString
@@ -279,15 +272,14 @@ case class UclCaseStmt(body: List[(Expr,List[UclStatement])]) extends UclStateme
     body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _)} ++ 
     List("esac")
 }
-case class UclProcedureCallStmt(id: Identifier, callLhss: List[UclLhs], args: List[Expr])
-  extends UclStatement {
+case class UclProcedureCallStmt(id: Identifier, callLhss: List[UclLhs], args: List[Expr])  extends UclStatement {
   override def toLines = List("call (" +
     Utils.join(callLhss.map(_.toString), ", ") + ") := " + id + "(" +
     Utils.join(args.map(_.toString), ", ") + ")")
 }
 
 case class UclLocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
-  override def toString = "localvar " + id + ": " + typ + ";"
+  override def toString = "var " + id + ": " + typ + ";"
 }
 
 case class UclProcedureSig(inParams: List[(Identifier,Type)], 
@@ -312,7 +304,8 @@ case class UclFunctionSig(args: List[(Identifier,Type)], retType: Type) extends 
 sealed abstract class UclDecl extends ASTNode
 case class UclProcedureDecl(id: Identifier, sig: UclProcedureSig, 
     decls: List[UclLocalVarDecl], body: List[UclStatement]) extends UclDecl {
-  override def toString = "procedure " + id + sig + PrettyPrinter.indent(1) + "{\n" + 
+  override def toString = "procedure " + id + sig + PrettyPrinter.indent(1) + "{\n" +
+                          Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" + 
                           Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") + 
                           "\n" + PrettyPrinter.indent(1) + "}"
 }

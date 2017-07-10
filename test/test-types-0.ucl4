@@ -2,8 +2,10 @@ module main {
   type t0 = int;
   type t1 = bool;
   type t2 = enum {red, green, blue};
-  type t3 = record {a: t0, b: t0, c: bool};
-  type t4 = record {a: t0, b: t0, c: record {d: bool, e: t3}};
+  type t3a = {t0, t0, t1};
+  type t3b = record {a: t0, b: t0, c: t1};
+  type t4 = record {d: t1, e: t3b};
+  type t5 = record {a: t0, b: t0, c: t4 };
 
   var y_global: t0;
   var z_global : t0;
@@ -11,7 +13,7 @@ module main {
   input mem_in : int -> int;
 
   procedure f(x: t0, y: t0) returns (z:t0) { 
-    localvar x_local: t0;
+    var x_local: t0;
     assume (x_local > 0); 
     assert (x_local <= 1); 
     havoc x_local; 

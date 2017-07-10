@@ -93,7 +93,6 @@ import uclid.lang.UclDecideCmd
       lazy val KwHavoc = "havoc"
       lazy val KwVar = "var"
       lazy val KwConst = "const"
-      lazy val KwLocalVar = "localvar"
       lazy val KwSkip = "skip"
       lazy val KwCall = "call"
       lazy val KwIf = "if"
@@ -133,8 +132,8 @@ import uclid.lang.UclDecideCmd
       lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul, OpBiImpl, OpImpl,
         OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat, OpNeg, OpMinus,
         "false", "true", "bv", KwProcedure, KwBool, KwInt, KwReturns,
-        KwAssume, KwAssert, KwVar, KwLocalVar, KwHavoc, KwCall, KwIf, KwElse,
-        KwCase, KwEsac, KwFor, KwIn, KwRange, KwLocalVar, KwInput, KwOutput,
+        KwAssume, KwAssert, KwVar, KwHavoc, KwCall, KwIf, KwElse,
+        KwCase, KwEsac, KwFor, KwIn, KwRange, KwInput, KwOutput,
         KwModule, KwType, KwEnum, KwRecord, KwSkip, KwFunction, 
         KwInitialize, KwUnroll, KwSimulate, KwDecide, KwControl,
         KwInit, KwNext, KwITE, KwLambda, 
@@ -240,6 +239,9 @@ import uclid.lang.UclDecideCmd
         
       lazy val EnumType : PackratParser[lang.EnumType] =
         KwEnum ~> ("{" ~> Id) ~ rep("," ~> Id) <~ "}" ^^ { case id ~ ids => lang.EnumType(id::ids) }
+      lazy val TupleType : PackratParser[lang.TupleType] = 
+        ("{" ~> Type ~ rep("," ~> Type) <~ "}") ^^
+        { case t ~ ts => lang.TupleType(t :: ts) }
       lazy val RecordType : PackratParser[lang.RecordType] =
         KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) <~ "}" ^^ 
         { case id ~ ids => lang.RecordType(id::ids) }
@@ -251,7 +253,7 @@ import uclid.lang.UclDecideCmd
           { case t ~ ts ~ rt => lang.ArrayType(t :: ts, rt)}
       lazy val SynonymType : PackratParser[lang.SynonymType] = Id ^^ { case id => lang.SynonymType(id) }
       lazy val Type : PackratParser[Type] = 
-        MapType | ArrayType | EnumType | RecordType | PrimitiveType | SynonymType
+        MapType | ArrayType | EnumType | TupleType | RecordType | PrimitiveType | SynonymType
     
       lazy val IdType : PackratParser[(Identifier,Type)] =
         Id ~ (":" ~> Type) ^^ { case id ~ typ => (id,typ)}
@@ -275,7 +277,7 @@ import uclid.lang.UclDecideCmd
         KwRange ~> ("(" ~> Number ~ ("," ~> Number) <~ ")") ^^ { case x ~ y => (x,y) }
     
       lazy val LocalVarDecl : PackratParser[UclLocalVarDecl] =
-        KwLocalVar ~> IdType <~ ";" ^^ { case (id,typ) => UclLocalVarDecl(id,typ)}
+        KwVar ~> IdType <~ ";" ^^ { case (id,typ) => UclLocalVarDecl(id,typ)}
         
       lazy val Statement: PackratParser[UclStatement] =
         KwSkip <~ ";" ^^ { case _ => UclSkipStmt() } |
