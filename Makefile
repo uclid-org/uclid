@@ -31,4 +31,7 @@ test-types-0:
 test-type1: 
 	sbt "run -m test ./test/test-type1.ucl4"
 
+test-tuple-record-1:
+	sbt "run ./test/test-tuple-record-1.ucl4"
+
 .PHONY: all build run specs test-int-fib test-types-0 test-type1 test-bv-fib
