@@ -22,7 +22,7 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
       simplifySynonyms()
     }
   }
-  override def applyOnTypeDecl(d : TraversalDirection.T, typDec : UclTypeDecl, in : Unit, context : ScopeMap) : Unit = {
+  override def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : Unit, context : ScopeMap) : Unit = {
     if (d == TraversalDirection.Down) {
       typeDeclMap.put(typDec.id, typDec.typ)
     }
@@ -134,7 +134,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
         case MulOp() => BVMulOp(w)
       }
     }
-    def opAppType(opapp : UclOperatorApplication) : Type = {
+    def opAppType(opapp : OperatorApplication) : Type = {
       val argTypes = opapp.operands.map(typeOf(_, c))
       opapp.op match {
         case polyOp : PolymorphicOperator => {
@@ -210,7 +210,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
       }
     }
     
-    def arraySelectType(arrSel : UclArraySelectOperation) : Type = {
+    def arraySelectType(arrSel : ArraySelectOperation) : Type = {
       Utils.assert(typeOf(arrSel.e, c).isInstanceOf[ArrayType], "Type error in the array operand of select operation.")
       val indTypes = arrSel.index.map(typeOf(_, c))
       val arrayType = typeOf(arrSel.e, c).asInstanceOf[ArrayType]
@@ -218,7 +218,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
       return arrayType.outType
     }
     
-    def arrayStoreType(arrStore : UclArrayStoreOperation) : Type = {
+    def arrayStoreType(arrStore : ArrayStoreOperation) : Type = {
       Utils.assert(typeOf(arrStore.e, c).isInstanceOf[ArrayType], "Type error in the array operand of store operation.")
       val indTypes = arrStore.index.map(typeOf(_, c))
       val valueType = typeOf(arrStore.value, c)
@@ -228,7 +228,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
       return arrayType
     }
     
-    def funcAppType(fapp : UclFuncApplication) : Type = {
+    def funcAppType(fapp : FuncApplication) : Type = {
       Utils.assert(typeOf(fapp.e, c).isInstanceOf[MapType], "Type error in function application (not a function).")
       val funcType = typeOf(fapp.e,c ).asInstanceOf[MapType]
       val argTypes = fapp.args.map(typeOf(_, c))
@@ -236,13 +236,13 @@ class TypecheckPass extends ReadOnlyPass[Unit]
       return funcType.outType
     }
     
-    def iteType(ite : UclITE) : Type = {
+    def iteType(ite : ITE) : Type = {
       Utils.assert(typeOf(ite.e, c).isBool, "Type error in ITE condition operand.")
       Utils.assert(typeOf(ite.t, c) == typeOf(ite.f, c), "ITE operand types don't match.")
       return typeOf(ite.t, c)
     }
     
-    def lambdaType(lambda : UclLambda) : Type = {
+    def lambdaType(lambda : Lambda) : Type = {
       return MapType(lambda.ids.map(_._2), typeOf(lambda.e, c))
     }
     
@@ -254,12 +254,12 @@ class TypecheckPass extends ReadOnlyPass[Unit]
         case i : IntLit => new IntType()
         case bv : BitVectorLit => new BitVectorType(bv.width)
         case r : Tuple => new TupleType(r.values.map(typeOf(_, c)))
-        case opapp : UclOperatorApplication => opAppType(opapp)
-        case arrSel : UclArraySelectOperation => arraySelectType(arrSel)
-        case arrStore : UclArrayStoreOperation => arrayStoreType(arrStore)
-        case fapp : UclFuncApplication => funcAppType(fapp)
-        case ite : UclITE => iteType(ite)
-        case lambda : UclLambda => lambdaType(lambda)
+        case opapp : OperatorApplication => opAppType(opapp)
+        case arrSel : ArraySelectOperation => arraySelectType(arrSel)
+        case arrStore : ArrayStoreOperation => arrayStoreType(arrStore)
+        case fapp : FuncApplication => funcAppType(fapp)
+        case ite : ITE => iteType(ite)
+        case lambda : Lambda => lambdaType(lambda)
       }
       memo.put(e.astNodeId, typ)
       return typ

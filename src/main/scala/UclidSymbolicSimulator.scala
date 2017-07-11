@@ -28,9 +28,9 @@ package uclid {
     def execute(solver : smt.SolverInterface) {
       module.cmds.foreach((cmd) => {
         cmd match {
-          case UclInitializeCmd() => initialize()
-          case UclSimulateCmd(steps) => simulate(steps.value.toInt)
-          case UclDecideCmd() => {
+          case InitializeCmd() => initialize()
+          case SimulateCmd(steps) => simulate(steps.value.toInt)
+          case DecideCmd() => {
             asserts.foreach{ (e) =>
               println("Assertion: " + e.toString)
               solver.check(smt.OperatorApplication(smt.NegationOp, List(e))) match {
@@ -138,7 +138,7 @@ package uclid {
       }
     }
     
-    def simulate(stmts: List[UclStatement], symbolTable: SymbolTable, c : Context) : SymbolTable = {
+    def simulate(stmts: List[Statement], symbolTable: SymbolTable, c : Context) : SymbolTable = {
       return stmts.foldLeft(symbolTable)((acc,i) => simulate(i, acc, c));
     }
     
@@ -146,12 +146,12 @@ package uclid {
       return simulate(context.next, symbolTable, context)
     }
     
-    def simulate(s: UclStatement, symbolTable: SymbolTable, c : Context) : SymbolTable = {
-      def simulateAssign(lhss: List[UclLhs], args: List[smt.Expr], input: SymbolTable) : SymbolTable = {
+    def simulate(s: Statement, symbolTable: SymbolTable, c : Context) : SymbolTable = {
+      def simulateAssign(lhss: List[Lhs], args: List[smt.Expr], input: SymbolTable) : SymbolTable = {
         //println("Invoking simulateAssign with " + lhss + " := " + args + " and symboltable " + symbolTable)
         var st : SymbolTable = input;
-        def lhs(i: (UclLhs,smt.Expr)) = { i._1 }
-        def rhs(i: (UclLhs,smt.Expr)) = { i._2 }
+        def lhs(i: (Lhs,smt.Expr)) = { i._1 }
+        def rhs(i: (Lhs,smt.Expr)) = { i._2 }
         (lhss zip args).foreach { x =>
           var arraySelectOp = x._1.arraySelect match { case Some(as) => as; case None => null};
           var recordSelectOp = x._1.recordSelect match { case Some(rs) => rs; case None => null};
@@ -170,17 +170,17 @@ package uclid {
         return st
       }
       s match {
-        case UclSkipStmt() => return symbolTable
-        case UclAssertStmt(e) => 
+        case SkipStmt() => return symbolTable
+        case AssertStmt(e) => 
           this.asserts = this.asserts ++ List(evaluate(e,symbolTable,c))
           return symbolTable
-        case UclAssumeStmt(e) => return symbolTable
-        case UclHavocStmt(id) => 
+        case AssumeStmt(e) => return symbolTable
+        case HavocStmt(id) => 
           return symbolTable.updated(id, newHavocSymbol(id.value, toSMT(c.variables(id),c)))
-        case UclAssignStmt(lhss,rhss) =>
+        case AssignStmt(lhss,rhss) =>
           val es = rhss.map(i => evaluate(i, symbolTable, c));
           return simulateAssign(lhss, es, symbolTable)
-        case UclIfElseStmt(e,then_branch,else_branch) =>
+        case IfElseStmt(e,then_branch,else_branch) =>
           var then_modifies : Set[Identifier] = writeSet(then_branch,c)
           var else_modifies : Set[Identifier] = writeSet(else_branch,c)
           //compute in parallel
@@ -190,13 +190,13 @@ package uclid {
             foldLeft(symbolTable){ (acc,id) => 
               acc.updated(id, smt.ITE(evaluate(e, symbolTable,c), then_st(id), else_st(id)))
             }
-        case UclForStmt(id, range, body) => throw new Utils.UnimplementedException("Cannot symbolically execute For loop")
-        case UclCaseStmt(body) => throw new Utils.UnimplementedException("Cannot symbolically execute Case stmt")
-        case UclProcedureCallStmt(id,lhss,args) =>
+        case ForStmt(id, range, body) => throw new Utils.UnimplementedException("Cannot symbolically execute For loop")
+        case CaseStmt(body) => throw new Utils.UnimplementedException("Cannot symbolically execute Case stmt")
+        case ProcedureCallStmt(id,lhss,args) =>
           var st : SymbolTable = (c.procedures(id).sig.inParams zip args).
             foldLeft(symbolTable){(acc,x) => acc.updated(x._1._1, evaluate(x._2, symbolTable, c) )}
           var c2: Context = c.copyContext()
-          val proc: UclProcedureDecl = c.procedures(id)
+          val proc: ProcedureDecl = c.procedures(id)
           c2.inputs = c.inputs ++ (proc.sig.inParams.map(i => i._1 -> i._2).toMap)
           c2.variables = c.variables ++ (proc.sig.outParams.map(i => i._1 -> i._2).toMap)
           c2.variables = c2.variables ++ (proc.decls.map(i => i.id -> i.typ).toMap)
@@ -211,13 +211,13 @@ package uclid {
       }
     }
     
-    def writeSet(stmts: List[UclStatement], c: Context) : Set[Identifier] = {
-      def stmtWriteSet(stmt: UclStatement, c: Context) : Set[Identifier] = stmt match {
-        case UclSkipStmt() => Set.empty
-        case UclAssertStmt(e) => Set.empty
-        case UclAssumeStmt(e) => Set.empty
-        case UclHavocStmt(id) => Set(id)
-        case UclAssignStmt(lhss,rhss) => 
+    def writeSet(stmts: List[Statement], c: Context) : Set[Identifier] = {
+      def stmtWriteSet(stmt: Statement, c: Context) : Set[Identifier] = stmt match {
+        case SkipStmt() => Set.empty
+        case AssertStmt(e) => Set.empty
+        case AssumeStmt(e) => Set.empty
+        case HavocStmt(id) => Set(id)
+        case AssignStmt(lhss,rhss) => 
           return lhss.map { lhs => 
             var lhs_id : String = lhs.id.value;
             lhs.recordSelect match {
@@ -225,12 +225,12 @@ package uclid {
               case None => Identifier(lhs_id)
             }
           }.toSet
-        case UclIfElseStmt(e,then_branch,else_branch) => 
+        case IfElseStmt(e,then_branch,else_branch) => 
           return writeSet(then_branch,c) ++ writeSet(else_branch,c)
-        case UclForStmt(id, range, body) => return writeSet(body,c)
-        case UclCaseStmt(body) => 
+        case ForStmt(id, range, body) => return writeSet(body,c)
+        case CaseStmt(body) => 
           return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2,c) }
-        case UclProcedureCallStmt(id,lhss,args) => return writeSet(c.procedures(id).body,c)
+        case ProcedureCallStmt(id,lhss,args) => return writeSet(c.procedures(id).body,c)
       }
       return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ stmtWriteSet(s,c)}
     }
@@ -238,19 +238,19 @@ package uclid {
     //TODO: get rid of this and use subtituteSMT instead
     def substitute(e: Expr, id: Identifier, arg: Expr) : Expr = {
        e match {
-         case UclOperatorApplication(op,args) =>
-           return UclOperatorApplication(op, args.map(x => substitute(x, id, arg)))
-         case UclArraySelectOperation(a,index) => 
-           return UclArraySelectOperation(a, index.map(x => substitute(x, id, arg)))
-         case UclArrayStoreOperation(a,index,value) => 
-           return UclArrayStoreOperation(a, index.map(x => substitute(x, id, arg)), substitute(value, id, arg))
-         case UclFuncApplication(f,args) => 
-           return UclFuncApplication(substitute(f,id,arg), args.map(x => substitute(x,id,arg)))
-         case UclITE(cond,t,f) =>
-           return UclITE(substitute(cond,id,arg), substitute(t,id,arg), substitute(f,id,arg))
-         case UclLambda(idtypes, le) =>
+         case OperatorApplication(op,args) =>
+           return OperatorApplication(op, args.map(x => substitute(x, id, arg)))
+         case ArraySelectOperation(a,index) => 
+           return ArraySelectOperation(a, index.map(x => substitute(x, id, arg)))
+         case ArrayStoreOperation(a,index,value) => 
+           return ArrayStoreOperation(a, index.map(x => substitute(x, id, arg)), substitute(value, id, arg))
+         case FuncApplication(f,args) => 
+           return FuncApplication(substitute(f,id,arg), args.map(x => substitute(x,id,arg)))
+         case ITE(cond,t,f) =>
+           return ITE(substitute(cond,id,arg), substitute(t,id,arg), substitute(f,id,arg))
+         case Lambda(idtypes, le) =>
            Utils.assert(idtypes.exists(x => x._1.value == id.value), "Lambda arguments of the same name")
-           return UclLambda(idtypes, substitute(le, id, arg))
+           return Lambda(idtypes, substitute(le, id, arg))
          case IntLit(n) => return e
          case BoolLit(b) => return e
          case Identifier(i) => return (if (id.value == i) arg else e)
@@ -282,16 +282,16 @@ package uclid {
   
     def evaluate(e: Expr, symbolTable: SymbolTable, context: Context) : smt.Expr = {
        e match { //check that all identifiers in e have been declared
-         case UclOperatorApplication(op,args) =>
+         case OperatorApplication(op,args) =>
            return smt.OperatorApplication(toSMT(op,context), args.map(i => evaluate(i, symbolTable, context)))
-         case UclArraySelectOperation(a,index) => 
+         case ArraySelectOperation(a,index) => 
            return smt.ArraySelectOperation(evaluate(a, symbolTable, context), 
                index.map { x => evaluate(x,symbolTable,context) })
-         case UclArrayStoreOperation(a,index,value) => 
+         case ArrayStoreOperation(a,index,value) => 
            return smt.ArrayStoreOperation(evaluate(a, symbolTable, context), 
                index.map { x => evaluate(x,symbolTable,context) }, 
                evaluate(value, symbolTable,context))
-         case UclFuncApplication(f,args) => f match {
+         case FuncApplication(f,args) => f match {
            case Identifier(id) => 
              if (context.constants.contains(Identifier(id))) {
                return smt.FunctionApplication(evaluate(f, symbolTable,context), args.map(i => evaluate(i,symbolTable,context))) 
@@ -303,14 +303,14 @@ package uclid {
              } else {
                throw new Exception("How did i get here?") //should either be a lambda or an identifier
              }
-           case UclLambda(idtypes,le) => //do beta sub
+           case Lambda(idtypes,le) => //do beta sub
              var le_sub = (idtypes.map(x => x._1) zip args).foldLeft(le){(acc,x) => substitute(acc, x._1, x._2)}
              return evaluate(le_sub, symbolTable, context)
            case _ => throw new Exception("How did i get here?")
          }
-         case UclITE(cond,t,f) =>
+         case ITE(cond,t,f) =>
            return smt.ITE(evaluate(cond,symbolTable,context), evaluate(t,symbolTable,context), evaluate(f,symbolTable,context))
-         case UclLambda(ids,le) => 
+         case Lambda(ids,le) => 
            return smt.Lambda(ids.map(i => smt.Symbol(i._1.value, toSMT(i._2,context))), evaluate(le,symbolTable,context))
          case IntLit(n) => smt.IntLit(n)
          case BoolLit(b) => smt.BooleanLit(b)
