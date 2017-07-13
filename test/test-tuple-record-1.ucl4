@@ -1,5 +1,5 @@
 module main {
-  type num = bv8;
+  type num = int;
   type bit = bool;
   type tup1 = {num, num, bit};
   type rec1 = record {a : num, b : num, c : bit };
@@ -8,13 +8,11 @@ module main {
   var st : tup1;
 
   procedure foo(stIn : tup1) returns (stOut: tup1) {
-    stOut._1 := stIn._1 + 1bv8;
-    stOut._2 := stIn._2 + stIn._1;
-    stOut._3 := !stIn._3; 
+    stOut := {stIn._1 + 1, stIn._2 + stIn._1, !stIn._3};
   }
   
   init {
-    st := {0bv8, 0bv8, true}; 
+    st := {0, 0, true}; 
   }
   
   next {
@@ -24,8 +22,8 @@ module main {
   }
   
   control {
-   // initialize;
-   // simulate (5);
-   // decide;
+   initialize;
+   simulate (3);
+   decide;
   }
 }
