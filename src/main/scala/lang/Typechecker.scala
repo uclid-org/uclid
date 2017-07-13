@@ -201,11 +201,21 @@ class TypecheckPass extends ReadOnlyPass[Unit]
         }
         case RecordSelect(field) => {
           Utils.assert(argTypes.size == 1, "Record select operator must have exactly one operand.")
-          Utils.assert(argTypes(0).isInstanceOf[RecordType], "Argument to record select operator must be of type record.")
-          val recordType = argTypes(0).asInstanceOf[RecordType]
-          val typOption = recordType.fieldType(field)
-          Utils.assert(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in record.")
-          return typOption.get
+          argTypes(0) match {
+            case recType : RecordType =>
+              val typOption = recType.fieldType(field)
+              Utils.assert(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in record.")
+              typOption.get
+            case tupType : TupleType =>
+              val indexS = field.value.substring(1)
+              Utils.assert(indexS.forall(Character.isDigit), "Tuple fields must be integers preceded by an underscore.")
+              val indexI = indexS.toInt
+              Utils.assert(indexI >= 1 && indexI <= tupType.numFields, "Invalid tuple index: " + indexS)
+              tupType.fieldTypes(indexI-1)
+            case _ =>
+              Utils.assert(false, "Argument to record select operator must be of type record.")
+              new BoolType()
+          }
         }
       }
     }

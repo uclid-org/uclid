@@ -1,15 +1,16 @@
 module main {
   type num = bv8;
   type bit = bool;
-  type tuple1 = {num, num, bit};
+  type tup1 = {num, num, bit};
   type rec1 = record {a : num, b : num, c : bit };
+  type rec2 = record { r : rec1, b : num };
   
-  var st : rec1;
+  var st : tup1;
 
-  procedure foo(stIn : rec1) returns (stOut: rec1) {
-    stOut.a := stIn.a + 1bv8;
-    stOut.b := stIn.b + stIn.a;
-    stOut.c := !stIn.c; 
+  procedure foo(stIn : tup1) returns (stOut: tup1) {
+    stOut._1 := stIn._1 + 1bv8;
+    stOut._2 := stIn._2 + stIn._1;
+    stOut._3 := !stIn._3; 
   }
   
   init {
@@ -19,7 +20,7 @@ module main {
   next {
     call (st) := foo(st);
     
-    assert (st.a <= st.b);
+    assert (st._1 <= st._2);
   }
   
   control {

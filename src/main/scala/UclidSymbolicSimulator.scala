@@ -20,8 +20,9 @@ package uclid {
     
     def newHavocSymbol(name: String, t: smt.Type) = 
       new smt.Symbol("_ucl_" + UniqueIdGenerator.unique() + "_" + name, t)
-    def newInputSymbol(name: String, step: Int, t: smt.Type) = 
+    def newInputSymbol(name: String, step: Int, t: smt.Type) = {
       new smt.Symbol("_ucl_" + step +"_" + name, t)
+    }
     def newConstantSymbol(name: String, t: smt.Type) = 
       new smt.Symbol(name,t)
     
