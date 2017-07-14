@@ -49,6 +49,7 @@ package uclid {
     case class TupleType(types: List[Type]) extends Type {
       val fieldNames = (1 to types.length).map("_" + _.toString)
       val fields = fieldNames zip types
+      val fieldIndices = (0 to (types.length - 1))
       def fieldType(name: String) : Option[Type] = fields.find((p) => p._1 == name).flatMap((f) => Some(f._2))
       def hasField(name: String) : Boolean = fields.find((p) => p._1 == name).isDefined
       def fieldIndex(name: String) : Int = fields.indexWhere((p) => p._1 == name)

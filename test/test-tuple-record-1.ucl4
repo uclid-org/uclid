@@ -6,18 +6,31 @@ module main {
   type rec2 = record { r : rec1, b : num };
   
   var st : tup1;
+  var stp : tup1;
+  var cnt : num;
 
-  procedure foo(stIn : tup1) returns (stOut: tup1) {
-    stOut := {stIn._1 + 1, stIn._2 + stIn._1, !stIn._3};
+  procedure foo(stIn : tup1) returns (st1: tup1, st2: tup1) {
+    st2._1 := stIn._1 + 1;
+    st2._2 := stIn._2 + st2._1;
+    st2._3 := !stIn._3;
+    st1 := {stIn._1 + 1, stIn._2 + stIn._1 + 1, !stIn._3};
   }
   
   init {
-    st := {0, 0, true}; 
+    st := {0, 0, true};
+    stp := st;
+    cnt := 0; 
   }
   
   next {
-    call (st) := foo(st);
+    call (st, stp) := foo(st);
+    cnt := cnt + 1;
     
+    assert (stp._1 == st._1);
+    assert (stp._2 == st._2);
+    assert (stp._3 == st._3);
+    
+    assert (st._1 == cnt);
     assert (st._1 <= st._2);
   }
   

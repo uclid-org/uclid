@@ -259,7 +259,9 @@ class TypecheckPass extends ReadOnlyPass[Unit]
     val cachedType = memo.get(e.astNodeId)
     if (cachedType.isEmpty) {
       val typ = e match {
-        case i : Identifier => (c.typeOf(i).get)
+        case i : Identifier =>
+          Utils.assert(c.typeOf(i).isDefined, "Unknown variable: " + i.value)
+          (c.typeOf(i).get)
         case b : BoolLit => new BoolType()
         case i : IntLit => new IntType()
         case bv : BitVectorLit => new BitVectorType(bv.width)
