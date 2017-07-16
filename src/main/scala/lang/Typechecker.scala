@@ -303,3 +303,4 @@ class PolymorphicTypeRewriterPass extends RewritePass {
 }
 class PolymorphicTypeRewriter extends ASTRewriter(
     "PolymorphicTypeRewriter", new PolymorphicTypeRewriterPass())
+  

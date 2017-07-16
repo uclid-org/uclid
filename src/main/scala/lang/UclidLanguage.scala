@@ -433,18 +433,21 @@ object Scope {
   }
 }
 
-case class ScopeMap (map: Scope.IdentifierMap) {
+case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl]) {
+  /** Check if a variable name exists in this context. */
+  def doesNameExist(name: Identifier) = map.contains(name)
   /** Create an empty context. */
   def this() {
-    this(Map.empty[Identifier, Scope.NamedExpression])
+    this(Map.empty[Identifier, Scope.NamedExpression], None, None)
   }
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : ScopeMap = {
-    new ScopeMap(map + (expr.id -> expr))
+    new ScopeMap(map + (expr.id -> expr), module, procedure)
   }
   /** Return a new context with the declarations in this module added to it. */
-  def +(module: Module) : ScopeMap = { 
-    val newMap = module.decls.foldLeft(map){ (mapAcc, decl) =>
+  def +(m: Module) : ScopeMap = { 
+    Utils.assert(module.isEmpty, "A module was already added to this Context.")
+    val newMap = m.decls.foldLeft(map){ (mapAcc, decl) =>
       decl match {
         case ProcedureDecl(id, sig, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
         case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
@@ -457,10 +460,11 @@ case class ScopeMap (map: Scope.IdentifierMap) {
         case InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
-    return new ScopeMap(newMap)
+    return new ScopeMap(newMap, Some(m), None)
   }
   /** Return a new context with the declarations in this procedure added to it. */
   def +(proc: ProcedureDecl) : ScopeMap = {
+    Utils.assert(procedure.isEmpty, "A procedure was already added to this context.")
     val map1 = proc.sig.inParams.foldLeft(map){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureInputArg(arg._1, arg._2))
     }
@@ -470,14 +474,14 @@ case class ScopeMap (map: Scope.IdentifierMap) {
     val map3 = proc.decls.foldLeft(map2){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureLocalVar(arg.id, arg.typ))
     }
-    return new ScopeMap(map3)
+    return new ScopeMap(map3, module, Some(proc))
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
   def +(lambda: Lambda) : ScopeMap = {
     val newMap = lambda.ids.foldLeft(map){ 
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }
-    return new ScopeMap(newMap)
+    return new ScopeMap(newMap, module, procedure)
   }
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {

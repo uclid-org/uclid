@@ -86,9 +86,23 @@ package uclid {
         println("Input File: " + srcFile)
         val text = scala.io.Source.fromFile(srcFile).mkString
         val fileModules = UclidParser.parseModel(text).map(passManager.run(_).get)
-        // passManager.pass("FindLeafProcedures").asInstanceOf[FindLeafProcedures].printLeafProcedures()
+        val findLeavesPass = passManager.pass("FindLeafProcedures").asInstanceOf[FindLeafProcedures] 
         for(module <- fileModules) {
           UclidSemanticAnalyzer.checkSemantics(module)
+          /*
+          findLeavesPass.out match {
+            case Some(leaves) =>
+                    leaves.foreach { (id) =>
+                      val proc = findLeavesPass.pass.procedure(id)
+                      println("Attempting to inline '" + proc.id.value + "'.")
+                      val rewriter = new ASTRewriter("Inliner", new InlineProcedurePass(proc))
+                      val moduleP = rewriter.visit(module)
+                      println(moduleP.toString)
+                    }
+            case None => 
+          }
+          * 
+          */
         }
         nameCnt = fileModules.foldLeft(nameCnt)((cnts : NameCountMap, m : Module) => (cnts + (m.id -> (cnts(m.id) + 1))))
         val repeatedNameCnt = nameCnt.filter{ case (name, cnt) => cnt > 1 }
