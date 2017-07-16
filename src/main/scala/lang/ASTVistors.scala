@@ -1164,6 +1164,15 @@ class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
       case None => Some(e)
     }
   }
+  override def rewriteIdentifier(i: Identifier, context: ScopeMap) : Option[Identifier] = {
+    rewrites.get(i) match {
+      case None => Some(i)
+      case Some(eprime) => eprime match {
+        case idprime : Identifier => Some(idprime)
+        case _ => Some(i)
+      }
+    }
+  }
 }
 
 class ExprRewriter(name: String, rewrites : Map[Expr, Expr]) 

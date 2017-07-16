@@ -89,7 +89,6 @@ package uclid {
         val findLeavesPass = passManager.pass("FindLeafProcedures").asInstanceOf[FindLeafProcedures] 
         for(module <- fileModules) {
           UclidSemanticAnalyzer.checkSemantics(module)
-          /*
           findLeavesPass.out match {
             case Some(leaves) =>
                     leaves.foreach { (id) =>
@@ -101,8 +100,6 @@ package uclid {
                     }
             case None => 
           }
-          * 
-          */
         }
         nameCnt = fileModules.foldLeft(nameCnt)((cnts : NameCountMap, m : Module) => (cnts + (m.id -> (cnts(m.id) + 1))))
         val repeatedNameCnt = nameCnt.filter{ case (name, cnt) => cnt > 1 }
