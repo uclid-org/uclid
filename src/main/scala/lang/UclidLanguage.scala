@@ -63,13 +63,17 @@ case class IntSubOp() extends IntArgOperator { override def toString = "-" }
 case class IntMulOp() extends IntArgOperator { override def toString = "*" }
 // These operators take bitvector operands.
 sealed abstract class BVArgOperator(val w : Int) extends InfixOperator
-case class BVLTOp(override val w : Int) extends BVArgOperator(w) { override def toString = "<_" + w.toString }
-case class BVLEOp(override val w : Int) extends BVArgOperator(w) { override def toString = "<=_" + w.toString }
-case class BVGTOp(override val w : Int) extends BVArgOperator(w) { override def toString = ">_" + w.toString }
-case class BVGEOp(override val w : Int) extends BVArgOperator(w) { override def toString = ">=_" + w.toString }
-case class BVAddOp(override val w : Int) extends BVArgOperator(w) { override def toString ="+_" + w.toString }
-case class BVSubOp(override val w : Int) extends BVArgOperator(w) { override def toString = "-_" + w.toString }
-case class BVMulOp(override val w : Int) extends BVArgOperator(w) { override def toString = "*_" + w.toString }
+case class BVLTOp(override val w : Int) extends BVArgOperator(w) { override def toString = "<" }
+case class BVLEOp(override val w : Int) extends BVArgOperator(w) { override def toString = "<=" }
+case class BVGTOp(override val w : Int) extends BVArgOperator(w) { override def toString = ">" }
+case class BVGEOp(override val w : Int) extends BVArgOperator(w) { override def toString = ">=" }
+case class BVAddOp(override val w : Int) extends BVArgOperator(w) { override def toString ="+"  }
+case class BVSubOp(override val w : Int) extends BVArgOperator(w) { override def toString = "-" }
+case class BVMulOp(override val w : Int) extends BVArgOperator(w) { override def toString = "*" }
+case class BVAndOp(override val w : Int) extends BVArgOperator(w) { override def toString = "&" }
+case class BVOrOp(override val w : Int) extends BVArgOperator(w) { override def toString = "|" }
+case class BVXorOp(override val w : Int) extends BVArgOperator(w) { override def toString = "^" }
+case class BVNotOp(override val w : Int) extends BVArgOperator(w) { override def toString = "~" }
 // Boolean operators.
 sealed abstract class BooleanOperator() extends Operator { override def isInfix = true }
 case class ConjunctionOp() extends BooleanOperator { override def toString = "&&" }

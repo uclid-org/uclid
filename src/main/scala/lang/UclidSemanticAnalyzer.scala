@@ -65,12 +65,16 @@ class Context {
     types = m_typedecls.map(x => x.asInstanceOf[T7].id -> x.asInstanceOf[T7].typ).toMap
     
     val m_nextdecl = m.decls.filter { x => x.isInstanceOf[NextDecl] }
-    Utils.assert(m_nextdecl.size == 1, "Need exactly one next decl");
+    Utils.assert(m_nextdecl.size == 1, "Need exactly one next decl.");
     next = (m_nextdecl(0)).asInstanceOf[NextDecl].body
     
     val m_initdecl = m.decls.filter { x => x.isInstanceOf[InitDecl] }
-    Utils.assert(m_initdecl.size == 1, "Need exactly one init decl");
-    init = (m_initdecl(0)).asInstanceOf[InitDecl].body
+    Utils.assert(m_initdecl.size <= 1, "Can't have more than one init decl.");
+    if (m_initdecl.size > 0) {
+      init = (m_initdecl(0)).asInstanceOf[InitDecl].body
+    } else {
+      init = List.empty[Statement]
+    }
   }
   
   def copyContext() : Context = {
@@ -374,6 +378,15 @@ object UclidSemanticAnalyzer {
           case IntAddOp() | IntSubOp() | IntMulOp() | BVAddOp(_) | BVSubOp(_) | BVMulOp(_) => {
             Utils.assert(types.size == 2, "Expected two arguments to arithmetic operators.")
             Utils.assert(types(0) == types(1), "Operands to arithmetic operators must be of the same type in expression: " + e.toString + ". Types are " + types(0).toString + " and " + types(1).toString + ".")
+            (types.head._1, temporalArgs)
+          }
+          case BVAndOp(_) | BVOrOp(_) | BVXorOp(_) => {
+            Utils.assert(types.size == 2, "Expected two arguments to arithmetic operators.")
+            Utils.assert(types(0) == types(1), "Operands to arithmetic operators must be of the same type in expression: " + e.toString + ". Types are " + types(0).toString + " and " + types(1).toString + ".")
+            (types.head._1, temporalArgs)
+          }
+          case BVNotOp(_) => {
+            Utils.assert(types.size == 1, "Expected two arguments to arithmetic operators.")
             (types.head._1, temporalArgs)
           }
           // FIXME: Remove these polymorphic operators.

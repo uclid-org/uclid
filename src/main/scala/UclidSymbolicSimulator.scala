@@ -130,6 +130,10 @@ package uclid {
         case BVAddOp(w) => return smt.BVAddOp(w)
         case BVSubOp(w) => return smt.BVSubOp(w)
         case BVMulOp(w) => return smt.BVMulOp(w)
+        case BVAndOp(w) => return smt.BVAndOp(w)
+        case BVOrOp(w) => return smt.BVOrOp(w)
+        case BVXorOp(w) => return smt.BVXorOp(w)
+        case BVNotOp(w) => return smt.BVNotOp(w)
         // Boolean operators.
         case ConjunctionOp() => return smt.ConjunctionOp
         case DisjunctionOp() => return smt.DisjunctionOp
