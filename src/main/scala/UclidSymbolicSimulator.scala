@@ -164,19 +164,20 @@ package uclid {
         def lhs(i: (Lhs,smt.Expr)) = { i._1 }
         def rhs(i: (Lhs,smt.Expr)) = { i._2 }
         (lhss zip args).foreach { x =>
-          var arraySelectOp = x._1.arraySelect match { case Some(as) => as; case None => null};
-          var recordSelectOp = x._1.recordSelect match { case Some(rs) => rs; case None => null};
+          val arraySelectOp = x._1.arraySelect
+          val recordSelectOp = x._1.recordSelect
+          val sliceSelectOp = x._1.sliceSelect
           //st = st.updated(lhs(x).id, rhs(x))
-          if (arraySelectOp == null && recordSelectOp == null) {
+          if (arraySelectOp.isEmpty && recordSelectOp.isEmpty && sliceSelectOp.isEmpty) {
             st = st + (lhs(x).id -> rhs(x))
-          } else if (arraySelectOp != null && recordSelectOp == null) {
+          } else if (arraySelectOp.isDefined && recordSelectOp.isEmpty && sliceSelectOp.isEmpty) {
             st = st + (lhs(x).id -> smt.ArrayStoreOperation(st(lhs(x).id), 
-                arraySelectOp.map(i => evaluate(i, st, c)), rhs(x)))
-          } else if (arraySelectOp == null && recordSelectOp != null) {
-            Utils.assert(recordSelectOp.length == 1, "No support for nested record updates.")
-            st = st + (lhs(x).id -> smt.OperatorApplication(smt.RecordUpdateOp(recordSelectOp(0).value), List(st(lhs(x).id), rhs(x))))
-          } else if (arraySelectOp != null && recordSelectOp != null) {
-            throw new Utils.UnimplementedException("No support for records")
+                arraySelectOp.get.map(i => evaluate(i, st, c)), rhs(x)))
+          } else if (arraySelectOp.isEmpty && recordSelectOp.isDefined && sliceSelectOp.isEmpty) {
+            Utils.assert(recordSelectOp.get.length == 1, "No support for nested record updates.")
+            st = st + (lhs(x).id -> smt.OperatorApplication(smt.RecordUpdateOp(recordSelectOp.get(0).value), List(st(lhs(x).id), rhs(x))))
+          } else if (arraySelectOp.isDefined && recordSelectOp.isDefined && sliceSelectOp.isEmpty) {
+            throw new Utils.UnimplementedException("No support for arrays of records.")
           }
         }
         return st

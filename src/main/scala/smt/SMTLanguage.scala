@@ -148,7 +148,33 @@ package uclid {
       override def toString = "bvneg"
       override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 1); checkAllArgTypes(args, BitVectorType.t(w)) }
     }
-    
+    case class BVExtractOp(hi : Int, lo : Int) extends BVResultOp(hi - lo + 1) {
+      override def toString = "bvextract"
+      override def typeCheck(args: List[Expr]) : Unit = { 
+        checkNumArgs(args, 1);
+        Utils.assert(args(0).typ.isBitVector, "Argument to bitvector extract must be a bitvector.")
+        val argBvType = args(0).typ.asInstanceOf[BitVectorType]
+        Utils.assert(hi < argBvType.width && lo < argBvType.width && hi >= 0 && lo >= 0, "Invalid indices to bitvector extract.")
+      }
+    }
+    case class BVConcatOp(w : Int) extends BVResultOp(w) {
+      override def toString = "bvconcat"
+      override def typeCheck(args: List[Expr]) : Unit = { 
+        checkNumArgs(args, 2);
+        Utils.assert(args.forall(_.typ.isBitVector), "Argument to bitvector concat must be a bitvector.")
+        val width = args.foldLeft(0)((acc, ai) => ai.typ.asInstanceOf[BitVectorType].width + acc)
+        Utils.assert(width == w, "Incorrect width argument to BVConcatOp.")
+      }
+    }    
+    case class BVReplaceOp(w : Int, hi : Int, lo : Int) extends BVResultOp(w) {
+      override def toString = "bvreplace"
+      override def typeCheck(args: List[Expr]) : Unit = {
+        checkNumArgs(args, 2);
+        Utils.assert(args.forall(_.typ.isBitVector), "Argument to bitvector concat must be a bitvector.")
+        Utils.assert(args(0).typ.asInstanceOf[BitVectorType].width == w, "Incorrect width of first operand to BVReplaceOp.")
+        Utils.assert(args(1).typ.asInstanceOf[BitVectorType].width == (hi-lo+1), "Incorrect width of second operand to BVReplaceOp.")
+      }
+    }
     // Operators that return Booleans.
     abstract class BoolResultOp extends Operator {
       override def resultType(args: List[Expr]) : Type = { BoolType.t }

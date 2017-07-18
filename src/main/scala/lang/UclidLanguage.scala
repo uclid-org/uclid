@@ -99,9 +99,15 @@ case class FinallyTemporalOp() extends TemporalPrefixOperator { override def toS
 case class GloballyTemporalOp() extends TemporalPrefixOperator { override def toString = "G" }
 case class NextTemporalOp() extends TemporalPrefixOperator { override def toString = "X" }
 
-case class ExtractOp(high: IntLit, low: IntLit) extends Operator {
-  override def toString = "[" + high + ":" + low + "]"
+case class BitVectorSlice(hi: Int, lo: Int) extends ASTNode  {
+  Utils.assert(hi >= lo && hi >= 0 && lo >= 0, "Invalid bitvector slice: [" + hi.toString + ":" + lo.toString + "].")
+  override def toString = "[" + hi.toString + ":" + lo.toString + "]"
 }
+
+case class ExtractOp(slice : BitVectorSlice) extends Operator {
+  override def toString = slice.toString
+}
+
 case class ConcatOp() extends Operator { override def toString = "++" }
 case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
@@ -163,13 +169,16 @@ case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
 
 case class Lhs(id: Identifier, 
                   arraySelect: Option[List[Expr]], 
-                  recordSelect: Option[List[Identifier]]) 
+                  recordSelect: Option[List[Identifier]],
+                  sliceSelect : Option[BitVectorSlice]) 
      extends ASTNode
 {
   val t1 = arraySelect match 
     { case Some(as) => as.toString; case None => "" }
   val t2 = recordSelect match 
     { case Some(rs) => rs.fold(""){(acc,i) => acc + "." + i}; case None => ""}
+  val t3 = sliceSelect match 
+    { case Some(ss) => ss.toString; case None => "" }
   override def toString = id.toString + t1 + t2
 }
 

@@ -177,8 +177,10 @@ import uclid.lang.DecideCmd
       lazy val ArrayStoreOp: Parser[(List[Expr],Expr)] =
         ("[" ~> (Expr ~ rep("," ~> Expr) ~ (":=" ~> Expr)) <~ "]") ^^ 
         {case e ~ es ~ r => (e :: es, r)}
-      lazy val ExtractOp: Parser[ExtractOp] =
-        ("[" ~> Number ~ ":" ~ Number <~ "]") ^^ { case x ~ ":" ~ y => lang.ExtractOp(x, y) }
+      lazy val BitVectorSlice: Parser[lang.BitVectorSlice] =
+        ("[" ~> Number ~ ":" ~ Number <~ "]") ^^ { case x ~ ":" ~ y => lang.BitVectorSlice(x.value.toInt, y.value.toInt) }
+      lazy val ExtractOp: Parser[lang.ExtractOp] =
+        ("[" ~> Number ~ ":" ~ Number <~ "]") ^^ { case x ~ ":" ~ y => lang.ExtractOp(lang.BitVectorSlice(x.value.toInt, y.value.toInt)) }
       lazy val Id: PackratParser[Identifier] = ident ^^ {case i => Identifier(i)}
       lazy val Bool: PackratParser[BoolLit] =
         "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) }
@@ -281,11 +283,12 @@ import uclid.lang.DecideCmd
         "(" ~ ")" ^^ { case _~_ => List.empty[(Identifier,Type)] }
     
       lazy val Lhs : PackratParser[lang.Lhs] =
-        Id ~ ArraySelectOp ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ 
-          { case id ~ mapOp ~ rOp ~ rOps => lang.Lhs(id, Some(mapOp), Some(rOp::rOps))} |
-        Id ~ ArraySelectOp ^^ { case id ~ op => lang.Lhs(id, Some(op), None) } |
-        Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { case id ~ rOp ~ rOps => lang.Lhs(id, None, Some(rOp::rOps)) } |
-        Id ^^ { case id => lang.Lhs(id, None, None) }
+        Id ~ ArraySelectOp ~ RecordSelectOp ~ rep(RecordSelectOp) ~ (BitVectorSlice.?) ^^  
+          { case id ~ mapOp ~ rOp ~ rOps ~ slice => lang.Lhs(id, Some(mapOp), Some(rOp::rOps), slice)} |
+        Id ~ ArraySelectOp ~ (BitVectorSlice.?) ^^ { case id ~ op ~ slice => lang.Lhs(id, Some(op), None, slice) } |
+        Id ~ RecordSelectOp ~ rep(RecordSelectOp) ~ (BitVectorSlice.?) ^^ 
+          { case id ~ rOp ~ rOps ~ slice => lang.Lhs(id, None, Some(rOp::rOps), slice) } |
+        Id ~ (BitVectorSlice.?) ^^ { case id ~ slice => lang.Lhs(id, None, None, slice) }
     
       lazy val LhsList: PackratParser[List[Lhs]] =
         ("(" ~> Lhs ~ rep("," ~> Lhs) <~ ")") ^^ { case l ~ ls => l::ls } |
