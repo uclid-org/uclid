@@ -33,12 +33,17 @@ sealed abstract class ASTNode extends Positional {
   val astNodeId = IdGenerator.newId()
 }
 
+object Operator {
+  val PREFIX = 0
+  val INFIX = 1
+  val POSTFIX = 2
+}
 sealed abstract class Operator extends ASTNode {
-  def isInfix = false
+  def fixity = Operator.PREFIX
   def isPolymorphic = false
 }
 sealed abstract class InfixOperator extends Operator {
-  override def isInfix = true
+  override def fixity = Operator.INFIX
 }
 // This is the polymorphic operator type. Typerchecker.rewrite converts these operators
 // to either the integer or bitvector versions.
@@ -75,14 +80,14 @@ case class BVOrOp(override val w : Int) extends BVArgOperator(w) { override def 
 case class BVXorOp(override val w : Int) extends BVArgOperator(w) { override def toString = "^" }
 case class BVNotOp(override val w : Int) extends BVArgOperator(w) { override def toString = "~" }
 // Boolean operators.
-sealed abstract class BooleanOperator() extends Operator { override def isInfix = true }
+sealed abstract class BooleanOperator() extends Operator { override def fixity = Operator.INFIX}
 case class ConjunctionOp() extends BooleanOperator { override def toString = "&&" }
 case class DisjunctionOp() extends BooleanOperator { override def toString = "||" }
 case class IffOp() extends BooleanOperator { override def toString = "<==>" }
 case class ImplicationOp() extends BooleanOperator { override def toString = "==>" }
 case class NegationOp() extends BooleanOperator { 
   override def toString = "!"
-  override def isInfix = false
+  override def fixity = Operator.INFIX
 }
 // (In-)equality operators.
 sealed abstract class ComparisonOperator() extends InfixOperator
@@ -90,8 +95,8 @@ case class EqualityOp() extends ComparisonOperator { override def toString = "==
 case class InequalityOp() extends ComparisonOperator { override def toString = "!=" } 
 
 sealed abstract class TemporalOperator() extends Operator
-sealed abstract class TemporalInfixOperator() extends TemporalOperator { override def isInfix = true }
-sealed abstract class TemporalPrefixOperator() extends TemporalOperator { override def isInfix = false }
+sealed abstract class TemporalInfixOperator() extends TemporalOperator { override def fixity = Operator.INFIX }
+sealed abstract class TemporalPrefixOperator() extends TemporalOperator { override def fixity = Operator.INFIX }
 case class UntilTemporalOp() extends TemporalInfixOperator { override def toString = "U" }
 case class WUntilTemporalOp() extends TemporalInfixOperator { override def toString = "W" }
 case class ReleaseTemporalOp() extends TemporalInfixOperator { override def toString = "R" }
@@ -106,9 +111,13 @@ case class BitVectorSlice(hi: Int, lo: Int) extends ASTNode  {
 
 case class ExtractOp(slice : BitVectorSlice) extends Operator {
   override def toString = slice.toString
+  override def fixity = Operator.POSTFIX
 }
 
-case class ConcatOp() extends Operator { override def toString = "++" }
+case class ConcatOp() extends Operator { 
+  override def toString = "++"
+  override def fixity = Operator.INFIX
+}
 case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
 }
@@ -139,10 +148,12 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
       case RecordSelect(r) => 
         operands(0).toString + "." + r.toString
       case _ => 
-        if (op.isInfix) {
+        if (op.fixity == Operator.INFIX) {
           "(" + Utils.join(operands.map(_.toString), " " + op + " ") + ")"
-        } else {
+        } else if (op.fixity == Operator.PREFIX) {
           op + "(" + Utils.join(operands.map(_.toString), ", ") + ")"
+        } else {
+          "(" + Utils.join(operands.map(_.toString), ", ") + ")" + op
         }
     }
   }
@@ -179,12 +190,14 @@ case class Lhs(id: Identifier,
     { case Some(rs) => rs.fold(""){(acc,i) => acc + "." + i}; case None => ""}
   val t3 = sliceSelect match 
     { case Some(ss) => ss.toString; case None => "" }
-  override def toString = id.toString + t1 + t2
+  override def toString = id.toString + t1 + t2 + t3
 }
 
 sealed abstract class Type {
   def isBool = false
   def isNumeric = false
+  def isInt = false
+  def isBitVector = false
   def isTemporal = false
   def isPrimitive = false
   def isProduct = false
@@ -223,9 +236,11 @@ case class BoolType() extends PrimitiveType {
 }
 case class IntType() extends NumericType { 
   override def toString = "int"
+  override def isInt = true
 }
 case class BitVectorType(width: Int) extends NumericType {
   override def toString = "bv" + width.toString
+  override def isBitVector = true
 }
 case class EnumType(ids: List[Identifier]) extends Type {
   override def toString = "enum {" + 

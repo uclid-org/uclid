@@ -134,6 +134,7 @@ package uclid {
         case BVOrOp(w) => return smt.BVOrOp(w)
         case BVXorOp(w) => return smt.BVXorOp(w)
         case BVNotOp(w) => return smt.BVNotOp(w)
+        case ExtractOp(slice) => return smt.BVExtractOp(slice.hi, slice.lo)
         // Boolean operators.
         case ConjunctionOp() => return smt.ConjunctionOp
         case DisjunctionOp() => return smt.DisjunctionOp
@@ -170,6 +171,11 @@ package uclid {
           //st = st.updated(lhs(x).id, rhs(x))
           if (arraySelectOp.isEmpty && recordSelectOp.isEmpty && sliceSelectOp.isEmpty) {
             st = st + (lhs(x).id -> rhs(x))
+          } else if(arraySelectOp.isEmpty && recordSelectOp.isEmpty && sliceSelectOp.isDefined) {
+            val resType = st(lhs(x).id).typ.asInstanceOf[smt.BitVectorType]
+            val op = smt.BVReplaceOp(resType.width, sliceSelectOp.get.hi, sliceSelectOp.get.lo)
+            val args = List(st(lhs(x).id), rhs(x))
+            st = st + (lhs(x).id -> smt.OperatorApplication(op, args))
           } else if (arraySelectOp.isDefined && recordSelectOp.isEmpty && sliceSelectOp.isEmpty) {
             st = st + (lhs(x).id -> smt.ArrayStoreOperation(st(lhs(x).id), 
                 arraySelectOp.get.map(i => evaluate(i, st, c)), rhs(x)))

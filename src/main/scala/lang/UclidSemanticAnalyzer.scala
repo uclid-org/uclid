@@ -257,8 +257,18 @@ object UclidSemanticAnalyzer {
           Utils.assert(productType.hasField(field), "Field " + field + " not found.")
           intermediateType = transitiveType(productType.fieldType(field).get, c)
         })
+      case None => 
+    }
+    lhs.sliceSelect match {
+      case Some(ss) => 
+        Utils.assert(transitiveType(intermediateType, c).isBitVector,
+            "Expected bitvector type when assigning to slice: " + intermediateType)
+        val bvType = transitiveType(intermediateType, c).asInstanceOf[BitVectorType]
+        Utils.assert(ss.hi < bvType.width && ss.lo < bvType.width, 
+            "Invalid bitvector slice. ")
+        return BitVectorType(ss.hi - ss.lo + 1)
+      case None =>
         return intermediateType
-      case None => return intermediateType
     }
   }
   
@@ -302,11 +312,11 @@ object UclidSemanticAnalyzer {
       case AssignStmt(lhss, rhss) => 
         Utils.assert(lhss.size == rhss.size, "LHSS and RHSS of different size: " + s);
         lhss.foreach{ x => checkLHS(x,c) }; rhss.foreach { x => checkExpr(x,c) };
-        Utils.assert((lhss zip rhss).forall 
-            { i => 
-              val rhsType = typeOf(i._2, c)
-              (typeOfLHS(i._1, c) matches rhsType._1) && !rhsType._2}, 
-            "LHSS and RHSS have conflicting types: " + s);
+        val lhsTypes = lhss.map(typeOfLHS(_, c))
+        val rhsTypes = rhss.map(typeOf(_, c))
+        Utils.assert((lhsTypes zip rhsTypes).forall 
+            { i =>  (i._1 matches i._2._1) && !i._2._2}, 
+            "LHSS and RHSS have conflicting types: " + s + ".\nTypes: " + lhsTypes.toString + "/" + rhsTypes.toString);
         Utils.assert(lhss.distinct.size == lhss.size, "LHSS contains identical variables: " + s)
       case IfElseStmt(e, t, f) => 
         checkExpr(e,c); 
@@ -388,6 +398,11 @@ object UclidSemanticAnalyzer {
           case BVNotOp(_) => {
             Utils.assert(types.size == 1, "Expected two arguments to arithmetic operators.")
             (types.head._1, temporalArgs)
+          }
+          case ExtractOp(slice) => {
+            Utils.assert(types.size == 1, "Expected one argument to bitvector extract operator.")
+            Utils.assert(types(0)._1.isBitVector, "Argument to bitvector extract must be of type bitvector.")
+            (BitVectorType(slice.hi - slice.lo + 1), temporalArgs)
           }
           // FIXME: Remove these polymorphic operators.
           case IntLTOp() | IntLEOp() | IntGTOp() | IntGEOp() |

@@ -149,7 +149,7 @@ package uclid {
       override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 1); checkAllArgTypes(args, BitVectorType.t(w)) }
     }
     case class BVExtractOp(hi : Int, lo : Int) extends BVResultOp(hi - lo + 1) {
-      override def toString = "bvextract"
+      override def toString = "bvextract " + hi + " " + lo
       override def typeCheck(args: List[Expr]) : Unit = { 
         checkNumArgs(args, 1);
         Utils.assert(args(0).typ.isBitVector, "Argument to bitvector extract must be a bitvector.")
@@ -167,7 +167,7 @@ package uclid {
       }
     }    
     case class BVReplaceOp(w : Int, hi : Int, lo : Int) extends BVResultOp(w) {
-      override def toString = "bvreplace"
+      override def toString = "bvreplace " + hi + " " + lo
       override def typeCheck(args: List[Expr]) : Unit = {
         checkNumArgs(args, 2);
         Utils.assert(args.forall(_.typ.isBitVector), "Argument to bitvector concat must be a bitvector.")
