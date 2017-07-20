@@ -303,6 +303,7 @@ case class SynonymType(id: Identifier) extends Type {
 /** Statements **/
 sealed abstract class Statement extends ASTNode {
   override def toString = Utils.join(toLines, "\n") + "\n"
+  def isLoop = false
   def toLines : List[String]
 }
 case class SkipStmt() extends Statement {
@@ -330,6 +331,7 @@ case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Stat
 case class ForStmt(id: Identifier, range: (IntLit,IntLit), body: List[Statement])
   extends Statement
 {
+  override def isLoop = true
   override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {") ++ 
                          body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _)
 }
