@@ -116,7 +116,10 @@ class FunctionInliner extends ASTAnalysis {
   var _astChanged = false 
   
   override def passName = "FunctionInliner"
-  override def reset() = findLeafProceduresPass.reset()
+  override def reset() = {
+    findLeafProceduresPass.reset()
+    _astChanged = false
+  }
   override def astChanged = _astChanged
   def visit(module : Module) : Option[Module] = {
     _astChanged = false
@@ -137,6 +140,7 @@ class FunctionInliner extends ASTAnalysis {
             (mod, proc) =>
               mod match {
                 case Some(m) => 
+                  _astChanged = true
                   val rewriter = new ASTRewriter("FunctionInliner.Inline:" + proc.id.toString, new InlineProcedurePass(proc))
                   // println("Inlining procedure: " + proc.id.toString)
                   val mP = rewriter.visit(m)
