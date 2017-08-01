@@ -26,6 +26,24 @@ class ForLoopRewriterPass(forStmts: Set[IdGenerator.Id]) extends RewritePass {
        List(st)
      }
   }
+  def rewriteStatement(stmt: Statement) : List[Statement] = {
+    stmt match {
+      case st : ForStmt => rewriteForStatement(st)
+      case _            => List(stmt)
+    }
+  }
+  override def rewriteProcedure(proc : ProcedureDecl, ctx : ScopeMap) : Option[ProcedureDecl] = {
+    val bodyP = proc.body.flatMap(rewriteStatement(_))
+    return Some(ProcedureDecl(proc.id, proc.sig, proc.decls, bodyP))
+  }
+  override def rewriteInit(init : InitDecl, ctx : ScopeMap) : Option[InitDecl] = { 
+    val bodyP = init.body.flatMap(rewriteStatement(_))
+    return Some(InitDecl(bodyP))
+  }
+  override def rewriteNext(next : NextDecl, ctx : ScopeMap) : Option[NextDecl] = { 
+    val bodyP = next.body.flatMap(rewriteStatement(_))
+    return Some(NextDecl(bodyP))
+  }
 }
 
 class ForLoopUnroller extends ASTAnalysis {
