@@ -1,3 +1,6 @@
+package uclid
+package test
+
 import org.scalatest.FlatSpec
 import uclid.{lang => l}
 
