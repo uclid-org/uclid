@@ -1,0 +1,28 @@
+module main {
+  var cnt : int;
+  var cntp : int;
+  
+  
+  procedure add10(x : int) returns (y : int) {
+    y := x;
+    for i in range(1, 10) {
+      y := y + 1;
+    }
+  }
+  
+  init {
+    cnt := 0;
+    cntp := 0;
+  }
+  next {
+    call (cnt) := add10(cnt);
+    cntp := cntp + 10;
+    
+    assert (cnt == cntp);
+  }
+  control {
+    initialize;
+    simulate (5);
+    decide;
+  }
+}
