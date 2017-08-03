@@ -5,9 +5,12 @@ module main {
   
   procedure add10(x : int) returns (y : int) {
     y := x;
-    for i in range(1, 10) {
-      y := y + 1;
+    for i in range(1, 3) {
+      for j in range(1, 3) {
+        y := y + 1;
+      }
     }
+    y := y + 1;
   }
   
   init {
