@@ -146,6 +146,7 @@ sealed abstract class Literal extends Expr {
 }
 sealed abstract class NumericLit extends Literal {
   override def isNumeric = true
+  def typeOf : NumericType
   def to (n : NumericLit) : Seq[NumericLit]
 }
 case class BoolLit(value: Boolean) extends Literal {
@@ -154,6 +155,7 @@ case class BoolLit(value: Boolean) extends Literal {
 
 case class IntLit(value: BigInt) extends NumericLit {
   override def toString = value.toString
+  override def typeOf : NumericType = IntType()
   override def to (n : NumericLit) : Seq[NumericLit]  = {
     n match {
       case i : IntLit => (value to i.value).map(IntLit(_))
@@ -164,6 +166,7 @@ case class IntLit(value: BigInt) extends NumericLit {
 
 case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
   override def toString = value.toString + "bv" + width.toString
+  override def  typeOf : NumericType = BitVectorType(width)
   override def to (n : NumericLit) : Seq[NumericLit] = {
     n match {
       case bv : BitVectorLit => (value to bv.value).map(BitVectorLit(_, width))
@@ -488,6 +491,7 @@ object Scope {
   case class ProcedureOutputArg(argId : Identifier, argTyp: Type) extends NamedExpression(argId, argTyp)
   case class ProcedureLocalVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
+  case class ForIndexVar(iId : Identifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
   case class SpecVar(varId : Identifier, expr: Expr) extends NamedExpression(varId, BoolType())
 
   type IdentifierMap = Map[Identifier, NamedExpression]
