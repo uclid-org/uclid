@@ -141,17 +141,37 @@ case class Identifier(value: String) extends Expr {
   override def toString = value.toString
 }
 
-sealed abstract class Literal extends Expr
+sealed abstract class Literal extends Expr {
+  def isNumeric = false
+}
+sealed abstract class NumericLit extends Literal {
+  override def isNumeric = true
+  def to (n : NumericLit) : Seq[NumericLit]
+}
 case class BoolLit(value: Boolean) extends Literal {
   override def toString = value.toString
 }
-case class IntLit(value: BigInt) extends Literal {
+
+case class IntLit(value: BigInt) extends NumericLit {
   override def toString = value.toString
+  override def to (n : NumericLit) : Seq[NumericLit]  = {
+    n match {
+      case i : IntLit => (value to i.value).map(IntLit(_))
+      case _ => throw new Utils.RuntimeError("Cannot create range for differing types of numeric literals.")
+    }
+  } 
 }
-//TODO: check that value can be expressed using "width" bits
-case class BitVectorLit(value: BigInt, width: Int) extends Literal {
+
+case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
   override def toString = value.toString + "bv" + width.toString
+  override def to (n : NumericLit) : Seq[NumericLit] = {
+    n match {
+      case bv : BitVectorLit => (value to bv.value).map(BitVectorLit(_, width))
+      case _ => throw new Utils.RuntimeError("Cannot create range for differening types of numeric literals.")
+    }
+  }
 }
+
 case class Tuple(values: List[Expr]) extends Expr {
   override def toString = "{" + Utils.join(values.map(_.toString), ", ") + "}"
 }
@@ -342,7 +362,7 @@ case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Stat
                          List("} else {") ++ 
                          elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
-case class ForStmt(id: Identifier, range: (IntLit,IntLit), body: List[Statement])
+case class ForStmt(id: Identifier, range: (NumericLit,NumericLit), body: List[Statement])
   extends Statement
 {
   override def isLoop = true
