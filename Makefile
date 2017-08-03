@@ -34,8 +34,17 @@ test-type1:
 test-tuple-record-1:
 	sbt "run ./test/test-tuple-record-1.ucl4"
 
+test-bv-assign:
+	sbt "run ./test/test-bv-assign.ucl4"
+
+test-forloop-0:
+	sbt "run ./test/test-forloop-0.ucl4"
+
+test-forloop-1:
+	sbt "run ./test/test-forloop-1.ucl4"
+
 test-forloop:
 	sbt "run ./test/test-forloop.ucl4"
 
 
-.PHONY: all build run specs test-int-fib test-types-0 test-type1 test-bv-fib
+.PHONY: all build run specs test-int-fib test-types-0 test-type1 test-bv-fib test-forloop test-forloop-0 test-forloop-1 test-bv-assign

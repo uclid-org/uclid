@@ -64,6 +64,7 @@ trait ReadOnlyPass[T] {
   def applyOnIdentifier(d : TraversalDirection.T, id : Identifier, in : T, context : ScopeMap) : T = { in }
   def applyOnLit(d : TraversalDirection.T, lit : Literal, in : T, context : ScopeMap) : T = { in }
   def applyOnBoolLit(d : TraversalDirection.T, b : BoolLit, in : T, context : ScopeMap) : T = { in }
+  def applyOnNumericLit(d : TraversalDirection.T, b : NumericLit, in : T, context : ScopeMap) : T = { in }
   def applyOnIntLit(d : TraversalDirection.T, i : IntLit, in : T, context : ScopeMap) : T = { in }
   def applyOnBitVectorLit(d : TraversalDirection.T, bv : BitVectorLit, in : T, context : ScopeMap) : T = { in }
   def applyOnTuple(d : TraversalDirection.T, rec : Tuple, in : T, context : ScopeMap) : T = { in }
@@ -398,12 +399,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnIfElse(TraversalDirection.Up, st, result, context)
     return result
   }
-  def visitForStatement(st : ForStmt, in : T, context : ScopeMap) : T = {
+  def visitForStatement(st : ForStmt, in : T, contextIn : ScopeMap) : T = {
     var result : T = in
-    result = pass.applyOnFor(TraversalDirection.Down, st, result, context)
-    result = visitIdentifier(st.id, result, context)
-    result = visitLiteral(st.range._1, result, context)
-    result = visitLiteral(st.range._2, result, context)
+    val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
+    result = pass.applyOnFor(TraversalDirection.Down, st, result, contextIn)
+    result = visitIdentifier(st.id, result, contextIn)
+    result = visitLiteral(st.range._1, result, contextIn)
+    result = visitLiteral(st.range._2, result, contextIn)
     result = st.body.foldLeft(result)((arg, i) => visitStatement(i, arg, context))
     result = pass.applyOnFor(TraversalDirection.Up, st, result, context)
     return result
@@ -469,9 +471,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnLit(TraversalDirection.Down, lit, result, context)
     result = lit match {
-      case BoolLit(b) => visitBoolLiteral(lit.asInstanceOf[BoolLit], result, context)
-      case IntLit(i) => visitIntLiteral(lit.asInstanceOf[IntLit], result, context)
-      case BitVectorLit(bv, w) => visitBitVectorLiteral(lit.asInstanceOf[BitVectorLit], result, context)
+      case b : BoolLit => visitBoolLiteral(b, result, context)
+      case n : NumericLit => visitNumericLit(n, result, context)
     }
     result = pass.applyOnLit(TraversalDirection.Up, lit, result, context)
     return result
@@ -480,6 +481,20 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnBoolLit(TraversalDirection.Down, b, result, context)
     result = pass.applyOnBoolLit(TraversalDirection.Up, b, result, context)
+    return result
+  }
+  def visitNumericLit(n : NumericLit, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnNumericLit(TraversalDirection.Down, n, in, context)
+    n match {
+      case i : IntLit => 
+        result = pass.applyOnIntLit(TraversalDirection.Down, i, in, context)
+        result = pass.applyOnIntLit(TraversalDirection.Up, i, in, context)
+      case bv : BitVectorLit => 
+        result = pass.applyOnBitVectorLit(TraversalDirection.Down, bv, in, context)
+        result = pass.applyOnBitVectorLit(TraversalDirection.Up, bv, in, context)
+    }
+    result = pass.applyOnNumericLit(TraversalDirection.Up, n, in, context)
     return result
   }
   def visitIntLiteral(i : IntLit, in : T, context : ScopeMap) : T = {
@@ -612,6 +627,7 @@ trait RewritePass {
   def rewriteBoolLit(b : BoolLit, ctx : ScopeMap) : Option[BoolLit] = { Some(b) }
   def rewriteIntLit(i : IntLit, ctx : ScopeMap) : Option[IntLit] = { Some(i) }
   def rewriteBitVectorLit(bv : BitVectorLit, ctx : ScopeMap) : Option[BitVectorLit] = { Some(bv) }
+  def rewriteNumericLit(n : NumericLit, ctx : ScopeMap) : Option[NumericLit] = { Some(n) }
   def rewriteTuple(rec : Tuple, ctx : ScopeMap) : Option[Tuple] = { Some(rec) }
   def rewriteOperatorApp(opapp : OperatorApplication, ctx : ScopeMap) : Option[OperatorApplication] = { Some(opapp) }
   def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = { Some(op) }
@@ -980,14 +996,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     return stP
   }
   
-  def visitForStatement(st : ForStmt, context : ScopeMap) : Option[ForStmt] = {
-    val idP = visitIdentifier(st.id, context)
-    val lit1P = visitIntLiteral(st.range._1, context)
-    val lit2P = visitIntLiteral(st.range._2, context)
+  def visitForStatement(st : ForStmt, contextIn : ScopeMap) : Option[ForStmt] = {
+    val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
+    val idP = visitIdentifier(st.id, contextIn)
+    val lit1P = visitNumericLiteral(st.range._1, contextIn)
+    val lit2P = visitNumericLiteral(st.range._2, contextIn)
     val stmts = st.body.map(visitStatement(_, context)).flatten
     
     val stP = (idP, lit1P, lit2P) match {
-      case (Some(id), Some(lit1), Some(lit2)) => pass.rewriteFor(ForStmt(id, (lit1, lit2), stmts), context)
+      case (Some(id), Some(lit1), Some(lit2)) => pass.rewriteFor(ForStmt(id, (lit1, lit2), stmts), contextIn)
       case _ => None
     }
     astChangeFlag = astChangeFlag || (stP != Some(st))
@@ -1053,8 +1070,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   def visitLiteral(lit : Literal, context : ScopeMap) : Option[Literal] = {
     val litP = (lit match {
       case b : BoolLit => visitBoolLiteral(b, context)
-      case i : IntLit => visitIntLiteral(i, context)
-      case bv : BitVectorLit => visitBitVectorLiteral(bv, context)
+      case n : NumericLit => visitNumericLiteral(n, context)
     }).flatMap(pass.rewriteLit(_, context))
     astChangeFlag = astChangeFlag || (litP != Some(lit))
     return litP
@@ -1066,12 +1082,22 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     return bP
   }
   
+  def visitNumericLiteral(n : NumericLit, context : ScopeMap) : Option[NumericLit] = {
+    val nP1 = n match {
+      case bv : BitVectorLit => visitBitVectorLiteral(bv, context)
+      case i : IntLit => visitIntLiteral(i, context)
+    }
+    val nP2 = nP1.flatMap(pass.rewriteNumericLit(_, context))
+    astChangeFlag = astChangeFlag || (nP2 != Some(n))
+    return nP2
+  }
+  
   def visitIntLiteral(i : IntLit, context : ScopeMap) : Option[IntLit] = {
     val iP = pass.rewriteIntLit(i, context)
     astChangeFlag = astChangeFlag || (iP != Some(i))
     return iP
   }
-  
+
   def visitBitVectorLiteral(bv : BitVectorLit, context : ScopeMap) : Option[BitVectorLit] = {
     val bvP = pass.rewriteBitVectorLit(bv, context)
     astChangeFlag = astChangeFlag || (bvP != Some(bv))

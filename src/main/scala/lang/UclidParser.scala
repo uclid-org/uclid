@@ -178,14 +178,15 @@ import uclid.lang.DecideCmd
         ("[" ~> (Expr ~ rep("," ~> Expr) ~ (":=" ~> Expr)) <~ "]") ^^ 
         {case e ~ es ~ r => (e :: es, r)}
       lazy val ConstBitVectorSlice: Parser[lang.ConstBitVectorSlice] =
-        ("[" ~> Number ~ ":" ~ Number <~ "]") ^^ { case x ~ ":" ~ y => lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt) }
+        ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt) }
       lazy val ExtractOp: Parser[lang.ExtractOp] =
-        ("[" ~> Number ~ ":" ~ Number <~ "]") ^^ { case x ~ ":" ~ y => lang.ExtractOp(lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt)) }
+        ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ExtractOp(lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt)) }
       lazy val Id: PackratParser[Identifier] = ident ^^ {case i => Identifier(i)}
       lazy val Bool: PackratParser[BoolLit] =
         "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) }
-      lazy val Number: PackratParser[IntLit] = integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base)) }
-      lazy val BitVector: PackratParser[BitVectorLit] = bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) }
+      lazy val Integer: PackratParser[lang.IntLit] = integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base)) }
+      lazy val BitVector: PackratParser[lang.BitVectorLit] = bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) }
+      lazy val Number : PackratParser[lang.NumericLit] = (Integer | BitVector)
     
       lazy val TemporalExpr0: PackratParser[Expr] = 
           TemporalExpr1 ~ TemporalOpUntil  ~ TemporalExpr0 ^^ ast_binary | TemporalExpr1 
@@ -235,11 +236,10 @@ import uclid.lang.DecideCmd
           E10 ~ ArrayStoreOp ^^ { case e ~ m => ArrayStoreOperation(e, m._1, m._2) } |
           E10 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |
           E10
-      /** E10 := false | true | Number | Bitvector | Id FuncApplication | (Expr) **/
+      /** E10 := false | true | Number | Id FuncApplication | (Expr) **/
       lazy val E10: PackratParser[Expr] =
           Bool |
           Number |
-          BitVector |
           "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
           KwITE ~> ("(" ~> Expr ~ ("," ~> Expr) ~ ("," ~> Expr) <~ ")") ^^ { case e ~ t ~ f => ITE(e,t,f) } |
           KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => Lambda(idtyps, expr) } |
@@ -294,7 +294,7 @@ import uclid.lang.DecideCmd
         ("(" ~> Lhs ~ rep("," ~> Lhs) <~ ")") ^^ { case l ~ ls => l::ls } |
         "(" ~> ")" ^^ { case _ => List.empty[Lhs] }
     
-      lazy val RangeExpr: PackratParser[(IntLit,IntLit)] =
+      lazy val RangeExpr: PackratParser[(NumericLit,NumericLit)] =
         KwRange ~> ("(" ~> Number ~ ("," ~> Number) <~ ")") ^^ { case x ~ y => (x,y) }
     
       lazy val LocalVarDecl : PackratParser[lang.LocalVarDecl] =
@@ -365,10 +365,10 @@ import uclid.lang.DecideCmd
         KwDecide <~ ";" ^^ { case _ => lang.DecideCmd() }
       
       lazy val UnrollCmd : PackratParser[lang.UnrollCmd] = 
-        KwUnroll ~ "(" ~> Number <~ ")" ~ ";" ^^ { case num => lang.UnrollCmd(num) }
+        KwUnroll ~ "(" ~> Integer <~ ")" ~ ";" ^^ { case num => lang.UnrollCmd(num) }
     
       lazy val SimulateCmd : PackratParser[lang.SimulateCmd] =
-        KwSimulate ~ "(" ~> Number <~ ")" ~ ";" ^^ { case num => lang.SimulateCmd(num) }
+        KwSimulate ~ "(" ~> Integer <~ ")" ~ ";" ^^ { case num => lang.SimulateCmd(num) }
       
       lazy val Cmd : PackratParser[UclCmd] =
         ( InitializeCmd | UnrollCmd | SimulateCmd | DecideCmd )
