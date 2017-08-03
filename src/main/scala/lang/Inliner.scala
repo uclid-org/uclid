@@ -163,8 +163,8 @@ class FunctionInliner extends ASTAnalysis {
 class TupleFlattenerPass extends RewritePass {
   def rewriteTuple(id : Identifier, typ : Type) : List[(Identifier, Type)] = {
     typ match {
-      case RecordType(fields) => fields.map{ (f) => (Identifier(id + "_$field$_" + f._1.value), f._2) }
-      case TupleType(fields) => fields.zipWithIndex.map{ case (f, i) => (Identifier(id.value + "_$tuple$_" + i.toString), f) }
+      case RecordType(fields) => fields.map{ (f) => (Identifier(id + "_$field$_" + f._1.name), f._2) }
+      case TupleType(fields) => fields.zipWithIndex.map{ case (f, i) => (Identifier(id.name + "_$tuple$_" + i.toString), f) }
       case _ => List((id, typ))
     }
   }

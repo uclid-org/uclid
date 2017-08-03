@@ -58,7 +58,7 @@ class ExpressionConverter {
       case lang.EqualityOp() => return smt.EqualityOp
       case lang.InequalityOp() => return smt.InequalityOp
       // Record select.
-      case lang.RecordSelect(r) => return smt.RecordSelectOp(r.value)
+      case lang.RecordSelect(r) => return smt.RecordSelectOp(r.name)
       // Polymorphic operators are not allowed.
       case p : lang.PolymorphicOperator => 
         throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")

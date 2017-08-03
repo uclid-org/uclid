@@ -15,7 +15,7 @@ package uclid {
       def existsOnce(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,1)
       def existsNone(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,0)
       def existsNTimes(a: List[lang.Identifier], b: lang.Identifier, n: Int) : Boolean = 
-        a.count { x => x.value == b.value } == n
+        a.count { x => x.name == b.name } == n
       
       def allUnique(a: List[lang.Identifier]) : Boolean = a.distinct.size == a.size
       

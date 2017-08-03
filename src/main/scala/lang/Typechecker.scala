@@ -87,6 +87,21 @@ class TypeSynonymRewriterPass extends RewritePass {
 class TypeSynonymRewriter extends ASTRewriter(
     "TypeSynonymRewriter", new TypeSynonymRewriterPass())
 
+class ForLoopIndexRewriterPass extends RewritePass {
+  override def rewriteIdentifierBase(id : IdentifierBase, ctx : ScopeMap) : Option[IdentifierBase] = {
+    ctx.get(id).flatMap(
+      (expr) => {
+        expr match {
+          case Scope.ForIndexVar(cId, cTyp) => Some(cId)
+          case _ => Some(id)
+        }
+      })
+  }
+}
+
+class ForLoopIndexRewriter extends ASTRewriter(
+    "ForLoopIndexRewriter", new ForLoopIndexRewriterPass())
+
 class TypecheckPass extends ReadOnlyPass[Unit]
 {
   type Memo = MutableMap[IdGenerator.Id, Type]
@@ -215,7 +230,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
               Utils.assert(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in record.")
               typOption.get
             case tupType : TupleType =>
-              val indexS = field.value.substring(1)
+              val indexS = field.name.substring(1)
               Utils.assert(indexS.forall(Character.isDigit), "Tuple fields must be integers preceded by an underscore.")
               val indexI = indexS.toInt
               Utils.assert(indexI >= 1 && indexI <= tupType.numFields, "Invalid tuple index: " + indexS)
@@ -267,8 +282,8 @@ class TypecheckPass extends ReadOnlyPass[Unit]
     val cachedType = memo.get(e.astNodeId)
     if (cachedType.isEmpty) {
       val typ = e match {
-        case i : Identifier =>
-          Utils.assert(c.typeOf(i).isDefined, "Unknown variable: " + i.value)
+        case i : IdentifierBase =>
+          Utils.assert(c.typeOf(i).isDefined, "Unknown variable: " + i.name)
           (c.typeOf(i).get)
         case b : BoolLit => new BoolType()
         case i : IntLit => new IntType()

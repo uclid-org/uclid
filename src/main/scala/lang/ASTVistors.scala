@@ -61,7 +61,9 @@ trait ReadOnlyPass[T] {
   def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, context : ScopeMap) : T = { in }
   def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : ScopeMap) : T = { in }
   def applyOnExpr(d : TraversalDirection.T, e : Expr, in : T, context : ScopeMap) : T = { in }
+  def applyOnIdentifierBase(d : TraversalDirection.T, id : IdentifierBase, in : T, context : ScopeMap) : T = { in }
   def applyOnIdentifier(d : TraversalDirection.T, id : Identifier, in : T, context : ScopeMap) : T = { in }
+  def applyOnConstIdentifier(d : TraversalDirection.T, id : ConstIdentifier, in : T, context : ScopeMap) : T = { in }
   def applyOnLit(d : TraversalDirection.T, lit : Literal, in : T, context : ScopeMap) : T = { in }
   def applyOnBoolLit(d : TraversalDirection.T, b : BoolLit, in : T, context : ScopeMap) : T = { in }
   def applyOnNumericLit(d : TraversalDirection.T, b : NumericLit, in : T, context : ScopeMap) : T = { in }
@@ -403,7 +405,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
     result = pass.applyOnFor(TraversalDirection.Down, st, result, contextIn)
-    result = visitIdentifier(st.id, result, contextIn)
+    result = visitConstIdentifier(st.id, result, contextIn)
     result = visitLiteral(st.range._1, result, contextIn)
     result = visitLiteral(st.range._2, result, contextIn)
     result = st.body.foldLeft(result)((arg, i) => visitStatement(i, arg, context))
@@ -448,7 +450,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnExpr(TraversalDirection.Down, e, result, context)
     result = e match {
-      case i : Identifier => visitIdentifier(i, result, context)
+      case i : IdentifierBase => visitIdentifierBase(i, result, context)
       case lit : Literal => visitLiteral(lit, result, context)
       case rec : Tuple => visitTuple(rec, result, context)
       case opapp : OperatorApplication => visitOperatorApp(opapp, result, context)
@@ -461,10 +463,26 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnExpr(TraversalDirection.Up, e, result, context)
     return result
   }
+  def visitIdentifierBase(id : IdentifierBase, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnIdentifierBase(TraversalDirection.Down, id, result, context)
+    result = id match {
+      case vId : Identifier => visitIdentifier(vId, result, context)
+      case cId : ConstIdentifier => visitConstIdentifier(cId, result, context)
+    }
+    result = pass.applyOnIdentifierBase(TraversalDirection.Up, id, result, context)
+    return result
+  }
   def visitIdentifier(id : Identifier, in : T, context : ScopeMap) : T = {
     var result : T = in
-    result = pass.applyOnIdentifier(TraversalDirection.Down, id, result, context)
-    result = pass.applyOnIdentifier(TraversalDirection.Up, id, result, context)
+    result = pass.applyOnIdentifier(TraversalDirection.Down, id, in, context)
+    result = pass.applyOnIdentifier(TraversalDirection.Up, id, in, context)
+    return result
+  }
+  def visitConstIdentifier(id : ConstIdentifier, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnConstIdentifier(TraversalDirection.Down, id, in, context)
+    result = pass.applyOnConstIdentifier(TraversalDirection.Up, id, in, context)
     return result
   }
   def visitLiteral(lit : Literal, in : T, context : ScopeMap) : T = {
@@ -622,7 +640,9 @@ trait RewritePass {
   def rewriteProcedureCall(st : ProcedureCallStmt, ctx : ScopeMap) : Option[ProcedureCallStmt] = { Some(st) }
   def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = { Some(lhs) }
   def rewriteExpr(e : Expr, ctx : ScopeMap) : Option[Expr] = { Some(e) }
+  def rewriteIdentifierBase(id : IdentifierBase, ctx : ScopeMap) : Option[IdentifierBase] = { Some(id) }
   def rewriteIdentifier(id : Identifier, ctx : ScopeMap) : Option[Identifier] = { Some(id) }
+  def rewriteConstIdentifier(id : ConstIdentifier, ctx : ScopeMap) : Option[ConstIdentifier] = { Some(id) }
   def rewriteLit(lit : Literal, ctx : ScopeMap) : Option[Literal] = { Some(lit) }
   def rewriteBoolLit(b : BoolLit, ctx : ScopeMap) : Option[BoolLit] = { Some(b) }
   def rewriteIntLit(i : IntLit, ctx : ScopeMap) : Option[IntLit] = { Some(i) }
@@ -998,7 +1018,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   
   def visitForStatement(st : ForStmt, contextIn : ScopeMap) : Option[ForStmt] = {
     val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
-    val idP = visitIdentifier(st.id, contextIn)
+    val idP = visitConstIdentifier(st.id, contextIn)
     val lit1P = visitNumericLiteral(st.range._1, contextIn)
     val lit2P = visitNumericLiteral(st.range._2, contextIn)
     val stmts = st.body.map(visitStatement(_, context)).flatten
@@ -1047,7 +1067,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   
   def visitExpr(e : Expr, context : ScopeMap) : Option[Expr] = {
     val eP = (e match {
-      case i : Identifier => visitIdentifier(i, context)
+      case i : IdentifierBase => visitIdentifierBase(i, context)
       case lit : Literal => visitLiteral(lit, context)
       case rec : Tuple => visitTuple(rec, context)
       case opapp : OperatorApplication => visitOperatorApp(opapp, context)
@@ -1061,12 +1081,25 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     return eP
   }
   
+  def visitIdentifierBase(id : IdentifierBase, context : ScopeMap) : Option[IdentifierBase] = {
+    val idP = id match {
+      case vId : Identifier => visitIdentifier(vId, context)
+      case cId : ConstIdentifier => visitConstIdentifier(cId, context)
+    }
+    val idP2 = idP.flatMap(pass.rewriteIdentifierBase(_, context))
+    astChangeFlag = astChangeFlag || (idP2 != Some(id))
+    return idP2
+  }
   def visitIdentifier(id : Identifier, context : ScopeMap) : Option[Identifier] = {
     val idP = pass.rewriteIdentifier(id, context)
     astChangeFlag = astChangeFlag || (idP != Some(id))
     return idP
   }
-  
+  def visitConstIdentifier(id : ConstIdentifier, context : ScopeMap) : Option[ConstIdentifier] = {
+    val idP = pass.rewriteConstIdentifier(id, context)
+    astChangeFlag = astChangeFlag || (idP != Some(id))
+    return idP
+  }  
   def visitLiteral(lit : Literal, context : ScopeMap) : Option[Literal] = {
     val litP = (lit match {
       case b : BoolLit => visitBoolLiteral(b, context)
@@ -1181,6 +1214,18 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     astChangeFlag = astChangeFlag || (lambdaP != Some(lambda))
     return lambdaP
   }
+}
+
+/** Very simple pass too print module. */
+class ASTPrinterPass extends ReadOnlyPass[Unit] {
+  override def applyOnModule(d : TraversalDirection.T, module : Module, in : Unit, context : ScopeMap) : Unit = {
+    println(module)
+  }
+}
+/** Simple analysis that instantiates ASTPrinterPass to print module. */
+class ASTPrinter extends ASTAnalyzer("ASTPrinter", new ASTPrinterPass()) {
+  override def pass = super.pass.asInstanceOf[ASTPrinterPass]
+  in = Some(Unit)
 }
 
 class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
