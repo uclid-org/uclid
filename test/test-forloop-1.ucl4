@@ -1,0 +1,29 @@
+module main {
+  type word_t = bv8;
+  var cnt : word_t;
+  var cntp : word_t;
+  
+  
+  procedure add4(x : word_t) returns (y : word_t) {
+    y := x;
+    for i in range(0bv8, 3bv8) {
+      y := y + 1bv8;
+    }
+  }
+  
+  init {
+    cnt := 0bv8;
+    cntp := 0bv8;
+  }
+  next {
+    call (cnt) := add4(cnt);
+    cntp := cntp + 4bv8;
+    
+    assert (cnt == cntp);
+  }
+  control {
+    initialize;
+    simulate (5);
+    decide;
+  }
+}

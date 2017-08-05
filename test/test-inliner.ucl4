@@ -1,0 +1,60 @@
+module main {
+  type bit_t = bv1;
+  
+  input x  : bit_t;
+  input y  : bit_t;
+
+  output s0 : bit_t;
+  output c0 : bit_t;
+  output s1 : bit_t;
+  output c1 : bit_t;
+  
+  procedure full_adder0(a : bit_t, b : bit_t, c_in : bit_t) returns (s : bit_t, c_out : bit_t) {
+	s := a ^ b ^ c_in;
+	c_out := (a & b) | (b & c_in) | (c_in & a);
+  }
+  
+  procedure full_adder1(a : bit_t, b : bit_t, c_in : bit_t) returns (s : bit_t, c_out : bit_t) {
+    var cnt : int;
+	s := a ^ b ^ c_in;
+	cnt := 0;
+	
+	if ((a&b) == 1bv1) {
+	  cnt := cnt + 1;
+	}
+	else {
+	}
+	
+	if ((b&c_in) == 1bv1) {
+	  cnt := cnt + 1;
+	}
+	else {
+	}
+	
+	if ((c_in&a) == 1bv1) {
+	  cnt := cnt + 1;
+	}
+	else {
+	}
+
+	if (cnt >= 2) {
+	  c_out := 1bv1;
+	} else {
+	  c_out := 0bv1;
+	}	
+  }
+
+  next {
+  	call (s0, c0) := full_adder0(x, y, 0bv1);
+  	call (s1, c1) := full_adder1(x, y, 0bv1);
+  	
+  	assert (s0 == s1);
+  	assert (c0 == c1);
+  }
+  
+  control {
+  	initialize;
+  	simulate (3);
+  	decide;
+  }
+}  
