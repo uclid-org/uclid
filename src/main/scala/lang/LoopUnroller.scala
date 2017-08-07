@@ -12,7 +12,7 @@ class FindInnermostLoopsPass extends ReadOnlyPass[Set[ForStmt]] {
 }
 
 class ForLoopRewriterPass(forStmtsToRewrite: Set[ForStmt]) extends RewritePass {
-  def rewriteForStatement(st: ForStmt) : List[Statement] = {
+  override def rewriteFor(st: ForStmt, ctx : ScopeMap) : List[Statement] = {
      if (forStmtsToRewrite.contains(st)) {
        val low = st.range._1
        val high = st.range._2
@@ -25,41 +25,6 @@ class ForLoopRewriterPass(forStmtsToRewrite: Set[ForStmt]) extends RewritePass {
      } else {
        List(st)
      }
-  }
-  def rewriteStatement(stmt: Statement) : List[Statement] = {
-    stmt match {
-      case IfElseStmt(cond, tbody, fbody) =>
-        val tbodyP = tbody.flatMap(rewriteStatement(_))
-        val fbodyP = fbody.flatMap(rewriteStatement(_))
-        val ifElseP = IfElseStmt(cond, tbodyP, fbodyP)
-        List(ifElseP)
-      case ForStmt(id, range, body) =>
-        val bodyP = body.flatMap(rewriteStatement(_))
-        val forP = ForStmt(id, range, bodyP)
-        rewriteForStatement(forP)
-      case CaseStmt(cases) =>
-        val caseConditions = cases.map(_._1)
-        val caseBodies = cases.map(_._2)
-        val caseBodiesP = caseBodies.map((body) => body.flatMap(rewriteStatement(_)))
-        val casesP = caseConditions zip caseBodiesP
-        val caseP = CaseStmt(casesP)
-        List(caseP)
-      case _ => 
-        // println(stmt)
-        List(stmt)
-    }
-  }
-  override def rewriteProcedure(proc : ProcedureDecl, ctx : ScopeMap) : Option[ProcedureDecl] = {
-    val bodyP = proc.body.flatMap(rewriteStatement(_))
-    return Some(ProcedureDecl(proc.id, proc.sig, proc.decls, bodyP))
-  }
-  override def rewriteInit(init : InitDecl, ctx : ScopeMap) : Option[InitDecl] = { 
-    val bodyP = init.body.flatMap(rewriteStatement(_))
-    return Some(InitDecl(bodyP))
-  }
-  override def rewriteNext(next : NextDecl, ctx : ScopeMap) : Option[NextDecl] = { 
-    val bodyP = next.body.flatMap(rewriteStatement(_))
-    return Some(NextDecl(bodyP))
   }
 }
 
@@ -87,7 +52,7 @@ class ForLoopUnroller extends ASTAnalysis {
           done = true
         case Some(mod) =>
           val innermostLoopSet = findInnermostLoopsAnalysis.visitModule(mod, Set.empty[ForStmt])
-          // println("Innermost loops: " + innermostLoopSet.toString)
+          println("Innermost loops: " + innermostLoopSet.toString)
           done = innermostLoopSet.size == 0
           if (!done) {
             _astChanged = true
