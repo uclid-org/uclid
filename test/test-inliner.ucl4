@@ -10,6 +10,10 @@ module main {
   output s1 : bit_t;
   output c1 : bit_t;
   
+  procedure incr(w : int) returns (u: int) {
+    u := w + 1;
+  }
+  
   procedure half_adder0(a : bit_t, b : bit_t) returns (s : bit_t, c_out : bit_t) {
     s := a ^ b;
     c_out := (a & b);
@@ -51,19 +55,19 @@ module main {
 	cnt := 0;
 	
 	if (a == 1bv1) {
-	  cnt := cnt + 1;
+	  call (cnt) := incr(cnt);
 	}
 	else {
 	}
 	
 	if (b == 1bv1) {
-	  cnt := cnt + 1;
+	  call (cnt) := incr(cnt);
 	}
 	else {
 	}
 	
 	if (c_in == 1bv1) {
-	  cnt := cnt + 1;
+	  call (cnt) := incr(cnt);
 	}
 	else {
 	}
@@ -72,7 +76,7 @@ module main {
 	  c_out := 1bv1;
 	} else {
 	  c_out := 0bv1;
-	}	
+	}
   }
 
   next {
