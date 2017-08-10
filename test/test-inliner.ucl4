@@ -34,7 +34,6 @@ module main {
   	cnt := 0;
   	if ((a&b) == 1bv1) {
   	  cnt := cnt + 1;
-  	} else {
   	}
   	
   	if (cnt == 1) {
@@ -57,19 +56,13 @@ module main {
 	if (a == 1bv1) {
 	  call (cnt) := incr(cnt);
 	}
-	else {
-	}
 	
 	if (b == 1bv1) {
 	  call (cnt) := incr(cnt);
 	}
-	else {
-	}
 	
 	if (c_in == 1bv1) {
 	  call (cnt) := incr(cnt);
-	}
-	else {
 	}
 
 	if (cnt >= 2) {
