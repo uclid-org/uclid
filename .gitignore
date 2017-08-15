@@ -1,3 +1,5 @@
 target/*
 bin/*
 .cache-main
+project/project/*
+project/target/*
