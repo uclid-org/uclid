@@ -275,7 +275,7 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val BlockCmd : PackratParser[List[UclCmd]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
   
   lazy val Module: PackratParser[UclModule] =
-    KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( BlockCmd ? ) <~ "}") ^^ { 
+    KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( BlockCmd.? ) <~ "}") ^^ { 
       case id ~ (decls ~ Some(cs)) => UclModule(id, decls, cs)
       case id ~ (decls ~ None) => UclModule(id, decls, List[UclCmd]())
     }

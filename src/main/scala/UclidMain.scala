@@ -32,7 +32,7 @@ object UclidMain {
           help = true;
         } else {
           println("Unknown argument: " + args(i))
-          exit(1)
+          sys.exit(1)
         }
       } else {
         srcFiles = args(i) :: srcFiles
@@ -54,7 +54,7 @@ object UclidMain {
     
     if (opts.help) {
       println(usage)
-      exit(0)
+      sys.exit(0)
     }
     
     process(opts.mainModule, opts.srcFiles)
