@@ -291,8 +291,14 @@ case class UclSpecDecl(id: UclIdentifier, expr: UclExpr) extends UclDecl {
 }
 
 abstract class UclCmd
+case class UclInitializeCmd() extends UclCmd {
+  override def toString = "initialize;"
+}
+case class UclUnrollCmd(steps : UclNumber) extends UclCmd {
+  override def toString = "unroll (" + steps.toString + ");"
+}
 case class UclSimulateCmd(steps : UclNumber) extends UclCmd {
-  override def toString = "simulate " + steps.toString + ";"
+  override def toString = "simulate (" + steps.toString + ");"
 }
 
 case class UclModule(id: UclIdentifier, decls: List[UclDecl], cmds : List[UclCmd]) {

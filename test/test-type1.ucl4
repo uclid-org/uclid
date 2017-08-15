@@ -13,7 +13,7 @@ module test {
   }
   
   control {
-  	simulate 5;
+  	simulate (5);
   }
 }
 

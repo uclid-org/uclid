@@ -46,6 +46,7 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val KwInput = "input"
   lazy val KwOutput = "output"
   lazy val KwInit = "init"
+  lazy val KwInitialize = "initialize"
   lazy val KwNext = "next"
   lazy val KwModule = "module"
   lazy val KwITE = "ITE"
@@ -53,6 +54,7 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val KwFunction = "function"
   lazy val KwControl = "control"
   lazy val KwSimulate = "simulate"
+  lazy val KwUnroll = "unroll"
   
   lazy val KwDefineProp = "property"
   lazy val TemporalOpGlobally = "G"
@@ -72,7 +74,7 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     KwAssume, KwAssert, KwVar, KwLocalVar, KwHavoc, KwCall, KwIf, KwElse,
     KwCase, KwEsac, KwFor, KwIn, KwRange, KwLocalVar, KwInput, KwOutput,
     KwModule, KwType, KwEnum, KwRecord, KwSkip, KwFunction, 
-    KwSimulate, KwControl,
+    KwInitialize, KwUnroll, KwSimulate, KwControl,
     KwInit, KwNext, KwITE, KwLambda, 
     KwDefineProp, TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
     TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
@@ -86,9 +88,9 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     case x ~ OpAnd ~ y => UclConjunction(x, y)
     case x ~ OpOr ~ y => UclDisjunction(x, y)
     case x ~ OpLT ~ y => UclIFuncApplication(UclLTOperator(), List(x,y))
-    case x ~ OpGT ~ y => UclIFuncApplication(UclLTOperator(), List(x,y))
-    case x ~ OpLE ~ y => UclIFuncApplication(UclLTOperator(), List(x,y))
-    case x ~ OpGE ~ y => UclIFuncApplication(UclLTOperator(), List(x,y))
+    case x ~ OpGT ~ y => UclIFuncApplication(UclGTOperator(), List(x,y))
+    case x ~ OpLE ~ y => UclIFuncApplication(UclLEOperator(), List(x,y))
+    case x ~ OpGE ~ y => UclIFuncApplication(UclGEOperator(), List(x,y))
     case x ~ OpEQ ~ y => UclEquality(x, y)
     case x ~ OpNE ~ y => UclNegation(UclEquality(x, y))
     case x ~ OpConcat ~ y => UclIFuncApplication(UclConcatOperator(), List(x,y))
@@ -265,12 +267,17 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     (TypeDecl | ConstDecl | FuncDecl | VarDecl | InputDecl | OutputDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl)
 
   // control commands.
-    
+  lazy val InitializeCmd : PackratParser[UclInitializeCmd] = 
+    KwInitialize <~ ";" ^^ { case _ => UclInitializeCmd() }
+  
+  lazy val UnrollCmd : PackratParser[UclUnrollCmd] = 
+    KwUnroll ~ "(" ~> Number <~ ")" ~ ";" ^^ { case num => UclUnrollCmd(num) }
+
   lazy val SimulateCmd : PackratParser[UclSimulateCmd] =
-    KwSimulate ~> Number <~ ";" ^^ { case num => UclSimulateCmd(num) }
+    KwSimulate ~ "(" ~> Number <~ ")" ~ ";" ^^ { case num => UclSimulateCmd(num) }
   
   lazy val Cmd : PackratParser[UclCmd] =
-    ( SimulateCmd )
+    ( InitializeCmd | UnrollCmd | SimulateCmd )
   
   lazy val BlockCmd : PackratParser[List[UclCmd]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
   

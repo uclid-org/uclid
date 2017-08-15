@@ -55,17 +55,6 @@ object SMTInterface {
   }
   
   def translateExpr(e: SMTExpr) : String = {
-    def translateOp(op: SMTOperator) : String = {
-      op match {
-        case SMTIntLTOperator() => "<"
-        case SMTIntLEOperator() => "<="
-        case SMTIntGTOperator() => ">"
-        case SMTIntGEOperator() => ">="
-        case SMTIntAddOperator() => "+"
-        case SMTIntSubOperator() => "-"
-        case SMTIntMulOperator() => "*"
-      }
-    }
     
     def mkTuple(index: List[SMTExpr]) : String = {
       if (index.size > 1) {
@@ -79,22 +68,7 @@ object SMTInterface {
     
     e match {
       case SMTSymbol(id,_) => id
-      case SMTBiImplication(l,r) => 
-        "(= " + translateExpr(l) + " " + translateExpr(r) + ")"
-      case SMTImplication(l,r) => 
-        "(=> " + translateExpr(l) + " " + translateExpr(r) + ")"
-      case SMTConjunction(l,r) => 
-        "(and " + translateExpr(l) + " " + translateExpr(r) + ")"
-      case SMTDisjunction(l,r) => 
-        "(or " + translateExpr(l) + " " + translateExpr(r) + ")"
-      case SMTNegation(expr) =>
-        "(not " + translateExpr(expr) + ")"
-      case SMTEquality(l,r) =>
-        "(= " + translateExpr(l) + " " + translateExpr(r) + ")"
-      case SMTIFuncApplication(op,operands) =>
-        "(" + translateOp(op) +
-          operands.foldLeft(""){(acc,i) => 
-            acc + " " + translateExpr(i)} + ")"
+      case SMTOperatorApplication(op,operands) => e.toString
       case SMTArraySelectOperation(e, index) =>
         "(select " + translateExpr(e) + " " + mkTuple(index) + ")"
       case SMTArrayStoreOperation(e, index, value) =>
@@ -135,19 +109,7 @@ object SMTInterface {
     e match {
       case SMTSymbol(_,_) =>
         return Set(e.asInstanceOf[SMTSymbol])
-      case SMTBiImplication(l,r) => 
-        return findSymbolicVariables(l) ++ findSymbolicVariables(r)
-      case SMTImplication(l,r) => 
-        return findSymbolicVariables(l) ++ findSymbolicVariables(r)
-      case SMTConjunction(l,r) => 
-        return findSymbolicVariables(l) ++ findSymbolicVariables(r)
-      case SMTDisjunction(l,r) => 
-        return findSymbolicVariables(l) ++ findSymbolicVariables(r)
-      case SMTNegation(expr) =>
-        return findSymbolicVariables(expr)
-      case SMTEquality(l,r) =>
-        return findSymbolicVariables(l) ++ findSymbolicVariables(r)
-      case SMTIFuncApplication(op,operands) =>
+      case SMTOperatorApplication(op,operands) =>
         return findSymbolicVariables(operands)
       case SMTArraySelectOperation(e, index) =>
         return findSymbolicVariables(e) ++ findSymbolicVariables(index)
