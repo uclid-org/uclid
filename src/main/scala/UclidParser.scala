@@ -210,8 +210,8 @@ case class UclProcedureSig(inParams: List[(UclIdentifier,UclType)], outParams: L
   type T = (UclIdentifier,UclType)
   val printfn = {(a: T) => a._1.toString + ":" + a._2.toString}
   override def toString =
-    "(" + inParams.tail.foldLeft(printfn(inParams.head)) { (acc, i) => acc + "," + printfn(i) } + ")" +
-    " returns " + "(" + outParams.tail.foldLeft(printfn(outParams.head)) { (acc,i) => acc + "," + printfn(i) } + ")"
+    "(" + inParams.foldLeft("") { (acc, i) => acc + "," + printfn(i) } + ")" +
+    " returns " + "(" + outParams.foldLeft("") { (acc,i) => acc + "," + printfn(i) } + ")"
 }
 case class UclFunctionSig(args: List[(UclIdentifier,UclType)], retType: UclType) {
   type T = (UclIdentifier,UclType)
