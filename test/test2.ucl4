@@ -1,0 +1,14 @@
+module testModule {
+  var y: int;
+  input mem_in : [int] int;
+  type t = bool;
+
+  procedure f(x: int, y: int) returns (z:int) { 
+    localvar x: int;
+    assume (x > 0); 
+    assert (x < 1); 
+    havoc x; 
+    x,y := y,x; 
+  }
+  output mem_out : [int] int;
+}
