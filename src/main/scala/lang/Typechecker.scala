@@ -171,7 +171,7 @@ class Typechecker () {
   }
   def rewrite(m : Module) : Module = {
     return (new RewritingVisitor(new RewritingASTVisitor {
-      override def rewriteOperator(op : Operator) : Option[Operator] = { 
+      override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = { 
         op match {
           case p : PolymorphicOperator => {
             val reifiedOp = typeMap.polyOpMap.get(p.astNodeId)

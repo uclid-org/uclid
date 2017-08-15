@@ -430,48 +430,48 @@ class FoldingVisitor[T] (v: FoldingASTVisitor[T]) {
 /* AST Visitor that rewrites and generates a new AST. */
 
 trait RewritingASTVisitor {
-  def rewriteModule(module : Module) : Option[Module] = { Some(module) }
-  def rewriteDecl(decl : UclDecl) : Option[UclDecl] = { Some(decl) }
-  def rewriteCommand(cmd : UclCmd) : Option[UclCmd] = { Some(cmd) }
-  def rewriteProcedure(proc : UclProcedureDecl) : Option[UclProcedureDecl] = { Some(proc) }
-  def rewriteFunction(func : UclFunctionDecl) : Option[UclFunctionDecl] = { Some(func) }
-  def rewriteStateVar(stvar : UclStateVarDecl) : Option[UclStateVarDecl] = { Some(stvar) }
-  def rewriteInputVar(inpvar : UclInputVarDecl) : Option[UclInputVarDecl] = { Some(inpvar) }
-  def rewriteOutputVar(outvar : UclOutputVarDecl) : Option[UclOutputVarDecl] = { Some(outvar) }
-  def rewriteConstant(cnst : UclConstantDecl) : Option[UclConstantDecl] = { Some(cnst) }
-  def rewriteSpec(spec : UclSpecDecl) : Option[UclSpecDecl] = { Some(spec) }
-  def rewriteTypeDecl(typDec : UclTypeDecl) : Option[UclTypeDecl] = { Some(typDec) }
-  def rewriteInit(init : UclInitDecl) : Option[UclInitDecl] = { Some(init) }
-  def rewriteNext(next : UclNextDecl) : Option[UclNextDecl] = { Some(next) }
-  def rewriteType(typ: Type) : Option[Type] = { Some(typ) }
-  def rewriteProcedureSig(sig : UclProcedureSig) : Option[UclProcedureSig] = { Some(sig) }
-  def rewriteFunctionSig(sig : UclFunctionSig) : Option[UclFunctionSig] = { Some(sig) }
-  def rewriteLocalVar(lvar : UclLocalVarDecl) : Option[UclLocalVarDecl] = { Some(lvar) }
-  def rewriteStatement(st : UclStatement) : Option[UclStatement] = { Some(st) }
-  def rewriteSkip(st : UclSkipStmt) : Option[UclSkipStmt] = { Some(st) }
-  def rewriteAssert(st : UclAssertStmt) : Option[UclAssertStmt] = { Some(st) }
-  def rewriteAssume(st : UclAssumeStmt) : Option[UclAssumeStmt] = { Some(st) }
-  def rewriteHavoc(st : UclHavocStmt) : Option[UclHavocStmt] = { Some(st) }
-  def rewriteAssign(st : UclAssignStmt) : Option[UclAssignStmt] = { Some(st) }
-  def rewriteIfElse(st : UclIfElseStmt) : Option[UclIfElseStmt] = { Some(st) }
-  def rewriteFor(st : UclForStmt) : Option[UclForStmt] = { Some(st) }
-  def rewriteCase(st : UclCaseStmt) : Option[UclCaseStmt] = { Some(st) }
-  def rewriteProcedureCall(st : UclProcedureCallStmt) : Option[UclProcedureCallStmt] = { Some(st) }
-  def rewriteLHS(lhs : UclLhs) : Option[UclLhs] = { Some(lhs) }
-  def rewriteExpr(e : Expr) : Option[Expr] = { Some(e) }
-  def rewriteIdentifier(id : Identifier) : Option[Identifier] = { Some(id) }
-  def rewriteLit(lit : Literal) : Option[Literal] = { Some(lit) }
-  def rewriteBoolLit(b : BoolLit) : Option[BoolLit] = { Some(b) }
-  def rewriteIntLit(i : IntLit) : Option[IntLit] = { Some(i) }
-  def rewriteBitVectorLit(bv : BitVectorLit) : Option[BitVectorLit] = { Some(bv) }
-  def rewriteRecord(rec : Record) : Option[Record] = { Some(rec) }
-  def rewriteOperatorApp(opapp : UclOperatorApplication) : Option[UclOperatorApplication] = { Some(opapp) }
-  def rewriteOperator(op : Operator) : Option[Operator] = { Some(op) }
-  def rewriteArraySelect(arrSel : UclArraySelectOperation) : Option[UclArraySelectOperation] = { Some(arrSel) }
-  def rewriteArrayStore(arrStore : UclArrayStoreOperation) : Option[UclArrayStoreOperation] = { Some(arrStore) }
-  def rewriteFuncApp(fapp : UclFuncApplication) : Option[UclFuncApplication] = { Some(fapp) }
-  def rewriteITE(ite : UclITE) : Option[UclITE] = { Some(ite) }
-  def rewriteLambda(lambda : UclLambda) : Option[UclLambda] = { Some(lambda) }
+  def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = { Some(module) }
+  def rewriteDecl(decl : UclDecl, ctx : ScopeMap) : Option[UclDecl] = { Some(decl) }
+  def rewriteCommand(cmd : UclCmd, ctx : ScopeMap) : Option[UclCmd] = { Some(cmd) }
+  def rewriteProcedure(proc : UclProcedureDecl, ctx : ScopeMap) : Option[UclProcedureDecl] = { Some(proc) }
+  def rewriteFunction(func : UclFunctionDecl, ctx : ScopeMap) : Option[UclFunctionDecl] = { Some(func) }
+  def rewriteStateVar(stvar : UclStateVarDecl, ctx : ScopeMap) : Option[UclStateVarDecl] = { Some(stvar) }
+  def rewriteInputVar(inpvar : UclInputVarDecl, ctx : ScopeMap) : Option[UclInputVarDecl] = { Some(inpvar) }
+  def rewriteOutputVar(outvar : UclOutputVarDecl, ctx : ScopeMap) : Option[UclOutputVarDecl] = { Some(outvar) }
+  def rewriteConstant(cnst : UclConstantDecl, ctx : ScopeMap) : Option[UclConstantDecl] = { Some(cnst) }
+  def rewriteSpec(spec : UclSpecDecl, ctx : ScopeMap) : Option[UclSpecDecl] = { Some(spec) }
+  def rewriteTypeDecl(typDec : UclTypeDecl, ctx : ScopeMap) : Option[UclTypeDecl] = { Some(typDec) }
+  def rewriteInit(init : UclInitDecl, ctx : ScopeMap) : Option[UclInitDecl] = { Some(init) }
+  def rewriteNext(next : UclNextDecl, ctx : ScopeMap) : Option[UclNextDecl] = { Some(next) }
+  def rewriteType(typ: Type, ctx : ScopeMap) : Option[Type] = { Some(typ) }
+  def rewriteProcedureSig(sig : UclProcedureSig, ctx : ScopeMap) : Option[UclProcedureSig] = { Some(sig) }
+  def rewriteFunctionSig(sig : UclFunctionSig, ctx : ScopeMap) : Option[UclFunctionSig] = { Some(sig) }
+  def rewriteLocalVar(lvar : UclLocalVarDecl, ctx : ScopeMap) : Option[UclLocalVarDecl] = { Some(lvar) }
+  def rewriteStatement(st : UclStatement, ctx : ScopeMap) : Option[UclStatement] = { Some(st) }
+  def rewriteSkip(st : UclSkipStmt, ctx : ScopeMap) : Option[UclSkipStmt] = { Some(st) }
+  def rewriteAssert(st : UclAssertStmt, ctx : ScopeMap) : Option[UclAssertStmt] = { Some(st) }
+  def rewriteAssume(st : UclAssumeStmt, ctx : ScopeMap) : Option[UclAssumeStmt] = { Some(st) }
+  def rewriteHavoc(st : UclHavocStmt, ctx : ScopeMap) : Option[UclHavocStmt] = { Some(st) }
+  def rewriteAssign(st : UclAssignStmt, ctx : ScopeMap) : Option[UclAssignStmt] = { Some(st) }
+  def rewriteIfElse(st : UclIfElseStmt, ctx : ScopeMap) : Option[UclIfElseStmt] = { Some(st) }
+  def rewriteFor(st : UclForStmt, ctx : ScopeMap) : Option[UclForStmt] = { Some(st) }
+  def rewriteCase(st : UclCaseStmt, ctx : ScopeMap) : Option[UclCaseStmt] = { Some(st) }
+  def rewriteProcedureCall(st : UclProcedureCallStmt, ctx : ScopeMap) : Option[UclProcedureCallStmt] = { Some(st) }
+  def rewriteLHS(lhs : UclLhs, ctx : ScopeMap) : Option[UclLhs] = { Some(lhs) }
+  def rewriteExpr(e : Expr, ctx : ScopeMap) : Option[Expr] = { Some(e) }
+  def rewriteIdentifier(id : Identifier, ctx : ScopeMap) : Option[Identifier] = { Some(id) }
+  def rewriteLit(lit : Literal, ctx : ScopeMap) : Option[Literal] = { Some(lit) }
+  def rewriteBoolLit(b : BoolLit, ctx : ScopeMap) : Option[BoolLit] = { Some(b) }
+  def rewriteIntLit(i : IntLit, ctx : ScopeMap) : Option[IntLit] = { Some(i) }
+  def rewriteBitVectorLit(bv : BitVectorLit, ctx : ScopeMap) : Option[BitVectorLit] = { Some(bv) }
+  def rewriteRecord(rec : Record, ctx : ScopeMap) : Option[Record] = { Some(rec) }
+  def rewriteOperatorApp(opapp : UclOperatorApplication, ctx : ScopeMap) : Option[UclOperatorApplication] = { Some(opapp) }
+  def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = { Some(op) }
+  def rewriteArraySelect(arrSel : UclArraySelectOperation, ctx : ScopeMap) : Option[UclArraySelectOperation] = { Some(arrSel) }
+  def rewriteArrayStore(arrStore : UclArrayStoreOperation, ctx : ScopeMap) : Option[UclArrayStoreOperation] = { Some(arrStore) }
+  def rewriteFuncApp(fapp : UclFuncApplication, ctx : ScopeMap) : Option[UclFuncApplication] = { Some(fapp) }
+  def rewriteITE(ite : UclITE, ctx : ScopeMap) : Option[UclITE] = { Some(ite) }
+  def rewriteLambda(lambda : UclLambda, ctx : ScopeMap) : Option[UclLambda] = { Some(lambda) }
 }
 
 
@@ -482,7 +482,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val id = visitIdentifier(module.id, context)
     val decls = module.decls.map(visitDecl(_, context)).flatten
     val cmds = module.cmds.map(visitCommand(_, context)).flatten
-    return id.flatMap((i) => v.rewriteModule(Module(i, decls, cmds)))
+    return id.flatMap((i) => v.rewriteModule(Module(i, decls, cmds), emptyContext))
   }
   
   def visitDecl(decl : UclDecl, context : ScopeMap) : Option[UclDecl] = {
@@ -497,7 +497,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
       case initDecl : UclInitDecl => visitInit(initDecl, context)
       case nextDecl : UclNextDecl => visitNext(nextDecl, context)
       case specDecl : UclSpecDecl => visitSpec(specDecl, context)
-    }).flatMap(v.rewriteDecl(_))
+    }).flatMap(v.rewriteDecl(_, context))
   }
   def visitProcedure(proc : UclProcedureDecl, contextIn : ScopeMap) : Option[UclProcedureDecl] = {
     val context = contextIn + proc
@@ -506,7 +506,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val decls = proc.decls.map(visitLocalVar(_, context)).flatten
     val stmts = proc.body.map(visitStatement(_, context)).flatten
     (id, sig) match {
-      case (Some(i), Some(s)) => v.rewriteProcedure(UclProcedureDecl(i, s, decls, stmts))
+      case (Some(i), Some(s)) => v.rewriteProcedure(UclProcedureDecl(i, s, decls, stmts), contextIn)
       case _ => None 
     }
   }
@@ -515,7 +515,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val id = visitIdentifier(func.id, context)
     val sig = visitFunctionSig(func.sig, context)
     (id, sig) match {
-      case (Some(i), Some(s)) => v.rewriteFunction(UclFunctionDecl(i, s))
+      case (Some(i), Some(s)) => v.rewriteFunction(UclFunctionDecl(i, s), context)
       case _ => None
     }
   }
@@ -524,7 +524,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val idP = visitIdentifier(stvar.id, context)
     val typP = visitType(stvar.typ, context)
     (idP, typP) match {
-      case (Some(id), Some(typ)) => v.rewriteStateVar(UclStateVarDecl(id, typ))
+      case (Some(id), Some(typ)) => v.rewriteStateVar(UclStateVarDecl(id, typ), context)
       case _ => None
     }
   }
@@ -533,7 +533,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val idP = visitIdentifier(inpvar.id, context)
     var typP = visitType(inpvar.typ, context)
     (idP, typP) match {
-      case (Some(id), Some(typ)) => v.rewriteInputVar(UclInputVarDecl(id, typ))
+      case (Some(id), Some(typ)) => v.rewriteInputVar(UclInputVarDecl(id, typ), context)
       case _ => None
     }
   }
@@ -542,7 +542,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val idP = visitIdentifier(outvar.id, context)
     val typP = visitType(outvar.typ, context)
     (idP, typP) match {
-      case (Some(id), Some(typ)) => v.rewriteOutputVar(UclOutputVarDecl(id, typ))
+      case (Some(id), Some(typ)) => v.rewriteOutputVar(UclOutputVarDecl(id, typ), context)
       case _ => None
     }
   }
@@ -551,7 +551,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val idP = visitIdentifier(cnst.id, context)
     val typP = visitType(cnst.typ, context)
     (idP, typP) match {
-      case (Some(id), Some(typ)) => v.rewriteConstant(UclConstantDecl(id, typ))
+      case (Some(id), Some(typ)) => v.rewriteConstant(UclConstantDecl(id, typ), context)
       case _ => None
     }
   }
@@ -560,7 +560,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val idP = visitIdentifier(spec.id, context)
     val exprP = visitExpr(spec.expr, context)
     (idP, exprP) match {
-      case (Some(id), Some(expr)) => v.rewriteSpec(UclSpecDecl(id, expr))
+      case (Some(id), Some(expr)) => v.rewriteSpec(UclSpecDecl(id, expr), context)
       case _ => None
     }
   }
@@ -569,27 +569,27 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val idP = visitIdentifier(typDec.id, context)
     val typeP = visitType(typDec.typ, context)
     (idP, typeP) match {
-      case (Some(id), Some(typ)) => v.rewriteTypeDecl(UclTypeDecl(id, typ))
+      case (Some(id), Some(typ)) => v.rewriteTypeDecl(UclTypeDecl(id, typ), context)
       case _ => None
     }
   }
   
   def visitInit(init : UclInitDecl, context : ScopeMap) : Option[UclInitDecl] = {
     val body = init.body.map(visitStatement(_, context)).flatten
-    return v.rewriteInit(UclInitDecl(body))
+    return v.rewriteInit(UclInitDecl(body), context)
   }
   
   def visitNext(next : UclNextDecl, context : ScopeMap) : Option[UclNextDecl] = {
     val body = next.body.map(visitStatement(_, context)).flatten
-    return v.rewriteNext(UclNextDecl(body))
+    return v.rewriteNext(UclNextDecl(body), context)
   }
   
   def visitCommand(cmd : UclCmd, context : ScopeMap) : Option[UclCmd] = {
-    return v.rewriteCommand(cmd)
+    return v.rewriteCommand(cmd, context)
   }
   
   def visitType(typ: Type, context : ScopeMap) : Option[Type] = {
-    return v.rewriteType(typ)
+    return v.rewriteType(typ, context)
   }
 
   def visitProcedureSig(sig : UclProcedureSig, context : ScopeMap) : Option[UclProcedureSig] = {
@@ -608,7 +608,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     }).flatten
     
     return (inParamsP, outParamsP) match {
-      case (in, out) => v.rewriteProcedureSig(UclProcedureSig(in, out))
+      case (in, out) => v.rewriteProcedureSig(UclProcedureSig(in, out), context)
       case _ => None
     }
   }
@@ -620,12 +620,12 @@ class RewritingVisitor (v: RewritingASTVisitor) {
         case _ => None
       }
     }).flatten
-    return visitType(sig.retType, context).flatMap((t) => v.rewriteFunctionSig(UclFunctionSig(args, t)))
+    return visitType(sig.retType, context).flatMap((t) => v.rewriteFunctionSig(UclFunctionSig(args, t), context))
   }
   
   def visitLocalVar(lvar : UclLocalVarDecl, context : ScopeMap) : Option[UclLocalVarDecl] = {
     visitIdentifier(lvar.id, context).flatMap((id) => {
-      visitType(lvar.typ, context).flatMap((t) => v.rewriteLocalVar(UclLocalVarDecl(id, t)))
+      visitType(lvar.typ, context).flatMap((t) => v.rewriteLocalVar(UclLocalVarDecl(id, t), context))
     })
   }
   
@@ -640,35 +640,35 @@ class RewritingVisitor (v: RewritingASTVisitor) {
       case forStmt : UclForStmt => visitForStatement(forStmt, context)
       case caseStmt : UclCaseStmt => visitCaseStatement(caseStmt, context)
       case procCallStmt : UclProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
-    }).flatMap(v.rewriteStatement(_))
+    }).flatMap(v.rewriteStatement(_, context))
   }
 
   def visitSkipStatement(st : UclSkipStmt, context : ScopeMap) : Option[UclSkipStmt] = {
-    return v.rewriteSkip(st)
+    return v.rewriteSkip(st, context)
   }
   
   def visitAssertStatement(st : UclAssertStmt, context : ScopeMap) : Option[UclAssertStmt] = {
     visitExpr(st.e, context).flatMap((e) => {
-      v.rewriteAssert(UclAssertStmt(e))
+      v.rewriteAssert(UclAssertStmt(e), context)
     })
   }
   
   def visitAssumeStatement(st : UclAssumeStmt, context : ScopeMap) : Option[UclAssumeStmt] = {
     visitExpr(st.e, context).flatMap((e) => {
-      v.rewriteAssume(UclAssumeStmt(e))
+      v.rewriteAssume(UclAssumeStmt(e), context)
     })
   }
   
   def visitHavocStatement(st: UclHavocStmt, context : ScopeMap) : Option[UclHavocStmt] = {
     visitIdentifier(st.id, context).flatMap((id) => {
-      v.rewriteHavoc(UclHavocStmt(id))
+      v.rewriteHavoc(UclHavocStmt(id), context)
     })
   }
   
   def visitAssignStatement(st : UclAssignStmt, context : ScopeMap) : Option[UclAssignStmt] = {
     val lhss = st.lhss.map(visitLhs(_, context)).flatten
     val rhss = st.rhss.map(visitExpr(_, context)).flatten
-    return v.rewriteAssign(UclAssignStmt(lhss, rhss))
+    return v.rewriteAssign(UclAssignStmt(lhss, rhss), context)
   }
   
   def visitIfElseStatement(st : UclIfElseStmt, context : ScopeMap) : Option[UclIfElseStmt] = {
@@ -676,7 +676,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val ifblock = st.ifblock.map(visitStatement(_, context)).flatten
     val elseblock = st.elseblock.map(visitStatement(_, context)).flatten
     cond match {
-      case Some(c) => v.rewriteIfElse(UclIfElseStmt(c, ifblock, elseblock))
+      case Some(c) => v.rewriteIfElse(UclIfElseStmt(c, ifblock, elseblock), context)
       case _ => None
     }
   }
@@ -688,7 +688,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val stmts = st.body.map(visitStatement(_, context)).flatten
     
     return (idP, lit1P, lit2P) match {
-      case (Some(id), Some(lit1), Some(lit2)) => v.rewriteFor(UclForStmt(id, (lit1, lit2), stmts))
+      case (Some(id), Some(lit1), Some(lit2)) => v.rewriteFor(UclForStmt(id, (lit1, lit2), stmts), context)
       case _ => None
     }
   }
@@ -701,14 +701,14 @@ class RewritingVisitor (v: RewritingASTVisitor) {
         Some(e, c._2.map(visitStatement(_, context)).flatten)
       })
     }).flatten // and finally get rid of all the Options.
-    return v.rewriteCase(UclCaseStmt(bodyP))
+    return v.rewriteCase(UclCaseStmt(bodyP), context)
   }
   
   def visitProcedureCallStatement(st : UclProcedureCallStmt, context : ScopeMap) : Option[UclProcedureCallStmt] = {
     val idP = visitIdentifier(st.id, context)
     val lhssP = st.callLhss.map(visitLhs(_, context)).flatten
     val argsP = st.args.map(visitExpr(_, context)).flatten
-    idP.flatMap((id) => v.rewriteProcedureCall(UclProcedureCallStmt(id, lhssP, argsP)))
+    idP.flatMap((id) => v.rewriteProcedureCall(UclProcedureCallStmt(id, lhssP, argsP), context))
   }
   
   def visitLhs(lhs : UclLhs, context : ScopeMap) : Option[UclLhs] = {
@@ -731,11 +731,11 @@ class RewritingVisitor (v: RewritingASTVisitor) {
       case fapp : UclFuncApplication => visitFuncApp(fapp, context)
       case ite : UclITE => visitITE(ite, context)
       case lambda : UclLambda => visitLambda(lambda, context)
-    }).flatMap(v.rewriteExpr(_))
+    }).flatMap(v.rewriteExpr(_, context))
   }
   
   def visitIdentifier(id : Identifier, context : ScopeMap) : Option[Identifier] = {
-    return v.rewriteIdentifier(id)
+    return v.rewriteIdentifier(id, context)
   }
   
   def visitLiteral(lit : Literal, context : ScopeMap) : Option[Literal] = {
@@ -743,38 +743,38 @@ class RewritingVisitor (v: RewritingASTVisitor) {
       case b : BoolLit => visitBoolLiteral(b, context)
       case i : IntLit => visitIntLiteral(i, context)
       case bv : BitVectorLit => visitBitVectorLiteral(bv, context)
-    }).flatMap(v.rewriteLit(_))
+    }).flatMap(v.rewriteLit(_, context))
   }
   
   def visitBoolLiteral(b : BoolLit, context : ScopeMap) : Option[BoolLit] = {
-    return v.rewriteBoolLit(b)
+    return v.rewriteBoolLit(b, context)
   }
   
   def visitIntLiteral(i : IntLit, context : ScopeMap) : Option[IntLit] = {
-    return v.rewriteIntLit(i)
+    return v.rewriteIntLit(i, context)
   }
   
   def visitBitVectorLiteral(bv : BitVectorLit, context : ScopeMap) : Option[BitVectorLit] = {
-    return v.rewriteBitVectorLit(bv)
+    return v.rewriteBitVectorLit(bv, context)
   }
   
   def visitRecord(rec : Record, context : ScopeMap) : Option[Record] = {
-    v.rewriteRecord(Record(rec.value.map(visitExpr(_, context)).flatten))
+    v.rewriteRecord(Record(rec.value.map(visitExpr(_, context)).flatten), context)
   }
   
   def visitOperatorApp(opapp : UclOperatorApplication, context : ScopeMap) : Option[UclOperatorApplication] = {
     return visitOperator(opapp.op, context).flatMap((op) => {
-      v.rewriteOperatorApp(UclOperatorApplication(op, opapp.operands.map(visitExpr(_, context)).flatten))
+      v.rewriteOperatorApp(UclOperatorApplication(op, opapp.operands.map(visitExpr(_, context)).flatten), context)
     })
   }
   
   def visitOperator(op : Operator, context : ScopeMap) : Option[Operator] = {
-    return v.rewriteOperator(op)
+    return v.rewriteOperator(op, context)
   }
   
   def visitArraySelectOp(arrSel : UclArraySelectOperation, context : ScopeMap) : Option[UclArraySelectOperation] = {
     return visitExpr(arrSel.e, context) match {
-      case Some(e) => v.rewriteArraySelect(UclArraySelectOperation(e, arrSel.index.map(visitExpr(_, context)).flatten))
+      case Some(e) => v.rewriteArraySelect(UclArraySelectOperation(e, arrSel.index.map(visitExpr(_, context)).flatten), context)
       case _ => None
     }
   }
@@ -784,7 +784,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val ind = arrStore.index.map(visitExpr(_, context)).flatten
     val valP = visitExpr(arrStore.value, context)
     return (eP, valP) match {
-      case (Some(e), Some(value)) => v.rewriteArrayStore(UclArrayStoreOperation(e, ind, value))
+      case (Some(e), Some(value)) => v.rewriteArrayStore(UclArrayStoreOperation(e, ind, value), context)
       case _ => None
     }
   }
@@ -793,7 +793,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val eP = visitExpr(fapp.e, context)
     val args = fapp.args.map(visitExpr(_, context)).flatten
     eP match {
-      case Some(e) => v.rewriteFuncApp(UclFuncApplication(e, args))
+      case Some(e) => v.rewriteFuncApp(UclFuncApplication(e, args), context)
       case _ => None
     }
   }
@@ -804,7 +804,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     val fP = visitExpr(ite.f, context)
     
     (condP, tP, fP) match {
-      case (Some(cond), Some(t), Some(f)) => v.rewriteITE(UclITE(cond, t, f))
+      case (Some(cond), Some(t), Some(f)) => v.rewriteITE(UclITE(cond, t, f), context)
       case _ => None
     }
   }
@@ -817,6 +817,6 @@ class RewritingVisitor (v: RewritingASTVisitor) {
         case _ => None
       }
     }).flatten
-    return visitExpr(lambda.e, context).flatMap((e) => v.rewriteLambda(UclLambda(idP, e)))
+    return visitExpr(lambda.e, context).flatMap((e) => v.rewriteLambda(UclLambda(idP, e), contextIn))
   }
 }
