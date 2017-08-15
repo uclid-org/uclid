@@ -326,6 +326,9 @@ package uclid {
     case class UclSimulateCmd(steps : IntLit) extends UclCmd {
       override def toString = "simulate (" + steps.toString + ");"
     }
+    case class UclDecideCmd() extends UclCmd {
+      override def toString = "decide; "
+    }
     
     case class Module(id: Identifier, decls: List[UclDecl], cmds : List[UclCmd]) {
       override def toString = 
