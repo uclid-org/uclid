@@ -11,11 +11,11 @@ case class UclGEOperator() extends UclOperator { override def toString = ">=" }
 case class UclAddOperator() extends UclOperator { override def toString = "+" }
 case class UclMulOperator() extends UclOperator { override def toString = "*" }
 case class UclExtractOperator(high: UclNumber, low: UclNumber) extends UclOperator {
-  override def toString = "[" + high.toString + ":" + low.toString + "]"
+  override def toString = "[" + high + ":" + low + "]"
 }
 case class UclConcatOperator() extends UclOperator { override def toString = "++" }
 case class UclRecordSelectOperator(id: UclIdentifier) extends UclOperator {
-  override def toString = "." + id.toString
+  override def toString = "." + id
 }
 
 abstract class UclExpr
@@ -27,51 +27,69 @@ case class UclNumber(value: BigInt) extends UclExpr {
 }
 //TODO: check that value can be expressed using "width" bits
 case class UclBitVector(value: BigInt, width: BigInt) extends UclExpr {
-  override def toString = value.toString + "bv" + width.toString //TODO: print in hex
+  override def toString = value + "bv" + width //TODO: print in hex
 }
 case class UclBoolean(value: Boolean) extends UclExpr {
   override def toString = value.toString
 }
 case class UclBiImplication(left: UclExpr, right: UclExpr) extends UclExpr {
-  override def toString = "(" + left.toString + " <==> " + right.toString + ")"
+  override def toString = "(" + left + " <==> " + right + ")"
 }
 case class UclImplication(left: UclExpr, right: UclExpr) extends UclExpr {
-  override def toString = "(" + left.toString + " ==> " + right.toString + ")"
+  override def toString = "(" + left + " ==> " + right + ")"
 }
 case class UclConjunction(left: UclExpr, right: UclExpr) extends UclExpr {
-  override def toString = "(" + left.toString + " /\\ " + right.toString + ")"
+  override def toString = "(" + left + " /\\ " + right + ")"
 }
 case class UclDisjunction(left: UclExpr, right: UclExpr) extends UclExpr {
-  override def toString = "(" + left.toString + " \\/ " + right.toString + ")"
+  override def toString = "(" + left + " \\/ " + right + ")"
 }
 case class UclNegation(expr: UclExpr) extends UclExpr {
-  override def toString = "! " + expr.toString
+  override def toString = "! " + expr
 }
 case class UclEquality(left: UclExpr, right: UclExpr) extends UclExpr {
-  override def toString = "(" + left.toString + " = " + right.toString + ")"
+  override def toString = "(" + left + " = " + right + ")"
 }
 //for symbols interpreted by underlying Theory solvers
 case class UclIFuncApplication(op: UclOperator, operands: List[UclExpr]) extends UclExpr {
   override def toString = op + "(" + operands.foldLeft(""){(acc,i) => acc + "," + i} + ")"
 }
 case class UclArraySelectOperation(e: UclExpr, index: List[UclExpr]) extends UclExpr {
-  override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
-    { (acc,i) => acc + "," + i.toString } + "]"
+  override def toString = e + "[" + index.tail.fold(index.head.toString)
+    { (acc,i) => acc + "," + i } + "]"
 }
 case class UclArrayStoreOperation(e: UclExpr, index: List[UclExpr], value: UclExpr) extends UclExpr {
-  override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
-    { (acc,i) => acc + "," + i.toString } + "]" + " := " + value.toString
+  override def toString = e + "[" + index.tail.fold(index.head.toString)
+    { (acc,i) => acc + "," + i } + "]" + " := " + value
 }
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class UclFuncApplication(e: UclExpr, args: List[UclExpr]) extends UclExpr {
-  override def toString = e.toString + "(" + args.tail.fold(args.head.toString)
-    { (acc,i) => acc + "," + i.toString } + ")"
+  override def toString = e + "(" + args.tail.fold(args.head.toString)
+    { (acc,i) => acc + "," + i } + ")"
 }
 case class UclITE(e: UclExpr, t: UclExpr, f: UclExpr) extends UclExpr {
-  override def toString = "ITE(" + e.toString + "," + t.toString + "," + f.toString + ")"
+  override def toString = "ITE(" + e + "," + t + "," + f + ")"
 }
 case class UclLambda(ids: List[(UclIdentifier,UclType)], e: UclExpr) extends UclExpr {
-  override def toString = "Lambda(" + ids + "). " + e.toString
+  override def toString = "Lambda(" + ids + "). " + e
+}
+case class UclTemporalOpUntil(left: UclExpr, right: UclExpr) extends UclExpr {
+  override def toString = "(" + left + " U " + right + ")"
+}
+case class UclTemporalOpWUntil(left: UclExpr, right: UclExpr) extends UclExpr {
+  override def toString = "(" + left + " W " + right + ")"
+}
+case class UclTemporalOpRelease(left: UclExpr, right: UclExpr) extends UclExpr {
+  override def toString = "(" + left + " R " + right + ")"
+}
+case class UclTemporalOpFinally(expr: UclExpr) extends UclExpr {
+  override def toString = "(F " + expr + ")"
+}
+case class UclTemporalOpGlobally(expr: UclExpr) extends UclExpr {
+  override def toString = "(G " + expr + ")"
+}
+case class UclTemporalOpNext(expr: UclExpr) extends UclExpr {
+  override def toString = "(Next " + expr + ")"
 }
 
 case class UclLhs(id: UclIdentifier, 
@@ -95,7 +113,7 @@ case class UclIntType() extends UclType {
 }
 case class UclEnumType(ids: List[UclIdentifier]) extends UclType {
   override def toString = "enum {" + 
-    ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i.toString} + "}"
+    ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i} + "}"
   override def equals(other: Any) = other match {
       case that: UclEnumType =>
         if (that.ids.size == this.ids.size) {
@@ -106,7 +124,7 @@ case class UclEnumType(ids: List[UclIdentifier]) extends UclType {
 }
 case class UclRecordType(fields: List[(UclIdentifier,UclType)]) extends UclType {
   override def toString = "record {" + 
-    fields.tail.foldLeft(fields.head.toString) {(acc,i) => acc + "," + i.toString} + "}"
+    fields.tail.foldLeft(fields.head.toString) {(acc,i) => acc + "," + i} + "}"
   override def equals(other: Any) = other match {
       case that: UclRecordType =>
         if (that.fields.size == this.fields.size) {
@@ -118,7 +136,7 @@ case class UclRecordType(fields: List[(UclIdentifier,UclType)]) extends UclType 
 //class UclBitvectorType extends UclType
 case class UclMapType(inTypes: List[UclType], outType: UclType) extends UclType {
   override def toString = "map [" + inTypes.tail.fold(inTypes.head.toString)
-  { (acc,i) => acc + "," + i.toString } + "] " + outType
+  { (acc,i) => acc + "," + i } + "] " + outType
   override def equals(other: Any) = other match {
       case that: UclMapType =>
         if (that.inTypes.size == this.inTypes.size) {
@@ -129,7 +147,7 @@ case class UclMapType(inTypes: List[UclType], outType: UclType) extends UclType 
 }
 case class UclArrayType(inTypes: List[UclType], outType: UclType) extends UclType {
   override def toString = "array [" + inTypes.tail.fold(inTypes.head.toString)
-  { (acc,i) => acc + "," + i.toString } + "] " + outType
+  { (acc,i) => acc + "," + i } + "] " + outType
   override def equals(other: Any) = other match {
       case that: UclArrayType =>
         if (that.inTypes.size == this.inTypes.size) {
@@ -176,7 +194,7 @@ case class UclForStmt(id: UclIdentifier, range: (UclNumber,UclNumber), body: Lis
 }
 case class UclCaseStmt(body: List[(UclExpr,List[UclStatement])]) extends UclStatement {
   override def toString = "case" +
-    body.foldLeft("") { (acc,i) => acc + "\n" + i._1.toString + " : " + i._2.toString + "\n"} + "esac"
+    body.foldLeft("") { (acc,i) => acc + "\n" + i._1 + " : " + i._2 + "\n"} + "esac"
 }
 case class UclProcedureCallStmt(id: UclIdentifier, callLhss: List[UclLhs], args: List[UclExpr])
   extends UclStatement {
@@ -191,14 +209,14 @@ case class UclLocalVarDecl(id: UclIdentifier, typ: UclType) {
 
 case class UclProcedureSig(inParams: List[(UclIdentifier,UclType)], outParams: List[(UclIdentifier,UclType)]) {
   type T = (UclIdentifier,UclType)
-  val printfn = {(a: T) => a._1.toString + ":" + a._2.toString}
+  val printfn = {(a: T) => a._1.toString + ":" + a._2}
   override def toString =
     "(" + inParams.foldLeft("") { (acc, i) => acc + "," + printfn(i) } + ")" +
     " returns " + "(" + outParams.foldLeft("") { (acc,i) => acc + "," + printfn(i) } + ")"
 }
 case class UclFunctionSig(args: List[(UclIdentifier,UclType)], retType: UclType) {
   type T = (UclIdentifier,UclType)
-  val printfn = {(a: T) => a._1.toString + ":" + a._2.toString}
+  val printfn = {(a: T) => a._1.toString + ":" + a._2}
   override def toString = "(" + args.tail.foldLeft(printfn(args.head)) { (acc, i) => acc + "," + printfn(i) } + ")" +
     ": " + retType
 }
@@ -235,6 +253,9 @@ case class UclInitDecl(body: List[UclStatement]) extends UclDecl {
 case class UclNextDecl(body: List[UclStatement]) extends UclDecl {
   override def toString = 
     "next {\n" + body.foldLeft("") { case (acc,i) => acc + "\t" + i + "\n" } + "}"
+}
+case class UclSpecDecl(id: UclIdentifier, expr: UclExpr) extends UclDecl {
+  override def toString = "property " + id + ":" + expr + ";"
 }
 
 case class UclModule(id: UclIdentifier, decls: List[UclDecl]) {
