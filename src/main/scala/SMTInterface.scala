@@ -14,7 +14,7 @@ object SMTInterface {
         case SMTArrayType(ins,out) =>
           if (ins.size > 1) {
             "(Array " + ins.foldLeft("(MyTuple" + ins.size){(acc,i) => 
-              acc + " " + printType(i)} + " " + printType(out) + "))"
+              acc + " " + printType(i)} + ") " + printType(out) + ")"
           } else {
             "(Array " + printType(ins(0)) + " " + printType(out) + ")"
           }
@@ -38,19 +38,19 @@ object SMTInterface {
         case SMTMapType(ins,out) =>
           arrayArities = arrayArities ++ Set(ins.size)
         case SMTArrayType(ins,out) =>
-          
+          arrayArities = arrayArities ++ Set(ins.size)
         case _ => ()
       }
     }
-    
+
     return arrayArities.foldLeft(""){ (acc,x) => 
       acc + "(declare-datatypes " +
         "(" + ((1 to x).toList).foldLeft("") {
           (acc,i) => acc + " " + "T"+i } + ")" +
         "((MyTuple" + x + " (mk-tuple" + x + 
         ((1 to x).toList).foldLeft("") { 
-            (acc,i) => acc + " (elem"+i+"T"+i+")" } + 
-        "))))"
+            (acc,i) => acc + " (elem"+i+" T"+i+")" } + 
+        "))))\n"
     }
   }
   
@@ -124,7 +124,7 @@ object SMTInterface {
     //val datatypes = symbols.foldLeft(""){(acc,x) => acc + generateDatatype(x)}
     val datatypes = generateDatatypes(symbols)
     val formula = "(assert " + translateExpr(e) + ")\n"
-    return datatypes + decl + formula
+    return datatypes + decl + formula + "(check-sat)\n"
   }
   
   def findSymbolicVariables(es: List[SMTExpr]) : Set[SMTSymbol] = {

@@ -1,14 +1,14 @@
 module testModule {
        
   var v1: int;
-  var arr: [int] int;
+  var arr: [int,int] int;
   type t1 = int;
 
   procedure p1(a1: int, a2: int) {
-    v1 := v1 + a1 + arr[a2];
+    v1 := v1 + a1 + arr[a2,a2];
   }
   procedure p2(a3: int) {
-    arr[a3] := arr[a3] + 4;
+    arr[a3,a3] := arr[a3,a3] + 4;
   }
 
   init {
