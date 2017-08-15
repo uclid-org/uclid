@@ -159,6 +159,9 @@ object UclidSemanticAnalyzer {
     }
   }
   
+  /* 
+   * Replaces type synonyms until only base types appear
+   */
   def transitiveType(typ: UclType, c: Context) : UclType = {
     val externalDecls : List[UclIdentifier] = c.externalDecls()
     if (typ.isInstanceOf[UclEnumType]) {
@@ -279,12 +282,13 @@ object UclidSemanticAnalyzer {
       case UclAssignStmt(lhss, rhss) => 
         UclidUtils.assert(lhss.size == rhss.size, "LHSS and RHSS of different size: " + s);
         lhss.foreach{ x => check(x,c) }; rhss.foreach { x => check(x,c) };
-        UclidUtils.assert((lhss zip rhss).forall { i => typeOf(i._1, c) == typeOf(i._2, c) }, 
+        UclidUtils.assert((lhss zip rhss).forall { i => typeOf(i._1, c) == typeOf(i._2, c)._1 && !typeOf(i._2, c)._2}, 
             "LHSS and RHSS have conflicting types: " + s);
         UclidUtils.assert(lhss.distinct.size == lhss.size, "LHSS contains identical variables: " + s)
       case UclIfElseStmt(e, t, f) => 
         check(e,c); 
-        UclidUtils.assert(typeOf(e,c) == UclBoolType(), "Expected boolean conditional");
+        UclidUtils.assert(transitiveType(typeOf(e,c)._1,c) == UclBoolType() && !typeOf(e,c)._2, 
+            "Expected boolean conditional");
         (t ++ f).foreach { x => check(x,c) };
       case UclForStmt(id,_,body) => 
         UclidUtils.assert(!(externalDecls.exists { x => x.value == id.value }), 
@@ -294,7 +298,7 @@ object UclidSemanticAnalyzer {
         body.foreach{x => check(x,c2)}
       case UclCaseStmt(body) => body.foreach { x =>
         check(x._1,c);
-        UclidUtils.assert(typeOf(x._1,c) == UclBoolType(), 
+        UclidUtils.assert(transitiveType(typeOf(x._1,c)._1,c) == UclBoolType() && !typeOf(x._1,c)._2, 
             "Expected boolean conditional within case statement guard");
         x._2.foreach { y => check(y,c) } 
         }
@@ -311,7 +315,7 @@ object UclidSemanticAnalyzer {
         UclidUtils.assert(args.size == c.procedures(id).sig.inParams.size, 
             "Calling procedure " + id + " with incorrect number of arguments")
         UclidUtils.assert((args zip c.procedures(id).sig.inParams.map(i => i._2)).
-            forall { i => typeOf(i._1, c) == i._2 }, 
+            forall { i => typeOf(i._1, c)._1 == i._2 }, 
             "Calling procedure " + id + " with arguments of incorrect type")
     }
   }
@@ -320,20 +324,15 @@ object UclidSemanticAnalyzer {
    * Returns the type and the fact whether the expression contains a temporal operator.
    */
   def typeOf(e: UclExpr, c: Context) : (UclType, Boolean) = {
-    def assertBoolArgs(t: UclType) : Unit = {
-      UclidUtils.assert(t == UclBoolType() || t == UclTemporalType(), 
+    def assertBoolType(t: UclType) : Unit = {
+      UclidUtils.assert(transitiveType(t,c) == UclBoolType() || t == UclTemporalType(), 
           "Expected expression " + t + " to have type Bool (or be a temporal formula).")
-    }
-    def assertIntArgs(l: Iterable[UclExpr]) : Unit = {
-      l.foreach{ i => UclidUtils.assert(typeOf(i,c) == UclIntType(), 
-          "Expected expression " + i + " to have type Int");
-      }
     }
     def typeOfBinaryBooleanOperator (l: UclExpr, r: UclExpr) : (UclType, Boolean) = {
         val (typeL, tempL) = typeOf(l,c)
-        assertBoolArgs(typeL)
+        assertBoolType(typeL)
         val (typeR, tempR) = typeOf(r,c)
-        assertBoolArgs(typeR)
+        assertBoolType(typeR)
         return (UclBoolType(), tempL || tempR)
     }
     
@@ -348,7 +347,7 @@ object UclidSemanticAnalyzer {
         return typeOfBinaryBooleanOperator(l,r)
       case UclNegation(e) => 
         val (typeE, tempE) = typeOf(e,c)
-        assertBoolArgs(typeE);
+        assertBoolType(typeE);
         return (UclBoolType(), tempE)
       case UclEquality(l,r) => 
         return typeOfBinaryBooleanOperator(l,r)
@@ -378,15 +377,15 @@ object UclidSemanticAnalyzer {
         UclidUtils.assert(transitiveType(t._1,c).isInstanceOf[UclArrayType],
             "expected array type: " + e)
         UclidUtils.assert((typeOf(a,c).asInstanceOf[UclArrayType].inTypes zip index).
-            forall { x => x._1 == typeOf(x._2,c) }, "Array Select operand type mismatch: " + e)
+            forall { x => x._1 == typeOf(x._2,c)._1 }, "Array Select operand type mismatch: " + e)
         return (t.asInstanceOf[UclArrayType].outType, false) //select returns the range type
       case UclArrayStoreOperation(a,index,value) =>
         val t = typeOf(a,c)
         assert(!t._2, "Array types may not have temporal subformulas")
         UclidUtils.assert(transitiveType(t._1,c).isInstanceOf[UclArrayType], "expected array type: " + e)
         UclidUtils.assert((a.asInstanceOf[UclArrayType].inTypes zip index).
-            forall { x => x._1 == typeOf(x._2,c) }, "Array Store operand type mismatch: " + e)
-        UclidUtils.assert(a.asInstanceOf[UclArrayType].outType == typeOf(value,c), 
+            forall { x => x._1 == typeOf(x._2,c)._1 }, "Array Store operand type mismatch: " + e)
+        UclidUtils.assert(a.asInstanceOf[UclArrayType].outType == typeOf(value,c)._1, 
             "Array Store value type mismatch")
         return (t._1, false) //store returns the new array
       case UclFuncApplication(f,args) =>
@@ -396,12 +395,12 @@ object UclidSemanticAnalyzer {
         val t1 = t._1.asInstanceOf[UclMapType];
         UclidUtils.assert((t1.inTypes.size == args.size), 
           "Function application has bad number of arguments: " + e);
-        UclidUtils.assert((t1.inTypes zip args).forall{i => i._1 == typeOf(i._2,c)}, 
+        UclidUtils.assert((t1.inTypes zip args).forall{i => i._1 == typeOf(i._2,c)._1}, 
           "Function application has bad types of arguments: " + e)
         return (t1.outType, false)
       case UclITE(cond,t,f) =>
         val condType = typeOf (cond,c)
-        assertBoolArgs(condType._1);
+        assertBoolType(condType._1);
         val tType = typeOf (t,c)
         val fType = typeOf (f,c)
         UclidUtils.assert(tType._1 == fType._1, 
