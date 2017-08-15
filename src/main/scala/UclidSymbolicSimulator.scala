@@ -152,7 +152,9 @@ case class SMTIntMulOperator() extends SMTOperator { override def toString = "*"
         c2.variables = c2.variables ++ (proc.decls.map(i => i.id -> i.typ).toMap)
         st = proc.decls.foldLeft(st)((acc,i) => acc.updated(i.id, newHavocSymbol(i.id.value, toSMT(i.typ))));
         st = simulate(proc.body, st, c2)
-        return simulateAssign(lhss, proc.sig.outParams.map(i => st(i._1)), st)
+        st = simulateAssign(lhss, proc.sig.outParams.map(i => st(i._1)), st)
+        //remove procedure arguments
+        return st
       case _ => return symbolTable
     }
   }
