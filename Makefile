@@ -6,4 +6,4 @@ build:
 	sbt compile
 
 run:
-	sbt "run /Users/rohitsinha/research/development/uclid/test/test4.ucl4"
+	sbt "run /Users/rohitsinha/research/development/uclid/test/test5.ucl4"

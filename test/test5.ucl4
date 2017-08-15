@@ -1,0 +1,17 @@
+module testModule {
+  input mem_in : [int] int;
+  output mem_out : [int] int;
+  var v1: bool;
+  var v2: int -> t1;
+  var v3: int -> bool;
+
+  type t1 = record {a: int, b: int, c: bool};
+  
+  procedure p1(a1: int, a2: t1) {
+    localvar tmp1: t1;
+    tmp1.a := 1; tmp1.b := 2; tmp1.c := false;
+    v1 := true ==> false;
+    v2 := Lambda(i:int). tmp1;
+    v3 := Lambda(i:int). ITE(i == a1, true, v3(i));
+  }
+}
