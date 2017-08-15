@@ -74,6 +74,12 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
     return Some(Module(m.id, moduleDecls, m.cmds))
   }
   
+  /** Inline a procedure call.
+   *  
+   *  The return value consists of a tuple of:
+   *  	- rewritten statements
+   *    - new variables that will need to be declared in the enclosing scope.
+   */
   def inlineProcedureCalls(uniqNamer : UniqueNameProvider, stmts : List[Statement]) : (List[Statement], List[(Identifier, Type)]) = {
     val init = (List.empty[Statement], List.empty[(Identifier, Type)])
     // we walk through the list of statements accumulating inlined procedures and new declarations.
@@ -104,6 +110,20 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
             val rewriter = new ExprRewriter("ProcedureInlineRewriter", rewriteMap)
             (acc._1 ++ rewriter.rewriteStatements(proc.body) ++ List(resultAssignStatment), acc._2 ++ retNewVars ++ localNewVars)
           }
+        case IfElseStmt(cond, ifblock, elseblock) =>
+          val ifBlockP = inlineProcedureCalls(uniqNamer, ifblock)
+          val elseBlockP = inlineProcedureCalls(uniqNamer, elseblock)
+          val ifElseP = IfElseStmt(cond, ifBlockP._1, elseBlockP._1)
+          (acc._1 ++ List(ifElseP), acc._2 ++ ifBlockP._2 ++ elseBlockP._2)
+        
+        case CaseStmt(cases) =>
+          val caseBodiesP = cases.map((c) => inlineProcedureCalls(uniqNamer, c._2))
+          val caseConds = cases.map(_._1)
+          val caseBodyStmts = caseBodiesP.map(_._1)
+          val caseBodyVars = caseBodiesP.map(_._2)
+          val caseStmtP = CaseStmt(caseConds zip caseBodyStmts)
+          val newVars = caseBodyVars.foldLeft(List.empty[(Identifier, Type)])((acc, vars) => acc ++ vars)
+          (acc._1 ++ List(caseStmtP), acc._2 ++ newVars)
         case _ => (acc._1 ++ List(stmt), acc._2)
       }
     })

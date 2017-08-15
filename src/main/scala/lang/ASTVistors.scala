@@ -628,16 +628,16 @@ trait RewritePass {
   def rewriteProcedureSig(sig : ProcedureSig, ctx : ScopeMap) : Option[ProcedureSig] = { Some(sig) }
   def rewriteFunctionSig(sig : FunctionSig, ctx : ScopeMap) : Option[FunctionSig] = { Some(sig) }
   def rewriteLocalVar(lvar : LocalVarDecl, ctx : ScopeMap) : Option[LocalVarDecl] = { Some(lvar) }
-  def rewriteStatement(st : Statement, ctx : ScopeMap) : Option[Statement] = { Some(st) }
-  def rewriteSkip(st : SkipStmt, ctx : ScopeMap) : Option[SkipStmt] = { Some(st) }
-  def rewriteAssert(st : AssertStmt, ctx : ScopeMap) : Option[AssertStmt] = { Some(st) }
-  def rewriteAssume(st : AssumeStmt, ctx : ScopeMap) : Option[AssumeStmt] = { Some(st) }
-  def rewriteHavoc(st : HavocStmt, ctx : ScopeMap) : Option[HavocStmt] = { Some(st) }
-  def rewriteAssign(st : AssignStmt, ctx : ScopeMap) : Option[AssignStmt] = { Some(st) }
-  def rewriteIfElse(st : IfElseStmt, ctx : ScopeMap) : Option[IfElseStmt] = { Some(st) }
-  def rewriteFor(st : ForStmt, ctx : ScopeMap) : Option[ForStmt] = { Some(st) }
-  def rewriteCase(st : CaseStmt, ctx : ScopeMap) : Option[CaseStmt] = { Some(st) }
-  def rewriteProcedureCall(st : ProcedureCallStmt, ctx : ScopeMap) : Option[ProcedureCallStmt] = { Some(st) }
+  def rewriteStatement(st : Statement, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteSkip(st : SkipStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteAssert(st : AssertStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteAssume(st : AssumeStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteHavoc(st : HavocStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteAssign(st : AssignStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteIfElse(st : IfElseStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteFor(st : ForStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteCase(st : CaseStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteProcedureCall(st : ProcedureCallStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
   def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = { Some(lhs) }
   def rewriteExpr(e : Expr, ctx : ScopeMap) : Option[Expr] = { Some(e) }
   def rewriteIdentifierBase(id : IdentifierBase, ctx : ScopeMap) : Option[IdentifierBase] = { Some(id) }
@@ -950,7 +950,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     return varP
   }
   
-  def visitStatement(st : Statement, context : ScopeMap) : Option[Statement] = {
+  def visitStatement(st : Statement, context : ScopeMap) : List[Statement] = {
     val stP = (st match {
       case skipStmt : SkipStmt => visitSkipStatement(skipStmt, context)
       case assertStmt : AssertStmt => visitAssertStatement(assertStmt, context)
@@ -962,41 +962,41 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case caseStmt : CaseStmt => visitCaseStatement(caseStmt, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
     }).flatMap(pass.rewriteStatement(_, context))
-    astChangeFlag = astChangeFlag || (stP != Some(st))
+    astChangeFlag = astChangeFlag || (stP != List(st))
     return stP
   }
 
-  def visitSkipStatement(st : SkipStmt, context : ScopeMap) : Option[SkipStmt] = {
+  def visitSkipStatement(st : SkipStmt, context : ScopeMap) : List[Statement] = {
     val stP = pass.rewriteSkip(st, context)
     astChangeFlag = astChangeFlag || (stP != Some(st))
     return stP
   }
   
-  def visitAssertStatement(st : AssertStmt, context : ScopeMap) : Option[AssertStmt] = {
-    val stP = visitExpr(st.e, context).flatMap((e) => {
+  def visitAssertStatement(st : AssertStmt, context : ScopeMap) : List[Statement] = {
+    val stP = visitExpr(st.e, context).toList.flatMap((e) => {
       pass.rewriteAssert(AssertStmt(e), context)
     })
     astChangeFlag = astChangeFlag || (stP != Some(st))
     return stP
   }
   
-  def visitAssumeStatement(st : AssumeStmt, context : ScopeMap) : Option[AssumeStmt] = {
-    val stP = visitExpr(st.e, context).flatMap((e) => {
+  def visitAssumeStatement(st : AssumeStmt, context : ScopeMap) : List[Statement] = {
+    val stP = visitExpr(st.e, context).toList.flatMap((e) => {
       pass.rewriteAssume(AssumeStmt(e), context)
     })
     astChangeFlag = astChangeFlag || (stP != Some(st))
     return stP
   }
   
-  def visitHavocStatement(st: HavocStmt, context : ScopeMap) : Option[HavocStmt] = {
-    val stP = visitIdentifier(st.id, context).flatMap((id) => {
+  def visitHavocStatement(st: HavocStmt, context : ScopeMap) : List[Statement] = {
+    val stP = visitIdentifier(st.id, context).toList.flatMap((id) => {
       pass.rewriteHavoc(HavocStmt(id), context)
     })
     astChangeFlag = astChangeFlag || (stP != Some(st))
     return stP
   }
   
-  def visitAssignStatement(st : AssignStmt, context : ScopeMap) : Option[AssignStmt] = {
+  def visitAssignStatement(st : AssignStmt, context : ScopeMap) : List[Statement] = {
     val lhss = st.lhss.map(visitLhs(_, context)).flatten
     val rhss = st.rhss.map(visitExpr(_, context)).flatten
     val stP = pass.rewriteAssign(AssignStmt(lhss, rhss), context)
@@ -1004,19 +1004,19 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     return stP
   }
   
-  def visitIfElseStatement(st : IfElseStmt, context : ScopeMap) : Option[IfElseStmt] = {
+  def visitIfElseStatement(st : IfElseStmt, context : ScopeMap) : List[Statement] = {
     val cond = visitExpr(st.cond, context)
     val ifblock = st.ifblock.map(visitStatement(_, context)).flatten
     val elseblock = st.elseblock.map(visitStatement(_, context)).flatten
     val stP = cond match {
       case Some(c) => pass.rewriteIfElse(IfElseStmt(c, ifblock, elseblock), context)
-      case _ => None
+      case _ => List.empty[Statement]
     }
     astChangeFlag = astChangeFlag || (stP != Some(st))
     return stP
   }
   
-  def visitForStatement(st : ForStmt, contextIn : ScopeMap) : Option[ForStmt] = {
+  def visitForStatement(st : ForStmt, contextIn : ScopeMap) : List[Statement] = {
     val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
     val idP = visitConstIdentifier(st.id, contextIn)
     val lit1P = visitNumericLiteral(st.range._1, contextIn)
@@ -1025,13 +1025,13 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     
     val stP = (idP, lit1P, lit2P) match {
       case (Some(id), Some(lit1), Some(lit2)) => pass.rewriteFor(ForStmt(id, (lit1, lit2), stmts), contextIn)
-      case _ => None
+      case _ => List.empty[Statement]
     }
     astChangeFlag = astChangeFlag || (stP != Some(st))
     return stP
   }
   
-  def visitCaseStatement(st : CaseStmt, context : ScopeMap) : Option[CaseStmt] = {
+  def visitCaseStatement(st : CaseStmt, context : ScopeMap) : List[Statement] = {
     val bodyP = st.body.map((c) => {
       // if rewriting the expression doesn't produce None.
       visitExpr(c._1, context).flatMap((e) => {
@@ -1044,11 +1044,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     return stP
   }
   
-  def visitProcedureCallStatement(st : ProcedureCallStmt, context : ScopeMap) : Option[ProcedureCallStmt] = {
+  def visitProcedureCallStatement(st : ProcedureCallStmt, context : ScopeMap) : List[Statement] = {
     val idP = visitIdentifier(st.id, context)
     val lhssP = st.callLhss.map(visitLhs(_, context)).flatten
     val argsP = st.args.map(visitExpr(_, context)).flatten
-    val stP = idP.flatMap((id) => pass.rewriteProcedureCall(ProcedureCallStmt(id, lhssP, argsP), context))
+    val stP = idP.toList.flatMap((id) => pass.rewriteProcedureCall(ProcedureCallStmt(id, lhssP, argsP), context))
     astChangeFlag = astChangeFlag || (stP != Some(st))
     return stP
   }
@@ -1252,9 +1252,6 @@ class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
 {
   def rewriteStatements(stmts : List[Statement]) : List[Statement] = {
     val emptyContext = new ScopeMap()
-    return stmts.flatMap(visitStatement(_, emptyContext) match {
-      case Some(st) => List(st)
-      case None => List.empty[Statement]
-    })
+    return stmts.flatMap(visitStatement(_, emptyContext))
   }
 }

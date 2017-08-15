@@ -46,5 +46,7 @@ test-forloop-1:
 test-forloop:
 	sbt "run ./test/test-forloop.ucl4"
 
-
-.PHONY: all build run specs test-int-fib test-types-0 test-type1 test-bv-fib test-forloop test-forloop-0 test-forloop-1 test-bv-assign
+test-inliner:
+	sbt "run ./test/test-inliner.ucl4"
+	
+.PHONY: all build run specs test-int-fib test-types-0 test-type1 test-bv-fib test-forloop test-forloop-0 test-forloop-1 test-bv-assign test-inliner
