@@ -399,12 +399,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnIfElse(TraversalDirection.Up, st, result, context)
     return result
   }
-  def visitForStatement(st : ForStmt, in : T, context : ScopeMap) : T = {
+  def visitForStatement(st : ForStmt, in : T, contextIn : ScopeMap) : T = {
     var result : T = in
-    result = pass.applyOnFor(TraversalDirection.Down, st, result, context)
-    result = visitIdentifier(st.id, result, context)
-    result = visitLiteral(st.range._1, result, context)
-    result = visitLiteral(st.range._2, result, context)
+    val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
+    result = pass.applyOnFor(TraversalDirection.Down, st, result, contextIn)
+    result = visitIdentifier(st.id, result, contextIn)
+    result = visitLiteral(st.range._1, result, contextIn)
+    result = visitLiteral(st.range._2, result, contextIn)
     result = st.body.foldLeft(result)((arg, i) => visitStatement(i, arg, context))
     result = pass.applyOnFor(TraversalDirection.Up, st, result, context)
     return result
@@ -995,14 +996,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     return stP
   }
   
-  def visitForStatement(st : ForStmt, context : ScopeMap) : Option[ForStmt] = {
-    val idP = visitIdentifier(st.id, context)
-    val lit1P = visitNumericLiteral(st.range._1, context)
-    val lit2P = visitNumericLiteral(st.range._2, context)
+  def visitForStatement(st : ForStmt, contextIn : ScopeMap) : Option[ForStmt] = {
+    val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
+    val idP = visitIdentifier(st.id, contextIn)
+    val lit1P = visitNumericLiteral(st.range._1, contextIn)
+    val lit2P = visitNumericLiteral(st.range._2, contextIn)
     val stmts = st.body.map(visitStatement(_, context)).flatten
     
     val stP = (idP, lit1P, lit2P) match {
-      case (Some(id), Some(lit1), Some(lit2)) => pass.rewriteFor(ForStmt(id, (lit1, lit2), stmts), context)
+      case (Some(id), Some(lit1), Some(lit2)) => pass.rewriteFor(ForStmt(id, (lit1, lit2), stmts), contextIn)
       case _ => None
     }
     astChangeFlag = astChangeFlag || (stP != Some(st))
