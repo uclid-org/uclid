@@ -282,7 +282,9 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
 
   lazy val SpecDecl: PackratParser[UclSpecDecl] =
     KwDefineProp ~> Id ~ (":" ~> Expr) <~ ";" ^^ { case id ~ expr => UclSpecDecl(id,expr) }
-  
+
+  lazy val Model: PackratParser[List[UclModule]] = rep(Module) 
+    
   def parseExpr(input: String): UclExpr = {
     val tokens = new PackratReader(new lexical.Scanner(input))
     phrase(Expr)(tokens) match {
@@ -294,6 +296,14 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   def parseModule(input: String): UclModule = {
     val tokens = new PackratReader(new lexical.Scanner(input))
     phrase(Module)(tokens) match {
+      case Success(ast, _) => ast
+      case e: NoSuccess => throw new IllegalArgumentException(e.toString)
+    }
+  }
+  
+  def parseModel(text: String): List[UclModule] = {
+    val tokens = new PackratReader(new lexical.Scanner(text))
+    phrase(Model)(tokens) match {
       case Success(ast, _) => ast
       case e: NoSuccess => throw new IllegalArgumentException(e.toString)
     }
