@@ -396,26 +396,23 @@ package uclid {
             Utils.assert(typeL == typeR,
                 "Equality operator requires equally typed arguments.")
             return (UclBoolType(), tempL || tempR)
-          case UclIFuncApplication(op,es) =>
+          case UclOperatorApplication(op,es) =>
             lazy val types = es.map { e => typeOf (e,c) }
-            /**
-             * assert types are equal and comparable
-             */
-            types.head._1 match { 
-              case x : UclIntType => () //TODO: add bitvectors
-              case x => Utils.assert(false, "Comparison operator " + op + " requires Int arguments.")
-            }
-            if (types.tail.exists { x => types.head._1 != x._1}) {
-              Utils.assert(false, "Comparison operator " + op + " has arguments with unequal types: " + types.map {x => x._1})
-            }
             val temporal = types.exists { x => x._2}
-            return (op match {
-                case LTOp() | LEOp() | GTOp() | GEOp() => UclBoolType()
-                case AddOp() | SubOp() | MulOp() => UclIntType()
-                case ExtractOp(_,_) => throw new Utils.UnimplementedException("bvextract unimplemented")
-                case ConcatOp() => throw new Utils.UnimplementedException("bvconcat unimplemented")
-              },
-              temporal)
+            val resultType = op match {
+              case AddOp() | SubOp() | MulOp() => {
+                Utils.assert(types(0) == types(1), "Operands to arithmetic operators must be of the same type.")
+                types.head._1
+              }
+              case LTOp() | LEOp() | GTOp() | GEOp() => {
+                Utils.assert(types(0) == types(1), "Operands to the comparison operators must be of the same type.")
+                UclBoolType()
+              }
+              case _ => {
+                throw new Utils.UnimplementedException("Operator not implemented yet!")
+              }
+            }
+            return (resultType, temporal)
           case UclArraySelectOperation(a,index) =>
             val (typ,temporal) = typeOf(a,c)
             Utils.assert(!temporal, "Array types may not have temporal subformulas")
@@ -474,7 +471,7 @@ package uclid {
            case UclDisjunction(l,r) => checkExpr(r,c); checkExpr(l,c);
            case UclNegation(l) => checkExpr(l,c);
            case UclEquality(l,r) => checkExpr(r,c); checkExpr(l,c);
-           case UclIFuncApplication(op,args) => args.foreach { x => checkExpr(x,c) }
+           case UclOperatorApplication(op,args) => args.foreach { x => checkExpr(x,c) }
            case UclArraySelectOperation(a,index) => checkExpr(a,c); index.foreach { x => checkExpr(x,c) }
            case UclArrayStoreOperation(a,index,value) => 
              checkExpr(a,c); index.foreach { x => checkExpr(x,c) }; checkExpr(value, c);

@@ -13,12 +13,17 @@ package uclid {
       lazy val OpAdd = "+"
       lazy val OpSub = "-"
       lazy val OpMul = "*"
+      lazy val OpUMul = "*_u"
       lazy val OpBiImpl = "<==>"
       lazy val OpImpl = "==>"
       lazy val OpLT = "<"
+      lazy val OpULT = "<_u"
       lazy val OpGT = ">"
+      lazy val OpUGT = ">_u"
       lazy val OpLE = "<="
+      lazy val OpULE = "<=_u"
       lazy val OpGE = ">="
+      lazy val OpUGE = ">=_u"
       lazy val OpEQ = "=="
       lazy val OpNE = "!="
       lazy val OpConcat = "++"
@@ -90,16 +95,16 @@ package uclid {
         case x ~ OpImpl ~ y => UclImplication(x, y)
         case x ~ OpAnd ~ y => UclConjunction(x, y)
         case x ~ OpOr ~ y => UclDisjunction(x, y)
-        case x ~ OpLT ~ y => UclIFuncApplication(LTOp(), List(x,y))
-        case x ~ OpGT ~ y => UclIFuncApplication(GTOp(), List(x,y))
-        case x ~ OpLE ~ y => UclIFuncApplication(LEOp(), List(x,y))
-        case x ~ OpGE ~ y => UclIFuncApplication(GEOp(), List(x,y))
+        case x ~ OpLT ~ y => UclOperatorApplication(LTOp(), List(x,y))
+        case x ~ OpGT ~ y => UclOperatorApplication(GTOp(), List(x,y))
+        case x ~ OpLE ~ y => UclOperatorApplication(LEOp(), List(x,y))
+        case x ~ OpGE ~ y => UclOperatorApplication(GEOp(), List(x,y))
         case x ~ OpEQ ~ y => UclEquality(x, y)
         case x ~ OpNE ~ y => UclNegation(UclEquality(x, y))
-        case x ~ OpConcat ~ y => UclIFuncApplication(ConcatOp(), List(x,y))
-        case x ~ OpAdd ~ y => UclIFuncApplication(AddOp(), List(x,y))
-        case x ~ OpSub ~ y => UclIFuncApplication(SubOp(), List(x,y))
-        case x ~ OpMul ~ y => UclIFuncApplication(MulOp(), List(x,y))
+        case x ~ OpConcat ~ y => UclOperatorApplication(ConcatOp(), List(x,y))
+        case x ~ OpAdd ~ y => UclOperatorApplication(AddOp(), List(x,y))
+        case x ~ OpSub ~ y => UclOperatorApplication(SubOp(), List(x,y))
+        case x ~ OpMul ~ y => UclOperatorApplication(MulOp(), List(x,y))
       }
     
       lazy val RelOp: Parser[String] = OpGT | OpLT | OpEQ | OpNE | OpGE | OpLE
@@ -156,7 +161,7 @@ package uclid {
           E10 ~ ExprList ^^ { case e ~ f => UclFuncApplication(e, f) } |
           E10 ~ ArraySelectOp ^^ { case e ~ m => UclArraySelectOperation(e, m) } |
           E10 ~ ArrayStoreOp ^^ { case e ~ m => UclArrayStoreOperation(e, m._1, m._2) } |
-          E10 ~ ExtractOp ^^ { case e ~ m => UclIFuncApplication(m, List(e)) } |
+          E10 ~ ExtractOp ^^ { case e ~ m => UclOperatorApplication(m, List(e)) } |
           E10
       /** E10 := false | true | Number | Bitvector | Id FuncApplication | (Expr) **/
       lazy val E10: PackratParser[Expr] =
