@@ -13,7 +13,7 @@ class Context {
   var next: List[UclStatement] = _
   var init: List[UclStatement] = _
   
-  def extractContext(m: UclModule) = {    
+  def extractContext(m: UclModule) = {
     type T1 = UclProcedureDecl
     val m_procs = m.decls.filter { x => x.isInstanceOf[T1] }
     UclidUtils.assert(UclidUtils.allUnique(m_procs.map(i => i.asInstanceOf[T1].id)), 

@@ -1,6 +1,6 @@
 all:
 	sbt compile
-	sbt "run ./test/test.ucl4"
+	sbt "run ./test/test7.ucl4"
 
 build:
 	sbt compile
