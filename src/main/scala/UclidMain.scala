@@ -80,15 +80,14 @@ package uclid {
       passManager.addPass(new Typechecker())
       passManager.addPass(new PolymorphicTypeRewriter())
       passManager.addPass(new FindLeafProcedures())
-      passManager.addPass(new TupleExpander())
+      // passManager.addPass(new TupleFlattener())
 
       for (srcFile <- srcFiles) {
         println("Input File: " + srcFile)
         val text = scala.io.Source.fromFile(srcFile).mkString
         val fileModules = UclidParser.parseModel(text).map(passManager.run(_).get)
-        passManager.pass("FindLeafProcedures").asInstanceOf[FindLeafProcedures].printLeafProcedures()
+        // passManager.pass("FindLeafProcedures").asInstanceOf[FindLeafProcedures].printLeafProcedures()
         for(module <- fileModules) {
-          println(module.toString)
           UclidSemanticAnalyzer.checkSemantics(module)
         }
         nameCnt = fileModules.foldLeft(nameCnt)((cnts : NameCountMap, m : Module) => (cnts + (m.id -> (cnts(m.id) + 1))))

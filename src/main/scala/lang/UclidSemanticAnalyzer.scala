@@ -246,7 +246,7 @@ object UclidSemanticAnalyzer {
     }
     lhs.recordSelect match {
       case Some(rs) => 
-        Utils.assert(transitiveType(intermediateType,c).isInstanceOf[RecordType], 
+        Utils.assert(transitiveType(intermediateType,c).isProduct, 
             "Expected record type: " + intermediateType)
         rs.foreach { field =>
           transitiveType(intermediateType,c).asInstanceOf[RecordType].fields.find(i => i._1.value == field.value) 

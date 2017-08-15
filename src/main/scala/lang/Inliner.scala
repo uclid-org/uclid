@@ -45,7 +45,7 @@ class FindLeafProcedures extends ASTAnalyzer("FindLeafProcedures", new FindLeafP
   }
 }
 
-class TupleExpanderPass extends RewritePass {
+class TupleFlattenerPass extends RewritePass {
   def rewriteTuple(id : Identifier, typ : Type) : List[(Identifier, Type)] = {
     typ match {
       case RecordType(fields) => fields.map{ (f) => (Identifier(id + "_$field$_" + f._1.value), f._2) }
@@ -68,4 +68,4 @@ class TupleExpanderPass extends RewritePass {
     return Some(Module(module.id, newDecls, module.cmds))
   }
 }
-class TupleExpander extends ASTRewriter("TupleExpander", new TupleExpanderPass())
+class TupleFlattener extends ASTRewriter("TupleExpander", new TupleFlattenerPass())

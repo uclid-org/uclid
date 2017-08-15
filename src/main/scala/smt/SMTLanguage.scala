@@ -235,6 +235,7 @@ package uclid {
       override def toString = id.toString
     }
     
+    
     case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr (op.resultType(operands)) {
       val fix = op.fixity
       Utils.assert(fix == INFIX || fix == PREFIX, "Unknown fixity.")
