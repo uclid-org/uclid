@@ -311,6 +311,8 @@ import uclid.lang.DecideCmd
           { case lhss ~ id ~ args => ProcedureCallStmt(id, lhss, args) } |
         KwIf ~> Expr ~ BlockStatement ~ (KwElse ~> BlockStatement) ^^
           { case e ~ f ~ g => IfElseStmt(e,f,g)} |
+        KwIf ~> (Expr ~ BlockStatement) ^^
+          { case e ~ f => IfElseStmt(e, f, List.empty[Statement]) } |
         KwCase ~> rep(CaseBlockStmt) <~ KwEsac ^^ 
           { case i => CaseStmt(i) } |
         KwFor ~> (Id ~ (KwIn ~> RangeExpr) ~ BlockStatement) ^^
