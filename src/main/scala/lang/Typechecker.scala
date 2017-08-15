@@ -89,8 +89,7 @@ class TypeSynonymRewriter extends ASTRewriter(
 
 class TypecheckPass extends ReadOnlyPass[Unit]
 {
-  type MemoKey = (Expr, ScopeMap)
-  type Memo = MutableMap[MemoKey, Type]
+  type Memo = MutableMap[IdGenerator.Id, Type]
   var memo : Memo = MutableMap.empty
   
   type PolymorphicOpMapKey = (IdGenerator.Id, Operator)
@@ -103,6 +102,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
   }
   
   override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : Unit, ctx : ScopeMap) : Unit = {
+    println("visiting Expression: " + e.toString)
     typeOf(e, ctx)
   }
   
@@ -241,7 +241,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
       return MapType(lambda.ids.map(_._2), typeOf(lambda.e, c))
     }
     
-    val cachedType = memo.get((e,c))
+    val cachedType = memo.get(e.astNodeId)
     if (cachedType.isEmpty) {
       val typ = e match {
         case i : Identifier => (c.typeOf(i).get)
@@ -256,7 +256,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
         case ite : UclITE => iteType(ite)
         case lambda : UclLambda => lambdaType(lambda)
       }
-      memo.put((e,c), typ)
+      memo.put(e.astNodeId, typ)
       return typ
     } else {
       return cachedType.get
