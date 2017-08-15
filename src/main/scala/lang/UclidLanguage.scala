@@ -347,7 +347,7 @@ case class ForStmt(id: Identifier, range: (IntLit,IntLit), body: List[Statement]
 {
   override def isLoop = true
   override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {") ++ 
-                         body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _)
+                         body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
 case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
   override def toLines = List("case") ++

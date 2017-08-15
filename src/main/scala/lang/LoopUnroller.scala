@@ -1,19 +1,19 @@
 package uclid
 package lang
 
-class FindInnermostLoopsPass extends ReadOnlyPass[Set[IdGenerator.Id]] {
-  override def applyOnFor(d : TraversalDirection.T, st : ForStmt, in : Set[IdGenerator.Id], context : ScopeMap) : Set[IdGenerator.Id] = {
+class FindInnermostLoopsPass extends ReadOnlyPass[Set[ForStmt]] {
+  override def applyOnFor(d : TraversalDirection.T, st : ForStmt, in : Set[ForStmt], context : ScopeMap) : Set[ForStmt] = {
     if(!st.body.exists(_.isLoop)) {
-      in + st.astNodeId
+      in + st
     } else {
       in
     }
   }
 }
 
-class ForLoopRewriterPass(forStmts: Set[IdGenerator.Id]) extends RewritePass {
+class ForLoopRewriterPass(forStmtsToRewrite: Set[ForStmt]) extends RewritePass {
   def rewriteForStatement(st: ForStmt) : List[Statement] = {
-     if (forStmts.contains(st.astNodeId)) {
+     if (forStmtsToRewrite.contains(st)) {
        val low = st.range._1.value
        val high = st.range._2.value
        def rewriteForValue(value : BigInt) : List[Statement] = {
@@ -69,7 +69,7 @@ class ForLoopUnroller extends ASTAnalysis {
         case None => 
           done = true
         case Some(mod) =>
-          val innermostLoopSet = findInnermostLoopsAnalysis.visitModule(mod, Set.empty[IdGenerator.Id])
+          val innermostLoopSet = findInnermostLoopsAnalysis.visitModule(mod, Set.empty[ForStmt])
           println("Innermost loops: " + innermostLoopSet.toString)
           done = innermostLoopSet.size == 0
           if (!done) {
