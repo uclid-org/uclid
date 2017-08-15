@@ -80,6 +80,7 @@ package uclid {
       passManager.addPass(new Typechecker())
       passManager.addPass(new PolymorphicTypeRewriter())
       passManager.addPass(new FunctionInliner())
+      passManager.addPass(new ForLoopUnroller())
       // passManager.addPass(new TupleFlattener())
 
       for (srcFile <- srcFiles) {
