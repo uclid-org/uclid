@@ -329,6 +329,7 @@ package uclid {
            return smt.Lambda(ids.map(i => smt.Symbol(i._1.value, toSMT(i._2,c))), evaluate(le,symbolTable,c))
          case IntLit(n) => smt.IntLit(n)
          case BoolLit(b) => smt.BooleanLit(b)
+         case BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
          case Identifier(id) => symbolTable(Identifier(id))
          case _ => throw new Utils.UnimplementedException("Should not get here")
       }

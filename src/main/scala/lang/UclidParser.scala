@@ -1,13 +1,63 @@
 /**
- * Created by Rohit Sinha on 5/21/15.
+ * First created by Rohit Sinha on 5/21/15.
  */
 
 package uclid {
   package lang {
-    import scala.util.parsing.combinator.syntactical.StandardTokenParsers
+    import scala.util.parsing.combinator.token._
+    import scala.util.parsing.combinator.syntactical._
     import scala.util.parsing.combinator.PackratParsers
     
-    object UclidParser extends StandardTokenParsers with PackratParsers {
+    import scala.language.implicitConversions
+    import scala.collection.mutable
+    
+    /** This is a re-implementation of the Scala libraries StdTokenParsers with StdToken replaced by UclidToken. */
+  trait UclidTokenParsers extends TokenParsers {
+    type Tokens <: UclidTokens
+    import lexical.{Keyword, IntegerLit, BitVectorTypeLit, BitVectorLit, StringLit, Identifier}
+  
+    protected val keywordCache = mutable.HashMap[String, Parser[String]]()
+  
+    /** A parser which matches a single keyword token.
+     *
+     * @param chars    The character string making up the matched keyword. 
+     * @return a `Parser` that matches the given string
+     */
+  //  implicit def keyword(chars: String): Parser[String] = accept(Keyword(chars)) ^^ (_.chars)
+      implicit def keyword(chars: String): Parser[String] = 
+        keywordCache.getOrElseUpdate(chars, accept(Keyword(chars)) ^^ (_.chars))
+   
+    /** A parser which matches an integer literal */
+    def integerLit: Parser[IntegerLit] = 
+      elem("integer", _.isInstanceOf[IntegerLit]) ^^ (_.asInstanceOf[IntegerLit])
+    
+    /** A parser which matches a bitvector type */
+    def bitVectorType: Parser[BitVectorTypeLit] =
+      elem("bitvector type", _.isInstanceOf[BitVectorTypeLit]) ^^ {_.asInstanceOf[BitVectorTypeLit]}
+    
+    /** A parser which matches a bitvector literal */
+    def bitvectorLit: Parser[BitVectorLit] = 
+      elem("bitvector", _.isInstanceOf[BitVectorLit]) ^^ (_.asInstanceOf[BitVectorLit])
+    
+    /** A parser which matches a string literal */
+    def stringLit: Parser[String] = 
+      elem("string literal", _.isInstanceOf[StringLit]) ^^ (_.chars)
+  
+    /** A parser which matches an identifier */
+    def ident: Parser[String] = 
+      elem("identifier", _.isInstanceOf[Identifier]) ^^ (_.chars)
+  }
+
+  object UclidParser extends UclidTokenParsers with PackratParsers {
+      type Tokens = UclidTokens
+      val lexical = new UclidLexical
+
+      // an implicit keyword function that gives a warning when a given word is not in the reserved/delimiters list
+      override implicit def keyword(chars : String): Parser[String] = { 
+        if(lexical.reserved.contains(chars) || lexical.delimiters.contains(chars)) super.keyword(chars)
+        else failure("You are trying to parse \""+chars+"\", but it is neither contained in the delimiters list, nor in the reserved keyword list of your lexical object")
+      }
+
       lazy val OpAnd = "&&"
       lazy val OpOr = "||"
       lazy val OpAdd = "+"
@@ -121,9 +171,8 @@ package uclid {
       lazy val Id: PackratParser[Identifier] = ident ^^ {case i => Identifier(i)}
       lazy val Bool: PackratParser[BoolLit] =
         "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) }
-      lazy val Number: PackratParser[IntLit] = numericLit ^^ { case i => IntLit(BigInt(i)) }
-    //  lazy val Bitvector: PackratParser[UclBitVector] = (numericLit ~ "bv" ~ numericLit) ^^
-    //    { case h ~ "bv" ~ l => UclBitVector(h.toInt, l.toInt) }
+      lazy val Number: PackratParser[IntLit] = integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base)) }
+      lazy val BitVector: PackratParser[BitVectorLit] = bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) }
     
       lazy val TemporalExpr0: PackratParser[Expr] = 
           TemporalExpr1 ~ TemporalOpUntil  ~ TemporalExpr0 ^^ ast_binary | TemporalExpr1 
@@ -167,6 +216,7 @@ package uclid {
       lazy val E10: PackratParser[Expr] =
           Bool |
           Number |
+          BitVector |
           "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Record(e::es)} |
           KwITE ~> ("(" ~> Expr ~ ("," ~> Expr) ~ ("," ~> Expr) <~ ")") ^^ { case e ~ t ~ f => UclITE(e,t,f) } |
           KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => UclLambda(idtyps, expr) } |
@@ -180,7 +230,10 @@ package uclid {
     
       /** Examples of allowed types are bool | int | [int,int,bool] int **/
       lazy val PrimitiveType : PackratParser[UclType] =
-        KwBool ^^ {case _ => UclBoolType()} | KwInt ^^ {case _ => UclIntType()}
+        KwBool ^^ {case _ => UclBoolType()}   | 
+        KwInt ^^ {case _ => UclIntType()}     |
+        bitVectorType ^^ {case bvType => UclBitVectorType(bvType.width)}
+        
       lazy val EnumType : PackratParser[UclEnumType] =
         KwEnum ~> ("{" ~> Id) ~ rep("," ~> Id) <~ "}" ^^ { case id ~ ids => UclEnumType(id::ids) }
       lazy val RecordType : PackratParser[UclRecordType] =

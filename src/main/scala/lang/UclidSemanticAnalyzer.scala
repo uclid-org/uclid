@@ -94,6 +94,132 @@ package uclid {
       }
     }
     
+    trait ModuleReadOnlyVisitor {
+      def visitProcedure(proc : UclProcedureDecl) {
+        visitIdentifier(proc.id)
+        visitProcedureSig(proc.sig)
+        proc.decls.foreach(visitLocalVar(_))
+        proc.body.foreach(visitStatement(_))
+      }
+      def visitFunction(func : UclFunctionDecl) {
+        visitIdentifier(func.id)
+        visitFunctionSig(func.sig)
+      }
+      def visitStateVar(stvar : UclStateVarDecl) {
+        visitIdentifier(stvar.id)
+        visitType(stvar.typ)
+      }
+      def visitInputVar(inpvar : UclInputVarDecl) {
+        visitIdentifier(inpvar.id)
+        visitType(inpvar.typ)
+      }
+      def visitOutputVar(outvar : UclOutputVarDecl) {
+        visitIdentifier(outvar.id)
+        visitType(outvar.typ)
+      }
+      def visitConstant(cnst : UclConstantDecl) {
+        visitIdentifier(cnst.id)
+        visitType(cnst.typ)
+      }
+      def visitSpec(spec : UclSpecDecl) {
+        visitIdentifier(spec.id)
+        visitExpr(spec.expr)
+      }
+      def visitTypeDecl(typDec : UclTypeDecl) {
+        visitIdentifier(typDec.id)
+        visitType(typDec.typ)
+      }
+      def visitInit(init : UclInitDecl) {
+        init.body.foreach(visitStatement(_))
+      }
+      def visitNext(next : UclNextDecl) {
+        next.body.foreach(visitStatement(_))
+      }
+
+      def visitType(typ: UclType) {}
+      
+      def visitProcedureSig(sig : UclProcedureSig) {
+        sig.inParams.foreach((inparam) => visitIdentifier(inparam._1))
+        sig.inParams.foreach((inparam) => visitType(inparam._2))
+        sig.outParams.foreach((outparam) => visitIdentifier(outparam._1))
+        sig.outParams.foreach((outparam) => visitType(outparam._2))
+      }
+      def visitFunctionSig(sig : UclFunctionSig) {
+        sig.args.foreach((arg) => visitIdentifier(arg._1))
+        sig.args.foreach((arg) => visitType(arg._2))
+        visitType(sig.retType)
+      }
+      def visitLocalVar(lvar : UclLocalVarDecl) {}
+      def visitStatement(st : UclStatement) {
+        st match {
+          case UclSkipStmt() => visitSkipStatement(st.asInstanceOf[UclSkipStmt])
+          case UclAssertStmt(e) => visitAssertStatement(st.asInstanceOf[UclAssertStmt])
+          case UclAssumeStmt(e) => visitAssumeStatement(st.asInstanceOf[UclAssumeStmt])
+          case UclHavocStmt(id) => visitHavocStatement(st.asInstanceOf[UclHavocStmt])
+          case UclAssignStmt(lhss, rhss) => visitAssignStatement(st.asInstanceOf[UclAssignStmt])
+          case UclIfElseStmt(cond, ifblock, elseblock) => visitIfElseStatement(st.asInstanceOf[UclIfElseStmt])
+          case UclForStmt(id, range, body) => visitForStatement(st.asInstanceOf[UclForStmt])
+          case UclCaseStmt(body) => visitCaseStatement(st.asInstanceOf[UclCaseStmt])
+          case UclProcedureCallStmt(id, callLhss, args) => visitProcedureCallStatement(st.asInstanceOf[UclProcedureCallStmt])
+        }
+      }
+      
+      def visitSkipStatement(st : UclSkipStmt) {}
+      def visitAssertStatement(st : UclAssertStmt) { visitExpr(st.e) }
+      def visitAssumeStatement(st : UclAssumeStmt) { visitExpr(st.e) }
+      def visitHavocStatement(st: UclHavocStmt) { visitIdentifier(st.id) }
+      def visitAssignStatement(st : UclAssignStmt) {
+        st.lhss.foreach(visitLhs(_))
+        st.rhss.foreach(visitExpr(_))
+      }
+      def visitIfElseStatement(st : UclIfElseStmt) {
+        visitExpr(st.cond)
+        st.ifblock.foreach(visitStatement(_))
+        st.elseblock.foreach(visitStatement(_))
+      }
+      def visitForStatement(st : UclForStmt) {
+        visitIdentifier(st.id)
+        visitLiteral(st.range._1)
+        visitLiteral(st.range._2)
+        st.body.foreach(visitStatement(_))
+      }
+      def visitCaseStatement(st : UclCaseStmt) {
+        st.body.foreach( 
+          (cases) => {
+            visitExpr(cases._1)
+            cases._2.foreach(visitStatement(_))
+          }
+        )
+      }
+      def visitProcedureCallStatement(st : UclProcedureCallStmt) {
+        visitIdentifier(st.id)
+        st.callLhss.foreach(visitLhs(_))
+        st.args.foreach(visitExpr(_))
+      }
+      def visitLhs(lhs : UclLhs) {
+        lhs.arraySelect match {
+          case Some(as) => as.foreach(visitExpr(_))
+          case None => {}
+        }
+        lhs.recordSelect match {
+          case Some(rs) => rs.foreach(visitIdentifier(_))
+          case None => {}
+        }
+      }
+      def visitIdentifier(id : Identifier) {}
+      def visitLiteral(lit : Literal) {
+        lit match {
+          case BoolLit(b) => visitBoolLiteral(lit.asInstanceOf[BoolLit])
+          case IntLit(i) => visitIntLiteral(lit.asInstanceOf[IntLit])
+          case BitVectorLit(bv, w) => visitBitVectorLiteral(lit.asInstanceOf[BitVectorLit])
+        }
+      }
+      def visitBoolLiteral(b : BoolLit) {}
+      def visitIntLiteral(i : IntLit) {}
+      def visitBitVectorLiteral(bv : BitVectorLit) {}
+      def visitExpr(expr : Expr) {}
+    }
+    
     object UclidSemanticAnalyzer {
       def checkSemantics(m: UclModule) : Unit = {
         var c: Context = new Context()
@@ -459,6 +585,7 @@ package uclid {
           case Identifier(id) => ((c.constants ++ c.variables ++ c.inputs ++ c.outputs)(Identifier(id)), false)
           case IntLit(n) => (UclIntType(), false)
           case BoolLit(b) => (UclBoolType(), false)
+          case BitVectorLit(bv, w) => (UclBitVectorType(w), false)
         }    
       }
       
