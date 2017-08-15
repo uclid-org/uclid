@@ -20,14 +20,25 @@ object UclidSymbolicSimulator {
   def newConstantSymbol(name: String, t: SMTType) = 
     new SMTSymbol(name,t)
   
-  def simulate_steps(m: UclModule, number_of_steps: Int) : SymbolTable = {
-    var st : SymbolTable = Map.empty;
-    
+  def initialize(m: UclModule) : SymbolTable = {
     var c : Context = new Context();
     c.extractContext(m);
+    
+    var st : SymbolTable = Map.empty;
     st = c.constants.foldLeft(st)((acc,i) => acc + (i._1 -> newConstantSymbol(i._1.value, toSMT(c.constants(i._1)))));
-    st = c.variables.foldLeft(st)((acc,i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(c.variables(i._1)))));
-    st = c.outputs.foldLeft(st)((acc,i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(c.outputs(i._1)))));
+    st = simulate(c.init, st, c);
+    (c.variables ++ c.outputs).foreach { i => 
+      UclidUtils.assert(st contains i._1, "Init Block does not assign to " + i)  
+    }
+    return st
+  }
+  
+  def simulate_steps(m: UclModule, number_of_steps: Int) : SymbolTable = {
+    var c : Context = new Context();
+    c.extractContext(m);
+    
+    var st : SymbolTable = initialize(m);
+    //st = c.variables.foldLeft(st)((acc,i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(c.variables(i._1)))));
     for (step <- 1 to number_of_steps) {
       st = c.inputs.foldLeft(st)((acc,i) => acc + (i._1 -> newInputSymbol(i._1.value, step, toSMT(c.inputs(i._1)))));
       st = simulate(m, st, c);
@@ -84,18 +95,6 @@ case class SMTIntMulOperator() extends SMTOperator { override def toString = "*"
   def simulate(m: UclModule, symbolTable: SymbolTable, c: Context) : SymbolTable = {
     return simulate(c.next, symbolTable, c)
   }
-  
-  /*
-  def simulate(p: UclProcedureDecl, symbolTable: SymbolTable, c: Context) : SymbolTable = {
-    var st: SymbolTable = symbolTable;
-    var c2: Context = c.copyContext()
-    c2.inputs = c.inputs ++ (p.sig.inParams.map(i => i._1 -> i._2).toMap)
-    c2.variables = c.variables ++ (p.sig.outParams.map(i => i._1 -> i._2).toMap)
-    c2.variables = c2.variables ++ (p.decls.map(i => i.id -> i.typ).toMap)
-    st = p.decls.foldLeft(st)((acc,i) => st.updated(i.id, newHavocSymbol(i.id.value, toSMT(i.typ))));
-    return simulate(p.body, symbolTable, c2)
-  }
-  * */
   
   def simulate(s: UclStatement, symbolTable: SymbolTable, c: Context) : SymbolTable = {
     def simulateAssign(lhss: List[UclLhs], args: List[SMTExpr], input: SymbolTable) : SymbolTable = {

@@ -32,11 +32,9 @@ case class UclBitVector(value: BigInt, width: BigInt) extends UclExpr {
 case class UclBoolean(value: Boolean) extends UclExpr {
   override def toString = value.toString
 }
-/*
 case class UclRecord(value: List[UclExpr]) extends UclExpr {
   override def toString = "{" + value.foldLeft(""){(acc,i) => acc + i} + "}"
 }
-* */
 case class UclBiImplication(left: UclExpr, right: UclExpr) extends UclExpr {
   override def toString = "(" + left + " <==> " + right + ")"
 }
