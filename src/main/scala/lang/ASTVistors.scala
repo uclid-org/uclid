@@ -1021,11 +1021,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     val arraySelectP = lhs.arraySelect.flatMap((as) => Some(as.map((e) => visitExpr(e, context)).flatten))
     val recordSelectP = lhs.recordSelect.flatMap((rs) => Some(rs.map((i) => visitIdentifier(i, context)).flatten))
     val lhsP = idP.flatMap((id) => {
-      Some(Lhs(id, arraySelectP, recordSelectP))
+      pass.rewriteLHS(Lhs(id, arraySelectP, recordSelectP, lhs.sliceSelect), context)
     })
     astChangeFlag = astChangeFlag || (lhsP != Some(lhs))
     return lhsP
   }
+  
   
   def visitExpr(e : Expr, context : ScopeMap) : Option[Expr] = {
     val eP = (e match {

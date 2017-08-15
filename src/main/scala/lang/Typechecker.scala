@@ -193,14 +193,14 @@ class TypecheckPass extends ReadOnlyPass[Unit]
           new BoolType()
         }
         case tOp : TemporalOperator => new TemporalType()
-        case ExtractOp(hi, lo) => {
+        case ExtractOp(slice) => {
           Utils.assert(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.")
           Utils.assert(argTypes(0).isInstanceOf[BitVectorType], "Operand to operator '" + opapp.op.toString + "' must be of type BitVector.") 
-          Utils.assert(argTypes(0).asInstanceOf[BitVectorType].width > hi.value.toInt, "Operand to operator '" + opapp.op.toString + "' must have width > "  + hi.value.toString + ".") 
-          Utils.assert(hi.value >= lo.value , "High-operand must be greater than or equal to low operand for operator '" + opapp.op.toString + "'.") 
-          Utils.assert(hi.value.toInt >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
-          Utils.assert(lo.value.toInt >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
-          new BitVectorType(hi.value.toInt - lo.value.toInt + 1)
+          Utils.assert(argTypes(0).asInstanceOf[BitVectorType].width > slice.hi, "Operand to operator '" + opapp.op.toString + "' must have width > "  + slice.hi.toString + ".") 
+          Utils.assert(slice.hi >= slice.lo, "High-operand must be greater than or equal to low operand for operator '" + opapp.op.toString + "'.") 
+          Utils.assert(slice.hi >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
+          Utils.assert(slice.lo >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
+          new BitVectorType(slice.hi - slice.lo + 1)
         }
         case ConcatOp() => {
           Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
