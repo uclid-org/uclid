@@ -411,7 +411,7 @@ package uclid {
             val temporal = types.exists { x => x._2}
             return (op match {
                 case LTOp() | LEOp() | GTOp() | GEOp() => UclBoolType()
-                case AddOp() | MulOp() => UclIntType()
+                case AddOp() | SubOp() | MulOp() => UclIntType()
                 case ExtractOp(_,_) => throw new Utils.UnimplementedException("bvextract unimplemented")
                 case ConcatOp() => throw new Utils.UnimplementedException("bvconcat unimplemented")
               },

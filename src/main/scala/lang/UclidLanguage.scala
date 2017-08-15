@@ -16,6 +16,7 @@ package uclid {
     case class GTOp() extends Operator { override def toString = ">" }
     case class GEOp() extends Operator { override def toString = ">=" }
     case class AddOp() extends Operator { override def toString = "+" }
+    case class SubOp() extends Operator { override def toString = "-" }
     case class MulOp() extends Operator { override def toString = "*" }
     case class ExtractOp(high: IntLit, low: IntLit) extends Operator {
       override def toString = "[" + high + ":" + low + "]"
