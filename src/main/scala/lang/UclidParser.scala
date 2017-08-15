@@ -62,6 +62,10 @@ import uclid.lang.DecideCmd
 
       lazy val OpAnd = "&&"
       lazy val OpOr = "||"
+      lazy val OpBvAnd = "&"
+      lazy val OpBvOr = "|"
+      lazy val OpBvXor = "^"
+      lazy val OpBvNot = "~"
       lazy val OpAdd = "+"
       lazy val OpSub = "-"
       lazy val OpMul = "*"
@@ -126,10 +130,12 @@ import uclid.lang.DecideCmd
     
       lexical.delimiters ++= List("(", ")", ",", "[", "]", 
         "bv", "{", "}", ";", "=", ":=", ":", ".", "->", "*",
-        OpAnd, OpOr, OpAdd, OpSub, OpMul, OpBiImpl, OpImpl,
-        OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat, OpNeg, OpMinus)
-      lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul, OpBiImpl, OpImpl,
-        OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat, OpNeg, OpMinus,
+        OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul, 
+        OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat, 
+        OpNeg, OpMinus)
+      lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul, 
+        OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, 
+        OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNeg, OpMinus,
         "false", "true", "bv", KwProcedure, KwBool, KwInt, KwReturns,
         KwAssume, KwAssert, KwVar, KwHavoc, KwCall, KwIf, KwElse,
         KwCase, KwEsac, KwFor, KwIn, KwRange, KwInput, KwOutput,
@@ -147,6 +153,9 @@ import uclid.lang.DecideCmd
         case x ~ OpImpl ~ y => OperatorApplication(ImplicationOp(), List(x, y))
         case x ~ OpAnd ~ y => OperatorApplication(ConjunctionOp(), List(x, y))
         case x ~ OpOr ~ y => OperatorApplication(DisjunctionOp(), List(x, y))
+        case x ~ OpBvAnd ~ y => OperatorApplication(BVAndOp(0), List(x, y))
+        case x ~ OpBvOr ~ y => OperatorApplication(BVOrOp(0), List(x, y))
+        case x ~ OpBvXor ~ y => OperatorApplication(BVXorOp(0), List(x, y))
         case x ~ OpLT ~ y => OperatorApplication(LTOp(), List(x,y))
         case x ~ OpGT ~ y => OperatorApplication(GTOp(), List(x,y))
         case x ~ OpLE ~ y => OperatorApplication(LEOp(), List(x,y))
@@ -194,7 +203,13 @@ import uclid.lang.DecideCmd
       /** E1 := E2 OpImpl E1 | E2  **/
       lazy val E1: PackratParser[Expr] = E2 ~ OpImpl ~ E1 ^^ ast_binary | E2
       /** E2 := E3 OpAnd E2 | E3 OpOr E2 | E3 **/
-      lazy val E2: PackratParser[Expr] = E3 ~ OpAnd ~ E2 ^^ ast_binary | E3 ~ OpOr ~ E2 ^^ ast_binary | E3
+      lazy val E2: PackratParser[Expr] = 
+          E3 ~ OpAnd ~ E2 ^^ ast_binary   | 
+          E3 ~ OpOr ~ E2 ^^ ast_binary    |
+          E3 ~ OpBvAnd ~ E2 ^^ ast_binary |
+          E3 ~ OpBvOr ~ E2 ^^ ast_binary  |
+          E3 ~ OpBvXor ~ E2 ^^ ast_binary |
+          E3 
       /** E3 := E4 OpRel E3 | E4  **/
       lazy val E3: PackratParser[Expr] = E4 ~ RelOp ~ E4 ^^ ast_binary | E4
       /** E4 := E5 OpConcat E4 | E5 **/
@@ -206,7 +221,10 @@ import uclid.lang.DecideCmd
       /** E6 := E7 OpMul E6 | E7 **/
       lazy val E7: PackratParser[Expr] = E8 ~ OpMul ~ E8 ^^ ast_binary | E8
       /** E8 := UnOp E9 | E9 **/
-      lazy val E8: PackratParser[Expr] = OpNeg ~> E9 ^^ { case e => OperatorApplication(NegationOp(), List(e)) } | E9
+      lazy val E8: PackratParser[Expr] = 
+          OpNeg ~> E9 ^^ { case e => OperatorApplication(NegationOp(), List(e)) } |
+          OpBvNot ~> E9 ^^ { case e => OperatorApplication(BVNotOp(0), List(e)) } |
+          E9
       /** E9 := E10 MapOp | E10 **/
       lazy val E9: PackratParser[Expr] =
           E10 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |

@@ -135,6 +135,19 @@ package uclid {
     case class BVMulOp(w : Int) extends BVResultOp(w) {
       override def toString = "bvmul"
     }
+    case class BVAndOp(w : Int) extends BVResultOp(w) {
+      override def toString = "bvand"
+    }
+    case class BVOrOp(w : Int) extends BVResultOp(w) {
+      override def toString = "bvor"
+    }
+    case class BVXorOp(w : Int) extends BVResultOp(w) {
+      override def toString = "bvxor"
+    }
+    case class BVNotOp(w : Int) extends BVResultOp(w) {
+      override def toString = "bvneg"
+      override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 1); checkAllArgTypes(args, BitVectorType.t(w)) }
+    }
     
     // Operators that return Booleans.
     abstract class BoolResultOp extends Operator {

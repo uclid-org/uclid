@@ -92,9 +92,8 @@ class TypecheckPass extends ReadOnlyPass[Unit]
   type Memo = MutableMap[IdGenerator.Id, Type]
   var memo : Memo = MutableMap.empty
   
-  type PolymorphicOpMapKey = (IdGenerator.Id, Operator)
-  type PolymorphicOpMap = MutableMap[IdGenerator.Id, Operator]
-  var polyOpMap : PolymorphicOpMap = MutableMap.empty
+  var polyOpMap : MutableMap[IdGenerator.Id, Operator] = MutableMap.empty
+  var bvOpMap : MutableMap[IdGenerator.Id, Int] = MutableMap.empty
   
   override def reset() = {
     memo.clear()
@@ -160,12 +159,21 @@ class TypecheckPass extends ReadOnlyPass[Unit]
           }
         }
         case bvOp : BVArgOperator => {
-          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+          def numArgs(op : BVArgOperator) : Int = {
+            op match {
+              case BVNotOp(_) => 1
+              case _ => 2
+            }
+          }
+          Utils.assert(argTypes.size == numArgs(bvOp), "Operator '" + opapp.op.toString + "' must have two arguments.")
           Utils.assert(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
-          typeOf(opapp.operands(0), c)
           bvOp match {
             case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) => new BoolType()
             case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) => new BitVectorType(bvOp.w)
+            case BVAndOp(_) | BVOrOp(_) | BVXorOp(_) | BVNotOp(_) =>
+              val t = new BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width)
+              bvOpMap.put(bvOp.astNodeId, t.width)
+              t
           }
         }
         case boolOp : BooleanOperator => {
@@ -296,6 +304,21 @@ class PolymorphicTypeRewriterPass extends RewritePass {
         val reifiedOp = typeCheckerPass.polyOpMap.get(p.astNodeId)
         Utils.assert(!reifiedOp.isEmpty, "No reified operator available for: " + p.toString)
         reifiedOp
+      }
+      case bv : BVArgOperator => {
+        if (bv.w == 0) {
+          val width = typeCheckerPass.bvOpMap.get(bv.astNodeId)
+          Utils.assert(!width.isEmpty, "No width available for: " + bv.toString)
+          bv match {
+            case BVAndOp(_) => width.flatMap((w) => Some(BVAndOp(w)))
+            case BVOrOp(_) => width.flatMap((w) => Some(BVOrOp(w)))
+            case BVXorOp(_) => width.flatMap((w) => Some(BVXorOp(w)))
+            case BVNotOp(_) => width.flatMap((w) => Some(BVNotOp(w)))
+            case _ => Some(bv)
+          }
+        } else {
+          Some(bv)
+        }
       }
       case _ => Some(op)
     }

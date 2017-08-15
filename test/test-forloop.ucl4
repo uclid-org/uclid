@@ -1,0 +1,42 @@
+module main {
+  type word_t = bv8;
+  type cmd_t = bv2;
+  type bit = bv1;
+  
+  input cmd   : cmd_t;
+  input arg0  : word_t;
+  input arg1  : word_t;
+  input valid : bool;
+
+  var t1 : word_t;
+  var t2 : word_t;
+  output rdy    : bool;
+  output result : word_t;
+  
+  procedure full_adder(a : bit, b : bit, c_in : bit) returns (s : bit, c_out : bit) {
+	s := a ^ b ^ c_in;
+	c_out := (a & b) | (b & c_in) | (c_in ^ a);
+  }
+  
+  procedure add_unrolled(a : word_t, b : word_t) returns (sum : word_t) {
+  	var c_in : word_t;
+  	var st : bit;
+  	var ct : bit;
+  	call (st, ct) := full_adder(a[0:0], b[0:0], 0bv1);
+  }
+  
+  next {
+  	rdy := false;
+  	t1 := (arg0 & ~arg1) | (~arg0 & arg1);
+  	t2 := (arg0 ^ arg1);
+  	result := 0bv8;
+  	
+  	assert (t1 == t2);
+  }
+  
+  control {
+  	initialize;
+  	simulate (5);
+  	decide;
+  }
+}
