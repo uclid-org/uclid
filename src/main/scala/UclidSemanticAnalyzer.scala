@@ -8,11 +8,11 @@ class Context {
   var inputs: Map[UclIdentifier, UclType] = _
   var outputs: Map[UclIdentifier, UclType] = _
   var constants: Map[UclIdentifier, UclType] = _
-  var types : Map[UclIdentifier, UclType] = _
+  var types : Map[UclIdentifier, UclType] = _ //rename to synonym types
   
   override def toString = variables.toString
   
-  def extractContext(m: UclModule) = {
+  def extractContext(m: UclModule) = {    
     type T1 = UclProcedureDecl
     val m_procs = m.decls.filter { x => x.isInstanceOf[T1] }
     UclidUtils.assert(m_procs.map(i => i.asInstanceOf[T1].id).distinct.size == 
@@ -80,17 +80,13 @@ object UclidSemanticAnalyzer {
     var c: Context = new Context()
     c.extractContext(m)
     check(m,c)
-    m.decls.foreach { x => check(x,c) }
   }
   
   def check(m: UclModule, c: Context) : Unit = {
     //check module level stuff
     def checkRedeclarationAndTypes(decls: Map[UclIdentifier, UclType]) : Unit = {
-      val externalDecls : List[UclIdentifier] = c.externalDecls()
-      decls.foreach(i => {
-        UclidUtils.assert(externalDecls.count { x => x.value == i._1.value } == 1, 
-          "Declaration " + i + " has conflicting name")
-      })
+      decls.foreach(i => { UclidUtils.assert(UclidUtils.existsOnce(c.externalDecls(), i._1), 
+          "Declaration " + i + " has conflicting name") })
     }
     checkRedeclarationAndTypes(c.constants)
     checkRedeclarationAndTypes(c.inputs)
@@ -105,31 +101,23 @@ object UclidSemanticAnalyzer {
     val externalDecls : List[UclIdentifier] = c.externalDecls()
     d match {
       case UclProcedureDecl(id,sig,decls,body) =>
-        UclidUtils.assert((sig.inParams.map(i => i._1) ++ sig.outParams.map(i => i._1)).distinct.size ==
-          (sig.inParams.map(i => i._1) ++ sig.outParams.map(i => i._1)).size,
+        UclidUtils.assert(UclidUtils.hasDuplicates(sig.inParams.map(i => i._1) ++ sig.outParams.map(i => i._1)),
           "Signature of procedure " + id + " contains arguments of the same name")
         (sig.inParams ++ sig.outParams).foreach(i => { 
-          //check that name is not reused
-          UclidUtils.assert((externalDecls ++ sig.inParams.map(j => j._1) ++ sig.outParams.map(j => j._1)).
-              count { x => x.value == i._1.value } == 1, 
-              "Signature of procedure " + id + " contains redeclaration: " + i)
-          if (i._2.isInstanceOf[UclSynonymType]) { //check that the type are acceptable
-            UclidUtils.assert(c.types.keys.exists { j => j.value == i._2.asInstanceOf[UclSynonymType].id.value }, 
-                "Signature of procedure " + id + " contains unknown type: " + i)
-          }
+          UclidUtils.assert(UclidUtils.existsOnce(
+              (externalDecls ++ sig.inParams.map(j => j._1) ++ sig.outParams.map(j => j._1)), i._1),
+              "Signature of procedure " + id + " contains redeclaration: " + i);
+          check(i._2, c)
         })
      
         decls.foreach { i => {
           //check that name is not reused
-          UclidUtils.assert((externalDecls ++ decls.map(j => j.id) ++ 
-              sig.inParams.map(j => j._1) ++ sig.outParams.map(j => j._1)).
-              count { x => x.value == i.id.value } == 1, "Local variable " + i + " redeclared")
-          if (i.typ.isInstanceOf[UclSynonymType]) { //check that the type is acceptable
-            UclidUtils.assert(c.types.keys.exists { j => j.value == i.typ.asInstanceOf[UclSynonymType].id.value }, 
-              "Local variable " + i + " has unknown type")
-          }
+          UclidUtils.assert(UclidUtils.existsOnce(
+              externalDecls ++ decls.map(j => j.id) ++ sig.inParams.map(j => j._1) ++ sig.outParams.map(j => j._1), i.id), 
+              "Local variable " + i + " redeclared")
+          check(i.typ,c)
         } }
-                   
+        
         var c2: Context = c.copyContext()
         c2.inputs = c.inputs ++ (sig.inParams.map(i => i._1 -> i._2).toMap)
         c2.variables = c.variables ++ (sig.outParams.map(i => i._1 -> i._2).toMap)
@@ -137,17 +125,13 @@ object UclidSemanticAnalyzer {
         body.foreach { x => check(x,c2) }
         
       case UclFunctionDecl(id,sig) =>
-        UclidUtils.assert((sig.args.map(i => i._1)).distinct.size == (sig.args.map(i => i._1)).size, 
+        UclidUtils.assert(UclidUtils.hasDuplicates(sig.args.map(i => i._1)), 
             "Signature of function " + id + " contains arguments of the same name")
         sig.args.foreach(i => { 
           //check that name is not reused
-          UclidUtils.assert((externalDecls ++ sig.args.map(j => j._1)).
-              count { x => x.value == i._1.value } == 1, 
+          UclidUtils.assert(UclidUtils.existsOnce(externalDecls ++ sig.args.map(j => j._1), i._1), 
               "Signature of function " + id + " contains redeclaration: " + i)
-          if (i._2.isInstanceOf[UclSynonymType]) { //check that the type are acceptable
-            UclidUtils.assert(c.types.keys.exists { j => j.value == i._2.asInstanceOf[UclSynonymType].id.value }, 
-                "Signature of function " + id + " contains unknown type: " + i)
-          }
+          check(i._2, c)
         })
       case UclTypeDecl(id,typ) => check(typ, c)
       case UclStateVarDecl(id, typ) => check(typ, c)
@@ -163,15 +147,14 @@ object UclidSemanticAnalyzer {
     val externalDecls : List[UclIdentifier] = c.externalDecls()
     if (typ.isInstanceOf[UclEnumType]) {
       typ.asInstanceOf[UclEnumType].ids.foreach { i => 
-        UclidUtils.assert((externalDecls ++ typ.asInstanceOf[UclEnumType].ids).
-        count{ j => j.value == i.value } == 1, "Enum " + typ + " has a redeclaration")
+        UclidUtils.assert(UclidUtils.existsOnce(
+            externalDecls ++ typ.asInstanceOf[UclEnumType].ids,i), "Enum " + typ + " has a redeclaration")
       }
     } else if (typ.isInstanceOf[UclRecordType]) {
       val t = typ.asInstanceOf[UclRecordType]
       //assert no map type
+      //TODO: assert that synonym types dont lead to maps or arrays
       t.fields.foreach { i => 
-        //UclidUtils.assert((externalDecls ++ t.fields.map(a => a._1)).count { j => j.value == i._1.value } == 1, 
-        //    "Record " + typ + " has a redeclaration")
         //assert no maps
         UclidUtils.assert(!(i._2.isInstanceOf[UclMapType] || i._2.isInstanceOf[UclArrayType]), 
             "Records cannot contain maps or arrays")
@@ -189,17 +172,37 @@ object UclidSemanticAnalyzer {
     }
   }
   
+  def typeOf(lhs: UclLhs, c: Context) : UclType = {
+    var intermediateType = (c.outputs ++ c.variables)(lhs.id)
+    lhs.arraySelect match {
+      case Some(as) => 
+        intermediateType = intermediateType.asInstanceOf[UclArrayType].outType
+      case None => ()
+    }
+    lhs.recordSelect match {
+      case Some(rs) => 
+        UclidUtils.assert(intermediateType.isInstanceOf[UclRecordType], "Expected record type")
+        rs.foreach { x =>
+          intermediateType.asInstanceOf[UclRecordType].fields.find(i => i._1.value == x.id.value) 
+              match { case Some(x) => intermediateType = x._2; 
+                      case None => UclidUtils.assert(false, "Should not get here") }
+        }
+        intermediateType
+      case None => intermediateType
+    }
+  }
+  
   def check(lhs: UclLhs, c: Context) : Unit = {
     UclidUtils.assert((c.outputs.keys ++ c.variables.keys).exists { x => x.value == lhs.id.value }, 
         "LHS variable " + lhs.id + " does not exist")
     var intermediateType = (c.outputs ++ c.variables)(lhs.id)
-    lhs.mapSelect match {
-      case Some(ms) => 
+    lhs.arraySelect match {
+      case Some(as) => 
         //assert that lhs.id is a map or array
         UclidUtils.assert(intermediateType.isInstanceOf[UclArrayType],
             "Cannot use select on non-array " + lhs.id)
         intermediateType = intermediateType.asInstanceOf[UclArrayType].outType
-        ms.index.foreach { x => check(x,c) }
+        as.index.foreach { x => check(x,c) }
       case None => ()
     }
     lhs.recordSelect match {
@@ -224,18 +227,97 @@ object UclidSemanticAnalyzer {
       case UclHavocStmt(id) => 
         UclidUtils.assert((c.variables.keys ++ c.outputs.keys).exists { x => x.value == id.value }, 
             "Statement " + s + " updates unknown variable")
-      case UclAssignStmt(lhss, rhss) => lhss.foreach{ x => check(x,c) }; rhss.foreach { x => check(x,c) }
-      case UclIfElseStmt(e, t, f) => check(e,c); (t ++ f).foreach { x => check(x,c) };
+      case UclAssignStmt(lhss, rhss) => 
+        UclidUtils.assert(lhss.size == rhss.size, "LHSS and RHSS of different size");
+        lhss.foreach{ x => check(x,c) }; rhss.foreach { x => check(x,c) };
+        (lhss zip rhss).foreach { i => typeOf(i._1, c) == typeOf(i._2, c) }
+      case UclIfElseStmt(e, t, f) => 
+        check(e,c); 
+        UclidUtils.assert(typeOf(e,c) == UclBoolType(), "Expected boolean conditional");
+        (t ++ f).foreach { x => check(x,c) };
       case UclForStmt(id,_,body) => 
-         var c2: Context = c.copyContext()
-         c2.inputs = c.inputs ++ Map(id -> UclIntType())
+        UclidUtils.assert(!(externalDecls.exists { x => x.value == id.value }), 
+            "For Loop counter " + id + " redeclared");
+        var c2: Context = c.copyContext();
+        c2.inputs = c.inputs ++ Map(id -> UclIntType());
         body.foreach{x => check(x,c2)}
-      case UclCaseStmt(body) => body.foreach { x => check(x._1,c);  x._2.foreach { y => check(y,c) } }
+      case UclCaseStmt(body) => body.foreach { 
+        x => check(x._1,c);
+        UclidUtils.assert(typeOf(x._1,c) == UclBoolType(), 
+            "Expected boolean conditional within case statement guard");
+        x._2.foreach { y => check(y,c) } 
+        }
       case UclProcedureCallStmt(id, lhss, args) =>
-        UclidUtils.assert(c.procedures.keys.exists { x => x.value == id.value }, "Calling unknown procedure " + id)
+        UclidUtils.assert(UclidUtils.existsOnce(c.procedures.keys.toList, id), 
+            "Calling unknown procedure " + id)
         lhss.foreach{ x => check(x,c) }
         args.foreach{ x => check(x,c) }
+        UclidUtils.assert(lhss.size == c.procedures(id).outParams.size, 
+            "Calling procedure " + id + " with incorrect number of results")
+        UclidUtils.assert((lhss zip c.procedures(id).outParams.map(i => i._2)).
+            forall { i => typeOf(i._1, c) == i._2 }, 
+            "Calling procedure " + id + " with results of incorrect type");
+        UclidUtils.assert(args.size == c.procedures(id).inParams.size, 
+            "Calling procedure " + id + " with incorrect number of arguments")
+        UclidUtils.assert((args zip c.procedures(id).inParams.map(i => i._2)).
+            forall { i => typeOf(i._1, c) == i._2 }, 
+            "Calling procedure " + id + " with arguments of incorrect type")
     }
+  }
+  
+  def typeOf(e: UclExpr, c: Context) : UclType = {
+    def assertBoolArgs(l: Iterable[UclExpr]) : Unit = {
+      l.foreach{ i => UclidUtils.assert(typeOf(i,c) == UclBoolType(), 
+          "Expected expression " + i + " to have type Bool");
+      }
+    }
+    def assertIntArgs(l: Iterable[UclExpr]) : Unit = {
+      l.foreach{ i => UclidUtils.assert(typeOf(i,c) == UclIntType(), 
+          "Expected expression " + i + " to have type Int");
+      }
+    }
+    e match {
+      case UclEquivalence(l,r) => assertBoolArgs(List(l,r)); UclBoolType()
+      case UclImplication(l,r) => assertBoolArgs(List(l,r)); UclBoolType()
+      case UclConjunction(l,r) => assertBoolArgs(List(l,r)); UclBoolType()
+      case UclDisjunction(l,r) => assertBoolArgs(List(l,r)); UclBoolType()
+      case UclRelationOperation(_,l,r) => assertIntArgs(List(l,r)); UclBoolType()
+      case UclAddOperation(l,r) => assertIntArgs(List(l,r)); UclIntType()
+      case UclMulOperation(l,r) => assertIntArgs(List(l,r)); UclIntType()
+      case UclUnaryOperation(_,e) => assertIntArgs(List(e)); UclIntType()
+      case UclArraySelectOperation(e,op) =>
+        UclidUtils.assert(typeOf(e,c).isInstanceOf[UclArrayType], "expected array type")
+        UclidUtils.assert((e.asInstanceOf[UclArrayType].inTypes zip op.index).
+            forall { x => x._1 == typeOf(x._2,c) }, "Array Select operand type mismatch")
+        e.asInstanceOf[UclMapType].outType //select returns the range type
+      case UclArrayStoreOperation(e,op) =>
+        UclidUtils.assert(typeOf(e,c).isInstanceOf[UclArrayType], "expected array type")
+        UclidUtils.assert((e.asInstanceOf[UclArrayType].inTypes zip op.index).
+            forall { x => x._1 == typeOf(x._2,c) }, "Array Store operand type mismatch")
+        UclidUtils.assert(e.asInstanceOf[UclArrayType].outType == typeOf(op.value,c), 
+            "Array Store value type mismatch")
+        typeOf(e,c) //store returns the new array
+      case UclFuncAppOperation(e,op) =>
+        UclidUtils.assert(typeOf(e,c).isInstanceOf[UclMapType],"Expected Map Type");
+        val t = typeOf(e,c).asInstanceOf[UclMapType];
+        UclidUtils.assert((t.inTypes.size == op.args.size), 
+          "Function application has bad number of arguments");
+        UclidUtils.assert((t.inTypes zip op.args).forall{i => i._1 == typeOf(i._2,c)}, 
+          "Function application has bad types of arguments")
+        t.outType
+      case UclITE(e,t,f) =>
+        assertBoolArgs(List(e));
+        UclidUtils.assert(typeOf(t,c) == typeOf(f,c), 
+            "ITE true and false expressions have different types")
+        typeOf(t,c)
+      case UclLambda(ids,e) =>
+        UclidUtils.assert(typeOf(e,c) == UclBoolType() || typeOf(e,c) == UclIntType(), 
+            "Cannot construct Lambda expressions that are functions")
+        UclMapType(ids.map(i => i._2), typeOf(e,c)) //Lambda expr returns a map type
+      case UclIdentifier(id) => (c.constants ++ c.variables ++ c.inputs ++ c.outputs)(UclIdentifier(id))
+      case UclNumber(n) => UclIntType()
+      case UclBoolean(b) => UclBoolType()
+    }    
   }
   
   def check(e: UclExpr, c: Context) : Unit = {
@@ -251,12 +333,10 @@ object UclidSemanticAnalyzer {
        case UclAddOperation(l,r) => check(r,c); check(l,c);
        case UclMulOperation(l,r) => check(r,c); check(l,c);
        case UclUnaryOperation(_,e) => check(e,c);
-       case UclMapSelectOperation(e,op) => check(e,c); op.index.foreach { x => check(x,c) }
-       case UclMapStoreOperation(e,op) => 
+       case UclArraySelectOperation(e,op) => check(e,c); op.index.foreach { x => check(x,c) }
+       case UclArrayStoreOperation(e,op) => 
          check(e,c); op.index.foreach { x => check(x,c) }; check(op.value, c);
-       case UclFuncAppOperation(id,op) => 
-         UclidUtils.assert(c.functions.keys.exists{x => x.value == id.value}, id + " is not a function");
-         op.args.foreach { x => check(x,c) }
+       case UclFuncAppOperation(e,op) => check(e,c); op.args.foreach { x => check(x,c) }
        case UclITE(e,t,f) => check(e,c); check(t,c); check(f,c);
        case UclLambda(ids,e) => ids.foreach { 
            x => check(x._2,c);
@@ -272,6 +352,7 @@ object UclidSemanticAnalyzer {
          UclidUtils.assert((c.constants.keys ++ c.inputs.keys ++ c.outputs.keys ++ c.variables.keys).
          exists{i => i.value == id}, "Identifier " + id + " not found");
        case _ => ()
-     } 
+     }
+    typeOf(e,c) //do type checking anyways
   }
 }

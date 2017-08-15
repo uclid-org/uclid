@@ -19,11 +19,11 @@ case class UclExtractOperator(high: UclNumber, low: UclNumber) {
 case class UclRecordSelectOperator(id: UclIdentifier) {
   override def toString = "." + id.toString
 }
-case class UclMapSelectOperator(index: List[UclExpr]) extends UclOperator {
+case class UclArraySelectOperator(index: List[UclExpr]) extends UclOperator {
   override def toString = "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + "]"
 }
-case class UclMapStoreOperator(index: List[UclExpr], value: UclExpr) extends UclOperator {
+case class UclArrayStoreOperator(index: List[UclExpr], value: UclExpr) extends UclOperator {
   override def toString = "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + " := " + value.toString + "]"
 }
@@ -72,17 +72,17 @@ case class UclMulOperation(left: UclExpr, right: UclExpr) extends UclExpr {
 case class UclUnaryOperation(op: UclUnaryOperator, e: UclExpr) extends UclExpr {
   override def toString = "(" + op.toString + " " + e.toString + ")"
 }
-case class UclMapSelectOperation(x: UclExpr, op: UclMapSelectOperator) extends UclExpr {
-  override def toString = x.toString + op.toString
+case class UclArraySelectOperation(e: UclExpr, op: UclArraySelectOperator) extends UclExpr {
+  override def toString = e.toString + op.toString
 }
-case class UclMapStoreOperation(e: UclExpr, op: UclMapStoreOperator) extends UclExpr {
+case class UclArrayStoreOperation(e: UclExpr, op: UclArrayStoreOperator) extends UclExpr {
   override def toString = e.toString + op.toString
 }
 case class UclExtractOperation(e: UclExpr, op: UclExtractOperator) extends UclExpr {
   override def toString = e.toString + op.toString
 }
-case class UclFuncAppOperation(id: UclIdentifier, op: UclFuncAppOperator) extends UclExpr {
-  override def toString = id.toString + op.toString
+case class UclFuncAppOperation(e: UclExpr, op: UclFuncAppOperator) extends UclExpr {
+  override def toString = e.toString + op.toString
 }
 case class UclITE(e: UclExpr, t: UclExpr, f: UclExpr) extends UclExpr {
   override def toString = "ITE(" + e.toString + "," + t.toString + "," + f.toString + ")"
@@ -92,36 +92,74 @@ case class UclLambda(ids: List[(UclIdentifier,UclType)], e: UclExpr) extends Ucl
 }
 
 case class UclLhs(id: UclIdentifier, 
-                  mapSelect: Option[UclMapSelectOperator], 
+                  arraySelect: Option[UclArraySelectOperator], 
                   recordSelect: Option[List[UclRecordSelectOperator]]) {
-  override def toString = mapSelect match {
-    case Some(ms) => id.toString + ms.toString
+  override def toString = arraySelect match {
+    case Some(as) => id.toString + as.toString
     case None => id.toString
   }
 }
 
 abstract class UclType
-case class UclBoolType() extends UclType { override def toString = "bool" }
-case class UclIntType() extends UclType { override def toString = "int" }
+case class UclBoolType() extends UclType { 
+  override def toString = "bool" 
+  override def equals(other: Any) = other.isInstanceOf[UclBoolType]
+}
+case class UclIntType() extends UclType { 
+  override def toString = "int" 
+  override def equals(other: Any) = other.isInstanceOf[UclIntType]  
+}
 case class UclEnumType(ids: List[UclIdentifier]) extends UclType {
   override def toString = "enum {" + 
     ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i.toString} + "}"
+  override def equals(other: Any) = other match {
+      case that: UclEnumType =>
+        if (that.ids.size == this.ids.size) {
+          (that.ids zip this.ids).forall(i => i._1.value == i._2.value)
+        } else { false }
+      case _ => false
+    }
 }
 case class UclRecordType(fields: List[(UclIdentifier,UclType)]) extends UclType {
   override def toString = "record {" + 
     fields.tail.foldLeft(fields.head.toString) {(acc,i) => acc + "," + i.toString} + "}"
+  override def equals(other: Any) = other match {
+      case that: UclRecordType =>
+        if (that.fields.size == this.fields.size) {
+          (that.fields zip this.fields).forall(i => i._1._1.value == i._2._1.value && i._1._2 == i._2._2)
+        } else { false }
+      case _ => false
+    }
 }
 //class UclBitvectorType extends UclType
 case class UclMapType(inTypes: List[UclType], outType: UclType) extends UclType {
   override def toString = "map [" + inTypes.tail.fold(inTypes.head.toString)
   { (acc,i) => acc + "," + i.toString } + "] " + outType
+  override def equals(other: Any) = other match {
+      case that: UclMapType =>
+        if (that.inTypes.size == this.inTypes.size) {
+          (that.outType == this.outType) && (that.inTypes zip this.inTypes).forall(i => i._1 == i._2)
+        } else { false }
+      case _ => false
+    }
 }
 case class UclArrayType(inTypes: List[UclType], outType: UclType) extends UclType {
   override def toString = "array [" + inTypes.tail.fold(inTypes.head.toString)
   { (acc,i) => acc + "," + i.toString } + "] " + outType
+  override def equals(other: Any) = other match {
+      case that: UclArrayType =>
+        if (that.inTypes.size == this.inTypes.size) {
+          (that.outType == this.outType) && (that.inTypes zip this.inTypes).forall(i => i._1 == i._2)
+        } else { false }
+      case _ => false
+    }
 }
 case class UclSynonymType(id: UclIdentifier) extends UclType {
   override def toString = id.toString
+  override def equals(other: Any) = other match {
+    case that: UclSynonymType => that.id.value == this.id.value
+    case _ => false
+  }
 }
 
 /** Statements **/
@@ -299,22 +337,16 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     case OpMinus ~ x => UclUnaryOperation(UclUnaryOperator(OpMinus), x)
   }
 
-  lazy val ast_mapselect: UclExpr ~ List[UclExpr] => UclMapSelectOperator = {
-    case e ~ es => UclMapSelectOperator(e :: es)
-  }
-
-  lazy val ast_mapstore: UclExpr ~ List[UclExpr] ~ UclExpr => UclMapStoreOperator = {
-    case e ~ es ~ r => UclMapStoreOperator(e :: es, r)
-  }
-
   lazy val RelOp: Parser[String] = OpGT | OpLT | OpEQ | OpNE | OpGE | OpLE
   lazy val UnOp: Parser[String] = OpNeg | OpMinus
   lazy val RecordSelectOp: Parser[UclRecordSelectOperator] =
     ("." ~> Id) ^^ {case id => UclRecordSelectOperator(id)}
-  lazy val MapSelectOp: Parser[UclMapSelectOperator] =
-    ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ ast_mapselect
-  lazy val MapStoreOp: Parser[UclMapStoreOperator] =
-    ("[" ~> (Expr ~ rep("," ~> Expr) ~ (":=" ~> Expr)) <~ "]") ^^ ast_mapstore
+  lazy val ArraySelectOp: Parser[UclArraySelectOperator] =
+    ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ 
+    {case e ~ es => UclArraySelectOperator(e :: es)}
+  lazy val ArrayStoreOp: Parser[UclArrayStoreOperator] =
+    ("[" ~> (Expr ~ rep("," ~> Expr) ~ (":=" ~> Expr)) <~ "]") ^^ 
+    {case e ~ es ~ r => UclArrayStoreOperator(e :: es, r)}
   lazy val ExtractOp: Parser[UclExtractOperator] =
     ("[" ~> Number ~ ":" ~ Number <~ "]") ^^ { case x ~ ":" ~ y => UclExtractOperator(x, y) }
   lazy val FuncApp: Parser[UclFuncAppOperator] =
@@ -343,19 +375,18 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val E7: PackratParser[UclExpr] = UnOp ~ E8 ^^ ast_unary | E8
   /** E8 := E9 MapOp | E9 **/
   lazy val E8: PackratParser[UclExpr] =
-      E9 ~ MapSelectOp ^^ { case e ~ m => UclMapSelectOperation(e, m) } |
-      E9 ~ MapStoreOp ^^ { case e ~ m => UclMapStoreOperation(e, m) } |
+      E9 ~ FuncApp ^^ { case e ~ f => UclFuncAppOperation(e, f) } |
+      E9 ~ ArraySelectOp ^^ { case e ~ m => UclArraySelectOperation(e, m) } |
+      E9 ~ ArrayStoreOp ^^ { case e ~ m => UclArrayStoreOperation(e, m) } |
       E9 ~ ExtractOp ^^ { case e ~ m => UclExtractOperation(e, m) } |
       E9
   /** E9 := false | true | Number | Bitvector | Id FuncApplication | (Expr) **/
   lazy val E9: PackratParser[UclExpr] =
       Bool |
       Number |
-      KwITE ~> ("(" ~> Expr ~ ("," ~> Expr) ~ ("," ~> Expr) <~ ")") ^^ 
-        { case e ~ t ~ f => UclITE(e,t,f) } |
+      KwITE ~> ("(" ~> Expr ~ ("," ~> Expr) ~ ("," ~> Expr) <~ ")") ^^ { case e ~ t ~ f => UclITE(e,t,f) } |
       KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => UclLambda(idtyps, expr) } |
       "(" ~> Expr <~ ")" |
-      Id ~ FuncApp ^^ {case id ~ f => UclFuncAppOperation(id,f)} |
       Id
   /** Expr := E0 **/
   lazy val Expr: PackratParser[UclExpr] = E0
@@ -389,9 +420,9 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     "(" ~ ")" ^^ { case _~_ => List.empty[(UclIdentifier,UclType)] }
 
   lazy val Lhs : PackratParser[UclLhs] =
-    Id ~ MapSelectOp ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ 
+    Id ~ ArraySelectOp ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ 
       { case id ~ mapOp ~ rOp ~ rOps => UclLhs(id, Some(mapOp), Some(rOp::rOps))} |
-    Id ~ MapSelectOp ^^ { case id ~ op => UclLhs(id, Some(op), None) } |
+    Id ~ ArraySelectOp ^^ { case id ~ op => UclLhs(id, Some(op), None) } |
     Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { case id ~ rOp ~ rOps => UclLhs(id, None, Some(rOp::rOps)) } |
     Id ^^ { case id => UclLhs(id, None, None) }
 
