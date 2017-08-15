@@ -169,8 +169,14 @@ class TypecheckPass extends ReadOnlyPass[Unit]
           }
         }
         case boolOp : BooleanOperator => {
-          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
-          Utils.assert(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
+          boolOp match {
+            case NegationOp() => 
+              Utils.assert(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.")
+              Utils.assert(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
+            case _ => 
+              Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+              Utils.assert(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
+          }
           new BoolType()
         }
         case cmpOp : ComparisonOperator => {
@@ -247,7 +253,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
         case b : BoolLit => new BoolType()
         case i : IntLit => new IntType()
         case bv : BitVectorLit => new BitVectorType(bv.width)
-        case r : Record => throw new Utils.UnimplementedException("Need to implement anonymous record types.")
+        case r : Tuple => new TupleType(r.values.map(typeOf(_, c)))
         case opapp : UclOperatorApplication => opAppType(opapp)
         case arrSel : UclArraySelectOperation => arraySelectType(arrSel)
         case arrStore : UclArrayStoreOperation => arrayStoreType(arrStore)

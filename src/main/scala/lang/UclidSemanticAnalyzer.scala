@@ -303,7 +303,7 @@ object UclidSemanticAnalyzer {
         Utils.assert((lhss zip rhss).forall 
             { i => 
               val rhsType = typeOf(i._2, c)
-              typeOfLHS(i._1, c) == rhsType._1 && !rhsType._2}, 
+              (typeOfLHS(i._1, c) matches rhsType._1) && !rhsType._2}, 
             "LHSS and RHSS have conflicting types: " + s);
         Utils.assert(lhss.distinct.size == lhss.size, "LHSS contains identical variables: " + s)
       case UclIfElseStmt(e, t, f) => 
@@ -392,6 +392,11 @@ object UclidSemanticAnalyzer {
             Utils.assert(types(1)._1.isBool, "Second operand to Boolean operator must be of Boolean type. Instead got: " + types(0).toString + "; expression: " + e.toString)
             (BoolType(), temporalArgs)
           }
+          case NegationOp() => {
+            Utils.assert(types.size == 1, "Expected one argument to Boolean negation operator.")
+            Utils.assert(types(0)._1.isBool, "Operand to Boolean negation operator must be of Boolean type. Instead got: " + types(0).toString + "; expression: " + e.toString)
+            (BoolType(), temporalArgs)
+          }
           case EqualityOp() | InequalityOp() => {
             Utils.assert(types.size == 2, "Expected two arguments to comparison operators.")
             Utils.assert(types(0) == types(1), "Operands to equality/inequality must be of the same type.")
@@ -407,11 +412,18 @@ object UclidSemanticAnalyzer {
             Utils.assert(types.forall((t) => t._1.isTemporal || t._1.isBool), "Operand to temporal operator " + op + " must be Boolean or temporal.")
             (TemporalType(), true)
           }
+          case RecordSelect(r) => {
+            Utils.assert(types.size == 1, "Incorrect number of operands to record select. ")
+            Utils.assert(types(0)._1.isInstanceOf[RecordType], "Operand to record select must be record.")
+            val recType = (types(0)._1.asInstanceOf[RecordType], types(0)._2)
+            Utils.assert(recType._1.hasField(r), "Field '" + r + "' does not exist in record.")
+            (recType._1.fieldType(r).get, recType._2)
+          }
           case _ => {
-            throw new Utils.UnimplementedException("Operator not implemented yet!")
+            throw new Utils.UnimplementedException("Operator not implemented yet: " + op)
           }
         }
-      case Record(values) => 
+      case Tuple(values) => 
         val valTypes = values.map(typeOf(_,c))
         val temporal = valTypes.exists(_._2)
         return (TupleType(valTypes.map(_._1)), temporal)
