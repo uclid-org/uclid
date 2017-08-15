@@ -11,4 +11,8 @@ module test {
   next {
     call (a, b) := fib(a, b);
   }
+  
+  control {
+  	simulate 5;
+  }
 }
