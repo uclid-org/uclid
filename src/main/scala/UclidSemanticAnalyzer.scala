@@ -13,8 +13,6 @@ class Context {
   var next: List[UclStatement] = _
   var init: List[UclStatement] = _
   
-  override def toString = variables.toString
-  
   def extractContext(m: UclModule) = {    
     type T1 = UclProcedureDecl
     val m_procs = m.decls.filter { x => x.isInstanceOf[T1] }
@@ -403,7 +401,7 @@ object UclidSemanticAnalyzer {
          * assert types are equal and comparable
          */
         types.head._1 match { 
-          case x : UclIntType => ()
+          case x : UclIntType => () //TODO: add bitvectors
           case x => UclidUtils.assert(false, "Comparison operator " + op + " requires Int arguments.")
         }
         if (types.tail.exists { x => types.head._1 != x._1}) {
