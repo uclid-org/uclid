@@ -2,22 +2,90 @@ package uclid
 package lang
 
 import scala.collection.mutable.{Map => MutableMap}
+import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.immutable.{Map => ImmutableMap}
 
-class TypeSynonymFinder extends ReadOnlyPass[Unit]
+class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
 {
   type TypeMap = MutableMap[Identifier, Type]
+  type TypeSet = MutableSet[Identifier]
   var typeDeclMap : TypeMap = MutableMap.empty
+  var typeSynonyms : TypeSet = MutableSet.empty
   
   override def reset () {
     typeDeclMap.clear()
+    typeSynonyms.clear()
+  }
+  override def applyOnModule( d : TraversalDirection.T, module : Module, in : Unit, context : ScopeMap) : Unit = {
+    if (d == TraversalDirection.Up) {
+      validateSynonyms()
+      simplifySynonyms()
+      printTypeDeclMap()
+    }
   }
   override def applyOnTypeDecl(d : TraversalDirection.T, typDec : UclTypeDecl, in : Unit, context : ScopeMap) : Unit = {
     if (d == TraversalDirection.Down) {
       typeDeclMap.put(typDec.id, typDec.typ)
     }
   }
+  override def applyOnType( d : TraversalDirection.T, typ : Type, in : Unit, context : ScopeMap) : Unit = {
+    if (d == TraversalDirection.Down) {
+      typ match {
+        case SynonymType(name) => typeSynonyms += name
+        case _ => /* skip */
+      }
+    }
+  }
+
+  def validateSynonyms() {
+    typeSynonyms.foreach {
+      (syn) => Utils.assert(typeDeclMap.contains(syn), "Type synonym '" + syn.toString + "' used without declaration.")
+    }
+  }
+
+  def simplifySynonyms() {
+    var simplified = false
+    do {
+      simplified = false
+      typeDeclMap.foreach {
+        case (name, decl) => {
+          decl match {
+            case SynonymType(otherName) =>
+                simplified = true
+                typeDeclMap.put(name, typeDeclMap.get(otherName).get)
+            case _ =>
+                typeDeclMap.put(name, decl)
+          }
+        }
+      }
+    } while (simplified)
+  }
+
+  def printTypeDeclMap() {
+    typeDeclMap.foreach {
+      case (name, decl) => println (name.toString + " --> " + decl.toString)
+    }
+  }
 }
+
+class TypeSynonymFinder extends ASTAnalyzer("TypeSynonymFinder", new TypeSynonymFinderPass())  {
+  override def pass = super.pass.asInstanceOf[TypeSynonymFinderPass]
+  in = Some(Unit)
+}
+
+class TypeSynonymRewriterPass extends RewritePass {
+  lazy val manager : PassManager = analysis.manager
+  lazy val typeSynonymFinderPass = manager.pass("TypeSynonymFinder").asInstanceOf[TypeSynonymFinder].pass
+  override def rewriteType(typ : Type, ctx : ScopeMap) : Option[Type] = {
+    typ match {
+      case SynonymType(name) => typeSynonymFinderPass.typeDeclMap.get(name)
+      case _ => Some(typ)
+    }
+  }
+}
+
+class TypeSynonymRewriter extends ASTRewriter(
+    "TypeSynonymRewriter", new TypeSynonymRewriterPass())
 
 class TypecheckPass extends ReadOnlyPass[Unit]
 {

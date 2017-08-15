@@ -233,7 +233,7 @@ case class MapType(inTypes: List[Type], outType: Type) extends Type {
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = "array [" + Utils.join(inTypes.map(_.toString), ", ") + "]" + outType.toString
 }
-case class SynonymType(id: Identifier /* FIXME: needs another argument? */) extends Type {
+case class SynonymType(id: Identifier) extends Type {
   override def toString = id.toString
   override def equals(other: Any) = other match {
     case that: SynonymType => that.id.value == this.id.value

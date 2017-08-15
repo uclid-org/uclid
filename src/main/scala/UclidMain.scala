@@ -75,10 +75,12 @@ package uclid {
       var nameCnt : NameCountMap = Map().withDefaultValue(0)
       
       val passManager = new PassManager()
+      passManager.addPass(new TypeSynonymFinder())
+      passManager.addPass(new TypeSynonymRewriter())
       passManager.addPass(new Typechecker())
       passManager.addPass(new PolymorphicTypeRewriter())
       passManager.addPass(new FindLeafProcedures())
-      
+
       for (srcFile <- srcFiles) {
         println("Input File: " + srcFile)
         val text = scala.io.Source.fromFile(srcFile).mkString
