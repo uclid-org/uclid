@@ -4,6 +4,10 @@ package lang
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.immutable.{Map => ImmutableMap}
 
+class TypeSynonymFinder extends ReadOnlyPass[Unit]
+{
+}
+
 class TypecheckPass extends ReadOnlyPass[Unit]
 {
   type MemoKey = (Expr, ScopeMap)
