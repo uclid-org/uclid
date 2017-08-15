@@ -97,9 +97,10 @@ package uclid {
       println(module.toString)
       val asserts = UclidSymbolicSimulator.simulate_steps(module,2)._2 //simulate for 2 steps
       var z3Interface = smt.Z3Interface.newInterface()
+      var z3FInterface = smt.Z3FileInterface.newInterface()
       asserts.foreach { x => 
         val assert = smt.OperatorApplication(smt.NegationOp, List(x))
-        var result = smt.Z3FileInterface.check(assert)
+        var result = z3FInterface.check(assert)
         var result2 = z3Interface.check(assert)
         println("results = " + result + "/" + result2)
         Utils.assert(result == result2, "Z3FileInterface and Z3Interface are producing differing results.")

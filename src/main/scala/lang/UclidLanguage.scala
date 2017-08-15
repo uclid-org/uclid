@@ -18,7 +18,7 @@ package uclid {
     sealed abstract class InfixOperator extends Operator {
       override def isInfix = true
     }
-    // This is the polymorphic operator type. The FixOperatorTypes pass will convert these operators
+    // This is the polymorphic operator type. Typerchecker.rewrite converts these operators
     // to either the integer or bitvector versions.
     sealed abstract class PolymorphicOperator extends InfixOperator {
       var reifiedOp : Option[Operator] = None

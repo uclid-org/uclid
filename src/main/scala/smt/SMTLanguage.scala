@@ -304,6 +304,9 @@ package uclid {
       
       def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set()) }
       
+      // Assert 'e' in the solver. (Modifies solver context to contain 'e'.)
+      def addConstraint(e : Expr)
+      // Check whether 'e' is satisfiable in the current solver context.
       def check(e : Expr) : Option[Boolean]
     }
   }

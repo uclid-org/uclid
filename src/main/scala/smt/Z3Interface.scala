@@ -169,13 +169,13 @@ package uclid {
         else z3AST
       })
       
+      override def addConstraint(e : Expr) : Unit = {
+        solver.add(exprToZ3(e).asInstanceOf[z3.BoolExpr])
+      }
       
       /** Check whether a particular expression is satisfiable.  */      
-      def check (e : Expr) : Option[Boolean] = {
-        
-        println("expr: " + e.toString())
+      override def check (e : Expr) : Option[Boolean] = {
         val z3Expr = exprToZ3(e)
-        println("z3: " + z3Expr.toString())
         
         solver.push()
         solver.add(z3Expr.asInstanceOf[z3.BoolExpr])
