@@ -5,6 +5,8 @@
  */
 package uclid {
   package smt {
+    import uclid.Utils
+    
     object Z3FormulaInterface {
       def generateDeclaration(x: Symbol) : String = {
         def printType(t: Type) : String = {
@@ -134,5 +136,5 @@ package uclid {
         }
       }
     }
-  }
+}
 }

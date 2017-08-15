@@ -38,7 +38,7 @@ package uclid {
       val t = new IntType
     }
     
-    // The bitvector type.
+    // The bit-vector type.
     case class BitVectorType(width: Int) extends Type
     {
       override def toString = "bv" + (width.toString)

@@ -98,7 +98,7 @@ package uclid {
       def getCurrentDirectory = new java.io.File( "." ).getCanonicalPath
       asserts.foreach { x => 
         println("*************** Formula Start ***************")
-        var fmla : String = uclid.smt.Z3FormulaInterface.checkFormulaZ3(x)
+        var fmla : String = smt.Z3FormulaInterface.checkFormulaZ3(x)
         println(fmla)
         Files.write(Paths.get(getCurrentDirectory + "/tmp.z3"), fmla.getBytes(StandardCharsets.UTF_8))
         //Process("z3 " + getCurrentDirectory + "/tmp.z3 -smt2")
