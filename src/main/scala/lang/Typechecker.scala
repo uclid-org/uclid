@@ -4,6 +4,7 @@ package lang
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.immutable.{Map => ImmutableMap}
+import uclid.smt.ExpressionAnalyzer
 
 class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
 {
@@ -101,6 +102,25 @@ class ForLoopIndexRewriterPass extends RewritePass {
 
 class ForLoopIndexRewriter extends ASTRewriter(
     "ForLoopIndexRewriter", new ForLoopIndexRewriterPass())
+
+class BitVectorIndexRewriterPass extends RewritePass {
+  override def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = {
+    lhs.sliceSelect match {
+      case Some(slice) =>
+        val hiL = lang.IntLit(slice.hi)
+        val loL = lang.IntLit(slice.lo)
+        val subL = lang.OperatorApplication(lang.IntSubOp(), List(hiL, loL))
+        val width = lang.OperatorApplication(lang.IntAddOp(), List(subL, lang.IntLit(1)))
+        val isCnst = ExpressionAnalyzer.isExprConst(width, ctx)
+        println("width: " + width.toString + "; isCnst: " + isCnst.toString)
+      case None =>
+    }
+    Some(lhs)
+  }
+}
+
+class BitVectorIndexRewriter extends ASTRewriter(
+    "BitVectorIndexRewriter", new BitVectorIndexRewriterPass())
 
 class TypecheckPass extends ReadOnlyPass[Unit]
 {

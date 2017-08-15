@@ -4,7 +4,7 @@ package smt
 import scala.collection.mutable.Map
 import scala.collection.immutable.Set
 
-class ExpressionConverter {
+object ExpressionAnalyzer {
   type SymbolTable = Map[lang.Identifier, smt.Symbol]
   
   def typeToSMT(typ : lang.Type) : smt.Type = {
@@ -25,6 +25,7 @@ class ExpressionConverter {
       case _ => throw new Utils.UnimplementedException("Unimplemented type: " + typ.toString)
     }
   }
+  
   def operatorToSMT(op : lang.Operator) : smt.Operator = {
     op match {
       // Integer operators.
@@ -67,12 +68,15 @@ class ExpressionConverter {
     }
     
   }
-  def exprToSMT(expr : lang.Expr, symbols : SymbolTable) : smt.Expr = {
-    def toSMT(e : lang.Expr) : smt.Expr = exprToSMT(e, symbols)
+  
+  def exprToSMT(expr : lang.Expr, scope : lang.ScopeMap) : smt.Expr = {
+    def toSMT(e : lang.Expr) : smt.Expr = exprToSMT(e, scope)
     def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map(toSMT(_))
     
      expr match {
-       case lang.Identifier(id) => symbols(lang.Identifier(id))
+       case lang.Identifier(id) => 
+         val typ = scope.typeOf(expr.asInstanceOf[lang.Identifier]).get
+         smt.Symbol(id, typeToSMT(typ))
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
@@ -99,5 +103,36 @@ class ExpressionConverter {
        case _ => 
          throw new Utils.UnimplementedException("Unimplemented expression: " + expr.toString)
     }
+  }
+  
+  def renameSymbols(expr : smt.Expr, renamerFn : ((String, smt.Type) => String)) : smt.Expr = {
+    def rename(e : smt.Expr) = renameSymbols(e, renamerFn)
+    expr match {
+      case Symbol(name,typ) =>
+        return Symbol(renamerFn(name, typ), typ) 
+      case OperatorApplication(op,operands) =>
+        return OperatorApplication(op, operands.map(rename(_)))
+      case ArraySelectOperation(e, index) =>
+        return ArraySelectOperation(rename(e), index.map(rename(_)))
+      case ArrayStoreOperation(e, index, value) =>
+        return ArrayStoreOperation(rename(e), index.map(rename(_)), rename(value))
+      case FunctionApplication(e, args) =>
+        return FunctionApplication(rename(e), args.map(rename(_)))
+      case ITE(e,t,f) =>
+        return ITE(rename(e), rename(t), rename(f))
+      case Lambda(syms,e) =>
+        return Lambda(syms.map((sym) => Symbol(renamerFn(sym.id, sym.typ), sym.typ)), rename(e))
+      case IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) =>  
+        return expr
+    }
+  }
+  
+  def isExprConst(expr : lang.Expr, scope : lang.ScopeMap) : Boolean = {
+    val smtExpr = exprToSMT(expr, scope)
+    val smtExpr1 = renameSymbols(smtExpr, (s, t) => s + "$1")
+    val smtExpr2 = renameSymbols(smtExpr, (s, t) => s + "$2")
+    println("expr1: " + smtExpr1.toString)
+    println("expr2: " + smtExpr2.toString)
+    return smtExpr1 == smtExpr2
   }
 }

@@ -179,6 +179,8 @@ import uclid.lang.DecideCmd
         {case e ~ es ~ r => (e :: es, r)}
       lazy val ConstBitVectorSlice: Parser[lang.ConstBitVectorSlice] =
         ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt) }
+      lazy val VarBitVectorSlice: Parser[lang.VarBitVectorSlice] = 
+        ("[" ~> Expr ~ ":" ~ Expr <~ "]") ^^ { case x ~ ":" ~ y => lang.VarBitVectorSlice(x, y) }
       lazy val ExtractOp: Parser[lang.ExtractOp] =
         ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ExtractOp(lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt)) }
       lazy val Id: PackratParser[Identifier] = ident ^^ {case i => Identifier(i)}

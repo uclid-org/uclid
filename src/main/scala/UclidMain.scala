@@ -81,6 +81,7 @@ object UclidMain {
     passManager.addPass(new ASTPrinter())
     passManager.addPass(new TypeSynonymFinder())
     passManager.addPass(new TypeSynonymRewriter())
+    passManager.addPass(new BitVectorIndexRewriter())
     passManager.addPass(new Typechecker())
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new FunctionInliner())
