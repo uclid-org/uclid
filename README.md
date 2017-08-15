@@ -10,7 +10,7 @@ You can run tests by using the command:
 
 An example is:
 
-    $ sbt "run ./test/test-type0.ucl4"
+    $ sbt "run ./test/test-int-fib.ucl4"
 
 # More Information
 
