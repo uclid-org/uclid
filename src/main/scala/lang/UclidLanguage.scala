@@ -104,12 +104,26 @@ case class FinallyTemporalOp() extends TemporalPrefixOperator { override def toS
 case class GloballyTemporalOp() extends TemporalPrefixOperator { override def toString = "G" }
 case class NextTemporalOp() extends TemporalPrefixOperator { override def toString = "X" }
 
-case class BitVectorSlice(hi: Int, lo: Int) extends ASTNode  {
+abstract class BitVectorSlice extends ASTNode {
+  def highIndex : Int = throw new Utils.UnimplementedException("Method highIndex not implemented.") 
+  def lowIndex : Int = throw new Utils.UnimplementedException("Method lowIndex not implemented.")
+  def width : Int = throw new Utils.UnimplementedException("Method width not implemented.")
+  def isConstant : Boolean = throw new Utils.UnimplementedException("Method isConstant not implemented.")
+}
+
+case class ConstBitVectorSlice(hi: Int, lo: Int) extends BitVectorSlice  {
   Utils.assert(hi >= lo && hi >= 0 && lo >= 0, "Invalid bitvector slice: [" + hi.toString + ":" + lo.toString + "].")
+  override def highIndex = hi
+  override def lowIndex = lo
+  override def width = (hi - lo + 1)
+  override def isConstant = true
+  override def toString = "[" + hi.toString + ":" + lo.toString + "]"
+}
+case class VarBitVectorSlice(hi: Expr, lo: Expr) extends BitVectorSlice {
   override def toString = "[" + hi.toString + ":" + lo.toString + "]"
 }
 
-case class ExtractOp(slice : BitVectorSlice) extends Operator {
+case class ExtractOp(slice : ConstBitVectorSlice) extends Operator {
   override def toString = slice.toString
   override def fixity = Operator.POSTFIX
 }
@@ -181,7 +195,7 @@ case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
 case class Lhs(id: Identifier, 
                   arraySelect: Option[List[Expr]], 
                   recordSelect: Option[List[Identifier]],
-                  sliceSelect : Option[BitVectorSlice]) 
+                  sliceSelect : Option[ConstBitVectorSlice]) 
      extends ASTNode
 {
   val t1 = arraySelect match 

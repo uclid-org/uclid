@@ -1,6 +1,6 @@
 module test {
   procedure f(x: int, y: int) returns (z:int) { 
-    localvar x: int;
+    var x: int;
     assume (x > 0); 
     assert (x < 1); 
     havoc x; 
