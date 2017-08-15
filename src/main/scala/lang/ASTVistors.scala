@@ -36,6 +36,16 @@ trait ReadOnlyPass[T] {
   def applyOnInit(d : TraversalDirection.T, init : UclInitDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnNext(d : TraversalDirection.T, next : UclNextDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnType(d : TraversalDirection.T, typ: Type, in : T, context : ScopeMap) : T = { in }
+  def applyOnTemporalType(d : TraversalDirection.T, tempT : TemporalType, in : T, context : ScopeMap) : T = { in }
+  def applyOnBoolType(d : TraversalDirection.T, boolT : BoolType, in : T, context : ScopeMap) : T = { in }
+  def applyOnIntType(d : TraversalDirection.T, intT : IntType, in : T, context : ScopeMap) : T = { in }
+  def applyOnBitVectorType(d : TraversalDirection.T, bvT : BitVectorType, in : T, context : ScopeMap) : T = { in }
+  def applyOnEnumType(d : TraversalDirection.T, enumT : EnumType, in : T, context : ScopeMap) : T = { in }
+  def applyOnTupleType(d : TraversalDirection.T, tupleT : TupleType, in : T, context : ScopeMap) : T = { in }
+  def applyOnRecordType(d : TraversalDirection.T, recordT : RecordType, in : T, context : ScopeMap) : T = { in }
+  def applyOnMapType(d : TraversalDirection.T, mapT : MapType, in : T, context : ScopeMap) : T = { in }
+  def applyOnArrayType(d : TraversalDirection.T, arrayT : ArrayType, in : T, context : ScopeMap) : T = { in }
+  def applyOnSynonymType(d : TraversalDirection.T, synT : SynonymType, in : T, context : ScopeMap) : T = { in }
   def applyOnProcedureSig(d : TraversalDirection.T, sig : UclProcedureSig, in : T, context : ScopeMap) : T = { in }
   def applyOnFunctionSig(d : TraversalDirection.T, sig : UclFunctionSig, in : T, context : ScopeMap) : T = { in }
   def applyOnLocalVar(d : TraversalDirection.T, lvar : UclLocalVarDecl, in : T, context : ScopeMap) : T = { in }
@@ -218,7 +228,87 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitType(typ: Type, in : T, context : ScopeMap) : T = {
     var result : T = in
     result = pass.applyOnType(TraversalDirection.Down, typ, result, context)
+    result = typ match {
+      case tempT : TemporalType => visitTemporalType(tempT, in, context)
+      case boolT : BoolType => visitBoolType(boolT, in, context)
+      case intT : IntType => visitIntType(intT, in, context)
+      case bvT : BitVectorType => visitBitVectorType(bvT, in, context)
+      case enumT : EnumType => visitEnumType(enumT, in, context)
+      case tupleT : TupleType => visitTupleType(tupleT, in, context)
+      case recT : RecordType => visitRecordType(recT, in, context)
+      case mapT : MapType => visitMapType(mapT, in, context)
+      case arrT : ArrayType => visitArrayType(arrT, in, context)
+      case synT : SynonymType => visitSynonymType(synT, in, context)
+    }
     result = pass.applyOnType(TraversalDirection.Up, typ, result, context)
+    return result
+  }
+  def visitTemporalType(tempT : TemporalType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnTemporalType(TraversalDirection.Down, tempT, result, context)
+    result = pass.applyOnTemporalType(TraversalDirection.Up, tempT, result, context)
+    return result
+  }
+  def visitBoolType(boolT : BoolType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnBoolType(TraversalDirection.Down, boolT, result, context)
+    result = pass.applyOnBoolType(TraversalDirection.Up, boolT, result, context)
+    return result
+  }
+  def visitIntType(intT : IntType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnIntType(TraversalDirection.Down, intT, result, context)
+    result = pass.applyOnIntType(TraversalDirection.Up, intT, result, context)
+    return result
+  }
+  def visitBitVectorType(bvT : BitVectorType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnBitVectorType(TraversalDirection.Down, bvT, result, context)
+    result = pass.applyOnBitVectorType(TraversalDirection.Up, bvT, result, context)
+    return result
+  }
+  def visitEnumType(enumT : EnumType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnEnumType(TraversalDirection.Down, enumT, result, context)
+    result = pass.applyOnEnumType(TraversalDirection.Up, enumT, result, context)
+    return result
+  }
+  def visitTupleType(tupleT : TupleType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnTupleType(TraversalDirection.Down, tupleT, result, context)
+    result = tupleT.fieldTypes.foldLeft(result)((acc, typ) => visitType(typ, acc, context))
+    result = pass.applyOnTupleType(TraversalDirection.Up, tupleT, result, context)
+    return result
+  }
+  def visitRecordType(recordT : RecordType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnRecordType(TraversalDirection.Down, recordT, result, context)
+    result = recordT.fields.foldLeft(result)((acc, fld) => {
+      visitType(fld._2, visitIdentifier(fld._1, acc, context), context)
+    })
+    result = pass.applyOnRecordType(TraversalDirection.Up, recordT, result, context)
+    return result
+  }
+  def visitMapType(mapT : MapType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnMapType(TraversalDirection.Down, mapT, result, context)
+    result = mapT.inTypes.foldLeft(result)((acc, t) => visitType(t, acc, context))
+    result = visitType(mapT.outType, result, context)
+    result = pass.applyOnMapType(TraversalDirection.Up, mapT, result, context)
+    return result
+  }
+  def visitArrayType(arrT : ArrayType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnArrayType(TraversalDirection.Down, arrT, result, context)
+    result = arrT.inTypes.foldLeft(result)((acc, t) => visitType(t, acc, context))
+    result = visitType(arrT.outType, result, context)
+    result = pass.applyOnArrayType(TraversalDirection.Up, arrT, result, context)
+    return result
+  }
+  def visitSynonymType(synT : SynonymType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnSynonymType(TraversalDirection.Down, synT, result, context)
+    result = pass.applyOnSynonymType(TraversalDirection.Up, synT, result, context)
     return result
   }
 
@@ -264,7 +354,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnStatement(TraversalDirection.Up, st, result, context)
     return result
   }
-
   def visitSkipStatement(st : UclSkipStmt, in : T, context : ScopeMap) : T = {
     var result : T = in
     result = pass.applyOnSkip(TraversalDirection.Down, st, result, context)
@@ -493,6 +582,16 @@ trait RewritePass {
   def rewriteInit(init : UclInitDecl, ctx : ScopeMap) : Option[UclInitDecl] = { Some(init) }
   def rewriteNext(next : UclNextDecl, ctx : ScopeMap) : Option[UclNextDecl] = { Some(next) }
   def rewriteType(typ: Type, ctx : ScopeMap) : Option[Type] = { Some(typ) }
+  def rewriteTemporalType(tempT : TemporalType, context : ScopeMap) : Option[TemporalType] = { Some(tempT) }
+  def rewriteBoolType(boolT : BoolType, context : ScopeMap) : Option[BoolType] = { Some(boolT) }
+  def rewriteIntType(intT : IntType, context : ScopeMap) : Option[IntType] = { Some(intT)  }
+  def rewriteBitVectorType(bvT : BitVectorType, context : ScopeMap) : Option[BitVectorType] = { Some(bvT)  }
+  def rewriteEnumType(enumT : EnumType, context : ScopeMap) : Option[EnumType] = { Some(enumT)  }
+  def rewriteTupleType(tupleT : TupleType, context : ScopeMap) : Option[TupleType] = { Some(tupleT)  }
+  def rewriteRecordType(recordT : RecordType, context : ScopeMap) : Option[RecordType] = { Some(recordT)  }
+  def rewriteMapType(mapT : MapType, context : ScopeMap) : Option[MapType] = { Some(mapT)  }
+  def rewriteSynonymType(synT : SynonymType, context : ScopeMap) : Option[SynonymType] = { Some(synT)  }
+  def rewriteArrayType(arrayT : ArrayType, context : ScopeMap) : Option[ArrayType] = { Some(arrayT)  }
   def rewriteProcedureSig(sig : UclProcedureSig, ctx : ScopeMap) : Option[UclProcedureSig] = { Some(sig) }
   def rewriteFunctionSig(sig : UclFunctionSig, ctx : ScopeMap) : Option[UclFunctionSig] = { Some(sig) }
   def rewriteLocalVar(lvar : UclLocalVarDecl, ctx : ScopeMap) : Option[UclLocalVarDecl] = { Some(lvar) }
@@ -680,11 +779,98 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   }
   
   def visitType(typ: Type, context : ScopeMap) : Option[Type] = {
-    val typP = pass.rewriteType(typ, context)
+    val typP = (typ match {
+      case tempT : TemporalType => visitTemporalType(tempT, context)
+      case boolT : BoolType => visitBoolType(boolT, context)
+      case intT : IntType => visitIntType(intT, context)
+      case bvT : BitVectorType => visitBitVectorType(bvT, context)
+      case enumT : EnumType => visitEnumType(enumT, context)
+      case tupleT : TupleType => visitTupleType(tupleT, context)
+      case recT : RecordType => visitRecordType(recT, context)
+      case mapT : MapType => visitMapType(mapT, context)
+      case arrT : ArrayType => visitArrayType(arrT, context)
+      case synT : SynonymType => visitSynonymType(synT, context)
+    }).flatMap(pass.rewriteType(_, context))
     astChangeFlag = astChangeFlag || (typP != Some(typ))
     return typP
   }
+  
+  def visitTemporalType(tempT : TemporalType, context : ScopeMap) : Option[TemporalType] = {
+    val tempTP = pass.rewriteTemporalType(tempT, context)
+    astChangeFlag = astChangeFlag || (tempTP != Some(tempT))
+    return tempTP
+  }
 
+  def visitBoolType(boolT : BoolType, context : ScopeMap) : Option[BoolType] = {
+    val boolTP = pass.rewriteBoolType(boolT, context)
+    astChangeFlag = astChangeFlag || (boolTP != Some(boolT))
+    return boolTP 
+  }
+
+  def visitIntType(intT : IntType, context : ScopeMap) : Option[IntType] = {
+    val intTP = pass.rewriteIntType(intT, context)
+    astChangeFlag = astChangeFlag || (intTP != Some(intT))
+    return intTP 
+  }
+  
+  def visitBitVectorType(bvT : BitVectorType, context : ScopeMap) : Option[BitVectorType] = {
+    val bvTP = pass.rewriteBitVectorType(bvT, context)
+    astChangeFlag = astChangeFlag || (bvTP != Some(bvT))
+    return bvTP 
+  }
+  
+  def visitEnumType(enumT : EnumType, context : ScopeMap) : Option[EnumType] = {
+    val idP = enumT.ids.map(visitIdentifier(_, context)).flatten
+    val enumTP = pass.rewriteEnumType(EnumType(idP), context)
+    astChangeFlag = astChangeFlag || (enumTP != Some(enumT))
+    return enumTP 
+  }
+  
+  def visitTupleType(tupleT : TupleType, context : ScopeMap) : Option[TupleType] = {
+    val fieldsP = tupleT.fieldTypes.map((t) => visitType(t, context)).flatten
+    val tupleTP = pass.rewriteTupleType(TupleType(fieldsP), context)
+    astChangeFlag = astChangeFlag || (tupleTP != Some(tupleT))
+    return tupleTP 
+  }
+  
+  def visitRecordType(recT : RecordType, context : ScopeMap) : Option[RecordType] = {
+    val fieldsP = recT.fields.map((f) => {
+      (visitIdentifier(f._1, context), visitType(f._2, context)) match {
+        case (Some(i), Some(t)) => Some((i,t))
+        case _ => None
+      }
+    }).flatten
+    val recTP = pass.rewriteRecordType(RecordType(fieldsP), context)
+    astChangeFlag = astChangeFlag || (recTP != Some(recT))
+    return recTP 
+  }
+  
+  def visitMapType(mapT : MapType, context : ScopeMap) : Option[MapType] = {
+    val inTypesP = mapT.inTypes.map(visitType(_, context)).flatten
+    val mapTP = (visitType(mapT.outType, context)) match {
+      case Some(outTypeP) => pass.rewriteMapType(MapType(inTypesP, outTypeP), context)
+      case _ => None
+    }
+    astChangeFlag = astChangeFlag || (mapTP != Some(mapT))
+    return mapTP 
+  }
+  
+  def visitArrayType(arrT : ArrayType, context : ScopeMap) : Option[ArrayType] = {
+    val inTypesP = arrT.inTypes.map(visitType(_, context)).flatten
+    val arrTP = (visitType(arrT.outType, context)) match {
+      case Some(outTypeP) => pass.rewriteArrayType(ArrayType(inTypesP, outTypeP), context)
+      case _ => None
+    }
+    astChangeFlag = astChangeFlag || (arrTP != Some(arrT))
+    return arrTP 
+  }
+  
+  def visitSynonymType(synT : SynonymType, context : ScopeMap) : Option[SynonymType] = {
+    val synTP = pass.rewriteSynonymType(synT, context)
+    astChangeFlag = astChangeFlag || (synTP != Some(synT))
+    return synTP 
+  }
+  
   def visitProcedureSig(sig : UclProcedureSig, context : ScopeMap) : Option[UclProcedureSig] = {
     val inParamsP : List[(Identifier, Type)] = sig.inParams.map((inP) => {
       (visitIdentifier(inP._1, context), visitType(inP._2, context)) match {
