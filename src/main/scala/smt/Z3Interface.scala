@@ -156,7 +156,7 @@ package uclid {
           case FunctionApplication(e, args) =>
             throw new Utils.UnimplementedException("Not implemented.")
           case ITE(e,t,f) =>
-            throw new Utils.UnimplementedException("Not implemented.")
+            ctx.mkITE(exprToZ3(e).asInstanceOf[z3.BoolExpr], exprToZ3(t).asInstanceOf[z3.Expr], exprToZ3(f).asInstanceOf[z3.Expr])
           case Lambda(_,_) =>
             throw new Utils.RuntimeError("Lambdas in assertions should have been beta-reduced.")
           case IntLit(i) => getIntLit(i)
