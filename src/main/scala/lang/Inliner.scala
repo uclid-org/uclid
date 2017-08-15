@@ -36,10 +36,11 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
     def apply(name: Identifier, tag : String) : Identifier = {
       var newId = Identifier(prefix + "$" + tag + "$" + name)
       var index = 0
-      while (ctx.doesNameExist(newId)) {
+      while (ctx.doesNameExist(newId) || assignedNames.contains(newId)) {
         index = index + 1
         newId = Identifier(prefix + "$" + tag + "$" + name + "$" + index.toString)
       }
+      assignedNames += (newId)
       return newId
     }
   }
