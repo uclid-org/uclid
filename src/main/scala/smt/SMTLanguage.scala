@@ -85,10 +85,10 @@ package uclid {
       def fixity : OperatorFixity
       
       def checkNumArgs(args: List[Expr], expectedNumOperands : Int) : Unit = {
-        Utils.assert(args.size == expectedNumOperands, "Operator '" + toString + "' requires " + expectedNumOperands + " operands.")
+        Utils.assert(args.size == expectedNumOperands, "Operator '" + toString + "' requires " + expectedNumOperands + " operand(s).")
       }
       def checkAllArgTypes(args: List[Expr], expectedType : Type) : Unit = {
-        Utils.assert(args.forall(op => op.typ == expectedType), "Operator '" + toString + "' requires operands of type: " + expectedType)
+        Utils.assert(args.forall(op => op.typ == expectedType), "Operator '" + toString + "' requires operand(s) of type: " + expectedType)
       }
       def checkAllArgsSameType(args: List[Expr]) : Unit = {
         args match {
@@ -102,22 +102,6 @@ package uclid {
     abstract class IntResultOp extends Operator {
       override def resultType(args: List[Expr]) : Type = { IntType.t }
       override def fixity = { PREFIX }
-    }
-    object IntLTOp extends IntResultOp { 
-      override def toString = "<"
-      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
-    }
-    object IntLEOp extends IntResultOp { 
-      override def toString = "<=" 
-      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
-    }
-    object IntGTOp extends IntResultOp { 
-      override def toString = ">" 
-      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
-    }
-    object IntGEOp extends IntResultOp { 
-      override def toString = ">=" 
-      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
     }
     object IntAddOp extends IntResultOp { 
       override def toString = "+" 
@@ -158,17 +142,40 @@ package uclid {
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
     }
     object NegationOp extends BoolResultOp { 
-      override def toString = "!" 
-      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
+      override def toString = "not" 
+      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 1); checkAllArgTypes(args, BoolType.t) }
+      override def fixity = PREFIX
     }
     object EqualityOp extends BoolResultOp { 
       override def toString = "=" 
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
     }
+    object IntLTOp extends BoolResultOp { 
+      override def toString = "<"
+      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
+      override def fixity = PREFIX
+    }
+    object IntLEOp extends BoolResultOp { 
+      override def toString = "<=" 
+      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
+      override def fixity = PREFIX
+    }
+    object IntGTOp extends BoolResultOp { 
+      override def toString = ">" 
+      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
+      override def fixity = PREFIX
+    }
+    object IntGEOp extends BoolResultOp { 
+      override def toString = ">=" 
+      override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
+      override def fixity = PREFIX
+    }
+    
+    // Expressions
     abstract class Expr(exprType: Type) {
       val typ = exprType
     }
-    
+    // Literals.
     abstract class Literal(exprType : Type) extends Expr (exprType)
     
     case class IntLit(value: BigInt) extends Literal (IntType.t) {
@@ -191,7 +198,7 @@ package uclid {
     case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr (op.resultType(operands)) {
       val fix = op.fixity
       Utils.assert(fix == INFIX || fix == PREFIX, "Unknown fixity.")
-      Utils.assert(fix != INFIX || operands.size == 2, "Infix operators musth have two operands.")
+      Utils.assert(fix != INFIX || operands.size == 2, "Infix operators must have two operands.")
       op.typeCheck(operands)
       override def toString = {
         fix match {
