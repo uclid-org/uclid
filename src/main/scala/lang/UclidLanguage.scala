@@ -235,41 +235,48 @@ case class SynonymType(id: Identifier /* FIXME: needs another argument? */) exte
 }
 
 /** Statements **/
-sealed abstract class UclStatement extends ASTNode
+sealed abstract class UclStatement extends ASTNode {
+  override def toString = Utils.join(toLines, "\n") + "\n"
+  def toLines : List[String]
+}
 case class UclSkipStmt() extends UclStatement {
-  override def toString = "skip;"
+  override def toLines = List("skip;")
 }
 case class UclAssertStmt(e: Expr) extends UclStatement {
-  override def toString = "assert " + e + ";"
+  override def toLines = List("assert " + e + ";")
 }
 case class UclAssumeStmt(e: Expr) extends UclStatement {
-  override def toString = "assume " + e + ";"
+  override def toLines = List("assume " + e + ";")
 }
 case class UclHavocStmt(id: Identifier) extends UclStatement {
-  override def toString = "havoc " + id + ";"
+  override def toLines = List("havoc " + id + ";")
 }
 case class UclAssignStmt(lhss: List[UclLhs], rhss: List[Expr]) extends UclStatement {
-  override def toString = 
-    Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + ";"
+  override def toLines = 
+    List(Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + ";")
 }
 case class UclIfElseStmt(cond: Expr, ifblock: List[UclStatement], elseblock: List[UclStatement]) extends UclStatement {
-  override def toString = "if " + cond + " {\n" + ifblock + "\n} else {\n" + elseblock + "\n}"
+  override def toLines = List("if " + cond.toString, "{") ++ 
+                         ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
+                         List("} else {") ++ 
+                         elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
 case class UclForStmt(id: Identifier, range: (IntLit,IntLit), body: List[UclStatement])
   extends UclStatement
 {
-  override def toString = "for " + id + " in range(" + range._1 +"," + range._2 + ") {\n" + 
-    body.fold(""){(acc,i) => acc + i.toString} + "}"
+  override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {") ++ 
+                         body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _)
 }
 case class UclCaseStmt(body: List[(Expr,List[UclStatement])]) extends UclStatement {
-  override def toString = "case" +
-    body.foldLeft("") { (acc,i) => acc + "\n" + i._1 + " : " + i._2 + "\n"} + "esac"
+  override def toLines = List("case") ++
+    body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _)} ++ 
+    List("esac")
 }
 case class UclProcedureCallStmt(id: Identifier, callLhss: List[UclLhs], args: List[Expr])
   extends UclStatement {
-  override def toString = "call (" +
+  override def toLines = List("call (" +
     Utils.join(callLhss.map(_.toString), ", ") + ") := " + id + "(" +
-    Utils.join(args.map(_.toString), ", ") + ")"
+    Utils.join(args.map(_.toString), ", ") + ")")
 }
 
 case class UclLocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
@@ -298,11 +305,9 @@ case class UclFunctionSig(args: List[(Identifier,Type)], retType: Type) extends 
 sealed abstract class UclDecl extends ASTNode
 case class UclProcedureDecl(id: Identifier, sig: UclProcedureSig, 
     decls: List[UclLocalVarDecl], body: List[UclStatement]) extends UclDecl {
-  override def toString = "procedure " + id + sig +
-    PrettyPrinter.indent(1) + "{\n" + body.foldLeft("") { 
-      case (acc,i) => acc + PrettyPrinter.indent(2) + i + "\n" 
-    } + 
-    PrettyPrinter.indent(1) + "}"
+  override def toString = "procedure " + id + sig + PrettyPrinter.indent(1) + "{\n" + 
+                          Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") + 
+                          "\n" + PrettyPrinter.indent(1) + "}"
 }
 case class UclTypeDecl(id: Identifier, typ: Type) extends UclDecl {
   override def toString = "type " + id + " = " + typ 
@@ -326,18 +331,14 @@ extends UclDecl {
 case class UclInitDecl(body: List[UclStatement]) extends UclDecl {
   override def toString = 
     "init {\n" + 
-    body.foldLeft("") { 
-      case (acc,i) => acc + PrettyPrinter.indent(2) + i + "\n" 
-    } + 
-    PrettyPrinter.indent(1) + "}"
+    Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
+    "\n" + PrettyPrinter.indent(1) + "}"
 }
 case class UclNextDecl(body: List[UclStatement]) extends UclDecl {
   override def toString = 
     "next {\n" + 
-    body.foldLeft("") { 
-      case (acc,i) => acc + PrettyPrinter.indent(2) + i + "\n" 
-    } + 
-    PrettyPrinter.indent(1) + "}"
+    Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
+    "\n" + PrettyPrinter.indent(1) + "}"
 }
 case class UclSpecDecl(id: Identifier, expr: Expr) extends UclDecl {
   override def toString = "property " + id + ":" + expr + ";"
@@ -389,7 +390,7 @@ object Scope {
 
   type IdentifierMap = Map[Identifier, NamedExpression]
   def addToMap(map : Scope.IdentifierMap, expr: Scope.NamedExpression) : Scope.IdentifierMap = {
-    Utils.assert(!map.contains(expr.id), "Error: identifier '" + expr.id.toString + "' hides previous declaration with the same name.")
+    Utils.assert(!map.contains(expr.id), "Identifier '" + expr.id.toString + "' hides previous declaration with the same name.")
     map + (expr.id -> expr)
   }
 }

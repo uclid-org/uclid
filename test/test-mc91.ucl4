@@ -4,8 +4,8 @@ module main {
     var n_init : number;
     var c : number;
 
-    // taken from a tail-recurisve definition of the mccarthy 91 function.
-    procedure mtaux(x: number, y: number) returns (z:number, w: number) {
+    // taken from a tail-recursive definition of the McCarthy 91 function.
+    procedure mc91(x: number, y: number) returns (z:number, w: number) {
         if (y == 0) {
             z := x;
             w := 0;
@@ -26,7 +26,7 @@ module main {
         c := 1;
     }
     next {
-        call (n, c) := mtaux(n, c);
+        call (n, c) := mc91(n, c);
         assert ((c == 0) && (n_init <= 100)) ==> (n == 91);
     }
 
