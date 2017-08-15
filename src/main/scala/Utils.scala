@@ -19,7 +19,12 @@ package uclid {
       
       def allUnique(a: List[lang.Identifier]) : Boolean = a.distinct.size == a.size
       
-      def join(things: List[String], sep: String) = things.head + things.tail.foldLeft(""){(acc,i) => acc + sep + i}
+      def join(things: List[String], sep: String) = {
+        things match {
+          case Nil => ""
+          case head :: tail => head + tail.foldLeft(""){(acc,i) => acc + sep + i} 
+        }
+      }
   }
   
   class Memo[I, O](f : I => O) {
