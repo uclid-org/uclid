@@ -101,6 +101,8 @@ package uclid {
           return smt.ArrayType(inTypes.map(t => 
             toSMT(UclidSemanticAnalyzer.transitiveType(t,context),context)), 
             toSMT(UclidSemanticAnalyzer.transitiveType(outType,context),context))
+        case TupleType(argTypes) => 
+          return smt.TupleType.t(argTypes.map(toSMT(_, context)))
         case _ => throw new Utils.UnimplementedException("Need to handle more types here.")
       }
     }
@@ -134,8 +136,9 @@ package uclid {
         // Comparison operators.
         case EqualityOp() => return smt.EqualityOp
         case InequalityOp() => return smt.InequalityOp
-        // FIXME
-        case _ => throw new Utils.UnimplementedException("Operator not supported yet.")
+        // Record select.
+        case RecordSelect(r) => return smt.RecordSelectOp(r.value)
+        case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
       }
     }
     
@@ -163,7 +166,8 @@ package uclid {
             st = st + (lhs(x).id -> smt.ArrayStoreOperation(st(lhs(x).id), 
                 arraySelectOp.map(i => evaluate(i, st, c)), rhs(x)))
           } else if (arraySelectOp == null && recordSelectOp != null) {
-            throw new Utils.UnimplementedException("No support for records")
+            Utils.assert(recordSelectOp.length == 1, "No support for nested record updates.")
+            st = st + (lhs(x).id -> smt.OperatorApplication(smt.RecordUpdateOp(recordSelectOp(0).value), List(st(lhs(x).id), rhs(x))))
           } else if (arraySelectOp != null && recordSelectOp != null) {
             throw new Utils.UnimplementedException("No support for records")
           }
@@ -317,7 +321,8 @@ package uclid {
          case BoolLit(b) => smt.BooleanLit(b)
          case BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
          case Identifier(id) => symbolTable(Identifier(id))
-         case _ => throw new Utils.UnimplementedException("Should not get here")
+         case Tuple(args) => smt.MakeTuple(args.map(i => evaluate(i, symbolTable, context)))
+         case _ => throw new Utils.UnimplementedException("Support not implemented for expression: " + e.toString)
       }
     }
   }

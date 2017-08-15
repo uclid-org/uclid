@@ -29,7 +29,7 @@ package uclid {
       }
       /** Returns tuple field names. */
       val getTupleFieldNames = new Memo[Int, Array[z3.Symbol]]((n : Int) => {
-        (1 to n).map((i => ctx.mkSymbol("__ucl_field" + i.toString))).toArray
+        (1 to n).map((i => ctx.mkSymbol(i.toString + "__ucl_tuple_field" ))).toArray
       })
       
       /** Utility function to cast to subtypes of z3.AST */
@@ -102,33 +102,40 @@ package uclid {
       }
       
       /** Convert an OperatorApplication into a Z3 AST.  */
-      def opToZ3(op : Operator, args : List[z3.AST]) : z3.Expr  = {
+      def opToZ3(op : Operator, operands : List[Expr]) : z3.Expr  = {
+        lazy val args = operands.map((arg) => exprToZ3(arg))
         // These values need to be lazy so that they are only evaluated when the appropriate ctx.mk* functions
         // are called. If they were eager, the casts would fail at runtime.
+        lazy val exprArgs = typecastAST[z3.Expr](args)
         lazy val arithArgs = typecastAST[z3.ArithExpr](args)
         lazy val boolArgs = typecastAST[z3.BoolExpr](args)
         lazy val bvArgs = typecastAST[z3.BitVecExpr](args)
         op match {
-          case IntLTOp       => ctx.mkLt (arithArgs(0), arithArgs(1))
-          case IntLEOp       => ctx.mkLe (arithArgs(0), arithArgs(1))
-          case IntGTOp       => ctx.mkGt (arithArgs(0), arithArgs(1))
-          case IntGEOp       => ctx.mkGe (arithArgs(0), arithArgs(1))
-          case IntAddOp      => ctx.mkAdd (arithArgs : _*)
-          case IntSubOp      => ctx.mkSub (arithArgs: _*)
-          case IntMulOp      => ctx.mkMul (arithArgs : _*)
-          case BVLTOp(_)     => ctx.mkBVSLT(bvArgs(0), bvArgs(1))
-          case BVLEOp(_)     => ctx.mkBVSLE(bvArgs(0), bvArgs(1))
-          case BVGTOp(_)     => ctx.mkBVSGT(bvArgs(0), bvArgs(1))
-          case BVGEOp(_)     => ctx.mkBVSGE(bvArgs(0), bvArgs(1))
-          case BVAddOp(_)    => ctx.mkBVAdd(bvArgs(0), bvArgs(1))
-          case BVSubOp(_)    => ctx.mkBVSub(bvArgs(0), bvArgs(1))
-          case BVMulOp(_)    => ctx.mkBVMul(bvArgs(0), bvArgs(1))
-          case NegationOp    => ctx.mkNot (boolArgs(0))
-          case IffOp         => ctx.mkIff (boolArgs(0), boolArgs(1))
-          case ImplicationOp => ctx.mkImplies (boolArgs(0), boolArgs(1))
-          case EqualityOp    => ctx.mkEq (boolArgs(0), boolArgs(1))
-          case ConjunctionOp => ctx.mkAnd (boolArgs : _*)
-          case DisjunctionOp => ctx.mkOr (boolArgs : _*)
+          case IntLTOp             => ctx.mkLt (arithArgs(0), arithArgs(1))
+          case IntLEOp             => ctx.mkLe (arithArgs(0), arithArgs(1))
+          case IntGTOp             => ctx.mkGt (arithArgs(0), arithArgs(1))
+          case IntGEOp             => ctx.mkGe (arithArgs(0), arithArgs(1))
+          case IntAddOp            => ctx.mkAdd (arithArgs : _*)
+          case IntSubOp            => ctx.mkSub (arithArgs: _*)
+          case IntMulOp            => ctx.mkMul (arithArgs : _*)
+          case BVLTOp(_)           => ctx.mkBVSLT(bvArgs(0), bvArgs(1))
+          case BVLEOp(_)           => ctx.mkBVSLE(bvArgs(0), bvArgs(1))
+          case BVGTOp(_)           => ctx.mkBVSGT(bvArgs(0), bvArgs(1))
+          case BVGEOp(_)           => ctx.mkBVSGE(bvArgs(0), bvArgs(1))
+          case BVAddOp(_)          => ctx.mkBVAdd(bvArgs(0), bvArgs(1))
+          case BVSubOp(_)          => ctx.mkBVSub(bvArgs(0), bvArgs(1))
+          case BVMulOp(_)          => ctx.mkBVMul(bvArgs(0), bvArgs(1))
+          case NegationOp          => ctx.mkNot (boolArgs(0))
+          case IffOp               => ctx.mkIff (boolArgs(0), boolArgs(1))
+          case ImplicationOp       => ctx.mkImplies (boolArgs(0), boolArgs(1))
+          case EqualityOp          => ctx.mkEq (boolArgs(0), boolArgs(1))
+          case ConjunctionOp       => ctx.mkAnd (boolArgs : _*)
+          case DisjunctionOp       => ctx.mkOr (boolArgs : _*)
+          case RecordSelectOp(fld) =>
+            val tupleType = operands(0).typ.asInstanceOf[TupleType]
+            val fieldIndex = tupleType.fieldIndex(fld)
+            val tupleSort = getTupleSort(tupleType.types)
+            tupleSort.getFieldDecls()(fieldIndex).apply(exprArgs(0))            
           case _             => throw new Utils.UnimplementedException("Operator not yet implemented: " + op.toString())
         }
       }
@@ -139,20 +146,18 @@ package uclid {
           case Symbol(id, typ) => 
             symbolToZ3(Symbol(id, typ))
           case OperatorApplication(op,operands) =>
-            opToZ3(op, operands.map((arg) => exprToZ3(arg)))
-          case ArraySelectOperation(e, index) => {
+            opToZ3(op, operands)
+          case ArraySelectOperation(e, index) =>
             val arrayType = e.typ.asInstanceOf[ArrayType]
             val arrayIndexType = arrayType.inTypes
             val indexTuple = getTuple(index.map((arg) => exprToZ3(arg)), arrayIndexType)
             ctx.mkSelect(exprToZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple)
-          }
-          case ArrayStoreOperation(e, index, value) => {
+          case ArrayStoreOperation(e, index, value) =>
             val arrayType = e.typ.asInstanceOf[ArrayType]
             val arrayIndexType = arrayType.inTypes
             val indexTuple = getTuple(index.map((arg) => exprToZ3(arg)), arrayIndexType)
             val data = exprToZ3(value).asInstanceOf[z3.Expr]
             ctx.mkStore(exprToZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple, data)
-          }
           case FunctionApplication(e, args) =>
             throw new Utils.UnimplementedException("Not implemented.")
           case ITE(e,t,f) =>
@@ -162,8 +167,11 @@ package uclid {
           case IntLit(i) => getIntLit(i)
           case BitVectorLit(bv,w) => getBitVectorLit(bv, w)
           case BooleanLit(b) => getBoolLit(b)
+          case MakeTuple(args) => 
+            val tupleSort = getTupleSort(args.map(_.typ))
+            tupleSort.mkDecl().apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
           case _ =>
-            throw new RuntimeException("Error!")
+            throw new Utils.UnimplementedException("No translation for expression yet: " + e.toString)
         }
         if (z3AST.isInstanceOf[z3.Expr]) z3AST.asInstanceOf[z3.Expr].simplify()
         else z3AST

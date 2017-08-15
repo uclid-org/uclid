@@ -47,6 +47,11 @@ package uclid {
     }
     
     case class TupleType(types: List[Type]) extends Type {
+      val fieldNames = (1 to types.length).map("_" + _.toString)
+      val fields = fieldNames zip types
+      def fieldType(name: String) : Option[Type] = fields.find((p) => p._1 == name).flatMap((f) => Some(f._2))
+      def hasField(name: String) : Boolean = fields.find((p) => p._1 == name).isDefined
+      def fieldIndex(name: String) : Int = fields.indexWhere((p) => p._1 == name)
       override def toString = "tuple [" + types.tail.fold(types.head.toString)
                               { (acc, i) => acc + ", " + i.toString } + "]"
       override def isTuple = true
@@ -136,55 +141,55 @@ package uclid {
       override def fixity = { INFIX }
     }
     
-    object IffOp extends BoolResultOp { 
+    case object IffOp extends BoolResultOp { 
       override def toString = "<==>"
       override def typeCheck (args: List[Expr]) = {
         Utils.assert(args.size == 2, "Iff must have two operands.")
         Utils.assert(args.forall(op => op.typ.isBool), "Iff operands must be boolean.")
       }
     }
-    object ImplicationOp extends BoolResultOp { 
+    case object ImplicationOp extends BoolResultOp { 
       override def toString  = "==>" 
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
     }
-    object ConjunctionOp extends BoolResultOp { 
+    case object ConjunctionOp extends BoolResultOp { 
       override def toString = "/\\" 
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
     }
-    object DisjunctionOp extends BoolResultOp { 
+    case object DisjunctionOp extends BoolResultOp { 
       override def toString = "\\/" 
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
     }
-    object NegationOp extends BoolResultOp { 
+    case object NegationOp extends BoolResultOp { 
       override def toString = "not" 
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 1); checkAllArgTypes(args, BoolType.t) }
       override def fixity = PREFIX
     }
-    object EqualityOp extends BoolResultOp { 
+    case object EqualityOp extends BoolResultOp { 
       override def toString = "=" 
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
     }
-    object InequalityOp extends BoolResultOp {
+    case object InequalityOp extends BoolResultOp {
       override def toString = "distinct"
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
     }
     // Integer comparison.
-    object IntLTOp extends BoolResultOp { 
+    case object IntLTOp extends BoolResultOp { 
       override def toString = "<"
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
       override def fixity = PREFIX
     }
-    object IntLEOp extends BoolResultOp { 
+    case object IntLEOp extends BoolResultOp { 
       override def toString = "<=" 
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
       override def fixity = PREFIX
     }
-    object IntGTOp extends BoolResultOp { 
+    case object IntGTOp extends BoolResultOp { 
       override def toString = ">" 
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
       override def fixity = PREFIX
     }
-    object IntGEOp extends BoolResultOp { 
+    case object IntGEOp extends BoolResultOp { 
       override def toString = ">=" 
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
       override def fixity = PREFIX
@@ -210,7 +215,29 @@ package uclid {
       override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
       override def fixity = PREFIX
     }
-    
+    case class RecordSelectOp(name : String) extends Operator {
+      override def toString = "get-field " + name
+      override def typeCheck(args: List[Expr]) : Unit = { 
+        checkNumArgs(args, 1);
+        Utils.assert(args(0).typ.isInstanceOf[TupleType], "Argument to record select must be a tuple.")
+        Utils.assert(args(0).typ.asInstanceOf[TupleType].hasField(name), "Field '" + name + "' does not exist in tuple.")
+      }
+      def resultType(args: List[Expr]) : Type = {
+        args(0).typ.asInstanceOf[TupleType].fieldType(name).get
+      }
+      override def fixity = PREFIX
+    }
+    case class RecordUpdateOp(name: String) extends Operator {
+      override def toString = "update-field " + name
+      override def typeCheck(args: List[Expr]) : Unit = {
+        checkNumArgs(args, 2)
+        Utils.assert(args(0).typ.isInstanceOf[TupleType], "Argument to record update must be a tuple.")
+        val tupleType = args(0).typ.asInstanceOf[TupleType]
+        Utils.assert(tupleType.hasField(name), "Field '" + name + "' does not exist in tuple.")
+      }
+      def resultType(args: List[Expr]) : Type = args(0).typ
+      override def fixity = PREFIX
+    }
     // Expressions
     abstract class Expr(exprType: Type) {
       val typ = exprType
@@ -233,6 +260,11 @@ package uclid {
     
     case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {
       override def toString = id.toString
+    }
+
+    // Tuple creation.
+    case class MakeTuple(args: List[Expr]) extends Expr (TupleType.t(args.map(_.typ))) {
+      override def toString = "(mk-tuple " + Utils.join(args.map(_.toString), " ") + ")" 
     }
     
     

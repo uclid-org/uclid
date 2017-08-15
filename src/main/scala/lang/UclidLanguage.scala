@@ -220,24 +220,32 @@ case class EnumType(ids: List[Identifier]) extends Type {
 }
 abstract sealed class ProductType extends Type {
   override def isProduct = true
+  def fields : List[(Identifier, Type)]
+  def numFields : Int = fields.length
+  def fieldType(i : Int) : Option[Type] = {
+    if (i >= 0 && i < fields.length) Some(fields(i)._2)
+    else None
+  }
+  def fieldType(fieldName : Identifier) : Option[Type] = {
+    fieldIndex(fieldName) match {
+      case -1 => None
+      case i  => Some(fields(i)._2)
+    }
+  }
+  def fieldIndex(name : Identifier) : Int = fields.indexWhere((p) => p._1 == name)
+  def hasField(fieldName : Identifier) : Boolean = {
+    fieldIndex(fieldName) != -1
+  }
 }
 case class TupleType(fieldTypes: List[Type]) extends ProductType {
+  override def fields = fieldTypes.zipWithIndex.map(p  => (Identifier("_" + (p._2+1).toString), p._1))  
   override def toString = "{" + Utils.join(fieldTypes.map(_.toString), ", ") + "}"
-  def numFields = fieldTypes.length
   override def isTuple = true
 }
-case class RecordType(fields: List[(Identifier,Type)]) extends ProductType {
-  Utils.assert(Utils.allUnique(fields.map(_._1)), "Record field names must be unique.")
-  def fieldType(fieldName: Identifier) : Option[Type] = {
-    fields.find((f) => f._1 == fieldName).flatMap((fp) => Some(fp._2))
-  }
-  def hasField(fieldName: Identifier) : Boolean = {
-    fields.exists((f) => f._1 == fieldName)
-  }
-  def fieldIndex(fieldName: Identifier) : Int = {
-    fields.indexWhere((f) => f._1 == fieldName)
-  }
-  def numFields = fields.length
+
+case class RecordType(fields_ : List[(Identifier,Type)]) extends ProductType {
+  Utils.assert(Utils.allUnique(fields_.map(_._1)), "Record field names must be unique.")
+  override def fields = fields_
   override def toString = "record {" + Utils.join(fields.map((f) => f._1.toString + " : " + f._2.toString), ", ")  + "}"
   override def isRecord = true
   override def matches(t2 : Type) : Boolean = {

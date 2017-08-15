@@ -247,12 +247,12 @@ object UclidSemanticAnalyzer {
     lhs.recordSelect match {
       case Some(rs) => 
         Utils.assert(transitiveType(intermediateType,c).isProduct, 
-            "Expected record type: " + intermediateType)
-        rs.foreach { field =>
-          transitiveType(intermediateType,c).asInstanceOf[RecordType].fields.find(i => i._1.value == field.value) 
-              match { case Some(field_type) => intermediateType = field_type._2
-                      case None => Utils.assert(false, "Should not get here") }
-        }
+            "Expected product type when assigning to field: " + intermediateType)
+        rs.foreach((field) => { 
+          val productType = intermediateType.asInstanceOf[ProductType]
+          Utils.assert(productType.hasField(field), "Field " + field + " not found.")
+          intermediateType = transitiveType(productType.fieldType(field).get, c)
+        })
         return intermediateType
       case None => return intermediateType
     }
@@ -273,14 +273,12 @@ object UclidSemanticAnalyzer {
     }
     lhs.recordSelect match {
       case Some(rs) => 
-        Utils.assert(intermediateType.isInstanceOf[RecordType], "Expected record type: " + intermediateType)
-        rs.foreach { field => 
-          Utils.assert(intermediateType.asInstanceOf[RecordType].fields.
-              exists { i => i._1.value == field.value }, "Field " + field + " not found")
-          intermediateType.asInstanceOf[RecordType].fields.find(i => i._1.value == field.value) 
-              match { case Some(y) => intermediateType = transitiveType(y._2,c)
-                      case None => Utils.assert(false, "Should not get here") }
-        }
+        Utils.assert(intermediateType.isProduct, "Expected product type when assigning to field: " + intermediateType)
+        rs.foreach((field) => { 
+          val productType = intermediateType.asInstanceOf[ProductType]
+          Utils.assert(productType.hasField(field), "Field " + field + " not found.")
+          intermediateType = transitiveType(productType.fieldType(field).get, c)
+        })
       case None => ()
     }
   }
@@ -375,7 +373,7 @@ object UclidSemanticAnalyzer {
             throw new Utils.RuntimeError("Polymorphic operators not expected here.")
           case IntAddOp() | IntSubOp() | IntMulOp() | BVAddOp(_) | BVSubOp(_) | BVMulOp(_) => {
             Utils.assert(types.size == 2, "Expected two arguments to arithmetic operators.")
-            Utils.assert(types(0) == types(1), "Operands to arithmetic operators must be of the same type.")
+            Utils.assert(types(0) == types(1), "Operands to arithmetic operators must be of the same type in expression: " + e.toString + ". Types are " + types(0).toString + " and " + types(1).toString + ".")
             (types.head._1, temporalArgs)
           }
           // FIXME: Remove these polymorphic operators.
@@ -414,9 +412,9 @@ object UclidSemanticAnalyzer {
           }
           case RecordSelect(r) => {
             Utils.assert(types.size == 1, "Incorrect number of operands to record select. ")
-            Utils.assert(types(0)._1.isInstanceOf[RecordType], "Operand to record select must be record.")
-            val recType = (types(0)._1.asInstanceOf[RecordType], types(0)._2)
-            Utils.assert(recType._1.hasField(r), "Field '" + r + "' does not exist in record.")
+            Utils.assert(types(0)._1.isProduct, "Operand to record select must be a product type.")
+            val recType = (types(0)._1.asInstanceOf[ProductType], types(0)._2)
+            Utils.assert(recType._1.hasField(r), "Field '" + r + "' does not exist in product type.")
             (recType._1.fieldType(r).get, recType._2)
           }
           case _ => {
