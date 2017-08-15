@@ -11,6 +11,7 @@ module test {
   next {
     call (a, b) := fib(a, b);
     assert (a <= b);
+    assert (a < b);
   }
   
   control {

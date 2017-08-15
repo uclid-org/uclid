@@ -1,13 +1,10 @@
 package uclid {
   import scala.util.parsing.combinator._
   import scala.collection.immutable._
-  import java.nio.file.{Paths, Files}
-  import java.nio.charset.StandardCharsets
-  import scala.sys.process._
   import uclid.lang._
   import lang.UclidSemanticAnalyzer
   import lang.UclModule
-  import lang.UclIdentifier
+  import lang.Identifier
   
   /**
    * Created by Rohit Sinha on 5/23/15.
@@ -46,7 +43,7 @@ package uclid {
       return UclidOptions(help, mainModule, srcFiles)
     }
     
-    type ModuleMap = Map[UclIdentifier, UclModule]
+    type ModuleMap = Map[Identifier, UclModule]
   
     val usage = """
       Usage: UclidMain [options] filename [filenames]
@@ -63,7 +60,7 @@ package uclid {
         sys.exit(0)
       }
       val modules = compile(opts.srcFiles)
-      val mainModuleName = UclIdentifier(opts.mainModule)
+      val mainModuleName = Identifier(opts.mainModule)
       Utils.assert(modules.contains(mainModuleName), "Main module (" + opts.mainModule + ") does not exist.")
       val mainModule = modules.get(mainModuleName)
       mainModule match {
@@ -73,7 +70,7 @@ package uclid {
     }
     
     def compile(srcFiles : List[String]) : ModuleMap = {
-      type NameCountMap = Map[UclIdentifier, Int]
+      type NameCountMap = Map[Identifier, Int]
       var modules : ModuleMap = Map()
       var nameCnt : NameCountMap = Map().withDefaultValue(0)
       
@@ -98,16 +95,13 @@ package uclid {
       //Control module
       println("Found main module: " + module.id)      
       val asserts = UclidSymbolicSimulator.simulate_steps(module,2)._2 //simulate for 2 steps
-      def getCurrentDirectory = new java.io.File( "." ).getCanonicalPath
       asserts.foreach { x => 
-        println("*************** Formula Start ***************")
-        var fmla : String = smt.Z3FormulaInterface.checkFormulaZ3(x)
-        println(fmla)
-        Files.write(Paths.get(getCurrentDirectory + "/tmp.z3"), fmla.getBytes(StandardCharsets.UTF_8))
-        //Process("z3 " + getCurrentDirectory + "/tmp.z3 -smt2")
-        val z3_output = "z3 " + getCurrentDirectory + "/tmp.z3 -smt2" !!;
-        println("Z3 says: " + z3_output)
-        println("*************** Formula End ***************")
+        var result = smt.Z3FileInterface.check(x)
+        result match {
+          case Some(false) => println("Assertion HOLDS.")
+          case Some(true)  => println("Assertion FAILED.")
+          case None        => println("Assertion INDETERMINATE.")
+        }
       }
     }
   }

@@ -3,14 +3,14 @@
 package uclid {
   package lang {
     class Context {
-      var procedures: Map[UclIdentifier, UclProcedureDecl] = _
-      var functions: Map[UclIdentifier, UclFunctionSig] = _
-      var variables: Map[UclIdentifier, UclType] = _
-      var inputs: Map[UclIdentifier, UclType] = _
-      var outputs: Map[UclIdentifier, UclType] = _
-      var constants: Map[UclIdentifier, UclType] = _
-      var specifications: Map[UclIdentifier, UclExpr] = _
-      var types : Map[UclIdentifier, UclType] = _
+      var procedures: Map[Identifier, UclProcedureDecl] = _
+      var functions: Map[Identifier, UclFunctionSig] = _
+      var variables: Map[Identifier, UclType] = _
+      var inputs: Map[Identifier, UclType] = _
+      var outputs: Map[Identifier, UclType] = _
+      var constants: Map[Identifier, UclType] = _
+      var specifications: Map[Identifier, Expr] = _
+      var types : Map[Identifier, UclType] = _
       var next: List[UclStatement] = _
       var init: List[UclStatement] = _
       
@@ -87,7 +87,7 @@ package uclid {
         return copy
       }
       
-      def externalDecls() : List[UclIdentifier] = {
+      def externalDecls() : List[Identifier] = {
         return this.constants.keys.toList ++ this.functions.keys.toList ++ this.inputs.keys.toList ++ 
           this.outputs.keys.toList ++ this.types.keys.toList ++ this.variables.keys.toList ++ 
           this.procedures.keys.toList ++ this.specifications.keys.toList
@@ -103,7 +103,7 @@ package uclid {
       
       def checkModule(m: UclModule, c: Context) : Unit = {
         //check module level stuff
-        def checkRedeclarationAndTypes(decls: Map[UclIdentifier, Any]) : Unit = {
+        def checkRedeclarationAndTypes(decls: Map[Identifier, Any]) : Unit = {
           decls.foreach(i => { Utils.assert(Utils.existsOnce(c.externalDecls(), i._1), 
               "Declaration " + i + " has conflicting name.") })
         }
@@ -118,7 +118,7 @@ package uclid {
       }
       
       def checkDecl(d: UclDecl, c: Context) : Unit = {
-        val externalDecls : List[UclIdentifier] = c.externalDecls()
+        val externalDecls : List[Identifier] = c.externalDecls()
         d match {
           case UclProcedureDecl(id,sig,decls,body) =>
             Utils.assert(Utils.allUnique(sig.inParams.map(i => i._1) ++ sig.outParams.map(i => i._1)),
@@ -175,7 +175,7 @@ package uclid {
        * Replaces type synonyms until only base types appear
        */
       def transitiveType(typ: UclType, c: Context) : UclType = {
-        val externalDecls : List[UclIdentifier] = c.externalDecls()
+        val externalDecls : List[Identifier] = c.externalDecls()
         if (typ.isInstanceOf[UclEnumType]) {
           return typ
         } else if (typ.isInstanceOf[UclRecordType]) {
@@ -195,7 +195,7 @@ package uclid {
       }
       
       def checkType(typ: UclType, c: Context) : Unit = {
-        val externalDecls : List[UclIdentifier] = c.externalDecls()
+        val externalDecls : List[Identifier] = c.externalDecls()
         if (typ.isInstanceOf[UclEnumType]) {
           typ.asInstanceOf[UclEnumType].ids.foreach { i => 
             Utils.assert(Utils.existsNone(externalDecls, i), "Enum " + typ + " has a redeclaration")
@@ -283,11 +283,11 @@ package uclid {
         }
       }
       
-      def assertNoTemporalType(t: (UclType, Boolean), e: UclExpr) : Unit = 
+      def assertNoTemporalType(t: (UclType, Boolean), e: Expr) : Unit = 
         Utils.assert(!t._2, "No temporal operators allowed in expression " + e)
       
       def checkStmt(s: UclStatement, c: Context) : Unit = {
-        val externalDecls : List[UclIdentifier] = c.externalDecls()
+        val externalDecls : List[Identifier] = c.externalDecls()
         s match {
           case UclAssertStmt(e) => checkExpr(e,c)
           case UclAssumeStmt(e) => checkExpr(e,c)
@@ -344,19 +344,19 @@ package uclid {
       /**
        * Returns the type and the fact whether the expression contains a temporal operator.
        */
-      def typeOf(e: UclExpr, c: Context) : (UclType, Boolean) = {
+      def typeOf(e: Expr, c: Context) : (UclType, Boolean) = {
         def assertBoolType(t: UclType) : Unit = {
           Utils.assert(transitiveType(t,c) == UclBoolType() || t == UclTemporalType(), 
               "Expected expression " + t + " to have type Bool (or be a temporal formula).")
         }
-        def typeOfBinaryBooleanOperator (l: UclExpr, r: UclExpr) : (UclType, Boolean) = {
+        def typeOfBinaryBooleanOperator (l: Expr, r: Expr) : (UclType, Boolean) = {
             val (typeL, tempL) = typeOf(l,c)
             assertBoolType(typeL)
             val (typeR, tempR) = typeOf(r,c)
             assertBoolType(typeR)
             return (UclBoolType(), tempL || tempR)
         }
-        def typeOfUnaryBooleanOperator(e: UclExpr) : (UclType, Boolean) = {
+        def typeOfUnaryBooleanOperator(e: Expr) : (UclType, Boolean) = {
           val (typeE, tempE) = typeOf(e,c)
           assertBoolType(typeE)
           return (UclBoolType(), tempE)
@@ -410,10 +410,10 @@ package uclid {
             }
             val temporal = types.exists { x => x._2}
             return (op match {
-                case UclLTOperator() | UclLEOperator() | UclGTOperator() | UclGEOperator() => UclBoolType()
-                case UclAddOperator() | UclMulOperator() => UclIntType()
-                case UclExtractOperator(_,_) => throw new Utils.UnimplementedException("bvextract unimplemented")
-                case UclConcatOperator() => throw new Utils.UnimplementedException("bvconcat unimplemented")
+                case LTOp() | LEOp() | GTOp() | GEOp() => UclBoolType()
+                case AddOp() | MulOp() => UclIntType()
+                case ExtractOp(_,_) => throw new Utils.UnimplementedException("bvextract unimplemented")
+                case ConcatOp() => throw new Utils.UnimplementedException("bvconcat unimplemented")
               },
               temporal)
           case UclArraySelectOperation(a,index) =>
@@ -459,14 +459,14 @@ package uclid {
             val t = typeOf(le,c2)
             Utils.assert(!t._2, "What do you need a Lambda expression with temporal type for!?")
             return (UclMapType(ids.map(i => i._2), t._1), false) //Lambda expr returns a map type
-          case UclIdentifier(id) => ((c.constants ++ c.variables ++ c.inputs ++ c.outputs)(UclIdentifier(id)), false)
-          case UclNumber(n) => (UclIntType(), false)
-          case UclBoolean(b) => (UclBoolType(), false)
+          case Identifier(id) => ((c.constants ++ c.variables ++ c.inputs ++ c.outputs)(Identifier(id)), false)
+          case IntLit(n) => (UclIntType(), false)
+          case BoolLit(b) => (UclBoolType(), false)
         }    
       }
       
-      def checkExpr(e: UclExpr, c: Context) : Unit = {
-        val externalDecls : List[UclIdentifier] = c.externalDecls()
+      def checkExpr(e: Expr, c: Context) : Unit = {
+        val externalDecls : List[Identifier] = c.externalDecls()
          e match { //check that all identifiers in e have been declared
            case UclBiImplication(l,r) => checkExpr(r,c); checkExpr(l,c);
            case UclImplication(l,r) => checkExpr(r,c); checkExpr(l,c);
@@ -499,7 +499,7 @@ package uclid {
              var c2: Context = c.copyContext()
              c2.inputs = c.inputs ++ (ids.map(i => i._1 -> i._2).toMap)
              checkExpr(le,c2);
-           case UclIdentifier(id) => 
+           case Identifier(id) => 
              Utils.assert((c.constants.keys ++ c.inputs.keys ++ c.outputs.keys ++ c.variables.keys).
              exists{i => i.value == id}, "Identifier " + id + " not found");
            case _ => ()

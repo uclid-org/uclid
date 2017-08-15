@@ -12,18 +12,18 @@ package uclid {
     import scala.collection.mutable.Map
     
     trait Type {
-     def isBool = { false }
-     def isInt = { false }
-     def isBitVector = { false }
-     def isMap = { false }
-     def isArray = { false }
+      def isBool = false
+      def isInt = false
+      def isBitVector = false
+      def isTuple = false
+      def isMap = false
+      def isArray = false
     }
     
     // The Boolean type.
     case class BoolType() extends Type { 
       override def toString = "bool" 
-      override def equals(other: Any) = other.isInstanceOf[BoolType]
-      override def isBool = { true }
+      override def isBool = true
     }
     object BoolType {
       val t = new BoolType
@@ -31,58 +31,46 @@ package uclid {
     // The integer type.
     case class IntType() extends Type { 
       override def toString = "int" 
-      override def equals(other: Any) = other.isInstanceOf[IntType]
-      override def isInt = { true }
+      override def isInt = true
     }
     object IntType {
       val t = new IntType
     }
-    
     // The bit-vector type.
     case class BitVectorType(width: Int) extends Type
     {
       override def toString = "bv" + (width.toString)
-      override def equals(other: Any) = other match {
-        case bvType : BitVectorType => (bvType.width == width)
-        case _                         => false
-      }
-      override def isBitVector = { true }
+      override def isBitVector = true
     }
     object BitVectorType {
-      var cache = scala.collection.mutable.Map[Int, BitVectorType]()
-      def t(width : Int) : BitVectorType = {
-        new BitVectorType(width)
-      }
+      val t = new Memo[Int, BitVectorType]((w : Int) => new BitVectorType(w))
+    }
+    
+    case class TupleType(types: List[Type]) extends Type {
+      override def toString = "tuple [" + types.tail.fold(types.head.toString)
+                              { (acc, i) => acc + ", " + i.toString } + "]"
+      override def isTuple = true
+    }
+    object TupleType {
+      val t = new Memo[List[Type], TupleType]((l : List[Type]) => new TupleType(l))
     }
     
     case class MapType(inTypes: List[Type], outType: Type) extends Type {
       override def toString = "map [" + inTypes.tail.fold(inTypes.head.toString)
-      { (acc,i) => acc + "," + i.toString } + "] " + outType
-      override def equals(other: Any) = other match {
-          case that: MapType =>
-            if (that.inTypes.size == this.inTypes.size) {
-              (that.outType == this.outType) && (that.inTypes zip this.inTypes).forall(i => i._1 == i._2)
-            } else { false }
-          case _ => false
-        }
+                              { (acc,i) => acc + "," + i.toString } + "] " + outType
       override def isMap = { true }
     }
     object MapType {
-      def t(inTypes: List[Type], outType: Type) = {
-        new MapType(inTypes, outType)
-      }
+      val t = new Memo[(List[Type], Type), MapType]((t: (List[Type],Type)) => new MapType(t._1, t._2))
     }
+    
     case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
       override def toString = "array [" + inTypes.tail.fold(inTypes.head.toString)
       { (acc,i) => acc + "," + i.toString } + "] " + outType
-      override def equals(other: Any) = other match {
-          case that: ArrayType =>
-            if (that.inTypes.size == this.inTypes.size) {
-              (that.outType == this.outType) && (that.inTypes zip this.inTypes).forall(i => i._1 == i._2)
-            } else { false }
-          case _ => false
-        }
       override def isArray = { true }
+    }
+    object ArrayType {
+      val t = new Memo[(List[Type], Type), ArrayType]((t: (List[Type],Type)) => new ArrayType(t._1, t._2))
     }
     
     object OperatorFixity extends scala.Enumeration {
@@ -239,5 +227,37 @@ package uclid {
       override def toString = "Lambda(" + ids + "). " + e.toString
     }
     
+    abstract class SolverInterface {
+      /** 
+       *  Helper function that finds the list of all symbols (constants in SMT parlance) in an expression. 
+       */
+      def findSymbols(e : Expr, syms : Set[Symbol]) : Set[Symbol] = {
+        e match {
+          case Symbol(_,_) =>
+            return syms + e.asInstanceOf[Symbol]
+          case OperatorApplication(op,operands) =>
+            return operands.foldLeft(syms)((acc,i) => findSymbols(i, acc))
+          case ArraySelectOperation(e, index) =>
+            return index.foldLeft(findSymbols(e, syms))((acc, i) => findSymbols(i, acc))
+          case ArrayStoreOperation(e, index, value) =>
+            return index.foldLeft(findSymbols(value, findSymbols(e, syms)))((acc,i) => findSymbols(i, acc))
+          case FunctionApplication(e, args) =>
+            return args.foldLeft(findSymbols(e, syms))((acc,i) => findSymbols(i, acc))
+          case ITE(e,t,f) =>
+            return findSymbols(e, syms) ++
+              findSymbols(t, Set()) ++
+              findSymbols(f, Set())
+          case Lambda(_,_) =>
+            throw new Exception("lambdas in assertions should have been beta-reduced")
+          case IntLit(_) => return Set.empty[Symbol]
+          case BitVectorLit(_,_) => return Set.empty[Symbol]
+          case BooleanLit(_) => return Set.empty[Symbol]
+        }
+      }
+      
+      def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set()) }
+      
+      def check(e : Expr) : Option[Boolean]
+    }
   }
 }

@@ -81,7 +81,7 @@ package uclid {
         KwDefineProp, TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
         TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
     
-      lazy val ast_binary: UclExpr ~ String ~ UclExpr => UclExpr = {
+      lazy val ast_binary: Expr ~ String ~ Expr => Expr = {
         case x ~ TemporalOpUntil   ~ y => UclTemporalOpUntil(x, y)
         case x ~ TemporalOpWUntil  ~ y => UclTemporalOpWUntil(x, y)
         case x ~ TemporalOpRelease ~ y => UclTemporalOpRelease(x, y)
@@ -89,85 +89,85 @@ package uclid {
         case x ~ OpImpl ~ y => UclImplication(x, y)
         case x ~ OpAnd ~ y => UclConjunction(x, y)
         case x ~ OpOr ~ y => UclDisjunction(x, y)
-        case x ~ OpLT ~ y => UclIFuncApplication(UclLTOperator(), List(x,y))
-        case x ~ OpGT ~ y => UclIFuncApplication(UclGTOperator(), List(x,y))
-        case x ~ OpLE ~ y => UclIFuncApplication(UclLEOperator(), List(x,y))
-        case x ~ OpGE ~ y => UclIFuncApplication(UclGEOperator(), List(x,y))
+        case x ~ OpLT ~ y => UclIFuncApplication(LTOp(), List(x,y))
+        case x ~ OpGT ~ y => UclIFuncApplication(GTOp(), List(x,y))
+        case x ~ OpLE ~ y => UclIFuncApplication(LEOp(), List(x,y))
+        case x ~ OpGE ~ y => UclIFuncApplication(GEOp(), List(x,y))
         case x ~ OpEQ ~ y => UclEquality(x, y)
         case x ~ OpNE ~ y => UclNegation(UclEquality(x, y))
-        case x ~ OpConcat ~ y => UclIFuncApplication(UclConcatOperator(), List(x,y))
-        case x ~ OpAdd ~ y => UclIFuncApplication(UclAddOperator(), List(x,y))
-        case x ~ OpMul ~ y => UclIFuncApplication(UclMulOperator(), List(x,y))
+        case x ~ OpConcat ~ y => UclIFuncApplication(ConcatOp(), List(x,y))
+        case x ~ OpAdd ~ y => UclIFuncApplication(AddOp(), List(x,y))
+        case x ~ OpMul ~ y => UclIFuncApplication(MulOp(), List(x,y))
       }
     
       lazy val RelOp: Parser[String] = OpGT | OpLT | OpEQ | OpNE | OpGE | OpLE
       lazy val UnOp: Parser[String] = OpNeg | OpMinus
-      lazy val RecordSelectOp: Parser[UclIdentifier] = ("." ~> Id)
-      lazy val ArraySelectOp: Parser[List[UclExpr]] =
+      lazy val RecordSelectOp: Parser[Identifier] = ("." ~> Id)
+      lazy val ArraySelectOp: Parser[List[Expr]] =
         ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ 
         {case e ~ es => (e :: es)}
-      lazy val ArrayStoreOp: Parser[(List[UclExpr],UclExpr)] =
+      lazy val ArrayStoreOp: Parser[(List[Expr],Expr)] =
         ("[" ~> (Expr ~ rep("," ~> Expr) ~ (":=" ~> Expr)) <~ "]") ^^ 
         {case e ~ es ~ r => (e :: es, r)}
-      lazy val ExtractOp: Parser[UclExtractOperator] =
-        ("[" ~> Number ~ ":" ~ Number <~ "]") ^^ { case x ~ ":" ~ y => UclExtractOperator(x, y) }
-      lazy val Id: PackratParser[UclIdentifier] = ident ^^ {case i => UclIdentifier(i)}
-      lazy val Bool: PackratParser[UclBoolean] =
-        "false" ^^ { _ => UclBoolean(false) } | "true" ^^ { _ => UclBoolean(true) }
-      lazy val Number: PackratParser[UclNumber] = numericLit ^^ { case i => UclNumber(BigInt(i)) }
+      lazy val ExtractOp: Parser[ExtractOp] =
+        ("[" ~> Number ~ ":" ~ Number <~ "]") ^^ { case x ~ ":" ~ y => lang.ExtractOp(x, y) }
+      lazy val Id: PackratParser[Identifier] = ident ^^ {case i => Identifier(i)}
+      lazy val Bool: PackratParser[BoolLit] =
+        "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) }
+      lazy val Number: PackratParser[IntLit] = numericLit ^^ { case i => IntLit(BigInt(i)) }
     //  lazy val Bitvector: PackratParser[UclBitVector] = (numericLit ~ "bv" ~ numericLit) ^^
     //    { case h ~ "bv" ~ l => UclBitVector(h.toInt, l.toInt) }
     
-      lazy val TemporalExpr0: PackratParser[UclExpr] = 
+      lazy val TemporalExpr0: PackratParser[Expr] = 
           TemporalExpr1 ~ TemporalOpUntil  ~ TemporalExpr0 ^^ ast_binary | TemporalExpr1 
-      lazy val TemporalExpr1: PackratParser[UclExpr] =
+      lazy val TemporalExpr1: PackratParser[Expr] =
         TemporalExpr2 ~ TemporalOpWUntil  ~ TemporalExpr1 ^^ ast_binary | TemporalExpr2
-      lazy val TemporalExpr2: PackratParser[UclExpr] =
+      lazy val TemporalExpr2: PackratParser[Expr] =
         TemporalExpr3 ~ TemporalOpRelease  ~ TemporalExpr2 ^^ ast_binary | TemporalExpr3
-      lazy val TemporalExpr3: PackratParser[UclExpr] = 
+      lazy val TemporalExpr3: PackratParser[Expr] = 
         TemporalOpFinally ~> TemporalExpr4 ^^ { case expr => UclTemporalOpFinally(expr) } | TemporalExpr4
-      lazy val TemporalExpr4: PackratParser[UclExpr] = 
+      lazy val TemporalExpr4: PackratParser[Expr] = 
         TemporalOpGlobally ~> TemporalExpr5 ^^ { case expr => UclTemporalOpGlobally(expr) } | TemporalExpr5
-      lazy val TemporalExpr5: PackratParser[UclExpr] = 
+      lazy val TemporalExpr5: PackratParser[Expr] = 
         TemporalOpNext ~> E0 ^^ { case expr => UclTemporalOpNext(expr) } | E0
         
       /** E0 := E1 OpEquiv E0 | E1  **/
-      lazy val E0: PackratParser[UclExpr] = E1 ~ OpBiImpl ~ E0 ^^ ast_binary | E1
+      lazy val E0: PackratParser[Expr] = E1 ~ OpBiImpl ~ E0 ^^ ast_binary | E1
       /** E1 := E2 OpImpl E1 | E2  **/
-      lazy val E1: PackratParser[UclExpr] = E2 ~ OpImpl ~ E1 ^^ ast_binary | E2
+      lazy val E1: PackratParser[Expr] = E2 ~ OpImpl ~ E1 ^^ ast_binary | E2
       /** E2 := E3 OpAnd E2 | E3 OpOr E2 | E3 **/
-      lazy val E2: PackratParser[UclExpr] = E3 ~ OpAnd ~ E2 ^^ ast_binary | E3 ~ OpOr ~ E2 ^^ ast_binary | E3
+      lazy val E2: PackratParser[Expr] = E3 ~ OpAnd ~ E2 ^^ ast_binary | E3 ~ OpOr ~ E2 ^^ ast_binary | E3
       /** E3 := E4 OpRel E3 | E4  **/
-      lazy val E3: PackratParser[UclExpr] = E4 ~ RelOp ~ E4 ^^ ast_binary | E4
+      lazy val E3: PackratParser[Expr] = E4 ~ RelOp ~ E4 ^^ ast_binary | E4
       /** E4 := E5 OpConcat E4 | E5 **/
-      lazy val E4: PackratParser[UclExpr] = E5 ~ OpConcat ~ E4 ^^ ast_binary | E5
+      lazy val E4: PackratParser[Expr] = E5 ~ OpConcat ~ E4 ^^ ast_binary | E5
       /** E5 := E6 OpAdd E5 | E6 **/
-      lazy val E5: PackratParser[UclExpr] = E6 ~ OpAdd ~ E5 ^^ ast_binary | E6
+      lazy val E5: PackratParser[Expr] = E6 ~ OpAdd ~ E5 ^^ ast_binary | E6
       /** E6 := E7 OpMul E6 | E7 **/
-      lazy val E6: PackratParser[UclExpr] = E7 ~ OpMul ~ E6 ^^ ast_binary | E7
+      lazy val E6: PackratParser[Expr] = E7 ~ OpMul ~ E6 ^^ ast_binary | E7
       /** E7 := UnOp E8 | E8 **/
-      lazy val E7: PackratParser[UclExpr] = OpNeg ~> E8 ^^ { case e => UclNegation(e) } | E8
+      lazy val E7: PackratParser[Expr] = OpNeg ~> E8 ^^ { case e => UclNegation(e) } | E8
       /** E8 := E9 MapOp | E9 **/
-      lazy val E8: PackratParser[UclExpr] =
+      lazy val E8: PackratParser[Expr] =
           E9 ~ ExprList ^^ { case e ~ f => UclFuncApplication(e, f) } |
           E9 ~ ArraySelectOp ^^ { case e ~ m => UclArraySelectOperation(e, m) } |
           E9 ~ ArrayStoreOp ^^ { case e ~ m => UclArrayStoreOperation(e, m._1, m._2) } |
           E9 ~ ExtractOp ^^ { case e ~ m => UclIFuncApplication(m, List(e)) } |
           E9
       /** E9 := false | true | Number | Bitvector | Id FuncApplication | (Expr) **/
-      lazy val E9: PackratParser[UclExpr] =
+      lazy val E9: PackratParser[Expr] =
           Bool |
           Number |
-          "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => UclRecord(e::es)} |
+          "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Record(e::es)} |
           KwITE ~> ("(" ~> Expr ~ ("," ~> Expr) ~ ("," ~> Expr) <~ ")") ^^ { case e ~ t ~ f => UclITE(e,t,f) } |
           KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => UclLambda(idtyps, expr) } |
           "(" ~> Expr <~ ")" |
           Id
       /** Expr := TemporalExpr0 **/
-      lazy val Expr: PackratParser[UclExpr] = TemporalExpr0
-      lazy val ExprList: Parser[List[UclExpr]] =
+      lazy val Expr: PackratParser[Expr] = TemporalExpr0
+      lazy val ExprList: Parser[List[Expr]] =
         ("(" ~> Expr ~ rep("," ~> Expr) <~ ")") ^^ { case e ~ es => e::es } |
-        "(" ~> ")" ^^ { case _ => List.empty[UclExpr] }
+        "(" ~> ")" ^^ { case _ => List.empty[Expr] }
     
       /** Examples of allowed types are bool | int | [int,int,bool] int **/
       lazy val PrimitiveType : PackratParser[UclType] =
@@ -187,12 +187,12 @@ package uclid {
       lazy val Type : PackratParser[UclType] = 
         MapType | ArrayType | EnumType | RecordType | PrimitiveType | SynonymType
     
-      lazy val IdType : PackratParser[(UclIdentifier,UclType)] =
+      lazy val IdType : PackratParser[(Identifier,UclType)] =
         Id ~ (":" ~> Type) ^^ { case id ~ typ => (id,typ)}
     
-      lazy val IdTypeList : PackratParser[List[(UclIdentifier,UclType)]] =
+      lazy val IdTypeList : PackratParser[List[(Identifier,UclType)]] =
         "(" ~> IdType ~ (rep ("," ~> IdType) <~ ")") ^^ { case t ~ ts =>  t :: ts} |
-        "(" ~ ")" ^^ { case _~_ => List.empty[(UclIdentifier,UclType)] }
+        "(" ~ ")" ^^ { case _~_ => List.empty[(Identifier,UclType)] }
     
       lazy val Lhs : PackratParser[UclLhs] =
         Id ~ ArraySelectOp ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ 
@@ -205,7 +205,7 @@ package uclid {
         ("(" ~> Lhs ~ rep("," ~> Lhs) <~ ")") ^^ { case l ~ ls => l::ls } |
         "(" ~> ")" ^^ { case _ => List.empty[UclLhs] }
     
-      lazy val RangeExpr: PackratParser[(UclNumber,UclNumber)] =
+      lazy val RangeExpr: PackratParser[(IntLit,IntLit)] =
         KwRange ~> ("(" ~> Number ~ ("," ~> Number) <~ ")") ^^ { case x ~ y => (x,y) }
     
       lazy val LocalVarDecl : PackratParser[UclLocalVarDecl] =
@@ -227,7 +227,7 @@ package uclid {
         KwFor ~> (Id ~ (KwIn ~> RangeExpr) ~ BlockStatement) ^^
           { case id ~ r ~ body => UclForStmt(id, r, body) }
         
-      lazy val CaseBlockStmt: PackratParser[(UclExpr, List[UclStatement])] = 
+      lazy val CaseBlockStmt: PackratParser[(Expr, List[UclStatement])] = 
         Expr ~ (":" ~> BlockStatement) ^^ { case e ~ ss => (e,ss) }
       lazy val BlockStatement: PackratParser[List[UclStatement]] = "{" ~> rep (Statement) <~ "}"
     
@@ -238,7 +238,7 @@ package uclid {
             UclProcedureDecl(id, UclProcedureSig(args,outs), decls, body) } |
         KwProcedure ~> Id ~ IdTypeList ~ ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
           { case id ~ args ~ decls ~ body => 
-            UclProcedureDecl(id, UclProcedureSig(args, List.empty[(UclIdentifier,UclType)]), decls, body) }
+            UclProcedureDecl(id, UclProcedureSig(args, List.empty[(Identifier,UclType)]), decls, body) }
     
       lazy val TypeDecl : PackratParser[UclTypeDecl] =
         KwType ~> Id ~ ("=" ~> Type) <~ ";" ^^ { case id ~ t => UclTypeDecl(id,t) }
@@ -294,7 +294,7 @@ package uclid {
     
       lazy val Model: PackratParser[List[UclModule]] = rep(Module) 
         
-      def parseExpr(input: String): UclExpr = {
+      def parseExpr(input: String): Expr = {
         val tokens = new PackratReader(new lexical.Scanner(input))
         phrase(Expr)(tokens) match {
           case Success(ast, _) => ast

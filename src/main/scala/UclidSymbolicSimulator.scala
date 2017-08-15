@@ -11,33 +11,33 @@ package uclid {
   import lang.UclSkipStmt
   import lang.UclProcedureDecl
   import lang.UclProcedureCallStmt
-  import lang.UclOperator
-  import lang.UclNumber
+  import lang.Operator
+  import lang.IntLit
   import lang.UclNegation
-  import lang.UclMulOperator
+  import lang.MulOp
   import lang.UclModule
   import lang.UclMapType
   import lang.UclLhs
   import lang.UclLambda
-  import lang.UclLTOperator
-  import lang.UclLEOperator
+  import lang.LTOp
+  import lang.LEOp
   import lang.UclIntType
   import lang.UclImplication
   import lang.UclIfElseStmt
-  import lang.UclIdentifier
+  import lang.Identifier
   import lang.UclITE
   import lang.UclIFuncApplication
   import lang.UclHavocStmt
-  import lang.UclGTOperator
-  import lang.UclGEOperator
+  import lang.GTOp
+  import lang.GEOp
   import lang.UclFuncApplication
   import lang.UclForStmt
-  import lang.UclExpr
+  import lang.Expr
   import lang.UclEquality
   import lang.UclDisjunction
   import lang.UclConjunction
   import lang.UclCaseStmt
-  import lang.UclBoolean
+  import lang.BoolLit
   import lang.UclBoolType
   import lang.UclBiImplication
   import lang.UclAssumeStmt
@@ -46,7 +46,7 @@ package uclid {
   import lang.UclArrayType
   import lang.UclArrayStoreOperation
   import lang.UclArraySelectOperation
-  import lang.UclAddOperator
+  import lang.AddOp
   
   object UniqueIdGenerator {
     var i : Int = 0;
@@ -56,7 +56,7 @@ package uclid {
   object UclidSymbolicSimulator {
     var asserts : List[smt.Expr] = List.empty
     
-    type SymbolTable = Map[UclIdentifier, smt.Expr];
+    type SymbolTable = Map[Identifier, smt.Expr];
     
     def newHavocSymbol(name: String, t: smt.Type) = 
       new smt.Symbol("_ucl_" + UniqueIdGenerator.unique() + "_" + name, t)
@@ -119,14 +119,14 @@ package uclid {
       }
     }
     
-    def toSMT(op: UclOperator, c: Context) : smt.Operator = {
+    def toSMT(op: Operator, c: Context) : smt.Operator = {
       op match {
-        case UclLTOperator() => return smt.IntLTOp
-        case UclLEOperator() => return smt.IntLEOp
-        case UclGTOperator() => return smt.IntGTOp
-        case UclGEOperator() => return smt.IntGEOp
-        case UclAddOperator() => return smt.IntAddOp
-        case UclMulOperator() => return smt.IntMulOp
+        case LTOp() => return smt.IntLTOp
+        case LEOp() => return smt.IntLEOp
+        case GTOp() => return smt.IntGTOp
+        case GEOp() => return smt.IntGEOp
+        case AddOp() => return smt.IntAddOp
+        case MulOp() => return smt.IntMulOp
       }
     }
     
@@ -173,8 +173,8 @@ package uclid {
           val es = rhss.map(i => evaluate(i, symbolTable, c));
           return simulateAssign(lhss, es, symbolTable)
         case UclIfElseStmt(e,then_branch,else_branch) =>
-          var then_modifies : Set[UclIdentifier] = writeSet(then_branch,c)
-          var else_modifies : Set[UclIdentifier] = writeSet(else_branch,c)
+          var then_modifies : Set[Identifier] = writeSet(then_branch,c)
+          var else_modifies : Set[Identifier] = writeSet(else_branch,c)
           //compute in parallel
           var then_st : SymbolTable = simulate(then_branch, symbolTable, c)
           var else_st : SymbolTable = simulate(else_branch, symbolTable, c)
@@ -202,8 +202,8 @@ package uclid {
       }
     }
     
-    def writeSet(stmts: List[UclStatement], c: Context) : Set[UclIdentifier] = {
-      def stmtWriteSet(stmt: UclStatement, c: Context) : Set[UclIdentifier] = stmt match {
+    def writeSet(stmts: List[UclStatement], c: Context) : Set[Identifier] = {
+      def stmtWriteSet(stmt: UclStatement, c: Context) : Set[Identifier] = stmt match {
         case UclSkipStmt() => Set.empty
         case UclAssertStmt(e) => Set.empty
         case UclAssumeStmt(e) => Set.empty
@@ -213,21 +213,21 @@ package uclid {
             var lhs_id : String = lhs.id.value;
             lhs.recordSelect match {
               case Some(rs) => throw new Utils.UnimplementedException("Unimplemented records in LHS")
-              case None => UclIdentifier(lhs_id)
+              case None => Identifier(lhs_id)
             }
           }.toSet
         case UclIfElseStmt(e,then_branch,else_branch) => 
           return writeSet(then_branch,c) ++ writeSet(else_branch,c)
         case UclForStmt(id, range, body) => return writeSet(body,c)
         case UclCaseStmt(body) => 
-          return body.foldLeft(Set.empty[UclIdentifier]) { (acc,i) => acc ++ writeSet(i._2,c) }
+          return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2,c) }
         case UclProcedureCallStmt(id,lhss,args) => return writeSet(c.procedures(id).body,c)
       }
-      return stmts.foldLeft(Set.empty[UclIdentifier]){(acc,s) => acc ++ stmtWriteSet(s,c)}
+      return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ stmtWriteSet(s,c)}
     }
   
     //TODO: get rid of this and use subtituteSMT instead
-    def substitute(e: UclExpr, id: UclIdentifier, arg: UclExpr) : UclExpr = {
+    def substitute(e: Expr, id: Identifier, arg: Expr) : Expr = {
        e match {
          case UclBiImplication(l,r) => 
            return UclBiImplication(substitute(l,id,arg), substitute(r,id,arg))
@@ -253,9 +253,9 @@ package uclid {
          case UclLambda(idtypes, le) =>
            Utils.assert(idtypes.exists(x => x._1.value == id.value), "Lambda arguments of the same name")
            return UclLambda(idtypes, substitute(le, id, arg))
-         case UclNumber(n) => return e
-         case UclBoolean(b) => return e
-         case UclIdentifier(i) => return (if (id.value == i) arg else e)
+         case IntLit(n) => return e
+         case BoolLit(b) => return e
+         case Identifier(i) => return (if (id.value == i) arg else e)
          case _ => throw new Utils.UnimplementedException("Should not get here")
        }
     }
@@ -282,7 +282,7 @@ package uclid {
        }
     }
   
-    def evaluate(e: UclExpr, symbolTable: SymbolTable, c: Context) : smt.Expr = {
+    def evaluate(e: Expr, symbolTable: SymbolTable, c: Context) : smt.Expr = {
        e match { //check that all identifiers in e have been declared
          case UclBiImplication(l,r) => 
            return smt.OperatorApplication(smt.IffOp, List(evaluate(l,symbolTable,c), evaluate(r,symbolTable,c)))
@@ -306,11 +306,11 @@ package uclid {
                index.map { x => evaluate(x,symbolTable,c) }, 
                evaluate(value, symbolTable,c))
          case UclFuncApplication(f,args) => f match {
-           case UclIdentifier(id) => 
-             if (c.constants.contains(UclIdentifier(id))) {
+           case Identifier(id) => 
+             if (c.constants.contains(Identifier(id))) {
                return smt.FunctionApplication(evaluate(f, symbolTable,c), args.map(i => evaluate(i,symbolTable,c))) 
-             } else if (c.variables.contains(UclIdentifier(id))) {
-               symbolTable(UclIdentifier(id)) match {
+             } else if (c.variables.contains(Identifier(id))) {
+               symbolTable(Identifier(id)) match {
                  case smt.Lambda(ids,e) => return (ids zip args.map(x => evaluate(x,symbolTable,c))).
                  foldLeft(e){(acc,x) => substituteSMT(acc, x._1, x._2)}
                }
@@ -326,9 +326,9 @@ package uclid {
            return smt.ITE(evaluate(cond,symbolTable,c), evaluate(t,symbolTable,c), evaluate(f,symbolTable,c))
          case UclLambda(ids,le) => 
            return smt.Lambda(ids.map(i => smt.Symbol(i._1.value, toSMT(i._2,c))), evaluate(le,symbolTable,c))
-         case UclNumber(n) => smt.IntLit(n)
-         case UclBoolean(b) => smt.BooleanLit(b)
-         case UclIdentifier(id) => symbolTable(UclIdentifier(id))
+         case IntLit(n) => smt.IntLit(n)
+         case BoolLit(b) => smt.BooleanLit(b)
+         case Identifier(id) => symbolTable(Identifier(id))
          case _ => throw new Utils.UnimplementedException("Should not get here")
       }
     }

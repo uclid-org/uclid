@@ -6,8 +6,14 @@
 package uclid {
   package smt {
     import uclid.Utils
+    import java.nio.file.{Paths, Files}
+    import java.nio.charset.StandardCharsets
+    import scala.sys.process._
     
-    object Z3FormulaInterface {
+    import scala.language.postfixOps
+
+  
+    object Z3FileInterface extends SolverInterface {
       def generateDeclaration(x: Symbol) : String = {
         def printType(t: Type) : String = {
           t match {
@@ -97,42 +103,25 @@ package uclid {
         }
       }
       
-      def checkFormulaZ3(e : Expr) : String = {
+      override def check(e : Expr) : Option[Boolean] = {
+        println("*************** Formula Start ***************")
         println("Asserting: " + e)
-        val symbols: Set[Symbol] = findSymbolicVariables(e);
+        val symbols: Set[Symbol] = findSymbols(e);
         val decl = symbols.foldLeft(""){(acc,x) => acc + generateDeclaration(x)}
         val datatypes = generateDatatypes(symbols)
-        val formula = "(assert (not " + translateExpr(e) + "))\n"
-        return datatypes + decl + formula + "(check-sat)\n"
-      }
-      
-      def findSymbolicVariables(es: List[Expr]) : Set[Symbol] = {
-        es.foldLeft(Set.empty[Symbol])((acc,i) => acc ++ findSymbolicVariables(i))
-      }
-      
-      def findSymbolicVariables(e : Expr) : Set[Symbol] = {
-        e match {
-          case Symbol(_,_) =>
-            return Set(e.asInstanceOf[Symbol])
-          case OperatorApplication(op,operands) =>
-            return findSymbolicVariables(operands)
-          case ArraySelectOperation(e, index) =>
-            return findSymbolicVariables(e) ++ findSymbolicVariables(index)
-          case ArrayStoreOperation(e, index, value) =>
-            return findSymbolicVariables(e) ++ 
-              findSymbolicVariables(index) ++ 
-              findSymbolicVariables(value)
-          case FunctionApplication(e, args) =>
-            return findSymbolicVariables(e) ++ findSymbolicVariables(args)
-          case ITE(e,t,f) =>
-            return findSymbolicVariables(e) ++
-              findSymbolicVariables(t) ++
-              findSymbolicVariables(f)
-          case Lambda(_,_) =>
-            throw new Exception("lambdas in assertions should have been beta-reduced")
-          case IntLit(_) => return Set.empty[Symbol]
-          case BitVectorLit(_,_) => return Set.empty[Symbol]
-          case BooleanLit(_) => return Set.empty[Symbol]
+        val assertion = "(assert (not " + translateExpr(e) + "))\n"
+        val formula = datatypes + decl + assertion + "(check-sat)\n"
+        def getCurrentDirectory = new java.io.File( "." ).getCanonicalPath
+
+        Files.write(Paths.get(getCurrentDirectory + "/tmp.z3"), formula.getBytes(StandardCharsets.UTF_8))
+        val z3_output = ("z3 " + getCurrentDirectory + "/tmp.z3 -smt2" !!).trim
+        println("z3 says: " + z3_output)
+        println("*************** Formula End ***************")
+        
+        return z3_output match {
+          case "sat" => Some(true)
+          case "unsat" => Some(false)
+          case _ => None
         }
       }
     }
