@@ -123,7 +123,7 @@ case class Tuple(values: List[Expr]) extends Expr {
   override def toString = "{" + Utils.join(values.map(_.toString), ", ") + "}"
 }
 //for symbols interpreted by underlying Theory solvers
-case class UclOperatorApplication(op: Operator, operands: List[Expr]) extends Expr {
+case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr {
   override def toString = {
     op match {
       case RecordSelect(r) => 
@@ -137,27 +137,27 @@ case class UclOperatorApplication(op: Operator, operands: List[Expr]) extends Ex
     }
   }
 }
-case class UclArraySelectOperation(e: Expr, index: List[Expr]) extends Expr {
+case class ArraySelectOperation(e: Expr, index: List[Expr]) extends Expr {
   override def toString = e + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i } + "]"
 }
-case class UclArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr {
+case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr {
   override def toString = e + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i } + "]" + " := " + value
 }
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
-case class UclFuncApplication(e: Expr, args: List[Expr]) extends Expr {
+case class FuncApplication(e: Expr, args: List[Expr]) extends Expr {
   override def toString = e + "(" + args.tail.fold(args.head.toString)
     { (acc,i) => acc + "," + i } + ")"
 }
-case class UclITE(e: Expr, t: Expr, f: Expr) extends Expr {
+case class ITE(e: Expr, t: Expr, f: Expr) extends Expr {
   override def toString = "ITE(" + e + "," + t + "," + f + ")"
 }
-case class UclLambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
+case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
   override def toString = "Lambda(" + ids + "). " + e
 }
 
-case class UclLhs(id: Identifier, 
+case class Lhs(id: Identifier, 
                   arraySelect: Option[List[Expr]], 
                   recordSelect: Option[List[Identifier]]) 
      extends ASTNode
@@ -256,54 +256,54 @@ case class SynonymType(id: Identifier) extends Type {
 }
 
 /** Statements **/
-sealed abstract class UclStatement extends ASTNode {
+sealed abstract class Statement extends ASTNode {
   override def toString = Utils.join(toLines, "\n") + "\n"
   def toLines : List[String]
 }
-case class UclSkipStmt() extends UclStatement {
+case class SkipStmt() extends Statement {
   override def toLines = List("skip;")
 }
-case class UclAssertStmt(e: Expr) extends UclStatement {
+case class AssertStmt(e: Expr) extends Statement {
   override def toLines = List("assert " + e + ";")
 }
-case class UclAssumeStmt(e: Expr) extends UclStatement {
+case class AssumeStmt(e: Expr) extends Statement {
   override def toLines = List("assume " + e + ";")
 }
-case class UclHavocStmt(id: Identifier) extends UclStatement {
+case class HavocStmt(id: Identifier) extends Statement {
   override def toLines = List("havoc " + id + ";")
 }
-case class UclAssignStmt(lhss: List[UclLhs], rhss: List[Expr]) extends UclStatement {
+case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines = 
     List(Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + ";")
 }
-case class UclIfElseStmt(cond: Expr, ifblock: List[UclStatement], elseblock: List[UclStatement]) extends UclStatement {
+case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Statement]) extends Statement {
   override def toLines = List("if " + cond.toString, "{") ++ 
                          ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
                          List("} else {") ++ 
                          elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
-case class UclForStmt(id: Identifier, range: (IntLit,IntLit), body: List[UclStatement])
-  extends UclStatement
+case class ForStmt(id: Identifier, range: (IntLit,IntLit), body: List[Statement])
+  extends Statement
 {
   override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {") ++ 
                          body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _)
 }
-case class UclCaseStmt(body: List[(Expr,List[UclStatement])]) extends UclStatement {
+case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
   override def toLines = List("case") ++
     body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _)} ++ 
     List("esac")
 }
-case class UclProcedureCallStmt(id: Identifier, callLhss: List[UclLhs], args: List[Expr])  extends UclStatement {
+case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr])  extends Statement {
   override def toLines = List("call (" +
     Utils.join(callLhss.map(_.toString), ", ") + ") := " + id + "(" +
     Utils.join(args.map(_.toString), ", ") + ")")
 }
 
-case class UclLocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
+case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
   override def toString = "var " + id + ": " + typ + ";"
 }
 
-case class UclProcedureSig(inParams: List[(Identifier,Type)], 
+case class ProcedureSig(inParams: List[(Identifier,Type)], 
                            outParams: List[(Identifier,Type)]) 
            extends ASTNode
 {
@@ -314,7 +314,7 @@ case class UclProcedureSig(inParams: List[(Identifier,Type)],
     "(" + Utils.join(inParams.map(printfn(_)), ", ") + ")" +
     " returns " + "(" + Utils.join(outParams.map(printfn(_)), ", ") + ")"
 }
-case class UclFunctionSig(args: List[(Identifier,Type)], retType: Type) extends ASTNode {
+case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends ASTNode {
   type T = (Identifier,Type)
   val typ = MapType(args.map(_._2), retType)
   val printfn = {(a: T) => a._1.toString + ": " + a._2}
@@ -322,64 +322,64 @@ case class UclFunctionSig(args: List[(Identifier,Type)], retType: Type) extends 
     ": " + retType
 }
 
-sealed abstract class UclDecl extends ASTNode
-case class UclProcedureDecl(id: Identifier, sig: UclProcedureSig, 
-    decls: List[UclLocalVarDecl], body: List[UclStatement]) extends UclDecl {
+sealed abstract class Decl extends ASTNode
+case class ProcedureDecl(id: Identifier, sig: ProcedureSig, 
+    decls: List[LocalVarDecl], body: List[Statement]) extends Decl {
   override def toString = "procedure " + id + sig + PrettyPrinter.indent(1) + "{\n" +
                           Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" + 
                           Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") + 
                           "\n" + PrettyPrinter.indent(1) + "}"
 }
-case class UclTypeDecl(id: Identifier, typ: Type) extends UclDecl {
+case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "type " + id + " = " + typ 
 }
-case class UclStateVarDecl(id: Identifier, typ: Type) extends UclDecl {
+case class StateVarDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "var " + id + ": " + typ + ";"
 }
-case class UclInputVarDecl(id: Identifier, typ: Type) extends UclDecl {
+case class InputVarDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "input " + id + ": " + typ + ";"
 }
-case class UclOutputVarDecl(id: Identifier, typ: Type) extends UclDecl {
+case class OutputVarDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "output " + id + ": " + typ + ";"
 }
-case class UclConstantDecl(id: Identifier, typ: Type) extends UclDecl {
+case class ConstantDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "constant " + id + ": " + typ + ";"
 }
-case class UclFunctionDecl(id: Identifier, sig: UclFunctionSig)
-extends UclDecl {
+case class FunctionDecl(id: Identifier, sig: FunctionSig)
+extends Decl {
   override def toString = "function " + id + sig + ";"
 }
-case class UclInitDecl(body: List[UclStatement]) extends UclDecl {
+case class InitDecl(body: List[Statement]) extends Decl {
   override def toString = 
     "init {\n" + 
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
     "\n" + PrettyPrinter.indent(1) + "}"
 }
-case class UclNextDecl(body: List[UclStatement]) extends UclDecl {
+case class NextDecl(body: List[Statement]) extends Decl {
   override def toString = 
     "next {\n" + 
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
     "\n" + PrettyPrinter.indent(1) + "}"
 }
-case class UclSpecDecl(id: Identifier, expr: Expr) extends UclDecl {
+case class SpecDecl(id: Identifier, expr: Expr) extends Decl {
   override def toString = "property " + id + ":" + expr + ";"
 }
 
 sealed abstract class UclCmd extends ASTNode
-case class UclInitializeCmd() extends UclCmd {
+case class InitializeCmd() extends UclCmd {
   override def toString = "initialize;"
 }
-case class UclUnrollCmd(steps : IntLit) extends UclCmd {
+case class UnrollCmd(steps : IntLit) extends UclCmd {
   override def toString = "unroll (" + steps.toString + ");"
 }
-case class UclSimulateCmd(steps : IntLit) extends UclCmd {
+case class SimulateCmd(steps : IntLit) extends UclCmd {
   override def toString = "simulate (" + steps.toString + ");"
 }
-case class UclDecideCmd() extends UclCmd {
+case class DecideCmd() extends UclCmd {
   override def toString = "decide; "
 }
 
-case class Module(id: Identifier, decls: List[UclDecl], cmds : List[UclCmd]) extends ASTNode {
+case class Module(id: Identifier, decls: List[Decl], cmds : List[UclCmd]) extends ASTNode {
   override def toString = 
     "\nmodule " + id + " {\n" + 
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +
@@ -429,21 +429,21 @@ case class ScopeMap (map: Scope.IdentifierMap) {
   def +(module: Module) : ScopeMap = { 
     val newMap = module.decls.foldLeft(map){ (mapAcc, decl) =>
       decl match {
-        case UclProcedureDecl(id, sig, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
-        case UclTypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
-        case UclStateVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.StateVar(id, typ))
-        case UclInputVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.InputVar(id, typ))
-        case UclOutputVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.OutputVar(id, typ))
-        case UclConstantDecl(id, typ) => Scope.addToMap(mapAcc, Scope.ConstantVar(id, typ)) 
-        case UclFunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
-        case UclSpecDecl(id, expr) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))
-        case UclInitDecl(_) | UclNextDecl(_) => mapAcc
+        case ProcedureDecl(id, sig, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
+        case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
+        case StateVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.StateVar(id, typ))
+        case InputVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.InputVar(id, typ))
+        case OutputVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.OutputVar(id, typ))
+        case ConstantDecl(id, typ) => Scope.addToMap(mapAcc, Scope.ConstantVar(id, typ)) 
+        case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
+        case SpecDecl(id, expr) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))
+        case InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
     return new ScopeMap(newMap)
   }
   /** Return a new context with the declarations in this procedure added to it. */
-  def +(proc: UclProcedureDecl) : ScopeMap = {
+  def +(proc: ProcedureDecl) : ScopeMap = {
     val map1 = proc.sig.inParams.foldLeft(map){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureInputArg(arg._1, arg._2))
     }
@@ -456,7 +456,7 @@ case class ScopeMap (map: Scope.IdentifierMap) {
     return new ScopeMap(map3)
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
-  def +(lambda: UclLambda) : ScopeMap = {
+  def +(lambda: Lambda) : ScopeMap = {
     val newMap = lambda.ids.foldLeft(map){ 
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }

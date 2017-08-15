@@ -4,73 +4,73 @@ package uclid;
 package lang;
 
 class Context {
-  var procedures: Map[Identifier, UclProcedureDecl] = _
-  var functions: Map[Identifier, UclFunctionSig] = _
+  var procedures: Map[Identifier, ProcedureDecl] = _
+  var functions: Map[Identifier, FunctionSig] = _
   var variables: Map[Identifier, Type] = _
   var inputs: Map[Identifier, Type] = _
   var outputs: Map[Identifier, Type] = _
   var constants: Map[Identifier, Type] = _
   var specifications: Map[Identifier, Expr] = _
   var types : Map[Identifier, Type] = _
-  var next: List[UclStatement] = _
-  var init: List[UclStatement] = _
+  var next: List[Statement] = _
+  var init: List[Statement] = _
   
   def extractContext(m: Module) = {
-    type T1 = UclProcedureDecl
+    type T1 = ProcedureDecl
     val m_procs = m.decls.filter { x => x.isInstanceOf[T1] }
     Utils.assert(Utils.allUnique(m_procs.map(i => i.asInstanceOf[T1].id)), 
         "Multiple procedures with identical names")
     procedures = m_procs.map(x => x.asInstanceOf[T1].id -> x.asInstanceOf[T1]).toMap
     
-    type T2 = UclFunctionDecl
+    type T2 = FunctionDecl
     val m_funcs = m.decls.filter { x => x.isInstanceOf[T2] }
     Utils.assert(Utils.allUnique(m_funcs.map(i => i.asInstanceOf[T2].id)),
         "Multiple functions with identical names")
     functions = m_funcs.map(x => x.asInstanceOf[T2].id -> x.asInstanceOf[T2].sig).toMap
     
-    type T3 = UclStateVarDecl
+    type T3 = StateVarDecl
     val m_vars = m.decls.filter { x => x.isInstanceOf[T3] }
     Utils.assert(Utils.allUnique(m_vars.map(i => i.asInstanceOf[T3].id)), 
         "Multiple variables with identical names")
     variables = m_vars.map(x => x.asInstanceOf[T3].id -> x.asInstanceOf[T3].typ).toMap
     
-    type T4 = UclInputVarDecl
+    type T4 = InputVarDecl
     val m_inputs = m.decls.filter { x => x.isInstanceOf[T4] }
     Utils.assert(Utils.allUnique(m_inputs.map(i => i.asInstanceOf[T4].id)), 
         "Multiple inputs with identical names")
     inputs = m_inputs.map(x => x.asInstanceOf[T4].id -> x.asInstanceOf[T4].typ).toMap
     
-    type T5 = UclOutputVarDecl
+    type T5 = OutputVarDecl
     val m_outputs = m.decls.filter { x => x.isInstanceOf[T5] }
     Utils.assert(Utils.allUnique(m_outputs.map(i => i.asInstanceOf[T5].id)), 
         "Multiple outputs with identical names")
     outputs = m_outputs.map(x => x.asInstanceOf[T5].id -> x.asInstanceOf[T5].typ).toMap
     
-    type T6 = UclConstantDecl
+    type T6 = ConstantDecl
     val m_consts = m.decls.filter { x => x.isInstanceOf[T6] }
     Utils.assert(Utils.allUnique(m_consts.map(i => i.asInstanceOf[T6].id)), 
         "Multiple constants with identical names")
     constants = m_consts.map(x => x.asInstanceOf[T6].id -> x.asInstanceOf[T6].typ).toMap
 
-    type TSpec = UclSpecDecl
+    type TSpec = SpecDecl
     lazy val m_specs = m.decls.filter { x => x.isInstanceOf[TSpec] }
     Utils.assert(Utils.allUnique(m_consts.map(i => i.asInstanceOf[TSpec].id)), 
         "Multiple constants with identical names")
     specifications = m_specs.map { x => x.asInstanceOf[TSpec].id -> x.asInstanceOf[TSpec].expr } .toMap
     
-    type T7 = UclTypeDecl
+    type T7 = TypeDecl
     val m_typedecls = m.decls.filter { x => x.isInstanceOf[T7] }
     Utils.assert(Utils.allUnique(m_typedecls.map(i => i.asInstanceOf[T7].id)), 
         "Multiple typedecls with identical names")
     types = m_typedecls.map(x => x.asInstanceOf[T7].id -> x.asInstanceOf[T7].typ).toMap
     
-    val m_nextdecl = m.decls.filter { x => x.isInstanceOf[UclNextDecl] }
+    val m_nextdecl = m.decls.filter { x => x.isInstanceOf[NextDecl] }
     Utils.assert(m_nextdecl.size == 1, "Need exactly one next decl");
-    next = (m_nextdecl(0)).asInstanceOf[UclNextDecl].body
+    next = (m_nextdecl(0)).asInstanceOf[NextDecl].body
     
-    val m_initdecl = m.decls.filter { x => x.isInstanceOf[UclInitDecl] }
+    val m_initdecl = m.decls.filter { x => x.isInstanceOf[InitDecl] }
     Utils.assert(m_initdecl.size == 1, "Need exactly one init decl");
-    init = (m_initdecl(0)).asInstanceOf[UclInitDecl].body
+    init = (m_initdecl(0)).asInstanceOf[InitDecl].body
   }
   
   def copyContext() : Context = {
@@ -120,10 +120,10 @@ object UclidSemanticAnalyzer {
     m.decls.foreach { x => checkDecl(x,c) }
   }
   
-  def checkDecl(d: UclDecl, c: Context) : Unit = {
+  def checkDecl(d: Decl, c: Context) : Unit = {
     val externalDecls : List[Identifier] = c.externalDecls()
     d match {
-      case UclProcedureDecl(id,sig,decls,body) =>
+      case ProcedureDecl(id,sig,decls,body) =>
         Utils.assert(Utils.allUnique(sig.inParams.map(i => i._1) ++ sig.outParams.map(i => i._1)),
           "Signature of procedure " + id + " contains arguments of the same name")
         (sig.inParams ++ sig.outParams).foreach(i => { 
@@ -151,7 +151,7 @@ object UclidSemanticAnalyzer {
         c2.variables = c2.variables ++ (decls.map(i => i.id -> i.typ).toMap)
         body.foreach { x => checkStmt(x,c2) }
         
-      case UclFunctionDecl(id,sig) =>
+      case FunctionDecl(id,sig) =>
         Utils.assert(Utils.allUnique(sig.args.map(i => i._1)), 
             "Signature of function " + id + " contains arguments of the same name")
         sig.args.foreach(i => { 
@@ -160,17 +160,17 @@ object UclidSemanticAnalyzer {
               "Signature of function " + id + " contains redeclaration: " + i)
           checkType(i._2, c)
         })
-      case UclTypeDecl(id,typ)       => checkType(typ, c)
-      case UclStateVarDecl(id, typ)  => checkType(typ, c)
-      case UclInputVarDecl(id,typ)   => checkType(typ, c)
-      case UclOutputVarDecl(id, typ) => checkType(typ, c)
-      case UclConstantDecl(id, typ)  => checkType(typ, c)
-      case UclSpecDecl(id, expr)     => 
+      case TypeDecl(id,typ)       => checkType(typ, c)
+      case StateVarDecl(id, typ)  => checkType(typ, c)
+      case InputVarDecl(id,typ)   => checkType(typ, c)
+      case OutputVarDecl(id, typ) => checkType(typ, c)
+      case ConstantDecl(id, typ)  => checkType(typ, c)
+      case SpecDecl(id, expr)     => 
         checkExpr(expr, c)
         Utils.assert(transitiveType(typeOf(expr, c)._1, c).isInstanceOf[BoolType], 
             "Expressions in specification declarations must have Boolean type.")
-      case UclInitDecl(body)         => body.foreach{x => checkStmt(x,c)}
-      case UclNextDecl(body)         => body.foreach{x => checkStmt(x,c)}
+      case InitDecl(body)         => body.foreach{x => checkStmt(x,c)}
+      case NextDecl(body)         => body.foreach{x => checkStmt(x,c)}
     }
   }
   
@@ -235,7 +235,7 @@ object UclidSemanticAnalyzer {
     }
   }
 
-  def typeOfLHS(lhs: UclLhs, c: Context) : Type = {
+  def typeOfLHS(lhs: Lhs, c: Context) : Type = {
     var intermediateType : Type = (c.outputs ++ c.variables)(lhs.id)
     lhs.arraySelect match {
       case Some(as) => 
@@ -258,7 +258,7 @@ object UclidSemanticAnalyzer {
     }
   }
   
-  def checkLHS(lhs: UclLhs, c: Context) : Unit = {
+  def checkLHS(lhs: Lhs, c: Context) : Unit = {
     Utils.assert((c.outputs.keys ++ c.variables.keys).exists { x => x.value == lhs.id.value }, 
         "LHS variable " + lhs.id + " does not exist")
     var intermediateType = transitiveType((c.outputs ++ c.variables)(lhs.id),c)
@@ -288,16 +288,16 @@ object UclidSemanticAnalyzer {
   def assertNoTemporalType(t: (Type, Boolean), e: Expr) : Unit = 
     Utils.assert(!t._2, "No temporal operators allowed in expression " + e)
   
-  def checkStmt(s: UclStatement, c: Context) : Unit = {
+  def checkStmt(s: Statement, c: Context) : Unit = {
     val externalDecls : List[Identifier] = c.externalDecls()
     s match {
-      case UclSkipStmt() => 
-      case UclAssertStmt(e) => checkExpr(e,c)
-      case UclAssumeStmt(e) => checkExpr(e,c)
-      case UclHavocStmt(id) => 
+      case SkipStmt() => 
+      case AssertStmt(e) => checkExpr(e,c)
+      case AssumeStmt(e) => checkExpr(e,c)
+      case HavocStmt(id) => 
         Utils.assert((c.variables.keys ++ c.outputs.keys).exists { x => x.value == id.value }, 
             "Statement " + s + " updates unknown variable")
-      case UclAssignStmt(lhss, rhss) => 
+      case AssignStmt(lhss, rhss) => 
         Utils.assert(lhss.size == rhss.size, "LHSS and RHSS of different size: " + s);
         lhss.foreach{ x => checkLHS(x,c) }; rhss.foreach { x => checkExpr(x,c) };
         Utils.assert((lhss zip rhss).forall 
@@ -306,27 +306,27 @@ object UclidSemanticAnalyzer {
               (typeOfLHS(i._1, c) matches rhsType._1) && !rhsType._2}, 
             "LHSS and RHSS have conflicting types: " + s);
         Utils.assert(lhss.distinct.size == lhss.size, "LHSS contains identical variables: " + s)
-      case UclIfElseStmt(e, t, f) => 
+      case IfElseStmt(e, t, f) => 
         checkExpr(e,c); 
         val eType = typeOf(e,c)
         assertNoTemporalType(eType,e)
         Utils.assert(transitiveType(eType._1,c) == BoolType(), 
             "Conditionals in if statements must have boolean type.");
         (t ++ f).foreach { x => checkStmt(x,c) };
-      case UclForStmt(id,_,body) => 
+      case ForStmt(id,_,body) => 
         Utils.assert(!(externalDecls.exists { x => x.value == id.value }), 
             "For Loop counter " + id + " redeclared");
         var c2: Context = c.copyContext();
         c2.inputs = c.inputs ++ Map(id -> IntType());
         body.foreach{x => checkStmt(x,c2)}
-      case UclCaseStmt(body) => body.foreach { x =>
+      case CaseStmt(body) => body.foreach { x =>
         checkExpr(x._1,c);
         val xType = typeOf(x._1,c)
         Utils.assert(transitiveType(xType._1,c) == BoolType() && !xType._2, 
             "Expected boolean conditional within case statement guard");
         x._2.foreach { y => checkStmt(y,c) } 
         }
-      case UclProcedureCallStmt(id, lhss, args) =>
+      case ProcedureCallStmt(id, lhss, args) =>
         Utils.assert(Utils.existsOnce(c.procedures.keys.toList, id), 
             "Calling unknown procedure " + id)
         lhss.foreach{ x => checkLHS(x,c) }
@@ -367,7 +367,7 @@ object UclidSemanticAnalyzer {
     
     e match {
       // Temporal operators
-      case UclOperatorApplication(op,es) =>
+      case OperatorApplication(op,es) =>
         lazy val types = es.map { e => typeOf (e,c) }
         val temporalArgs = types.exists { x => x._2}
         return op match {
@@ -427,7 +427,7 @@ object UclidSemanticAnalyzer {
         val valTypes = values.map(typeOf(_,c))
         val temporal = valTypes.exists(_._2)
         return (TupleType(valTypes.map(_._1)), temporal)
-      case UclArraySelectOperation(a,index) =>
+      case ArraySelectOperation(a,index) =>
         val (typ,temporal) = typeOf(a,c)
         Utils.assert(!temporal, "Array types may not have temporal subformulas")
         Utils.assert(transitiveType(typ,c).isInstanceOf[ArrayType],
@@ -435,7 +435,7 @@ object UclidSemanticAnalyzer {
         Utils.assert((typ.asInstanceOf[ArrayType].inTypes zip index).
             forall { x => x._1 == typeOf(x._2,c)._1 }, "Array Select operand type mismatch: " + e)
         return (typ.asInstanceOf[ArrayType].outType, false) //select returns the range type
-      case UclArrayStoreOperation(a,index,value) =>
+      case ArrayStoreOperation(a,index,value) =>
         val (typ,temporal) = typeOf(a,c)
         Utils.assert(!temporal, "Array types may not have temporal subformulas")
         Utils.assert(transitiveType(typ,c).isInstanceOf[ArrayType], "expected array type: " + e)
@@ -444,7 +444,7 @@ object UclidSemanticAnalyzer {
         Utils.assert(typ.asInstanceOf[ArrayType].outType == typeOf(value,c)._1, 
             "Array Store value type mismatch")
         return (typ, false) //store returns the new array
-      case UclFuncApplication(f,args) =>
+      case FuncApplication(f,args) =>
         val (typ,temporal) = typeOf(f,c)
         Utils.assert(!temporal, "Array types may not have temporal subformulas")
         Utils.assert(transitiveType(typ,c).isInstanceOf[MapType],"Expected Map Type " + e);
@@ -453,7 +453,7 @@ object UclidSemanticAnalyzer {
         Utils.assert((typ.asInstanceOf[MapType].inTypes zip args).forall{i => i._1 == typeOf(i._2,c)._1}, 
           "Function application has bad types of arguments: " + e)
         return (typ.asInstanceOf[MapType].outType, false)
-      case UclITE(cond,t,f) =>
+      case ITE(cond,t,f) =>
         val condType = typeOf (cond,c)
         assertBoolType(condType._1);
         val tType = typeOf (t,c)
@@ -461,7 +461,7 @@ object UclidSemanticAnalyzer {
         Utils.assert(tType._1 == fType._1, 
             "ITE true and false expressions have different types: " + e)
         return (tType._1, tType._2 || fType._2)
-      case UclLambda(ids,le) =>
+      case Lambda(ids,le) =>
         var c2: Context = c.copyContext()
         c2.inputs = c.inputs ++ (ids.map(i => i._1 -> i._2).toMap)
         Utils.assert(ids.forall { i => transitiveType(i._2,c) == BoolType() || 
@@ -480,12 +480,12 @@ object UclidSemanticAnalyzer {
   def checkExpr(e: Expr, c: Context) : Unit = {
     val externalDecls : List[Identifier] = c.externalDecls()
      e match { //check that all identifiers in e have been declared
-       case UclOperatorApplication(op,args) => args.foreach { x => checkExpr(x,c) }
-       case UclArraySelectOperation(a,index) => checkExpr(a,c); index.foreach { x => checkExpr(x,c) }
-       case UclArrayStoreOperation(a,index,value) => 
+       case OperatorApplication(op,args) => args.foreach { x => checkExpr(x,c) }
+       case ArraySelectOperation(a,index) => checkExpr(a,c); index.foreach { x => checkExpr(x,c) }
+       case ArrayStoreOperation(a,index,value) => 
          checkExpr(a,c); index.foreach { x => checkExpr(x,c) }; checkExpr(value, c);
-       case UclFuncApplication(f,args) => checkExpr(f,c); args.foreach { x => checkExpr(x,c) }
-       case UclITE(cond,t,f) => 
+       case FuncApplication(f,args) => checkExpr(f,c); args.foreach { x => checkExpr(x,c) }
+       case ITE(cond,t,f) => 
          checkExpr(cond,c) 
          val tTypeCond = transitiveType(typeOf(cond, c)._1, c)
          Utils.assert(tTypeCond.isInstanceOf[BoolType], 
@@ -494,7 +494,7 @@ object UclidSemanticAnalyzer {
          checkExpr(f,c)
          Utils.assert(transitiveType(typeOf(t, c)._1, c) == transitiveType(typeOf(f, c)._1, c), 
              "The branches in the ITE expression " + e + " have different types.")
-       case UclLambda(ids,le) => ids.foreach { 
+       case Lambda(ids,le) => ids.foreach { 
            x => checkType(x._2,c);
            Utils.assert(transitiveType(x._2,c).isInstanceOf[IntType] || 
                transitiveType(x._2,c).isInstanceOf[BoolType],

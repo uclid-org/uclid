@@ -5,16 +5,16 @@ import scala.collection.mutable.Map
 import scala.collection.immutable.Set
 
 class FindLeafProceduresPass extends ReadOnlyPass[Set[IdGenerator.Id]] {
-  var procedureMap = Map.empty[IdGenerator.Id, UclProcedureDecl]  
+  var procedureMap = Map.empty[IdGenerator.Id, ProcedureDecl]  
   override def reset() { 
     procedureMap.clear()
   }
-  override def applyOnProcedure(d : TraversalDirection.T, proc : UclProcedureDecl, in : Set[IdGenerator.Id], ctx : ScopeMap) : Set[IdGenerator.Id] = {
+  override def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : Set[IdGenerator.Id], ctx : ScopeMap) : Set[IdGenerator.Id] = {
     if (d == TraversalDirection.Down) return in
     
     val hasProcedureCalls = proc.body.exists((st) => {
       st match {
-        case UclProcedureCallStmt(_,_,_) => true
+        case ProcedureCallStmt(_,_,_) => true
         case _ => false
       }
     })
@@ -25,7 +25,7 @@ class FindLeafProceduresPass extends ReadOnlyPass[Set[IdGenerator.Id]] {
       return in
     }
   }
-  def procedure(i : IdGenerator.Id) : UclProcedureDecl = procedureMap.get(i).get
+  def procedure(i : IdGenerator.Id) : ProcedureDecl = procedureMap.get(i).get
 }
 class FindLeafProcedures extends ASTAnalyzer("FindLeafProcedures", new FindLeafProceduresPass) {
   override def pass : FindLeafProceduresPass = super.pass.asInstanceOf[FindLeafProceduresPass]
