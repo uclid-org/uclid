@@ -9,10 +9,37 @@ module main {
   var stp : tup1;
   var cnt : num;
 
+  procedure add(n1 : num, n2 : num) returns (sum : num)  {
+  	sum := n1 + n2;
+  }
+  procedure incr(n1 : num) returns (res : num) {
+    call (res) := add(n1, 1);
+  }
+  procedure negb(v : bit) returns (res : bit) {
+    res := !v;
+  }
+  procedure getf1(sta : tup1) returns (f1 : num) {
+    f1 := sta._1;
+  }
+  procedure getf2(sta : tup1) returns (f2 : num) {
+    f2 := sta._2;
+  }
+  procedure getf3(sta : tup1) returns (f3 : bit) {
+    f3 := sta._3;
+  }
+  
   procedure foo(stIn : tup1) returns (st1: tup1, st2: tup1) {
-    st2._1 := stIn._1 + 1;
-    st2._2 := stIn._2 + st2._1;
-    st2._3 := !stIn._3;
+    var l1 : num;
+    var l2 : num;
+    var l3 : bit;
+    
+    call (l1) := getf1(stIn);
+    call (l2) := getf2(stIn);
+    call (l3) := getf3(stIn);
+     
+    call (st2._1) := incr(l1);
+    call (st2._2) := add(l2, st2._1);
+    call (st2._3) := negb(l3);
     st1 := {stIn._1 + 1, stIn._2 + stIn._1 + 1, !stIn._3};
   }
   
@@ -35,8 +62,8 @@ module main {
   }
   
   control {
-   //initialize;
-   //simulate (3);
-   //decide;
+   initialize;
+   simulate (3);
+   decide;
   }
 }

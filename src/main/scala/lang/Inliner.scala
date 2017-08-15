@@ -29,23 +29,6 @@ class FindLeafProceduresPass extends ReadOnlyPass[Set[IdGenerator.Id]] {
   def procedure(i : IdGenerator.Id) : ProcedureDecl = procedureMap.get(i).get
 }
 
-class FindLeafProcedures extends ASTAnalyzer("FindLeafProcedures", new FindLeafProceduresPass) {
-  override def pass : FindLeafProceduresPass = super.pass.asInstanceOf[FindLeafProceduresPass]
-  in = Some(Set.empty)
-  override def reset() {
-    in = Some(Set.empty)
-  }
-  
-  // Mainly for debugging.
-  def printLeafProcedures() {
-    out match {
-      case Some(list) => println("Found some leaf procedures.")
-                         list.foreach{ (astNodeId) => println("--> " + pass.procedure(astNodeId).id.toString) }
-      case None       => println("No leaf procedures. (ERROR!)")
-    }
-  }
-}
-
 class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
   type UniqueNameProvider = (Identifier, String) => Identifier
   class ContextualNameProvider(ctx : ScopeMap, prefix : String) {
@@ -62,8 +45,10 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
   }
   
   override def rewriteProcedure(p : ProcedureDecl, ctx : ScopeMap) : Option[ProcedureDecl] = {
+    if (p.id == proc.id) return None
+    
     val nameProvider = new ContextualNameProvider(ctx + p, "proc$" + p.id + "$" + proc.id)
-    val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(id, p), proc.body)
+    val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(id, p), p.body)
     val newDecls = newVars.map((t) => LocalVarDecl(t._1, t._2))
     return Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, stmts))
   }
@@ -84,7 +69,8 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
           (acc._1 ++ List(stmt), acc._2)
       }
     })
-    return Some(Module(m.id, decls._2 ++ decls._1, m.cmds))
+    val moduleDecls = decls._2 ++ decls._1
+    return Some(Module(m.id, moduleDecls, m.cmds))
   }
   
   def inlineProcedureCalls(uniqNamer : UniqueNameProvider, stmts : List[Statement]) : (List[Statement], List[(Identifier, Type)]) = {
@@ -95,30 +81,77 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
         case ProcedureCallStmt(id, lhss, args) =>
           if (id != proc.id) {
             (acc._1 ++ List(stmt), acc._2) 
+          } else {
+            // Sanity check.
+            Utils.assert(args.size == proc.sig.inParams.size, "Incorrect number of arguments to procedure: " + proc.id + ".\nStatement: " + stmt.toString)
+            Utils.assert(lhss.size == proc.sig.outParams.size, "Incorrect number of return values from procedure: " + proc.id)
+            // what are the arguments?
+            val argVars : List[Identifier] = proc.sig.inParams.map(_._1)
+            // return values original names.
+            var retVars : List[Identifier] = proc.sig.outParams.map(_._1)
+            // new variables for the return values.
+            var retNewVars : List[(Identifier, Type)] = proc.sig.outParams.map((r) => (uniqNamer(r._1, "ret"), r._2))
+            // new variables for the local variables.
+            val localNewVars : List[(Identifier, Type)] = proc.decls.map((v) => (uniqNamer(v.id, "loc"), v.typ))
+            // map procedure formal arguments to actual
+            val mEmpty = Map.empty[Expr, Expr]
+            val mArgs = (argVars zip args).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2))
+            val mRet  = (retVars zip retNewVars).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2._1))
+            val mLocal = (proc.decls zip localNewVars).foldLeft(mEmpty)((map, t) => map + (t._1.id -> t._2._1))
+            val resultAssignStatment = AssignStmt(lhss, retNewVars.map(_._1))
+            val rewriteMap = mArgs ++ mRet ++ mLocal
+            val rewriter = new ExprRewriter("ProcedureInlineRewriter", rewriteMap)
+            (acc._1 ++ rewriter.rewriteStatements(proc.body) ++ List(resultAssignStatment), acc._2 ++ retNewVars ++ localNewVars)
           }
-          // Sanity check.
-          Utils.assert(args.size == proc.sig.inParams.size, "Incorrect number of arguments to procedure: " + proc.id)
-          Utils.assert(lhss.size == proc.sig.outParams.size, "Incorrect number of return values from procedure: " + proc.id)
-          // what are the arguments?
-          val argVars : List[Identifier] = proc.sig.inParams.map(_._1)
-          // return values original names.
-          var retVars : List[Identifier] = proc.sig.outParams.map(_._1)
-          // new variables for the return values.
-          var retNewVars : List[(Identifier, Type)] = proc.sig.outParams.map((r) => (uniqNamer(r._1, "ret"), r._2))
-          // new variables for the local variables.
-          val localNewVars : List[(Identifier, Type)] = proc.decls.map((v) => (uniqNamer(v.id, "loc"), v.typ))
-          // map procedure formal arguments to actual
-          val mEmpty = Map.empty[Expr, Expr]
-          val mArgs = (argVars zip args).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2))
-          val mRet  = (retVars zip retNewVars).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2._1))
-          val mLocal = (proc.decls zip localNewVars).foldLeft(mEmpty)((map, t) => map + (t._1.id -> t._2._1))
-          val resultAssignStatment = AssignStmt(lhss, retNewVars.map(_._1))
-          val rewriteMap = mArgs ++ mRet ++ mLocal
-          val rewriter = new ExprRewriter("ProcedureInlineRewriter", rewriteMap)
-          (acc._1 ++ rewriter.rewriteStatements(proc.body) ++ List(resultAssignStatment), acc._2 ++ retNewVars ++ localNewVars)
         case _ => (acc._1 ++ List(stmt), acc._2)
       }
     })
+  }
+}
+
+class FunctionInliner extends ASTAnalysis {
+  var findLeafProceduresPass = new FindLeafProceduresPass()
+  var findLeafProceduresAnalysis = new ASTAnalyzer("FunctionInliner.FindLeafProcedures", findLeafProceduresPass)
+  var _astChanged = false 
+  
+  override def passName = "FunctionInliner"
+  override def reset() = findLeafProceduresPass.reset()
+  override def astChanged = _astChanged
+  def visit(module : Module) : Option[Module] = {
+    _astChanged = false
+    var modP : Option[Module] = Some(module)
+    var iteration = 0
+    var done = false
+    val MAX_ITERATIONS = 100
+    do {
+      findLeafProceduresAnalysis.reset()
+      modP match {
+        case None => 
+          done = true
+        case Some(mod) =>
+          val leafProcedureSet = findLeafProceduresAnalysis.visitModule(mod, Set.empty[IdGenerator.Id])
+          val procDecls = leafProcedureSet.map((id) => findLeafProceduresPass.procedure(id))
+          // println("Leaf procedures: " + Utils.join(procDecls.map(_.id.toString).toList, ", "))
+          modP = procDecls.foldLeft(modP)(
+            (mod, proc) =>
+              mod match {
+                case Some(m) => 
+                  val rewriter = new ASTRewriter("FunctionInliner.Inline:" + proc.id.toString, new InlineProcedurePass(proc))
+                  // println("Inlining procedure: " + proc.id.toString)
+                  val mP = rewriter.visit(m)
+                  // println("** Changed Module **")
+                  // println(mP.get.toString)
+                  mP
+                case None =>
+                  None
+              }
+          )
+          done = procDecls.size == 0
+      }
+      iteration = iteration + 1
+    } while(!done && iteration < MAX_ITERATIONS)
+    Utils.assert(iteration < MAX_ITERATIONS, "Too many rewriting iterations.")
+    return modP
   }
 }
 

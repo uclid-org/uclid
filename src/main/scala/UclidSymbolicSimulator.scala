@@ -48,9 +48,12 @@ package uclid {
     
     def initialize() {
       context.extractContext(module)
-      val initSymbolTable = context.constants.foldLeft(Map.empty[Identifier, smt.Expr]){
+      val cnstSymbolTable = context.constants.foldLeft(Map.empty[Identifier, smt.Expr]){
         (acc,i) => acc + (i._1 -> newConstantSymbol(i._1.value, toSMT(context.constants(i._1),context)))
-      };
+      }
+      val initSymbolTable = (context.variables ++ context.outputs).foldLeft(cnstSymbolTable){
+        (acc, i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(i._2, context)))
+      }
       symbolTable = simulate(context.init, initSymbolTable, context);
       (context.variables ++ context.outputs).foreach { i => 
         Utils.assert(symbolTable.contains(i._1), "Init Block does not assign to " + i)  
