@@ -4,6 +4,49 @@
  */
 package uclid {
   import uclid.lang._
+  import lang.UclidSemanticAnalyzer
+  import lang.Context
+  import lang.UclType
+  import lang.UclStatement
+  import lang.UclSkipStmt
+  import lang.UclProcedureDecl
+  import lang.UclProcedureCallStmt
+  import lang.UclOperator
+  import lang.UclNumber
+  import lang.UclNegation
+  import lang.UclMulOperator
+  import lang.UclModule
+  import lang.UclMapType
+  import lang.UclLhs
+  import lang.UclLambda
+  import lang.UclLTOperator
+  import lang.UclLEOperator
+  import lang.UclIntType
+  import lang.UclImplication
+  import lang.UclIfElseStmt
+  import lang.UclIdentifier
+  import lang.UclITE
+  import lang.UclIFuncApplication
+  import lang.UclHavocStmt
+  import lang.UclGTOperator
+  import lang.UclGEOperator
+  import lang.UclFuncApplication
+  import lang.UclForStmt
+  import lang.UclExpr
+  import lang.UclEquality
+  import lang.UclDisjunction
+  import lang.UclConjunction
+  import lang.UclCaseStmt
+  import lang.UclBoolean
+  import lang.UclBoolType
+  import lang.UclBiImplication
+  import lang.UclAssumeStmt
+  import lang.UclAssignStmt
+  import lang.UclAssertStmt
+  import lang.UclArrayType
+  import lang.UclArrayStoreOperation
+  import lang.UclArraySelectOperation
+  import lang.UclAddOperator
   
   object UniqueIdGenerator {
     var i : Int = 0;

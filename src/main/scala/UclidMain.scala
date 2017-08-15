@@ -5,6 +5,9 @@ package uclid {
   import java.nio.charset.StandardCharsets
   import scala.sys.process._
   import uclid.lang._
+  import lang.UclidSemanticAnalyzer
+  import lang.UclModule
+  import lang.UclIdentifier
   
   /**
    * Created by Rohit Sinha on 5/23/15.
