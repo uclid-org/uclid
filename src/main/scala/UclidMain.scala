@@ -77,11 +77,13 @@ package uclid {
       val passManager = new PassManager()
       passManager.addPass(new Typechecker())
       passManager.addPass(new PolymorphicTypeRewriter())
+      passManager.addPass(new FindLeafProcedures())
       
       for (srcFile <- srcFiles) {
         println("Input File: " + srcFile)
         val text = scala.io.Source.fromFile(srcFile).mkString
         val fileModules = UclidParser.parseModel(text).map(passManager.run(_).get)
+        passManager.pass("FindLeafProcedures").asInstanceOf[FindLeafProcedures].printLeafProcedures()
         for(module <- fileModules) {
           UclidSemanticAnalyzer.checkSemantics(module)
         }
