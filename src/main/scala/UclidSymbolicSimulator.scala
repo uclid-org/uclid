@@ -25,17 +25,13 @@ object UclidSymbolicSimulator {
     
     var c : Context = new Context();
     c.extractContext(m);
-    st = c.constants.foldLeft(st)((acc,i) => st.updated(i._1, 
-        newConstantSymbol(i._1.value, toSMT(c.constants(i._1)))));
-    st = c.variables.foldLeft(st)((acc,i) => st.updated(i._1, 
-        newHavocSymbol(i._1.value, toSMT(c.variables(i._1)))));
-    st = c.outputs.foldLeft(st)((acc,i) => st.updated(i._1, 
-        newHavocSymbol(i._1.value, toSMT(c.outputs(i._1)))));
+    st = c.constants.foldLeft(st)((acc,i) => acc + (i._1 -> newConstantSymbol(i._1.value, toSMT(c.constants(i._1)))));
+    st = c.variables.foldLeft(st)((acc,i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(c.variables(i._1)))));
+    st = c.outputs.foldLeft(st)((acc,i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(c.outputs(i._1)))));
     for (step <- 1 to number_of_steps) {
-      st = c.inputs.foldLeft(st)((acc,i) => st.updated(i._1, 
-          newInputSymbol(i._1.value, step, toSMT(c.inputs(i._1)))));
+      st = c.inputs.foldLeft(st)((acc,i) => acc + (i._1 -> newInputSymbol(i._1.value, step, toSMT(c.inputs(i._1)))));
       st = simulate(m, st, c);
-      println("****** After step# " + step + " ******")
+      println("****** After step# " + step + " ******");
       println(st)
     }
     
@@ -103,22 +99,25 @@ case class SMTIntMulOperator() extends SMTOperator { override def toString = "*"
   
   def simulate(s: UclStatement, symbolTable: SymbolTable, c: Context) : SymbolTable = {
     def simulateAssign(lhss: List[UclLhs], args: List[SMTExpr], input: SymbolTable) : SymbolTable = {
-      println("Invoking simulateAssign with " + lhss + " := " + args + " and symboltable " + symbolTable)
+      //println("Invoking simulateAssign with " + lhss + " := " + args + " and symboltable " + symbolTable)
       var st : SymbolTable = input;
       def lhs(i: (UclLhs,SMTExpr)) = { i._1 }
       def rhs(i: (UclLhs,SMTExpr)) = { i._2 }
       (lhss zip args).foreach { x =>
-        var arrayId: UclIdentifier = lhs(x).id;
-        x._1.arraySelect match {
-          case Some(as) => throw new UclidUtils.UnimplementedException("Unimplemented arrays in LHS")
-          case None => st = st.updated(lhs(x).id, rhs(x))
-        }
-        x._1.recordSelect match {
-          case Some(rs) => throw new UclidUtils.UnimplementedException("Unimplemented records in LHS")
-          case None => st = st.updated(lhs(x).id, rhs(x))
+        var arraySelectOp = x._1.arraySelect match { case Some(as) => as; case None => null};
+        var recordSelectOp = x._1.recordSelect match { case Some(rs) => rs; case None => null};
+        //st = st.updated(lhs(x).id, rhs(x))
+        if (arraySelectOp == null && recordSelectOp == null) {
+          st = st + (lhs(x).id -> rhs(x))
+        } else if (arraySelectOp != null && recordSelectOp == null) {
+          st = st + (lhs(x).id -> SMTArrayStoreOperation(st(lhs(x).id), 
+              arraySelectOp.map(i => evaluate(i, st, c)), rhs(x)))
+        } else if (arraySelectOp == null && recordSelectOp != null) {
+          throw new UclidUtils.UnimplementedException("No support for records")
+        } else if (arraySelectOp != null && recordSelectOp != null) {
+          throw new UclidUtils.UnimplementedException("No support for records")
         }
       }
-      println("returning " + st)
       return st
     }
     s match {
@@ -150,11 +149,12 @@ case class SMTIntMulOperator() extends SMTOperator { override def toString = "*"
         c2.inputs = c.inputs ++ (proc.sig.inParams.map(i => i._1 -> i._2).toMap)
         c2.variables = c.variables ++ (proc.sig.outParams.map(i => i._1 -> i._2).toMap)
         c2.variables = c2.variables ++ (proc.decls.map(i => i.id -> i.typ).toMap)
-        st = proc.decls.foldLeft(st)((acc,i) => acc.updated(i.id, newHavocSymbol(i.id.value, toSMT(i.typ))));
+        st = proc.decls.foldLeft(st)((acc,i) => acc + (i.id -> newHavocSymbol(i.id.value, toSMT(i.typ))));
         st = simulate(proc.body, st, c2)
         st = simulateAssign(lhss, proc.sig.outParams.map(i => st(i._1)), st)
         //remove procedure arguments
-        return st
+        st = proc.sig.inParams.foldLeft(st)((acc,i) => acc - i._1)
+        return st 
       case _ => return symbolTable
     }
   }
