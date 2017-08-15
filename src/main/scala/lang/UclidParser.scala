@@ -345,16 +345,16 @@ package uclid {
       
       lazy val BlockCmd : PackratParser[List[UclCmd]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
       
-      lazy val Module: PackratParser[UclModule] =
+      lazy val Module: PackratParser[lang.Module] =
         KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( BlockCmd.? ) <~ "}") ^^ { 
-          case id ~ (decls ~ Some(cs)) => UclModule(id, decls, cs)
-          case id ~ (decls ~ None) => UclModule(id, decls, List[UclCmd]())
+          case id ~ (decls ~ Some(cs)) => lang.Module(id, decls, cs)
+          case id ~ (decls ~ None) => lang.Module(id, decls, List[UclCmd]())
         }
     
       lazy val SpecDecl: PackratParser[UclSpecDecl] =
         KwDefineProp ~> Id ~ (":" ~> Expr) <~ ";" ^^ { case id ~ expr => UclSpecDecl(id,expr) }
     
-      lazy val Model: PackratParser[List[UclModule]] = rep(Module) 
+      lazy val Model: PackratParser[List[Module]] = rep(Module) 
         
       def parseExpr(input: String): Expr = {
         val tokens = new PackratReader(new lexical.Scanner(input))
@@ -364,7 +364,7 @@ package uclid {
         }
       }
     
-      def parseModule(input: String): UclModule = {
+      def parseModule(input: String): Module = {
         val tokens = new PackratReader(new lexical.Scanner(input))
         phrase(Module)(tokens) match {
           case Success(ast, _) => ast
@@ -372,7 +372,7 @@ package uclid {
         }
       }
       
-      def parseModel(text: String): List[UclModule] = {
+      def parseModel(text: String): List[Module] = {
         val tokens = new PackratReader(new lexical.Scanner(text))
         phrase(Model)(tokens) match {
           case Success(ast, _) => ast

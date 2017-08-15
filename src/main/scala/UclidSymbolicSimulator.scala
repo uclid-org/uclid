@@ -22,7 +22,7 @@ package uclid {
     def newConstantSymbol(name: String, t: smt.Type) = 
       new smt.Symbol(name,t)
     
-    def initialize(m: UclModule) : SymbolTable = {
+    def initialize(m: Module) : SymbolTable = {
       var c : Context = new Context();
       c.extractContext(m);
       
@@ -35,7 +35,7 @@ package uclid {
       return st
     }
     
-    def simulate_steps(m: UclModule, number_of_steps: Int) : (SymbolTable,List[smt.Expr]) = 
+    def simulate_steps(m: Module, number_of_steps: Int) : (SymbolTable,List[smt.Expr]) = 
     {
       var c : Context = new Context();
       c.extractContext(m);
@@ -107,7 +107,7 @@ package uclid {
       return stmts.foldLeft(symbolTable)((acc,i) => simulate(i, acc, c));
     }
     
-    def simulate(m: UclModule, symbolTable: SymbolTable, c: Context) : SymbolTable = {
+    def simulate(m: Module, symbolTable: SymbolTable, c: Context) : SymbolTable = {
       return simulate(c.next, symbolTable, c)
     }
     
