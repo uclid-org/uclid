@@ -8,6 +8,7 @@ abstract class ASTAnalysis {
   def passName : String
   def reset() {}
   def visit (module : Module) : Option[Module]
+  def astChanged : Boolean
 }
 
 object TraversalDirection extends Enumeration {
@@ -68,7 +69,7 @@ trait ReadOnlyPass[T] {
 class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAnalysis {
   // Set a backpointer to the pass from here.
   _pass._analysis = Some(this)
-  
+
   /** The pass itself. */
   def pass : ReadOnlyPass[T] = _pass
   /** The input/outputs of the pass. */
@@ -89,6 +90,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     _out = Some(visitModule(module, _in.get))
     return Some(module)
   }
+  /** These analyses never change the AST. */
+  override def astChanged = false
 
   // Reset calls reset on the pass.
   override  def reset() = { pass.reset() }
@@ -528,19 +531,28 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   override def passName = _passName
   override def visit(module : Module) : Option[Module] = visitModule(module)
   
-  override def reset { pass.reset() }  
+  var astChangeFlag = false
+  override def astChanged = astChangeFlag
+
+  override def reset { 
+    pass.reset()
+    astChangeFlag = false
+  }
   
   def visitModule(module : Module) : Option[Module] = {
+    astChangeFlag = false
     val emptyContext = new ScopeMap()
     val context = emptyContext + module
     val id = visitIdentifier(module.id, context)
     val decls = module.decls.map(visitDecl(_, context)).flatten
     val cmds = module.cmds.map(visitCommand(_, context)).flatten
-    return id.flatMap((i) => pass.rewriteModule(Module(i, decls, cmds), emptyContext))
+    val moduleP = id.flatMap((i) => pass.rewriteModule(Module(i, decls, cmds), emptyContext))
+    astChangeFlag = astChangeFlag || (moduleP != Some(module))
+    return moduleP
   }
   
   def visitDecl(decl : UclDecl, context : ScopeMap) : Option[UclDecl] = {
-    return (decl match {
+    val declP = (decl match {
       case procDecl : UclProcedureDecl => visitProcedure(procDecl, context)
       case typeDecl : UclTypeDecl => visitTypeDecl(typeDecl, context)
       case stateVar : UclStateVarDecl => visitStateVar(stateVar, context)
@@ -552,6 +564,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case nextDecl : UclNextDecl => visitNext(nextDecl, context)
       case specDecl : UclSpecDecl => visitSpec(specDecl, context)
     }).flatMap(pass.rewriteDecl(_, context))
+    astChangeFlag = astChangeFlag || (declP != Some(decl))
+    return declP
   }
   def visitProcedure(proc : UclProcedureDecl, contextIn : ScopeMap) : Option[UclProcedureDecl] = {
     val context = contextIn + proc
@@ -559,19 +573,23 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     val sig = visitProcedureSig(proc.sig, context)
     val decls = proc.decls.map(visitLocalVar(_, context)).flatten
     val stmts = proc.body.map(visitStatement(_, context)).flatten
-    (id, sig) match {
+    val procP = (id, sig) match {
       case (Some(i), Some(s)) => pass.rewriteProcedure(UclProcedureDecl(i, s, decls, stmts), contextIn)
       case _ => None 
     }
+    astChangeFlag = astChangeFlag || (procP != Some(proc))
+    return procP
   }
   
   def visitFunction(func : UclFunctionDecl, context : ScopeMap) : Option[UclFunctionDecl] = {
     val id = visitIdentifier(func.id, context)
     val sig = visitFunctionSig(func.sig, context)
-    (id, sig) match {
+    val funcP = (id, sig) match {
       case (Some(i), Some(s)) => pass.rewriteFunction(UclFunctionDecl(i, s), context)
       case _ => None
     }
+    astChangeFlag = astChangeFlag || (funcP != Some(func))
+    return funcP
   }
   
   def visitStateVar(stvar : UclStateVarDecl, context : ScopeMap) : Option[UclStateVarDecl] = {

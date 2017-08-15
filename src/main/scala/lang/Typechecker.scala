@@ -6,6 +6,17 @@ import scala.collection.immutable.{Map => ImmutableMap}
 
 class TypeSynonymFinder extends ReadOnlyPass[Unit]
 {
+  type TypeMap = MutableMap[Identifier, Type]
+  var typeDeclMap : TypeMap = MutableMap.empty
+  
+  override def reset () {
+    typeDeclMap.clear()
+  }
+  override def applyOnTypeDecl(d : TraversalDirection.T, typDec : UclTypeDecl, in : Unit, context : ScopeMap) : Unit = {
+    if (d == TraversalDirection.Down) {
+      typeDeclMap.put(typDec.id, typDec.typ)
+    }
+  }
 }
 
 class TypecheckPass extends ReadOnlyPass[Unit]
