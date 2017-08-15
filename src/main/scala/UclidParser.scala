@@ -111,29 +111,36 @@ case class UclSynonymType(id: UclIdentifier) extends UclType {
 
 /** Statements **/
 abstract class UclStatement
-case class UclAssert(e: UclExpr) extends UclStatement {
+case class UclSkipStmt() extends UclStatement {
+  override def toString = "skip;"
+}
+case class UclAssertStmt(e: UclExpr) extends UclStatement {
   override def toString = "assert " + e + ";"
 }
-case class UclAssume(e: UclExpr) extends UclStatement {
+case class UclAssumeStmt(e: UclExpr) extends UclStatement {
   override def toString = "assume " + e + ";"
 }
-case class UclHavoc(id: UclIdentifier) extends UclStatement {
+case class UclHavocStmt(id: UclIdentifier) extends UclStatement {
   override def toString = "havoc " + id + ";"
 }
-case class UclAssign(lhss: List[UclLhs], rhss: List[UclExpr]) extends UclStatement {
+case class UclAssignStmt(lhss: List[UclLhs], rhss: List[UclExpr]) extends UclStatement {
   override def toString = lhss.tail.foldLeft(lhss.head.toString) { (acc,i) => acc + "," + i } +
     " := " +rhss.tail.foldLeft(rhss.head.toString) { (acc,i) => acc + "," + i } + ";"
 }
-case class UclIfStmt(cond: UclExpr, ifblock: List[UclStatement], elseblock: List[UclStatement])
+case class UclIfElseStmt(cond: UclExpr, ifblock: List[UclStatement], elseblock: List[UclStatement])
   extends UclStatement {
   override def toString = "if " + cond + " {\n" + ifblock + "\n} else {\n" + elseblock + "\n}"
 }
-case class UclFor(id: UclIdentifier, range: (UclNumber,UclNumber), body: List[UclStatement])
+case class UclForStmt(id: UclIdentifier, range: (UclNumber,UclNumber), body: List[UclStatement])
   extends UclStatement
 {
   override def toString = "for " + id + " in range(" + range._1 +"," + range._2 + ") {\n" + body + "}"
 }
-case class UclProcedureCall(id: UclIdentifier, callLhss: List[UclLhs], args: List[UclExpr])
+case class UclCaseStmt(body: List[(UclExpr,List[UclStatement])]) extends UclStatement {
+  override def toString = "case" +
+    body.foldLeft("") { (acc,i) => acc + "\n" + i._1.toString + " : " + i._2.toString + "\n"} + "esac"
+}
+case class UclProcedureCallStmt(id: UclIdentifier, callLhss: List[UclLhs], args: List[UclExpr])
   extends UclStatement {
   override def toString = "call (" +
     callLhss.foldLeft("") { (acc,i) => acc + "," + i } + ") := " + id + "(" +
@@ -203,9 +210,12 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
   lazy val KwHavoc = "havoc"
   lazy val KwVar = "var"
   lazy val KwLocalVar = "localvar"
+  lazy val KwSkip = "skip"
   lazy val KwCall = "call"
   lazy val KwIf = "if"
   lazy val KwElse = "else"
+  lazy val KwCase = "case"
+  lazy val KwEsac = "esac"
   lazy val KwFor = "for"
   lazy val KwIn = "in"
   lazy val KwRange = "range"
@@ -222,8 +232,8 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat, OpNeg, OpMinus,
     "false", "true", "bv", KwProcedure, KwBool, KwInt, KwReturns,
     KwAssume, KwAssert, KwVar, KwLocalVar, KwHavoc, KwCall, KwIf, KwElse,
-    KwFor, KwIn, KwRange, KwLocalVar, KwType, KwInput, KwOutput, KwModule,
-    KwEnum, KwRecord)
+    KwCase, KwEsac, KwFor, KwIn, KwRange, KwLocalVar, KwInput, KwOutput,
+    KwModule, KwType, KwEnum, KwRecord, KwSkip)
 
   lazy val ast_binary: UclExpr ~ String ~ UclExpr => UclExpr = {
     case x ~ OpBiImpl ~ y => UclEquivalence(x, y)
@@ -316,7 +326,8 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
     "[" ~> PrimitiveType ~ (rep ("," ~> PrimitiveType) <~ "]") ~ PrimitiveType ^^
       { case t ~ ts ~ rt => UclMapType(t :: ts, rt)}
   lazy val SynonymType : PackratParser[UclSynonymType] = Id ^^ { case id => UclSynonymType(id) }
-  lazy val Type : PackratParser[UclType] = PrimitiveType | MapType | EnumType | RecordType | SynonymType
+  lazy val Type : PackratParser[UclType] = 
+    PrimitiveType | MapType | EnumType | RecordType | SynonymType
 
   lazy val IdType : PackratParser[(UclIdentifier,UclType)] =
     Id ~ (":" ~> Type) ^^ { case id ~ typ => (id,typ)}
@@ -338,28 +349,33 @@ object UclidParser extends StandardTokenParsers with PackratParsers {
 
   lazy val LocalVarDecl : PackratParser[UclLocalVarDecl] =
     KwLocalVar ~> IdType <~ ";" ^^ { case (id,typ) => UclLocalVarDecl(id,typ)}
-  lazy val LocalVarDecls: PackratParser[List[UclLocalVarDecl]] = rep (LocalVarDecl)
     
   lazy val Statement: PackratParser[UclStatement] =
-    KwAssert ~> Expr <~ ";" ^^ { case e => UclAssert(e) } |
-    KwAssume ~> Expr <~ ";" ^^ { case e => UclAssume(e) } |
-    KwHavoc ~> Id <~ ";" ^^ { case id => UclHavoc(id) } |
+    KwSkip <~ ";" ^^ { case _ => UclSkipStmt() } |
+    KwAssert ~> Expr <~ ";" ^^ { case e => UclAssertStmt(e) } |
+    KwAssume ~> Expr <~ ";" ^^ { case e => UclAssumeStmt(e) } |
+    KwHavoc ~> Id <~ ";" ^^ { case id => UclHavocStmt(id) } |
     Lhs ~ rep("," ~> Lhs) ~ ":=" ~ Expr ~ rep("," ~> Expr) <~ ";" ^^
-      { case l ~ ls ~ ":=" ~ r ~ rs => UclAssign(l::ls, r::rs) } |
+      { case l ~ ls ~ ":=" ~ r ~ rs => UclAssignStmt(l::ls, r::rs) } |
     KwCall ~> LhsList ~ (":=" ~> Id) ~ ExprList <~ ";" ^^
-      { case lhss ~ id ~ args => UclProcedureCall(id, lhss, args) } |
-    KwIf ~> Expr ~ ("{" ~> Body <~ "}") ~ (KwElse ~> ("{" ~> Body <~ "}")) ^^
-      { case e ~ f ~ g => UclIfStmt(e,f,g)} |
-    KwFor ~> (Id ~ (KwIn ~> RangeExpr) ~ ("{" ~> Body <~ "}")) ^^
-      { case id ~ r ~ body => UclFor(id, r, body) }
+      { case lhss ~ id ~ args => UclProcedureCallStmt(id, lhss, args) } |
+    KwIf ~> Expr ~ BlockStatement ~ (KwElse ~> BlockStatement) ^^
+      { case e ~ f ~ g => UclIfElseStmt(e,f,g)} |
+    KwCase ~> rep(CaseBlockStmt) <~ KwEsac ^^ 
+      { case i => UclCaseStmt(i) } |
+    KwFor ~> (Id ~ (KwIn ~> RangeExpr) ~ BlockStatement) ^^
+      { case id ~ r ~ body => UclForStmt(id, r, body) }
     
-  lazy val Body: PackratParser[List[UclStatement]] = rep (Statement)
+  lazy val CaseBlockStmt: PackratParser[(UclExpr, List[UclStatement])] = 
+    Expr ~ (":" ~> BlockStatement) ^^ { case e ~ ss => (e,ss) }
+  lazy val BlockStatement: PackratParser[List[UclStatement]] = "{" ~> rep (Statement) <~ "}"
 
   lazy val ProcedureDecl : PackratParser[UclProcedureDecl] =
-    KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~ ("{" ~> LocalVarDecls) ~ (Body <~ "}") ^^
-      { case id ~ args ~ outs ~ decls ~ body => 
+    KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~ 
+      ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^ 
+      { case id ~ args ~ outs ~ decls ~ body =>  
         UclProcedureDecl(id, UclSignature(args,outs), decls, body) } |
-    KwProcedure ~> Id ~ IdTypeList ~ ("{" ~> LocalVarDecls) ~ (Body <~ "}") ^^
+    KwProcedure ~> Id ~ IdTypeList ~ ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
       { case id ~ args ~ decls ~ body => 
         UclProcedureDecl(id, UclSignature(args, List.empty[(UclIdentifier,UclType)]), decls, body) }
   
