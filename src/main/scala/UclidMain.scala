@@ -5,7 +5,8 @@ import scala.util.parsing.combinator._
  */
 object UclidMain {
   def main(args: Array[String]) : Unit = {
-    val input = scala.io.Source.fromFile("/Users/rohitsinha/research/development/uclid/test/test1.ucl4").mkString
+    println("Input File: " + args(0))
+    val input = scala.io.Source.fromFile(args(0)).mkString
     println("result: " + UclidParser.parseProc(input))
   }
 }
