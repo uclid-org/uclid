@@ -110,6 +110,27 @@ package uclid {
         lazy val arithArgs = typecastAST[z3.ArithExpr](args)
         lazy val boolArgs = typecastAST[z3.BoolExpr](args)
         lazy val bvArgs = typecastAST[z3.BitVecExpr](args)
+        
+        def mkReplace(w : Int, hi : Int, lo : Int, arg0 : z3.BitVecExpr, arg1 : z3.BitVecExpr) : z3.BitVecExpr = {
+          val slice0 = (w-1, hi+1)
+          val slice2 = (lo-1, 0)
+          
+          // Convert a valid slice into Some(bvexpr) and an invalid slice into none.
+          def getSlice(slice : (Int, Int), arg : z3.BitVecExpr) : Option[z3.BitVecExpr] = {
+            if (slice._1 >= slice._2) {
+              Utils.assert(slice._1 < w && slice._1 >= 0, "Invalid slice: " + slice.toString)
+              Utils.assert(slice._2 < w && slice._2 >= 0, "Invalid slice: " + slice.toString)
+              Some(ctx.mkExtract(slice._1, slice._2, arg))
+            } else {
+              None
+            }
+          }
+          // Now merge the slices.
+          val slices : List[z3.BitVecExpr] = List(getSlice(slice0, arg0), Some(arg1), getSlice(slice2, arg0)).flatten
+          val repl = slices.tail.foldLeft(slices.head)((r0, r1) => ctx.mkConcat(r0, r1))
+          Utils.assert(w == repl.getSortSize(), "Invalid result size.")
+          return repl
+        }
         op match {
           case IntLTOp                => ctx.mkLt (arithArgs(0), arithArgs(1))
           case IntLEOp                => ctx.mkLe (arithArgs(0), arithArgs(1))
@@ -130,11 +151,12 @@ package uclid {
           case BVXorOp(_)             => ctx.mkBVXOR(bvArgs(0), bvArgs(1))
           case BVNotOp(_)             => ctx.mkBVNot(bvArgs(0))
           case BVExtractOp(hi, lo)    => ctx.mkExtract(hi, lo, bvArgs(0))
-          case BVConcatOp(w)          => ctx.mkConcat(bvArgs(0), bvArgs(1)) 
+          case BVConcatOp(w)          => ctx.mkConcat(bvArgs(0), bvArgs(1))
+          case BVReplaceOp(w, hi, lo) => mkReplace(w, hi, lo, bvArgs(0), bvArgs(1))
           case NegationOp             => ctx.mkNot (boolArgs(0))
           case IffOp                  => ctx.mkIff (boolArgs(0), boolArgs(1))
           case ImplicationOp          => ctx.mkImplies (boolArgs(0), boolArgs(1))
-          case EqualityOp             => ctx.mkEq (boolArgs(0), boolArgs(1))
+          case EqualityOp             => ctx.mkEq(exprArgs(0), exprArgs(1)) 
           case ConjunctionOp          => ctx.mkAnd (boolArgs : _*)
           case DisjunctionOp          => ctx.mkOr (boolArgs : _*)
           case RecordSelectOp(fld)    =>
