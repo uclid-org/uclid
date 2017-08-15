@@ -11,13 +11,36 @@ package uclid {
     }
     
     abstract class Operator
-    case class LTOp() extends Operator { override def toString = "<" }
-    case class LEOp() extends Operator { override def toString = "<=" }
-    case class GTOp() extends Operator { override def toString = ">" }
-    case class GEOp() extends Operator { override def toString = ">=" }
-    case class AddOp() extends Operator { override def toString = "+" }
-    case class SubOp() extends Operator { override def toString = "-" }
-    case class MulOp() extends Operator { override def toString = "*" }
+    // This is the polymorphic operator type. The FixOperatorTypes pass converts these operators
+    // to either the integer or bitvector versions.
+    abstract class PolymorphicOperator extends Operator
+    case class LTOp() extends PolymorphicOperator { override def toString = "<" }
+    case class LEOp() extends PolymorphicOperator { override def toString = "<=" }
+    case class GTOp() extends PolymorphicOperator { override def toString = ">" }
+    case class GEOp() extends PolymorphicOperator { override def toString = ">=" }
+    case class AddOp() extends PolymorphicOperator { override def toString = "+" }
+    case class SubOp() extends PolymorphicOperator { override def toString = "-" }
+    case class MulOp() extends PolymorphicOperator { override def toString = "*" }
+    // These are operators with integer operators.
+    abstract class IntArgOperator extends Operator
+    case class IntLTOp() extends IntArgOperator { override def toString = "<" }
+    case class IntLEOp() extends IntArgOperator { override def toString = "<=" }
+    case class IntGTOp() extends IntArgOperator { override def toString = ">" }
+    case class IntGEOp() extends IntArgOperator { override def toString = ">=" }
+    case class IntAddOp() extends IntArgOperator { override def toString ="+" }
+    case class IntSubOp() extends IntArgOperator { override def toString = "-" }
+    case class IntMulOp() extends IntArgOperator { override def toString = "*" }
+    // These operators take bitvector operands.
+    abstract class BVArgOperator extends Operator
+    case class BVLTOp() extends BVArgOperator { override def toString = "<" }
+    case class BVLEOp() extends BVArgOperator { override def toString = "<=" }
+    case class BVGTOp() extends BVArgOperator { override def toString = ">" }
+    case class BVGEOp() extends BVArgOperator { override def toString = ">=" }
+    case class BVAddOp() extends BVArgOperator { override def toString ="+" }
+    case class BVSubOp() extends BVArgOperator { override def toString = "-" }
+    case class BVMulOp() extends BVArgOperator { override def toString = "*" }
+    
+    
     case class ExtractOp(high: IntLit, low: IntLit) extends Operator {
       override def toString = "[" + high + ":" + low + "]"
     }
