@@ -17,7 +17,7 @@ specs:
 	sbt "run ./test/spec1.ucl4"
 	
 test-type0: 
-	sbt "run -m test ./test/test-type0.ucl4"
+	sbt "run ./test/test-type0.ucl4"
 
 test-bv0: 
 	sbt "run -m test ./test/test-bv0.ucl4"
