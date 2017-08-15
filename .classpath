@@ -1,8 +1,19 @@
 <classpath>
   <classpathentry kind="src" path="src/main/scala"/>
+  <classpathentry kind="src" path="src/test/scala"/>
   <classpathentry kind="lib" path="./lib/scala-parser-combinators-2.11.0-M4.jar"/>
   <classpathentry kind="lib" path="./lib/com.microsoft.z3.jar"/>
+  <classpathentry sourcepath="/home/pramod/.ivy2/cache/org.scalactic/scalactic_2.10/srcs/scalactic_2.10-3.0.1-sources.jar" kind="lib" path="/home/pramod/.ivy2/cache/org.scalactic/scalactic_2.10/bundles/scalactic_2.10-3.0.1.jar">
+    <attributes>
+      <attribute name="javadoc_location" value="jar:file:/home/pramod/.ivy2/cache/org.scalactic/scalactic_2.10/docs/scalactic_2.10-3.0.1-javadoc.jar!/"/>
+    </attributes>
+  </classpathentry>
   <classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
+  <classpathentry sourcepath="/home/pramod/.ivy2/cache/org.scalatest/scalatest_2.10/srcs/scalatest_2.10-3.0.1-sources.jar" kind="lib" path="/home/pramod/.ivy2/cache/org.scalatest/scalatest_2.10/bundles/scalatest_2.10-3.0.1.jar">
+    <attributes>
+      <attribute name="javadoc_location" value="jar:file:/home/pramod/.ivy2/cache/org.scalatest/scalatest_2.10/docs/scalatest_2.10-3.0.1-javadoc.jar!/"/>
+    </attributes>
+  </classpathentry>
   <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
   <classpathentry kind="output" path="bin"/>
 </classpath>

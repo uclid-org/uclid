@@ -2,8 +2,9 @@ package uclid
 package smt
 
 import scala.collection.mutable.Map
+import scala.collection.immutable.Set
 
-object ExpressionConverter {
+class ExpressionConverter {
   type SymbolTable = Map[lang.Identifier, smt.Symbol]
   
   def typeToSMT(typ : lang.Type) : smt.Type = {
