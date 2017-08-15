@@ -4,7 +4,7 @@ package lang
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.immutable.{Map => ImmutableMap}
 
-class TypecheckingVisitor extends ReadOnlyPass[Unit]
+class TypecheckPass extends ReadOnlyPass[Unit]
 {
   type MemoKey = (Expr, ScopeMap)
   type Memo = MutableMap[MemoKey, Type]
@@ -13,6 +13,11 @@ class TypecheckingVisitor extends ReadOnlyPass[Unit]
   type PolymorphicOpMapKey = (IdGenerator.Id, Operator)
   type PolymorphicOpMap = MutableMap[IdGenerator.Id, Operator]
   var polyOpMap : PolymorphicOpMap = MutableMap.empty
+  
+  override def reset() = {
+    memo.clear()
+    polyOpMap.clear()
+  }
   
   override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : Unit, ctx : ScopeMap) : Unit = {
     typeOf(e, ctx)
@@ -163,33 +168,37 @@ class TypecheckingVisitor extends ReadOnlyPass[Unit]
   }
 }
 
-class Typechecker () {
-  val typeMap = new TypecheckingVisitor()
-  val visitor = new ASTAnalyzer(typeMap)
-  def check(m : Module) = {
-    visitor.visitModule(m, Unit)
-  }
-  def rewrite(m : Module) : Module = {
-    return (new ASTRewriter(new RewritePass {
-      override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = { 
-        op match {
-          case p : PolymorphicOperator => {
-            val reifiedOp = typeMap.polyOpMap.get(p.astNodeId)
-            Utils.assert(!reifiedOp.isEmpty, "No reified operator available!")
-            println("replacing " + p.toString + " with " + reifiedOp.toString)
-            reifiedOp
-          }
-          case _ => Some(op)
-        }
-      }
-    })).visitModule(m).get
-  }
+class Typechecker extends ASTAnalyzer("Typechecker", new TypecheckPass())  {
+  override def pass = super.pass.asInstanceOf[TypecheckPass]
+  in = Some(Unit)
 }
 
-object Typechecker {
-  def checkAndRewrite(m : Module) : Module = {
-    val tc = new Typechecker()
-    tc.check(m)
-    return tc.rewrite(m)
+class PolymorphicTypeRewriterPass extends RewritePass {
+  override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = {
+    val manager : PassManager = pass.get.manager.get
+    val typeChecker = manager.getPass("Typechecker").get.asInstanceOf[Typechecker].pass
+    
+    op match {
+      case p : PolymorphicOperator => {
+        val reifiedOp = typeChecker.polyOpMap.get(p.astNodeId)
+        Utils.assert(!reifiedOp.isEmpty, "No reified operator available!")
+        println("replacing " + p.toString + " with " + reifiedOp.toString)
+        reifiedOp
+      }
+      case _ => Some(op)
+    }
   }
 }
+class PolymorphicTypeRewriter extends ASTRewriter(
+    "PolymorphicTypeRewriter", new PolymorphicTypeRewriterPass())
+
+
+/*
+object Typechecker {
+  def checkAndRewrite(m : Module) : Module = {
+    val typechecker = new Typechecker()
+    val typerewriter = new PolymorphicTypeRewriter()
+    return typerewriter.visit(typechecker.visit(m).get).get
+  }
+}
+*/
