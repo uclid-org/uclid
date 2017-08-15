@@ -95,7 +95,6 @@ package uclid {
       //Control module
       println("Found main module: " + module.id)
       println(module.toString)
-      /*
       val asserts = UclidSymbolicSimulator.simulate_steps(module,2)._2 //simulate for 2 steps
       var z3Interface = smt.Z3Interface.newInterface()
       asserts.foreach { x => 
@@ -110,7 +109,6 @@ package uclid {
           case None        => println("Assertion INDETERMINATE.")
         }
       }
-      */
       //smt.SMTTester.testInts()
     }
   }
