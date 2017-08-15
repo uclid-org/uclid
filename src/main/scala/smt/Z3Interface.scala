@@ -136,6 +136,16 @@ package uclid {
             val fieldIndex = tupleType.fieldIndex(fld)
             val tupleSort = getTupleSort(tupleType.types)
             tupleSort.getFieldDecls()(fieldIndex).apply(exprArgs(0))            
+          case RecordUpdateOp(fld) =>
+            val tupleType = operands(0).typ.asInstanceOf[TupleType]
+            val fieldIndex = tupleType.fieldIndex(fld)
+            val indices = tupleType.fieldIndices
+            val tupleSort = getTupleSort(tupleType.types)
+            val newFields = indices.map{ (i) =>
+              if (i == fieldIndex) exprArgs(1)
+              else tupleSort.getFieldDecls()(i).apply(exprArgs(0))
+            }
+            tupleSort.mkDecl().apply(newFields.toSeq : _*)
           case _             => throw new Utils.UnimplementedException("Operator not yet implemented: " + op.toString())
         }
       }
@@ -173,6 +183,7 @@ package uclid {
           case _ =>
             throw new Utils.UnimplementedException("No translation for expression yet: " + e.toString)
         }
+        // z3AST
         if (z3AST.isInstanceOf[z3.Expr]) z3AST.asInstanceOf[z3.Expr].simplify()
         else z3AST
       })
@@ -184,6 +195,7 @@ package uclid {
       /** Check whether a particular expression is satisfiable.  */      
       override def check (e : Expr) : Option[Boolean] = {
         val z3Expr = exprToZ3(e)
+        println("Z3 Expression: " + z3Expr.toString)
         
         solver.push()
         solver.add(z3Expr.asInstanceOf[z3.BoolExpr])

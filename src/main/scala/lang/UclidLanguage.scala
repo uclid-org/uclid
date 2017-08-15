@@ -7,7 +7,7 @@ package uclid
 package lang
 
 import scala.collection.immutable.Map
-
+import scala.util.parsing.input.Positional
 
 object PrettyPrinter
 {
@@ -29,7 +29,7 @@ object IdGenerator {
 /** All elements in the AST are derived from this class.
  *  The plan is to stick an ID into this later so that we can use the ID to store auxiliary information.
  */
-sealed abstract class ASTNode {
+sealed abstract class ASTNode extends Positional {
   val astNodeId = IdGenerator.newId()
 }
 

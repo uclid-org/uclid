@@ -26,9 +26,8 @@ import uclid.lang.DecideCmd
      * @param chars    The character string making up the matched keyword. 
      * @return a `Parser` that matches the given string
      */
-  //  implicit def keyword(chars: String): Parser[String] = accept(Keyword(chars)) ^^ (_.chars)
-      implicit def keyword(chars: String): Parser[String] = 
-        keywordCache.getOrElseUpdate(chars, accept(Keyword(chars)) ^^ (_.chars))
+    implicit def keyword(chars: String): Parser[String] = 
+      keywordCache.getOrElseUpdate(chars, accept(Keyword(chars)) ^^ (_.chars))
    
     /** A parser which matches an integer literal */
     def integerLit: Parser[IntegerLit] = 

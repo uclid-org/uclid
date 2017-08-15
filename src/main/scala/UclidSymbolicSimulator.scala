@@ -72,8 +72,8 @@ package uclid {
         val stWInputs = newInputSymbols(currentState, step)
         states += stWInputs
         currentState = simulate(stWInputs);
-        println("****** After step# " + step + " ******");
-        println(currentState)
+//        println("****** After step# " + step + " ******");
+//        println(currentState)
       }
       
       return (currentState,asserts)
