@@ -1,7 +1,9 @@
 package uclid
 package lang
 
-import scala.collection.mutable.Map
+import scala.collection.mutable.{Map => MutableMap}
+import scala.collection.immutable.{Map => ImmutableMap}
+
 
 /* AST visitor that walks through the AST and collects information. */
 trait FoldingASTVisitor[T] {
@@ -17,7 +19,7 @@ trait FoldingASTVisitor[T] {
   def applyOnTypeDecl(typDec : UclTypeDecl, in : T) : T = { in }
   def applyOnInit(init : UclInitDecl, in : T) : T = { in }
   def applyOnNext(next : UclNextDecl, in : T) : T = { in }
-  def applyOnType(typ: UclType, in : T) : T = { in }
+  def applyOnType(typ: Type, in : T) : T = { in }
   def applyOnProcedureSig(sig : UclProcedureSig, in : T) : T = { in }
   def applyOnFunctionSig(sig : UclFunctionSig, in : T) : T = { in }
   def applyOnLocalVar(lvar : UclLocalVarDecl, in : T) : T = { in }
@@ -162,7 +164,7 @@ class FoldingVisitor[T] (v: FoldingASTVisitor[T], depthFirst: Boolean) {
     return v.applyOnCmd(cmd, result)
   }
 
-  def visitType(typ: UclType, in : T) : T = {
+  def visitType(typ: Type, in : T) : T = {
     var result : T = in
     if(!depthFirst) result = v.applyOnType(typ, result)
     if(depthFirst) result = v.applyOnType(typ, result)
@@ -434,7 +436,7 @@ trait RewritingASTVisitor {
   def rewriteTypeDecl(typDec : UclTypeDecl) : Option[UclTypeDecl] = { Some(typDec) }
   def rewriteInit(init : UclInitDecl) : Option[UclInitDecl] = { Some(init) }
   def rewriteNext(next : UclNextDecl) : Option[UclNextDecl] = { Some(next) }
-  def rewriteType(typ: UclType) : Option[UclType] = { Some(typ) }
+  def rewriteType(typ: Type) : Option[Type] = { Some(typ) }
   def rewriteProcedureSig(sig : UclProcedureSig) : Option[UclProcedureSig] = { Some(sig) }
   def rewriteFunctionSig(sig : UclFunctionSig) : Option[UclFunctionSig] = { Some(sig) }
   def rewriteLocalVar(lvar : UclLocalVarDecl) : Option[UclLocalVarDecl] = { Some(lvar) }
@@ -576,19 +578,19 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     return v.rewriteCommand(cmd)
   }
   
-  def visitType(typ: UclType) : Option[UclType] = {
+  def visitType(typ: Type) : Option[Type] = {
     return v.rewriteType(typ)
   }
 
   def visitProcedureSig(sig : UclProcedureSig) : Option[UclProcedureSig] = {
-    val inParamsP : List[(Identifier, UclType)] = sig.inParams.map((inP) => {
+    val inParamsP : List[(Identifier, Type)] = sig.inParams.map((inP) => {
       (visitIdentifier(inP._1), visitType(inP._2)) match {
         case (Some(id), Some(typ)) => Some(id, typ)
         case _ => None
       }
     }).flatten
     
-    val outParamsP : List[(Identifier, UclType)] = sig.outParams.map((outP) => {
+    val outParamsP : List[(Identifier, Type)] = sig.outParams.map((outP) => {
       (visitIdentifier(outP._1), visitType(outP._2)) match {
         case (Some(id), Some(typ)) => Some(id, typ)
         case _ => None
@@ -602,7 +604,7 @@ class RewritingVisitor (v: RewritingASTVisitor) {
   }
   
   def visitFunctionSig(sig : UclFunctionSig) : Option[UclFunctionSig] = {
-    val args : List[(Identifier, UclType)] = sig.args.map((inP) => {
+    val args : List[(Identifier, Type)] = sig.args.map((inP) => {
       (visitIdentifier(inP._1), visitType(inP._2)) match {
         case (Some(id), Some(typ)) => Some(id, typ)
         case _ => None
@@ -796,72 +798,124 @@ class RewritingVisitor (v: RewritingASTVisitor) {
 
 class TypingVisitor extends FoldingASTVisitor[Unit]
 {
-  type M = Map[Expr, UclType]
-  var memo : Map[Expr, UclType] = Map.empty[Expr, UclType]
+  type Context = ImmutableMap[Identifier, Type]
+  type MemoKey = (Expr, Context)
+  type Memo = MutableMap[MemoKey, Type]
+  var memo : Memo = MutableMap.empty[MemoKey, Type]
+  var context = ImmutableMap.empty[Identifier, Type]
   
   override def applyOnExpr(e : Expr, in : Unit) : Unit = {
-    if (!memo.contains(e)) {
-      val t = typeOf(e)
-    }
+    typeOf(e, context)
   }
   
-  def typeOf(e : Expr) : UclType = {
-    def typeOfOpApp(opapp : UclOperatorApplication) : UclType = {
-      val argTypes = opapp.operands.map(typeOf(_))
+  def typeOf(e : Expr, c : Context) : Type = {
+    def opAppType(opapp : UclOperatorApplication) : Type = {
+      val argTypes = opapp.operands.map(typeOf(_, c))
       opapp.op match {
         case polyOp : PolymorphicOperator => {
           Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
           Utils.assert(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type.")
           Utils.assert(argTypes.forall(_.isNumeric), "Arguments to operator '" + opapp.op.toString + "' must be of a numeric type.")
-          typeOf(opapp.operands(0))
+          typeOf(opapp.operands(0), c)
         }
         case intOp : IntArgOperator => {
           Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
-          Utils.assert(argTypes.forall(_.isInstanceOf[UclIntType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer.")
-          new UclIntType()
+          Utils.assert(argTypes.forall(_.isInstanceOf[IntType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer.")
+          new IntType()
         }
         case bvOp : BVArgOperator => {
           Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
-          Utils.assert(argTypes.forall(_.isInstanceOf[UclBitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
-          typeOf(opapp.operands(0))
+          Utils.assert(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
+          typeOf(opapp.operands(0), c)
         }
         case boolOp : BooleanOperator => {
           Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
-          Utils.assert(argTypes.forall(_.isInstanceOf[UclBoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
-          new UclBoolType()
+          Utils.assert(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
+          new BoolType()
         }
         case cmpOp : ComparisonOperator => {
           Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
           Utils.assert(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type.")
-          new UclBoolType()
+          new BoolType()
         }
-        case tOp : TemporalOperator => new UclTemporalType()
+        case tOp : TemporalOperator => new TemporalType()
         case ExtractOp(hi, lo) => {
           Utils.assert(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.")
-          Utils.assert(argTypes(0).isInstanceOf[UclBitVectorType], "Operand to operator '" + opapp.op.toString + "' must be of type BitVector.") 
-          Utils.assert(argTypes(0).asInstanceOf[UclBitVectorType].width > hi.value.toInt, "Operand to operator '" + opapp.op.toString + "' must have width > "  + hi.value.toString + ".") 
+          Utils.assert(argTypes(0).isInstanceOf[BitVectorType], "Operand to operator '" + opapp.op.toString + "' must be of type BitVector.") 
+          Utils.assert(argTypes(0).asInstanceOf[BitVectorType].width > hi.value.toInt, "Operand to operator '" + opapp.op.toString + "' must have width > "  + hi.value.toString + ".") 
           Utils.assert(hi.value >= lo.value , "High-operand must be greater than or equal to low operand for operator '" + opapp.op.toString + "'.") 
           Utils.assert(hi.value.toInt >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
           Utils.assert(lo.value.toInt >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
-          new UclBitVectorType(hi.value.toInt - lo.value.toInt + 1)
+          new BitVectorType(hi.value.toInt - lo.value.toInt + 1)
         }
         case ConcatOp() => {
           Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
-          Utils.assert(argTypes.forall(_.isInstanceOf[UclBitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
-          new UclBitVectorType(argTypes(0).asInstanceOf[UclBitVectorType].width + argTypes(1).asInstanceOf[UclBitVectorType].width)
+          Utils.assert(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
+          new BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width + argTypes(1).asInstanceOf[BitVectorType].width)
+        }
+        case RecordSelect(field) => {
+          Utils.assert(argTypes.size == 1, "Record select operator must have exactly one operand.")
+          Utils.assert(argTypes(0).isInstanceOf[RecordType], "Argument to record select operator must be of type record.")
+          val recordType = argTypes(0).asInstanceOf[RecordType]
+          val typOption = recordType.fieldType(field)
+          Utils.assert(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in record.")
+          return typOption.get
         }
       }
     }
-    val cachedType = memo.get(e)
+    
+    def arraySelectType(arrSel : UclArraySelectOperation) : Type = {
+      Utils.assert(typeOf(arrSel.e, c).isInstanceOf[ArrayType], "Type error in the array operand of select operation.")
+      val indTypes = arrSel.index.map(typeOf(_, c))
+      val arrayType = typeOf(arrSel.e, c).asInstanceOf[ArrayType]
+      Utils.assert(arrayType.inTypes == indTypes, "Array index type error.")
+      return arrayType.outType
+    }
+    
+    def arrayStoreType(arrStore : UclArrayStoreOperation) : Type = {
+      Utils.assert(typeOf(arrStore.e, c).isInstanceOf[ArrayType], "Type error in the array operand of store operation.")
+      val indTypes = arrStore.index.map(typeOf(_, c))
+      val valueType = typeOf(arrStore.value, c)
+      val arrayType = typeOf(arrStore.e, c).asInstanceOf[ArrayType]
+      Utils.assert(arrayType.inTypes == indTypes, "Array index type error.")
+      Utils.assert(arrayType.outType == valueType, "Array update value type error.")
+      return arrayType
+    }
+    
+    def funcAppType(fapp : UclFuncApplication) : Type = {
+      Utils.assert(typeOf(fapp.e, c).isInstanceOf[MapType], "Type error in function application (not a function).")
+      val funcType = typeOf(fapp.e,c ).asInstanceOf[MapType]
+      val argTypes = fapp.args.map(typeOf(_, c))
+      Utils.assert(funcType.inTypes == argTypes, "Type error in function application (argument type error).")
+      return funcType.outType
+    }
+    
+    def iteType(ite : UclITE) : Type = {
+      Utils.assert(typeOf(ite.e, c).isBool, "Type error in ITE condition operand.")
+      Utils.assert(typeOf(ite.t, c) == typeOf(ite.f, c), "ITE operand types don't match.")
+      return typeOf(ite.t, c)
+    }
+    
+    def lambdaType(lambda : UclLambda) : Type = {
+      return MapType(lambda.ids.map(_._2), typeOf(lambda.e, c))
+    }
+    
+    val cachedType = memo.get((e,c))
     if (cachedType.isEmpty) {
       val typ = e match {
-        case b : BoolLit => new UclBoolType()
-        case i : IntLit => new UclIntType()
-        case bv : BitVectorLit => new UclBitVectorType(bv.width)
+        case i : Identifier => (c.get(i).get)
+        case b : BoolLit => new BoolType()
+        case i : IntLit => new IntType()
+        case bv : BitVectorLit => new BitVectorType(bv.width)
         case r : Record => throw new Utils.UnimplementedException("Need to implement anonymous record types.")
-        case opapp : UclOperatorApplication => typeOfOpApp(opapp)
+        case opapp : UclOperatorApplication => opAppType(opapp)
+        case arrSel : UclArraySelectOperation => arraySelectType(arrSel)
+        case arrStore : UclArrayStoreOperation => arrayStoreType(arrStore)
+        case fapp : UclFuncApplication => funcAppType(fapp)
+        case ite : UclITE => iteType(ite)
+        case lambda : UclLambda => lambdaType(lambda)
       }
-      memo.put(e, typ)
+      memo.put((e,c), typ)
       return typ
     } else {
       return cachedType.get

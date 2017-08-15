@@ -52,24 +52,24 @@ package uclid {
       return (st,asserts)
     }
     
-    def toSMT(t: UclType, c: Context) : smt.Type = {
-      def dealWithFunc(inTypes: List[UclType], outType: UclType) : Unit = {
-        if (inTypes.filter { x => !(x.isInstanceOf[UclBoolType] || x.isInstanceOf[UclIntType]) }.size > 0 ||
-            !(outType.isInstanceOf[UclBoolType] || outType.isInstanceOf[UclIntType])
+    def toSMT(t: Type, c: Context) : smt.Type = {
+      def dealWithFunc(inTypes: List[Type], outType: Type) : Unit = {
+        if (inTypes.filter { x => !(x.isInstanceOf[BoolType] || x.isInstanceOf[IntType]) }.size > 0 ||
+            !(outType.isInstanceOf[BoolType] || outType.isInstanceOf[IntType])
         ) {
           throw new Utils.UnimplementedException("Primitive map types implemented thus far")
         }
       }
       t match {
-        case UclIntType() => return smt.IntType()
-        case UclBoolType() => return smt.BoolType()
-        case UclBitVectorType(w) => return smt.BitVectorType(w)
-        case UclMapType(inTypes,outType) => 
+        case IntType() => return smt.IntType()
+        case BoolType() => return smt.BoolType()
+        case BitVectorType(w) => return smt.BitVectorType(w)
+        case MapType(inTypes,outType) => 
           //dealWithFunc(inTypes, outType);
           return smt.MapType(inTypes.map(t => 
             toSMT(UclidSemanticAnalyzer.transitiveType(t,c),c)), 
             toSMT(UclidSemanticAnalyzer.transitiveType(outType,c),c))
-        case UclArrayType(inTypes,outType) => 
+        case ArrayType(inTypes,outType) => 
           //dealWithFunc(inTypes, outType);
           return smt.ArrayType(inTypes.map(t => 
             toSMT(UclidSemanticAnalyzer.transitiveType(t,c),c)), 

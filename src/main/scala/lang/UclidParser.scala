@@ -229,32 +229,32 @@ package uclid {
         "(" ~> ")" ^^ { case _ => List.empty[Expr] }
     
       /** Examples of allowed types are bool | int | [int,int,bool] int **/
-      lazy val PrimitiveType : PackratParser[UclType] =
-        KwBool ^^ {case _ => UclBoolType()}   | 
-        KwInt ^^ {case _ => UclIntType()}     |
-        bitVectorType ^^ {case bvType => UclBitVectorType(bvType.width)}
+      lazy val PrimitiveType : PackratParser[Type] =
+        KwBool ^^ {case _ => BoolType()}   | 
+        KwInt ^^ {case _ => IntType()}     |
+        bitVectorType ^^ {case bvType => BitVectorType(bvType.width)}
         
-      lazy val EnumType : PackratParser[UclEnumType] =
-        KwEnum ~> ("{" ~> Id) ~ rep("," ~> Id) <~ "}" ^^ { case id ~ ids => UclEnumType(id::ids) }
-      lazy val RecordType : PackratParser[UclRecordType] =
+      lazy val EnumType : PackratParser[lang.EnumType] =
+        KwEnum ~> ("{" ~> Id) ~ rep("," ~> Id) <~ "}" ^^ { case id ~ ids => lang.EnumType(id::ids) }
+      lazy val RecordType : PackratParser[lang.RecordType] =
         KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) <~ "}" ^^ 
-        { case id ~ ids => UclRecordType(id::ids) }
-      lazy val MapType : PackratParser[UclMapType] =
+        { case id ~ ids => lang.RecordType(id::ids) }
+      lazy val MapType : PackratParser[lang.MapType] =
         PrimitiveType ~ rep ("*" ~> PrimitiveType) ~ ("->" ~> Type) ^^
-          { case t ~ ts ~ rt => UclMapType(t :: ts, rt)}
-      lazy val ArrayType : PackratParser[UclArrayType] =
+          { case t ~ ts ~ rt => lang.MapType(t :: ts, rt)}
+      lazy val ArrayType : PackratParser[lang.ArrayType] =
         ("[") ~> PrimitiveType ~ (rep ("," ~> PrimitiveType) <~ "]") ~ Type ^^
-          { case t ~ ts ~ rt => UclArrayType(t :: ts, rt)}
-      lazy val SynonymType : PackratParser[UclSynonymType] = Id ^^ { case id => UclSynonymType(id) }
-      lazy val Type : PackratParser[UclType] = 
+          { case t ~ ts ~ rt => lang.ArrayType(t :: ts, rt)}
+      lazy val SynonymType : PackratParser[lang.SynonymType] = Id ^^ { case id => lang.SynonymType(id) }
+      lazy val Type : PackratParser[Type] = 
         MapType | ArrayType | EnumType | RecordType | PrimitiveType | SynonymType
     
-      lazy val IdType : PackratParser[(Identifier,UclType)] =
+      lazy val IdType : PackratParser[(Identifier,Type)] =
         Id ~ (":" ~> Type) ^^ { case id ~ typ => (id,typ)}
     
-      lazy val IdTypeList : PackratParser[List[(Identifier,UclType)]] =
+      lazy val IdTypeList : PackratParser[List[(Identifier,Type)]] =
         "(" ~> IdType ~ (rep ("," ~> IdType) <~ ")") ^^ { case t ~ ts =>  t :: ts} |
-        "(" ~ ")" ^^ { case _~_ => List.empty[(Identifier,UclType)] }
+        "(" ~ ")" ^^ { case _~_ => List.empty[(Identifier,Type)] }
     
       lazy val Lhs : PackratParser[UclLhs] =
         Id ~ ArraySelectOp ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ 
@@ -300,7 +300,7 @@ package uclid {
             UclProcedureDecl(id, UclProcedureSig(args,outs), decls, body) } |
         KwProcedure ~> Id ~ IdTypeList ~ ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
           { case id ~ args ~ decls ~ body => 
-            UclProcedureDecl(id, UclProcedureSig(args, List.empty[(Identifier,UclType)]), decls, body) }
+            UclProcedureDecl(id, UclProcedureSig(args, List.empty[(Identifier,Type)]), decls, body) }
     
       lazy val TypeDecl : PackratParser[UclTypeDecl] =
         KwType ~> Id ~ ("=" ~> Type) <~ ";" ^^ { case id ~ t => UclTypeDecl(id,t) }
