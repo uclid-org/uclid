@@ -10,5 +10,6 @@ object UclidMain {
     val module = UclidParser.parseModule(input)
     //println("Parse Result: " + module)
     UclidSemanticAnalyzer.checkSemantics(module)
+    println("Semantic Checking Succeeded")
   }
 }
