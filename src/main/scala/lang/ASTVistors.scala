@@ -477,128 +477,131 @@ trait RewritingASTVisitor {
 
 class RewritingVisitor (v: RewritingASTVisitor) {
   def visitModule(module : Module) : Option[Module] = {
-    val id = visitIdentifier(module.id)
-    val decls = module.decls.map(visitDecl(_)).flatten
-    val cmds = module.cmds.map(visitCommand(_)).flatten
+    val emptyContext = new ScopeMap()
+    val context = emptyContext + module
+    val id = visitIdentifier(module.id, context)
+    val decls = module.decls.map(visitDecl(_, context)).flatten
+    val cmds = module.cmds.map(visitCommand(_, context)).flatten
     return id.flatMap((i) => v.rewriteModule(Module(i, decls, cmds)))
   }
   
-  def visitDecl(decl : UclDecl) : Option[UclDecl] = {
+  def visitDecl(decl : UclDecl, context : ScopeMap) : Option[UclDecl] = {
     return (decl match {
-      case procDecl : UclProcedureDecl => visitProcedure(procDecl)
-      case typeDecl : UclTypeDecl => visitTypeDecl(typeDecl)
-      case stateVar : UclStateVarDecl => visitStateVar(stateVar)
-      case inputVar : UclInputVarDecl => visitInputVar(inputVar)
-      case outputVar : UclOutputVarDecl => visitOutputVar(outputVar)
-      case constDecl : UclConstantDecl => visitConstant(constDecl)
-      case funcDecl : UclFunctionDecl => visitFunction(funcDecl)
-      case initDecl : UclInitDecl => visitInit(initDecl)
-      case nextDecl : UclNextDecl => visitNext(nextDecl)
-      case specDecl : UclSpecDecl => visitSpec(specDecl)
+      case procDecl : UclProcedureDecl => visitProcedure(procDecl, context)
+      case typeDecl : UclTypeDecl => visitTypeDecl(typeDecl, context)
+      case stateVar : UclStateVarDecl => visitStateVar(stateVar, context)
+      case inputVar : UclInputVarDecl => visitInputVar(inputVar, context)
+      case outputVar : UclOutputVarDecl => visitOutputVar(outputVar, context)
+      case constDecl : UclConstantDecl => visitConstant(constDecl, context)
+      case funcDecl : UclFunctionDecl => visitFunction(funcDecl, context)
+      case initDecl : UclInitDecl => visitInit(initDecl, context)
+      case nextDecl : UclNextDecl => visitNext(nextDecl, context)
+      case specDecl : UclSpecDecl => visitSpec(specDecl, context)
     }).flatMap(v.rewriteDecl(_))
   }
-  def visitProcedure(proc : UclProcedureDecl) : Option[UclProcedureDecl] = {
-    val id = visitIdentifier(proc.id)
-    val sig = visitProcedureSig(proc.sig)
-    val decls = proc.decls.map(visitLocalVar(_)).flatten
-    val stmts = proc.body.map(visitStatement(_)).flatten
+  def visitProcedure(proc : UclProcedureDecl, contextIn : ScopeMap) : Option[UclProcedureDecl] = {
+    val context = contextIn + proc
+    val id = visitIdentifier(proc.id, context)
+    val sig = visitProcedureSig(proc.sig, context)
+    val decls = proc.decls.map(visitLocalVar(_, context)).flatten
+    val stmts = proc.body.map(visitStatement(_, context)).flatten
     (id, sig) match {
       case (Some(i), Some(s)) => v.rewriteProcedure(UclProcedureDecl(i, s, decls, stmts))
       case _ => None 
     }
   }
   
-  def visitFunction(func : UclFunctionDecl) : Option[UclFunctionDecl] = {
-    val id = visitIdentifier(func.id)
-    val sig = visitFunctionSig(func.sig)
+  def visitFunction(func : UclFunctionDecl, context : ScopeMap) : Option[UclFunctionDecl] = {
+    val id = visitIdentifier(func.id, context)
+    val sig = visitFunctionSig(func.sig, context)
     (id, sig) match {
       case (Some(i), Some(s)) => v.rewriteFunction(UclFunctionDecl(i, s))
       case _ => None
     }
   }
   
-  def visitStateVar(stvar : UclStateVarDecl) : Option[UclStateVarDecl] = {
-    val idP = visitIdentifier(stvar.id)
-    val typP = visitType(stvar.typ)
+  def visitStateVar(stvar : UclStateVarDecl, context : ScopeMap) : Option[UclStateVarDecl] = {
+    val idP = visitIdentifier(stvar.id, context)
+    val typP = visitType(stvar.typ, context)
     (idP, typP) match {
       case (Some(id), Some(typ)) => v.rewriteStateVar(UclStateVarDecl(id, typ))
       case _ => None
     }
   }
   
-  def visitInputVar(inpvar : UclInputVarDecl) : Option[UclInputVarDecl] = {
-    val idP = visitIdentifier(inpvar.id)
-    var typP = visitType(inpvar.typ)
+  def visitInputVar(inpvar : UclInputVarDecl, context : ScopeMap) : Option[UclInputVarDecl] = {
+    val idP = visitIdentifier(inpvar.id, context)
+    var typP = visitType(inpvar.typ, context)
     (idP, typP) match {
       case (Some(id), Some(typ)) => v.rewriteInputVar(UclInputVarDecl(id, typ))
       case _ => None
     }
   }
   
-  def visitOutputVar(outvar : UclOutputVarDecl) : Option[UclOutputVarDecl] = {
-    val idP = visitIdentifier(outvar.id)
-    val typP = visitType(outvar.typ)
+  def visitOutputVar(outvar : UclOutputVarDecl, context : ScopeMap) : Option[UclOutputVarDecl] = {
+    val idP = visitIdentifier(outvar.id, context)
+    val typP = visitType(outvar.typ, context)
     (idP, typP) match {
       case (Some(id), Some(typ)) => v.rewriteOutputVar(UclOutputVarDecl(id, typ))
       case _ => None
     }
   }
   
-  def visitConstant(cnst : UclConstantDecl) : Option[UclConstantDecl] = {
-    val idP = visitIdentifier(cnst.id)
-    val typP = visitType(cnst.typ)
+  def visitConstant(cnst : UclConstantDecl, context : ScopeMap) : Option[UclConstantDecl] = {
+    val idP = visitIdentifier(cnst.id, context)
+    val typP = visitType(cnst.typ, context)
     (idP, typP) match {
       case (Some(id), Some(typ)) => v.rewriteConstant(UclConstantDecl(id, typ))
       case _ => None
     }
   }
   
-  def visitSpec(spec : UclSpecDecl) : Option[UclSpecDecl] = {
-    val idP = visitIdentifier(spec.id)
-    val exprP = visitExpr(spec.expr)
+  def visitSpec(spec : UclSpecDecl, context : ScopeMap) : Option[UclSpecDecl] = {
+    val idP = visitIdentifier(spec.id, context)
+    val exprP = visitExpr(spec.expr, context)
     (idP, exprP) match {
       case (Some(id), Some(expr)) => v.rewriteSpec(UclSpecDecl(id, expr))
       case _ => None
     }
   }
   
-  def visitTypeDecl(typDec : UclTypeDecl) : Option[UclTypeDecl] = {
-    val idP = visitIdentifier(typDec.id)
-    val typeP = visitType(typDec.typ)
+  def visitTypeDecl(typDec : UclTypeDecl, context : ScopeMap) : Option[UclTypeDecl] = {
+    val idP = visitIdentifier(typDec.id, context)
+    val typeP = visitType(typDec.typ, context)
     (idP, typeP) match {
       case (Some(id), Some(typ)) => v.rewriteTypeDecl(UclTypeDecl(id, typ))
       case _ => None
     }
   }
   
-  def visitInit(init : UclInitDecl) : Option[UclInitDecl] = {
-    val body = init.body.map(visitStatement(_)).flatten
+  def visitInit(init : UclInitDecl, context : ScopeMap) : Option[UclInitDecl] = {
+    val body = init.body.map(visitStatement(_, context)).flatten
     return v.rewriteInit(UclInitDecl(body))
   }
   
-  def visitNext(next : UclNextDecl) : Option[UclNextDecl] = {
-    val body = next.body.map(visitStatement(_)).flatten
+  def visitNext(next : UclNextDecl, context : ScopeMap) : Option[UclNextDecl] = {
+    val body = next.body.map(visitStatement(_, context)).flatten
     return v.rewriteNext(UclNextDecl(body))
   }
   
-  def visitCommand(cmd : UclCmd) : Option[UclCmd] = {
+  def visitCommand(cmd : UclCmd, context : ScopeMap) : Option[UclCmd] = {
     return v.rewriteCommand(cmd)
   }
   
-  def visitType(typ: Type) : Option[Type] = {
+  def visitType(typ: Type, context : ScopeMap) : Option[Type] = {
     return v.rewriteType(typ)
   }
 
-  def visitProcedureSig(sig : UclProcedureSig) : Option[UclProcedureSig] = {
+  def visitProcedureSig(sig : UclProcedureSig, context : ScopeMap) : Option[UclProcedureSig] = {
     val inParamsP : List[(Identifier, Type)] = sig.inParams.map((inP) => {
-      (visitIdentifier(inP._1), visitType(inP._2)) match {
+      (visitIdentifier(inP._1, context), visitType(inP._2, context)) match {
         case (Some(id), Some(typ)) => Some(id, typ)
         case _ => None
       }
     }).flatten
     
     val outParamsP : List[(Identifier, Type)] = sig.outParams.map((outP) => {
-      (visitIdentifier(outP._1), visitType(outP._2)) match {
+      (visitIdentifier(outP._1, context), visitType(outP._2, context)) match {
         case (Some(id), Some(typ)) => Some(id, typ)
         case _ => None
       }
@@ -610,79 +613,79 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     }
   }
   
-  def visitFunctionSig(sig : UclFunctionSig) : Option[UclFunctionSig] = {
+  def visitFunctionSig(sig : UclFunctionSig, context : ScopeMap) : Option[UclFunctionSig] = {
     val args : List[(Identifier, Type)] = sig.args.map((inP) => {
-      (visitIdentifier(inP._1), visitType(inP._2)) match {
+      (visitIdentifier(inP._1, context), visitType(inP._2, context)) match {
         case (Some(id), Some(typ)) => Some(id, typ)
         case _ => None
       }
     }).flatten
-    return visitType(sig.retType).flatMap((t) => v.rewriteFunctionSig(UclFunctionSig(args, t)))
+    return visitType(sig.retType, context).flatMap((t) => v.rewriteFunctionSig(UclFunctionSig(args, t)))
   }
   
-  def visitLocalVar(lvar : UclLocalVarDecl) : Option[UclLocalVarDecl] = {
-    visitIdentifier(lvar.id).flatMap((id) => {
-      visitType(lvar.typ).flatMap((t) => v.rewriteLocalVar(UclLocalVarDecl(id, t)))
+  def visitLocalVar(lvar : UclLocalVarDecl, context : ScopeMap) : Option[UclLocalVarDecl] = {
+    visitIdentifier(lvar.id, context).flatMap((id) => {
+      visitType(lvar.typ, context).flatMap((t) => v.rewriteLocalVar(UclLocalVarDecl(id, t)))
     })
   }
   
-  def visitStatement(st : UclStatement) : Option[UclStatement] = {
+  def visitStatement(st : UclStatement, context : ScopeMap) : Option[UclStatement] = {
     return (st match {
-      case skipStmt : UclSkipStmt => visitSkipStatement(skipStmt)
-      case assertStmt : UclAssertStmt => visitAssertStatement(assertStmt)
-      case assumeStmt : UclAssumeStmt => visitAssumeStatement(assumeStmt)
-      case havocStmt : UclHavocStmt => visitHavocStatement(havocStmt)
-      case assignStmt : UclAssignStmt => visitAssignStatement(assignStmt)
-      case ifElseStmt : UclIfElseStmt => visitIfElseStatement(ifElseStmt)
-      case forStmt : UclForStmt => visitForStatement(forStmt)
-      case caseStmt : UclCaseStmt => visitCaseStatement(caseStmt)
-      case procCallStmt : UclProcedureCallStmt => visitProcedureCallStatement(procCallStmt)
+      case skipStmt : UclSkipStmt => visitSkipStatement(skipStmt, context)
+      case assertStmt : UclAssertStmt => visitAssertStatement(assertStmt, context)
+      case assumeStmt : UclAssumeStmt => visitAssumeStatement(assumeStmt, context)
+      case havocStmt : UclHavocStmt => visitHavocStatement(havocStmt, context)
+      case assignStmt : UclAssignStmt => visitAssignStatement(assignStmt, context)
+      case ifElseStmt : UclIfElseStmt => visitIfElseStatement(ifElseStmt, context)
+      case forStmt : UclForStmt => visitForStatement(forStmt, context)
+      case caseStmt : UclCaseStmt => visitCaseStatement(caseStmt, context)
+      case procCallStmt : UclProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
     }).flatMap(v.rewriteStatement(_))
   }
 
-  def visitSkipStatement(st : UclSkipStmt) : Option[UclSkipStmt] = {
+  def visitSkipStatement(st : UclSkipStmt, context : ScopeMap) : Option[UclSkipStmt] = {
     return v.rewriteSkip(st)
   }
   
-  def visitAssertStatement(st : UclAssertStmt) : Option[UclAssertStmt] = {
-    visitExpr(st.e).flatMap((e) => {
+  def visitAssertStatement(st : UclAssertStmt, context : ScopeMap) : Option[UclAssertStmt] = {
+    visitExpr(st.e, context).flatMap((e) => {
       v.rewriteAssert(UclAssertStmt(e))
     })
   }
   
-  def visitAssumeStatement(st : UclAssumeStmt) : Option[UclAssumeStmt] = {
-    visitExpr(st.e).flatMap((e) => {
+  def visitAssumeStatement(st : UclAssumeStmt, context : ScopeMap) : Option[UclAssumeStmt] = {
+    visitExpr(st.e, context).flatMap((e) => {
       v.rewriteAssume(UclAssumeStmt(e))
     })
   }
   
-  def visitHavocStatement(st: UclHavocStmt) : Option[UclHavocStmt] = {
-    visitIdentifier(st.id).flatMap((id) => {
+  def visitHavocStatement(st: UclHavocStmt, context : ScopeMap) : Option[UclHavocStmt] = {
+    visitIdentifier(st.id, context).flatMap((id) => {
       v.rewriteHavoc(UclHavocStmt(id))
     })
   }
   
-  def visitAssignStatement(st : UclAssignStmt) : Option[UclAssignStmt] = {
-    val lhss = st.lhss.map(visitLhs(_)).flatten
-    val rhss = st.rhss.map(visitExpr(_)).flatten
+  def visitAssignStatement(st : UclAssignStmt, context : ScopeMap) : Option[UclAssignStmt] = {
+    val lhss = st.lhss.map(visitLhs(_, context)).flatten
+    val rhss = st.rhss.map(visitExpr(_, context)).flatten
     return v.rewriteAssign(UclAssignStmt(lhss, rhss))
   }
   
-  def visitIfElseStatement(st : UclIfElseStmt) : Option[UclIfElseStmt] = {
-    val cond = visitExpr(st.cond)
-    val ifblock = st.ifblock.map(visitStatement(_)).flatten
-    val elseblock = st.elseblock.map(visitStatement(_)).flatten
+  def visitIfElseStatement(st : UclIfElseStmt, context : ScopeMap) : Option[UclIfElseStmt] = {
+    val cond = visitExpr(st.cond, context)
+    val ifblock = st.ifblock.map(visitStatement(_, context)).flatten
+    val elseblock = st.elseblock.map(visitStatement(_, context)).flatten
     cond match {
       case Some(c) => v.rewriteIfElse(UclIfElseStmt(c, ifblock, elseblock))
       case _ => None
     }
   }
   
-  def visitForStatement(st : UclForStmt) : Option[UclForStmt] = {
-    val idP = visitIdentifier(st.id)
-    val lit1P = visitIntLiteral(st.range._1)
-    val lit2P = visitIntLiteral(st.range._2)
-    val stmts = st.body.map(visitStatement(_)).flatten
+  def visitForStatement(st : UclForStmt, context : ScopeMap) : Option[UclForStmt] = {
+    val idP = visitIdentifier(st.id, context)
+    val lit1P = visitIntLiteral(st.range._1, context)
+    val lit2P = visitIntLiteral(st.range._2, context)
+    val stmts = st.body.map(visitStatement(_, context)).flatten
     
     return (idP, lit1P, lit2P) match {
       case (Some(id), Some(lit1), Some(lit2)) => v.rewriteFor(UclForStmt(id, (lit1, lit2), stmts))
@@ -690,115 +693,115 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     }
   }
   
-  def visitCaseStatement(st : UclCaseStmt) : Option[UclCaseStmt] = {
+  def visitCaseStatement(st : UclCaseStmt, context : ScopeMap) : Option[UclCaseStmt] = {
     val bodyP = st.body.map((c) => {
       // if rewriting the expression doesn't produce None.
-      visitExpr(c._1).flatMap((e) => {
+      visitExpr(c._1, context).flatMap((e) => {
         // then rewrite each of statements associated with the case expression.
-        Some(e, c._2.map(visitStatement(_)).flatten)
+        Some(e, c._2.map(visitStatement(_, context)).flatten)
       })
     }).flatten // and finally get rid of all the Options.
     return v.rewriteCase(UclCaseStmt(bodyP))
   }
   
-  def visitProcedureCallStatement(st : UclProcedureCallStmt) : Option[UclProcedureCallStmt] = {
-    val idP = visitIdentifier(st.id)
-    val lhssP = st.callLhss.map(visitLhs(_)).flatten
-    val argsP = st.args.map(visitExpr(_)).flatten
+  def visitProcedureCallStatement(st : UclProcedureCallStmt, context : ScopeMap) : Option[UclProcedureCallStmt] = {
+    val idP = visitIdentifier(st.id, context)
+    val lhssP = st.callLhss.map(visitLhs(_, context)).flatten
+    val argsP = st.args.map(visitExpr(_, context)).flatten
     idP.flatMap((id) => v.rewriteProcedureCall(UclProcedureCallStmt(id, lhssP, argsP)))
   }
   
-  def visitLhs(lhs : UclLhs) : Option[UclLhs] = {
-    val idP = visitIdentifier(lhs.id)
-    val arraySelectP = lhs.arraySelect.flatMap((as) => Some(as.map((e) => visitExpr(e)).flatten))
-    val recordSelectP = lhs.recordSelect.flatMap((rs) => Some(rs.map((i) => visitIdentifier(i)).flatten))
+  def visitLhs(lhs : UclLhs, context : ScopeMap) : Option[UclLhs] = {
+    val idP = visitIdentifier(lhs.id, context)
+    val arraySelectP = lhs.arraySelect.flatMap((as) => Some(as.map((e) => visitExpr(e, context)).flatten))
+    val recordSelectP = lhs.recordSelect.flatMap((rs) => Some(rs.map((i) => visitIdentifier(i, context)).flatten))
     idP.flatMap((id) => {
       Some(UclLhs(id, arraySelectP, recordSelectP))
     })
   }
   
-  def visitExpr(e : Expr) : Option[Expr] = {
+  def visitExpr(e : Expr, context : ScopeMap) : Option[Expr] = {
     return (e match {
-      case i : Identifier => visitIdentifier(i)
-      case lit : Literal => visitLiteral(lit)
-      case rec : Record => visitRecord(rec)
-      case opapp : UclOperatorApplication => visitOperatorApp(opapp)
-      case arrSel : UclArraySelectOperation => visitArraySelectOp(arrSel)
-      case arrUpd : UclArrayStoreOperation => visitArrayStoreOp(arrUpd)
-      case fapp : UclFuncApplication => visitFuncApp(fapp)
-      case ite : UclITE => visitITE(ite)
-      case lambda : UclLambda => visitLambda(lambda)
+      case i : Identifier => visitIdentifier(i, context)
+      case lit : Literal => visitLiteral(lit, context)
+      case rec : Record => visitRecord(rec, context)
+      case opapp : UclOperatorApplication => visitOperatorApp(opapp, context)
+      case arrSel : UclArraySelectOperation => visitArraySelectOp(arrSel, context)
+      case arrUpd : UclArrayStoreOperation => visitArrayStoreOp(arrUpd, context)
+      case fapp : UclFuncApplication => visitFuncApp(fapp, context)
+      case ite : UclITE => visitITE(ite, context)
+      case lambda : UclLambda => visitLambda(lambda, context)
     }).flatMap(v.rewriteExpr(_))
   }
   
-  def visitIdentifier(id : Identifier) : Option[Identifier] = {
+  def visitIdentifier(id : Identifier, context : ScopeMap) : Option[Identifier] = {
     return v.rewriteIdentifier(id)
   }
   
-  def visitLiteral(lit : Literal) : Option[Literal] = {
+  def visitLiteral(lit : Literal, context : ScopeMap) : Option[Literal] = {
     return (lit match {
-      case b : BoolLit => visitBoolLiteral(b)
-      case i : IntLit => visitIntLiteral(i)
-      case bv : BitVectorLit => visitBitVectorLiteral(bv)
+      case b : BoolLit => visitBoolLiteral(b, context)
+      case i : IntLit => visitIntLiteral(i, context)
+      case bv : BitVectorLit => visitBitVectorLiteral(bv, context)
     }).flatMap(v.rewriteLit(_))
   }
   
-  def visitBoolLiteral(b : BoolLit) : Option[BoolLit] = {
+  def visitBoolLiteral(b : BoolLit, context : ScopeMap) : Option[BoolLit] = {
     return v.rewriteBoolLit(b)
   }
   
-  def visitIntLiteral(i : IntLit) : Option[IntLit] = {
+  def visitIntLiteral(i : IntLit, context : ScopeMap) : Option[IntLit] = {
     return v.rewriteIntLit(i)
   }
   
-  def visitBitVectorLiteral(bv : BitVectorLit) : Option[BitVectorLit] = {
+  def visitBitVectorLiteral(bv : BitVectorLit, context : ScopeMap) : Option[BitVectorLit] = {
     return v.rewriteBitVectorLit(bv)
   }
   
-  def visitRecord(rec : Record) : Option[Record] = {
-    v.rewriteRecord(Record(rec.value.map(visitExpr(_)).flatten))
+  def visitRecord(rec : Record, context : ScopeMap) : Option[Record] = {
+    v.rewriteRecord(Record(rec.value.map(visitExpr(_, context)).flatten))
   }
   
-  def visitOperatorApp(opapp : UclOperatorApplication) : Option[UclOperatorApplication] = {
-    return visitOperator(opapp.op).flatMap((op) => {
-      v.rewriteOperatorApp(UclOperatorApplication(op, opapp.operands.map(visitExpr(_)).flatten))
+  def visitOperatorApp(opapp : UclOperatorApplication, context : ScopeMap) : Option[UclOperatorApplication] = {
+    return visitOperator(opapp.op, context).flatMap((op) => {
+      v.rewriteOperatorApp(UclOperatorApplication(op, opapp.operands.map(visitExpr(_, context)).flatten))
     })
   }
   
-  def visitOperator(op : Operator) : Option[Operator] = {
+  def visitOperator(op : Operator, context : ScopeMap) : Option[Operator] = {
     return v.rewriteOperator(op)
   }
   
-  def visitArraySelectOp(arrSel : UclArraySelectOperation) : Option[UclArraySelectOperation] = {
-    return visitExpr(arrSel.e) match {
-      case Some(e) => v.rewriteArraySelect(UclArraySelectOperation(e, arrSel.index.map(visitExpr(_)).flatten))
+  def visitArraySelectOp(arrSel : UclArraySelectOperation, context : ScopeMap) : Option[UclArraySelectOperation] = {
+    return visitExpr(arrSel.e, context) match {
+      case Some(e) => v.rewriteArraySelect(UclArraySelectOperation(e, arrSel.index.map(visitExpr(_, context)).flatten))
       case _ => None
     }
   }
   
-  def visitArrayStoreOp(arrStore : UclArrayStoreOperation) : Option[UclArrayStoreOperation] = {
-    val eP = visitExpr(arrStore.e)
-    val ind = arrStore.index.map(visitExpr(_)).flatten
-    val valP = visitExpr(arrStore.value)
+  def visitArrayStoreOp(arrStore : UclArrayStoreOperation, context : ScopeMap) : Option[UclArrayStoreOperation] = {
+    val eP = visitExpr(arrStore.e, context)
+    val ind = arrStore.index.map(visitExpr(_, context)).flatten
+    val valP = visitExpr(arrStore.value, context)
     return (eP, valP) match {
       case (Some(e), Some(value)) => v.rewriteArrayStore(UclArrayStoreOperation(e, ind, value))
       case _ => None
     }
   }
   
-  def visitFuncApp(fapp : UclFuncApplication) : Option[UclFuncApplication] = {
-    val eP = visitExpr(fapp.e)
-    val args = fapp.args.map(visitExpr(_)).flatten
+  def visitFuncApp(fapp : UclFuncApplication, context : ScopeMap) : Option[UclFuncApplication] = {
+    val eP = visitExpr(fapp.e, context)
+    val args = fapp.args.map(visitExpr(_, context)).flatten
     eP match {
       case Some(e) => v.rewriteFuncApp(UclFuncApplication(e, args))
       case _ => None
     }
   }
   
-  def visitITE(ite: UclITE) : Option[UclITE] = {
-    val condP = visitExpr(ite.e)
-    val tP = visitExpr(ite.t)
-    val fP = visitExpr(ite.f)
+  def visitITE(ite: UclITE, context : ScopeMap) : Option[UclITE] = {
+    val condP = visitExpr(ite.e, context)
+    val tP = visitExpr(ite.t, context)
+    val fP = visitExpr(ite.f, context)
     
     (condP, tP, fP) match {
       case (Some(cond), Some(t), Some(f)) => v.rewriteITE(UclITE(cond, t, f))
@@ -806,13 +809,14 @@ class RewritingVisitor (v: RewritingASTVisitor) {
     }
   }
   
-  def visitLambda(lambda: UclLambda) : Option[UclLambda] = {
+  def visitLambda(lambda: UclLambda, contextIn : ScopeMap) : Option[UclLambda] = {
+    val context = contextIn + lambda
     val idP = lambda.ids.map((arg) => {
-      (visitIdentifier(arg._1), visitType(arg._2)) match {
+      (visitIdentifier(arg._1, context), visitType(arg._2, context)) match {
         case (Some(id), Some(typ)) => Some(id, typ)
         case _ => None
       }
     }).flatten
-    return visitExpr(lambda.e).flatMap((e) => v.rewriteLambda(UclLambda(idP, e)))
+    return visitExpr(lambda.e, context).flatMap((e) => v.rewriteLambda(UclLambda(idP, e)))
   }
 }
