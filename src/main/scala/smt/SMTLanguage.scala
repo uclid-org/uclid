@@ -290,7 +290,7 @@ case class IntLit(value: BigInt) extends Literal (IntType.t) {
 }
 
 case class BitVectorLit(value: BigInt, width: Int) extends Literal (BitVectorType.t(width)) {
-  Utils.assert(value.bitCount + 1 <= width, "Value (" + value.toString + ") too big for BitVector of width " + width + " bits.")
+  Utils.assert(value.bitCount <= width, "Value (" + value.toString + ") too big for BitVector of width " + width + " bits.")
   override def toString = "(_ bv" + value.toString + " " + width.toString +")"
 }
 
