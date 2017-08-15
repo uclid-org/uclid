@@ -50,10 +50,10 @@ class UclidSymbolicSimulator (module : Module) {
   def initialize() {
     context.extractContext(module)
     val cnstSymbolTable = context.constants.foldLeft(Map.empty[Identifier, smt.Expr]){
-      (acc,i) => acc + (i._1 -> newConstantSymbol(i._1.value, toSMT(context.constants(i._1),context)))
+      (acc,i) => acc + (i._1 -> newConstantSymbol(i._1.name, toSMT(context.constants(i._1),context)))
     }
     val initSymbolTable = (context.variables ++ context.outputs).foldLeft(cnstSymbolTable){
-      (acc, i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(i._2, context)))
+      (acc, i) => acc + (i._1 -> newHavocSymbol(i._1.name, toSMT(i._2, context)))
     }
     symbolTable = simulate(context.init, initSymbolTable, context);
     (context.variables ++ context.outputs).foreach { i => 
@@ -65,7 +65,7 @@ class UclidSymbolicSimulator (module : Module) {
   {
     def newInputSymbols(st : SymbolTable, step : Int) : SymbolTable = {
       context.inputs.foldLeft(st)((acc,i) => {
-        acc + (i._1 -> newInputSymbol(i._1.value, step, toSMT(i._2, context))) 
+        acc + (i._1 -> newInputSymbol(i._1.name, step, toSMT(i._2, context))) 
       })
     }
     //st = context.variables.foldLeft(st)((acc,i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(context.variables(i._1)))));
@@ -146,7 +146,7 @@ class UclidSymbolicSimulator (module : Module) {
       case EqualityOp() => return smt.EqualityOp
       case InequalityOp() => return smt.InequalityOp
       // Record select.
-      case RecordSelect(r) => return smt.RecordSelectOp(r.value)
+      case RecordSelect(r) => return smt.RecordSelectOp(r.name)
       case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
     }
   }
@@ -182,7 +182,7 @@ class UclidSymbolicSimulator (module : Module) {
               arraySelectOp.get.map(i => evaluate(i, st, c)), rhs(x)))
         } else if (arraySelectOp.isEmpty && recordSelectOp.isDefined && sliceSelectOp.isEmpty) {
           Utils.assert(recordSelectOp.get.length == 1, "No support for nested record updates.")
-          st = st + (lhs(x).id -> smt.OperatorApplication(smt.RecordUpdateOp(recordSelectOp.get(0).value), List(st(lhs(x).id), rhs(x))))
+          st = st + (lhs(x).id -> smt.OperatorApplication(smt.RecordUpdateOp(recordSelectOp.get(0).name), List(st(lhs(x).id), rhs(x))))
         } else if (arraySelectOp.isDefined && recordSelectOp.isDefined && sliceSelectOp.isEmpty) {
           throw new Utils.UnimplementedException("No support for arrays of records.")
         }
@@ -196,7 +196,7 @@ class UclidSymbolicSimulator (module : Module) {
         return symbolTable
       case AssumeStmt(e) => return symbolTable
       case HavocStmt(id) => 
-        return symbolTable.updated(id, newHavocSymbol(id.value, toSMT(c.variables(id),c)))
+        return symbolTable.updated(id, newHavocSymbol(id.name, toSMT(c.variables(id),c)))
       case AssignStmt(lhss,rhss) =>
         val es = rhss.map(i => evaluate(i, symbolTable, c));
         return simulateAssign(lhss, es, symbolTable)
@@ -220,8 +220,8 @@ class UclidSymbolicSimulator (module : Module) {
         c2.inputs = c.inputs ++ (proc.sig.inParams.map(i => i._1 -> i._2).toMap)
         c2.variables = c.variables ++ (proc.sig.outParams.map(i => i._1 -> i._2).toMap)
         c2.variables = c2.variables ++ (proc.decls.map(i => i.id -> i.typ).toMap)
-        st = proc.decls.foldLeft(st)((acc,i) => acc + (i.id -> newHavocSymbol(i.id.value, toSMT(i.typ,c2))));
-        st = proc.sig.outParams.foldLeft(st)((acc, i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(i._2, c2))))
+        st = proc.decls.foldLeft(st)((acc,i) => acc + (i.id -> newHavocSymbol(i.id.name, toSMT(i.typ,c2))));
+        st = proc.sig.outParams.foldLeft(st)((acc, i) => acc + (i._1 -> newHavocSymbol(i._1.name, toSMT(i._2, c2))))
         st = simulate(proc.body, st, c2)
         st = simulateAssign(lhss, proc.sig.outParams.map(i => st(i._1)), st)
         //remove procedure arguments
@@ -239,7 +239,7 @@ class UclidSymbolicSimulator (module : Module) {
       case HavocStmt(id) => Set(id)
       case AssignStmt(lhss,rhss) => 
         return lhss.map { lhs => 
-          var lhs_id : String = lhs.id.value;
+          var lhs_id : String = lhs.id.name;
           lhs.recordSelect match {
             case Some(rs) => throw new Utils.UnimplementedException("Unimplemented records in LHS")
             case None => Identifier(lhs_id)
@@ -269,11 +269,11 @@ class UclidSymbolicSimulator (module : Module) {
        case ITE(cond,t,f) =>
          return ITE(substitute(cond,id,arg), substitute(t,id,arg), substitute(f,id,arg))
        case Lambda(idtypes, le) =>
-         Utils.assert(idtypes.exists(x => x._1.value == id.value), "Lambda arguments of the same name")
+         Utils.assert(idtypes.exists(x => x._1.name == id.name), "Lambda arguments of the same name")
          return Lambda(idtypes, substitute(le, id, arg))
        case IntLit(n) => return e
        case BoolLit(b) => return e
-       case Identifier(i) => return (if (id.value == i) arg else e)
+       case Identifier(i) => return (if (id.name == i) arg else e)
        case _ => throw new Utils.UnimplementedException("Should not get here")
      }
   }
@@ -331,7 +331,7 @@ class UclidSymbolicSimulator (module : Module) {
        case ITE(cond,t,f) =>
          return smt.ITE(evaluate(cond,symbolTable,context), evaluate(t,symbolTable,context), evaluate(f,symbolTable,context))
        case Lambda(ids,le) => 
-         return smt.Lambda(ids.map(i => smt.Symbol(i._1.value, toSMT(i._2,context))), evaluate(le,symbolTable,context))
+         return smt.Lambda(ids.map(i => smt.Symbol(i._1.name, toSMT(i._2,context))), evaluate(le,symbolTable,context))
        case IntLit(n) => smt.IntLit(n)
        case BoolLit(b) => smt.BooleanLit(b)
        case BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)

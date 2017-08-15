@@ -1,6 +1,6 @@
 scalacOptions += "-feature"
 scalacOptions += "-unchecked"
-// scalacOptions += "-deprecation"
+scalacOptions += "-deprecation"
 
 resolvers += "Artima Maven Repository" at "http://repo.artima.com/releases"
 

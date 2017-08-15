@@ -1,6 +1,7 @@
 module main {
   var cnt : int;
   var cntp : int;
+  var cntq : int;
   
   
   procedure add10(x : int) returns (y : int) {
@@ -13,15 +14,26 @@ module main {
     y := y + 1;
   }
   
+  procedure add10b(x : int) returns (y : int) {
+    y := x;
+    for i in range(1, 4) {
+      y := y + i;
+    }
+  }
+  
   init {
     cnt := 0;
     cntp := 0;
+    cntq := 0;
   }
   next {
     call (cnt) := add10(cnt);
+    call (cntq) := add10b(cntq);
     cntp := cntp + 10;
     
+    
     assert (cnt == cntp);
+    assert (cntq == cntp);
   }
   control {
     initialize;

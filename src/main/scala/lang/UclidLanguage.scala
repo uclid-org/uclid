@@ -136,12 +136,34 @@ case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
 }
 
-sealed abstract class Expr extends ASTNode
-case class Identifier(value: String) extends Expr {
-  override def toString = value.toString
+sealed abstract class Expr extends ASTNode {
+  /** Is this value a statically-defined constant? */
+  def isConstant = false
+}
+sealed abstract class IdentifierBase(nam : String) extends Expr {
+  val name = nam
+  override def toString = name.toString
+  override def equals (other: Any) : Boolean = {
+    other match {
+      case that : IdentifierBase => name == that.name
+      case _ => false
+    }
+  }
+  override def hashCode() : Int = name.hashCode()
+}
+
+case class Identifier(nam : String) extends IdentifierBase(nam)
+
+// These are identifiers whose value is a statically-defined constant.
+// For now, these are only created for the index variables in for loops.
+case class ConstIdentifier(nam : String) extends IdentifierBase(nam) {
+  override def isConstant = true
+  override def toString = name.toString + "#const"
 }
 
 sealed abstract class Literal extends Expr {
+  /** All literals are constants. */
+  override def isConstant = true
   def isNumeric = false
 }
 sealed abstract class NumericLit extends Literal {
@@ -180,6 +202,7 @@ case class Tuple(values: List[Expr]) extends Expr {
 }
 //for symbols interpreted by underlying Theory solvers
 case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr {
+  override def isConstant = operands.forall(_.isConstant)
   override def toString = {
     op match {
       case RecordSelect(r) => 
@@ -332,7 +355,7 @@ case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
 case class SynonymType(id: Identifier) extends Type {
   override def toString = id.toString
   override def equals(other: Any) = other match {
-    case that: SynonymType => that.id.value == this.id.value
+    case that: SynonymType => that.id.name == this.id.name
     case _ => false
   }
 }
@@ -365,7 +388,7 @@ case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Stat
                          List("} else {") ++ 
                          elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
-case class ForStmt(id: Identifier, range: (NumericLit,NumericLit), body: List[Statement])
+case class ForStmt(id: ConstIdentifier, range: (NumericLit,NumericLit), body: List[Statement])
   extends Statement
 {
   override def isLoop = true
@@ -474,27 +497,27 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[UclCmd]) extend
 }
 
 object Scope {
-  sealed abstract class NamedExpression(val id : Identifier, val typ: Type) {
+  sealed abstract class NamedExpression(val id : IdentifierBase, val typ: Type) {
     val isReadOnly = false
   }
-  sealed abstract class ReadOnlyNamedExpression(id : Identifier, typ: Type) extends NamedExpression(id, typ) {
+  sealed abstract class ReadOnlyNamedExpression(id : IdentifierBase, typ: Type) extends NamedExpression(id, typ) {
     override val isReadOnly = true
   }
   case class TypeSynonym(typId : Identifier, sTyp: Type) extends ReadOnlyNamedExpression(typId, sTyp)
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
   case class InputVar(inpId : Identifier, inpTyp: Type) extends ReadOnlyNamedExpression(inpId, inpTyp)
   case class OutputVar(outId : Identifier, outTyp: Type) extends NamedExpression(outId, outTyp)
-  case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
+  case class ConstantVar(cId : IdentifierBase, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class ProcedureOutputArg(argId : Identifier, argTyp: Type) extends NamedExpression(argId, argTyp)
   case class ProcedureLocalVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
-  case class ForIndexVar(iId : Identifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
+  case class ForIndexVar(iId : ConstIdentifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
   case class SpecVar(varId : Identifier, expr: Expr) extends NamedExpression(varId, BoolType())
 
-  type IdentifierMap = Map[Identifier, NamedExpression]
+  type IdentifierMap = Map[IdentifierBase, NamedExpression]
   def addToMap(map : Scope.IdentifierMap, expr: Scope.NamedExpression) : Scope.IdentifierMap = {
     Utils.assert(!map.contains(expr.id), "Identifier '" + expr.id.toString + "' hides previous declaration with the same name.")
     map + (expr.id -> expr)
@@ -503,10 +526,13 @@ object Scope {
 
 case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl]) {
   /** Check if a variable name exists in this context. */
-  def doesNameExist(name: Identifier) = map.contains(name)
+  def doesNameExist(name: IdentifierBase) = map.contains(name)
+  /** Return the NamedExpression. */
+  def get(id: IdentifierBase) : Option[Scope.NamedExpression] = map.get(id)
+  
   /** Create an empty context. */
   def this() {
-    this(Map.empty[Identifier, Scope.NamedExpression], None, None)
+    this(Map.empty[IdentifierBase, Scope.NamedExpression], None, None)
   }
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : ScopeMap = {
@@ -552,7 +578,7 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
     return new ScopeMap(newMap, module, procedure)
   }
   /** Return the type of an identifier in this context. */
-  def typeOf(id : Identifier) : Option[Type] = {
+  def typeOf(id : IdentifierBase) : Option[Type] = {
     map.get(id).flatMap((e) => Some(e.typ))
   }
 }

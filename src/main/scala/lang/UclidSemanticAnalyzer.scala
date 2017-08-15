@@ -143,7 +143,7 @@ object UclidSemanticAnalyzer {
               externalDecls ++ sig.inParams.map(x => x._1) ++ sig.outParams.map(x => x._1), i.id), 
               "Local variable " + i + " redeclared")
           c.procedures.keys.
-            filter{j => id.value != j.value}.
+            filter{j => id.name != j.name}.
             foreach{ j => Utils.assert(Utils.existsNone(c.procedures(j).decls.map(k => k.id), i.id), 
                 "Local variable " + i + " redeclared as a local variable of procedure " + j ) }
           checkType(i.typ,c)
@@ -234,7 +234,7 @@ object UclidSemanticAnalyzer {
           "Array types cannot produce arrays: " + typ)
       checkType(typ.asInstanceOf[ArrayType].outType, c)
     } else if (typ.isInstanceOf[SynonymType]) {
-      Utils.assert(c.types.keys.exists { x => x.value == typ.asInstanceOf[SynonymType].id.value }, 
+      Utils.assert(c.types.keys.exists { x => x.name == typ.asInstanceOf[SynonymType].id.name }, 
           "Synonym Type " + typ + " does not exist.")
     }
   }
@@ -273,7 +273,7 @@ object UclidSemanticAnalyzer {
   }
   
   def checkLHS(lhs: Lhs, c: Context) : Unit = {
-    Utils.assert((c.outputs.keys ++ c.variables.keys).exists { x => x.value == lhs.id.value }, 
+    Utils.assert((c.outputs.keys ++ c.variables.keys).exists { x => x.name == lhs.id.name }, 
         "LHS variable " + lhs.id + " does not exist")
     var intermediateType = transitiveType((c.outputs ++ c.variables)(lhs.id),c)
     lhs.arraySelect match {
@@ -307,7 +307,7 @@ object UclidSemanticAnalyzer {
       case AssertStmt(e) => checkExpr(e,c)
       case AssumeStmt(e) => checkExpr(e,c)
       case HavocStmt(id) => 
-        Utils.assert((c.variables.keys ++ c.outputs.keys).exists { x => x.value == id.value }, 
+        Utils.assert((c.variables.keys ++ c.outputs.keys).exists { x => x.name == id.name }, 
             "Statement " + s + " updates unknown variable")
       case AssignStmt(lhss, rhss) => 
         Utils.assert(lhss.size == rhss.size, "LHSS and RHSS of different size: " + s);
@@ -326,10 +326,11 @@ object UclidSemanticAnalyzer {
             "Conditionals in if statements must have boolean type.");
         (t ++ f).foreach { x => checkStmt(x,c) };
       case ForStmt(id,_,body) => 
-        Utils.assert(!(externalDecls.exists { x => x.value == id.value }), 
+        Utils.assert(!(externalDecls.exists { x => x.name == id.name }), 
             "For Loop counter " + id + " redeclared");
         var c2: Context = c.copyContext();
-        c2.inputs = c.inputs ++ Map(id -> IntType());
+        // FIXME: hack converting ConstIdentifier to Identifier. //
+        c2.inputs = c.inputs ++ Map(Identifier(id.name) -> IntType());
         body.foreach{x => checkStmt(x,c2)}
       case CaseStmt(body) => body.foreach { x =>
         checkExpr(x._1,c);
@@ -404,7 +405,6 @@ object UclidSemanticAnalyzer {
             Utils.assert(types(0)._1.isBitVector, "Argument to bitvector extract must be of type bitvector.")
             (BitVectorType(slice.hi - slice.lo + 1), temporalArgs)
           }
-          // FIXME: Remove these polymorphic operators.
           case IntLTOp() | IntLEOp() | IntGTOp() | IntGEOp() |
                BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) => {
             Utils.assert(types.size == 2, "Expected two arguments to comparison operators.")
@@ -496,10 +496,11 @@ object UclidSemanticAnalyzer {
         val t = typeOf(le,c2)
         Utils.assert(!t._2, "What do you need a Lambda expression with temporal type for!?")
         return (MapType(ids.map(i => i._2), t._1), false) //Lambda expr returns a map type
-      case Identifier(id) => ((c.constants ++ c.variables ++ c.inputs ++ c.outputs)(Identifier(id)), false)
+      case id : IdentifierBase => ((c.constants ++ c.variables ++ c.inputs ++ c.outputs)(Identifier(id.name)), false)
       case IntLit(n) => (IntType(), false)
       case BoolLit(b) => (BoolType(), false)
       case BitVectorLit(bv, w) => (BitVectorType(w), false)
+      case _ => throw new Utils.RuntimeError("Unsupported construct: " + e.toString())
     }    
   }
   
@@ -527,13 +528,13 @@ object UclidSemanticAnalyzer {
              "Lambda indexed by non-primitive type in expression " + e);
          }
          ids.foreach{ x => Utils.assert((externalDecls ++ ids.map(i => i._1)).
-             count { i => i.value == x._1.value } == 1, "Lambda argument has a redeclaration") }
+             count { i => i.name == x._1.name } == 1, "Lambda argument has a redeclaration") }
          var c2: Context = c.copyContext()
          c2.inputs = c.inputs ++ (ids.map(i => i._1 -> i._2).toMap)
          checkExpr(le,c2);
        case Identifier(id) => 
          Utils.assert((c.constants.keys ++ c.inputs.keys ++ c.outputs.keys ++ c.variables.keys).
-         exists{i => i.value == id}, "Identifier " + id + " not found");
+         exists{i => i.name == id}, "Identifier " + id + " not found");
        case _ => ()
      }
     typeOf(e,c) //do type checking on e
