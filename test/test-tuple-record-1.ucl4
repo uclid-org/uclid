@@ -23,8 +23,8 @@ module main {
   }
   
   control {
-   initialize;
-   simulate (5);
-   decide;
+   // initialize;
+   // simulate (5);
+   // decide;
   }
 }

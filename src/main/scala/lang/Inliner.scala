@@ -27,6 +27,7 @@ class FindLeafProceduresPass extends ReadOnlyPass[Set[IdGenerator.Id]] {
   }
   def procedure(i : IdGenerator.Id) : ProcedureDecl = procedureMap.get(i).get
 }
+
 class FindLeafProcedures extends ASTAnalyzer("FindLeafProcedures", new FindLeafProceduresPass) {
   override def pass : FindLeafProceduresPass = super.pass.asInstanceOf[FindLeafProceduresPass]
   in = Some(Set.empty)
@@ -43,3 +44,28 @@ class FindLeafProcedures extends ASTAnalyzer("FindLeafProcedures", new FindLeafP
     }
   }
 }
+
+class TupleExpanderPass extends RewritePass {
+  def rewriteTuple(id : Identifier, typ : Type) : List[(Identifier, Type)] = {
+    typ match {
+      case RecordType(fields) => fields.map{ (f) => (Identifier(id + "_$field$_" + f._1.value), f._2) }
+      case TupleType(fields) => fields.zipWithIndex.map{ case (f, i) => (Identifier(id.value + "_$tuple$_" + i.toString), f) }
+      case _ => List((id, typ))
+    }
+  }
+  
+  override def rewriteModule(module: Module, ctx : ScopeMap) : Option[Module] = {
+    val newDecls : List[Decl] = module.decls.flatMap{ (decl) =>
+      decl match {
+        case StateVarDecl(id, typ) => rewriteTuple(id, typ).map((t) => StateVarDecl(t._1, t._2))
+        case InputVarDecl(id, typ) => rewriteTuple(id, typ).map((t) => InputVarDecl(t._1, t._2))
+        case OutputVarDecl(id, typ) => rewriteTuple(id, typ).map((t) => OutputVarDecl(t._1, t._2))
+        case ConstantDecl(id, typ) => rewriteTuple(id, typ).map((t) => ConstantDecl(t._1, t._2))
+        case FunctionDecl(id, sig) => throw new Utils.UnimplementedException("TODO")
+        case _ => List(decl)
+      }
+    }
+    return Some(Module(module.id, newDecls, module.cmds))
+  }
+}
+class TupleExpander extends ASTRewriter("TupleExpander", new TupleExpanderPass())
