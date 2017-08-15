@@ -80,15 +80,24 @@ package uclid {
     
     def toSMT(op: Operator, c: Context) : smt.Operator = {
       op match {
+        // Polymorphic operators are not allowed.
+        case p : PolymorphicOperator => throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")
         // Integer operators.
-        case LTOp() => return smt.IntLTOp
-        case LEOp() => return smt.IntLEOp
-        case GTOp() => return smt.IntGTOp
-        case GEOp() => return smt.IntGEOp
-        case AddOp() => return smt.IntAddOp
-        case SubOp() => return smt.IntSubOp
-        case MulOp() => return smt.IntMulOp
-        // TODO: bitvector operators.
+        case IntLTOp() => return smt.IntLTOp
+        case IntLEOp() => return smt.IntLEOp
+        case IntGTOp() => return smt.IntGTOp
+        case IntGEOp() => return smt.IntGEOp
+        case IntAddOp() => return smt.IntAddOp
+        case IntSubOp() => return smt.IntSubOp
+        case IntMulOp() => return smt.IntMulOp
+        // Bitvector operators.
+        case BVLTOp(w) => return smt.BVLTOp(w)
+        case BVLEOp(w) => return smt.BVLEOp(w)
+        case BVGTOp(w) => return smt.BVGTOp(w)
+        case BVGEOp(w) => return smt.BVGEOp(w)
+        case BVAddOp(w) => return smt.BVAddOp(w)
+        case BVSubOp(w) => return smt.BVSubOp(w)
+        case BVMulOp(w) => return smt.BVMulOp(w)
         // Boolean operators.
         case ConjunctionOp() => return smt.ConjunctionOp
         case DisjunctionOp() => return smt.DisjunctionOp
