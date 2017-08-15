@@ -1156,17 +1156,24 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   }
 }
 
-class ExprRewriterPass(expr: Expr, repl: Expr) extends RewritePass
+class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
 {
   override def rewriteExpr(e: Expr, context: ScopeMap) : Option[Expr] = {
-    if (e == expr) {
-      Some(repl)
-    } else {
-      Some(e)
+    rewrites.get(e) match {
+      case Some(eprime) => Some(eprime)
+      case None => Some(e)
     }
   }
 }
 
-class ExprRewriter(name: String, expr: Expr, repl: Expr) 
-  extends ASTRewriter(name, new ExprRewriterPass(expr, repl))
-
+class ExprRewriter(name: String, rewrites : Map[Expr, Expr]) 
+  extends ASTRewriter(name, new ExprRewriterPass(rewrites))
+{
+  def rewriteStatements(stmts : List[Statement]) : List[Statement] = {
+    val emptyContext = new ScopeMap()
+    return stmts.flatMap(visitStatement(_, emptyContext) match {
+      case Some(st) => List(st)
+      case None => List.empty[Statement]
+    })
+  }
+}
