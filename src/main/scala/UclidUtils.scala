@@ -14,5 +14,5 @@ object UclidUtils {
     def existsNTimes(a: List[UclIdentifier], b: UclIdentifier, n: Int) : Boolean = 
       a.count { x => x.value == b.value } == n
     
-    def hasDuplicates(a: List[UclIdentifier]) : Boolean = a.distinct.size == a.size
+    def allUnique(a: List[UclIdentifier]) : Boolean = a.distinct.size == a.size
 }

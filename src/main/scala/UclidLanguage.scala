@@ -21,7 +21,6 @@ case class UclRecordSelectOperator(id: UclIdentifier) extends UclOperator {
 abstract class UclExpr
 case class UclIdentifier(value: String) extends UclExpr {
   override def toString = value.toString
-  override def equals (other : Any) = isInstanceOf[UclIdentifier] 
 }
 case class UclNumber(value: BigInt) extends UclExpr {
   override def toString = value.toString
