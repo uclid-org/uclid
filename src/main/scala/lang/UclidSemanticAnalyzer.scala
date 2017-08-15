@@ -99,7 +99,7 @@ class Context {
 object UclidSemanticAnalyzer {
   def hasPolymorphicOperators(m : Module) : Boolean = {
     val visitor = new FoldingVisitor((new FoldingASTVisitor[Boolean] {
-        override def applyOnOperator(d : TraversalDirection.T, op : Operator, in : Boolean) : Boolean = {
+        override def applyOnOperator(d : TraversalDirection.T, op : Operator, in : Boolean, ctx : ScopeMap) : Boolean = {
           if (d == TraversalDirection.Up) { 
             in
           } else {
