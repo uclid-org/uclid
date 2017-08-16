@@ -4,3 +4,5 @@ bin/*
 project/project/*
 project/target/*
 /bin/
+.classpath
+.project

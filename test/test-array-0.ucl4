@@ -1,0 +1,30 @@
+module main
+{
+  var numbers : [int]int;
+  var sum : int;
+  var index : int;
+  
+  init {
+    for i in range(0, 9) {
+      numbers[i] := 0;
+    }
+    sum := 0;
+    index := 0;
+  }
+  
+  next {
+    sum := sum + index;
+    numbers[index] := index;
+    
+    index := index + 1;
+    
+    assert ((numbers[0] + numbers[1] + numbers[2] + numbers[3] + 
+    		 numbers[4] + numbers[5] + numbers[6] + numbers[7]) == sum);
+  }
+  
+  control {
+    initialize;
+    simulate (5);
+    decide;
+  }
+}

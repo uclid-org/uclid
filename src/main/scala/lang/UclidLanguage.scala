@@ -245,7 +245,7 @@ case class Lhs(id: Identifier,
      extends ASTNode
 {
   val t1 = arraySelect match 
-    { case Some(as) => as.toString; case None => "" }
+    { case Some(as) => "[" + Utils.join(as.map(_.toString), ", ") + "]"; case None => "" }
   val t2 = recordSelect match 
     { case Some(rs) => rs.fold(""){(acc,i) => acc + "." + i}; case None => ""}
   val t3 = sliceSelect match 
@@ -396,16 +396,9 @@ case class ForStmt(id: ConstIdentifier, range: (NumericLit,NumericLit), body: Li
                          body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
 case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
-  override def toLines = {
-    val l1 = "case"
-    val lN = "esac"
-    List(l1) ++ body.flatMap((c) => caseToLines(c._1, c._2)).map(PrettyPrinter.indent(1) + _) ++ List(lN)
-  }
-  def caseToLines(e : Expr, block : List[Statement]) : List[String] = {
-    val l1 = e.toString + " : {"
-    val lN = "}"
-    return List(l1) ++ block.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List(lN) 
-  }
+  override def toLines = List("case") ++
+    body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _)} ++ 
+    List("esac")
 }
 case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr])  extends Statement {
   override def toLines = List("call (" +
