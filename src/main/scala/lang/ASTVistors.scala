@@ -1223,7 +1223,7 @@ class ASTPrinterPass extends ReadOnlyPass[Unit] {
   }
 }
 /** Simple analysis that instantiates ASTPrinterPass to print module. */
-class ASTPrinter extends ASTAnalyzer("ASTPrinter", new ASTPrinterPass()) {
+class ASTPrinter(name: String) extends ASTAnalyzer(name, new ASTPrinterPass()) {
   override def pass = super.pass.asInstanceOf[ASTPrinterPass]
   in = Some(Unit)
 }

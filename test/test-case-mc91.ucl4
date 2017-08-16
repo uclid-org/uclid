@@ -1,0 +1,51 @@
+module main {
+    type Number = int;
+    type AnotherNumber = Number;
+    type YetAnotherNumber = AnotherNumber;
+
+    var n : YetAnotherNumber;
+    var n_init : YetAnotherNumber;
+    var c : YetAnotherNumber;
+
+    // taken from a tail-recursive definition of the McCarthy 91 function.
+    procedure mc91(x: YetAnotherNumber, y: YetAnotherNumber) returns (z:YetAnotherNumber, w: YetAnotherNumber) {
+        case
+          y == 0 : 
+          {
+            z := x;
+            w := 0;
+          }
+          true :  
+          {
+            case
+	          (x > 100) :
+	          {
+	              z := x - 10;
+	              w := y - 1;
+	          }
+	          true : 
+	          {
+	              z := x + 11;
+	              w := y + 1;
+	          }
+            esac
+          }
+        esac
+    }
+
+    init {
+        havoc n_init;
+        n := n_init;
+        c := 1;
+    }
+    next {
+        call (n, c) := mc91(n, c);
+        assert ((c == 0) && (n_init <= 100)) ==> (n == 91);
+    }
+
+    control {
+        initialize;
+        simulate (5);
+        decide;
+    }
+}

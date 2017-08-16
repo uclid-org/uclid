@@ -78,7 +78,7 @@ object UclidMain {
     val passManager = new PassManager()
     // for certain unfortunate reasons we need to unroll for loops before type checking.
     passManager.addPass(new ForLoopIndexRewriter())
-    passManager.addPass(new ASTPrinter())
+    passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new TypeSynonymFinder())
     passManager.addPass(new TypeSynonymRewriter())
     passManager.addPass(new BitVectorIndexRewriter())
@@ -86,6 +86,8 @@ object UclidMain {
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new FunctionInliner())
     passManager.addPass(new ForLoopUnroller())
+    passManager.addPass(new ASTPrinter("ASTPrinter$2"))
+    passManager.addPass(new CaseEliminator())
     // passManager.addPass(new TupleFlattener())
 
     for (srcFile <- srcFiles) {

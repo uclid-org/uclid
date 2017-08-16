@@ -25,6 +25,9 @@ test-bv-fib:
 test-mc91: 
 	sbt "run ./test/test-mc91.ucl4"
 
+test-case-mc91: 
+	sbt "run ./test/test-case-mc91.ucl4"
+
 test-types-0: 
 	sbt "run ./test/test-types-0.ucl4"
 
