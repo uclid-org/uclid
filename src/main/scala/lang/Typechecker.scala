@@ -39,7 +39,24 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
 
   def validateSynonyms() {
     typeSynonyms.foreach {
-      (syn) => Utils.assert(typeDeclMap.contains(syn), "Type synonym '" + syn.toString + "' used without declaration.")
+      (syn) => Utils.checkError(typeDeclMap.contains(syn), "Type synonym '" + syn.toString + "' used without declaration.")
+    }
+  }
+
+  def simplifyType(typ : Type) : Type = {
+    typ match {
+      case SynonymType(otherName) =>
+        simplifyType(typeDeclMap.get(otherName).get)
+      case TupleType(fieldTypes) =>
+        TupleType(fieldTypes.map(simplifyType(_)))
+      case RecordType(fields) =>
+        RecordType(fields.map((f) => (f._1, simplifyType(f._2))))
+      case MapType(inTypes, outType) =>
+        MapType(inTypes.map(simplifyType(_)), simplifyType(outType))
+      case ArrayType(inTypes, outType) =>
+        ArrayType(inTypes.map(simplifyType(_)), simplifyType(outType))
+      case _ =>
+        typ
     }
   }
 
@@ -48,13 +65,13 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
     do {
       simplified = false
       typeDeclMap.foreach {
-        case (name, decl) => {
-          decl match {
+        case (name, typ) => {
+          typ match {
             case SynonymType(otherName) =>
                 simplified = true
-                typeDeclMap.put(name, typeDeclMap.get(otherName).get)
+                typeDeclMap.put(name, simplifyType(typeDeclMap.get(otherName).get))
             case _ =>
-                typeDeclMap.put(name, decl)
+                typeDeclMap.put(name, simplifyType(typ))
           }
         }
       }
@@ -78,10 +95,12 @@ class TypeSynonymRewriterPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
   lazy val typeSynonymFinderPass = manager.pass("TypeSynonymFinder").asInstanceOf[TypeSynonymFinder].pass
   override def rewriteType(typ : Type, ctx : ScopeMap) : Option[Type] = {
-    typ match {
+    val result = typ match {
       case SynonymType(name) => typeSynonymFinderPass.typeDeclMap.get(name)
       case _ => Some(typ)
     }
+    println("[DEBUG] Visiting: " + typ.toString() + "; replacing with: " + result.get.toString())
+    return result
   }
 }
 
@@ -172,9 +191,11 @@ class TypecheckPass extends ReadOnlyPass[Unit]
       val argTypes = opapp.operands.map(typeOf(_, c))
       opapp.op match {
         case polyOp : PolymorphicOperator => {
-          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
-          Utils.assert(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type.")
-          Utils.assert(argTypes.forall(_.isNumeric), "Arguments to operator '" + opapp.op.toString + "' must be of a numeric type.")
+          Utils.checkError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+          Utils.checkError(argTypes(0) == argTypes(1), 
+              "Arguments to operator '" + opapp.op.toString + "' must be of the same type. Types of expression '" +
+              opapp.toString() + "' are " + argTypes(0).toString() + " and " + argTypes(1).toString() + ".")
+          Utils.checkError(argTypes.forall(_.isNumeric), "Arguments to operator '" + opapp.op.toString + "' must be of a numeric type.")
           typeOf(opapp.operands(0), c) match {
             case i : IntType =>
               polyOpMap.put(polyOp.astNodeId, polyToInt(polyOp))
@@ -186,8 +207,8 @@ class TypecheckPass extends ReadOnlyPass[Unit]
           }
         }
         case intOp : IntArgOperator => {
-          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
-          Utils.assert(argTypes.forall(_.isInstanceOf[IntType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer.")
+          Utils.checkError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+          Utils.checkError(argTypes.forall(_.isInstanceOf[IntType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer.")
           intOp match {
             case IntLTOp() | IntLEOp() | IntGTOp() | IntGEOp() => new BoolType()
             case IntAddOp() | IntSubOp() | IntMulOp() => new IntType()
@@ -200,8 +221,8 @@ class TypecheckPass extends ReadOnlyPass[Unit]
               case _ => 2
             }
           }
-          Utils.assert(argTypes.size == numArgs(bvOp), "Operator '" + opapp.op.toString + "' must have two arguments.")
-          Utils.assert(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
+          Utils.checkError(argTypes.size == numArgs(bvOp), "Operator '" + opapp.op.toString + "' must have two arguments.")
+          Utils.checkError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
           bvOp match {
             case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) => new BoolType()
             case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) => new BitVectorType(bvOp.w)
@@ -214,49 +235,49 @@ class TypecheckPass extends ReadOnlyPass[Unit]
         case boolOp : BooleanOperator => {
           boolOp match {
             case NegationOp() => 
-              Utils.assert(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.")
-              Utils.assert(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
+              Utils.checkError(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.")
+              Utils.checkError(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
             case _ => 
-              Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
-              Utils.assert(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
+              Utils.checkError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+              Utils.checkError(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
           }
           new BoolType()
         }
         case cmpOp : ComparisonOperator => {
-          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
-          Utils.assert(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type.")
+          Utils.checkError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+          Utils.checkError(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type.")
           new BoolType()
         }
         case tOp : TemporalOperator => new TemporalType()
         case ExtractOp(slice) => {
-          Utils.assert(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.")
-          Utils.assert(argTypes(0).isInstanceOf[BitVectorType], "Operand to operator '" + opapp.op.toString + "' must be of type BitVector.") 
-          Utils.assert(argTypes(0).asInstanceOf[BitVectorType].width > slice.hi, "Operand to operator '" + opapp.op.toString + "' must have width > "  + slice.hi.toString + ".") 
-          Utils.assert(slice.hi >= slice.lo, "High-operand must be greater than or equal to low operand for operator '" + opapp.op.toString + "'.") 
-          Utils.assert(slice.hi >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
-          Utils.assert(slice.lo >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
+          Utils.checkError(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.")
+          Utils.checkError(argTypes(0).isInstanceOf[BitVectorType], "Operand to operator '" + opapp.op.toString + "' must be of type BitVector.") 
+          Utils.checkError(argTypes(0).asInstanceOf[BitVectorType].width > slice.hi, "Operand to operator '" + opapp.op.toString + "' must have width > "  + slice.hi.toString + ".") 
+          Utils.checkError(slice.hi >= slice.lo, "High-operand must be greater than or equal to low operand for operator '" + opapp.op.toString + "'.") 
+          Utils.checkError(slice.hi >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
+          Utils.checkError(slice.lo >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.") 
           new BitVectorType(slice.hi - slice.lo + 1)
         }
         case ConcatOp() => {
-          Utils.assert(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
-          Utils.assert(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
+          Utils.checkError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
+          Utils.checkError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector.")
           new BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width + argTypes(1).asInstanceOf[BitVectorType].width)
         }
         case RecordSelect(field) => {
-          Utils.assert(argTypes.size == 1, "Record select operator must have exactly one operand.")
+          Utils.checkError(argTypes.size == 1, "Record select operator must have exactly one operand.")
           argTypes(0) match {
             case recType : RecordType =>
               val typOption = recType.fieldType(field)
-              Utils.assert(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in record.")
+              Utils.checkError(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in record.")
               typOption.get
             case tupType : TupleType =>
               val indexS = field.name.substring(1)
-              Utils.assert(indexS.forall(Character.isDigit), "Tuple fields must be integers preceded by an underscore.")
+              Utils.checkError(indexS.forall(Character.isDigit), "Tuple fields must be integers preceded by an underscore.")
               val indexI = indexS.toInt
-              Utils.assert(indexI >= 1 && indexI <= tupType.numFields, "Invalid tuple index: " + indexS)
+              Utils.checkError(indexI >= 1 && indexI <= tupType.numFields, "Invalid tuple index: " + indexS)
               tupType.fieldTypes(indexI-1)
             case _ =>
-              Utils.assert(false, "Argument to record select operator must be of type record.")
+              Utils.checkError(false, "Argument to record select operator must be of type record.")
               new BoolType()
           }
         }
@@ -264,34 +285,34 @@ class TypecheckPass extends ReadOnlyPass[Unit]
     }
     
     def arraySelectType(arrSel : ArraySelectOperation) : Type = {
-      Utils.assert(typeOf(arrSel.e, c).isInstanceOf[ArrayType], "Type error in the array operand of select operation.")
+      Utils.checkError(typeOf(arrSel.e, c).isInstanceOf[ArrayType], "Type error in the array operand of select operation.")
       val indTypes = arrSel.index.map(typeOf(_, c))
       val arrayType = typeOf(arrSel.e, c).asInstanceOf[ArrayType]
-      Utils.assert(arrayType.inTypes == indTypes, "Array index type error.")
+      Utils.checkError(arrayType.inTypes == indTypes, "Array index type error.")
       return arrayType.outType
     }
     
     def arrayStoreType(arrStore : ArrayStoreOperation) : Type = {
-      Utils.assert(typeOf(arrStore.e, c).isInstanceOf[ArrayType], "Type error in the array operand of store operation.")
+      Utils.checkError(typeOf(arrStore.e, c).isInstanceOf[ArrayType], "Type error in the array operand of store operation.")
       val indTypes = arrStore.index.map(typeOf(_, c))
       val valueType = typeOf(arrStore.value, c)
       val arrayType = typeOf(arrStore.e, c).asInstanceOf[ArrayType]
-      Utils.assert(arrayType.inTypes == indTypes, "Array index type error.")
-      Utils.assert(arrayType.outType == valueType, "Array update value type error.")
+      Utils.checkError(arrayType.inTypes == indTypes, "Array index type error.")
+      Utils.checkError(arrayType.outType == valueType, "Array update value type error.")
       return arrayType
     }
     
     def funcAppType(fapp : FuncApplication) : Type = {
-      Utils.assert(typeOf(fapp.e, c).isInstanceOf[MapType], "Type error in function application (not a function).")
+      Utils.checkError(typeOf(fapp.e, c).isInstanceOf[MapType], "Type error in function application (not a function).")
       val funcType = typeOf(fapp.e,c ).asInstanceOf[MapType]
       val argTypes = fapp.args.map(typeOf(_, c))
-      Utils.assert(funcType.inTypes == argTypes, "Type error in function application (argument type error).")
+      Utils.checkError(funcType.inTypes == argTypes, "Type error in function application (argument type error).")
       return funcType.outType
     }
     
     def iteType(ite : ITE) : Type = {
-      Utils.assert(typeOf(ite.e, c).isBool, "Type error in ITE condition operand.")
-      Utils.assert(typeOf(ite.t, c) == typeOf(ite.f, c), "ITE operand types don't match.")
+      Utils.checkError(typeOf(ite.e, c).isBool, "Type error in ITE condition operand.")
+      Utils.checkError(typeOf(ite.t, c) == typeOf(ite.f, c), "ITE operand types don't match.")
       return typeOf(ite.t, c)
     }
     
@@ -303,7 +324,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
     if (cachedType.isEmpty) {
       val typ = e match {
         case i : IdentifierBase =>
-          Utils.assert(c.typeOf(i).isDefined, "Unknown variable: " + i.name)
+          Utils.checkError(c.typeOf(i).isDefined, "Unknown variable: " + i.name)
           (c.typeOf(i).get)
         case b : BoolLit => new BoolType()
         case i : IntLit => new IntType()
@@ -337,13 +358,13 @@ class PolymorphicTypeRewriterPass extends RewritePass {
     op match {
       case p : PolymorphicOperator => {
         val reifiedOp = typeCheckerPass.polyOpMap.get(p.astNodeId)
-        Utils.assert(!reifiedOp.isEmpty, "No reified operator available for: " + p.toString)
+        Utils.checkError(!reifiedOp.isEmpty, "No reified operator available for: " + p.toString)
         reifiedOp
       }
       case bv : BVArgOperator => {
         if (bv.w == 0) {
           val width = typeCheckerPass.bvOpMap.get(bv.astNodeId)
-          Utils.assert(!width.isEmpty, "No width available for: " + bv.toString)
+          Utils.checkError(!width.isEmpty, "No width available for: " + bv.toString)
           bv match {
             case BVAndOp(_) => width.flatMap((w) => Some(BVAndOp(w)))
             case BVOrOp(_) => width.flatMap((w) => Some(BVOrOp(w)))

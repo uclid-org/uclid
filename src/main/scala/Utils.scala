@@ -6,7 +6,10 @@ package uclid {
   
   object Utils {
       def assert(b: Boolean, err: String) : Unit = {
-        if (!b) { println("ERROR: " + err); System.exit(0); } //throw new Exception(err); }
+        if (!b) { println("Assertion FAILURE: " + err); System.exit(2); } //throw new Exception(err); }
+      }
+      def checkError(b : Boolean, err: String) : Unit = {
+        if (!b) { println("ERROR: " + err); System.exit(1); }
       }
       
       class UnimplementedException (msg:String=null, cause:Throwable=null) extends java.lang.UnsupportedOperationException (msg, cause) {}
