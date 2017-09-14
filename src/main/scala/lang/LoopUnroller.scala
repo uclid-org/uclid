@@ -32,6 +32,7 @@ class ForLoopUnroller extends ASTAnalysis {
   var findInnermostLoopsPass = new FindInnermostLoopsPass()
   var findInnermostLoopsAnalysis = new ASTAnalyzer("ForLoopUnroller.FindInnermostLoops", findInnermostLoopsPass)
   var _astChanged = false 
+  val MAX_ITERATIONS = 500
   
   override def passName = "ForLoopUnroller"
   override def reset() = {
@@ -44,7 +45,6 @@ class ForLoopUnroller extends ASTAnalysis {
     var modP : Option[Module] = Some(module)
     var iteration = 0
     var done = false
-    val MAX_ITERATIONS = 100
     do {
       findInnermostLoopsAnalysis.reset()
       modP match {

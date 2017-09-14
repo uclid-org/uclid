@@ -84,6 +84,7 @@ object UclidMain {
     passManager.addPass(new BitVectorIndexRewriter())
     passManager.addPass(new Typechecker())
     passManager.addPass(new PolymorphicTypeRewriter())
+    passManager.addPass(new RecordRewriter())
     passManager.addPass(new FunctionInliner())
     passManager.addPass(new ForLoopUnroller())
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))

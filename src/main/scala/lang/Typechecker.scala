@@ -99,7 +99,6 @@ class TypeSynonymRewriterPass extends RewritePass {
       case SynonymType(name) => typeSynonymFinderPass.typeDeclMap.get(name)
       case _ => Some(typ)
     }
-    println("[DEBUG] Visiting: " + typ.toString() + "; replacing with: " + result.get.toString())
     return result
   }
 }
@@ -236,7 +235,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
           boolOp match {
             case NegationOp() => 
               Utils.checkError(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.")
-              Utils.checkError(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
+              Utils.checkError(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool. (" + opapp.toString() + ").")
             case _ => 
               Utils.checkError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.")
               Utils.checkError(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.")
@@ -268,7 +267,7 @@ class TypecheckPass extends ReadOnlyPass[Unit]
           argTypes(0) match {
             case recType : RecordType =>
               val typOption = recType.fieldType(field)
-              Utils.checkError(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in record.")
+              Utils.checkError(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in " + recType.toString())
               typOption.get
             case tupType : TupleType =>
               val indexS = field.name.substring(1)

@@ -233,7 +233,12 @@ import uclid.lang.DecideCmd
       /** E9 := E10 MapOp | E10 **/
       lazy val E9: PackratParser[Expr] =
           E10 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
-          E10 ~ RecordSelectOp ^^ { case e ~ r => OperatorApplication(RecordSelect(r), List(e)) } |
+          E10 ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { 
+            case e ~ r ~ rs =>
+              (r :: rs).foldLeft(e){ 
+                (acc, f) => OperatorApplication(RecordSelect(f), List(acc))
+              }
+          } |
           E10 ~ ArraySelectOp ^^ { case e ~ m => ArraySelectOperation(e, m) } |
           E10 ~ ArrayStoreOp ^^ { case e ~ m => ArrayStoreOperation(e, m._1, m._2) } |
           E10 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |

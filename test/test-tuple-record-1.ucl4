@@ -7,6 +7,8 @@ module main {
   
   var st : tup1;
   var stp : tup1;
+  var r1 : rec2;
+  var r2 : rec2;
   var cnt : num;
 
   procedure add(n1 : num, n2 : num) returns (sum : num)  {
@@ -28,6 +30,16 @@ module main {
     f3 := sta._3;
   }
   
+  procedure get_f_a(r : rec1) returns (a : num) {
+    a := r.a;
+  }
+  procedure get_f_b(r : rec1) returns (b : num) {
+    b := r.b;
+  }
+  procedure get_f_c(r : rec1) returns (c : bit) {
+    c := r.c;
+  }
+  
   procedure foo(stIn : tup1) returns (st1: tup1, st2: tup1) {
     var l1 : num;
     var l2 : num;
@@ -43,14 +55,35 @@ module main {
     st1 := {stIn._1 + 1, stIn._2 + stIn._1 + 1, !stIn._3};
   }
   
+  procedure bar(r1 : rec2) returns (r2 : rec2, r3 : rec2) {
+    var l1 : num;
+    var l2 : num;
+    var l3 : bit;
+    var rec : rec1;
+    
+    call (l1) := get_f_a(r1);
+    call (l2) := get_f_b(r1);
+    call (l3) := get_f_c(r2);
+    
+    call (r2.r.a) := incr(l1);
+    call (r2.r.b) := add(l2, r2.r.b);
+    call (r2.r.c) := negb(l3);
+    r2.b := (r1.r.a + 1);
+    rec := { r1.r.a + 1, r1.r.b + r1.r.a + 1, !r1.r.c };
+	r3 := { rec, r1.r.a + 1 };
+  }
+  
   init {
     st := {0, 0, true};
+    r1 := {{0, 0, true}, 0};
     stp := st;
     cnt := 0; 
   }
   
   next {
     call (st, stp) := foo(st);
+    call (r1, r2) := bar(r1);
+     
     cnt := cnt + 1;
     
     assert (stp._1 == st._1);
@@ -59,6 +92,11 @@ module main {
     
     assert (st._1 == cnt);
     assert (st._1 <= st._2);
+    
+    assert (r1.r.a == r2.r.a);
+    assert (r1.r.b == r2.r.b);
+    assert (r1.r.c == r2.r.c);
+    assert (r1.b == r2.b);
   }
   
   control {

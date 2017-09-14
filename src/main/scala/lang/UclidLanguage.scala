@@ -239,9 +239,9 @@ case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
 }
 
 case class Lhs(id: Identifier, 
-                  arraySelect: Option[List[Expr]], 
-                  recordSelect: Option[List[Identifier]],
-                  sliceSelect : Option[ConstBitVectorSlice]) 
+               arraySelect: Option[List[Expr]], 
+               recordSelect: Option[List[Identifier]],
+               sliceSelect : Option[ConstBitVectorSlice]) 
      extends ASTNode
 {
   val t1 = arraySelect match 
@@ -519,7 +519,6 @@ object Scope {
 
   type IdentifierMap = Map[IdentifierBase, NamedExpression]
   def addToMap(map : Scope.IdentifierMap, expr: Scope.NamedExpression) : Scope.IdentifierMap = {
-    Utils.assert(!map.contains(expr.id), "Identifier '" + expr.id.toString + "' hides previous declaration with the same name.")
     map + (expr.id -> expr)
   }
 }
