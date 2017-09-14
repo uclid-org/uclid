@@ -16,6 +16,7 @@ trait Type {
   def isInt = false
   def isBitVector = false
   def isTuple = false
+  def isRecord = false
   def isMap = false
   def isArray = false
 }
@@ -46,17 +47,22 @@ object BitVectorType {
   val t = new Memo[Int, BitVectorType]((w : Int) => new BitVectorType(w))
 }
 
-case class TupleType(types: List[Type]) extends Type {
-  val fieldNames = (1 to types.length).map("_" + _.toString)
-  val fields = fieldNames zip types
-  val fieldIndices = (0 to (types.length - 1))
+abstract class ProductType(fields : List[(String, Type)]) extends Type {
+  val fieldNames = fields.map(_._1)
+  val fieldIndices = (0 to fields.length - 1)
   def fieldType(name: String) : Option[Type] = fields.find((p) => p._1 == name).flatMap((f) => Some(f._2))
   def hasField(name: String) : Boolean = fields.find((p) => p._1 == name).isDefined
   def fieldIndex(name: String) : Int = fields.indexWhere((p) => p._1 == name)
-  override def toString = "tuple [" + types.tail.fold(types.head.toString)
-                          { (acc, i) => acc + ", " + i.toString } + "]"
+  override def toString = "record [" + Utils.join(fields.map((f) => (f._1 + ": " + f._2.toString)), ", ") + "]"
+}
+case class TupleType(types: List[Type]) extends ProductType(((1 to types.length).map("_" + _.toString)).zip(types).toList) {
+  override def toString = "tuple [" + Utils.join(types.map(_.toString), ", ") + "]"
   override def isTuple = true
 }
+case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields_) {
+  override def isRecord = true
+}
+
 object TupleType {
   val t = new Memo[List[Type], TupleType]((l : List[Type]) => new TupleType(l))
 }

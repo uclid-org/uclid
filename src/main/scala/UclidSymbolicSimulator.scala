@@ -107,6 +107,8 @@ class UclidSymbolicSimulator (module : Module) {
           toSMT(UclidSemanticAnalyzer.transitiveType(outType,context),context))
       case TupleType(argTypes) => 
         return smt.TupleType.t(argTypes.map(toSMT(_, context)))
+      case RecordType(fields) =>
+        return smt.RecordType(fields.map((f) => (f._1.toString, toSMT(f._2, context))))
       case _ => throw new Utils.UnimplementedException("Need to handle more types here.")
     }
   }

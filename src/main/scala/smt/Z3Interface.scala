@@ -58,6 +58,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case IntType()        => getIntSort()
       case BitVectorType(w) => getBitVectorSort(w)
       case TupleType(ts)    => getTupleSort(ts)
+      case RecordType(rs)   => getTupleSort(rs.map(_._2))
       case ArrayType(rs, d) => getArraySort(rs, d)
     }
   }

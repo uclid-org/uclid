@@ -61,9 +61,9 @@ module main {
     var l3 : bit;
     var rec : rec1;
     
-    call (l1) := get_f_a(r1);
-    call (l2) := get_f_b(r1);
-    call (l3) := get_f_c(r2);
+    call (l1) := get_f_a(r1.r);
+    call (l2) := get_f_b(r1.r);
+    call (l3) := get_f_c(r1.r);
     
     call (r2.r.a) := incr(l1);
     call (r2.r.b) := add(l2, r2.r.b);

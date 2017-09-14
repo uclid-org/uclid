@@ -439,10 +439,11 @@ object UclidSemanticAnalyzer {
             (TemporalType(), true)
           }
           case RecordSelect(r) => {
+            println("expression: " + e.toString())
             Utils.assert(types.size == 1, "Incorrect number of operands to record select. ")
             Utils.assert(types(0)._1.isProduct, "Operand to record select must be a product type.")
             val recType = (types(0)._1.asInstanceOf[ProductType], types(0)._2)
-            Utils.assert(recType._1.hasField(r), "Field '" + r + "' does not exist in product type.")
+            Utils.assert(recType._1.hasField(r), "Field '" + r + "' does not exist in product type: " + recType.toString)
             (recType._1.fieldType(r).get, recType._2)
           }
           case _ => {
