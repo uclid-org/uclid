@@ -20,9 +20,10 @@ module main {
   }
   
   init {
-    p.a := 0;
-    p.b := 1;
-    p.c := false;
+    p := {0, 1, false};
+    // p.a := 0;
+    // p.b := 1;
+    // p.c := false;
   }
   
   next {
