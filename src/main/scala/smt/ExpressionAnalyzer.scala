@@ -21,7 +21,9 @@ object ExpressionAnalyzer {
             "Only arrays with primitive types are implemented.")
         return smt.ArrayType(inTypes.map(typeToSMT(_)), typeToSMT(outType)) 
       case lang.TupleType(argTypes) => 
-        return smt.TupleType.t(argTypes.map(typeToSMT(_)))
+        return smt.TupleType(argTypes.map(typeToSMT(_)))
+      case lang.RecordType(fields) =>
+        return smt.RecordType(fields.map((f) => (f._1.toString, typeToSMT(f._2))))
       case _ => throw new Utils.UnimplementedException("Unimplemented type: " + typ.toString)
     }
   }

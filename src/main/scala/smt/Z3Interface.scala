@@ -48,6 +48,19 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
         types.map((t) => getZ3Sort(t)).toArray
     )
   })
+  val getRecordSort = new Memo[List[(String, Type)], z3.TupleSort]((fields : List[(String, Type)]) => {
+    ctx.mkTupleSort(
+      getTupleName(), 
+      fields.map((f) => ctx.mkSymbol(f._1)).toArray,
+      fields.map((f) => getZ3Sort(f._2)).toArray
+    )
+  })
+  def getProductSort(typ : ProductType) : z3.TupleSort = {
+    typ match {
+      case tupType : TupleType => getTupleSort(tupType.types)
+      case recType : RecordType => getRecordSort(recType.fields_)
+    }
+  }
   val getArraySort = new Memo[(List[Type], Type), z3.ArraySort]((arrayType : (List[Type], Type)) => {
     ctx.mkArraySort(getTupleSort(arrayType._1), getZ3Sort(arrayType._2))
   })
@@ -58,14 +71,14 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case IntType()        => getIntSort()
       case BitVectorType(w) => getBitVectorSort(w)
       case TupleType(ts)    => getTupleSort(ts)
-      case RecordType(rs)   => getTupleSort(rs.map(_._2))
+      case RecordType(rs)   => getRecordSort(rs)
       case ArrayType(rs, d) => getArraySort(rs, d)
     }
   }
 
   /** Create a Z3 tuple AST. */
   def getTuple(values : List[z3.AST], tupleMemberTypes : List[Type]) : z3.Expr = {
-    val tupleType = TupleType.t(tupleMemberTypes)
+    val tupleType = TupleType(tupleMemberTypes)
     val tupleSort = getZ3Sort(tupleType).asInstanceOf[z3.TupleSort]
     val tupleCons = tupleSort.mkDecl()
     tupleCons.apply(typecastAST[z3.Expr](values).toSeq : _*) 
@@ -91,6 +104,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case IntType() => VarSort(getIntSort())
       case BitVectorType(w) => VarSort(getBitVectorSort(w))
       case TupleType(ts) => VarSort(getTupleSort(ts))
+      case RecordType(rs) => VarSort(getRecordSort(rs))
       case MapType(ins, out) => MapSort(ins, out)
       case ArrayType(ins, out) => VarSort(getArraySort(ins, out))
     } 
@@ -162,20 +176,20 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case ConjunctionOp          => ctx.mkAnd (boolArgs : _*)
       case DisjunctionOp          => ctx.mkOr (boolArgs : _*)
       case RecordSelectOp(fld)    =>
-        val tupleType = operands(0).typ.asInstanceOf[TupleType]
-        val fieldIndex = tupleType.fieldIndex(fld)
-        val tupleSort = getTupleSort(tupleType.types)
-        tupleSort.getFieldDecls()(fieldIndex).apply(exprArgs(0))            
+        val prodType = operands(0).typ.asInstanceOf[ProductType]
+        val fieldIndex = prodType.fieldIndex(fld)
+        val prodSort = getProductSort(prodType)
+        prodSort.getFieldDecls()(fieldIndex).apply(exprArgs(0))            
       case RecordUpdateOp(fld) =>
-        val tupleType = operands(0).typ.asInstanceOf[TupleType]
-        val fieldIndex = tupleType.fieldIndex(fld)
-        val indices = tupleType.fieldIndices
-        val tupleSort = getTupleSort(tupleType.types)
+        val prodType = operands(0).typ.asInstanceOf[ProductType]
+        val fieldIndex = prodType.fieldIndex(fld)
+        val indices = prodType.fieldIndices
+        val prodSort = getProductSort(prodType)
         val newFields = indices.map{ (i) =>
           if (i == fieldIndex) exprArgs(1)
-          else tupleSort.getFieldDecls()(i).apply(exprArgs(0))
+          else prodSort.getFieldDecls()(i).apply(exprArgs(0))
         }
-        tupleSort.mkDecl().apply(newFields.toSeq : _*)
+        prodSort.mkDecl().apply(newFields.toSeq : _*)
       case _             => throw new Utils.UnimplementedException("Operator not yet implemented: " + op.toString())
     }
   }

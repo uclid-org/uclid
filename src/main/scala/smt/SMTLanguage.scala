@@ -62,27 +62,15 @@ case class TupleType(types: List[Type]) extends ProductType(((1 to types.length)
 case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields_) {
   override def isRecord = true
 }
-
-object TupleType {
-  val t = new Memo[List[Type], TupleType]((l : List[Type]) => new TupleType(l))
-}
-
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = "map [" + inTypes.tail.fold(inTypes.head.toString)
                           { (acc,i) => acc + "," + i.toString } + "] " + outType
   override def isMap = { true }
 }
-object MapType {
-  val t = new Memo[(List[Type], Type), MapType]((t: (List[Type],Type)) => new MapType(t._1, t._2))
-}
-
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = "array [" + inTypes.tail.fold(inTypes.head.toString)
   { (acc,i) => acc + "," + i.toString } + "] " + outType
   override def isArray = { true }
-}
-object ArrayType {
-  val t = new Memo[(List[Type], Type), ArrayType]((t: (List[Type],Type)) => new ArrayType(t._1, t._2))
 }
 
 object OperatorFixity extends scala.Enumeration {
@@ -265,11 +253,11 @@ case class RecordSelectOp(name : String) extends Operator {
   override def toString = "get-field " + name
   override def typeCheck(args: List[Expr]) : Unit = { 
     checkNumArgs(args, 1);
-    Utils.assert(args(0).typ.isInstanceOf[TupleType], "Argument to record select must be a tuple.")
-    Utils.assert(args(0).typ.asInstanceOf[TupleType].hasField(name), "Field '" + name + "' does not exist in tuple.")
+    Utils.assert(args(0).typ.isInstanceOf[ProductType], "Argument to record select must be a product type.")
+    Utils.assert(args(0).typ.asInstanceOf[ProductType].hasField(name), "Field '" + name + "' does not exist in product type.")
   }
   def resultType(args: List[Expr]) : Type = {
-    args(0).typ.asInstanceOf[TupleType].fieldType(name).get
+    args(0).typ.asInstanceOf[ProductType].fieldType(name).get
   }
   override def fixity = PREFIX
 }
@@ -277,9 +265,9 @@ case class RecordUpdateOp(name: String) extends Operator {
   override def toString = "update-field " + name
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 2)
-    Utils.assert(args(0).typ.isInstanceOf[TupleType], "Argument to record update must be a tuple.")
-    val tupleType = args(0).typ.asInstanceOf[TupleType]
-    Utils.assert(tupleType.hasField(name), "Field '" + name + "' does not exist in tuple.")
+    Utils.assert(args(0).typ.isInstanceOf[ProductType], "Argument to record update must be a product type.")
+    val tupleType = args(0).typ.asInstanceOf[ProductType]
+    Utils.assert(tupleType.hasField(name), "Field '" + name + "' does not exist in product type.")
   }
   def resultType(args: List[Expr]) : Type = args(0).typ
   override def fixity = PREFIX
@@ -309,7 +297,7 @@ case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {
 }
 
 // Tuple creation.
-case class MakeTuple(args: List[Expr]) extends Expr (TupleType.t(args.map(_.typ))) {
+case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ))) {
   override def toString = "(mk-tuple " + Utils.join(args.map(_.toString), " ") + ")" 
 }
 
@@ -349,7 +337,7 @@ case class FunctionApplication(e: Expr, args: List[Expr])
 case class ITE(e: Expr, t: Expr, f: Expr) extends Expr (t.typ) {
   override def toString = "ITE(" + e.toString + "," + t.toString + "," + f.toString + ")"
 }
-case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType.t(ids.map(id => id.typ), e.typ)) {
+case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType(ids.map(id => id.typ), e.typ)) {
   override def toString = "Lambda(" + ids + "). " + e.toString
 }
 
