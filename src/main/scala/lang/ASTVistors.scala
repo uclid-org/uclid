@@ -435,13 +435,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitLhs(lhs : Lhs, in : T, context : ScopeMap) : T = {
     var result : T = in
     result = pass.applyOnLHS(TraversalDirection.Down, lhs, result, context)
-    result = lhs.arraySelect match {
-      case Some(as) => as.foldLeft(result)((acc, i) => visitExpr(i, acc, context))
-      case None => result
-    }
-    result = lhs.recordSelect match {
-      case Some(rs) => rs.foldLeft(result)((acc, i) => visitIdentifier(i, acc, context))
-      case None => result
+    result = visitIdentifier(lhs.ident, result, context)
+    result = lhs match {
+      case LhsId(id) => result // FIXME: add visitors for various Lhs types.
+      case LhsArraySelect(id, indices) => indices.foldLeft(result)((acc, ind) => visitExpr(ind, acc, context))
+      case LhsRecordSelect(id, fields) => fields.foldLeft(result)((acc, fld) => visitIdentifier(fld, acc, context))
+      case LhsSliceSelect(id, slice) => result // FIXME: add visitors for slice selects?
     }
     result = pass.applyOnLHS(TraversalDirection.Up, lhs, result, context)
     return result
@@ -1054,12 +1053,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   }
   
   def visitLhs(lhs : Lhs, context : ScopeMap) : Option[Lhs] = {
-    val idP = visitIdentifier(lhs.id, context)
-    val arraySelectP = lhs.arraySelect.flatMap((as) => Some(as.map((e) => visitExpr(e, context)).flatten))
-    val recordSelectP = lhs.recordSelect.flatMap((rs) => Some(rs.map((i) => visitIdentifier(i, context)).flatten))
-    val lhsP = idP.flatMap((id) => {
-      pass.rewriteLHS(Lhs(id, arraySelectP, recordSelectP, lhs.sliceSelect), context)
-    })
+    val idP = visitIdentifier(lhs.ident, context)
+    val 
     astChangeFlag = astChangeFlag || (lhsP != Some(lhs))
     return lhsP
   }

@@ -290,12 +290,18 @@ import uclid.lang.DecideCmd
         "(" ~ ")" ^^ { case _~_ => List.empty[(Identifier,Type)] }
     
       lazy val Lhs : PackratParser[lang.Lhs] =
+        Id ~ ArraySelectOp ^^ { case id ~ mapOp => lang.LhsArraySelect(id, mapOp) }
+        Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { case id ~ rOp ~ rOps => lang.LhsRecordSelect(id, rOp :: rOps) }
+        Id ~ ConstBitVectorSlice ^^ { case id ~ slice => lang.LhsSliceSelect(id, slice) }
+        Id ^^ { case id => lang.LhsId(id) }
+        /*
         Id ~ ArraySelectOp ~ RecordSelectOp ~ rep(RecordSelectOp) ~ (ConstBitVectorSlice.?) ^^  
           { case id ~ mapOp ~ rOp ~ rOps ~ slice => lang.Lhs(id, Some(mapOp), Some(rOp::rOps), slice)} |
         Id ~ ArraySelectOp ~ (ConstBitVectorSlice.?) ^^ { case id ~ op ~ slice => lang.Lhs(id, Some(op), None, slice) } |
         Id ~ RecordSelectOp ~ rep(RecordSelectOp) ~ (ConstBitVectorSlice.?) ^^ 
           { case id ~ rOp ~ rOps ~ slice => lang.Lhs(id, None, Some(rOp::rOps), slice) } |
         Id ~ (ConstBitVectorSlice.?) ^^ { case id ~ slice => lang.Lhs(id, None, None, slice) }
+        */
     
       lazy val LhsList: PackratParser[List[Lhs]] =
         ("(" ~> Lhs ~ rep("," ~> Lhs) <~ ")") ^^ { case l ~ ls => l::ls } |

@@ -238,19 +238,18 @@ case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
   override def toString = "Lambda(" + ids + "). " + e
 }
 
-case class Lhs(id: Identifier, 
-               arraySelect: Option[List[Expr]], 
-               recordSelect: Option[List[Identifier]],
-               sliceSelect : Option[ConstBitVectorSlice]) 
-     extends ASTNode
-{
-  val t1 = arraySelect match 
-    { case Some(as) => "[" + Utils.join(as.map(_.toString), ", ") + "]"; case None => "" }
-  val t2 = recordSelect match 
-    { case Some(rs) => rs.fold(""){(acc,i) => acc + "." + i}; case None => ""}
-  val t3 = sliceSelect match 
-    { case Some(ss) => ss.toString; case None => "" }
-  override def toString = id.toString + t1 + t2 + t3
+sealed abstract class Lhs(val ident: Identifier) extends ASTNode
+case class LhsId(id: Identifier) extends Lhs(id) {
+  override def toString = id.toString
+}
+case class LhsArraySelect(id: Identifier, indices: List[Expr]) extends Lhs(id) {
+  override def toString = id.toString + "[" + Utils.join(indices.map(_.toString), ", ") + "]"
+}
+case class LhsRecordSelect(id: Identifier, fields: List[Identifier]) extends Lhs(id) {
+  override def toString = id.toString + "." + Utils.join(fields.map(_.toString), ".")
+}
+case class LhsSliceSelect(id: Identifier, bitslice: ConstBitVectorSlice) extends Lhs(id) {
+  override def toString = id.toString + bitslice.toString
 }
 
 sealed abstract class Type {
