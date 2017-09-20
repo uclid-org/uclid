@@ -290,9 +290,9 @@ import uclid.lang.DecideCmd
         "(" ~ ")" ^^ { case _~_ => List.empty[(Identifier,Type)] }
     
       lazy val Lhs : PackratParser[lang.Lhs] =
-        Id ~ ArraySelectOp ^^ { case id ~ mapOp => lang.LhsArraySelect(id, mapOp) }
-        Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { case id ~ rOp ~ rOps => lang.LhsRecordSelect(id, rOp :: rOps) }
-        Id ~ ConstBitVectorSlice ^^ { case id ~ slice => lang.LhsSliceSelect(id, slice) }
+        Id ~ ConstBitVectorSlice ^^ { case id ~ slice => lang.LhsSliceSelect(id, slice) }  |
+        Id ~ ArraySelectOp ^^ { case id ~ mapOp => lang.LhsArraySelect(id, mapOp) }        |
+        Id ~ RecordSelectOp ^^ { case id ~ rOp => lang.LhsRecordSelect(id, List(rOp)) }    |
         Id ^^ { case id => lang.LhsId(id) }
         /*
         Id ~ ArraySelectOp ~ RecordSelectOp ~ rep(RecordSelectOp) ~ (ConstBitVectorSlice.?) ^^  

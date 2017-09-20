@@ -123,15 +123,15 @@ class ForLoopIndexRewriter extends ASTRewriter(
 
 class BitVectorIndexRewriterPass extends RewritePass {
   override def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = {
-    lhs.sliceSelect match {
-      case Some(slice) =>
+    lhs match {
+      case LhsSliceSelect(id, slice) =>
         val hiL = lang.IntLit(slice.hi)
         val loL = lang.IntLit(slice.lo)
         val subL = lang.OperatorApplication(lang.IntSubOp(), List(hiL, loL))
         val width = lang.OperatorApplication(lang.IntAddOp(), List(subL, lang.IntLit(1)))
         val isCnst = ExpressionAnalyzer.isExprConst(width, ctx)
         println("width: " + width.toString + "; isCnst: " + isCnst.toString)
-      case None =>
+      case _ =>
     }
     Some(lhs)
   }

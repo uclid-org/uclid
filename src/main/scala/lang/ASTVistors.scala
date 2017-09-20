@@ -1053,8 +1053,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   }
   
   def visitLhs(lhs : Lhs, context : ScopeMap) : Option[Lhs] = {
-    val idP = visitIdentifier(lhs.ident, context)
-    val 
+    val lhsP : Option[Lhs] = visitIdentifier(lhs.ident, context) match {
+      case Some(id) =>
+        Some(lhs match {
+          case LhsId(_) => 
+            LhsId(id)
+          case LhsArraySelect(_, indices) => 
+            LhsArraySelect(id, indices.flatMap((i) => visitExpr(i, context)))
+          case LhsRecordSelect(_, fields) =>
+            LhsRecordSelect(id, fields.flatMap((f) => visitIdentifier(f, context)))
+          case LhsSliceSelect(_, slice) =>
+            LhsSliceSelect(id, slice)
+        })
+      case None =>
+        None
+    }
     astChangeFlag = astChangeFlag || (lhsP != Some(lhs))
     return lhsP
   }

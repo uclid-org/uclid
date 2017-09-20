@@ -313,12 +313,26 @@ abstract sealed class ProductType extends Type {
     if (i >= 0 && i < fields.length) Some(fields(i)._2)
     else None
   }
+  
   def fieldType(fieldName : Identifier) : Option[Type] = {
     fieldIndex(fieldName) match {
       case -1 => None
       case i  => Some(fields(i)._2)
     }
   }
+
+  def nestedFieldType(fields : List[Identifier]) : Option[Type] = {
+    val thisType : Option[Type] = Some(this)
+    fields.foldLeft(thisType)((acc, f) => {
+      acc.flatMap((typ) => {
+        typ match {
+          case prodType : ProductType => prodType.fieldType(f)
+          case _ => None
+        }
+      })
+    }) 
+  }
+  
   def fieldIndex(name : Identifier) : Int = fields.indexWhere((p) => p._1 == name)
   def hasField(fieldName : Identifier) : Boolean = {
     fieldIndex(fieldName) != -1

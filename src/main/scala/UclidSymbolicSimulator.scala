@@ -168,25 +168,20 @@ class UclidSymbolicSimulator (module : Module) {
       def lhs(i: (Lhs,smt.Expr)) = { i._1 }
       def rhs(i: (Lhs,smt.Expr)) = { i._2 }
       (lhss zip args).foreach { x =>
-        val arraySelectOp = x._1.arraySelect
-        val recordSelectOp = x._1.recordSelect
-        val sliceSelectOp = x._1.sliceSelect
-        //st = st.updated(lhs(x).id, rhs(x))
-        if (arraySelectOp.isEmpty && recordSelectOp.isEmpty && sliceSelectOp.isEmpty) {
-          st = st + (lhs(x).id -> rhs(x))
-        } else if(arraySelectOp.isEmpty && recordSelectOp.isEmpty && sliceSelectOp.isDefined) {
-          val resType = st(lhs(x).id).typ.asInstanceOf[smt.BitVectorType]
-          val op = smt.BVReplaceOp(resType.width, sliceSelectOp.get.hi, sliceSelectOp.get.lo)
-          val args = List(st(lhs(x).id), rhs(x))
-          st = st + (lhs(x).id -> smt.OperatorApplication(op, args))
-        } else if (arraySelectOp.isDefined && recordSelectOp.isEmpty && sliceSelectOp.isEmpty) {
-          st = st + (lhs(x).id -> smt.ArrayStoreOperation(st(lhs(x).id), 
-              arraySelectOp.get.map(i => evaluate(i, st, c)), rhs(x)))
-        } else if (arraySelectOp.isEmpty && recordSelectOp.isDefined && sliceSelectOp.isEmpty) {
-          Utils.assert(recordSelectOp.get.length == 1, "No support for nested record updates.")
-          st = st + (lhs(x).id -> smt.OperatorApplication(smt.RecordUpdateOp(recordSelectOp.get(0).name), List(st(lhs(x).id), rhs(x))))
-        } else if (arraySelectOp.isDefined && recordSelectOp.isDefined && sliceSelectOp.isEmpty) {
-          throw new Utils.UnimplementedException("No support for arrays of records.")
+        lhs(x) match {
+          case LhsId(id) => 
+            st = st + (id -> rhs(x))
+          case LhsArraySelect(id, indices) => 
+            st = st + (id -> smt.ArrayStoreOperation(st(id), indices.map(i => evaluate(i, st, c)), rhs(x)))
+          case LhsRecordSelect(id, fields) =>
+            // FIXME: add support for nested record updates.
+            Utils.assert(fields.length == 1, "No support for nested record updates.")
+            st = st + (id -> smt.OperatorApplication(smt.RecordUpdateOp(fields(0).name), List(st(id), rhs(x))))
+          case LhsSliceSelect(id, slice) =>
+            val resType = st(id).typ.asInstanceOf[smt.BitVectorType]
+            val op = smt.BVReplaceOp(resType.width, slice.hi, slice.lo)
+            val args = List(st(id), rhs(x))
+            st = st + (id-> smt.OperatorApplication(op, args))
         }
       }
       return st
@@ -240,13 +235,7 @@ class UclidSymbolicSimulator (module : Module) {
       case AssumeStmt(e) => Set.empty
       case HavocStmt(id) => Set(id)
       case AssignStmt(lhss,rhss) => 
-        return lhss.map { lhs => 
-          var lhs_id : String = lhs.id.name;
-          lhs.recordSelect match {
-            case Some(rs) => throw new Utils.UnimplementedException("Unimplemented records in LHS")
-            case None => Identifier(lhs_id)
-          }
-        }.toSet
+        return lhss.map(lhs => lhs.ident).toSet
       case IfElseStmt(e,then_branch,else_branch) => 
         return writeSet(then_branch,c) ++ writeSet(else_branch,c)
       case ForStmt(id, range, body) => return writeSet(body,c)

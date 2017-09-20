@@ -240,60 +240,54 @@ object UclidSemanticAnalyzer {
   }
 
   def typeOfLHS(lhs: Lhs, c: Context) : Type = {
-    var intermediateType : Type = (c.outputs ++ c.variables)(lhs.id)
-    lhs.arraySelect match {
-      case Some(as) => 
-        Utils.assert(transitiveType(intermediateType,c).isInstanceOf[ArrayType],
-            "Cannot use select on non-array " + lhs.id)
-        intermediateType = transitiveType(intermediateType,c).asInstanceOf[ArrayType].outType
-      case None => ()
-    }
-    lhs.recordSelect match {
-      case Some(rs) => 
+    var intermediateType : Type = (c.outputs ++ c.variables)(lhs.ident)
+    lhs match {
+      case LhsId(id) => 
+        intermediateType
+      case LhsArraySelect(id, indices) =>
+        Utils.assert(transitiveType(intermediateType, c).isInstanceOf[ArrayType], 
+            "Cannot use select on non-array: " + lhs.ident)
+        transitiveType(intermediateType,c).asInstanceOf[ArrayType].outType
+      case LhsRecordSelect(id, fields) => 
         Utils.assert(transitiveType(intermediateType,c).isProduct, 
             "Expected product type when assigning to field: " + intermediateType)
-        rs.foreach((field) => { 
-          val productType = intermediateType.asInstanceOf[ProductType]
-          Utils.assert(productType.hasField(field), "Field " + field + " not found.")
-          intermediateType = transitiveType(productType.fieldType(field).get, c)
-        })
-      case None => 
-    }
-    lhs.sliceSelect match {
-      case Some(ss) => 
+        val productType = intermediateType.asInstanceOf[ProductType]
+        val fieldType = productType.nestedFieldType(fields)
+        Utils.assert(fieldType.isDefined, "Field type could not be computed.")
+        transitiveType(fieldType.get, c)
+      case LhsSliceSelect(id, slice) =>
         Utils.assert(transitiveType(intermediateType, c).isBitVector,
             "Expected bitvector type when assigning to slice: " + intermediateType)
         val bvType = transitiveType(intermediateType, c).asInstanceOf[BitVectorType]
-        Utils.assert(ss.hi < bvType.width && ss.lo < bvType.width, 
+        Utils.assert(slice.hi < bvType.width && slice.lo < bvType.width, 
             "Invalid bitvector slice. ")
-        return BitVectorType(ss.hi - ss.lo + 1)
-      case None =>
-        return intermediateType
+        BitVectorType(slice.hi - slice.lo + 1)
     }
   }
   
   def checkLHS(lhs: Lhs, c: Context) : Unit = {
-    Utils.assert((c.outputs.keys ++ c.variables.keys).exists { x => x.name == lhs.id.name }, 
-        "LHS variable " + lhs.id + " does not exist")
-    var intermediateType = transitiveType((c.outputs ++ c.variables)(lhs.id),c)
-    lhs.arraySelect match {
-      case Some(index) => 
-        //assert that lhs.id is a map or array
-        Utils.assert(intermediateType.isInstanceOf[ArrayType],
-            "Cannot use select on non-array " + lhs.id)
-        intermediateType = transitiveType(intermediateType.asInstanceOf[ArrayType].outType,c)
-        index.foreach { x => checkExpr(x,c) }
-      case None => ()
-    }
-    lhs.recordSelect match {
-      case Some(rs) => 
-        Utils.assert(intermediateType.isProduct, "Expected product type when assigning to field: " + intermediateType)
-        rs.foreach((field) => { 
-          val productType = intermediateType.asInstanceOf[ProductType]
-          Utils.assert(productType.hasField(field), "Field " + field + " not found.")
-          intermediateType = transitiveType(productType.fieldType(field).get, c)
-        })
-      case None => ()
+    Utils.assert((c.outputs.keys ++ c.variables.keys).exists { x => x.name == lhs.ident.name }, 
+        "LHS variable " + lhs.ident + " does not exist")
+    var intermediateType = transitiveType((c.outputs ++ c.variables)(lhs.ident),c)
+    lhs match {
+      case LhsId(id) => 
+        intermediateType
+      case LhsArraySelect(id, indices) =>
+        Utils.assert(transitiveType(intermediateType, c).isInstanceOf[ArrayType], 
+            "Cannot use select on non-array: " + lhs.ident)
+        indices.foreach { x => checkExpr(x,c) }
+      case LhsRecordSelect(id, fields) => 
+        Utils.assert(transitiveType(intermediateType,c).isProduct, 
+            "Expected product type when assigning to field: " + intermediateType)
+        val productType = intermediateType.asInstanceOf[ProductType]
+        val fieldType = productType.nestedFieldType(fields)
+        Utils.assert(fieldType.isDefined, "Field type could not be computed.")
+      case LhsSliceSelect(id, slice) =>
+        Utils.assert(transitiveType(intermediateType, c).isBitVector,
+            "Expected bitvector type when assigning to slice: " + intermediateType)
+        val bvType = transitiveType(intermediateType, c).asInstanceOf[BitVectorType]
+        Utils.assert(slice.hi < bvType.width && slice.lo < bvType.width, 
+            "Invalid bitvector slice. ")
     }
   }
   
