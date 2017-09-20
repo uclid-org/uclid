@@ -27,24 +27,32 @@ class UclidSymbolicSimulator (module : Module) {
   def newConstantSymbol(name: String, t: smt.Type) = 
     new smt.Symbol(name,t)
   
-  def execute(solver : smt.SolverInterface) {
-    module.cmds.foreach((cmd) => {
-      cmd match {
-        case InitializeCmd() => initialize()
-        case SimulateCmd(steps) => simulate(steps.value.toInt)
-        case DecideCmd() => {
-          asserts.foreach{ (e) =>
-            println("Assertion: " + e.toString)
-            solver.check(smt.OperatorApplication(smt.NegationOp, List(e))) match {
-              case Some(false) => println("Assertion HOLDS.")
-              case Some(true)  => println("Assertion FAILED.")
-              case None        => println("Assertion INDETERMINATE.")
+  def execute(solver : smt.SolverInterface) : List[(smt.Expr, Option[Boolean])] = {
+    module.cmds.foldLeft(List.empty[(smt.Expr, Option[Boolean])]){
+      (acc, cmd) => {
+        cmd match {
+          case InitializeCmd() => 
+            initialize()
+            acc
+          case SimulateCmd(steps) => 
+            simulate(steps.value.toInt)
+            acc
+          case DecideCmd() =>
+            asserts.foldLeft(acc){ 
+              case (acc, e) =>
+                val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e)))
+                val result = sat match {
+                  case Some(true)  => Some(false)
+                  case Some(false) => Some(true)
+                  case None        => None
+                }
+                (e, result) :: acc 
             }
-          }
+          case _ => 
+            throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }
-        case _ => throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
       }
-    })
+    }
   }
   
   def initialize() {

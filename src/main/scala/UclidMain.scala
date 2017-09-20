@@ -65,7 +65,7 @@ object UclidMain {
     Utils.assert(modules.contains(mainModuleName), "Main module (" + opts.mainModule + ") does not exist.")
     val mainModule = modules.get(mainModuleName)
     mainModule match {
-      case Some(m) => execute(m)
+      case Some(m) => printResults(execute(m))
       case None    => 
     }
   }
@@ -83,13 +83,10 @@ object UclidMain {
     passManager.addPass(new BitVectorIndexRewriter())
     passManager.addPass(new Typechecker())
     passManager.addPass(new PolymorphicTypeRewriter())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new FunctionInliner())
-    passManager.addPass(new ASTPrinter("ASTPrinter$2"))
     passManager.addPass(new ForLoopUnroller())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
     passManager.addPass(new CaseEliminator())
-    // passManager.addPass(new TupleFlattener())
+    // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
 
     for (srcFile <- srcFiles) {
       println("Input File: " + srcFile)
@@ -108,12 +105,43 @@ object UclidMain {
     return modules
   }
   
-  def execute(module : Module) {
+  def execute(module : Module) : List[(smt.Expr, Option[Boolean])] = {
     //Control module
-    println("Found main module: " + module.id)
-    println(module.toString)
+    //println("Found main module: " + module.id)
+    //println(module.toString)
     var symbolicSimulator = new UclidSymbolicSimulator(module)
     var z3Interface = smt.Z3Interface.newInterface()
-    symbolicSimulator.execute(z3Interface)
+    return symbolicSimulator.execute(z3Interface)
   }
+  
+  def printResults(assertionResults : List[(smt.Expr, Option[Boolean])]) {
+    val passCount = assertionResults.count((p) => p._2 == Some(true))
+    val failCount = assertionResults.count((p) => p._2 == Some(false))
+    val undetCount = assertionResults.count((p) => p._2 == None)
+    
+    Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
+    println("%d assertions passed.".format(passCount))
+    println("%d assertions failed.".format(failCount))
+    println("%d assertions indeterminate.".format(undetCount))
+    
+    if (failCount > 0) {
+      println("List of failed assertions:")
+      assertionResults.foreach{ (p) => 
+        if (p._2 == Some(false)) {
+          println("  --> " + p._1.toString)
+        }
+      }
+    }
+    
+    if (undetCount > 0) {
+      println("List of indeterminate assertions:")
+      assertionResults.foreach{ (p) => 
+        if (p._2 == None) {
+          println(" --> " + p._1.toString)
+        }
+      }
+    }
+  }
+  
+
 }

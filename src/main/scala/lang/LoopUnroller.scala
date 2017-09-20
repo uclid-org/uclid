@@ -52,16 +52,16 @@ class ForLoopUnroller extends ASTAnalysis {
           done = true
         case Some(mod) =>
           val innermostLoopSet = findInnermostLoopsAnalysis.visitModule(mod, Set.empty[ForStmt])
-          println("Innermost loops: " + innermostLoopSet.toString)
+          // println("Innermost loops: " + innermostLoopSet.toString)
           done = innermostLoopSet.size == 0
           if (!done) {
             _astChanged = true
             val forLoopRewriter = new ASTRewriter("ForLoopUnroller.LoopRewriter", new ForLoopRewriterPass(innermostLoopSet))
             modP = forLoopRewriter.visit(mod)
-            if(!modP.isEmpty) {
-              println("** AFTER UNROLLING **")
-              println(modP.get)
-            }
+            // if(!modP.isEmpty) {
+            //  println("** AFTER UNROLLING **")
+            //  println(modP.get)
+            // }
           }
       }
       iteration = iteration + 1

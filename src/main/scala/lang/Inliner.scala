@@ -152,10 +152,10 @@ class FunctionInliner extends ASTAnalysis {
               done = false
               // rewrite this procedure.
               val rewriter = new ASTRewriter("FunctionInliner.Inline:" + proc.id.toString, new InlineProcedurePass(proc))
-              println("Inlining procedure: " + proc.id.toString)
+              // println("Inlining procedure: " + proc.id.toString)
               val mP = rewriter.visit(mod)
-              println("** Changed Module **")
-              println(mP.get.toString)
+              // println("** Changed Module **")
+              // println(mP.get.toString)
               mP
             case None =>
               _astChanged = true
