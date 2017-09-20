@@ -5,29 +5,31 @@
 package uclid {
   
   object Utils {
-      def assert(b: Boolean, err: String) : Unit = {
-        if (!b) { println("Assertion FAILURE: " + err); System.exit(2); } //throw new Exception(err); }
+    def assert(b: Boolean, err: String) : Unit = {
+      if (!b) { throw new AssertionError(err) }
+    }
+    def checkError(b : Boolean, err: String) : Unit = {
+      if (!b) { throw new ParserError(err) }
+    }
+    
+    class UnimplementedException (msg:String=null, cause:Throwable=null) extends java.lang.UnsupportedOperationException (msg, cause) {}
+    class RuntimeError (msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
+    class AssertionError(msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
+    class ParserError(msg:String, cause:Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
+    
+    def existsOnce(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,1)
+    def existsNone(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,0)
+    def existsNTimes(a: List[lang.Identifier], b: lang.Identifier, n: Int) : Boolean = 
+      a.count { x => x.name == b.name } == n
+    
+    def allUnique(a: List[lang.Identifier]) : Boolean = a.distinct.size == a.size
+    
+    def join(things: List[String], sep: String) = {
+      things match {
+        case Nil => ""
+        case head :: tail => head + tail.foldLeft(""){(acc,i) => acc + sep + i} 
       }
-      def checkError(b : Boolean, err: String) : Unit = {
-        if (!b) { println("ERROR: " + err); System.exit(1); }
-      }
-      
-      class UnimplementedException (msg:String=null, cause:Throwable=null) extends java.lang.UnsupportedOperationException (msg, cause) {}
-      class RuntimeError (msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
-      
-      def existsOnce(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,1)
-      def existsNone(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,0)
-      def existsNTimes(a: List[lang.Identifier], b: lang.Identifier, n: Int) : Boolean = 
-        a.count { x => x.name == b.name } == n
-      
-      def allUnique(a: List[lang.Identifier]) : Boolean = a.distinct.size == a.size
-      
-      def join(things: List[String], sep: String) = {
-        things match {
-          case Nil => ""
-          case head :: tail => head + tail.foldLeft(""){(acc,i) => acc + sep + i} 
-        }
-      }
+    }
   }
   
   class Memo[I, O](f : I => O) {

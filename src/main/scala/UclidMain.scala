@@ -60,13 +60,23 @@ object UclidMain {
       println(usage)
       sys.exit(0)
     }
-    val modules = compile(opts.srcFiles)
-    val mainModuleName = Identifier(opts.mainModule)
-    Utils.assert(modules.contains(mainModuleName), "Main module (" + opts.mainModule + ") does not exist.")
-    val mainModule = modules.get(mainModuleName)
-    mainModule match {
-      case Some(m) => printResults(execute(m))
-      case None    => 
+    try { 
+      val modules = compile(opts.srcFiles)
+      val mainModuleName = Identifier(opts.mainModule)
+      Utils.assert(modules.contains(mainModuleName), "Main module (" + opts.mainModule + ") does not exist.")
+      val mainModule = modules.get(mainModuleName)
+      mainModule match {
+        case Some(m) => printResults(execute(m))
+        case None    => 
+      }
+    }
+    catch  {
+      case (p : Utils.ParserError) =>
+        println("[Compiler Error]: " + p.getMessage)
+        System.exit(1)
+      case(a : Utils.AssertionError) =>
+        println("[Assertion Failure]: " + a.getMessage)
+        System.exit(2)
     }
   }
   
@@ -89,7 +99,6 @@ object UclidMain {
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
 
     for (srcFile <- srcFiles) {
-      println("Input File: " + srcFile)
       val text = scala.io.Source.fromFile(srcFile).mkString
       val fileModules = UclidParser.parseModel(text).map(passManager.run(_).get)
       for(module <- fileModules) {
@@ -97,11 +106,10 @@ object UclidMain {
       }
       nameCnt = fileModules.foldLeft(nameCnt)((cnts : NameCountMap, m : Module) => (cnts + (m.id -> (cnts(m.id) + 1))))
       val repeatedNameCnt = nameCnt.filter{ case (name, cnt) => cnt > 1 }
-      val repeatedNames = repeatedNameCnt.foldLeft(""){ case (str, (name, cnt)) => str + " " + name }
-      Utils.assert(repeatedNameCnt.size == 0, "Repeated module names: " + repeatedNames)
+      val repeatedNames = Utils.join(repeatedNameCnt.map((r) => r._1.toString).toList, " ")
+      Utils.checkError(repeatedNameCnt.size == 0, "Repeated module names: " + repeatedNames)
       modules = fileModules.foldLeft(modules)((ms: ModuleMap, m : Module) => ms + (m.id -> m)) 
     }
-    println("Total number of modules is: " + modules.size)
     return modules
   }
   

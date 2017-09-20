@@ -1,4 +1,4 @@
-module test {
+module main {
   var a : bv16;
   var b : bv16;
   procedure fib(x: bv16, y: bv16) returns (z:bv16, w:bv16) { 
