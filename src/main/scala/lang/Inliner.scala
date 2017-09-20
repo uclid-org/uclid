@@ -1,17 +1,12 @@
 package uclid
 package lang
 
-import scala.collection.mutable.{Map => MutableMap, Set => MutableSet}
-import scala.collection.immutable.Map
-import scala.collection.immutable.Set
+import scala.collection.mutable.{Set => MutableSet}
 
-class FindLeafProceduresPass extends ReadOnlyPass[Set[IdGenerator.Id]] {
-  var procedureMap = MutableMap.empty[IdGenerator.Id, ProcedureDecl]  
-  override def reset() { 
-    procedureMap.clear()
-  }
-  override def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : Set[IdGenerator.Id], ctx : ScopeMap) : Set[IdGenerator.Id] = {
+class FindLeafProcedurePass extends ReadOnlyPass[Option[ProcedureDecl]] {
+  override def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : Option[ProcedureDecl], ctx : ScopeMap) : Option[ProcedureDecl] = {
     if (d == TraversalDirection.Down) return in
+    if (in.isDefined) return in
     
     val hasProcedureCalls = proc.body.exists((st) => {
       st match {
@@ -20,13 +15,11 @@ class FindLeafProceduresPass extends ReadOnlyPass[Set[IdGenerator.Id]] {
       }
     })
     if (!hasProcedureCalls) {
-      procedureMap.put(proc.astNodeId, proc)
-      return in + proc.astNodeId
+      return Some(proc)
     } else {
       return in
     }
   }
-  def procedure(i : IdGenerator.Id) : ProcedureDecl = procedureMap.get(i).get
 }
 
 class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
@@ -131,13 +124,12 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
 }
 
 class FunctionInliner extends ASTAnalysis {
-  var findLeafProceduresPass = new FindLeafProceduresPass()
-  var findLeafProceduresAnalysis = new ASTAnalyzer("FunctionInliner.FindLeafProcedures", findLeafProceduresPass)
+  var findLeafProcedurePass = new FindLeafProcedurePass()
+  var findLeafProcedureAnalysis = new ASTAnalyzer("FunctionInliner.FindLeafProcedure", findLeafProcedurePass)
   var _astChanged = false 
   
   override def passName = "FunctionInliner"
   override def reset() = {
-    findLeafProceduresPass.reset()
     _astChanged = false
   }
   override def astChanged = _astChanged
@@ -146,32 +138,30 @@ class FunctionInliner extends ASTAnalysis {
     var modP : Option[Module] = Some(module)
     var iteration = 0
     var done = false
-    val MAX_ITERATIONS = 100
+    val MAX_ITERATIONS = 1000
     do {
-      findLeafProceduresAnalysis.reset()
-      modP match {
+      modP = modP match {
         case None => 
           done = true
+          None
         case Some(mod) =>
-          val leafProcedureSet = findLeafProceduresAnalysis.visitModule(mod, Set.empty[IdGenerator.Id])
-          val procDecls = leafProcedureSet.map((id) => findLeafProceduresPass.procedure(id))
-          // println("Leaf procedures: " + Utils.join(procDecls.map(_.id.toString).toList, ", "))
-          modP = procDecls.foldLeft(modP)(
-            (mod, proc) =>
-              mod match {
-                case Some(m) => 
-                  _astChanged = true
-                  val rewriter = new ASTRewriter("FunctionInliner.Inline:" + proc.id.toString, new InlineProcedurePass(proc))
-                  // println("Inlining procedure: " + proc.id.toString)
-                  val mP = rewriter.visit(m)
-                  // println("** Changed Module **")
-                  // println(mP.get.toString)
-                  mP
-                case None =>
-                  None
-              }
-          )
-          done = procDecls.size == 0
+          val leafProc = findLeafProcedureAnalysis.visitModule(mod, None)
+          leafProc match {
+            case Some(proc) =>
+              _astChanged = true
+              done = false
+              // rewrite this procedure.
+              val rewriter = new ASTRewriter("FunctionInliner.Inline:" + proc.id.toString, new InlineProcedurePass(proc))
+              println("Inlining procedure: " + proc.id.toString)
+              val mP = rewriter.visit(mod)
+              println("** Changed Module **")
+              println(mP.get.toString)
+              mP
+            case None =>
+              _astChanged = true
+              done = true
+              Some(mod)
+          }
       }
       iteration = iteration + 1
     } while(!done && iteration < MAX_ITERATIONS)
