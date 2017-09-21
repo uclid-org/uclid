@@ -60,6 +60,7 @@ case class TupleType(types: List[Type]) extends ProductType(((1 to types.length)
   override def isTuple = true
 }
 case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields_) {
+  override def toString = "record [" + Utils.join(fields_.map((f) => f._1.toString + " : " + f._2.toString), ", ") + "]"
   override def isRecord = true
 }
 case class MapType(inTypes: List[Type], outType: Type) extends Type {

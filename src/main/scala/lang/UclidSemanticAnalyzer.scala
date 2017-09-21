@@ -253,7 +253,7 @@ object UclidSemanticAnalyzer {
             "Expected product type when assigning to field: " + intermediateType)
         val productType = intermediateType.asInstanceOf[ProductType]
         val fieldType = productType.nestedFieldType(fields)
-        Utils.assert(fieldType.isDefined, "Field type could not be computed.")
+        Utils.assert(fieldType.isDefined, "Field type could not be computed: " + lhs.toString)
         transitiveType(fieldType.get, c)
       case LhsSliceSelect(id, slice) =>
         Utils.assert(transitiveType(intermediateType, c).isBitVector,
@@ -281,7 +281,7 @@ object UclidSemanticAnalyzer {
             "Expected product type when assigning to field: " + intermediateType)
         val productType = intermediateType.asInstanceOf[ProductType]
         val fieldType = productType.nestedFieldType(fields)
-        Utils.assert(fieldType.isDefined, "Field type could not be computed.")
+        Utils.assert(fieldType.isDefined, "Field type could not be computed: " + lhs.toString)
       case LhsSliceSelect(id, slice) =>
         Utils.assert(transitiveType(intermediateType, c).isBitVector,
             "Expected bitvector type when assigning to slice: " + intermediateType)

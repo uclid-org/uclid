@@ -119,6 +119,7 @@ import uclid.lang.DecideCmd
       lazy val KwSimulate = "simulate"
       lazy val KwUnroll = "unroll"
       lazy val KwDecide = "decide"
+      lazy val KwDebug = "__uclid_debug"
       
       lazy val KwDefineProp = "property"
       lazy val TemporalOpGlobally = "G"
@@ -140,7 +141,7 @@ import uclid.lang.DecideCmd
         KwAssume, KwAssert, KwVar, KwHavoc, KwCall, KwIf, KwElse,
         KwCase, KwEsac, KwFor, KwIn, KwRange, KwInput, KwOutput,
         KwModule, KwType, KwEnum, KwRecord, KwSkip, KwFunction, 
-        KwInitialize, KwUnroll, KwSimulate, KwDecide, KwControl,
+        KwInitialize, KwUnroll, KwSimulate, KwDecide, KwControl, KwDebug,
         KwInit, KwNext, KwITE, KwLambda, 
         KwDefineProp, TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
         TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
@@ -292,7 +293,7 @@ import uclid.lang.DecideCmd
       lazy val Lhs : PackratParser[lang.Lhs] =
         Id ~ ConstBitVectorSlice ^^ { case id ~ slice => lang.LhsSliceSelect(id, slice) }  |
         Id ~ ArraySelectOp ^^ { case id ~ mapOp => lang.LhsArraySelect(id, mapOp) }        |
-        Id ~ RecordSelectOp ^^ { case id ~ rOp => lang.LhsRecordSelect(id, List(rOp)) }    |
+        Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { case id ~ rOp ~ rOps => lang.LhsRecordSelect(id, rOp::rOps) }    |
         Id ^^ { case id => lang.LhsId(id) }
     
       lazy val LhsList: PackratParser[List[Lhs]] =
@@ -377,8 +378,13 @@ import uclid.lang.DecideCmd
       lazy val SimulateCmd : PackratParser[lang.SimulateCmd] =
         KwSimulate ~ "(" ~> Integer <~ ")" ~ ";" ^^ { case num => lang.SimulateCmd(num) }
       
+      // this command is for debugging.
+      lazy val DebugCmd : PackratParser[lang.DebugCmd] =
+        KwDebug ~> Id <~ ";" ^^ { case cmd => lang.DebugCmd(cmd, List.empty[lang.Expr]) }
+
+
       lazy val Cmd : PackratParser[UclCmd] =
-        ( InitializeCmd | UnrollCmd | SimulateCmd | DecideCmd )
+        ( InitializeCmd | UnrollCmd | SimulateCmd | DecideCmd | DebugCmd )
       
       lazy val BlockCmd : PackratParser[List[UclCmd]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
       

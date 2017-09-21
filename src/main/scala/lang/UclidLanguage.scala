@@ -498,6 +498,9 @@ case class SimulateCmd(steps : IntLit) extends UclCmd {
 case class DecideCmd() extends UclCmd {
   override def toString = "decide; "
 }
+case class DebugCmd(cmd: Identifier, args: List[Expr]) extends UclCmd {
+  override def toString = "__uclid_debug " + cmd.toString + " " + Utils.join(args.map(_.toString), " ") + ";"
+}
 
 case class Module(id: Identifier, decls: List[Decl], cmds : List[UclCmd]) extends ASTNode {
   override def toString = 

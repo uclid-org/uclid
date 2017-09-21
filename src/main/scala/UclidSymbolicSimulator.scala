@@ -48,6 +48,13 @@ class UclidSymbolicSimulator (module : Module) {
                 }
                 (e, result) :: acc 
             }
+          case DebugCmd(cmd, args) =>
+            if (cmd.toString == "print_module") {
+              println(module.toString)
+            } else {
+              throw new Utils.ParserError("Unknown debug command: " + cmd.toString)
+            }
+            acc
           case _ => 
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }
@@ -170,6 +177,21 @@ class UclidSymbolicSimulator (module : Module) {
   }
   
   def simulate(s: Statement, symbolTable: SymbolTable, c : Context) : SymbolTable = {
+    def recordSelect(field : String, rec : smt.Expr) = {
+      smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
+    }
+    def recordUpdate(field : String, rec : smt.Expr, newVal : smt.Expr) = {
+      smt.OperatorApplication(smt.RecordUpdateOp(field), List(rec, newVal))
+    }
+    def simulateRecordUpdateExpr(st : smt.Expr, fields : List[String], newVal : smt.Expr) : smt.Expr = {
+      fields match {
+        case hd :: tl =>
+          recordUpdate(hd, st, simulateRecordUpdateExpr(recordSelect(hd, st), tl, newVal))
+        case Nil =>
+          newVal
+      }
+    }
+
     def simulateAssign(lhss: List[Lhs], args: List[smt.Expr], input: SymbolTable) : SymbolTable = {
       //println("Invoking simulateAssign with " + lhss + " := " + args + " and symboltable " + symbolTable)
       var st : SymbolTable = input;
@@ -182,9 +204,7 @@ class UclidSymbolicSimulator (module : Module) {
           case LhsArraySelect(id, indices) => 
             st = st + (id -> smt.ArrayStoreOperation(st(id), indices.map(i => evaluate(i, st, c)), rhs(x)))
           case LhsRecordSelect(id, fields) =>
-            // FIXME: add support for nested record updates.
-            Utils.assert(fields.length == 1, "No support for nested record updates.")
-            st = st + (id -> smt.OperatorApplication(smt.RecordUpdateOp(fields(0).name), List(st(id), rhs(x))))
+            st = st + (id -> simulateRecordUpdateExpr(st(id), fields.map(_.toString), rhs(x)))
           case LhsSliceSelect(id, slice) =>
             val resType = st(id).typ.asInstanceOf[smt.BitVectorType]
             val op = smt.BVReplaceOp(resType.width, slice.hi, slice.lo)
@@ -300,7 +320,7 @@ class UclidSymbolicSimulator (module : Module) {
   }
 
   def evaluate(e: Expr, symbolTable: SymbolTable, context: Context) : smt.Expr = {
-     e match { //check that all identifiers in e have been declared
+     val smtExpr = e match { //check that all identifiers in e have been declared
        case OperatorApplication(op,args) =>
          return smt.OperatorApplication(toSMT(op,context), args.map(i => evaluate(i, symbolTable, context)))
        case ArraySelectOperation(a,index) => 
@@ -338,5 +358,6 @@ class UclidSymbolicSimulator (module : Module) {
        case Tuple(args) => smt.MakeTuple(args.map(i => evaluate(i, symbolTable, context)))
        case _ => throw new Utils.UnimplementedException("Support not implemented for expression: " + e.toString)
     }
+    return smtExpr
   }
 }

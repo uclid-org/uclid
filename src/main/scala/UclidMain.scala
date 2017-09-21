@@ -76,6 +76,7 @@ object UclidMain {
         System.exit(1)
       case(a : Utils.AssertionError) =>
         println("[Assertion Failure]: " + a.getMessage)
+        a.printStackTrace()
         System.exit(2)
     }
   }

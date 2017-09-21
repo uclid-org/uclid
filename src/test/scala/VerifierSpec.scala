@@ -44,6 +44,9 @@ class VerifierSpec extends FlatSpec {
   "test/test-record-1.ucl4" should "verify successfully." in {
     nTestsFail("./test/test-record-1.ucl4", 0)
   }
+  "test/test-tuple-record-1.ucl4" should "verify successfully." in {
+    nTestsFail("./test/test-tuple-record-1.ucl4", 0)
+  }
   "test/test-types-0.ucl4" should "verify successfully." in {
     nTestsFail("./test/test-types-0.ucl4", 0)
   }
