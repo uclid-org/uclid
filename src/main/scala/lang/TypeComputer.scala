@@ -351,7 +351,7 @@ class TypeComputer extends ASTAnalyzer("TypeComputer", new TypeComputePass())  {
 
 class PolymorphicTypeRewriterPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
-  lazy val typeCheckerPass = manager.pass("Typechecker").asInstanceOf[TypeComputer].pass
+  lazy val typeCheckerPass = manager.pass("TypeComputer").asInstanceOf[TypeComputer].pass
   override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = {
     
     op match {
