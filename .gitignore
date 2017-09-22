@@ -6,3 +6,5 @@ project/target/*
 /bin/
 .classpath
 .project
+.cache-tests
+.settings/*
