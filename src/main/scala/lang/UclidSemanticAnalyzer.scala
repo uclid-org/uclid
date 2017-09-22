@@ -490,7 +490,16 @@ object UclidSemanticAnalyzer {
         val t = typeOf(le,c2)
         Utils.assert(!t._2, "What do you need a Lambda expression with temporal type for!?")
         return (MapType(ids.map(i => i._2), t._1), false) //Lambda expr returns a map type
-      case id : IdentifierBase => ((c.constants ++ c.variables ++ c.inputs ++ c.outputs)(Identifier(id.name)), false)
+      case id : IdentifierBase =>
+        val vars = (c.constants ++ c.variables ++ c.inputs ++ c.outputs)
+        var someId = vars.get(Identifier(id.name))
+        if (someId.isDefined) {
+          (someId.get, false)
+        } else {
+          val someFType = c.functions.get(Identifier(id.name))
+          Utils.assert(someFType.isDefined, "Unable to find identifier in function map: " + id.name)
+          (someFType.get.typ, false)
+        }
       case IntLit(n) => (IntType(), false)
       case BoolLit(b) => (BoolType(), false)
       case BitVectorLit(bv, w) => (BitVectorType(w), false)
@@ -527,7 +536,7 @@ object UclidSemanticAnalyzer {
          c2.inputs = c.inputs ++ (ids.map(i => i._1 -> i._2).toMap)
          checkExpr(le,c2);
        case Identifier(id) => 
-         Utils.assert((c.constants.keys ++ c.inputs.keys ++ c.outputs.keys ++ c.variables.keys).
+         Utils.assert((c.constants.keys ++ c.functions.keys ++ c.inputs.keys ++ c.outputs.keys ++ c.variables.keys).
          exists{i => i.name == id}, "Identifier " + id + " not found");
        case _ => ()
      }

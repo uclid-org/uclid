@@ -1,18 +1,31 @@
 module main {
+  type rec_t = record { x : int, y : int };
+  
+  function h(rec : rec_t) : int;
   function f(g : int) : int;
   
   var x : int;
   var y : int;
   
+  var r : rec_t;
+  var q : rec_t;
+  
   init {
     x := 0;
     y := 0;
+    r.x := 0; 
+    r.y := 0;
   }
   
   next {
     x := f(x);
     y := f(y);
     
+    q := r;
+    r.x := h(r);
+    r.y := h(q);
+
+	assert (f(r.x) == f(r.y));
     assert (x == y);
   }
   

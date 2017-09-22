@@ -213,7 +213,8 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
         val data = exprToZ3(value).asInstanceOf[z3.Expr]
         ctx.mkStore(exprToZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple, data)
       case FunctionApplication(e, args) =>
-        throw new Utils.UnimplementedException("Not implemented.")
+        val func = exprToZ3(e).asInstanceOf[z3.FuncDecl]
+        func.apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
       case ITE(e,t,f) =>
         ctx.mkITE(exprToZ3(e).asInstanceOf[z3.BoolExpr], exprToZ3(t).asInstanceOf[z3.Expr], exprToZ3(f).asInstanceOf[z3.Expr])
       case Lambda(_,_) =>

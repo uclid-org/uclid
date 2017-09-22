@@ -67,7 +67,10 @@ class UclidSymbolicSimulator (module : Module) {
     val cnstSymbolTable = context.constants.foldLeft(Map.empty[Identifier, smt.Expr]){
       (acc,i) => acc + (i._1 -> newConstantSymbol(i._1.name, toSMT(context.constants(i._1),context)))
     }
-    val initSymbolTable = (context.variables ++ context.outputs).foldLeft(cnstSymbolTable){
+    val cnstAndFuncTable = context.functions.foldLeft(cnstSymbolTable){
+      (acc,i) => acc + (i._1 -> newConstantSymbol(i._1.name, toSMT(i._2.typ, context)))
+    }
+    val initSymbolTable = (context.variables ++ context.outputs).foldLeft(cnstAndFuncTable){
       (acc, i) => acc + (i._1 -> newHavocSymbol(i._1.name, toSMT(i._2, context)))
     }
     symbolTable = simulate(context.init, initSymbolTable, context);
@@ -332,7 +335,7 @@ class UclidSymbolicSimulator (module : Module) {
              evaluate(value, symbolTable,context))
        case FuncApplication(f,args) => f match {
          case Identifier(id) => 
-           if (context.constants.contains(Identifier(id))) {
+           if (context.functions.contains(Identifier(id))) {
              return smt.FunctionApplication(evaluate(f, symbolTable,context), args.map(i => evaluate(i,symbolTable,context))) 
            } else if (context.variables.contains(Identifier(id))) {
              symbolTable(Identifier(id)) match {
@@ -340,7 +343,7 @@ class UclidSymbolicSimulator (module : Module) {
                foldLeft(e){(acc,x) => substituteSMT(acc, x._1, x._2)}
              }
            } else {
-             throw new Exception("How did i get here?") //should either be a lambda or an identifier
+             throw new Exception("How did I get here?") //should either be a lambda or an identifier
            }
          case Lambda(idtypes,le) => //do beta sub
            var le_sub = (idtypes.map(x => x._1) zip args).foldLeft(le){(acc,x) => substitute(acc, x._1, x._2)}

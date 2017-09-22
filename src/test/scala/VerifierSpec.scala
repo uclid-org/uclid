@@ -50,4 +50,7 @@ class VerifierSpec extends FlatSpec {
   "test/test-types-0.ucl4" should "verify successfully." in {
     nTestsFail("./test/test-types-0.ucl4", 0)
   }
+  "test/test-functions-1.ucl4" should "verify successfully." in {
+    nTestsFail("./test/test-functions-1.ucl4", 0)
+  }
 }
