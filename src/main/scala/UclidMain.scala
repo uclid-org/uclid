@@ -92,7 +92,7 @@ object UclidMain {
     passManager.addPass(new TypeSynonymFinder())
     passManager.addPass(new TypeSynonymRewriter())
     passManager.addPass(new BitVectorIndexRewriter())
-    passManager.addPass(new Typechecker())
+    passManager.addPass(new TypeComputer())
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new FunctionInliner())
     passManager.addPass(new ForLoopUnroller())

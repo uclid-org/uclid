@@ -140,7 +140,7 @@ class BitVectorIndexRewriterPass extends RewritePass {
 class BitVectorIndexRewriter extends ASTRewriter(
     "BitVectorIndexRewriter", new BitVectorIndexRewriterPass())
 
-class TypecheckPass extends ReadOnlyPass[Unit]
+class TypeComputePass extends ReadOnlyPass[Unit]
 {
   type Memo = MutableMap[IdGenerator.Id, Type]
   var memo : Memo = MutableMap.empty
@@ -344,14 +344,14 @@ class TypecheckPass extends ReadOnlyPass[Unit]
   }
 }
 
-class Typechecker extends ASTAnalyzer("Typechecker", new TypecheckPass())  {
-  override def pass = super.pass.asInstanceOf[TypecheckPass]
+class TypeComputer extends ASTAnalyzer("TypeComputer", new TypeComputePass())  {
+  override def pass = super.pass.asInstanceOf[TypeComputePass]
   in = Some(Unit)
 }
 
 class PolymorphicTypeRewriterPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
-  lazy val typeCheckerPass = manager.pass("Typechecker").asInstanceOf[Typechecker].pass
+  lazy val typeCheckerPass = manager.pass("Typechecker").asInstanceOf[TypeComputer].pass
   override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = {
     
     op match {
