@@ -1,7 +1,7 @@
 package uclid
 package lang
 
-abstract class RecordAssignmentRewriterPass(typechecker: TypeComputePass) extends RewritePass {
+abstract class RecordAssignmentRewriterPass(typechecker: ExpressionTypeCheckerPass) extends RewritePass {
   def expandAssignment(lhs: Lhs, rhs: Expr) : List[(Lhs, Expr)]
   
   override def rewriteAssign(st : AssignStmt, ctx : ScopeMap) : List[Statement] = {

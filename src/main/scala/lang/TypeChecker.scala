@@ -140,7 +140,7 @@ class BitVectorIndexRewriterPass extends RewritePass {
 class BitVectorIndexRewriter extends ASTRewriter(
     "BitVectorIndexRewriter", new BitVectorIndexRewriterPass())
 
-class TypeComputePass extends ReadOnlyPass[Unit]
+class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
 {
   type Memo = MutableMap[IdGenerator.Id, Type]
   var memo : Memo = MutableMap.empty
@@ -157,6 +157,23 @@ class TypeComputePass extends ReadOnlyPass[Unit]
     typeOf(e, ctx)
   }
   
+  /*
+  def typeOf(lhs : Lhs, c : ScopeMap) : Type = {
+    val typOpt = c.typeOf(lhs.ident)
+    Utils.checkError(typOpt.isDefined, "Unknown variable in LHS: " + id.toString)
+    val typ = typOpt.get
+    lhs match {
+      case LhsId(id) => 
+        val tOpt = 
+        Utils.checkError(tOpt.isDefined, )
+        tOpt.get
+      case LhsArraySelect(id, indices) =>
+        val tOpt = c.typeOf(id)
+        Utils.checkError(tOpt.isDefined, "Unkonwn variable in LHS)
+    }
+  }
+  * 
+  */
   def typeOf(e : Expr, c : ScopeMap) : Type = {
     def polyResultType(op : PolymorphicOperator, argType : Type) : Type = {
       op match {
@@ -344,14 +361,41 @@ class TypeComputePass extends ReadOnlyPass[Unit]
   }
 }
 
-class TypeComputer extends ASTAnalyzer("TypeComputer", new TypeComputePass())  {
-  override def pass = super.pass.asInstanceOf[TypeComputePass]
+class ExpressionTypeChecker extends ASTAnalyzer("ExpressionTypeChecker", new ExpressionTypeCheckerPass())  {
+  override def pass = super.pass.asInstanceOf[ExpressionTypeCheckerPass]
+  in = Some(Unit)
+}
+
+class ModuleTypeCheckerPass extends ReadOnlyPass[Unit]
+{
+  lazy val manager : PassManager = analysis.manager
+  lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
+  override def applyOnStatement(d : TraversalDirection.T, st : Statement, in : Unit, context : ScopeMap) : Unit = {
+    st match {
+      case AssertStmt(e) => 
+        val eType = exprTypeChecker.typeOf(e, context)
+        Utils.checkError(eType.isBool || eType.isTemporal, "Assertion expression must be of Boolean or Temporal type.")
+      case AssumeStmt(e) =>
+        val eType = exprTypeChecker.typeOf(e, context)
+        Utils.checkError(eType.isBool, "Assumption must be Boolean.")
+      case HavocStmt(id) =>
+        Utils.checkError(context.doesNameExist(id), "Unknown identifier in havoc statement.")
+      case AssignStmt(lhss, rhss) =>
+        
+      case _ =>
+        // Ignore the rest.
+    }
+  }
+}
+
+class ModuleTypeChecker extends ASTAnalyzer("ModuleTypeChecker", new ModuleTypeCheckerPass())  {
+  override def pass = super.pass.asInstanceOf[ModuleTypeCheckerPass]
   in = Some(Unit)
 }
 
 class PolymorphicTypeRewriterPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
-  lazy val typeCheckerPass = manager.pass("TypeComputer").asInstanceOf[TypeComputer].pass
+  lazy val typeCheckerPass = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
   override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = {
     
     op match {
