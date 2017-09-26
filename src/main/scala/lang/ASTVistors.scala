@@ -681,9 +681,19 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     val id = visitIdentifier(module.id, context)
     val decls = module.decls.map(visitDecl(_, context)).flatten
     val cmds = module.cmds.map(visitCommand(_, context)).flatten
-    val moduleP = id.flatMap((i) => pass.rewriteModule(Module(i, decls, cmds), emptyContext))
+    val moduleIn = id.flatMap((i) => Some(Module(i, decls, cmds)))
+    val moduleP = moduleIn.flatMap((m) => pass.rewriteModule(m, emptyContext))
     astChangeFlag = astChangeFlag || (moduleP != Some(module))
-    return moduleP
+    
+    return (ASTNode.introducePos(moduleP, module.pos) match {
+      case Some(m) => 
+        module.filename match {
+          case Some(fn) => Some(m.withFilename(fn))
+          case None     => None
+        }
+      case None =>
+        None
+    })
   }
   
   def visitDecl(decl : Decl, context : ScopeMap) : Option[Decl] = {
@@ -700,8 +710,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case specDecl : SpecDecl => visitSpec(specDecl, context)
     }).flatMap(pass.rewriteDecl(_, context))
     astChangeFlag = astChangeFlag || (declP != Some(decl))
-    return declP
+    return ASTNode.introducePos(declP, decl.pos)
   }
+
   def visitProcedure(proc : ProcedureDecl, contextIn : ScopeMap) : Option[ProcedureDecl] = {
     val context = contextIn + proc
     val id = visitIdentifier(proc.id, context)
@@ -713,7 +724,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None 
     }
     astChangeFlag = astChangeFlag || (procP != Some(proc))
-    return procP
+    return ASTNode.introducePos(procP, proc.pos)
   }
   
   def visitFunction(func : FunctionDecl, context : ScopeMap) : Option[FunctionDecl] = {
@@ -724,7 +735,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (funcP != Some(func))
-    return funcP
+    return ASTNode.introducePos(funcP, func.pos)
   }
   
   def visitStateVar(stvar : StateVarDecl, context : ScopeMap) : Option[StateVarDecl] = {
@@ -735,7 +746,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (stateVarP != Some(stvar))
-    return stateVarP
+    return ASTNode.introducePos(stateVarP, stvar.pos)
   }
   
   def visitInputVar(inpvar : InputVarDecl, context : ScopeMap) : Option[InputVarDecl] = {
@@ -746,7 +757,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (inpVarP != Some(inpvar))
-    return inpVarP
+    return ASTNode.introducePos(inpVarP, inpvar.pos)
   }
   
   def visitOutputVar(outvar : OutputVarDecl, context : ScopeMap) : Option[OutputVarDecl] = {
@@ -757,7 +768,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (outVarP != Some(outvar))
-    return outVarP
+    return ASTNode.introducePos(outVarP, outvar.pos)
   }
   
   def visitConstant(cnst : ConstantDecl, context : ScopeMap) : Option[ConstantDecl] = {
@@ -768,7 +779,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (cnstP != Some(cnst))
-    return cnstP
+    return ASTNode.introducePos(cnstP, cnst.pos)
   }
   
   def visitSpec(spec : SpecDecl, context : ScopeMap) : Option[SpecDecl] = {
@@ -779,7 +790,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (specP != Some(spec))
-    return specP
+    return ASTNode.introducePos(specP, spec.pos)
   }
   
   def visitTypeDecl(typDec : TypeDecl, context : ScopeMap) : Option[TypeDecl] = {
@@ -790,27 +801,27 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (typDecP != Some(typDec))
-    return typDecP
+    return ASTNode.introducePos(typDecP, typDec.pos)
   }
   
   def visitInit(init : InitDecl, context : ScopeMap) : Option[InitDecl] = {
     val body = init.body.map(visitStatement(_, context)).flatten
     val initP = pass.rewriteInit(InitDecl(body), context)
     astChangeFlag = astChangeFlag || (initP != Some(init))
-    return initP
+    return ASTNode.introducePos(initP, init.pos)
   }
   
   def visitNext(next : NextDecl, context : ScopeMap) : Option[NextDecl] = {
     val body = next.body.map(visitStatement(_, context)).flatten
     val nextP = pass.rewriteNext(NextDecl(body), context)
     astChangeFlag = astChangeFlag || (nextP != Some(next))
-    return nextP
+    return ASTNode.introducePos(nextP, next.pos)
   }
   
   def visitCommand(cmd : UclCmd, context : ScopeMap) : Option[UclCmd] = {
     val cmdP = pass.rewriteCommand(cmd, context)
     astChangeFlag = astChangeFlag || (cmdP != Some(cmd))
-    return cmdP
+    return ASTNode.introducePos(cmdP, cmd.pos)
   }
   
   def visitType(typ: Type, context : ScopeMap) : Option[Type] = {
@@ -827,45 +838,45 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case synT : SynonymType => visitSynonymType(synT, context)
     }).flatMap(pass.rewriteType(_, context))
     astChangeFlag = astChangeFlag || (typP != Some(typ))
-    return typP
+    return ASTNode.introducePos(typP, typ.pos)
   }
   
   def visitTemporalType(tempT : TemporalType, context : ScopeMap) : Option[TemporalType] = {
     val tempTP = pass.rewriteTemporalType(tempT, context)
     astChangeFlag = astChangeFlag || (tempTP != Some(tempT))
-    return tempTP
+    return ASTNode.introducePos(tempTP, tempT.pos)
   }
 
   def visitBoolType(boolT : BoolType, context : ScopeMap) : Option[BoolType] = {
     val boolTP = pass.rewriteBoolType(boolT, context)
     astChangeFlag = astChangeFlag || (boolTP != Some(boolT))
-    return boolTP 
+    return ASTNode.introducePos(boolTP, boolT.pos)
   }
 
   def visitIntType(intT : IntType, context : ScopeMap) : Option[IntType] = {
     val intTP = pass.rewriteIntType(intT, context)
     astChangeFlag = astChangeFlag || (intTP != Some(intT))
-    return intTP 
+    return ASTNode.introducePos(intTP, intT.pos) 
   }
   
   def visitBitVectorType(bvT : BitVectorType, context : ScopeMap) : Option[BitVectorType] = {
     val bvTP = pass.rewriteBitVectorType(bvT, context)
     astChangeFlag = astChangeFlag || (bvTP != Some(bvT))
-    return bvTP 
+    return ASTNode.introducePos(bvTP, bvT.pos) 
   }
   
   def visitEnumType(enumT : EnumType, context : ScopeMap) : Option[EnumType] = {
     val idP = enumT.ids.map(visitIdentifier(_, context)).flatten
     val enumTP = pass.rewriteEnumType(EnumType(idP), context)
     astChangeFlag = astChangeFlag || (enumTP != Some(enumT))
-    return enumTP 
+    return ASTNode.introducePos(enumTP, enumT.pos)
   }
   
   def visitTupleType(tupleT : TupleType, context : ScopeMap) : Option[TupleType] = {
     val fieldsP = tupleT.fieldTypes.map((t) => visitType(t, context)).flatten
     val tupleTP = pass.rewriteTupleType(TupleType(fieldsP), context)
     astChangeFlag = astChangeFlag || (tupleTP != Some(tupleT))
-    return tupleTP 
+    return ASTNode.introducePos(tupleTP, tupleT.pos)
   }
   
   def visitRecordType(recT : RecordType, context : ScopeMap) : Option[RecordType] = {
@@ -877,7 +888,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     }).flatten
     val recTP = pass.rewriteRecordType(RecordType(fieldsP), context)
     astChangeFlag = astChangeFlag || (recTP != Some(recT))
-    return recTP 
+    return ASTNode.introducePos(recTP, recT.pos)
   }
   
   def visitMapType(mapT : MapType, context : ScopeMap) : Option[MapType] = {
@@ -887,7 +898,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (mapTP != Some(mapT))
-    return mapTP 
+    return ASTNode.introducePos(mapTP, mapT.pos)
   }
   
   def visitArrayType(arrT : ArrayType, context : ScopeMap) : Option[ArrayType] = {
@@ -897,13 +908,13 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (arrTP != Some(arrT))
-    return arrTP 
+    return ASTNode.introducePos(arrTP, arrT.pos)
   }
   
   def visitSynonymType(synT : SynonymType, context : ScopeMap) : Option[SynonymType] = {
     val synTP = pass.rewriteSynonymType(synT, context)
     astChangeFlag = astChangeFlag || (synTP != Some(synT))
-    return synTP 
+    return ASTNode.introducePos(synTP, synT.pos)
   }
   
   def visitProcedureSig(sig : ProcedureSig, context : ScopeMap) : Option[ProcedureSig] = {
@@ -926,7 +937,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (sigP != Some(sig))
-    return sigP
+    return ASTNode.introducePos(sigP, sig.pos)
   }
   
   def visitFunctionSig(sig : FunctionSig, context : ScopeMap) : Option[FunctionSig] = {
@@ -938,7 +949,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     }).flatten
     val sigP = visitType(sig.retType, context).flatMap((t) => pass.rewriteFunctionSig(FunctionSig(args, t), context))
     astChangeFlag = astChangeFlag || (sigP != Some(sig))
-    return sigP
+    return ASTNode.introducePos(sigP, sig.pos)
   }
   
   def visitLocalVar(lvar : LocalVarDecl, context : ScopeMap) : Option[LocalVarDecl] = {
@@ -946,7 +957,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       visitType(lvar.typ, context).flatMap((t) => pass.rewriteLocalVar(LocalVarDecl(id, t), context))
     })
     astChangeFlag = astChangeFlag || (varP != Some(lvar))
-    return varP
+    return ASTNode.introducePos(varP, lvar.pos)
   }
   
   def visitStatement(st : Statement, context : ScopeMap) : List[Statement] = {
@@ -962,13 +973,13 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
     }).flatMap(pass.rewriteStatement(_, context))
     astChangeFlag = astChangeFlag || (stP != List(st))
-    return stP
+    return ASTNode.introducePos(stP, st.pos)
   }
 
   def visitSkipStatement(st : SkipStmt, context : ScopeMap) : List[Statement] = {
     val stP = pass.rewriteSkip(st, context)
     astChangeFlag = astChangeFlag || (stP != Some(st))
-    return stP
+    return ASTNode.introducePos(stP, st.pos)
   }
   
   def visitAssertStatement(st : AssertStmt, context : ScopeMap) : List[Statement] = {
@@ -976,7 +987,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       pass.rewriteAssert(AssertStmt(e), context)
     })
     astChangeFlag = astChangeFlag || (stP != Some(st))
-    return stP
+    return ASTNode.introducePos(stP, st.pos)
   }
   
   def visitAssumeStatement(st : AssumeStmt, context : ScopeMap) : List[Statement] = {
@@ -984,7 +995,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       pass.rewriteAssume(AssumeStmt(e), context)
     })
     astChangeFlag = astChangeFlag || (stP != Some(st))
-    return stP
+    return ASTNode.introducePos(stP, st.pos)
   }
   
   def visitHavocStatement(st: HavocStmt, context : ScopeMap) : List[Statement] = {
@@ -992,7 +1003,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       pass.rewriteHavoc(HavocStmt(id), context)
     })
     astChangeFlag = astChangeFlag || (stP != Some(st))
-    return stP
+    return ASTNode.introducePos(stP, st.pos)
   }
   
   def visitAssignStatement(st : AssignStmt, context : ScopeMap) : List[Statement] = {
@@ -1000,7 +1011,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     val rhss = st.rhss.map(visitExpr(_, context)).flatten
     val stP = pass.rewriteAssign(AssignStmt(lhss, rhss), context)
     astChangeFlag = astChangeFlag || (stP != Some(st))
-    return stP
+    return ASTNode.introducePos(stP, st.pos)
   }
   
   def visitIfElseStatement(st : IfElseStmt, context : ScopeMap) : List[Statement] = {
@@ -1012,7 +1023,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => List.empty[Statement]
     }
     astChangeFlag = astChangeFlag || (stP != Some(st))
-    return stP
+    return ASTNode.introducePos(stP, st.pos)
   }
   
   def visitForStatement(st : ForStmt, contextIn : ScopeMap) : List[Statement] = {
@@ -1027,7 +1038,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => List.empty[Statement]
     }
     astChangeFlag = astChangeFlag || (stP != Some(st))
-    return stP
+    return ASTNode.introducePos(stP, st.pos)
   }
   
   def visitCaseStatement(st : CaseStmt, context : ScopeMap) : List[Statement] = {
@@ -1040,7 +1051,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     }).flatten // and finally get rid of all the Options.
     val stP = pass.rewriteCase(CaseStmt(bodyP), context)
     astChangeFlag = astChangeFlag || (stP != Some(st))
-    return stP
+    return ASTNode.introducePos(stP, st.pos)
   }
   
   def visitProcedureCallStatement(st : ProcedureCallStmt, context : ScopeMap) : List[Statement] = {
@@ -1049,7 +1060,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     val argsP = st.args.map(visitExpr(_, context)).flatten
     val stP = idP.toList.flatMap((id) => pass.rewriteProcedureCall(ProcedureCallStmt(id, lhssP, argsP), context))
     astChangeFlag = astChangeFlag || (stP != Some(st))
-    return stP
+    return ASTNode.introducePos(stP, st.pos)
   }
   
   def visitLhs(lhs : Lhs, context : ScopeMap) : Option[Lhs] = {
@@ -1069,7 +1080,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
         None
     }
     astChangeFlag = astChangeFlag || (lhsP != Some(lhs))
-    return lhsP
+    return ASTNode.introducePos(lhsP, lhs.pos)
   }
   
   
@@ -1086,7 +1097,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case lambda : Lambda => visitLambda(lambda, context)
     }).flatMap(pass.rewriteExpr(_, context))
     astChangeFlag = astChangeFlag || (eP != Some(e))
-    return eP
+    return ASTNode.introducePos(eP, e.pos)
   }
   
   def visitIdentifierBase(id : IdentifierBase, context : ScopeMap) : Option[IdentifierBase] = {
@@ -1096,17 +1107,17 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     }
     val idP2 = idP.flatMap(pass.rewriteIdentifierBase(_, context))
     astChangeFlag = astChangeFlag || (idP2 != Some(id))
-    return idP2
+    return ASTNode.introducePos(idP2, id.pos)
   }
   def visitIdentifier(id : Identifier, context : ScopeMap) : Option[Identifier] = {
     val idP = pass.rewriteIdentifier(id, context)
     astChangeFlag = astChangeFlag || (idP != Some(id))
-    return idP
+    return ASTNode.introducePos(idP, id.pos)
   }
   def visitConstIdentifier(id : ConstIdentifier, context : ScopeMap) : Option[ConstIdentifier] = {
     val idP = pass.rewriteConstIdentifier(id, context)
     astChangeFlag = astChangeFlag || (idP != Some(id))
-    return idP
+    return ASTNode.introducePos(idP, id.pos)
   }  
   def visitLiteral(lit : Literal, context : ScopeMap) : Option[Literal] = {
     val litP = (lit match {
@@ -1114,13 +1125,13 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case n : NumericLit => visitNumericLiteral(n, context)
     }).flatMap(pass.rewriteLit(_, context))
     astChangeFlag = astChangeFlag || (litP != Some(lit))
-    return litP
+    return ASTNode.introducePos(litP, lit.pos)
   }
   
   def visitBoolLiteral(b : BoolLit, context : ScopeMap) : Option[BoolLit] = {
     val bP = pass.rewriteBoolLit(b, context)
     astChangeFlag = astChangeFlag || (bP != Some(b))
-    return bP
+    return ASTNode.introducePos(bP, b.pos)
   }
   
   def visitNumericLiteral(n : NumericLit, context : ScopeMap) : Option[NumericLit] = {
@@ -1130,25 +1141,25 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     }
     val nP2 = nP1.flatMap(pass.rewriteNumericLit(_, context))
     astChangeFlag = astChangeFlag || (nP2 != Some(n))
-    return nP2
+    return ASTNode.introducePos(nP2, n.pos)
   }
   
   def visitIntLiteral(i : IntLit, context : ScopeMap) : Option[IntLit] = {
     val iP = pass.rewriteIntLit(i, context)
     astChangeFlag = astChangeFlag || (iP != Some(i))
-    return iP
+    return ASTNode.introducePos(iP, i.pos)
   }
 
   def visitBitVectorLiteral(bv : BitVectorLit, context : ScopeMap) : Option[BitVectorLit] = {
     val bvP = pass.rewriteBitVectorLit(bv, context)
     astChangeFlag = astChangeFlag || (bvP != Some(bv))
-    return bvP
+    return ASTNode.introducePos(bvP, bv.pos)
   }
-  
+
   def visitTuple(rec : Tuple, context : ScopeMap) : Option[Tuple] = {
     val recP = pass.rewriteTuple(Tuple(rec.values.map(visitExpr(_, context)).flatten), context)
     astChangeFlag = astChangeFlag || (recP != Some(rec))
-    return recP
+    return ASTNode.introducePos(recP, rec.pos)
   }
   
   def visitOperatorApp(opapp : OperatorApplication, context : ScopeMap) : Option[OperatorApplication] = {
@@ -1156,13 +1167,13 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       pass.rewriteOperatorApp(OperatorApplication(op, opapp.operands.map(visitExpr(_, context)).flatten), context)
     })
     astChangeFlag = astChangeFlag || (opAppP != Some(opapp))
-    return opAppP
+    return ASTNode.introducePos(opAppP, opapp.pos)
   }
   
   def visitOperator(op : Operator, context : ScopeMap) : Option[Operator] = {
     val opP = pass.rewriteOperator(op, context)
     astChangeFlag = astChangeFlag || (opP != Some(op))
-    return opP
+    return ASTNode.introducePos(opP, op.pos)
   }
   
   def visitArraySelectOp(arrSel : ArraySelectOperation, context : ScopeMap) : Option[ArraySelectOperation] = {
@@ -1171,7 +1182,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (arrSelP != Some(arrSel))
-    return arrSelP
+    return ASTNode.introducePos(arrSelP, arrSel.pos)
   }
   
   def visitArrayStoreOp(arrStore : ArrayStoreOperation, context : ScopeMap) : Option[ArrayStoreOperation] = {
@@ -1183,7 +1194,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (arrStoreP != Some(arrStore))
-    return arrStoreP
+    return ASTNode.introducePos(arrStoreP, arrStore.pos)
   }
   
   def visitFuncApp(fapp : FuncApplication, context : ScopeMap) : Option[FuncApplication] = {
@@ -1194,7 +1205,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (fappP != Some(fapp))
-    return fappP
+    return ASTNode.introducePos(fappP, fapp.pos)
   }
   
   def visitITE(ite: ITE, context : ScopeMap) : Option[ITE] = {
@@ -1207,7 +1218,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
       case _ => None
     }
     astChangeFlag = astChangeFlag || (iteP != Some(ite))
-    return iteP
+    return ASTNode.introducePos(iteP, ite.pos)
   }
   
   def visitLambda(lambda: Lambda, contextIn : ScopeMap) : Option[Lambda] = {
@@ -1220,7 +1231,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     }).flatten
     val lambdaP = visitExpr(lambda.e, context).flatMap((e) => pass.rewriteLambda(Lambda(idP, e), contextIn))
     astChangeFlag = astChangeFlag || (lambdaP != Some(lambda))
-    return lambdaP
+    return ASTNode.introducePos(lambdaP, lambda.pos)
   }
 }
 

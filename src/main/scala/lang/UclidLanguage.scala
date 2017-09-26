@@ -8,6 +8,7 @@ package lang
 
 import scala.collection.immutable.Map
 import scala.util.parsing.input.Positional
+import scala.util.parsing.input.Position
 
 object PrettyPrinter
 {
@@ -32,7 +33,25 @@ object IdGenerator {
 sealed abstract class ASTNode extends Positional {
   val astNodeId = IdGenerator.newId()
 }
-
+object ASTNode {
+  def introducePos[T <: Positional](node : Option[T], pos : Position) : Option[T] = {
+    node match {
+      case Some(n) => 
+        var nP = n
+        nP.pos = pos
+        Some(nP)
+      case None =>
+        None
+    }
+  }
+  def introducePos[T <: Positional](node : List[T], pos : Position) : List[T] = {
+    node.map((n) => {
+      var nP = n
+      nP.pos = pos
+      nP
+    })
+  }
+}
 object Operator {
   val PREFIX = 0
   val INFIX = 1
@@ -510,6 +529,14 @@ case class DebugCmd(cmd: Identifier, args: List[Expr]) extends UclCmd {
 }
 
 case class Module(id: Identifier, decls: List[Decl], cmds : List[UclCmd]) extends ASTNode {
+  var filename : Option[String] = None
+  // create a new module with with the filename set.
+  def withFilename(name : String) : Module = {
+    val newModule = Module(id, decls, cmds)
+    newModule.filename = Some(name)
+    return newModule
+  }
+
   override def toString = 
     "\nmodule " + id + " {\n" + 
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +
@@ -551,7 +578,10 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
   def doesNameExist(name: IdentifierBase) = map.contains(name)
   /** Return the NamedExpression. */
   def get(id: IdentifierBase) : Option[Scope.NamedExpression] = map.get(id)
-  
+  /** Return the filename. */
+  def filename : Option[String] = {
+    module.flatMap((m) => m.filename)
+  }
   /** Create an empty context. */
   def this() {
     this(Map.empty[IdentifierBase, Scope.NamedExpression], None, None)

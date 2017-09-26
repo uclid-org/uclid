@@ -446,10 +446,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       }
     }
     
-    def parseModel(text: String): List[Module] = {
+    def parseModel(filename : String, text: String): List[Module] = {
       val tokens = new PackratReader(new lexical.Scanner(text))
       phrase(Model)(tokens) match {
-        case Success(ast, _) => ast
+        case Success(modules, _) => modules.map((m) => m.withFilename(filename))
         case e: NoSuccess => throw new IllegalArgumentException(e.toString)
       }
     }

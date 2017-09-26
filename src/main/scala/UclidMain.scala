@@ -9,39 +9,51 @@ import lang.Identifier
 
 /**
  * Created by Rohit Sinha on 5/23/15.
+ * With lots of updates by Pramod Subramanyan in the summer of 2017.
  */
 object UclidMain {
-  case class UclidOptions(
-      help : Boolean,
-      mainModule: String,
-      srcFiles: List[String]
-  )
+  object options {
+      var help : Boolean = false
+      var mainModule: String = "main"
+      var srcFiles: List[String] = Nil
+      var debugOptions : Set[String] = Set.empty[String]
+  }
   
-  def getOptions(args: Array[String]) : UclidOptions = {
+  def getOptions(args: Array[String]) {
     def isSwitch(s : String) = (s(0) == '-')
-    var mainModule : String = "main"
-    var srcFiles : List[String] = Nil
-    var help = false
-    var ignore = false;
+    var ignore = false
    
     for (i <- args.indices) {
       if (ignore) {
         ignore = false
       } else if ( isSwitch(args(i)) ) {
         if (args(i) == "--main" || args(i) == "-m") {
-          mainModule = args(i+1)
-          ignore = true
+          if (i+1 < args.length) {
+            options.mainModule = args(i+1)
+            ignore = true
+          } else {
+            println("Expected name of main module after switch '" + args(i) + "'")
+            options.help = true;
+          }
+        } else if (args(i) == "--debug" || args(i) == "-d") {
+          if (i+1 < args.length) {
+            options.debugOptions = args(i+1).split("+").toSet
+            ignore = true
+          } else {
+            println("Expected list of debug modules after switch '" + args(i) + "'")
+            options.help = true;
+          }
         } else if (args(i) == "--help" || args(i) == "-h") {
-          help = true;
+          options.help = true;
         } else {
           println("Unknown argument: " + args(i))
+          println(usage)
           sys.exit(1)
         }
       } else {
-        srcFiles = args(i) :: srcFiles
+        options.srcFiles = args(i) :: options.srcFiles
       }
     }
-    return UclidOptions(help, mainModule, srcFiles)
   }
   
   type ModuleMap = Map[Identifier, Module]
@@ -51,19 +63,20 @@ object UclidMain {
     Options:
       -h/--help : This message.
       -m/--main : Set the main module.
+      -d/--debug : Debug options.
   """
   def main(args: Array[String]) {
     if (args.length == 0) println(usage)
     val opts = getOptions(args)
     
-    if (opts.help) {
+    if (options.help) {
       println(usage)
-      sys.exit(0)
+      sys.exit(1)
     }
     try { 
-      val modules = compile(opts.srcFiles)
-      val mainModuleName = Identifier(opts.mainModule)
-      Utils.assert(modules.contains(mainModuleName), "Main module (" + opts.mainModule + ") does not exist.")
+      val modules = compile(options.srcFiles)
+      val mainModuleName = Identifier(options.mainModule)
+      Utils.assert(modules.contains(mainModuleName), "Main module (" + options.mainModule + ") does not exist.")
       val mainModule = modules.get(mainModuleName)
       mainModule match {
         case Some(m) => printResults(execute(m))
@@ -72,7 +85,19 @@ object UclidMain {
     }
     catch  {
       case (p : Utils.ParserError) =>
-        println("[Compiler Error]: " + p.getMessage)
+        val filenameStr = p.filename match {
+          case Some(f) => f + ", "
+          case None => ""
+        }
+        val positionStr = p.pos match {
+          case Some(pos) => "line " + pos.line.toString
+          case None => ""
+        }
+        val fullStr = p.pos match {
+          case Some(pos) => pos.longString
+          case None => ""
+        }
+        println("Compiler Error at " + filenameStr + positionStr + ": " + p.getMessage + "\n" + fullStr)
         System.exit(1)
       case(a : Utils.AssertionError) =>
         println("[Assertion Failure]: " + a.getMessage)
@@ -103,13 +128,13 @@ object UclidMain {
 
     for (srcFile <- srcFiles) {
       val text = scala.io.Source.fromFile(srcFile).mkString
-      val fileModules = UclidParser.parseModel(text).map(passManager.run(_).get)
+      val fileModules = UclidParser.parseModel(srcFile, text).map(passManager.run(_).get)
       for(module <- fileModules) {
         UclidSemanticAnalyzer.checkSemantics(module)
       }
       nameCnt = fileModules.foldLeft(nameCnt)((cnts : NameCountMap, m : Module) => (cnts + (m.id -> (cnts(m.id) + 1))))
       val repeatedNameCnt = nameCnt.filter{ case (name, cnt) => cnt > 1 }
-      val repeatedNames = Utils.join(repeatedNameCnt.map((r) => r._1.toString).toList, " ")
+      val repeatedNames = Utils.join(repeatedNameCnt.map((r) => r._1.toString).toList, ", ")
       Utils.checkError(repeatedNameCnt.size == 0, "Repeated module names: " + repeatedNames)
       modules = fileModules.foldLeft(modules)((ms: ModuleMap, m : Module) => ms + (m.id -> m)) 
     }
@@ -117,9 +142,7 @@ object UclidMain {
   }
   
   def execute(module : Module) : List[(smt.Expr, Option[Boolean])] = {
-    //Control module
-    //println("Found main module: " + module.id)
-    //println(module.toString)
+    // execute the control module
     var symbolicSimulator = new UclidSymbolicSimulator(module)
     var z3Interface = smt.Z3Interface.newInterface()
     return symbolicSimulator.execute(z3Interface)
@@ -153,6 +176,4 @@ object UclidMain {
       }
     }
   }
-  
-
 }

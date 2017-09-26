@@ -52,7 +52,7 @@ class UclidSymbolicSimulator (module : Module) {
             if (cmd.toString == "print_module") {
               println(module.toString)
             } else {
-              throw new Utils.ParserError("Unknown debug command: " + cmd.toString)
+              throw new Utils.ParserError("Unknown debug command: " + cmd.toString, Some(cmd.pos), module.filename)
             }
             acc
           case _ => 
