@@ -4,33 +4,39 @@ import scala.util.parsing.combinator.lexical._
 import scala.util.parsing.combinator.token._
 import scala.util.parsing.input.CharArrayReader.EofCh
 import scala.collection.mutable
+import scala.util.parsing.input.Positional
 
 trait UclidTokens extends Tokens {
-  case class Keyword(chars: String) extends Token {
+  abstract class UclidToken extends Token with Positional
+
+  /** Keywords. */
+  case class Keyword(chars: String) extends UclidToken {
     override def toString = "`" + chars + "'"
   }
-  /** The class of integer literal tokens */
-  case class IntegerLit(chars: String, base: Int) extends Token {
+  /** The class of integer literal tokens. */
+  case class IntegerLit(chars: String, base: Int) extends UclidToken {
     override def toString = chars.toString + "_" + base.toString
   }
   
-  case class BitVectorTypeLit(chars: String) extends Token {
+  /** Bitvector types. */
+  case class BitVectorTypeLit(chars: String) extends UclidToken {
     val width = chars.toInt
     override def toString = "bv" + width.toString
   }
 
-  case class BitVectorLit(chars: String, base: Int, width: Int) extends Token {
+  /** Bitvector literals. */
+  case class BitVectorLit(chars: String, base: Int, width: Int) extends UclidToken {
     val intValue = BigInt(chars, base)
     override def toString = "0x" + intValue.toString(16) + "bv" + width.toString
   }
   
-  /** The class of string literal tokens */
-  case class StringLit(chars: String) extends Token {
+  /** The class of string literal tokens. */
+  case class StringLit(chars: String) extends UclidToken {
     override def toString = "\""+chars+"\""
   }   
 
-  /** The class of identifier tokens */
-  case class Identifier(chars: String) extends Token {
+  /** The class of identifier tokens. */
+  case class Identifier(chars: String) extends UclidToken {
     override def toString = "identifier "+chars
   }
 }
@@ -39,29 +45,27 @@ trait UclidTokens extends Tokens {
  *  Most of this code is based on the Scala library's StdLexical.
  *  We can't subclass StdLexical because it uses StdToken while we have more interesting tokens (UclidTokens).
  */
-class UclidLexical extends Lexical with UclidTokens {
+class UclidLexical extends Lexical with UclidTokens with Positional {
   override def token: Parser[Token] = 
-    ( 'b' ~ 'v' ~> rep(digit)                             ^^ { case chars => BitVectorTypeLit(chars.mkString("")) } 
-    | (letter | '_') ~ rep( letter | '_' | digit )                ^^ { case first ~ rest => processIdent(first :: rest mkString "") }
-    | digit ~ rep(digit) ~ 'b' ~ 'v' ~ digit ~ rep(digit) ^^ { case (f1 ~ r1 ~ 'b' ~ 'v' ~ f2 ~ r2) => BitVectorLit(f1 :: r1 mkString "", 10, (f2 :: r2 mkString "").toInt) }  
-    | '0' ~ 'x' ~> hexDigit ~ rep( hexDigit )             ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 16) }
-    | '0' ~ 'b' ~> bit ~ rep( bit )                       ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 2) }
-    | digit ~ rep( digit )                                ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 10) }
-    | '\'' ~ rep( chrExcept('\'', '\n', EofCh) ) ~ '\''   ^^ { case '\'' ~ chars ~ '\'' => StringLit(chars mkString "") }
-    | '\"' ~ rep( chrExcept('\"', '\n', EofCh) ) ~ '\"'   ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "") }
+    ( positioned { 'b' ~ 'v' ~> rep(digit)                             ^^ { case chars => BitVectorTypeLit(chars.mkString("")) } } 
+    | positioned { (letter | '_') ~ rep( letter | '_' | digit )        ^^ { case first ~ rest => processIdent(first :: rest mkString "") } }
+    | positioned { digit ~ rep(digit) ~ 'b' ~ 'v' ~ digit ~ rep(digit) ^^ { case (f1 ~ r1 ~ 'b' ~ 'v' ~ f2 ~ r2) => BitVectorLit(f1 :: r1 mkString "", 10, (f2 :: r2 mkString "").toInt) } }
+    | positioned { '0' ~ 'x' ~> hexDigit ~ rep( hexDigit )             ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 16) } }
+    | positioned { '0' ~ 'b' ~> bit ~ rep( bit )                       ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 2) } }
+    | positioned { digit ~ rep( digit )                                ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 10) } }
+    | positioned { '\'' ~ rep( chrExcept('\'', '\n', EofCh) ) ~ '\''   ^^ { case '\'' ~ chars ~ '\'' => StringLit(chars mkString "") } }
+    | positioned { '\"' ~ rep( chrExcept('\"', '\n', EofCh) ) ~ '\"'   ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "") } }
     | EofCh                                               ^^^ EOF
     | '\'' ~> failure("unclosed string literal")       
     | '\"' ~> failure("unclosed string literal")       
     | delim                                             
     | failure("illegal character")
     )
+
    
   def hexDigit : Parser[Char] = elem("hexDigit", ((ch) => ch.isDigit || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')))
   def bit : Parser[Char] = elem("bit", ((ch) => ch == '0' || ch == '1'))
    
-     /** Returns the legal identifier chars, except digits. */
-  def identChar = letter | elem('_')
-
   // see `whitespace in `Scanners`
   def whitespace: Parser[Any] = rep(
       whitespaceChar

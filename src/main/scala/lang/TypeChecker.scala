@@ -157,23 +157,43 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
     typeOf(e, ctx)
   }
   
-  /*
   def typeOf(lhs : Lhs, c : ScopeMap) : Type = {
-    val typOpt = c.typeOf(lhs.ident)
+    val cachedType = memo.get(lhs.astNodeId)
+    if (cachedType.isDefined) {
+      return cachedType.get
+    }
+
+    val id = lhs.ident
+    val typOpt = c.typeOf(id)
     Utils.checkError(typOpt.isDefined, "Unknown variable in LHS: " + id.toString)
     val typ = typOpt.get
-    lhs match {
+    val resultType = lhs match {
       case LhsId(id) => 
-        val tOpt = 
-        Utils.checkError(tOpt.isDefined, )
-        tOpt.get
+        typ
       case LhsArraySelect(id, indices) =>
-        val tOpt = c.typeOf(id)
-        Utils.checkError(tOpt.isDefined, "Unkonwn variable in LHS)
+        Utils.checkError(typ.isArray, "Lhs variable in array index operation must be of type array: " + id.toString)
+        val indexTypes = indices.map(typeOf(_, c))
+        val arrTyp = typ.asInstanceOf[ArrayType]
+        lazy val indexTypString = "(" + Utils.join(indexTypes.map(_.toString), ", ") + ")"
+        lazy val inTypString = "(" + Utils.join(arrTyp.inTypes.map(_.toString), ", ") + ")"
+        Utils.checkError(arrTyp.inTypes == indexTypes, "Invalid index types. Expected: " + inTypString + "; got: " + indexTypString)
+        arrTyp.outType
+      case LhsRecordSelect(id, fields) =>
+        Utils.checkError(typ.isProduct, "Lhs variable in record select operation must be a product type: " + id.toString)
+        val prodType = typ.asInstanceOf[ProductType]
+        val fieldType = prodType.nestedFieldType(fields)
+        lazy val fieldTypeString = Utils.join(fields.map(_.toString), ".")
+        Utils.checkError(fieldType.isDefined, "Field does not exist: " + fieldTypeString)
+        fieldType.get
+      case LhsSliceSelect(id, slice) =>
+        Utils.checkError(typ.isBitVector, "Lhs variable in bitvector slice update must be a bitvector: " + id.toString)
+        val bvType = typ.asInstanceOf[BitVectorType]
+        Utils.checkError(bvType.isValidSlice(slice), "Invalid slice: " + slice.toString)
+        BitVectorType(slice.width)
     }
+    memo.put(lhs.astNodeId, resultType)
+    return resultType
   }
-  * 
-  */
   def typeOf(e : Expr, c : ScopeMap) : Type = {
     def polyResultType(op : PolymorphicOperator, argType : Type) : Type = {
       op match {
@@ -381,7 +401,10 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Unit]
       case HavocStmt(id) =>
         Utils.checkError(context.doesNameExist(id), "Unknown identifier in havoc statement.")
       case AssignStmt(lhss, rhss) =>
-        
+        val lhsTypes = lhss.map(exprTypeChecker.typeOf(_, context))
+        val rhsTypes = rhss.map(exprTypeChecker.typeOf(_, context))
+        val typesMatch = (lhsTypes zip rhsTypes).map((p) => p._1.matches(p._2))
+        Utils.checkError(typesMatch.forall((b) => b), "LHS/RHS types do not match.")
       case _ =>
         // Ignore the rest.
     }

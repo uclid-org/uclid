@@ -262,6 +262,8 @@ sealed abstract class Type {
   def isProduct = false
   def isRecord = false
   def isTuple = false
+  def isMap = false
+  def isArray = false
   def matches (t2 : Type) = (this == t2)
 }
 
@@ -300,6 +302,9 @@ case class IntType() extends NumericType {
 case class BitVectorType(width: Int) extends NumericType {
   override def toString = "bv" + width.toString
   override def isBitVector = true
+  def isValidSlice(slice : ConstBitVectorSlice) : Boolean = {
+    return (slice.lo >= 0 && slice.hi < width)
+  }
 }
 case class EnumType(ids: List[Identifier]) extends Type {
   override def toString = "enum {" + 
@@ -360,10 +365,12 @@ case class RecordType(fields_ : List[(Identifier,Type)]) extends ProductType {
 }
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = Utils.join(inTypes.map(_.toString), " * ") + " -> " + outType.toString
+  override def isMap = true
 }
 
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = "[" + Utils.join(inTypes.map(_.toString), " * ") + "] " + outType.toString
+  override def isArray = true
 }
 case class SynonymType(id: Identifier) extends Type {
   override def toString = id.toString
@@ -380,23 +387,23 @@ sealed abstract class Statement extends ASTNode {
   def toLines : List[String]
 }
 case class SkipStmt() extends Statement {
-  override def toLines = List("skip;")
+  override def toLines = List("skip; //" + pos.toString)
 }
 case class AssertStmt(e: Expr) extends Statement {
-  override def toLines = List("assert " + e + ";")
+  override def toLines = List("assert " + e + "; //" + pos.toString)
 }
 case class AssumeStmt(e: Expr) extends Statement {
-  override def toLines = List("assume " + e + ";")
+  override def toLines = List("assume " + e + "; //" + pos.toString)
 }
 case class HavocStmt(id: Identifier) extends Statement {
-  override def toLines = List("havoc " + id + ";")
+  override def toLines = List("havoc " + id + "; //" + pos.toString)
 }
 case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines = 
-    List(Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + ";")
+    List(Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + "; // " + pos.toString)
 }
 case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Statement]) extends Statement {
-  override def toLines = List("if " + cond.toString, "{") ++ 
+  override def toLines = List("if " + cond.toString + " // " + pos.toString, "{ ") ++ 
                          ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
                          List("} else {") ++ 
                          elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
@@ -405,7 +412,7 @@ case class ForStmt(id: ConstIdentifier, range: (NumericLit,NumericLit), body: Li
   extends Statement
 {
   override def isLoop = true
-  override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {") ++ 
+  override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + id.pos.toString) ++ 
                          body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
 case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
@@ -416,11 +423,11 @@ case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
 case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr])  extends Statement {
   override def toLines = List("call (" +
     Utils.join(callLhss.map(_.toString), ", ") + ") := " + id + "(" +
-    Utils.join(args.map(_.toString), ", ") + ")")
+    Utils.join(args.map(_.toString), ", ") + ") // " + id.pos.toString)
 }
 
 case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
-  override def toString = "var " + id + ": " + typ + ";"
+  override def toString = "var " + id + ": " + typ + "; // " + id.pos.toString
 }
 
 case class ProcedureSig(inParams: List[(Identifier,Type)], 
@@ -444,59 +451,59 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
 
 sealed abstract class Decl extends ASTNode
 case class ProcedureDecl(id: Identifier, sig: ProcedureSig, 
-    decls: List[LocalVarDecl], body: List[Statement]) extends Decl {
-  override def toString = "procedure " + id + sig + PrettyPrinter.indent(1) + "{\n" +
+  decls: List[LocalVarDecl], body: List[Statement]) extends Decl {
+  override def toString = "procedure " + id + sig + PrettyPrinter.indent(1) + "{  // " + id.pos.toString + "\n" +
                           Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" + 
                           Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") + 
                           "\n" + PrettyPrinter.indent(1) + "}"
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "type " + id + " = " + typ 
+  override def toString = "type " + id + " = " + typ + "; // " + pos.toString 
 }
 case class StateVarDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "var " + id + ": " + typ + ";"
+  override def toString = "var " + id + ": " + typ + "; // " + pos.toString
 }
 case class InputVarDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "input " + id + ": " + typ + ";"
+  override def toString = "input " + id + ": " + typ + "; // " + pos.toString
 }
 case class OutputVarDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "output " + id + ": " + typ + ";"
+  override def toString = "output " + id + ": " + typ + "; // " + pos.toString
 }
 case class ConstantDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "constant " + id + ": " + typ + ";"
+  override def toString = "constant " + id + ": " + typ + "; // " + pos.toString
 }
 case class FunctionDecl(id: Identifier, sig: FunctionSig)
 extends Decl {
-  override def toString = "function " + id + sig + ";"
+  override def toString = "function " + id + sig + ";  // " + pos.toString 
 }
 case class InitDecl(body: List[Statement]) extends Decl {
   override def toString = 
-    "init {\n" + 
+    "init { // " + pos.toString + "\n" +
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
     "\n" + PrettyPrinter.indent(1) + "}"
 }
 case class NextDecl(body: List[Statement]) extends Decl {
   override def toString = 
-    "next {\n" + 
+    "next {  // " + pos.toString + "\n" + 
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
     "\n" + PrettyPrinter.indent(1) + "}"
 }
 case class SpecDecl(id: Identifier, expr: Expr) extends Decl {
-  override def toString = "property " + id + ":" + expr + ";"
+  override def toString = "property " + id + ":" + expr + ";  // " + id.pos.toString
 }
 
 sealed abstract class UclCmd extends ASTNode
 case class InitializeCmd() extends UclCmd {
-  override def toString = "initialize;"
+  override def toString = "initialize;" + "// " + pos.toString
 }
 case class UnrollCmd(steps : IntLit) extends UclCmd {
-  override def toString = "unroll (" + steps.toString + ");"
+  override def toString = "unroll (" + steps.toString + ");" + "// " + pos.toString
 }
 case class SimulateCmd(steps : IntLit) extends UclCmd {
-  override def toString = "simulate (" + steps.toString + ");"
+  override def toString = "simulate (" + steps.toString + ");" + "// " + pos.toString
 }
 case class DecideCmd() extends UclCmd {
-  override def toString = "decide; "
+  override def toString = "decide; " + "// " + pos.toString
 }
 case class DebugCmd(cmd: Identifier, args: List[Expr]) extends UclCmd {
   override def toString = "__uclid_debug " + cmd.toString + " " + Utils.join(args.map(_.toString), " ") + ";"
@@ -507,7 +514,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[UclCmd]) extend
     "\nmodule " + id + " {\n" + 
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +
       PrettyPrinter.indent(1) + "control {" + "\n" + 
-        cmds.foldLeft("")  { case (acc,i) => acc + PrettyPrinter.indent(2) + i + "\n" } +
+      cmds.foldLeft("")  { case (acc,i) => acc + PrettyPrinter.indent(2) + i + "\n" } +
       PrettyPrinter.indent(1) + "}\n" + 
     "}\n"
 }

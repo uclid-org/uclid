@@ -344,15 +344,15 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnStatement(TraversalDirection.Down, st, result, context)
     result = st match {
-      case SkipStmt() => visitSkipStatement(st.asInstanceOf[SkipStmt], result, context)
-      case AssertStmt(e) => visitAssertStatement(st.asInstanceOf[AssertStmt], result, context)
-      case AssumeStmt(e) => visitAssumeStatement(st.asInstanceOf[AssumeStmt], result, context)
-      case HavocStmt(id) => visitHavocStatement(st.asInstanceOf[HavocStmt], result, context)
-      case AssignStmt(lhss, rhss) => visitAssignStatement(st.asInstanceOf[AssignStmt], result, context)
-      case IfElseStmt(cond, ifblock, elseblock) => visitIfElseStatement(st.asInstanceOf[IfElseStmt], result, context)
-      case ForStmt(id, range, body) => visitForStatement(st.asInstanceOf[ForStmt], result, context)
-      case CaseStmt(body) => visitCaseStatement(st.asInstanceOf[CaseStmt], result, context)
-      case ProcedureCallStmt(id, callLhss, args) => visitProcedureCallStatement(st.asInstanceOf[ProcedureCallStmt], result, context)
+      case skipStmt   : SkipStmt    => visitSkipStatement(skipStmt, result, context)
+      case assertStmt : AssertStmt => visitAssertStatement(assertStmt, result, context)
+      case assumeStmt : AssumeStmt => visitAssumeStatement(assumeStmt, result, context)
+      case havocStmt  : HavocStmt => visitHavocStatement(havocStmt, result, context)
+      case assignStmt : AssignStmt => visitAssignStatement(assignStmt, result, context)
+      case ifElseStmt : IfElseStmt => visitIfElseStatement(ifElseStmt, result, context)
+      case forStmt : ForStmt => visitForStatement(forStmt, result, context)
+      case caseStmt : CaseStmt => visitCaseStatement(caseStmt, result, context)
+      case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, result, context)
     }
     result = pass.applyOnStatement(TraversalDirection.Up, st, result, context)
     return result
@@ -1227,7 +1227,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
 /** Very simple pass too print module. */
 class ASTPrinterPass extends ReadOnlyPass[Unit] {
   override def applyOnModule(d : TraversalDirection.T, module : Module, in : Unit, context : ScopeMap) : Unit = {
-    println(module)
+    if (d == TraversalDirection.Down) {
+      println(module)
+    }
   }
 }
 /** Simple analysis that instantiates ASTPrinterPass to print module. */
