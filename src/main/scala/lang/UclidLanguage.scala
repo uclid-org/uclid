@@ -252,7 +252,7 @@ case class LhsSliceSelect(id: Identifier, bitslice: ConstBitVectorSlice) extends
   override def toString = id.toString + bitslice.toString
 }
 
-sealed abstract class Type {
+sealed abstract class Type extends Positional {
   def isBool = false
   def isNumeric = false
   def isInt = false
@@ -412,7 +412,7 @@ case class ForStmt(id: ConstIdentifier, range: (NumericLit,NumericLit), body: Li
   extends Statement
 {
   override def isLoop = true
-  override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + id.pos.toString) ++ 
+  override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + pos.toString) ++ 
                          body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
 case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
