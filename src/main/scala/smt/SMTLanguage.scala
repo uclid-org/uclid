@@ -376,4 +376,8 @@ abstract class SolverInterface {
   def addConstraint(e : Expr)
   // Check whether 'e' is satisfiable in the current solver context.
   def check(e : Expr) : Option[Boolean]
+  // Add a list of assumptions
+  def addAssumptions(es : List[Expr])
+  // Pop the the last added list of assumptions
+  def popAssumptions()
 }

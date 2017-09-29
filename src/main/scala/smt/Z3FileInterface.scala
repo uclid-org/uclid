@@ -130,6 +130,13 @@ class Z3FileInterface() extends SolverInterface {
       case _ => None
     }
   }
+  
+  override def addAssumptions(es : List[Expr]) {
+    throw new Utils.UnimplementedException("Add assumptions not implemented in file-based solver.")
+  }
+  override def popAssumptions() {
+    throw new Utils.UnimplementedException("Pop assumptions not implemented in file-based solver.")
+  }
 }
 
 object Z3FileInterface {

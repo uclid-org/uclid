@@ -256,6 +256,17 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     }
   }
   
+  override def addAssumptions(es : List[Expr]) {
+    solver.push()
+    es.foreach((e) => {
+      println("adding assumption: " + e.toString())
+      solver.add(exprToZ3(e).asInstanceOf[z3.BoolExpr])
+    })
+  }
+  override def popAssumptions() {
+    solver.pop()
+  }
+  
 }
 
 object Z3Interface {

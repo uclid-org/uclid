@@ -14,6 +14,7 @@ object UniqueIdGenerator {
 
 class UclidSymbolicSimulator (module : Module) {
   var asserts : List[smt.Expr] = List.empty
+  var assumes : List[smt.Expr] = List.empty
   var context : Context = new Context();
   
   type SymbolTable = Map[Identifier, smt.Expr];
@@ -38,7 +39,8 @@ class UclidSymbolicSimulator (module : Module) {
             simulate(steps.value.toInt)
             acc
           case DecideCmd() =>
-            asserts.foldLeft(acc){ 
+            solver.addAssumptions(assumes)
+            val results = asserts.foldLeft(acc){ 
               case (acc, e) =>
                 val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e)))
                 val result = sat match {
@@ -48,6 +50,8 @@ class UclidSymbolicSimulator (module : Module) {
                 }
                 (e, result) :: acc 
             }
+            solver.popAssumptions();
+            results
           case DebugCmd(cmd, args) =>
             if (cmd.toString == "print_module") {
               println(module.toString)
@@ -222,7 +226,9 @@ class UclidSymbolicSimulator (module : Module) {
       case AssertStmt(e) => 
         this.asserts = this.asserts ++ List(evaluate(e,symbolTable,c))
         return symbolTable
-      case AssumeStmt(e) => return symbolTable
+      case AssumeStmt(e) => 
+        this.assumes = this.assumes ++ List(evaluate(e,symbolTable,c))
+        return symbolTable
       case HavocStmt(id) => 
         return symbolTable.updated(id, newHavocSymbol(id.name, toSMT(c.variables(id),c)))
       case AssignStmt(lhss,rhss) =>
