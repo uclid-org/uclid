@@ -2,22 +2,28 @@ module main
 {
   var sum : int;
   var fake : int;
+  var i : int;
   
   init {
+    i := 0;
   }
   
   next {
-    assume (sum == 1);
-    assume (fake == 10);
+    assert ((i == 0) || (fake == 2*sum));
+    havoc sum;
+    havoc fake;
+    assume (fake == (sum+sum+1));
+    assert (fake == (sum+1+sum));
     havoc fake;
     assume (fake == (sum + sum));
-    assert (fake == 2*sum);
     assert false;
+
+    i := i + 1;
   }
   
   control {
     initialize;
-    simulate (5);
+    simulate (2);
     decide;
   }
 }
