@@ -4,13 +4,13 @@ Compile using:
 
     $ sbt compile
 
-You can run tests by using the command:
-
-    $ sbt "run <test>"
-
 Running the test suite:
 
     $ sbt test
+
+You can run tests by using the command:
+
+    $ sbt "run <test>"
 
 An example is:
 
