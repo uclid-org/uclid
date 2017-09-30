@@ -1,0 +1,20 @@
+module main {
+  type id_t = enum { privileged, unprivileged, invalid };
+  type syscall_t = enum { setresuid, setfsuid, noop };
+  
+  input invocation : syscall_t;
+  input operand_ruid : id_t;
+  input operand_euid : id_t;
+  input operand_suid : id_t;
+  input operand_fsuid : id_t;
+  
+  var systemcall : syscall_t;
+  
+  init {
+    systemcall := noop;
+  }
+  
+  next {
+    // assert (systemcall == noop);
+  }
+}
