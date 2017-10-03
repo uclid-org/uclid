@@ -566,10 +566,35 @@ object Scope {
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ForIndexVar(iId : ConstIdentifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
   case class SpecVar(varId : Identifier, expr: Expr) extends NamedExpression(varId, BoolType())
+  case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends NamedExpression(enumId, enumTyp) 
 
   type IdentifierMap = Map[IdentifierBase, NamedExpression]
   def addToMap(map : Scope.IdentifierMap, expr: Scope.NamedExpression) : Scope.IdentifierMap = {
     map + (expr.id -> expr)
+  }
+  def addTypeToMap(map : Scope.IdentifierMap, typ : Type, module : Option[Module]) : Scope.IdentifierMap = {
+    typ match {
+      case enumTyp : EnumType => 
+        enumTyp.ids.foldLeft(map)((m, id) => {
+          m.get(id) match {
+            case Some(namedExpr) =>
+              namedExpr match {
+                case EnumIdentifier(eId, eTyp) =>
+                  Utils.checkParsingError(eTyp == enumTyp, 
+                      "Identifier " + eId.nam + " redeclared as a member of a different enum.", 
+                      eTyp.pos, module.flatMap(_.filename))
+                  m
+                case _ =>
+                  Utils.raiseParsingError("Redeclaration of identifier " + id.name, id.pos, module.flatMap(_.filename))
+                  m
+              }
+            case None =>
+              m + (id -> EnumIdentifier(id, enumTyp))
+          }
+        })
+      case _ =>
+        map
+    }
   }
 }
 
@@ -590,10 +615,14 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
   def +(expr: Scope.NamedExpression) : ScopeMap = {
     new ScopeMap(map + (expr.id -> expr), module, procedure)
   }
+  def +(typ : Type) : ScopeMap = {
+    ScopeMap(Scope.addTypeToMap(map, typ, module), module, procedure)
+  }
+  
   /** Return a new context with the declarations in this module added to it. */
   def +(m: Module) : ScopeMap = { 
     Utils.assert(module.isEmpty, "A module was already added to this Context.")
-    val newMap = m.decls.foldLeft(map){ (mapAcc, decl) =>
+    val m1 = m.decls.foldLeft(map){ (mapAcc, decl) =>
       decl match {
         case ProcedureDecl(id, sig, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
         case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
@@ -606,7 +635,25 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
         case InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
-    return new ScopeMap(newMap, Some(m), None)
+    val m2 = m.decls.foldLeft(m1){(mapAcc, decl) =>
+      decl match {
+        case ProcedureDecl(id, sig, _, _) => 
+          val m1 = sig.inParams.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
+          val m2 = sig.outParams.foldLeft(m1)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
+          m2
+        case FunctionDecl(id, sig) =>
+          val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
+          val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
+          m2
+        case TypeDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case StateVarDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case InputVarDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case OutputVarDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case ConstantDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case _ => mapAcc          
+      }
+    }
+    ScopeMap(m2, Some(m), None)
   }
   /** Return a new context with the declarations in this procedure added to it. */
   def +(proc: ProcedureDecl) : ScopeMap = {

@@ -13,8 +13,11 @@ object Utils {
   def assert(b: Boolean, err: String) : Unit = {
     if (!b) { throw new AssertionError(err) }
   }
+  def raiseParsingError(err: String, pos : Position, fileName : Option[String]) : Unit = {
+    throw new ParserError(err, Some(pos), fileName)
+  }
   def checkParsingError(b : Boolean, err: String, pos : Position, fileName : Option[String]) : Unit = {
-    if (!b) { throw new ParserError(err, Some(pos), fileName) }
+    if (!b) { raiseParsingError(err, pos, fileName) }
   }
   def checkError(b : Boolean, err: String) : Unit = {
     if (!b) { throw new ParserError(err, None, None) }
