@@ -15,6 +15,13 @@ module main {
   }
   
   next {
-    // assert (systemcall == noop);
+    assert (systemcall == noop);
+    assert (systemcall != setresuid);
+  }
+  
+  control {
+    initialize;
+    simulate (5);
+    decide;
   }
 }

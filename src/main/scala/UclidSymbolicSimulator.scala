@@ -6,6 +6,7 @@ package uclid
 
 import lang._
 import scala.collection.mutable.ArrayBuffer
+import uclid.smt.EnumLit
 
 object UniqueIdGenerator {
   var i : Int = 0;
@@ -74,10 +75,13 @@ class UclidSymbolicSimulator (module : Module) {
     val cnstAndFuncTable = context.functions.foldLeft(cnstSymbolTable){
       (acc,i) => acc + (i._1 -> newConstantSymbol(i._1.name, toSMT(i._2.typ, context)))
     }
-    val initSymbolTable = (context.variables ++ context.outputs).foldLeft(cnstAndFuncTable){
+    val enumCnstAndFuncTable = context.enumeratedConstants.foldLeft(cnstAndFuncTable){
+      (acc,i) => acc + (i._1 -> EnumLit(i._1.nam, smt.EnumType(i._2.ids.map(_.toString)))) 
+    }
+    val initSymbolTable = (context.variables ++ context.outputs).foldLeft(enumCnstAndFuncTable){
       (acc, i) => acc + (i._1 -> newHavocSymbol(i._1.name, toSMT(i._2, context)))
     }
-    symbolTable = simulate(context.init, initSymbolTable, context);
+    symbolTable = simulate(context.init, initSymbolTable, context)
     (context.variables ++ context.outputs).foreach { i => 
       Utils.assert(symbolTable.contains(i._1), "Init Block does not assign to " + i)  
     }
@@ -131,6 +135,8 @@ class UclidSymbolicSimulator (module : Module) {
         return smt.TupleType(argTypes.map(toSMT(_, context)))
       case RecordType(fields) =>
         return smt.RecordType(fields.map((f) => (f._1.toString, toSMT(f._2, context))))
+      case EnumType(ids) => 
+        smt.EnumType(ids.map(_.name))
       case _ => throw new Utils.UnimplementedException("Need to handle more types here.")
     }
   }

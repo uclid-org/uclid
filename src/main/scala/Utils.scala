@@ -42,6 +42,15 @@ object Utils {
   }
 }
 
+class UniqueNamer(val prefix : String) {
+  var count = 0
+  def newName() : String = {
+    val name : String = prefix + "__" + count.toString
+    count = count + 1
+    return name
+  }
+}
+
 class Memo[I, O](f : I => O) {
   var memoHashMap = new scala.collection.mutable.HashMap[I, O]
   val fun = f

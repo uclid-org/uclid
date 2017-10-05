@@ -19,6 +19,7 @@ trait Type {
   def isRecord = false
   def isMap = false
   def isArray = false
+  def isEnum = false
 }
 
 // The Boolean type.
@@ -66,14 +67,18 @@ case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = "map [" + inTypes.tail.fold(inTypes.head.toString)
                           { (acc,i) => acc + "," + i.toString } + "] " + outType
-  override def isMap = { true }
+  override def isMap = true
 }
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = "array [" + inTypes.tail.fold(inTypes.head.toString)
   { (acc,i) => acc + "," + i.toString } + "] " + outType
-  override def isArray = { true }
+  override def isArray = true
 }
-
+case class EnumType(members : List[String]) extends Type {
+  override def toString  = "enum {" + Utils.join(members, ", ") + "}"
+  override def isEnum = true
+  def fieldIndex(name : String) : Int = members.indexWhere(_ == name)
+}
 object OperatorFixity extends scala.Enumeration {
   type OperatorFixity = Value
   val INFIX, PREFIX = Value
@@ -291,6 +296,10 @@ case class BitVectorLit(value: BigInt, width: Int) extends Literal (BitVectorTyp
 
 case class BooleanLit(value: Boolean) extends Literal (BoolType.t) {
   override def toString = value.toString
+}
+
+case class EnumLit(id : String, eTyp : EnumType) extends Literal (eTyp) {
+  override def toString  = id.toString
 }
 
 case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {

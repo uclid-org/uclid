@@ -11,6 +11,7 @@ class Context {
   var outputs: Map[Identifier, Type] = _
   var constants: Map[Identifier, Type] = _
   var specifications: Map[Identifier, Expr] = _
+  var enumeratedConstants : Map[Identifier, EnumType] = _
   var types : Map[Identifier, Type] = _
   var next: List[Statement] = _
   var init: List[Statement] = _
@@ -63,6 +64,10 @@ class Context {
     Utils.assert(Utils.allUnique(m_typedecls.map(i => i.asInstanceOf[T7].id)), 
         "Multiple typedecls with identical names")
     types = m_typedecls.map(x => x.asInstanceOf[T7].id -> x.asInstanceOf[T7].typ).toMap
+
+    val scope = new ScopeMap() + m
+    val enums = scope.map.filter((p) => p._2.isInstanceOf[Scope.EnumIdentifier]).map((p) => p._2.asInstanceOf[Scope.EnumIdentifier])
+    enumeratedConstants = enums.map((e) => (e.enumId -> e.enumTyp)).toMap
     
     val m_nextdecl = m.decls.filter { x => x.isInstanceOf[NextDecl] }
     Utils.assert(m_nextdecl.size == 1, "Need exactly one next decl.");
@@ -75,6 +80,7 @@ class Context {
     } else {
       init = List.empty[Statement]
     }
+    
   }
   
   def copyContext() : Context = {
@@ -86,6 +92,7 @@ class Context {
     copy.procedures = this.procedures
     copy.specifications = this.specifications
     copy.types = this.types
+    copy.enumeratedConstants = this.enumeratedConstants
     copy.variables = this.variables
     copy.init = this.init
     copy.next = this.next
@@ -491,7 +498,7 @@ object UclidSemanticAnalyzer {
         Utils.assert(!t._2, "What do you need a Lambda expression with temporal type for!?")
         return (MapType(ids.map(i => i._2), t._1), false) //Lambda expr returns a map type
       case id : IdentifierBase =>
-        val vars = (c.constants ++ c.variables ++ c.inputs ++ c.outputs)
+        val vars = (c.constants ++ c.variables ++ c.inputs ++ c.outputs ++ c.enumeratedConstants)
         var someId = vars.get(Identifier(id.name))
         if (someId.isDefined) {
           (someId.get, false)
@@ -536,7 +543,7 @@ object UclidSemanticAnalyzer {
          c2.inputs = c.inputs ++ (ids.map(i => i._1 -> i._2).toMap)
          checkExpr(le,c2);
        case Identifier(id) => 
-         Utils.assert((c.constants.keys ++ c.functions.keys ++ c.inputs.keys ++ c.outputs.keys ++ c.variables.keys).
+         Utils.assert((c.constants.keys ++ c.functions.keys ++ c.inputs.keys ++ c.outputs.keys ++ c.variables.keys ++ c.enumeratedConstants.keys).
          exists{i => i.name == id}, "Identifier " + id + " not found");
        case _ => ()
      }
