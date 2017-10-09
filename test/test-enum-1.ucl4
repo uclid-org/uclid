@@ -17,6 +17,9 @@ module main {
   next {
     assert (systemcall == noop);
     assert (systemcall != setresuid);
+    assert (operand_ruid == privileged   || 
+            operand_ruid == unprivileged ||
+            operand_ruid == invalid);
   }
   
   control {

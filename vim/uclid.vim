@@ -20,7 +20,7 @@ set cpo&vim
 syn keyword ucl4Type			bool int bv\d\+ enum
 " repeat / condition / label
 syn keyword ucl4Expr			forall exists Lambda 
-syn keyword ucl4Stmt			if assert assume havoc for skip
+syn keyword ucl4Stmt			if else assert assume havoc for skip case
 syn keyword ucl4Decl			module init next control function procedure type var input output constant initialize simulate decide
 " user labels
 syn keyword ucl4Constant			false true
