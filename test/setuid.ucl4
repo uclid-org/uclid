@@ -1,0 +1,89 @@
+module main {
+  type id_t = enum { privileged, unprivileged, invalid };
+  type syscall_t = enum { setresuid, setfsuid, noop };
+  
+  input invocation : syscall_t;
+  input operand_ruid : id_t;    // real
+  input operand_euid : id_t;    // effective
+  input operand_suid : id_t;    // super
+  input operand_fsuid : id_t;   // filesystem
+  
+  var systemcall : syscall_t;
+
+  var process_ruid  : id_t;     // real
+  var process_euid  : id_t;     // effective
+  var process_suid  : id_t;     // super
+  var process_fsuid : id_t;     // filesystem
+
+  var precond_setresuid : bool;
+  var precond_setfsuid  : bool;
+  
+  init {
+    systemcall    := noop;
+    process_ruid  := privileged;
+    process_euid  := privileged;
+    process_suid  := privileged;
+    process_fsuid := privileged;
+  }
+  
+  next {
+    precond_setresuid := 
+      (process_euid == privileged) || 
+	    ((operand_ruid == process_ruid || operand_ruid == process_suid || operand_ruid == process_euid || operand_ruid == invalid)     &&
+	     (operand_euid == process_ruid || operand_euid == process_suid || operand_euid == process_euid || operand_euid == invalid)     &&
+	     (operand_suid == process_ruid || operand_suid == process_suid || operand_suid == process_euid || operand_suid == invalid));
+    
+    precond_setfsuid := 
+      (process_ruid == privileged || process_euid == privileged || process_suid == privileged);
+
+    // next systemcall
+    systemcall := invocation;
+
+    case 
+        // setresuid
+        (invocation == setresuid) : 
+        {
+            if (precond_setresuid) {
+                if (operand_ruid != invalid) {
+                    process_ruid := operand_ruid;
+                }
+                if (operand_euid != invalid) {
+                    process_euid := operand_euid;
+                }
+                if (operand_suid != invalid) {
+                    process_suid := operand_suid;
+                }
+
+                // this is the buggy code.
+                if (operand_euid != invalid) {
+                  process_fsuid := operand_euid;
+                }
+                /* fixed code is like this:
+                if (process_fsuid == privileged && 
+                    process_ruid != privileged  && process_euid != privileged  && process_suid != privileged)
+                {
+                  process_fsuid := operand_euid; // should we set this to something else?
+                }
+                */
+            }
+        }
+        // setfsuid
+        (invocation == setfsuid) :
+        {
+            if (precond_setfsuid && operand_fsuid != invalid) {
+                process_fsuid := operand_fsuid;
+            }
+        }
+    esac
+
+    // assertion
+    assert (process_fsuid == privileged) ==> 
+           (process_ruid == privileged || process_euid == privileged || process_suid == privileged);
+  }
+  
+  control {
+    initialize;
+    simulate (4);
+    decide;
+  }
+}
