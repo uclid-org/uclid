@@ -124,7 +124,6 @@ object UclidMain {
     passManager.addPass(new FunctionInliner())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new CaseEliminator())
-    passManager
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
 
     for (srcFile <- srcFiles) {
@@ -144,17 +143,17 @@ object UclidMain {
     return modules
   }
 
-  def execute(module : Module) : List[(smt.Expr, Option[Boolean])] = {
+  def execute(module : Module) : List[(lang.ASTPosition, smt.Expr, Int, Option[Boolean])] = {
     // execute the control module
     var symbolicSimulator = new UclidSymbolicSimulator(module)
     var z3Interface = smt.Z3Interface.newInterface()
     return symbolicSimulator.execute(z3Interface)
   }
 
-  def printResults(assertionResults : List[(smt.Expr, Option[Boolean])]) {
-    val passCount = assertionResults.count((p) => p._2 == Some(true))
-    val failCount = assertionResults.count((p) => p._2 == Some(false))
-    val undetCount = assertionResults.count((p) => p._2 == None)
+  def printResults(assertionResults : List[(lang.ASTPosition, smt.Expr, Int, Option[Boolean])]) {
+    val passCount = assertionResults.count((p) => p._4 == Some(true))
+    val failCount = assertionResults.count((p) => p._4 == Some(false))
+    val undetCount = assertionResults.count((p) => p._4 == None)
     
     Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
     println("%d assertions passed.".format(passCount))
@@ -162,19 +161,17 @@ object UclidMain {
     println("%d assertions indeterminate.".format(undetCount))
     
     if (failCount > 0) {
-      println("List of failed assertions:")
       assertionResults.foreach{ (p) => 
-        if (p._2 == Some(false)) {
-          println("  --> " + p._1.toString)
+        if (p._4 == Some(false)) {
+          println("[Step #" + p._3.toString + "] assertion FAILED @ " +  p._1.toString )
         }
       }
     }
     
     if (undetCount > 0) {
-      println("List of indeterminate assertions:")
       assertionResults.foreach{ (p) => 
-        if (p._2 == None) {
-          println(" --> " + p._1.toString)
+        if (p._4 == None) {
+          println("[Step #" + p._3.toString + "] assertion INDETERMINATE @ " +  p._1.toString )
         }
       }
     }

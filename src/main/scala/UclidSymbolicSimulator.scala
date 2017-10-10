@@ -14,7 +14,7 @@ object UniqueIdGenerator {
 }
 
 class UclidSymbolicSimulator (module : Module) {
-  var asserts : List[smt.Expr] = List.empty
+  var asserts : List[(ASTPosition, smt.Expr, Int)] = List.empty
   var assumes : List[smt.Expr] = List.empty
   var context : Context = new Context();
   
@@ -29,8 +29,8 @@ class UclidSymbolicSimulator (module : Module) {
   def newConstantSymbol(name: String, t: smt.Type) = 
     new smt.Symbol(name,t)
   
-  def execute(solver : smt.SolverInterface) : List[(smt.Expr, Option[Boolean])] = {
-    module.cmds.foldLeft(List.empty[(smt.Expr, Option[Boolean])]){
+  def execute(solver : smt.SolverInterface) : List[(ASTPosition, smt.Expr, Int, Option[Boolean])] = {
+    module.cmds.foldLeft(List.empty[(ASTPosition, smt.Expr, Int, Option[Boolean])]){
       (acc, cmd) => {
         cmd match {
           case InitializeCmd() => 
@@ -43,13 +43,13 @@ class UclidSymbolicSimulator (module : Module) {
             solver.addAssumptions(assumes)
             val results = asserts.foldLeft(acc){ 
               case (acc, e) =>
-                val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e)))
+                val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e._2)))
                 val result = sat match {
                   case Some(true)  => Some(false)
                   case Some(false) => Some(true)
                   case None        => None
                 }
-                (e, result) :: acc 
+                (e._1, e._2, e._3, result) :: acc 
             }
             solver.popAssumptions();
             results
@@ -81,13 +81,13 @@ class UclidSymbolicSimulator (module : Module) {
     val initSymbolTable = (context.variables ++ context.outputs).foldLeft(enumCnstAndFuncTable){
       (acc, i) => acc + (i._1 -> newHavocSymbol(i._1.name, toSMT(i._2, context)))
     }
-    symbolTable = simulate(context.init, initSymbolTable, context)
+    symbolTable = simulate(0, context.init, initSymbolTable, context)
     (context.variables ++ context.outputs).foreach { i => 
       Utils.assert(symbolTable.contains(i._1), "Init Block does not assign to " + i)  
     }
   }
   
-  def simulate(number_of_steps: Int) : (SymbolTable,List[smt.Expr]) = 
+  def simulate(number_of_steps: Int) : (SymbolTable,List[(ASTPosition, smt.Expr, Int)]) = 
   {
     def newInputSymbols(st : SymbolTable, step : Int) : SymbolTable = {
       context.inputs.foldLeft(st)((acc,i) => {
@@ -101,7 +101,7 @@ class UclidSymbolicSimulator (module : Module) {
     for (step <- 1 to number_of_steps) {
       val stWInputs = newInputSymbols(currentState, step)
       states += stWInputs
-      currentState = simulate(stWInputs);
+      currentState = simulate(step, stWInputs);
 //        println("****** After step# " + step + " ******");
 //        println(currentState)
     }
@@ -181,15 +181,15 @@ class UclidSymbolicSimulator (module : Module) {
     }
   }
   
-  def simulate(stmts: List[Statement], symbolTable: SymbolTable, c : Context) : SymbolTable = {
-    return stmts.foldLeft(symbolTable)((acc,i) => simulate(i, acc, c));
+  def simulate(iter : Int, stmts: List[Statement], symbolTable: SymbolTable, c : Context) : SymbolTable = {
+    return stmts.foldLeft(symbolTable)((acc,i) => simulate(iter, i, acc, c));
   }
   
-  def simulate(symbolTable: SymbolTable) : SymbolTable = {
-    return simulate(context.next, symbolTable, context)
+  def simulate(iter : Int, symbolTable: SymbolTable) : SymbolTable = {
+    return simulate(iter, context.next, symbolTable, context)
   }
   
-  def simulate(s: Statement, symbolTable: SymbolTable, c : Context) : SymbolTable = {
+  def simulate(iter : Int, s: Statement, symbolTable: SymbolTable, c : Context) : SymbolTable = {
     def recordSelect(field : String, rec : smt.Expr) = {
       smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
     }
@@ -230,7 +230,7 @@ class UclidSymbolicSimulator (module : Module) {
     s match {
       case SkipStmt() => return symbolTable
       case AssertStmt(e, id) => 
-        this.asserts = this.asserts ++ List(evaluate(e,symbolTable,c))
+        this.asserts = (s.position, evaluate(e,symbolTable,c), iter) :: this.asserts 
         return symbolTable
       case AssumeStmt(e, id) => 
         this.assumes = this.assumes ++ List(evaluate(e,symbolTable,c))
@@ -244,8 +244,8 @@ class UclidSymbolicSimulator (module : Module) {
         var then_modifies : Set[Identifier] = writeSet(then_branch,c)
         var else_modifies : Set[Identifier] = writeSet(else_branch,c)
         //compute in parallel
-        var then_st : SymbolTable = simulate(then_branch, symbolTable, c)
-        var else_st : SymbolTable = simulate(else_branch, symbolTable, c)
+        var then_st : SymbolTable = simulate(iter, then_branch, symbolTable, c)
+        var else_st : SymbolTable = simulate(iter, else_branch, symbolTable, c)
         return symbolTable.keys.filter { id => then_modifies.contains(id) || else_modifies.contains(id) }.
           foldLeft(symbolTable){ (acc,id) => 
             acc.updated(id, smt.ITE(evaluate(e, symbolTable,c), then_st(id), else_st(id)))
@@ -262,7 +262,7 @@ class UclidSymbolicSimulator (module : Module) {
         c2.variables = c2.variables ++ (proc.decls.map(i => i.id -> i.typ).toMap)
         st = proc.decls.foldLeft(st)((acc,i) => acc + (i.id -> newHavocSymbol(i.id.name, toSMT(i.typ,c2))));
         st = proc.sig.outParams.foldLeft(st)((acc, i) => acc + (i._1 -> newHavocSymbol(i._1.name, toSMT(i._2, c2))))
-        st = simulate(proc.body, st, c2)
+        st = simulate(iter, proc.body, st, c2)
         st = simulateAssign(lhss, proc.sig.outParams.map(i => st(i._1)), st)
         //remove procedure arguments
         st = proc.sig.inParams.foldLeft(st)((acc,i) => acc - i._1)

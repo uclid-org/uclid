@@ -26,12 +26,24 @@ object IdGenerator {
     return id
   }
 }
+/**
+ * An AST position consists of a filename and the Position type from the Scala std library.
+ */
+case class ASTPosition(filename : Option[String], pos : Position)  {
+  override def toString : String = {
+    (filename match {
+      case Some(fn) => fn
+      case None     => ""
+    }) + ":" + pos.line.toString
+  }
+}
 
 /** All elements in the AST are derived from this class.
  *  The plan is to stick an ID into this later so that we can use the ID to store auxiliary information.
  */
 sealed abstract class ASTNode extends Positional {
   var filename : Option[String] = None
+  def position : ASTPosition = ASTPosition(filename, pos)
   val astNodeId = IdGenerator.newId()
 }
 
