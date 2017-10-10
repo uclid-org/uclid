@@ -366,6 +366,10 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitAssertStatement(st : AssertStmt, in : T, context : ScopeMap) : T = {
     var result : T = in
     result = pass.applyOnAssert(TraversalDirection.Down, st, result, context)
+    result = st.id match {
+      case None     => result
+      case Some(id) => visitIdentifier(id, result, context)
+    }
     result = visitExpr(st.e, result, context)
     result = pass.applyOnAssert(TraversalDirection.Up, st, result, context)
     return result
@@ -983,16 +987,18 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   }
   
   def visitAssertStatement(st : AssertStmt, context : ScopeMap) : List[Statement] = {
+    val idP = st.id.flatMap(id => visitIdentifier(id, context))
     val stP = visitExpr(st.e, context).toList.flatMap((e) => {
-      pass.rewriteAssert(AssertStmt(e), context)
+      pass.rewriteAssert(AssertStmt(e, idP), context)
     })
     astChangeFlag = astChangeFlag || (stP != Some(st))
     return ASTNode.introducePos(stP, st.pos)
   }
   
   def visitAssumeStatement(st : AssumeStmt, context : ScopeMap) : List[Statement] = {
+    val idP = st.id.flatMap(id => visitIdentifier(id, context))
     val stP = visitExpr(st.e, context).toList.flatMap((e) => {
-      pass.rewriteAssume(AssumeStmt(e), context)
+      pass.rewriteAssume(AssumeStmt(e, idP), context)
     })
     astChangeFlag = astChangeFlag || (stP != Some(st))
     return ASTNode.introducePos(stP, st.pos)

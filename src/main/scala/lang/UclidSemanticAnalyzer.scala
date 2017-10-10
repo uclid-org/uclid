@@ -305,8 +305,8 @@ object UclidSemanticAnalyzer {
     val externalDecls : List[Identifier] = c.externalDecls()
     s match {
       case SkipStmt() => 
-      case AssertStmt(e) => checkExpr(e,c)
-      case AssumeStmt(e) => checkExpr(e,c)
+      case AssertStmt(e, id) => checkExpr(e, c)
+      case AssumeStmt(e, id) => checkExpr(e, c)
       case HavocStmt(id) => 
         Utils.assert((c.variables.keys ++ c.outputs.keys).exists { x => x.name == id.name }, 
             "Statement " + s + " updates unknown variable")

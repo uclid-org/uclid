@@ -124,11 +124,14 @@ object UclidMain {
     passManager.addPass(new FunctionInliner())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new CaseEliminator())
+    passManager
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
 
     for (srcFile <- srcFiles) {
       val text = scala.io.Source.fromFile(srcFile).mkString
-      val fileModules = UclidParser.parseModel(srcFile, text).map(passManager.run(_).get)
+      val filenameAdder = new AddFilenameRewriter(Some(srcFile))
+      val fileModulesP = UclidParser.parseModel(srcFile, text).map(passManager.run(_).get)
+      val fileModules = fileModulesP.map((m) => filenameAdder.visit(m)).flatten
       for(module <- fileModules) {
         UclidSemanticAnalyzer.checkSemantics(module)
       }
@@ -140,14 +143,14 @@ object UclidMain {
     }
     return modules
   }
-  
+
   def execute(module : Module) : List[(smt.Expr, Option[Boolean])] = {
     // execute the control module
     var symbolicSimulator = new UclidSymbolicSimulator(module)
     var z3Interface = smt.Z3Interface.newInterface()
     return symbolicSimulator.execute(z3Interface)
   }
-  
+
   def printResults(assertionResults : List[(smt.Expr, Option[Boolean])]) {
     val passCount = assertionResults.count((p) => p._2 == Some(true))
     val failCount = assertionResults.count((p) => p._2 == Some(false))

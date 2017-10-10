@@ -31,8 +31,10 @@ object IdGenerator {
  *  The plan is to stick an ID into this later so that we can use the ID to store auxiliary information.
  */
 sealed abstract class ASTNode extends Positional {
+  var filename : Option[String] = None
   val astNodeId = IdGenerator.newId()
 }
+
 object ASTNode {
   def introducePos[T <: Positional](node : Option[T], pos : Position) : Option[T] = {
     node match {
@@ -408,10 +410,10 @@ sealed abstract class Statement extends ASTNode {
 case class SkipStmt() extends Statement {
   override def toLines = List("skip; //" + pos.toString)
 }
-case class AssertStmt(e: Expr) extends Statement {
+case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assert " + e + "; //" + pos.toString)
 }
-case class AssumeStmt(e: Expr) extends Statement {
+case class AssumeStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assume " + e + "; //" + pos.toString)
 }
 case class HavocStmt(id: Identifier) extends Statement {
@@ -529,7 +531,6 @@ case class DebugCmd(cmd: Identifier, args: List[Expr]) extends UclCmd {
 }
 
 case class Module(id: Identifier, decls: List[Decl], cmds : List[UclCmd]) extends ASTNode {
-  var filename : Option[String] = None
   // create a new module with with the filename set.
   def withFilename(name : String) : Module = {
     val newModule = Module(id, decls, cmds)

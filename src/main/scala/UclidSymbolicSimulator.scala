@@ -229,10 +229,10 @@ class UclidSymbolicSimulator (module : Module) {
     }
     s match {
       case SkipStmt() => return symbolTable
-      case AssertStmt(e) => 
+      case AssertStmt(e, id) => 
         this.asserts = this.asserts ++ List(evaluate(e,symbolTable,c))
         return symbolTable
-      case AssumeStmt(e) => 
+      case AssumeStmt(e, id) => 
         this.assumes = this.assumes ++ List(evaluate(e,symbolTable,c))
         return symbolTable
       case HavocStmt(id) => 
@@ -274,8 +274,8 @@ class UclidSymbolicSimulator (module : Module) {
   def writeSet(stmts: List[Statement], c: Context) : Set[Identifier] = {
     def stmtWriteSet(stmt: Statement, c: Context) : Set[Identifier] = stmt match {
       case SkipStmt() => Set.empty
-      case AssertStmt(e) => Set.empty
-      case AssumeStmt(e) => Set.empty
+      case AssertStmt(e, id) => Set.empty
+      case AssumeStmt(e, id) => Set.empty
       case HavocStmt(id) => Set(id)
       case AssignStmt(lhss,rhss) => 
         return lhss.map(lhs => lhs.ident).toSet

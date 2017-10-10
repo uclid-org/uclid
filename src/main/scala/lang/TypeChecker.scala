@@ -404,10 +404,10 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Unit]
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
   override def applyOnStatement(d : TraversalDirection.T, st : Statement, in : Unit, context : ScopeMap) : Unit = {
     st match {
-      case AssertStmt(e) => 
+      case AssertStmt(e, id) => 
         val eType = exprTypeChecker.typeOf(e, context)
         Utils.checkParsingError(eType.isBool || eType.isTemporal, "Assertion expression must be of Boolean or Temporal type.", st.pos, context.filename)
-      case AssumeStmt(e) =>
+      case AssumeStmt(e, id) =>
         val eType = exprTypeChecker.typeOf(e, context)
         Utils.checkParsingError(eType.isBool, "Assumption must be Boolean.", st.pos, context.filename)
       case HavocStmt(id) =>
