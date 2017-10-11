@@ -110,17 +110,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwInput = "input"
     lazy val KwOutput = "output"
     lazy val KwInit = "init"
-    lazy val KwInitialize = "initialize"
     lazy val KwNext = "next"
     lazy val KwModule = "module"
     lazy val KwITE = "ITE"
     lazy val KwLambda = "Lambda"
     lazy val KwFunction = "function"
     lazy val KwControl = "control"
-    lazy val KwSimulate = "simulate"
-    lazy val KwUnroll = "unroll"
-    lazy val KwDecide = "decide"
-    lazy val KwDebug = "__uclid_debug"
     
     lazy val KwDefineProp = "property"
     lazy val TemporalOpGlobally = "G"
@@ -142,8 +137,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwAssume, KwAssert, KwVar, KwHavoc, KwCall, KwIf, KwElse,
       KwCase, KwEsac, KwFor, KwIn, KwRange, KwInput, KwOutput,
       KwModule, KwType, KwEnum, KwRecord, KwSkip, KwFunction, 
-      KwInitialize, KwUnroll, KwSimulate, KwDecide, KwControl, KwDebug,
-      KwInit, KwNext, KwITE, KwLambda, 
+      KwControl, KwInit, KwNext, KwITE, KwLambda, 
       KwDefineProp, TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
       TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
   
@@ -390,44 +384,31 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       positioned (TypeDecl | ConstDecl | FuncDecl | VarDecl | InputDecl | OutputDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl)
   
     // control commands.
-    lazy val InitializeCmd : PackratParser[lang.InitializeCmd] = positioned { 
-      KwInitialize <~ ";" ^^ { case _ => lang.InitializeCmd() }
-    }
-  
-    lazy val DecideCmd : PackratParser[lang.DecideCmd] = positioned { 
-      KwDecide <~ ";" ^^ { case _ => lang.DecideCmd() }
-    }
+    lazy val IdParamList : PackratParser[List[Identifier]] = 
+      "[" ~> Id ~ (rep ("," ~> Id) <~ "]") ^^ { case t ~ ts =>  t :: ts} |
+      "[" <~ "]" ^^ { case _ => List.empty } 
     
-    lazy val UnrollCmd : PackratParser[lang.UnrollCmd] = positioned { 
-      KwUnroll ~ "(" ~> Integer <~ ")" ~ ";" ^^ { case num => lang.UnrollCmd(num) }
-    }
-  
-    lazy val SimulateCmd : PackratParser[lang.SimulateCmd] = positioned {
-      KwSimulate ~ "(" ~> Integer <~ ")" ~ ";" ^^ { case num => lang.SimulateCmd(num) }
-    }
-    
-    // this command is for debugging.
-    lazy val DebugCmd : PackratParser[lang.DebugCmd] = positioned {
-      KwDebug ~> Id <~ ";" ^^ { case cmd => lang.DebugCmd(cmd, List.empty[lang.Expr]) }
+      
+    lazy val Cmd : PackratParser[lang.ProofCommand] = positioned {
+      Id <~ ";" ^^ { case id => lang.ProofCommand(id, List.empty, List.empty) } |
+      Id ~ IdParamList <~ ";" ^^ { case id ~ idparams => lang.ProofCommand(id, idparams, List.empty) } |  
+      Id ~ ExprList <~ ";" ^^ { case id ~ es => lang.ProofCommand(id, List.empty, es) } |
+      Id ~ IdParamList ~ ExprList <~ ";" ^^ { case id ~ idparams ~ es => lang.ProofCommand(id, idparams, es) }
     }
 
+    lazy val CmdBlock : PackratParser[List[ProofCommand]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
 
-    lazy val Cmd : PackratParser[UclCmd] =
-      ( InitializeCmd | UnrollCmd | SimulateCmd | DecideCmd | DebugCmd )
-    
-    lazy val BlockCmd : PackratParser[List[UclCmd]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
-    
     lazy val Module: PackratParser[lang.Module] = positioned {
-      KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( BlockCmd.? ) <~ "}") ^^ { 
+      KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( CmdBlock.? ) <~ "}") ^^ { 
         case id ~ (decls ~ Some(cs)) => lang.Module(id, decls, cs)
-        case id ~ (decls ~ None) => lang.Module(id, decls, List[UclCmd]())
+        case id ~ (decls ~ None) => lang.Module(id, decls, List[ProofCommand]())
       }
     }
-  
+
     lazy val SpecDecl: PackratParser[lang.SpecDecl] = positioned {
       KwDefineProp ~> Id ~ (":" ~> Expr) <~ ";" ^^ { case id ~ expr => lang.SpecDecl(id,expr) }
     }
-  
+
     lazy val Model: PackratParser[List[Module]] = rep(Module) 
       
     def parseExpr(input: String): Expr = {

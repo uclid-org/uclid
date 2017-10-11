@@ -32,14 +32,14 @@ class UclidSymbolicSimulator (module : Module) {
   def execute(solver : smt.SolverInterface) : List[(ASTPosition, smt.Expr, Int, Option[Boolean])] = {
     module.cmds.foldLeft(List.empty[(ASTPosition, smt.Expr, Int, Option[Boolean])]){
       (acc, cmd) => {
-        cmd match {
-          case InitializeCmd() => 
+        cmd.name.toString match {
+          case "initialize" => 
             initialize()
             acc
-          case SimulateCmd(steps) => 
-            simulate(steps.value.toInt)
+          case "simulate" => 
+            simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt)
             acc
-          case DecideCmd() =>
+          case "decide" =>
             solver.addAssumptions(assumes)
             val results = asserts.foldLeft(acc){ 
               case (acc, e) =>
@@ -53,12 +53,8 @@ class UclidSymbolicSimulator (module : Module) {
             }
             solver.popAssumptions();
             results
-          case DebugCmd(cmd, args) =>
-            if (cmd.toString == "print_module") {
-              println(module.toString)
-            } else {
-              throw new Utils.ParserError("Unknown debug command: " + cmd.toString, Some(cmd.pos), module.filename)
-            }
+          case "print_module" =>
+            println(module.toString)
             acc
           case _ => 
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)

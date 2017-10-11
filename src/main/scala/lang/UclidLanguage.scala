@@ -525,24 +525,13 @@ case class SpecDecl(id: Identifier, expr: Expr) extends Decl {
   override def toString = "property " + id + ":" + expr + ";  // " + id.pos.toString
 }
 
-sealed abstract class ProofCommand extends ASTNode
-case class UnparsedCommand(cmd : Identifier, args : List[Expr]) extends ProofCommand {
-  override def toString = cmd.toString + " (" + Utils.join(args.map(_.toString), ", ") + ")";
-}
-case class InitializeCmd() extends ProofCommand {
-  override def toString = "initialize;" + "// " + pos.toString
-}
-case class UnrollCmd(steps : IntLit) extends ProofCommand {
-  override def toString = "unroll (" + steps.toString + ");" + "// " + pos.toString
-}
-case class SimulateCmd(steps : IntLit) extends ProofCommand {
-  override def toString = "simulate (" + steps.toString + ");" + "// " + pos.toString
-}
-case class DecideCmd() extends ProofCommand {
-  override def toString = "decide; " + "// " + pos.toString
-}
-case class DebugCmd(cmd: Identifier, args: List[Expr]) extends ProofCommand {
-  override def toString = "__uclid_debug " + cmd.toString + " " + Utils.join(args.map(_.toString), " ") + ";"
+case class ProofCommand(name : Identifier, params: List[Identifier], args : List[Expr]) extends ASTNode {
+  override def toString = {
+    val nameStr = name.toString 
+    val paramStr = if (params.size > 0) { "[" + Utils.join(params.map(_.toString), ", ") + "]" } else { "" }
+    val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
+    nameStr + paramStr + argStr + ";"
+  }
 }
 
 case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) extends ASTNode {
