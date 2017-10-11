@@ -77,7 +77,7 @@ trait ReadOnlyPass[T] {
   def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : ScopeMap) : T = { in }
   def applyOnITE(d : TraversalDirection.T, ite : ITE, in : T, context : ScopeMap) : T = { in }
   def applyOnLambda(d : TraversalDirection.T, lambda : Lambda, in : T, context : ScopeMap) : T = { in }
-  def applyOnCmd(d : TraversalDirection.T, cmd : UclCmd, in : T, context : ScopeMap) : T = { in }
+  def applyOnCmd(d : TraversalDirection.T, cmd : ProofCommand, in : T, context : ScopeMap) : T = { in }
 }
 
 class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAnalysis {
@@ -222,7 +222,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnNext(TraversalDirection.Up, next, result, context)
     return result
   }
-  def visitCmd(cmd : UclCmd, in : T, context : ScopeMap) : T = {
+  def visitCmd(cmd : ProofCommand, in : T, context : ScopeMap) : T = {
     val result : T = in
     return pass.applyOnCmd(TraversalDirection.Down, cmd, result, context)
     return pass.applyOnCmd(TraversalDirection.Up, cmd, result, context)
@@ -606,7 +606,7 @@ trait RewritePass {
   
   def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = { Some(module) }
   def rewriteDecl(decl : Decl, ctx : ScopeMap) : Option[Decl] = { Some(decl) }
-  def rewriteCommand(cmd : UclCmd, ctx : ScopeMap) : Option[UclCmd] = { Some(cmd) }
+  def rewriteCommand(cmd : ProofCommand, ctx : ScopeMap) : Option[ProofCommand] = { Some(cmd) }
   def rewriteProcedure(proc : ProcedureDecl, ctx : ScopeMap) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : ScopeMap) : Option[FunctionDecl] = { Some(func) }
   def rewriteStateVar(stvar : StateVarDecl, ctx : ScopeMap) : Option[StateVarDecl] = { Some(stvar) }
@@ -822,7 +822,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
     return ASTNode.introducePos(nextP, next.pos)
   }
   
-  def visitCommand(cmd : UclCmd, context : ScopeMap) : Option[UclCmd] = {
+  def visitCommand(cmd : ProofCommand, context : ScopeMap) : Option[ProofCommand] = {
     val cmdP = pass.rewriteCommand(cmd, context)
     astChangeFlag = astChangeFlag || (cmdP != Some(cmd))
     return ASTNode.introducePos(cmdP, cmd.pos)

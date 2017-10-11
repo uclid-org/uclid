@@ -525,24 +525,27 @@ case class SpecDecl(id: Identifier, expr: Expr) extends Decl {
   override def toString = "property " + id + ":" + expr + ";  // " + id.pos.toString
 }
 
-sealed abstract class UclCmd extends ASTNode
-case class InitializeCmd() extends UclCmd {
+sealed abstract class ProofCommand extends ASTNode
+case class UnparsedCommand(cmd : Identifier, args : List[Expr]) extends ProofCommand {
+  override def toString = cmd.toString + " (" + Utils.join(args.map(_.toString), ", ") + ")";
+}
+case class InitializeCmd() extends ProofCommand {
   override def toString = "initialize;" + "// " + pos.toString
 }
-case class UnrollCmd(steps : IntLit) extends UclCmd {
+case class UnrollCmd(steps : IntLit) extends ProofCommand {
   override def toString = "unroll (" + steps.toString + ");" + "// " + pos.toString
 }
-case class SimulateCmd(steps : IntLit) extends UclCmd {
+case class SimulateCmd(steps : IntLit) extends ProofCommand {
   override def toString = "simulate (" + steps.toString + ");" + "// " + pos.toString
 }
-case class DecideCmd() extends UclCmd {
+case class DecideCmd() extends ProofCommand {
   override def toString = "decide; " + "// " + pos.toString
 }
-case class DebugCmd(cmd: Identifier, args: List[Expr]) extends UclCmd {
+case class DebugCmd(cmd: Identifier, args: List[Expr]) extends ProofCommand {
   override def toString = "__uclid_debug " + cmd.toString + " " + Utils.join(args.map(_.toString), " ") + ";"
 }
 
-case class Module(id: Identifier, decls: List[Decl], cmds : List[UclCmd]) extends ASTNode {
+case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) extends ASTNode {
   // create a new module with with the filename set.
   def withFilename(name : String) : Module = {
     val newModule = Module(id, decls, cmds)

@@ -10,7 +10,7 @@ class AddFilenamePass(filename : Option[String]) extends RewritePass {
     decl.filename = filename
     Some(decl) 
   }
-  override def rewriteCommand(cmd : UclCmd, ctx : ScopeMap) : Option[UclCmd] = { 
+  override def rewriteCommand(cmd : ProofCommand, ctx : ScopeMap) : Option[ProofCommand] = { 
     cmd.filename = filename
     Some(cmd) 
   }
