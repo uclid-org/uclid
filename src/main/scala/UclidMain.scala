@@ -124,6 +124,7 @@ object UclidMain {
     passManager.addPass(new FunctionInliner())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new CaseEliminator())
+    passManager.addPass(new ControlCommandChecker())
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
 
     for (srcFile <- srcFiles) {
