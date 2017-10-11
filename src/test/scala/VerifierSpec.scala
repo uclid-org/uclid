@@ -11,8 +11,8 @@ class VerifierSpec extends FlatSpec {
     val mainModule = modules.get(l.Identifier("main"))
     assert (mainModule.isDefined)
     val results = UclidMain.execute(mainModule.get)
-    assert (results.count((e) => e._4 == Some(false)) == nFail)
-    assert (results.count((e) => e._4 == Some(true)) == (results.size - nFail));
+    assert (results.count((e) => e.result == Some(false)) == nFail)
+    assert (results.count((e) => e.result == Some(true)) == (results.size - nFail));
   }
   
   "test/test-array-0.ucl4" should "verify successfully." in {

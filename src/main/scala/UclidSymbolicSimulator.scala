@@ -13,8 +13,11 @@ object UniqueIdGenerator {
   def unique() : Int = {i = i + 1; return i}
 }
 
+case class AssertInfo(iter : Int, expr : smt.Expr, pos : ASTPosition)
+case class CheckResult(assert : AssertInfo, result : Option[Boolean])
+
 class UclidSymbolicSimulator (module : Module) {
-  var asserts : List[(ASTPosition, smt.Expr, Int)] = List.empty
+  var asserts : List[AssertInfo] = List.empty
   var assumes : List[smt.Expr] = List.empty
   var context : Context = new Context();
   
@@ -29,8 +32,8 @@ class UclidSymbolicSimulator (module : Module) {
   def newConstantSymbol(name: String, t: smt.Type) = 
     new smt.Symbol(name,t)
   
-  def execute(solver : smt.SolverInterface) : List[(ASTPosition, smt.Expr, Int, Option[Boolean])] = {
-    module.cmds.foldLeft(List.empty[(ASTPosition, smt.Expr, Int, Option[Boolean])]){
+  def execute(solver : smt.SolverInterface) : List[CheckResult] = {
+    module.cmds.foldLeft(List.empty[CheckResult]){
       (acc, cmd) => {
         cmd.name.toString match {
           case "initialize" => 
@@ -43,13 +46,13 @@ class UclidSymbolicSimulator (module : Module) {
             solver.addAssumptions(assumes)
             val results = asserts.foldLeft(acc){ 
               case (acc, e) =>
-                val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e._2)))
+                val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e.expr)))
                 val result = sat match {
                   case Some(true)  => Some(false)
                   case Some(false) => Some(true)
                   case None        => None
                 }
-                (e._1, e._2, e._3, result) :: acc 
+                CheckResult(e, result) :: acc 
             }
             solver.popAssumptions();
             results
@@ -83,7 +86,7 @@ class UclidSymbolicSimulator (module : Module) {
     }
   }
   
-  def simulate(number_of_steps: Int) : (SymbolTable,List[(ASTPosition, smt.Expr, Int)]) = 
+  def simulate(number_of_steps: Int) : (SymbolTable, List[AssertInfo]) = 
   {
     def newInputSymbols(st : SymbolTable, step : Int) : SymbolTable = {
       context.inputs.foldLeft(st)((acc,i) => {
@@ -226,7 +229,7 @@ class UclidSymbolicSimulator (module : Module) {
     s match {
       case SkipStmt() => return symbolTable
       case AssertStmt(e, id) => 
-        this.asserts = (s.position, evaluate(e,symbolTable,c), iter) :: this.asserts 
+        this.asserts = AssertInfo(iter, evaluate(e,symbolTable,c), s.position) :: this.asserts 
         return symbolTable
       case AssumeStmt(e, id) => 
         this.assumes = this.assumes ++ List(evaluate(e,symbolTable,c))

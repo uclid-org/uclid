@@ -144,17 +144,17 @@ object UclidMain {
     return modules
   }
 
-  def execute(module : Module) : List[(lang.ASTPosition, smt.Expr, Int, Option[Boolean])] = {
+  def execute(module : Module) : List[CheckResult] = {
     // execute the control module
     var symbolicSimulator = new UclidSymbolicSimulator(module)
     var z3Interface = smt.Z3Interface.newInterface()
     return symbolicSimulator.execute(z3Interface)
   }
 
-  def printResults(assertionResults : List[(lang.ASTPosition, smt.Expr, Int, Option[Boolean])]) {
-    val passCount = assertionResults.count((p) => p._4 == Some(true))
-    val failCount = assertionResults.count((p) => p._4 == Some(false))
-    val undetCount = assertionResults.count((p) => p._4 == None)
+  def printResults(assertionResults : List[CheckResult]) {
+    val passCount = assertionResults.count((p) => p.result == Some(true))
+    val failCount = assertionResults.count((p) => p.result == Some(false))
+    val undetCount = assertionResults.count((p) => p.result == None)
     
     Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
     println("%d assertions passed.".format(passCount))
@@ -163,16 +163,16 @@ object UclidMain {
     
     if (failCount > 0) {
       assertionResults.foreach{ (p) => 
-        if (p._4 == Some(false)) {
-          println("[Step #" + p._3.toString + "] assertion FAILED @ " +  p._1.toString )
+        if (p.result == Some(false)) {
+          println("[Step #" + p.assert.pos.toString + "] assertion FAILED @ " +  p.assert.pos.toString )
         }
       }
     }
     
     if (undetCount > 0) {
       assertionResults.foreach{ (p) => 
-        if (p._4 == None) {
-          println("[Step #" + p._3.toString + "] assertion INDETERMINATE @ " +  p._1.toString )
+        if (p.result == None) {
+          println("[Step #" + p.assert.pos.toString + "] assertion INDETERMINATE @ " +  p.assert.pos.toString )
         }
       }
     }
