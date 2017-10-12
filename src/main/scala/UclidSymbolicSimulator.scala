@@ -16,7 +16,11 @@ object UniqueIdGenerator {
   def unique() : Int = {i = i + 1; return i}
 }
 
-case class AssertInfo(iter : Int, expr : smt.Expr, pos : ASTPosition)
+case class AssertInfo(name : String, iter : Int, expr : smt.Expr, pos : ASTPosition) {
+  override def toString = {
+    "[Step #" + iter.toString + "] " + name + " @ " + pos.toString
+  }
+}
 case class CheckResult(assert : AssertInfo, result : smt.SolverResult)
 
 class UclidSymbolicSimulator (module : Module) {
@@ -132,15 +136,14 @@ class UclidSymbolicSimulator (module : Module) {
     if (failCount > 0) {
       assertionResults.foreach{ (p) => 
         if (p.result.isFalse) {
-          println("[Step #" + p.assert.iter.toString + "] assertion FAILED @ " +  p.assert.pos.toString )
+          println("  FAILED -> " + p.assert.toString)
         }
       }
     }
-    
     if (undetCount > 0) {
       assertionResults.foreach{ (p) => 
         if (p.result.isUndefined) {
-          println("[Step #" + p.assert.iter.toString + "] assertion INDETERMINATE @ " +  p.assert.pos.toString )
+          println("  UNDEF -> " + p.assert.toString)
         }
       }
     }
@@ -268,7 +271,11 @@ class UclidSymbolicSimulator (module : Module) {
   }
   
   def simulate(iter : Int, symbolTable: SymbolTable) : SymbolTable = {
-    return simulate(iter, context.next, symbolTable, context)
+    val state = simulate(iter, context.next, symbolTable, context)
+    this.asserts = context.specifications.foldLeft(this.asserts){(asserts, prop) =>
+      AssertInfo("property " + prop._1.toString, iter, evaluate(prop._2, symbolTable, context), prop._2.position) :: asserts
+    }
+    return state
   }
   
   def simulate(iter : Int, s: Statement, symbolTable: SymbolTable, c : Context) : SymbolTable = {
@@ -312,7 +319,7 @@ class UclidSymbolicSimulator (module : Module) {
     s match {
       case SkipStmt() => return symbolTable
       case AssertStmt(e, id) => 
-        this.asserts = AssertInfo(iter, evaluate(e,symbolTable,c), s.position) :: this.asserts 
+        this.asserts = AssertInfo("assertion", iter, evaluate(e,symbolTable,c), s.position) :: this.asserts 
         return symbolTable
       case AssumeStmt(e, id) => 
         this.assumes = this.assumes ++ List(evaluate(e,symbolTable,c))

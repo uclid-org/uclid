@@ -75,10 +75,16 @@ module main {
     esac
 
     // assertion
+    /*
     assert (process_fsuid == privileged) ==> 
            (process_ruid == privileged || process_euid == privileged || process_suid == privileged);
+  	*/
   }
   
+  property fsinvariant : 
+  		(process_fsuid == privileged) ==> 
+        (process_ruid == privileged || process_euid == privileged || process_suid == privileged);
+        
   control {
     initialize;
     simulate (4);
