@@ -66,7 +66,7 @@ class UclidSymbolicSimulator (module : Module) {
             printResults(results)
             results
           case "print_cex" =>
-            printCEX(results)
+            printCEX(results, cmd.args)
             results
           case "print_module" =>
             println(module.toString)
@@ -146,38 +146,46 @@ class UclidSymbolicSimulator (module : Module) {
     }
   }
 
-  def printCEX(results : List[CheckResult]) {
+  def printCEX(results : List[CheckResult], exprs : List[Expr]) {
     results.foreach((res) => {
       if (res.result.isModelDefined) {
-        printCEX(res)
+        printCEX(res, exprs)
       }
     })
   }
 
-  def printCEX(res : CheckResult) {
+  def printCEX(res : CheckResult, exprs : List[Expr]) {
     println("CEX for assertion @ " + res.assert.pos.toString)
+    val exprsToPrint = if (exprs.size == 0) { 
+      val vars = (context.inputs.keys ++ context.variables.keys ++ context.outputs.keys)
+      vars.toList.sortWith((l, r) => l.name < r.name)
+    } else {
+      exprs
+    }
+    
     val model = res.result.model.get
     val indices = 0 to (frameTable.size - 1)
     (indices zip frameTable).foreach{ case (i, frame) => {
       println("=================================")
       println("Step #" + i.toString)
-      printFrame(frame, model)
+      printFrame(frame, model, exprsToPrint)
       println("=================================")
     }}
   }
 
-  def printFrame(f : SymbolTable, m : smt.Model) {
+  def printFrame(f : SymbolTable, m : smt.Model, exprs : List[Expr]) {
     def expr(id : lang.Identifier) : Option[smt.Expr] = {
       if (f.contains(id)) { Some(evaluate(id, f, context)) } 
       else { None }
     }
     
-    val keys = f.keys.toSeq.sortWith((left, right) => left.name < right.name)
-    keys.foreach { (id) => {
-      expr(id) match {
-        case Some(e) => 
-          println("  " + id.toString + " : " + m.evalAsString(e))
-        case _ =>
+    exprs.foreach { (e) => {
+      try {
+        val result = m.evalAsString(evaluate(e, f , context))
+        println("  " + e.toString + " : " + result)
+      } catch {
+        case excp : java.util.NoSuchElementException =>
+          println("  " + e.toString + " : <UNDEF> ")
       }
     }}
   }

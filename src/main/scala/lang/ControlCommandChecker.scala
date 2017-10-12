@@ -24,7 +24,6 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         Utils.checkParsingError(cmd.args.size == 0, "'print_results' command does not expect any arguments.", cmd.pos, filename)
       case "print_cex" =>
         Utils.checkParsingError(cmd.params.size == 0, "'print_cex' command does not except any parameters.", cmd.pos, filename)
-        Utils.checkParsingError(cmd.args.size == 0, "'print_cex' command does not expect any arguments.", cmd.pos, filename)
       case "print_module" =>
         Utils.checkParsingError(cmd.params.size == 0, "'print_module' command does not except any parameters.", cmd.pos, filename)
         Utils.checkParsingError(cmd.args.size == 0, "'print_module' command does not expect any arguments.", cmd.pos, filename)
