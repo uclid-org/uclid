@@ -24,6 +24,7 @@ object Utils {
   }
   class UnimplementedException (msg:String=null, cause:Throwable=null) extends java.lang.UnsupportedOperationException (msg, cause) {}
   class RuntimeError (msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
+  class EvaluationError(msg : String, cause: Throwable = null) extends RuntimeError(msg, cause) {} 
   class AssertionError(msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
   class ParserError(msg:String, val pos : Option[Position], val filename: Option[String], cause:Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
   

@@ -351,6 +351,30 @@ case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType(ids.map(id =>
   override def toString = "Lambda(" + ids + "). " + e.toString
 }
 
+abstract class Model {
+  def evaluate(e : Expr) : Expr = { 
+    throw new Utils.UnimplementedException("evaluate not implemented yet.") 
+  }
+  def evalAsString(e : Expr) : String = { 
+    throw new Utils.UnimplementedException("evalAsString not implemented yet.") 
+  } 
+}
+
+case class SolverResult(result : Option[Boolean], model: Option[Model]) {
+  def hasValue(expected : Boolean) : Boolean = { 
+    result match { 
+      case Some(b) => b == expected
+      case None => false
+    }
+  }
+  def isTrue = hasValue(true)
+  def isFalse = hasValue(false)
+  def isDefined = result.isDefined
+  def isUndefined = result.isEmpty
+  def isModelDefined = model.isDefined
+  def evalAsString(e : Expr) : Option[String] = { model.flatMap((m) => Some(m.evalAsString(e))) }
+}
+
 abstract class SolverInterface {
   /** 
    *  Helper function that finds the list of all symbols (constants in SMT parlance) in an expression. 
@@ -384,7 +408,7 @@ abstract class SolverInterface {
   // Assert 'e' in the solver. (Modifies solver context to contain 'e'.)
   def addConstraint(e : Expr)
   // Check whether 'e' is satisfiable in the current solver context.
-  def check(e : Expr) : Option[Boolean]
+  def check(e : Expr) : SolverResult
   // Add a list of assumptions
   def addAssumptions(es : List[Expr])
   // Pop the the last added list of assumptions

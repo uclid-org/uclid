@@ -83,5 +83,7 @@ module main {
     initialize;
     simulate (4);
     decide;
+    print_results;
+    print_cex;
   }
 }

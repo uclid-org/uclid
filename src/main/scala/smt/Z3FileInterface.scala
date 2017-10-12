@@ -110,7 +110,7 @@ class Z3FileInterface() extends SolverInterface {
     }
   }
   
-  override def check(e : Expr) : Option[Boolean] = {
+  override def check(e : Expr) : SolverResult = {
     def assertionToString(e : Expr) : String = "(assert " + translateExpr(e) + ")\n"
     
     val symbols_e = findSymbols(e) 
@@ -125,9 +125,9 @@ class Z3FileInterface() extends SolverInterface {
     val z3_output = ("z3 " + getCurrentDirectory + "/tmp.z3 -smt2" !!).trim
     
     return z3_output match {
-      case "sat" => Some(true)
-      case "unsat" => Some(false)
-      case _ => None
+      case "sat" => SolverResult(Some(true), None)
+      case "unsat" => SolverResult(Some(false), None)
+      case _ => SolverResult(None, None)
     }
   }
   

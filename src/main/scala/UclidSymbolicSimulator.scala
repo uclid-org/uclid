@@ -1,10 +1,13 @@
 
 /**
  * @author rohitsinha
+ * 
+ * with (loads of) modifications by pramod
  */
 package uclid
 
 import lang._
+
 import scala.collection.mutable.ArrayBuffer
 import uclid.smt.EnumLit
 
@@ -14,15 +17,18 @@ object UniqueIdGenerator {
 }
 
 case class AssertInfo(iter : Int, expr : smt.Expr, pos : ASTPosition)
-case class CheckResult(assert : AssertInfo, result : Option[Boolean])
+case class CheckResult(assert : AssertInfo, result : smt.SolverResult)
 
 class UclidSymbolicSimulator (module : Module) {
   var asserts : List[AssertInfo] = List.empty
   var assumes : List[smt.Expr] = List.empty
+  var results : List[CheckResult] = List.empty
   var context : Context = new Context();
   
   type SymbolTable = Map[Identifier, smt.Expr];
   var symbolTable : SymbolTable = Map.empty
+  type FrameTable = ArrayBuffer[SymbolTable]
+  var frameTable : FrameTable = ArrayBuffer.empty
   
   def newHavocSymbol(name: String, t: smt.Type) = 
     new smt.Symbol("_ucl_" + UniqueIdGenerator.unique() + "_" + name, t)
@@ -44,17 +50,23 @@ class UclidSymbolicSimulator (module : Module) {
             acc
           case "decide" =>
             solver.addAssumptions(assumes)
-            val results = asserts.foldLeft(acc){ 
+            results = asserts.foldLeft(acc){ 
               case (acc, e) =>
                 val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e.expr)))
-                val result = sat match {
-                  case Some(true)  => Some(false)
-                  case Some(false) => Some(true)
-                  case None        => None
+                val result = sat.result match {
+                  case Some(true)  => smt.SolverResult(Some(false), sat.model)
+                  case Some(false) => smt.SolverResult(Some(true), sat.model)
+                  case None        => smt.SolverResult(None, None)
                 }
                 CheckResult(e, result) :: acc 
             }
             solver.popAssumptions();
+            results
+          case "print_results" =>
+            printResults(results)
+            results
+          case "print_cex" =>
+            printCEX(results)
             results
           case "print_module" =>
             println(module.toString)
@@ -65,7 +77,7 @@ class UclidSymbolicSimulator (module : Module) {
       }
     }
   }
-  
+
   def initialize() {
     context.extractContext(module)
     val cnstSymbolTable = context.constants.foldLeft(Map.empty[Identifier, smt.Expr]){
@@ -84,8 +96,9 @@ class UclidSymbolicSimulator (module : Module) {
     (context.variables ++ context.outputs).foreach { i => 
       Utils.assert(symbolTable.contains(i._1), "Init Block does not assign to " + i)  
     }
+    frameTable += symbolTable
   }
-  
+
   def simulate(number_of_steps: Int) : (SymbolTable, List[AssertInfo]) = 
   {
     def newInputSymbols(st : SymbolTable, step : Int) : SymbolTable = {
@@ -93,7 +106,6 @@ class UclidSymbolicSimulator (module : Module) {
         acc + (i._1 -> newInputSymbol(i._1.name, step, toSMT(i._2, context))) 
       })
     }
-    //st = context.variables.foldLeft(st)((acc,i) => acc + (i._1 -> newHavocSymbol(i._1.value, toSMT(context.variables(i._1)))));
     var currentState = symbolTable
     var states = new ArrayBuffer[SymbolTable]()
     
@@ -101,13 +113,76 @@ class UclidSymbolicSimulator (module : Module) {
       val stWInputs = newInputSymbols(currentState, step)
       states += stWInputs
       currentState = simulate(step, stWInputs);
-//        println("****** After step# " + step + " ******");
-//        println(currentState)
+      frameTable += currentState
     }
-    
+
     return (currentState,asserts)
   }
-  
+
+  def printResults(assertionResults : List[CheckResult]) {
+    val passCount = assertionResults.count((p) => p.result.isTrue)
+    val failCount = assertionResults.count((p) => p.result.isFalse)
+    val undetCount = assertionResults.count((p) => p.result.isUndefined)
+    
+    Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
+    println("%d assertions passed.".format(passCount))
+    println("%d assertions failed.".format(failCount))
+    println("%d assertions indeterminate.".format(undetCount))
+    
+    if (failCount > 0) {
+      assertionResults.foreach{ (p) => 
+        if (p.result.isFalse) {
+          println("[Step #" + p.assert.iter.toString + "] assertion FAILED @ " +  p.assert.pos.toString )
+        }
+      }
+    }
+    
+    if (undetCount > 0) {
+      assertionResults.foreach{ (p) => 
+        if (p.result.isUndefined) {
+          println("[Step #" + p.assert.iter.toString + "] assertion INDETERMINATE @ " +  p.assert.pos.toString )
+        }
+      }
+    }
+  }
+
+  def printCEX(results : List[CheckResult]) {
+    results.foreach((res) => {
+      if (res.result.isModelDefined) {
+        printCEX(res)
+      }
+    })
+  }
+
+  def printCEX(res : CheckResult) {
+    println("CEX for assertion @ " + res.assert.pos.toString)
+    val model = res.result.model.get
+    val indices = 0 to (frameTable.size - 1)
+    (indices zip frameTable).foreach{ case (i, frame) => {
+      println("=================================")
+      println("Step #" + i.toString)
+      printFrame(frame, model)
+      println("=================================")
+    }}
+  }
+
+  def printFrame(f : SymbolTable, m : smt.Model) {
+    def expr(id : lang.Identifier) : Option[smt.Expr] = {
+      if (f.contains(id)) { Some(evaluate(id, f, context)) } 
+      else { None }
+    }
+    
+    val keys = f.keys.toSeq.sortWith((left, right) => left.name < right.name)
+    keys.foreach { (id) => {
+      expr(id) match {
+        case Some(e) => 
+          println("  " + id.toString + " : " + m.evalAsString(e))
+        case _ =>
+      }
+    }}
+  }
+
+
   def toSMT(t: Type, context: Context) : smt.Type = {
     def dealWithFunc(inTypes: List[Type], outType: Type) : Unit = {
       if (inTypes.filter { x => !(x.isInstanceOf[BoolType] || x.isInstanceOf[IntType]) }.size > 0 ||
@@ -139,7 +214,7 @@ class UclidSymbolicSimulator (module : Module) {
       case _ => throw new Utils.UnimplementedException("Need to handle more types here.")
     }
   }
-  
+
   def toSMT(op: Operator, context: Context) : smt.Operator = {
     op match {
       // Polymorphic operators are not allowed.
@@ -269,7 +344,7 @@ class UclidSymbolicSimulator (module : Module) {
       case _ => return symbolTable
     }
   }
-  
+
   def writeSet(stmts: List[Statement], c: Context) : Set[Identifier] = {
     def stmtWriteSet(stmt: Statement, c: Context) : Set[Identifier] = stmt match {
       case SkipStmt() => Set.empty

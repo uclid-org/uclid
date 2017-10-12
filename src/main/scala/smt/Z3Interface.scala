@@ -11,6 +11,18 @@ import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
 
 /**
+ * Result of solving a Z3 instance.
+ */
+class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
+  override def evalAsString(e : Expr) : String = {
+    interface.exprToZ3(e) match {
+      case z3Expr : z3.Expr => model.eval(z3Expr, true).toString
+      case _ => throw new Utils.EvaluationError("Unable to evaluate expression: " + e.toString)
+    }
+  }
+}
+
+/**
  * Decide validity of SMTExpr's using a Z3 sovler.
  */
 class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterface {
@@ -253,23 +265,26 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
   }
   
   /** Check whether a particular expression is satisfiable.  */      
-  override def check (e : Expr) : Option[Boolean] = {
+  override def check (e : Expr) : SolverResult = {
     val z3Expr = exprToZ3(e)
     // println("Z3 Expression: " + z3Expr.toString)
     
     solver.push()
     solver.add(z3Expr.asInstanceOf[z3.BoolExpr])
     // println(solver.toString())
-    val result = solver.check()
-    solver.pop()
+    val z3Result = solver.check()
     
-    if (result == z3.Status.SATISFIABLE) {
-      Some(true)
-    } else if (result == z3.Status.UNSATISFIABLE) {
-      Some(false)
-    } else {
-      None
+    val checkResult : SolverResult = z3Result match {
+      case z3.Status.SATISFIABLE =>
+        val z3Model = solver.getModel()
+        SolverResult(Some(true), Some(new Z3Model(this, z3Model))) 
+      case z3.Status.UNSATISFIABLE =>
+        SolverResult(Some(false), None)
+      case _ =>
+        SolverResult(None, None)
     }
+    solver.pop()
+    return checkResult
   }
   
   override def addAssumptions(es : List[Expr]) {

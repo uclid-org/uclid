@@ -79,7 +79,7 @@ object UclidMain {
       Utils.assert(modules.contains(mainModuleName), "Main module (" + options.mainModule + ") does not exist.")
       val mainModule = modules.get(mainModuleName)
       mainModule match {
-        case Some(m) => printResults(execute(m))
+        case Some(m) => execute(m)
         case None    => 
       }
     }
@@ -151,30 +151,4 @@ object UclidMain {
     return symbolicSimulator.execute(z3Interface)
   }
 
-  def printResults(assertionResults : List[CheckResult]) {
-    val passCount = assertionResults.count((p) => p.result == Some(true))
-    val failCount = assertionResults.count((p) => p.result == Some(false))
-    val undetCount = assertionResults.count((p) => p.result == None)
-    
-    Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
-    println("%d assertions passed.".format(passCount))
-    println("%d assertions failed.".format(failCount))
-    println("%d assertions indeterminate.".format(undetCount))
-    
-    if (failCount > 0) {
-      assertionResults.foreach{ (p) => 
-        if (p.result == Some(false)) {
-          println("[Step #" + p.assert.pos.toString + "] assertion FAILED @ " +  p.assert.pos.toString )
-        }
-      }
-    }
-    
-    if (undetCount > 0) {
-      assertionResults.foreach{ (p) => 
-        if (p.result == None) {
-          println("[Step #" + p.assert.pos.toString + "] assertion INDETERMINATE @ " +  p.assert.pos.toString )
-        }
-      }
-    }
-  }
 }
