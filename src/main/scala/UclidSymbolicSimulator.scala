@@ -43,18 +43,26 @@ class UclidSymbolicSimulator (module : Module) {
     new smt.Symbol(name,t)
   
   def execute(solver : smt.SolverInterface) : List[CheckResult] = {
-    module.cmds.foldLeft(List.empty[CheckResult]){
-      (acc, cmd) => {
+    module.cmds.foreach {
+      (cmd) => {
         cmd.name.toString match {
           case "initialize" => 
-            initialize()
-            acc
+            initialize(false, true, false)
+            results = List.empty
           case "simulate" => 
-            simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt)
-            acc
+            simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false)
+          case "k_induction_base" =>
+            val k = cmd.args(0).asInstanceOf[IntLit].value.toInt
+            initialize(false, true, false)
+            simulate(k, true, false)
+          case "k_induction_step" =>
+            val k = cmd.args(0).asInstanceOf[IntLit].value.toInt
+            initialize(true, false, true)
+            simulate(k-1, false, true)
+            simulate(1, true, false)
           case "decide" =>
             solver.addAssumptions(assumes)
-            results = asserts.foldLeft(acc){ 
+            results = asserts.foldLeft(results){ 
               case (acc, e) =>
                 val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e.expr)))
                 val result = sat.result match {
@@ -62,27 +70,24 @@ class UclidSymbolicSimulator (module : Module) {
                   case Some(false) => smt.SolverResult(Some(true), sat.model)
                   case None        => smt.SolverResult(None, None)
                 }
-                CheckResult(e, result) :: acc 
+                CheckResult(e, result) :: acc
             }
             solver.popAssumptions();
-            results
           case "print_results" =>
             printResults(results)
-            results
           case "print_cex" =>
             printCEX(results, cmd.args)
-            results
           case "print_module" =>
             println(module.toString)
-            acc
           case _ => 
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }
       }
     }
+    return results
   }
 
-  def initialize() {
+  def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean) {
     context.extractContext(module)
     val cnstSymbolTable = context.constants.foldLeft(Map.empty[Identifier, smt.Expr]){
       (acc,i) => acc + (i._1 -> newConstantSymbol(i._1.name, toSMT(context.constants(i._1),context)))
@@ -96,14 +101,23 @@ class UclidSymbolicSimulator (module : Module) {
     val initSymbolTable = (context.variables ++ context.outputs).foldLeft(enumCnstAndFuncTable){
       (acc, i) => acc + (i._1 -> newHavocSymbol(i._1.name, toSMT(i._2, context)))
     }
-    symbolTable = simulate(0, context.init, initSymbolTable, context)
-    (context.variables ++ context.outputs).foreach { i => 
-      Utils.assert(symbolTable.contains(i._1), "Init Block does not assign to " + i)  
+    symbolTable = if (!havocInit) { 
+      simulate(0, context.init, initSymbolTable, context)
+    } else {
+      initSymbolTable
     }
+
+    if (addAssertions) {
+      addAsserts(0, symbolTable)
+    }
+    if (addAssumptions) {
+      assumeAssertions(symbolTable)
+    }
+    frameTable.clear()
     frameTable += symbolTable
   }
 
-  def simulate(number_of_steps: Int) : (SymbolTable, List[AssertInfo]) = 
+  def simulate(number_of_steps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean) : SymbolTable = 
   {
     def newInputSymbols(st : SymbolTable, step : Int) : SymbolTable = {
       context.inputs.foldLeft(st)((acc,i) => {
@@ -117,10 +131,12 @@ class UclidSymbolicSimulator (module : Module) {
       val stWInputs = newInputSymbols(currentState, step)
       states += stWInputs
       currentState = simulate(step, stWInputs);
+      if (addAssertions) { addAsserts(step, currentState)  }
+      if (addAssertionsAsAssumes) { assumeAssertions(symbolTable) }
       frameTable += currentState
     }
 
-    return (currentState,asserts)
+    return currentState
   }
 
   def printResults(assertionResults : List[CheckResult]) {
@@ -193,6 +209,20 @@ class UclidSymbolicSimulator (module : Module) {
     }}
   }
 
+  /** Add module specifications (properties) to the list of proof obligations */
+  def addAsserts(iter : Int, symbolTable : SymbolTable) {
+    this.asserts = context.specifications.foldLeft(this.asserts){(asserts, prop) =>
+      AssertInfo("property " + prop._1.toString, iter, evaluate(prop._2, symbolTable, context), prop._2.position) :: asserts
+    }
+  }
+  
+  /** Assume assertions (for inductive proofs). */
+  def assumeAssertions(symbolTable : SymbolTable) {
+    this.assumes = context.specifications.foldLeft(this.assumes){
+        (acc, prop) => (evaluate(prop._2, symbolTable, context)) :: acc
+    }
+  }
+  
 
   def toSMT(t: Type, context: Context) : smt.Type = {
     def dealWithFunc(inTypes: List[Type], outType: Type) : Unit = {
@@ -269,12 +299,9 @@ class UclidSymbolicSimulator (module : Module) {
   def simulate(iter : Int, stmts: List[Statement], symbolTable: SymbolTable, c : Context) : SymbolTable = {
     return stmts.foldLeft(symbolTable)((acc,i) => simulate(iter, i, acc, c));
   }
-  
+
   def simulate(iter : Int, symbolTable: SymbolTable) : SymbolTable = {
     val state = simulate(iter, context.next, symbolTable, context)
-    this.asserts = context.specifications.foldLeft(this.asserts){(asserts, prop) =>
-      AssertInfo("property " + prop._1.toString, iter, evaluate(prop._2, symbolTable, context), prop._2.position) :: asserts
-    }
     return state
   }
   
