@@ -35,17 +35,23 @@ class UclidSymbolicSimulator (module : Module) {
   var frameTable : FrameTable = ArrayBuffer.empty
   
   def newHavocSymbol(name: String, t: smt.Type) = 
-    new smt.Symbol("_ucl_" + UniqueIdGenerator.unique() + "_" + name, t)
+    new smt.Symbol("$undef_" + UniqueIdGenerator.unique() + "_" + name, t)
   def newInputSymbol(name: String, step: Int, t: smt.Type) = {
-    new smt.Symbol("_ucl_" + step +"_" + name, t)
+    new smt.Symbol("$input_" + step +"_" + name, t)
   }
   def newConstantSymbol(name: String, t: smt.Type) = 
-    new smt.Symbol(name,t)
+    new smt.Symbol("$const_"+name,t)
   
   def execute(solver : smt.SolverInterface) : List[CheckResult] = {
     module.cmds.foreach {
       (cmd) => {
         cmd.name.toString match {
+          case "clear_context" =>
+            asserts = List.empty
+            assumes = List.empty
+            results = List.empty
+            symbolTable = Map.empty
+            frameTable.clear()
           case "initialize" => 
             initialize(false, true, false)
             results = List.empty
@@ -61,6 +67,8 @@ class UclidSymbolicSimulator (module : Module) {
             simulate(k-1, false, true)
             simulate(1, true, false)
           case "decide" =>
+            // assumes.foreach((e) => println("assumption : " + e.toString))
+            // asserts.foreach((e) => println("assertion  : " + e.toString + "; " + e.expr.toString))
             solver.addAssumptions(assumes)
             results = asserts.foldLeft(results){ 
               case (acc, e) =>
@@ -115,6 +123,8 @@ class UclidSymbolicSimulator (module : Module) {
     }
     frameTable.clear()
     frameTable += symbolTable
+    // println("*** INITIAL ****")
+    // printSymbolTable(symbolTable)
   }
 
   def simulate(number_of_steps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean) : SymbolTable = 
@@ -128,12 +138,16 @@ class UclidSymbolicSimulator (module : Module) {
     var states = new ArrayBuffer[SymbolTable]()
     
     for (step <- 1 to number_of_steps) {
+      // println("*** BEFORE STEP " + step.toString + "****")
+      // printSymbolTable(currentState)
       val stWInputs = newInputSymbols(currentState, step)
       states += stWInputs
       currentState = simulate(step, stWInputs);
       if (addAssertions) { addAsserts(step, currentState)  }
       if (addAssertionsAsAssumes) { assumeAssertions(symbolTable) }
       frameTable += currentState
+      // println("*** AFTER STEP " + step.toString + "****")
+      // printSymbolTable(currentState)
     }
 
     return currentState
@@ -209,17 +223,28 @@ class UclidSymbolicSimulator (module : Module) {
     }}
   }
 
+  def printSymbolTable(symbolTable : SymbolTable) {
+    val keys = symbolTable.keys.toList.sortWith((l, r) => l.name < r.name)
+    keys.foreach {
+      (k) => {
+        println (k.toString + " : " + symbolTable.get(k).get.toString)
+      }
+    }
+  }
+
   /** Add module specifications (properties) to the list of proof obligations */
   def addAsserts(iter : Int, symbolTable : SymbolTable) {
-    this.asserts = context.specifications.foldLeft(this.asserts){(asserts, prop) =>
-      AssertInfo("property " + prop._1.toString, iter, evaluate(prop._2, symbolTable, context), prop._2.position) :: asserts
-    }
+    this.asserts = context.specifications.foldLeft(this.asserts){(asserts, prop) => {
+      val property = AssertInfo("property " + prop._1.toString, iter, evaluate(prop._2, symbolTable, context), prop._2.position)
+      // println ("addAsserts: " + property.toString + "; " + property.expr.toString)
+      property :: asserts
+    }}
   }
   
   /** Assume assertions (for inductive proofs). */
   def assumeAssertions(symbolTable : SymbolTable) {
     this.assumes = context.specifications.foldLeft(this.assumes){
-        (acc, prop) => (evaluate(prop._2, symbolTable, context)) :: acc
+      (acc, prop) => (evaluate(prop._2, symbolTable, context)) :: acc
     }
   }
   
