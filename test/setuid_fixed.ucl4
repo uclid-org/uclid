@@ -47,17 +47,18 @@ module main {
             process_suid := operand_suid;
           }
 
-          // this is the buggy code.
+          /* this is the buggy code.
           if (operand_euid != invalid) {
             process_fsuid := operand_euid;
           }
-          /* fixed code is like this:
+          */
+          // this is fixed code.
           if (process_fsuid == privileged && 
               process_ruid != privileged  && process_euid != privileged  && process_suid != privileged)
           {
-            process_fsuid := operand_euid; // should we set this to something else?
+            // should we set this to something else?
+            process_fsuid := operand_euid; 
           }
-          */
         }
       }
       // setfsuid
