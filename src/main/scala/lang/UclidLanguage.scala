@@ -41,7 +41,7 @@ case class ASTPosition(filename : Option[String], pos : Position)  {
 /** All elements in the AST are derived from this class.
  *  The plan is to stick an ID into this later so that we can use the ID to store auxiliary information.
  */
-sealed abstract class ASTNode extends Positional {
+sealed trait ASTNode extends Positional {
   var filename : Option[String] = None
   def position : ASTPosition = ASTPosition(filename, pos)
   val astNodeId = IdGenerator.newId()
@@ -71,17 +71,15 @@ object Operator {
   val INFIX = 1
   val POSTFIX = 2
 }
-sealed abstract class Operator extends ASTNode {
-  def fixity = Operator.PREFIX
+sealed trait Operator extends ASTNode {
+  def fixity : Int
   def isPolymorphic = false
-}
-sealed abstract class InfixOperator extends Operator {
-  override def fixity = Operator.INFIX
 }
 // This is the polymorphic operator type. Typerchecker.rewrite converts these operators
 // to either the integer or bitvector versions.
-sealed abstract class PolymorphicOperator extends InfixOperator {
+sealed abstract class PolymorphicOperator extends Operator {
   override def isPolymorphic = true
+  override def fixity = Operator.INFIX
 }
 case class LTOp() extends PolymorphicOperator { override def toString = "<" }
 case class LEOp() extends PolymorphicOperator { override def toString = "<=" }
@@ -91,7 +89,9 @@ case class AddOp() extends PolymorphicOperator { override def toString = "+" }
 case class SubOp() extends PolymorphicOperator { override def toString = "-" }
 case class MulOp() extends PolymorphicOperator { override def toString = "*" }
 // These are operators with integer operators.
-sealed abstract class IntArgOperator extends InfixOperator
+sealed abstract class IntArgOperator extends Operator {
+  override def fixity = Operator.INFIX
+}
 case class IntLTOp() extends IntArgOperator { override def toString = "<" }
 case class IntLEOp() extends IntArgOperator { override def toString = "<=" }
 case class IntGTOp() extends IntArgOperator { override def toString = ">" }
@@ -100,7 +100,9 @@ case class IntAddOp() extends IntArgOperator { override def toString ="+" }
 case class IntSubOp() extends IntArgOperator { override def toString = "-" }
 case class IntMulOp() extends IntArgOperator { override def toString = "*" }
 // These operators take bitvector operands.
-sealed abstract class BVArgOperator(val w : Int) extends InfixOperator
+sealed abstract class BVArgOperator(val w : Int) extends Operator {
+  override def fixity = Operator.INFIX
+}
 case class BVLTOp(override val w : Int) extends BVArgOperator(w) { override def toString = "<" }
 case class BVLEOp(override val w : Int) extends BVArgOperator(w) { override def toString = "<=" }
 case class BVGTOp(override val w : Int) extends BVArgOperator(w) { override def toString = ">" }
@@ -113,7 +115,9 @@ case class BVOrOp(override val w : Int) extends BVArgOperator(w) { override def 
 case class BVXorOp(override val w : Int) extends BVArgOperator(w) { override def toString = "^" }
 case class BVNotOp(override val w : Int) extends BVArgOperator(w) { override def toString = "~" }
 // Boolean operators.
-sealed abstract class BooleanOperator() extends Operator { override def fixity = Operator.INFIX}
+sealed abstract class BooleanOperator extends Operator { 
+  override def fixity = Operator.INFIX 
+}
 case class ConjunctionOp() extends BooleanOperator { override def toString = "&&" }
 case class DisjunctionOp() extends BooleanOperator { override def toString = "||" }
 case class IffOp() extends BooleanOperator { override def toString = "<==>" }
@@ -122,8 +126,24 @@ case class NegationOp() extends BooleanOperator {
   override def toString = "!"
   override def fixity = Operator.INFIX
 }
+// Quantifiers
+sealed abstract class QuantifiedBooleanOperator extends BooleanOperator {
+  override def fixity = Operator.PREFIX
+  def variables : List[(Identifier, Type)]
+}
+case class ForallOp(vs : List[(Identifier, Type)]) extends QuantifiedBooleanOperator { 
+  override def toString = "forall"
+  override def variables = vs
+}
+case class ExistsOp(vs: List[(Identifier, Type)]) extends QuantifiedBooleanOperator { 
+  override def toString = "exists"
+  override def variables = vs
+}
+
 // (In-)equality operators.
-sealed abstract class ComparisonOperator() extends InfixOperator
+sealed abstract class ComparisonOperator() extends Operator {
+  override def fixity = Operator.INFIX
+}
 case class EqualityOp() extends ComparisonOperator { override def toString = "==" }
 case class InequalityOp() extends ComparisonOperator { override def toString = "!=" } 
 
@@ -167,6 +187,7 @@ case class ConcatOp() extends Operator {
 }
 case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
+  override def fixity = Operator.INFIX
 }
 
 sealed abstract class Expr extends ASTNode {
@@ -571,7 +592,9 @@ object Scope {
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ForIndexVar(iId : ConstIdentifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
   case class SpecVar(varId : Identifier, expr: Expr) extends NamedExpression(varId, BoolType())
-  case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends NamedExpression(enumId, enumTyp) 
+  case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends NamedExpression(enumId, enumTyp)
+  case class ForallVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
+  case class ExistsVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
 
   type IdentifierMap = Map[IdentifierBase, NamedExpression]
   def addToMap(map : Scope.IdentifierMap, expr: Scope.NamedExpression) : Scope.IdentifierMap = {
@@ -681,6 +704,20 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
     }
     return new ScopeMap(newMap, module, procedure)
   }
+  def +(opapp : OperatorApplication) : ScopeMap = {
+    return opapp.op match {
+      case ForallOp(vs) =>
+        new ScopeMap(
+            vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
+            module, procedure)
+      case ExistsOp(vs) =>
+        new ScopeMap(
+            vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
+            module, procedure)
+      case _ => this
+    }
+  }
+
   /** Return the type of an identifier in this context. */
   def typeOf(id : IdentifierBase) : Option[Type] = {
     map.get(id).flatMap((e) => Some(e.typ))

@@ -537,12 +537,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnTuple(TraversalDirection.Up, rec, result, context)
     return result
   }
-  def visitOperatorApp(opapp : OperatorApplication, in : T, context : ScopeMap) : T = {
+  def visitOperatorApp(opapp : OperatorApplication, in : T, contextIn : ScopeMap) : T = {
     var result : T = in
-    result = pass.applyOnOperatorApp(TraversalDirection.Down, opapp, result, context)
-    result = visitOperator(opapp.op, result, context)
-    result = opapp.operands.foldLeft(result)((acc, i) => visitExpr(i, acc, context))
-    result = pass.applyOnOperatorApp(TraversalDirection.Up, opapp, result, context)
+    result = pass.applyOnOperatorApp(TraversalDirection.Down, opapp, result, contextIn)
+    result = visitOperator(opapp.op, result, contextIn)
+    result = opapp.operands.foldLeft(result)((acc, i) => visitExpr(i, acc, contextIn + opapp))
+    result = pass.applyOnOperatorApp(TraversalDirection.Up, opapp, result, contextIn)
     return result
   }
   def visitOperator(op : Operator, in : T, context : ScopeMap) : T = {
@@ -1170,7 +1170,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   
   def visitOperatorApp(opapp : OperatorApplication, context : ScopeMap) : Option[OperatorApplication] = {
     val opAppP = visitOperator(opapp.op, context).flatMap((op) => {
-      pass.rewriteOperatorApp(OperatorApplication(op, opapp.operands.map(visitExpr(_, context)).flatten), context)
+      pass.rewriteOperatorApp(OperatorApplication(op, opapp.operands.map(visitExpr(_, context + opapp)).flatten), context)
     })
     astChangeFlag = astChangeFlag || (opAppP != Some(opapp))
     return ASTNode.introducePos(opAppP, opapp.pos)
