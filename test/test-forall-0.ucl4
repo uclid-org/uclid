@@ -7,11 +7,6 @@ module main
   
   init {
     assume (forall (i : int) : numbers[i] == 0);
-    /*
-    for i in range(0, 10) {
-      numbers[i] := 0;
-    }
-    */
     sum := 0;
     index := 0;
   }
@@ -27,7 +22,7 @@ module main
   
   control {
     initialize;
-    simulate (3);
+    simulate (4);
     decide;
     print_results;
     print_cex(sum, value, numbers[0], numbers[1], numbers[2], numbers[3]);

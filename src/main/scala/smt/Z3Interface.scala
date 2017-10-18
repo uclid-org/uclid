@@ -33,15 +33,22 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
   val solver = z3Solver
   
   /* Unique names for Tuples. */
-  val tupleNamer = new UniqueNamer("__ucl_tuple")
+  val tupleNamer = new UniqueNamer("$tuple")
   def getTupleName() : z3.Symbol = { 
     return ctx.mkSymbol(tupleNamer.newName())
   }
   /* Unique names for Enums. */
-  val enumNamer = new UniqueNamer("__ucl_enum")
+  val enumNamer = new UniqueNamer("$enum")
   def getEnumName() : String = {
     enumNamer.newName()
   }
+  /* Unique names for quantifiers. */
+  val forallNamer = new UniqueNamer("$forall")
+  def getForallName() = ctx.mkSymbol(forallNamer.newName())
+  val existsNamer = new UniqueNamer("$exists")
+  def getExistsName() = ctx.mkSymbol(existsNamer.newName())
+  val skolemNamer = new UniqueNamer("$skolem")
+  def getSkolemName() = ctx.mkSymbol(skolemNamer.newName())
 
   /** Returns tuple field names. */
   val getTupleFieldNames = new Memo[Int, Array[z3.Symbol]]((n : Int) => {
@@ -202,12 +209,12 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case ConjunctionOp          => ctx.mkAnd (boolArgs : _*)
       case DisjunctionOp          => ctx.mkOr (boolArgs : _*)
       case ForallOp(vs)           =>
-        val qTyps = vs.map((v) => getZ3Sort(v.typ)).toArray
-        val qVars = vs.map((v) => ctx.mkSymbol(v.toString).asInstanceOf[z3.Symbol]).toArray
-        val forall = ctx.mkForall(qTyps, qVars, boolArgs(0), 1, null, null, null, null)
-        println("forall " + op.toString + Utils.join(operands.map(_.toString), ", "))
-        println("forall: " + forall.toString)
-        forall
+        // val qTyps = vs.map((v) => getZ3Sort(v.typ)).toArray
+        val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
+        ctx.mkForall(qVars, boolArgs(0), 1, null, null, getForallName(), getSkolemName())
+      case ExistsOp(vs)           =>
+        val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
+        ctx.mkExists(qVars, boolArgs(0), 1, null, null, getExistsName(), getSkolemName())
       case RecordSelectOp(fld)    =>
         val prodType = operands(0).typ.asInstanceOf[ProductType]
         val fieldIndex = prodType.fieldIndex(fld)
@@ -300,7 +307,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     solver.push()
     es.foreach((e) => {
       val eZ3 = exprToZ3(e).asInstanceOf[z3.BoolExpr]
-      println("assumption: " + eZ3.toString)
+      // println("assumption: " + eZ3.toString)
       solver.add(eZ3)
     })
   }

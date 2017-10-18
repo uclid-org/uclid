@@ -60,4 +60,7 @@ class VerifierSpec extends FlatSpec {
   "test/test-enum-1.ucl4" should "verify all assertions." in {
     nTestsFail("./test/test-enum-1.ucl4", 0)
   }
+  "test/test-forall-0.ucl4" should "verify all assertions." in {
+    nTestsFail("./test/test-forall-0.ucl4", 0)
+  }
 }

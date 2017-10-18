@@ -48,7 +48,7 @@ object Utils {
 class UniqueNamer(val prefix : String) {
   var count = 0
   def newName() : String = {
-    val name : String = prefix + "__" + count.toString
+    val name : String = prefix + ":" + count.toString
     count = count + 1
     return name
   }
