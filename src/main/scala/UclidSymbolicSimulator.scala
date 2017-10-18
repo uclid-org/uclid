@@ -317,6 +317,9 @@ class UclidSymbolicSimulator (module : Module) {
       case InequalityOp() => return smt.InequalityOp
       // Record select.
       case RecordSelect(r) => return smt.RecordSelectOp(r.name)
+      // Quantifiers
+      case ForallOp(vs) => return smt.ForallOp(vs.map(v => smt.Symbol(v._1.toString, toSMT(v._2, context))))
+      case ExistsOp(vs) => return smt.ExistsOp(vs.map(v => smt.Symbol(v._1.toString, toSMT(v._2, context))))
       case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
     }
   }
@@ -478,7 +481,7 @@ class UclidSymbolicSimulator (module : Module) {
   def evaluate(e: Expr, symbolTable: SymbolTable, context: Context) : smt.Expr = {
      val smtExpr = e match { //check that all identifiers in e have been declared
        case OperatorApplication(op,args) =>
-         return smt.OperatorApplication(toSMT(op,context), args.map(i => evaluate(i, symbolTable, context)))
+         return smt.OperatorApplication(toSMT(op,context), args.map(i => evaluate(i, symbolTable, context.contextWithOperatorApplication(op))))
        case ArraySelectOperation(a,index) => 
          return smt.ArraySelectOperation(evaluate(a, symbolTable, context), 
              index.map { x => evaluate(x,symbolTable,context) })
@@ -510,7 +513,13 @@ class UclidSymbolicSimulator (module : Module) {
        case IntLit(n) => smt.IntLit(n)
        case BoolLit(b) => smt.BooleanLit(b)
        case BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
-       case Identifier(id) => symbolTable(Identifier(id))
+       case Identifier(id) =>
+         val qVars = context.forallVars ++ context.existsVars
+         val qTyp = qVars.get(Identifier(id))
+         qTyp match {
+           case Some(typ) => smt.Symbol(id.toString, toSMT(typ, context))
+           case None => symbolTable(Identifier(id))
+         }
        case Tuple(args) => smt.MakeTuple(args.map(i => evaluate(i, symbolTable, context)))
        case _ => throw new Utils.UnimplementedException("Support not implemented for expression: " + e.toString)
     }

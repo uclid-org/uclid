@@ -11,7 +11,9 @@ import scala.util.parsing.input.Position
 
 object Utils {
   def assert(b: Boolean, err: String) : Unit = {
-    if (!b) { throw new AssertionError(err) }
+    if (!b) { 
+      throw new AssertionError(err) 
+    }
   }
   def raiseParsingError(err: String, pos : Position, fileName : Option[String]) : Unit = {
     throw new ParserError(err, Some(pos), fileName)

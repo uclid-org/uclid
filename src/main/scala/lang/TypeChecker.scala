@@ -235,7 +235,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
       return bvOp
     }
     def opAppType(opapp : OperatorApplication) : Type = {
-      val argTypes = opapp.operands.map(typeOf(_, c))
+      val argTypes = opapp.operands.map(typeOf(_, c + opapp))
       opapp.op match {
         case polyOp : PolymorphicOperator => {
           Utils.checkParsingError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.", opapp.pos, c.filename)
@@ -279,6 +279,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
               bvOpMap.put(bvOp.astNodeId, t.width)
               t
           }
+        }
+        case qOp : QuantifiedBooleanOperator => {
+          Utils.checkParsingError(argTypes(0).isInstanceOf[BoolType], "Operand to the quantifier '" + qOp.toString + "' must be boolean.", opapp.pos, c.filename)
+          new BoolType()
         }
         case boolOp : BooleanOperator => {
           boolOp match {

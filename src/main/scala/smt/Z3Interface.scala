@@ -136,7 +136,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     
     exprSort match {
       case VarSort(s) => 
-        ctx.mkFreshConst(sym.id, s)
+        ctx.mkConst(sym.id, s)
       case MapSort(ins, out) => 
         ctx.mkFuncDecl(sym.id, ins.map(getZ3Sort _).toArray, getZ3Sort(out))
     }
@@ -201,6 +201,13 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case InequalityOp           => ctx.mkDistinct(exprArgs(0), exprArgs(1))
       case ConjunctionOp          => ctx.mkAnd (boolArgs : _*)
       case DisjunctionOp          => ctx.mkOr (boolArgs : _*)
+      case ForallOp(vs)           =>
+        val qTyps = vs.map((v) => getZ3Sort(v.typ)).toArray
+        val qVars = vs.map((v) => ctx.mkSymbol(v.toString).asInstanceOf[z3.Symbol]).toArray
+        val forall = ctx.mkForall(qTyps, qVars, boolArgs(0), 1, null, null, null, null)
+        println("forall " + op.toString + Utils.join(operands.map(_.toString), ", "))
+        println("forall: " + forall.toString)
+        forall
       case RecordSelectOp(fld)    =>
         val prodType = operands(0).typ.asInstanceOf[ProductType]
         val fieldIndex = prodType.fieldIndex(fld)
@@ -255,9 +262,9 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case _ =>
         throw new Utils.UnimplementedException("No translation for expression yet: " + e.toString)
     }
-    // z3AST
-    if (z3AST.isInstanceOf[z3.Expr]) z3AST.asInstanceOf[z3.Expr].simplify()
-    else z3AST
+    z3AST
+    // if (z3AST.isInstanceOf[z3.Expr]) z3AST.asInstanceOf[z3.Expr].simplify()
+    // else z3AST
   })
   
   override def addConstraint(e : Expr) : Unit = {
@@ -271,12 +278,14 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     
     solver.push()
     solver.add(z3Expr.asInstanceOf[z3.BoolExpr])
-    // println(solver.toString())
+    println(solver.toString())
     val z3Result = solver.check()
+    println(z3Result.toString)
     
     val checkResult : SolverResult = z3Result match {
       case z3.Status.SATISFIABLE =>
         val z3Model = solver.getModel()
+        println("model: " + z3Model.toString)
         SolverResult(Some(true), Some(new Z3Model(this, z3Model))) 
       case z3.Status.UNSATISFIABLE =>
         SolverResult(Some(false), None)
@@ -290,7 +299,9 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
   override def addAssumptions(es : List[Expr]) {
     solver.push()
     es.foreach((e) => {
-      solver.add(exprToZ3(e).asInstanceOf[z3.BoolExpr])
+      val eZ3 = exprToZ3(e).asInstanceOf[z3.BoolExpr]
+      println("assumption: " + eZ3.toString)
+      solver.add(eZ3)
     })
   }
   override def popAssumptions() {

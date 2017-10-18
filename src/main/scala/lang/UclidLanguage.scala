@@ -704,6 +704,7 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
     }
     return new ScopeMap(newMap, module, procedure)
   }
+  /** Return a new context with quantifier variables added. */
   def +(opapp : OperatorApplication) : ScopeMap = {
     return opapp.op match {
       case ForallOp(vs) =>

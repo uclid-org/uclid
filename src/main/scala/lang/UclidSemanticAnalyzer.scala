@@ -10,6 +10,8 @@ class Context {
   var inputs: Map[Identifier, Type] = _
   var outputs: Map[Identifier, Type] = _
   var constants: Map[Identifier, Type] = _
+  var forallVars: Map[Identifier, Type] = Map.empty
+  var existsVars: Map[Identifier, Type] = Map.empty
   var specifications: Map[Identifier, Expr] = _
   var enumeratedConstants : Map[Identifier, EnumType] = _
   var types : Map[Identifier, Type] = _
@@ -90,6 +92,8 @@ class Context {
     copy.inputs = this.inputs
     copy.outputs = this.outputs
     copy.procedures = this.procedures
+    copy.forallVars = this.forallVars
+    copy.existsVars = this.existsVars
     copy.specifications = this.specifications
     copy.types = this.types
     copy.enumeratedConstants = this.enumeratedConstants
@@ -97,6 +101,21 @@ class Context {
     copy.init = this.init
     copy.next = this.next
     return copy
+  }
+  
+  def contextWithOperatorApplication(op : Operator) : Context = {
+    op match {
+     case ForallOp(vs) =>
+       val c2 = this.copyContext()
+       c2.forallVars = c2.forallVars ++ (vs.map((i) => i._1 -> i._2).toMap)
+       c2
+     case ExistsOp(vs) =>
+       var c2 = this.copyContext()
+       c2.existsVars = c2.existsVars ++ (vs.map(i => i._1 -> i._2).toMap)
+       c2
+     case _ =>
+       this
+    }
   }
   
   def externalDecls() : List[Identifier] = {
@@ -382,8 +401,8 @@ object UclidSemanticAnalyzer {
     e match {
       // Temporal operators
       case OperatorApplication(op,es) =>
-        lazy val types = es.map { e => typeOf (e,c) }
-        val temporalArgs = types.exists { x => x._2}
+        lazy val types = es.map { e => typeOf (e,c.contextWithOperatorApplication(op)) }
+        lazy val temporalArgs = types.exists { x => x._2}
         return op match {
           case AddOp() | SubOp() | MulOp() | LTOp() | LEOp() | GTOp() | GEOp() => 
             throw new Utils.RuntimeError("Polymorphic operators not expected here.")
@@ -413,6 +432,10 @@ object UclidSemanticAnalyzer {
             Utils.assert(types.forall(_._1.isNumeric), "Arguments to comparison operators must be numeric.")
             (BoolType(), temporalArgs)
           }
+          case qOp : QuantifiedBooleanOperator =>
+            Utils.assert(types.size == 1, "Expected one argument to quantifier.")
+            Utils.assert(types(0)._1.isBool, "Argument to quantifier must be a boolean.")
+            (BoolType(), temporalArgs)
           case ConjunctionOp() | DisjunctionOp() | IffOp() | ImplicationOp() => {
             Utils.assert(types.size == 2, "Expected two arguments to Boolean operators.")
             Utils.assert(types(0)._1.isBool, "First operand to Boolean operator must be of Boolean type. Instead got: " + types(0).toString + "; expression: " + e.toString)
@@ -498,7 +521,7 @@ object UclidSemanticAnalyzer {
         Utils.assert(!t._2, "What do you need a Lambda expression with temporal type for!?")
         return (MapType(ids.map(i => i._2), t._1), false) //Lambda expr returns a map type
       case id : IdentifierBase =>
-        val vars = (c.constants ++ c.variables ++ c.inputs ++ c.outputs ++ c.enumeratedConstants)
+        val vars = (c.constants ++ c.variables ++ c.inputs ++ c.outputs ++ c.enumeratedConstants ++ c.forallVars ++ c.existsVars)
         var someId = vars.get(Identifier(id.name))
         if (someId.isDefined) {
           (someId.get, false)
@@ -517,7 +540,8 @@ object UclidSemanticAnalyzer {
   def checkExpr(e: Expr, c: Context) : Unit = {
     val externalDecls : List[Identifier] = c.externalDecls()
      e match { //check that all identifiers in e have been declared
-       case OperatorApplication(op,args) => args.foreach { x => checkExpr(x,c) }
+       case OperatorApplication(op,args) =>
+         args.foreach(checkExpr(_, c.contextWithOperatorApplication(op)))
        case ArraySelectOperation(a,index) => checkExpr(a,c); index.foreach { x => checkExpr(x,c) }
        case ArrayStoreOperation(a,index,value) => 
          checkExpr(a,c); index.foreach { x => checkExpr(x,c) }; checkExpr(value, c);
@@ -543,7 +567,7 @@ object UclidSemanticAnalyzer {
          c2.inputs = c.inputs ++ (ids.map(i => i._1 -> i._2).toMap)
          checkExpr(le,c2);
        case Identifier(id) => 
-         Utils.assert((c.constants.keys ++ c.functions.keys ++ c.inputs.keys ++ c.outputs.keys ++ c.variables.keys ++ c.enumeratedConstants.keys).
+         Utils.assert((c.constants.keys ++ c.functions.keys ++ c.inputs.keys ++ c.outputs.keys ++ c.variables.keys ++ c.enumeratedConstants.keys ++ c.forallVars.keys ++ c.existsVars.keys).
          exists{i => i.name == id}, "Identifier " + id + " not found");
        case _ => ()
      }

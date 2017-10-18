@@ -181,6 +181,25 @@ abstract class BoolResultOp extends Operator {
   override def fixity = { INFIX }
 }
 
+abstract class QuantifierOp extends BoolResultOp {
+  def variables : List[Symbol]
+
+  override def fixity = PREFIX
+  override def typeCheck (args: List[Expr]) = {
+    Utils.assert(args.size == 1, this.toString + " must have exactly one operand.")
+    Utils.assert(args.size == 1, this.toString + " must have exactly one operand.")
+  }
+}
+
+case class ForallOp(vs : List[Symbol]) extends QuantifierOp {
+  override def variables = vs
+  override def toString = "forall (" + Utils.join(vs.map(i => i.toString + ": " + i.typ.toString), ", ") + "): "
+}
+case class ExistsOp(vs : List[Symbol]) extends QuantifierOp {
+  override def variables = vs
+  override def toString = "exists (" + Utils.join(vs.map(i => i.toString + ": " + i.typ.toString), ", ") + "): "
+}
+
 case object IffOp extends BoolResultOp { 
   override def toString = "<==>"
   override def typeCheck (args: List[Expr]) = {
