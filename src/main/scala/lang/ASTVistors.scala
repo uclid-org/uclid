@@ -113,7 +113,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   // We now have the code that actually traverses the AST.
   def visitModule(module : Module, in : T) : T = {
     var result : T = in
-    val emptyContext = new ScopeMap()
+    val emptyContext = ScopeMap.empty
     val context = emptyContext + module
 
     result = pass.applyOnModule(TraversalDirection.Down, module, result, emptyContext)
@@ -680,7 +680,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass) extends ASTAnalysis {
   
   def visitModule(module : Module) : Option[Module] = {
     astChangeFlag = false
-    val emptyContext = new ScopeMap()
+    val emptyContext = ScopeMap.empty
     val context = emptyContext + module
     val id = visitIdentifier(module.id, context)
     val decls = module.decls.map(visitDecl(_, context)).flatten
@@ -1278,7 +1278,7 @@ class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   extends ASTRewriter(name, new ExprRewriterPass(rewrites))
 {
   def rewriteStatements(stmts : List[Statement]) : List[Statement] = {
-    val emptyContext = new ScopeMap()
+    val emptyContext = ScopeMap.empty
     return stmts.flatMap(visitStatement(_, emptyContext))
   }
 }

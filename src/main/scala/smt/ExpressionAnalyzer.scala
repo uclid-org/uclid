@@ -4,31 +4,32 @@ package smt
 import scala.collection.mutable.Map
 import scala.collection.immutable.Set
 
-object ExpressionAnalyzer {
+object Converter {
   type SymbolTable = Map[lang.Identifier, smt.Symbol]
   
   def typeToSMT(typ : lang.Type) : smt.Type = {
     typ match {
-      case lang.IntType() => return smt.IntType()
-      case lang.BoolType() => return smt.BoolType()
-      case lang.BitVectorType(w) => return smt.BitVectorType(w)
+      case lang.IntType() => 
+        smt.IntType()
+      case lang.BoolType() => 
+        smt.BoolType()
+      case lang.BitVectorType(w) => 
+        smt.BitVectorType(w)
       case lang.MapType(inTypes,outType) => 
-        Utils.assert(inTypes.forall(_.isPrimitive) && outType.isPrimitive, 
-            "Only maps with primitive types are implemented.")
-        return smt.MapType(inTypes.map(typeToSMT(_)), typeToSMT(outType)) 
+        smt.MapType(inTypes.map(typeToSMT(_)), typeToSMT(outType)) 
       case lang.ArrayType(inTypes,outType) => 
-        Utils.assert(inTypes.forall(_.isPrimitive) && outType.isPrimitive, 
-            "Only arrays with primitive types are implemented.")
-        return smt.ArrayType(inTypes.map(typeToSMT(_)), typeToSMT(outType)) 
+        smt.ArrayType(inTypes.map(typeToSMT(_)), typeToSMT(outType)) 
       case lang.TupleType(argTypes) => 
-        return smt.TupleType(argTypes.map(typeToSMT(_)))
+        smt.TupleType(argTypes.map(typeToSMT(_)))
       case lang.RecordType(fields) =>
-        return smt.RecordType(fields.map((f) => (f._1.toString, typeToSMT(f._2))))
+        smt.RecordType(fields.map((f) => (f._1.toString, typeToSMT(f._2))))
+      case lang.EnumType(ids) =>
+        smt.EnumType(ids.map(_.name))
       case _ => throw new Utils.UnimplementedException("Unimplemented type: " + typ.toString)
     }
   }
   
-  def operatorToSMT(op : lang.Operator) : smt.Operator = {
+  def opToSMT(op : lang.Operator) : smt.Operator = {
     op match {
       // Integer operators.
       case lang.IntLTOp() => return smt.IntLTOp
@@ -72,8 +73,8 @@ object ExpressionAnalyzer {
   }
   
   def exprToSMT(expr : lang.Expr, scope : lang.ScopeMap) : smt.Expr = {
-    def toSMT(e : lang.Expr) : smt.Expr = exprToSMT(e, scope)
-    def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map(toSMT(_))
+    def toSMT(expr : lang.Expr) : smt.Expr = exprToSMT(expr, scope)
+    def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e))
     
      expr match {
        case lang.Identifier(id) => 
@@ -84,7 +85,7 @@ object ExpressionAnalyzer {
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
        case lang.Tuple(args) => smt.MakeTuple(toSMTs(args))
        case lang.OperatorApplication(op,args) =>
-         return smt.OperatorApplication(operatorToSMT(op), toSMTs(args))
+         return smt.OperatorApplication(opToSMT(op), toSMTs(args))
        case lang.ArraySelectOperation(a,index) => 
          return smt.ArraySelectOperation(toSMT(a), toSMTs(index))
        case lang.ArrayStoreOperation(a,index,value) => 

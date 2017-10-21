@@ -27,9 +27,10 @@ class UclidSymbolicSimulator (module : Module) {
   var asserts : List[AssertInfo] = List.empty
   var assumes : List[smt.Expr] = List.empty
   var results : List[CheckResult] = List.empty
-  var context : Context = new Context();
+  var context : Context = new Context()
+  val scope = ScopeMap.empty + module
   
-  type SymbolTable = Map[Identifier, smt.Expr];
+  type SymbolTable = Map[IdentifierBase, smt.Expr];
   var symbolTable : SymbolTable = Map.empty
   type FrameTable = ArrayBuffer[SymbolTable]
   var frameTable : FrameTable = ArrayBuffer.empty
@@ -96,19 +97,20 @@ class UclidSymbolicSimulator (module : Module) {
   }
 
   def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean) {
+    val initSymbolTable = scope.map.foldLeft(Map.empty[IdentifierBase, smt.Expr]){
+      (mapAcc, decl) => {
+        decl._2 match {
+          case Scope.ConstantVar(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.Function(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
+          case Scope.InputVar(id, typ) => mapAcc + (id -> newHavocSymbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.OutputVar(id, typ) => mapAcc + (id -> newHavocSymbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.StateVar(id, typ) => mapAcc + (id -> newHavocSymbol(id.name, smt.Converter.typeToSMT(typ)))
+          case _ => mapAcc
+        }
+      }
+    }
     context.extractContext(module)
-    val cnstSymbolTable = context.constants.foldLeft(Map.empty[Identifier, smt.Expr]){
-      (acc,i) => acc + (i._1 -> newConstantSymbol(i._1.name, toSMT(context.constants(i._1),context)))
-    }
-    val cnstAndFuncTable = context.functions.foldLeft(cnstSymbolTable){
-      (acc,i) => acc + (i._1 -> newConstantSymbol(i._1.name, toSMT(i._2.typ, context)))
-    }
-    val enumCnstAndFuncTable = context.enumeratedConstants.foldLeft(cnstAndFuncTable){
-      (acc,i) => acc + (i._1 -> EnumLit(i._1.nam, smt.EnumType(i._2.ids.map(_.toString)))) 
-    }
-    val initSymbolTable = (context.variables ++ context.outputs).foldLeft(enumCnstAndFuncTable){
-      (acc, i) => acc + (i._1 -> newHavocSymbol(i._1.name, toSMT(i._2, context)))
-    }
     symbolTable = if (!havocInit) { 
       simulate(0, context.init, initSymbolTable, context)
     } else {
@@ -130,8 +132,11 @@ class UclidSymbolicSimulator (module : Module) {
   def simulate(number_of_steps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean) : SymbolTable = 
   {
     def newInputSymbols(st : SymbolTable, step : Int) : SymbolTable = {
-      context.inputs.foldLeft(st)((acc,i) => {
-        acc + (i._1 -> newInputSymbol(i._1.name, step, toSMT(i._2, context))) 
+      scope.map.foldLeft(st)((acc, decl) => {
+        decl._2 match {
+          case Scope.InputVar(id, typ) => acc + (id -> newInputSymbol(id.name, step, smt.Converter.typeToSMT(typ)))
+          case _ => acc
+        }
       })
     }
     var currentState = symbolTable
@@ -249,39 +254,7 @@ class UclidSymbolicSimulator (module : Module) {
   }
   
 
-  def toSMT(t: Type, context: Context) : smt.Type = {
-    def dealWithFunc(inTypes: List[Type], outType: Type) : Unit = {
-      if (inTypes.filter { x => !(x.isInstanceOf[BoolType] || x.isInstanceOf[IntType]) }.size > 0 ||
-          !(outType.isInstanceOf[BoolType] || outType.isInstanceOf[IntType])
-      ) {
-        throw new Utils.UnimplementedException("Primitive map types implemented thus far")
-      }
-    }
-    t match {
-      case IntType() => return smt.IntType()
-      case BoolType() => return smt.BoolType()
-      case BitVectorType(w) => return smt.BitVectorType(w)
-      case MapType(inTypes,outType) => 
-        //dealWithFunc(inTypes, outType);
-        return smt.MapType(inTypes.map(t => 
-          toSMT(UclidSemanticAnalyzer.transitiveType(t,context),context)), 
-          toSMT(UclidSemanticAnalyzer.transitiveType(outType,context),context))
-      case ArrayType(inTypes,outType) => 
-        //dealWithFunc(inTypes, outType);
-        return smt.ArrayType(inTypes.map(t => 
-          toSMT(UclidSemanticAnalyzer.transitiveType(t,context),context)), 
-          toSMT(UclidSemanticAnalyzer.transitiveType(outType,context),context))
-      case TupleType(argTypes) => 
-        return smt.TupleType(argTypes.map(toSMT(_, context)))
-      case RecordType(fields) =>
-        return smt.RecordType(fields.map((f) => (f._1.toString, toSMT(f._2, context))))
-      case EnumType(ids) => 
-        smt.EnumType(ids.map(_.name))
-      case _ => throw new Utils.UnimplementedException("Need to handle more types here.")
-    }
-  }
-
-  def toSMT(op: Operator, context: Context) : smt.Operator = {
+  def toSMT(op: Operator) : smt.Operator = {
     op match {
       // Polymorphic operators are not allowed.
       case p : PolymorphicOperator => throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")
@@ -318,8 +291,8 @@ class UclidSymbolicSimulator (module : Module) {
       // Record select.
       case RecordSelect(r) => return smt.RecordSelectOp(r.name)
       // Quantifiers
-      case ForallOp(vs) => return smt.ForallOp(vs.map(v => smt.Symbol(v._1.toString, toSMT(v._2, context))))
-      case ExistsOp(vs) => return smt.ExistsOp(vs.map(v => smt.Symbol(v._1.toString, toSMT(v._2, context))))
+      case ForallOp(vs) => return smt.ForallOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
+      case ExistsOp(vs) => return smt.ExistsOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
       case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
     }
   }
@@ -380,13 +353,13 @@ class UclidSymbolicSimulator (module : Module) {
         this.assumes = this.assumes ++ List(evaluate(e,symbolTable,c))
         return symbolTable
       case HavocStmt(id) => 
-        return symbolTable.updated(id, newHavocSymbol(id.name, toSMT(c.variables(id),c)))
+        return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(c.variables(id))))
       case AssignStmt(lhss,rhss) =>
         val es = rhss.map(i => evaluate(i, symbolTable, c));
         return simulateAssign(lhss, es, symbolTable)
       case IfElseStmt(e,then_branch,else_branch) =>
-        var then_modifies : Set[Identifier] = writeSet(then_branch,c)
-        var else_modifies : Set[Identifier] = writeSet(else_branch,c)
+        var then_modifies : Set[IdentifierBase] = writeSet(then_branch,c)
+        var else_modifies : Set[IdentifierBase] = writeSet(else_branch,c)
         //compute in parallel
         var then_st : SymbolTable = simulate(iter, then_branch, symbolTable, c)
         var else_st : SymbolTable = simulate(iter, else_branch, symbolTable, c)
@@ -404,8 +377,8 @@ class UclidSymbolicSimulator (module : Module) {
         c2.inputs = c.inputs ++ (proc.sig.inParams.map(i => i._1 -> i._2).toMap)
         c2.variables = c.variables ++ (proc.sig.outParams.map(i => i._1 -> i._2).toMap)
         c2.variables = c2.variables ++ (proc.decls.map(i => i.id -> i.typ).toMap)
-        st = proc.decls.foldLeft(st)((acc,i) => acc + (i.id -> newHavocSymbol(i.id.name, toSMT(i.typ,c2))));
-        st = proc.sig.outParams.foldLeft(st)((acc, i) => acc + (i._1 -> newHavocSymbol(i._1.name, toSMT(i._2, c2))))
+        st = proc.decls.foldLeft(st)((acc,i) => acc + (i.id -> newHavocSymbol(i.id.name, smt.Converter.typeToSMT(i.typ))));
+        st = proc.sig.outParams.foldLeft(st)((acc, i) => acc + (i._1 -> newHavocSymbol(i._1.name, smt.Converter.typeToSMT(i._2))))
         st = simulate(iter, proc.body, st, c2)
         st = simulateAssign(lhss, proc.sig.outParams.map(i => st(i._1)), st)
         //remove procedure arguments
@@ -415,8 +388,8 @@ class UclidSymbolicSimulator (module : Module) {
     }
   }
 
-  def writeSet(stmts: List[Statement], c: Context) : Set[Identifier] = {
-    def stmtWriteSet(stmt: Statement, c: Context) : Set[Identifier] = stmt match {
+  def writeSet(stmts: List[Statement], c: Context) : Set[IdentifierBase] = {
+    def stmtWriteSet(stmt: Statement, c: Context) : Set[IdentifierBase] = stmt match {
       case SkipStmt() => Set.empty
       case AssertStmt(e, id) => Set.empty
       case AssumeStmt(e, id) => Set.empty
@@ -427,10 +400,10 @@ class UclidSymbolicSimulator (module : Module) {
         return writeSet(then_branch,c) ++ writeSet(else_branch,c)
       case ForStmt(id, range, body) => return writeSet(body,c)
       case CaseStmt(body) => 
-        return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2,c) }
+        return body.foldLeft(Set.empty[IdentifierBase]) { (acc,i) => acc ++ writeSet(i._2,c) }
       case ProcedureCallStmt(id,lhss,args) => return writeSet(c.procedures(id).body,c)
     }
-    return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ stmtWriteSet(s,c)}
+    return stmts.foldLeft(Set.empty[IdentifierBase]){(acc,s) => acc ++ stmtWriteSet(s,c)}
   }
 
   //TODO: get rid of this and use subtituteSMT instead
@@ -481,7 +454,7 @@ class UclidSymbolicSimulator (module : Module) {
   def evaluate(e: Expr, symbolTable: SymbolTable, context: Context) : smt.Expr = {
      val smtExpr = e match { //check that all identifiers in e have been declared
        case OperatorApplication(op,args) =>
-         return smt.OperatorApplication(toSMT(op,context), args.map(i => evaluate(i, symbolTable, context.contextWithOperatorApplication(op))))
+         return smt.OperatorApplication(toSMT(op), args.map(i => evaluate(i, symbolTable, context.contextWithOperatorApplication(op))))
        case ArraySelectOperation(a,index) => 
          return smt.ArraySelectOperation(evaluate(a, symbolTable, context), 
              index.map { x => evaluate(x,symbolTable,context) })
@@ -509,7 +482,7 @@ class UclidSymbolicSimulator (module : Module) {
        case ITE(cond,t,f) =>
          return smt.ITE(evaluate(cond,symbolTable,context), evaluate(t,symbolTable,context), evaluate(f,symbolTable,context))
        case Lambda(ids,le) => 
-         return smt.Lambda(ids.map(i => smt.Symbol(i._1.name, toSMT(i._2,context))), evaluate(le,symbolTable,context))
+         return smt.Lambda(ids.map(i => smt.Symbol(i._1.name, smt.Converter.typeToSMT(i._2))), evaluate(le,symbolTable,context))
        case IntLit(n) => smt.IntLit(n)
        case BoolLit(b) => smt.BooleanLit(b)
        case BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
@@ -517,7 +490,7 @@ class UclidSymbolicSimulator (module : Module) {
          val qVars = context.forallVars ++ context.existsVars
          val qTyp = qVars.get(Identifier(id))
          qTyp match {
-           case Some(typ) => smt.Symbol(id.toString, toSMT(typ, context))
+           case Some(typ) => smt.Symbol(id.toString, smt.Converter.typeToSMT(typ))
            case None => symbolTable(Identifier(id))
          }
        case Tuple(args) => smt.MakeTuple(args.map(i => evaluate(i, symbolTable, context)))

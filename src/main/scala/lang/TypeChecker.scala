@@ -4,7 +4,7 @@ package lang
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.immutable.{Map => ImmutableMap}
-import uclid.smt.ExpressionAnalyzer
+
 
 class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
 {
@@ -136,7 +136,7 @@ class BitVectorIndexRewriterPass extends RewritePass {
         val loL = lang.IntLit(slice.lo)
         val subL = lang.OperatorApplication(lang.IntSubOp(), List(hiL, loL))
         val width = lang.OperatorApplication(lang.IntAddOp(), List(subL, lang.IntLit(1)))
-        val isCnst = ExpressionAnalyzer.isExprConst(width, ctx)
+        val isCnst = smt.Converter.isExprConst(width, ctx)
         println("width: " + width.toString + "; isCnst: " + isCnst.toString)
       case _ =>
     }

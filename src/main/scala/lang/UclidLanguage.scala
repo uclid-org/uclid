@@ -626,6 +626,11 @@ object Scope {
   }
 }
 
+object ScopeMap {
+  /** Create an empty context. */
+  def empty : ScopeMap = ScopeMap(Map.empty[IdentifierBase, Scope.NamedExpression], None, None)
+}
+
 case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl]) {
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: IdentifierBase) = map.contains(name)
@@ -635,13 +640,9 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
   def filename : Option[String] = {
     module.flatMap((m) => m.filename)
   }
-  /** Create an empty context. */
-  def this() {
-    this(Map.empty[IdentifierBase, Scope.NamedExpression], None, None)
-  }
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : ScopeMap = {
-    new ScopeMap(map + (expr.id -> expr), module, procedure)
+    ScopeMap(map + (expr.id -> expr), module, procedure)
   }
   def +(typ : Type) : ScopeMap = {
     ScopeMap(Scope.addTypeToMap(map, typ, module), module, procedure)
@@ -695,30 +696,30 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
     val map3 = proc.decls.foldLeft(map2){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureLocalVar(arg.id, arg.typ))
     }
-    return new ScopeMap(map3, module, Some(proc))
+    return ScopeMap(map3, module, Some(proc))
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
   def +(lambda: Lambda) : ScopeMap = {
     val newMap = lambda.ids.foldLeft(map){ 
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }
-    return new ScopeMap(newMap, module, procedure)
+    return ScopeMap(newMap, module, procedure)
   }
   /** Return a new context with quantifier variables added. */
   def +(opapp : OperatorApplication) : ScopeMap = {
     return opapp.op match {
       case ForallOp(vs) =>
-        new ScopeMap(
-            vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-            module, procedure)
+        ScopeMap(
+          vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
+          module, procedure)
       case ExistsOp(vs) =>
-        new ScopeMap(
-            vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-            module, procedure)
+        ScopeMap(
+          vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
+          module, procedure)
       case _ => this
     }
   }
-
+  
   /** Return the type of an identifier in this context. */
   def typeOf(id : IdentifierBase) : Option[Type] = {
     map.get(id).flatMap((e) => Some(e.typ))

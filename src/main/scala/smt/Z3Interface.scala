@@ -285,14 +285,14 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     
     solver.push()
     solver.add(z3Expr.asInstanceOf[z3.BoolExpr])
-    println(solver.toString())
+    // println(solver.toString())
     val z3Result = solver.check()
-    println(z3Result.toString)
+    // println(z3Result.toString)
     
     val checkResult : SolverResult = z3Result match {
       case z3.Status.SATISFIABLE =>
         val z3Model = solver.getModel()
-        println("model: " + z3Model.toString)
+        // println("model: " + z3Model.toString)
         SolverResult(Some(true), Some(new Z3Model(this, z3Model))) 
       case z3.Status.UNSATISFIABLE =>
         SolverResult(Some(false), None)

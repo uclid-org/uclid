@@ -67,7 +67,7 @@ class Context {
         "Multiple typedecls with identical names")
     types = m_typedecls.map(x => x.asInstanceOf[T7].id -> x.asInstanceOf[T7].typ).toMap
 
-    val scope = new ScopeMap() + m
+    val scope = ScopeMap.empty + m
     val enums = scope.map.filter((p) => p._2.isInstanceOf[Scope.EnumIdentifier]).map((p) => p._2.asInstanceOf[Scope.EnumIdentifier])
     enumeratedConstants = enums.map((e) => (e.enumId -> e.enumTyp)).toMap
     
@@ -82,7 +82,6 @@ class Context {
     } else {
       init = List.empty[Statement]
     }
-    
   }
   
   def copyContext() : Context = {
