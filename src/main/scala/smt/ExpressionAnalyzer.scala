@@ -1,8 +1,7 @@
 package uclid
 package smt
 
-import scala.collection.mutable.Map
-import scala.collection.immutable.Set
+import scala.collection.immutable.Map
 
 object Converter {
   type SymbolTable = Map[lang.Identifier, smt.Symbol]
@@ -63,15 +62,16 @@ object Converter {
       case lang.InequalityOp() => return smt.InequalityOp
       // Record select.
       case lang.RecordSelect(r) => return smt.RecordSelectOp(r.name)
+      // Quantifiers
+      case lang.ForallOp(vs) => return smt.ForallOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
+      case lang.ExistsOp(vs) => return smt.ExistsOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
       // Polymorphic operators are not allowed.
       case p : lang.PolymorphicOperator => 
         throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")
-      case _ => 
-        throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
+      case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
     }
-    
   }
-  
+
   def exprToSMT(expr : lang.Expr, scope : lang.ScopeMap) : smt.Expr = {
     def toSMT(expr : lang.Expr) : smt.Expr = exprToSMT(expr, scope)
     def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e))
@@ -85,7 +85,7 @@ object Converter {
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
        case lang.Tuple(args) => smt.MakeTuple(toSMTs(args))
        case lang.OperatorApplication(op,args) =>
-         return smt.OperatorApplication(opToSMT(op), toSMTs(args))
+         return smt.OperatorApplication(opToSMT(op), args.map((a) => exprToSMT(a, scope + lang.OperatorApplication(op, args))))
        case lang.ArraySelectOperation(a,index) => 
          return smt.ArraySelectOperation(toSMT(a), toSMTs(index))
        case lang.ArrayStoreOperation(a,index,value) => 
@@ -102,7 +102,50 @@ object Converter {
        case lang.ITE(cond,t,f) =>
          return smt.ITE(toSMT(cond), toSMT(t), toSMT(f))
        case lang.Lambda(ids,le) => 
-         throw new Utils.UnimplementedException("Lambda's are not yet implemented.")
+         throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
+       case _ => 
+         throw new Utils.UnimplementedException("Unimplemented expression: " + expr.toString)
+    }
+  }
+  
+  def exprToSMT(expr : lang.Expr, symbolTable : Map[lang.IdentifierBase, Expr], scope : lang.ScopeMap) : smt.Expr = {
+    def toSMT(expr : lang.Expr) : smt.Expr = exprToSMT(expr, symbolTable, scope)
+    def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e))
+     expr match {
+       case id : lang.Identifier =>
+         if (scope.typeOf(id).isEmpty) {
+           println("Trouble for id: " + id.toString)
+         }
+         val typ = scope.typeOf(id).get
+         if (scope.isQuantifierVar(id)) {
+           Symbol(id.name, typeToSMT(typ))
+         } else {
+           symbolTable(id)
+         }
+       case lang.IntLit(n) => smt.IntLit(n)
+       case lang.BoolLit(b) => smt.BooleanLit(b)
+       case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
+       case lang.Tuple(args) => smt.MakeTuple(toSMTs(args))
+       case opapp : lang.OperatorApplication =>
+         return smt.OperatorApplication(
+             opToSMT(opapp.op), opapp.operands.map((a) => exprToSMT(a, symbolTable, scope + opapp)))
+       case lang.ArraySelectOperation(a,index) => 
+         return smt.ArraySelectOperation(toSMT(a), toSMTs(index))
+       case lang.ArrayStoreOperation(a,index,value) => 
+         return smt.ArrayStoreOperation(toSMT(a), toSMTs(index), toSMT(value)) 
+       case lang.FuncApplication(f,args) => f match {
+         case lang.Identifier(id) => 
+           return smt.FunctionApplication(toSMT(f), toSMTs(args)) 
+         case lang.Lambda(idtypes,le) => 
+           // FIXME: beta sub
+           throw new Utils.UnimplementedException("Beta reduction is not implemented yet.")
+         case _ => 
+           throw new Utils.RuntimeError("Should never get here.")
+       }
+       case lang.ITE(cond,t,f) =>
+         return smt.ITE(toSMT(cond), toSMT(t), toSMT(f))
+       case lang.Lambda(ids,le) => 
+         throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
        case _ => 
          throw new Utils.UnimplementedException("Unimplemented expression: " + expr.toString)
     }

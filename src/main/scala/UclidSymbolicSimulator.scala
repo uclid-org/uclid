@@ -254,49 +254,6 @@ class UclidSymbolicSimulator (module : Module) {
   }
   
 
-  def toSMT(op: Operator) : smt.Operator = {
-    op match {
-      // Polymorphic operators are not allowed.
-      case p : PolymorphicOperator => throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")
-      // Integer operators.
-      case IntLTOp() => return smt.IntLTOp
-      case IntLEOp() => return smt.IntLEOp
-      case IntGTOp() => return smt.IntGTOp
-      case IntGEOp() => return smt.IntGEOp
-      case IntAddOp() => return smt.IntAddOp
-      case IntSubOp() => return smt.IntSubOp
-      case IntMulOp() => return smt.IntMulOp
-      // Bitvector operators.
-      case BVLTOp(w) => return smt.BVLTOp(w)
-      case BVLEOp(w) => return smt.BVLEOp(w)
-      case BVGTOp(w) => return smt.BVGTOp(w)
-      case BVGEOp(w) => return smt.BVGEOp(w)
-      case BVAddOp(w) => return smt.BVAddOp(w)
-      case BVSubOp(w) => return smt.BVSubOp(w)
-      case BVMulOp(w) => return smt.BVMulOp(w)
-      case BVAndOp(w) => return smt.BVAndOp(w)
-      case BVOrOp(w) => return smt.BVOrOp(w)
-      case BVXorOp(w) => return smt.BVXorOp(w)
-      case BVNotOp(w) => return smt.BVNotOp(w)
-      case ExtractOp(slice) => return smt.BVExtractOp(slice.hi, slice.lo)
-      // Boolean operators.
-      case ConjunctionOp() => return smt.ConjunctionOp
-      case DisjunctionOp() => return smt.DisjunctionOp
-      case IffOp() => return smt.IffOp
-      case ImplicationOp() => return smt.ImplicationOp
-      case NegationOp() => return smt.NegationOp
-      // Comparison operators.
-      case EqualityOp() => return smt.EqualityOp
-      case InequalityOp() => return smt.InequalityOp
-      // Record select.
-      case RecordSelect(r) => return smt.RecordSelectOp(r.name)
-      // Quantifiers
-      case ForallOp(vs) => return smt.ForallOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
-      case ExistsOp(vs) => return smt.ExistsOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
-      case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
-    }
-  }
-  
   def simulate(iter : Int, stmts: List[Statement], symbolTable: SymbolTable, c : Context) : SymbolTable = {
     return stmts.foldLeft(symbolTable)((acc,i) => simulate(iter, i, acc, c));
   }
@@ -428,7 +385,7 @@ class UclidSymbolicSimulator (module : Module) {
        case _ => throw new Utils.UnimplementedException("Should not get here")
      }
   }
-  
+
   def substituteSMT(e: smt.Expr, s: smt.Symbol, arg: smt.Expr) : smt.Expr = {
      e match {
        case smt.OperatorApplication(op,args) =>
@@ -452,50 +409,6 @@ class UclidSymbolicSimulator (module : Module) {
   }
 
   def evaluate(e: Expr, symbolTable: SymbolTable, context: Context) : smt.Expr = {
-     val smtExpr = e match { //check that all identifiers in e have been declared
-       case OperatorApplication(op,args) =>
-         return smt.OperatorApplication(toSMT(op), args.map(i => evaluate(i, symbolTable, context.contextWithOperatorApplication(op))))
-       case ArraySelectOperation(a,index) => 
-         return smt.ArraySelectOperation(evaluate(a, symbolTable, context), 
-             index.map { x => evaluate(x,symbolTable,context) })
-       case ArrayStoreOperation(a,index,value) => 
-         return smt.ArrayStoreOperation(evaluate(a, symbolTable, context), 
-             index.map { x => evaluate(x,symbolTable,context) }, 
-             evaluate(value, symbolTable,context))
-       case FuncApplication(f,args) => f match {
-         case Identifier(id) => 
-           if (context.functions.contains(Identifier(id))) {
-             return smt.FunctionApplication(evaluate(f, symbolTable,context), args.map(i => evaluate(i,symbolTable,context))) 
-           } else if (context.variables.contains(Identifier(id))) {
-             symbolTable(Identifier(id)) match {
-               case smt.Lambda(ids,e) => return (ids zip args.map(x => evaluate(x,symbolTable,context))).
-               foldLeft(e){(acc,x) => substituteSMT(acc, x._1, x._2)}
-             }
-           } else {
-             throw new Exception("How did I get here?") //should either be a lambda or an identifier
-           }
-         case Lambda(idtypes,le) => //do beta sub
-           var le_sub = (idtypes.map(x => x._1) zip args).foldLeft(le){(acc,x) => substitute(acc, x._1, x._2)}
-           return evaluate(le_sub, symbolTable, context)
-         case _ => throw new Exception("How did i get here?")
-       }
-       case ITE(cond,t,f) =>
-         return smt.ITE(evaluate(cond,symbolTable,context), evaluate(t,symbolTable,context), evaluate(f,symbolTable,context))
-       case Lambda(ids,le) => 
-         return smt.Lambda(ids.map(i => smt.Symbol(i._1.name, smt.Converter.typeToSMT(i._2))), evaluate(le,symbolTable,context))
-       case IntLit(n) => smt.IntLit(n)
-       case BoolLit(b) => smt.BooleanLit(b)
-       case BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
-       case Identifier(id) =>
-         val qVars = context.forallVars ++ context.existsVars
-         val qTyp = qVars.get(Identifier(id))
-         qTyp match {
-           case Some(typ) => smt.Symbol(id.toString, smt.Converter.typeToSMT(typ))
-           case None => symbolTable(Identifier(id))
-         }
-       case Tuple(args) => smt.MakeTuple(args.map(i => evaluate(i, symbolTable, context)))
-       case _ => throw new Utils.UnimplementedException("Support not implemented for expression: " + e.toString)
-    }
-    return smtExpr
+    smt.Converter.exprToSMT(e, symbolTable, scope)
   }
 }

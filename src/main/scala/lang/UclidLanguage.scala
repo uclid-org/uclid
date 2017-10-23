@@ -647,7 +647,7 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
   def +(typ : Type) : ScopeMap = {
     ScopeMap(Scope.addTypeToMap(map, typ, module), module, procedure)
   }
-  
+
   /** Return a new context with the declarations in this module added to it. */
   def +(m: Module) : ScopeMap = { 
     Utils.assert(module.isEmpty, "A module was already added to this Context.")
@@ -723,5 +723,17 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
   /** Return the type of an identifier in this context. */
   def typeOf(id : IdentifierBase) : Option[Type] = {
     map.get(id).flatMap((e) => Some(e.typ))
+  }
+  
+  def isQuantifierVar(id : IdentifierBase) : Boolean = {
+    (map.get(id).flatMap{
+      (p) => p match {
+        case Scope.ForallVar(_, _) | Scope.ExistsVar(_, _) => Some(true)
+        case _ => Some(false)
+      }
+    }) match {
+      case Some(t) => t
+      case None => false
+    }
   }
 }
