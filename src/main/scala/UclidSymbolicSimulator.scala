@@ -27,7 +27,6 @@ class UclidSymbolicSimulator (module : Module) {
   var asserts : List[AssertInfo] = List.empty
   var assumes : List[smt.Expr] = List.empty
   var results : List[CheckResult] = List.empty
-  var context : Context = new Context()
   val scope = ScopeMap.empty + module
   
   type SymbolTable = Map[IdentifierBase, smt.Expr];
@@ -110,9 +109,8 @@ class UclidSymbolicSimulator (module : Module) {
         }
       }
     }
-    context.extractContext(module)
-    symbolTable = if (!havocInit) { 
-      simulate(0, context.init, initSymbolTable, context)
+    symbolTable = if (!havocInit && module.init.isDefined) { 
+      simulate(0, module.init.get.body, initSymbolTable)
     } else {
       initSymbolTable
     }
@@ -195,7 +193,7 @@ class UclidSymbolicSimulator (module : Module) {
   def printCEX(res : CheckResult, exprs : List[Expr]) {
     println("CEX for assertion @ " + res.assert.pos.toString)
     val exprsToPrint = if (exprs.size == 0) { 
-      val vars = (context.inputs.keys ++ context.variables.keys ++ context.outputs.keys)
+      val vars = (scope.inputs ++ scope.vars ++ scope.outputs).map(_.id)
       vars.toList.sortWith((l, r) => l.name < r.name)
     } else {
       exprs
@@ -213,13 +211,13 @@ class UclidSymbolicSimulator (module : Module) {
 
   def printFrame(f : SymbolTable, m : smt.Model, exprs : List[Expr]) {
     def expr(id : lang.Identifier) : Option[smt.Expr] = {
-      if (f.contains(id)) { Some(evaluate(id, f, context)) } 
+      if (f.contains(id)) { Some(evaluate(id, f)) } 
       else { None }
     }
     
     exprs.foreach { (e) => {
       try {
-        val result = m.evalAsString(evaluate(e, f , context))
+        val result = m.evalAsString(evaluate(e, f))
         println("  " + e.toString + " : " + result)
       } catch {
         case excp : java.util.NoSuchElementException =>
@@ -239,8 +237,8 @@ class UclidSymbolicSimulator (module : Module) {
 
   /** Add module specifications (properties) to the list of proof obligations */
   def addAsserts(iter : Int, symbolTable : SymbolTable) {
-    this.asserts = context.specifications.foldLeft(this.asserts){(asserts, prop) => {
-      val property = AssertInfo("property " + prop._1.toString, iter, evaluate(prop._2, symbolTable, context), prop._2.position)
+    this.asserts = scope.specs.foldLeft(this.asserts){(asserts, prop) => {
+      val property = AssertInfo("property " + prop.id.toString, iter, evaluate(prop.expr, symbolTable), prop.expr.position)
       // println ("addAsserts: " + property.toString + "; " + property.expr.toString)
       property :: asserts
     }}
@@ -248,22 +246,22 @@ class UclidSymbolicSimulator (module : Module) {
   
   /** Assume assertions (for inductive proofs). */
   def assumeAssertions(symbolTable : SymbolTable) {
-    this.assumes = context.specifications.foldLeft(this.assumes){
-      (acc, prop) => (evaluate(prop._2, symbolTable, context)) :: acc
+    this.assumes = scope.specs.foldLeft(this.assumes){
+      (acc, prop) => (evaluate(prop.expr, symbolTable)) :: acc
     }
   }
   
 
-  def simulate(iter : Int, stmts: List[Statement], symbolTable: SymbolTable, c : Context) : SymbolTable = {
-    return stmts.foldLeft(symbolTable)((acc,i) => simulate(iter, i, acc, c));
+  def simulate(iter : Int, stmts: List[Statement], symbolTable: SymbolTable) : SymbolTable = {
+    return stmts.foldLeft(symbolTable)((acc,i) => simulate(iter, i, acc));
   }
 
   def simulate(iter : Int, symbolTable: SymbolTable) : SymbolTable = {
-    val state = simulate(iter, context.next, symbolTable, context)
-    return state
+    // FIXME: Make sure module has a next declaration.
+    simulate(iter, module.next.get.body, symbolTable)
   }
   
-  def simulate(iter : Int, s: Statement, symbolTable: SymbolTable, c : Context) : SymbolTable = {
+  def simulate(iter : Int, s: Statement, symbolTable: SymbolTable) : SymbolTable = {
     def recordSelect(field : String, rec : smt.Expr) = {
       smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
     }
@@ -289,7 +287,7 @@ class UclidSymbolicSimulator (module : Module) {
           case LhsId(id) => 
             st = st + (id -> rhs(x))
           case LhsArraySelect(id, indices) => 
-            st = st + (id -> smt.ArrayStoreOperation(st(id), indices.map(i => evaluate(i, st, c)), rhs(x)))
+            st = st + (id -> smt.ArrayStoreOperation(st(id), indices.map(i => evaluate(i, st)), rhs(x)))
           case LhsRecordSelect(id, fields) =>
             st = st + (id -> simulateRecordUpdateExpr(st(id), fields.map(_.toString), rhs(x)))
           case LhsSliceSelect(id, slice) =>
@@ -304,49 +302,36 @@ class UclidSymbolicSimulator (module : Module) {
     s match {
       case SkipStmt() => return symbolTable
       case AssertStmt(e, id) => 
-        this.asserts = AssertInfo("assertion", iter, evaluate(e,symbolTable,c), s.position) :: this.asserts 
+        this.asserts = AssertInfo("assertion", iter, evaluate(e,symbolTable), s.position) :: this.asserts 
         return symbolTable
       case AssumeStmt(e, id) => 
-        this.assumes = this.assumes ++ List(evaluate(e,symbolTable,c))
+        this.assumes = this.assumes ++ List(evaluate(e,symbolTable))
         return symbolTable
       case HavocStmt(id) => 
-        return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(c.variables(id))))
+        return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(scope.typeOf(id).get)))
       case AssignStmt(lhss,rhss) =>
-        val es = rhss.map(i => evaluate(i, symbolTable, c));
+        val es = rhss.map(i => evaluate(i, symbolTable));
         return simulateAssign(lhss, es, symbolTable)
       case IfElseStmt(e,then_branch,else_branch) =>
-        var then_modifies : Set[IdentifierBase] = writeSet(then_branch,c)
-        var else_modifies : Set[IdentifierBase] = writeSet(else_branch,c)
+        var then_modifies : Set[IdentifierBase] = writeSet(then_branch)
+        var else_modifies : Set[IdentifierBase] = writeSet(else_branch)
         //compute in parallel
-        var then_st : SymbolTable = simulate(iter, then_branch, symbolTable, c)
-        var else_st : SymbolTable = simulate(iter, else_branch, symbolTable, c)
+        var then_st : SymbolTable = simulate(iter, then_branch, symbolTable)
+        var else_st : SymbolTable = simulate(iter, else_branch, symbolTable)
         return symbolTable.keys.filter { id => then_modifies.contains(id) || else_modifies.contains(id) }.
           foldLeft(symbolTable){ (acc,id) => 
-            acc.updated(id, smt.ITE(evaluate(e, symbolTable,c), then_st(id), else_st(id)))
+            acc.updated(id, smt.ITE(evaluate(e, symbolTable), then_st(id), else_st(id)))
           }
       case ForStmt(id, range, body) => throw new Utils.UnimplementedException("Cannot symbolically execute For loop")
       case CaseStmt(body) => throw new Utils.UnimplementedException("Cannot symbolically execute Case stmt")
       case ProcedureCallStmt(id,lhss,args) =>
-        var st : SymbolTable = (c.procedures(id).sig.inParams zip args).
-          foldLeft(symbolTable){(acc,x) => acc.updated(x._1._1, evaluate(x._2, symbolTable, c) )}
-        var c2: Context = c.copyContext()
-        val proc: ProcedureDecl = c.procedures(id)
-        c2.inputs = c.inputs ++ (proc.sig.inParams.map(i => i._1 -> i._2).toMap)
-        c2.variables = c.variables ++ (proc.sig.outParams.map(i => i._1 -> i._2).toMap)
-        c2.variables = c2.variables ++ (proc.decls.map(i => i.id -> i.typ).toMap)
-        st = proc.decls.foldLeft(st)((acc,i) => acc + (i.id -> newHavocSymbol(i.id.name, smt.Converter.typeToSMT(i.typ))));
-        st = proc.sig.outParams.foldLeft(st)((acc, i) => acc + (i._1 -> newHavocSymbol(i._1.name, smt.Converter.typeToSMT(i._2))))
-        st = simulate(iter, proc.body, st, c2)
-        st = simulateAssign(lhss, proc.sig.outParams.map(i => st(i._1)), st)
-        //remove procedure arguments
-        st = proc.sig.inParams.foldLeft(st)((acc,i) => acc - i._1)
-        return st 
+        throw new Utils.RuntimeError("ProcedureCallStmt must have been inlined by now.")
       case _ => return symbolTable
     }
   }
 
-  def writeSet(stmts: List[Statement], c: Context) : Set[IdentifierBase] = {
-    def stmtWriteSet(stmt: Statement, c: Context) : Set[IdentifierBase] = stmt match {
+  def writeSet(stmts: List[Statement]) : Set[IdentifierBase] = {
+    def stmtWriteSet(stmt: Statement) : Set[IdentifierBase] = stmt match {
       case SkipStmt() => Set.empty
       case AssertStmt(e, id) => Set.empty
       case AssumeStmt(e, id) => Set.empty
@@ -354,13 +339,14 @@ class UclidSymbolicSimulator (module : Module) {
       case AssignStmt(lhss,rhss) => 
         return lhss.map(lhs => lhs.ident).toSet
       case IfElseStmt(e,then_branch,else_branch) => 
-        return writeSet(then_branch,c) ++ writeSet(else_branch,c)
-      case ForStmt(id, range, body) => return writeSet(body,c)
+        return writeSet(then_branch) ++ writeSet(else_branch)
+      case ForStmt(id, range, body) => return writeSet(body)
       case CaseStmt(body) => 
-        return body.foldLeft(Set.empty[IdentifierBase]) { (acc,i) => acc ++ writeSet(i._2,c) }
-      case ProcedureCallStmt(id,lhss,args) => return writeSet(c.procedures(id).body,c)
+        return body.foldLeft(Set.empty[IdentifierBase]) { (acc,i) => acc ++ writeSet(i._2) }
+      case ProcedureCallStmt(id,lhss,args) =>
+        throw new Utils.RuntimeError("ProcedureCallStmt must have been inlined by now.")
     }
-    return stmts.foldLeft(Set.empty[IdentifierBase]){(acc,s) => acc ++ stmtWriteSet(s,c)}
+    return stmts.foldLeft(Set.empty[IdentifierBase]){(acc,s) => acc ++ stmtWriteSet(s)}
   }
 
   //TODO: get rid of this and use subtituteSMT instead
@@ -408,7 +394,7 @@ class UclidSymbolicSimulator (module : Module) {
      }
   }
 
-  def evaluate(e: Expr, symbolTable: SymbolTable, context: Context) : smt.Expr = {
+  def evaluate(e: Expr, symbolTable: SymbolTable) : smt.Expr = {
     smt.Converter.exprToSMT(e, symbolTable, scope)
   }
 }

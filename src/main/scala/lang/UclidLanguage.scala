@@ -9,6 +9,7 @@ package lang
 import scala.collection.immutable.Map
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
+import scala.reflect.ClassTag
 
 object PrettyPrinter
 {
@@ -562,7 +563,14 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
     newModule.filename = Some(name)
     return newModule
   }
+  
+  val init : Option[InitDecl] = {
+    decls.find(_.isInstanceOf[InitDecl]).flatMap((d) => Some(d.asInstanceOf[InitDecl]))
+  }
 
+  val next : Option[NextDecl] = {
+    decls.find(_.isInstanceOf[NextDecl]).flatMap((d) => Some(d.asInstanceOf[NextDecl]))
+  }
   override def toString = 
     "\nmodule " + id + " {\n" + 
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +
@@ -640,6 +648,11 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
   def filename : Option[String] = {
     module.flatMap((m) => m.filename)
   }
+  val inputs = map.filter(_._2.isInstanceOf[Scope.InputVar]).map(_._2.asInstanceOf[Scope.InputVar]).toSet
+  val vars = map.filter(_._2.isInstanceOf[Scope.StateVar]).map(_._2.asInstanceOf[Scope.StateVar]).toSet
+  val outputs = map.filter(_._2.isInstanceOf[Scope.OutputVar]).map(_._2.asInstanceOf[Scope.OutputVar]).toSet
+  val specs = map.filter(_._2.isInstanceOf[Scope.SpecVar]).map(_._2.asInstanceOf[Scope.SpecVar]).toSet
+  
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : ScopeMap = {
     ScopeMap(map + (expr.id -> expr), module, procedure)
