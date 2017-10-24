@@ -151,7 +151,7 @@ object UclidMain {
 
   def execute(module : Module) : List[CheckResult] = {
     // execute the control module
-    var symbolicSimulator = new UclidSymbolicSimulator(module)
+    var symbolicSimulator = new SymbolicSimulator(module)
     var z3Interface = smt.Z3Interface.newInterface()
     return symbolicSimulator.execute(z3Interface)
   }

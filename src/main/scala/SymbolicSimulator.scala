@@ -23,7 +23,7 @@ case class AssertInfo(name : String, iter : Int, expr : smt.Expr, pos : ASTPosit
 }
 case class CheckResult(assert : AssertInfo, result : smt.SolverResult)
 
-class UclidSymbolicSimulator (module : Module) {
+class SymbolicSimulator (module : Module) {
   var asserts : List[AssertInfo] = List.empty
   var assumes : List[smt.Expr] = List.empty
   var results : List[CheckResult] = List.empty
