@@ -24,7 +24,7 @@ module main
     initialize;
     simulate (4);
     decide;
-    print_results;
-    print_cex(sum, value, numbers[0], numbers[1], numbers[2], numbers[3]);
+    // print_results;
+    // print_cex(sum, value, numbers[0], numbers[1], numbers[2], numbers[3]);
   }
 }

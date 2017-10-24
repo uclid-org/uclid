@@ -6,12 +6,18 @@ module main
   var index : int;
   output value : int;
   
+  function f(g : int, g : int) : int;
+
+  procedure add(a : int, b : int) returns (a : int) {
+    a := a + b;
+  }
+
   init {
     assume (forall (i : int) : numbers[i] == 0);
     sum := 0;
     index := 0;
   }
-  
+
   next {
     sum := sum + value;
     numbers[index] := value;
@@ -20,7 +26,7 @@ module main
     
     assert ((numbers[0] + numbers[1] + numbers[2] + numbers[3]) == sum);
   }
-  
+
   control {
     initialize;
     simulate (4);

@@ -25,7 +25,5 @@ module main {
     // inductive step.
     k_induction_step (1);
     decide;
-    print_results;
-    print_cex;
   }
 }

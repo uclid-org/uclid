@@ -40,7 +40,15 @@ class AddFilenamePass(var filename : Option[String]) extends RewritePass {
   }
   override def rewriteIdentifierBase(id : IdentifierBase, ctx : ScopeMap) : Option[IdentifierBase] = { 
     id.filename = filename
-    Some(id) 
+    Some(id)
+  }
+  override def rewriteIdentifier(id : Identifier, ctx : ScopeMap) : Option[Identifier] = {
+    id.filename = filename
+    Some(id)
+  }
+  override def rewriteConstIdentifier(id : ConstIdentifier, ctx : ScopeMap) : Option[ConstIdentifier] = {
+    id.filename = filename
+    Some(id)
   }
   override def rewriteTuple(rec : Tuple, ctx : ScopeMap) : Option[Tuple] = { 
     rec.filename = filename

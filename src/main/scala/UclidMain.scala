@@ -3,7 +3,6 @@ package uclid
 import scala.util.parsing.combinator._
 import scala.collection.immutable._
 import uclid.lang._
-import lang.UclidSemanticAnalyzer
 import lang.Module
 import lang.Identifier
 
@@ -97,14 +96,15 @@ object UclidMain {
           case Some(pos) => pos.longString
           case None => ""
         }
-        println("Compiler Error at " + filenameStr + positionStr + ": " + p.getMessage + "\n" + fullStr)
+        println("Error at " + filenameStr + positionStr + ": " + p.getMessage + "\n" + fullStr)
         System.exit(1)
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
-            println("Compiler Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString) 
+            println("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString) 
           }
         }
+        println("Parsing failed. " + ps.errors.size.toString + " errors found.")
       case(a : Utils.AssertionError) =>
         println("[Assertion Failure]: " + a.getMessage)
         a.printStackTrace()
@@ -140,9 +140,6 @@ object UclidMain {
       val text = scala.io.Source.fromFile(srcFile).mkString
       filenameAdderPass.setFilename(srcFile)
       val fileModules = UclidParser.parseModel(srcFile, text).map(passManager.run(_).get)
-      for(module <- fileModules) {
-        UclidSemanticAnalyzer.checkSemantics(module)
-      }
       nameCnt = fileModules.foldLeft(nameCnt)((cnts : NameCountMap, m : Module) => (cnts + (m.id -> (cnts(m.id) + 1))))
       val repeatedNameCnt = nameCnt.filter{ case (name, cnt) => cnt > 1 }
       val repeatedNames = Utils.join(repeatedNameCnt.map((r) => r._1.toString).toList, ", ")
