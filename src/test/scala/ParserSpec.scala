@@ -34,5 +34,16 @@ class ParserSpec extends FlatSpec {
         assert (msg.contains("Unknown identifier in havoc statement"))
     }
   }
+  "test/test-module-errors.ucl4" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-module-errors.ucl4"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 3)
+    }
+  }
 
 }
