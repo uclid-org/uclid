@@ -32,41 +32,48 @@ object IdGenerator {
  */
 case class ASTPosition(filename : Option[String], pos : Position)  {
   override def toString : String = {
-    (filename match {
-      case Some(fn) => fn
-      case None     => ""
-    }) + ":" + pos.line.toString
+    filename match {
+      case Some(fn) => fn + ", line " + pos.line.toString
+      case None     => "line " + pos.line.toString
+    }
   }
 }
 
-/** All elements in the AST are derived from this class.
- *  The plan is to stick an ID into this later so that we can use the ID to store auxiliary information.
- */
-sealed trait ASTNode extends Positional {
+sealed  trait PositionedNode extends Positional {
   var filename : Option[String] = None
-  def position : ASTPosition = ASTPosition(filename, pos)
-  val astNodeId = IdGenerator.newId()
+  def position = ASTPosition(filename, pos)
 }
 
 object ASTNode {
-  def introducePos[T <: Positional](node : Option[T], pos : Position) : Option[T] = {
+  def introducePos[T <: PositionedNode](setFilename : Boolean, node : Option[T], pos : ASTPosition) : Option[T] = {
     node match {
       case Some(n) => 
         var nP = n
-        nP.pos = pos
+        if (setFilename) { nP.filename = pos.filename }
+        nP.pos = pos.pos
         Some(nP)
       case None =>
         None
     }
   }
-  def introducePos[T <: Positional](node : List[T], pos : Position) : List[T] = {
-    node.map((n) => {
+  def introducePos[T <: PositionedNode](setFilename: Boolean, nodes : List[T], pos : ASTPosition) : List[T] = {
+    nodes.map((n) => {
       var nP = n
-      nP.pos = pos
+      if (setFilename) { nP.filename = pos.filename }
+      nP.pos = pos.pos
       nP
     })
   }
 }
+
+
+/** All elements in the AST are derived from this class.
+ *  The plan is to stick an ID into this later so that we can use the ID to store auxiliary information.
+ */
+sealed trait ASTNode extends Positional with PositionedNode {
+  val astNodeId = IdGenerator.newId()
+}
+
 object Operator {
   val PREFIX = 0
   val INFIX = 1
@@ -307,7 +314,7 @@ case class LhsSliceSelect(id: Identifier, bitslice: ConstBitVectorSlice) extends
   override def toString = id.toString + bitslice.toString
 }
 
-sealed abstract class Type extends Positional {
+sealed abstract class Type extends PositionedNode {
   def isBool = false
   def isNumeric = false
   def isInt = false
@@ -442,23 +449,23 @@ sealed abstract class Statement extends ASTNode {
   def toLines : List[String]
 }
 case class SkipStmt() extends Statement {
-  override def toLines = List("skip; //" + pos.toString)
+  override def toLines = List("skip; // " + position.toString)
 }
 case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
-  override def toLines = List("assert " + e + "; //" + pos.toString)
+  override def toLines = List("assert " + e + "; // " + position.toString)
 }
 case class AssumeStmt(e: Expr, id : Option[Identifier]) extends Statement {
-  override def toLines = List("assume " + e + "; //" + pos.toString)
+  override def toLines = List("assume " + e + "; // " + position.toString)
 }
 case class HavocStmt(id: Identifier) extends Statement {
-  override def toLines = List("havoc " + id + "; //" + pos.toString)
+  override def toLines = List("havoc " + id + "; // " + position.toString)
 }
 case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines = 
-    List(Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + "; // " + pos.toString)
+    List(Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
 }
 case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Statement]) extends Statement {
-  override def toLines = List("if " + cond.toString + " // " + pos.toString, "{ ") ++ 
+  override def toLines = List("if " + cond.toString + " // " + position.toString, "{ ") ++ 
                          ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
                          List("} else {") ++ 
                          elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
@@ -467,7 +474,7 @@ case class ForStmt(id: ConstIdentifier, range: (NumericLit,NumericLit), body: Li
   extends Statement
 {
   override def isLoop = true
-  override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + pos.toString) ++ 
+  override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString) ++ 
                          body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
 case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
@@ -478,11 +485,11 @@ case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
 case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr])  extends Statement {
   override def toLines = List("call (" +
     Utils.join(callLhss.map(_.toString), ", ") + ") := " + id + "(" +
-    Utils.join(args.map(_.toString), ", ") + ") // " + id.pos.toString)
+    Utils.join(args.map(_.toString), ", ") + ") // " + id.position.toString)
 }
 
 case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
-  override def toString = "var " + id + ": " + typ + "; // " + id.pos.toString
+  override def toString = "var " + id + ": " + typ + "; // " + id.position.toString
 }
 
 case class ProcedureSig(inParams: List[(Identifier,Type)], 
@@ -504,47 +511,58 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
     ": " + retType
 }
 
-sealed abstract class Decl extends ASTNode
+sealed abstract class Decl extends ASTNode {
+  def declName : Option[Identifier]
+}
 case class ProcedureDecl(id: Identifier, sig: ProcedureSig, 
   decls: List[LocalVarDecl], body: List[Statement]) extends Decl {
-  override def toString = "procedure " + id + sig + PrettyPrinter.indent(1) + "{  // " + id.pos.toString + "\n" +
+  override def toString = "procedure " + id + sig + PrettyPrinter.indent(1) + "{  // " + id.position.toString + "\n" +
                           Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" + 
                           Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") + 
                           "\n" + PrettyPrinter.indent(1) + "}"
+  override def declName = Some(id)
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "type " + id + " = " + typ + "; // " + pos.toString 
+  override def toString = "type " + id + " = " + typ + "; // " + position.toString 
+  override def declName = Some(id)
 }
 case class StateVarDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "var " + id + ": " + typ + "; // " + pos.toString
+  override def toString = "var " + id + ": " + typ + "; // " + position.toString
+  override def declName = Some(id)
 }
 case class InputVarDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "input " + id + ": " + typ + "; // " + pos.toString
+  override def toString = "input " + id + ": " + typ + "; // " + position.toString
+  override def declName = Some(id)
 }
 case class OutputVarDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "output " + id + ": " + typ + "; // " + pos.toString
+  override def toString = "output " + id + ": " + typ + "; // " + position.toString
+  override def declName = Some(id)
 }
 case class ConstantDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "constant " + id + ": " + typ + "; // " + pos.toString
+  override def toString = "constant " + id + ": " + typ + "; // " + position.toString
+  override def declName = Some(id)
 }
-case class FunctionDecl(id: Identifier, sig: FunctionSig)
-extends Decl {
-  override def toString = "function " + id + sig + ";  // " + pos.toString 
+case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl {
+  override def toString = "function " + id + sig + ";  // " + position.toString 
+  override def declName = Some(id)
 }
 case class InitDecl(body: List[Statement]) extends Decl {
   override def toString = 
-    "init { // " + pos.toString + "\n" +
+    "init { // " + position.toString + "\n" +
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
     "\n" + PrettyPrinter.indent(1) + "}"
+  override def declName = None
 }
 case class NextDecl(body: List[Statement]) extends Decl {
   override def toString = 
-    "next {  // " + pos.toString + "\n" + 
+    "next {  // " + position.toString + "\n" + 
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
     "\n" + PrettyPrinter.indent(1) + "}"
+  override def declName = None
 }
 case class SpecDecl(id: Identifier, expr: Expr) extends Decl {
-  override def toString = "property " + id + ":" + expr + ";  // " + id.pos.toString
+  override def toString = "property " + id + ":" + expr + ";  // " + id.position.toString
+  override def declName = Some(id)
 }
 
 case class ProofCommand(name : Identifier, params: List[Identifier], args : List[Expr]) extends ASTNode {
@@ -552,7 +570,7 @@ case class ProofCommand(name : Identifier, params: List[Identifier], args : List
     val nameStr = name.toString 
     val paramStr = if (params.size > 0) { "[" + Utils.join(params.map(_.toString), ", ") + "]" } else { "" }
     val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
-    nameStr + paramStr + argStr + ";"
+    nameStr + paramStr + argStr + ";" + " // " + position.toString
   }
 }
 

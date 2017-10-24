@@ -1,7 +1,7 @@
 package uclid
 package lang
 
-class AddFilenamePass(filename : Option[String]) extends RewritePass {
+class AddFilenamePass(var filename : Option[String]) extends RewritePass {
   override def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = { 
     module.filename = filename
     return Some(module)
@@ -53,4 +53,9 @@ class AddFilenamePass(filename : Option[String]) extends RewritePass {
 }
 
 class AddFilenameRewriter(filename : Option[String]) extends ASTRewriter(
-    "AddFilenameRewriter", new AddFilenamePass(filename))
+    "AddFilenameRewriter", new AddFilenamePass(filename), false)  {
+  
+  def setFilename(fn: String) {
+    pass.asInstanceOf[AddFilenamePass].filename = Some(fn)
+  }
+}

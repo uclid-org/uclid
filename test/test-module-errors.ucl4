@@ -1,0 +1,31 @@
+module main
+{
+  input value : int;
+  var numbers : [int]int;
+  var sum : int;
+  var index : int;
+  output value : int;
+  
+  init {
+    assume (forall (i : int) : numbers[i] == 0);
+    sum := 0;
+    index := 0;
+  }
+  
+  next {
+    sum := sum + value;
+    numbers[index] := value;
+    
+    index := index + 1;
+    
+    assert ((numbers[0] + numbers[1] + numbers[2] + numbers[3]) == sum);
+  }
+  
+  control {
+    initialize;
+    simulate (4);
+    decide;
+    print_results;
+    print_cex(sum, value, numbers[0], numbers[1], numbers[2], numbers[3]);
+  }
+}

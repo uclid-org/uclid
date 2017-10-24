@@ -29,6 +29,7 @@ object Utils {
   class EvaluationError(msg : String, cause: Throwable = null) extends RuntimeError(msg, cause) {} 
   class AssertionError(msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
   class ParserError(msg:String, val pos : Option[Position], val filename: Option[String], cause:Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
+  class ParserErrorList(val errors : List[(String, lang.ASTPosition)]) extends java.lang.RuntimeException("Parser Errors", null) {}
   
   def existsOnce(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,1)
   def existsNone(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,0)

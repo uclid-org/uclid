@@ -99,6 +99,12 @@ object UclidMain {
         }
         println("Compiler Error at " + filenameStr + positionStr + ": " + p.getMessage + "\n" + fullStr)
         System.exit(1)
+      case (ps : Utils.ParserErrorList) =>
+        ps.errors.foreach {
+          (err) => {
+            println("Compiler Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString) 
+          }
+        }
       case(a : Utils.AssertionError) =>
         println("[Assertion Failure]: " + a.getMessage)
         a.printStackTrace()
@@ -114,6 +120,8 @@ object UclidMain {
     val passManager = new PassManager()
     // for certain unfortunate reasons we need to unroll for loops before type checking.
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
+    val filenameAdderPass = new AddFilenameRewriter(None) 
+    passManager.addPass(filenameAdderPass)
     passManager.addPass(new ForLoopIndexRewriter())
     passManager.addPass(new TypeSynonymFinder())
     passManager.addPass(new TypeSynonymRewriter())
@@ -121,6 +129,7 @@ object UclidMain {
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new ModuleTypeChecker())
+    passManager.addPass(new SemanticAnalyzer())
     passManager.addPass(new FunctionInliner())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new CaseEliminator())
@@ -129,9 +138,8 @@ object UclidMain {
 
     for (srcFile <- srcFiles) {
       val text = scala.io.Source.fromFile(srcFile).mkString
-      val filenameAdder = new AddFilenameRewriter(Some(srcFile))
-      val fileModulesP = UclidParser.parseModel(srcFile, text).map(passManager.run(_).get)
-      val fileModules = fileModulesP.map((m) => filenameAdder.visit(m)).flatten
+      filenameAdderPass.setFilename(srcFile)
+      val fileModules = UclidParser.parseModel(srcFile, text).map(passManager.run(_).get)
       for(module <- fileModules) {
         UclidSemanticAnalyzer.checkSemantics(module)
       }
