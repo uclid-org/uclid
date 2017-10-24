@@ -80,6 +80,69 @@ trait ReadOnlyPass[T] {
   def applyOnCmd(d : TraversalDirection.T, cmd : ProofCommand, in : T, context : ScopeMap) : T = { in }
 }
 
+/* AST Visitor that rewrites and generates a new AST. */
+trait RewritePass {
+  var _analysis : Option[ASTAnalysis] = None
+  def analysis : ASTAnalysis = _analysis.get
+  def reset() { }
+  
+  def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = { Some(module) }
+  def rewriteDecl(decl : Decl, ctx : ScopeMap) : Option[Decl] = { Some(decl) }
+  def rewriteCommand(cmd : ProofCommand, ctx : ScopeMap) : Option[ProofCommand] = { Some(cmd) }
+  def rewriteProcedure(proc : ProcedureDecl, ctx : ScopeMap) : Option[ProcedureDecl] = { Some(proc) }
+  def rewriteFunction(func : FunctionDecl, ctx : ScopeMap) : Option[FunctionDecl] = { Some(func) }
+  def rewriteStateVar(stvar : StateVarDecl, ctx : ScopeMap) : Option[StateVarDecl] = { Some(stvar) }
+  def rewriteInputVar(inpvar : InputVarDecl, ctx : ScopeMap) : Option[InputVarDecl] = { Some(inpvar) }
+  def rewriteOutputVar(outvar : OutputVarDecl, ctx : ScopeMap) : Option[OutputVarDecl] = { Some(outvar) }
+  def rewriteConstant(cnst : ConstantDecl, ctx : ScopeMap) : Option[ConstantDecl] = { Some(cnst) }
+  def rewriteSpec(spec : SpecDecl, ctx : ScopeMap) : Option[SpecDecl] = { Some(spec) }
+  def rewriteTypeDecl(typDec : TypeDecl, ctx : ScopeMap) : Option[TypeDecl] = { Some(typDec) }
+  def rewriteInit(init : InitDecl, ctx : ScopeMap) : Option[InitDecl] = { Some(init) }
+  def rewriteNext(next : NextDecl, ctx : ScopeMap) : Option[NextDecl] = { Some(next) }
+  def rewriteType(typ: Type, ctx : ScopeMap) : Option[Type] = { Some(typ) }
+  def rewriteTemporalType(tempT : TemporalType, context : ScopeMap) : Option[TemporalType] = { Some(tempT) }
+  def rewriteBoolType(boolT : BoolType, context : ScopeMap) : Option[BoolType] = { Some(boolT) }
+  def rewriteIntType(intT : IntType, context : ScopeMap) : Option[IntType] = { Some(intT)  }
+  def rewriteBitVectorType(bvT : BitVectorType, context : ScopeMap) : Option[BitVectorType] = { Some(bvT)  }
+  def rewriteEnumType(enumT : EnumType, context : ScopeMap) : Option[EnumType] = { Some(enumT)  }
+  def rewriteTupleType(tupleT : TupleType, context : ScopeMap) : Option[TupleType] = { Some(tupleT)  }
+  def rewriteRecordType(recordT : RecordType, context : ScopeMap) : Option[RecordType] = { Some(recordT)  }
+  def rewriteMapType(mapT : MapType, context : ScopeMap) : Option[MapType] = { Some(mapT)  }
+  def rewriteSynonymType(synT : SynonymType, context : ScopeMap) : Option[SynonymType] = { Some(synT)  }
+  def rewriteArrayType(arrayT : ArrayType, context : ScopeMap) : Option[ArrayType] = { Some(arrayT)  }
+  def rewriteProcedureSig(sig : ProcedureSig, ctx : ScopeMap) : Option[ProcedureSig] = { Some(sig) }
+  def rewriteFunctionSig(sig : FunctionSig, ctx : ScopeMap) : Option[FunctionSig] = { Some(sig) }
+  def rewriteLocalVar(lvar : LocalVarDecl, ctx : ScopeMap) : Option[LocalVarDecl] = { Some(lvar) }
+  def rewriteStatement(st : Statement, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteSkip(st : SkipStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteAssert(st : AssertStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteAssume(st : AssumeStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteHavoc(st : HavocStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteAssign(st : AssignStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteIfElse(st : IfElseStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteFor(st : ForStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteCase(st : CaseStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteProcedureCall(st : ProcedureCallStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = { Some(lhs) }
+  def rewriteExpr(e : Expr, ctx : ScopeMap) : Option[Expr] = { Some(e) }
+  def rewriteIdentifierBase(id : IdentifierBase, ctx : ScopeMap) : Option[IdentifierBase] = { Some(id) }
+  def rewriteIdentifier(id : Identifier, ctx : ScopeMap) : Option[Identifier] = { Some(id) }
+  def rewriteConstIdentifier(id : ConstIdentifier, ctx : ScopeMap) : Option[ConstIdentifier] = { Some(id) }
+  def rewriteLit(lit : Literal, ctx : ScopeMap) : Option[Literal] = { Some(lit) }
+  def rewriteBoolLit(b : BoolLit, ctx : ScopeMap) : Option[BoolLit] = { Some(b) }
+  def rewriteIntLit(i : IntLit, ctx : ScopeMap) : Option[IntLit] = { Some(i) }
+  def rewriteBitVectorLit(bv : BitVectorLit, ctx : ScopeMap) : Option[BitVectorLit] = { Some(bv) }
+  def rewriteNumericLit(n : NumericLit, ctx : ScopeMap) : Option[NumericLit] = { Some(n) }
+  def rewriteTuple(rec : Tuple, ctx : ScopeMap) : Option[Tuple] = { Some(rec) }
+  def rewriteOperatorApp(opapp : OperatorApplication, ctx : ScopeMap) : Option[OperatorApplication] = { Some(opapp) }
+  def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = { Some(op) }
+  def rewriteArraySelect(arrSel : ArraySelectOperation, ctx : ScopeMap) : Option[ArraySelectOperation] = { Some(arrSel) }
+  def rewriteArrayStore(arrStore : ArrayStoreOperation, ctx : ScopeMap) : Option[ArrayStoreOperation] = { Some(arrStore) }
+  def rewriteFuncApp(fapp : FuncApplication, ctx : ScopeMap) : Option[FuncApplication] = { Some(fapp) }
+  def rewriteITE(ite : ITE, ctx : ScopeMap) : Option[ITE] = { Some(ite) }
+  def rewriteLambda(lambda : Lambda, ctx : ScopeMap) : Option[Lambda] = { Some(lambda) }
+}
+
 class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAnalysis {
   // Set a backpointer to the pass from here.
   _pass._analysis = Some(this)
@@ -595,70 +658,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnLambda(TraversalDirection.Up, lambda, result, contextIn)
     return result
   }
-}
-
-/* AST Visitor that rewrites and generates a new AST. */
-
-trait RewritePass {
-  var _analysis : Option[ASTAnalysis] = None
-  def analysis : ASTAnalysis = _analysis.get
-  def reset() { }
-  
-  def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = { Some(module) }
-  def rewriteDecl(decl : Decl, ctx : ScopeMap) : Option[Decl] = { Some(decl) }
-  def rewriteCommand(cmd : ProofCommand, ctx : ScopeMap) : Option[ProofCommand] = { Some(cmd) }
-  def rewriteProcedure(proc : ProcedureDecl, ctx : ScopeMap) : Option[ProcedureDecl] = { Some(proc) }
-  def rewriteFunction(func : FunctionDecl, ctx : ScopeMap) : Option[FunctionDecl] = { Some(func) }
-  def rewriteStateVar(stvar : StateVarDecl, ctx : ScopeMap) : Option[StateVarDecl] = { Some(stvar) }
-  def rewriteInputVar(inpvar : InputVarDecl, ctx : ScopeMap) : Option[InputVarDecl] = { Some(inpvar) }
-  def rewriteOutputVar(outvar : OutputVarDecl, ctx : ScopeMap) : Option[OutputVarDecl] = { Some(outvar) }
-  def rewriteConstant(cnst : ConstantDecl, ctx : ScopeMap) : Option[ConstantDecl] = { Some(cnst) }
-  def rewriteSpec(spec : SpecDecl, ctx : ScopeMap) : Option[SpecDecl] = { Some(spec) }
-  def rewriteTypeDecl(typDec : TypeDecl, ctx : ScopeMap) : Option[TypeDecl] = { Some(typDec) }
-  def rewriteInit(init : InitDecl, ctx : ScopeMap) : Option[InitDecl] = { Some(init) }
-  def rewriteNext(next : NextDecl, ctx : ScopeMap) : Option[NextDecl] = { Some(next) }
-  def rewriteType(typ: Type, ctx : ScopeMap) : Option[Type] = { Some(typ) }
-  def rewriteTemporalType(tempT : TemporalType, context : ScopeMap) : Option[TemporalType] = { Some(tempT) }
-  def rewriteBoolType(boolT : BoolType, context : ScopeMap) : Option[BoolType] = { Some(boolT) }
-  def rewriteIntType(intT : IntType, context : ScopeMap) : Option[IntType] = { Some(intT)  }
-  def rewriteBitVectorType(bvT : BitVectorType, context : ScopeMap) : Option[BitVectorType] = { Some(bvT)  }
-  def rewriteEnumType(enumT : EnumType, context : ScopeMap) : Option[EnumType] = { Some(enumT)  }
-  def rewriteTupleType(tupleT : TupleType, context : ScopeMap) : Option[TupleType] = { Some(tupleT)  }
-  def rewriteRecordType(recordT : RecordType, context : ScopeMap) : Option[RecordType] = { Some(recordT)  }
-  def rewriteMapType(mapT : MapType, context : ScopeMap) : Option[MapType] = { Some(mapT)  }
-  def rewriteSynonymType(synT : SynonymType, context : ScopeMap) : Option[SynonymType] = { Some(synT)  }
-  def rewriteArrayType(arrayT : ArrayType, context : ScopeMap) : Option[ArrayType] = { Some(arrayT)  }
-  def rewriteProcedureSig(sig : ProcedureSig, ctx : ScopeMap) : Option[ProcedureSig] = { Some(sig) }
-  def rewriteFunctionSig(sig : FunctionSig, ctx : ScopeMap) : Option[FunctionSig] = { Some(sig) }
-  def rewriteLocalVar(lvar : LocalVarDecl, ctx : ScopeMap) : Option[LocalVarDecl] = { Some(lvar) }
-  def rewriteStatement(st : Statement, ctx : ScopeMap) : List[Statement] = { List(st) }
-  def rewriteSkip(st : SkipStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
-  def rewriteAssert(st : AssertStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
-  def rewriteAssume(st : AssumeStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
-  def rewriteHavoc(st : HavocStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
-  def rewriteAssign(st : AssignStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
-  def rewriteIfElse(st : IfElseStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
-  def rewriteFor(st : ForStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
-  def rewriteCase(st : CaseStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
-  def rewriteProcedureCall(st : ProcedureCallStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
-  def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = { Some(lhs) }
-  def rewriteExpr(e : Expr, ctx : ScopeMap) : Option[Expr] = { Some(e) }
-  def rewriteIdentifierBase(id : IdentifierBase, ctx : ScopeMap) : Option[IdentifierBase] = { Some(id) }
-  def rewriteIdentifier(id : Identifier, ctx : ScopeMap) : Option[Identifier] = { Some(id) }
-  def rewriteConstIdentifier(id : ConstIdentifier, ctx : ScopeMap) : Option[ConstIdentifier] = { Some(id) }
-  def rewriteLit(lit : Literal, ctx : ScopeMap) : Option[Literal] = { Some(lit) }
-  def rewriteBoolLit(b : BoolLit, ctx : ScopeMap) : Option[BoolLit] = { Some(b) }
-  def rewriteIntLit(i : IntLit, ctx : ScopeMap) : Option[IntLit] = { Some(i) }
-  def rewriteBitVectorLit(bv : BitVectorLit, ctx : ScopeMap) : Option[BitVectorLit] = { Some(bv) }
-  def rewriteNumericLit(n : NumericLit, ctx : ScopeMap) : Option[NumericLit] = { Some(n) }
-  def rewriteTuple(rec : Tuple, ctx : ScopeMap) : Option[Tuple] = { Some(rec) }
-  def rewriteOperatorApp(opapp : OperatorApplication, ctx : ScopeMap) : Option[OperatorApplication] = { Some(opapp) }
-  def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = { Some(op) }
-  def rewriteArraySelect(arrSel : ArraySelectOperation, ctx : ScopeMap) : Option[ArraySelectOperation] = { Some(arrSel) }
-  def rewriteArrayStore(arrStore : ArrayStoreOperation, ctx : ScopeMap) : Option[ArrayStoreOperation] = { Some(arrStore) }
-  def rewriteFuncApp(fapp : FuncApplication, ctx : ScopeMap) : Option[FuncApplication] = { Some(fapp) }
-  def rewriteITE(ite : ITE, ctx : ScopeMap) : Option[ITE] = { Some(ite) }
-  def rewriteLambda(lambda : Lambda, ctx : ScopeMap) : Option[Lambda] = { Some(lambda) }
 }
 
 
@@ -1238,47 +1237,5 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val lambdaP = visitExpr(lambda.e, context).flatMap((e) => pass.rewriteLambda(Lambda(idP, e), contextIn))
     astChangeFlag = astChangeFlag || (lambdaP != Some(lambda))
     return ASTNode.introducePos(setFilename, lambdaP, lambda.position)
-  }
-}
-
-/** Very simple pass too print module. */
-class ASTPrinterPass extends ReadOnlyPass[Unit] {
-  override def applyOnModule(d : TraversalDirection.T, module : Module, in : Unit, context : ScopeMap) : Unit = {
-    if (d == TraversalDirection.Down) {
-      println(module)
-    }
-  }
-}
-/** Simple analysis that instantiates ASTPrinterPass to print module. */
-class ASTPrinter(name: String) extends ASTAnalyzer(name, new ASTPrinterPass()) {
-  override def pass = super.pass.asInstanceOf[ASTPrinterPass]
-  in = Some(Unit)
-}
-
-class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
-{
-  override def rewriteExpr(e: Expr, context: ScopeMap) : Option[Expr] = {
-    rewrites.get(e) match {
-      case Some(eprime) => Some(eprime)
-      case None => Some(e)
-    }
-  }
-  override def rewriteIdentifier(i: Identifier, context: ScopeMap) : Option[Identifier] = {
-    rewrites.get(i) match {
-      case None => Some(i)
-      case Some(eprime) => eprime match {
-        case idprime : Identifier => Some(idprime)
-        case _ => Some(i)
-      }
-    }
-  }
-}
-
-class ExprRewriter(name: String, rewrites : Map[Expr, Expr]) 
-  extends ASTRewriter(name, new ExprRewriterPass(rewrites))
-{
-  def rewriteStatements(stmts : List[Statement]) : List[Statement] = {
-    val emptyContext = ScopeMap.empty
-    return stmts.flatMap(visitStatement(_, emptyContext))
   }
 }
