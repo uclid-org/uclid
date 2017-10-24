@@ -139,8 +139,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "false", "true", "bv", KwProcedure, KwBool, KwInt, KwReturns,
       KwAssume, KwAssert, KwVar, KwHavoc, KwCall, KwIf, KwElse,
       KwCase, KwEsac, KwFor, KwIn, KwRange, KwInput, KwOutput,
-      KwModule, KwType, KwEnum, KwRecord, KwSkip, KwFunction,
-      KwControl, KwInit, KwNext, KwITE, KwLambda,
+      KwConst, KwModule, KwType, KwEnum, KwRecord, KwSkip, 
+      KwFunction, KwControl, KwInit, KwNext, KwITE, KwLambda,
       KwDefineProp, KwForall, KwExists)
       // TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
       // TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
@@ -393,7 +393,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
       
     lazy val Decl: PackratParser[Decl] = 
-      positioned (TypeDecl | ConstDecl | FuncDecl | VarDecl | InputDecl | OutputDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl)
+      positioned (TypeDecl | ConstDecl | FuncDecl | VarDecl | InputDecl | OutputDecl | ConstDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl)
   
     // control commands.
     lazy val IdParamList : PackratParser[List[Identifier]] = 

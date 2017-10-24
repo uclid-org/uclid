@@ -5,6 +5,7 @@ module main
   var tmp : int;
   var numbers : [int]int;
   var index : int;
+  const some_int : int;
 
   procedure find_value(num : int) returns (v : int) {
     v := 0;
@@ -16,29 +17,39 @@ module main
   }
 
   init {
-    assume (exists (i : int) : (i > 0) && (i < 11) && numbers[i] == 11);
+    assume (exists (i : int) : (i > 0) && (i < 11) && numbers[i] == some_int);
+    assume (exists (i : int) : (i > 0) && (i < 11) && numbers[i] != some_int);
+	assume (index > 0 && index < 11);
+	assume (numbers[index] == some_int);
   }
-  
+
   next {
     assume ((i1 > 0) && (i1 < 11));
     assume ((i2 > 0) && (i2 < 11));
     assume (i1 != i2);
+
     tmp := numbers[i1];
     numbers[i1] := numbers[i2];
     numbers[i2] := tmp;
     
-    call (index) := find_value(11);
+    call (index) := find_value(some_int);
   }
-  
-  property ind_existence : (exists (i : int) : (i > 0) && (i < 11) && (numbers[i] == 1));
+
+  property ind_existence : (exists (i : int) : (i > 0) && (i < 11) && (numbers[i] == some_int));
+  property ind_inexistence : (exists (i : int) : (i > 0) && (i < 11) && (numbers[i] != some_int));
   property ind_found : (index != 0);
-  
+
   control {
-    // k_induction_base(2);
-    initialize;
-    simulate (2);
+
+    k_induction_base(1);
     decide;
-    print_results;
-    print_cex(index, numbers[1], numbers[2], numbers[3], numbers[4], numbers[5], numbers[6], numbers[7], numbers[8], numbers[9], numbers[10]);
+    //print_results;
+    //print_cex(index, numbers[1], numbers[2], numbers[3], numbers[4], numbers[5], numbers[6], numbers[7], numbers[8], numbers[9], numbers[10], some_int);
+    //clear_context;
+
+    k_induction_step(1);
+    decide;
+    //print_results;
+    //print_cex(index, numbers[1], numbers[2], numbers[3], numbers[4], numbers[5], numbers[6], numbers[7], numbers[8], numbers[9], numbers[10], some_int);
   }
 }

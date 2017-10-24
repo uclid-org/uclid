@@ -281,6 +281,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
   /** Check whether a particular expression is satisfiable.  */      
   override def check (e : Expr) : SolverResult = {
     val z3Expr = exprToZ3(e)
+    // println("SMT expression: " + e.toString)
     // println("Z3 Expression: " + z3Expr.toString)
     
     solver.push()
