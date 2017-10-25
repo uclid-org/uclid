@@ -184,8 +184,13 @@ case class VarBitVectorSlice(hi: Expr, lo: Expr) extends BitVectorSlice {
   override def toString = "[" + hi.toString + ":" + lo.toString + "]"
 }
 
-case class ExtractOp(slice : ConstBitVectorSlice) extends Operator {
+sealed abstract class ExtractOp extends Operator
+case class ConstExtractOp(slice : ConstBitVectorSlice) extends ExtractOp {
   override def toString = slice.toString
+  override def fixity = Operator.POSTFIX
+}
+case class VarExtractOp(slice : VarBitVectorSlice) extends ExtractOp {
+  override def toString = slice.toString()
   override def fixity = Operator.POSTFIX
 }
 

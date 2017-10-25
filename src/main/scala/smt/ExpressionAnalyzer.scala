@@ -50,7 +50,7 @@ object Converter {
       case lang.BVOrOp(w) => return smt.BVOrOp(w)
       case lang.BVXorOp(w) => return smt.BVXorOp(w)
       case lang.BVNotOp(w) => return smt.BVNotOp(w)
-      case lang.ExtractOp(slice) => return smt.BVExtractOp(slice.hi, slice.lo)
+      case lang.ConstExtractOp(slice) => return smt.BVExtractOp(slice.hi, slice.lo)
       // Boolean operators.
       case lang.ConjunctionOp() => return smt.ConjunctionOp
       case lang.DisjunctionOp() => return smt.DisjunctionOp
@@ -174,10 +174,9 @@ object Converter {
   }
   
   var z3ConstInterface = Z3Interface.newInterface()
-  def isExprConst(expr : lang.Expr, scope : lang.ScopeMap) : Boolean = {
-    val smtExpr = exprToSMT(expr, scope)
-    val smtExpr1 = renameSymbols(smtExpr, (s, t) => s + "_1")
-    val smtExpr2 = renameSymbols(smtExpr, (s, t) => s + "_2")
+  def isExprConst(expr : smt.Expr, scope : lang.ScopeMap) : Boolean = {
+    val smtExpr1 = renameSymbols(expr, (s, t) => s + "_1")
+    val smtExpr2 = renameSymbols(expr, (s, t) => s + "_2")
     z3ConstInterface.check(smt.OperatorApplication(smt.InequalityOp, List(smtExpr1, smtExpr2))).isFalse
   }
 }

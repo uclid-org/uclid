@@ -181,8 +181,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       positioned { ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt) } }
     lazy val VarBitVectorSlice: Parser[lang.VarBitVectorSlice] = 
       positioned { ("[" ~> Expr ~ ":" ~ Expr <~ "]") ^^ { case x ~ ":" ~ y => lang.VarBitVectorSlice(x, y) } }
-    lazy val ExtractOp: Parser[lang.ExtractOp] =
-      ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ExtractOp(lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt)) }
+    lazy val ConstExtractOp : Parser[lang.ConstExtractOp] =
+      ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ConstExtractOp(lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt)) }
+    lazy val VarExtractOp : Parser[lang.VarExtractOp] = 
+      positioned { ("[" ~> Expr ~ ":" ~ Expr <~ "]") ^^ { case x ~ ":" ~ y => lang.VarExtractOp(lang.VarBitVectorSlice(x, y)) } }
+    lazy val ExtractOp : Parser[lang.ExtractOp] = positioned { ConstExtractOp | VarExtractOp }
     lazy val Id: PackratParser[Identifier] = positioned { ident ^^ {case i => Identifier(i)} }
     lazy val Bool: PackratParser[BoolLit] =
       positioned { "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) } }

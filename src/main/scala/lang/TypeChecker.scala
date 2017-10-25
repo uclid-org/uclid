@@ -130,12 +130,13 @@ class ForLoopIndexRewriter extends ASTRewriter(
 
 class BitVectorIndexRewriterPass extends RewritePass {
   override def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = {
+    println("LHS: " + lhs.toString)
     lhs match {
-      case LhsSliceSelect(id, slice) =>
-        val hiL = lang.IntLit(slice.hi)
-        val loL = lang.IntLit(slice.lo)
-        val subL = lang.OperatorApplication(lang.IntSubOp(), List(hiL, loL))
-        val width = lang.OperatorApplication(lang.IntAddOp(), List(subL, lang.IntLit(1)))
+      case LhsVarSliceSelect(id, slice) =>
+        val hiExp = smt.Converter.exprToSMT(slice.hi, ctx)
+        val loExp = smt.Converter.exprToSMT(slice.lo, ctx)
+        val subExp = smt.OperatorApplication(smt.IntSubOp, List(hiExp, loExp))
+        val width = smt.OperatorApplication(smt.IntAddOp, List(subExp, smt.IntLit(1)))
         val isCnst = smt.Converter.isExprConst(width, ctx)
         println("width: " + width.toString + "; isCnst: " + isCnst.toString)
       case _ =>
@@ -197,6 +198,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
         val bvType = typ.asInstanceOf[BitVectorType]
         Utils.checkParsingError(bvType.isValidSlice(slice), "Invalid slice: " + slice.toString, slice.pos, c.filename)
         BitVectorType(slice.width)
+      case LhsVarSliceSelect(id, fields) =>
+        // FIXME: Implement VarSliceSelect.
+        throw new Utils.UnimplementedException("FIXME: Implement typeOf(LHS, Scope) for VarSliceSelect.")
     }
     memo.put(lhs.astNodeId, resultType)
     return resultType
@@ -301,14 +305,22 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
           new BoolType()
         }
         case tOp : TemporalOperator => new TemporalType()
-        case ExtractOp(slice) => {
-          Utils.checkParsingError(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.", opapp.pos, c.filename)
-          Utils.checkParsingError(argTypes(0).isInstanceOf[BitVectorType], "Operand to operator '" + opapp.op.toString + "' must be of type BitVector.", opapp.pos, c.filename) 
-          Utils.checkParsingError(argTypes(0).asInstanceOf[BitVectorType].width > slice.hi, "Operand to operator '" + opapp.op.toString + "' must have width > "  + slice.hi.toString + ".", opapp.pos, c.filename) 
-          Utils.checkParsingError(slice.hi >= slice.lo, "High-operand must be greater than or equal to low operand for operator '" + opapp.op.toString + "'.", opapp.pos, c.filename) 
-          Utils.checkParsingError(slice.hi >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.", opapp.pos, c.filename) 
-          Utils.checkParsingError(slice.lo >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.", opapp.pos, c.filename) 
-          new BitVectorType(slice.hi - slice.lo + 1)
+        case extrOp : ExtractOp => {
+          extrOp match {
+            case ConstExtractOp(slice) => {
+              Utils.checkParsingError(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.", opapp.pos, c.filename)
+              Utils.checkParsingError(argTypes(0).isInstanceOf[BitVectorType], "Operand to operator '" + opapp.op.toString + "' must be of type BitVector.", opapp.pos, c.filename) 
+              Utils.checkParsingError(argTypes(0).asInstanceOf[BitVectorType].width > slice.hi, "Operand to operator '" + opapp.op.toString + "' must have width > "  + slice.hi.toString + ".", opapp.pos, c.filename) 
+              Utils.checkParsingError(slice.hi >= slice.lo, "High-operand must be greater than or equal to low operand for operator '" + opapp.op.toString + "'.", opapp.pos, c.filename) 
+              Utils.checkParsingError(slice.hi >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.", opapp.pos, c.filename) 
+              Utils.checkParsingError(slice.lo >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.", opapp.pos, c.filename) 
+              new BitVectorType(slice.hi - slice.lo + 1)
+            }
+            case VarExtractOp(slice) => {
+              // FIXME: Implement typeOf(Expr) for VarExtractOp
+              throw new Utils.UnimplementedException("FIXME: Implement type checker for VarExtractOp")
+            }
+          }
         }
         case ConcatOp() => {
           Utils.checkParsingError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.", opapp.pos, c.filename)

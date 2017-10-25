@@ -295,6 +295,9 @@ class SymbolicSimulator (module : Module) {
             val op = smt.BVReplaceOp(resType.width, slice.hi, slice.lo)
             val args = List(st(id), rhs(x))
             st = st + (id-> smt.OperatorApplication(op, args))
+          case LhsVarSliceSelect(id, fields) =>
+            // FIXME: Implement VarSliceSelect.
+            throw new Utils.UnimplementedException("FIXME: Implement simulateAssign for VarSliceSelect.")
         }
       }
       return st

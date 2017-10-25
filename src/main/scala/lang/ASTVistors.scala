@@ -507,7 +507,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case LhsId(id) => result // FIXME: add visitors for various Lhs types.
       case LhsArraySelect(id, indices) => indices.foldLeft(result)((acc, ind) => visitExpr(ind, acc, context))
       case LhsRecordSelect(id, fields) => fields.foldLeft(result)((acc, fld) => visitIdentifier(fld, acc, context))
-      case LhsSliceSelect(id, slice) => result // FIXME: add visitors for slice selects?
+      case LhsSliceSelect(id, slice) => result // FIXME: add visitor for slice select.
+      case LhsVarSliceSelect(id, slice) => result // FIXME: add visitor for slice select.
     }
     result = pass.applyOnLHS(TraversalDirection.Up, lhs, result, context)
     return result
@@ -1069,26 +1070,28 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
   
   def visitLhs(lhs : Lhs, context : ScopeMap) : Option[Lhs] = {
-    val lhsP : Option[Lhs] = visitIdentifier(lhs.ident, context) match {
-      case Some(id) =>
-        Some(lhs match {
-          case LhsId(_) => 
-            LhsId(id)
-          case LhsArraySelect(_, indices) => 
-            LhsArraySelect(id, indices.flatMap((i) => visitExpr(i, context)))
-          case LhsRecordSelect(_, fields) =>
-            LhsRecordSelect(id, fields.flatMap((f) => visitIdentifier(f, context)))
-          case LhsSliceSelect(_, slice) =>
-            LhsSliceSelect(id, slice)
-        })
-      case None =>
-        None
+    val lhsIdP = visitIdentifier(lhs.ident, context)
+    val lhsP = lhsIdP.flatMap{(id) =>
+      val lhsP1 = lhs match {
+        case LhsId(_) => LhsId(id)
+        case LhsArraySelect(_, indices) =>
+          LhsArraySelect(id, indices.map(visitExpr(_, context)).flatten)
+        case LhsRecordSelect(_, fields) => 
+          LhsRecordSelect(id, fields.map(visitIdentifier(_, context)).flatten)
+        case LhsSliceSelect(_, slice) =>
+          // FIXME: add visitor
+          LhsSliceSelect(id, slice)
+        case LhsVarSliceSelect(_, slice) => 
+          // FIXME: add visitor
+          LhsVarSliceSelect(id, slice)
+      }
+      pass.rewriteLHS(lhsP1, context)
     }
     astChangeFlag = astChangeFlag || (lhsP != Some(lhs))
     return ASTNode.introducePos(setFilename, lhsP, lhs.position)
   }
-  
-  
+
+
   def visitExpr(e : Expr, context : ScopeMap) : Option[Expr] = {
     val eP = (e match {
       case i : IdentifierBase => visitIdentifierBase(i, context)
