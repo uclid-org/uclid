@@ -310,7 +310,10 @@ case class LhsArraySelect(id: Identifier, indices: List[Expr]) extends Lhs(id) {
 case class LhsRecordSelect(id: Identifier, fields: List[Identifier]) extends Lhs(id) {
   override def toString = id.toString + "." + Utils.join(fields.map(_.toString), ".")
 }
-case class LhsSliceSelect(id: Identifier, bitslice: ConstBitVectorSlice) extends Lhs(id) {
+case class LhsSliceSelect(id: Identifier, bitslice : ConstBitVectorSlice) extends Lhs(id) {
+  override def toString = id.toString + bitslice.toString
+}
+case class LhsVarSliceSelect(id: Identifier, bitslice: VarBitVectorSlice) extends Lhs(id) {
   override def toString = id.toString + bitslice.toString
 }
 

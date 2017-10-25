@@ -306,7 +306,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "(" ~ ")" ^^ { case _~_ => List.empty[(Identifier,Type)] }
   
     lazy val Lhs : PackratParser[lang.Lhs] = positioned {
-      Id ~ ConstBitVectorSlice ^^ { case id ~ slice => lang.LhsSliceSelect(id, slice) }  |
+      Id ~ VarBitVectorSlice ^^ { case id ~ slice => lang.LhsVarSliceSelect(id, slice) }  |
       Id ~ ArraySelectOp ^^ { case id ~ mapOp => lang.LhsArraySelect(id, mapOp) }        |
       Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { case id ~ rOp ~ rOps => lang.LhsRecordSelect(id, rOp::rOps) }    |
       Id ^^ { case id => lang.LhsId(id) }

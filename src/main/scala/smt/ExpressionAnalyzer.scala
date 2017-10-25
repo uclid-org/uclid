@@ -173,12 +173,11 @@ object Converter {
     }
   }
   
+  var z3ConstInterface = Z3Interface.newInterface()
   def isExprConst(expr : lang.Expr, scope : lang.ScopeMap) : Boolean = {
     val smtExpr = exprToSMT(expr, scope)
-    val smtExpr1 = renameSymbols(smtExpr, (s, t) => s + "$1")
-    val smtExpr2 = renameSymbols(smtExpr, (s, t) => s + "$2")
-    println("expr1: " + smtExpr1.toString)
-    println("expr2: " + smtExpr2.toString)
-    return smtExpr1 == smtExpr2
+    val smtExpr1 = renameSymbols(smtExpr, (s, t) => s + "_1")
+    val smtExpr2 = renameSymbols(smtExpr, (s, t) => s + "_2")
+    z3ConstInterface.check(smt.OperatorApplication(smt.InequalityOp, List(smtExpr1, smtExpr2))).isFalse
   }
 }
