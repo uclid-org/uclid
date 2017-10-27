@@ -166,22 +166,20 @@ case class GloballyTemporalOp() extends TemporalPrefixOperator { override def to
 case class NextTemporalOp() extends TemporalPrefixOperator { override def toString = "X" }
 
 abstract class BitVectorSlice extends ASTNode {
-  def highIndex : Int = throw new Utils.UnimplementedException("Method highIndex not implemented.") 
-  def lowIndex : Int = throw new Utils.UnimplementedException("Method lowIndex not implemented.")
-  def width : Int = throw new Utils.UnimplementedException("Method width not implemented.")
-  def isConstant : Boolean = throw new Utils.UnimplementedException("Method isConstant not implemented.")
+  def width : Option[Int]
+  def isConstantWidth : Boolean
 }
 
 case class ConstBitVectorSlice(hi: Int, lo: Int) extends BitVectorSlice  {
   Utils.assert(hi >= lo && hi >= 0 && lo >= 0, "Invalid bitvector slice: [" + hi.toString + ":" + lo.toString + "].")
-  override def highIndex = hi
-  override def lowIndex = lo
-  override def width = (hi - lo + 1)
-  override def isConstant = true
+  override def width = Some(hi - lo + 1)
+  override def isConstantWidth = true
   override def toString = "[" + hi.toString + ":" + lo.toString + "]"
 }
-case class VarBitVectorSlice(hi: Expr, lo: Expr) extends BitVectorSlice {
+case class VarBitVectorSlice(hi: Expr, lo: Expr, wd : Option[Int] = None) extends BitVectorSlice {
   override def toString = "[" + hi.toString + ":" + lo.toString + "]"
+  override def width = wd
+  override def isConstantWidth = wd.isDefined
 }
 
 sealed abstract class ExtractOp extends Operator

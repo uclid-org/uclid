@@ -9,6 +9,7 @@ import com.microsoft.{z3 => z3}
 import java.util.HashMap;
 import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
+import com.microsoft.z3.enumerations.Z3_lbool
 
 /**
  * Result of solving a Z3 instance.
@@ -18,6 +19,27 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
     interface.exprToZ3(e) match {
       case z3Expr : z3.Expr => model.eval(z3Expr, true).toString
       case _ => throw new Utils.EvaluationError("Unable to evaluate expression: " + e.toString)
+    }
+  }
+  override def evaluate(e : Expr) : Expr = {
+    interface.exprToZ3(e) match {
+      case z3Expr : z3.Expr => 
+        val value = model.eval(z3Expr, true)
+        if (value.isIntNum()) {
+          val bigInt = value.asInstanceOf[z3.IntNum].getBigInteger()
+          smt.IntLit(bigInt)
+        } else if (value.isBool()) {
+          val boolValue = value.asInstanceOf[z3.BoolExpr].getBoolValue()
+          if (boolValue.toInt() == Z3_lbool.Z3_L_TRUE) {
+            smt.BooleanLit(true)
+          } else if(boolValue.toInt() == Z3_lbool.Z3_L_FALSE) {
+            smt.BooleanLit(false)
+          } else {
+            throw new Utils.RuntimeError("Unable to get model value for: " + e.toString)
+          }
+        } else {
+          throw new Utils.RuntimeError("Unable to get model value for: " + e.toString)
+        }
     }
   }
 }

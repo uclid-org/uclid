@@ -128,20 +128,100 @@ class ForLoopIndexRewriterPass extends RewritePass {
 class ForLoopIndexRewriter extends ASTRewriter(
     "ForLoopIndexRewriter", new ForLoopIndexRewriterPass())
 
+object ReplacePolymorphicOperators {
+  def toInt(op : PolymorphicOperator) : IntArgOperator = {
+    val intOp = op match {
+      case LTOp() => IntLTOp()
+      case LEOp() => IntLEOp()
+      case GTOp() => IntGTOp()
+      case GEOp() => IntGEOp()
+      case AddOp() => IntAddOp()
+      case SubOp() => IntSubOp()
+      case MulOp() => IntMulOp()
+    }
+    intOp.pos = op.pos
+    intOp
+  }
+  def toBitvector(op : PolymorphicOperator, w : Int) : BVArgOperator = {
+    val bvOp = op match {
+      case LTOp() => BVLTOp(w)
+      case LEOp() => BVLEOp(w)
+      case GTOp() => BVGTOp(w)
+      case GEOp() => BVGEOp(w)
+      case AddOp() => BVAddOp(w)
+      case SubOp() => BVSubOp(w)
+      case MulOp() => BVMulOp(w)
+    }
+    bvOp.pos = op.pos
+    bvOp
+  }
+  def toType(op : PolymorphicOperator, typ : NumericType) = {
+    typ match {
+      case intTyp : IntType => toInt(op)
+      case bvTyp : BitVectorType => toBitvector(op, bvTyp.width)
+    }
+  }
+  def rewrite(e : Expr, typ : NumericType) : Expr = {
+    def r(e : Expr) : Expr = rewrite(e, typ)
+    def rs(es : List[Expr])  = es.map(r(_))
+    
+    e match {
+      case i : IdentifierBase => e
+      case l : Literal => e
+      case Tuple(es) => Tuple(es.map(r(_)))
+      case OperatorApplication(op, operands) =>
+        val opP = op match {
+          case p : PolymorphicOperator => toType(p, typ)
+          case _ => op
+        }
+        OperatorApplication(opP, rs(operands))
+      case ArraySelectOperation(expr, indices) =>
+        ArraySelectOperation(r(expr), rs(indices))
+      case ArrayStoreOperation(expr, indices, value) =>
+        ArrayStoreOperation(r(expr), rs(indices), r(value)) 
+      case FuncApplication(expr, args) =>
+        FuncApplication(r(expr), rs(args))
+      case ITE(c, t, f) =>
+        ITE(r(c), r(t), r(f))
+      case Lambda(args, expr) =>
+        Lambda(args, r(expr))
+    }
+  }
+}
+
 class BitVectorIndexRewriterPass extends RewritePass {
+  def rewriteSlice(slice : VarBitVectorSlice) : VarBitVectorSlice = {
+    val hiP = ReplacePolymorphicOperators.rewrite(slice.hi, IntType())
+    val loP = ReplacePolymorphicOperators.rewrite(slice.lo, IntType())
+    VarBitVectorSlice(hiP, loP)
+  }
+  def getWidth(slice : VarBitVectorSlice) : VarBitVectorSlice = {
+    
+  }
+  override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = {
+    op match {
+      case VarExtractOp(slice) =>
+        Some(VarExtractOp(rewriteSlice(slice)))
+      case _ =>
+        Some(op)
+    }
+  }
   override def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = {
     println("LHS: " + lhs.toString)
-    lhs match {
+    Some(lhs match {
       case LhsVarSliceSelect(id, slice) =>
-        val hiExp = smt.Converter.exprToSMT(slice.hi, ctx)
-        val loExp = smt.Converter.exprToSMT(slice.lo, ctx)
+        val sliceP = rewriteSlice(slice)
+        val hiExp = smt.Converter.exprToSMT(sliceP.hi, ctx)
+        val loExp = smt.Converter.exprToSMT(sliceP.lo, ctx)
         val subExp = smt.OperatorApplication(smt.IntSubOp, List(hiExp, loExp))
-        val width = smt.OperatorApplication(smt.IntAddOp, List(subExp, smt.IntLit(1)))
-        val isCnst = smt.Converter.isExprConst(width, ctx)
-        println("width: " + width.toString + "; isCnst: " + isCnst.toString)
-      case _ =>
-    }
-    Some(lhs)
+        val widthExpr = smt.OperatorApplication(smt.IntAddOp, List(subExp, smt.IntLit(1)))
+        val width = smt.Converter.getConstIntValue(widthExpr, ctx)
+        width match {
+          case Some(w) => LhsVarSliceSelect(id, VarBitVectorSlice(sliceP.hi, sliceP.lo, Some(w)))
+          case None => lhs
+        }
+      case _ => lhs
+    })
   }
 }
 
@@ -197,7 +277,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
         Utils.checkParsingError(typ.isBitVector, "Lhs variable in bitvector slice update must be a bitvector: " + id.toString, lhs.pos, c.filename)
         val bvType = typ.asInstanceOf[BitVectorType]
         Utils.checkParsingError(bvType.isValidSlice(slice), "Invalid slice: " + slice.toString, slice.pos, c.filename)
-        BitVectorType(slice.width)
+        BitVectorType(slice.width.get)
       case LhsVarSliceSelect(id, fields) =>
         // FIXME: Implement VarSliceSelect.
         throw new Utils.UnimplementedException("FIXME: Implement typeOf(LHS, Scope) for VarSliceSelect.")
@@ -212,32 +292,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
         case AddOp() | SubOp() | MulOp() => argType
       }
     }
-    def polyToInt(op : PolymorphicOperator) : IntArgOperator = {
-      val intOp = op match {
-        case LTOp() => IntLTOp()
-        case LEOp() => IntLEOp()
-        case GTOp() => IntGTOp()
-        case GEOp() => IntGEOp()
-        case AddOp() => IntAddOp()
-        case SubOp() => IntSubOp()
-        case MulOp() => IntMulOp()
-      }
-      intOp.pos = op.pos
-      return intOp
-    }
-    def polyToBV(op : PolymorphicOperator, w : Int) : BVArgOperator = {
-      val bvOp = op match {
-        case LTOp() => BVLTOp(w)
-        case LEOp() => BVLEOp(w)
-        case GTOp() => BVGTOp(w)
-        case GEOp() => BVGEOp(w)
-        case AddOp() => BVAddOp(w)
-        case SubOp() => BVSubOp(w)
-        case MulOp() => BVMulOp(w)
-      }
-      bvOp.pos = op.pos
-      return bvOp
-    }
     def opAppType(opapp : OperatorApplication) : Type = {
       val argTypes = opapp.operands.map(typeOf(_, c + opapp))
       opapp.op match {
@@ -250,10 +304,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
           Utils.checkParsingError(argTypes.forall(_.isNumeric), "Arguments to operator '" + opapp.op.toString + "' must be of a numeric type.", opapp.pos, c.filename)
           typeOf(opapp.operands(0), c) match {
             case i : IntType =>
-              polyOpMap.put(polyOp.astNodeId, polyToInt(polyOp))
+              polyOpMap.put(polyOp.astNodeId, ReplacePolymorphicOperators.toInt(polyOp))
               polyResultType(polyOp, i)
             case bv : BitVectorType =>
-              polyOpMap.put(polyOp.astNodeId, polyToBV(polyOp, bv.width))
+              polyOpMap.put(polyOp.astNodeId, ReplacePolymorphicOperators.toBitvector(polyOp, bv.width))
               polyResultType(polyOp, bv)
             case _ => throw new Utils.UnimplementedException("Unknown operand type to polymorphic operator '" + opapp.op.toString + "'.")
           }
