@@ -190,43 +190,30 @@ object ReplacePolymorphicOperators {
 }
 
 class BitVectorIndexRewriterPass extends RewritePass {
-  def rewriteSlice(slice : VarBitVectorSlice) : VarBitVectorSlice = {
+  def rewriteSlice(slice : VarBitVectorSlice, ctx : ScopeMap) : VarBitVectorSlice = {
     val hiP = ReplacePolymorphicOperators.rewrite(slice.hi, IntType())
     val loP = ReplacePolymorphicOperators.rewrite(slice.lo, IntType())
-    VarBitVectorSlice(hiP, loP)
+    val hiExp = smt.Converter.exprToSMT(hiP, ctx)
+    val loExp = smt.Converter.exprToSMT(loP, ctx)
+    val subExp = smt.OperatorApplication(smt.IntSubOp, List(hiExp, loExp))
+    val widthExpr = smt.OperatorApplication(smt.IntAddOp, List(subExp, smt.IntLit(1)))
+    val width = smt.Converter.getConstIntValue(widthExpr, ctx)
+    VarBitVectorSlice(hiP, loP, width)
   }
-  def getWidth(slice : VarBitVectorSlice) : VarBitVectorSlice = {
-    
-  }
-  override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = {
-    op match {
-      case VarExtractOp(slice) =>
-        Some(VarExtractOp(rewriteSlice(slice)))
-      case _ =>
-        Some(op)
+
+  override def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : ScopeMap) : Option[BitVectorSlice] = {
+    slice match {
+      case varBvSlice : VarBitVectorSlice => Some(rewriteSlice(varBvSlice, ctx))
+      case _ => Some(slice)
     }
-  }
-  override def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = {
-    println("LHS: " + lhs.toString)
-    Some(lhs match {
-      case LhsVarSliceSelect(id, slice) =>
-        val sliceP = rewriteSlice(slice)
-        val hiExp = smt.Converter.exprToSMT(sliceP.hi, ctx)
-        val loExp = smt.Converter.exprToSMT(sliceP.lo, ctx)
-        val subExp = smt.OperatorApplication(smt.IntSubOp, List(hiExp, loExp))
-        val widthExpr = smt.OperatorApplication(smt.IntAddOp, List(subExp, smt.IntLit(1)))
-        val width = smt.Converter.getConstIntValue(widthExpr, ctx)
-        width match {
-          case Some(w) => LhsVarSliceSelect(id, VarBitVectorSlice(sliceP.hi, sliceP.lo, Some(w)))
-          case None => lhs
-        }
-      case _ => lhs
-    })
   }
 }
 
 class BitVectorIndexRewriter extends ASTRewriter(
     "BitVectorIndexRewriter", new BitVectorIndexRewriterPass())
+
+class RewriteVarBitVectorSlice extends RewritePass {
+}
 
 class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
 {
@@ -278,9 +265,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
         val bvType = typ.asInstanceOf[BitVectorType]
         Utils.checkParsingError(bvType.isValidSlice(slice), "Invalid slice: " + slice.toString, slice.pos, c.filename)
         BitVectorType(slice.width.get)
-      case LhsVarSliceSelect(id, fields) =>
-        // FIXME: Implement VarSliceSelect.
-        throw new Utils.UnimplementedException("FIXME: Implement typeOf(LHS, Scope) for VarSliceSelect.")
+      case LhsVarSliceSelect(id, slice) =>
+        Utils.checkParsingError(slice.width.isDefined, "Width of bitvector slice is not constant.", lhs.pos, c.filename)
+        BitVectorType(slice.width.get)
     }
     memo.put(lhs.astNodeId, resultType)
     return resultType
@@ -340,7 +327,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
         }
         case qOp : QuantifiedBooleanOperator => {
           Utils.checkParsingError(argTypes(0).isInstanceOf[BoolType], "Operand to the quantifier '" + qOp.toString + "' must be boolean.", opapp.pos, c.filename)
-          new BoolType()
+          BoolType()
         }
         case boolOp : BooleanOperator => {
           boolOp match {
@@ -351,12 +338,12 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
               Utils.checkParsingError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.", opapp.pos, c.filename)
               Utils.checkParsingError(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.", opapp.pos, c.filename)
           }
-          new BoolType()
+          BoolType()
         }
         case cmpOp : ComparisonOperator => {
           Utils.checkParsingError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.", opapp.pos, c.filename)
           Utils.checkParsingError(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type.", opapp.pos, c.filename)
-          new BoolType()
+          BoolType()
         }
         case tOp : TemporalOperator => new TemporalType()
         case extrOp : ExtractOp => {
@@ -368,11 +355,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
               Utils.checkParsingError(slice.hi >= slice.lo, "High-operand must be greater than or equal to low operand for operator '" + opapp.op.toString + "'.", opapp.pos, c.filename) 
               Utils.checkParsingError(slice.hi >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.", opapp.pos, c.filename) 
               Utils.checkParsingError(slice.lo >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.", opapp.pos, c.filename) 
-              new BitVectorType(slice.hi - slice.lo + 1)
+              BitVectorType(slice.hi - slice.lo + 1)
             }
             case VarExtractOp(slice) => {
-              // FIXME: Implement typeOf(Expr) for VarExtractOp
-              throw new Utils.UnimplementedException("FIXME: Implement type checker for VarExtractOp")
+              Utils.checkParsingError(slice.width.isDefined, "Slice width is not constant", extrOp.pos, c.filename)
+              BitVectorType(slice.width.get)
             }
           }
         }

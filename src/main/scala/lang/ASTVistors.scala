@@ -60,6 +60,7 @@ trait ReadOnlyPass[T] {
   def applyOnCase(d : TraversalDirection.T, st : CaseStmt, in : T, context : ScopeMap) : T = { in }
   def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, context : ScopeMap) : T = { in }
   def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : ScopeMap) : T = { in }
+  def applyOnBitVectorSlice(d : TraversalDirection.T, slice : BitVectorSlice, in : T, context : ScopeMap) : T = { in }
   def applyOnExpr(d : TraversalDirection.T, e : Expr, in : T, context : ScopeMap) : T = { in }
   def applyOnIdentifierBase(d : TraversalDirection.T, id : IdentifierBase, in : T, context : ScopeMap) : T = { in }
   def applyOnIdentifier(d : TraversalDirection.T, id : Identifier, in : T, context : ScopeMap) : T = { in }
@@ -124,6 +125,7 @@ trait RewritePass {
   def rewriteCase(st : CaseStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
   def rewriteProcedureCall(st : ProcedureCallStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
   def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = { Some(lhs) }
+  def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : ScopeMap) : Option[BitVectorSlice] = { Some(slice) }
   def rewriteExpr(e : Expr, ctx : ScopeMap) : Option[Expr] = { Some(e) }
   def rewriteIdentifierBase(id : IdentifierBase, ctx : ScopeMap) : Option[IdentifierBase] = { Some(id) }
   def rewriteIdentifier(id : Identifier, ctx : ScopeMap) : Option[Identifier] = { Some(id) }
@@ -504,15 +506,28 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnLHS(TraversalDirection.Down, lhs, result, context)
     result = visitIdentifier(lhs.ident, result, context)
     result = lhs match {
-      case LhsId(id) => result // FIXME: add visitors for various Lhs types.
+      case LhsId(id) => result
       case LhsArraySelect(id, indices) => indices.foldLeft(result)((acc, ind) => visitExpr(ind, acc, context))
       case LhsRecordSelect(id, fields) => fields.foldLeft(result)((acc, fld) => visitIdentifier(fld, acc, context))
-      case LhsSliceSelect(id, slice) => result // FIXME: add visitor for slice select.
-      case LhsVarSliceSelect(id, slice) => result // FIXME: add visitor for slice select.
+      case LhsSliceSelect(id, slice) => visitBitVectorSlice(slice, result, context)
+      case LhsVarSliceSelect(id, slice) => visitBitVectorSlice(slice, result, context)
     }
     result = pass.applyOnLHS(TraversalDirection.Up, lhs, result, context)
     return result
   }
+
+  def visitBitVectorSlice(slice : BitVectorSlice, in : T, context : ScopeMap) : T = {
+    var result = pass.applyOnBitVectorSlice(TraversalDirection.Down, slice, in, context)
+    slice match {
+      case varSlice : VarBitVectorSlice =>
+        result = visitExpr(varSlice.hi, result, context)
+        result = visitExpr(varSlice.lo, result, context)
+      case _ =>
+    }
+    result = pass.applyOnBitVectorSlice(TraversalDirection.Up, slice, in, context)
+    return result
+  }
+
   def visitExpr(e : Expr, in : T, context : ScopeMap) : T = {
     var result : T = in
     result = pass.applyOnExpr(TraversalDirection.Down, e, result, context)
@@ -612,6 +627,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitOperator(op : Operator, in : T, context : ScopeMap) : T = {
     var result : T = in
     result = pass.applyOnOperator(TraversalDirection.Down, op, result, context)
+    op match {
+      case ConstExtractOp(slice) =>
+        result = visitBitVectorSlice(slice, result, context)
+      case VarExtractOp(slice) =>
+        result = visitBitVectorSlice(slice, result, context)
+      case _ =>
+    }
     result = pass.applyOnOperator(TraversalDirection.Up, op, result, context)
     return result
   }
@@ -1059,7 +1081,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     astChangeFlag = astChangeFlag || (stP != Some(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
-  
+
   def visitProcedureCallStatement(st : ProcedureCallStmt, context : ScopeMap) : List[Statement] = {
     val idP = visitIdentifier(st.id, context)
     val lhssP = st.callLhss.map(visitLhs(_, context)).flatten
@@ -1068,29 +1090,51 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     astChangeFlag = astChangeFlag || (stP != Some(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
-  
+
   def visitLhs(lhs : Lhs, context : ScopeMap) : Option[Lhs] = {
     val lhsIdP = visitIdentifier(lhs.ident, context)
-    val lhsP = lhsIdP.flatMap{(id) =>
-      val lhsP1 = lhs match {
-        case LhsId(_) => LhsId(id)
-        case LhsArraySelect(_, indices) =>
-          LhsArraySelect(id, indices.map(visitExpr(_, context)).flatten)
-        case LhsRecordSelect(_, fields) => 
-          LhsRecordSelect(id, fields.map(visitIdentifier(_, context)).flatten)
-        case LhsSliceSelect(_, slice) =>
-          // FIXME: add visitor
-          LhsSliceSelect(id, slice)
-        case LhsVarSliceSelect(_, slice) => 
-          // FIXME: add visitor
-          LhsVarSliceSelect(id, slice)
+    def newLhsSliceSelect(id : Identifier, slice : BitVectorSlice) = {
+      slice match {
+        case constBvSlice : ConstBitVectorSlice => LhsSliceSelect(id, constBvSlice)
+        case varBvSlice : VarBitVectorSlice => LhsVarSliceSelect(id, varBvSlice)
       }
-      pass.rewriteLHS(lhsP1, context)
+    }
+    val lhsP = lhsIdP.flatMap{(id) =>
+      val lhsP1 : Option[Lhs] = lhs match {
+        case LhsId(_) => Some(LhsId(id))
+        case LhsArraySelect(_, indices) =>
+          Some(LhsArraySelect(id, indices.map(visitExpr(_, context)).flatten))
+        case LhsRecordSelect(_, fields) => 
+          Some(LhsRecordSelect(id, fields.map(visitIdentifier(_, context)).flatten))
+        case LhsSliceSelect(id, slice) =>
+          val sliceP = visitBitVectorSlice(slice, context)
+          sliceP.flatMap((s) => Some(newLhsSliceSelect(id, s)))
+        case LhsVarSliceSelect(_, slice) => 
+          val sliceP = visitBitVectorSlice(slice, context)
+          sliceP.flatMap((s) => Some(newLhsSliceSelect(id, s)))
+      }
+      lhsP1.flatMap((lhsP) => pass.rewriteLHS(lhsP, context))
     }
     astChangeFlag = astChangeFlag || (lhsP != Some(lhs))
     return ASTNode.introducePos(setFilename, lhsP, lhs.position)
   }
 
+  def visitBitVectorSlice(slice : BitVectorSlice, context : ScopeMap) : Option[BitVectorSlice] = {
+    slice match {
+      case varBvSlice : VarBitVectorSlice =>
+        var hiP = visitExpr(varBvSlice.hi, context)
+        var loP = visitExpr(varBvSlice.lo, context)
+
+        (hiP, loP) match {
+          case (Some(hi), Some(lo)) =>
+            pass.rewriteBitVectorSlice(VarBitVectorSlice(hi, lo, varBvSlice.wd), context)
+          case _ =>
+            None
+        }
+      case constBvSlice : ConstBitVectorSlice =>
+        pass.rewriteBitVectorSlice(constBvSlice, context)
+    }
+  }
 
   def visitExpr(e : Expr, context : ScopeMap) : Option[Expr] = {
     val eP = (e match {
@@ -1179,7 +1223,24 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
   
   def visitOperator(op : Operator, context : ScopeMap) : Option[Operator] = {
-    val opP = pass.rewriteOperator(op, context)
+    def newExtractOp(slice : BitVectorSlice) : ExtractOp = {
+      slice match {
+        case constBvSlice : ConstBitVectorSlice => ConstExtractOp(constBvSlice)
+        case varBvSlice : VarBitVectorSlice => VarExtractOp(varBvSlice)
+      }
+    }
+    val opP : Option[Operator] = op match {
+      case ConstExtractOp(slice) =>
+        val sliceP = visitBitVectorSlice(slice, context)
+        val extractOp = sliceP.flatMap((slice) => Some(newExtractOp(slice)))
+        extractOp.flatMap((eOp) => pass.rewriteOperator(eOp, context)) 
+      case VarExtractOp(slice) =>
+        val sliceP = visitBitVectorSlice(slice, context)
+        val extractOp = sliceP.flatMap((slice) => Some(newExtractOp(slice)))
+        extractOp.flatMap((eOp) => pass.rewriteOperator(eOp, context))
+      case _ =>
+        pass.rewriteOperator(op, context)
+    }
     astChangeFlag = astChangeFlag || (opP != Some(op))
     return ASTNode.introducePos(setFilename, opP, op.position)
   }
