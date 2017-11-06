@@ -449,6 +449,60 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Unit]
         val rhsTypes = rhss.map(exprTypeChecker.typeOf(_, context))
         val typesMatch = (lhsTypes zip rhsTypes).map((p) => p._1.matches(p._2))
         Utils.checkParsingError(typesMatch.forall((b) => b), "LHS/RHS types do not match.", st.pos, context.filename)
+      case IfElseStmt(cond, _, _) =>
+        val cType = exprTypeChecker.typeOf(cond, context)
+        Utils.checkParsingError(cType.isBool, "Condition in if statement must be of type boolean.", st.pos, context.filename)
+      case ForStmt(_, range, _) =>
+        range._1 match {
+          case i : IntLit =>
+            range._2 match {
+              case j: IntLit => Utils.checkParsingError(i.value < j.value, "Range lower bound must be less than upper bound.", st.pos, context.filename)
+              case _ => Utils.checkParsingError(false, "Range lower and upper bounds must be of same type.", st.pos, context.filename)
+              // Maybe import and use: `throw new ParserError("Range lower and upper bounds must be of same type.", Some(st.pos), context.filename)`
+            }
+          case b : BitVectorLit =>
+            range._2 match {
+              case c: BitVectorLit => Utils.checkParsingError(b.value < c.value, "Range lower bound must be less than upper bound.", st.pos, context.filename)
+              case _ => Utils.checkParsingError(false, "Range lower and upper bounds must be of same type.", st.pos, context.filename)
+              // Maybe import and use: `throw new ParserError("Range lower and upper bounds must be of same type.", Some(st.pos), context.filename)`
+            }
+        }
+      case CaseStmt(body) =>
+        body.foreach(c => {
+          var cType = exprTypeChecker.typeOf(c._1, context)
+          Utils.checkParsingError(cType.isBool, "Case clause must be of type boolean.", st.pos, context.filename)
+        })
+      case ProcedureCallStmt(id, callLhss, args) =>
+        Utils.checkParsingError(context.module.nonEmpty, "Procedure does not exist.", st.pos, context.filename)
+        var p = context.module.get.decls.find(d => d.declName.exists(i => i == id))
+        Utils.checkParsingError(p.nonEmpty, "Procedure does not exist.", st.pos, context.filename)
+        Utils.checkParsingError({for ((ip, ar) <- p.get.asInstanceOf[ProcedureDecl].sig.inParams.zipAll(args, None, None)) {
+            if (ip == None || ar == None) {
+              false
+            } else {
+              var ipType = ip.asInstanceOf[(Identifier, Type)]._2.asInstanceOf[Type]
+              var arType = exprTypeChecker.typeOf(ar.asInstanceOf[Expr], context)
+              if (!ipType.matches(arType)) {
+                false
+              }
+            }
+          }
+          true
+        }, "Argument types do not match parameter types.", st.pos, context.filename)
+        Utils.checkParsingError({for ((op, lh) <- p.get.asInstanceOf[ProcedureDecl].sig.outParams.zipAll(callLhss, None, None)) {
+          if (op == None || lh == None) {
+            false
+          } else {
+            var opType = op.asInstanceOf[(Identifier, Type)]._2.asInstanceOf[Type]
+            var lhExpr = context.map.get(lh.asInstanceOf[Lhs].ident)
+            Utils.checkParsingError(lhExpr.nonEmpty, "Left hand side type does not exist.", st.pos, context.filename)
+            if (!opType.matches(lhExpr.get.typ)) {
+              false
+            }
+          }
+        }
+          true
+        }, "Left hand side types do not match parameter types.", st.pos, context.filename)
       case _ =>
         // Ignore the rest.
     }
