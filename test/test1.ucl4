@@ -6,9 +6,11 @@ module test {
     havoc x; 
     x,y := y,x; 
     if (x && 1) { 
-      x := 2; call (x) := g(); 
+      x := 2; 
+      call (x) := g(); 
     } else {  
-      y:= 2; call (x) := f(x+1,2); 
+      y:= 2; 
+      call (x) := f((x+1)[2],2); 
       x := h(x,u);
     }
     for i in range(0,4) { 

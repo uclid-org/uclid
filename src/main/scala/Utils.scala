@@ -24,12 +24,14 @@ object Utils {
   def checkError(b : Boolean, err: String) : Unit = {
     if (!b) { throw new ParserError(err, None, None) }
   }
-  class UnimplementedException (msg:String=null, cause:Throwable=null) extends java.lang.UnsupportedOperationException (msg, cause) {}
-  class RuntimeError (msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
-  class EvaluationError(msg : String, cause: Throwable = null) extends RuntimeError(msg, cause) {} 
-  class AssertionError(msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
-  class ParserError(msg:String, val pos : Option[Position], val filename: Option[String], cause:Throwable=null) extends java.lang.RuntimeException(msg, cause) {}
-  class ParserErrorList(val errors : List[(String, lang.ASTPosition)]) extends java.lang.RuntimeException("Parser Errors", null) {}
+  class UnimplementedException (msg:String=null, cause:Throwable=null) extends java.lang.UnsupportedOperationException (msg, cause)
+  class RuntimeError (msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause)
+  class EvaluationError(msg : String, cause: Throwable = null) extends RuntimeError(msg, cause)
+  class AssertionError(msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause)
+  class ParserError(msg:String, val pos : Option[Position], val filename: Option[String], cause:Throwable=null) extends java.lang.RuntimeException(msg, cause)
+  class TypeError(msg: String, pos: Option[Position], filename: Option[String]) extends ParserError(msg, pos, filename)
+  class TypeErrorList(val errors: List[TypeError]) extends java.lang.RuntimeException("Type errors.", null)
+  class ParserErrorList(val errors : List[(String, lang.ASTPosition)]) extends java.lang.RuntimeException("Parser Errors", null)
   
   def existsOnce(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,1)
   def existsNone(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,0)

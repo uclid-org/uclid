@@ -98,10 +98,16 @@ object UclidMain {
         }
         println("Error at " + filenameStr + positionStr + ": " + p.getMessage + "\n" + fullStr)
         System.exit(1)
+      case (typeErrors : Utils.TypeErrorList) =>
+        typeErrors.errors.foreach {
+          (err) => {
+            println("Type error at " + err.pos.get.toString + ": " + err.getMessage() + "\n" + err.pos.get.longString)
+          }
+        }
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
-            println("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString) 
+            println("Error at " + err._2.toString + ": " + err._1 + "\n" + err._2.pos.longString) 
           }
         }
         println("Parsing failed. " + ps.errors.size.toString + " errors found.")
@@ -128,6 +134,7 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceFindWidth())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new PolymorphicTypeRewriter())
+    passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())
     passManager.addPass(new FunctionInliner())
