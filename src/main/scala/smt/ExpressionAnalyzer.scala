@@ -75,11 +75,13 @@ object Converter {
   def exprToSMT(expr : lang.Expr, scope : lang.ScopeMap) : smt.Expr = {
     def toSMT(expr : lang.Expr) : smt.Expr = exprToSMT(expr, scope)
     def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e))
+    def idToSMT(id : lang.IdentifierBase) : smt.Expr = {
+      val typ = scope.typeOf(id).get
+      smt.Symbol(id.name, typeToSMT(typ))
+    }
     
      expr match {
-       case lang.Identifier(id) => 
-         val typ = scope.typeOf(expr.asInstanceOf[lang.Identifier]).get
-         smt.Symbol(id, typeToSMT(typ))
+       case id : lang.IdentifierBase => idToSMT(id) 
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
@@ -103,8 +105,6 @@ object Converter {
          return smt.ITE(toSMT(cond), toSMT(t), toSMT(f))
        case lang.Lambda(ids,le) => 
          throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
-       case _ => 
-         throw new Utils.UnimplementedException("Unimplemented expression: " + expr.toString)
     }
   }
   

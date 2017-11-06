@@ -189,31 +189,6 @@ object ReplacePolymorphicOperators {
   }
 }
 
-class BitVectorIndexRewriterPass extends RewritePass {
-  def rewriteSlice(slice : VarBitVectorSlice, ctx : ScopeMap) : VarBitVectorSlice = {
-    val hiP = ReplacePolymorphicOperators.rewrite(slice.hi, IntType())
-    val loP = ReplacePolymorphicOperators.rewrite(slice.lo, IntType())
-    val hiExp = smt.Converter.exprToSMT(hiP, ctx)
-    val loExp = smt.Converter.exprToSMT(loP, ctx)
-    val subExp = smt.OperatorApplication(smt.IntSubOp, List(hiExp, loExp))
-    val widthExpr = smt.OperatorApplication(smt.IntAddOp, List(subExp, smt.IntLit(1)))
-    val width = smt.Converter.getConstIntValue(widthExpr, ctx)
-    VarBitVectorSlice(hiP, loP, width)
-  }
-
-  override def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : ScopeMap) : Option[BitVectorSlice] = {
-    slice match {
-      case varBvSlice : VarBitVectorSlice => Some(rewriteSlice(varBvSlice, ctx))
-      case _ => Some(slice)
-    }
-  }
-}
-
-class BitVectorIndexRewriter extends ASTRewriter(
-    "BitVectorIndexRewriter", new BitVectorIndexRewriterPass())
-
-class RewriteVarBitVectorSlice extends RewritePass {
-}
 
 class ExpressionTypeCheckerPass extends ReadOnlyPass[Unit]
 {
