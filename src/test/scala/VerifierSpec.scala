@@ -27,6 +27,9 @@ class VerifierSpec extends FlatSpec {
   "test/test-case-mc91.ucl4" should "verify successfully." in {
     nTestsFail("./test/test-case-mc91.ucl4", 0)
   }
+  "test/test-forloop.ucl4" should "verify successfully." in {
+    nTestsFail("./test/test-forloop.ucl4", 0)
+  }
   "test/test-forloop-0.ucl4" should "verify successfully." in {
     nTestsFail("./test/test-forloop-0.ucl4", 0)
   }
@@ -35,6 +38,9 @@ class VerifierSpec extends FlatSpec {
   }
   "test/test-inliner.ucl4" should "verify successfully." in {
     nTestsFail("./test/test-inliner.ucl4", 0)
+  }
+  "test/test-inliner-1.ucl4" should "verify successfully." in {
+    nTestsFail("./test/test-inliner-1.ucl4", 0)
   }
   "test/test-int-fib.ucl4" should "verify successfully all but one assertion." in {
     nTestsFail("./test/test-int-fib.ucl4", 1)

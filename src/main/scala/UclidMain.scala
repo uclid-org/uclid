@@ -135,7 +135,7 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new CaseEliminator())
     passManager.addPass(new ControlCommandChecker())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
+    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
     for (srcFile <- srcFiles) {
       val text = scala.io.Source.fromFile(srcFile).mkString

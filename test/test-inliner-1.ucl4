@@ -1,20 +1,14 @@
 module main {
   type word_t = bv4;
-  type cmd_t = bv2;
-  type bit = bv1;
-  
-  input cmd   : cmd_t;
-  input arg0  : word_t;
-  input arg1  : word_t;
-  input valid : bool;
+  type bit_t = bv1;
 
-  var t1 : word_t;
-  var t2 : word_t;
   var r1 : word_t;
-  output rdy    : bool;
-  output result : word_t;
+  var r2 : word_t;
   
-  procedure full_adder(a : bit, b : bit, c_in : bit) returns (s : bit, c_out : bit) {
+  input arg0 : word_t;
+  input arg1 : word_t;
+  
+  procedure full_adder(a : bit_t, b : bit_t, c_in : bit_t) returns (s : bit_t, c_out : bit_t) {
 	s := a ^ b ^ c_in;
 	c_out := (a & b) | (b & c_in) | (c_in & a);
   }
@@ -36,15 +30,9 @@ module main {
   }
   
   next {
-  	rdy := false;
-  	t1 := (arg0 & ~arg1) | (~arg0 & arg1);
-  	t2 := (arg0 ^ arg1);
-  	
-  	call (result) := add_unrolled(arg0, arg1);
-  	call (r1) := add_forloop(arg0, arg1);
-  	assert (r1 == result);
-  	assert (result == (arg0 + arg1));
-  	assert (t1 == t2);
+  	call (r1) := add_unrolled(arg0, arg1);
+  	call (r2) := add_forloop(arg0, arg1);
+  	assert (r1 == r2);
   }
   
   control {

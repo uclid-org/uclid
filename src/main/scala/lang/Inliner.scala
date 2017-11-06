@@ -103,6 +103,10 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
             val rewriter = new ExprRewriter("ProcedureInlineRewriter", rewriteMap)
             (acc._1 ++ rewriter.rewriteStatements(proc.body) ++ List(resultAssignStatment), acc._2 ++ retNewVars ++ localNewVars)
           }
+        case ForStmt(id, range, body) =>
+          val bodyP = inlineProcedureCalls(uniqNamer, body)
+          val forP = ForStmt(id, range, bodyP._1)
+          (acc._1 ++ List(forP), acc._2 ++ bodyP._2)
         case IfElseStmt(cond, ifblock, elseblock) =>
           val ifBlockP = inlineProcedureCalls(uniqNamer, ifblock)
           val elseBlockP = inlineProcedureCalls(uniqNamer, elseblock)
