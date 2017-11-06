@@ -134,7 +134,6 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceFindWidth())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new PolymorphicTypeRewriter())
-    passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())
     passManager.addPass(new FunctionInliner())
