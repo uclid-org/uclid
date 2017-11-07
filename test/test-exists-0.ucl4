@@ -17,8 +17,8 @@ module main
   }
 
   init {
-    assume (exists (i : int) : (i > 0) && (i < 11) && numbers[i] == some_int);
-    assume (exists (i : int) : (i > 0) && (i < 11) && numbers[i] != some_int);
+    assume (exists (i : int) :: (i > 0) && (i < 11) && numbers[i] == some_int);
+    assume (exists (i : int) :: (i > 0) && (i < 11) && numbers[i] != some_int);
 	assume (index > 0 && index < 11);
 	assume (numbers[index] == some_int);
   }
@@ -35,8 +35,8 @@ module main
     call (index) := find_value(some_int);
   }
 
-  property ind_existence : (exists (i : int) : (i > 0) && (i < 11) && (numbers[i] == some_int));
-  property ind_inexistence : (exists (i : int) : (i > 0) && (i < 11) && (numbers[i] != some_int));
+  property ind_existence : (exists (i : int) :: (i > 0) && (i < 11) && (numbers[i] == some_int));
+  property ind_inexistence : (exists (i : int) :: (i > 0) && (i < 11) && (numbers[i] != some_int));
   property ind_found : (index != 0);
 
   control {

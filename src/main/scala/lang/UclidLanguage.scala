@@ -577,7 +577,15 @@ case class SpecDecl(id: Identifier, expr: Expr) extends Decl {
   override def toString = "property " + id + ":" + expr + ";  // " + id.position.toString
   override def declName = Some(id)
 }
-
+case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
+  override def toString = {
+    id match {
+      case Some(id) => "axiom " + id.toString + " : " + expr.toString()
+      case None => "axiom " + expr.toString
+    }
+  }
+  override def declName = id
+}
 case class ProofCommand(name : Identifier, params: List[Identifier], args : List[Expr]) extends ASTNode {
   override def toString = {
     val nameStr = name.toString 
@@ -594,7 +602,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
     newModule.filename = Some(name)
     return newModule
   }
-  
+
   val init : Option[InitDecl] = {
     decls.find(_.isInstanceOf[InitDecl]).flatMap((d) => Some(d.asInstanceOf[InitDecl]))
   }
@@ -602,6 +610,11 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
   val next : Option[NextDecl] = {
     decls.find(_.isInstanceOf[NextDecl]).flatMap((d) => Some(d.asInstanceOf[NextDecl]))
   }
+
+  val axioms : List[AxiomDecl] = {
+    decls.filter(_.isInstanceOf[AxiomDecl]).map(_.asInstanceOf[AxiomDecl])
+  }
+
   override def toString = 
     "\nmodule " + id + " {\n" + 
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +
@@ -630,7 +643,8 @@ object Scope {
   case class ProcedureLocalVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ForIndexVar(iId : ConstIdentifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
-  case class SpecVar(varId : Identifier, expr: Expr) extends NamedExpression(varId, BoolType())
+  case class SpecVar(varId : Identifier, expr: Expr) extends NamedExpression(varId, BoolType()) // FIXME: make readonly
+  case class AxiomVar(varId : Identifier, expr : Expr) extends ReadOnlyNamedExpression(varId, BoolType())
   case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends NamedExpression(enumId, enumTyp)
   case class ForallVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ExistsVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
@@ -705,6 +719,10 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
         case ConstantDecl(id, typ) => Scope.addToMap(mapAcc, Scope.ConstantVar(id, typ)) 
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SpecDecl(id, expr) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))
+        case AxiomDecl(sId, expr) => sId match {
+          case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr))
+          case None => mapAcc
+        }
         case InitDecl(_) | NextDecl(_) => mapAcc
       }
     }

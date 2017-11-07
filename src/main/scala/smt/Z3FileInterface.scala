@@ -36,6 +36,9 @@ class Z3FileInterface() extends SolverInterface {
           } else {
             "(Array " + printType(ins(0)) + " " + printType(out) + ")"
           }
+        case _ =>
+          // FIXME: add more types here.
+          throw new Utils.UnimplementedException("Add support for more types!")
       }
     }
     
@@ -46,6 +49,9 @@ class Z3FileInterface() extends SolverInterface {
         "(declare-fun " + x.id + " " + printType(x.typ) + ")\n"
       case ArrayType(ins,out) => 
         "(declare-const " + x.id + " " + printType(x.typ) + ")\n"
+      case _ =>
+        // FIXME: add more types here.
+        throw new Utils.UnimplementedException("Add support for more types!")
     }
   }
   

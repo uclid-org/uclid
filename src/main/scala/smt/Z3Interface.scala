@@ -84,8 +84,9 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
   }
 
   // Methods to convert uclid.smt.Type values into Z3 sorts.
-  val getBoolSort = new Memo[Unit, z3.BoolSort](Unit => ctx.mkBoolSort())
-  val getIntSort = new Memo[Unit, z3.IntSort](Unit => ctx.mkIntSort())
+  val getUninterpretedSort = new Memo[String, z3.UninterpretedSort]((name) => ctx.mkUninterpretedSort(name))
+  lazy val boolSort = ctx.mkBoolSort()
+  lazy val intSort = ctx.mkIntSort()
   val getBitVectorSort = new Memo[Int, z3.BitVecSort]((w : Int) => ctx.mkBitVecSort(w))
   val getTupleSort = new Memo[List[Type], z3.TupleSort]((types : List[Type]) => {
     ctx.mkTupleSort(
@@ -116,13 +117,16 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
   /** Convert uclid.smt types to Z3 sorts. */
   def getZ3Sort (typ : smt.Type) : z3.Sort = {
     typ  match {
-      case BoolType()       => getBoolSort()
-      case IntType()        => getIntSort()
-      case BitVectorType(w) => getBitVectorSort(w)
-      case TupleType(ts)    => getTupleSort(ts)
-      case RecordType(rs)   => getRecordSort(rs)
-      case ArrayType(rs, d) => getArraySort(rs, d)
-      case EnumType(ids)    => getEnumSort(ids)
+      case UninterpretedType(n) => getUninterpretedSort(n)
+      case BoolType()           => boolSort
+      case IntType()            => intSort
+      case BitVectorType(w)     => getBitVectorSort(w)
+      case TupleType(ts)        => getTupleSort(ts)
+      case RecordType(rs)       => getRecordSort(rs)
+      case ArrayType(rs, d)     => getArraySort(rs, d)
+      case EnumType(ids)        => getEnumSort(ids)
+      case MapType(rs, d)       =>
+        throw new Utils.RuntimeError("Must not use getZ3Sort to convert MapSorts.")
     }
   }
 
@@ -153,8 +157,9 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     case class MapSort(ins : List[Type], out : Type) extends ExprSort
     
     val exprSort = (sym.typ) match {
-      case BoolType() => VarSort(getBoolSort())
-      case IntType() => VarSort(getIntSort())
+      case UninterpretedType(name) => VarSort(getUninterpretedSort(name))
+      case BoolType() => VarSort(boolSort)
+      case IntType() => VarSort(intSort)
       case BitVectorType(w) => VarSort(getBitVectorSort(w))
       case TupleType(ts) => VarSort(getTupleSort(ts))
       case RecordType(rs) => VarSort(getRecordSort(rs))

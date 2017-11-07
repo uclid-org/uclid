@@ -6,7 +6,7 @@ module main
   var index : int;
   
   init {
-    assume (forall (i : int) : numbers[i] == 0);
+    assume (forall (i : int) :: numbers[i] == 0);
     sum := 0;
     index := 0;
   }

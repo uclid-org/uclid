@@ -11,7 +11,7 @@ package uclid
 package smt
 import scala.collection.mutable.Map
 
-trait Type {
+sealed trait Type {
   def isBool = false
   def isInt = false
   def isBitVector = false
@@ -53,7 +53,7 @@ object BitVectorType {
   val t = new Memo[Int, BitVectorType]((w : Int) => new BitVectorType(w))
 }
 
-abstract class ProductType(fields : List[(String, Type)]) extends Type {
+sealed abstract class ProductType(fields : List[(String, Type)]) extends Type {
   val fieldNames = fields.map(_._1)
   val fieldIndices = (0 to fields.length - 1)
   def fieldType(name: String) : Option[Type] = fields.find((p) => p._1 == name).flatMap((f) => Some(f._2))

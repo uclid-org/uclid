@@ -32,6 +32,7 @@ trait ReadOnlyPass[T] {
   def applyOnOutputVar(d : TraversalDirection.T, outvar : OutputVarDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnConstant(d : TraversalDirection.T, cnst : ConstantDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnSpec(d : TraversalDirection.T, spec : SpecDecl, in : T, context : ScopeMap) : T = { in }
+  def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnInit(d : TraversalDirection.T, init : InitDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnNext(d : TraversalDirection.T, next : NextDecl, in : T, context : ScopeMap) : T = { in }
@@ -98,6 +99,7 @@ trait RewritePass {
   def rewriteOutputVar(outvar : OutputVarDecl, ctx : ScopeMap) : Option[OutputVarDecl] = { Some(outvar) }
   def rewriteConstant(cnst : ConstantDecl, ctx : ScopeMap) : Option[ConstantDecl] = { Some(cnst) }
   def rewriteSpec(spec : SpecDecl, ctx : ScopeMap) : Option[SpecDecl] = { Some(spec) }
+  def rewriteAxiom(axiom : AxiomDecl, ctx : ScopeMap) : Option[AxiomDecl] = { Some(axiom) }
   def rewriteTypeDecl(typDec : TypeDecl, ctx : ScopeMap) : Option[TypeDecl] = { Some(typDec) }
   def rewriteInit(init : InitDecl, ctx : ScopeMap) : Option[InitDecl] = { Some(init) }
   def rewriteNext(next : NextDecl, ctx : ScopeMap) : Option[NextDecl] = { Some(next) }
@@ -204,6 +206,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case InitDecl(body) => visitInit(decl.asInstanceOf[InitDecl], result, context)
       case NextDecl(body) => visitNext(decl.asInstanceOf[NextDecl], result, context)
       case SpecDecl(id, expr) => visitSpec(decl.asInstanceOf[SpecDecl], result, context)
+      case AxiomDecl(sId, expr) => visitAxiom(decl.asInstanceOf[AxiomDecl], result, context) 
     }
     result = pass.applyOnDecl(TraversalDirection.Up, decl, result, context)
     return result
@@ -265,6 +268,17 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitIdentifier(spec.id, result, context)
     result = visitExpr(spec.expr, result, context)
     result = pass.applyOnSpec(TraversalDirection.Up, spec, result, context)
+    return result
+  }
+  def visitAxiom(axiom : AxiomDecl, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnAxiom(TraversalDirection.Down, axiom, result, context)
+    result = axiom.id match {
+      case Some(id) => visitIdentifier(id, result, context)
+      case None => result
+    }
+    result = visitExpr(axiom.expr, result, context)
+    result = pass.applyOnAxiom(TraversalDirection.Up, axiom, result, context)
     return result
   }
   def visitTypeDecl(typDec : TypeDecl, in : T, context : ScopeMap) : T = {
@@ -743,6 +757,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case initDecl : InitDecl => visitInit(initDecl, context)
       case nextDecl : NextDecl => visitNext(nextDecl, context)
       case specDecl : SpecDecl => visitSpec(specDecl, context)
+      case axiomDecl : AxiomDecl => visitAxiom(axiomDecl, context)
     }).flatMap(pass.rewriteDecl(_, context))
     astChangeFlag = astChangeFlag || (declP != Some(decl))
     return ASTNode.introducePos(setFilename, declP, decl.position)
@@ -827,7 +842,14 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     astChangeFlag = astChangeFlag || (specP != Some(spec))
     return ASTNode.introducePos(setFilename, specP, spec.position)
   }
-  
+
+  def visitAxiom(axiom : AxiomDecl, context : ScopeMap) : Option[AxiomDecl] = {
+    val idP = axiom.id.flatMap((id) => visitIdentifier(id, context))
+    val exprP = visitExpr(axiom.expr, context)
+    val axiomP = exprP.flatMap((e) => pass.rewriteAxiom(AxiomDecl(idP, e), context))
+    astChangeFlag = astChangeFlag || (axiomP != Some(axiom))
+    return ASTNode.introducePos(setFilename, axiomP, axiom.position)
+  }
   def visitTypeDecl(typDec : TypeDecl, context : ScopeMap) : Option[TypeDecl] = {
     val idP = visitIdentifier(typDec.id, context)
     val typeP = visitType(typDec.typ, context)

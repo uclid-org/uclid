@@ -6,6 +6,8 @@ object Converter {
   
   def typeToSMT(typ : lang.Type) : smt.Type = {
     typ match {
+      case lang.UninterpretedType(id) =>
+        smt.UninterpretedType(id.name)
       case lang.IntType() => 
         smt.IntType()
       case lang.BoolType() => 
@@ -22,7 +24,10 @@ object Converter {
         smt.RecordType(fields.map((f) => (f._1.toString, typeToSMT(f._2))))
       case lang.EnumType(ids) =>
         smt.EnumType(ids.map(_.name))
-      case _ => throw new Utils.UnimplementedException("Unimplemented type: " + typ.toString)
+      case lang.SynonymType(typ) =>
+        throw new Utils.UnimplementedException("Synonym types must have been eliminated by now.")
+      case lang.TemporalType() =>
+        throw new Utils.UnimplementedException("Temporal types are not expected here.")
     }
   }
   

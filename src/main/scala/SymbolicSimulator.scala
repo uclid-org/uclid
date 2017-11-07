@@ -24,10 +24,11 @@ case class AssertInfo(name : String, iter : Int, expr : smt.Expr, pos : ASTPosit
 case class CheckResult(assert : AssertInfo, result : smt.SolverResult)
 
 class SymbolicSimulator (module : Module) {
-  var asserts : List[AssertInfo] = List.empty
-  var assumes : List[smt.Expr] = List.empty
-  var results : List[CheckResult] = List.empty
   val scope = ScopeMap.empty + module
+  var asserts : List[AssertInfo] = List.empty
+  var results : List[CheckResult] = List.empty
+  val initAssumes = module.axioms.foldLeft(List.empty[smt.Expr])((acc, axiom) => smt.Converter.exprToSMT(axiom.expr, scope) :: acc)
+  var assumes : List[smt.Expr] = initAssumes
   
   type SymbolTable = Map[IdentifierBase, smt.Expr];
   var symbolTable : SymbolTable = Map.empty
@@ -43,12 +44,13 @@ class SymbolicSimulator (module : Module) {
     new smt.Symbol("$const_"+name,t)
   
   def execute(solver : smt.SolverInterface) : List[CheckResult] = {
+    // add axioms as assumptions.
     module.cmds.foreach {
       (cmd) => {
         cmd.name.toString match {
           case "clear_context" =>
             asserts = List.empty
-            assumes = List.empty
+            assumes = initAssumes
             results = List.empty
             symbolTable = Map.empty
             frameTable.clear()
@@ -246,7 +248,7 @@ class SymbolicSimulator (module : Module) {
   
   /** Assume assertions (for inductive proofs). */
   def assumeAssertions(symbolTable : SymbolTable) {
-    this.assumes = scope.specs.foldLeft(this.assumes){
+    this.assumes ++= scope.specs.foldLeft(this.assumes){
       (acc, prop) => (evaluate(prop.expr, symbolTable)) :: acc
     }
   }
@@ -308,7 +310,7 @@ class SymbolicSimulator (module : Module) {
         this.asserts = AssertInfo("assertion", iter, evaluate(e,symbolTable), s.position) :: this.asserts 
         return symbolTable
       case AssumeStmt(e, id) => 
-        this.assumes = this.assumes ++ List(evaluate(e,symbolTable))
+        this.assumes ++= List(evaluate(e,symbolTable))
         return symbolTable
       case HavocStmt(id) => 
         return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(scope.typeOf(id).get)))
