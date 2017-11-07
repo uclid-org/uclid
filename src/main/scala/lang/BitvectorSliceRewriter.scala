@@ -1,15 +1,18 @@
 package uclid
 package lang
 
+import uclid.smt.{Converter => Converter}
+import uclid.smt.{ExpressionAnalyzer => ExpressionAnalyzer}
+
 class BitVectorSliceFindWidthPass extends RewritePass {
   def rewriteSlice(slice : VarBitVectorSlice, ctx : ScopeMap) : VarBitVectorSlice = {
     val hiP = ReplacePolymorphicOperators.rewrite(slice.hi, IntType())
     val loP = ReplacePolymorphicOperators.rewrite(slice.lo, IntType())
-    val hiExp = smt.Converter.exprToSMT(hiP, ctx)
-    val loExp = smt.Converter.exprToSMT(loP, ctx)
+    val hiExp = Converter.exprToSMT(hiP, ctx)
+    val loExp = Converter.exprToSMT(loP, ctx)
     val subExp = smt.OperatorApplication(smt.IntSubOp, List(hiExp, loExp))
     val widthExpr = smt.OperatorApplication(smt.IntAddOp, List(subExp, smt.IntLit(1)))
-    val width = smt.Converter.getConstIntValue(widthExpr, ctx)
+    val width = ExpressionAnalyzer.getConstIntValue(widthExpr, ctx)
     VarBitVectorSlice(hiP, loP, width)
   }
 
@@ -30,10 +33,10 @@ class BitVectorSliceConstifyPass extends RewritePass {
     slice.width match {
       case None => Some(slice)
       case Some(w) =>
-        val hiExp = smt.Converter.exprToSMT(slice.hi, ctx)
-        val loExp = smt.Converter.exprToSMT(slice.lo, ctx)
-        val hiInt = smt.Converter.getConstIntValue(hiExp, ctx)
-        val loInt = smt.Converter.getConstIntValue(loExp, ctx)
+        val hiExp = Converter.exprToSMT(slice.hi, ctx)
+        val loExp = Converter.exprToSMT(slice.lo, ctx)
+        val hiInt = ExpressionAnalyzer.getConstIntValue(hiExp, ctx)
+        val loInt = ExpressionAnalyzer.getConstIntValue(loExp, ctx)
         (hiInt, loInt) match {
           case (Some(hi), Some(lo)) =>
             Some(ConstBitVectorSlice(hi, lo))

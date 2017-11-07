@@ -37,6 +37,7 @@ trait ReadOnlyPass[T] {
   def applyOnNext(d : TraversalDirection.T, next : NextDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnType(d : TraversalDirection.T, typ: Type, in : T, context : ScopeMap) : T = { in }
   def applyOnTemporalType(d : TraversalDirection.T, tempT : TemporalType, in : T, context : ScopeMap) : T = { in }
+  def applyOnUninterpretedType(d : TraversalDirection.T, unintT : UninterpretedType, in : T, context : ScopeMap) : T = { in }
   def applyOnBoolType(d : TraversalDirection.T, boolT : BoolType, in : T, context : ScopeMap) : T = { in }
   def applyOnIntType(d : TraversalDirection.T, intT : IntType, in : T, context : ScopeMap) : T = { in }
   def applyOnBitVectorType(d : TraversalDirection.T, bvT : BitVectorType, in : T, context : ScopeMap) : T = { in }
@@ -102,6 +103,7 @@ trait RewritePass {
   def rewriteNext(next : NextDecl, ctx : ScopeMap) : Option[NextDecl] = { Some(next) }
   def rewriteType(typ: Type, ctx : ScopeMap) : Option[Type] = { Some(typ) }
   def rewriteTemporalType(tempT : TemporalType, context : ScopeMap) : Option[TemporalType] = { Some(tempT) }
+  def rewriteUninterpretedType(unintT : UninterpretedType, context : ScopeMap) : Option[UninterpretedType] = { Some(unintT) }
   def rewriteBoolType(boolT : BoolType, context : ScopeMap) : Option[BoolType] = { Some(boolT) }
   def rewriteIntType(intT : IntType, context : ScopeMap) : Option[IntType] = { Some(intT)  }
   def rewriteBitVectorType(bvT : BitVectorType, context : ScopeMap) : Option[BitVectorType] = { Some(bvT)  }
@@ -298,6 +300,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnType(TraversalDirection.Down, typ, result, context)
     result = typ match {
       case tempT : TemporalType => visitTemporalType(tempT, in, context)
+      case unintT : UninterpretedType => visitUninterpretedType(unintT, in, context)
       case boolT : BoolType => visitBoolType(boolT, in, context)
       case intT : IntType => visitIntType(intT, in, context)
       case bvT : BitVectorType => visitBitVectorType(bvT, in, context)
@@ -315,6 +318,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnTemporalType(TraversalDirection.Down, tempT, result, context)
     result = pass.applyOnTemporalType(TraversalDirection.Up, tempT, result, context)
+    return result
+  }
+  def visitUninterpretedType(unintT : UninterpretedType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnUninterpretedType(TraversalDirection.Down, unintT, in, context)
+    result = pass.applyOnUninterpretedType(TraversalDirection.Up, unintT, in, context)
     return result
   }
   def visitBoolType(boolT : BoolType, in : T, context : ScopeMap) : T = {
@@ -853,6 +862,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitType(typ: Type, context : ScopeMap) : Option[Type] = {
     val typP = (typ match {
       case tempT : TemporalType => visitTemporalType(tempT, context)
+      case unintT : UninterpretedType => visitUninterpretedType(unintT, context)
       case boolT : BoolType => visitBoolType(boolT, context)
       case intT : IntType => visitIntType(intT, context)
       case bvT : BitVectorType => visitBitVectorType(bvT, context)
@@ -871,6 +881,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val tempTP = pass.rewriteTemporalType(tempT, context)
     astChangeFlag = astChangeFlag || (tempTP != Some(tempT))
     return ASTNode.introducePos(setFilename, tempTP, tempT.position)
+  }
+  
+  def visitUninterpretedType(unintT : UninterpretedType, context : ScopeMap) : Option[UninterpretedType] = {
+    val unintTP = pass.rewriteUninterpretedType(unintT, context)
+    astChangeFlag = astChangeFlag || (unintTP != Some(unintT))
+    return ASTNode.introducePos(setFilename, unintTP, unintT.position)
   }
 
   def visitBoolType(boolT : BoolType, context : ScopeMap) : Option[BoolType] = {

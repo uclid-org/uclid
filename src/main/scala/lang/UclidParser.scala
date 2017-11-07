@@ -361,7 +361,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
   
     lazy val TypeDecl : PackratParser[lang.TypeDecl] = positioned {
-      KwType ~> Id ~ ("=" ~> Type) <~ ";" ^^ { case id ~ t => lang.TypeDecl(id,t) }
+      KwType ~> Id ~ ("=" ~> Type) <~ ";" ^^ { case id ~ t => lang.TypeDecl(id,t) } |
+      KwType ~> Id <~ ";" ^^ { case id => lang.TypeDecl(id, lang.UninterpretedType(id)) }
     }
       
     lazy val VarDecl : PackratParser[lang.StateVarDecl] = positioned {

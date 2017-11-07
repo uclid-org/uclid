@@ -20,8 +20,13 @@ trait Type {
   def isMap = false
   def isArray = false
   def isEnum = false
+  def isUninterpreted = false
 }
-
+// Uninterpreted types.
+case class UninterpretedType(name: String) extends Type {
+  override def toString = name.toString()
+  override def isUninterpreted = true
+}
 // The Boolean type.
 case class BoolType() extends Type { 
   override def toString = "bool" 

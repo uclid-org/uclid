@@ -332,6 +332,7 @@ sealed abstract class Type extends PositionedNode {
   def isTuple = false
   def isMap = false
   def isArray = false
+  def isUninterpreted = false
   def matches (t2 : Type) = (this == t2)
 }
 
@@ -355,7 +356,13 @@ case class TemporalType() extends Type {
   override def toString = "temporal"
   override def isTemporal = true
 }
-
+/** 
+ *  Uninterpreted types.
+ */
+case class UninterpretedType(name: Identifier) extends Type {
+  override def toString = name.toString
+  override def isUninterpreted = true
+}
 /**
  * Regular types.
  */
