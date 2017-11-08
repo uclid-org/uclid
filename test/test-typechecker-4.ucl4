@@ -4,10 +4,20 @@ module main {
   var a : int;
   var b : int;
 
+  var c : bv16;
+  var d : bv8;
+  var e : bv8;
+
   init {
     a := 0;
     b := 1;
     for i in range(10, 1)  {
+      a := a + 1;
+    }
+    for i in range(c, d)  {
+      a := a + 1;
+    }
+    for i in range(10bv8, 0bv8)  {
       a := a + 1;
     }
   }
