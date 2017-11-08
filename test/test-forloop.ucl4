@@ -2,11 +2,8 @@ module main {
   type word_t = bv4;
   type bit = bv1;
   
-  input arg0  : word_t;
-  input arg1  : word_t;
-  
-  var t1 : word_t;
-  var t2 : word_t;
+  input arg0, arg1  : word_t;
+  var t1, t2 : word_t;
 
   output result : word_t;
   

@@ -1,7 +1,5 @@
 module main {
-  var cnt : int;
-  var cntp : int;
-  var cntq : int;
+  var cnt, cntp, cntq : int;
   
   
   procedure add10(x : int) returns (y : int) {

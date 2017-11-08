@@ -4,11 +4,8 @@ module main {
   function h(rec : rec_t) : int;
   function f(g : int) : int;
   
-  var x : int;
-  var y : int;
-  
-  var r : rec_t;
-  var q : rec_t;
+  var x, y : int;
+  var r, q : rec_t;
   
   init {
     x := 0;

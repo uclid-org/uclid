@@ -1,6 +1,5 @@
 module main {
-  var x : int;
-  var y : int;
+  var x, y : int;
   
   init {
     x := 1;

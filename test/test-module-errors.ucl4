@@ -1,10 +1,11 @@
 module main
 {
+  type rec_t = record { a : int, a : bool, c : int };
   input value : int;
   var numbers : [int]int;
-  var sum : int;
-  var index : int;
+  var sum, index : int;
   output value : int;
+  var r : rec_t;
   
   function f(g : int, g : int) : int;
 

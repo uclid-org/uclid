@@ -1,10 +1,8 @@
 module main
 {
-  input i1 : int;
-  input i2 : int;
-  var tmp : int;
+  input i1, i2 : int;
+  var tmp, index : int;
   var numbers : [int]int;
-  var index : int;
   const some_int : int;
 
   procedure find_value(num : int) returns (v : int) {

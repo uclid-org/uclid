@@ -3,9 +3,7 @@ module main {
     type AnotherNumber = Number;
     type YetAnotherNumber = AnotherNumber;
 
-    var n : YetAnotherNumber;
-    var n_init : YetAnotherNumber;
-    var c : YetAnotherNumber;
+    var n, n_init, c : YetAnotherNumber;
 
     // taken from a tail-recursive definition of the McCarthy 91 function.
     procedure mc91(x: YetAnotherNumber, y: YetAnotherNumber) returns (z:YetAnotherNumber, w: YetAnotherNumber) {

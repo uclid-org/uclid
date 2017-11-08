@@ -1,8 +1,6 @@
 module main {
   type word_t = bv8;
-  var cnt : word_t;
-  var cntp : word_t;
-  
+  var cnt, cntp : word_t;
   
   procedure add4(x : word_t) returns (y : word_t) {
     y := x;

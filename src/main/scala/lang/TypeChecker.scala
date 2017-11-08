@@ -497,9 +497,11 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Unit]
         })
       case ProcedureCallStmt(id, callLhss, args) =>
         Utils.checkParsingError(context.module.nonEmpty, "Procedure does not exist.", st.pos, context.filename)
-        var p = context.module.get.decls.find(d => d.declName.exists(i => i == id))
-        Utils.checkParsingError(p.nonEmpty, "Procedure does not exist.", st.pos, context.filename)
-        Utils.checkParsingError({for ((ip, ar) <- p.get.asInstanceOf[ProcedureDecl].sig.inParams.zipAll(args, None, None)) {
+        Utils.checkParsingError(context.doesProcedureExist(id), "Procedure does not exist.", st.pos, context.filename)
+        val procOption = context.module.get.decls.find((p) => p.isInstanceOf[ProcedureDecl] && p.asInstanceOf[ProcedureDecl].id == id)
+        Utils.checkParsingError(procOption.isDefined, "Procedure does not exist.", st.pos, context.filename)
+        val proc = procOption.get.asInstanceOf[ProcedureDecl]
+        Utils.checkParsingError({for ((ip, ar) <- proc.sig.inParams.zipAll(args, None, None)) {
             if (ip == None || ar == None) {
               false
             } else {
@@ -512,7 +514,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Unit]
           }
           true
         }, "Argument types do not match parameter types.", st.pos, context.filename)
-        Utils.checkParsingError({for ((op, lh) <- p.get.asInstanceOf[ProcedureDecl].sig.outParams.zipAll(callLhss, None, None)) {
+        Utils.checkParsingError({for ((op, lh) <- proc.sig.outParams.zipAll(callLhss, None, None)) {
           if (op == None || lh == None) {
             false
           } else {

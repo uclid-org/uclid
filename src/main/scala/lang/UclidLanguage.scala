@@ -424,9 +424,8 @@ case class TupleType(fieldTypes: List[Type]) extends ProductType {
   override def isTuple = true
 }
 
-case class RecordType(fields_ : List[(Identifier,Type)]) extends ProductType {
-  Utils.assert(Utils.allUnique(fields_.map(_._1)), "Record field names must be unique.")
-  override def fields = fields_
+case class RecordType(members : List[(Identifier,Type)]) extends ProductType {
+  override def fields = members
   override def toString = "record {" + Utils.join(fields.map((f) => f._1.toString + " : " + f._2.toString), ", ")  + "}"
   override def isRecord = true
   override def matches(t2 : Type) : Boolean = {
@@ -525,7 +524,7 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
 }
 
 sealed abstract class Decl extends ASTNode {
-  def declName : Option[Identifier]
+  def declNames : List[Identifier]
 }
 case class ProcedureDecl(id: Identifier, sig: ProcedureSig, 
   decls: List[LocalVarDecl], body: List[Statement]) extends Decl {
@@ -533,49 +532,67 @@ case class ProcedureDecl(id: Identifier, sig: ProcedureSig,
                           Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" + 
                           Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") + 
                           "\n" + PrettyPrinter.indent(1) + "}"
-  override def declName = Some(id)
+  override def declNames = List(id)
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "type " + id + " = " + typ + "; // " + position.toString 
-  override def declName = Some(id)
+  override def declNames = List(id)
 }
 case class StateVarDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "var " + id + ": " + typ + "; // " + position.toString
-  override def declName = Some(id)
+  override def declNames = List(id)
+}
+/** StateVarsDecl represents var declarations of the form: vars x1, x2 : int.
+ */
+case class StateVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
+  override def toString = "var " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
+  override def declNames = ids
 }
 case class InputVarDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "input " + id + ": " + typ + "; // " + position.toString
-  override def declName = Some(id)
+  override def declNames = List(id)
+}
+/** InputVarsDecl is analogous to StateVarsDecl.
+ */
+case class InputVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
+  override def toString = "input " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
+  override def declNames = ids
 }
 case class OutputVarDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "output " + id + ": " + typ + "; // " + position.toString
-  override def declName = Some(id)
+  override def declNames = List(id)
+}
+/** OutputVarsDecl is analogous to StateVarsDecl and InputVarsDecl.
+ */
+case class OutputVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
+  override def toString = "output " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
+  override def declNames = ids
 }
 case class ConstantDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "constant " + id + ": " + typ + "; // " + position.toString
-  override def declName = Some(id)
+  override def declNames = List(id)
 }
 case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl {
   override def toString = "function " + id + sig + ";  // " + position.toString 
-  override def declName = Some(id)
+  override def declNames = List(id)
 }
 case class InitDecl(body: List[Statement]) extends Decl {
   override def toString = 
     "init { // " + position.toString + "\n" +
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
     "\n" + PrettyPrinter.indent(1) + "}"
-  override def declName = None
+  override def declNames = List.empty
 }
 case class NextDecl(body: List[Statement]) extends Decl {
   override def toString = 
     "next {  // " + position.toString + "\n" + 
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
     "\n" + PrettyPrinter.indent(1) + "}"
-  override def declName = None
+  override def declNames = List.empty
 }
 case class SpecDecl(id: Identifier, expr: Expr) extends Decl {
   override def toString = "property " + id + ":" + expr + ";  // " + id.position.toString
-  override def declName = Some(id)
+  override def declNames = List(id)
 }
 case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
   override def toString = {
@@ -584,7 +601,10 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
       case None => "axiom " + expr.toString
     }
   }
-  override def declName = id
+  override def declNames = id match { 
+    case Some(i) => List(i)
+    case _ => List.empty
+  }
 }
 case class ProofCommand(name : Identifier, params: List[Identifier], args : List[Expr]) extends ASTNode {
   override def toString = {
@@ -689,6 +709,18 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
   def doesNameExist(name: IdentifierBase) = map.contains(name)
   /** Return the NamedExpression. */
   def get(id: IdentifierBase) : Option[Scope.NamedExpression] = map.get(id)
+  /** Does procedure exist? */
+  def doesProcedureExist(id : IdentifierBase) : Boolean = {
+    map.get(id) match {
+      case Some(namedExpr) =>
+        namedExpr match {
+          case Scope.Procedure(pId, typ) => true
+          case _ => false
+        }
+      case None => false
+    }
+  }
+
   /** Return the filename. */
   def filename : Option[String] = {
     module.flatMap((m) => m.filename)
@@ -714,8 +746,11 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
         case ProcedureDecl(id, sig, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
         case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
         case StateVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.StateVar(id, typ))
+        case StateVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.StateVar(id, typ)))
         case InputVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.InputVar(id, typ))
+        case InputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.InputVar(id, typ)))
         case OutputVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.OutputVar(id, typ))
+        case OutputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.OutputVar(id, typ)))
         case ConstantDecl(id, typ) => Scope.addToMap(mapAcc, Scope.ConstantVar(id, typ)) 
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SpecDecl(id, expr) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))

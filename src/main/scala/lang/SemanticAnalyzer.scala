@@ -23,7 +23,8 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
   }
   override def applyOnModule(d : TraversalDirection.T, module : Module, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
-      val moduleIds = module.decls.filter((d) => d.declName.isDefined).map((d) => (d.declName.get, d.position))
+      // val moduleIds = module.decls.filter((d) => d.declNames.isDefined).map((d) => (d.declName.get, d.position))
+      val moduleIds = module.decls.flatMap((d) => d.declNames.map((n) => (n, d.position)))
       checkIdRedeclaration(moduleIds, in)
     } else { in }
   }
@@ -48,6 +49,14 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
         ModuleError(msg, stmt.position) :: in
       } else { in }
     } else { in }
+  }
+  override def applyOnRecordType(d : TraversalDirection.T, recordT : RecordType, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
+    if (d == TraversalDirection.Down) {
+      val fieldNames = recordT.members.map((f) => (f._1, f._1.position))
+      checkIdRedeclaration(fieldNames, in)
+    } else {
+      in
+    }
   }
 }
 

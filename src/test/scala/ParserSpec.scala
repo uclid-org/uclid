@@ -47,7 +47,7 @@ class ParserSpec extends FlatSpec {
     }
     catch {
       case p : Utils.ParserErrorList =>
-        assert (p.errors.size == 3)
+        assert (p.errors.size == 5)
     }
   }
 

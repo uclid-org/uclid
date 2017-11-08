@@ -27,9 +27,12 @@ trait ReadOnlyPass[T] {
   def applyOnDecl(d : TraversalDirection.T, decl : Decl, in : T, context : ScopeMap) : T = { in }
   def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : ScopeMap) : T = { in }
-  def applyOnStateVar(d : TraversalDirection.T, stvar : StateVarDecl, in : T, context : ScopeMap) : T = { in }
+  def applyOnStateVar(d : TraversalDirection.T, stVar : StateVarDecl, in : T, context : ScopeMap) : T = { in }
+  def applyOnStateVars(d : TraversalDirection.T, stVars : StateVarsDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnInputVar(d : TraversalDirection.T, inpvar : InputVarDecl, in : T, context : ScopeMap) : T = { in }
+  def applyOnInputVars(d : TraversalDirection.T, inpVars : InputVarsDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnOutputVar(d : TraversalDirection.T, outvar : OutputVarDecl, in : T, context : ScopeMap) : T = { in }
+  def applyOnOutputVars(d : TraversalDirection.T, outvars : OutputVarsDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnConstant(d : TraversalDirection.T, cnst : ConstantDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnSpec(d : TraversalDirection.T, spec : SpecDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : ScopeMap) : T = { in }
@@ -94,9 +97,12 @@ trait RewritePass {
   def rewriteCommand(cmd : ProofCommand, ctx : ScopeMap) : Option[ProofCommand] = { Some(cmd) }
   def rewriteProcedure(proc : ProcedureDecl, ctx : ScopeMap) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : ScopeMap) : Option[FunctionDecl] = { Some(func) }
-  def rewriteStateVar(stvar : StateVarDecl, ctx : ScopeMap) : Option[StateVarDecl] = { Some(stvar) }
+  def rewriteStateVar(stVar : StateVarDecl, ctx : ScopeMap) : Option[StateVarDecl] = { Some(stVar) }
+  def rewriteStateVars(stVars : StateVarsDecl, ctx : ScopeMap) : Option[StateVarsDecl] = { Some(stVars) }
   def rewriteInputVar(inpvar : InputVarDecl, ctx : ScopeMap) : Option[InputVarDecl] = { Some(inpvar) }
+  def rewriteInputVars(inpVars : InputVarsDecl, ctx : ScopeMap) : Option[InputVarsDecl] = { Some(inpVars) }
   def rewriteOutputVar(outvar : OutputVarDecl, ctx : ScopeMap) : Option[OutputVarDecl] = { Some(outvar) }
+  def rewriteOutputVars(outvars : OutputVarsDecl, ctx : ScopeMap) : Option[OutputVarsDecl] = { Some(outvars) }
   def rewriteConstant(cnst : ConstantDecl, ctx : ScopeMap) : Option[ConstantDecl] = { Some(cnst) }
   def rewriteSpec(spec : SpecDecl, ctx : ScopeMap) : Option[SpecDecl] = { Some(spec) }
   def rewriteAxiom(axiom : AxiomDecl, ctx : ScopeMap) : Option[AxiomDecl] = { Some(axiom) }
@@ -196,17 +202,20 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnDecl(TraversalDirection.Down, decl, result, context)
     result = decl match {
-      case ProcedureDecl(id, sig, vars, body) => visitProcedure(decl.asInstanceOf[ProcedureDecl], result, context)
-      case TypeDecl(id, typ) => visitTypeDecl(decl.asInstanceOf[TypeDecl], result, context)
-      case StateVarDecl(id, typ) => visitStateVar(decl.asInstanceOf[StateVarDecl], result, context)
-      case InputVarDecl(id, typ) => visitInputVar(decl.asInstanceOf[InputVarDecl], result, context)
-      case OutputVarDecl(id, typ) => visitOutputVar(decl.asInstanceOf[OutputVarDecl], result, context)
-      case ConstantDecl(id, typ) => visitConstant(decl.asInstanceOf[ConstantDecl], result, context)
-      case FunctionDecl(id, sig) => visitFunction(decl.asInstanceOf[FunctionDecl], result, context)
-      case InitDecl(body) => visitInit(decl.asInstanceOf[InitDecl], result, context)
-      case NextDecl(body) => visitNext(decl.asInstanceOf[NextDecl], result, context)
-      case SpecDecl(id, expr) => visitSpec(decl.asInstanceOf[SpecDecl], result, context)
-      case AxiomDecl(sId, expr) => visitAxiom(decl.asInstanceOf[AxiomDecl], result, context) 
+      case proc: ProcedureDecl => visitProcedure(proc, result, context)
+      case typ : TypeDecl => visitTypeDecl(typ, result, context)
+      case stVar : StateVarDecl => visitStateVar(stVar, result, context)
+      case stVars : StateVarsDecl => visitStateVars(stVars, result, context)
+      case inpVar : InputVarDecl => visitInputVar(inpVar, result, context)
+      case inpVars : InputVarsDecl => visitInputVars(inpVars, result, context)
+      case outVar : OutputVarDecl => visitOutputVar(outVar, result, context)
+      case outVars : OutputVarsDecl => visitOutputVars(outVars, result, context)
+      case const : ConstantDecl => visitConstant(const, result, context)
+      case func : FunctionDecl => visitFunction(func, result, context)
+      case init : InitDecl => visitInit(init, result, context)
+      case next : NextDecl => visitNext(next, result, context)
+      case spec : SpecDecl => visitSpec(spec, result, context)
+      case axiom : AxiomDecl => visitAxiom(axiom, result, context) 
     }
     result = pass.applyOnDecl(TraversalDirection.Up, decl, result, context)
     return result
@@ -230,12 +239,20 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnFunction(TraversalDirection.Up, func, result, context)
     return result
   }
-  def visitStateVar(stvar : StateVarDecl, in : T, context : ScopeMap) : T = {
+  def visitStateVar(stVar : StateVarDecl, in : T, context : ScopeMap) : T = {
     var result : T = in
-    result = pass.applyOnStateVar(TraversalDirection.Down, stvar, result, context)
-    result = visitIdentifier(stvar.id, result, context)
-    result = visitType(stvar.typ, result, context)
-    result = pass.applyOnStateVar(TraversalDirection.Up, stvar, result, context)
+    result = pass.applyOnStateVar(TraversalDirection.Down, stVar, result, context)
+    result = visitIdentifier(stVar.id, result, context)
+    result = visitType(stVar.typ, result, context)
+    result = pass.applyOnStateVar(TraversalDirection.Up, stVar, result, context)
+    return result
+  }
+  def visitStateVars(stVars : StateVarsDecl, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnStateVars(TraversalDirection.Down, stVars, result, context)
+    result = stVars.ids.foldLeft(result)((acc, id) => visitIdentifier(id, acc, context))
+    result = visitType(stVars.typ, result, context)
+    result = pass.applyOnStateVars(TraversalDirection.Up, stVars, result, context)
     return result
   }
   def visitInputVar(inpvar : InputVarDecl, in : T, context : ScopeMap) : T = {
@@ -246,12 +263,28 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnInputVar(TraversalDirection.Up, inpvar, result, context)
     return result
   }
+  def visitInputVars(inpVars : InputVarsDecl, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnInputVars(TraversalDirection.Down, inpVars, result, context)
+    result = inpVars.ids.foldLeft(result)((acc, id) => visitIdentifier(id, acc, context))
+    result = visitType(inpVars.typ, result, context)
+    result = pass.applyOnInputVars(TraversalDirection.Up, inpVars, result, context)
+    return result
+  }
   def visitOutputVar(outvar : OutputVarDecl, in : T, context : ScopeMap) : T = {
     var result : T = in
     result = pass.applyOnOutputVar(TraversalDirection.Down, outvar, result, context)
     result = visitIdentifier(outvar.id, result, context)
     result = visitType(outvar.typ, result, context)
     result = pass.applyOnOutputVar(TraversalDirection.Up, outvar, result, context)
+    return result
+  }
+  def visitOutputVars(outVars : OutputVarsDecl, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnOutputVars(TraversalDirection.Down, outVars, result, context)
+    result = outVars.ids.foldLeft(result)((acc, id) => visitIdentifier(id, acc, context))
+    result = visitType(outVars.typ, result, context)
+    result = pass.applyOnOutputVars(TraversalDirection.Up, outVars, result, context)
     return result
   }
   def visitConstant(cnst : ConstantDecl, in : T, context : ScopeMap) : T = {
@@ -750,8 +783,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case procDecl : ProcedureDecl => visitProcedure(procDecl, context)
       case typeDecl : TypeDecl => visitTypeDecl(typeDecl, context)
       case stateVar : StateVarDecl => visitStateVar(stateVar, context)
+      case stateVars : StateVarsDecl => visitStateVars(stateVars, context)
       case inputVar : InputVarDecl => visitInputVar(inputVar, context)
+      case inputVars : InputVarsDecl => visitInputVars(inputVars, context)
       case outputVar : OutputVarDecl => visitOutputVar(outputVar, context)
+      case outputVars : OutputVarsDecl => visitOutputVars(outputVars, context)
       case constDecl : ConstantDecl => visitConstant(constDecl, context)
       case funcDecl : FunctionDecl => visitFunction(funcDecl, context)
       case initDecl : InitDecl => visitInit(initDecl, context)
@@ -788,17 +824,29 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setFilename, funcP, func.position)
   }
   
-  def visitStateVar(stvar : StateVarDecl, context : ScopeMap) : Option[StateVarDecl] = {
-    val idP = visitIdentifier(stvar.id, context)
-    val typP = visitType(stvar.typ, context)
+  def visitStateVar(stVar : StateVarDecl, context : ScopeMap) : Option[StateVarDecl] = {
+    val idP = visitIdentifier(stVar.id, context)
+    val typP = visitType(stVar.typ, context)
     val stateVarP = (idP, typP) match {
       case (Some(id), Some(typ)) => pass.rewriteStateVar(StateVarDecl(id, typ), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (stateVarP != Some(stvar))
-    return ASTNode.introducePos(setFilename, stateVarP, stvar.position)
+    astChangeFlag = astChangeFlag || (stateVarP != Some(stVar))
+    return ASTNode.introducePos(setFilename, stateVarP, stVar.position)
   }
-  
+
+  def visitStateVars(stVars : StateVarsDecl, context : ScopeMap) : Option[StateVarsDecl] = {
+    val idsP = (stVars.ids.map((id) => visitIdentifier(id, context))).flatten
+    val typP = visitType(stVars.typ, context)
+    val stateVarsP = if (idsP.size > 0 && typP.isDefined) {
+      pass.rewriteStateVars(StateVarsDecl(idsP, typP.get), context)
+    } else {
+      None
+    }
+    astChangeFlag = astChangeFlag || (stateVarsP != Some(stVars))
+    return ASTNode.introducePos(setFilename, stateVarsP, stVars.position)
+  }
+
   def visitInputVar(inpvar : InputVarDecl, context : ScopeMap) : Option[InputVarDecl] = {
     val idP = visitIdentifier(inpvar.id, context)
     var typP = visitType(inpvar.typ, context)
@@ -810,6 +858,18 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setFilename, inpVarP, inpvar.position)
   }
   
+  def visitInputVars(inpVars : InputVarsDecl, context : ScopeMap) : Option[InputVarsDecl] = {
+    val idsP = (inpVars.ids.map((id) => visitIdentifier(id, context))).flatten
+    val typP = visitType(inpVars.typ, context)
+    val stateVarsP = if (idsP.size > 0 && typP.isDefined) {
+      pass.rewriteInputVars(InputVarsDecl(idsP, typP.get), context)
+    } else {
+      None
+    }
+    astChangeFlag = astChangeFlag || (stateVarsP != Some(inpVars))
+    return ASTNode.introducePos(setFilename, stateVarsP, inpVars.position)
+  }
+
   def visitOutputVar(outvar : OutputVarDecl, context : ScopeMap) : Option[OutputVarDecl] = {
     val idP = visitIdentifier(outvar.id, context)
     val typP = visitType(outvar.typ, context)
@@ -821,6 +881,18 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setFilename, outVarP, outvar.position)
   }
   
+  def visitOutputVars(outVars : OutputVarsDecl, context : ScopeMap) : Option[OutputVarsDecl] = {
+    val idsP = (outVars.ids.map((id) => visitIdentifier(id, context))).flatten
+    val typP = visitType(outVars.typ, context)
+    val stateVarsP = if (idsP.size > 0 && typP.isDefined) {
+      pass.rewriteOutputVars(OutputVarsDecl(idsP, typP.get), context)
+    } else {
+      None
+    }
+    astChangeFlag = astChangeFlag || (stateVarsP != Some(outVars))
+    return ASTNode.introducePos(setFilename, stateVarsP, outVars.position)
+  }
+
   def visitConstant(cnst : ConstantDecl, context : ScopeMap) : Option[ConstantDecl] = {
     val idP = visitIdentifier(cnst.id, context)
     val typP = visitType(cnst.typ, context)

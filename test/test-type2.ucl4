@@ -6,8 +6,7 @@ module main {
   
   
   input i : int;
-  var v1 : hash_t;
-  var v2 : hash_t;
+  var v1, v2 : hash_t;
   
   init {
     v1 := hash_int(0);

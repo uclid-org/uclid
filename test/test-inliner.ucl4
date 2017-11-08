@@ -1,14 +1,8 @@
 module main {
   type bit_t = bv1;
   
-  input x  : bit_t;
-  input y  : bit_t;
-  input z  : bit_t;
-
-  output s0 : bit_t;
-  output c0 : bit_t;
-  output s1 : bit_t;
-  output c1 : bit_t;
+  input x, y, z  : bit_t;
+  output s0, c0, s1, c1 : bit_t;
   
   procedure incr(w : int) returns (u: int) {
     u := w + 1;

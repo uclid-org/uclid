@@ -3,9 +3,7 @@ module main {
   type bit = bool;
   type rec1 = record {a : num, b : num, c : bit };
 
-  var p : rec1;
-  var q1 : rec1;
-  var q2 : rec1;
+  var p, q1, q2 : rec1;
   
   procedure foo(p : rec1) returns (pn : rec1) {
     pn.a := p.a + 1;

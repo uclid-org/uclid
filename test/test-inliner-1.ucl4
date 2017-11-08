@@ -2,11 +2,8 @@ module main {
   type word_t = bv4;
   type bit_t = bv1;
 
-  var r1 : word_t;
-  var r2 : word_t;
-  
-  input arg0 : word_t;
-  input arg1 : word_t;
+  var r1, r2 : word_t;
+  input arg0, arg1 : word_t;
   
   procedure full_adder(a : bit_t, b : bit_t, c_in : bit_t) returns (s : bit_t, c_out : bit_t) {
 	s := a ^ b ^ c_in;

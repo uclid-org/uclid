@@ -1,8 +1,6 @@
 module main
 {
-  var sum : int;
-  var fake : int;
-  var i : int;
+  var sum, fake, i : int;
   
   init {
     i := 0;

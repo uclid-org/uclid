@@ -2,8 +2,7 @@ module main
 {
   input value : int;
   var numbers : [int]int;
-  var sum : int;
-  var index : int;
+  var sum, index : int;
   
   init {
     assume (forall (i : int) :: numbers[i] == 0);

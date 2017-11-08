@@ -3,10 +3,7 @@ module main {
   type syscall_t = enum { setresuid, setfsuid, noop };
   
   input invocation : syscall_t;
-  input operand_ruid : id_t;
-  input operand_euid : id_t;
-  input operand_suid : id_t;
-  input operand_fsuid : id_t;
+  input operand_ruid, operand_euid, operand_suid, operand_fsuid : id_t;
   
   var systemcall : syscall_t;
   
