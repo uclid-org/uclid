@@ -322,10 +322,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val RangeExpr: PackratParser[(NumericLit,NumericLit)] =
       KwRange ~> ("(" ~> Number ~ ("," ~> Number) <~ ")") ^^ { case x ~ y => (x,y) }
   
+    lazy val IdList : PackratParser[List[lang.Identifier]] =  
+      Id ~ rep("," ~> Id) ^^ { case id ~ ids => id :: ids }
+
     lazy val LocalVarDecl : PackratParser[lang.LocalVarDecl] = positioned {
       KwVar ~> IdType <~ ";" ^^ { case (id,typ) => lang.LocalVarDecl(id,typ)}
     }
-      
+
     lazy val Statement: PackratParser[Statement] = positioned {
       KwSkip <~ ";" ^^ { case _ => SkipStmt() } |
       KwAssert ~> Expr <~ ";" ^^ { case e => AssertStmt(e, None) } |

@@ -25,7 +25,6 @@ module main {
     initialize;
     simulate(3);
     decide;
-    print_results;
   }
 }
 
