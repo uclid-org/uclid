@@ -1,3 +1,12 @@
+/*
+ * UCLID5
+ * 
+ * Authors: Norman Mu, Pramod Subramanyan
+ *
+ * UCLID Parser/Typechecker tests.
+ *
+ */
+
 package uclid
 package test
 

@@ -1,5 +1,9 @@
- /* Created by Rohit Sinha on 5/28/15.
-  * With loads of modifications by Pramod (so much so Rohit's original code is probably all gone.)
+/*
+ * UCLID5
+ * 
+ * Authors: Rohit Sinha, Pramod Subramanyan
+ * 
+ * Walks through the module looking for semantic errors.
  */
 package uclid;
 package lang;

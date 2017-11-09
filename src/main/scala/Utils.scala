@@ -1,9 +1,10 @@
-
-/**
- * @author rohitsinha
- * @author pramod
+/*
+ * UCLID5
  * 
- * Utility functions for uclid.
+ * Authors: Rohit Sinha, Pramod Subramanyan
+
+ * Utilities for UCLID5.
+ *
  */
 package uclid
 

@@ -1,7 +1,12 @@
-
-/**
- * @author pramod
+/*
+ * UCLID5
+ * 
+ * Author: Pramod Subramanyan
+ *
+ * Z3 Java API interface.
+ *
  */
+
 package uclid
 package smt
 

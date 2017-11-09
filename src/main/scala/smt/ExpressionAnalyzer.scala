@@ -1,3 +1,12 @@
+/*
+ * UCLID5
+ * 
+ * Author: Pramod Subramanyan
+ *
+ * ExpressionAnalyzer: Currently enables testing if an expression is a constant.
+ *
+ */
+
 package uclid
 package smt
 

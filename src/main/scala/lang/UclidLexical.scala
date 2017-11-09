@@ -1,3 +1,13 @@
+/*
+ * UCLID5
+ * 
+ * Author: Pramod Subramanyan
+
+ * Defines lexical tokens for UCLID5
+ *
+ */
+
+
 package uclid.lang
 
 import scala.util.parsing.combinator.lexical._

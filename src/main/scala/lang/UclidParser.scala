@@ -1,5 +1,10 @@
-/**
- * First created by Rohit Sinha on 5/21/15.
+/*
+ * UCLID5
+ * 
+ * Authors: Rohit Sinha, Pramod Subramanyan
+
+ * Parser for UCLID5.
+ *
  */
 
 package uclid

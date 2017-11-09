@@ -1,3 +1,12 @@
+/*
+ * UCLID5
+ * 
+ * Author: Pramod Subramanyan
+
+ * Unrolls all for loops.
+ *
+ */
+
 package uclid
 package lang
 

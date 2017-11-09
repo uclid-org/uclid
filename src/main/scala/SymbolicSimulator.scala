@@ -1,9 +1,12 @@
-
-/**
- * @author rohitsinha
+/*
+ * UCLID5
  * 
- * with (loads of) modifications by pramod
+ * Authors: Rohit Sinha, Pramod Subramanyan
+
+ * Symbolic simulator/model checker for UCLID5.
+ *
  */
+
 package uclid
 
 import lang._

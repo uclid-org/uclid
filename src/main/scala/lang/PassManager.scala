@@ -1,3 +1,13 @@
+/*
+ * UCLID5
+ * 
+ * Author: Pramod Subramanyan
+
+ * PassManager: runs each AST pass in the order in which they are added to the manager.
+ * May eventually add pass dependencies, invalidations and so on to this class. 
+ *
+ */
+
 package uclid
 package lang
 

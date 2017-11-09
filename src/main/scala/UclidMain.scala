@@ -1,3 +1,12 @@
+/*
+ * UCLID5
+ * 
+ * Authors: Rohit Sinha, Pramod Subramanyan
+
+ * UCLID main file.
+ *
+ */
+
 package uclid
 
 import scala.util.parsing.combinator._

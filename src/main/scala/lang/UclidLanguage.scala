@@ -1,8 +1,13 @@
 
-/**
- * @author rohitsinha
- * With modifications by pramod.
+/*
+ * UCLID5
+ * 
+ * Authors: Rohit Sinha, Pramod Subramanyan
+
+ * Defines ASTs for UCLID5
+ *
  */
+
 package uclid
 package lang
 

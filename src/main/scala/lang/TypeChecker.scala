@@ -1,3 +1,12 @@
+/*
+ * UCLID5
+ * 
+ * Authors: Norman Mu, Pramod Subramanyan
+
+ * All sorts of type inference and type checking functionality is in here.
+ *
+ */
+
 package uclid
 package lang
 

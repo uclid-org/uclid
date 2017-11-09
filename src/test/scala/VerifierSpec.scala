@@ -1,3 +1,12 @@
+/*
+ * UCLID5
+ * 
+ * Author: Pramod Subramanyan
+ *
+ * UCLID verification engine tests.
+ *
+ */
+
 package uclid
 package test
 

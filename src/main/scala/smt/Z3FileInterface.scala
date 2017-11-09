@@ -1,8 +1,12 @@
-
-/**
- * @author rohitsinha
- * @author pramod
+/*
+ * UCLID5
+ * 
+ * Authors: Rohit Sinha, Pramod Subramanyan
+ *
+ * File-based SMT solver interface.
+ *
  */
+
 package uclid
 package smt
 

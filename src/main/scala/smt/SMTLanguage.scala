@@ -1,12 +1,11 @@
-/**
- * @author rohitsinha
- * @author pramod
+/*
+ * UCLID5
  * 
- * This class defines an AST for SMT formulas. Uclid assertions are converted to ASTs using this class. 
- * These ASTs can then be readily converted into something Z3 (or potentially other solvers) can understand.
- * 
+ * Authors: Rohit Sinha, Pramod Subramanyan
+ *
+ * SMT AST definition.
+ *
  */
-
 package uclid
 package smt
 import scala.collection.mutable.Map

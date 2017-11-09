@@ -1,3 +1,11 @@
+/*
+ * UCLID5
+ * 
+ * Author: Pramod Subramanyan
+ *
+ * UCLID AST to SMT AST converter.
+ *
+ */
 package uclid
 package smt
 
