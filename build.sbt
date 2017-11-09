@@ -1,3 +1,7 @@
+name := "uclid"
+version := "0.7"
+scalaVersion := "2.12.0"
+ 
 scalacOptions += "-feature"
 scalacOptions += "-unchecked"
 scalacOptions += "-deprecation"
