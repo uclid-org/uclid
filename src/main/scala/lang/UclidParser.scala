@@ -106,6 +106,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwFor = "for"
     lazy val KwIn = "in"
     lazy val KwRange = "range"
+    lazy val KwInstance = "instance"
     lazy val KwType = "type"
     lazy val KwInput = "input"
     lazy val KwOutput = "output"
@@ -139,7 +140,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNeg, OpMinus,
       "false", "true", "bv", KwProcedure, KwBool, KwInt, KwReturns,
       KwAssume, KwAssert, KwVar, KwHavoc, KwCall, KwIf, KwElse,
-      KwCase, KwEsac, KwFor, KwIn, KwRange, KwInput, KwOutput,
+      KwCase, KwEsac, KwFor, KwIn, KwRange, KwInstance, KwInput, KwOutput,
       KwConst, KwModule, KwType, KwEnum, KwRecord, KwSkip, 
       KwFunction, KwControl, KwInit, KwNext, KwITE, KwLambda,
       KwDefineProp, KwDefineAxiom, KwForall, KwExists)
@@ -353,6 +354,17 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val BlockStatement: PackratParser[List[Statement]] = 
       "{" ~> rep (Statement) <~ "}"
   
+    lazy val ArgMap : PackratParser[(lang.Identifier, Option[lang.Expr])] = 
+      Id <~ ":" ~ "(" ~ ")" ^^ { case formalId => (formalId, None) } |
+      Id ~ ":" ~ "(" ~ Expr ~ ")" ^^ { case formalId ~ ":" ~ "(" ~ expr ~ ")" => (formalId, Some(expr)) }
+    lazy val ArgMapList : PackratParser[List[(lang.Identifier, Option[lang.Expr])]] =
+      "(" ~ ")" ^^ { case _ => List.empty } |
+      "(" ~> ArgMap ~ rep("," ~> ArgMap) <~ ")" ^^ { case arg ~ args => arg :: args }
+
+    lazy val InstanceDecl : PackratParser[lang.InstanceDecl] = positioned {
+      KwInstance ~> Id ~ ":" ~ Id <~ "(" ~ ")" ~ ";" ^^ { case instId ~ ":" ~ moduleId => lang.InstanceDecl(instId, moduleId, List.empty) } 
+    }
+      
     lazy val ProcedureDecl : PackratParser[lang.ProcedureDecl] = positioned {
       KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~ 
         ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^ 

@@ -503,14 +503,21 @@ case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Exp
 case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
   override def toString = "var " + id + ": " + typ + "; // " + id.position.toString
 }
-
-case class ProcedureSig(inParams: List[(Identifier,Type)], 
-                           outParams: List[(Identifier,Type)]) 
-           extends ASTNode
-{
+sealed abstract class IOSig(inputs: List[(Identifier,Type)], outputs: List[(Identifier,Type)]) extends ASTNode {
   type T = (Identifier,Type)
   val printfn = {(a: T) => a._1.toString + ": " + a._2}
-  val typ = MapType(inParams.map(_._2), TupleType(outParams.map(_._2)))
+  val typ = MapType(inputs.map(_._2), TupleType(outputs.map(_._2)))
+}
+
+case class ModuleSig(inParams: List[(Identifier, Type)], outParams: List[(Identifier, Type)]) extends IOSig(inParams, outParams) 
+{
+  override def toString =
+    "inputs (" + Utils.join(inParams.map(printfn(_)), ", ") + ")" +
+    " outputs " + "(" + Utils.join(outParams.map(printfn(_)), ", ") + ")"
+}
+
+case class ProcedureSig(inParams: List[(Identifier,Type)], outParams: List[(Identifier,Type)]) extends IOSig(inParams, outParams)
+{
   override def toString =
     "(" + Utils.join(inParams.map(printfn(_)), ", ") + ")" +
     " returns " + "(" + Utils.join(outParams.map(printfn(_)), ", ") + ")"
@@ -526,6 +533,18 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
 sealed abstract class Decl extends ASTNode {
   def declNames : List[Identifier]
 }
+
+case class InstanceDecl(moduleId : Identifier, instanceId : Identifier, arguments: List[(Identifier, Option[Expr])]) extends Decl
+{
+  def argToString(arg : (Identifier, Option[Expr])) = arg._2 match {
+    case Some(e) => arg._1.toString + ":" + e.toString
+    case None => arg._1.toString + ": ()"
+  }
+  val argsToString = Utils.join(arguments.map(argToString(_)), ", ")
+  override def toString = "instance " + instanceId.toString + " : " + moduleId.toString + "(" + argsToString + "); // " + position.toString
+  override def declNames = List(instanceId)
+}
+
 case class ProcedureDecl(id: Identifier, sig: ProcedureSig, 
   decls: List[LocalVarDecl], body: List[Statement]) extends Decl {
   override def toString = "procedure " + id + sig + PrettyPrinter.indent(1) + "{  // " + id.position.toString + "\n" +
