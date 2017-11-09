@@ -34,8 +34,9 @@ class ParserSpec extends FlatSpec {
       assert (false);
     }
     catch {
-      case p : Utils.ParserError =>
-        val msg : String = p.getMessage()
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        val msg : String = p.errors(0)._1
         assert (msg.contains("Unknown identifier in havoc statement"))
     }
   }
@@ -50,5 +51,29 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.size == 5)
     }
   }
-
+  "test/test-typechecker-3.ucl4" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-typechecker-3.ucl4"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 2)
+    }
+  }
+  "test/test-typechecker-4.ucl4" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-typechecker-4.ucl4"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 3)
+        // XXX: continue testing here
+    }
+  }
 }

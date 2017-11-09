@@ -453,90 +453,159 @@ class ExpressionTypeChecker extends ASTAnalyzer("ExpressionTypeChecker", new Exp
   }
 }
 
-class ModuleTypeCheckerPass extends ReadOnlyPass[Unit]
+class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
 {
   lazy val manager : PassManager = analysis.manager
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
-  override def applyOnStatement(d : TraversalDirection.T, st : Statement, in : Unit, context : ScopeMap) : Unit = {
-    st match {
-      case AssertStmt(e, id) => 
-        val eType = exprTypeChecker.typeOf(e, context)
-        Utils.checkParsingError(eType.isBool || eType.isTemporal, "Assertion expression must be of Boolean or Temporal type.", st.pos, context.filename)
-      case AssumeStmt(e, id) =>
-        val eType = exprTypeChecker.typeOf(e, context)
-        Utils.checkParsingError(eType.isBool, "Assumption must be Boolean.", st.pos, context.filename)
-      case HavocStmt(id) =>
-        Utils.checkParsingError(context.doesNameExist(id), "Unknown identifier in havoc statement.", st.pos, context.filename)
-      case AssignStmt(lhss, rhss) =>
-        val lhsTypes = lhss.map(exprTypeChecker.typeOf(_, context))
-        val rhsTypes = rhss.map(exprTypeChecker.typeOf(_, context))
-        val typesMatch = (lhsTypes zip rhsTypes).map((p) => p._1.matches(p._2))
-        Utils.checkParsingError(typesMatch.forall((b) => b), "LHS/RHS types do not match.", st.pos, context.filename)
-      case IfElseStmt(cond, _, _) =>
-        val cType = exprTypeChecker.typeOf(cond, context)
-        Utils.checkParsingError(cType.isBool, "Condition in if statement must be of type boolean.", st.pos, context.filename)
-      case ForStmt(_, range, _) =>
-        range._1 match {
-          case i : IntLit =>
-            range._2 match {
-              case j: IntLit => Utils.checkParsingError(i.value < j.value, "Range lower bound must be less than upper bound.", st.pos, context.filename)
-              case _ => Utils.checkParsingError(false, "Range lower and upper bounds must be of same type.", st.pos, context.filename)
-              // Maybe import and use: `throw new ParserError("Range lower and upper bounds must be of same type.", Some(st.pos), context.filename)`
+  override def applyOnStatement(d : TraversalDirection.T, st : Statement, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
+    if (d == TraversalDirection.Up) {
+      in
+    } else {
+      st match {
+        case AssertStmt(e, id) =>
+          val eType = exprTypeChecker.typeOf(e, context)
+          if (!(eType.isBool || eType.isTemporal)) {
+            ModuleError("Assertion expression must be of Boolean or Temporal type.", st.position) :: in
+          } else {
+            in
+          }
+        case AssumeStmt(e, id) =>
+          val eType = exprTypeChecker.typeOf(e, context)
+          if (!eType.isBool) {
+            ModuleError("Assumption must be Boolean.", st.position) :: in
+          } else {
+            in
+          }
+        case HavocStmt(id) =>
+          if (!context.doesNameExist(id)) {
+            ModuleError("Unknown identifier in havoc statement.", st.position) :: in
+          } else {
+            in
+          }
+        case AssignStmt(lhss, rhss) =>
+          var ret = in
+
+          for ((lh, rh) <- lhss zip rhss) {
+            val lhType = exprTypeChecker.typeOf(lh, context)
+            val rhType = exprTypeChecker.typeOf(rh, context)
+            if (!lhType.matches(rhType)) {
+              lh.ident.toString
+              ret = ModuleError("%s expected type %s but received type %s.".format(lh.ident.toString, lhType.toString, rhType.toString), st.position) :: ret
             }
-          case b : BitVectorLit =>
-            range._2 match {
-              case c: BitVectorLit => Utils.checkParsingError(b.value < c.value, "Range lower bound must be less than upper bound.", st.pos, context.filename)
-              case _ => Utils.checkParsingError(false, "Range lower and upper bounds must be of same type.", st.pos, context.filename)
-              // Maybe import and use: `throw new ParserError("Range lower and upper bounds must be of same type.", Some(st.pos), context.filename)`
-            }
-        }
-      case CaseStmt(body) =>
-        body.foreach(c => {
-          var cType = exprTypeChecker.typeOf(c._1, context)
-          Utils.checkParsingError(cType.isBool, "Case clause must be of type boolean.", st.pos, context.filename)
-        })
-      case ProcedureCallStmt(id, callLhss, args) =>
-        Utils.checkParsingError(context.module.nonEmpty, "Procedure does not exist.", st.pos, context.filename)
-        Utils.checkParsingError(context.doesProcedureExist(id), "Procedure does not exist.", st.pos, context.filename)
-        val procOption = context.module.get.decls.find((p) => p.isInstanceOf[ProcedureDecl] && p.asInstanceOf[ProcedureDecl].id == id)
-        Utils.checkParsingError(procOption.isDefined, "Procedure does not exist.", st.pos, context.filename)
-        val proc = procOption.get.asInstanceOf[ProcedureDecl]
-        Utils.checkParsingError({for ((ip, ar) <- proc.sig.inParams.zipAll(args, None, None)) {
-            if (ip == None || ar == None) {
-              false
-            } else {
-              var ipType = ip.asInstanceOf[(Identifier, Type)]._2.asInstanceOf[Type]
-              var arType = exprTypeChecker.typeOf(ar.asInstanceOf[Expr], context)
-              if (!ipType.matches(arType)) {
-                false
+          }
+
+          val l1 = lhss.length
+          val l2 = rhss.length
+
+          if (l1 != l2) {
+            ret = ModuleError("Assignment expected %d expressions but received %d.".format(l1, l2), st.position) :: ret
+          }
+
+          ret
+
+        case IfElseStmt(cond, _, _) =>
+          val cType = exprTypeChecker.typeOf(cond, context)
+          if (!cType.isBool) {
+            ModuleError("Condition in if statement must be of type boolean.", st.position) :: in
+          } else {
+            in
+          }
+        case ForStmt(_, range, _) =>
+          range._1 match {
+            case i: IntLit =>
+              range._2 match {
+                case j: IntLit =>
+                  if (i.value > j.value) {
+                    ModuleError("Range lower bound must be less than upper bound.", st.position) :: in
+                  } else {
+                    in
+                  }
+                case _ =>
+                  ModuleError("Range lower and upper bounds must be of same type.", st.position) :: in
+              }
+            case b: BitVectorLit =>
+              range._2 match {
+                case c: BitVectorLit =>
+                  if (b.value > c.value) {
+                    ModuleError("Range lower bound must be less than upper bound.", st.position) :: in
+                  } else if (b.width != c.width) {
+                    ModuleError("Range lower and upper bounds must be of same width", st.position) :: in
+                  } else {
+                    in
+                  }
+                case _ =>
+                  ModuleError("Range lower and upper bounds must be of same type.", st.position) :: in
+              }
+          }
+        case CaseStmt(body) =>
+          body.foldLeft(in) {
+            (acc, c) => {
+              var cType = exprTypeChecker.typeOf(c._1, context)
+              if (!cType.isBool) {
+                ModuleError("Case clause must be of type boolean.", st.position) :: acc
+              } else {
+                acc
               }
             }
           }
-          true
-        }, "Argument types do not match parameter types.", st.pos, context.filename)
-        Utils.checkParsingError({for ((op, lh) <- proc.sig.outParams.zipAll(callLhss, None, None)) {
-          if (op == None || lh == None) {
-            false
-          } else {
-            var opType = op.asInstanceOf[(Identifier, Type)]._2.asInstanceOf[Type]
-            var lhExpr = context.map.get(lh.asInstanceOf[Lhs].ident)
-            Utils.checkParsingError(lhExpr.nonEmpty, "Left hand side type does not exist.", st.pos, context.filename)
-            if (!opType.matches(lhExpr.get.typ)) {
-              false
+        case ProcedureCallStmt(id, callLhss, args) =>
+          var ret = in
+          if (context.module.isEmpty) {
+            ret = ModuleError("Procedure does not exist.", st.position) :: ret
+          }
+          val procOption = context.module.get.decls.find((p) => p.isInstanceOf[ProcedureDecl] && p.asInstanceOf[ProcedureDecl].id == id)
+
+          if (procOption.isEmpty) {
+            ret = ModuleError("Procedure does not exist.", st.position) :: ret
+          }
+
+          val proc = procOption.get.asInstanceOf[ProcedureDecl]
+          for ((param, arg) <- proc.sig.inParams zip args) {
+            var (pId, pType) = param.asInstanceOf[(Identifier, Type)]
+            var aType = exprTypeChecker.typeOf(arg.asInstanceOf[Expr], context)
+            if (!pType.matches(aType)) {
+              ret = ModuleError("Parameter %s expected argument of type %s but received type %s.".format(pId.nam, pType.toString, aType.toString), st.position) :: ret
             }
           }
-        }
-          true
-        }, "Left hand side types do not match parameter types.", st.pos, context.filename)
-      case _ =>
-        // Ignore the rest.
+
+          var l1 = proc.sig.inParams.length
+          var l2 = args.length
+
+          if (l1 != l2) {
+            ret = ModuleError("Procedure expected %d arguments but received %d.".format(l1, l2), st.position) :: ret
+          }
+
+          for ((retval, lh) <- proc.sig.outParams zip callLhss) {
+            val rType = retval.asInstanceOf[(Identifier, Type)]._2
+            val lType = exprTypeChecker.typeOf(lh, context)
+            if (!rType.matches(lType)) {
+              ret = ModuleError("Left hand variable %s expected return value of type %s but received type %s."
+                .format(lh.toString, lType.toString, rType.toString), st.position) :: ret
+            }
+          }
+
+          l1 = proc.sig.inParams.length
+          l2 = args.length
+
+          if (l1 != l2) {
+            ret = ModuleError("Left hand side expected %d return values but received %d.".format(l1, l2), st.position) :: ret
+          }
+          ret
+        case SkipStmt() => in
+      }
     }
   }
 }
 
 class ModuleTypeChecker extends ASTAnalyzer("ModuleTypeChecker", new ModuleTypeCheckerPass())  {
-  override def pass = super.pass.asInstanceOf[ModuleTypeCheckerPass]
-  in = Some(Unit)
+  override def visit(module : Module) : Option[Module] = {
+    val out = visitModule(module, List.empty[ModuleError])
+    if (out.size > 0) {
+      val errors = out.map((me) => (me.msg, me.position))
+      throw new Utils.ParserErrorList(errors)
+    }
+    return Some(module)
+  }
 }
 
 class PolymorphicTypeRewriterPass extends RewritePass {
