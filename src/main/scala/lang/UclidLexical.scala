@@ -53,8 +53,8 @@ class UclidLexical extends Lexical with UclidTokens with Positional {
     | positioned { '0' ~ 'x' ~> hexDigit ~ rep( hexDigit )             ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 16) } }
     | positioned { '0' ~ 'b' ~> bit ~ rep( bit )                       ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 2) } }
     | positioned { digit ~ rep( digit )                                ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 10) } }
-    | positioned { '\'' ~ rep( chrExcept('\'', '\n', EofCh) ) ~ '\''   ^^ { case '\'' ~ chars ~ '\'' => StringLit(chars mkString "") } }
-    | positioned { '\"' ~ rep( chrExcept('\"', '\n', EofCh) ) ~ '\"'   ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "") } }
+    | positioned { '\'' ~> rep( chrExcept('\'', '\n', EofCh) ) <~ '\'' ^^ { case chars => StringLit(chars mkString "") } }
+    | positioned { '\"' ~> rep( chrExcept('\"', '\n', EofCh) ) <~ '\"' ^^ { case chars => StringLit(chars mkString "") } }
     | EofCh                                               ^^^ EOF
     | '\'' ~> failure("unclosed string literal")       
     | '\"' ~> failure("unclosed string literal")       

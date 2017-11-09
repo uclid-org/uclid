@@ -75,7 +75,7 @@ object UclidMain {
     try { 
       val modules = compile(options.srcFiles)
       val mainModuleName = Identifier(options.mainModule)
-      Utils.assert(modules.contains(mainModuleName), "Main module (" + options.mainModule + ") does not exist.")
+      Utils.checkError(modules.contains(mainModuleName), "Main module (" + options.mainModule + ") does not exist.")
       val mainModule = modules.get(mainModuleName)
       mainModule match {
         case Some(m) => execute(m)
@@ -96,7 +96,7 @@ object UclidMain {
           case Some(pos) => pos.longString
           case None => ""
         }
-        println("Error at " + filenameStr + positionStr + ": " + p.getMessage + "\n" + fullStr)
+        println("Error " + filenameStr + positionStr + ": " + p.getMessage + "\n" + fullStr)
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {

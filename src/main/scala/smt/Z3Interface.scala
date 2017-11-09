@@ -30,9 +30,9 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
           smt.IntLit(bigInt)
         } else if (value.isBool()) {
           val boolValue = value.asInstanceOf[z3.BoolExpr].getBoolValue()
-          if (boolValue.toInt() == Z3_lbool.Z3_L_TRUE) {
+          if (boolValue == Z3_lbool.Z3_L_TRUE) {
             smt.BooleanLit(true)
-          } else if(boolValue.toInt() == Z3_lbool.Z3_L_FALSE) {
+          } else if(boolValue == Z3_lbool.Z3_L_FALSE) {
             smt.BooleanLit(false)
           } else {
             throw new Utils.RuntimeError("Unable to get model value for: " + e.toString)

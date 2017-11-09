@@ -1,0 +1,20 @@
+module adder  {
+  type cmd_t = enum { add, sub, and, or };
+  
+  input a, b : bv4;
+  input cmd : cmd_t;
+  output result : bv4;
+  
+  next {
+    case
+      (cmd == add) : result := a + b;
+      (cmd == sub) : result := a - b;
+      (cmd == and) : result := a & b;
+      (cmd == or)  : result := a | b;
+    esac
+  }
+}
+
+module alu {
+  type addr_t = bv8;
+}

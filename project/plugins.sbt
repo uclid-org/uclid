@@ -1,10 +1,9 @@
 name := "uclid"
 version := "1.0"
-scalaVersion := "2.11.1"
+scalaVersion := "2.12.0"
  
-libraryDependencies ++= Seq(
- "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.1" withSources()
-)
+// for autoplugins
+addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.1")
 
 
 // addSbtPlugin("com.artima.supersafe" %% "supersafe" % "1.1.2")

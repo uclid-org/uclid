@@ -354,15 +354,17 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val BlockStatement: PackratParser[List[Statement]] = 
       "{" ~> rep (Statement) <~ "}"
   
+    lazy val OptionalExpr : PackratParser[Option[lang.Expr]] = 
+      "(" ~ ")" ^^ { case _ => None } |
+      "(" ~> Expr <~ ")" ^^ { case expr => Some(expr) }
     lazy val ArgMap : PackratParser[(lang.Identifier, Option[lang.Expr])] = 
-      Id <~ ":" ~ "(" ~ ")" ^^ { case formalId => (formalId, None) } |
-      Id ~ ":" ~ "(" ~ Expr ~ ")" ^^ { case formalId ~ ":" ~ "(" ~ expr ~ ")" => (formalId, Some(expr)) }
+      Id ~ ":" ~ OptionalExpr ^^ { case id ~ ":" ~ optExpr => (id, optExpr) }
     lazy val ArgMapList : PackratParser[List[(lang.Identifier, Option[lang.Expr])]] =
       "(" ~ ")" ^^ { case _ => List.empty } |
       "(" ~> ArgMap ~ rep("," ~> ArgMap) <~ ")" ^^ { case arg ~ args => arg :: args }
 
     lazy val InstanceDecl : PackratParser[lang.InstanceDecl] = positioned {
-      KwInstance ~> Id ~ ":" ~ Id <~ "(" ~ ")" ~ ";" ^^ { case instId ~ ":" ~ moduleId => lang.InstanceDecl(instId, moduleId, List.empty) } 
+      KwInstance ~> Id ~ ":" ~ Id ~ ArgMapList <~ ";" ^^ { case instId ~ ":" ~ moduleId ~ args => lang.InstanceDecl(instId, moduleId, args) }
     }
       
     lazy val ProcedureDecl : PackratParser[lang.ProcedureDecl] = positioned {
@@ -429,7 +431,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val Decl: PackratParser[Decl] = 
-      positioned (TypeDecl | ConstDecl | FuncDecl | 
+      positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl | 
                   VarDecl | VarsDecl | InputDecl | InputsDecl | OutputDecl | OutputsDecl | 
                   ConstDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl | AxiomDecl)
   
