@@ -25,6 +25,7 @@ trait ReadOnlyPass[T] {
   
   def applyOnModule(d : TraversalDirection.T, module : Module, in : T, context : ScopeMap) : T = { in }
   def applyOnDecl(d : TraversalDirection.T, decl : Decl, in : T, context : ScopeMap) : T = { in }
+  def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnStateVar(d : TraversalDirection.T, stVar : StateVarDecl, in : T, context : ScopeMap) : T = { in }
@@ -95,6 +96,7 @@ trait RewritePass {
   def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = { Some(module) }
   def rewriteDecl(decl : Decl, ctx : ScopeMap) : Option[Decl] = { Some(decl) }
   def rewriteCommand(cmd : ProofCommand, ctx : ScopeMap) : Option[ProofCommand] = { Some(cmd) }
+  def rewriteInstance(inst : InstanceDecl, ctx : ScopeMap) : Option[InstanceDecl] = { Some(inst) }
   def rewriteProcedure(proc : ProcedureDecl, ctx : ScopeMap) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : ScopeMap) : Option[FunctionDecl] = { Some(func) }
   def rewriteStateVar(stVar : StateVarDecl, ctx : ScopeMap) : Option[StateVarDecl] = { Some(stVar) }
@@ -202,6 +204,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnDecl(TraversalDirection.Down, decl, result, context)
     result = decl match {
+      case inst : InstanceDecl => visitInstance(inst, result, context)
       case proc: ProcedureDecl => visitProcedure(proc, result, context)
       case typ : TypeDecl => visitTypeDecl(typ, result, context)
       case stVar : StateVarDecl => visitStateVar(stVar, result, context)
@@ -218,6 +221,20 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case axiom : AxiomDecl => visitAxiom(axiom, result, context) 
     }
     result = pass.applyOnDecl(TraversalDirection.Up, decl, result, context)
+    return result
+  }
+  def visitInstance(inst : InstanceDecl, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnInstance(TraversalDirection.Down, inst, result, context)
+    result = visitIdentifier(inst.instanceId, result, context)
+    result = visitIdentifier(inst.moduleId, result, context)
+    result = inst.arguments.foldLeft(result){ 
+      (acc, arg) => arg._2 match {
+        case Some(expr) => visitExpr(expr, acc, context)
+        case None => acc
+      }
+    }
+    result = pass.applyOnInstance(TraversalDirection.Up, inst, result, context)
     return result
   }
   def visitProcedure(proc : ProcedureDecl, in : T, contextIn : ScopeMap) : T = {
@@ -780,6 +797,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   
   def visitDecl(decl : Decl, context : ScopeMap) : Option[Decl] = {
     val declP = (decl match {
+      case instDecl : InstanceDecl => visitInstance(instDecl, context)
       case procDecl : ProcedureDecl => visitProcedure(procDecl, context)
       case typeDecl : TypeDecl => visitTypeDecl(typeDecl, context)
       case stateVar : StateVarDecl => visitStateVar(stateVar, context)
@@ -797,6 +815,25 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }).flatMap(pass.rewriteDecl(_, context))
     astChangeFlag = astChangeFlag || (declP != Some(decl))
     return ASTNode.introducePos(setFilename, declP, decl.position)
+  }
+
+  def visitInstance(inst : InstanceDecl, context : ScopeMap) : Option[InstanceDecl] = {
+    val instIdP = visitIdentifier(inst.instanceId, context)
+    val modIdP = visitIdentifier(inst.moduleId, context)
+    val argP = inst.arguments.map {
+      (a) => a._2 match {
+          case Some(e) => (a._1, visitExpr(e, context))
+          case None => (a._1, None)
+        }
+      }
+    val instP = (instIdP, modIdP) match {
+      case (Some(instId), Some(modId)) =>
+        pass.rewriteInstance(InstanceDecl(instId, modId, argP), context)
+      case _ =>
+        None
+    }
+    astChangeFlag = astChangeFlag || (instP != Some(inst))
+    return ASTNode.introducePos(setFilename, instP, inst.position)
   }
 
   def visitProcedure(proc : ProcedureDecl, contextIn : ScopeMap) : Option[ProcedureDecl] = {

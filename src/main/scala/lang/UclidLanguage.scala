@@ -453,6 +453,27 @@ case class SynonymType(id: Identifier) extends Type {
     case _ => false
   }
 }
+case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends Type {
+  def argToString(arg : (Identifier, Option[Type])) : String = {
+    val id = arg._1
+    arg._2 match {
+      case Some(t) => id.toString + " : (" + t.toString + ")"
+      case None => id.toString + " : ()"  
+    }
+  }
+
+  override def toString = "(" + Utils.join(args.map(argToString(_)), ", ") + ")"
+}
+case class ModuleType(inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)]) extends Type {
+  def argToString(arg: (Identifier, Type)) : String = {
+    arg._1.toString + ": (" + arg._2.toString + ")"
+  }
+  def argsToString(args: List[(Identifier, Type)]) = 
+    Utils.join(args.map(argToString(_)), ", ")
+
+  override def toString = 
+    "inputs (" + argsToString(inputs) + ") outputs (" + argsToString(outputs) + ")" 
+}
 
 /** Statements **/
 sealed abstract class Statement extends ASTNode {
@@ -670,6 +691,7 @@ object Scope {
   sealed abstract class ReadOnlyNamedExpression(id : IdentifierBase, typ: Type) extends NamedExpression(id, typ) {
     override val isReadOnly = true
   }
+  case class Instance(instId : Identifier, moduleId : Identifier, instTyp : ModuleInstanceType) extends ReadOnlyNamedExpression(instId, instTyp)  
   case class TypeSynonym(typId : Identifier, sTyp: Type) extends ReadOnlyNamedExpression(typId, sTyp)
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
   case class InputVar(inpId : Identifier, inpTyp: Type) extends ReadOnlyNamedExpression(inpId, inpTyp)
