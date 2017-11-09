@@ -1,3 +1,10 @@
+/*
+ * UCLID5
+ * 
+ * Authors: Pramod Subramanyan.
+ * 
+ * AddFilenamePass annotates each AST node in a module with a filename.
+ */
 package uclid
 package lang
 

@@ -1,3 +1,13 @@
+/*
+ * UCLID5
+ * 
+ * Author: Pramod Subramanyan
+
+ * Inlines all procedure calls.
+ *
+ * FIXME: Need to check for the absence of recursion. 
+ */
+
 package uclid
 package lang
 
@@ -127,7 +137,7 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
   }
 }
 
-class FunctionInliner extends ASTAnalysis {
+class ProcedureInliner extends ASTAnalysis {
   var findLeafProcedurePass = new FindLeafProcedurePass()
   var findLeafProcedureAnalysis = new ASTAnalyzer("FunctionInliner.FindLeafProcedure", findLeafProcedurePass)
   var _astChanged = false 
@@ -174,27 +184,3 @@ class FunctionInliner extends ASTAnalysis {
   }
 }
 
-class TupleFlattenerPass extends RewritePass {
-  def rewriteTuple(id : Identifier, typ : Type) : List[(Identifier, Type)] = {
-    typ match {
-      case RecordType(fields) => fields.map{ (f) => (Identifier(id + "_$field$_" + f._1.name), f._2) }
-      case TupleType(fields) => fields.zipWithIndex.map{ case (f, i) => (Identifier(id.name + "_$tuple$_" + i.toString), f) }
-      case _ => List((id, typ))
-    }
-  }
-  
-  override def rewriteModule(module: Module, ctx : ScopeMap) : Option[Module] = {
-    val newDecls : List[Decl] = module.decls.flatMap{ (decl) =>
-      decl match {
-        case StateVarDecl(id, typ) => rewriteTuple(id, typ).map((t) => StateVarDecl(t._1, t._2))
-        case InputVarDecl(id, typ) => rewriteTuple(id, typ).map((t) => InputVarDecl(t._1, t._2))
-        case OutputVarDecl(id, typ) => rewriteTuple(id, typ).map((t) => OutputVarDecl(t._1, t._2))
-        case ConstantDecl(id, typ) => rewriteTuple(id, typ).map((t) => ConstantDecl(t._1, t._2))
-        case FunctionDecl(id, sig) => throw new Utils.UnimplementedException("TODO")
-        case _ => List(decl)
-      }
-    }
-    return Some(Module(module.id, newDecls, module.cmds))
-  }
-}
-class TupleFlattener extends ASTRewriter("TupleExpander", new TupleFlattenerPass())

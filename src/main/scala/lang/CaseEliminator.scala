@@ -1,3 +1,11 @@
+/*
+ * UCLID5
+ * 
+ * Author : Pramod Subramanyan
+ *
+ * This file eliminate case statements from the AST and replaces them with ifs.
+ * 
+ */
 package uclid
 package lang
 

@@ -1,3 +1,12 @@
+/*
+ * UCLID5
+ * 
+ * Author : Pramod Subramanyan
+ * 
+ * A couple of AST-handling utilities.
+ *   (i) ASTPrinterPass  : Prints out the module
+ *  (ii) ExprRewriterPas : Replaces all instances of an expression with another. 
+ */
 package uclid
 package lang
 

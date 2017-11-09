@@ -1,4 +1,8 @@
 /*
+ * UCLID5
+ * 
+ * Author: Pramod Subramanyan
+
  * ControlCommandChecker.
  * 
  * Walks through the control section of a module and checks if the commands are well-formed.

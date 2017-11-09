@@ -1,3 +1,29 @@
+/*
+ * UCLID5
+ * 
+ * Author : Pramod Subramanyan
+ *
+ * This file contains AST passes that compute the width of bitvector slice operations.
+ * 
+ * To see why this is required, consider the following code:
+ * 
+ *   for i in range(0, 3)  {
+ *     call (sum[i:i], cout[i+1:i+1]) := full_adder(a[i:i], b[i:i], cout[i:i]); 
+ *   }
+ *   
+ * To typecheck this code, we need to be able to determine that each of the bitvector slice operations
+ * (sum[i:i], cout[i+1:i+1], a[i:i], b[i:i] and c[i:i]) are all of width 1. At the time we are parsing
+ * the code and constructing the AST we do not know this fact. Therefore, these slice operations are
+ * represented using VarBitVectorSlice nodes in the AST.
+ * 
+ * The class BitVectorSliceFindWidthPass computes the width of VarBitVectorSlice nodes using the SMT solver.
+ * 
+ * The class BitVectorSliceConstifyPass replaces VarBitVectorSlice nodes with ConstBitVectorSlice nodes
+ * where possible if the SMT solver is able to prove that a particular node is a constant. Returning
+ * to the above example, it bcomes possible to "constify" the slices after we unroll the for loop.
+ * 
+ */
+
 package uclid
 package lang
 

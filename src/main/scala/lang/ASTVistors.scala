@@ -1,3 +1,31 @@
+/*
+ * UCLID5
+ * 
+ * Author : Pramod Subramanyan
+ * 
+ * INTRODUCTION: The AST Pass Infrastructure
+ * =========================================
+ * 
+ * ReadOnlyPass[T] is the base class for all passes that walk through a pass and possibly collect
+ * information about the AST. Think of it as akin to a the function passed in to a fold operation.
+ * 
+ * RewritePass is the base class for all passes that modify the AST.
+ * 
+ * ASTAnalyzer takes a ReadOnlyPass[T] and "folds" (reduces/accumulates) the pass's results over the AST. 
+ * 
+ * ASTRewriter takes a RewritePass and rewrites each element of the AST using the RewritePass.
+ * 
+ * USAGE
+ * =====
+ * 
+ * To write a pass of your own, you will subclass either ReadOnlyPass[T] and ASTAnalyzer or
+ * RewritePass and ASTRewriter. 
+ * 
+ * A simple readonly pass to look at is SemanticAnalyzer.
+ * 
+ * A simple readwrite pass is CaseEliminator.
+ */
+
 package uclid
 package lang
 
