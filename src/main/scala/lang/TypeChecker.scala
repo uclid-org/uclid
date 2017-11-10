@@ -620,8 +620,8 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
             }
           }
 
-          l1 = proc.sig.inParams.length
-          l2 = args.length
+          l1 = proc.sig.outParams.length
+          l2 = callLhss.length
 
           if (l1 != l2) {
             ret = ModuleError("Left hand side expected %d return values but received %d.".format(l1, l2), st.position) :: ret
