@@ -700,15 +700,17 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
     newModule.filename = Some(name)
     return newModule
   }
-
+  // find procedures.
+  val procedures : List[ProcedureDecl] = decls.filter(_.isInstanceOf[ProcedureDecl]).map(_.asInstanceOf[ProcedureDecl])
+  // find the init block.
   val init : Option[InitDecl] = {
     decls.find(_.isInstanceOf[InitDecl]).flatMap((d) => Some(d.asInstanceOf[InitDecl]))
   }
-
+  // find the next block. 
   val next : Option[NextDecl] = {
     decls.find(_.isInstanceOf[NextDecl]).flatMap((d) => Some(d.asInstanceOf[NextDecl]))
   }
-
+  // find all axioms.
   val axioms : List[AxiomDecl] = {
     decls.filter(_.isInstanceOf[AxiomDecl]).map(_.asInstanceOf[AxiomDecl])
   }

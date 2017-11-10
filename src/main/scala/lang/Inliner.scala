@@ -36,22 +36,14 @@ package uclid
 package lang
 
 import scala.collection.mutable.{Set => MutableSet}
+import scala.collection.immutable.{Set => Set}
 
-class FindLeafProcedurePass extends ReadOnlyPass[Option[ProcedureDecl]] {
-  override def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : Option[ProcedureDecl], ctx : ScopeMap) : Option[ProcedureDecl] = {
-    if (d == TraversalDirection.Down) return in
-    if (in.isDefined) return in
-    
-    val hasProcedureCalls = proc.body.exists((st) => {
-      st match {
-        case ProcedureCallStmt(_,_,_) => true
-        case _ => false
-      }
-    })
-    if (!hasProcedureCalls) {
-      return Some(proc)
-    } else {
-      return in
+class FindLeafProcedurePass extends ReadOnlyPass[Set[Identifier]] {
+  type T = Set[Identifier]
+  override def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, ctx : ScopeMap) : T = {
+    ctx.procedure match {
+      case Some(proc) => in - proc.id
+      case None => in
     }
   }
 }
@@ -183,26 +175,38 @@ class ProcedureInliner extends ASTAnalysis {
           done = true
           None
         case Some(mod) =>
-          val leafProc = findLeafProcedureAnalysis.visitModule(mod, None)
+          val leafProcSet = findLeafProcedureAnalysis.visitModule(mod, mod.procedures.map(_.id).toSet)
+          val leafProc = leafProcSet.headOption
           leafProc match {
-            case Some(proc) =>
+            case Some(procId) =>
               _astChanged = true
               done = false
+              val proc = mod.procedures.find((p) => p.id == procId).get
               // rewrite this procedure.
-              val rewriter = new ASTRewriter("FunctionInliner.Inline:" + proc.id.toString, new InlineProcedurePass(proc))
+              val rewriter = new ASTRewriter("FunctionInliner.Inline:" + procId.toString, new InlineProcedurePass(proc))
               // println("Inlining procedure: " + proc.id.toString)
               val mP = rewriter.visit(mod)
               // println("** Changed Module **")
               // println(mP.get.toString)
               mP
             case None =>
-              _astChanged = true
+              _astChanged = false
               done = true
               Some(mod)
           }
       }
       iteration = iteration + 1
     } while(!done && iteration < MAX_ITERATIONS)
+    // check if we managed to inline all procedures.
+    modP match {
+      case Some(mod) => 
+        val procs = mod.procedures
+        if (procs.size > 0) { 
+          val errors = procs.map((p) => ("Unable to inline procedure " + p.id + ". Do you have recursion?", p.position))
+          throw new Utils.ParserErrorList(errors)
+        }
+      case None =>
+    }
     Utils.assert(iteration < MAX_ITERATIONS, "Too many rewriting iterations.")
     return modP
   }

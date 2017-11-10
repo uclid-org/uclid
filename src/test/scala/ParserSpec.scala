@@ -109,4 +109,17 @@ class ParserSpec extends FlatSpec {
         // XXX: continue testing here
     }
   }
+  "test/test-recursion.ucl4" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-recursion.ucl4"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        // XXX: continue testing here
+    }
+  }
 }
