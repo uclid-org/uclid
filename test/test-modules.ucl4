@@ -1,20 +1,65 @@
-module adder  {
-  type cmd_t = enum { add, sub, and, or };
+module alu  {
+  type cmd_t = enum { add, sub, nop };
+  type data_t = bv4;
   
-  input a, b : bv4;
+  input a, b : data_t;
   input cmd : cmd_t;
-  output result : bv4;
+  output result : data_t;
   
   next {
     case
-      (cmd == add) : result := a + b;
-      (cmd == sub) : result := a - b;
-      (cmd == and) : result := a & b;
-      (cmd == or)  : result := a | b;
+      (cmd == add) : {
+        result := a + b;
+      }
+
+      (cmd == sub) :  { 
+        result := a - b;
+      }
     esac
   }
 }
 
-module alu {
+module main {
+  type cmd_t  = enum { add, sub, nop };
   type addr_t = bv8;
+  type opcode_t = bv6;  
+  type data_t = bv4;
+  type regindex_t = bv2;
+  
+  input mem    : [addr_t]opcode_t;
+  var   regs   : [regindex_t]data_t;
+  var   pc     : addr_t;
+  var   opcode : opcode_t;
+  var   cmd    : cmd_t;
+  var   r0ind  : regindex_t;
+  var   r1ind  : regindex_t;  
+  var   r0     : data_t;
+  var   r1     : data_t;
+  var   res    : data_t;
+
+  init {
+	assume (forall (r : regindex_t) :: regs[r] == 0bv4);
+    pc := 0bv8;
+  }
+
+  instance alu : alu (cmd : (cmd), a : (r0), b : (r1), result : (res)); 
+
+  next {
+    opcode := mem[pc];
+    case 
+      opcode[1:0] == 1bv2 : { cmd := add; }
+      opcode[1:0] == 2bv2 : { cmd := sub; }
+      true                : { cmd := nop; }
+    esac
+
+    r0ind := opcode[3:2];
+    r1ind := opcode[5:4];
+
+	call (alu);
+	
+  }
+  
+  control {
+    print_module;
+  }
 }

@@ -251,7 +251,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
     return in
   }
   
-  def checkTypeError(condition: Boolean, msg: String, pos: Position, filename: Option[String]) {
+  def checkTypeError(condition: Boolean, msg: => String, pos: => Position, filename: => Option[String]) {
     if (!condition) {
       throw new Utils.TypeError(msg, Some(pos), filename)
     }
@@ -418,7 +418,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
       checkTypeError(typeOf(arrSel.e, c).isInstanceOf[ArrayType], "Type error in the array operand of select operation.", arrSel.pos, c.filename)
       val indTypes = arrSel.index.map(typeOf(_, c))
       val arrayType = typeOf(arrSel.e, c).asInstanceOf[ArrayType]
-      checkTypeError(arrayType.inTypes == indTypes, "Array index type error.", arrSel.pos, c.filename)
+      lazy val message = "Array index type error. Expected: (" + 
+                          Utils.join(arrayType.inTypes.map((t) => t.toString), ", ") + "). Got: (" +
+                          Utils.join(indTypes.map((t) => t.toString), ", ") + ")."
+      checkTypeError(arrayType.inTypes == indTypes, message, arrSel.pos, c.filename)
       return arrayType.outType
     }
     
@@ -624,7 +627,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
             ret = ModuleError("Left hand side expected %d return values but received %d.".format(l1, l2), st.position) :: ret
           }
           ret
-        case SkipStmt() => in
+        case SkipStmt() | ModuleCallStmt(_) => in
       }
     }
   }

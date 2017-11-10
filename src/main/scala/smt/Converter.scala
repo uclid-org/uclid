@@ -58,8 +58,8 @@ object Converter {
         smt.EnumType(ids.map(_.name))
       case lang.SynonymType(typ) =>
         throw new Utils.UnimplementedException("Synonym types must have been eliminated by now.")
-      case lang.TemporalType() =>
-        throw new Utils.UnimplementedException("Temporal types are not expected here.")
+      case lang.UndefinedType() | lang.ModuleInstanceType(_) | lang.ModuleType(_, _) | lang.TemporalType() =>
+        throw new AssertionError("Type '" + typ.toString + "' not expected here.")
     }
   }
   

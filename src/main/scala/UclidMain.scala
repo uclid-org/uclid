@@ -169,6 +169,7 @@ object UclidMain {
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())
+    passManager.addPass(new ComputeInstanceTypes())
     passManager.addPass(new ProcedureInliner())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())

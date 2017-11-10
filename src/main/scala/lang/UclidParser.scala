@@ -324,7 +324,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       PrimitiveType ~ rep ("*" ~> PrimitiveType) ~ ("->" ~> Type) ^^ { case t ~ ts ~ rt => lang.MapType(t :: ts, rt)}
     }
     lazy val ArrayType : PackratParser[lang.ArrayType] = positioned {
-      ("[") ~> PrimitiveType ~ (rep ("," ~> PrimitiveType) <~ "]") ~ Type ^^ { case t ~ ts ~ rt => lang.ArrayType(t :: ts, rt)}
+      ("[") ~> Type ~ (rep ("," ~> PrimitiveType) <~ "]") ~ Type ^^ { case t ~ ts ~ rt => lang.ArrayType(t :: ts, rt)}
     }
     lazy val SynonymType : PackratParser[lang.SynonymType] = positioned ( Id ^^ { case id => lang.SynonymType(id) } )
     lazy val Type : PackratParser[Type] = positioned {
@@ -368,6 +368,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case l ~ ls ~ ":=" ~ r ~ rs => AssignStmt(l::ls, r::rs) } |
       KwCall ~> LhsList ~ (":=" ~> Id) ~ ExprList <~ ";" ^^
         { case lhss ~ id ~ args => ProcedureCallStmt(id, lhss, args) } |
+      KwCall ~ "(" ~> Id <~ ")" ~ ";" ^^
+        { case id => lang.ModuleCallStmt(id) } |
       KwIf ~> Expr ~ BlockStatement ~ (KwElse ~> BlockStatement) ^^
         { case e ~ f ~ g => IfElseStmt(e,f,g)} |
       KwIf ~> (Expr ~ BlockStatement) ^^
@@ -393,7 +395,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "(" ~> ArgMap ~ rep("," ~> ArgMap) <~ ")" ^^ { case arg ~ args => arg :: args }
 
     lazy val InstanceDecl : PackratParser[lang.InstanceDecl] = positioned {
-      KwInstance ~> Id ~ ":" ~ Id ~ ArgMapList <~ ";" ^^ { case instId ~ ":" ~ moduleId ~ args => lang.InstanceDecl(instId, moduleId, args) }
+      KwInstance ~> Id ~ ":" ~ Id ~ ArgMapList <~ ";" ^^ { case instId ~ ":" ~ moduleId ~ args => lang.InstanceDecl(instId, moduleId, args, None, None) }
     }
       
     lazy val ProcedureDecl : PackratParser[lang.ProcedureDecl] = positioned {

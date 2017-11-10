@@ -94,6 +94,7 @@ trait ReadOnlyPass[T] {
   def applyOnNext(d : TraversalDirection.T, next : NextDecl, in : T, context : ScopeMap) : T = { in }
   def applyOnType(d : TraversalDirection.T, typ: Type, in : T, context : ScopeMap) : T = { in }
   def applyOnTemporalType(d : TraversalDirection.T, tempT : TemporalType, in : T, context : ScopeMap) : T = { in }
+  def applyOnUndefinedType(d : TraversalDirection.T, undefT : UndefinedType, in : T, context : ScopeMap) : T = { in }
   def applyOnUninterpretedType(d : TraversalDirection.T, unintT : UninterpretedType, in : T, context : ScopeMap) : T = { in }
   def applyOnBoolType(d : TraversalDirection.T, boolT : BoolType, in : T, context : ScopeMap) : T = { in }
   def applyOnIntType(d : TraversalDirection.T, intT : IntType, in : T, context : ScopeMap) : T = { in }
@@ -104,6 +105,8 @@ trait ReadOnlyPass[T] {
   def applyOnMapType(d : TraversalDirection.T, mapT : MapType, in : T, context : ScopeMap) : T = { in }
   def applyOnArrayType(d : TraversalDirection.T, arrayT : ArrayType, in : T, context : ScopeMap) : T = { in }
   def applyOnSynonymType(d : TraversalDirection.T, synT : SynonymType, in : T, context : ScopeMap) : T = { in }
+  def applyOnModuleInstanceType(d : TraversalDirection.T, instT : ModuleInstanceType, in : T, context : ScopeMap) : T = { in }
+  def applyOnModuleType(d : TraversalDirection.T, modT : ModuleType, in : T, context : ScopeMap) : T = { in }
   def applyOnProcedureSig(d : TraversalDirection.T, sig : ProcedureSig, in : T, context : ScopeMap) : T = { in }
   def applyOnFunctionSig(d : TraversalDirection.T, sig : FunctionSig, in : T, context : ScopeMap) : T = { in }
   def applyOnLocalVar(d : TraversalDirection.T, lvar : LocalVarDecl, in : T, context : ScopeMap) : T = { in }
@@ -117,6 +120,7 @@ trait ReadOnlyPass[T] {
   def applyOnFor(d : TraversalDirection.T, st : ForStmt, in : T, context : ScopeMap) : T = { in }
   def applyOnCase(d : TraversalDirection.T, st : CaseStmt, in : T, context : ScopeMap) : T = { in }
   def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, context : ScopeMap) : T = { in }
+  def applyOnModuleCall(d : TraversalDirection.T, st : ModuleCallStmt, in : T, context : ScopeMap) : T = { in }
   def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : ScopeMap) : T = { in }
   def applyOnBitVectorSlice(d : TraversalDirection.T, slice : BitVectorSlice, in : T, context : ScopeMap) : T = { in }
   def applyOnExpr(d : TraversalDirection.T, e : Expr, in : T, context : ScopeMap) : T = { in }
@@ -165,6 +169,7 @@ trait RewritePass {
   def rewriteNext(next : NextDecl, ctx : ScopeMap) : Option[NextDecl] = { Some(next) }
   def rewriteType(typ: Type, ctx : ScopeMap) : Option[Type] = { Some(typ) }
   def rewriteTemporalType(tempT : TemporalType, context : ScopeMap) : Option[TemporalType] = { Some(tempT) }
+  def rewriteUndefinedType(undefT : UndefinedType, context : ScopeMap) : Option[Type] = { Some(undefT) }
   def rewriteUninterpretedType(unintT : UninterpretedType, context : ScopeMap) : Option[UninterpretedType] = { Some(unintT) }
   def rewriteBoolType(boolT : BoolType, context : ScopeMap) : Option[BoolType] = { Some(boolT) }
   def rewriteIntType(intT : IntType, context : ScopeMap) : Option[IntType] = { Some(intT)  }
@@ -173,8 +178,10 @@ trait RewritePass {
   def rewriteTupleType(tupleT : TupleType, context : ScopeMap) : Option[TupleType] = { Some(tupleT)  }
   def rewriteRecordType(recordT : RecordType, context : ScopeMap) : Option[RecordType] = { Some(recordT)  }
   def rewriteMapType(mapT : MapType, context : ScopeMap) : Option[MapType] = { Some(mapT)  }
-  def rewriteSynonymType(synT : SynonymType, context : ScopeMap) : Option[SynonymType] = { Some(synT)  }
   def rewriteArrayType(arrayT : ArrayType, context : ScopeMap) : Option[ArrayType] = { Some(arrayT)  }
+  def rewriteSynonymType(synT : SynonymType, context : ScopeMap) : Option[SynonymType] = { Some(synT)  }
+  def rewriteModuleInstanceType(instT : ModuleInstanceType, context : ScopeMap) : Option[ModuleInstanceType] = { Some(instT)  }
+  def rewriteModuleType(modT : ModuleType, context : ScopeMap) : Option[ModuleType] = { Some(modT)  }
   def rewriteProcedureSig(sig : ProcedureSig, ctx : ScopeMap) : Option[ProcedureSig] = { Some(sig) }
   def rewriteFunctionSig(sig : FunctionSig, ctx : ScopeMap) : Option[FunctionSig] = { Some(sig) }
   def rewriteLocalVar(lvar : LocalVarDecl, ctx : ScopeMap) : Option[LocalVarDecl] = { Some(lvar) }
@@ -188,6 +195,7 @@ trait RewritePass {
   def rewriteFor(st : ForStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
   def rewriteCase(st : CaseStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
   def rewriteProcedureCall(st : ProcedureCallStmt, ctx : ScopeMap) : List[Statement] = { List(st) }
+  def rewriteModuleCall(st : ModuleCallStmt, ctx : ScopeMap) : List[Statement] = { List(st) } 
   def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = { Some(lhs) }
   def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : ScopeMap) : Option[BitVectorSlice] = { Some(slice) }
   def rewriteExpr(e : Expr, ctx : ScopeMap) : Option[Expr] = { Some(e) }
@@ -285,6 +293,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
         case Some(expr) => visitExpr(expr, acc, context)
         case None => acc
       }
+    }
+    result = inst.instType match {
+      case Some(typ) => visitType(typ, result, context)
+      case None => result
+    }
+    result = inst.modType match {
+      case Some(typ) => visitType(typ, result, context)
+      case None => result
     }
     result = pass.applyOnInstance(TraversalDirection.Up, inst, result, context)
     return result
@@ -416,6 +432,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnType(TraversalDirection.Down, typ, result, context)
     result = typ match {
       case tempT : TemporalType => visitTemporalType(tempT, in, context)
+      case undefT : UndefinedType => visitUndefinedType(undefT, in, context)
       case unintT : UninterpretedType => visitUninterpretedType(unintT, in, context)
       case boolT : BoolType => visitBoolType(boolT, in, context)
       case intT : IntType => visitIntType(intT, in, context)
@@ -426,6 +443,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case mapT : MapType => visitMapType(mapT, in, context)
       case arrT : ArrayType => visitArrayType(arrT, in, context)
       case synT : SynonymType => visitSynonymType(synT, in, context)
+      case instT : ModuleInstanceType => visitModuleInstanceType(instT, in, context)
+      case modT : ModuleType => visitModuleType(modT, in, context)
     }
     result = pass.applyOnType(TraversalDirection.Up, typ, result, context)
     return result
@@ -434,6 +453,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnTemporalType(TraversalDirection.Down, tempT, result, context)
     result = pass.applyOnTemporalType(TraversalDirection.Up, tempT, result, context)
+    return result
+  }
+  def visitUndefinedType(undefT : UndefinedType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnUndefinedType(TraversalDirection.Down, undefT, in, context)
+    result = pass.applyOnUndefinedType(TraversalDirection.Up, undefT, in, context)
     return result
   }
   def visitUninterpretedType(unintT : UninterpretedType, in : T, context : ScopeMap) : T = {
@@ -504,6 +529,18 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnSynonymType(TraversalDirection.Up, synT, result, context)
     return result
   }
+  def visitModuleInstanceType(instT : ModuleInstanceType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnModuleInstanceType(TraversalDirection.Down, instT, result, context)
+    result = pass.applyOnModuleInstanceType(TraversalDirection.Up, instT, result, context)
+    return result
+  }
+  def visitModuleType(modT : ModuleType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnModuleType(TraversalDirection.Down, modT, result, context)
+    result = pass.applyOnModuleType(TraversalDirection.Up, modT, result, context)
+    return result
+  }
 
   def visitProcedureSig(sig : ProcedureSig, in : T, context : ScopeMap) : T = {
     var result : T = in
@@ -543,6 +580,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case forStmt : ForStmt => visitForStatement(forStmt, result, context)
       case caseStmt : CaseStmt => visitCaseStatement(caseStmt, result, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, result, context)
+      case modCallStmt : ModuleCallStmt => visitModuleCallStatement(modCallStmt, result, context)
     }
     result = pass.applyOnStatement(TraversalDirection.Up, st, result, context)
     return result
@@ -624,6 +662,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = st.callLhss.foldLeft(result)((arg, i) => visitLhs(i, arg, context))
     result = st.args.foldLeft(result)((arg, i) => visitExpr(i, arg, context))
     result = pass.applyOnProcedureCall(TraversalDirection.Up, st, result, context)
+    return result
+  }
+  def visitModuleCallStatement(st : ModuleCallStmt, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnModuleCall(TraversalDirection.Down, st, result, context)
+    result = visitIdentifier(st.id, result, context)
+    result = pass.applyOnModuleCall(TraversalDirection.Up, st, result, context)
     return result
   }
   def visitLhs(lhs : Lhs, in : T, context : ScopeMap) : T = {
@@ -752,15 +797,29 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitOperator(op : Operator, in : T, context : ScopeMap) : T = {
     var result : T = in
     result = pass.applyOnOperator(TraversalDirection.Down, op, result, context)
+    lazy val quantifierCtx = context + op
     op match {
       case ConstExtractOp(slice) =>
         result = visitBitVectorSlice(slice, result, context)
       case VarExtractOp(slice) =>
         result = visitBitVectorSlice(slice, result, context)
+      case ForallOp(args) =>
+        result = visitQuantifierArgs(args, result, quantifierCtx)
+      case ExistsOp(args) =>
+        result = visitQuantifierArgs(args, result, quantifierCtx)
       case _ =>
     }
     result = pass.applyOnOperator(TraversalDirection.Up, op, result, context)
     return result
+  }
+  def visitQuantifierArgs(args : List[(Identifier, Type)], in : T, context : ScopeMap) : T = {
+    args.foldLeft(in) {
+      (acc, arg) => {
+        val accP1 = visitIdentifier(arg._1, acc, context)
+        val accP2 = visitType(arg._2, accP1, context)
+        accP2
+      }
+    }
   }
   def visitArraySelectOp(arrSel : ArraySelectOperation, in : T, context : ScopeMap) : T = {
     var result : T = in
@@ -878,9 +937,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
           case None => (a._1, None)
         }
       }
+    val instTP = inst.instType.flatMap((t) => visitType(t, context)).flatMap {
+      (t) => t match {
+        case tp : ModuleInstanceType => Some(tp)
+        case _ => None
+      }
+    }
+    val modTP = inst.modType.flatMap((t) => visitType(t, context)).flatMap {
+      (t) => t match {
+        case tp : ModuleType => Some(tp)
+        case _ => None
+      }
+    }
     val instP = (instIdP, modIdP) match {
       case (Some(instId), Some(modId)) =>
-        pass.rewriteInstance(InstanceDecl(instId, modId, argP), context)
+        pass.rewriteInstance(InstanceDecl(instId, modId, argP, instTP, modTP), context)
       case _ =>
         None
     }
@@ -1045,6 +1116,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitType(typ: Type, context : ScopeMap) : Option[Type] = {
     val typP = (typ match {
       case tempT : TemporalType => visitTemporalType(tempT, context)
+      case undefT : UndefinedType => visitUndefinedType(undefT, context)
       case unintT : UninterpretedType => visitUninterpretedType(unintT, context)
       case boolT : BoolType => visitBoolType(boolT, context)
       case intT : IntType => visitIntType(intT, context)
@@ -1055,6 +1127,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case mapT : MapType => visitMapType(mapT, context)
       case arrT : ArrayType => visitArrayType(arrT, context)
       case synT : SynonymType => visitSynonymType(synT, context)
+      case instT : ModuleInstanceType => visitModuleInstanceType(instT, context)
+      case modT : ModuleType => visitModuleType(modT, context)
     }).flatMap(pass.rewriteType(_, context))
     astChangeFlag = astChangeFlag || (typP != Some(typ))
     return ASTNode.introducePos(setFilename, typP, typ.position)
@@ -1066,6 +1140,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setFilename, tempTP, tempT.position)
   }
   
+  def visitUndefinedType(undefT : UndefinedType, context : ScopeMap) : Option[Type] = {
+    val undefTP = pass.rewriteUndefinedType(undefT, context)
+    astChangeFlag = astChangeFlag || (undefTP != Some(undefT))
+    return ASTNode.introducePos(setFilename, undefTP, undefT.position)
+  }
+
   def visitUninterpretedType(unintT : UninterpretedType, context : ScopeMap) : Option[UninterpretedType] = {
     val unintTP = pass.rewriteUninterpretedType(unintT, context)
     astChangeFlag = astChangeFlag || (unintTP != Some(unintT))
@@ -1141,7 +1221,19 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     astChangeFlag = astChangeFlag || (synTP != Some(synT))
     return ASTNode.introducePos(setFilename, synTP, synT.position)
   }
-  
+
+  def visitModuleInstanceType(instT : ModuleInstanceType, context : ScopeMap) : Option[ModuleInstanceType] = {
+    val instTP = pass.rewriteModuleInstanceType(instT, context)
+    astChangeFlag = astChangeFlag || (instTP != Some(instT))
+    return ASTNode.introducePos(setFilename, instTP, instT.position)
+  }
+
+  def visitModuleType(modT : ModuleType, context : ScopeMap) : Option[ModuleType] = {
+    val modTP = pass.rewriteModuleType(modT, context)
+    astChangeFlag = astChangeFlag || (modTP != Some(modT))
+    return ASTNode.introducePos(setFilename, modTP, modT.position)
+  }
+
   def visitProcedureSig(sig : ProcedureSig, context : ScopeMap) : Option[ProcedureSig] = {
     val inParamsP : List[(Identifier, Type)] = sig.inParams.map((inP) => {
       (visitIdentifier(inP._1, context), visitType(inP._2, context)) match {
@@ -1196,6 +1288,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case forStmt : ForStmt => visitForStatement(forStmt, context)
       case caseStmt : CaseStmt => visitCaseStatement(caseStmt, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
+      case modCallStmt : ModuleCallStmt => visitModuleCallStatement(modCallStmt, context)
     }).flatMap(pass.rewriteStatement(_, context))
     astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
@@ -1203,7 +1296,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitSkipStatement(st : SkipStmt, context : ScopeMap) : List[Statement] = {
     val stP = pass.rewriteSkip(st, context)
-    astChangeFlag = astChangeFlag || (stP != Some(st))
+    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1212,7 +1305,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val stP = visitExpr(st.e, context).toList.flatMap((e) => {
       pass.rewriteAssert(AssertStmt(e, idP), context)
     })
-    astChangeFlag = astChangeFlag || (stP != Some(st))
+    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1221,7 +1314,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val stP = visitExpr(st.e, context).toList.flatMap((e) => {
       pass.rewriteAssume(AssumeStmt(e, idP), context)
     })
-    astChangeFlag = astChangeFlag || (stP != Some(st))
+    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1229,7 +1322,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val stP = visitIdentifier(st.id, context).toList.flatMap((id) => {
       pass.rewriteHavoc(HavocStmt(id), context)
     })
-    astChangeFlag = astChangeFlag || (stP != Some(st))
+    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1237,7 +1330,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val lhss = st.lhss.map(visitLhs(_, context)).flatten
     val rhss = st.rhss.map(visitExpr(_, context)).flatten
     val stP = pass.rewriteAssign(AssignStmt(lhss, rhss), context)
-    astChangeFlag = astChangeFlag || (stP != Some(st))
+    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1249,7 +1342,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(c) => pass.rewriteIfElse(IfElseStmt(c, ifblock, elseblock), context)
       case _ => List.empty[Statement]
     }
-    astChangeFlag = astChangeFlag || (stP != Some(st))
+    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1264,7 +1357,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(id), Some(lit1), Some(lit2)) => pass.rewriteFor(ForStmt(id, (lit1, lit2), stmts), contextIn)
       case _ => List.empty[Statement]
     }
-    astChangeFlag = astChangeFlag || (stP != Some(st))
+    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1277,7 +1370,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       })
     }).flatten // and finally get rid of all the Options.
     val stP = pass.rewriteCase(CaseStmt(bodyP), context)
-    astChangeFlag = astChangeFlag || (stP != Some(st))
+    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
 
@@ -1286,7 +1379,19 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val lhssP = st.callLhss.map(visitLhs(_, context)).flatten
     val argsP = st.args.map(visitExpr(_, context)).flatten
     val stP = idP.toList.flatMap((id) => pass.rewriteProcedureCall(ProcedureCallStmt(id, lhssP, argsP), context))
-    astChangeFlag = astChangeFlag || (stP != Some(st))
+    astChangeFlag = astChangeFlag || (stP != List(st))
+    return ASTNode.introducePos(setFilename, stP, st.position)
+  }
+
+  def visitModuleCallStatement(st : ModuleCallStmt,  context : ScopeMap) : List[Statement] = {
+    val stP = visitIdentifier(st.id, context) match {
+      case Some(id) =>
+        val stP1 = ModuleCallStmt(id)
+        pass.rewriteModuleCall(stP1, context)
+      case None =>
+        List.empty
+    }
+    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
 
@@ -1428,6 +1533,20 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         case varBvSlice : VarBitVectorSlice => VarExtractOp(varBvSlice)
       }
     }
+    def rewriteQuantifiedVars(args : List[(Identifier, Type)]) = {
+      val ctxP = context + op
+      args.map {
+        (a) => {
+          val idP = visitIdentifier(a._1, ctxP)
+          val typeP = visitType(a._2, ctxP)
+          (idP, typeP) match {
+            case (Some(id), Some(typ)) => Some((id, typ))
+            case _ => None
+          }
+        }
+      }.flatten
+    }
+
     val opP : Option[Operator] = op match {
       case ConstExtractOp(slice) =>
         val sliceP = visitBitVectorSlice(slice, context)
@@ -1437,13 +1556,17 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         val sliceP = visitBitVectorSlice(slice, context)
         val extractOp = sliceP.flatMap((slice) => Some(newExtractOp(slice)))
         extractOp.flatMap((eOp) => pass.rewriteOperator(eOp, context))
+      case ForallOp(args) =>
+        Some(ForallOp(rewriteQuantifiedVars(args)))
+      case ExistsOp(args) =>
+        Some(ExistsOp(rewriteQuantifiedVars(args)))
       case _ =>
         pass.rewriteOperator(op, context)
     }
     astChangeFlag = astChangeFlag || (opP != Some(op))
     return ASTNode.introducePos(setFilename, opP, op.position)
   }
-  
+
   def visitArraySelectOp(arrSel : ArraySelectOperation, context : ScopeMap) : Option[ArraySelectOperation] = {
     val arrSelP = visitExpr(arrSel.e, context) match {
       case Some(e) => pass.rewriteArraySelect(ArraySelectOperation(e, arrSel.index.map(visitExpr(_, context)).flatten), context)
@@ -1452,7 +1575,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     astChangeFlag = astChangeFlag || (arrSelP != Some(arrSel))
     return ASTNode.introducePos(setFilename, arrSelP, arrSel.position)
   }
-  
+
   def visitArrayStoreOp(arrStore : ArrayStoreOperation, context : ScopeMap) : Option[ArrayStoreOperation] = {
     val eP = visitExpr(arrStore.e, context)
     val ind = arrStore.index.map(visitExpr(_, context)).flatten
@@ -1464,7 +1587,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     astChangeFlag = astChangeFlag || (arrStoreP != Some(arrStore))
     return ASTNode.introducePos(setFilename, arrStoreP, arrStore.position)
   }
-  
+
   def visitFuncApp(fapp : FuncApplication, context : ScopeMap) : Option[FuncApplication] = {
     val eP = visitExpr(fapp.e, context)
     val args = fapp.args.map(visitExpr(_, context)).flatten
