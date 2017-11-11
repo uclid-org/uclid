@@ -48,18 +48,25 @@ class PassManager {
     passes += pass
     pass._manager = Some(this)
   }
-  
+
+  // run on a single module.
   def run(module : Module) : Option[Module] = {
     passes.foreach{ _.reset() }
     
     val init : Option[Module] = Some(module)
-    def applyPass(pass: ASTAnalysis, m: Module) : Option[Module] = {
-      // println("running pass: " + pass.passName)
-      pass.visit(m)
-    }
-    
     return passes.foldLeft(init){
-      (mod, pass) => mod.flatMap(applyPass(pass, _))
+      (mod, pass) => mod.flatMap(pass.visit(_))
+    }
+  }
+
+  // run on a list of modules.
+  def run(modules : List[Module]) : List[Module] = {
+    passes.foreach(_.reset())
+    modules.foldRight(List.empty[Module]) {
+      (m, acc) => run(m) match {
+        case Some(m) => m :: acc
+        case None => acc
+      }
     }
   }
 

@@ -40,8 +40,7 @@ import uclid.{lang => l}
 class VerifierSpec extends FlatSpec {
   def nTestsFail(filename: String, nFail : Int) {
     val modules = UclidMain.compile(List(filename))
-    assert (modules.size == 1)
-    val mainModule = modules.get(l.Identifier("main"))
+    val mainModule = UclidMain.instantiate(modules, l.Identifier("main"))
     assert (mainModule.isDefined)
     val results = UclidMain.execute(mainModule.get)
     assert (results.count((e) => e.result.isFalse) == nFail)

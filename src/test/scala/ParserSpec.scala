@@ -45,8 +45,9 @@ class ParserSpec extends FlatSpec {
       assert (fileModules.size == 2)
     }
     catch {
-      case p : Utils.ParserError => 
-        assert(p.getMessage() == "Repeated module names: test")
+      case p : Utils.ParserErrorList => 
+        assert (p.errors.size == 1)
+        assert (p.errors(0)._1.contains("Redeclaration of identifier 'test'."))
     }
   }
   "test/test-typechecker-0.ucl4" should "not parse successfully." in {

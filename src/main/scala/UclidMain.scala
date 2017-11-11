@@ -88,8 +88,6 @@ object UclidMain {
     }
   }
   
-  type ModuleMap = Map[Identifier, Module]
-
   val usage = """
     Usage: UclidMain [options] filename [filenames]
     Options:
@@ -108,11 +106,10 @@ object UclidMain {
     try { 
       val modules = compile(options.srcFiles)
       val mainModuleName = Identifier(options.mainModule)
-      Utils.checkError(modules.contains(mainModuleName), "Main module (" + options.mainModule + ") does not exist.")
-      val mainModule = modules.get(mainModuleName)
+      val mainModule = instantiate(modules, mainModuleName)
       mainModule match {
         case Some(m) => execute(m)
-        case None    => 
+        case None    => throw new Utils.ParserError("Unable to find main module: " + mainModule.toString, None, None)
       }
     }
     catch  {
@@ -151,9 +148,8 @@ object UclidMain {
     }
   }
   
-  def compile(srcFiles : List[String]) : ModuleMap = {
+  def compile(srcFiles : List[String]) : List[Module] = {
     type NameCountMap = Map[Identifier, Int]
-    var modules : ModuleMap = Map()
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
     
     val intraModulePassManager = new PassManager()
@@ -177,17 +173,35 @@ object UclidMain {
     intraModulePassManager.addPass(new ControlCommandChecker())
     // intraModulePassManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
-    for (srcFile <- srcFiles) {
+    def parseFile(srcFile : String) : List[Module] = {
       val text = scala.io.Source.fromFile(srcFile).mkString
       filenameAdderPass.setFilename(srcFile)
-      val fileModules = UclidParser.parseModel(srcFile, text).map(intraModulePassManager.run(_).get)
-      nameCnt = fileModules.foldLeft(nameCnt)((cnts : NameCountMap, m : Module) => (cnts + (m.id -> (cnts(m.id) + 1))))
-      val repeatedNameCnt = nameCnt.filter{ case (name, cnt) => cnt > 1 }
-      val repeatedNames = Utils.join(repeatedNameCnt.map((r) => r._1.toString).toList, ", ")
-      Utils.checkError(repeatedNameCnt.size == 0, "Repeated module names: " + repeatedNames)
-      modules = fileModules.foldLeft(modules)((ms: ModuleMap, m : Module) => ms + (m.id -> m)) 
+      UclidParser.parseModel(srcFile, text).map(intraModulePassManager.run(_).get)
     }
+    
+    val modules = srcFiles.foldLeft(List.empty[Module]) {
+      (acc, srcFile) => acc ++ parseFile(srcFile) 
+    }
+    val modIdSeq = modules.map(m => (m.id, m.position))
+    val moduleErrors = SemanticAnalyzerPass.checkIdRedeclaration(modIdSeq, List.empty[ModuleError])
+    if (moduleErrors.size > 0) {
+      val errors = moduleErrors.map((me) => (me.msg, me.position))
+      throw new Utils.ParserErrorList(errors)
+    }
+    
     return modules
+  }
+  
+  def instantiate(moduleList : List[Module], mainModuleName : Identifier) : Option[Module] = {
+    // create pass manager.
+    val passManager = new PassManager()
+    passManager.addPass(new ModuleInstanceChecker(moduleList))
+
+    // run passes.
+    val moduleListP = passManager.run(moduleList)
+    
+    // return main module.
+    moduleListP.find((m) => m.id == mainModuleName)
   }
 
   def execute(module : Module) : List[CheckResult] = {
