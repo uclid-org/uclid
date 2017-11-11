@@ -54,20 +54,24 @@ class PassManager {
     passes.foreach{ _.reset() }
     
     val init : Option[Module] = Some(module)
-    return passes.foldLeft(init){
+    val modP = passes.foldLeft(init){
       (mod, pass) => mod.flatMap(pass.visit(_))
     }
+    passes.foreach(_.finish())
+    modP
   }
 
   // run on a list of modules.
   def run(modules : List[Module]) : List[Module] = {
     passes.foreach(_.reset())
-    modules.foldRight(List.empty[Module]) {
+    val modulesP = modules.foldRight(List.empty[Module]) {
       (m, acc) => run(m) match {
         case Some(m) => m :: acc
         case None => acc
       }
     }
+    passes.foreach(_.finish())
+    modulesP
   }
 
   def pass(name : String) : ASTAnalysis = passes.find(_.passName == name).get

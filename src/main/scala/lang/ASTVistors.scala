@@ -60,6 +60,7 @@ abstract class ASTAnalysis {
   def passName : String
   def reset() {}
   def visit (module : Module) : Option[Module]
+  def finish() {}
 }
 
 object TraversalDirection extends Enumeration {

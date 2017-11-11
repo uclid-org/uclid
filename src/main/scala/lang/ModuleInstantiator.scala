@@ -5,8 +5,8 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
   val moduleNames = modules.map(_.id).toSet
   
   def checkInstance(inst : InstanceDecl, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
-    if (!moduleNames.contains(inst.instanceId)) {
-      val error = ModuleError("Unknown module being instantiated: " + inst.instanceId.toString, inst.instanceId.position)
+    if (!moduleNames.contains(inst.moduleId)) {
+      val error = ModuleError("Unknown module being instantiated: " + inst.moduleId.toString, inst.moduleId.position)
       error :: in
     } else {
       in
@@ -27,6 +27,12 @@ class ModuleInstanceChecker(modules : List[Module]) extends ASTAnalyzer(
 {
   override def reset() {
     in = Some(List.empty[ModuleError])
+  }
+  override def finish() {
+    val errors = out.get
+    if (errors.size > 0) {
+      throw new Utils.ParserErrorList(errors.map((e) => (e.msg, e.position)))
+    }
   }
 }
 
