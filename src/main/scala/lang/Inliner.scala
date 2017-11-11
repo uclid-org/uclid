@@ -156,15 +156,9 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
 class ProcedureInliner extends ASTAnalysis {
   var findLeafProcedurePass = new FindLeafProcedurePass()
   var findLeafProcedureAnalysis = new ASTAnalyzer("FunctionInliner.FindLeafProcedure", findLeafProcedurePass)
-  var _astChanged = false 
   
   override def passName = "FunctionInliner"
-  override def reset() = {
-    _astChanged = false
-  }
-  override def astChanged = _astChanged
   def visit(module : Module) : Option[Module] = {
-    _astChanged = false
     var modP : Option[Module] = Some(module)
     var iteration = 0
     var done = false
@@ -179,7 +173,6 @@ class ProcedureInliner extends ASTAnalysis {
           val leafProc = leafProcSet.headOption
           leafProc match {
             case Some(procId) =>
-              _astChanged = true
               done = false
               val proc = mod.procedures.find((p) => p.id == procId).get
               // rewrite this procedure.
@@ -190,7 +183,6 @@ class ProcedureInliner extends ASTAnalysis {
               // println(mP.get.toString)
               mP
             case None =>
-              _astChanged = false
               done = true
               Some(mod)
           }

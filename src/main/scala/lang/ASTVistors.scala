@@ -60,8 +60,6 @@ abstract class ASTAnalysis {
   def passName : String
   def reset() {}
   def visit (module : Module) : Option[Module]
-  def astChanged : Boolean
-  def iteratedApply = false
 }
 
 object TraversalDirection extends Enumeration {
@@ -241,9 +239,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     _out = Some(visitModule(module, _in.get))
     return Some(module)
   }
-  /** These analyses never change the AST. */
-  override def astChanged = false
-
   // Reset calls reset on the pass.
   override  def reset() = { pass.reset() }
   
@@ -876,16 +871,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   override def passName = _passName
   override def visit(module : Module) : Option[Module] = visitModule(module)
   
-  var astChangeFlag = false
-  override def astChanged = astChangeFlag
-
   override def reset() { 
     pass.reset()
-    astChangeFlag = false
   }
   
   def visitModule(module : Module) : Option[Module] = {
-    astChangeFlag = false
     val emptyContext = ScopeMap.empty
     val context = emptyContext + module
     val id = visitIdentifier(module.id, context)
@@ -893,7 +883,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val cmds = module.cmds.map(visitCommand(_, context)).flatten
     val moduleIn = id.flatMap((i) => Some(Module(i, decls, cmds)))
     val moduleP = moduleIn.flatMap((m) => pass.rewriteModule(m, emptyContext))
-    astChangeFlag = astChangeFlag || (moduleP != Some(module))
     
     return (ASTNode.introducePos(setFilename, moduleP, module.position) match {
       case Some(m) => 
@@ -924,7 +913,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case specDecl : SpecDecl => visitSpec(specDecl, context)
       case axiomDecl : AxiomDecl => visitAxiom(axiomDecl, context)
     }).flatMap(pass.rewriteDecl(_, context))
-    astChangeFlag = astChangeFlag || (declP != Some(decl))
     return ASTNode.introducePos(setFilename, declP, decl.position)
   }
 
@@ -955,7 +943,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case _ =>
         None
     }
-    astChangeFlag = astChangeFlag || (instP != Some(inst))
     return ASTNode.introducePos(setFilename, instP, inst.position)
   }
 
@@ -969,7 +956,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(i), Some(s)) => pass.rewriteProcedure(ProcedureDecl(i, s, decls, stmts), contextIn)
       case _ => None 
     }
-    astChangeFlag = astChangeFlag || (procP != Some(proc))
     return ASTNode.introducePos(setFilename, procP, proc.position)
   }
   
@@ -980,7 +966,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(i), Some(s)) => pass.rewriteFunction(FunctionDecl(i, s), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (funcP != Some(func))
     return ASTNode.introducePos(setFilename, funcP, func.position)
   }
   
@@ -991,7 +976,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(id), Some(typ)) => pass.rewriteStateVar(StateVarDecl(id, typ), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (stateVarP != Some(stVar))
     return ASTNode.introducePos(setFilename, stateVarP, stVar.position)
   }
 
@@ -1003,7 +987,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     } else {
       None
     }
-    astChangeFlag = astChangeFlag || (stateVarsP != Some(stVars))
     return ASTNode.introducePos(setFilename, stateVarsP, stVars.position)
   }
 
@@ -1014,7 +997,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(id), Some(typ)) => pass.rewriteInputVar(InputVarDecl(id, typ), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (inpVarP != Some(inpvar))
     return ASTNode.introducePos(setFilename, inpVarP, inpvar.position)
   }
   
@@ -1026,7 +1008,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     } else {
       None
     }
-    astChangeFlag = astChangeFlag || (stateVarsP != Some(inpVars))
     return ASTNode.introducePos(setFilename, stateVarsP, inpVars.position)
   }
 
@@ -1037,7 +1018,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(id), Some(typ)) => pass.rewriteOutputVar(OutputVarDecl(id, typ), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (outVarP != Some(outvar))
     return ASTNode.introducePos(setFilename, outVarP, outvar.position)
   }
   
@@ -1049,7 +1029,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     } else {
       None
     }
-    astChangeFlag = astChangeFlag || (stateVarsP != Some(outVars))
     return ASTNode.introducePos(setFilename, stateVarsP, outVars.position)
   }
 
@@ -1060,7 +1039,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(id), Some(typ)) => pass.rewriteConstant(ConstantDecl(id, typ), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (cnstP != Some(cnst))
     return ASTNode.introducePos(setFilename, cnstP, cnst.position)
   }
   
@@ -1071,7 +1049,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (specP != Some(spec))
     return ASTNode.introducePos(setFilename, specP, spec.position)
   }
 
@@ -1079,7 +1056,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val idP = axiom.id.flatMap((id) => visitIdentifier(id, context))
     val exprP = visitExpr(axiom.expr, context)
     val axiomP = exprP.flatMap((e) => pass.rewriteAxiom(AxiomDecl(idP, e), context))
-    astChangeFlag = astChangeFlag || (axiomP != Some(axiom))
     return ASTNode.introducePos(setFilename, axiomP, axiom.position)
   }
   def visitTypeDecl(typDec : TypeDecl, context : ScopeMap) : Option[TypeDecl] = {
@@ -1089,27 +1065,23 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(id), Some(typ)) => pass.rewriteTypeDecl(TypeDecl(id, typ), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (typDecP != Some(typDec))
     return ASTNode.introducePos(setFilename, typDecP, typDec.position)
   }
   
   def visitInit(init : InitDecl, context : ScopeMap) : Option[InitDecl] = {
     val body = init.body.map(visitStatement(_, context)).flatten
     val initP = pass.rewriteInit(InitDecl(body), context)
-    astChangeFlag = astChangeFlag || (initP != Some(init))
     return ASTNode.introducePos(setFilename, initP, init.position)
   }
   
   def visitNext(next : NextDecl, context : ScopeMap) : Option[NextDecl] = {
     val body = next.body.map(visitStatement(_, context)).flatten
     val nextP = pass.rewriteNext(NextDecl(body), context)
-    astChangeFlag = astChangeFlag || (nextP != Some(next))
     return ASTNode.introducePos(setFilename, nextP, next.position)
   }
   
   def visitCommand(cmd : ProofCommand, context : ScopeMap) : Option[ProofCommand] = {
     val cmdP = pass.rewriteCommand(cmd, context)
-    astChangeFlag = astChangeFlag || (cmdP != Some(cmd))
     return ASTNode.introducePos(setFilename, cmdP, cmd.position)
   }
   
@@ -1130,57 +1102,48 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case instT : ModuleInstanceType => visitModuleInstanceType(instT, context)
       case modT : ModuleType => visitModuleType(modT, context)
     }).flatMap(pass.rewriteType(_, context))
-    astChangeFlag = astChangeFlag || (typP != Some(typ))
     return ASTNode.introducePos(setFilename, typP, typ.position)
   }
   
   def visitTemporalType(tempT : TemporalType, context : ScopeMap) : Option[TemporalType] = {
     val tempTP = pass.rewriteTemporalType(tempT, context)
-    astChangeFlag = astChangeFlag || (tempTP != Some(tempT))
     return ASTNode.introducePos(setFilename, tempTP, tempT.position)
   }
   
   def visitUndefinedType(undefT : UndefinedType, context : ScopeMap) : Option[Type] = {
     val undefTP = pass.rewriteUndefinedType(undefT, context)
-    astChangeFlag = astChangeFlag || (undefTP != Some(undefT))
     return ASTNode.introducePos(setFilename, undefTP, undefT.position)
   }
 
   def visitUninterpretedType(unintT : UninterpretedType, context : ScopeMap) : Option[UninterpretedType] = {
     val unintTP = pass.rewriteUninterpretedType(unintT, context)
-    astChangeFlag = astChangeFlag || (unintTP != Some(unintT))
     return ASTNode.introducePos(setFilename, unintTP, unintT.position)
   }
 
   def visitBoolType(boolT : BoolType, context : ScopeMap) : Option[BoolType] = {
     val boolTP = pass.rewriteBoolType(boolT, context)
-    astChangeFlag = astChangeFlag || (boolTP != Some(boolT))
     return ASTNode.introducePos(setFilename, boolTP, boolT.position)
   }
 
   def visitIntType(intT : IntType, context : ScopeMap) : Option[IntType] = {
     val intTP = pass.rewriteIntType(intT, context)
-    astChangeFlag = astChangeFlag || (intTP != Some(intT))
     return ASTNode.introducePos(setFilename, intTP, intT.position) 
   }
   
   def visitBitVectorType(bvT : BitVectorType, context : ScopeMap) : Option[BitVectorType] = {
     val bvTP = pass.rewriteBitVectorType(bvT, context)
-    astChangeFlag = astChangeFlag || (bvTP != Some(bvT))
     return ASTNode.introducePos(setFilename, bvTP, bvT.position) 
   }
   
   def visitEnumType(enumT : EnumType, context : ScopeMap) : Option[EnumType] = {
     val idP = enumT.ids.map(visitIdentifier(_, context)).flatten
     val enumTP = pass.rewriteEnumType(EnumType(idP), context)
-    astChangeFlag = astChangeFlag || (enumTP != Some(enumT))
     return ASTNode.introducePos(setFilename, enumTP, enumT.position)
   }
   
   def visitTupleType(tupleT : TupleType, context : ScopeMap) : Option[TupleType] = {
     val fieldsP = tupleT.fieldTypes.map((t) => visitType(t, context)).flatten
     val tupleTP = pass.rewriteTupleType(TupleType(fieldsP), context)
-    astChangeFlag = astChangeFlag || (tupleTP != Some(tupleT))
     return ASTNode.introducePos(setFilename, tupleTP, tupleT.position)
   }
   
@@ -1192,7 +1155,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       }
     }).flatten
     val recTP = pass.rewriteRecordType(RecordType(fieldsP), context)
-    astChangeFlag = astChangeFlag || (recTP != Some(recT))
     return ASTNode.introducePos(setFilename, recTP, recT.position)
   }
   
@@ -1202,7 +1164,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(outTypeP) => pass.rewriteMapType(MapType(inTypesP, outTypeP), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (mapTP != Some(mapT))
     return ASTNode.introducePos(setFilename, mapTP, mapT.position)
   }
   
@@ -1212,25 +1173,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(outTypeP) => pass.rewriteArrayType(ArrayType(inTypesP, outTypeP), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (arrTP != Some(arrT))
     return ASTNode.introducePos(setFilename, arrTP, arrT.position)
   }
   
   def visitSynonymType(synT : SynonymType, context : ScopeMap) : Option[SynonymType] = {
     val synTP = pass.rewriteSynonymType(synT, context)
-    astChangeFlag = astChangeFlag || (synTP != Some(synT))
     return ASTNode.introducePos(setFilename, synTP, synT.position)
   }
 
   def visitModuleInstanceType(instT : ModuleInstanceType, context : ScopeMap) : Option[ModuleInstanceType] = {
     val instTP = pass.rewriteModuleInstanceType(instT, context)
-    astChangeFlag = astChangeFlag || (instTP != Some(instT))
     return ASTNode.introducePos(setFilename, instTP, instT.position)
   }
 
   def visitModuleType(modT : ModuleType, context : ScopeMap) : Option[ModuleType] = {
     val modTP = pass.rewriteModuleType(modT, context)
-    astChangeFlag = astChangeFlag || (modTP != Some(modT))
     return ASTNode.introducePos(setFilename, modTP, modT.position)
   }
 
@@ -1253,7 +1210,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (in, out) => pass.rewriteProcedureSig(ProcedureSig(in, out), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (sigP != Some(sig))
     return ASTNode.introducePos(setFilename, sigP, sig.position)
   }
   
@@ -1265,7 +1221,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       }
     }).flatten
     val sigP = visitType(sig.retType, context).flatMap((t) => pass.rewriteFunctionSig(FunctionSig(args, t), context))
-    astChangeFlag = astChangeFlag || (sigP != Some(sig))
     return ASTNode.introducePos(setFilename, sigP, sig.position)
   }
   
@@ -1273,7 +1228,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val varP = visitIdentifier(lvar.id, context).flatMap((id) => {
       visitType(lvar.typ, context).flatMap((t) => pass.rewriteLocalVar(LocalVarDecl(id, t), context))
     })
-    astChangeFlag = astChangeFlag || (varP != Some(lvar))
     return ASTNode.introducePos(setFilename, varP, lvar.position)
   }
   
@@ -1290,13 +1244,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
       case modCallStmt : ModuleCallStmt => visitModuleCallStatement(modCallStmt, context)
     }).flatMap(pass.rewriteStatement(_, context))
-    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
 
   def visitSkipStatement(st : SkipStmt, context : ScopeMap) : List[Statement] = {
     val stP = pass.rewriteSkip(st, context)
-    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1305,7 +1257,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val stP = visitExpr(st.e, context).toList.flatMap((e) => {
       pass.rewriteAssert(AssertStmt(e, idP), context)
     })
-    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1314,7 +1265,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val stP = visitExpr(st.e, context).toList.flatMap((e) => {
       pass.rewriteAssume(AssumeStmt(e, idP), context)
     })
-    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1322,7 +1272,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val stP = visitIdentifier(st.id, context).toList.flatMap((id) => {
       pass.rewriteHavoc(HavocStmt(id), context)
     })
-    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1330,7 +1279,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val lhss = st.lhss.map(visitLhs(_, context)).flatten
     val rhss = st.rhss.map(visitExpr(_, context)).flatten
     val stP = pass.rewriteAssign(AssignStmt(lhss, rhss), context)
-    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1342,7 +1290,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(c) => pass.rewriteIfElse(IfElseStmt(c, ifblock, elseblock), context)
       case _ => List.empty[Statement]
     }
-    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1357,7 +1304,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(id), Some(lit1), Some(lit2)) => pass.rewriteFor(ForStmt(id, (lit1, lit2), stmts), contextIn)
       case _ => List.empty[Statement]
     }
-    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
   
@@ -1370,7 +1316,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       })
     }).flatten // and finally get rid of all the Options.
     val stP = pass.rewriteCase(CaseStmt(bodyP), context)
-    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
 
@@ -1379,7 +1324,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val lhssP = st.callLhss.map(visitLhs(_, context)).flatten
     val argsP = st.args.map(visitExpr(_, context)).flatten
     val stP = idP.toList.flatMap((id) => pass.rewriteProcedureCall(ProcedureCallStmt(id, lhssP, argsP), context))
-    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
 
@@ -1391,7 +1335,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case None =>
         List.empty
     }
-    astChangeFlag = astChangeFlag || (stP != List(st))
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
 
@@ -1419,7 +1362,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       }
       lhsP1.flatMap((lhsP) => pass.rewriteLHS(lhsP, context))
     }
-    astChangeFlag = astChangeFlag || (lhsP != Some(lhs))
     return ASTNode.introducePos(setFilename, lhsP, lhs.position)
   }
 
@@ -1452,7 +1394,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case ite : ITE => visitITE(ite, context)
       case lambda : Lambda => visitLambda(lambda, context)
     }).flatMap(pass.rewriteExpr(_, context))
-    astChangeFlag = astChangeFlag || (eP != Some(e))
     return ASTNode.introducePos(setFilename, eP, e.position)
   }
   
@@ -1462,17 +1403,14 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case cId : ConstIdentifier => visitConstIdentifier(cId, context)
     }
     val idP2 = idP.flatMap(pass.rewriteIdentifierBase(_, context))
-    astChangeFlag = astChangeFlag || (idP2 != Some(id))
     return ASTNode.introducePos(setFilename, idP2, id.position)
   }
   def visitIdentifier(id : Identifier, context : ScopeMap) : Option[Identifier] = {
     val idP = pass.rewriteIdentifier(id, context)
-    astChangeFlag = astChangeFlag || (idP != Some(id))
     return ASTNode.introducePos(setFilename, idP, id.position)
   }
   def visitConstIdentifier(id : ConstIdentifier, context : ScopeMap) : Option[ConstIdentifier] = {
     val idP = pass.rewriteConstIdentifier(id, context)
-    astChangeFlag = astChangeFlag || (idP != Some(id))
     return ASTNode.introducePos(setFilename, idP, id.position)
   }  
   def visitLiteral(lit : Literal, context : ScopeMap) : Option[Literal] = {
@@ -1480,13 +1418,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case b : BoolLit => visitBoolLiteral(b, context)
       case n : NumericLit => visitNumericLiteral(n, context)
     }).flatMap(pass.rewriteLit(_, context))
-    astChangeFlag = astChangeFlag || (litP != Some(lit))
     return ASTNode.introducePos(setFilename, litP, lit.position)
   }
   
   def visitBoolLiteral(b : BoolLit, context : ScopeMap) : Option[BoolLit] = {
     val bP = pass.rewriteBoolLit(b, context)
-    astChangeFlag = astChangeFlag || (bP != Some(b))
     return ASTNode.introducePos(setFilename, bP, b.position)
   }
   
@@ -1496,25 +1432,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case i : IntLit => visitIntLiteral(i, context)
     }
     val nP2 = nP1.flatMap(pass.rewriteNumericLit(_, context))
-    astChangeFlag = astChangeFlag || (nP2 != Some(n))
     return ASTNode.introducePos(setFilename, nP2, n.position)
   }
   
   def visitIntLiteral(i : IntLit, context : ScopeMap) : Option[IntLit] = {
     val iP = pass.rewriteIntLit(i, context)
-    astChangeFlag = astChangeFlag || (iP != Some(i))
     return ASTNode.introducePos(setFilename, iP, i.position)
   }
 
   def visitBitVectorLiteral(bv : BitVectorLit, context : ScopeMap) : Option[BitVectorLit] = {
     val bvP = pass.rewriteBitVectorLit(bv, context)
-    astChangeFlag = astChangeFlag || (bvP != Some(bv))
     return ASTNode.introducePos(setFilename, bvP, bv.position)
   }
 
   def visitTuple(rec : Tuple, context : ScopeMap) : Option[Tuple] = {
     val recP = pass.rewriteTuple(Tuple(rec.values.map(visitExpr(_, context)).flatten), context)
-    astChangeFlag = astChangeFlag || (recP != Some(rec))
     return ASTNode.introducePos(setFilename, recP, rec.position)
   }
   
@@ -1522,7 +1454,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val opAppP = visitOperator(opapp.op, context).flatMap((op) => {
       pass.rewriteOperatorApp(OperatorApplication(op, opapp.operands.map(visitExpr(_, context + opapp)).flatten), context)
     })
-    astChangeFlag = astChangeFlag || (opAppP != Some(opapp))
     return ASTNode.introducePos(setFilename, opAppP, opapp.position)
   }
   
@@ -1563,7 +1494,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case _ =>
         pass.rewriteOperator(op, context)
     }
-    astChangeFlag = astChangeFlag || (opP != Some(op))
     return ASTNode.introducePos(setFilename, opP, op.position)
   }
 
@@ -1572,7 +1502,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(e) => pass.rewriteArraySelect(ArraySelectOperation(e, arrSel.index.map(visitExpr(_, context)).flatten), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (arrSelP != Some(arrSel))
     return ASTNode.introducePos(setFilename, arrSelP, arrSel.position)
   }
 
@@ -1584,7 +1513,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(e), Some(value)) => pass.rewriteArrayStore(ArrayStoreOperation(e, ind, value), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (arrStoreP != Some(arrStore))
     return ASTNode.introducePos(setFilename, arrStoreP, arrStore.position)
   }
 
@@ -1595,7 +1523,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(e) => pass.rewriteFuncApp(FuncApplication(e, args), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (fappP != Some(fapp))
     return ASTNode.introducePos(setFilename, fappP, fapp.position)
   }
   
@@ -1608,7 +1535,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(cond), Some(t), Some(f)) => pass.rewriteITE(ITE(cond, t, f), context)
       case _ => None
     }
-    astChangeFlag = astChangeFlag || (iteP != Some(ite))
     return ASTNode.introducePos(setFilename, iteP, ite.position)
   }
   
@@ -1621,7 +1547,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       }
     }).flatten
     val lambdaP = visitExpr(lambda.e, context).flatMap((e) => pass.rewriteLambda(Lambda(idP, e), contextIn))
-    astChangeFlag = astChangeFlag || (lambdaP != Some(lambda))
     return ASTNode.introducePos(setFilename, lambdaP, lambda.position)
   }
 }

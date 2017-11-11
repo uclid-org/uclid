@@ -55,8 +55,14 @@ module main {
     r0ind := opcode[3:2];
     r1ind := opcode[5:4];
 
+    r0 := regs[r0ind];
+    r1 := regs[r1ind];
+    
 	call (alu);
 	
+	regs[r0ind] := res;
+
+	pc := pc + 1bv8;
   }
   
   control {

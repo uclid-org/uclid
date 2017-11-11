@@ -627,7 +627,15 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
             ret = ModuleError("Left hand side expected %d return values but received %d.".format(l1, l2), st.position) :: ret
           }
           ret
-        case SkipStmt() | ModuleCallStmt(_) => in
+        case ModuleCallStmt(id) =>
+          val instanceNames : Set[Identifier] = context.module.get.instanceNames
+          if (!instanceNames.contains(id)) {
+            val error = ModuleError("Unknown module instance: " + id.toString, id.position)
+            error :: in
+          } else {
+            in
+          }
+        case SkipStmt() => in
       }
     }
   }

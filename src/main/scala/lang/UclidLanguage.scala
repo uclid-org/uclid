@@ -700,8 +700,18 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
     newModule.filename = Some(name)
     return newModule
   }
+  // find inputs.
+  val inputs : List[InputVarDecl] = decls.filter(_.isInstanceOf[InputVarDecl]).map(_.asInstanceOf[InputVarDecl])
+  // find outputs.
+  val outputs : List[OutputVarDecl] = decls.filter(_.isInstanceOf[OutputVarDecl]).map(_.asInstanceOf[OutputVarDecl])
+  // compute the "type" of this module.
+  val moduleType : ModuleType = ModuleType(inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)))
   // find procedures.
   val procedures : List[ProcedureDecl] = decls.filter(_.isInstanceOf[ProcedureDecl]).map(_.asInstanceOf[ProcedureDecl])
+  // find instances of other modules.
+  val instances : List[InstanceDecl] = decls.filter(_.isInstanceOf[InstanceDecl]).map(_.asInstanceOf[InstanceDecl])
+  // set of instance names (for easy searching.)
+  lazy val instanceNames : Set[Identifier] = instances.map(_.instanceId).toSet 
   // find the init block.
   val init : Option[InitDecl] = {
     decls.find(_.isInstanceOf[InitDecl]).flatMap((d) => Some(d.asInstanceOf[InitDecl]))

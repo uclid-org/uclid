@@ -55,12 +55,7 @@ class PassManager {
     val init : Option[Module] = Some(module)
     def applyPass(pass: ASTAnalysis, m: Module) : Option[Module] = {
       // println("running pass: " + pass.passName)
-      val mP = pass.visit(m)
-      if (pass.iteratedApply && pass.astChanged && !mP.isEmpty) {
-        applyPass(pass, mP.get)
-      } else {
-        mP
-      }
+      pass.visit(m)
     }
     
     return passes.foldLeft(init){
