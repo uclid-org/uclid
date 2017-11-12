@@ -1,6 +1,8 @@
 package uclid
 package lang
 
+import scala.collection.immutable.Map
+
 class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[List[ModuleError]] {
   val moduleMap = modules.map(m => (m.id -> m)).toMap
 
@@ -96,27 +98,62 @@ class ModuleInstanceChecker(modules : List[Module]) extends ASTAnalyzer(
   }
 }
 
-class LeafModuleFinderPass extends ReadOnlyPass[Set[Identifier]] {
-  override def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : Set[Identifier], context : ScopeMap) : Set[Identifier] = {
+class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
+  type T = Map[Identifier, Set[Identifier]]
+  override def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : ScopeMap) : T = {
     if (d == TraversalDirection.Down) {
+      // this module calls inst.moduleId
       val moduleName = context.module.get.id
-      in - moduleName
+      in.get(moduleName) match {
+        case Some(modules) => in + (moduleName -> (modules + inst.moduleId))
+        case None => in + (moduleName -> Set(inst.moduleId))
+      }
     } else {
       in
     }
   }
 }
 
-class LeafModuleFinder(modules : List[Module]) extends ASTAnalyzer(
-    "LeafModuleFinder", new LeafModuleFinderPass())
+class ModuleDependencyFinder(modules : List[Module], mainModuleName : Identifier) extends ASTAnalyzer(
+    "LeafModuleFinder", new ModuleDependencyFinderPass())
 {
+  var moduleInstantiationOrder : Option[List[Identifier]] = None
   override def reset() {
-    in = Some(modules.map(_.id).toSet)
+    in = Some(Map.empty[Identifier, Set[Identifier]])
   }
   override def finish() {
-    // println("Leaf modules: " + out.get.toString)
+    val depGraph = out.get
+    def visit(mod : Identifier, visitOrder : Map[Identifier, Int]) : Map[Identifier, Int] = {
+      if (visitOrder.contains(mod)) {
+        visitOrder
+      } else {
+        val visitOrderP = visitOrder + (mod -> visitOrder.size)
+        depGraph.get(mod) match {
+          case Some(modules) =>
+            modules.foldLeft(visitOrderP)((acc, m) => visit(m, acc))
+          case None =>
+            visitOrderP
+        }
+      }
+    }
+    // now walk through the dep graph
+    val order = visit(mainModuleName, Map.empty[Identifier, Int])
+    val instantiationOrder = order.toList.sortWith((p1, p2) => p1._2 > p2._2).map(p => p._1)
+    moduleInstantiationOrder = Some(instantiationOrder)
+    // println("order: " + instantiationOrder.toString)
   }
 }
-class ModuleInstantiator {
-  
+
+
+
+class ModuleInstantiatorPass(modules : List[Module], moduleName : Identifier) extends RewritePass {
+  val module = modules.find(_.id == moduleName).get
+  def instantiate(inst : InstanceDecl) = {
+    val targetMod = modules.find(m => m.id == inst.moduleId).get
+    // strategy will be:
+    // find new names for each input, output and state variable.
+    // rename the entire module.
+    
+    
+  }
 }

@@ -34,6 +34,8 @@
 package uclid
 package lang
 
+import scala.collection.mutable.{Set => MutableSet}
+
 object Scope {
   sealed abstract class NamedExpression(val id : IdentifierBase, val typ: Type) {
     val isReadOnly = false
@@ -228,5 +230,17 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
       case Some(t) => t
       case None => false
     }
+  }
+}
+
+class ContextualNameProvider(ctx : ScopeMap, prefix : String) {
+  var index = 1 
+  def apply(name: Identifier, tag : String) : Identifier = {
+    var newId = Identifier(prefix + "$" + tag + "$" + name + "_" + index.toString)
+    while (ctx.doesNameExist(newId)) {
+      index = index + 1
+      newId = Identifier(prefix + "$" + tag + "$" + name + "_" + index.toString)
+    }
+    return newId
   }
 }

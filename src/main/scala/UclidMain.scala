@@ -196,7 +196,7 @@ object UclidMain {
     // create pass manager.
     val passManager = new PassManager()
     passManager.addPass(new ModuleInstanceChecker(moduleList))
-    passManager.addPass(new LeafModuleFinder(moduleList))
+    passManager.addPass(new ModuleDependencyFinder(moduleList, mainModuleName))
 
     // run passes.
     val moduleListP = passManager.run(moduleList)

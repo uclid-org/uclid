@@ -50,20 +50,6 @@ class FindLeafProcedurePass extends ReadOnlyPass[Set[Identifier]] {
 
 class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
   type UniqueNameProvider = (Identifier, String) => Identifier
-  class ContextualNameProvider(ctx : ScopeMap, prefix : String) {
-    var assignedNames = MutableSet.empty[Identifier] 
-    def apply(name: Identifier, tag : String) : Identifier = {
-      var newId = Identifier(prefix + "$" + tag + "$" + name)
-      var index = 0
-      while (ctx.doesNameExist(newId) || assignedNames.contains(newId)) {
-        index = index + 1
-        newId = Identifier(prefix + "$" + tag + "$" + name + "$" + index.toString)
-      }
-      assignedNames += (newId)
-      return newId
-    }
-  }
-  
   override def rewriteProcedure(p : ProcedureDecl, ctx : ScopeMap) : Option[ProcedureDecl] = {
     if (p.id == proc.id) return None
     
