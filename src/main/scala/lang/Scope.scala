@@ -236,7 +236,7 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
 class ContextualNameProvider(ctx : ScopeMap, prefix : String) {
   var index = 1 
   def apply(name: Identifier, tag : String) : Identifier = {
-    var newId = Identifier(prefix + "$" + tag + "$" + name + "_" + index.toString)
+    var newId = Identifier(prefix + "$" + tag + "$" + name)
     while (ctx.doesNameExist(newId)) {
       index = index + 1
       newId = Identifier(prefix + "$" + tag + "$" + name + "_" + index.toString)

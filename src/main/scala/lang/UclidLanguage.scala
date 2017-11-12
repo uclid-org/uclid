@@ -596,6 +596,14 @@ sealed abstract class Decl extends ASTNode {
 
 case class InstanceDecl(moduleId : Identifier, instanceId : Identifier, arguments: List[(Identifier, Option[Expr])], instType : Option[ModuleInstanceType], modType : Option[ModuleType]) extends Decl
 {
+  val argMap = arguments.foldLeft(Map.empty[Identifier, Expr]) { 
+    (acc, arg) => {
+      arg._2 match {
+        case Some(expr) => acc + (arg._1 -> expr)
+        case None => acc
+      }
+    }
+  }
   def argToString(arg : (Identifier, Option[Expr])) = arg._2 match {
     case Some(e) => arg._1.toString + ":" + e.toString
     case None => arg._1.toString + ": ()"
@@ -708,11 +716,15 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
   // find inputs.
   val inputs : List[InputVarDecl] = 
     decls.filter(_.isInstanceOf[InputVarDecl]).map(_.asInstanceOf[InputVarDecl]) ++
-    decls.filter(_.isInstanceOf[InputVarsDecl]).map(_.asInstanceOf[InputVarsDecl]).flatMap((i) => i.ids.map((id) => InputVarDecl(id, i.typ)))
+    decls.filter(_.isInstanceOf[InputVarsDecl]).map(_.asInstanceOf[InputVarsDecl]).flatMap(i => i.ids.map(id => InputVarDecl(id, i.typ)))
   // find outputs.
   val outputs : List[OutputVarDecl] = 
     decls.filter(_.isInstanceOf[OutputVarDecl]).map(_.asInstanceOf[OutputVarDecl]) ++
-    decls.filter(_.isInstanceOf[OutputVarsDecl]).map(_.asInstanceOf[OutputVarsDecl]).flatMap((i) => i.ids.map((id) => OutputVarDecl(id, i.typ)))
+    decls.filter(_.isInstanceOf[OutputVarsDecl]).map(_.asInstanceOf[OutputVarsDecl]).flatMap(o => o.ids.map(id => OutputVarDecl(id, o.typ)))
+  // find state variables.
+  var vars : List[StateVarDecl] = 
+    decls.filter(_.isInstanceOf[StateVarDecl]).map(_.asInstanceOf[StateVarDecl]) ++
+    decls.filter(_.isInstanceOf[StateVarsDecl]).map(_.asInstanceOf[StateVarsDecl]).flatMap(s => s.ids.map(id => StateVarDecl(id, s.typ)))  
   // compute the "type" of this module.
   val moduleType : ModuleType = ModuleType(inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)))
   // find procedures.
