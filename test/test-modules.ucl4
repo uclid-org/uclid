@@ -42,7 +42,7 @@ module main {
     pc := 0bv8;
   }
 
-  instance alu : alux (cmd : (cmd), a : (r0), b : (r1), result : (res)); 
+  instance alu : alu (cmd : (cmd), a : (r0), b : (r1), result : (res)); 
 
   next {
     opcode := mem[pc];
@@ -60,7 +60,7 @@ module main {
     
 	call (alu);
 	
-	regs[r0ind] := res;
+	regs[r0ind] := res[3:0];
 
 	pc := pc + 1bv8;
   }

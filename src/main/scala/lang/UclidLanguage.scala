@@ -487,6 +487,7 @@ case class SynonymType(id: Identifier) extends Type {
   }
 }
 case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends Type {
+  lazy val argMap = args.map(a => (a._1 -> a._2)).toMap
   def argToString(arg : (Identifier, Option[Type])) : String = {
     val id = arg._1
     arg._2 match {
@@ -503,8 +504,12 @@ case class ModuleType(inputs: List[(Identifier, Type)], outputs: List[(Identifie
   def argsToString(args: List[(Identifier, Type)]) = 
     Utils.join(args.map(argToString(_)), ", ")
 
+  lazy val inputMap = inputs.map(a => (a._1 -> a._2)).toMap
+  lazy val outputMap = outputs.map(a => (a._1 -> a._2)).toMap
+  lazy val argSet = inputs.map(_._1).toSet union outputs.map(_._1).toSet
+
   override def toString = 
-    "inputs (" + argsToString(inputs) + ") outputs (" + argsToString(outputs) + ")" 
+    "inputs (" + argsToString(inputs) + ") outputs (" + argsToString(outputs) + ")"
 }
 
 /** Statements **/
@@ -701,9 +706,13 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
     return newModule
   }
   // find inputs.
-  val inputs : List[InputVarDecl] = decls.filter(_.isInstanceOf[InputVarDecl]).map(_.asInstanceOf[InputVarDecl])
+  val inputs : List[InputVarDecl] = 
+    decls.filter(_.isInstanceOf[InputVarDecl]).map(_.asInstanceOf[InputVarDecl]) ++
+    decls.filter(_.isInstanceOf[InputVarsDecl]).map(_.asInstanceOf[InputVarsDecl]).flatMap((i) => i.ids.map((id) => InputVarDecl(id, i.typ)))
   // find outputs.
-  val outputs : List[OutputVarDecl] = decls.filter(_.isInstanceOf[OutputVarDecl]).map(_.asInstanceOf[OutputVarDecl])
+  val outputs : List[OutputVarDecl] = 
+    decls.filter(_.isInstanceOf[OutputVarDecl]).map(_.asInstanceOf[OutputVarDecl]) ++
+    decls.filter(_.isInstanceOf[OutputVarsDecl]).map(_.asInstanceOf[OutputVarsDecl]).flatMap((i) => i.ids.map((id) => OutputVarDecl(id, i.typ)))
   // compute the "type" of this module.
   val moduleType : ModuleType = ModuleType(inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)))
   // find procedures.
