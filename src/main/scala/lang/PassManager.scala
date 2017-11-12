@@ -49,14 +49,18 @@ class PassManager {
     pass._manager = Some(this)
   }
 
+  // private version of _run, does not reset or finish.
+  
+  def _run(module : Module) : Option[Module] = {
+    val init : Option[Module] = Some(module)
+    passes.foldLeft(init){
+      (mod, pass) => mod.flatMap(pass.visit(_))
+    }
+  }
   // run on a single module.
   def run(module : Module) : Option[Module] = {
     passes.foreach{ _.reset() }
-    
-    val init : Option[Module] = Some(module)
-    val modP = passes.foldLeft(init){
-      (mod, pass) => mod.flatMap(pass.visit(_))
-    }
+    val modP = _run(module)
     passes.foreach(_.finish())
     modP
   }
@@ -64,10 +68,9 @@ class PassManager {
   // run on a list of modules.
   def run(modules : List[Module]) : List[Module] = {
     passes.foreach(_.reset())
-    val modulesP = modules.foldRight(List.empty[Module]) {
-      (m, acc) => run(m) match {
-        case Some(m) => m :: acc
-        case None => acc
+    val modulesP = passes.foldLeft(modules) { 
+      (mods, pass) => {
+        mods.map(m => pass.visit(m)).flatten
       }
     }
     passes.foreach(_.finish())

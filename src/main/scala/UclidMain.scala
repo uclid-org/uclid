@@ -152,31 +152,31 @@ object UclidMain {
     type NameCountMap = Map[Identifier, Int]
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
     
-    val intraModulePassManager = new PassManager()
+    val passManager = new PassManager()
     // for certain unfortunate reasons we need to unroll for-loops before type checking.
     // intraModulePassManager.addPass(new ASTPrinter("ASTPrinter$1"))
     val filenameAdderPass = new AddFilenameRewriter(None) 
-    intraModulePassManager.addPass(filenameAdderPass)
-    intraModulePassManager.addPass(new ForLoopIndexRewriter())
-    intraModulePassManager.addPass(new TypeSynonymFinder())
-    intraModulePassManager.addPass(new TypeSynonymRewriter())
-    intraModulePassManager.addPass(new BitVectorSliceFindWidth())
-    intraModulePassManager.addPass(new ExpressionTypeChecker())
-    intraModulePassManager.addPass(new PolymorphicTypeRewriter())
-    intraModulePassManager.addPass(new ModuleTypeChecker())
-    intraModulePassManager.addPass(new SemanticAnalyzer())
-    intraModulePassManager.addPass(new ComputeInstanceTypes())
-    intraModulePassManager.addPass(new ProcedureInliner())
-    intraModulePassManager.addPass(new ForLoopUnroller())
-    intraModulePassManager.addPass(new BitVectorSliceConstify())
-    intraModulePassManager.addPass(new CaseEliminator())
-    intraModulePassManager.addPass(new ControlCommandChecker())
+    passManager.addPass(filenameAdderPass)
+    passManager.addPass(new ForLoopIndexRewriter())
+    passManager.addPass(new TypeSynonymFinder())
+    passManager.addPass(new TypeSynonymRewriter())
+    passManager.addPass(new BitVectorSliceFindWidth())
+    passManager.addPass(new ExpressionTypeChecker())
+    passManager.addPass(new PolymorphicTypeRewriter())
+    passManager.addPass(new ModuleTypeChecker())
+    passManager.addPass(new SemanticAnalyzer())
+    passManager.addPass(new ComputeInstanceTypes())
+    passManager.addPass(new ProcedureInliner())
+    passManager.addPass(new ForLoopUnroller())
+    passManager.addPass(new BitVectorSliceConstify())
+    passManager.addPass(new CaseEliminator())
+    passManager.addPass(new ControlCommandChecker())
     // intraModulePassManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
     def parseFile(srcFile : String) : List[Module] = {
       val text = scala.io.Source.fromFile(srcFile).mkString
       filenameAdderPass.setFilename(srcFile)
-      UclidParser.parseModel(srcFile, text).map(intraModulePassManager.run(_).get)
+      UclidParser.parseModel(srcFile, text).map(passManager.run(_).get)
     }
     
     val modules = srcFiles.foldLeft(List.empty[Module]) {
@@ -196,6 +196,7 @@ object UclidMain {
     // create pass manager.
     val passManager = new PassManager()
     passManager.addPass(new ModuleInstanceChecker(moduleList))
+    passManager.addPass(new LeafModuleFinder(moduleList))
 
     // run passes.
     val moduleListP = passManager.run(moduleList)

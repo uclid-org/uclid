@@ -96,6 +96,27 @@ class ModuleInstanceChecker(modules : List[Module]) extends ASTAnalyzer(
   }
 }
 
+class LeafModuleFinderPass extends ReadOnlyPass[Set[Identifier]] {
+  override def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : Set[Identifier], context : ScopeMap) : Set[Identifier] = {
+    if (d == TraversalDirection.Down) {
+      val moduleName = context.module.get.id
+      in - moduleName
+    } else {
+      in
+    }
+  }
+}
+
+class LeafModuleFinder(modules : List[Module]) extends ASTAnalyzer(
+    "LeafModuleFinder", new LeafModuleFinderPass())
+{
+  override def reset() {
+    in = Some(modules.map(_.id).toSet)
+  }
+  override def finish() {
+    // println("Leaf modules: " + out.get.toString)
+  }
+}
 class ModuleInstantiator {
   
 }
