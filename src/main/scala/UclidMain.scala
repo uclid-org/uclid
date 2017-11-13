@@ -199,10 +199,10 @@ object UclidMain {
     passManager.addPass(new ModuleDependencyFinder(moduleList, mainModuleName))
     // passManager.addPass(new ModuleFlattener(moduleList, mainModuleName))
 
-    println("Initial modules: " + Utils.join(moduleList.map(_.id.toString), ", "))
+    // println("Initial modules: " + Utils.join(moduleList.map(_.id.toString), ", "))
     // run passes.
     val moduleListP = passManager.run(moduleList)
-    println("Final modules: " + Utils.join(moduleListP.map(_.id.toString), ", "))
+    // println("Final modules: " + Utils.join(moduleListP.map(_.id.toString), ", "))
     
     // return main module.
     moduleListP.find((m) => m.id == mainModuleName)
