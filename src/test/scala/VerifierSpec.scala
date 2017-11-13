@@ -107,4 +107,7 @@ class VerifierSpec extends FlatSpec {
   "test/test-type2.ucl4" should "verify all assertions." in {
     nTestsFail("./test/test-type2.ucl4", 0)
   }
+  "test/test-modules.ucl4" should "verify all assertions." in {
+    nTestsFail("./test/test-modules.ucl4", 0)
+  }
 }

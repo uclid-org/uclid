@@ -323,9 +323,18 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
   }
 
+  // "delete" this instance.
+  override def rewriteInstance(instD : InstanceDecl, context : ScopeMap) : Option[InstanceDecl] = {
+    if (instD == inst) {
+      None
+    } else {
+      Some(instD)
+    }
+  }
+
   // add new variables and inputs.
   override def rewriteModule(module : Module, context : ScopeMap) : Option[Module] = {
-    val declsP = newVariables ++ newInputs ++ module.decls
+    val declsP : List[Decl] = newVariables ++ newInputs ++ module.decls 
     val moduleP = Module(module.id, declsP, module.cmds)
     Some(moduleP)
   }
@@ -345,22 +354,21 @@ class ModuleFlattenerPass(modules : List[Module], moduleName : Identifier) exten
   type RewriteMap = MIP.RewriteMap
 
   val module = modules.find(_.id == moduleName).get
-  
-  override def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = {
-    val init : Option[Module] = Some(module)
-    module.instances.foldLeft(init) {
-      (modOpt, inst) => {
-        modOpt match {
-          case Some(mod) => 
-            val targetModule = modules.find(_.id == inst.moduleId).get
-            val passName = "ModuleInstantiator:" + module.id + ":" + inst.instanceId
-            val rewriter = new ModuleInstantiator(passName, mod, inst, targetModule)
-            rewriter.visit(mod)
-          case None =>
-            None
-        }
-      }
+
+  def rewrite(module : Module) : Module = {
+    module.instances match {
+      case inst :: rest =>
+        val targetModule = modules.find(_.id == inst.moduleId).get
+        val passName = "ModuleInstantiator:" + module.id + ":" + inst.instanceId
+        val rewriter = new ModuleInstantiator(passName, module, inst, targetModule)
+        val modP = rewriter.visit(module).get
+        rewrite(modP)
+      case Nil =>
+        module
     }
+  }
+  override def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = {
+    Some(rewrite(module))
   }
 }
 

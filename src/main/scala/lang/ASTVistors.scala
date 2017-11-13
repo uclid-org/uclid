@@ -894,7 +894,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(m) => 
         module.filename match {
           case Some(fn) => Some(m.withFilename(fn))
-          case None     => None
+          case None     => Some(m)
         }
       case None =>
         None

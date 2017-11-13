@@ -26,7 +26,7 @@ module main {
   type data_t = bv4;
   type regindex_t = bv2;
   
-  input mem    : [addr_t]opcode_t;
+  var   mem    : [addr_t]opcode_t;
   var   regs   : [regindex_t]data_t;
   var   pc     : addr_t;
   var   opcode : opcode_t;
@@ -36,19 +36,24 @@ module main {
   var   r0     : data_t;
   var   r1     : data_t;
   var   res    : data_t;
+  var   cnt    : data_t;
 
   init {
-	assume (forall (r : regindex_t) :: regs[r] == 0bv4);
+	assume (forall (r : regindex_t) :: regs[r] == 1bv4);
+	cnt := 1bv4;
+	assume (forall (a : addr_t) :: mem[a] == 0bv6);
     pc := 0bv8;
   }
 
-  instance alu : alu (cmd : (cmd), a : (r0), b : (r1), result : (res)); 
+  instance alu : alu (cmd : (cmd), a : (r0), b : (r1), result : (res));
+
+  property cnt_eq_r0 : (cnt == regs[0bv2]);
 
   next {
     opcode := mem[pc];
     case 
-      opcode[1:0] == 1bv2 : { cmd := add; }
-      opcode[1:0] == 2bv2 : { cmd := sub; }
+      opcode[1:0] == 0bv2 : { cmd := add; }
+      opcode[1:0] == 1bv2 : { cmd := sub; }
       true                : { cmd := nop; }
     esac
 
@@ -62,10 +67,15 @@ module main {
 	
 	regs[r0ind] := res[3:0];
 
+	cnt := cnt + cnt;
 	pc := pc + 1bv8;
   }
   
   control {
-    print_module;
+    initialize;
+    simulate(3);
+    decide;
+    print_results;
+    print_cex ( cnt, regs[0bv2], regs[1bv2] );
   }
 }
