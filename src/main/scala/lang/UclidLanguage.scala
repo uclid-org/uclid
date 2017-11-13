@@ -563,10 +563,14 @@ case class ModuleCallStmt(id: Identifier) extends Statement {
 case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
   override def toString = "var " + id + ": " + typ + "; // " + id.position.toString
 }
+
+/**
+ * Base class for module and procedure signatures.
+ */
 sealed abstract class IOSig(inputs: List[(Identifier,Type)], outputs: List[(Identifier,Type)]) extends ASTNode {
   type T = (Identifier,Type)
-  val printfn = {(a: T) => a._1.toString + ": " + a._2}
-  val typ = MapType(inputs.map(_._2), TupleType(outputs.map(_._2)))
+  lazy val printfn = {(a: T) => a._1.toString + ": " + a._2}
+  lazy val typ = MapType(inputs.map(_._2), TupleType(outputs.map(_._2)))
 }
 
 case class ModuleSig(inParams: List[(Identifier, Type)], outParams: List[(Identifier, Type)]) extends IOSig(inParams, outParams) 
@@ -596,7 +600,7 @@ sealed abstract class Decl extends ASTNode {
 
 case class InstanceDecl(moduleId : Identifier, instanceId : Identifier, arguments: List[(Identifier, Option[Expr])], instType : Option[ModuleInstanceType], modType : Option[ModuleType]) extends Decl
 {
-  val argMap = arguments.foldLeft(Map.empty[Identifier, Expr]) { 
+  lazy val argMap = arguments.foldLeft(Map.empty[Identifier, Expr]) { 
     (acc, arg) => {
       arg._2 match {
         case Some(expr) => acc + (arg._1 -> expr)
@@ -608,7 +612,7 @@ case class InstanceDecl(moduleId : Identifier, instanceId : Identifier, argument
     case Some(e) => arg._1.toString + ":" + e.toString
     case None => arg._1.toString + ": ()"
   }
-  val argsToString = Utils.join(arguments.map(argToString(_)), ", ")
+  lazy val argsToString = Utils.join(arguments.map(argToString(_)), ", ")
   override def toString = "instance " + instanceId.toString + " : " + moduleId.toString + "(" + argsToString + "); // " + position.toString
   override def declNames = List(instanceId)
   def instanceType : Type = instType match {
@@ -713,36 +717,38 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
     newModule.filename = Some(name)
     return newModule
   }
-  // find inputs.
-  val inputs : List[InputVarDecl] = 
+  // module inputs.
+  lazy val inputs : List[InputVarDecl] = 
     decls.filter(_.isInstanceOf[InputVarDecl]).map(_.asInstanceOf[InputVarDecl]) ++
     decls.filter(_.isInstanceOf[InputVarsDecl]).map(_.asInstanceOf[InputVarsDecl]).flatMap(i => i.ids.map(id => InputVarDecl(id, i.typ)))
-  // find outputs.
-  val outputs : List[OutputVarDecl] = 
+  // module outputs.
+  lazy val outputs : List[OutputVarDecl] = 
     decls.filter(_.isInstanceOf[OutputVarDecl]).map(_.asInstanceOf[OutputVarDecl]) ++
     decls.filter(_.isInstanceOf[OutputVarsDecl]).map(_.asInstanceOf[OutputVarsDecl]).flatMap(o => o.ids.map(id => OutputVarDecl(id, o.typ)))
-  // find state variables.
-  var vars : List[StateVarDecl] = 
+  // module state variables.
+  lazy val vars : List[StateVarDecl] = 
     decls.filter(_.isInstanceOf[StateVarDecl]).map(_.asInstanceOf[StateVarDecl]) ++
-    decls.filter(_.isInstanceOf[StateVarsDecl]).map(_.asInstanceOf[StateVarsDecl]).flatMap(s => s.ids.map(id => StateVarDecl(id, s.typ)))  
-  // compute the "type" of this module.
-  val moduleType : ModuleType = ModuleType(inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)))
-  // find procedures.
-  val procedures : List[ProcedureDecl] = decls.filter(_.isInstanceOf[ProcedureDecl]).map(_.asInstanceOf[ProcedureDecl])
-  // find instances of other modules.
-  val instances : List[InstanceDecl] = decls.filter(_.isInstanceOf[InstanceDecl]).map(_.asInstanceOf[InstanceDecl])
+    decls.filter(_.isInstanceOf[StateVarsDecl]).map(_.asInstanceOf[StateVarsDecl]).flatMap(s => s.ids.map(id => StateVarDecl(id, s.typ)))
+  // module procedures.
+  lazy val procedures : List[ProcedureDecl] = decls.filter(_.isInstanceOf[ProcedureDecl]).map(_.asInstanceOf[ProcedureDecl])
+  // module instances of other modules.
+  lazy val instances : List[InstanceDecl] = decls.filter(_.isInstanceOf[InstanceDecl]).map(_.asInstanceOf[InstanceDecl])
   // set of instance names (for easy searching.)
   lazy val instanceNames : Set[Identifier] = instances.map(_.instanceId).toSet 
-  // find the init block.
-  val init : Option[InitDecl] = {
+
+  // compute the "type" of this module.
+  lazy val moduleType : ModuleType = ModuleType(inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)))
+
+  // the init block.
+  lazy val init : Option[InitDecl] = {
     decls.find(_.isInstanceOf[InitDecl]).flatMap((d) => Some(d.asInstanceOf[InitDecl]))
   }
-  // find the next block. 
-  val next : Option[NextDecl] = {
+  // the next block. 
+  lazy val next : Option[NextDecl] = {
     decls.find(_.isInstanceOf[NextDecl]).flatMap((d) => Some(d.asInstanceOf[NextDecl]))
   }
   // find all axioms.
-  val axioms : List[AxiomDecl] = {
+  lazy val axioms : List[AxiomDecl] = {
     decls.filter(_.isInstanceOf[AxiomDecl]).map(_.asInstanceOf[AxiomDecl])
   }
 
