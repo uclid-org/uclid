@@ -70,7 +70,13 @@ class PassManager {
     passes.foreach(_.reset())
     val modulesP = passes.foldLeft(modules) { 
       (mods, pass) => {
-        mods.map(m => pass.visit(m)).flatten
+        mods.map {
+          m => {
+            val mP = pass.visit(m)
+            pass.rewind()
+            mP
+          }
+        }.flatten
       }
     }
     passes.foreach(_.finish())

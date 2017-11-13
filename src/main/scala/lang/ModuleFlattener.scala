@@ -150,9 +150,28 @@ class ModuleDependencyFinder(modules : List[Module], mainModuleName : Identifier
     "LeafModuleFinder", new ModuleDependencyFinderPass())
 {
   var moduleInstantiationOrder : Option[List[Identifier]] = None
+  var cyclicalDependency : Option[Boolean] = None
   override def reset() {
     in = Some(Map.empty[Identifier, Set[Identifier]])
   }
+  def findCyclicDependencies(graph : Map[Identifier, Set[Identifier]], start : Identifier) : List[ModuleError] = {
+    def visit(node : Identifier, stack : Set[Identifier], errorsIn : List[ModuleError]) : List[ModuleError] = {
+      if (stack contains node) {
+        val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
+        val error = ModuleError(msg, node.position)
+        error :: errorsIn
+      } else {
+        graph.get(node) match {
+          case Some(nodes) =>
+            nodes.foldLeft(errorsIn)((acc, n) => visit(n, stack + node, acc))
+          case None =>
+            errorsIn
+        }
+      }
+    }
+    visit(start, Set.empty[Identifier], List.empty[ModuleError])
+  }
+
   override def finish() {
     val depGraph = out.get
     def visit(mod : Identifier, visitOrder : Map[Identifier, Int]) : Map[Identifier, Int] = {
@@ -172,7 +191,10 @@ class ModuleDependencyFinder(modules : List[Module], mainModuleName : Identifier
     val order = visit(mainModuleName, Map.empty[Identifier, Int])
     val instantiationOrder = order.toList.sortWith((p1, p2) => p1._2 > p2._2).map(p => p._1)
     moduleInstantiationOrder = Some(instantiationOrder)
-    // println("order: " + instantiationOrder.toString)
+    val errors = findCyclicDependencies(depGraph, mainModuleName)
+    if (errors.size > 0) {
+      throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)))
+    }
   }
 }
 

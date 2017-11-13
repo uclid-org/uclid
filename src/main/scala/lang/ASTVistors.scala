@@ -59,6 +59,7 @@ abstract class ASTAnalysis {
   
   def passName : String
   def reset() {}
+  def rewind() {}
   def visit (module : Module) : Option[Module]
   def finish() {}
 }
@@ -235,6 +236,10 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def out : Option[T] = _out
   /** Name of the pass. */
   override def passName = _passName
+  /** Sets in to out in order to chain modules. **/
+  override def rewind() {
+    _in = _out
+  }
   /** The main 'do-er' method. */
   override def visit(module : Module) : Option[Module] = {
     _out = Some(visitModule(module, _in.get))
