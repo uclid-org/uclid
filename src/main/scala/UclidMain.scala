@@ -198,6 +198,10 @@ object UclidMain {
     passManager.addPass(new ModuleInstanceChecker(moduleList))
     passManager.addPass(new ModuleDependencyFinder(moduleList, mainModuleName))
     passManager.addPass(new ModuleFlattener(moduleList, mainModuleName))
+    passManager.addPass(new ModuleCleaner())
+    passManager.addPass(new ExpressionTypeChecker())
+    passManager.addPass(new ModuleTypeChecker())
+    passManager.addPass(new SemanticAnalyzer())
 
     // println("Initial modules: " + Utils.join(moduleList.map(_.id.toString), ", "))
     // run passes.

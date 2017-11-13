@@ -101,4 +101,3 @@ class SemanticAnalyzer extends ASTAnalyzer("SemanticAnalyzer", new SemanticAnaly
     return Some(module)
   }
 }
-

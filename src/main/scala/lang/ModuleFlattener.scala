@@ -368,7 +368,8 @@ class ModuleFlattenerPass(modules : List[Module], moduleName : Identifier) exten
     }
   }
   override def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = {
-    Some(rewrite(module))
+    val modP = rewrite(module)
+    Some(modP)
   }
 }
 

@@ -72,6 +72,7 @@ module main {
   }
   
   control {
+    print_module;
     initialize;
     simulate(3);
     decide;
