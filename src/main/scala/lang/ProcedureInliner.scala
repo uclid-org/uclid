@@ -52,7 +52,7 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
   type UniqueNameProvider = (Identifier, String) => Identifier
   override def rewriteProcedure(p : ProcedureDecl, ctx : ScopeMap) : Option[ProcedureDecl] = {
     if (p.id == proc.id) return None
-    
+
     val nameProvider = new ContextualNameProvider(ctx + p, "proc$" + p.id + "$" + proc.id)
     val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(id, p), p.body)
     val newDecls = newVars.map((t) => LocalVarDecl(t._1, t._2))

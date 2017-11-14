@@ -193,18 +193,21 @@ object UclidMain {
   }
   
   def instantiate(moduleList : List[Module], mainModuleName : Identifier) : Option[Module] = {
+    if (moduleList.find(m => m.id == mainModuleName).isEmpty) {
+      return None
+    }
+
     // create pass manager.
     val passManager = new PassManager()
-    // passManager.addPass(new ASTPrinter("ASTPrinter$3"))
     passManager.addPass(new ModuleInstanceChecker(moduleList))
     passManager.addPass(new ModuleDependencyFinder(moduleList, mainModuleName))
     passManager.addPass(new ModuleFlattener(moduleList, mainModuleName))
     passManager.addPass(new ModuleEliminator(mainModuleName))
-    // passManager.addPass(new ModuleCleaner())
+    passManager.addPass(new ModuleCleaner())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())
     // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
-    // passManager.addPass(new SemanticAnalyzer())
+    passManager.addPass(new SemanticAnalyzer())
 
     // run passes.
     val moduleListP = passManager.run(moduleList)

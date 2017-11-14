@@ -167,10 +167,13 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
           m2
         case TypeDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case StateVarDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case StateVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case InputVarDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case InputVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case OutputVarDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case OutputVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ConstantDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
-        case _ => mapAcc          
+        case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
     ScopeMap(m2, Some(m), None)
@@ -236,10 +239,11 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
 class ContextualNameProvider(ctx : ScopeMap, prefix : String) {
   var index = 1 
   def apply(name: Identifier, tag : String) : Identifier = {
-    var newId = Identifier(prefix + "$" + tag + "$" + name)
+    var newId = Identifier(prefix + "$" + tag + "$" + name + "_" + index.toString)
+    index = index + 1
     while (ctx.doesNameExist(newId)) {
-      index = index + 1
       newId = Identifier(prefix + "$" + tag + "$" + name + "_" + index.toString)
+      index = index + 1
     }
     return newId
   }
