@@ -1,0 +1,10 @@
+module main {
+  procedure foo(n : int) returns (z : int) {
+    z := n + n;
+  }
+
+  var p : int;
+  next {
+    p := foo(p);
+  }
+}
