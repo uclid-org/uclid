@@ -148,6 +148,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwControl = "control"
     lazy val KwForall = "forall"
     lazy val KwExists = "exists"
+    lazy val KwDefault = "default"
     
     lazy val KwDefineProp = "property"
     lazy val KwDefineAxiom = "axiom"
@@ -172,7 +173,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwCase, KwEsac, KwFor, KwIn, KwRange, KwInstance, KwInput, KwOutput,
       KwConst, KwModule, KwType, KwEnum, KwRecord, KwSkip, 
       KwFunction, KwControl, KwInit, KwNext, KwITE, KwLambda,
-      KwDefineProp, KwDefineAxiom, KwForall, KwExists)
+      KwDefineProp, KwDefineAxiom, KwForall, KwExists, KwDefault)
       // TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
       // TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
   
@@ -381,7 +382,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
       
     lazy val CaseBlockStmt: PackratParser[(Expr, List[Statement])] =  
-      Expr ~ (":" ~> BlockStatement) ^^ { case e ~ ss => (e,ss) }
+      (Expr ~ ":" ~ BlockStatement) ^^ { case e ~ ":" ~ ss => (e,ss) } |
+      (KwDefault ~ ":" ~> BlockStatement) ^^ { case ss => (BoolLit(true), ss) }
+
     lazy val BlockStatement: PackratParser[List[Statement]] = 
       "{" ~> rep (Statement) <~ "}"
   

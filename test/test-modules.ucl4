@@ -54,7 +54,7 @@ module main {
     case 
       opcode[1:0] == 0bv2 : { cmd := add; }
       opcode[1:0] == 1bv2 : { cmd := sub; }
-      true                : { cmd := nop; }
+      default             : { cmd := nop; }
     esac
 
     r0ind := opcode[3:2];

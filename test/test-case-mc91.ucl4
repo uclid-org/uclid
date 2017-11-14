@@ -13,7 +13,7 @@ module main {
             z := x;
             w := 0;
           }
-          true :  
+          default :  
           {
             case
 	          (x > 100) :
@@ -21,7 +21,7 @@ module main {
 	              z := x - 10;
 	              w := y - 1;
 	          }
-	          true : 
+	          default : 
 	          {
 	              z := x + 11;
 	              w := y + 1;
