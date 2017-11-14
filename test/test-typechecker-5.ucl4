@@ -1,0 +1,14 @@
+module main {
+  type t4 = record {a: int, b: int, c: record {d: bool , e: t4}};
+  var x4 : t4;
+  
+  init {
+    x4.c.d := false;
+    x4.a := 0;
+  }
+  
+  next {
+    x4.c.d := !x4.c.d;
+    x4.a := x4.a + 1;
+  }
+}
