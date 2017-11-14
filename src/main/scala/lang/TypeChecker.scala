@@ -436,8 +436,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
     }
     
     def funcAppType(fapp : FuncApplication) : Type = {
-      checkTypeError(typeOf(fapp.e, c).isInstanceOf[MapType], "Type error in function application (not a function).", fapp.pos, c.filename)
-      val funcType = typeOf(fapp.e,c ).asInstanceOf[MapType]
+      val funcType1 = typeOf(fapp.e, c) 
+      lazy val typeErrorMsg = "Type error in function application (not a function). %s is of type '%s'.".format(fapp.e.toString, funcType1.toString)
+      checkTypeError(funcType1.isInstanceOf[MapType], typeErrorMsg, fapp.pos, c.filename)
+      val funcType = funcType1.asInstanceOf[MapType]
       val argTypes = fapp.args.map(typeOf(_, c))
       checkTypeError(funcType.inTypes == argTypes, "Type error in function application (argument type error).", fapp.pos, c.filename)
       return funcType.outType
@@ -457,7 +459,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
     if (cachedType.isEmpty) {
       val typ = e match {
         case i : IdentifierBase =>
-          checkTypeError(c.typeOf(i).isDefined, "Unknown variable: " + i.name, i.pos, c.filename)
+          checkTypeError(c.typeOf(i).isDefined, "Unknown identifier: " + i.name, i.pos, c.filename)
           (c.typeOf(i).get)
         case b : BoolLit => new BoolType()
         case i : IntLit => new IntType()

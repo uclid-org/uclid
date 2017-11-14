@@ -103,6 +103,7 @@ trait ReadOnlyPass[T] {
   def applyOnTupleType(d : TraversalDirection.T, tupleT : TupleType, in : T, context : ScopeMap) : T = { in }
   def applyOnRecordType(d : TraversalDirection.T, recordT : RecordType, in : T, context : ScopeMap) : T = { in }
   def applyOnMapType(d : TraversalDirection.T, mapT : MapType, in : T, context : ScopeMap) : T = { in }
+  def applyOnProcedureType(d : TraversalDirection.T, procT : ProcedureType, in : T, context : ScopeMap) : T = { in }
   def applyOnArrayType(d : TraversalDirection.T, arrayT : ArrayType, in : T, context : ScopeMap) : T = { in }
   def applyOnSynonymType(d : TraversalDirection.T, synT : SynonymType, in : T, context : ScopeMap) : T = { in }
   def applyOnModuleInstanceType(d : TraversalDirection.T, instT : ModuleInstanceType, in : T, context : ScopeMap) : T = { in }
@@ -178,6 +179,7 @@ trait RewritePass {
   def rewriteTupleType(tupleT : TupleType, context : ScopeMap) : Option[TupleType] = { Some(tupleT)  }
   def rewriteRecordType(recordT : RecordType, context : ScopeMap) : Option[RecordType] = { Some(recordT)  }
   def rewriteMapType(mapT : MapType, context : ScopeMap) : Option[MapType] = { Some(mapT)  }
+  def rewriteProcedureType(procT : ProcedureType, context : ScopeMap) : Option[ProcedureType] = { Some(procT) } 
   def rewriteArrayType(arrayT : ArrayType, context : ScopeMap) : Option[ArrayType] = { Some(arrayT)  }
   def rewriteSynonymType(synT : SynonymType, context : ScopeMap) : Option[SynonymType] = { Some(synT)  }
   def rewriteModuleInstanceType(instT : ModuleInstanceType, context : ScopeMap) : Option[ModuleInstanceType] = { Some(instT)  }
@@ -442,6 +444,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case tupleT : TupleType => visitTupleType(tupleT, in, context)
       case recT : RecordType => visitRecordType(recT, in, context)
       case mapT : MapType => visitMapType(mapT, in, context)
+      case procT : ProcedureType => visitProcedureType(procT, in, context)
       case arrT : ArrayType => visitArrayType(arrT, in, context)
       case synT : SynonymType => visitSynonymType(synT, in, context)
       case instT : ModuleInstanceType => visitModuleInstanceType(instT, in, context)
@@ -514,6 +517,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = mapT.inTypes.foldLeft(result)((acc, t) => visitType(t, acc, context))
     result = visitType(mapT.outType, result, context)
     result = pass.applyOnMapType(TraversalDirection.Up, mapT, result, context)
+    return result
+  }
+  def visitProcedureType(procT : ProcedureType, in : T, context : ScopeMap) : T = {
+    var result : T = in
+    result = pass.applyOnProcedureType(TraversalDirection.Down, procT, result, context)
+    result = procT.inTypes.foldLeft(result)((acc, t) => visitType(t, acc, context))
+    result = procT.outTypes.foldLeft(result)((acc, t) => visitType(t, acc, context))
+    result = pass.applyOnProcedureType(TraversalDirection.Up, procT, result, context)
     return result
   }
   def visitArrayType(arrT : ArrayType, in : T, context : ScopeMap) : T = {
@@ -1103,6 +1114,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case tupleT : TupleType => visitTupleType(tupleT, context)
       case recT : RecordType => visitRecordType(recT, context)
       case mapT : MapType => visitMapType(mapT, context)
+      case procT : ProcedureType => visitProcedureType(procT, context)
       case arrT : ArrayType => visitArrayType(arrT, context)
       case synT : SynonymType => visitSynonymType(synT, context)
       case instT : ModuleInstanceType => visitModuleInstanceType(instT, context)
@@ -1172,7 +1184,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     return ASTNode.introducePos(setFilename, mapTP, mapT.position)
   }
-  
+
+  def visitProcedureType(procT : ProcedureType, context : ScopeMap) : Option[ProcedureType] = {
+    val inTypesP = procT.inTypes.map(visitType(_, context)).flatten
+    val outTypesP = procT.outTypes.map(visitType(_, context)).flatten
+    val procTP1 = ProcedureType(inTypesP, outTypesP)
+    val procTP = pass.rewriteProcedureType(procTP1, context)
+    return ASTNode.introducePos(setFilename, procTP, procT.position)  
+  }
+
   def visitArrayType(arrT : ArrayType, context : ScopeMap) : Option[ArrayType] = {
     val inTypesP = arrT.inTypes.map(visitType(_, context)).flatten
     val arrTP = (visitType(arrT.outType, context)) match {

@@ -474,7 +474,11 @@ case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = Utils.join(inTypes.map(_.toString), " * ") + " -> " + outType.toString
   override def isMap = true
 }
-
+case class ProcedureType(inTypes : List[Type], outTypes: List[Type]) extends Type {
+  override def toString = 
+    "procedure (" + Utils.join(inTypes.map(_.toString), ", ") + ") returns " +
+        "(" + Utils.join(outTypes.map(_.toString), ", ") + ")"
+}
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = "[" + Utils.join(inTypes.map(_.toString), " * ") + "] " + outType.toString
   override def isArray = true
@@ -570,22 +574,28 @@ case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
 sealed abstract class IOSig(inputs: List[(Identifier,Type)], outputs: List[(Identifier,Type)]) extends ASTNode {
   type T = (Identifier,Type)
   lazy val printfn = {(a: T) => a._1.toString + ": " + a._2}
-  lazy val typ = MapType(inputs.map(_._2), TupleType(outputs.map(_._2)))
 }
-
+/**
+ * Module signatures.
+ */
 case class ModuleSig(inParams: List[(Identifier, Type)], outParams: List[(Identifier, Type)]) extends IOSig(inParams, outParams) 
 {
   override def toString =
     "inputs (" + Utils.join(inParams.map(printfn(_)), ", ") + ")" +
     " outputs " + "(" + Utils.join(outParams.map(printfn(_)), ", ") + ")"
 }
-
+/**
+ * Procedure signatures.
+ */
 case class ProcedureSig(inParams: List[(Identifier,Type)], outParams: List[(Identifier,Type)]) extends IOSig(inParams, outParams)
 {
   override def toString =
     "(" + Utils.join(inParams.map(printfn(_)), ", ") + ")" +
     " returns " + "(" + Utils.join(outParams.map(printfn(_)), ", ") + ")"
+  lazy val typ = ProcedureType(inParams.map(_._2), outParams.map(_._2))
 }
+/** Function signatures.
+ */
 case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends ASTNode {
   type T = (Identifier,Type)
   val typ = MapType(args.map(_._2), retType)
