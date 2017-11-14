@@ -154,7 +154,7 @@ object UclidMain {
     
     val passManager = new PassManager()
     // for certain unfortunate reasons we need to unroll for-loops before type checking.
-    // intraModulePassManager.addPass(new ASTPrinter("ASTPrinter$1"))
+    // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     val filenameAdderPass = new AddFilenameRewriter(None) 
     passManager.addPass(filenameAdderPass)
     passManager.addPass(new ForLoopIndexRewriter())
@@ -171,7 +171,7 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new CaseEliminator())
     passManager.addPass(new ControlCommandChecker())
-    // intraModulePassManager.addPass(new ASTPrinter("ASTPrinter$2"))
+    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
     def parseFile(srcFile : String) : List[Module] = {
       val text = scala.io.Source.fromFile(srcFile).mkString
@@ -195,18 +195,19 @@ object UclidMain {
   def instantiate(moduleList : List[Module], mainModuleName : Identifier) : Option[Module] = {
     // create pass manager.
     val passManager = new PassManager()
+    // passManager.addPass(new ASTPrinter("ASTPrinter$3"))
     passManager.addPass(new ModuleInstanceChecker(moduleList))
     passManager.addPass(new ModuleDependencyFinder(moduleList, mainModuleName))
     passManager.addPass(new ModuleFlattener(moduleList, mainModuleName))
-    passManager.addPass(new ModuleCleaner())
+    passManager.addPass(new ModuleEliminator(mainModuleName))
+    // passManager.addPass(new ModuleCleaner())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())
-    passManager.addPass(new SemanticAnalyzer())
+    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
+    // passManager.addPass(new SemanticAnalyzer())
 
-    // println("Initial modules: " + Utils.join(moduleList.map(_.id.toString), ", "))
     // run passes.
     val moduleListP = passManager.run(moduleList)
-    // println("Final modules: " + Utils.join(moduleListP.map(_.id.toString), ", "))
     
     // return main module.
     moduleListP.find((m) => m.id == mainModuleName)
@@ -218,5 +219,4 @@ object UclidMain {
     var z3Interface = smt.Z3Interface.newInterface()
     return symbolicSimulator.execute(z3Interface)
   }
-
 }

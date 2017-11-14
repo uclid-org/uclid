@@ -72,11 +72,8 @@ module main {
   }
   
   control {
-    print_module;
     initialize;
     simulate(3);
     decide;
-    print_results;
-    print_cex ( cnt, regs[0bv2], regs[1bv2] );
   }
 }
