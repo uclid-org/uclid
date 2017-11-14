@@ -123,4 +123,17 @@ class ParserSpec extends FlatSpec {
         // XXX: continue testing here
     }
   }
+  "test/test-procedure-types-errors.ucl4" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-procedure-types-errors.ucl4"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 3)
+        assert (p.errors.forall(p => p._1.contains("Parameter r expected")))
+    }
+  }
 }
