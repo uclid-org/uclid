@@ -149,4 +149,17 @@ class ParserSpec extends FlatSpec {
         assert (p.errors(0).getMessage().contains("Type error in function application"))
     }
   } 
+  "test/test-typechecker-5.ucl4" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-typechecker-5.ucl4"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.TypeError =>
+        assert (p.getMessage().contains("Recursively defined synonym type"))
+        // XXX: continue testing here
+    }
+  }
 }

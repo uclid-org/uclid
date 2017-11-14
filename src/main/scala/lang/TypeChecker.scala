@@ -54,7 +54,7 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
   override def applyOnModule( d : TraversalDirection.T, module : Module, in : Unit, context : ScopeMap) : Unit = {
     if (d == TraversalDirection.Up) {
       validateSynonyms(module)
-      simplifySynonyms()
+      simplifySynonyms(module)
     }
   }
   override def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : Unit, context : ScopeMap) : Unit = {
@@ -81,24 +81,28 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
     }
   }
 
-  def simplifyType(typ : Type) : Type = {
+  def simplifyType(typ : Type, visited : Set[Identifier], m : Module) : Type = {
     typ match {
       case SynonymType(otherName) =>
-        simplifyType(typeDeclMap.get(otherName).get)
+        if (visited contains otherName) {
+          val msg = "Recursively defined synonym type: %s.".format(otherName.toString)
+          throw new Utils.TypeError(msg, Some(otherName.pos), m.filename)
+        }
+        simplifyType(typeDeclMap.get(otherName).get, visited + otherName, m)
       case TupleType(fieldTypes) =>
-        TupleType(fieldTypes.map(simplifyType(_)))
+        TupleType(fieldTypes.map(simplifyType(_, visited, m)))
       case RecordType(fields) =>
-        RecordType(fields.map((f) => (f._1, simplifyType(f._2))))
+        RecordType(fields.map((f) => (f._1, simplifyType(f._2, visited, m))))
       case MapType(inTypes, outType) =>
-        MapType(inTypes.map(simplifyType(_)), simplifyType(outType))
+        MapType(inTypes.map(simplifyType(_, visited, m)), simplifyType(outType, visited, m))
       case ArrayType(inTypes, outType) =>
-        ArrayType(inTypes.map(simplifyType(_)), simplifyType(outType))
+        ArrayType(inTypes.map(simplifyType(_, visited, m)), simplifyType(outType, visited, m))
       case _ =>
         typ
     }
   }
 
-  def simplifySynonyms() {
+  def simplifySynonyms(m : Module) {
     var simplified = false
     do {
       simplified = false
@@ -107,9 +111,9 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
           typ match {
             case SynonymType(otherName) =>
                 simplified = true
-                typeDeclMap.put(name, simplifyType(typeDeclMap.get(otherName).get))
+                typeDeclMap.put(name, simplifyType(typeDeclMap.get(otherName).get, Set.empty, m))
             case _ =>
-                typeDeclMap.put(name, simplifyType(typ))
+                typeDeclMap.put(name, simplifyType(typ, Set.empty, m))
           }
         }
       }
