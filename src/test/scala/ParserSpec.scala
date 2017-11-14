@@ -58,7 +58,7 @@ class ParserSpec extends FlatSpec {
     }
     catch {
       case p : Utils.TypeErrorList =>
-        assert (p.errors.size == 2)
+        assert (p.errors.size == 6)
     }
   }
   "test/test-typechecker-1.ucl4" should "not parse successfully." in {

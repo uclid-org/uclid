@@ -134,6 +134,7 @@ object UclidMain {
             println("Type error at " + err.pos.get.toString + ": " + err.getMessage() + "\n" + err.pos.get.longString)
           }
         }
+        println("Parsing failed. %d errors found.".format(typeErrors.errors.size))
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
