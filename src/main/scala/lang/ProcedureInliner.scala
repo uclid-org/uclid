@@ -40,7 +40,7 @@ import scala.collection.immutable.{Set => Set}
 
 class FindLeafProcedurePass extends ReadOnlyPass[Set[Identifier]] {
   type T = Set[Identifier]
-  override def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, ctx : ScopeMap) : T = {
+  override def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, ctx : Scope) : T = {
     ctx.procedure match {
       case Some(proc) => in - proc.id
       case None => in
@@ -50,7 +50,7 @@ class FindLeafProcedurePass extends ReadOnlyPass[Set[Identifier]] {
 
 class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
   type UniqueNameProvider = (Identifier, String) => Identifier
-  override def rewriteProcedure(p : ProcedureDecl, ctx : ScopeMap) : Option[ProcedureDecl] = {
+  override def rewriteProcedure(p : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
     if (p.id == proc.id) return None
 
     val nameProvider = new ContextualNameProvider(ctx + p, "proc$" + p.id + "$" + proc.id)
@@ -59,7 +59,7 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
     return Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, stmts))
   }
   
-  override def rewriteModule(m : Module, ctx : ScopeMap) : Option[Module] = {
+  override def rewriteModule(m : Module, ctx : Scope) : Option[Module] = {
     val initNameProvider = new ContextualNameProvider(ctx, "init$" + proc.id)
     val nextNameProvider = new ContextualNameProvider(ctx, "next$" + proc.id)
     

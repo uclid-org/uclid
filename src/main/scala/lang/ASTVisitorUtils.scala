@@ -36,7 +36,7 @@ package lang
 
 /** Very simple pass too print module. */
 class ASTPrinterPass extends ReadOnlyPass[Unit] {
-  override def applyOnModule(d : TraversalDirection.T, module : Module, in : Unit, context : ScopeMap) : Unit = {
+  override def applyOnModule(d : TraversalDirection.T, module : Module, in : Unit, context : Scope) : Unit = {
     if (d == TraversalDirection.Down) {
       println(module)
     }
@@ -50,13 +50,13 @@ class ASTPrinter(name: String) extends ASTAnalyzer(name, new ASTPrinterPass()) {
 
 class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
 {
-  override def rewriteExpr(e: Expr, context: ScopeMap) : Option[Expr] = {
+  override def rewriteExpr(e: Expr, context: Scope) : Option[Expr] = {
     rewrites.get(e) match {
       case Some(eprime) => Some(eprime)
       case None => Some(e)
     }
   }
-  override def rewriteIdentifier(i: Identifier, context: ScopeMap) : Option[Identifier] = {
+  override def rewriteIdentifier(i: Identifier, context: Scope) : Option[Identifier] = {
     rewrites.get(i) match {
       case None => Some(i)
       case Some(eprime) => eprime match {
@@ -71,7 +71,7 @@ class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   extends ASTRewriter(name, new ExprRewriterPass(rewrites))
 {
   def rewriteStatements(stmts : List[Statement]) : List[Statement] = {
-    val emptyContext = ScopeMap.empty
+    val emptyContext = Scope.empty
     return stmts.flatMap(visitStatement(_, emptyContext))
   }
 }

@@ -490,6 +490,10 @@ case class SynonymType(id: Identifier) extends Type {
     case _ => false
   }
 }
+case class ExternalType(moduleId : Identifier, typeId : Identifier) extends Type {
+  override def toString = moduleId.toString + "::" + typeId.toString
+}
+
 case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends Type {
   lazy val argMap = args.map(a => (a._1 -> a._2)).toMap
   def argToString(arg : (Identifier, Option[Type])) : String = {

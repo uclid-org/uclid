@@ -52,14 +52,14 @@ object SemanticAnalyzerPass {
 }
 
 class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
-  override def applyOnModule(d : TraversalDirection.T, module : Module, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
+  override def applyOnModule(d : TraversalDirection.T, module : Module, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       // val moduleIds = module.decls.filter((d) => d.declNames.isDefined).map((d) => (d.declName.get, d.position))
       val moduleIds = module.decls.flatMap((d) => d.declNames.map((n) => (n, d.position)))
       SemanticAnalyzerPass.checkIdRedeclaration(moduleIds, in)
     } else { in }
   }
-  override def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
+  override def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       val inParams = proc.sig.inParams.map((arg) => (arg._1, arg._1.position))
       val outParams = proc.sig.outParams.map((arg) => (arg._1, arg._1.position))
@@ -67,13 +67,13 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
       SemanticAnalyzerPass.checkIdRedeclaration(inParams ++ outParams ++ localVars, in)
     } else { in }
   }
-  override def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
+  override def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       val params = func.sig.args.map((arg) => (arg._1, arg._1.position))
       SemanticAnalyzerPass.checkIdRedeclaration(params, in)
     } else { in }
   }
-  override def applyOnAssign(d : TraversalDirection.T, stmt : AssignStmt, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
+  override def applyOnAssign(d : TraversalDirection.T, stmt : AssignStmt, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       if (stmt.lhss.size != stmt.rhss.size) {
         val msg = "Number of left and right hand sides on assignement statement don't match."
@@ -81,7 +81,7 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
       } else { in }
     } else { in }
   }
-  override def applyOnRecordType(d : TraversalDirection.T, recordT : RecordType, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
+  override def applyOnRecordType(d : TraversalDirection.T, recordT : RecordType, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       val fieldNames = recordT.members.map((f) => (f._1, f._1.position))
       SemanticAnalyzerPass.checkIdRedeclaration(fieldNames, in)

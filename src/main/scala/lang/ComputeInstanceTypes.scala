@@ -38,7 +38,7 @@ class ComputeInstanceTypesPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
   
-  override def rewriteInstance(instD : InstanceDecl, context : ScopeMap) : Option[InstanceDecl] = {
+  override def rewriteInstance(instD : InstanceDecl, context : Scope) : Option[InstanceDecl] = {
     val actualArgTypes = instD.arguments.map { 
       (p) => p._2 match {
         case Some(arg) => (p._1, Some(exprTypeChecker.typeOf(arg, context)))

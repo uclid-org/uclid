@@ -81,7 +81,7 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
     errs3
   }
   
-  def checkInstance(inst : InstanceDecl, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
+  def checkInstance(inst : InstanceDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     moduleMap.get(inst.moduleId) match {
       case None =>
         val error = ModuleError("Unknown module being instantiated: " + inst.moduleId.toString, inst.moduleId.position)
@@ -106,7 +106,7 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
     }
   }
 
-  override def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
+  override def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       // only need to check in one direction.
       checkInstance(inst, in, context)
@@ -132,7 +132,7 @@ class ModuleInstanceChecker(modules : List[Module]) extends ASTAnalyzer(
 
 class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
   type T = Map[Identifier, Set[Identifier]]
-  override def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : ScopeMap) : T = {
+  override def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
       // this module calls inst.moduleId
       val moduleName = context.module.get.id
@@ -231,7 +231,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   type RewriteMap = MIP.RewriteMap
 
   def createVarMap() : VarMap = {
-    val nameProvider = new ContextualNameProvider(ScopeMap.empty + module, "$inst:" + inst.instanceId.toString)
+    val nameProvider = new ContextualNameProvider(Scope.empty + module, "$inst:" + inst.instanceId.toString)
     
     val idMap0 : VarMap = Map.empty
     // map each input
@@ -316,7 +316,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   // add initialization for the instance.
-  override def rewriteInit(init : InitDecl, context : ScopeMap) : Option[InitDecl] = {
+  override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
     newModule.init match {
       case Some(initD) => Some(InitDecl(initD.body ++ init.body))
       case None => Some(init)
@@ -324,7 +324,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   // "delete" this instance.
-  override def rewriteInstance(instD : InstanceDecl, context : ScopeMap) : Option[InstanceDecl] = {
+  override def rewriteInstance(instD : InstanceDecl, context : Scope) : Option[InstanceDecl] = {
     if (instD == inst) {
       None
     } else {
@@ -333,14 +333,14 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   // add new variables and inputs.
-  override def rewriteModule(module : Module, context : ScopeMap) : Option[Module] = {
+  override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
     val declsP : List[Decl] = newVariables ++ newInputs ++ module.decls 
     val moduleP = Module(module.id, declsP, module.cmds)
     Some(moduleP)
   }
 
   // rewrite module.
-  override def rewriteModuleCall(modCall : ModuleCallStmt, context : ScopeMap) : List[Statement] = {
+  override def rewriteModuleCall(modCall : ModuleCallStmt, context : Scope) : List[Statement] = {
     newInputAssignments ++ newNextStatements
   }
 }
@@ -367,7 +367,7 @@ class ModuleFlattenerPass(modules : List[Module], moduleName : Identifier) exten
         module
     }
   }
-  override def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = {
+  override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = {
     val modP = rewrite(module)
     Some(modP)
   }

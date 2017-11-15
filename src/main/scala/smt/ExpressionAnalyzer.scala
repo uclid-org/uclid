@@ -38,7 +38,7 @@ import scala.collection.immutable.Map
 
 object ExpressionAnalyzer {
   var z3ConstInterface = Z3Interface.newInterface()
-  def getConstIntValue(expr : smt.Expr, scope : lang.ScopeMap) : Option[Int] = {
+  def getConstIntValue(expr : smt.Expr, scope : lang.Scope) : Option[Int] = {
     Utils.assert(expr.typ.isInt, "Expected an integer-sorted expression.")
     val smtExpr1 = Converter.renameSymbols(expr, (s, t) => s + "_1")
     val smtExpr2 = Converter.renameSymbols(expr, (s, t) => s + "_2")
@@ -58,7 +58,7 @@ object ExpressionAnalyzer {
       }
     }
   }
-  def isExprConst(expr : smt.Expr, scope : lang.ScopeMap) : Boolean = {
+  def isExprConst(expr : smt.Expr, scope : lang.Scope) : Boolean = {
     val smtExpr1 = Converter.renameSymbols(expr, (s, t) => s + "_1")
     val smtExpr2 = Converter.renameSymbols(expr, (s, t) => s + "_2")
     z3ConstInterface.check(smt.OperatorApplication(smt.InequalityOp, List(smtExpr1, smtExpr2))).isFalse

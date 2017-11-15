@@ -33,59 +33,59 @@ package uclid
 package lang
 
 class AddFilenamePass(var filename : Option[String]) extends RewritePass {
-  override def rewriteModule(module : Module, ctx : ScopeMap) : Option[Module] = { 
+  override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = { 
     module.filename = filename
     return Some(module)
   }
-  override def rewriteDecl(decl : Decl, ctx : ScopeMap) : Option[Decl] = { 
+  override def rewriteDecl(decl : Decl, ctx : Scope) : Option[Decl] = { 
     decl.filename = filename
     Some(decl) 
   }
-  override def rewriteCommand(cmd : ProofCommand, ctx : ScopeMap) : Option[ProofCommand] = { 
+  override def rewriteCommand(cmd : ProofCommand, ctx : Scope) : Option[ProofCommand] = { 
     cmd.filename = filename
     Some(cmd) 
   }
-  override def rewriteProcedureSig(sig : ProcedureSig, ctx : ScopeMap) : Option[ProcedureSig] = { 
+  override def rewriteProcedureSig(sig : ProcedureSig, ctx : Scope) : Option[ProcedureSig] = { 
     sig.filename = filename
     Some(sig) 
   }
-  override def rewriteFunctionSig(sig : FunctionSig, ctx : ScopeMap) : Option[FunctionSig] = { 
+  override def rewriteFunctionSig(sig : FunctionSig, ctx : Scope) : Option[FunctionSig] = { 
     sig.filename = filename
     Some(sig) 
   }
-  override def rewriteLocalVar(lvar : LocalVarDecl, ctx : ScopeMap) : Option[LocalVarDecl] = { 
+  override def rewriteLocalVar(lvar : LocalVarDecl, ctx : Scope) : Option[LocalVarDecl] = { 
     lvar.filename = filename
     Some(lvar) 
   }
-  override def rewriteStatement(st : Statement, ctx : ScopeMap) : List[Statement] = { 
+  override def rewriteStatement(st : Statement, ctx : Scope) : List[Statement] = { 
     st.filename = filename
     List(st) 
   }
-  override def rewriteLHS(lhs : Lhs, ctx : ScopeMap) : Option[Lhs] = { 
+  override def rewriteLHS(lhs : Lhs, ctx : Scope) : Option[Lhs] = { 
     lhs.filename = filename
     Some(lhs) 
   }
-  override def rewriteExpr(e : Expr, ctx : ScopeMap) : Option[Expr] = { 
+  override def rewriteExpr(e : Expr, ctx : Scope) : Option[Expr] = { 
     e.filename = filename
     Some(e) 
   }
-  override def rewriteIdentifierBase(id : IdentifierBase, ctx : ScopeMap) : Option[IdentifierBase] = { 
+  override def rewriteIdentifierBase(id : IdentifierBase, ctx : Scope) : Option[IdentifierBase] = { 
     id.filename = filename
     Some(id)
   }
-  override def rewriteIdentifier(id : Identifier, ctx : ScopeMap) : Option[Identifier] = {
+  override def rewriteIdentifier(id : Identifier, ctx : Scope) : Option[Identifier] = {
     id.filename = filename
     Some(id)
   }
-  override def rewriteConstIdentifier(id : ConstIdentifier, ctx : ScopeMap) : Option[ConstIdentifier] = {
+  override def rewriteConstIdentifier(id : ConstIdentifier, ctx : Scope) : Option[ConstIdentifier] = {
     id.filename = filename
     Some(id)
   }
-  override def rewriteTuple(rec : Tuple, ctx : ScopeMap) : Option[Tuple] = { 
+  override def rewriteTuple(rec : Tuple, ctx : Scope) : Option[Tuple] = { 
     rec.filename = filename
     Some(rec) 
   }
-  override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = { 
+  override def rewriteOperator(op : Operator, ctx : Scope) : Option[Operator] = { 
     op.filename = filename
     Some(op) 
   }

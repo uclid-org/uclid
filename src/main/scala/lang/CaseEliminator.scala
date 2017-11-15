@@ -43,7 +43,7 @@ class CaseEliminatorPass extends RewritePass {
     }
   }
 
-  override def rewriteCase(st : CaseStmt, ctx : ScopeMap) : List[Statement] = {
+  override def rewriteCase(st : CaseStmt, ctx : Scope) : List[Statement] = {
     casesToIfs(st.body)
   }
 }

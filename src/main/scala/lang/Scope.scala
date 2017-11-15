@@ -90,14 +90,12 @@ object Scope {
         map
     }
   }
-}
-
-object ScopeMap {
   /** Create an empty context. */
-  def empty : ScopeMap = ScopeMap(Map.empty[IdentifierBase, Scope.NamedExpression], None, None)
+  def empty : Scope = Scope(Map.empty[IdentifierBase, Scope.NamedExpression], None, None)
 }
 
-case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl]) {
+
+case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl]) {
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: IdentifierBase) = map.contains(name)
   /** Return the NamedExpression. */
@@ -124,15 +122,15 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
   val specs = map.filter(_._2.isInstanceOf[Scope.SpecVar]).map(_._2.asInstanceOf[Scope.SpecVar]).toSet
   
   /** Return a new context with this identifier added to the current context. */
-  def +(expr: Scope.NamedExpression) : ScopeMap = {
-    ScopeMap(map + (expr.id -> expr), module, procedure)
+  def +(expr: Scope.NamedExpression) : Scope = {
+    Scope(map + (expr.id -> expr), module, procedure)
   }
-  def +(typ : Type) : ScopeMap = {
-    ScopeMap(Scope.addTypeToMap(map, typ, module), module, procedure)
+  def +(typ : Type) : Scope = {
+    Scope(Scope.addTypeToMap(map, typ, module), module, procedure)
   }
 
   /** Return a new context with the declarations in this module added to it. */
-  def +(m: Module) : ScopeMap = { 
+  def +(m: Module) : Scope = { 
     Utils.assert(module.isEmpty, "A module was already added to this Context.")
     val m1 = m.decls.foldLeft(map){ (mapAcc, decl) =>
       decl match {
@@ -176,10 +174,10 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
         case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
-    ScopeMap(m2, Some(m), None)
+    Scope(m2, Some(m), None)
   }
   /** Return a new context with the declarations in this procedure added to it. */
-  def +(proc: ProcedureDecl) : ScopeMap = {
+  def +(proc: ProcedureDecl) : Scope = {
     Utils.assert(procedure.isEmpty, "A procedure was already added to this context.")
     val map1 = proc.sig.inParams.foldLeft(map){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureInputArg(arg._1, arg._2))
@@ -190,28 +188,28 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
     val map3 = proc.decls.foldLeft(map2){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureLocalVar(arg.id, arg.typ))
     }
-    return ScopeMap(map3, module, Some(proc))
+    return Scope(map3, module, Some(proc))
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
-  def +(lambda: Lambda) : ScopeMap = {
+  def +(lambda: Lambda) : Scope = {
     val newMap = lambda.ids.foldLeft(map){ 
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }
-    return ScopeMap(newMap, module, procedure)
+    return Scope(newMap, module, procedure)
   }
   /** Return a new context with quantifier variables added. */
-  def +(opapp : OperatorApplication) : ScopeMap = {
+  def +(opapp : OperatorApplication) : Scope = {
     this + (opapp.op)
   }
   /** Return a new context with the quantifier variables adder. */
-  def +(op : Operator) : ScopeMap = {
+  def +(op : Operator) : Scope = {
     op match {
       case ForallOp(vs) =>
-        ScopeMap(
+        Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
           module, procedure)
       case ExistsOp(vs) =>
-        ScopeMap(
+        Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
           module, procedure)
       case _ => this
@@ -236,7 +234,7 @@ case class ScopeMap (map: Scope.IdentifierMap, module : Option[Module], procedur
   }
 }
 
-class ContextualNameProvider(ctx : ScopeMap, prefix : String) {
+class ContextualNameProvider(ctx : Scope, prefix : String) {
   var index = 1 
   def apply(name: Identifier, tag : String) : Identifier = {
     var newId = Identifier(prefix + "$" + tag + "$" + name + "_" + index.toString)

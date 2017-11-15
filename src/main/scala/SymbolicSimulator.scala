@@ -51,7 +51,7 @@ case class AssertInfo(name : String, iter : Int, expr : smt.Expr, pos : ASTPosit
 case class CheckResult(assert : AssertInfo, result : smt.SolverResult)
 
 class SymbolicSimulator (module : Module) {
-  val scope = ScopeMap.empty + module
+  val scope = Scope.empty + module
   var asserts : List[AssertInfo] = List.empty
   var results : List[CheckResult] = List.empty
   val initAssumes = module.axioms.foldLeft(List.empty[smt.Expr])((acc, axiom) => smt.Converter.exprToSMT(axiom.expr, scope) :: acc)

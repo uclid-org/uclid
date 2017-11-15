@@ -35,7 +35,7 @@ package uclid
 package lang
 
 class FindInnermostLoopsPass extends ReadOnlyPass[Set[ForStmt]] {
-  override def applyOnFor(d : TraversalDirection.T, st : ForStmt, in : Set[ForStmt], context : ScopeMap) : Set[ForStmt] = {
+  override def applyOnFor(d : TraversalDirection.T, st : ForStmt, in : Set[ForStmt], context : Scope) : Set[ForStmt] = {
     if(!st.body.exists(_.isLoop)) {
       in + st
     } else {
@@ -45,7 +45,7 @@ class FindInnermostLoopsPass extends ReadOnlyPass[Set[ForStmt]] {
 }
 
 class ForLoopRewriterPass(forStmtsToRewrite: Set[ForStmt]) extends RewritePass {
-  override def rewriteFor(st: ForStmt, ctx : ScopeMap) : List[Statement] = {
+  override def rewriteFor(st: ForStmt, ctx : Scope) : List[Statement] = {
      if (forStmtsToRewrite.contains(st)) {
        val low = st.range._1
        val high = st.range._2

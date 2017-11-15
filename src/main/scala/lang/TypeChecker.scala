@@ -51,18 +51,18 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
     typeDeclMap.clear()
     typeSynonyms.clear()
   }
-  override def applyOnModule( d : TraversalDirection.T, module : Module, in : Unit, context : ScopeMap) : Unit = {
+  override def applyOnModule( d : TraversalDirection.T, module : Module, in : Unit, context : Scope) : Unit = {
     if (d == TraversalDirection.Up) {
       validateSynonyms(module)
       simplifySynonyms(module)
     }
   }
-  override def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : Unit, context : ScopeMap) : Unit = {
+  override def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : Unit, context : Scope) : Unit = {
     if (d == TraversalDirection.Down) {
       typeDeclMap.put(typDec.id, typDec.typ)
     }
   }
-  override def applyOnType( d : TraversalDirection.T, typ : Type, in : Unit, context : ScopeMap) : Unit = {
+  override def applyOnType( d : TraversalDirection.T, typ : Type, in : Unit, context : Scope) : Unit = {
     if (d == TraversalDirection.Down) {
       typ match {
         case SynonymType(name) => typeSynonyms += name
@@ -136,7 +136,7 @@ class TypeSynonymFinder extends ASTAnalyzer("TypeSynonymFinder", new TypeSynonym
 class TypeSynonymRewriterPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
   lazy val typeSynonymFinderPass = manager.pass("TypeSynonymFinder").asInstanceOf[TypeSynonymFinder].pass
-  override def rewriteType(typ : Type, ctx : ScopeMap) : Option[Type] = {
+  override def rewriteType(typ : Type, ctx : Scope) : Option[Type] = {
     val result = typ match {
       case SynonymType(name) => typeSynonymFinderPass.typeDeclMap.get(name)
       case _ => Some(typ)
@@ -149,7 +149,7 @@ class TypeSynonymRewriter extends ASTRewriter(
     "TypeSynonymRewriter", new TypeSynonymRewriterPass())
 
 class ForLoopIndexRewriterPass extends RewritePass {
-  override def rewriteIdentifierBase(id : IdentifierBase, ctx : ScopeMap) : Option[IdentifierBase] = {
+  override def rewriteIdentifierBase(id : IdentifierBase, ctx : Scope) : Option[IdentifierBase] = {
     ctx.get(id).flatMap(
       (expr) => {
         expr match {
@@ -242,7 +242,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
     polyOpMap.clear()
   }
   
-  override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : ErrorList, ctx : ScopeMap) : ErrorList = {
+  override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : ErrorList, ctx : Scope) : ErrorList = {
     if (d == TraversalDirection.Up) {
       try {
         typeOf(e, ctx)
@@ -255,7 +255,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
     return in
   }
   
-  override def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : ErrorList, ctx : ScopeMap) : ErrorList = {
+  override def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : ErrorList, ctx : Scope) : ErrorList = {
     if (d == TraversalDirection.Up) {
       try {
         typeOf(lhs, ctx)
@@ -274,7 +274,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
     }
   }
 
-  def typeOf(lhs : Lhs, c : ScopeMap) : Type = {
+  def typeOf(lhs : Lhs, c : Scope) : Type = {
     val cachedType = memo.get(lhs.astNodeId)
     if (cachedType.isDefined) {
       return cachedType.get
@@ -314,7 +314,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
     memo.put(lhs.astNodeId, resultType)
     return resultType
   }
-  def typeOf(e : Expr, c : ScopeMap) : Type = {
+  def typeOf(e : Expr, c : Scope) : Type = {
     def polyResultType(op : PolymorphicOperator, argType : Type) : Type = {
       op match {
         case LTOp() | LEOp() | GTOp() | GEOp() => new BoolType()
@@ -512,7 +512,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
 {
   lazy val manager : PassManager = analysis.manager
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
-  override def applyOnStatement(d : TraversalDirection.T, st : Statement, in : List[ModuleError], context : ScopeMap) : List[ModuleError] = {
+  override def applyOnStatement(d : TraversalDirection.T, st : Statement, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Up) {
       in
     } else {
@@ -674,7 +674,7 @@ class ModuleTypeChecker extends ASTAnalyzer("ModuleTypeChecker", new ModuleTypeC
 class PolymorphicTypeRewriterPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
   lazy val typeCheckerPass = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
-  override def rewriteOperator(op : Operator, ctx : ScopeMap) : Option[Operator] = {
+  override def rewriteOperator(op : Operator, ctx : Scope) : Option[Operator] = {
     
     op match {
       case p : PolymorphicOperator => {

@@ -49,7 +49,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     val cntInt = cnt.intValue()
     Utils.checkParsingError(cntInt == cnt, "Argument to simulate is too large.", cmd.pos, filename)
   }
-  override def applyOnCmd(d : TraversalDirection.T, cmd : ProofCommand, in : Unit, context : ScopeMap) : Unit = {
+  override def applyOnCmd(d : TraversalDirection.T, cmd : ProofCommand, in : Unit, context : Scope) : Unit = {
     val filename = context.module.flatMap(_.filename)
     cmd.name.toString match {
       case "clear_context" =>

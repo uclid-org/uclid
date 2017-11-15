@@ -55,7 +55,7 @@ import uclid.smt.{Converter => Converter}
 import uclid.smt.{ExpressionAnalyzer => ExpressionAnalyzer}
 
 class BitVectorSliceFindWidthPass extends RewritePass {
-  def rewriteSlice(slice : VarBitVectorSlice, ctx : ScopeMap) : VarBitVectorSlice = {
+  def rewriteSlice(slice : VarBitVectorSlice, ctx : Scope) : VarBitVectorSlice = {
     val hiP = ReplacePolymorphicOperators.rewrite(slice.hi, IntType())
     val loP = ReplacePolymorphicOperators.rewrite(slice.lo, IntType())
     val hiExp = Converter.exprToSMT(hiP, ctx)
@@ -66,7 +66,7 @@ class BitVectorSliceFindWidthPass extends RewritePass {
     VarBitVectorSlice(hiP, loP, width)
   }
 
-  override def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : ScopeMap) : Option[BitVectorSlice] = {
+  override def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : Scope) : Option[BitVectorSlice] = {
     slice match {
       case varBvSlice : VarBitVectorSlice => Some(rewriteSlice(varBvSlice, ctx))
       case _ => Some(slice)
@@ -79,7 +79,7 @@ class BitVectorSliceFindWidth extends ASTRewriter(
 
 
 class BitVectorSliceConstifyPass extends RewritePass {
-  def rewriteSlice(slice : VarBitVectorSlice, ctx : ScopeMap) : Some[BitVectorSlice] = {
+  def rewriteSlice(slice : VarBitVectorSlice, ctx : Scope) : Some[BitVectorSlice] = {
     slice.width match {
       case None => Some(slice)
       case Some(w) =>
@@ -96,7 +96,7 @@ class BitVectorSliceConstifyPass extends RewritePass {
     }
   }
 
-  override def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : ScopeMap) : Option[BitVectorSlice] = {
+  override def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : Scope) : Option[BitVectorSlice] = {
     slice match {
       case varBvSlice : VarBitVectorSlice => rewriteSlice(varBvSlice, ctx)
       case _ => Some(slice)

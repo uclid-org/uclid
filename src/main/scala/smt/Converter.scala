@@ -58,7 +58,7 @@ object Converter {
         smt.EnumType(ids.map(_.name))
       case lang.SynonymType(typ) =>
         throw new Utils.UnimplementedException("Synonym types must have been eliminated by now.")
-      case lang.UndefinedType() | lang.ProcedureType(_, _) | 
+      case lang.UndefinedType() | lang.ProcedureType(_, _) | lang.ExternalType(_, _) |
            lang.ModuleInstanceType(_) | lang.ModuleType(_, _) | lang.TemporalType() =>
         throw new AssertionError("Type '" + typ.toString + "' not expected here.")
     }
@@ -108,7 +108,7 @@ object Converter {
     }
   }
 
-  def exprToSMT(expr : lang.Expr, scope : lang.ScopeMap) : smt.Expr = {
+  def exprToSMT(expr : lang.Expr, scope : lang.Scope) : smt.Expr = {
     def toSMT(expr : lang.Expr) : smt.Expr = exprToSMT(expr, scope)
     def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e))
     def idToSMT(id : lang.IdentifierBase) : smt.Expr = {
@@ -144,7 +144,7 @@ object Converter {
     }
   }
   
-  def exprToSMT(expr : lang.Expr, symbolTable : Map[lang.IdentifierBase, Expr], scope : lang.ScopeMap) : smt.Expr = {
+  def exprToSMT(expr : lang.Expr, symbolTable : Map[lang.IdentifierBase, Expr], scope : lang.Scope) : smt.Expr = {
     def toSMT(expr : lang.Expr) : smt.Expr = exprToSMT(expr, symbolTable, scope)
     def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e))
      expr match {
