@@ -1,0 +1,14 @@
+module common {
+  type addr_t = bv8;
+  type data_t = bv8;
+  
+  type opcode_t = enum { add, sub, load, store };
+  type mem_t = [addr_t]data_t;
+}
+
+module cpu {
+  type addr_t = common :: addr_t;
+}
+
+module main {
+}
