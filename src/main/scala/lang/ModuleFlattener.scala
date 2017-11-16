@@ -124,7 +124,6 @@ class ModuleInstanceChecker(modules : List[Module]) extends ASTAnalyzer(
     in = Some(List.empty[ModuleError])
   }
   override def finish() {
-    println("finish")
     val errors = out.get
     if (errors.size > 0) {
       throw new Utils.ParserErrorList(errors.map((e) => (e.msg, e.position)))

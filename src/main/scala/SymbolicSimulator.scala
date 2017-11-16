@@ -57,7 +57,7 @@ class SymbolicSimulator (module : Module) {
   val initAssumes = module.axioms.foldLeft(List.empty[smt.Expr])((acc, axiom) => smt.Converter.exprToSMT(axiom.expr, scope) :: acc)
   var assumes : List[smt.Expr] = initAssumes
   
-  type SymbolTable = Map[IdentifierBase, smt.Expr];
+  type SymbolTable = Map[Identifier, smt.Expr];
   var symbolTable : SymbolTable = Map.empty
   type FrameTable = ArrayBuffer[SymbolTable]
   var frameTable : FrameTable = ArrayBuffer.empty
@@ -125,7 +125,7 @@ class SymbolicSimulator (module : Module) {
   }
 
   def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean) {
-    val initSymbolTable = scope.map.foldLeft(Map.empty[IdentifierBase, smt.Expr]){
+    val initSymbolTable = scope.map.foldLeft(Map.empty[Identifier, smt.Expr]){
       (mapAcc, decl) => {
         decl._2 match {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
@@ -345,8 +345,8 @@ class SymbolicSimulator (module : Module) {
         val es = rhss.map(i => evaluate(i, symbolTable));
         return simulateAssign(lhss, es, symbolTable)
       case IfElseStmt(e,then_branch,else_branch) =>
-        var then_modifies : Set[IdentifierBase] = writeSet(then_branch)
-        var else_modifies : Set[IdentifierBase] = writeSet(else_branch)
+        var then_modifies : Set[Identifier] = writeSet(then_branch)
+        var else_modifies : Set[Identifier] = writeSet(else_branch)
         //compute in parallel
         var then_st : SymbolTable = simulate(iter, then_branch, symbolTable)
         var else_st : SymbolTable = simulate(iter, else_branch, symbolTable)
@@ -362,8 +362,8 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def writeSet(stmts: List[Statement]) : Set[IdentifierBase] = {
-    def stmtWriteSet(stmt: Statement) : Set[IdentifierBase] = stmt match {
+  def writeSet(stmts: List[Statement]) : Set[Identifier] = {
+    def stmtWriteSet(stmt: Statement) : Set[Identifier] = stmt match {
       case SkipStmt() => Set.empty
       case AssertStmt(e, id) => Set.empty
       case AssumeStmt(e, id) => Set.empty
@@ -374,13 +374,13 @@ class SymbolicSimulator (module : Module) {
         return writeSet(then_branch) ++ writeSet(else_branch)
       case ForStmt(id, range, body) => return writeSet(body)
       case CaseStmt(body) => 
-        return body.foldLeft(Set.empty[IdentifierBase]) { (acc,i) => acc ++ writeSet(i._2) }
+        return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2) }
       case ProcedureCallStmt(id,lhss,args) =>
         throw new Utils.RuntimeError("ProcedureCallStmt must have been inlined by now.")
       case ModuleCallStmt(id) =>
         throw new Utils.RuntimeError("ModuleCallStmt must have been inlined by now.")
     }
-    return stmts.foldLeft(Set.empty[IdentifierBase]){(acc,s) => acc ++ stmtWriteSet(s)}
+    return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ stmtWriteSet(s)}
   }
 
   //TODO: get rid of this and use subtituteSMT instead

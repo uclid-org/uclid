@@ -54,7 +54,10 @@ class PassManager {
   def _run(module : Module, context : Scope) : Option[Module] = {
     val init : Option[Module] = Some(module)
     passes.foldLeft(init){
-      (mod, pass) => mod.flatMap(pass.visit(_, context))
+      (mod, pass) => {
+        // println("running pass: %s; moduleDefined: %s".format(pass.passName, mod.isDefined.toString))
+        mod.flatMap(pass.visit(_, context))
+      }
     }
   }
   // run on a single module.

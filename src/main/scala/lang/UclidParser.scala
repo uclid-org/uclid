@@ -378,7 +378,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwCase ~> rep(CaseBlockStmt) <~ KwEsac ^^ 
         { case i => CaseStmt(i) } |
       KwFor ~> (Id ~ (KwIn ~> RangeExpr) ~ BlockStatement) ^^
-        { case id ~ r ~ body => ForStmt(ConstIdentifier(id.name), r, body) }
+        { case id ~ r ~ body => ForStmt(Identifier(id.name), r, body) }
     }
       
     lazy val CaseBlockStmt: PackratParser[(Expr, List[Statement])] =  

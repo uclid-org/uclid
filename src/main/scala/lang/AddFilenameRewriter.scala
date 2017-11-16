@@ -69,15 +69,7 @@ class AddFilenamePass(var filename : Option[String]) extends RewritePass {
     e.filename = filename
     Some(e) 
   }
-  override def rewriteIdentifierBase(id : IdentifierBase, ctx : Scope) : Option[IdentifierBase] = { 
-    id.filename = filename
-    Some(id)
-  }
   override def rewriteIdentifier(id : Identifier, ctx : Scope) : Option[Identifier] = {
-    id.filename = filename
-    Some(id)
-  }
-  override def rewriteConstIdentifier(id : ConstIdentifier, ctx : Scope) : Option[ConstIdentifier] = {
     id.filename = filename
     Some(id)
   }

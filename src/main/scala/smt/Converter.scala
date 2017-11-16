@@ -111,13 +111,13 @@ object Converter {
   def exprToSMT(expr : lang.Expr, scope : lang.Scope) : smt.Expr = {
     def toSMT(expr : lang.Expr) : smt.Expr = exprToSMT(expr, scope)
     def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e))
-    def idToSMT(id : lang.IdentifierBase) : smt.Expr = {
+    def idToSMT(id : lang.Identifier) : smt.Expr = {
       val typ = scope.typeOf(id).get
       smt.Symbol(id.name, typeToSMT(typ))
     }
     
      expr match {
-       case id : lang.IdentifierBase => idToSMT(id) 
+       case id : lang.Identifier => idToSMT(id) 
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
@@ -144,7 +144,7 @@ object Converter {
     }
   }
   
-  def exprToSMT(expr : lang.Expr, symbolTable : Map[lang.IdentifierBase, Expr], scope : lang.Scope) : smt.Expr = {
+  def exprToSMT(expr : lang.Expr, symbolTable : Map[lang.Identifier, Expr], scope : lang.Scope) : smt.Expr = {
     def toSMT(expr : lang.Expr) : smt.Expr = exprToSMT(expr, symbolTable, scope)
     def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e))
      expr match {

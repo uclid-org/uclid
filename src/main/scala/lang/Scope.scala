@@ -37,10 +37,10 @@ package lang
 import scala.collection.mutable.{Set => MutableSet}
 
 object Scope {
-  sealed abstract class NamedExpression(val id : IdentifierBase, val typ: Type) {
+  sealed abstract class NamedExpression(val id : Identifier, val typ: Type) {
     val isReadOnly = false
   }
-  sealed abstract class ReadOnlyNamedExpression(id : IdentifierBase, typ: Type) extends NamedExpression(id, typ) {
+  sealed abstract class ReadOnlyNamedExpression(id : Identifier, typ: Type) extends NamedExpression(id, typ) {
     override val isReadOnly = true
   }
   case class ModuleDefinition(mod : lang.Module) extends ReadOnlyNamedExpression(mod.id, mod.moduleType)
@@ -49,21 +49,21 @@ object Scope {
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
   case class InputVar(inpId : Identifier, inpTyp: Type) extends ReadOnlyNamedExpression(inpId, inpTyp)
   case class OutputVar(outId : Identifier, outTyp: Type) extends NamedExpression(outId, outTyp)
-  case class ConstantVar(cId : IdentifierBase, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
+  case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class ProcedureOutputArg(argId : Identifier, argTyp: Type) extends NamedExpression(argId, argTyp)
   case class ProcedureLocalVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
-  case class ForIndexVar(iId : ConstIdentifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
+  case class ForIndexVar(iId : Identifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
   case class SpecVar(varId : Identifier, expr: Expr) extends ReadOnlyNamedExpression(varId, BoolType())
   case class AxiomVar(varId : Identifier, expr : Expr) extends ReadOnlyNamedExpression(varId, BoolType())
   case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends ReadOnlyNamedExpression(enumId, enumTyp)
   case class ForallVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ExistsVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
 
-  type IdentifierMap = Map[IdentifierBase, NamedExpression]
+  type IdentifierMap = Map[Identifier, NamedExpression]
   def addToMap(map : Scope.IdentifierMap, expr: Scope.NamedExpression) : Scope.IdentifierMap = {
     map + (expr.id -> expr)
   }
@@ -76,7 +76,7 @@ object Scope {
               namedExpr match {
                 case EnumIdentifier(eId, eTyp) =>
                   Utils.checkParsingError(eTyp == enumTyp, 
-                      "Identifier " + eId.nam + " redeclared as a member of a different enum.", 
+                      "Identifier " + eId.name + " redeclared as a member of a different enum.", 
                       eTyp.pos, module.flatMap(_.filename))
                   m
                 case _ =>
@@ -92,17 +92,17 @@ object Scope {
     }
   }
   /** Create an empty context. */
-  def empty : Scope = Scope(Map.empty[IdentifierBase, Scope.NamedExpression], None, None)
+  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None)
 }
 
 
 case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl]) {
   /** Check if a variable name exists in this context. */
-  def doesNameExist(name: IdentifierBase) = map.contains(name)
+  def doesNameExist(name: Identifier) = map.contains(name)
   /** Return the NamedExpression. */
-  def get(id: IdentifierBase) : Option[Scope.NamedExpression] = map.get(id)
+  def get(id: Identifier) : Option[Scope.NamedExpression] = map.get(id)
   /** Does procedure exist? */
-  def doesProcedureExist(id : IdentifierBase) : Boolean = {
+  def doesProcedureExist(id : Identifier) : Boolean = {
     map.get(id) match {
       case Some(namedExpr) =>
         namedExpr match {
@@ -229,11 +229,11 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
   }
   
   /** Return the type of an identifier in this context. */
-  def typeOf(id : IdentifierBase) : Option[Type] = {
+  def typeOf(id : Identifier) : Option[Type] = {
     map.get(id).flatMap((e) => Some(e.typ))
   }
   
-  def isQuantifierVar(id : IdentifierBase) : Boolean = {
+  def isQuantifierVar(id : Identifier) : Boolean = {
     (map.get(id).flatMap{
       (p) => p match {
         case Scope.ForallVar(_, _) | Scope.ExistsVar(_, _) => Some(true)

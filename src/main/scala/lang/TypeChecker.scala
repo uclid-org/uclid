@@ -148,24 +148,6 @@ class TypeSynonymRewriterPass extends RewritePass {
 class TypeSynonymRewriter extends ASTRewriter(
     "TypeSynonymRewriter", new TypeSynonymRewriterPass())
 
-class ForLoopIndexRewriterPass extends RewritePass {
-  override def rewriteIdentifierBase(id : IdentifierBase, ctx : Scope) : Option[IdentifierBase] = {
-    ctx.get(id).flatMap(
-      (expr) => {
-        expr match {
-          case Scope.ForIndexVar(cId, cTyp) =>
-            val forVarId = cId
-            forVarId.pos = id.pos
-            Some(forVarId)
-          case _ => Some(id)
-        }
-      })
-  }
-}
-
-class ForLoopIndexRewriter extends ASTRewriter(
-    "ForLoopIndexRewriter", new ForLoopIndexRewriterPass())
-
 object ReplacePolymorphicOperators {
   def toInt(op : PolymorphicOperator) : IntArgOperator = {
     val intOp = op match {
@@ -204,7 +186,7 @@ object ReplacePolymorphicOperators {
     def rs(es : List[Expr])  = es.map(r(_))
     
     e match {
-      case i : IdentifierBase => e
+      case i : Identifier => e
       case l : Literal => e
       case Tuple(es) => Tuple(es.map(r(_)))
       case OperatorApplication(op, operands) =>
@@ -383,6 +365,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
           BoolType()
         }
         case cmpOp : ComparisonOperator => {
+          // println("typeOf: " + e.toString)
+          // println("cmpOp : " + cmpOp.toString)
+          // println("args: " + opapp.operands.toString)
+          // println("argTypes: " + argTypes.toString)
+          // Utils.assert(argTypes.size == 2, "Trouble!")
           checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.", opapp.pos, c.filename)
           checkTypeError(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type.", opapp.pos, c.filename)
           BoolType()
@@ -475,7 +462,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
     val cachedType = memo.get(e.astNodeId)
     if (cachedType.isEmpty) {
       val typ = e match {
-        case i : IdentifierBase =>
+        case i : Identifier =>
           checkTypeError(c.typeOf(i).isDefined, "Unknown identifier: " + i.name, i.pos, c.filename)
           (c.typeOf(i).get)
         case b : BoolLit => new BoolType()
@@ -619,7 +606,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
             var (pId, pType) = param.asInstanceOf[(Identifier, Type)]
             var aType = exprTypeChecker.typeOf(arg.asInstanceOf[Expr], context)
             if (!pType.matches(aType)) {
-              ret = ModuleError("Parameter %s expected argument of type %s but received type %s.".format(pId.nam, pType.toString, aType.toString), st.position) :: ret
+              ret = ModuleError("Parameter %s expected argument of type %s but received type %s.".format(pId.name, pType.toString, aType.toString), st.position) :: ret
             }
           }
 

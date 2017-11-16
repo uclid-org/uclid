@@ -233,25 +233,9 @@ sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
   def isConstant = false
 }
-sealed abstract class IdentifierBase(nam : String) extends Expr {
-  val name = nam
+
+case class Identifier(name : String) extends Expr {
   override def toString = name.toString
-  override def equals (other: Any) : Boolean = {
-    other match {
-      case that : IdentifierBase => name == that.name
-      case _ => false
-    }
-  }
-  override def hashCode() : Int = name.hashCode()
-}
-
-case class Identifier(nam : String) extends IdentifierBase(nam)
-
-// These are identifiers whose value is a statically-defined constant.
-// For now, these are only created for the index variables in for loops.
-case class ConstIdentifier(nam : String) extends IdentifierBase(nam) {
-  override def isConstant = true
-  override def toString = name.toString + "#const"
 }
 
 sealed abstract class Literal extends Expr {
@@ -548,7 +532,7 @@ case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Stat
                          List("} else {") ++ 
                          elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
-case class ForStmt(id: ConstIdentifier, range: (NumericLit,NumericLit), body: List[Statement])
+case class ForStmt(id: Identifier, range: (NumericLit,NumericLit), body: List[Statement])
   extends Statement
 {
   override def isLoop = true

@@ -126,9 +126,7 @@ trait ReadOnlyPass[T] {
   def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = { in }
   def applyOnBitVectorSlice(d : TraversalDirection.T, slice : BitVectorSlice, in : T, context : Scope) : T = { in }
   def applyOnExpr(d : TraversalDirection.T, e : Expr, in : T, context : Scope) : T = { in }
-  def applyOnIdentifierBase(d : TraversalDirection.T, id : IdentifierBase, in : T, context : Scope) : T = { in }
   def applyOnIdentifier(d : TraversalDirection.T, id : Identifier, in : T, context : Scope) : T = { in }
-  def applyOnConstIdentifier(d : TraversalDirection.T, id : ConstIdentifier, in : T, context : Scope) : T = { in }
   def applyOnLit(d : TraversalDirection.T, lit : Literal, in : T, context : Scope) : T = { in }
   def applyOnBoolLit(d : TraversalDirection.T, b : BoolLit, in : T, context : Scope) : T = { in }
   def applyOnNumericLit(d : TraversalDirection.T, b : NumericLit, in : T, context : Scope) : T = { in }
@@ -203,9 +201,7 @@ trait RewritePass {
   def rewriteLHS(lhs : Lhs, ctx : Scope) : Option[Lhs] = { Some(lhs) }
   def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : Scope) : Option[BitVectorSlice] = { Some(slice) }
   def rewriteExpr(e : Expr, ctx : Scope) : Option[Expr] = { Some(e) }
-  def rewriteIdentifierBase(id : IdentifierBase, ctx : Scope) : Option[IdentifierBase] = { Some(id) }
   def rewriteIdentifier(id : Identifier, ctx : Scope) : Option[Identifier] = { Some(id) }
-  def rewriteConstIdentifier(id : ConstIdentifier, ctx : Scope) : Option[ConstIdentifier] = { Some(id) }
   def rewriteLit(lit : Literal, ctx : Scope) : Option[Literal] = { Some(lit) }
   def rewriteBoolLit(b : BoolLit, ctx : Scope) : Option[BoolLit] = { Some(b) }
   def rewriteIntLit(i : IntLit, ctx : Scope) : Option[IntLit] = { Some(i) }
@@ -660,7 +656,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
     result = pass.applyOnFor(TraversalDirection.Down, st, result, contextIn)
-    result = visitConstIdentifier(st.id, result, contextIn)
+    result = visitIdentifier(st.id, result, contextIn)
     result = visitLiteral(st.range._1, result, contextIn)
     result = visitLiteral(st.range._2, result, contextIn)
     result = st.body.foldLeft(result)((arg, i) => visitStatement(i, arg, context))
@@ -725,7 +721,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnExpr(TraversalDirection.Down, e, result, context)
     result = e match {
-      case i : IdentifierBase => visitIdentifierBase(i, result, context)
+      case i : Identifier => visitIdentifier(i, result, context)
       case lit : Literal => visitLiteral(lit, result, context)
       case rec : Tuple => visitTuple(rec, result, context)
       case opapp : OperatorApplication => visitOperatorApp(opapp, result, context)
@@ -738,26 +734,10 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnExpr(TraversalDirection.Up, e, result, context)
     return result
   }
-  def visitIdentifierBase(id : IdentifierBase, in : T, context : Scope) : T = {
-    var result : T = in
-    result = pass.applyOnIdentifierBase(TraversalDirection.Down, id, result, context)
-    result = id match {
-      case vId : Identifier => visitIdentifier(vId, result, context)
-      case cId : ConstIdentifier => visitConstIdentifier(cId, result, context)
-    }
-    result = pass.applyOnIdentifierBase(TraversalDirection.Up, id, result, context)
-    return result
-  }
   def visitIdentifier(id : Identifier, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnIdentifier(TraversalDirection.Down, id, in, context)
     result = pass.applyOnIdentifier(TraversalDirection.Up, id, in, context)
-    return result
-  }
-  def visitConstIdentifier(id : ConstIdentifier, in : T, context : Scope) : T = {
-    var result : T = in
-    result = pass.applyOnConstIdentifier(TraversalDirection.Down, id, in, context)
-    result = pass.applyOnConstIdentifier(TraversalDirection.Up, id, in, context)
     return result
   }
   def visitLiteral(lit : Literal, in : T, context : Scope) : T = {
@@ -1345,7 +1325,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   
   def visitForStatement(st : ForStmt, contextIn : Scope) : List[Statement] = {
     val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
-    val idP = visitConstIdentifier(st.id, contextIn)
+    val idP = visitIdentifier(st.id, contextIn)
     val lit1P = visitNumericLiteral(st.range._1, contextIn)
     val lit2P = visitNumericLiteral(st.range._2, contextIn)
     val stmts = st.body.map(visitStatement(_, context)).flatten
@@ -1434,7 +1414,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitExpr(e : Expr, context : Scope) : Option[Expr] = {
     val eP = (e match {
-      case i : IdentifierBase => visitIdentifierBase(i, context)
+      case i : Identifier => visitIdentifier(i, context)
       case lit : Literal => visitLiteral(lit, context)
       case rec : Tuple => visitTuple(rec, context)
       case opapp : OperatorApplication => visitOperatorApp(opapp, context)
@@ -1447,22 +1427,10 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setFilename, eP, e.position)
   }
   
-  def visitIdentifierBase(id : IdentifierBase, context : Scope) : Option[IdentifierBase] = {
-    val idP = id match {
-      case vId : Identifier => visitIdentifier(vId, context)
-      case cId : ConstIdentifier => visitConstIdentifier(cId, context)
-    }
-    val idP2 = idP.flatMap(pass.rewriteIdentifierBase(_, context))
-    return ASTNode.introducePos(setFilename, idP2, id.position)
-  }
   def visitIdentifier(id : Identifier, context : Scope) : Option[Identifier] = {
     val idP = pass.rewriteIdentifier(id, context)
     return ASTNode.introducePos(setFilename, idP, id.position)
   }
-  def visitConstIdentifier(id : ConstIdentifier, context : Scope) : Option[ConstIdentifier] = {
-    val idP = pass.rewriteConstIdentifier(id, context)
-    return ASTNode.introducePos(setFilename, idP, id.position)
-  }  
   def visitLiteral(lit : Literal, context : Scope) : Option[Literal] = {
     val litP = (lit match {
       case b : BoolLit => visitBoolLiteral(b, context)
