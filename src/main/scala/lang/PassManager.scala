@@ -67,19 +67,20 @@ class PassManager {
 
   // run on a list of modules.
   def run(modules : List[Module]) : List[Module] = {
-    passes.foreach(_.reset())
     val modulesP = passes.foldLeft(modules) { 
       (mods, pass) => {
-        mods.map {
+        pass.reset()
+        val modsP = mods.map {
           m => {
             val mP = pass.visit(m, Scope.empty)
             pass.rewind()
             mP
           }
         }.flatten
+        pass.finish()
+        modsP
       }
     }
-    passes.foreach(_.finish())
     modulesP
   }
 

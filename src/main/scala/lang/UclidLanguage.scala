@@ -612,7 +612,7 @@ sealed abstract class Decl extends ASTNode {
   def declNames : List[Identifier]
 }
 
-case class InstanceDecl(moduleId : Identifier, instanceId : Identifier, arguments: List[(Identifier, Option[Expr])], instType : Option[ModuleInstanceType], modType : Option[ModuleType]) extends Decl
+case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, arguments: List[(Identifier, Option[Expr])], instType : Option[ModuleInstanceType], modType : Option[ModuleType]) extends Decl
 {
   lazy val argMap = arguments.foldLeft(Map.empty[Identifier, Expr]) { 
     (acc, arg) => {

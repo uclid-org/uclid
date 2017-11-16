@@ -159,7 +159,8 @@ object UclidMain {
     val filenameAdderPass = new AddFilenameRewriter(None) 
     passManager.addPass(filenameAdderPass)
     passManager.addPass(new ForLoopIndexRewriter())
-    // passManager.addPass(new ExternalTypeRewriter())
+    passManager.addPass(new ExternalTypeAnalysis())
+    passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new TypeSynonymFinder())
     passManager.addPass(new TypeSynonymRewriter())
     passManager.addPass(new BitVectorSliceFindWidth())
@@ -196,7 +197,6 @@ object UclidMain {
       (acc, m) =>
         val modules = acc._1
         val context = acc._2
-        // println("context::modules: " + context.moduleDefinitionMap.toString)
         val mP = passManager.run(m, context).get
         (mP :: modules, context +& mP)
     }._1
@@ -211,12 +211,12 @@ object UclidMain {
     val passManager = new PassManager()
     passManager.addPass(new ModuleInstanceChecker(moduleList))
     passManager.addPass(new ModuleDependencyFinder(moduleList, mainModuleName))
+    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
     passManager.addPass(new ModuleFlattener(moduleList, mainModuleName))
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new ModuleCleaner())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
     passManager.addPass(new SemanticAnalyzer())
 
     // run passes.

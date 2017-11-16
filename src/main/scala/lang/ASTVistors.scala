@@ -228,8 +228,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   /** The pass itself. */
   def pass : ReadOnlyPass[T] = _pass
   /** The input/outputs of the pass. */
-  private[this] var _in : Option[T] = None
-  private[this] var _out : Option[T] = None
+  protected[this] var _in : Option[T] = None
+  protected[this] var _out : Option[T] = None
   /** The pseudo-variable 'in' sets the input to the analysis. */
   def in : Option[T] = _in
   def in_=(i : Option[T]): Unit = {
@@ -904,7 +904,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
   
   def visitModule(module : Module, initContext : Scope) : Option[Module] = {
-    val initContext = Scope.empty
     val context = initContext + module
     val id = visitIdentifier(module.id, context)
     val decls = module.decls.map(visitDecl(_, context)).flatten
