@@ -262,7 +262,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   def createNewModule(varMap : VarMap) : Module = {
     val rewriteMap = MIP.toRewriteMap(varMap)
     val rewriter = new ExprRewriter("MIP:" + inst.instanceId.toString, rewriteMap)
-    rewriter.visit(targetModule).get
+    rewriter.visit(targetModule, Scope.empty).get
   }
 
   def createNewVariables(varMap : VarMap) : List[StateVarDecl] = {
@@ -361,7 +361,7 @@ class ModuleFlattenerPass(modules : List[Module], moduleName : Identifier) exten
         val targetModule = modules.find(_.id == inst.moduleId).get
         val passName = "ModuleInstantiator:" + module.id + ":" + inst.instanceId
         val rewriter = new ModuleInstantiator(passName, module, inst, targetModule)
-        val modP = rewriter.visit(module).get
+        val modP = rewriter.visit(module, Scope.empty).get
         rewrite(modP)
       case Nil =>
         module

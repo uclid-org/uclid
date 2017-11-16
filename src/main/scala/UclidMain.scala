@@ -159,6 +159,7 @@ object UclidMain {
     val filenameAdderPass = new AddFilenameRewriter(None) 
     passManager.addPass(filenameAdderPass)
     passManager.addPass(new ForLoopIndexRewriter())
+    // passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new TypeSynonymFinder())
     passManager.addPass(new TypeSynonymRewriter())
     passManager.addPass(new BitVectorSliceFindWidth())
@@ -177,20 +178,28 @@ object UclidMain {
     def parseFile(srcFile : String) : List[Module] = {
       val text = scala.io.Source.fromFile(srcFile).mkString
       filenameAdderPass.setFilename(srcFile)
-      UclidParser.parseModel(srcFile, text).map(passManager.run(_).get)
+      UclidParser.parseModel(srcFile, text)
     }
     
-    val modules = srcFiles.foldLeft(List.empty[Module]) {
+    val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
       (acc, srcFile) => acc ++ parseFile(srcFile) 
     }
-    val modIdSeq = modules.map(m => (m.id, m.position))
+    val modIdSeq = parsedModules.map(m => (m.id, m.position))
     val moduleErrors = SemanticAnalyzerPass.checkIdRedeclaration(modIdSeq, List.empty[ModuleError])
     if (moduleErrors.size > 0) {
       val errors = moduleErrors.map((me) => (me.msg, me.position))
       throw new Utils.ParserErrorList(errors)
     }
-    
-    return modules
+    // now process each module
+    val init = (List.empty[Module], Scope.empty)
+    return parsedModules.foldLeft(init) { 
+      (acc, m) =>
+        val modules = acc._1
+        val context = acc._2
+        // println("context::modules: " + context.moduleDefinitionMap.toString)
+        val mP = passManager.run(m, context).get
+        (mP :: modules, context +& mP)
+    }._1
   }
   
   def instantiate(moduleList : List[Module], mainModuleName : Identifier) : Option[Module] = {

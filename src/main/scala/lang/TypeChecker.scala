@@ -499,8 +499,8 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
 
 class ExpressionTypeChecker extends ASTAnalyzer("ExpressionTypeChecker", new ExpressionTypeCheckerPass())  {
   override def pass = super.pass.asInstanceOf[ExpressionTypeCheckerPass]
-  override def visit(module : Module) : Option[Module] = {
-    val errors = visitModule(module, List.empty[Utils.TypeError])
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val errors = visitModule(module, List.empty[Utils.TypeError], context)
     if (errors.size > 0) {
       throw new Utils.TypeErrorList(errors)
     }
@@ -661,8 +661,8 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
 }
 
 class ModuleTypeChecker extends ASTAnalyzer("ModuleTypeChecker", new ModuleTypeCheckerPass())  {
-  override def visit(module : Module) : Option[Module] = {
-    val out = visitModule(module, List.empty[ModuleError])
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val out = visitModule(module, List.empty[ModuleError], context)
     if (out.size > 0) {
       val errors = out.map((me) => (me.msg, me.position))
       throw new Utils.ParserErrorList(errors)

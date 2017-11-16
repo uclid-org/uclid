@@ -144,7 +144,7 @@ class ProcedureInliner extends ASTAnalysis {
   var findLeafProcedureAnalysis = new ASTAnalyzer("FunctionInliner.FindLeafProcedure", findLeafProcedurePass)
   
   override def passName = "FunctionInliner"
-  def visit(module : Module) : Option[Module] = {
+  override def visit(module : Module, context : Scope) : Option[Module] = {
     var modP : Option[Module] = Some(module)
     var iteration = 0
     var done = false
@@ -155,7 +155,7 @@ class ProcedureInliner extends ASTAnalysis {
           done = true
           None
         case Some(mod) =>
-          val leafProcSet = findLeafProcedureAnalysis.visitModule(mod, mod.procedures.map(_.id).toSet)
+          val leafProcSet = findLeafProcedureAnalysis.visitModule(mod, mod.procedures.map(_.id).toSet, context)
           val leafProc = leafProcSet.headOption
           leafProc match {
             case Some(procId) =>
@@ -164,7 +164,7 @@ class ProcedureInliner extends ASTAnalysis {
               // rewrite this procedure.
               val rewriter = new ASTRewriter("FunctionInliner.Inline:" + procId.toString, new InlineProcedurePass(proc))
               // println("Inlining procedure: " + proc.id.toString)
-              val mP = rewriter.visit(mod)
+              val mP = rewriter.visit(mod, context)
               // println("** Changed Module **")
               // println(mP.get.toString)
               mP

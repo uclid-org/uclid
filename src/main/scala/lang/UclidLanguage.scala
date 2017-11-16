@@ -748,7 +748,11 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
   // module instances of other modules.
   lazy val instances : List[InstanceDecl] = decls.filter(_.isInstanceOf[InstanceDecl]).map(_.asInstanceOf[InstanceDecl])
   // set of instance names (for easy searching.)
-  lazy val instanceNames : Set[Identifier] = instances.map(_.instanceId).toSet 
+  lazy val instanceNames : Set[Identifier] = instances.map(_.instanceId).toSet
+  // set of type declarations.
+  lazy val typeDeclarationMap : Map[Identifier, Type] = decls.filter(_.isInstanceOf[TypeDecl]).map(_.asInstanceOf[TypeDecl]).map {
+    t => (t.id -> t.typ)
+  }.toMap
 
   // compute the "type" of this module.
   lazy val moduleType : ModuleType = ModuleType(inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)))

@@ -92,8 +92,8 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
 }
 
 class SemanticAnalyzer extends ASTAnalyzer("SemanticAnalyzer", new SemanticAnalyzerPass())  {
-  override def visit(module : Module) : Option[Module] = {
-    val out = visitModule(module, List.empty[ModuleError])
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val out = visitModule(module, List.empty[ModuleError], context)
     if (out.size > 0) {
       val errors = out.map((me) => (me.msg, me.position))
       throw new Utils.ParserErrorList(errors)

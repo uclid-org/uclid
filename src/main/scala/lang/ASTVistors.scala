@@ -60,7 +60,7 @@ abstract class ASTAnalysis {
   def passName : String
   def reset() {}
   def rewind() {}
-  def visit (module : Module) : Option[Module]
+  def visit (module : Module, context : Scope) : Option[Module]
   def finish() {}
 }
 
@@ -245,24 +245,23 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     _in = _out
   }
   /** The main 'do-er' method. */
-  override def visit(module : Module) : Option[Module] = {
-    _out = Some(visitModule(module, _in.get))
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    _out = Some(visitModule(module, _in.get, context : Scope))
     return Some(module)
   }
   // Reset calls reset on the pass.
   override  def reset() = { pass.reset() }
   
   // We now have the code that actually traverses the AST.
-  def visitModule(module : Module, in : T) : T = {
+  def visitModule(module : Module, in : T, initContext : Scope) : T = {
     var result : T = in
-    val emptyContext = Scope.empty
-    val context = emptyContext + module
+    val context = initContext + module
 
-    result = pass.applyOnModule(TraversalDirection.Down, module, result, emptyContext)
+    result = pass.applyOnModule(TraversalDirection.Down, module, result, initContext)
     result = visitIdentifier(module.id, result, context)
     result = module.decls.foldLeft(result)((acc, i) => visitDecl(i, acc, context))
     result = module.cmds.foldLeft(result)((acc, i) => visitCmd(i, acc, context))
-    result = pass.applyOnModule(TraversalDirection.Up, module, result, emptyContext)
+    result = pass.applyOnModule(TraversalDirection.Up, module, result, initContext)
     return result
   }
   def visitDecl(decl : Decl, in : T, context : Scope) : T = {
@@ -898,20 +897,20 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   
   def pass = _pass
   override def passName = _passName
-  override def visit(module : Module) : Option[Module] = visitModule(module)
+  override def visit(module : Module, context : Scope) : Option[Module] = visitModule(module, context)
   
   override def reset() { 
     pass.reset()
   }
   
-  def visitModule(module : Module) : Option[Module] = {
-    val emptyContext = Scope.empty
-    val context = emptyContext + module
+  def visitModule(module : Module, initContext : Scope) : Option[Module] = {
+    val initContext = Scope.empty
+    val context = initContext + module
     val id = visitIdentifier(module.id, context)
     val decls = module.decls.map(visitDecl(_, context)).flatten
     val cmds = module.cmds.map(visitCommand(_, context)).flatten
     val moduleIn = id.flatMap((i) => Some(Module(i, decls, cmds)))
-    val moduleP = moduleIn.flatMap((m) => pass.rewriteModule(m, emptyContext))
+    val moduleP = moduleIn.flatMap((m) => pass.rewriteModule(m, initContext))
     
     return (ASTNode.introducePos(setFilename, moduleP, module.position) match {
       case Some(m) => 

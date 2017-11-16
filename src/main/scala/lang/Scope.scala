@@ -43,6 +43,7 @@ object Scope {
   sealed abstract class ReadOnlyNamedExpression(id : IdentifierBase, typ: Type) extends NamedExpression(id, typ) {
     override val isReadOnly = true
   }
+  case class ModuleDefinition(mod : lang.Module) extends ReadOnlyNamedExpression(mod.id, mod.moduleType)
   case class Instance(instId : Identifier, moduleId : Identifier, instTyp : Type) extends ReadOnlyNamedExpression(instId, instTyp)  
   case class TypeSynonym(typId : Identifier, sTyp: Type) extends ReadOnlyNamedExpression(typId, sTyp)
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
@@ -56,9 +57,9 @@ object Scope {
   case class ProcedureLocalVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ForIndexVar(iId : ConstIdentifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
-  case class SpecVar(varId : Identifier, expr: Expr) extends NamedExpression(varId, BoolType()) // FIXME: make readonly
+  case class SpecVar(varId : Identifier, expr: Expr) extends ReadOnlyNamedExpression(varId, BoolType())
   case class AxiomVar(varId : Identifier, expr : Expr) extends ReadOnlyNamedExpression(varId, BoolType())
-  case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends NamedExpression(enumId, enumTyp)
+  case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends ReadOnlyNamedExpression(enumId, enumTyp)
   case class ForallVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ExistsVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
 
@@ -116,17 +117,28 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
   def filename : Option[String] = {
     module.flatMap((m) => m.filename)
   }
-  val inputs = map.filter(_._2.isInstanceOf[Scope.InputVar]).map(_._2.asInstanceOf[Scope.InputVar]).toSet
-  val vars = map.filter(_._2.isInstanceOf[Scope.StateVar]).map(_._2.asInstanceOf[Scope.StateVar]).toSet
-  val outputs = map.filter(_._2.isInstanceOf[Scope.OutputVar]).map(_._2.asInstanceOf[Scope.OutputVar]).toSet
-  val specs = map.filter(_._2.isInstanceOf[Scope.SpecVar]).map(_._2.asInstanceOf[Scope.SpecVar]).toSet
-  
+  lazy val inputs = map.filter(_._2.isInstanceOf[Scope.InputVar]).map(_._2.asInstanceOf[Scope.InputVar]).toSet
+  lazy val vars = map.filter(_._2.isInstanceOf[Scope.StateVar]).map(_._2.asInstanceOf[Scope.StateVar]).toSet
+  lazy val outputs = map.filter(_._2.isInstanceOf[Scope.OutputVar]).map(_._2.asInstanceOf[Scope.OutputVar]).toSet
+  lazy val specs = map.filter(_._2.isInstanceOf[Scope.SpecVar]).map(_._2.asInstanceOf[Scope.SpecVar]).toSet
+  lazy val moduleDefinitionMap = map.filter(_._2.isInstanceOf[Scope.ModuleDefinition]).map { 
+    d => {
+      val moduleDefn = d._2.asInstanceOf[Scope.ModuleDefinition]
+      (moduleDefn.id -> moduleDefn.mod) 
+    }
+  }.toMap
+
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : Scope = {
     Scope(map + (expr.id -> expr), module, procedure)
   }
   def +(typ : Type) : Scope = {
     Scope(Scope.addTypeToMap(map, typ, module), module, procedure)
+  }
+
+  /** Add a reference to this module (don't expand the module's declarations). */
+  def +&(m : Module) : Scope = {
+    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure)
   }
 
   /** Return a new context with the declarations in this module added to it. */
