@@ -228,6 +228,10 @@ case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
   override def fixity = Operator.INFIX
 }
+case class SelectFromInstance(varId : Identifier) extends Operator {
+  override def toString = "->" + varId
+  override def fixity = Operator.INFIX
+}
 
 sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */

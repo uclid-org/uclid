@@ -115,6 +115,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val OpConcat = "++"
     lazy val OpNeg = "!"
     lazy val OpMinus = "-"
+    lazy val OpSelectFromInstance = "->"
     lazy val KwProcedure = "procedure"
     lazy val KwBool = "bool"
     lazy val KwInt = "int"
@@ -164,7 +165,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "bv", "{", "}", ";", "=", ":=", ":", "::", ".", "->", "*",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat,
-      OpNeg, OpMinus)
+      OpNeg, OpMinus, OpSelectFromInstance)
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNeg, OpMinus,
@@ -203,6 +204,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val RelOp: Parser[String] = OpGT | OpLT | OpEQ | OpNE | OpGE | OpLE
     lazy val UnOp: Parser[String] = OpNeg | OpMinus
     lazy val RecordSelectOp: Parser[Identifier] = positioned { ("." ~> Id) }
+    lazy val SelectFromInstanceOp : Parser[Identifier] = positioned { (OpSelectFromInstance ~> Id) }
     lazy val ArraySelectOp: Parser[List[Expr]] =
       ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ 
       {case e ~ es => (e :: es) }
@@ -283,6 +285,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
               (acc, f) => OperatorApplication(RecordSelect(f), List(acc))
             }
         } |
+        E12 ~ SelectFromInstanceOp ~ rep(SelectFromInstanceOp) ^^ {
+          case e ~ r ~ rs =>
+            (r :: rs).foldLeft(e) { 
+              (acc, f) => OperatorApplication(SelectFromInstance(f), List(acc))
+            }
+        }
         E12 ~ ArraySelectOp ^^ { case e ~ m => ArraySelectOperation(e, m) } |
         E12 ~ ArrayStoreOp ^^ { case e ~ m => ArrayStoreOperation(e, m._1, m._2) } |
         E12 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |
