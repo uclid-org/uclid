@@ -290,7 +290,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
             (r :: rs).foldLeft(e) { 
               (acc, f) => OperatorApplication(SelectFromInstance(f), List(acc))
             }
-        }
+        } |
         E12 ~ ArraySelectOp ^^ { case e ~ m => ArraySelectOperation(e, m) } |
         E12 ~ ArrayStoreOp ^^ { case e ~ m => ArrayStoreOperation(e, m._1, m._2) } |
         E12 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |

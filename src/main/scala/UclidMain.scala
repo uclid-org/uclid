@@ -159,7 +159,6 @@ object UclidMain {
     val filenameAdderPass = new AddFilenameRewriter(None) 
     passManager.addPass(filenameAdderPass)
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
-    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new TypeSynonymFinder())
