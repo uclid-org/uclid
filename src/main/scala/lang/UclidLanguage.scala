@@ -727,6 +727,13 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
   lazy val vars : List[StateVarDecl] = 
     decls.filter(_.isInstanceOf[StateVarDecl]).map(_.asInstanceOf[StateVarDecl]) ++
     decls.filter(_.isInstanceOf[StateVarsDecl]).map(_.asInstanceOf[StateVarsDecl]).flatMap(s => s.ids.map(id => StateVarDecl(id, s.typ)))
+  // module constants.
+  lazy val constants : List[ConstantDecl] =
+    decls.filter(_.isInstanceOf[ConstantDecl]).map(_.asInstanceOf[ConstantDecl])
+  // module functions.
+  lazy val functions : List[FunctionDecl] =
+    decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
+
   // module procedures.
   lazy val procedures : List[ProcedureDecl] = decls.filter(_.isInstanceOf[ProcedureDecl]).map(_.asInstanceOf[ProcedureDecl])
   // module instances of other modules.

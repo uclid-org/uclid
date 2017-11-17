@@ -206,6 +206,8 @@ object ModuleInstantiatorPass {
   case class BoundOutput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class UnboundOutput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class StateVariable(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
+  case class Constant(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
+  case class Function(id : Identifier, sig : FunctionSig) extends InstanceVarRenaming(id, sig.typ)
   type VarMap = Map[Identifier, InstanceVarRenaming]
   type RewriteMap = Map[Expr, Expr]
 
@@ -257,7 +259,15 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val idMap3 = targetModule.vars.foldLeft(idMap2) {
       (mapAcc, v) => mapAcc + (v.id -> MIP.StateVariable(nameProvider(v.id, "var"), v.typ))
     }
-    idMap3
+    // map each constant.
+    val idMap4 = targetModule.constants.foldLeft(idMap3) {
+      (mapAcc, v) => mapAcc + (v.id -> MIP.Constant(nameProvider(v.id, "const"), v.typ))
+    }
+    // map each function.
+    val idMap5 = targetModule.functions.foldLeft(idMap4) {
+      (mapAcc, f) => mapAcc + (f.id -> MIP.Function(nameProvider(f.id, "function"), f.sig))
+    }
+    idMap5
   }
 
   def createNewModule(varMap : VarMap) : Module = {
@@ -266,13 +276,15 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     rewriter.visit(targetModule, Scope.empty).get
   }
 
-  def createNewVariables(varMap : VarMap) : List[StateVarDecl] = {
+  def createNewVariables(varMap : VarMap) : List[Decl] = {
     varMap.map {
       v => {
         v._2 match {
           case MIP.BoundInput(id, t, _t) => Some(StateVarDecl(id, t))
           case MIP.UnboundOutput(id, t) => Some(StateVarDecl(id, t))
           case MIP.StateVariable(id, t) => Some(StateVarDecl(id, t))
+          case MIP.Constant(id, t) => Some(ConstantDecl(id, t))
+          case MIP.Function(id, sig) => Some(FunctionDecl(id, sig))
           case MIP.UnboundInput(_, _) | MIP.BoundOutput(_, _) => None
         }
       }
@@ -285,7 +297,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
         v._2 match {
           case MIP.UnboundInput(id, t) => Some(InputVarDecl(id, t))
           case MIP.BoundInput(_, _, _) | MIP.BoundOutput(_, _) |
-               MIP.UnboundOutput(_, _) | MIP.StateVariable(_, _) =>
+               MIP.UnboundOutput(_, _) | MIP.StateVariable(_, _) |
+               MIP.Constant(_, _) | MIP.Function(_, _) =>
              None
         }
       }
