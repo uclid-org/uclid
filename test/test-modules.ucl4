@@ -45,7 +45,7 @@ module main {
     pc := 0bv8;
   }
 
-  instance alu : alu (cmd : (cmd), a : (r0), b : (r1), result : (res));
+  instance alu_i : alu (cmd : (cmd), a : (r0), b : (r1), result : (res));
 
   property cnt_eq_r0 : (cnt == regs[0bv2]);
 
@@ -63,7 +63,7 @@ module main {
     r0 := regs[r0ind];
     r1 := regs[r1ind];
     
-	call (alu);
+	call (alu_i);
 	
 	regs[r0ind] := res[3:0];
 

@@ -493,16 +493,23 @@ case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends T
   }
   override def toString = "(" + Utils.join(args.map(argToString(_)), ", ") + ")"
 }
-case class ModuleType(inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)]) extends Type {
+case class ModuleType(
+    inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)], 
+    constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
+    instances: List[(Identifier, ModuleType)]) extends Type {
+
   def argToString(arg: (Identifier, Type)) : String = {
     arg._1.toString + ": (" + arg._2.toString + ")"
   }
   def argsToString(args: List[(Identifier, Type)]) = 
     Utils.join(args.map(argToString(_)), ", ")
 
-  lazy val inputMap = inputs.map(a => (a._1 -> a._2)).toMap
-  lazy val outputMap = outputs.map(a => (a._1 -> a._2)).toMap
+  lazy val inputMap : Map[Identifier, Type] = inputs.map(a => (a._1 -> a._2)).toMap
+  lazy val outputMap : Map[Identifier, Type] = outputs.map(a => (a._1 -> a._2)).toMap
   lazy val argSet = inputs.map(_._1).toSet union outputs.map(_._1).toSet
+  lazy val constantMap : Map[Identifier, Type] = constants.map(a => (a._1 -> a._2)).toMap
+  lazy val varMap : Map[Identifier, Type] = variables.map(a => (a._1 -> a._2)).toMap
+  lazy val instanceMap : Map[Identifier, ModuleType] = instances.map(a => (a._1 -> a._2)).toMap
 
   override def toString = 
     "inputs (" + argsToString(inputs) + ") outputs (" + argsToString(outputs) + ")"
@@ -750,7 +757,10 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
   }.toMap
 
   // compute the "type" of this module.
-  lazy val moduleType : ModuleType = ModuleType(inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)))
+  lazy val moduleType : ModuleType = ModuleType(
+      inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)),
+      constants.map(c => (c.id, c.typ)), vars.map(v => (v.id, v.typ)),
+      instances.map(inst => (inst.instanceId, inst.modType.get)))
 
   // the init block.
   lazy val init : Option[InitDecl] = {

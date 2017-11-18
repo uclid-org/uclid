@@ -161,6 +161,8 @@ object UclidMain {
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
+    passManager.addPass(new InstanceModuleNameChecker())
+    passManager.addPass(new InstanceModuleTypeRewriter())
     passManager.addPass(new TypeSynonymFinder())
     passManager.addPass(new TypeSynonymRewriter())
     passManager.addPass(new BitVectorSliceFindWidth())
