@@ -157,7 +157,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
         case OutputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.OutputVar(id, typ)))
         case ConstantDecl(id, typ) => Scope.addToMap(mapAcc, Scope.ConstantVar(id, typ)) 
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
-        case SpecDecl(id, expr) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))
+        case SpecDecl(id, expr, _) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))
         case AxiomDecl(sId, expr) => sId match {
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr))
           case None => mapAcc
@@ -183,7 +183,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
         case OutputVarDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case OutputVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ConstantDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
-        case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
+        case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
     Scope(m2, Some(m), None)

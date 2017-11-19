@@ -102,6 +102,7 @@ sealed trait ASTNode extends Positional with PositionedNode {
   val astNodeId = IdGenerator.newId()
 }
 
+
 object Operator {
   val PREFIX = 0
   val INFIX = 1
@@ -233,6 +234,7 @@ case class SelectFromInstance(varId : Identifier) extends Operator {
   override def fixity = Operator.INFIX
 }
 
+
 sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
   def isConstant = false
@@ -335,6 +337,29 @@ case class LhsSliceSelect(id: Identifier, bitslice : ConstBitVectorSlice) extend
 case class LhsVarSliceSelect(id: Identifier, bitslice: VarBitVectorSlice) extends Lhs(id) {
   override def toString = id.toString + bitslice.toString
 }
+
+/** Type decorators for expressions. */
+sealed abstract class ExprDecorator extends ASTNode
+case class UnknownDecorator(value: String) extends ExprDecorator
+case object LTLExprDecorator extends ExprDecorator
+
+object ExprDecorator {
+  /** Factory constructor. */
+  def parse(e : Expr) : ExprDecorator = {
+    val dec = e match {
+      case Identifier(id) =>
+        if (id == "LTL") {
+          LTLExprDecorator
+        } else {
+          UnknownDecorator(e.toString)
+        }
+      case _ => UnknownDecorator(e.toString)
+    }
+    dec.pos = e.pos
+    return dec
+  }
+}
+
 
 sealed abstract class Type extends PositionedNode {
   def isBool = false
@@ -510,7 +535,12 @@ case class ModuleType(
   lazy val constantMap : Map[Identifier, Type] = constants.map(a => (a._1 -> a._2)).toMap
   lazy val varMap : Map[Identifier, Type] = variables.map(a => (a._1 -> a._2)).toMap
   lazy val instanceMap : Map[Identifier, ModuleType] = instances.map(a => (a._1 -> a._2)).toMap
-
+  lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ instanceMap ++ varMap
+  
+  def typeOf(id : Identifier) : Option[Type] = {
+    typeMap.get(id)
+  }
+  
   override def toString = 
     "inputs (" + argsToString(inputs) + ") outputs (" + argsToString(outputs) + ")"
 }
@@ -694,7 +724,7 @@ case class NextDecl(body: List[Statement]) extends Decl {
     "\n" + PrettyPrinter.indent(1) + "}"
   override def declNames = List.empty
 }
-case class SpecDecl(id: Identifier, expr: Expr) extends Decl {
+case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
   override def toString = "property " + id + ":" + expr + ";  // " + id.position.toString
   override def declNames = List(id)
 }

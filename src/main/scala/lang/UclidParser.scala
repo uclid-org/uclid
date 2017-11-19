@@ -467,7 +467,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val SpecDecl: PackratParser[lang.SpecDecl] = positioned {
-      KwDefineProp ~> Id ~ (":" ~> Expr) <~ ";" ^^ { case id ~ expr => lang.SpecDecl(id,expr) }
+      KwDefineProp ~> Id ~ (":" ~> Expr) <~ ";" ^^ { case id ~ expr => lang.SpecDecl(id,expr, List.empty) } |
+      KwDefineProp ~> Id ~ ("[" ~> rep(Expr) <~ "]") ~  (":" ~> Expr) <~ ";" ^^ 
+         { case id ~ es ~ expr => lang.SpecDecl(id, expr, es.map(ExprDecorator.parse(_))) } 
     }
     
     lazy val AxiomDecl: PackratParser[lang.AxiomDecl] = positioned {

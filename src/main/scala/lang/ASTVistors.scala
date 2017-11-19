@@ -140,6 +140,7 @@ trait ReadOnlyPass[T] {
   def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : Scope) : T = { in }
   def applyOnITE(d : TraversalDirection.T, ite : ITE, in : T, context : Scope) : T = { in }
   def applyOnLambda(d : TraversalDirection.T, lambda : Lambda, in : T, context : Scope) : T = { in }
+  def applyOnExprDecorator(d : TraversalDirection.T, dec : ExprDecorator, in : T, context : Scope) : T = { in }
   def applyOnCmd(d : TraversalDirection.T, cmd : ProofCommand, in : T, context : Scope) : T = { in }
 }
 
@@ -214,6 +215,7 @@ trait RewritePass {
   def rewriteArrayStore(arrStore : ArrayStoreOperation, ctx : Scope) : Option[ArrayStoreOperation] = { Some(arrStore) }
   def rewriteFuncApp(fapp : FuncApplication, ctx : Scope) : Option[FuncApplication] = { Some(fapp) }
   def rewriteITE(ite : ITE, ctx : Scope) : Option[ITE] = { Some(ite) }
+  def rewriteExprDecorator(dec : ExprDecorator, ctx : Scope) : Option[ExprDecorator] = { Some(dec) }
   def rewriteLambda(lambda : Lambda, ctx : Scope) : Option[Lambda] = { Some(lambda) }
 }
 
@@ -385,6 +387,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnSpec(TraversalDirection.Down, spec, result, context)
     result = visitIdentifier(spec.id, result, context)
     result = visitExpr(spec.expr, result, context)
+    result = spec.params.foldLeft(result)((acc, d) => visitExprDecorator(d, acc, context))
     result = pass.applyOnSpec(TraversalDirection.Up, spec, result, context)
     return result
   }
@@ -868,6 +871,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnLambda(TraversalDirection.Up, lambda, result, contextIn)
     return result
   }
+  def visitExprDecorator(dec : ExprDecorator, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnExprDecorator(TraversalDirection.Down, dec, in, context)
+    result = pass.applyOnExprDecorator(TraversalDirection.Up, dec, in, context)
+    return result
+  }
 }
 
 
@@ -1052,8 +1061,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitSpec(spec : SpecDecl, context : Scope) : Option[SpecDecl] = {
     val idP = visitIdentifier(spec.id, context)
     val exprP = visitExpr(spec.expr, context)
+    val decsP = spec.params.map(visitExprDecorator(_, context)).flatten
     val specP = (idP, exprP) match {
-      case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr), context)
+      case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr, decsP), context)
       case _ => None
     }
     return ASTNode.introducePos(setFilename, specP, spec.position)
@@ -1566,5 +1576,10 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }).flatten
     val lambdaP = visitExpr(lambda.e, context).flatMap((e) => pass.rewriteLambda(Lambda(idP, e), contextIn))
     return ASTNode.introducePos(setFilename, lambdaP, lambda.position)
+  }
+
+  def visitExprDecorator(dec : ExprDecorator, context : Scope) : Option[ExprDecorator] = {
+    val decP = pass.rewriteExprDecorator(dec, context)
+    return ASTNode.introducePos(setFilename, decP, dec.position)
   }
 }

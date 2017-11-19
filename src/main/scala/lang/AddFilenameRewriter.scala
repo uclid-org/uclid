@@ -81,6 +81,10 @@ class AddFilenamePass(var filename : Option[String]) extends RewritePass {
     op.filename = filename
     Some(op) 
   }
+  override def rewriteExprDecorator(dec : ExprDecorator, ctx : Scope) : Option[ExprDecorator] = {
+    dec.filename = filename
+    Some(dec)
+  }
 }
 
 class AddFilenameRewriter(filename : Option[String]) extends ASTRewriter(
