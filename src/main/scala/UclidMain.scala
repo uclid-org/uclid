@@ -154,11 +154,9 @@ object UclidMain {
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
     
     val passManager = new PassManager()
-    // for certain unfortunate reasons we need to unroll for-loops before type checking.
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     val filenameAdderPass = new AddFilenameRewriter(None) 
     passManager.addPass(filenameAdderPass)
-    // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new InstanceModuleNameChecker())

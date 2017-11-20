@@ -15,7 +15,6 @@ module cpu {
   type regindex_t;
   type regs_t = [regindex_t]word_t;
   
-  
   var mem : mem_t;
   var regs : regs_t;
   var pc : addr_t;
@@ -63,10 +62,17 @@ module cpu {
 }
   
 module main {
+  type addr_t = common :: addr_t;
+  type mem_t = common :: mem_t;
+  type word_t = common :: word_t;
+  type op_t = common :: op_t;
 
   instance cpu_i : cpu();
+  init {
+    assume (forall (a : addr_t) :: (cpu_i->mem)[a] == 0bv8);
+  }
   next {
-      call (cpu_i);
+    call (cpu_i);
   }
   control {
     print_module;
