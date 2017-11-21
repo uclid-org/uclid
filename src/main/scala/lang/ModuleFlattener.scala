@@ -236,7 +236,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   def createVarMap() : VarMap = {
     // sanity check
     Utils.assert(targetModule.instances.size == 0, "All instances in target module must have been flattened by now!")
-
     val nameProvider = new ContextualNameProvider(Scope.empty + module, "$inst:" + inst.instanceId.toString)
     
     val idMap0 : VarMap = Map.empty

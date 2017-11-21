@@ -523,7 +523,7 @@ case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends T
 case class ModuleType(
     inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)], 
     constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
-    instances: List[(Identifier, ModuleType)]) extends Type {
+    functions : List[(Identifier, MapType)], instances: List[(Identifier, ModuleType)]) extends Type {
 
   def argToString(arg: (Identifier, Type)) : String = {
     arg._1.toString + ": (" + arg._2.toString + ")"
@@ -537,7 +537,8 @@ case class ModuleType(
   lazy val constantMap : Map[Identifier, Type] = constants.map(a => (a._1 -> a._2)).toMap
   lazy val varMap : Map[Identifier, Type] = variables.map(a => (a._1 -> a._2)).toMap
   lazy val instanceMap : Map[Identifier, ModuleType] = instances.map(a => (a._1 -> a._2)).toMap
-  lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ instanceMap ++ varMap
+  lazy val functionMap : Map[Identifier, MapType] = functions.map(a => (a._1 -> a._2)).toMap 
+  lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ instanceMap ++ functionMap ++ varMap
   
   def typeOf(id : Identifier) : Option[Type] = {
     typeMap.get(id)
@@ -796,6 +797,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
   lazy val moduleType : ModuleType = ModuleType(
       inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)),
       constants.map(c => (c.id, c.typ)), vars.map(v => (v.id, v.typ)),
+      functions.map(c => (c.id, c.sig.typ)), 
       instances.map(inst => (inst.instanceId, inst.modType.get)))
 
   // the init block.
