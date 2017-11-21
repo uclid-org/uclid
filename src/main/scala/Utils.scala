@@ -53,8 +53,21 @@ object Utils {
   class RuntimeError (msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause)
   class EvaluationError(msg : String, cause: Throwable = null) extends RuntimeError(msg, cause)
   class AssertionError(msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause)
-  class ParserError(msg:String, val pos : Option[Position], val filename: Option[String], cause:Throwable=null) extends java.lang.RuntimeException(msg, cause)
-  class TypeError(msg: String, pos: Option[Position], filename: Option[String]) extends ParserError(msg, pos, filename)
+  class ParserError(val msg:String, val pos : Option[Position], val filename: Option[String]) extends java.lang.RuntimeException(msg, null) {
+    override def hashCode : Int = {
+      msg.hashCode() + pos.hashCode() + filename.hashCode()
+    }
+  }
+  class TypeError(msg: String, pos: Option[Position], filename: Option[String]) extends ParserError(msg, pos, filename) {
+    override def equals(that: Any) : Boolean = {
+      that match {
+        case that : TypeError =>
+          (msg == that.msg) && (pos == that.pos) && filename == that.filename
+        case _ =>
+          false
+      }
+    }
+  }
   class TypeErrorList(val errors: List[TypeError]) extends java.lang.RuntimeException("Type errors.", null)
   class ParserErrorList(val errors : List[(String, lang.ASTPosition)]) extends java.lang.RuntimeException("Parser Errors", null)
   

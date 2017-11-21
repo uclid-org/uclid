@@ -210,11 +210,11 @@ object ReplacePolymorphicOperators {
 }
 
 
-class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
+class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
 {
   type Memo = MutableMap[IdGenerator.Id, Type]
   var memo : Memo = MutableMap.empty
-  type ErrorList = List[Utils.TypeError]
+  type ErrorList = Set[Utils.TypeError]
   
   var polyOpMap : MutableMap[IdGenerator.Id, Operator] = MutableMap.empty
   var bvOpMap : MutableMap[IdGenerator.Id, Int] = MutableMap.empty
@@ -225,12 +225,12 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
   }
   
   override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : ErrorList, ctx : Scope) : ErrorList = {
-    if (d == TraversalDirection.Up) {
+    if (d == TraversalDirection.Down) {
       try {
         typeOf(e, ctx)
       } catch {
         case p : Utils.TypeError => {
-          return (p :: in)
+          return (in + p)
         }
       }
     }
@@ -243,7 +243,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
         typeOf(lhs, ctx)
       } catch {
         case p : Utils.TypeError => {
-          return (p :: in)
+          return (in + p)
         }
       }
     }
@@ -416,7 +416,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
           }
         }
         case SelectFromInstance(fld) => {
-          println (opapp.toString)
           Utils.assert(argTypes.size == 1, "Expected exactly one argument to SelectFromInstance.")
           val inst = argTypes(0)
           checkTypeError(inst.isInstanceOf[ModuleType], "Argument to select operator must be module instance.", inst.pos, c.filename)
@@ -497,9 +496,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
 class ExpressionTypeChecker extends ASTAnalyzer("ExpressionTypeChecker", new ExpressionTypeCheckerPass())  {
   override def pass = super.pass.asInstanceOf[ExpressionTypeCheckerPass]
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    val errors = visitModule(module, List.empty[Utils.TypeError], context)
+    val errors = visitModule(module, Set.empty[Utils.TypeError], context)
     if (errors.size > 0) {
-      throw new Utils.TypeErrorList(errors)
+      throw new Utils.TypeErrorList(errors.toList)
     }
     return Some(module)
   }

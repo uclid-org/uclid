@@ -69,7 +69,7 @@ module main {
 
   instance cpu_i : cpu();
   init {
-    assume (forall (a : addr_t) :: (cpu_i->mem)[a] == 0bv8);
+    assume (forall (a : addr_t) :: (cpu_i->mxem)[a] == 0bv8);
   }
   next {
     call (cpu_i);
