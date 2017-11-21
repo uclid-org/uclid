@@ -209,12 +209,12 @@ trait RewritePass {
   def rewriteBitVectorLit(bv : BitVectorLit, ctx : Scope) : Option[BitVectorLit] = { Some(bv) }
   def rewriteNumericLit(n : NumericLit, ctx : Scope) : Option[NumericLit] = { Some(n) }
   def rewriteTuple(rec : Tuple, ctx : Scope) : Option[Tuple] = { Some(rec) }
-  def rewriteOperatorApp(opapp : OperatorApplication, ctx : Scope) : Option[OperatorApplication] = { Some(opapp) }
+  def rewriteOperatorApp(opapp : OperatorApplication, ctx : Scope) : Option[Expr] = { Some(opapp) }
   def rewriteOperator(op : Operator, ctx : Scope) : Option[Operator] = { Some(op) }
-  def rewriteArraySelect(arrSel : ArraySelectOperation, ctx : Scope) : Option[ArraySelectOperation] = { Some(arrSel) }
-  def rewriteArrayStore(arrStore : ArrayStoreOperation, ctx : Scope) : Option[ArrayStoreOperation] = { Some(arrStore) }
-  def rewriteFuncApp(fapp : FuncApplication, ctx : Scope) : Option[FuncApplication] = { Some(fapp) }
-  def rewriteITE(ite : ITE, ctx : Scope) : Option[ITE] = { Some(ite) }
+  def rewriteArraySelect(arrSel : ArraySelectOperation, ctx : Scope) : Option[Expr] = { Some(arrSel) }
+  def rewriteArrayStore(arrStore : ArrayStoreOperation, ctx : Scope) : Option[Expr] = { Some(arrStore) }
+  def rewriteFuncApp(fapp : FuncApplication, ctx : Scope) : Option[Expr] = { Some(fapp) }
+  def rewriteITE(ite : ITE, ctx : Scope) : Option[Expr] = { Some(ite) }
   def rewriteExprDecorator(dec : ExprDecorator, ctx : Scope) : Option[ExprDecorator] = { Some(dec) }
   def rewriteLambda(lambda : Lambda, ctx : Scope) : Option[Lambda] = { Some(lambda) }
 }
@@ -1478,7 +1478,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setFilename, recP, rec.position)
   }
   
-  def visitOperatorApp(opapp : OperatorApplication, context : Scope) : Option[OperatorApplication] = {
+  def visitOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     val opAppP = visitOperator(opapp.op, context).flatMap((op) => {
       pass.rewriteOperatorApp(OperatorApplication(op, opapp.operands.map(visitExpr(_, context + opapp)).flatten), context)
     })
@@ -1525,7 +1525,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setFilename, opP, op.position)
   }
 
-  def visitArraySelectOp(arrSel : ArraySelectOperation, context : Scope) : Option[ArraySelectOperation] = {
+  def visitArraySelectOp(arrSel : ArraySelectOperation, context : Scope) : Option[Expr] = {
     val arrSelP = visitExpr(arrSel.e, context) match {
       case Some(e) => pass.rewriteArraySelect(ArraySelectOperation(e, arrSel.index.map(visitExpr(_, context)).flatten), context)
       case _ => None
@@ -1533,7 +1533,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setFilename, arrSelP, arrSel.position)
   }
 
-  def visitArrayStoreOp(arrStore : ArrayStoreOperation, context : Scope) : Option[ArrayStoreOperation] = {
+  def visitArrayStoreOp(arrStore : ArrayStoreOperation, context : Scope) : Option[Expr] = {
     val eP = visitExpr(arrStore.e, context)
     val ind = arrStore.index.map(visitExpr(_, context)).flatten
     val valP = visitExpr(arrStore.value, context)
@@ -1544,7 +1544,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setFilename, arrStoreP, arrStore.position)
   }
 
-  def visitFuncApp(fapp : FuncApplication, context : Scope) : Option[FuncApplication] = {
+  def visitFuncApp(fapp : FuncApplication, context : Scope) : Option[Expr] = {
     val eP = visitExpr(fapp.e, context)
     val args = fapp.args.map(visitExpr(_, context)).flatten
     val fappP = eP match {
@@ -1554,7 +1554,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setFilename, fappP, fapp.position)
   }
   
-  def visitITE(ite: ITE, context : Scope) : Option[ITE] = {
+  def visitITE(ite: ITE, context : Scope) : Option[Expr] = {
     val condP = visitExpr(ite.e, context)
     val tP = visitExpr(ite.t, context)
     val fP = visitExpr(ite.f, context)

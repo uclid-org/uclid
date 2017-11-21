@@ -234,6 +234,9 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   type RewriteMap = MIP.RewriteMap
 
   def createVarMap() : VarMap = {
+    // sanity check
+    Utils.assert(targetModule.instances.size == 0, "All instances in target module must have been flattened by now!")
+
     val nameProvider = new ContextualNameProvider(Scope.empty + module, "$inst:" + inst.instanceId.toString)
     
     val idMap0 : VarMap = Map.empty
@@ -329,6 +332,21 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     case _ => List.empty[Statement]
   }
 
+  // rewrite SelectFromInstance operations.
+  override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
+    opapp.op match {
+      case SelectFromInstance(field) =>
+        val instance = opapp.operands(0)
+        if (instance == inst.instanceId) {
+          val fldP = varMap.get(field)
+          Utils.assert(fldP.isDefined, "Non-existent field should have been detected by now!")
+          Some(fldP.get.ident)
+        } else {
+          Some(opapp)
+        }
+      case _ => Some(opapp)
+    }
+  }
   // add initialization for the instance.
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
     newModule.init match {

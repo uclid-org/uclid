@@ -44,7 +44,7 @@ object Scope {
     override val isReadOnly = true
   }
   case class ModuleDefinition(mod : lang.Module) extends ReadOnlyNamedExpression(mod.id, mod.moduleType)
-  case class Instance(instId : Identifier, moduleId : Identifier, instTyp : Type) extends ReadOnlyNamedExpression(instId, instTyp)  
+  case class Instance(instId : Identifier, moduleId : Identifier, modTyp : Type) extends ReadOnlyNamedExpression(instId, modTyp)  
   case class TypeSynonym(typId : Identifier, sTyp: Type) extends ReadOnlyNamedExpression(typId, sTyp)
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
   case class InputVar(inpId : Identifier, inpTyp: Type) extends ReadOnlyNamedExpression(inpId, inpTyp)
@@ -146,7 +146,8 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
     Utils.assert(module.isEmpty, "A module was already added to this Context.")
     val m1 = m.decls.foldLeft(map){ (mapAcc, decl) =>
       decl match {
-        case instD : InstanceDecl => Scope.addToMap(mapAcc, Scope.Instance(instD.instanceId, instD.moduleId, instD.instanceType))
+        case instD : InstanceDecl => 
+          Scope.addToMap(mapAcc, Scope.Instance(instD.instanceId, instD.moduleId, instD.moduleType))
         case ProcedureDecl(id, sig, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
         case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
         case StateVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.StateVar(id, typ))

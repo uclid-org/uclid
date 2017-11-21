@@ -201,7 +201,7 @@ object UclidMain {
         (mP :: modules, context +& mP)
     }._1
   }
-  
+
   def instantiate(moduleList : List[Module], mainModuleName : Identifier) : Option[Module] = {
     if (moduleList.find(m => m.id == mainModuleName).isEmpty) {
       return None

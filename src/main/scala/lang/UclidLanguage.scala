@@ -290,6 +290,8 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
     op match {
       case RecordSelect(r) => 
         operands(0).toString + "." + r.toString
+      case SelectFromInstance(f) =>
+        operands(0).toString + "->" + f.toString
       case _ => 
         if (op.fixity == Operator.INFIX) {
           "(" + Utils.join(operands.map(_.toString), " " + op + " ") + ")"
@@ -657,6 +659,10 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
   def instanceType : Type = instType match {
     case None => UndefinedType()
     case Some(instT) => instT
+  }
+  def moduleType : Type = modType match {
+    case None => UndefinedType()
+    case Some(modT) => modT
   }
 }
 

@@ -398,7 +398,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
           new BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width + argTypes(1).asInstanceOf[BitVectorType].width)
         }
         case RecordSelect(field) => {
-          checkTypeError(argTypes.size == 1, "Record select operator must have exactly one operand.", opapp.pos, c.filename)
+          Utils.assert(argTypes.size == 1, "Record select operator must have exactly one operand.")
           argTypes(0) match {
             case recType : RecordType =>
               val typOption = recType.fieldType(field)
@@ -414,6 +414,16 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[List[Utils.TypeError]]
               checkTypeError(false, "Argument to record select operator must be of type record.", opapp.pos, c.filename)
               new BoolType()
           }
+        }
+        case SelectFromInstance(fld) => {
+          println (opapp.toString)
+          Utils.assert(argTypes.size == 1, "Expected exactly one argument to SelectFromInstance.")
+          val inst = argTypes(0)
+          checkTypeError(inst.isInstanceOf[ModuleType], "Argument to select operator must be module instance.", inst.pos, c.filename)
+          val modT = inst.asInstanceOf[ModuleType]
+          val fldT = modT.typeMap.get(fld)
+          checkTypeError(fldT.isDefined, "Unknown type for selection: %s.".format(fld.toString), fld.pos, c.filename)
+          fldT.get
         }
       }
     }
