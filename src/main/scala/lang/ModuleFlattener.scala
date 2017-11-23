@@ -61,7 +61,7 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
         }
       }
     }
-  
+
     // first check there are no unknown arguments (arguments that don't correspond to the I/Os of module).
     val badArgs = instT.args.map(_._1).filter(a => !modT.argSet.contains(a))
     val errs1 = badArgs.foldLeft(in) { 
@@ -80,7 +80,7 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
     val errs3 = checkTypes(wiredOutputs, errs2, "output", modT.outputMap)
     errs3
   }
-  
+
   def checkInstance(inst : InstanceDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     val targetModOption = moduleMap.get(inst.moduleId)
     targetModOption match {

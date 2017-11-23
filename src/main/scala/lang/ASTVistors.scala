@@ -127,6 +127,7 @@ trait ReadOnlyPass[T] {
   def applyOnBitVectorSlice(d : TraversalDirection.T, slice : BitVectorSlice, in : T, context : Scope) : T = { in }
   def applyOnExpr(d : TraversalDirection.T, e : Expr, in : T, context : Scope) : T = { in }
   def applyOnIdentifier(d : TraversalDirection.T, id : Identifier, in : T, context : Scope) : T = { in }
+  def applyOnExternalIdentifier(d : TraversalDirection.T, eId : ExternalIdentifier, in : T, context : Scope) : T = { in }
   def applyOnLit(d : TraversalDirection.T, lit : Literal, in : T, context : Scope) : T = { in }
   def applyOnBoolLit(d : TraversalDirection.T, b : BoolLit, in : T, context : Scope) : T = { in }
   def applyOnNumericLit(d : TraversalDirection.T, b : NumericLit, in : T, context : Scope) : T = { in }
@@ -203,6 +204,7 @@ trait RewritePass {
   def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : Scope) : Option[BitVectorSlice] = { Some(slice) }
   def rewriteExpr(e : Expr, ctx : Scope) : Option[Expr] = { Some(e) }
   def rewriteIdentifier(id : Identifier, ctx : Scope) : Option[Identifier] = { Some(id) }
+  def rewriteExternalIdentifier(eId : ExternalIdentifier, ctx : Scope) : Option[Expr] = { Some(eId) }
   def rewriteLit(lit : Literal, ctx : Scope) : Option[Literal] = { Some(lit) }
   def rewriteBoolLit(b : BoolLit, ctx : Scope) : Option[BoolLit] = { Some(b) }
   def rewriteIntLit(i : IntLit, ctx : Scope) : Option[IntLit] = { Some(i) }
@@ -434,22 +436,22 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnType(TraversalDirection.Down, typ, result, context)
     result = typ match {
-      case tempT : TemporalType => visitTemporalType(tempT, in, context)
-      case undefT : UndefinedType => visitUndefinedType(undefT, in, context)
-      case unintT : UninterpretedType => visitUninterpretedType(unintT, in, context)
-      case boolT : BoolType => visitBoolType(boolT, in, context)
-      case intT : IntType => visitIntType(intT, in, context)
-      case bvT : BitVectorType => visitBitVectorType(bvT, in, context)
-      case enumT : EnumType => visitEnumType(enumT, in, context)
-      case tupleT : TupleType => visitTupleType(tupleT, in, context)
-      case recT : RecordType => visitRecordType(recT, in, context)
-      case mapT : MapType => visitMapType(mapT, in, context)
-      case procT : ProcedureType => visitProcedureType(procT, in, context)
-      case arrT : ArrayType => visitArrayType(arrT, in, context)
-      case synT : SynonymType => visitSynonymType(synT, in, context)
-      case extT : ExternalType => visitExternalType(extT, in, context)
-      case instT : ModuleInstanceType => visitModuleInstanceType(instT, in, context)
-      case modT : ModuleType => visitModuleType(modT, in, context)
+      case tempT : TemporalType => visitTemporalType(tempT, result, context)
+      case undefT : UndefinedType => visitUndefinedType(undefT, result, context)
+      case unintT : UninterpretedType => visitUninterpretedType(unintT, result, context)
+      case boolT : BoolType => visitBoolType(boolT, result, context)
+      case intT : IntType => visitIntType(intT, result, context)
+      case bvT : BitVectorType => visitBitVectorType(bvT, result, context)
+      case enumT : EnumType => visitEnumType(enumT, result, context)
+      case tupleT : TupleType => visitTupleType(tupleT, result, context)
+      case recT : RecordType => visitRecordType(recT, result, context)
+      case mapT : MapType => visitMapType(mapT, result, context)
+      case procT : ProcedureType => visitProcedureType(procT, result, context)
+      case arrT : ArrayType => visitArrayType(arrT, result, context)
+      case synT : SynonymType => visitSynonymType(synT, result, context)
+      case extT : ExternalType => visitExternalType(extT, result, context)
+      case instT : ModuleInstanceType => visitModuleInstanceType(instT, result, context)
+      case modT : ModuleType => visitModuleType(modT, result, context)
     }
     result = pass.applyOnType(TraversalDirection.Up, typ, result, context)
     return result
@@ -462,14 +464,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   }
   def visitUndefinedType(undefT : UndefinedType, in : T, context : Scope) : T = {
     var result : T = in
-    result = pass.applyOnUndefinedType(TraversalDirection.Down, undefT, in, context)
-    result = pass.applyOnUndefinedType(TraversalDirection.Up, undefT, in, context)
+    result = pass.applyOnUndefinedType(TraversalDirection.Down, undefT, result, context)
+    result = pass.applyOnUndefinedType(TraversalDirection.Up, undefT, result, context)
     return result
   }
   def visitUninterpretedType(unintT : UninterpretedType, in : T, context : Scope) : T = {
     var result : T = in
-    result = pass.applyOnUninterpretedType(TraversalDirection.Down, unintT, in, context)
-    result = pass.applyOnUninterpretedType(TraversalDirection.Up, unintT, in, context)
+    result = pass.applyOnUninterpretedType(TraversalDirection.Down, unintT, result, context)
+    result = pass.applyOnUninterpretedType(TraversalDirection.Up, unintT, result, context)
     return result
   }
   def visitBoolType(boolT : BoolType, in : T, context : Scope) : T = {
@@ -716,7 +718,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
         result = visitExpr(varSlice.lo, result, context)
       case _ =>
     }
-    result = pass.applyOnBitVectorSlice(TraversalDirection.Up, slice, in, context)
+    result = pass.applyOnBitVectorSlice(TraversalDirection.Up, slice, result, context)
     return result
   }
 
@@ -725,6 +727,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnExpr(TraversalDirection.Down, e, result, context)
     result = e match {
       case i : Identifier => visitIdentifier(i, result, context)
+      case ei : ExternalIdentifier => visitExternalIdentifier(ei, result, context)
       case lit : Literal => visitLiteral(lit, result, context)
       case rec : Tuple => visitTuple(rec, result, context)
       case opapp : OperatorApplication => visitOperatorApp(opapp, result, context)
@@ -739,8 +742,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   }
   def visitIdentifier(id : Identifier, in : T, context : Scope) : T = {
     var result : T = in
-    result = pass.applyOnIdentifier(TraversalDirection.Down, id, in, context)
-    result = pass.applyOnIdentifier(TraversalDirection.Up, id, in, context)
+    result = pass.applyOnIdentifier(TraversalDirection.Down, id, result, context)
+    result = pass.applyOnIdentifier(TraversalDirection.Up, id, result, context)
+    return result
+  }
+  def visitExternalIdentifier(eId : ExternalIdentifier, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnExternalIdentifier(TraversalDirection.Down, eId, result, context)
+    result = pass.applyOnExternalIdentifier(TraversalDirection.Up, eId, result, context)
     return result
   }
   def visitLiteral(lit : Literal, in : T, context : Scope) : T = {
@@ -761,16 +770,16 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   }
   def visitNumericLit(n : NumericLit, in : T, context : Scope) : T = {
     var result : T = in
-    result = pass.applyOnNumericLit(TraversalDirection.Down, n, in, context)
+    result = pass.applyOnNumericLit(TraversalDirection.Down, n, result, context)
     n match {
       case i : IntLit => 
-        result = pass.applyOnIntLit(TraversalDirection.Down, i, in, context)
-        result = pass.applyOnIntLit(TraversalDirection.Up, i, in, context)
+        result = pass.applyOnIntLit(TraversalDirection.Down, i, result, context)
+        result = pass.applyOnIntLit(TraversalDirection.Up, i, result, context)
       case bv : BitVectorLit => 
-        result = pass.applyOnBitVectorLit(TraversalDirection.Down, bv, in, context)
-        result = pass.applyOnBitVectorLit(TraversalDirection.Up, bv, in, context)
+        result = pass.applyOnBitVectorLit(TraversalDirection.Down, bv, result, context)
+        result = pass.applyOnBitVectorLit(TraversalDirection.Up, bv, result, context)
     }
-    result = pass.applyOnNumericLit(TraversalDirection.Up, n, in, context)
+    result = pass.applyOnNumericLit(TraversalDirection.Up, n, result, context)
     return result
   }
   def visitIntLiteral(i : IntLit, in : T, context : Scope) : T = {
@@ -873,8 +882,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   }
   def visitExprDecorator(dec : ExprDecorator, in : T, context : Scope) : T = {
     var result : T = in
-    result = pass.applyOnExprDecorator(TraversalDirection.Down, dec, in, context)
-    result = pass.applyOnExprDecorator(TraversalDirection.Up, dec, in, context)
+    result = pass.applyOnExprDecorator(TraversalDirection.Down, dec, result, context)
+    result = pass.applyOnExprDecorator(TraversalDirection.Up, dec, result, context)
     return result
   }
 }
@@ -1098,7 +1107,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
   
   def visitCommand(cmd : ProofCommand, context : Scope) : Option[ProofCommand] = {
-    val cmdP = pass.rewriteCommand(cmd, context)
+    val argsP = cmd.args.map(e => visitExpr(e, context)).flatten
+    val cmdP = pass.rewriteCommand(ProofCommand(cmd.name, cmd.params, argsP), context)
     return ASTNode.introducePos(setFilename, cmdP, cmd.position)
   }
   
@@ -1425,6 +1435,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitExpr(e : Expr, context : Scope) : Option[Expr] = {
     val eP = (e match {
       case i : Identifier => visitIdentifier(i, context)
+      case eId : ExternalIdentifier => visitExternalIdentifier(eId, context)
       case lit : Literal => visitLiteral(lit, context)
       case rec : Tuple => visitTuple(rec, context)
       case opapp : OperatorApplication => visitOperatorApp(opapp, context)
@@ -1436,10 +1447,14 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }).flatMap(pass.rewriteExpr(_, context))
     return ASTNode.introducePos(setFilename, eP, e.position)
   }
-  
+
   def visitIdentifier(id : Identifier, context : Scope) : Option[Identifier] = {
     val idP = pass.rewriteIdentifier(id, context)
     return ASTNode.introducePos(setFilename, idP, id.position)
+  }
+  def visitExternalIdentifier(eId : ExternalIdentifier, context : Scope) : Option[Expr] = {
+    val eIdP = pass.rewriteExternalIdentifier(eId, context)
+    return ASTNode.introducePos(setFilename, eIdP, eId.position)
   }
   def visitLiteral(lit : Literal, context : Scope) : Option[Literal] = {
     val litP = (lit match {

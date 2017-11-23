@@ -73,13 +73,21 @@ class PassManager {
     val modulesP = passes.foldLeft(modules) { 
       (mods, pass) => {
         pass.reset()
-        val modsP = mods.map {
-          m => {
-            val mP = pass.visit(m, Scope.empty)
+        val initCtx = Scope.empty
+        val initModules = List.empty[Module]
+        val init = (initCtx, initModules)
+        val modsP = mods.foldRight(init) {
+          (m, acc) => {
+            val ctx = acc._1
+            val modules = acc._2
+            val mP = pass.visit(m, ctx)
             pass.rewind()
-            mP
+            mP match {
+              case None => (ctx, modules)
+              case Some(modP) => (ctx +& modP, modP::modules)
+            }
           }
-        }.flatten
+        }._2
         pass.finish()
         modsP
       }

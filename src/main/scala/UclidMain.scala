@@ -193,6 +193,9 @@ object UclidMain {
     }
     // now process each module
     val init = (List.empty[Module], Scope.empty)
+    // NOTE: The foldLeft/:: combination here reverses the order of modules.
+    // The PassManager in instantiate calls run(ms : List[Module]); this version of run uses foldRight. 
+    // So modules end up being processed in the same order in both PassManagers.
     return parsedModules.foldLeft(init) { 
       (acc, m) =>
         val modules = acc._1
@@ -211,6 +214,7 @@ object UclidMain {
     val passManager = new PassManager()
     passManager.addPass(new ModuleInstanceChecker(moduleList))
     passManager.addPass(new ModuleDependencyFinder(moduleList, mainModuleName))
+    passManager.addPass(new ExternalSymbolAnalysis())
     // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
     passManager.addPass(new ModuleFlattener(moduleList, mainModuleName))
     passManager.addPass(new ModuleEliminator(mainModuleName))

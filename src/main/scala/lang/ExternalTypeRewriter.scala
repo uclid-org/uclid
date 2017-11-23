@@ -1,40 +1,77 @@
 package uclid
 package lang
 
-class ExternalTypeAnalysisPass extends ReadOnlyPass[(List[ModuleError], Map[ExternalType, Type])] {
-  type T = (List[ModuleError], Map[ExternalType, Type])
-  override def applyOnExternalType(d : TraversalDirection.T, extT : ExternalType, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up) {
-      if (in._2.contains(extT)) {
-        in
-      } else {
-        context.moduleDefinitionMap.get(extT.moduleId) match {
-          case Some(mod) =>
-            mod.typeDeclarationMap.get(extT.typeId) match {
-              case Some(typ) => 
-                (in._1, in._2 + (extT -> typ))
-              case None =>
-                val msg = "Unknown type '%s' in module '%s'.".format(extT.typeId.toString, mod.id.toString)
-                (ModuleError(msg, extT.typeId.position) :: in._1, in._2)
-            }
+class ExternalTypeMap (val errors : Set[ModuleError], val typeMap : Map[ExternalType, Type]) {
+  def + (error : ModuleError) : ExternalTypeMap =
+    new ExternalTypeMap(errors + error, typeMap)
+
+  def + (extT: ExternalType, typ: Type)  : ExternalTypeMap =
+    new ExternalTypeMap(errors, typeMap + (extT -> typ))
+
+  def toParserErrorList = new Utils.ParserErrorList(errors.toList.map(e => (e.msg, e.position)))
+}
+
+object ExternalTypeMap {
+  def empty = {
+    new ExternalTypeMap(Set.empty, Map.empty)
+  }
+}
+
+class ExternalTypeAnalysisPass extends ReadOnlyPass[ExternalTypeMap] {
+  override def applyOnExternalType(d : TraversalDirection.T, extT : ExternalType, in : ExternalTypeMap, context : Scope) : ExternalTypeMap = {
+    // do this in only only one direction.
+    if (d == TraversalDirection.Down) {
+      return in
+    }
+    // have we already seen this type?
+    if (in.typeMap.contains(extT)) {
+      return in
+    }
+
+    // look this type up in the module.
+    context.moduleDefinitionMap.get(extT.moduleId) match {
+      case Some(mod) =>
+        mod.typeDeclarationMap.get(extT.typeId) match {
+          case Some(typ) => 
+            in + (extT, typ)
           case None =>
-            val msg = "Unknown module: %s.".format(extT.moduleId.toString)
-            (ModuleError(msg, extT.moduleId.position) :: in._1, in._2)
+            val error = ModuleError("Unknown type '%s' in module '%s'.".format(extT.typeId.toString, mod.id.toString), extT.typeId.position)
+            in + error
         }
-      }
-    } else {
-      in
+      case None =>
+        val error = ModuleError("Unknown module: %s.".format(extT.moduleId.toString), extT.moduleId.position)
+        in + error
+    }
+  }
+
+  override def applyOnExternalIdentifier(d : TraversalDirection.T, eId : ExternalIdentifier, in  : ExternalTypeMap, context : Scope) : ExternalTypeMap = {
+    // only one direction.
+    if (d == TraversalDirection.Down) {
+      return in
+    }
+    context.moduleDefinitionMap.get(eId.moduleId) match {
+      case Some(mod) =>
+        mod.functionMap.get (eId.id) match {
+          case Some(funcDecl) => in
+          case None =>
+            val error = ModuleError("Unknown identifier '%s' in module '%s'".format(eId.id, eId.moduleId), eId.id.position)
+            in + error
+        }
+      case None =>
+        val error = ModuleError("Unknown module: %s.".format(eId.moduleId.toString), eId.moduleId.position)
+        in + error
     }
   }
 }
+
 class ExternalTypeAnalysis extends ASTAnalyzer("ExternalTypeAnalysis", new ExternalTypeAnalysisPass()) {
-  in = Some((List.empty[ModuleError], Map.empty[ExternalType, Type]))
-  
+  override def reset() {
+    in = Some(ExternalTypeMap.empty)
+  }
   override def visit(module : Module, context : Scope) : Option[Module] = {
     val analysisResult = visitModule(module, _in.get, context) 
-    val errors = analysisResult._1
-    if (errors.size > 0) {
-      throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)))
+    if (analysisResult.errors.size > 0) {
+      throw analysisResult.toParserErrorList
     }
     _out = Some(analysisResult)
     return Some(module)
@@ -44,9 +81,9 @@ class ExternalTypeAnalysis extends ASTAnalyzer("ExternalTypeAnalysis", new Exter
 class ExternalTypeRewriterPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
   lazy val externalTypeAnalysis = manager.pass("ExternalTypeAnalysis").asInstanceOf[ExternalTypeAnalysis]
-  lazy val typeMap : Map[ExternalType, Type] = externalTypeAnalysis.out.get._2
 
   override def rewriteExternalType(extT : ExternalType, context : Scope) : Option[Type] = {
+    val typeMap : Map[ExternalType, Type] = externalTypeAnalysis.out.get.typeMap
     val typP = typeMap.get(extT)
     Utils.assert(typP.isDefined, "Unknown external types must have been eliminated by now.")
     typP

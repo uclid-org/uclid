@@ -205,6 +205,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val UnOp: Parser[String] = OpNeg | OpMinus
     lazy val RecordSelectOp: Parser[Identifier] = positioned { ("." ~> Id) }
     lazy val SelectFromInstanceOp : Parser[Identifier] = positioned { (OpSelectFromInstance ~> Id) }
+    lazy val SelectFromModuleOp : Parser[(Identifier, Identifier)] = { 
+      Id ~ ("::" ~> Id) ^^ { case modId ~ id => (modId, id) } 
+    }
     lazy val ArraySelectOp: Parser[List[Expr]] =
       ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ 
       {case e ~ es => (e :: es) }
@@ -243,8 +246,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       positioned { TemporalOpNext ~> E0 ^^ { case expr => OperatorApplication(NextTemporalOp(), List(expr)) } | E0 }
     */
     lazy val E1: PackratParser[Expr] = 
-      KwForall ~> IdTypeList ~ "::" ~ E1 ^^ { case ids ~ "::" ~ expr => OperatorApplication(ForallOp(ids), List(expr)) } |
-      KwExists ~> IdTypeList ~ "::" ~ E1 ^^ { case ids ~ "::" ~ expr => OperatorApplication(ExistsOp(ids), List(expr)) } |
+      "(" ~ KwForall ~> IdTypeList ~ ("::" ~> E1) <~ ")" ^^ { case ids ~ expr => OperatorApplication(ForallOp(ids), List(expr)) } |
+      "(" ~ KwExists ~> IdTypeList ~ ("::" ~> E1) <~ ")" ^^ { case ids ~ expr => OperatorApplication(ExistsOp(ids), List(expr)) } |
       E2
 
     /** E2 := E3 OpEquiv E2 | E3  **/
@@ -278,32 +281,38 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     /** E11 := E12 MapOp | E12 **/
     lazy val E11: PackratParser[Expr] = positioned {
-        E12 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
-        E12 ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { 
-          case e ~ r ~ rs =>
-            (r :: rs).foldLeft(e){ 
-              (acc, f) => OperatorApplication(RecordSelect(f), List(acc))
-            }
-        } |
-        E12 ~ SelectFromInstanceOp ~ rep(SelectFromInstanceOp) ^^ {
-          case e ~ r ~ rs =>
-            (r :: rs).foldLeft(e) { 
-              (acc, f) => OperatorApplication(SelectFromInstance(f), List(acc))
-            }
-        } |
         E12 ~ ArraySelectOp ^^ { case e ~ m => ArraySelectOperation(e, m) } |
         E12 ~ ArrayStoreOp ^^ { case e ~ m => ArrayStoreOperation(e, m._1, m._2) } |
         E12 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |
         E12
     }
-    /** E12 := false | true | Number | Id FuncApplication | (Expr) **/
     lazy val E12: PackratParser[Expr] = positioned {
+        E13 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
+        E13 ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { 
+          case e ~ r ~ rs =>
+            (r :: rs).foldLeft(e){ 
+              (acc, f) => OperatorApplication(RecordSelect(f), List(acc))
+            }
+        } |
+        E13 ~ SelectFromInstanceOp ~ rep(SelectFromInstanceOp) ^^ {
+          case e ~ f ~ fs =>
+            (f :: fs).foldLeft(e) { 
+              (acc, f) => OperatorApplication(SelectFromInstance(f), List(acc))
+            }
+        } |
+        E13
+    }
+    /** E12 := false | true | Number | Id FuncApplication | (Expr) **/
+    lazy val E13: PackratParser[Expr] = positioned {
         Bool |
         Number |
         "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
         KwITE ~> ("(" ~> Expr ~ ("," ~> Expr) ~ ("," ~> Expr) <~ ")") ^^ { case e ~ t ~ f => ITE(e,t,f) } |
         KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => Lambda(idtyps, expr) } |
         "(" ~> Expr <~ ")" |
+        SelectFromModuleOp  ^^ {
+          case (moduleId, varId) => lang.ExternalIdentifier(moduleId, varId) 
+        } |        
         Id
     }
     

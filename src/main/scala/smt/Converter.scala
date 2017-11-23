@@ -59,7 +59,7 @@ object Converter {
       case lang.SynonymType(typ) =>
         throw new Utils.UnimplementedException("Synonym types must have been eliminated by now.")
       case lang.UndefinedType() | lang.ProcedureType(_, _) | lang.ExternalType(_, _) |
-           lang.ModuleInstanceType(_) | lang.ModuleType(_, _, _, _, _) | lang.TemporalType() =>
+           lang.ModuleInstanceType(_) | lang.ModuleType(_, _, _, _, _, _) | lang.TemporalType() =>
         throw new AssertionError("Type '" + typ.toString + "' not expected here.")
     }
   }
@@ -137,6 +137,8 @@ object Converter {
          case _ => 
            throw new Utils.RuntimeError("Should never get here.")
        }
+       case lang.ExternalIdentifier(_, _) =>
+         throw new Utils.RuntimeError("Should never get here. ExternalIdentifiers must have been rewritten by this point.")
        case lang.ITE(cond,t,f) =>
          return smt.ITE(toSMT(cond), toSMT(t), toSMT(f))
        case lang.Lambda(ids,le) => 

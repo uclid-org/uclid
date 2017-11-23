@@ -24,14 +24,15 @@ module cpu {
   function word2reg1(w : word_t) : regindex_t;
   function word2nextPC(w : word_t)  : addr_t;
 
+  var inst : word_t;
+  var op : op_t;
+  var r0ind : regindex_t;
+  var r1ind : regindex_t;
+  var r0 : word_t;
+  var r1 : word_t;
+  var result : word_t;
+
   procedure next_instruction() returns () {
-      var inst : word_t;
-      var op : op_t;
-      var r0ind : regindex_t;
-      var r1ind : regindex_t;
-      var r0 : word_t;
-      var r1 : word_t;
-      var result : word_t;
 
       // get the next instruction.
       inst := mem[pc];
@@ -53,7 +54,7 @@ module cpu {
   }
 
   init {
-      assume (forall (r : regindex_t) :: regs[r] == 0bv8);
+      assume (forall (r : regindex_t) :: regs[r] == 1bv8);
   }
 
   next {
@@ -66,15 +67,31 @@ module main {
   type mem_t = common :: mem_t;
   type word_t = common :: word_t;
   type op_t = common :: op_t;
+  type regindex_t = cpu :: regindex_t;
+  
+  const r0index : regindex_t;
+  var sum : word_t; 
 
   instance cpu_i : cpu();
   init {
-    assume (forall (a : addr_t) :: (cpu_i->mxem)[a] == 0bv8);
+    assume (forall (a : addr_t) :: (cpu::word2op(cpu_i->mem[a])) == add);
+    assume (forall (a : addr_t) :: (cpu::word2reg0(cpu_i->mem[a])) == r0index);
+    assume (forall (a : addr_t) :: (cpu::word2reg1(cpu_i->mem[a])) == r0index);
+    sum := 1bv8;
   }
   next {
     call (cpu_i);
+    sum := sum + sum;
   }
+  
+  property add_property : (sum == cpu_i->regs[r0index]);
   control {
     print_module;
+
+    initialize;
+    simulate(1);
+    decide;
+    print_results;
+    print_cex (cpu_i->regs[r0index], sum, cpu_i->r0, cpu_i->r1, cpu_i->result);
   }
 }

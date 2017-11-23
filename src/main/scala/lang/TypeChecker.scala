@@ -187,6 +187,7 @@ object ReplacePolymorphicOperators {
     
     e match {
       case i : Identifier => e
+      case ei : ExternalIdentifier => e
       case l : Literal => e
       case Tuple(es) => Tuple(es.map(r(_)))
       case OperatorApplication(op, operands) =>
@@ -249,10 +250,13 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     }
     return in
   }
-  
+
+  def raiseTypeError(msg: => String, pos: => Position, filename: => Option[String]) {
+      throw new Utils.TypeError(msg, Some(pos), filename)
+  }
   def checkTypeError(condition: Boolean, msg: => String, pos: => Position, filename: => Option[String]) {
     if (!condition) {
-      throw new Utils.TypeError(msg, Some(pos), filename)
+      raiseTypeError(msg, pos, filename)
     }
   }
 
@@ -472,8 +476,22 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     if (cachedType.isEmpty) {
       val typ = e match {
         case i : Identifier =>
-          checkTypeError(c.typeOf(i).isDefined, "Unknown identifier: " + i.name, i.pos, c.filename)
+          checkTypeError(c.typeOf(i).isDefined, "Unknown identifier: %s".format(i.name), i.pos, c.filename)
           (c.typeOf(i).get)
+        case eId : ExternalIdentifier =>
+          val mId = eId.moduleId
+          val fId = eId.id
+          val moduleTypeOption = c.typeOf(mId)
+          checkTypeError(moduleTypeOption.isDefined, "Unknown module: %s.".format(mId.toString), mId.pos, c.filename)
+          val moduleTypeP = moduleTypeOption.get
+          checkTypeError(moduleTypeP.isInstanceOf[ModuleType], "Identifier '%s' is not a module.".format(mId.toString), mId.pos, c.filename)
+          val moduleType = moduleTypeP.asInstanceOf[ModuleType]
+          moduleType.funcMap.get(fId) match {
+            case None => 
+              raiseTypeError("Unknown function '%s' in module '%s'.".format(fId.toString, mId.toString), fId.pos, c.filename)
+              UndefinedType()
+            case Some(fSig) => fSig.typ
+          }
         case b : BoolLit => new BoolType()
         case i : IntLit => new IntType()
         case bv : BitVectorLit => new BitVectorType(bv.width)
@@ -504,11 +522,12 @@ class ExpressionTypeChecker extends ASTAnalyzer("ExpressionTypeChecker", new Exp
   }
 }
 
-class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
+class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
 {
+  type T = Set[ModuleError]
   lazy val manager : PassManager = analysis.manager
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
-  override def applyOnStatement(d : TraversalDirection.T, st : Statement, in : List[ModuleError], context : Scope) : List[ModuleError] = {
+  override def applyOnStatement(d : TraversalDirection.T, st : Statement, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       in
     } else {
@@ -516,20 +535,20 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
         case AssertStmt(e, id) =>
           val eType = exprTypeChecker.typeOf(e, context)
           if (!(eType.isBool || eType.isTemporal)) {
-            ModuleError("Assertion expression must be of Boolean or Temporal type.", st.position) :: in
+            in + ModuleError("Assertion expression must be of Boolean or Temporal type.", st.position)
           } else {
             in
           }
         case AssumeStmt(e, id) =>
           val eType = exprTypeChecker.typeOf(e, context)
           if (!eType.isBool) {
-            ModuleError("Assumption must be Boolean.", st.position) :: in
+            in + ModuleError("Assumption must be Boolean.", st.position)
           } else {
             in
           }
         case HavocStmt(id) =>
           if (!context.doesNameExist(id)) {
-            ModuleError("Unknown identifier in havoc statement.", st.position) :: in
+            in + ModuleError("Unknown identifier in havoc statement.", st.position)
           } else {
             in
           }
@@ -541,7 +560,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
             val rhType = exprTypeChecker.typeOf(rh, context)
             if (!lhType.matches(rhType)) {
               lh.ident.toString
-              ret = ModuleError("%s expected type %s but received type %s.".format(lh.ident.toString, lhType.toString, rhType.toString), st.position) :: ret
+              ret = in + ModuleError("%s expected type %s but received type %s.".format(lh.ident.toString, lhType.toString, rhType.toString), st.position)
             }
           }
 
@@ -549,7 +568,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
           val l2 = rhss.length
 
           if (l1 != l2) {
-            ret = ModuleError("Assignment expected %d expressions but received %d.".format(l1, l2), st.position) :: ret
+            ret = ret + ModuleError("Assignment expected %d expressions but received %d.".format(l1, l2), st.position)
           }
 
           ret
@@ -557,7 +576,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
         case IfElseStmt(cond, _, _) =>
           val cType = exprTypeChecker.typeOf(cond, context)
           if (!cType.isBool) {
-            ModuleError("Condition in if statement must be of type boolean.", st.position) :: in
+            in + ModuleError("Condition in if statement must be of type boolean.", st.position)
           } else {
             in
           }
@@ -567,25 +586,25 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
               range._2 match {
                 case j: IntLit =>
                   if (i.value > j.value) {
-                    ModuleError("Range lower bound must be less than upper bound.", st.position) :: in
+                    in + ModuleError("Range lower bound must be less than upper bound.", st.position) 
                   } else {
                     in
                   }
                 case _ =>
-                  ModuleError("Range lower and upper bounds must be of same type.", st.position) :: in
+                  in + ModuleError("Range lower and upper bounds must be of same type.", st.position)
               }
             case b: BitVectorLit =>
               range._2 match {
                 case c: BitVectorLit =>
                   if (b.value > c.value) {
-                    ModuleError("Range lower bound must be less than upper bound.", st.position) :: in
+                    in + ModuleError("Range lower bound must be less than upper bound.", st.position)
                   } else if (b.width != c.width) {
-                    ModuleError("Range lower and upper bounds must be of same width", st.position) :: in
+                    in + ModuleError("Range lower and upper bounds must be of same width", st.position)
                   } else {
                     in
                   }
                 case _ =>
-                  ModuleError("Range lower and upper bounds must be of same type.", st.position) :: in
+                  in + ModuleError("Range lower and upper bounds must be of same type.", st.position) 
               }
           }
         case CaseStmt(body) =>
@@ -593,7 +612,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
             (acc, c) => {
               var cType = exprTypeChecker.typeOf(c._1, context)
               if (!cType.isBool) {
-                ModuleError("Case clause must be of type boolean.", st.position) :: acc
+                acc + ModuleError("Case clause must be of type boolean.", st.position) 
               } else {
                 acc
               }
@@ -602,12 +621,12 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
         case ProcedureCallStmt(id, callLhss, args) =>
           var ret = in
           if (context.module.isEmpty) {
-            ret = ModuleError("Procedure does not exist.", st.position) :: ret
+            ret = ret + ModuleError("Procedure does not exist.", st.position) 
           }
           val procOption = context.module.get.decls.find((p) => p.isInstanceOf[ProcedureDecl] && p.asInstanceOf[ProcedureDecl].id == id)
 
           if (procOption.isEmpty) {
-            ret = ModuleError("Procedure does not exist.", st.position) :: ret
+            ret = ret + ModuleError("Procedure does not exist.", st.position) 
           }
 
           val proc = procOption.get.asInstanceOf[ProcedureDecl]
@@ -615,7 +634,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
             var (pId, pType) = param.asInstanceOf[(Identifier, Type)]
             var aType = exprTypeChecker.typeOf(arg.asInstanceOf[Expr], context)
             if (!pType.matches(aType)) {
-              ret = ModuleError("Parameter %s expected argument of type %s but received type %s.".format(pId.name, pType.toString, aType.toString), st.position) :: ret
+              ret = ret + ModuleError("Parameter %s expected argument of type %s but received type %s.".format(pId.name, pType.toString, aType.toString), st.position) 
             }
           }
 
@@ -623,15 +642,15 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
           var l2 = args.length
 
           if (l1 != l2) {
-            ret = ModuleError("Procedure expected %d arguments but received %d.".format(l1, l2), st.position) :: ret
+            ret = ret + ModuleError("Procedure expected %d arguments but received %d.".format(l1, l2), st.position) 
           }
 
           for ((retval, lh) <- proc.sig.outParams zip callLhss) {
             val rType = retval.asInstanceOf[(Identifier, Type)]._2
             val lType = exprTypeChecker.typeOf(lh, context)
             if (!rType.matches(lType)) {
-              ret = ModuleError("Left hand variable %s expected return value of type %s but received type %s."
-                .format(lh.toString, lType.toString, rType.toString), st.position) :: ret
+              ret = ret + ModuleError("Left hand variable %s expected return value of type %s but received type %s."
+                .format(lh.toString, lType.toString, rType.toString), st.position) 
             }
           }
 
@@ -639,14 +658,14 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
           l2 = callLhss.length
 
           if (l1 != l2) {
-            ret = ModuleError("Left hand side expected %d return values but received %d.".format(l1, l2), st.position) :: ret
+            ret = ret + ModuleError("Left hand side expected %d return values but received %d.".format(l1, l2), st.position) 
           }
           ret
         case ModuleCallStmt(id) =>
           val instanceNames : Set[Identifier] = context.module.get.instanceNames
           if (!instanceNames.contains(id)) {
             val error = ModuleError("Unknown module instance: " + id.toString, id.position)
-            error :: in
+            in + error
           } else {
             in
           }
@@ -658,9 +677,9 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[List[ModuleError]]
 
 class ModuleTypeChecker extends ASTAnalyzer("ModuleTypeChecker", new ModuleTypeCheckerPass())  {
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    val out = visitModule(module, List.empty[ModuleError], context)
+    val out = visitModule(module, Set.empty[ModuleError], context)
     if (out.size > 0) {
-      val errors = out.map((me) => (me.msg, me.position))
+      val errors = out.map((me) => (me.msg, me.position)).toList
       throw new Utils.ParserErrorList(errors)
     }
     return Some(module)

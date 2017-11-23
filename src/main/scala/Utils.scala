@@ -35,7 +35,7 @@ package uclid
 import scala.util.parsing.input.Position
 
 object Utils {
-  def assert(b: Boolean, err: String) : Unit = {
+  def assert(b: Boolean, err: => String /* error may be lazily computed. */) : Unit = {
     if (!b) { 
       throw new AssertionError(err) 
     }
@@ -43,7 +43,7 @@ object Utils {
   def raiseParsingError(err: String, pos : Position, fileName : Option[String]) : Unit = {
     throw new ParserError(err, Some(pos), fileName)
   }
-  def checkParsingError(b : Boolean, err: String, pos : Position, fileName : Option[String]) : Unit = {
+  def checkParsingError(b : Boolean, err: => String, pos : Position, fileName : Option[String]) : Unit = {
     if (!b) { raiseParsingError(err, pos, fileName) }
   }
   def checkError(b : Boolean, err: String) : Unit = {

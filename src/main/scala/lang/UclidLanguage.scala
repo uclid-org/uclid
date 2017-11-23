@@ -243,6 +243,9 @@ sealed abstract class Expr extends ASTNode {
 case class Identifier(name : String) extends Expr {
   override def toString = name.toString
 }
+case class ExternalIdentifier(moduleId : Identifier, id : Identifier) extends Expr {
+  override def toString = moduleId.toString + "::" + id.toString
+}
 
 sealed abstract class Literal extends Expr {
   /** All literals are constants. */
@@ -523,7 +526,7 @@ case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends T
 case class ModuleType(
     inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)], 
     constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
-    instances: List[(Identifier, ModuleType)]) extends Type {
+    functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, ModuleType)]) extends Type {
 
   def argToString(arg: (Identifier, Type)) : String = {
     arg._1.toString + ": (" + arg._2.toString + ")"
@@ -536,8 +539,9 @@ case class ModuleType(
   lazy val argSet = inputs.map(_._1).toSet union outputs.map(_._1).toSet
   lazy val constantMap : Map[Identifier, Type] = constants.map(a => (a._1 -> a._2)).toMap
   lazy val varMap : Map[Identifier, Type] = variables.map(a => (a._1 -> a._2)).toMap
+  lazy val funcMap : Map[Identifier, FunctionSig] = functions.map(a => (a._1 -> a._2)).toMap
   lazy val instanceMap : Map[Identifier, ModuleType] = instances.map(a => (a._1 -> a._2)).toMap
-  lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ instanceMap
+  lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ funcMap.map(f => (f._1 -> f._2.typ))  ++ instanceMap
   
   def typeOf(id : Identifier) : Option[Type] = {
     typeMap.get(id)
@@ -780,6 +784,8 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
   // module functions.
   lazy val functions : List[FunctionDecl] =
     decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
+  lazy val functionMap : Map[Identifier, FunctionDecl] =
+    functions.map(f => (f.id -> f)).toMap
 
   // module procedures.
   lazy val procedures : List[ProcedureDecl] = decls.filter(_.isInstanceOf[ProcedureDecl]).map(_.asInstanceOf[ProcedureDecl])
@@ -796,6 +802,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
   lazy val moduleType : ModuleType = ModuleType(
       inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)),
       constants.map(c => (c.id, c.typ)), vars.map(v => (v.id, v.typ)),
+      functions.map(c => (c.id, c.sig)), 
       instances.map(inst => (inst.instanceId, inst.modType.get)))
 
   // the init block.
