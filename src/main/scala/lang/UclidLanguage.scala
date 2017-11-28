@@ -184,15 +184,11 @@ sealed abstract class ComparisonOperator() extends Operator {
 case class EqualityOp() extends ComparisonOperator { override def toString = "==" }
 case class InequalityOp() extends ComparisonOperator { override def toString = "!=" } 
 
-sealed abstract class TemporalOperator() extends Operator
-sealed abstract class TemporalInfixOperator() extends TemporalOperator { override def fixity = Operator.INFIX }
-sealed abstract class TemporalPrefixOperator() extends TemporalOperator { override def fixity = Operator.INFIX }
-case class UntilTemporalOp() extends TemporalInfixOperator { override def toString = "U" }
-case class WUntilTemporalOp() extends TemporalInfixOperator { override def toString = "W" }
-case class ReleaseTemporalOp() extends TemporalInfixOperator { override def toString = "R" }
-case class FinallyTemporalOp() extends TemporalPrefixOperator { override def toString = "F" }
-case class GloballyTemporalOp() extends TemporalPrefixOperator { override def toString = "G" }
-case class NextTemporalOp() extends TemporalPrefixOperator { override def toString = "X" }
+sealed abstract class TemporalOperator() extends Operator { override def fixity = Operator.PREFIX }
+case class GloballyTemporalOp() extends TemporalOperator { override def toString = "globally" }
+case class NextTemporalOp() extends TemporalOperator { override def toString = "next" }
+case class UntilTemporalOp() extends TemporalOperator { override def toString = "until" }
+case class FinallyTemporalOp() extends TemporalOperator { override def toString = "finally" }
 
 abstract class BitVectorSlice extends ASTNode {
   def width : Option[Int]

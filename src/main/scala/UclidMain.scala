@@ -157,6 +157,9 @@ object UclidMain {
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     val filenameAdderPass = new AddFilenameRewriter(None) 
     passManager.addPass(filenameAdderPass)
+    passManager.addPass(new LTLOperatorRewriter())
+    passManager.addPass(new LTLOperatorArgumentChecker())
+    passManager.addPass(new LTLNegatedNormalFormRewriter())
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new InstanceModuleNameChecker())
@@ -174,6 +177,7 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new CaseEliminator())
     passManager.addPass(new ControlCommandChecker())
+    passManager.addPass(new LTLPropertyRewriter())
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
     def parseFile(srcFile : String) : List[Module] = {
