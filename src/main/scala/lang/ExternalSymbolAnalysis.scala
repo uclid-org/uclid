@@ -15,6 +15,16 @@ class ExternalSymbolMap (
     val newName : Identifier = nameProvider.get.apply(funcDecl.id, extId.moduleId.toString)
     new ExternalSymbolMap(nameProvider, functionMap + (extId -> (newName, funcDecl)))
   }
+  
+  def getOrAdd(extId : ExternalIdentifier, funcDecl : FunctionDecl) : (ExternalSymbolMap, Identifier) = {
+    functionMap.get(extId) match {
+      case Some((newName, funcDecl)) =>
+        (this, newName)
+      case None =>
+        val newMap = this + (extId, funcDecl)
+        (newMap, newMap.functionMap.get(extId).get._1)
+    }
+  }
 }
 
 object ExternalSymbolMap {
