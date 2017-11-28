@@ -86,12 +86,12 @@ module main {
   
   property add_property : (sum == cpu_i->regs[r0index]);
   control {
-    print_module;
+    //print_module;
 
     initialize;
-    simulate(5);
+    simulate(4);
     decide;
-    print_results;
-    print_cex (cpu_i->regs[r0index], sum, cpu_i->r0, cpu_i->r1, cpu_i->result);
+    //print_results;
+    //print_cex (cpu_i->regs[r0index], sum, cpu_i->r0, cpu_i->r1, cpu_i->result);
   }
 }
