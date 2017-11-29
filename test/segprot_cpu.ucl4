@@ -6,7 +6,7 @@ module common {
   type word_t = bv8;
 
   // Or enums.
-  type op_t = enum { op_add, op_sub, op_load, op_store, op_syscall, op_sysret };
+  type op_t   = enum { op_mov, op_add, op_sub, op_load, op_store, op_syscall, op_sysret };
   type mode_t = enum { usr_mode, sup_mode };
 
   // Or SMT arrays.
@@ -16,18 +16,21 @@ module common {
 module cpu {
   // Import type aliases from common.
   type addr_t = common :: addr_t;
-  type mem_t = common :: mem_t;
+  type mem_t  = common :: mem_t;
   type word_t = common :: word_t;
-  type op_t = common :: op_t;
+  type op_t   = common :: op_t;
   type mode_t = common :: mode_t;
   
   // Types can also be uninterpreted.
   type regindex_t; 
   // And we can use them in maps.
   type regs_t = [regindex_t]word_t;
+
+  // This is an input to the module.
+  input imem : mem_t;
   
   // These are the state variables of this module.
-  var mem  : mem_t;
+  var dmem : mem_t;
   var regs : regs_t;
   var pc   : addr_t;
   var mode : mode_t;
@@ -40,9 +43,11 @@ module cpu {
   function word2op     ( w : word_t )  : op_t;
   function word2reg0   ( w : word_t )  : regindex_t;
   function word2reg1   ( w : word_t )  : regindex_t;
+  function word2imm    ( w : word_t )  : word_t;
   function word2nextPC ( w : word_t )  : addr_t;
 
-  // More state variables ...
+  // More state variables.
+  input nd : bool;
   var inst   : word_t;
   var op     : op_t;
   var r0ind  : regindex_t;
@@ -53,43 +58,54 @@ module cpu {
 
   // Define initial state for the modules.
   init {
-      assume (forall (r : regindex_t) :: regs[r] == 0bv8);
-      pc   := 0bv8;
-      inst := 0bv8;
-      mode := sup_mode;
+    assume (forall (r : regindex_t) :: regs[r] == 0bv8);
+    assume (forall (a : addr_t) :: dmem[a] == 0bv8);
+    pc   := 0bv8;
+    inst := 0bv8;
+    mode := sup_mode;
   }
 
-  // Define the "next" transitions.
+  // Define "next" transition.
   next {
-      // get the next instruction.
-      inst := mem[pc];
-      // find its operation
-      op := word2op(inst);
-      // and its operands
-      r0ind := word2reg0(inst);
-      r1ind := word2reg1(inst);
-      r0 := regs[r0ind];
-      r1 := regs[r1ind];
-      // default value of result!
-      result := r0;
-      // now execute
-
-      // We have case statements!
-      case
-        (op == op_add)     : { result := r0 + r1; }
-        (op == op_sub)     : { result := r0 - r1; }
-        (op == op_load)    : { result := mem[r1]; }
-        (op == op_store)   : { 
-          // And if statements
-          if (mode == sup_mode || r0 < sup_range_lo || r0 >= sup_range_hi) {
-              mem[r0] := r1; 
-          }
+    // get the next instruction.
+    inst := imem[pc];
+    // find its operation
+    op := word2op(inst);
+    // and its operands
+    r0ind := word2reg0(inst);
+    r1ind := word2reg1(inst);
+    r0 := regs[r0ind];
+    r1 := regs[r1ind];
+    
+    // now execute
+    case
+      // we have case statements!
+      (op == op_mov)     : { result := word2imm(inst); pc := pc + 1bv8;}
+      (op == op_add)     : { result := r0 + r1; pc := pc + 1bv8; }
+      (op == op_sub)     : { result := r0 - r1; pc := pc + 1bv8; }
+      (op == op_load)    : { result := dmem[r1]; pc := pc + 1bv8; }
+      (op == op_store)   : { 
+        result := r0;
+        // And if statements
+        if (mode == sup_mode || r0 < sup_range_lo || r0 >= sup_range_hi) {
+          dmem[r0] := r1; 
         }
-        (op == op_syscall) : { mode := sup_mode; }
-        (op == op_sysret)  : { mode := usr_mode; }
-      esac
-      regs[r0ind] := result;
-      pc := pc + 1bv8;
+        pc := pc + 1bv8;
+      }
+      (op == op_syscall) : { 
+        result := r0;
+        if (r0 >= sup_range_lo && r0 < sup_range_hi) {
+          mode := sup_mode; 
+        }
+        pc := pc + 1bv8;
+      }
+      (op == op_sysret)  : { 
+        result := r0;
+        mode := usr_mode; 
+        pc := pc + 1bv8;
+      }
+    esac
+    regs[r0ind] := result;
   }
 }
   
@@ -97,19 +113,21 @@ module main {
   // The is the "main" module: i.e. the module from which proof script commands are executed.
 
   // Import types
-  type addr_t = common :: addr_t;
-  type mem_t = common :: mem_t;
-  type word_t = common :: word_t;
-  type op_t = common :: op_t;
+  type addr_t     = common :: addr_t;
+  type mem_t      = common :: mem_t;
+  type word_t     = common :: word_t;
+  type op_t       = common :: op_t;
   type regindex_t = cpu :: regindex_t;
   
+  // instruction memory is the same for both CPUs.
+  var imem : mem_t;
+
   // Create two instances of the CPU module.
-  instance cpu_i_1 : cpu();
-  instance cpu_i_2 : cpu();
+  instance cpu_i_1 : cpu(imem : (imem));
+  instance cpu_i_2 : cpu(imem : (imem));
 
   init {
     // Assume the two CPUs have the same initial state.
-    assume (forall (a : addr_t) :: cpu_i_1->mem[a] == cpu_i_2->mem[a]);
     assume (cpu_i_1->sup_range_lo == cpu_i_2->sup_range_lo);
     assume (cpu_i_1->sup_range_hi == cpu_i_2->sup_range_hi);
   }
@@ -122,7 +140,7 @@ module main {
   
   // These are our properties.
   property eq_regs : (forall (ri : regindex_t) :: cpu_i_1->regs[ri] == cpu_i_2->regs[ri]);
-  property eq_mem  : (forall (a : addr_t) :: cpu_i_1->mem[a] == cpu_i_2->mem[a]);
+  property eq_mem  : (forall (a : addr_t) :: cpu_i_1->dmem[a] == cpu_i_2->dmem[a]);
   property eq_pc   : (cpu_i_1->pc == cpu_i_2->pc);
   property eq_inst : (cpu_i_1->inst == cpu_i_2->inst);
 
