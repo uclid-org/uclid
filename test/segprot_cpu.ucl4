@@ -1,0 +1,107 @@
+module common {
+  type addr_t = bv8;
+  type word_t = bv8;
+
+  type op_t = enum { op_add, op_sub, op_load /*, op_store, op_syscall, op_sysret*/ };
+  type mem_t = [addr_t]word_t;
+  // type mode_t = enum { usr_mode, sup_mode };
+}
+
+module cpu {
+  type addr_t = common :: addr_t;
+  type mem_t = common :: mem_t;
+  type word_t = common :: word_t;
+  type op_t = common :: op_t;
+  // type mode_t = common :: mode_t;
+  
+  type regindex_t = bv1;
+  type regs_t = [regindex_t]word_t;
+  
+  input mem : mem_t;
+  var regs : regs_t;
+  var pc : addr_t;
+  // var mode : mode_t;
+
+  const sup_range_lo : addr_t;
+  const sup_range_hi : addr_t;
+  
+  function word2op(w : word_t) : op_t;
+  function word2reg0(w : word_t) : regindex_t;
+  function word2reg1(w : word_t) : regindex_t;
+  function word2nextPC(w : word_t)  : addr_t;
+
+  var inst : word_t;
+  var op : op_t;
+  var r0ind : regindex_t;
+  var r1ind : regindex_t;
+  var r0 : word_t;
+  var r1 : word_t;
+  var result : word_t;
+
+  init {
+      assume (forall (r : regindex_t) :: regs[r] == 0bv8);
+      pc := 0bv8;
+      // mode := sup_mode;
+  }
+
+  next {
+      // get the next instruction.
+      inst := mem[pc];
+      // find its operation
+      // op := word2op(inst);
+      // and its operands
+      // r0ind := word2reg0(inst);
+      // r1ind := word2reg1(inst);
+      // r0 := regs[r0ind];
+      // r1 := regs[r1ind];
+      // now execute
+      // case
+        // (op == op_add)     : { result := r0 + r1; }
+        // (op == op_sub)     : { result := r0 - r1; }
+        // (op == op_load)    : { result := mem[r1]; }
+        // (op == op_store)   : { result := r0; /*mem[r0] := r1;*/ }
+        // (op == op_syscall) : { mode := sup_mode; }
+        // (op == op_sysret)  : { mode := usr_mode; }
+      // esac
+      // regs[r0ind] := result;
+      pc := pc + 1bv8;
+  }
+}
+  
+module main {
+  type addr_t = common :: addr_t;
+  type mem_t = common :: mem_t;
+  type word_t = common :: word_t;
+  type op_t = common :: op_t;
+  type regindex_t = cpu :: regindex_t;
+  
+  var sum : word_t; 
+  var mem : mem_t;
+
+  instance cpu_i_1 : cpu(mem : (mem));
+  instance cpu_i_2 : cpu(mem : (mem));
+  init {
+    //assume (forall (a : addr_t) :: (cpu::word2op   (mem[a])) == op_add);
+    //assume (forall (a : addr_t) :: (cpu::word2reg0 (mem[a])) == r0index);
+    //assume (forall (a : addr_t) :: (cpu::word2reg1 (mem[a])) == r0index);
+    //sum := 1bv8;
+  }
+  next {
+    call (cpu_i_1);
+    call (cpu_i_2);
+    sum := sum + sum;
+  }
+  
+  // property add_property : (sum == cpu_i_1->regs[r0index]);
+  // property eq_property : (forall (ri : regindex_t) :: cpu_i_1->regs[ri] == cpu_i_2->regs[ri]);
+  property eq_pc : (cpu_i_1->pc == cpu_i_2->pc);
+  control {
+    print_module;
+    initialize;
+    simulate(2);
+    decide;
+    print_results;
+    print_cex (cpu_i_1->pc, cpu_i_2->pc); // , cpu_i_1->inst, cpu_i_2->inst, cpu_i_1->regs[0bv1], cpu_i_1->regs[1bv1], cpu_i_2->regs[0bv1], cpu_i_2->regs[1bv1]);
+    // print_cex (cpu_i_1->regs[2bv2], cpu_i_2->regs[2bv2], cpu_i_1->regs[3bv2], cpu_i_2->regs[3bv2]);
+  }
+}
