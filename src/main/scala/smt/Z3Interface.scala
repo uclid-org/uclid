@@ -325,9 +325,9 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case _ =>
         throw new Utils.UnimplementedException("No translation for expression yet: " + e.toString)
     }
-    z3AST
-    // if (z3AST.isInstanceOf[z3.Expr]) z3AST.asInstanceOf[z3.Expr].simplify()
-    // else z3AST
+    // z3AST
+    if (z3AST.isInstanceOf[z3.Expr]) z3AST.asInstanceOf[z3.Expr].simplify()
+    else z3AST
   })
   
   override def addConstraint(e : Expr) : Unit = {
