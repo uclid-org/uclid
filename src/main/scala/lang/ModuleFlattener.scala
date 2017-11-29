@@ -385,7 +385,11 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   // rewrite module.
   override def rewriteModuleCall(modCall : ModuleCallStmt, context : Scope) : List[Statement] = {
-    newInputAssignments ++ newNextStatements
+    if (modCall.id == inst.instanceId) {
+      newInputAssignments ++ newNextStatements
+    } else {
+      List(modCall)
+    }
   }
 }
 
@@ -416,9 +420,13 @@ class ModuleFlattenerPass(modules : List[Module], moduleName : Identifier) exten
         Module(module.id, funcDecls ++ module.decls, module.cmds)
     }
   }
-  override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = {
+  override def rewriteModule(moduleIn : Module, ctx : Scope) : Option[Module] = {
     val extSymMap = externalSymbolAnalysis.out.get
-    val modP = rewrite(module, extSymMap)
+    val moduleInP = moduleIn.init match {
+      case Some(initStmts) => moduleIn
+      case None => Module(moduleIn.id, InitDecl(List.empty) :: moduleIn.decls, moduleIn.cmds)
+    }
+    val modP = rewrite(moduleInP, extSymMap)
     Some(modP)
   }
 }

@@ -39,11 +39,8 @@ module main {
   
   property eq_pc : (c1->pc == c2->pc);
   control {
-    print_module;
     initialize;
-    simulate(2);
+    simulate(3);
     decide;
-    print_results;
-    print_cex (c1->pc, c2->pc); 
   }
 }
