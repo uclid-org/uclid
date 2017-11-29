@@ -21,7 +21,7 @@ syn keyword ucl4Type            bool int bv\d\+ enum
 " repeat / condition / label
 syn keyword ucl4Expr            forall exists Lambda 
 syn keyword ucl4Stmt            if else assert assume havoc for skip case esac
-syn keyword ucl4Decl            module init next control function procedure returns call type var input output constant property instance axiom 
+syn keyword ucl4Decl            module init next control function procedure returns call type var input output const property invariant requires ensures instance axiom
 syn keyword ucl4Cmd             initialize simulate decide print_module print_cex print_results k_induction_base k_induction_step clear_context
 " user labels
 syn keyword ucl4Constant        false true
