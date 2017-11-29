@@ -109,7 +109,7 @@ object UclidMain {
       val mainModule = instantiate(modules, mainModuleName)
       mainModule match {
         case Some(m) => execute(m)
-        case None    => throw new Utils.ParserError("Unable to find main module: " + mainModule.toString, None, None)
+        case None    => throw new Utils.ParserError("Unable to find main module.", None, None)
       }
     }
     catch  {
