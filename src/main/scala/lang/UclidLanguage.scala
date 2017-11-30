@@ -295,6 +295,8 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
         operands(0).toString + "." + r.toString
       case SelectFromInstance(f) =>
         operands(0).toString + "->" + f.toString
+      case ForallOp(_) | ExistsOp(_) =>
+        "(" + op.toString + operands(0).toString + ")"
       case _ => 
         if (op.fixity == Operator.INFIX) {
           "(" + Utils.join(operands.map(_.toString), " " + op + " ") + ")"
@@ -574,7 +576,7 @@ case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
     List(Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
 }
 case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Statement]) extends Statement {
-  override def toLines = List("if " + cond.toString + " // " + position.toString, "{ ") ++ 
+  override def toLines = List("if (" + cond.toString + ") // " + position.toString, "{ ") ++ 
                          ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
                          List("} else {") ++ 
                          elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
@@ -735,7 +737,7 @@ case class NextDecl(body: List[Statement]) extends Decl {
   override def declNames = List.empty
 }
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
-  override def toString = "property " + id + ":" + expr + ";  // " + id.position.toString
+  override def toString = "property " + id + " : " + expr + ";  // " + id.position.toString
   override def declNames = List(id)
 }
 case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
