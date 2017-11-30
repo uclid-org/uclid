@@ -427,9 +427,11 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     return result
   }
   def visitCmd(cmd : ProofCommand, in : T, context : Scope) : T = {
-    val result : T = in
-    return pass.applyOnCmd(TraversalDirection.Down, cmd, result, context)
-    return pass.applyOnCmd(TraversalDirection.Up, cmd, result, context)
+    var result : T = in
+    result = pass.applyOnCmd(TraversalDirection.Down, cmd, result, context)
+    result = cmd.args.foldLeft(result)((r, expr) => visitExpr(expr, r, context))
+    result = pass.applyOnCmd(TraversalDirection.Up, cmd, result, context)
+    return result
   }
 
   def visitType(typ: Type, in : T, context : Scope) : T = {

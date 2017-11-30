@@ -1,3 +1,6 @@
+// 
+// Test for type checking in print_cex commands.
+//
 
 module common {
   // This module declares types that are used in the rest of the model.
@@ -88,19 +91,12 @@ module main {
   // The control block defines the commands that will executed as part of the proof script.
   control {
     print_module;
-    // initialize creates symbolic expressions for the init statements.
     initialize;
-    // simulate(3) "unrolls" the module for 3 steps and creates symbolic
-    // expressions for the assertions encountered during those three steps.
     simulate(1);
-    // decide actually checks if these assertions hold.
     decide;
-    // this prints out the results of the verification.
     print_results;
 
-    // Some commands for debugging.
-    // print_cex (cpu_i_1->op, cpu_i_2->op, cpu_i_1->mem, cpu_i_2->mem);
-    // print_cex (cpu_i_1->inst, cpu_i_2->inst, cpu_i_1->op, cpu_i_2->op, cpu_i_1->regs[0bv1], cpu_i_2->regs[0bv1], cpu_i_1->regs[1bv1], cpu_i_2->regs[1bv1]);
-    // print_cex (cpu_i_1->inst, cpu_i_2->inst);
+    // NOTE: This command is expected to create typechecking errors.
+    print_cex (cpu_i_1->r0d /* Unknown field. */, cpu_i_2->r0d  /* Unknown field. */, cpu_1->r1  /* Unknown instance. */, cpu_2->r1 /* Unknown instance. */);
   }
 }
