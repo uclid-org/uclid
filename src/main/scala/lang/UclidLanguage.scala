@@ -576,10 +576,17 @@ case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
     List(Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
 }
 case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Statement]) extends Statement {
-  override def toLines = List("if (" + cond.toString + ") // " + position.toString, "{ ") ++ 
-                         ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
-                         List("} else {") ++ 
-                         elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
+  lazy val lines : List[String] = if (elseblock.size > 0) {
+    List("if (" + cond.toString + ") // " + position.toString, "{ ") ++ 
+    ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
+    List("} else {") ++ 
+    elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")  
+  } else {
+    List("if (" + cond.toString + ") // " + position.toString, "{ ") ++ 
+    ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
+    List("}") 
+  }
+  override def toLines = lines 
 }
 case class ForStmt(id: Identifier, range: (NumericLit,NumericLit), body: List[Statement])
   extends Statement
