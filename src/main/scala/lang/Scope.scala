@@ -99,6 +99,13 @@ object Scope {
 case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl]) {
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: Identifier) = map.contains(name)
+  /** Check if a variable is readonly. */
+  def isNameReadOnly(name: Identifier) = {
+    map.get(name) match { 
+      case Some(namedExpr) => namedExpr.isReadOnly
+      case None => true
+    }
+  }
   /** Return the NamedExpression. */
   def get(id: Identifier) : Option[Scope.NamedExpression] = map.get(id)
   /** Does procedure exist? */

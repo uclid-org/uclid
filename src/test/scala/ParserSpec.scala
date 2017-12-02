@@ -85,6 +85,17 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.size == 5)
     }
   }
+  "test/test-typechecker-6.ucl4" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-typechecker-6.ucl4"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 3)
+    }
+  }
   "test/test-typechecker-3.ucl4" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(List("test/test-typechecker-3.ucl4"))
