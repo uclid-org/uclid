@@ -63,7 +63,7 @@ module main {
     r0 := regs[r0ind];
     r1 := regs[r1ind];
     
-	call (alu_i);
+	next (alu_i);
 	
 	regs[r0ind] := res[3:0];
 

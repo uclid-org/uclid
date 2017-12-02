@@ -134,6 +134,7 @@ module main {
 
   next {
     // These call statements invoke the next state function of the two CPU module instances.
+    // FIXME: next (cpu_i_1)
     call (cpu_i_1);
     call (cpu_i_2);
   }

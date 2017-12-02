@@ -80,6 +80,7 @@ trait ReadOnlyPass[T] {
   def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : Scope) : T = { in }
   def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : Scope) : T = { in }
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : Scope) : T = { in }
+  def applyOnSynthesisFunction(d : TraversalDirection.T, synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = { in }
   def applyOnStateVar(d : TraversalDirection.T, stVar : StateVarDecl, in : T, context : Scope) : T = { in }
   def applyOnStateVars(d : TraversalDirection.T, stVars : StateVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnInputVar(d : TraversalDirection.T, inpvar : InputVarDecl, in : T, context : Scope) : T = { in }
@@ -143,6 +144,7 @@ trait ReadOnlyPass[T] {
   def applyOnLambda(d : TraversalDirection.T, lambda : Lambda, in : T, context : Scope) : T = { in }
   def applyOnExprDecorator(d : TraversalDirection.T, dec : ExprDecorator, in : T, context : Scope) : T = { in }
   def applyOnCmd(d : TraversalDirection.T, cmd : ProofCommand, in : T, context : Scope) : T = { in }
+  def applyOnGrammar(d : TraversalDirection.T, grammar : Grammar, in : T, context : Scope) : T = { in }
 }
 
 /* AST Visitor that rewrites and generates a new AST. */
@@ -157,6 +159,7 @@ trait RewritePass {
   def rewriteInstance(inst : InstanceDecl, ctx : Scope) : Option[InstanceDecl] = { Some(inst) }
   def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : Scope) : Option[FunctionDecl] = { Some(func) }
+  def rewriteSynthesisFunction(synFunc : SynthesisFunctionDecl, ctx : Scope) : Option[SynthesisFunctionDecl] = { Some(synFunc) }
   def rewriteStateVar(stVar : StateVarDecl, ctx : Scope) : Option[StateVarDecl] = { Some(stVar) }
   def rewriteStateVars(stVars : StateVarsDecl, ctx : Scope) : Option[StateVarsDecl] = { Some(stVars) }
   def rewriteInputVar(inpvar : InputVarDecl, ctx : Scope) : Option[InputVarDecl] = { Some(inpvar) }
@@ -219,6 +222,7 @@ trait RewritePass {
   def rewriteITE(ite : ITE, ctx : Scope) : Option[Expr] = { Some(ite) }
   def rewriteExprDecorator(dec : ExprDecorator, ctx : Scope) : Option[ExprDecorator] = { Some(dec) }
   def rewriteLambda(lambda : Lambda, ctx : Scope) : Option[Lambda] = { Some(lambda) }
+  def rewriteGrammar(grammar : Grammar, ctx : Scope) : Option[Grammar] = { Some(grammar) }
 }
 
 class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAnalysis {
@@ -279,6 +283,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case outVars : OutputVarsDecl => visitOutputVars(outVars, result, context)
       case const : ConstantDecl => visitConstant(const, result, context)
       case func : FunctionDecl => visitFunction(func, result, context)
+      case synFunc : SynthesisFunctionDecl => visitSynthesisFunction(synFunc, result, context)
       case init : InitDecl => visitInit(init, result, context)
       case next : NextDecl => visitNext(next, result, context)
       case spec : SpecDecl => visitSpec(spec, result, context)
@@ -326,6 +331,21 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitIdentifier(func.id, result, context)
     result = visitFunctionSig(func.sig, result, context)
     result = pass.applyOnFunction(TraversalDirection.Up, func, result, context)
+    return result
+  }
+  def visitSynthesisFunction(synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnSynthesisFunction(TraversalDirection.Down, synFunc, result, context)
+    result = visitIdentifier(synFunc.id, result, context)
+    result = visitFunctionSig(synFunc.sig, result, context)
+    // FIXME: add function parameters to context
+    result = synFunc.requires.foldLeft(result)((acc, reqExp) => visitExpr(reqExp, acc, context))
+    result = synFunc.ensures.foldLeft(result)((acc, ensExp) => visitExpr(ensExp, acc, context))
+    result = synFunc.grammar match {
+      case Some(g) => visitGrammar(g, result, context)
+      case None => result
+    }
+    result = pass.applyOnSynthesisFunction(TraversalDirection.Up, synFunc, result, context)
     return result
   }
   def visitStateVar(stVar : StateVarDecl, in : T, context : Scope) : T = {
@@ -888,6 +908,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnExprDecorator(TraversalDirection.Up, dec, result, context)
     return result
   }
+  def visitGrammar(grammar : Grammar, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnGrammar(TraversalDirection.Down, grammar, result, context)
+    result = pass.applyOnGrammar(TraversalDirection.Up, grammar, result, context)
+    return result
+  }
 }
 
 
@@ -935,6 +961,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case outputVars : OutputVarsDecl => visitOutputVars(outputVars, context)
       case constDecl : ConstantDecl => visitConstant(constDecl, context)
       case funcDecl : FunctionDecl => visitFunction(funcDecl, context)
+      case synFuncDecl : SynthesisFunctionDecl => visitSynthesisFunction(synFuncDecl, context)
       case initDecl : InitDecl => visitInit(initDecl, context)
       case nextDecl : NextDecl => visitNext(nextDecl, context)
       case specDecl : SpecDecl => visitSpec(specDecl, context)
@@ -995,7 +1022,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     return ASTNode.introducePos(setFilename, funcP, func.position)
   }
-  
+
+  def visitSynthesisFunction(synFunc : SynthesisFunctionDecl, context : Scope) : Option[SynthesisFunctionDecl] = {
+    val idP = visitIdentifier(synFunc.id, context)
+    val sigP = visitFunctionSig(synFunc.sig, context)
+    // FIXME: need to add function variables to context
+    val requiresP = synFunc.requires.map(e => visitExpr(e, context)).flatten
+    val ensuresP = synFunc.ensures.map(e => visitExpr(e, context)).flatten
+    val grammarP = synFunc.grammar.flatMap(g => visitGrammar(g, context))
+    (idP, sigP) match {
+      case (Some(id), Some(sig)) =>
+        val synFuncP = SynthesisFunctionDecl(id, sig, requiresP, ensuresP, grammarP)
+        pass.rewriteSynthesisFunction(synFuncP, context)
+      case _ => None
+    }
+  }
   def visitStateVar(stVar : StateVarDecl, context : Scope) : Option[StateVarDecl] = {
     val idP = visitIdentifier(stVar.id, context)
     val typP = visitType(stVar.typ, context)
@@ -1598,5 +1639,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitExprDecorator(dec : ExprDecorator, context : Scope) : Option[ExprDecorator] = {
     val decP = pass.rewriteExprDecorator(dec, context)
     return ASTNode.introducePos(setFilename, decP, dec.position)
+  }
+  def visitGrammar(grammar : Grammar, context : Scope) : Option[Grammar] = {
+    val grammarP = pass.rewriteGrammar(grammar, context)
+    return ASTNode.introducePos(setFilename, grammarP, grammar.position)
   }
 }

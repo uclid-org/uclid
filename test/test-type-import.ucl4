@@ -80,7 +80,7 @@ module main {
     sum := 1bv8;
   }
   next {
-    call (cpu_i);
+    next (cpu_i);
     sum := sum + sum;
   }
   

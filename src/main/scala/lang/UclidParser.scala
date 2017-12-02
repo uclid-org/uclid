@@ -150,7 +150,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwForall = "forall"
     lazy val KwExists = "exists"
     lazy val KwDefault = "default"
-    
+    lazy val KwSynthesis = "synthesis"
+    lazy val KwGrammar = "grammar"
+    lazy val KwRequires = "requires"
+    lazy val KwEnsures = "ensures"
+    lazy val KwInvariant = "invariant"
     lazy val KwDefineProp = "property"
     lazy val KwDefineAxiom = "axiom"
 
@@ -174,7 +178,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwCase, KwEsac, KwFor, KwIn, KwRange, KwInstance, KwInput, KwOutput,
       KwConst, KwModule, KwType, KwEnum, KwRecord, KwSkip, 
       KwFunction, KwControl, KwInit, KwNext, KwITE, KwLambda,
-      KwDefineProp, KwDefineAxiom, KwForall, KwExists, KwDefault)
+      KwDefineProp, KwDefineAxiom, KwForall, KwExists, KwDefault,
+      KwSynthesis, KwGrammar, KwRequires, KwEnsures, KwInvariant)
       // TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
       // TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
   
@@ -386,7 +391,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case l ~ ls ~ ":=" ~ r ~ rs => AssignStmt(l::ls, r::rs) } |
       KwCall ~> LhsList ~ (":=" ~> Id) ~ ExprList <~ ";" ^^
         { case lhss ~ id ~ args => ProcedureCallStmt(id, lhss, args) } |
-      KwCall ~ "(" ~> Id <~ ")" ~ ";" ^^
+      KwNext ~ "(" ~> Id <~ ")" ~ ";" ^^
         { case id => lang.ModuleCallStmt(id) } |
       KwIf ~ "(" ~> (Expr <~ ")") ~ BlockStatement ~ (KwElse ~> BlockStatement) ^^
         { case e ~ f ~ g => IfElseStmt(e,f,g)} |
@@ -459,12 +464,18 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val ConstDecl : PackratParser[lang.ConstantDecl] = positioned {
       KwConst ~> IdType <~ ";" ^^ { case (id,typ) => lang.ConstantDecl(id,typ)}
     }
-      
+
     lazy val FuncDecl : PackratParser[lang.FunctionDecl] = positioned {
       KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) <~ ";" ^^ 
       { case id ~ idtyps ~ rt => lang.FunctionDecl(id, lang.FunctionSig(idtyps, rt)) }
     }
-      
+
+    lazy val SynthFuncDecl : PackratParser[lang.SynthesisFunctionDecl] = positioned {
+      KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) <~ ";" ^^
+      { case id ~ idtyps ~ rt =>
+          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), List.empty, List.empty, None)
+      }
+    }
     lazy val InitDecl : PackratParser[lang.InitDecl] = positioned { 
       KwInit ~> BlockStatement ^^ 
         { case b => lang.InitDecl(b) }
@@ -487,7 +498,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val Decl: PackratParser[Decl] = 
-      positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl | 
+      positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl | SynthFuncDecl |
                   VarDecl | VarsDecl | InputDecl | InputsDecl | OutputDecl | OutputsDecl | 
                   ConstDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl | AxiomDecl)
   

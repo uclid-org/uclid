@@ -648,6 +648,8 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
     ": " + retType
 }
 
+sealed abstract class Grammar extends ASTNode
+
 sealed abstract class Decl extends ASTNode {
   def declNames : List[Identifier]
 }
@@ -727,6 +729,11 @@ case class ConstantDecl(id: Identifier, typ: Type) extends Decl {
 }
 case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl {
   override def toString = "function " + id + sig + ";  // " + position.toString 
+  override def declNames = List(id)
+}
+case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, requires: List[Expr], ensures: List[Expr], grammar : Option[Grammar]) extends Decl {
+  // FIXME: printout requires and ensures conditions.
+  override def toString = "synthesis function " + id + sig + "; //" + position.toString()
   override def declNames = List(id)
 }
 case class InitDecl(body: List[Statement]) extends Decl {

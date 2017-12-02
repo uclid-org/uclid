@@ -78,6 +78,6 @@ module main {
     simulate (4);
     decide;
     print_results;
-    print_cex (invocation, operand_ruid, operand_euid, operand_suid, operand_fsuid, process_ruid, process_euid, process_suid, process_fsuid);
+    // print_cex (invocation, operand_ruid, operand_euid, operand_suid, operand_fsuid, process_ruid, process_euid, process_suid, process_fsuid);
   }
 }
