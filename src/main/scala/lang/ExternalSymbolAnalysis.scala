@@ -7,7 +7,7 @@ class ExternalSymbolMap (
   val nameProvider : Option[ContextualNameProvider], val externalMap: Map[ExternalIdentifier, (Identifier, ModuleExternal)]) {
 
   def + (module : Module, context : Scope) : ExternalSymbolMap = {
-    val newProvider = new ContextualNameProvider(context, "$external_function")
+    val newProvider = new ContextualNameProvider(context, "$external")
     new ExternalSymbolMap(Some(newProvider), externalMap)
   }
 
@@ -57,19 +57,23 @@ class ExternalSymbolAnalysis extends ASTAnalyzer("ExternalSymbolAnalysis", new E
   }
 }
 
-  /*
-  override def rewriteModule(mod : Module, context : Scope) : Option[Module] = {
-    val funcMap : Map[ExternalIdentifier, (Identifier, FunctionDecl)] = externalTypeAnalysis.out.get.functionMap
-    val newFunctions : List[FunctionDecl] = funcMap.map(e => FunctionDecl(e._2._1, e._2._2.sig)).toList
-    val modP = Module(mod.id, newFunctions ++ mod.decls, mod.cmds)
-    Some(modP)
+class ExternalSymbolRewriterPass(externalSymbolMap: ExternalSymbolMap) extends RewritePass {
+  override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
+    val extDecls = externalSymbolMap.externalMap.map(p => {
+      p._2._2 match {
+        case f : FunctionDecl => FunctionDecl(p._2._1, f.sig)
+        case c : ConstantDecl => ConstantDecl(p._2._1, c.typ)
+      }
+    }).toList
+    Some(Module(module.id, extDecls ++ module.decls, module.cmds))
   }
-
-  override def rewriteExternalIdentifier(eId : ExternalIdentifier, context : Scope) : Option[Expr] = {
-    val funcMap : Map[ExternalIdentifier, (Identifier, FunctionDecl)] = externalTypeAnalysis.out.get.functionMap
-    val idP = funcMap.get(eId)
-    Utils.assert(idP.isDefined, "Unknown external identifiers must have been eliminated by now: " + eId.toString)
-    Some(idP.get._1)
+  override def rewriteExternalIdentifier(extId : ExternalIdentifier, context : Scope) : Option[Expr] = {
+    externalSymbolMap.externalMap.get(extId) match {
+      case Some((newId, _)) => Some(newId)
+      case None => throw new Utils.RuntimeError("Unknown external identifiers must have been eliminated by now.")
+    }
   }
-  */
+}
 
+class ExternalSymbolRewriter(externalSymbolMap: ExternalSymbolMap) extends ASTRewriter(
+    "ExternalSymbolRewriter", new ExternalSymbolRewriterPass(externalSymbolMap))

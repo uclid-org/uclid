@@ -55,7 +55,7 @@ class PassManager {
     val init : Option[Module] = Some(module)
     passes.foldLeft(init){
       (mod, pass) => {
-        // println("running pass: %s; moduleDefined: %s".format(pass.passName, mod.isDefined.toString))
+        // println("[1] running pass: %s; moduleDefined: %s".format(pass.passName, mod.isDefined.toString))
         mod.flatMap(pass.visit(_, context))
       }
     }
@@ -73,6 +73,7 @@ class PassManager {
     val modulesP = passes.foldLeft(modules) {
       (mods, pass) => {
         pass.reset()
+        // println("[2] running pass: " + pass.passName)
         val initCtx = Scope.empty
         val initModules = List.empty[Module]
         val init = (initCtx, initModules)

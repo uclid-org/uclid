@@ -339,14 +339,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     case _ => List.empty[Statement]
   }
 
-  // rewrite external identifiers.
-  override def rewriteExternalIdentifier(extId : ExternalIdentifier, context : Scope) : Option[Expr] = {
-    externalSymbolMap.externalMap.get(extId) match {
-      case Some((newId, _)) => Some(newId)
-      case None => throw new Utils.RuntimeError("Unknown external identifiers must have been eliminated by now.")
-    }
-  }
-
   // rewrite SelectFromInstance operations.
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     opapp.op match {
@@ -419,13 +411,8 @@ class ModuleFlattenerPass(modules : List[Module], moduleName : Identifier) exten
         val modP = rewriter.visit(module, Scope.empty).get
         rewrite(modP, extSymbolMapP)
       case Nil =>
-        val extDecls = extSymMap.externalMap.map(p => {
-          p._2._2 match {
-            case f : FunctionDecl => FunctionDecl(p._2._1, f.sig)
-            case c : ConstantDecl => ConstantDecl(p._2._1, c.typ)
-          }
-        }).toList
-        Module(module.id, extDecls ++ module.decls, module.cmds)
+        val rewriter = new ExternalSymbolRewriter(extSymMap)
+        rewriter.visit(module, Scope.empty).get
     }
   }
   override def rewriteModule(moduleIn : Module, ctx : Scope) : Option[Module] = {
