@@ -70,7 +70,7 @@ module main {
   type regindex_t = cpu :: regindex_t;
   
   const r0index : regindex_t;
-  var sum : word_t; 
+  var sum : common :: word_t;
 
   instance cpu_i : cpu();
   init {

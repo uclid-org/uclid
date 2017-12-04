@@ -350,8 +350,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       ("[") ~> Type ~ (rep ("," ~> PrimitiveType) <~ "]") ~ Type ^^ { case t ~ ts ~ rt => lang.ArrayType(t :: ts, rt)}
     }
     lazy val SynonymType : PackratParser[lang.SynonymType] = positioned ( Id ^^ { case id => lang.SynonymType(id) } )
+    lazy val ExternalType : PackratParser[lang.ExternalType] = positioned {
+      Id ~ ("::" ~> Id) ^^ { case moduleId ~ typeId => lang.ExternalType(moduleId, typeId) }
+    }
     lazy val Type : PackratParser[Type] = positioned {
-      MapType | ArrayType | EnumType | TupleType | RecordType | PrimitiveType | SynonymType
+      MapType | ArrayType | EnumType | TupleType | RecordType | ExternalType | SynonymType | PrimitiveType
     }
 
     lazy val IdType : PackratParser[(Identifier,Type)] =
@@ -435,10 +438,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
   
     lazy val TypeDecl : PackratParser[lang.TypeDecl] = positioned {
       KwType ~> Id ~ ("=" ~> Type) <~ ";" ^^ { case id ~ t => lang.TypeDecl(id,t) } |
-      KwType ~> Id <~ ";" ^^ { case id => lang.TypeDecl(id, lang.UninterpretedType(id)) } |
-      KwType ~> Id ~ "=" ~ Id ~ "::" ~ Id <~ ";" ^^ { 
-        case synonymId ~ "=" ~ moduleId ~ "::" ~ typId => lang.TypeDecl(synonymId, lang.ExternalType(moduleId, typId))    
-      }
+      KwType ~> Id <~ ";" ^^ { case id => lang.TypeDecl(id, lang.UninterpretedType(id)) }
     }
       
     lazy val VarsDecl : PackratParser[lang.StateVarsDecl] = positioned {
