@@ -1,30 +1,30 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Author: Pramod Subramanyan
 
  * Class to track scope/context for UCLID ASTs.
@@ -44,7 +44,7 @@ object Scope {
     override val isReadOnly = true
   }
   case class ModuleDefinition(mod : lang.Module) extends ReadOnlyNamedExpression(mod.id, mod.moduleType)
-  case class Instance(instId : Identifier, moduleId : Identifier, modTyp : Type) extends ReadOnlyNamedExpression(instId, modTyp)  
+  case class Instance(instId : Identifier, moduleId : Identifier, modTyp : Type) extends ReadOnlyNamedExpression(instId, modTyp)
   case class TypeSynonym(typId : Identifier, sTyp: Type) extends ReadOnlyNamedExpression(typId, sTyp)
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
   case class InputVar(inpId : Identifier, inpTyp: Type) extends ReadOnlyNamedExpression(inpId, inpTyp)
@@ -69,14 +69,14 @@ object Scope {
   }
   def addTypeToMap(map : Scope.IdentifierMap, typ : Type, module : Option[Module]) : Scope.IdentifierMap = {
     typ match {
-      case enumTyp : EnumType => 
+      case enumTyp : EnumType =>
         enumTyp.ids.foldLeft(map)((m, id) => {
           m.get(id) match {
             case Some(namedExpr) =>
               namedExpr match {
                 case EnumIdentifier(eId, eTyp) =>
-                  Utils.checkParsingError(eTyp == enumTyp, 
-                      "Identifier " + eId.name + " redeclared as a member of a different enum.", 
+                  Utils.checkParsingError(eTyp == enumTyp,
+                      "Identifier " + eId.name + " redeclared as a member of a different enum.",
                       eTyp.pos, module.flatMap(_.filename))
                   m
                 case _ =>
@@ -101,7 +101,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
   def doesNameExist(name: Identifier) = map.contains(name)
   /** Check if a variable is readonly. */
   def isNameReadOnly(name: Identifier) = {
-    map.get(name) match { 
+    map.get(name) match {
       case Some(namedExpr) => namedExpr.isReadOnly
       case None => true
     }
@@ -128,10 +128,10 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
   lazy val vars = map.filter(_._2.isInstanceOf[Scope.StateVar]).map(_._2.asInstanceOf[Scope.StateVar]).toSet
   lazy val outputs = map.filter(_._2.isInstanceOf[Scope.OutputVar]).map(_._2.asInstanceOf[Scope.OutputVar]).toSet
   lazy val specs = map.filter(_._2.isInstanceOf[Scope.SpecVar]).map(_._2.asInstanceOf[Scope.SpecVar]).toSet
-  lazy val moduleDefinitionMap = map.filter(_._2.isInstanceOf[Scope.ModuleDefinition]).map { 
+  lazy val moduleDefinitionMap = map.filter(_._2.isInstanceOf[Scope.ModuleDefinition]).map {
     d => {
       val moduleDefn = d._2.asInstanceOf[Scope.ModuleDefinition]
-      (moduleDefn.id -> moduleDefn.mod) 
+      (moduleDefn.id -> moduleDefn.mod)
     }
   }.toMap
 
@@ -149,11 +149,11 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
   }
 
   /** Return a new context with the declarations in this module added to it. */
-  def +(m: Module) : Scope = { 
+  def +(m: Module) : Scope = {
     Utils.assert(module.isEmpty, "A module was already added to this Context.")
     val m1 = m.decls.foldLeft(map){ (mapAcc, decl) =>
       decl match {
-        case instD : InstanceDecl => 
+        case instD : InstanceDecl =>
           Scope.addToMap(mapAcc, Scope.Instance(instD.instanceId, instD.moduleId, instD.moduleType))
         case ProcedureDecl(id, sig, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
         case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
@@ -163,7 +163,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
         case InputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.InputVar(id, typ)))
         case OutputVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.OutputVar(id, typ))
         case OutputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.OutputVar(id, typ)))
-        case ConstantDecl(id, typ) => Scope.addToMap(mapAcc, Scope.ConstantVar(id, typ)) 
+        case ConstantDecl(id, typ) => Scope.addToMap(mapAcc, Scope.ConstantVar(id, typ))
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SynthesisFunctionDecl(id, sig, _, _, _) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SpecDecl(id, expr, _) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))
@@ -176,7 +176,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
     }
     val m2 = m.decls.foldLeft(m1){(mapAcc, decl) =>
       decl match {
-        case ProcedureDecl(id, sig, _, _) => 
+        case ProcedureDecl(id, sig, _, _) =>
           val m1 = sig.inParams.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = sig.outParams.foldLeft(m1)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           m2
@@ -217,7 +217,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
   def +(lambda: Lambda) : Scope = {
-    val newMap = lambda.ids.foldLeft(map){ 
+    val newMap = lambda.ids.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }
     return Scope(newMap, module, procedure)
@@ -240,12 +240,12 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
       case _ => this
     }
   }
-  
+
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {
     map.get(id).flatMap((e) => Some(e.typ))
   }
-  
+
   def isQuantifierVar(id : Identifier) : Boolean = {
     (map.get(id).flatMap{
       (p) => p match {
@@ -260,7 +260,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
 }
 
 class ContextualNameProvider(ctx : Scope, prefix : String) {
-  var index = 1 
+  var index = 1
   def apply(name: Identifier, tag : String) : Identifier = {
     var newId = Identifier(prefix + "$" + tag + "$" + name + "_" + index.toString)
     index = index + 1

@@ -1,30 +1,30 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Authors: Rohit Sinha, Pramod Subramanyan
 
  * Symbolic simulator/model checker for UCLID5.
@@ -56,20 +56,20 @@ class SymbolicSimulator (module : Module) {
   var results : List[CheckResult] = List.empty
   val initAssumes = module.axioms.foldLeft(List.empty[smt.Expr])((acc, axiom) => smt.Converter.exprToSMT(axiom.expr, scope) :: acc)
   var assumes : List[smt.Expr] = initAssumes
-  
+
   type SymbolTable = Map[Identifier, smt.Expr];
   var symbolTable : SymbolTable = Map.empty
   type FrameTable = ArrayBuffer[SymbolTable]
   var frameTable : FrameTable = ArrayBuffer.empty
-  
-  def newHavocSymbol(name: String, t: smt.Type) = 
+
+  def newHavocSymbol(name: String, t: smt.Type) =
     new smt.Symbol("$undef_" + UniqueIdGenerator.unique() + "_" + name, t)
   def newInputSymbol(name: String, step: Int, t: smt.Type) = {
     new smt.Symbol("$input_" + step +"_" + name, t)
   }
-  def newConstantSymbol(name: String, t: smt.Type) = 
+  def newConstantSymbol(name: String, t: smt.Type) =
     new smt.Symbol("$const_"+name,t)
-  
+
   def execute(solver : smt.SolverInterface) : List[CheckResult] = {
     // add axioms as assumptions.
     module.cmds.foreach {
@@ -81,10 +81,10 @@ class SymbolicSimulator (module : Module) {
             results = List.empty
             symbolTable = Map.empty
             frameTable.clear()
-          case "initialize" => 
+          case "initialize" =>
             initialize(false, true, false)
             results = List.empty
-          case "simulate" => 
+          case "simulate" =>
             simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false)
           case "k_induction_base" =>
             val k = cmd.args(0).asInstanceOf[IntLit].value.toInt
@@ -99,7 +99,7 @@ class SymbolicSimulator (module : Module) {
             // assumes.foreach((e) => println("assumption : " + e.toString))
             // asserts.foreach((e) => println("assertion  : " + e.toString + "; " + e.expr.toString))
             solver.addAssumptions(assumes)
-            results = asserts.foldLeft(results){ 
+            results = asserts.foldLeft(results){
               case (acc, e) =>
                 val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e.expr)))
                 val result = sat.result match {
@@ -116,7 +116,7 @@ class SymbolicSimulator (module : Module) {
             printCEX(results, cmd.args)
           case "print_module" =>
             println(module.toString)
-          case _ => 
+          case _ =>
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }
       }
@@ -138,7 +138,7 @@ class SymbolicSimulator (module : Module) {
         }
       }
     }
-    symbolTable = if (!havocInit && module.init.isDefined) { 
+    symbolTable = if (!havocInit && module.init.isDefined) {
       simulate(0, module.init.get.body, initSymbolTable)
     } else {
       initSymbolTable
@@ -156,7 +156,7 @@ class SymbolicSimulator (module : Module) {
     // printSymbolTable(symbolTable)
   }
 
-  def simulate(number_of_steps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean) : SymbolTable = 
+  def simulate(number_of_steps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean) : SymbolTable =
   {
     def newInputSymbols(st : SymbolTable, step : Int) : SymbolTable = {
       scope.map.foldLeft(st)((acc, decl) => {
@@ -168,7 +168,7 @@ class SymbolicSimulator (module : Module) {
     }
     var currentState = symbolTable
     var states = new ArrayBuffer[SymbolTable]()
-    
+
     for (step <- 1 to number_of_steps) {
       // println("*** BEFORE STEP " + step.toString + "****")
       // printSymbolTable(currentState)
@@ -189,21 +189,21 @@ class SymbolicSimulator (module : Module) {
     val passCount = assertionResults.count((p) => p.result.isTrue)
     val failCount = assertionResults.count((p) => p.result.isFalse)
     val undetCount = assertionResults.count((p) => p.result.isUndefined)
-    
+
     Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
     println("%d assertions passed.".format(passCount))
     println("%d assertions failed.".format(failCount))
     println("%d assertions indeterminate.".format(undetCount))
-    
+
     if (failCount > 0) {
-      assertionResults.foreach{ (p) => 
+      assertionResults.foreach{ (p) =>
         if (p.result.isFalse) {
           println("  FAILED -> " + p.assert.toString)
         }
       }
     }
     if (undetCount > 0) {
-      assertionResults.foreach{ (p) => 
+      assertionResults.foreach{ (p) =>
         if (p.result.isUndefined) {
           println("  UNDEF -> " + p.assert.toString)
         }
@@ -221,13 +221,13 @@ class SymbolicSimulator (module : Module) {
 
   def printCEX(res : CheckResult, exprs : List[Expr]) {
     println("CEX for assertion @ " + res.assert.pos.toString)
-    val exprsToPrint = if (exprs.size == 0) { 
+    val exprsToPrint = if (exprs.size == 0) {
       val vars = (scope.inputs ++ scope.vars ++ scope.outputs).map(_.id)
       vars.toList.sortWith((l, r) => l.name < r.name)
     } else {
       exprs
     }
-    
+
     val model = res.result.model.get
     val indices = 0 to (frameTable.size - 1)
     (indices zip frameTable).foreach{ case (i, frame) => {
@@ -240,10 +240,10 @@ class SymbolicSimulator (module : Module) {
 
   def printFrame(f : SymbolTable, m : smt.Model, exprs : List[Expr]) {
     def expr(id : lang.Identifier) : Option[smt.Expr] = {
-      if (f.contains(id)) { Some(evaluate(id, f)) } 
+      if (f.contains(id)) { Some(evaluate(id, f)) }
       else { None }
     }
-    
+
     exprs.foreach { (e) => {
       try {
         val result = m.evalAsString(evaluate(e, f))
@@ -272,14 +272,14 @@ class SymbolicSimulator (module : Module) {
       property :: asserts
     }}
   }
-  
+
   /** Assume assertions (for inductive proofs). */
   def assumeAssertions(symbolTable : SymbolTable) {
     this.assumes ++= scope.specs.foldLeft(this.assumes){
       (acc, prop) => (evaluate(prop.expr, symbolTable)) :: acc
     }
   }
-  
+
 
   def simulate(iter : Int, stmts: List[Statement], symbolTable: SymbolTable) : SymbolTable = {
     return stmts.foldLeft(symbolTable)((acc,i) => simulate(iter, i, acc));
@@ -289,7 +289,7 @@ class SymbolicSimulator (module : Module) {
     // FIXME: Make sure module has a next declaration.
     simulate(iter, module.next.get.body, symbolTable)
   }
-  
+
   def simulate(iter : Int, s: Statement, symbolTable: SymbolTable) : SymbolTable = {
     def recordSelect(field : String, rec : smt.Expr) = {
       smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
@@ -313,9 +313,9 @@ class SymbolicSimulator (module : Module) {
       def rhs(i: (Lhs,smt.Expr)) = { i._2 }
       (lhss zip args).foreach { x =>
         lhs(x) match {
-          case LhsId(id) => 
+          case LhsId(id) =>
             st = st + (id -> rhs(x))
-          case LhsArraySelect(id, indices) => 
+          case LhsArraySelect(id, indices) =>
             st = st + (id -> smt.ArrayStoreOperation(st(id), indices.map(i => evaluate(i, st)), rhs(x)))
           case LhsRecordSelect(id, fields) =>
             st = st + (id -> simulateRecordUpdateExpr(st(id), fields.map(_.toString), rhs(x)))
@@ -333,13 +333,13 @@ class SymbolicSimulator (module : Module) {
     }
     s match {
       case SkipStmt() => return symbolTable
-      case AssertStmt(e, id) => 
-        this.asserts = AssertInfo("assertion", iter, evaluate(e,symbolTable), s.position) :: this.asserts 
+      case AssertStmt(e, id) =>
+        this.asserts = AssertInfo("assertion", iter, evaluate(e,symbolTable), s.position) :: this.asserts
         return symbolTable
-      case AssumeStmt(e, id) => 
+      case AssumeStmt(e, id) =>
         this.assumes ++= List(evaluate(e,symbolTable))
         return symbolTable
-      case HavocStmt(id) => 
+      case HavocStmt(id) =>
         return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(scope.typeOf(id).get)))
       case AssignStmt(lhss,rhss) =>
         val es = rhss.map(i => evaluate(i, symbolTable));
@@ -351,7 +351,7 @@ class SymbolicSimulator (module : Module) {
         var then_st : SymbolTable = simulate(iter, then_branch, symbolTable)
         var else_st : SymbolTable = simulate(iter, else_branch, symbolTable)
         return symbolTable.keys.filter { id => then_modifies.contains(id) || else_modifies.contains(id) }.
-          foldLeft(symbolTable){ (acc,id) => 
+          foldLeft(symbolTable){ (acc,id) =>
             acc.updated(id, smt.ITE(evaluate(e, symbolTable), then_st(id), else_st(id)))
           }
       case ForStmt(id, range, body) => throw new Utils.UnimplementedException("Cannot symbolically execute For loop")
@@ -368,12 +368,12 @@ class SymbolicSimulator (module : Module) {
       case AssertStmt(e, id) => Set.empty
       case AssumeStmt(e, id) => Set.empty
       case HavocStmt(id) => Set(id)
-      case AssignStmt(lhss,rhss) => 
+      case AssignStmt(lhss,rhss) =>
         return lhss.map(lhs => lhs.ident).toSet
-      case IfElseStmt(e,then_branch,else_branch) => 
+      case IfElseStmt(e,then_branch,else_branch) =>
         return writeSet(then_branch) ++ writeSet(else_branch)
       case ForStmt(id, range, body) => return writeSet(body)
-      case CaseStmt(body) => 
+      case CaseStmt(body) =>
         return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2) }
       case ProcedureCallStmt(id,lhss,args) =>
         throw new Utils.RuntimeError("ProcedureCallStmt must have been inlined by now.")
@@ -388,11 +388,11 @@ class SymbolicSimulator (module : Module) {
      e match {
        case OperatorApplication(op,args) =>
          return OperatorApplication(op, args.map(x => substitute(x, id, arg)))
-       case ArraySelectOperation(a,index) => 
+       case ArraySelectOperation(a,index) =>
          return ArraySelectOperation(a, index.map(x => substitute(x, id, arg)))
-       case ArrayStoreOperation(a,index,value) => 
+       case ArrayStoreOperation(a,index,value) =>
          return ArrayStoreOperation(a, index.map(x => substitute(x, id, arg)), substitute(value, id, arg))
-       case FuncApplication(f,args) => 
+       case FuncApplication(f,args) =>
          return FuncApplication(substitute(f,id,arg), args.map(x => substitute(x,id,arg)))
        case ITE(cond,t,f) =>
          return ITE(substitute(cond,id,arg), substitute(t,id,arg), substitute(f,id,arg))
@@ -410,11 +410,11 @@ class SymbolicSimulator (module : Module) {
      e match {
        case smt.OperatorApplication(op,args) =>
          return smt.OperatorApplication(op, args.map(x => substituteSMT(x, s, arg)))
-       case smt.ArraySelectOperation(a,index) => 
+       case smt.ArraySelectOperation(a,index) =>
          return smt.ArraySelectOperation(a, index.map(x => substituteSMT(x, s, arg)))
-       case smt.ArrayStoreOperation(a,index,value) => 
+       case smt.ArrayStoreOperation(a,index,value) =>
          return smt.ArrayStoreOperation(a, index.map(x => substituteSMT(x, s, arg)), substituteSMT(value, s, arg))
-       case smt.FunctionApplication(f,args) => 
+       case smt.FunctionApplication(f,args) =>
          return smt.FunctionApplication(substituteSMT(f,s,arg), args.map(x => substituteSMT(x,s,arg)))
        case smt.ITE(cond,t,f) =>
          return smt.ITE(substituteSMT(cond,s,arg), substituteSMT(t,s,arg), substituteSMT(f,s,arg))

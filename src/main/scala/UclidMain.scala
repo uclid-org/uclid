@@ -1,30 +1,30 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Authors: Rohit Sinha, Pramod Subramanyan
 
  * UCLID main file.
@@ -50,11 +50,11 @@ object UclidMain {
       var srcFiles: List[String] = Nil
       var debugOptions : Set[String] = Set.empty[String]
   }
-  
+
   def getOptions(args: Array[String]) {
     def isSwitch(s : String) = (s(0) == '-')
     var ignore = false
-   
+
     for (i <- args.indices) {
       if (ignore) {
         ignore = false
@@ -87,7 +87,7 @@ object UclidMain {
       }
     }
   }
-  
+
   val usage = """
     Usage: UclidMain [options] filename [filenames]
     Options:
@@ -98,12 +98,12 @@ object UclidMain {
   def main(args: Array[String]) {
     if (args.length == 0) println(usage)
     val opts = getOptions(args)
-    
+
     if (options.help) {
       println(usage)
       sys.exit(1)
     }
-    try { 
+    try {
       val modules = compile(options.srcFiles)
       val mainModuleName = Identifier(options.mainModule)
       val mainModule = instantiate(modules, mainModuleName)
@@ -138,7 +138,7 @@ object UclidMain {
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
-            println("Error at " + err._2.toString + ": " + err._1 + "\n" + err._2.pos.longString) 
+            println("Error at " + err._2.toString + ": " + err._1 + "\n" + err._2.pos.longString)
           }
         }
         println("Parsing failed. " + ps.errors.size.toString + " errors found.")
@@ -148,14 +148,14 @@ object UclidMain {
         System.exit(2)
     }
   }
-  
+
   def compile(srcFiles : List[String]) : List[Module] = {
     type NameCountMap = Map[Identifier, Int]
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
-    
+
     val passManager = new PassManager()
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
-    val filenameAdderPass = new AddFilenameRewriter(None) 
+    val filenameAdderPass = new AddFilenameRewriter(None)
     passManager.addPass(filenameAdderPass)
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
@@ -181,9 +181,9 @@ object UclidMain {
       filenameAdderPass.setFilename(srcFile)
       UclidParser.parseModel(srcFile, text)
     }
-    
+
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
-      (acc, srcFile) => acc ++ parseFile(srcFile) 
+      (acc, srcFile) => acc ++ parseFile(srcFile)
     }
     val modIdSeq = parsedModules.map(m => (m.id, m.position))
     val moduleErrors = SemanticAnalyzerPass.checkIdRedeclaration(modIdSeq, List.empty[ModuleError])
@@ -194,9 +194,9 @@ object UclidMain {
     // now process each module
     val init = (List.empty[Module], Scope.empty)
     // NOTE: The foldLeft/:: combination here reverses the order of modules.
-    // The PassManager in instantiate calls run(ms : List[Module]); this version of run uses foldRight. 
+    // The PassManager in instantiate calls run(ms : List[Module]); this version of run uses foldRight.
     // So modules end up being processed in the same order in both PassManagers.
-    return parsedModules.foldLeft(init) { 
+    return parsedModules.foldLeft(init) {
       (acc, m) =>
         val modules = acc._1
         val context = acc._2
@@ -225,7 +225,7 @@ object UclidMain {
 
     // run passes.
     val moduleListP = passManager.run(moduleList)
-    
+
     // return main module.
     moduleListP.find((m) => m.id == mainModuleName)
   }

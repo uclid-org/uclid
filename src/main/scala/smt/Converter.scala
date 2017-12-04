@@ -1,30 +1,30 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Author: Pramod Subramanyan
  *
  * UCLID AST to SMT AST converter.
@@ -35,22 +35,22 @@ package smt
 
 object Converter {
   type SymbolTable = Map[lang.Identifier, smt.Symbol]
-  
+
   def typeToSMT(typ : lang.Type) : smt.Type = {
     typ match {
       case lang.UninterpretedType(id) =>
         smt.UninterpretedType(id.name)
-      case lang.IntType() => 
+      case lang.IntType() =>
         smt.IntType()
-      case lang.BoolType() => 
+      case lang.BoolType() =>
         smt.BoolType()
-      case lang.BitVectorType(w) => 
+      case lang.BitVectorType(w) =>
         smt.BitVectorType(w)
-      case lang.MapType(inTypes,outType) => 
-        smt.MapType(inTypes.map(typeToSMT(_)), typeToSMT(outType)) 
-      case lang.ArrayType(inTypes,outType) => 
-        smt.ArrayType(inTypes.map(typeToSMT(_)), typeToSMT(outType)) 
-      case lang.TupleType(argTypes) => 
+      case lang.MapType(inTypes,outType) =>
+        smt.MapType(inTypes.map(typeToSMT(_)), typeToSMT(outType))
+      case lang.ArrayType(inTypes,outType) =>
+        smt.ArrayType(inTypes.map(typeToSMT(_)), typeToSMT(outType))
+      case lang.TupleType(argTypes) =>
         smt.TupleType(argTypes.map(typeToSMT(_)))
       case lang.RecordType(fields) =>
         smt.RecordType(fields.map((f) => (f._1.toString, typeToSMT(f._2))))
@@ -63,7 +63,7 @@ object Converter {
         throw new AssertionError("Type '" + typ.toString + "' not expected here.")
     }
   }
-  
+
   def opToSMT(op : lang.Operator) : smt.Operator = {
     op match {
       // Integer operators.
@@ -102,7 +102,7 @@ object Converter {
       case lang.ForallOp(vs) => return smt.ForallOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
       case lang.ExistsOp(vs) => return smt.ExistsOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
       // Polymorphic operators are not allowed.
-      case p : lang.PolymorphicOperator => 
+      case p : lang.PolymorphicOperator =>
         throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")
       case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
     }
@@ -115,37 +115,37 @@ object Converter {
       val typ = scope.typeOf(id).get
       smt.Symbol(id.name, typeToSMT(typ))
     }
-    
+
      expr match {
-       case id : lang.Identifier => idToSMT(id) 
+       case id : lang.Identifier => idToSMT(id)
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
        case lang.Tuple(args) => smt.MakeTuple(toSMTs(args))
        case lang.OperatorApplication(op,args) =>
          return smt.OperatorApplication(opToSMT(op), args.map((a) => exprToSMT(a, scope + lang.OperatorApplication(op, args))))
-       case lang.ArraySelectOperation(a,index) => 
+       case lang.ArraySelectOperation(a,index) =>
          return smt.ArraySelectOperation(toSMT(a), toSMTs(index))
-       case lang.ArrayStoreOperation(a,index,value) => 
-         return smt.ArrayStoreOperation(toSMT(a), toSMTs(index), toSMT(value)) 
+       case lang.ArrayStoreOperation(a,index,value) =>
+         return smt.ArrayStoreOperation(toSMT(a), toSMTs(index), toSMT(value))
        case lang.FuncApplication(f,args) => f match {
-         case lang.Identifier(id) => 
-           return smt.FunctionApplication(toSMT(f), toSMTs(args)) 
-         case lang.Lambda(idtypes,le) => 
+         case lang.Identifier(id) =>
+           return smt.FunctionApplication(toSMT(f), toSMTs(args))
+         case lang.Lambda(idtypes,le) =>
            // FIXME: beta sub
            throw new Utils.UnimplementedException("Beta reduction is not implemented yet.")
-         case _ => 
+         case _ =>
            throw new Utils.RuntimeError("Should never get here.")
        }
        case lang.ExternalIdentifier(_, _) =>
          throw new Utils.RuntimeError("Should never get here. ExternalIdentifiers must have been rewritten by this point.")
        case lang.ITE(cond,t,f) =>
          return smt.ITE(toSMT(cond), toSMT(t), toSMT(f))
-       case lang.Lambda(ids,le) => 
+       case lang.Lambda(ids,le) =>
          throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
     }
   }
-  
+
   def exprToSMT(expr : lang.Expr, symbolTable : Map[lang.Identifier, Expr], scope : lang.Scope) : smt.Expr = {
     def toSMT(expr : lang.Expr) : smt.Expr = exprToSMT(expr, symbolTable, scope)
     def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e))
@@ -167,33 +167,33 @@ object Converter {
        case opapp : lang.OperatorApplication =>
          return smt.OperatorApplication(
              opToSMT(opapp.op), opapp.operands.map((a) => exprToSMT(a, symbolTable, scope + opapp)))
-       case lang.ArraySelectOperation(a,index) => 
+       case lang.ArraySelectOperation(a,index) =>
          return smt.ArraySelectOperation(toSMT(a), toSMTs(index))
-       case lang.ArrayStoreOperation(a,index,value) => 
-         return smt.ArrayStoreOperation(toSMT(a), toSMTs(index), toSMT(value)) 
+       case lang.ArrayStoreOperation(a,index,value) =>
+         return smt.ArrayStoreOperation(toSMT(a), toSMTs(index), toSMT(value))
        case lang.FuncApplication(f,args) => f match {
-         case lang.Identifier(id) => 
-           return smt.FunctionApplication(toSMT(f), toSMTs(args)) 
-         case lang.Lambda(idtypes,le) => 
+         case lang.Identifier(id) =>
+           return smt.FunctionApplication(toSMT(f), toSMTs(args))
+         case lang.Lambda(idtypes,le) =>
            // FIXME: beta sub
            throw new Utils.UnimplementedException("Beta reduction is not implemented yet.")
-         case _ => 
+         case _ =>
            throw new Utils.RuntimeError("Should never get here.")
        }
        case lang.ITE(cond,t,f) =>
          return smt.ITE(toSMT(cond), toSMT(t), toSMT(f))
-       case lang.Lambda(ids,le) => 
+       case lang.Lambda(ids,le) =>
          throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
-       case _ => 
+       case _ =>
          throw new Utils.UnimplementedException("Unimplemented expression: " + expr.toString)
     }
   }
-  
+
   def renameSymbols(expr : smt.Expr, renamerFn : ((String, smt.Type) => String)) : smt.Expr = {
     def rename(e : smt.Expr) = renameSymbols(e, renamerFn)
     expr match {
       case Symbol(name,typ) =>
-        return Symbol(renamerFn(name, typ), typ) 
+        return Symbol(renamerFn(name, typ), typ)
       case OperatorApplication(op,operands) =>
         return OperatorApplication(op, operands.map(rename(_)))
       case ArraySelectOperation(e, index) =>
@@ -206,7 +206,7 @@ object Converter {
         return ITE(rename(e), rename(t), rename(f))
       case Lambda(syms,e) =>
         return Lambda(syms.map((sym) => Symbol(renamerFn(sym.id, sym.typ), sym.typ)), rename(e))
-      case IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) =>  
+      case IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) =>
         return expr
     }
   }

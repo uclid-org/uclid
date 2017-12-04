@@ -1,52 +1,52 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Author : Pramod Subramanyan
- * 
+ *
  * INTRODUCTION: The AST Pass Infrastructure
  * =========================================
- * 
+ *
  * ReadOnlyPass[T] is the base class for all passes that walk through a pass and possibly collect
  * information about the AST. Think of it as akin to a the function passed in to a fold operation.
- * 
+ *
  * RewritePass is the base class for all passes that modify the AST.
- * 
- * ASTAnalyzer takes a ReadOnlyPass[T] and "folds" (reduces/accumulates) the pass's results over the AST. 
- * 
+ *
+ * ASTAnalyzer takes a ReadOnlyPass[T] and "folds" (reduces/accumulates) the pass's results over the AST.
+ *
  * ASTRewriter takes a RewritePass and rewrites each element of the AST using the RewritePass.
- * 
+ *
  * USAGE
  * =====
- * 
+ *
  * To write a pass of your own, you will subclass either ReadOnlyPass[T] and ASTAnalyzer or
- * RewritePass and ASTRewriter. 
- * 
+ * RewritePass and ASTRewriter.
+ *
  * A simple readonly pass to look at is SemanticAnalyzer.
- * 
+ *
  * A simple readwrite pass is CaseEliminator.
  */
 
@@ -56,7 +56,7 @@ package lang
 abstract class ASTAnalysis {
   var _manager : Option[PassManager] = None
   def manager : PassManager = { _manager.get }
-  
+
   def passName : String
   def reset() {}
   def rewind() {}
@@ -74,7 +74,7 @@ trait ReadOnlyPass[T] {
   var _analysis : Option[ASTAnalysis] = None
   def analysis : ASTAnalysis = _analysis.get
   def reset() {}
-  
+
   def applyOnModule(d : TraversalDirection.T, module : Module, in : T, context : Scope) : T = { in }
   def applyOnDecl(d : TraversalDirection.T, decl : Decl, in : T, context : Scope) : T = { in }
   def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : Scope) : T = { in }
@@ -152,7 +152,7 @@ trait RewritePass {
   var _analysis : Option[ASTAnalysis] = None
   def analysis : ASTAnalysis = _analysis.get
   def reset() { }
-  
+
   def rewriteModule(module : Module, ctx : Scope) : Option[Module] = { Some(module) }
   def rewriteDecl(decl : Decl, ctx : Scope) : Option[Decl] = { Some(decl) }
   def rewriteCommand(cmd : ProofCommand, ctx : Scope) : Option[ProofCommand] = { Some(cmd) }
@@ -183,7 +183,7 @@ trait RewritePass {
   def rewriteTupleType(tupleT : TupleType, context : Scope) : Option[TupleType] = { Some(tupleT)  }
   def rewriteRecordType(recordT : RecordType, context : Scope) : Option[RecordType] = { Some(recordT)  }
   def rewriteMapType(mapT : MapType, context : Scope) : Option[MapType] = { Some(mapT)  }
-  def rewriteProcedureType(procT : ProcedureType, context : Scope) : Option[ProcedureType] = { Some(procT) } 
+  def rewriteProcedureType(procT : ProcedureType, context : Scope) : Option[ProcedureType] = { Some(procT) }
   def rewriteArrayType(arrayT : ArrayType, context : Scope) : Option[ArrayType] = { Some(arrayT)  }
   def rewriteSynonymType(synT : SynonymType, context : Scope) : Option[Type] = { Some(synT)  }
   def rewriteExternalType(extT : ExternalType, context : Scope) : Option[Type] = { Some(extT) }
@@ -202,7 +202,7 @@ trait RewritePass {
   def rewriteFor(st : ForStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteCase(st : CaseStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteProcedureCall(st : ProcedureCallStmt, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteModuleCall(st : ModuleCallStmt, ctx : Scope) : List[Statement] = { List(st) } 
+  def rewriteModuleCall(st : ModuleCallStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteLHS(lhs : Lhs, ctx : Scope) : Option[Lhs] = { Some(lhs) }
   def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : Scope) : Option[BitVectorSlice] = { Some(slice) }
   def rewriteExpr(e : Expr, ctx : Scope) : Option[Expr] = { Some(e) }
@@ -255,7 +255,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   }
   // Reset calls reset on the pass.
   override  def reset() = { pass.reset() }
-  
+
   // We now have the code that actually traverses the AST.
   def visitModule(module : Module, in : T, initContext : Scope) : T = {
     var result : T = in
@@ -287,7 +287,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case init : InitDecl => visitInit(init, result, context)
       case next : NextDecl => visitNext(next, result, context)
       case spec : SpecDecl => visitSpec(spec, result, context)
-      case axiom : AxiomDecl => visitAxiom(axiom, result, context) 
+      case axiom : AxiomDecl => visitAxiom(axiom, result, context)
     }
     result = pass.applyOnDecl(TraversalDirection.Up, decl, result, context)
     return result
@@ -297,7 +297,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnInstance(TraversalDirection.Down, inst, result, context)
     result = visitIdentifier(inst.instanceId, result, context)
     result = visitIdentifier(inst.moduleId, result, context)
-    result = inst.arguments.foldLeft(result){ 
+    result = inst.arguments.foldLeft(result){
       (acc, arg) => arg._2 match {
         case Some(expr) => visitExpr(expr, acc, context)
         case None => acc
@@ -794,10 +794,10 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnNumericLit(TraversalDirection.Down, n, result, context)
     n match {
-      case i : IntLit => 
+      case i : IntLit =>
         result = pass.applyOnIntLit(TraversalDirection.Down, i, result, context)
         result = pass.applyOnIntLit(TraversalDirection.Up, i, result, context)
-      case bv : BitVectorLit => 
+      case bv : BitVectorLit =>
         result = pass.applyOnBitVectorLit(TraversalDirection.Down, bv, result, context)
         result = pass.applyOnBitVectorLit(TraversalDirection.Up, bv, result, context)
     }
@@ -894,7 +894,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   }
   def visitLambda(lambda: Lambda, in : T, contextIn : Scope) : T = {
     var result : T = in
-    val context = contextIn + lambda 
+    val context = contextIn + lambda
     result = pass.applyOnLambda(TraversalDirection.Down, lambda, result, contextIn)
     result = lambda.ids.foldLeft(result)((acc, arg) => visitIdentifier(arg._1, acc, context))
     result = lambda.ids.foldLeft(result)((acc, arg) => visitType(arg._2, acc, context))
@@ -920,15 +920,15 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
 class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean = true) extends ASTAnalysis {
   // Set a backpointer to here from the pass.
   _pass._analysis = Some(this)
-  
+
   def pass = _pass
   override def passName = _passName
   override def visit(module : Module, context : Scope) : Option[Module] = visitModule(module, context)
-  
-  override def reset() { 
+
+  override def reset() {
     pass.reset()
   }
-  
+
   def visitModule(module : Module, initContext : Scope) : Option[Module] = {
     val context = initContext + module
     val id = visitIdentifier(module.id, context)
@@ -936,9 +936,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val cmds = module.cmds.map(visitCommand(_, context)).flatten
     val moduleIn = id.flatMap((i) => Some(Module(i, decls, cmds)))
     val moduleP = moduleIn.flatMap((m) => pass.rewriteModule(m, initContext))
-    
+
     return (ASTNode.introducePos(setFilename, moduleP, module.position) match {
-      case Some(m) => 
+      case Some(m) =>
         module.filename match {
           case Some(fn) => Some(m.withFilename(fn))
           case None     => Some(m)
@@ -947,7 +947,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         None
     })
   }
-  
+
   def visitDecl(decl : Decl, context : Scope) : Option[Decl] = {
     val declP = (decl match {
       case instDecl : InstanceDecl => visitInstance(instDecl, context)
@@ -1008,11 +1008,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val stmts = proc.body.map(visitStatement(_, context)).flatten
     val procP = (id, sig) match {
       case (Some(i), Some(s)) => pass.rewriteProcedure(ProcedureDecl(i, s, decls, stmts), contextIn)
-      case _ => None 
+      case _ => None
     }
     return ASTNode.introducePos(setFilename, procP, proc.position)
   }
-  
+
   def visitFunction(func : FunctionDecl, context : Scope) : Option[FunctionDecl] = {
     val id = visitIdentifier(func.id, context)
     val sig = visitFunctionSig(func.sig, context)
@@ -1067,7 +1067,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     return ASTNode.introducePos(setFilename, inpVarP, inpvar.position)
   }
-  
+
   def visitInputVars(inpVars : InputVarsDecl, context : Scope) : Option[InputVarsDecl] = {
     val idsP = (inpVars.ids.map((id) => visitIdentifier(id, context))).flatten
     val typP = visitType(inpVars.typ, context)
@@ -1088,7 +1088,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     return ASTNode.introducePos(setFilename, outVarP, outvar.position)
   }
-  
+
   def visitOutputVars(outVars : OutputVarsDecl, context : Scope) : Option[OutputVarsDecl] = {
     val idsP = (outVars.ids.map((id) => visitIdentifier(id, context))).flatten
     val typP = visitType(outVars.typ, context)
@@ -1109,7 +1109,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     return ASTNode.introducePos(setFilename, cnstP, cnst.position)
   }
-  
+
   def visitSpec(spec : SpecDecl, context : Scope) : Option[SpecDecl] = {
     val idP = visitIdentifier(spec.id, context)
     val exprP = visitExpr(spec.expr, context)
@@ -1136,25 +1136,25 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     return ASTNode.introducePos(setFilename, typDecP, typDec.position)
   }
-  
+
   def visitInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
     val body = init.body.map(visitStatement(_, context)).flatten
     val initP = pass.rewriteInit(InitDecl(body), context)
     return ASTNode.introducePos(setFilename, initP, init.position)
   }
-  
+
   def visitNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
     val body = next.body.map(visitStatement(_, context)).flatten
     val nextP = pass.rewriteNext(NextDecl(body), context)
     return ASTNode.introducePos(setFilename, nextP, next.position)
   }
-  
+
   def visitCommand(cmd : ProofCommand, context : Scope) : Option[ProofCommand] = {
     val argsP = cmd.args.map(e => visitExpr(e, context)).flatten
     val cmdP = pass.rewriteCommand(ProofCommand(cmd.name, cmd.params, argsP), context)
     return ASTNode.introducePos(setFilename, cmdP, cmd.position)
   }
-  
+
   def visitType(typ: Type, context : Scope) : Option[Type] = {
     val typP = (typ match {
       case tempT : TemporalType => visitTemporalType(tempT, context)
@@ -1176,12 +1176,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }).flatMap(pass.rewriteType(_, context))
     return ASTNode.introducePos(setFilename, typP, typ.position)
   }
-  
+
   def visitTemporalType(tempT : TemporalType, context : Scope) : Option[TemporalType] = {
     val tempTP = pass.rewriteTemporalType(tempT, context)
     return ASTNode.introducePos(setFilename, tempTP, tempT.position)
   }
-  
+
   def visitUndefinedType(undefT : UndefinedType, context : Scope) : Option[Type] = {
     val undefTP = pass.rewriteUndefinedType(undefT, context)
     return ASTNode.introducePos(setFilename, undefTP, undefT.position)
@@ -1199,26 +1199,26 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitIntType(intT : IntType, context : Scope) : Option[IntType] = {
     val intTP = pass.rewriteIntType(intT, context)
-    return ASTNode.introducePos(setFilename, intTP, intT.position) 
+    return ASTNode.introducePos(setFilename, intTP, intT.position)
   }
-  
+
   def visitBitVectorType(bvT : BitVectorType, context : Scope) : Option[BitVectorType] = {
     val bvTP = pass.rewriteBitVectorType(bvT, context)
-    return ASTNode.introducePos(setFilename, bvTP, bvT.position) 
+    return ASTNode.introducePos(setFilename, bvTP, bvT.position)
   }
-  
+
   def visitEnumType(enumT : EnumType, context : Scope) : Option[EnumType] = {
     val idP = enumT.ids.map(visitIdentifier(_, context)).flatten
     val enumTP = pass.rewriteEnumType(EnumType(idP), context)
     return ASTNode.introducePos(setFilename, enumTP, enumT.position)
   }
-  
+
   def visitTupleType(tupleT : TupleType, context : Scope) : Option[TupleType] = {
     val fieldsP = tupleT.fieldTypes.map((t) => visitType(t, context)).flatten
     val tupleTP = pass.rewriteTupleType(TupleType(fieldsP), context)
     return ASTNode.introducePos(setFilename, tupleTP, tupleT.position)
   }
-  
+
   def visitRecordType(recT : RecordType, context : Scope) : Option[RecordType] = {
     val fieldsP = recT.fields.map((f) => {
       (visitIdentifier(f._1, context), visitType(f._2, context)) match {
@@ -1229,7 +1229,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val recTP = pass.rewriteRecordType(RecordType(fieldsP), context)
     return ASTNode.introducePos(setFilename, recTP, recT.position)
   }
-  
+
   def visitMapType(mapT : MapType, context : Scope) : Option[MapType] = {
     val inTypesP = mapT.inTypes.map(visitType(_, context)).flatten
     val mapTP = (visitType(mapT.outType, context)) match {
@@ -1244,7 +1244,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val outTypesP = procT.outTypes.map(visitType(_, context)).flatten
     val procTP1 = ProcedureType(inTypesP, outTypesP)
     val procTP = pass.rewriteProcedureType(procTP1, context)
-    return ASTNode.introducePos(setFilename, procTP, procT.position)  
+    return ASTNode.introducePos(setFilename, procTP, procT.position)
   }
 
   def visitArrayType(arrT : ArrayType, context : Scope) : Option[ArrayType] = {
@@ -1255,7 +1255,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     return ASTNode.introducePos(setFilename, arrTP, arrT.position)
   }
-  
+
   def visitSynonymType(synT : SynonymType, context : Scope) : Option[Type] = {
     val idP = visitIdentifier(synT.id, context)
     val synTP = idP.flatMap(id => pass.rewriteSynonymType(SynonymType(id), context))
@@ -1291,21 +1291,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         case _ => None
       }
     }).flatten
-    
+
     val outParamsP : List[(Identifier, Type)] = sig.outParams.map((outP) => {
       (visitIdentifier(outP._1, context), visitType(outP._2, context)) match {
         case (Some(id), Some(typ)) => Some(id, typ)
         case _ => None
       }
     }).flatten
-    
+
     val sigP = (inParamsP, outParamsP) match {
       case (in, out) => pass.rewriteProcedureSig(ProcedureSig(in, out), context)
       case _ => None
     }
     return ASTNode.introducePos(setFilename, sigP, sig.position)
   }
-  
+
   def visitFunctionSig(sig : FunctionSig, context : Scope) : Option[FunctionSig] = {
     val args : List[(Identifier, Type)] = sig.args.map((inP) => {
       (visitIdentifier(inP._1, context), visitType(inP._2, context)) match {
@@ -1316,14 +1316,14 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val sigP = visitType(sig.retType, context).flatMap((t) => pass.rewriteFunctionSig(FunctionSig(args, t), context))
     return ASTNode.introducePos(setFilename, sigP, sig.position)
   }
-  
+
   def visitLocalVar(lvar : LocalVarDecl, context : Scope) : Option[LocalVarDecl] = {
     val varP = visitIdentifier(lvar.id, context).flatMap((id) => {
       visitType(lvar.typ, context).flatMap((t) => pass.rewriteLocalVar(LocalVarDecl(id, t), context))
     })
     return ASTNode.introducePos(setFilename, varP, lvar.position)
   }
-  
+
   def visitStatement(st : Statement, context : Scope) : List[Statement] = {
     val stP = (st match {
       case skipStmt : SkipStmt => visitSkipStatement(skipStmt, context)
@@ -1344,7 +1344,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val stP = pass.rewriteSkip(st, context)
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
-  
+
   def visitAssertStatement(st : AssertStmt, context : Scope) : List[Statement] = {
     val idP = st.id.flatMap(id => visitIdentifier(id, context))
     val stP = visitExpr(st.e, context).toList.flatMap((e) => {
@@ -1352,7 +1352,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     })
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
-  
+
   def visitAssumeStatement(st : AssumeStmt, context : Scope) : List[Statement] = {
     val idP = st.id.flatMap(id => visitIdentifier(id, context))
     val stP = visitExpr(st.e, context).toList.flatMap((e) => {
@@ -1360,21 +1360,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     })
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
-  
+
   def visitHavocStatement(st: HavocStmt, context : Scope) : List[Statement] = {
     val stP = visitIdentifier(st.id, context).toList.flatMap((id) => {
       pass.rewriteHavoc(HavocStmt(id), context)
     })
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
-  
+
   def visitAssignStatement(st : AssignStmt, context : Scope) : List[Statement] = {
     val lhss = st.lhss.map(visitLhs(_, context)).flatten
     val rhss = st.rhss.map(visitExpr(_, context)).flatten
     val stP = pass.rewriteAssign(AssignStmt(lhss, rhss), context)
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
-  
+
   def visitIfElseStatement(st : IfElseStmt, context : Scope) : List[Statement] = {
     val cond = visitExpr(st.cond, context)
     val ifblock = st.ifblock.map(visitStatement(_, context)).flatten
@@ -1385,21 +1385,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
-  
+
   def visitForStatement(st : ForStmt, contextIn : Scope) : List[Statement] = {
     val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
     val idP = visitIdentifier(st.id, contextIn)
     val lit1P = visitNumericLiteral(st.range._1, contextIn)
     val lit2P = visitNumericLiteral(st.range._2, contextIn)
     val stmts = st.body.map(visitStatement(_, context)).flatten
-    
+
     val stP = (idP, lit1P, lit2P) match {
       case (Some(id), Some(lit1), Some(lit2)) => pass.rewriteFor(ForStmt(id, (lit1, lit2), stmts), contextIn)
       case _ => List.empty[Statement]
     }
     return ASTNode.introducePos(setFilename, stP, st.position)
   }
-  
+
   def visitCaseStatement(st : CaseStmt, context : Scope) : List[Statement] = {
     val bodyP = st.body.map((c) => {
       // if rewriting the expression doesn't produce None.
@@ -1444,12 +1444,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         case LhsId(_) => Some(LhsId(id))
         case LhsArraySelect(_, indices) =>
           Some(LhsArraySelect(id, indices.map(visitExpr(_, context)).flatten))
-        case LhsRecordSelect(_, fields) => 
+        case LhsRecordSelect(_, fields) =>
           Some(LhsRecordSelect(id, fields.map(visitIdentifier(_, context)).flatten))
         case LhsSliceSelect(id, slice) =>
           val sliceP = visitBitVectorSlice(slice, context)
           sliceP.flatMap((s) => Some(newLhsSliceSelect(id, s)))
-        case LhsVarSliceSelect(_, slice) => 
+        case LhsVarSliceSelect(_, slice) =>
           val sliceP = visitBitVectorSlice(slice, context)
           sliceP.flatMap((s) => Some(newLhsSliceSelect(id, s)))
       }
@@ -1506,12 +1506,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }).flatMap(pass.rewriteLit(_, context))
     return ASTNode.introducePos(setFilename, litP, lit.position)
   }
-  
+
   def visitBoolLiteral(b : BoolLit, context : Scope) : Option[BoolLit] = {
     val bP = pass.rewriteBoolLit(b, context)
     return ASTNode.introducePos(setFilename, bP, b.position)
   }
-  
+
   def visitNumericLiteral(n : NumericLit, context : Scope) : Option[NumericLit] = {
     val nP1 = n match {
       case bv : BitVectorLit => visitBitVectorLiteral(bv, context)
@@ -1520,7 +1520,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val nP2 = nP1.flatMap(pass.rewriteNumericLit(_, context))
     return ASTNode.introducePos(setFilename, nP2, n.position)
   }
-  
+
   def visitIntLiteral(i : IntLit, context : Scope) : Option[IntLit] = {
     val iP = pass.rewriteIntLit(i, context)
     return ASTNode.introducePos(setFilename, iP, i.position)
@@ -1535,14 +1535,14 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val recP = pass.rewriteTuple(Tuple(rec.values.map(visitExpr(_, context)).flatten), context)
     return ASTNode.introducePos(setFilename, recP, rec.position)
   }
-  
+
   def visitOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     val opAppP = visitOperator(opapp.op, context).flatMap((op) => {
       pass.rewriteOperatorApp(OperatorApplication(op, opapp.operands.map(visitExpr(_, context + opapp)).flatten), context)
     })
     return ASTNode.introducePos(setFilename, opAppP, opapp.position)
   }
-  
+
   def visitOperator(op : Operator, context : Scope) : Option[Operator] = {
     def newExtractOp(slice : BitVectorSlice) : ExtractOp = {
       slice match {
@@ -1568,7 +1568,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case ConstExtractOp(slice) =>
         val sliceP = visitBitVectorSlice(slice, context)
         val extractOp = sliceP.flatMap((slice) => Some(newExtractOp(slice)))
-        extractOp.flatMap((eOp) => pass.rewriteOperator(eOp, context)) 
+        extractOp.flatMap((eOp) => pass.rewriteOperator(eOp, context))
       case VarExtractOp(slice) =>
         val sliceP = visitBitVectorSlice(slice, context)
         val extractOp = sliceP.flatMap((slice) => Some(newExtractOp(slice)))
@@ -1611,19 +1611,19 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     return ASTNode.introducePos(setFilename, fappP, fapp.position)
   }
-  
+
   def visitITE(ite: ITE, context : Scope) : Option[Expr] = {
     val condP = visitExpr(ite.e, context)
     val tP = visitExpr(ite.t, context)
     val fP = visitExpr(ite.f, context)
-    
+
     val iteP = (condP, tP, fP) match {
       case (Some(cond), Some(t), Some(f)) => pass.rewriteITE(ITE(cond, t, f), context)
       case _ => None
     }
     return ASTNode.introducePos(setFilename, iteP, ite.position)
   }
-  
+
   def visitLambda(lambda: Lambda, contextIn : Scope) : Option[Lambda] = {
     val context = contextIn + lambda
     val idP = lambda.ids.map((arg) => {

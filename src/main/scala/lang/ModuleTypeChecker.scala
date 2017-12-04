@@ -1,30 +1,30 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Authors: Norman Mu, Pramod Subramanyan
 
  * All sorts of type inference and type checking functionality is in here.
@@ -101,7 +101,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
               range._2 match {
                 case j: IntLit =>
                   if (i.value > j.value) {
-                    in + ModuleError("Range lower bound must be less than upper bound.", st.position) 
+                    in + ModuleError("Range lower bound must be less than upper bound.", st.position)
                   } else {
                     in
                   }
@@ -119,7 +119,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
                     in
                   }
                 case _ =>
-                  in + ModuleError("Range lower and upper bounds must be of same type.", st.position) 
+                  in + ModuleError("Range lower and upper bounds must be of same type.", st.position)
               }
           }
         case CaseStmt(body) =>
@@ -127,7 +127,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
             (acc, c) => {
               var cType = exprTypeChecker.typeOf(c._1, context)
               if (!cType.isBool) {
-                acc + ModuleError("Case clause must be of type boolean.", st.position) 
+                acc + ModuleError("Case clause must be of type boolean.", st.position)
               } else {
                 acc
               }
@@ -136,12 +136,12 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         case ProcedureCallStmt(id, callLhss, args) =>
           var ret = in
           if (context.module.isEmpty) {
-            ret = ret + ModuleError("Procedure does not exist.", st.position) 
+            ret = ret + ModuleError("Procedure does not exist.", st.position)
           }
           val procOption = context.module.get.decls.find((p) => p.isInstanceOf[ProcedureDecl] && p.asInstanceOf[ProcedureDecl].id == id)
 
           if (procOption.isEmpty) {
-            ret = ret + ModuleError("Procedure does not exist.", st.position) 
+            ret = ret + ModuleError("Procedure does not exist.", st.position)
           }
 
           val proc = procOption.get.asInstanceOf[ProcedureDecl]
@@ -149,7 +149,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
             var (pId, pType) = param.asInstanceOf[(Identifier, Type)]
             var aType = exprTypeChecker.typeOf(arg.asInstanceOf[Expr], context)
             if (!pType.matches(aType)) {
-              ret = ret + ModuleError("Parameter %s expected argument of type %s but received type %s.".format(pId.name, pType.toString, aType.toString), st.position) 
+              ret = ret + ModuleError("Parameter %s expected argument of type %s but received type %s.".format(pId.name, pType.toString, aType.toString), st.position)
             }
           }
 
@@ -157,7 +157,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           var l2 = args.length
 
           if (l1 != l2) {
-            ret = ret + ModuleError("Procedure expected %d arguments but received %d.".format(l1, l2), st.position) 
+            ret = ret + ModuleError("Procedure expected %d arguments but received %d.".format(l1, l2), st.position)
           }
 
           for ((retval, lh) <- proc.sig.outParams zip callLhss) {
@@ -165,7 +165,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
             val lType = exprTypeChecker.typeOf(lh, context)
             if (!rType.matches(lType)) {
               ret = ret + ModuleError("Left hand variable %s expected return value of type %s but received type %s."
-                .format(lh.toString, lType.toString, rType.toString), st.position) 
+                .format(lh.toString, lType.toString, rType.toString), st.position)
             }
           }
 
@@ -173,7 +173,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           l2 = callLhss.length
 
           if (l1 != l2) {
-            ret = ret + ModuleError("Left hand side expected %d return values but received %d.".format(l1, l2), st.position) 
+            ret = ret + ModuleError("Left hand side expected %d return values but received %d.".format(l1, l2), st.position)
           }
           ret
         case ModuleCallStmt(id) =>

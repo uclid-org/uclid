@@ -1,30 +1,30 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Authors: Rohit Sinha, Pramod Subramanyan
 
  * Defines ASTs for UCLID5
@@ -75,7 +75,7 @@ sealed  trait PositionedNode extends Positional {
 object ASTNode {
   def introducePos[T <: PositionedNode](setFilename : Boolean, node : Option[T], pos : ASTPosition) : Option[T] = {
     node match {
-      case Some(n) => 
+      case Some(n) =>
         var nP = n
         if (setFilename) { nP.filename = pos.filename }
         nP.pos = pos.pos
@@ -152,14 +152,14 @@ case class BVOrOp(override val w : Int) extends BVArgOperator(w) { override def 
 case class BVXorOp(override val w : Int) extends BVArgOperator(w) { override def toString = "^" }
 case class BVNotOp(override val w : Int) extends BVArgOperator(w) { override def toString = "~" }
 // Boolean operators.
-sealed abstract class BooleanOperator extends Operator { 
-  override def fixity = Operator.INFIX 
+sealed abstract class BooleanOperator extends Operator {
+  override def fixity = Operator.INFIX
 }
 case class ConjunctionOp() extends BooleanOperator { override def toString = "&&" }
 case class DisjunctionOp() extends BooleanOperator { override def toString = "||" }
 case class IffOp() extends BooleanOperator { override def toString = "<==>" }
 case class ImplicationOp() extends BooleanOperator { override def toString = "==>" }
-case class NegationOp() extends BooleanOperator { 
+case class NegationOp() extends BooleanOperator {
   override def toString = "!"
   override def fixity = Operator.INFIX
 }
@@ -168,12 +168,12 @@ sealed abstract class QuantifiedBooleanOperator extends BooleanOperator {
   override def fixity = Operator.PREFIX
   def variables : List[(Identifier, Type)]
 }
-case class ForallOp(vs : List[(Identifier, Type)]) extends QuantifiedBooleanOperator { 
-  override def toString = "forall (" + Utils.join(vs.map((v) => v._1.toString + " : " + v._2.toString), ", ") + ") :: " 
+case class ForallOp(vs : List[(Identifier, Type)]) extends QuantifiedBooleanOperator {
+  override def toString = "forall (" + Utils.join(vs.map((v) => v._1.toString + " : " + v._2.toString), ", ") + ") :: "
   override def variables = vs
 }
-case class ExistsOp(vs: List[(Identifier, Type)]) extends QuantifiedBooleanOperator { 
-  override def toString = "exists (" + Utils.join(vs.map((v) => v._1.toString + " : " + v._2.toString), ", ") + ") :: " 
+case class ExistsOp(vs: List[(Identifier, Type)]) extends QuantifiedBooleanOperator {
+  override def toString = "exists (" + Utils.join(vs.map((v) => v._1.toString + " : " + v._2.toString), ", ") + ") :: "
   override def variables = vs
 }
 
@@ -182,7 +182,7 @@ sealed abstract class ComparisonOperator() extends Operator {
   override def fixity = Operator.INFIX
 }
 case class EqualityOp() extends ComparisonOperator { override def toString = "==" }
-case class InequalityOp() extends ComparisonOperator { override def toString = "!=" } 
+case class InequalityOp() extends ComparisonOperator { override def toString = "!=" }
 
 sealed abstract class TemporalOperator() extends Operator
 sealed abstract class TemporalInfixOperator() extends TemporalOperator { override def fixity = Operator.INFIX }
@@ -221,7 +221,7 @@ case class VarExtractOp(slice : VarBitVectorSlice) extends ExtractOp {
   override def fixity = Operator.POSTFIX
 }
 
-case class ConcatOp() extends Operator { 
+case class ConcatOp() extends Operator {
   override def toString = "++"
   override def fixity = Operator.INFIX
 }
@@ -269,7 +269,7 @@ case class IntLit(value: BigInt) extends NumericLit {
       case i : IntLit => (value to i.value).map(IntLit(_))
       case _ => throw new Utils.RuntimeError("Cannot create range for differing types of numeric literals.")
     }
-  } 
+  }
 }
 
 case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
@@ -291,13 +291,13 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
   override def isConstant = operands.forall(_.isConstant)
   override def toString = {
     op match {
-      case RecordSelect(r) => 
+      case RecordSelect(r) =>
         operands(0).toString + "." + r.toString
       case SelectFromInstance(f) =>
         operands(0).toString + "->" + f.toString
       case ForallOp(_) | ExistsOp(_) =>
         "(" + op.toString + operands(0).toString + ")"
-      case _ => 
+      case _ =>
         if (op.fixity == Operator.INFIX) {
           "(" + Utils.join(operands.map(_.toString), " " + op + " ") + ")"
         } else if (op.fixity == Operator.PREFIX) {
@@ -390,7 +390,7 @@ sealed abstract class Type extends PositionedNode {
 sealed abstract class PrimitiveType extends Type {
   override def isPrimitive = true
 }
-/** 
+/**
  *  Numeric types base class. All numeric types are also primitive types.
  */
 sealed abstract class NumericType extends PrimitiveType {
@@ -409,7 +409,7 @@ case class TemporalType() extends Type {
 case class UndefinedType() extends Type {
   override def toString = "undefined"
 }
-/** 
+/**
  *  Uninterpreted types.
  */
 case class UninterpretedType(name: Identifier) extends Type {
@@ -423,7 +423,7 @@ case class BoolType() extends PrimitiveType {
   override def toString = "bool"
   override def isBool = true
 }
-case class IntType() extends NumericType { 
+case class IntType() extends NumericType {
   override def toString = "int"
   override def isInt = true
 }
@@ -435,7 +435,7 @@ case class BitVectorType(width: Int) extends NumericType {
   }
 }
 case class EnumType(ids: List[Identifier]) extends Type {
-  override def toString = "enum {" + 
+  override def toString = "enum {" +
     ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i} + "}"
 }
 abstract sealed class ProductType extends Type {
@@ -446,7 +446,7 @@ abstract sealed class ProductType extends Type {
     if (i >= 0 && i < fields.length) Some(fields(i)._2)
     else None
   }
-  
+
   def fieldType(fieldName : Identifier) : Option[Type] = {
     fieldIndex(fieldName) match {
       case -1 => None
@@ -463,16 +463,16 @@ abstract sealed class ProductType extends Type {
           case _ => None
         }
       })
-    }) 
+    })
   }
-  
+
   def fieldIndex(name : Identifier) : Int = fields.indexWhere((p) => p._1 == name)
   def hasField(fieldName : Identifier) : Boolean = {
     fieldIndex(fieldName) != -1
   }
 }
 case class TupleType(fieldTypes: List[Type]) extends ProductType {
-  override def fields = fieldTypes.zipWithIndex.map(p  => (Identifier("_" + (p._2+1).toString), p._1))  
+  override def fields = fieldTypes.zipWithIndex.map(p  => (Identifier("_" + (p._2+1).toString), p._1))
   override def toString = "{" + Utils.join(fieldTypes.map(_.toString), ", ") + "}"
   override def isTuple = true
 }
@@ -483,8 +483,8 @@ case class RecordType(members : List[(Identifier,Type)]) extends ProductType {
   override def isRecord = true
   override def matches(t2 : Type) : Boolean = {
     t2 match {
-      case tup : TupleType => 
-          fields.size == tup.fieldTypes.size && 
+      case tup : TupleType =>
+          fields.size == tup.fieldTypes.size &&
           (fields.map(_._2) zip tup.fieldTypes).forall( tpair => tpair._1.matches(tpair._2))
       case _ => this == t2
     }
@@ -495,7 +495,7 @@ case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override def isMap = true
 }
 case class ProcedureType(inTypes : List[Type], outTypes: List[Type]) extends Type {
-  override def toString = 
+  override def toString =
     "procedure (" + Utils.join(inTypes.map(_.toString), ", ") + ") returns " +
         "(" + Utils.join(outTypes.map(_.toString), ", ") + ")"
 }
@@ -520,20 +520,20 @@ case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends T
     val id = arg._1
     arg._2 match {
       case Some(t) => id.toString + " : (" + t.toString + ")"
-      case None => id.toString + " : ()"  
+      case None => id.toString + " : ()"
     }
   }
   override def toString = "(" + Utils.join(args.map(argToString(_)), ", ") + ")"
 }
 case class ModuleType(
-    inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)], 
+    inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)],
     constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
     functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, ModuleType)]) extends Type {
 
   def argToString(arg: (Identifier, Type)) : String = {
     arg._1.toString + ": (" + arg._2.toString + ")"
   }
-  def argsToString(args: List[(Identifier, Type)]) = 
+  def argsToString(args: List[(Identifier, Type)]) =
     Utils.join(args.map(argToString(_)), ", ")
 
   lazy val inputMap : Map[Identifier, Type] = inputs.map(a => (a._1 -> a._2)).toMap
@@ -544,12 +544,12 @@ case class ModuleType(
   lazy val funcMap : Map[Identifier, FunctionSig] = functions.map(a => (a._1 -> a._2)).toMap
   lazy val instanceMap : Map[Identifier, ModuleType] = instances.map(a => (a._1 -> a._2)).toMap
   lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ funcMap.map(f => (f._1 -> f._2.typ))  ++ instanceMap
-  
+
   def typeOf(id : Identifier) : Option[Type] = {
     typeMap.get(id)
   }
-  
-  override def toString = 
+
+  override def toString =
     "inputs (" + argsToString(inputs) + ") outputs (" + argsToString(outputs) + ")"
 }
 
@@ -572,32 +572,32 @@ case class HavocStmt(id: Identifier) extends Statement {
   override def toLines = List("havoc " + id + "; // " + position.toString)
 }
 case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
-  override def toLines = 
+  override def toLines =
     List(Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
 }
 case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Statement]) extends Statement {
   lazy val lines : List[String] = if (elseblock.size > 0) {
-    List("if (" + cond.toString + ") // " + position.toString, "{ ") ++ 
-    ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
-    List("} else {") ++ 
-    elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")  
+    List("if (" + cond.toString + ") // " + position.toString, "{ ") ++
+    ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++
+    List("} else {") ++
+    elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
   } else {
-    List("if (" + cond.toString + ") // " + position.toString, "{ ") ++ 
-    ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
-    List("}") 
+    List("if (" + cond.toString + ") // " + position.toString, "{ ") ++
+    ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++
+    List("}")
   }
-  override def toLines = lines 
+  override def toLines = lines
 }
 case class ForStmt(id: Identifier, range: (NumericLit,NumericLit), body: List[Statement])
   extends Statement
 {
   override def isLoop = true
-  override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString) ++ 
+  override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString) ++
                          body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
 case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
   override def toLines = List("case") ++
-    body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _)} ++ 
+    body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _)} ++
     List("esac")
 }
 case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr])  extends Statement {
@@ -622,7 +622,7 @@ sealed abstract class IOSig(inputs: List[(Identifier,Type)], outputs: List[(Iden
 /**
  * Module signatures.
  */
-case class ModuleSig(inParams: List[(Identifier, Type)], outParams: List[(Identifier, Type)]) extends IOSig(inParams, outParams) 
+case class ModuleSig(inParams: List[(Identifier, Type)], outParams: List[(Identifier, Type)]) extends IOSig(inParams, outParams)
 {
   override def toString =
     "inputs (" + Utils.join(inParams.map(printfn(_)), ", ") + ")" +
@@ -656,7 +656,7 @@ sealed abstract class Decl extends ASTNode {
 
 case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, arguments: List[(Identifier, Option[Expr])], instType : Option[ModuleInstanceType], modType : Option[ModuleType]) extends Decl
 {
-  lazy val argMap = arguments.foldLeft(Map.empty[Identifier, Expr]) { 
+  lazy val argMap = arguments.foldLeft(Map.empty[Identifier, Expr]) {
     (acc, arg) => {
       arg._2 match {
         case Some(expr) => acc + (arg._1 -> expr)
@@ -681,16 +681,16 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
   }
 }
 
-case class ProcedureDecl(id: Identifier, sig: ProcedureSig, 
+case class ProcedureDecl(id: Identifier, sig: ProcedureSig,
   decls: List[LocalVarDecl], body: List[Statement]) extends Decl {
   override def toString = "procedure " + id + sig + PrettyPrinter.indent(1) + "{  // " + id.position.toString + "\n" +
-                          Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" + 
-                          Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") + 
+                          Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" +
+                          Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
                           "\n" + PrettyPrinter.indent(1) + "}"
   override def declNames = List(id)
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "type " + id + " = " + typ + "; // " + position.toString 
+  override def toString = "type " + id + " = " + typ + "; // " + position.toString
   override def declNames = List(id)
 }
 case class StateVarDecl(id: Identifier, typ: Type) extends Decl {
@@ -728,7 +728,7 @@ case class ConstantDecl(id: Identifier, typ: Type) extends Decl {
   override def declNames = List(id)
 }
 case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl {
-  override def toString = "function " + id + sig + ";  // " + position.toString 
+  override def toString = "function " + id + sig + ";  // " + position.toString
   override def declNames = List(id)
 }
 case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, requires: List[Expr], ensures: List[Expr], grammar : Option[Grammar]) extends Decl {
@@ -737,16 +737,16 @@ case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, requires: Lis
   override def declNames = List(id)
 }
 case class InitDecl(body: List[Statement]) extends Decl {
-  override def toString = 
+  override def toString =
     "init { // " + position.toString + "\n" +
-    Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
+    Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
     "\n" + PrettyPrinter.indent(1) + "}"
   override def declNames = List.empty
 }
 case class NextDecl(body: List[Statement]) extends Decl {
-  override def toString = 
-    "next {  // " + position.toString + "\n" + 
-    Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +  
+  override def toString =
+    "next {  // " + position.toString + "\n" +
+    Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
     "\n" + PrettyPrinter.indent(1) + "}"
   override def declNames = List.empty
 }
@@ -761,14 +761,14 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
       case None => "axiom " + expr.toString
     }
   }
-  override def declNames = id match { 
+  override def declNames = id match {
     case Some(i) => List(i)
     case _ => List.empty
   }
 }
 case class ProofCommand(name : Identifier, params: List[Identifier], args : List[Expr]) extends ASTNode {
   override def toString = {
-    val nameStr = name.toString 
+    val nameStr = name.toString
     val paramStr = if (params.size > 0) { "[" + Utils.join(params.map(_.toString), ", ") + "]" } else { "" }
     val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
     nameStr + paramStr + argStr + ";" + " // " + position.toString
@@ -783,15 +783,15 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
     return newModule
   }
   // module inputs.
-  lazy val inputs : List[InputVarDecl] = 
+  lazy val inputs : List[InputVarDecl] =
     decls.filter(_.isInstanceOf[InputVarDecl]).map(_.asInstanceOf[InputVarDecl]) ++
     decls.filter(_.isInstanceOf[InputVarsDecl]).map(_.asInstanceOf[InputVarsDecl]).flatMap(i => i.ids.map(id => InputVarDecl(id, i.typ)))
   // module outputs.
-  lazy val outputs : List[OutputVarDecl] = 
+  lazy val outputs : List[OutputVarDecl] =
     decls.filter(_.isInstanceOf[OutputVarDecl]).map(_.asInstanceOf[OutputVarDecl]) ++
     decls.filter(_.isInstanceOf[OutputVarsDecl]).map(_.asInstanceOf[OutputVarsDecl]).flatMap(o => o.ids.map(id => OutputVarDecl(id, o.typ)))
   // module state variables.
-  lazy val vars : List[StateVarDecl] = 
+  lazy val vars : List[StateVarDecl] =
     decls.filter(_.isInstanceOf[StateVarDecl]).map(_.asInstanceOf[StateVarDecl]) ++
     decls.filter(_.isInstanceOf[StateVarsDecl]).map(_.asInstanceOf[StateVarsDecl]).flatMap(s => s.ids.map(id => StateVarDecl(id, s.typ)))
   // module constants.
@@ -818,14 +818,14 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
   lazy val moduleType : ModuleType = ModuleType(
       inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)),
       constants.map(c => (c.id, c.typ)), vars.map(v => (v.id, v.typ)),
-      functions.map(c => (c.id, c.sig)), 
+      functions.map(c => (c.id, c.sig)),
       instances.map(inst => (inst.instanceId, inst.modType.get)))
 
   // the init block.
   lazy val init : Option[InitDecl] = {
     decls.find(_.isInstanceOf[InitDecl]).flatMap((d) => Some(d.asInstanceOf[InitDecl]))
   }
-  // the next block. 
+  // the next block.
   lazy val next : Option[NextDecl] = {
     decls.find(_.isInstanceOf[NextDecl]).flatMap((d) => Some(d.asInstanceOf[NextDecl]))
   }
@@ -834,11 +834,11 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
     decls.filter(_.isInstanceOf[AxiomDecl]).map(_.asInstanceOf[AxiomDecl])
   }
 
-  override def toString = 
-    "\nmodule " + id + " {\n" + 
+  override def toString =
+    "\nmodule " + id + " {\n" +
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +
-      PrettyPrinter.indent(1) + "control {" + "\n" + 
+      PrettyPrinter.indent(1) + "control {" + "\n" +
       cmds.foldLeft("")  { case (acc,i) => acc + PrettyPrinter.indent(2) + i + "\n" } +
-      PrettyPrinter.indent(1) + "}\n" + 
+      PrettyPrinter.indent(1) + "}\n" +
     "}\n"
 }

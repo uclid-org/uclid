@@ -1,47 +1,47 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Author: Pramod Subramanyan
 
  * PassManager: runs each AST pass in the order in which they are added to the manager.
- * May eventually add pass dependencies, invalidations and so on to this class. 
+ * May eventually add pass dependencies, invalidations and so on to this class.
  *
  */
 
 package uclid
 package lang
 
-import scala.collection.mutable.{ListBuffer,Set} 
+import scala.collection.mutable.{ListBuffer,Set}
 
 class PassManager {
   type PassList = ListBuffer[ASTAnalysis]
   var passes : PassList = new PassList()
   var passNames : Set[String] = Set.empty
-  
+
   def addPass(pass : ASTAnalysis) {
     Utils.assert(!passNames.contains(pass.passName), "Pass with the same name already exists.")
     passNames += pass.passName
@@ -50,7 +50,7 @@ class PassManager {
   }
 
   // private version of _run, does not reset or finish.
-  
+
   def _run(module : Module, context : Scope) : Option[Module] = {
     val init : Option[Module] = Some(module)
     passes.foldLeft(init){
@@ -70,7 +70,7 @@ class PassManager {
 
   // run on a list of modules.
   def run(modules : List[Module]) : List[Module] = {
-    val modulesP = passes.foldLeft(modules) { 
+    val modulesP = passes.foldLeft(modules) {
       (mods, pass) => {
         pass.reset()
         val initCtx = Scope.empty

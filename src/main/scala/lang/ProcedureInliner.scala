@@ -1,35 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Author: Pramod Subramanyan
 
  * Inlines all procedure calls.
  *
- * FIXME: Need to check for the absence of recursion. 
+ * FIXME: Need to check for the absence of recursion.
  */
 
 package uclid
@@ -58,17 +58,17 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
     val newDecls = newVars.map((t) => LocalVarDecl(t._1, t._2))
     return Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, stmts))
   }
-  
+
   override def rewriteModule(m : Module, ctx : Scope) : Option[Module] = {
     val initNameProvider = new ContextualNameProvider(ctx, "init$" + proc.id)
     val nextNameProvider = new ContextualNameProvider(ctx, "next$" + proc.id)
-    
+
     val decls = m.decls.foldLeft((List.empty[Decl], List.empty[StateVarDecl]))((acc, decl) => {
       decl match {
-        case InitDecl(body) => 
+        case InitDecl(body) =>
           val (stmts, vars) = inlineProcedureCalls((id, p) => initNameProvider(id, p), body)
           (acc._1 ++ List(InitDecl(stmts)), acc._2 ++ vars.map((t) => StateVarDecl(t._1, t._2)))
-        case NextDecl(body) => 
+        case NextDecl(body) =>
           val (stmts, vars) = inlineProcedureCalls((id, p) => nextNameProvider(id, p), body)
           (acc._1 ++ List(NextDecl(stmts)), acc._2 ++ vars.map((t) => StateVarDecl(t._1, t._2)))
         case stmt =>
@@ -78,9 +78,9 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
     val moduleDecls = decls._2 ++ decls._1
     return Some(Module(m.id, moduleDecls, m.cmds))
   }
-  
+
   /** Inline a procedure call.
-   *  
+   *
    *  The return value consists of a tuple of:
    *  	- rewritten statements
    *    - new variables that will need to be declared in the enclosing scope.
@@ -92,7 +92,7 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
       stmt match {
         case ProcedureCallStmt(id, lhss, args) =>
           if (id != proc.id) {
-            (acc._1 ++ List(stmt), acc._2) 
+            (acc._1 ++ List(stmt), acc._2)
           } else {
             // Sanity check.
             Utils.assert(args.size == proc.sig.inParams.size, "Incorrect number of arguments to procedure: " + proc.id + ".\nStatement: " + stmt.toString)
@@ -124,7 +124,7 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
           val elseBlockP = inlineProcedureCalls(uniqNamer, elseblock)
           val ifElseP = IfElseStmt(cond, ifBlockP._1, elseBlockP._1)
           (acc._1 ++ List(ifElseP), acc._2 ++ ifBlockP._2 ++ elseBlockP._2)
-        
+
         case CaseStmt(cases) =>
           val caseBodiesP = cases.map((c) => inlineProcedureCalls(uniqNamer, c._2))
           val caseConds = cases.map(_._1)
@@ -142,7 +142,7 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
 class ProcedureInliner extends ASTAnalysis {
   var findLeafProcedurePass = new FindLeafProcedurePass()
   var findLeafProcedureAnalysis = new ASTAnalyzer("FunctionInliner.FindLeafProcedure", findLeafProcedurePass)
-  
+
   override def passName = "FunctionInliner"
   override def visit(module : Module, context : Scope) : Option[Module] = {
     var modP : Option[Module] = Some(module)
@@ -151,7 +151,7 @@ class ProcedureInliner extends ASTAnalysis {
     val MAX_ITERATIONS = 1000
     do {
       modP = modP match {
-        case None => 
+        case None =>
           done = true
           None
         case Some(mod) =>
@@ -177,9 +177,9 @@ class ProcedureInliner extends ASTAnalysis {
     } while(!done && iteration < MAX_ITERATIONS)
     // check if we managed to inline all procedures.
     modP match {
-      case Some(mod) => 
+      case Some(mod) =>
         val procs = mod.procedures
-        if (procs.size > 0) { 
+        if (procs.size > 0) {
           val errors = procs.map((p) => ("Unable to inline procedure " + p.id + ". Do you have recursion?", p.position))
           throw new Utils.ParserErrorList(errors)
         }

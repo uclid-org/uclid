@@ -1,30 +1,30 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Authors: Rohit Sinha, Pramod Subramanyan
  *
  * SMT AST definition.
@@ -51,16 +51,16 @@ case class UninterpretedType(name: String) extends Type {
   override def isUninterpreted = true
 }
 // The Boolean type.
-case class BoolType() extends Type { 
-  override def toString = "bool" 
+case class BoolType() extends Type {
+  override def toString = "bool"
   override def isBool = true
 }
 object BoolType {
   val t = new BoolType
 }
 // The integer type.
-case class IntType() extends Type { 
-  override def toString = "int" 
+case class IntType() extends Type {
+  override def toString = "int"
   override def isInt = true
 }
 object IntType {
@@ -117,7 +117,7 @@ trait Operator {
   def resultType(args: List[Expr]) : Type
   def typeCheck (args: List[Expr]) : Unit = { }
   def fixity : OperatorFixity
-  
+
   def checkNumArgs(args: List[Expr], expectedNumOperands : Int) : Unit = {
     Utils.assert(args.size == expectedNumOperands, "Operator '" + toString + "' requires " + expectedNumOperands + " operand(s).")
   }
@@ -138,14 +138,14 @@ abstract class IntResultOp extends Operator {
   override def fixity = { PREFIX }
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
 }
-object IntAddOp extends IntResultOp { 
-  override def toString = "+" 
+object IntAddOp extends IntResultOp {
+  override def toString = "+"
 }
-object IntSubOp extends IntResultOp { 
-  override def toString = "-" 
+object IntSubOp extends IntResultOp {
+  override def toString = "-"
 }
-object IntMulOp extends IntResultOp { 
-  override def toString = "*" 
+object IntMulOp extends IntResultOp {
+  override def toString = "*"
 }
 
 // Operators that return bitvectors.
@@ -178,7 +178,7 @@ case class BVNotOp(w : Int) extends BVResultOp(w) {
 }
 case class BVExtractOp(hi : Int, lo : Int) extends BVResultOp(hi - lo + 1) {
   override def toString = "bvextract " + hi + " " + lo
-  override def typeCheck(args: List[Expr]) : Unit = { 
+  override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 1);
     Utils.assert(args(0).typ.isBitVector, "Argument to bitvector extract must be a bitvector.")
     val argBvType = args(0).typ.asInstanceOf[BitVectorType]
@@ -187,13 +187,13 @@ case class BVExtractOp(hi : Int, lo : Int) extends BVResultOp(hi - lo + 1) {
 }
 case class BVConcatOp(w : Int) extends BVResultOp(w) {
   override def toString = "bvconcat"
-  override def typeCheck(args: List[Expr]) : Unit = { 
+  override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 2);
     Utils.assert(args.forall(_.typ.isBitVector), "Argument to bitvector concat must be a bitvector.")
     val width = args.foldLeft(0)((acc, ai) => ai.typ.asInstanceOf[BitVectorType].width + acc)
     Utils.assert(width == w, "Incorrect width argument to BVConcatOp.")
   }
-}    
+}
 case class BVReplaceOp(w : Int, hi : Int, lo : Int) extends BVResultOp(w) {
   override def toString = "bvreplace " + hi + " " + lo
   override def typeCheck(args: List[Expr]) : Unit = {
@@ -228,32 +228,32 @@ case class ExistsOp(vs : List[Symbol]) extends QuantifierOp {
   override def toString = "exists (" + Utils.join(vs.map(i => i.toString + ": " + i.typ.toString), ", ") + "): "
 }
 
-case object IffOp extends BoolResultOp { 
+case object IffOp extends BoolResultOp {
   override def toString = "<==>"
   override def typeCheck (args: List[Expr]) = {
     Utils.assert(args.size == 2, "Iff must have two operands.")
     Utils.assert(args.forall(op => op.typ.isBool), "Iff operands must be boolean.")
   }
 }
-case object ImplicationOp extends BoolResultOp { 
-  override def toString  = "==>" 
+case object ImplicationOp extends BoolResultOp {
+  override def toString  = "==>"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
 }
-case object ConjunctionOp extends BoolResultOp { 
-  override def toString = "/\\" 
+case object ConjunctionOp extends BoolResultOp {
+  override def toString = "/\\"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
 }
-case object DisjunctionOp extends BoolResultOp { 
-  override def toString = "\\/" 
+case object DisjunctionOp extends BoolResultOp {
+  override def toString = "\\/"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
 }
-case object NegationOp extends BoolResultOp { 
-  override def toString = "not" 
+case object NegationOp extends BoolResultOp {
+  override def toString = "not"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 1); checkAllArgTypes(args, BoolType.t) }
   override def fixity = PREFIX
 }
-case object EqualityOp extends BoolResultOp { 
-  override def toString = "=" 
+case object EqualityOp extends BoolResultOp {
+  override def toString = "="
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
 }
 case object InequalityOp extends BoolResultOp {
@@ -261,50 +261,50 @@ case object InequalityOp extends BoolResultOp {
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
 }
 // Integer comparison.
-case object IntLTOp extends BoolResultOp { 
+case object IntLTOp extends BoolResultOp {
   override def toString = "<"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
   override def fixity = PREFIX
 }
-case object IntLEOp extends BoolResultOp { 
-  override def toString = "<=" 
+case object IntLEOp extends BoolResultOp {
+  override def toString = "<="
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
   override def fixity = PREFIX
 }
-case object IntGTOp extends BoolResultOp { 
-  override def toString = ">" 
+case object IntGTOp extends BoolResultOp {
+  override def toString = ">"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
   override def fixity = PREFIX
 }
-case object IntGEOp extends BoolResultOp { 
-  override def toString = ">=" 
+case object IntGEOp extends BoolResultOp {
+  override def toString = ">="
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
   override def fixity = PREFIX
 }
 // Bitvector comparison.
-case class BVLTOp(w : Int) extends BoolResultOp { 
+case class BVLTOp(w : Int) extends BoolResultOp {
   override def toString = "bvslt"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
   override def fixity = PREFIX
 }
-case class BVLEOp(w : Int) extends BoolResultOp { 
-  override def toString = "bvsle" 
+case class BVLEOp(w : Int) extends BoolResultOp {
+  override def toString = "bvsle"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
   override def fixity = PREFIX
 }
-case class BVGTOp(w : Int) extends BoolResultOp { 
-  override def toString = "bvugt" 
+case class BVGTOp(w : Int) extends BoolResultOp {
+  override def toString = "bvugt"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
   override def fixity = PREFIX
 }
-case class BVGEOp(w : Int) extends BoolResultOp { 
-  override def toString = "bvuge" 
+case class BVGEOp(w : Int) extends BoolResultOp {
+  override def toString = "bvuge"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
   override def fixity = PREFIX
 }
 case class RecordSelectOp(name : String) extends Operator {
   override def toString = "get-field " + name
-  override def typeCheck(args: List[Expr]) : Unit = { 
+  override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 1);
     Utils.assert(args(0).typ.isInstanceOf[ProductType], "Argument to record select must be a product type.")
     Utils.assert(args(0).typ.asInstanceOf[ProductType].hasField(name), "Field '" + name + "' does not exist in product type.")
@@ -355,7 +355,7 @@ case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {
 
 // Tuple creation.
 case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ))) {
-  override def toString = "(mk-tuple " + Utils.join(args.map(_.toString), " ") + ")" 
+  override def toString = "(mk-tuple " + Utils.join(args.map(_.toString), " ") + ")"
 }
 
 
@@ -372,21 +372,21 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
   }
 }
 
-case class ArraySelectOperation(e: Expr, index: List[Expr]) 
-  extends Expr (e.typ.asInstanceOf[ArrayType].outType) 
+case class ArraySelectOperation(e: Expr, index: List[Expr])
+  extends Expr (e.typ.asInstanceOf[ArrayType].outType)
 {
   override def toString = "(" + e.toString + ")" + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + "]"
 }
-case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr(e.typ) 
+case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr(e.typ)
 {
   override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + " := " + value.toString + "]"
 }
 
 //For uninterpreted function symbols or anonymous functions defined by Lambda expressions
-case class FunctionApplication(e: Expr, args: List[Expr]) 
-  extends Expr (e.typ.asInstanceOf[MapType].outType) 
+case class FunctionApplication(e: Expr, args: List[Expr])
+  extends Expr (e.typ.asInstanceOf[MapType].outType)
 {
   override def toString = e.toString + "(" + args.tail.fold(args.head.toString)
     { (acc,i) => acc + "," + i.toString } + ")"
@@ -399,17 +399,17 @@ case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType(ids.map(id =>
 }
 
 abstract class Model {
-  def evaluate(e : Expr) : Expr = { 
-    throw new Utils.UnimplementedException("evaluate not implemented yet.") 
+  def evaluate(e : Expr) : Expr = {
+    throw new Utils.UnimplementedException("evaluate not implemented yet.")
   }
-  def evalAsString(e : Expr) : String = { 
-    throw new Utils.UnimplementedException("evalAsString not implemented yet.") 
-  } 
+  def evalAsString(e : Expr) : String = {
+    throw new Utils.UnimplementedException("evalAsString not implemented yet.")
+  }
 }
 
 case class SolverResult(result : Option[Boolean], model: Option[Model]) {
-  def hasValue(expected : Boolean) : Boolean = { 
-    result match { 
+  def hasValue(expected : Boolean) : Boolean = {
+    result match {
       case Some(b) => b == expected
       case None => false
     }
@@ -423,8 +423,8 @@ case class SolverResult(result : Option[Boolean], model: Option[Model]) {
 }
 
 abstract class SolverInterface {
-  /** 
-   *  Helper function that finds the list of all symbols (constants in SMT parlance) in an expression. 
+  /**
+   *  Helper function that finds the list of all symbols (constants in SMT parlance) in an expression.
    */
   def findSymbols(e : Expr, syms : Set[Symbol]) : Set[Symbol] = {
     e match {
@@ -449,9 +449,9 @@ abstract class SolverInterface {
       case BooleanLit(_) => return Set.empty[Symbol]
     }
   }
-  
+
   def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set()) }
-  
+
   // Assert 'e' in the solver. (Modifies solver context to contain 'e'.)
   def addConstraint(e : Expr)
   // Check whether 'e' is satisfiable in the current solver context.

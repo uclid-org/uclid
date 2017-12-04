@@ -1,30 +1,30 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Authors: Rohit Sinha, Pramod Subramanyan
 
  * Utilities for UCLID5.
@@ -36,8 +36,8 @@ import scala.util.parsing.input.Position
 
 object Utils {
   def assert(b: Boolean, err: => String /* error may be lazily computed. */) : Unit = {
-    if (!b) { 
-      throw new AssertionError(err) 
+    if (!b) {
+      throw new AssertionError(err)
     }
   }
   def raiseParsingError(err: String, pos : Position, fileName : Option[String]) : Unit = {
@@ -70,18 +70,18 @@ object Utils {
   }
   class TypeErrorList(val errors: List[TypeError]) extends java.lang.RuntimeException("Type errors.", null)
   class ParserErrorList(val errors : List[(String, lang.ASTPosition)]) extends java.lang.RuntimeException("Parser Errors", null)
-  
+
   def existsOnce(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,1)
   def existsNone(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,0)
-  def existsNTimes(a: List[lang.Identifier], b: lang.Identifier, n: Int) : Boolean = 
+  def existsNTimes(a: List[lang.Identifier], b: lang.Identifier, n: Int) : Boolean =
     a.count { x => x.name == b.name } == n
-  
+
   def allUnique(a: List[lang.Identifier]) : Boolean = a.distinct.size == a.size
-  
+
   def join(things: List[String], sep: String) = {
     things match {
       case Nil => ""
-      case head :: tail => head + tail.foldLeft(""){(acc,i) => acc + sep + i} 
+      case head :: tail => head + tail.foldLeft(""){(acc,i) => acc + sep + i}
     }
   }
 }
