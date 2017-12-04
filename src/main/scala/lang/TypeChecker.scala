@@ -486,11 +486,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           val moduleTypeP = moduleTypeOption.get
           checkTypeError(moduleTypeP.isInstanceOf[ModuleType], "Identifier '%s' is not a module.".format(mId.toString), mId.pos, c.filename)
           val moduleType = moduleTypeP.asInstanceOf[ModuleType]
-          moduleType.funcMap.get(fId) match {
+          moduleType.externalTypeMap.get(fId) match {
             case None =>
-              raiseTypeError("Unknown function '%s' in module '%s'.".format(fId.toString, mId.toString), fId.pos, c.filename)
+              raiseTypeError("Unknown external '%s' in module '%s'.".format(fId.toString, mId.toString), fId.pos, c.filename)
               UndefinedType()
-            case Some(fSig) => fSig.typ
+            case Some(typ) => typ
           }
         case b : BoolLit => new BoolType()
         case i : IntLit => new IntType()

@@ -51,7 +51,7 @@ class ExternalTypeAnalysisPass extends ReadOnlyPass[ExternalTypeMap] {
     }
     context.moduleDefinitionMap.get(eId.moduleId) match {
       case Some(mod) =>
-        mod.functionMap.get (eId.id) match {
+        mod.externalMap.get (eId.id) match {
           case Some(funcDecl) => in
           case None =>
             val error = ModuleError("Unknown identifier '%s' in module '%s'".format(eId.id, eId.moduleId), eId.id.position)

@@ -264,11 +264,14 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       (mapAcc, v) => mapAcc + (v.id -> MIP.StateVariable(nameProvider(v.id, "var"), v.typ))
     }
     // map each constant.
-    val idMap4 = targetModule.constants.foldLeft(idMap3) {
-      (mapAcc, v) => mapAcc + (v.id -> MIP.Constant(nameProvider(v.id, "const"), v.typ))
+    val map4 = targetModule.constants.foldLeft((idMap3, initExternalSymbolMap)) {
+      (acc, c) => {
+        val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, c.id), c)
+        (acc._1 + (c.id -> MIP.Constant(newName, c.typ)), extSymMapP)
+      }
     }
     // map each function.
-    val map5 = targetModule.functions.foldLeft((idMap4, initExternalSymbolMap)) {
+    val map5 = targetModule.functions.foldLeft(map4) {
       (acc, f) => {
         val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, f.id), f)
         (acc._1 + (f.id -> MIP.Function(newName, f.sig)), extSymMapP)
@@ -338,7 +341,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   // rewrite external identifiers.
   override def rewriteExternalIdentifier(extId : ExternalIdentifier, context : Scope) : Option[Expr] = {
-    externalSymbolMap.functionMap.get(extId) match {
+    externalSymbolMap.externalMap.get(extId) match {
       case Some((newId, _)) => Some(newId)
       case None => throw new Utils.RuntimeError("Unknown external identifiers must have been eliminated by now.")
     }
@@ -416,8 +419,13 @@ class ModuleFlattenerPass(modules : List[Module], moduleName : Identifier) exten
         val modP = rewriter.visit(module, Scope.empty).get
         rewrite(modP, extSymbolMapP)
       case Nil =>
-        val funcDecls = extSymMap.functionMap.map(p => FunctionDecl(p._2._1, p._2._2.sig)).toList
-        Module(module.id, funcDecls ++ module.decls, module.cmds)
+        val extDecls = extSymMap.externalMap.map(p => {
+          p._2._2 match {
+            case f : FunctionDecl => FunctionDecl(p._2._1, f.sig)
+            case c : ConstantDecl => ConstantDecl(p._2._1, c.typ)
+          }
+        }).toList
+        Module(module.id, extDecls ++ module.decls, module.cmds)
     }
   }
   override def rewriteModule(moduleIn : Module, ctx : Scope) : Option[Module] = {

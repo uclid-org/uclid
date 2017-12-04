@@ -544,7 +544,7 @@ case class ModuleType(
   lazy val funcMap : Map[Identifier, FunctionSig] = functions.map(a => (a._1 -> a._2)).toMap
   lazy val instanceMap : Map[Identifier, ModuleType] = instances.map(a => (a._1 -> a._2)).toMap
   lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ funcMap.map(f => (f._1 -> f._2.typ))  ++ instanceMap
-
+  lazy val externalTypeMap : Map[Identifier, Type] = constantMap ++ funcMap.map(f => (f._1 -> f._2.typ))
   def typeOf(id : Identifier) : Option[Type] = {
     typeMap.get(id)
   }
@@ -723,13 +723,23 @@ case class OutputVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
   override def toString = "output " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
   override def declNames = ids
 }
-case class ConstantDecl(id: Identifier, typ: Type) extends Decl {
+/** This is base trait for all entities that are exported from a module. */
+sealed abstract trait ModuleExternal {
+  def extName : Identifier
+  def extType : Type
+}
+
+case class ConstantDecl(id: Identifier, typ: Type) extends Decl with ModuleExternal {
   override def toString = "constant " + id + ": " + typ + "; // " + position.toString
   override def declNames = List(id)
+  override def extName = id
+  override def extType = typ
 }
-case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl {
+case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with ModuleExternal {
   override def toString = "function " + id + sig + ";  // " + position.toString
   override def declNames = List(id)
+  override def extName = id
+  override def extType = sig.typ
 }
 case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, requires: List[Expr], ensures: List[Expr], grammar : Option[Grammar]) extends Decl {
   // FIXME: printout requires and ensures conditions.
@@ -800,8 +810,9 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
   // module functions.
   lazy val functions : List[FunctionDecl] =
     decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
-  lazy val functionMap : Map[Identifier, FunctionDecl] =
-    functions.map(f => (f.id -> f)).toMap
+
+  lazy val externalMap : Map[Identifier, ModuleExternal] =
+    (functions.map(f => (f.id -> f)) ++ constants.map(c => (c.id -> c))).toMap
 
   // module procedures.
   lazy val procedures : List[ProcedureDecl] = decls.filter(_.isInstanceOf[ProcedureDecl]).map(_.asInstanceOf[ProcedureDecl])
