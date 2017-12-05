@@ -189,6 +189,9 @@ case class GloballyTemporalOp() extends TemporalOperator { override def toString
 case class NextTemporalOp() extends TemporalOperator { override def toString = "next" }
 case class UntilTemporalOp() extends TemporalOperator { override def toString = "until" }
 case class FinallyTemporalOp() extends TemporalOperator { override def toString = "finally" }
+case class ReleaseTemporalOp() extends TemporalOperator { override def toString = "release" }
+// For internal use only:
+case class WUntilTemporalOp() extends TemporalOperator { override def toString = "wuntil" }
 
 abstract class BitVectorSlice extends ASTNode {
   def width : Option[Int]

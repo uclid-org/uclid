@@ -148,6 +148,7 @@ trait ReadOnlyPass[T] {
 /* AST Visitor that rewrites and generates a new AST. */
 trait RewritePass {
   var _analysis : Option[ASTAnalysis] = None
+  var inSpec : Boolean = false
   def analysis : ASTAnalysis = _analysis.get
   def reset() { }
   
@@ -895,6 +896,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   
   def pass = _pass
   override def passName = _passName
+  def _setFilename = setFilename
   override def visit(module : Module, context : Scope) : Option[Module] = visitModule(module, context)
   
   override def reset() { 
