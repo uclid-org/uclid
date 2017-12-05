@@ -293,9 +293,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
           case MIP.BoundInput(id, t, _t) => Some(StateVarDecl(id, t))
           case MIP.UnboundOutput(id, t) => Some(StateVarDecl(id, t))
           case MIP.StateVariable(id, t) => Some(StateVarDecl(id, t))
-          case MIP.Constant(id, t) => Some(ConstantDecl(id, t))
-          case MIP.Function(_, _) | MIP.UnboundInput(_, _) | MIP.BoundOutput(_, _) =>
-            None
+          case MIP.Constant(_, _) | MIP.Function(_, _) | 
+               MIP.UnboundInput(_, _) | MIP.BoundOutput(_, _) =>  None
         }
       }
     }.toList.flatten
