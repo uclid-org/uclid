@@ -41,7 +41,7 @@ class ParserSpec extends FlatSpec {
   "test/test-type1.ucl4" should "not parse successfully." in {
     try {
       val filename = "test/test-type1.ucl4"
-      val fileModules = UclidMain.compile(List(filename))
+      val fileModules = UclidMain.compile(List(filename), lang.Identifier("main"))
       assert (fileModules.size == 2)
     }
     catch {
@@ -52,7 +52,7 @@ class ParserSpec extends FlatSpec {
   }
   "test/test-typechecker-0.ucl4" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List("test/test-typechecker-0.ucl4"))
+      val fileModules = UclidMain.compile(List("test/test-typechecker-0.ucl4"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }
@@ -63,7 +63,7 @@ class ParserSpec extends FlatSpec {
   }
   "test/test-typechecker-1.ucl4" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List("test/test-typechecker-1.ucl4"))
+      val fileModules = UclidMain.compile(List("test/test-typechecker-1.ucl4"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }
@@ -76,7 +76,7 @@ class ParserSpec extends FlatSpec {
   }
   "test/test-module-errors.ucl4" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List("test/test-module-errors.ucl4"))
+      val fileModules = UclidMain.compile(List("test/test-module-errors.ucl4"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }
@@ -87,7 +87,7 @@ class ParserSpec extends FlatSpec {
   }
   "test/test-typechecker-6.ucl4" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List("test/test-typechecker-6.ucl4"))
+      val fileModules = UclidMain.compile(List("test/test-typechecker-6.ucl4"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }
@@ -98,7 +98,7 @@ class ParserSpec extends FlatSpec {
   }
   "test/test-typechecker-3.ucl4" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List("test/test-typechecker-3.ucl4"))
+      val fileModules = UclidMain.compile(List("test/test-typechecker-3.ucl4"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }
@@ -110,7 +110,7 @@ class ParserSpec extends FlatSpec {
   }
   "test/test-typechecker-4.ucl4" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List("test/test-typechecker-4.ucl4"))
+      val fileModules = UclidMain.compile(List("test/test-typechecker-4.ucl4"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }
@@ -123,7 +123,7 @@ class ParserSpec extends FlatSpec {
   }
   "test/test-recursion.ucl4" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List("test/test-recursion.ucl4"))
+      val fileModules = UclidMain.compile(List("test/test-recursion.ucl4"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }
@@ -136,7 +136,7 @@ class ParserSpec extends FlatSpec {
   }
   "test/test-procedure-types-errors.ucl4" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List("test/test-procedure-types-errors.ucl4"))
+      val fileModules = UclidMain.compile(List("test/test-procedure-types-errors.ucl4"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }
@@ -149,7 +149,7 @@ class ParserSpec extends FlatSpec {
   }
   "test/test-procedure-invocation-errors.ucl4" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List("test/test-procedure-invocation-errors.ucl4"))
+      val fileModules = UclidMain.compile(List("test/test-procedure-invocation-errors.ucl4"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }
@@ -162,7 +162,7 @@ class ParserSpec extends FlatSpec {
   }
   "test/test-typechecker-5.ucl4" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List("test/test-typechecker-5.ucl4"))
+      val fileModules = UclidMain.compile(List("test/test-typechecker-5.ucl4"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }
@@ -175,7 +175,7 @@ class ParserSpec extends FlatSpec {
   }
   "test/test-modules-2.ucl4" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List("test/test-modules-2.ucl4"))
+      val fileModules = UclidMain.compile(List("test/test-modules-2.ucl4"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }

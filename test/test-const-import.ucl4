@@ -24,10 +24,11 @@ module main {
   property sum_num : sum == num;
 
   control {
-    print_module;
+    // print_module;
     initialize;
     simulate(5);
     decide;
-    print_results;
+    // print_results;
+    // print_cex(sum, num);
   }
 }

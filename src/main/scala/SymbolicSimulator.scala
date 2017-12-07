@@ -54,8 +54,8 @@ class SymbolicSimulator (module : Module) {
   val scope = Scope.empty + module
   var asserts : List[AssertInfo] = List.empty
   var results : List[CheckResult] = List.empty
-  val initAssumes = module.axioms.foldLeft(List.empty[smt.Expr])((acc, axiom) => smt.Converter.exprToSMT(axiom.expr, scope) :: acc)
-  var assumes : List[smt.Expr] = initAssumes
+  // val initAssumes = module.axioms.foldLeft(List.empty[smt.Expr])((acc, axiom) => smt.Converter.exprToSMT(axiom.expr, scope) :: acc)
+  var assumes : List[smt.Expr] = List.empty
 
   type SymbolTable = Map[Identifier, smt.Expr];
   var symbolTable : SymbolTable = Map.empty
@@ -77,7 +77,7 @@ class SymbolicSimulator (module : Module) {
         cmd.name.toString match {
           case "clear_context" =>
             asserts = List.empty
-            assumes = initAssumes
+            assumes = List.empty
             results = List.empty
             symbolTable = Map.empty
             frameTable.clear()
@@ -143,6 +143,8 @@ class SymbolicSimulator (module : Module) {
     } else {
       initSymbolTable
     }
+
+    addModuleAssumptions(symbolTable)
 
     if (addAssertions) {
       addAsserts(0, symbolTable)
@@ -271,6 +273,13 @@ class SymbolicSimulator (module : Module) {
       // println ("addAsserts: " + property.toString + "; " + property.expr.toString)
       property :: asserts
     }}
+  }
+
+  /** Add module-level axioms/assumptions. */
+  def addModuleAssumptions(symbolTable : SymbolTable) {
+    this.assumes ++= module.axioms.foldLeft(List.empty[smt.Expr]) { 
+      (acc, axiom) => evaluate(axiom.expr, symbolTable) :: acc
+    }
   }
 
   /** Assume assertions (for inductive proofs). */

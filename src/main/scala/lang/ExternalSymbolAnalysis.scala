@@ -70,7 +70,7 @@ class ExternalSymbolRewriterPass(externalSymbolMap: ExternalSymbolMap) extends R
   override def rewriteExternalIdentifier(extId : ExternalIdentifier, context : Scope) : Option[Expr] = {
     externalSymbolMap.externalMap.get(extId) match {
       case Some((newId, _)) => Some(newId)
-      case None => throw new Utils.RuntimeError("Unknown external identifiers must have been eliminated by now.")
+      case None => throw new Utils.RuntimeError("Unknown external identifiers must have been eliminated by now: " + extId.toString)
     }
   }
 }

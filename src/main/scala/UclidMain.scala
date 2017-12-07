@@ -104,8 +104,8 @@ object UclidMain {
       sys.exit(1)
     }
     try {
-      val modules = compile(options.srcFiles)
       val mainModuleName = Identifier(options.mainModule)
+      val modules = compile(options.srcFiles, mainModuleName)
       val mainModule = instantiate(modules, mainModuleName)
       mainModule match {
         case Some(m) => execute(m)
@@ -149,7 +149,7 @@ object UclidMain {
     }
   }
 
-  def compile(srcFiles : List[String]) : List[Module] = {
+  def compile(srcFiles : List[String], mainModuleName : Identifier) : List[Module] = {
     type NameCountMap = Map[Identifier, Int]
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
 
@@ -168,12 +168,12 @@ object UclidMain {
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())
+    passManager.addPass(new ControlCommandChecker())
     passManager.addPass(new ComputeInstanceTypes())
     passManager.addPass(new ProcedureInliner())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new CaseEliminator())
-    passManager.addPass(new ControlCommandChecker())
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
     def parseFile(srcFile : String) : List[Module] = {
@@ -214,9 +214,11 @@ object UclidMain {
     val passManager = new PassManager()
     passManager.addPass(new ModuleInstanceChecker(moduleList))
     passManager.addPass(new ModuleDependencyFinder(moduleList, mainModuleName))
+    passManager.addPass(new StatelessAxiomFinder())
+    passManager.addPass(new StatelessAxiomImporter(mainModuleName))
+    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ModuleFlattener(moduleList, mainModuleName))
-    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new ModuleCleaner())
     passManager.addPass(new ExpressionTypeChecker())
