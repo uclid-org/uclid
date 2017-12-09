@@ -31,10 +31,24 @@ class FindFreshLiteralsPass extends ReadOnlyPass[FindFreshLiteralsPass.T] {
 
 class FindFreshLiterals extends ASTAnalyzer("FindFreshLiterals", new FindFreshLiteralsPass()) {
   in = Some(FindFreshLiteralsPass.T(None, List.empty))
+  lazy val literalMap : Map[IdGenerator.Id, InputVarDecl] = out.get.inputs.toMap
+  lazy val declarations : List[InputVarDecl] = out.get.inputs.map(_._2)
 }
-    
-class RewriteFreshLiterals extends RewritePass {
+
+class RewriteFreshLiteralsPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
-  lazy val findFreshLiterals = manager.pass("FindFreshLiterals").asInstanceOf[FindFreshLiterals].pass
-  
+  lazy val findFreshLiterals = manager.pass("FindFreshLiterals").asInstanceOf[FindFreshLiterals]
+
+  override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
+    val moduleP = Module(module.id, findFreshLiterals.declarations ++ module.decls, module.cmds)
+    Some(moduleP)
+  }
+  override def rewriteFreshLit(f : FreshLit, context : Scope) : Option[Expr] = {
+    findFreshLiterals.literalMap.get(f.astNodeId) match {
+      case Some(inpDecl) => Some(inpDecl.id)
+      case None          => throw new Utils.RuntimeError("All FreshLit instances must be in map.")
+    }
+  }
 }
+
+class RewriteFreshLiterals extends ASTRewriter("RewriteFreshLiterals", new RewriteFreshLiteralsPass())

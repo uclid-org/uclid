@@ -4,9 +4,9 @@ module main {
   var n : int;
   
   init {
-    x := 1;
-    y := 1;
-    n := 2;
+    x := 0;
+    y := 0;
+    n := 0;
   }
   
   next {
@@ -20,16 +20,12 @@ module main {
   }
   
   property eq_nxy : (n == (x + y));
-  /*
   property le_xn  : (x <= n);
   property le_yn  : (y <= n);
-  property lt_xn  : (n > 0) ==> (x < n);
-  */
 
   control {
     initialize;
-    simulate(5);
+    simulate(3);
     decide;
-    print_results;
   }
 }
