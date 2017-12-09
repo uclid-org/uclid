@@ -352,7 +352,6 @@ case class EnumLit(id : String, eTyp : EnumType) extends Literal (eTyp) {
 case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {
   override def toString = id.toString
 }
-
 // Tuple creation.
 case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ))) {
   override def toString = "(mk-tuple " + Utils.join(args.map(_.toString), " ") + ")"

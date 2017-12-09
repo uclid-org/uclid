@@ -130,6 +130,7 @@ trait ReadOnlyPass[T] {
   def applyOnIdentifier(d : TraversalDirection.T, id : Identifier, in : T, context : Scope) : T = { in }
   def applyOnExternalIdentifier(d : TraversalDirection.T, eId : ExternalIdentifier, in : T, context : Scope) : T = { in }
   def applyOnLit(d : TraversalDirection.T, lit : Literal, in : T, context : Scope) : T = { in }
+  def applyOnFreshLit(d : TraversalDirection.T, f : FreshLit, in : T, context : Scope) : T = { in }
   def applyOnBoolLit(d : TraversalDirection.T, b : BoolLit, in : T, context : Scope) : T = { in }
   def applyOnNumericLit(d : TraversalDirection.T, b : NumericLit, in : T, context : Scope) : T = { in }
   def applyOnIntLit(d : TraversalDirection.T, i : IntLit, in : T, context : Scope) : T = { in }
@@ -209,6 +210,7 @@ trait RewritePass {
   def rewriteIdentifier(id : Identifier, ctx : Scope) : Option[Identifier] = { Some(id) }
   def rewriteExternalIdentifier(eId : ExternalIdentifier, ctx : Scope) : Option[Expr] = { Some(eId) }
   def rewriteLit(lit : Literal, ctx : Scope) : Option[Literal] = { Some(lit) }
+  def rewriteFreshLit(f : FreshLit, ctx : Scope) : Option[Expr] = { Some(f) }
   def rewriteBoolLit(b : BoolLit, ctx : Scope) : Option[BoolLit] = { Some(b) }
   def rewriteIntLit(i : IntLit, ctx : Scope) : Option[IntLit] = { Some(i) }
   def rewriteBitVectorLit(bv : BitVectorLit, ctx : Scope) : Option[BitVectorLit] = { Some(bv) }
@@ -778,10 +780,17 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnLit(TraversalDirection.Down, lit, result, context)
     result = lit match {
+      case f : FreshLit => visitFreshLiteral(f, result, context)
       case b : BoolLit => visitBoolLiteral(b, result, context)
       case n : NumericLit => visitNumericLit(n, result, context)
     }
     result = pass.applyOnLit(TraversalDirection.Up, lit, result, context)
+    return result
+  }
+  def visitFreshLiteral(f : FreshLit, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnFreshLit(TraversalDirection.Down, f, result, context)
+    result = pass.applyOnFreshLit(TraversalDirection.Up, f, result, context)
     return result
   }
   def visitBoolLiteral(b : BoolLit, in : T, context : Scope) : T = {
@@ -1495,18 +1504,29 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val idP = pass.rewriteIdentifier(id, context)
     return ASTNode.introducePos(setFilename, idP, id.position)
   }
+
   def visitExternalIdentifier(eId : ExternalIdentifier, context : Scope) : Option[Expr] = {
     val eIdP = pass.rewriteExternalIdentifier(eId, context)
     return ASTNode.introducePos(setFilename, eIdP, eId.position)
   }
-  def visitLiteral(lit : Literal, context : Scope) : Option[Literal] = {
+
+  def visitLiteral(lit : Literal, context : Scope) : Option[Expr] = {
     val litP = (lit match {
+      case f : FreshLit => visitFreshLiteral(f, context)
       case b : BoolLit => visitBoolLiteral(b, context)
       case n : NumericLit => visitNumericLiteral(n, context)
-    }).flatMap(pass.rewriteLit(_, context))
+    }).flatMap{
+      case l : Literal => pass.rewriteLit(l, context)
+      case e : Expr => pass.rewriteExpr(e, context)
+      case _ => None // should never get here!
+    }
     return ASTNode.introducePos(setFilename, litP, lit.position)
   }
 
+  def visitFreshLiteral(f : FreshLit, context : Scope) : Option[Expr] = {
+    val fP = pass.rewriteFreshLit(f, context)
+    return ASTNode.introducePos(setFilename, fP, f.position)
+  }
   def visitBoolLiteral(b : BoolLit, context : Scope) : Option[BoolLit] = {
     val bP = pass.rewriteBoolLit(b, context)
     return ASTNode.introducePos(setFilename, bP, b.position)

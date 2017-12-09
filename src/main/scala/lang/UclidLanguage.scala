@@ -246,11 +246,14 @@ case class Identifier(name : String) extends Expr {
 case class ExternalIdentifier(moduleId : Identifier, id : Identifier) extends Expr {
   override def toString = moduleId.toString + "::" + id.toString
 }
-
 sealed abstract class Literal extends Expr {
   /** All literals are constants. */
   override def isConstant = true
   def isNumeric = false
+}
+/** A non-deterministic new constant. */
+case class FreshLit(typ : Type) extends Literal {
+  override def toString = "*"
 }
 sealed abstract class NumericLit extends Literal {
   override def isNumeric = true
@@ -260,7 +263,6 @@ sealed abstract class NumericLit extends Literal {
 case class BoolLit(value: Boolean) extends Literal {
   override def toString = value.toString
 }
-
 case class IntLit(value: BigInt) extends NumericLit {
   override def toString = value.toString
   override def typeOf : NumericType = IntType()

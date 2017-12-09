@@ -123,20 +123,22 @@ object Converter {
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
        case lang.Tuple(args) => smt.MakeTuple(toSMTs(args))
        case lang.OperatorApplication(op,args) =>
-         return smt.OperatorApplication(opToSMT(op), args.map((a) => exprToSMT(a, scope + lang.OperatorApplication(op, args))))
+         smt.OperatorApplication(opToSMT(op), args.map((a) => exprToSMT(a, scope + lang.OperatorApplication(op, args))))
        case lang.ArraySelectOperation(a,index) =>
-         return smt.ArraySelectOperation(toSMT(a), toSMTs(index))
+         smt.ArraySelectOperation(toSMT(a), toSMTs(index))
        case lang.ArrayStoreOperation(a,index,value) =>
-         return smt.ArrayStoreOperation(toSMT(a), toSMTs(index), toSMT(value))
+         smt.ArrayStoreOperation(toSMT(a), toSMTs(index), toSMT(value))
        case lang.FuncApplication(f,args) => f match {
          case lang.Identifier(id) =>
-           return smt.FunctionApplication(toSMT(f), toSMTs(args))
+           smt.FunctionApplication(toSMT(f), toSMTs(args))
          case lang.Lambda(idtypes,le) =>
            // FIXME: beta sub
            throw new Utils.UnimplementedException("Beta reduction is not implemented yet.")
          case _ =>
            throw new Utils.RuntimeError("Should never get here.")
        }
+       case lang.FreshLit(t) =>
+         throw new Utils.RuntimeError("Should never get here. FreshLits must have been rewritten by this point.")
        case lang.ExternalIdentifier(_, _) =>
          throw new Utils.RuntimeError("Should never get here. ExternalIdentifiers must have been rewritten by this point.")
        case lang.ITE(cond,t,f) =>
@@ -184,8 +186,10 @@ object Converter {
          return smt.ITE(toSMT(cond), toSMT(t), toSMT(f))
        case lang.Lambda(ids,le) =>
          throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
-       case _ =>
-         throw new Utils.UnimplementedException("Unimplemented expression: " + expr.toString)
+       case lang.ExternalIdentifier(_, _) =>
+         throw new Utils.RuntimeError("External identifiers should have been eliminated by now.")
+       case lang.FreshLit(t) =>
+         throw new Utils.RuntimeError("Fresh literals should have been eliminated by now.")
     }
   }
 

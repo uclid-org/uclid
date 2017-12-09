@@ -396,6 +396,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case lhss ~ id ~ args => ProcedureCallStmt(id, lhss, args) } |
       KwNext ~ "(" ~> Id <~ ")" ~ ";" ^^
         { case id => lang.ModuleCallStmt(id) } |
+      KwIf ~ "(" ~ "*" ~ ")" ~> (BlockStatement <~ KwElse) ~ BlockStatement ^^
+        { case tblk ~ fblk => lang.IfElseStmt(lang.FreshLit(lang.BoolType()), tblk, fblk) } |
+      KwIf ~ "(" ~ "*" ~ ")" ~> BlockStatement ^^
+        { case blk => IfElseStmt(lang.FreshLit(lang.BoolType()), blk, List.empty) } |
       KwIf ~ "(" ~> (Expr <~ ")") ~ BlockStatement ~ (KwElse ~> BlockStatement) ^^
         { case e ~ f ~ g => IfElseStmt(e,f,g)} |
       KwIf ~> (Expr ~ BlockStatement) ^^

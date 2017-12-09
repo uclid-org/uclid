@@ -492,6 +492,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               UndefinedType()
             case Some(typ) => typ
           }
+        case f : FreshLit => f.typ
         case b : BoolLit => new BoolType()
         case i : IntLit => new IntType()
         case bv : BitVectorLit => new BitVectorType(bv.width)
