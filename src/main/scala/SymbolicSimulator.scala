@@ -45,9 +45,7 @@ object UniqueIdGenerator {
 
 class SymbolicSimulator (module : Module) {
   val scope = Scope.empty + module
-  var proofObligations : List[ProofObligation] = List.empty
-  var proofResults : List[CheckResult] = List.empty
-  var currentProofObligation = ProofObligation.root
+  val assertionTree = new AssertionTree()
   
   type SymbolTable = Map[Identifier, smt.Expr];
   var symbolTable : SymbolTable = Map.empty
@@ -63,13 +61,13 @@ class SymbolicSimulator (module : Module) {
     new smt.Symbol("$const_"+name,t)
 
   def execute(solver : smt.SolverInterface) : List[CheckResult] = {
+    var proofResults : List[CheckResult] = List.empty
     // add axioms as assumptions.
     module.cmds.foreach {
       (cmd) => {
         cmd.name.toString match {
           case "clear_context" =>
-            proofObligations = List.empty
-            proofResults = List.empty
+            assertionTree.resetToInitial()
             symbolTable = Map.empty
             frameTable.clear()
           case "initialize" =>
@@ -88,26 +86,7 @@ class SymbolicSimulator (module : Module) {
           case "decide" =>
             // assumes.foreach((e) => println("assumption : " + e.toString))
             // asserts.foreach((e) => println("assertion  : " + e.toString + "; " + e.expr.toString))
-            commitProofObligations()
-            proofResults = proofObligations.flatMap {
-              (po) => {
-                println(po.toString)
-                solver.addAssumptions(po.allAssumptions)
-                val results = po.assertions.map {
-                  e => {
-                    val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e.expr)))
-                    val result = sat.result match {
-                      case Some(true)  => smt.SolverResult(Some(false), sat.model)
-                      case Some(false) => smt.SolverResult(Some(true), sat.model)
-                      case None        => smt.SolverResult(None, None)
-                    }
-                    CheckResult(e, result)
-                  }
-                }
-                solver.popAssumptions();
-                results
-              }
-            }
+            proofResults = assertionTree.verify(solver)
           case "print_results" =>
             printResults(proofResults)
           case "print_cex" =>
@@ -266,19 +245,11 @@ class SymbolicSimulator (module : Module) {
 
   /** Add assertion. */
   def addAssert(property : AssertInfo) {
-    currentProofObligation = currentProofObligation.addAssertion(property)
+    assertionTree.addAssert(property)
   }
   /** Add assumption. */
   def addAssumption(e : smt.Expr) {
-    val r = currentProofObligation.addAssumption(e) 
-    if (r._1) { proofObligations ++= List(currentProofObligation) }
-    currentProofObligation = r._2
-  }
-  /** Commit the last outstanding PO. */
-  def commitProofObligations() {
-    if (currentProofObligation.assertions.size > 0) {
-      proofObligations ++= List(currentProofObligation)
-    }
+    assertionTree.addAssumption(e)
   }
   /** Add module specifications (properties) to the list of proof obligations */
   def addAsserts(iter : Int, symbolTable : SymbolTable) {
