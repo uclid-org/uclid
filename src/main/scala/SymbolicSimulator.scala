@@ -43,20 +43,12 @@ object UniqueIdGenerator {
   def unique() : Int = {i = i + 1; return i}
 }
 
-case class AssertInfo(name : String, iter : Int, expr : smt.Expr, pos : ASTPosition) {
-  override def toString = {
-    "[Step #" + iter.toString + "] " + name + " @ " + pos.toString
-  }
-}
-case class CheckResult(assert : AssertInfo, result : smt.SolverResult)
-
 class SymbolicSimulator (module : Module) {
   val scope = Scope.empty + module
-  var asserts : List[AssertInfo] = List.empty
-  var results : List[CheckResult] = List.empty
-  // val initAssumes = module.axioms.foldLeft(List.empty[smt.Expr])((acc, axiom) => smt.Converter.exprToSMT(axiom.expr, scope) :: acc)
-  var assumes : List[smt.Expr] = List.empty
-
+  var proofObligations : List[ProofObligation] = List.empty
+  var proofResults : List[CheckResult] = List.empty
+  var currentProofObligation = ProofObligation.root
+  
   type SymbolTable = Map[Identifier, smt.Expr];
   var symbolTable : SymbolTable = Map.empty
   type FrameTable = ArrayBuffer[SymbolTable]
@@ -76,14 +68,12 @@ class SymbolicSimulator (module : Module) {
       (cmd) => {
         cmd.name.toString match {
           case "clear_context" =>
-            asserts = List.empty
-            assumes = List.empty
-            results = List.empty
+            proofObligations = List.empty
+            proofResults = List.empty
             symbolTable = Map.empty
             frameTable.clear()
           case "initialize" =>
             initialize(false, true, false)
-            results = List.empty
           case "simulate" =>
             simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false)
           case "k_induction_base" =>
@@ -98,22 +88,30 @@ class SymbolicSimulator (module : Module) {
           case "decide" =>
             // assumes.foreach((e) => println("assumption : " + e.toString))
             // asserts.foreach((e) => println("assertion  : " + e.toString + "; " + e.expr.toString))
-            solver.addAssumptions(assumes)
-            results = asserts.foldLeft(results){
-              case (acc, e) =>
-                val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e.expr)))
-                val result = sat.result match {
-                  case Some(true)  => smt.SolverResult(Some(false), sat.model)
-                  case Some(false) => smt.SolverResult(Some(true), sat.model)
-                  case None        => smt.SolverResult(None, None)
+            commitProofObligations()
+            proofResults = proofObligations.flatMap {
+              (po) => {
+                println(po.toString)
+                solver.addAssumptions(po.allAssumptions)
+                val results = po.assertions.map {
+                  e => {
+                    val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e.expr)))
+                    val result = sat.result match {
+                      case Some(true)  => smt.SolverResult(Some(false), sat.model)
+                      case Some(false) => smt.SolverResult(Some(true), sat.model)
+                      case None        => smt.SolverResult(None, None)
+                    }
+                    CheckResult(e, result)
+                  }
                 }
-                CheckResult(e, result) :: acc
+                solver.popAssumptions();
+                results
+              }
             }
-            solver.popAssumptions();
           case "print_results" =>
-            printResults(results)
+            printResults(proofResults)
           case "print_cex" =>
-            printCEX(results, cmd.args)
+            printCEX(proofResults, cmd.args)
           case "print_module" =>
             println(module.toString)
           case _ =>
@@ -121,7 +119,7 @@ class SymbolicSimulator (module : Module) {
         }
       }
     }
-    return results
+    return proofResults
   }
 
   def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean) {
@@ -266,27 +264,37 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
+  /** Add assertion. */
+  def addAssert(property : AssertInfo) {
+    currentProofObligation = currentProofObligation.addAssertion(property)
+  }
+  /** Add assumption. */
+  def addAssumption(e : smt.Expr) {
+    val r = currentProofObligation.addAssumption(e) 
+    if (r._1) { proofObligations ++= List(currentProofObligation) }
+    currentProofObligation = r._2
+  }
+  /** Commit the last outstanding PO. */
+  def commitProofObligations() {
+    if (currentProofObligation.assertions.size > 0) {
+      proofObligations ++= List(currentProofObligation)
+    }
+  }
   /** Add module specifications (properties) to the list of proof obligations */
   def addAsserts(iter : Int, symbolTable : SymbolTable) {
-    this.asserts = scope.specs.foldLeft(this.asserts){(asserts, prop) => {
+    scope.specs.foreach(prop => {
       val property = AssertInfo("property " + prop.id.toString, iter, evaluate(prop.expr, symbolTable), prop.expr.position)
       // println ("addAsserts: " + property.toString + "; " + property.expr.toString)
-      property :: asserts
-    }}
+      addAssert(property)
+    })
   }
-
   /** Add module-level axioms/assumptions. */
   def addModuleAssumptions(symbolTable : SymbolTable) {
-    this.assumes ++= module.axioms.foldLeft(List.empty[smt.Expr]) { 
-      (acc, axiom) => evaluate(axiom.expr, symbolTable) :: acc
-    }
+    module.axioms.foreach(ax => addAssumption(evaluate(ax.expr, symbolTable)))
   }
-
   /** Assume assertions (for inductive proofs). */
   def assumeAssertions(symbolTable : SymbolTable) {
-    this.assumes ++= scope.specs.foldLeft(this.assumes){
-      (acc, prop) => (evaluate(prop.expr, symbolTable)) :: acc
-    }
+    scope.specs.foreach(sp => addAssumption(evaluate(sp.expr, symbolTable)))
   }
 
 
@@ -343,10 +351,10 @@ class SymbolicSimulator (module : Module) {
     s match {
       case SkipStmt() => return symbolTable
       case AssertStmt(e, id) =>
-        this.asserts = AssertInfo("assertion", iter, evaluate(e,symbolTable), s.position) :: this.asserts
+        addAssert(AssertInfo("assertion", iter, evaluate(e,symbolTable), s.position))
         return symbolTable
       case AssumeStmt(e, id) =>
-        this.assumes ++= List(evaluate(e,symbolTable))
+        addAssumption(evaluate(e,symbolTable))
         return symbolTable
       case HavocStmt(id) =>
         return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(scope.typeOf(id).get)))
