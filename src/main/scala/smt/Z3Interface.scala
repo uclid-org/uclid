@@ -367,6 +367,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     })
   }
   override def popAssumptions() {
+    // println("pop!")
     solver.pop()
   }
 }

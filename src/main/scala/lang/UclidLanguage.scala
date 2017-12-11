@@ -683,12 +683,16 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
   }
 }
 
-case class ProcedureDecl(id: Identifier, sig: ProcedureSig,
-  decls: List[LocalVarDecl], body: List[Statement]) extends Decl {
-  override def toString = "procedure " + id + sig + PrettyPrinter.indent(1) + "{  // " + id.position.toString + "\n" +
-                          Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" +
-                          Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
-                          "\n" + PrettyPrinter.indent(1) + "}"
+case class ProcedureDecl(id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: List[Statement], requires: List[Expr], ensures: List[Expr]) extends Decl {
+  override def toString = {
+    "procedure " + id + sig + "\n"
+    Utils.join(requires.map(PrettyPrinter.indent(2) + "requires " + _.toString), "\n") +
+    Utils.join(ensures.map(PrettyPrinter.indent(2) + "ensures " + _.toString), "\n") +
+    PrettyPrinter.indent(1) + "{  // " + id.position.toString + "\n" +
+    Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" +
+    Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
+    "\n" + PrettyPrinter.indent(1) + "}"
+  }
   override def declNames = List(id)
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {

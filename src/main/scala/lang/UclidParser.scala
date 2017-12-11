@@ -434,10 +434,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
         ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
         { case id ~ args ~ outs ~ decls ~ body =>
-          lang.ProcedureDecl(id, lang.ProcedureSig(args,outs), decls, body) } |
+          lang.ProcedureDecl(id, lang.ProcedureSig(args,outs), decls, body, List.empty, List.empty) } |
       KwProcedure ~> Id ~ IdTypeList ~ ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
         { case id ~ args ~ decls ~ body =>
-          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty[(Identifier,Type)]), decls, body) }
+          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty[(Identifier,Type)]), decls, body, List.empty, List.empty) }
     }
 
     lazy val TypeDecl : PackratParser[lang.TypeDecl] = positioned {

@@ -46,7 +46,7 @@ object UniqueIdGenerator {
 class SymbolicSimulator (module : Module) {
   val scope = Scope.empty + module
   val assertionTree = new AssertionTree()
-  
+
   type SymbolTable = Map[Identifier, smt.Expr];
   var symbolTable : SymbolTable = Map.empty
   type FrameTable = ArrayBuffer[SymbolTable]
