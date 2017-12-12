@@ -141,9 +141,9 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
 
 class ProcedureInliner extends ASTAnalysis {
   var findLeafProcedurePass = new FindLeafProcedurePass()
-  var findLeafProcedureAnalysis = new ASTAnalyzer("FunctionInliner.FindLeafProcedure", findLeafProcedurePass)
+  var findLeafProcedureAnalysis = new ASTAnalyzer("ProcedureInliner.FindLeafProcedure", findLeafProcedurePass)
 
-  override def passName = "FunctionInliner"
+  override def passName = "ProcedureInliner"
   override def visit(module : Module, context : Scope) : Option[Module] = {
     var modP : Option[Module] = Some(module)
     var iteration = 0

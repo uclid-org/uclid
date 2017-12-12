@@ -84,6 +84,23 @@ object Utils {
       case head :: tail => head + tail.foldLeft(""){(acc,i) => acc + sep + i}
     }
   }
+
+  def topoSort[T](root : T, graph: Map[T, Set[T]]) : List[T] = {
+    def visit(node : T, visitOrder : Map[T, Int]) : Map[T, Int] = {
+      if (visitOrder.contains(node)) {
+        visitOrder
+      } else {
+        val visitOrderP = visitOrder + (node -> visitOrder.size)
+        graph.get(node) match {
+          case Some(nodes) => nodes.foldLeft(visitOrderP)((acc, m) => visit(m, acc))
+          case None => visitOrderP
+        }
+      }
+    }
+    // now walk through the dep graph
+    val order : List[(T, Int)] = visit(root, Map.empty[T, Int]).toList
+    order.sortWith((x, y) => x._2 < x._2).map(p => p._1)
+  }
 }
 
 class UniqueNamer(val prefix : String) {

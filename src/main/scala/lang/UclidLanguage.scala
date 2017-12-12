@@ -689,9 +689,7 @@ case class ProcedureDecl(
   override def toString = {
     val modifiesString = if (modifies.size > 0) {
       PrettyPrinter.indent(2) + "modifies " + Utils.join(modifies.map(_.toString).toList, ", ") + ";\n"
-    } else {
-      ""
-    }
+    } else { "" }
     "procedure " + id + sig + "\n" +
     Utils.join(requires.map(PrettyPrinter.indent(2) + "requires " + _.toString + ";\n"), "") +
     Utils.join(ensures.map(PrettyPrinter.indent(2) + "ensures " + _.toString + "; \n"), "") +
@@ -831,6 +829,10 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
 
   // module procedures.
   lazy val procedures : List[ProcedureDecl] = decls.filter(_.isInstanceOf[ProcedureDecl]).map(_.asInstanceOf[ProcedureDecl])
+  // inlineable procedures.
+  lazy val inlineableProcedures : Set[Identifier] = decls.collect{ case p : ProcedureDecl => p.id }.toSet
+  // helper method for inlineableProcedures.
+  def isInlineableProcedure(id : Identifier) : Boolean = inlineableProcedures.contains(id)
   // module instances of other modules.
   lazy val instances : List[InstanceDecl] = decls.filter(_.isInstanceOf[InstanceDecl]).map(_.asInstanceOf[InstanceDecl])
   // set of instance names (for easy searching.)

@@ -175,23 +175,7 @@ class ModuleDependencyFinder(modules : List[Module], mainModuleName : Identifier
 
   override def finish() {
     val depGraph = out.get
-    def visit(mod : Identifier, visitOrder : Map[Identifier, Int]) : Map[Identifier, Int] = {
-      if (visitOrder.contains(mod)) {
-        visitOrder
-      } else {
-        val visitOrderP = visitOrder + (mod -> visitOrder.size)
-        depGraph.get(mod) match {
-          case Some(modules) =>
-            modules.foldLeft(visitOrderP)((acc, m) => visit(m, acc))
-          case None =>
-            visitOrderP
-        }
-      }
-    }
-    // now walk through the dep graph
-    val order = visit(mainModuleName, Map.empty[Identifier, Int])
-    val instantiationOrder = order.toList.sortWith((p1, p2) => p1._2 > p2._2).map(p => p._1)
-    moduleInstantiationOrder = Some(instantiationOrder)
+    val moduleInstantiationOrder = Some(Utils.topoSort(mainModuleName, depGraph))
     val errors = findCyclicDependencies(depGraph, mainModuleName)
     if (errors.size > 0) {
       throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)))
