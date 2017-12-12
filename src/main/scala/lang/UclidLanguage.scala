@@ -687,10 +687,16 @@ case class ProcedureDecl(
     id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: List[Statement], 
     requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier]) extends Decl {
   override def toString = {
-    "procedure " + id + sig + "\n"
-    Utils.join(requires.map(PrettyPrinter.indent(2) + "requires " + _.toString), "\n") +
-    Utils.join(ensures.map(PrettyPrinter.indent(2) + "ensures " + _.toString), "\n") +
-    PrettyPrinter.indent(1) + "{  // " + id.position.toString + "\n" +
+    val modifiesString = if (modifies.size > 0) {
+      PrettyPrinter.indent(2) + "modifies " + Utils.join(modifies.map(_.toString).toList, ", ") + ";\n"
+    } else {
+      ""
+    }
+    "procedure " + id + sig + "\n" +
+    Utils.join(requires.map(PrettyPrinter.indent(2) + "requires " + _.toString + ";\n"), "") +
+    Utils.join(ensures.map(PrettyPrinter.indent(2) + "ensures " + _.toString + "; \n"), "") +
+    modifiesString +
+    PrettyPrinter.indent(1) + "{ // " + id.position.toString + "\n" +
     Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" +
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
     "\n" + PrettyPrinter.indent(1) + "}"

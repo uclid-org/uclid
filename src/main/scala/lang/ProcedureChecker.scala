@@ -30,6 +30,7 @@
  * ProcedureChecker
  *  If a procedure has pre/post conditions
  *    - it should not write to a variable that has not been declared modified.
+ *    - only state variables should be declared modifiable
  *
  */
 package uclid
@@ -51,17 +52,38 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       case _ => in
     }
   }
+
   override def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = {
-    context.procedure match {
-      case Some(proc) =>
-        if (proc.hasPrePost) {
-          checkLhs(proc, lhs, context, in)
-        } else {
-          in
+    if (d == TraversalDirection.Down) {
+      context.procedure match {
+        case Some(proc) =>
+          if (proc.hasPrePost) {
+            checkLhs(proc, lhs, context, in)
+          } else { in }
+        case None => in
+      }
+    } else { in }
+  }
+
+  override def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down) {
+      val badVariables = proc.modifies.filter {
+        (v) => {
+          context.get(v) match {
+            case Some(namedExpr) =>
+              namedExpr match {
+                case Scope.StateVar(_, _) => false
+                case _                    => true
+              }
+            case None => true
+          }
         }
-      case None =>
-        in
-    }
+      }
+      val errors = badVariables.map { 
+        (v) => ModuleError("Unknown state variable declared as modifiable: %s.".format(v.toString), v.position)
+      }.toSet
+      errors ++ in
+    } else { in }
   }
 }
 

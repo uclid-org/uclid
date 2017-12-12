@@ -195,8 +195,9 @@ class ParserSpec extends FlatSpec {
     catch {
       // this list has all the errors from parsing
       case p : Utils.ParserErrorList =>
-        assert (p.errors.size == 1)
-        assert (p.errors(0)._1.contains("Assignment to variable not declared modifiable: x."))
+        assert (p.errors.size == 2)
+        assert (p.errors.exists(p => p._1.contains("Assignment to variable not declared modifiable: x.")))
+        assert (p.errors.exists(p => p._1.contains("Unknown state variable declared as modifiable: z.")))
     }
   }
 }
