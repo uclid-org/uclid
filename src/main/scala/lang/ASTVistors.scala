@@ -326,6 +326,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = proc.body.foldLeft(result)((acc, i) => visitStatement(i, acc, context))
     result = proc.requires.foldLeft(result)((acc, r) => visitExpr(r, acc, context))
     result = proc.ensures.foldLeft(result)((acc, r) => visitExpr(r, acc, context))
+    result = proc.modifies.foldLeft(result)((acc, r) => visitIdentifier(r, acc, context))
     result = pass.applyOnProcedure(TraversalDirection.Up, proc, result, contextIn)
     return result
   }
@@ -1019,8 +1020,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val stmts = proc.body.map(visitStatement(_, context)).flatten
     val reqs = proc.requires.map(r => visitExpr(r, context)).flatten
     val enss = proc.ensures.map(e => visitExpr(e, context)).flatten
+    val mods = proc.modifies.map(v => visitIdentifier(v, context)).flatten
     val procP = (id, sig) match {
-      case (Some(i), Some(s)) => pass.rewriteProcedure(ProcedureDecl(i, s, decls, stmts, reqs, enss), contextIn)
+      case (Some(i), Some(s)) => pass.rewriteProcedure(ProcedureDecl(i, s, decls, stmts, reqs, enss, mods), contextIn)
       case _ => None
     }
     return ASTNode.introducePos(setFilename, procP, proc.position)

@@ -683,7 +683,9 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
   }
 }
 
-case class ProcedureDecl(id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: List[Statement], requires: List[Expr], ensures: List[Expr]) extends Decl {
+case class ProcedureDecl(
+    id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: List[Statement], 
+    requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier]) extends Decl {
   override def toString = {
     "procedure " + id + sig + "\n"
     Utils.join(requires.map(PrettyPrinter.indent(2) + "requires " + _.toString), "\n") +
@@ -694,6 +696,7 @@ case class ProcedureDecl(id: Identifier, sig: ProcedureSig, decls: List[LocalVar
     "\n" + PrettyPrinter.indent(1) + "}"
   }
   override def declNames = List(id)
+  def hasPrePost = requires.size > 0 && ensures.size > 0
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "type " + id + " = " + typ + "; // " + position.toString

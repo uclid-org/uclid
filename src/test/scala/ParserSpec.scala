@@ -186,4 +186,17 @@ class ParserSpec extends FlatSpec {
         // XXX: continue testing here
     }
   }
+  "test/test-procedure-checker-1.ucl4" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-procedure-checker-1.ucl4"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors(0)._1.contains("Assignment to variable not declared modifiable: x."))
+    }
+  }
 }

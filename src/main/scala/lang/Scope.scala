@@ -155,7 +155,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
       decl match {
         case instD : InstanceDecl =>
           Scope.addToMap(mapAcc, Scope.Instance(instD.instanceId, instD.moduleId, instD.moduleType))
-        case ProcedureDecl(id, sig, _, _, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
+        case ProcedureDecl(id, sig, _, _, _, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
         case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
         case StateVarDecl(id, typ) => Scope.addToMap(mapAcc, Scope.StateVar(id, typ))
         case StateVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.StateVar(id, typ)))
@@ -176,7 +176,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
     }
     val m2 = m.decls.foldLeft(m1){(mapAcc, decl) =>
       decl match {
-        case ProcedureDecl(id, sig, _, _, _, _) =>
+        case ProcedureDecl(id, sig, _, _, _, _, _) =>
           val m1 = sig.inParams.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = sig.outParams.foldLeft(m1)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           m2

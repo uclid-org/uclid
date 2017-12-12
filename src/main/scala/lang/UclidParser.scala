@@ -157,6 +157,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwInvariant = "invariant"
     lazy val KwDefineProp = "property"
     lazy val KwDefineAxiom = "axiom"
+    lazy val KwModifies = "modifies"
 
     // lazy val TemporalOpGlobally = "G"
     // lazy val TemporalOpFinally = "F"
@@ -177,7 +178,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwAssume, KwAssert, KwVar, KwHavoc, KwCall, KwIf, KwElse,
       KwCase, KwEsac, KwFor, KwIn, KwRange, KwInstance, KwInput, KwOutput,
       KwConst, KwModule, KwType, KwEnum, KwRecord, KwSkip,
-      KwFunction, KwControl, KwInit, KwNext, KwITE, KwLambda,
+      KwFunction, KwControl, KwInit, KwNext, KwITE, KwLambda, KwModifies,
       KwDefineProp, KwDefineAxiom, KwForall, KwExists, KwDefault,
       KwSynthesis, KwGrammar, KwRequires, KwEnsures, KwInvariant)
       // TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
@@ -430,14 +431,28 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwInstance ~> Id ~ ":" ~ Id ~ ArgMapList <~ ";" ^^ { case instId ~ ":" ~ moduleId ~ args => lang.InstanceDecl(instId, moduleId, args, None, None) }
     }
 
+    lazy val RequireExpr : PackratParser[lang.Expr] = positioned {
+      KwRequires ~> Expr <~ ";"
+    }
+    lazy val EnsureExpr : PackratParser[lang.Expr] = positioned {
+      KwEnsures ~> Expr <~ ";"
+    }
+    lazy val ModifiesExprs : PackratParser[List[lang.Identifier]] = {
+      KwModifies ~> Id ~ rep("," ~> Id) <~ ";" ^^ { case id ~ ids => id :: ids }
+    }
     lazy val ProcedureDecl : PackratParser[lang.ProcedureDecl] = positioned {
-      KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
+      KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~ 
+      rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~
         ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
-        { case id ~ args ~ outs ~ decls ~ body =>
-          lang.ProcedureDecl(id, lang.ProcedureSig(args,outs), decls, body, List.empty, List.empty) } |
-      KwProcedure ~> Id ~ IdTypeList ~ ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
-        { case id ~ args ~ decls ~ body =>
-          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty[(Identifier,Type)]), decls, body, List.empty, List.empty) }
+        { case id ~ args ~ outs ~ requires ~ ensures ~ modifies ~ decls ~ body =>
+          lang.ProcedureDecl(id, lang.ProcedureSig(args,outs), decls, body, 
+                             requires, ensures, modifies.flatMap(m => m).toSet) } |
+      // procedure with no return value
+      KwProcedure ~> Id ~ IdTypeList ~ rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~ 
+      ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
+        { case id ~ args ~ requires ~ ensures ~ modifies~ decls ~ body =>
+          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty[(Identifier,Type)]), decls, body, 
+                             requires, ensures, modifies.flatMap(m => m).toSet) }
     }
 
     lazy val TypeDecl : PackratParser[lang.TypeDecl] = positioned {
