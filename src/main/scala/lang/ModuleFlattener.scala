@@ -148,35 +148,22 @@ class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identi
 }
 
 class ModuleDependencyFinder(modules : List[Module], mainModuleName : Identifier) extends ASTAnalyzer(
-    "LeafModuleFinder", new ModuleDependencyFinderPass())
+    "ModuleDependencyFinder", new ModuleDependencyFinderPass())
 {
   var moduleInstantiationOrder : Option[List[Identifier]] = None
   var cyclicalDependency : Option[Boolean] = None
   override def reset() {
     in = Some(Map.empty[Identifier, Set[Identifier]])
   }
-  def findCyclicDependencies(graph : Map[Identifier, Set[Identifier]], start : Identifier) : List[ModuleError] = {
-    def visit(node : Identifier, stack : Set[Identifier], errorsIn : List[ModuleError]) : List[ModuleError] = {
-      if (stack contains node) {
-        val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
-        val error = ModuleError(msg, node.position)
-        error :: errorsIn
-      } else {
-        graph.get(node) match {
-          case Some(nodes) =>
-            nodes.foldLeft(errorsIn)((acc, n) => visit(n, stack + node, acc))
-          case None =>
-            errorsIn
-        }
-      }
-    }
-    visit(start, Set.empty[Identifier], List.empty[ModuleError])
-  }
 
   override def finish() {
     val depGraph = out.get
-    val moduleInstantiationOrder = Some(Utils.topoSort(mainModuleName, depGraph))
-    val errors = findCyclicDependencies(depGraph, mainModuleName)
+    val moduleInstantiationOrder = Some(Utils.topoSort(List(mainModuleName), depGraph))
+    def cyclicModuleError(node : Identifier, stack : Set[Identifier]) : ModuleError = {
+      val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
+      ModuleError(msg, node.position)
+    }
+    val errors = Utils.findCyclicDependencies(depGraph, List(mainModuleName), cyclicModuleError)
     if (errors.size > 0) {
       throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)))
     }

@@ -252,7 +252,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   }
   /** The main 'do-er' method. */
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    _out = Some(visitModule(module, _in.get, context : Scope))
+    _out = Some(visitModule(module, _in.get, context))
     return Some(module)
   }
   // Reset calls reset on the pass.

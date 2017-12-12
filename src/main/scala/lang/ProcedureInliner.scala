@@ -38,6 +38,53 @@ package lang
 import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.immutable.{Set => Set}
 
+class FindProcedureDependencyPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
+  type T = Map[Identifier, Set[Identifier]]
+  override def applyOnProcedureCall(d : TraversalDirection.T, proc : ProcedureCallStmt, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down) {
+      context.procedure match {
+        case Some(proc) =>
+          in.get(proc.id) match {
+            case Some(procedures) => in + (proc.id -> (procedures + proc.id))
+            case None => in + (proc.id -> Set(proc.id))
+          }
+        case None => in
+      }
+    } else {
+      in
+    }
+  }
+}
+
+class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new FindProcedureDependencyPass())
+{
+  var moduleInstantiationOrder : Option[List[Identifier]] = None
+  var cyclicalDependency : Option[Boolean] = None
+  override def reset() {
+    in = Some(Map.empty[Identifier, Set[Identifier]])
+  }
+
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val procDepGraph = visitModule(module, Map.empty[Identifier, Set[Identifier]], context)
+    // val procInliningOrder = Some(Utils.topoSort(mainModuleName, depGraph))
+    Some(module)
+  }
+  /*
+  override def finish() {
+    val depGraph = out.get
+    def cyclicModuleError(node : Identifier, stack : Set[Identifier]) : ModuleError = {
+      val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
+      ModuleError(msg, node.position)
+    }
+    val errors = Utils.findCyclicDependencies(depGraph, mainModuleName, cyclicModuleError)
+    if (errors.size > 0) {
+      throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)))
+    }
+  }
+  * 
+  */
+}
+
 class FindLeafProcedurePass extends ReadOnlyPass[Set[Identifier]] {
   type T = Set[Identifier]
   override def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, ctx : Scope) : T = {
