@@ -776,6 +776,7 @@ case class NextDecl(body: List[Statement]) extends Decl {
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
   override def toString = "property " + id + " : " + expr + ";  // " + id.position.toString
   override def declNames = List(id)
+  def name = "property " + id.toString()
 }
 case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
   override def toString = {
@@ -823,6 +824,8 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) 
   // module functions.
   lazy val functions : List[FunctionDecl] =
     decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
+  // module properties.
+  lazy val properties : List[SpecDecl] = decls.collect{ case spec : SpecDecl => spec }
 
   lazy val externalMap : Map[Identifier, ModuleExternal] =
     (functions.map(f => (f.id -> f)) ++ constants.map(c => (c.id -> c))).toMap

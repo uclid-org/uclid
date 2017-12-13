@@ -36,18 +36,28 @@ package lang
 
 class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
   def checkNoArgs(cmd : ProofCommand, filename : Option[String]) {
-    Utils.checkParsingError(cmd.args.size == 0, "'initialize' command does not expect any arguments.", cmd.pos, filename)
+    Utils.checkParsingError(cmd.args.size == 0, "'%s' command does not expect any arguments.".format(cmd.name.toString), cmd.pos, filename)
   }
   def checkNoParams(cmd : ProofCommand, filename : Option[String]) {
-    Utils.checkParsingError(cmd.params.size == 0, "'initialize' command does not except any parameters.", cmd.pos, filename)
+    Utils.checkParsingError(cmd.params.size == 0, "'%s' command does not except any parameters.".format(cmd.name.toString), cmd.pos, filename)
   }
   def checkHasOneIntLitArg(cmd : ProofCommand, filename : Option[String]) {
-    Utils.checkParsingError(cmd.args.size == 1, "'simulate' command expects exactly one argument.", cmd.pos, filename)
+    Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument.".format(cmd.name.toString), cmd.pos, filename)
     val cntLit = cmd.args(0)
-    Utils.checkParsingError(cntLit.isInstanceOf[IntLit], "'simulate' command expects a constant integer argument.", cmd.pos, filename)
+    Utils.checkParsingError(cntLit.isInstanceOf[IntLit], "'%s' command expects a constant integer argument.".format(cmd.name.toString), cmd.pos, filename)
     val cnt = cntLit.asInstanceOf[IntLit].value
     val cntInt = cnt.intValue()
-    Utils.checkParsingError(cntInt == cnt, "Argument to simulate is too large.", cmd.pos, filename)
+    Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large.".format(cmd.name.toString), cmd.pos, filename)
+  }
+  def checkHasZeroOrOneIntLitArg(cmd : ProofCommand, filename : Option[String]) {
+    Utils.checkParsingError(cmd.args.size <= 1, "'%s' command expects no more than one argument.".format(cmd.name.toString), cmd.pos, filename)
+    if (cmd.args.size > 0) {
+      val cntLit = cmd.args(0)
+      Utils.checkParsingError(cntLit.isInstanceOf[IntLit], "'%s' command expects a constant integer argument.".format(cmd.name.toString), cmd.pos, filename)
+      val cnt = cntLit.asInstanceOf[IntLit].value
+      val cntInt = cnt.intValue()
+      Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large.".format(cmd.name.toString), cmd.pos, filename)
+    }
   }
   override def applyOnCmd(d : TraversalDirection.T, cmd : ProofCommand, in : Unit, context : Scope) : Unit = {
     val filename = context.module.flatMap(_.filename)
@@ -61,12 +71,9 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       case "simulate" =>
         checkNoParams(cmd, filename)
         checkHasOneIntLitArg(cmd, filename)
-      case "k_induction_base" =>
+      case "induction" =>
         checkNoParams(cmd, filename)
-        checkHasOneIntLitArg(cmd, filename)
-      case "k_induction_step" =>
-        checkNoParams(cmd, filename)
-        checkHasOneIntLitArg(cmd, filename)
+        checkHasZeroOrOneIntLitArg(cmd, filename)
       case "decide" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)

@@ -15,12 +15,7 @@ module main {
   property y_le_x : y <= x;
 
   control {
-  	// base case.
-    k_induction_base (1);
-    clear_context;
-
-    // inductive step.
-    k_induction_step (1);
+  	induction;
     decide;
     // print_results;
   }
