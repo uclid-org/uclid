@@ -26,16 +26,14 @@
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
  *
  * Author: Pramod Subramanyan
-
+ *
  * Inlines all procedure calls.
  *
- * FIXME: Need to check for the absence of recursion.
  */
 
 package uclid
 package lang
 
-import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.immutable.{Set => Set}
 
 class FindProcedureDependencyPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
@@ -73,16 +71,6 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
     }
     procInliningOrder = Utils.topoSort(List(Identifier("$top")), procDepGraph)
     Some(module)
-  }
-}
-
-class FindLeafProcedurePass extends ReadOnlyPass[Set[Identifier]] {
-  type T = Set[Identifier]
-  override def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, ctx : Scope) : T = {
-    ctx.procedure match {
-      case Some(proc) => in - proc.id
-      case None => in
-    }
   }
 }
 
@@ -178,52 +166,21 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
 }
 
 class ProcedureInliner extends ASTAnalysis {
-  var findLeafProcedurePass = new FindLeafProcedurePass()
-  var findLeafProcedureAnalysis = new ASTAnalyzer("ProcedureInliner.FindLeafProcedure", findLeafProcedurePass)
-
+  lazy val findProcedureDependency = manager.pass("FindProcedureDependency").asInstanceOf[FindProcedureDependency]
   override def passName = "ProcedureInliner"
+
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    var modP : Option[Module] = Some(module)
-    var iteration = 0
-    var done = false
-    val MAX_ITERATIONS = 1000
-    do {
-      modP = modP match {
-        case None =>
-          done = true
-          None
-        case Some(mod) =>
-          val leafProcSet = findLeafProcedureAnalysis.visitModule(mod, mod.procedures.map(_.id).toSet, context)
-          val leafProc = leafProcSet.headOption
-          leafProc match {
-            case Some(procId) =>
-              done = false
-              val proc = mod.procedures.find((p) => p.id == procId).get
-              // rewrite this procedure.
-              val rewriter = new ASTRewriter("FunctionInliner.Inline:" + procId.toString, new InlineProcedurePass(proc))
-              // println("Inlining procedure: " + proc.id.toString)
-              val mP = rewriter.visit(mod, context)
-              // println("** Changed Module **")
-              // println(mP.get.toString)
-              mP
-            case None =>
-              done = true
-              Some(mod)
-          }
+    val procInliningOrder = findProcedureDependency.procInliningOrder
+    def inlineProcedure(procId : Identifier, mod : Module) : Module = {
+      if (procId != Identifier("$top")) {
+        val proc = mod.procedures.find(p => p.id == procId).get
+        val rewriter = new ASTRewriter("ProcedureInliner.Inline:" + procId.toString, new InlineProcedurePass(proc))
+        rewriter.visit(mod, context).get
+      } else {
+        module
       }
-      iteration = iteration + 1
-    } while(!done && iteration < MAX_ITERATIONS)
-    // check if we managed to inline all procedures.
-    modP match {
-      case Some(mod) =>
-        val procs = mod.procedures
-        if (procs.size > 0) {
-          val errors = procs.map((p) => ("Unable to inline procedure " + p.id + ". Do you have recursion?", p.position))
-          throw new Utils.ParserErrorList(errors)
-        }
-      case None =>
     }
-    Utils.assert(iteration < MAX_ITERATIONS, "Too many rewriting iterations.")
-    return modP
+    val modP = procInliningOrder.foldLeft(module)((mod, procId) => inlineProcedure(procId, mod))
+    Some(modP)
   }
 }

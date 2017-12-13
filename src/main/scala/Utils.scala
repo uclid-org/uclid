@@ -123,7 +123,7 @@ object Utils {
     }
     // now walk through the dep graph
     val order : List[(T, Int)] = roots.foldLeft(Map.empty[T, Int])((acc, r) => visit(r, acc)).toList
-    order.sortWith((x, y) => x._2 > y._2).map(p => p._1)
+    order.sortWith((x, y) => x._2 < y._2).map(p => p._1)
   }
 
   def findCyclicDependencies[U, V](graph : Map[U, Set[U]], roots : List[U], errorFn : ((U, List[U]) => V)) : List[V] = {

@@ -161,6 +161,7 @@ object UclidMain {
     passManager.addPass(new ComputeInstanceTypes())
     passManager.addPass(new FindProcedureDependency())
     passManager.addPass(new ProcedureInliner())
+    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new CaseEliminator())
