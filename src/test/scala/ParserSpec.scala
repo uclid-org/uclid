@@ -200,4 +200,17 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.exists(p => p._1.contains("Unknown state variable declared as modifiable: z.")))
     }
   }
+  "test/test-mutual-recursion-error.ucl4" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-mutual-recursion-error.ucl4"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.exists(p => p._1.contains("Recursion involving procedures")))
+    }
+  }
 }

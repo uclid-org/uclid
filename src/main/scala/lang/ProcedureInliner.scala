@@ -41,48 +41,39 @@ import scala.collection.immutable.{Set => Set}
 class FindProcedureDependencyPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
   type T = Map[Identifier, Set[Identifier]]
   override def applyOnProcedureCall(d : TraversalDirection.T, proc : ProcedureCallStmt, in : T, context : Scope) : T = {
+    def addEdge(caller : Identifier, callee : Identifier) : T = {
+      in.get(caller) match {
+        case Some(procedures) => in + (caller -> (procedures + callee))
+        case None => in + (caller -> Set(callee))
+      }
+    }
     if (d == TraversalDirection.Down) {
       context.procedure match {
-        case Some(proc) =>
-          in.get(proc.id) match {
-            case Some(procedures) => in + (proc.id -> (procedures + proc.id))
-            case None => in + (proc.id -> Set(proc.id))
-          }
-        case None => in
+        case Some(currentProc) => addEdge(currentProc.id, proc.id)
+        case None => addEdge(Identifier("$top"), proc.id)
       }
-    } else {
-      in
-    }
+    } else { in }
   }
 }
 
 class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new FindProcedureDependencyPass())
 {
-  var moduleInstantiationOrder : Option[List[Identifier]] = None
-  var cyclicalDependency : Option[Boolean] = None
-  override def reset() {
-    in = Some(Map.empty[Identifier, Set[Identifier]])
-  }
+  var procInliningOrder : List[Identifier] = List.empty
 
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    val procDepGraph = visitModule(module, Map.empty[Identifier, Set[Identifier]], context)
-    // val procInliningOrder = Some(Utils.topoSort(mainModuleName, depGraph))
-    Some(module)
-  }
-  /*
-  override def finish() {
-    val depGraph = out.get
-    def cyclicModuleError(node : Identifier, stack : Set[Identifier]) : ModuleError = {
-      val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
-      ModuleError(msg, node.position)
+    def recursionError(proc : Identifier, stack : List[Identifier]) : ModuleError = {
+      val msg = "Recursion involving procedures: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
+      ModuleError(msg, proc.position)
     }
-    val errors = Utils.findCyclicDependencies(depGraph, mainModuleName, cyclicModuleError)
+
+    val procDepGraph = visitModule(module, Map.empty[Identifier, Set[Identifier]], context)
+    val errors = Utils.findCyclicDependencies(procDepGraph, List(Identifier("$top")), recursionError)
     if (errors.size > 0) {
       throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)))
     }
+    procInliningOrder = Utils.topoSort(List(Identifier("$top")), procDepGraph)
+    Some(module)
   }
-  * 
-  */
 }
 
 class FindLeafProcedurePass extends ReadOnlyPass[Set[Identifier]] {
@@ -236,4 +227,3 @@ class ProcedureInliner extends ASTAnalysis {
     return modP
   }
 }
-

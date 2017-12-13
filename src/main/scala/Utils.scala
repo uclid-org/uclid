@@ -99,24 +99,24 @@ object Utils {
     }
     // now walk through the dep graph
     val order : List[(T, Int)] = roots.foldLeft(Map.empty[T, Int])((acc, r) => visit(r, acc)).toList
-    order.sortWith((x, y) => x._2 < x._2).map(p => p._1)
+    order.sortWith((x, y) => x._2 > y._2).map(p => p._1)
   }
 
-  def findCyclicDependencies[U, V](graph : Map[U, Set[U]], roots : List[U], errorFn : ((U, Set[U]) => V)) : List[V] = {
-    def visit(node : U, stack : Set[U], errorsIn : List[V]) : List[V] = {
+  def findCyclicDependencies[U, V](graph : Map[U, Set[U]], roots : List[U], errorFn : ((U, List[U]) => V)) : List[V] = {
+    def visit(node : U, stack : List[U], errorsIn : List[V]) : List[V] = {
       if (stack contains node) {
         val cycleError = errorFn(node, stack)
         cycleError :: errorsIn
       } else {
         graph.get(node) match {
           case Some(nodes) =>
-            nodes.foldLeft(errorsIn)((acc, n) => visit(n, stack + node, acc))
+            nodes.foldLeft(errorsIn)((acc, n) => visit(n, node :: stack, acc))
           case None =>
             errorsIn
         }
       }
     }
-    roots.foldLeft(List.empty[V])((acc, r) => visit(r, Set.empty[U], acc))
+    roots.foldLeft(List.empty[V])((acc, r) => visit(r, List.empty[U], acc))
   }
 }
 

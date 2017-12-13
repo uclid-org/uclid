@@ -159,7 +159,7 @@ class ModuleDependencyFinder(modules : List[Module], mainModuleName : Identifier
   override def finish() {
     val depGraph = out.get
     val moduleInstantiationOrder = Some(Utils.topoSort(List(mainModuleName), depGraph))
-    def cyclicModuleError(node : Identifier, stack : Set[Identifier]) : ModuleError = {
+    def cyclicModuleError(node : Identifier, stack : List[Identifier]) : ModuleError = {
       val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
       ModuleError(msg, node.position)
     }
