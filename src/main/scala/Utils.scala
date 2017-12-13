@@ -57,6 +57,19 @@ object Utils {
     override def hashCode : Int = {
       msg.hashCode() + pos.hashCode() + filename.hashCode()
     }
+    def errorName = "Parser"
+    lazy val filenameStr = filename match {
+      case Some(f) => f + ", "
+      case None => ""
+    }
+    lazy val positionStr = pos match {
+      case Some(p) => "line " + p.line.toString
+      case None => ""
+    }
+    lazy val fullStr = pos match {
+      case Some(p) => p.longString
+      case None => ""
+    }
   }
   class TypeError(msg: String, pos: Option[Position], filename: Option[String]) extends ParserError(msg, pos, filename) {
     override def equals(that: Any) : Boolean = {
@@ -67,6 +80,17 @@ object Utils {
           false
       }
     }
+    override def errorName = "Type"
+  }
+  class SyntaxError(msg: String, pos: Option[Position], filename: Option[String]) extends ParserError(msg,  pos, filename) {
+    override def equals(that: Any) : Boolean = {
+      that match {
+        case that : SyntaxError =>
+          (msg == that.msg) && (pos == that.pos) && filename == that.filename
+        case _ => false
+      }
+    }
+    override def errorName = "Syntax"
   }
   class TypeErrorList(val errors: List[TypeError]) extends java.lang.RuntimeException("Type errors.", null)
   class ParserErrorList(val errors : List[(String, lang.ASTPosition)]) extends java.lang.RuntimeException("Parser Errors", null)

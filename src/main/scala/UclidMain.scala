@@ -114,24 +114,12 @@ object UclidMain {
     }
     catch  {
       case (p : Utils.ParserError) =>
-        val filenameStr = p.filename match {
-          case Some(f) => f + ", "
-          case None => ""
-        }
-        val positionStr = p.pos match {
-          case Some(pos) => "line " + pos.line.toString
-          case None => ""
-        }
-        val fullStr = p.pos match {
-          case Some(pos) => pos.longString
-          case None => ""
-        }
-        println("Error " + filenameStr + positionStr + ": " + p.getMessage + "\n" + fullStr)
+        println("%s error at %s%s: %s\n%s".format(p.errorName, p.filenameStr, p.positionStr, p.getMessage, p.fullStr))
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
-          (err) => {
-            println("Type error at " + err.pos.get.toString + ": " + err.getMessage() + "\n" + err.pos.get.longString)
+          (p) => {
+            println("Type error at %s%s: %s\n%s".format(p.errorName, p.filenameStr, p.positionStr, p.getMessage, p.fullStr))
           }
         }
         println("Parsing failed. %d errors found.".format(typeErrors.errors.size))

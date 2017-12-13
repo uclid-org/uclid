@@ -545,27 +545,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Model: PackratParser[List[Module]] = rep(Module)
 
-    def parseExpr(input: String): Expr = {
-      val tokens = new PackratReader(new lexical.Scanner(input))
-      phrase(Expr)(tokens) match {
-        case Success(ast, _) => ast
-        case e: NoSuccess => throw new IllegalArgumentException(e.toString)
-      }
-    }
-
-    def parseModule(input: String): Module = {
-      val tokens = new PackratReader(new lexical.Scanner(input))
-      phrase(Module)(tokens) match {
-        case Success(ast, _) => ast
-        case e: NoSuccess => throw new IllegalArgumentException(e.toString)
-      }
-    }
-
     def parseModel(filename : String, text: String): List[Module] = {
       val tokens = new PackratReader(new lexical.Scanner(text))
       phrase(Model)(tokens) match {
         case Success(modules, _) => modules.map((m) => m.withFilename(filename))
-        case e: NoSuccess => throw new IllegalArgumentException(e.toString)
+        case NoSuccess(msg, next) => throw new Utils.SyntaxError(msg, Some(next.pos), Some(filename))
       }
     }
   }
