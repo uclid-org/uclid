@@ -58,13 +58,10 @@ object Utils {
       msg.hashCode() + pos.hashCode() + filename.hashCode()
     }
     def errorName = "Parser"
-    lazy val filenameStr = filename match {
-      case Some(f) => f + ", "
-      case None => ""
-    }
-    lazy val positionStr = pos match {
-      case Some(p) => "line " + p.line.toString
-      case None => ""
+    lazy val positionStr = (filename, pos) match {
+      case (Some(f), Some(p)) => f.toString + ", line " + p.line.toString
+      case (None, Some(p)) => "line " + p.line.toString
+      case _ => ""
     }
     lazy val fullStr = pos match {
       case Some(p) => p.longString

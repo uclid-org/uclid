@@ -285,8 +285,8 @@ class SymbolicSimulator (module : Module) {
     val initProcState = proc.sig.outParams.foldLeft(initProcState1)((acc, arg) => {
       acc + (arg._1 -> newHavocSymbol(arg._1.name, smt.Converter.typeToSMT(arg._2)))
     })
-    println("**** initProcState ****")
-    printSymbolTable(initProcState)
+    // println("**** initProcState ****")
+    // printSymbolTable(initProcState)
 
     // add assumption.
     proc.requires.foreach(r => assertionTree.addAssumption(smt.Converter.exprToSMT(r, initProcState, procScope)))
@@ -297,8 +297,8 @@ class SymbolicSimulator (module : Module) {
     frameTable += initProcState
     frameTable += finalState 
 
-    println("**** finalState ****")
-    printSymbolTable(finalState)
+    // println("**** finalState ****")
+    // printSymbolTable(finalState)
 
     // add assertions.
     proc.ensures.foreach {

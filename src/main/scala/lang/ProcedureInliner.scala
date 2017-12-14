@@ -74,21 +74,21 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
   }
 }
 
-class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
+class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
   type UniqueNameProvider = (Identifier, String) => Identifier
   override def rewriteProcedure(p : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
-    if (p.id == proc.id) Some(p)
+    if (p.id == procToInline.id) Some(p)
     else {
-      val nameProvider = new ContextualNameProvider(ctx + p, "proc$" + p.id + "$" + proc.id)
+      val nameProvider = new ContextualNameProvider(ctx + p, "proc$" + p.id + "$" + procToInline.id)
       val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(id, p), p.body)
       val newDecls = newVars.map((t) => LocalVarDecl(t._1, t._2))
-      Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, stmts, proc.requires, proc.ensures, proc.modifies))
+      Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, stmts, p.requires, p.ensures, p.modifies))
     }
   }
 
   override def rewriteModule(m : Module, ctx : Scope) : Option[Module] = {
-    val initNameProvider = new ContextualNameProvider(ctx, "init$" + proc.id)
-    val nextNameProvider = new ContextualNameProvider(ctx, "next$" + proc.id)
+    val initNameProvider = new ContextualNameProvider(ctx, "init$" + procToInline.id)
+    val nextNameProvider = new ContextualNameProvider(ctx, "next$" + procToInline.id)
 
     val decls = m.decls.foldLeft((List.empty[Decl], List.empty[StateVarDecl]))((acc, decl) => {
       decl match {
@@ -118,29 +118,29 @@ class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
     return stmts.foldLeft(init)((acc, stmt) => {
       stmt match {
         case ProcedureCallStmt(id, lhss, args) =>
-          if (id != proc.id) {
+          if (id != procToInline.id) {
             (acc._1 ++ List(stmt), acc._2)
           } else {
             // Sanity check.
-            Utils.assert(args.size == proc.sig.inParams.size, "Incorrect number of arguments to procedure: " + proc.id + ".\nStatement: " + stmt.toString)
-            Utils.assert(lhss.size == proc.sig.outParams.size, "Incorrect number of return values from procedure: " + proc.id)
+            Utils.assert(args.size == procToInline.sig.inParams.size, "Incorrect number of arguments to procedure: " + procToInline.id + ".\nStatement: " + stmt.toString)
+            Utils.assert(lhss.size == procToInline.sig.outParams.size, "Incorrect number of return values from procedure: " + procToInline.id)
             // what are the arguments?
-            val argVars : List[Identifier] = proc.sig.inParams.map(_._1)
+            val argVars : List[Identifier] = procToInline.sig.inParams.map(_._1)
             // return values original names.
-            var retVars : List[Identifier] = proc.sig.outParams.map(_._1)
+            var retVars : List[Identifier] = procToInline.sig.outParams.map(_._1)
             // new variables for the return values.
-            var retNewVars : List[(Identifier, Type)] = proc.sig.outParams.map((r) => (uniqNamer(r._1, "ret"), r._2))
+            var retNewVars : List[(Identifier, Type)] = procToInline.sig.outParams.map((r) => (uniqNamer(r._1, "ret"), r._2))
             // new variables for the local variables.
-            val localNewVars : List[(Identifier, Type)] = proc.decls.map((v) => (uniqNamer(v.id, "loc"), v.typ))
+            val localNewVars : List[(Identifier, Type)] = procToInline.decls.map((v) => (uniqNamer(v.id, "loc"), v.typ))
             // map procedure formal arguments to actual
             val mEmpty = Map.empty[Expr, Expr]
             val mArgs = (argVars zip args).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2))
             val mRet  = (retVars zip retNewVars).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2._1))
-            val mLocal = (proc.decls zip localNewVars).foldLeft(mEmpty)((map, t) => map + (t._1.id -> t._2._1))
+            val mLocal = (procToInline.decls zip localNewVars).foldLeft(mEmpty)((map, t) => map + (t._1.id -> t._2._1))
             val resultAssignStatment = AssignStmt(lhss, retNewVars.map(_._1))
             val rewriteMap = mArgs ++ mRet ++ mLocal
             val rewriter = new ExprRewriter("ProcedureInlineRewriter", rewriteMap)
-            (acc._1 ++ rewriter.rewriteStatements(proc.body) ++ List(resultAssignStatment), acc._2 ++ retNewVars ++ localNewVars)
+            (acc._1 ++ rewriter.rewriteStatements(procToInline.body) ++ List(resultAssignStatment), acc._2 ++ retNewVars ++ localNewVars)
           }
         case ForStmt(id, range, body) =>
           val bodyP = inlineProcedureCalls(uniqNamer, body)

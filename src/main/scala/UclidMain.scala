@@ -114,19 +114,19 @@ object UclidMain {
     }
     catch  {
       case (p : Utils.ParserError) =>
-        println("%s error at %s%s: %s\n%s".format(p.errorName, p.filenameStr, p.positionStr, p.getMessage, p.fullStr))
+        println("%s error at %s. %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
           (p) => {
-            println("Type error at %s%s: %s\n%s".format(p.errorName, p.filenameStr, p.positionStr, p.getMessage, p.fullStr))
+            println("Type error at %s. %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
           }
         }
         println("Parsing failed. %d errors found.".format(typeErrors.errors.size))
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
-            println("Error at " + err._2.toString + ": " + err._1 + "\n" + err._2.pos.longString)
+            println("Error at " + err._2.toString + ". " + err._1 + ".\n" + err._2.pos.longString)
           }
         }
         println("Parsing failed. " + ps.errors.size.toString + " errors found.")
@@ -161,13 +161,11 @@ object UclidMain {
     passManager.addPass(new ComputeInstanceTypes())
     passManager.addPass(new FindProcedureDependency())
     passManager.addPass(new ProcedureInliner())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new CaseEliminator())
     passManager.addPass(new FindFreshLiterals())
     passManager.addPass(new RewriteFreshLiterals())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
     def parseFile(srcFile : String) : List[Module] = {
       val text = scala.io.Source.fromFile(srcFile).mkString
@@ -209,7 +207,6 @@ object UclidMain {
     passManager.addPass(new ModuleDependencyFinder(moduleList, mainModuleName))
     passManager.addPass(new StatelessAxiomFinder())
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
-    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ModuleFlattener(moduleList, mainModuleName))
     passManager.addPass(new ModuleEliminator(mainModuleName))
@@ -217,6 +214,7 @@ object UclidMain {
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())
+    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
 
     // run passes.
     val moduleListP = passManager.run(moduleList)
