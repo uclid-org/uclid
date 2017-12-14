@@ -49,6 +49,11 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     val cntInt = cnt.intValue()
     Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large.".format(cmd.name.toString), cmd.pos, filename)
   }
+  def checkHasOneIdentifierArg(cmd : ProofCommand, filename : Option[String]) {
+    Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument.".format(cmd.name.toString), cmd.pos, filename)
+    val cntLit = cmd.args(0)
+    Utils.checkParsingError(cntLit.isInstanceOf[Identifier], "'%s' command expects a identifier as argument.".format(cmd.name.toString), cmd.pos, filename)
+  }
   def checkHasZeroOrOneIntLitArg(cmd : ProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size <= 1, "'%s' command expects no more than one argument.".format(cmd.name.toString), cmd.pos, filename)
     if (cmd.args.size > 0) {
@@ -74,6 +79,13 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       case "induction" =>
         checkNoParams(cmd, filename)
         checkHasZeroOrOneIntLitArg(cmd, filename)
+      case "verify" =>
+        checkNoParams(cmd, filename)
+        checkHasOneIdentifierArg(cmd, filename)
+        val arg = cmd.args(0).asInstanceOf[Identifier]
+        val module = context.module.get
+        lazy val errorMsg = "Unknown procedure: '%s'.".format(arg.toString())
+        Utils.checkParsingError(module.procedures.find(p => p.id == arg).isDefined, errorMsg, arg.pos, filename)
       case "decide" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)

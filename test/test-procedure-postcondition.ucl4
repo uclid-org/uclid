@@ -1,8 +1,17 @@
 module main
 {
-  input n  : int;
+  input w  : int;
   var nums : [int]int;
   var x : int; 
+
+  procedure add(a : int, b : int) returns (c : int)
+    requires (a >= 0 && a < 10);
+    requires (b >= 0 && b < 10);
+    ensures c == a + b;
+    ensures (c >= 0 && c < 18);
+  {
+    c := a + b;
+  }
 
   procedure sum(n : int) returns (numbers : [int]int)
     requires (n > 0);
@@ -24,5 +33,9 @@ module main
 
   control {
     print_module;
+    verify(add);
+    verify(sum);
+    decide;
+    print_results;
   }
 }

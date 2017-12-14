@@ -77,12 +77,13 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
 class InlineProcedurePass(proc : ProcedureDecl) extends RewritePass {
   type UniqueNameProvider = (Identifier, String) => Identifier
   override def rewriteProcedure(p : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
-    if (p.id == proc.id) return None
-
-    val nameProvider = new ContextualNameProvider(ctx + p, "proc$" + p.id + "$" + proc.id)
-    val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(id, p), p.body)
-    val newDecls = newVars.map((t) => LocalVarDecl(t._1, t._2))
-    return Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, stmts, proc.requires, proc.ensures, proc.modifies))
+    if (p.id == proc.id) Some(p)
+    else {
+      val nameProvider = new ContextualNameProvider(ctx + p, "proc$" + p.id + "$" + proc.id)
+      val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(id, p), p.body)
+      val newDecls = newVars.map((t) => LocalVarDecl(t._1, t._2))
+      Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, stmts, proc.requires, proc.ensures, proc.modifies))
+    }
   }
 
   override def rewriteModule(m : Module, ctx : Scope) : Option[Module] = {
