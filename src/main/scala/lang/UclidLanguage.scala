@@ -194,6 +194,12 @@ case class FinallyTemporalOp() extends TemporalPrefixOperator { override def toS
 case class GloballyTemporalOp() extends TemporalPrefixOperator { override def toString = "G" }
 case class NextTemporalOp() extends TemporalPrefixOperator { override def toString = "X" }
 
+// "Old" operator.
+case class OldOperator() extends Operator {
+  override def fixity = Operator.PREFIX
+  override def toString = "old"
+}
+
 abstract class BitVectorSlice extends ASTNode {
   def width : Option[Int]
   def isConstantWidth : Boolean

@@ -26,7 +26,7 @@
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
  *
  * Authors: Norman Mu, Pramod Subramanyan
-
+ *
  * All sorts of type inference and type checking functionality is in here.
  *
  */
@@ -428,6 +428,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(fldT.isDefined, "Unknown type for selection: %s.".format(fld.toString), fld.pos, c.filename)
           fldT.get
         }
+        case OldOperator() =>
+          checkTypeError(argTypes.size == 1, "Expect exactly one argument to 'old'.", opapp.pos, c.filename)
+          argTypes(0)
       }
     }
 

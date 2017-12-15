@@ -147,6 +147,7 @@ object UclidMain {
     passManager.addPass(filenameAdderPass)
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
+    passManager.addPass(new OldExprRewriter())
     passManager.addPass(new InstanceModuleNameChecker())
     passManager.addPass(new InstanceModuleTypeRewriter())
     passManager.addPass(new TypeSynonymFinder())
