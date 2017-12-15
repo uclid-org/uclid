@@ -97,6 +97,7 @@ object Scope {
 
 
 case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl]) {
+  var inLTLSpec : Boolean = false
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: Identifier) = map.contains(name)
   /** Return the NamedExpression. */

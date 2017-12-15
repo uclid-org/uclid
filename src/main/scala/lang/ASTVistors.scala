@@ -148,7 +148,6 @@ trait ReadOnlyPass[T] {
 /* AST Visitor that rewrites and generates a new AST. */
 trait RewritePass {
   var _analysis : Option[ASTAnalysis] = None
-  var inSpec : Boolean = false
   def analysis : ASTAnalysis = _analysis.get
   def reset() { }
   
