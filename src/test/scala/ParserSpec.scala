@@ -160,6 +160,19 @@ class ParserSpec extends FlatSpec {
         assert (p.errors(0).getMessage().contains("Type error in function application"))
     }
   }
+  "test/test-syntax-errors-1.ucl4" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-syntax-errors-1.ucl4"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 3)
+        assert (p.errors.forall(e => e.getMessage().contains("Argument to select operator must be module instance.")))
+    }
+  }
   "test/test-typechecker-5.ucl4" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(List("test/test-typechecker-5.ucl4"), lang.Identifier("main"))

@@ -119,7 +119,7 @@ object UclidMain {
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
           (p) => {
-            println("Type error at %s. %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
+            println("Type error at %s. %s\n%s".format(p.positionStr, p.getMessage, p.fullStr))
           }
         }
         println("Parsing failed. %d errors found.".format(typeErrors.errors.size))

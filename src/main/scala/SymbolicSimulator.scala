@@ -292,7 +292,7 @@ class SymbolicSimulator (module : Module) {
     // printSymbolTable(initProcState)
 
     // add assumption.
-    proc.requires.foreach(r => assertionTree.addAssumption(smt.Converter.exprToSMT(r, initProcState, procScope)))
+    proc.requires.foreach(r => assertionTree.addAssumption(smt.Converter.exprToSMT(r, initProcState, None, procScope)))
     // simulate procedure execution.
     val finalState = simulate(1, proc.body, initProcState, procScope, label)
     // create frame table.
@@ -307,7 +307,7 @@ class SymbolicSimulator (module : Module) {
     proc.ensures.foreach {
       e => {
         val name = "postcondition"
-        val expr = smt.Converter.exprToSMT(e, finalState, procScope)
+        val expr = smt.Converter.exprToSMT(e, finalState, Some(initProcState), procScope)
         assertionTree.addAssert(AssertInfo(name, label, frameTable, 1, expr, e.position))
       }
     }
@@ -480,6 +480,6 @@ class SymbolicSimulator (module : Module) {
   }
 
   def evaluate(e: Expr, symbolTable: SymbolTable, scope : Scope) : smt.Expr = {
-    smt.Converter.exprToSMT(e, symbolTable, scope)
+    smt.Converter.exprToSMT(e, symbolTable, None, scope)
   }
 }

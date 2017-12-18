@@ -422,7 +422,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case SelectFromInstance(fld) => {
           Utils.assert(argTypes.size == 1, "Expected exactly one argument to SelectFromInstance.")
           val inst = argTypes(0)
-          checkTypeError(inst.isInstanceOf[ModuleType], "Argument to select operator must be module instance.", inst.pos, c.filename)
+          checkTypeError(inst.isInstanceOf[ModuleType], "Argument to select operator must be module instance.", fld.pos, c.filename)
           val modT = inst.asInstanceOf[ModuleType]
           val fldT = modT.typeMap.get(fld)
           checkTypeError(fldT.isDefined, "Unknown type for selection: %s.".format(fld.toString), fld.pos, c.filename)

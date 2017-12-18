@@ -35,6 +35,7 @@ package smt
 
 object Converter {
   type SymbolTable = SymbolicSimulator.SymbolTable
+  type FrameTable = SymbolicSimulator.FrameTable
 
   def typeToSMT(typ : lang.Type) : smt.Type = {
     typ match {
@@ -108,34 +109,34 @@ object Converter {
     }
   }
 
-  def _exprToSMT(expr : lang.Expr, scope : lang.Scope, idToSMT : ((lang.Identifier, lang.Scope) => smt.Expr)) : smt.Expr = {
-    def toSMT(expr : lang.Expr, scope : lang.Scope) : smt.Expr = _exprToSMT(expr, scope, idToSMT)
-    def toSMTs(es : List[lang.Expr], scope : lang.Scope) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e, scope))
+  def _exprToSMT(expr : lang.Expr, scope : lang.Scope, past : Int, idToSMT : ((lang.Identifier, lang.Scope, Int) => smt.Expr)) : smt.Expr = {
+    def toSMT(expr : lang.Expr, scope : lang.Scope, past : Int) : smt.Expr = _exprToSMT(expr, scope, past, idToSMT)
+    def toSMTs(es : List[lang.Expr], scope : lang.Scope, past : Int) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e, scope, past))
 
      expr match {
-       case id : lang.Identifier => idToSMT(id, scope)
+       case id : lang.Identifier => idToSMT(id, scope, past)
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
-       case lang.Tuple(args) => smt.MakeTuple(toSMTs(args, scope))
+       case lang.Tuple(args) => smt.MakeTuple(toSMTs(args, scope, past))
        case opapp : lang.OperatorApplication =>
-         opapp.op match {
+         val op = opapp.op
+         val args = opapp.operands
+         op match {
            case lang.OldOperator() =>
-             throw new Utils.UnimplementedException("Old operator is not yet implemented.")
+             toSMT(args(0), scope, 1)
            case _ =>
-             val op = opapp.op
-             val args = opapp.operands
              val scopeWOpApp = scope + opapp
-             val argsInSMT = toSMTs(args, scopeWOpApp)
+             val argsInSMT = toSMTs(args, scopeWOpApp, past)
              smt.OperatorApplication(opToSMT(op), argsInSMT)
          }
        case lang.ArraySelectOperation(a,index) =>
-         smt.ArraySelectOperation(toSMT(a, scope), toSMTs(index, scope))
+         smt.ArraySelectOperation(toSMT(a, scope, past), toSMTs(index, scope, past))
        case lang.ArrayStoreOperation(a,index,value) =>
-         smt.ArrayStoreOperation(toSMT(a, scope), toSMTs(index, scope), toSMT(value, scope))
+         smt.ArrayStoreOperation(toSMT(a, scope, past), toSMTs(index, scope, past), toSMT(value, scope, past))
        case lang.FuncApplication(f,args) => f match {
          case lang.Identifier(id) =>
-           smt.FunctionApplication(toSMT(f, scope), toSMTs(args, scope))
+           smt.FunctionApplication(toSMT(f, scope, past), toSMTs(args, scope, past))
          case lang.Lambda(idtypes,le) =>
            // FIXME: beta sub
            throw new Utils.UnimplementedException("Beta reduction is not implemented yet.")
@@ -143,7 +144,7 @@ object Converter {
            throw new Utils.RuntimeError("Should never get here.")
        }
        case lang.ITE(cond,t,f) =>
-         return smt.ITE(toSMT(cond, scope), toSMT(t, scope), toSMT(f, scope))
+         return smt.ITE(toSMT(cond, scope, past), toSMT(t, scope, past), toSMT(f, scope, past))
        // Unimplemented operators.
        case lang.Lambda(ids,le) =>
          throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
@@ -156,21 +157,32 @@ object Converter {
   }
 
   def exprToSMT(expr : lang.Expr, scope : lang.Scope) : smt.Expr = {
-    def idToSMT(id : lang.Identifier, scope : lang.Scope) : smt.Expr = {
+    def idToSMT(id : lang.Identifier, scope : lang.Scope, past : Int) : smt.Expr = {
       val typ = scope.typeOf(id).get
       smt.Symbol(id.name, typeToSMT(typ))
     }
-    _exprToSMT(expr, scope, idToSMT)
+    _exprToSMT(expr, scope, 0, idToSMT)
   }
 
-  def exprToSMT(expr : lang.Expr, symbolTable : SymbolTable, scope : lang.Scope) : smt.Expr = {
-    def idToSMT(id : lang.Identifier, scope : lang.Scope) : smt.Expr = {
+  def exprToSMT(expr : lang.Expr, thisFrame : SymbolTable, pastFrame : Option[SymbolTable], scope : lang.Scope) : smt.Expr = {
+    def idToSMT(id : lang.Identifier, scope : lang.Scope, past : Int) : smt.Expr = {
       val typOpt = scope.typeOf(id)
       Utils.assert(typOpt.isDefined, "Unknown id in scope: " + id.toString())
       if (scope.isQuantifierVar(id)) { Symbol(id.name, typeToSMT(typOpt.get)) } 
-      else { symbolTable(id) }
+      else {
+        past match {
+          case 0 => thisFrame(id)
+          case 1 =>
+            pastFrame match {
+              case Some(pFrame) => pFrame(id)
+              case None => throw new Utils.RuntimeError("Unexpected 'old' operator.")
+            }
+          case _ =>
+            throw new Utils.RuntimeError("Invalid past value: " + past.toString)
+        }
+      }
     }
-    _exprToSMT(expr, scope, idToSMT)
+    _exprToSMT(expr, scope, 0, idToSMT)
   }
 
   def renameSymbols(expr : smt.Expr, renamerFn : ((String, smt.Type) => String)) : smt.Expr = {
