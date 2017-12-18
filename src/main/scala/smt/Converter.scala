@@ -167,7 +167,9 @@ object Converter {
   def exprToSMT(expr : lang.Expr, thisFrame : SymbolTable, pastFrame : Option[SymbolTable], scope : lang.Scope) : smt.Expr = {
     def idToSMT(id : lang.Identifier, scope : lang.Scope, past : Int) : smt.Expr = {
       val typOpt = scope.typeOf(id)
-      Utils.assert(typOpt.isDefined, "Unknown id in scope: " + id.toString())
+      if (typOpt.isEmpty) {
+        throw new Utils.UnknownIdentifierException(id)
+      }
       if (scope.isQuantifierVar(id)) { Symbol(id.name, typeToSMT(typOpt.get)) } 
       else {
         past match {

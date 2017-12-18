@@ -316,8 +316,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
         val instance = opapp.operands(0)
         if (instance == inst.instanceId) {
           val fldP = varMap.get(field)
-          Utils.assert(fldP.isDefined, "Non-existent field should have been detected by now!")
-          Some(fldP.get.ident)
+          if (fldP.isEmpty && context.cmd.isDefined) {
+            Some(opapp)
+          } else { 
+            Utils.assert(fldP.isDefined, "Non-existent field should have been detected by now!")
+            Some(fldP.get.ident)
+          }
         } else {
           Some(opapp)
         }

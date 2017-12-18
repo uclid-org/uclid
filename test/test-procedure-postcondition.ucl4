@@ -2,7 +2,7 @@ module main
 {
   input w  : int;
   var nums : [int]int;
-  var x : int; 
+  var x    : int; 
 
   procedure add(a : int, b : int) returns (c : int)
     requires (a >= 0 && a < 10);
@@ -37,6 +37,7 @@ module main
     verify(add);
     verify(sum);
     decide;
-    print_results;
+    // print_results;
+    // print_cex(a, b, c);
   }
 }

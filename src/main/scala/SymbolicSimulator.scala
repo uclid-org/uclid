@@ -113,8 +113,7 @@ class SymbolicSimulator (module : Module) {
           case "print_results" =>
             printResults(proofResults)
           case "print_cex" =>
-            // FIXME: have to move context into scope
-            printCEX(proofResults, cmd.args, context)
+            printCEX(proofResults, cmd.args)
           case "print_module" =>
             println(module.toString)
           case _ =>
@@ -215,16 +214,17 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def printCEX(results : List[CheckResult], exprs : List[Expr], scope : Scope) {
+  def printCEX(results : List[CheckResult], exprs : List[Expr]) {
     results.foreach((res) => {
       if (res.result.isModelDefined) {
-        printCEX(res, exprs, scope)
+        printCEX(res, exprs)
       }
     })
   }
 
-  def printCEX(res : CheckResult, exprs : List[Expr], scope : Scope) {
+  def printCEX(res : CheckResult, exprs : List[Expr]) {
     println("CEX for %s".format(res.assert.toString, res.assert.pos.toString))
+    val scope = res.assert.context
     val exprsToPrint = if (exprs.size == 0) {
       val vars = (scope.inputs ++ scope.vars ++ scope.outputs).map(_.id)
       vars.toList.sortWith((l, r) => l.name < r.name)
@@ -254,7 +254,7 @@ class SymbolicSimulator (module : Module) {
         val result = m.evalAsString(evaluate(e, f, scope))
         println("  " + e.toString + " : " + result)
       } catch {
-        case excp : java.util.NoSuchElementException =>
+        case excp : Utils.UnknownIdentifierException =>
           println("  " + e.toString + " : <UNDEF> ")
       }
     }}
@@ -308,7 +308,7 @@ class SymbolicSimulator (module : Module) {
       e => {
         val name = "postcondition"
         val expr = smt.Converter.exprToSMT(e, finalState, Some(initProcState), procScope)
-        assertionTree.addAssert(AssertInfo(name, label, frameTable, 1, expr, e.position))
+        assertionTree.addAssert(AssertInfo(name, label, frameTable, procScope, 1, expr, e.position))
       }
     }
     resetState()
@@ -318,7 +318,7 @@ class SymbolicSimulator (module : Module) {
   def addAsserts(iter : Int, symbolTable : SymbolTable, label : String, scope : Scope) {
     scope.specs.foreach(specVar => {
       val prop = module.properties.find(p => p.id == specVar.varId).get
-      val property = AssertInfo(prop.name, label, frameTable.clone(), iter, evaluate(prop.expr, symbolTable, scope), prop.expr.position)
+      val property = AssertInfo(prop.name, label, frameTable.clone(), scope, iter, evaluate(prop.expr, symbolTable, scope), prop.expr.position)
       // println ("addAsserts: " + property.toString + "; " + property.expr.toString)
       addAssert(property)
     })
@@ -385,7 +385,7 @@ class SymbolicSimulator (module : Module) {
     s match {
       case SkipStmt() => return symbolTable
       case AssertStmt(e, id) =>
-        addAssert(AssertInfo("assertion", label, frameTable.clone(), iter, evaluate(e,symbolTable, scope), s.position))
+        addAssert(AssertInfo("assertion", label, frameTable.clone(), scope, iter, evaluate(e,symbolTable, scope), s.position))
         return symbolTable
       case AssumeStmt(e, id) =>
         addAssumption(evaluate(e,symbolTable, scope))

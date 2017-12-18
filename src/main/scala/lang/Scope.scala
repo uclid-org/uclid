@@ -92,11 +92,11 @@ object Scope {
     }
   }
   /** Create an empty context. */
-  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None)
+  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None)
 }
 
 
-case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl]) {
+case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[ProofCommand]) {
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: Identifier) = map.contains(name)
   /** Check if a variable is readonly. */
@@ -137,15 +137,15 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
 
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : Scope = {
-    Scope(map + (expr.id -> expr), module, procedure)
+    Scope(map + (expr.id -> expr), module, procedure, cmd)
   }
   def +(typ : Type) : Scope = {
-    Scope(Scope.addTypeToMap(map, typ, module), module, procedure)
+    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd)
   }
 
   /** Add a reference to this module (don't expand the module's declarations). */
   def +&(m : Module) : Scope = {
-    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure)
+    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd)
   }
 
   /** Return a new context with the declarations in this module added to it. */
@@ -199,7 +199,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
         case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
-    Scope(m2, Some(m), None)
+    Scope(m2, Some(m), None, None)
   }
   /** Return a new context with the declarations in this procedure added to it. */
   def +(proc: ProcedureDecl) : Scope = {
@@ -213,14 +213,14 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
     val map3 = proc.decls.foldLeft(map2){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureLocalVar(arg.id, arg.typ))
     }
-    return Scope(map3, module, Some(proc))
+    return Scope(map3, module, Some(proc), None)
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
   def +(lambda: Lambda) : Scope = {
     val newMap = lambda.ids.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }
-    return Scope(newMap, module, procedure)
+    return Scope(newMap, module, procedure, cmd)
   }
   /** Return a new context with quantifier variables added. */
   def +(opapp : OperatorApplication) : Scope = {
@@ -232,15 +232,19 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
       case ForallOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure)
+          module, procedure, cmd)
       case ExistsOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure)
+          module, procedure, cmd)
       case _ => this
     }
   }
 
+  /** Return a new context for this command. */
+  def +(command : ProofCommand) : Scope = {
+    Scope(map, module, procedure, Some(command))
+  }
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {
     map.get(id).flatMap((e) => Some(e.typ))

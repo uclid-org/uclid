@@ -454,7 +454,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitCmd(cmd : ProofCommand, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnCmd(TraversalDirection.Down, cmd, result, context)
-    result = cmd.args.foldLeft(result)((r, expr) => visitExpr(expr, r, context))
+    result = cmd.args.foldLeft(result)((r, expr) => visitExpr(expr, r, context + cmd))
     result = pass.applyOnCmd(TraversalDirection.Up, cmd, result, context)
     return result
   }
@@ -1165,7 +1165,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitCommand(cmd : ProofCommand, context : Scope) : Option[ProofCommand] = {
-    val argsP = cmd.args.map(e => visitExpr(e, context)).flatten
+    val argsP = cmd.args.map(e => visitExpr(e, context + cmd)).flatten
     val cmdP = pass.rewriteCommand(ProofCommand(cmd.name, cmd.params, argsP), context)
     return ASTNode.introducePos(setFilename, cmdP, cmd.position)
   }

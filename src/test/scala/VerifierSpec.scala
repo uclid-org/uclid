@@ -122,4 +122,7 @@ class VerifierSpec extends FlatSpec {
   "test/test-if-star.ucl4" should "verify all assertions." in {
     nTestsFail("./test/test-if-star.ucl4", 0)
   }
+  "test/test-procedure-postcondition.ucl4" should "verify all but one assertion." in {
+    nTestsFail("./test/test-procedure-postcondition.ucl4", 1)
+  }
 }

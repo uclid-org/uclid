@@ -37,7 +37,7 @@ import uclid.lang._
 
 import scala.collection.mutable.ListBuffer
 
-case class AssertInfo(name : String, label : String, frameTable : SymbolicSimulator.FrameTable, iter : Int, expr : smt.Expr, pos : ASTPosition) {
+case class AssertInfo(name : String, label : String, frameTable : SymbolicSimulator.FrameTable, context : Scope, iter : Int, expr : smt.Expr, pos : ASTPosition) {
   override def toString = {
     label + " [Step #" + iter.toString + "] " + name + " @ " + pos.toString
   }

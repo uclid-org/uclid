@@ -91,6 +91,7 @@ object Utils {
   }
   class TypeErrorList(val errors: List[TypeError]) extends java.lang.RuntimeException("Type errors.", null)
   class ParserErrorList(val errors : List[(String, lang.ASTPosition)]) extends java.lang.RuntimeException("Parser Errors", null)
+  class UnknownIdentifierException(val ident : lang.Identifier) extends java.lang.RuntimeException("Unknown identifier:  " + ident.toString)
 
   def existsOnce(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,1)
   def existsNone(a: List[lang.Identifier], b: lang.Identifier) : Boolean = existsNTimes(a,b,0)
