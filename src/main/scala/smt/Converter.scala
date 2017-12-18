@@ -34,7 +34,7 @@ package uclid
 package smt
 
 object Converter {
-  type SymbolTable = Map[lang.Identifier, smt.Symbol]
+  type SymbolTable = SymbolicSimulator.SymbolTable
 
   def typeToSMT(typ : lang.Type) : smt.Type = {
     typ match {
@@ -108,89 +108,69 @@ object Converter {
     }
   }
 
-  def exprToSMT(expr : lang.Expr, scope : lang.Scope) : smt.Expr = {
-    def toSMT(expr : lang.Expr) : smt.Expr = exprToSMT(expr, scope)
-    def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e))
-    def idToSMT(id : lang.Identifier) : smt.Expr = {
-      val typ = scope.typeOf(id).get
-      smt.Symbol(id.name, typeToSMT(typ))
-    }
+  def _exprToSMT(expr : lang.Expr, scope : lang.Scope, idToSMT : ((lang.Identifier, lang.Scope) => smt.Expr)) : smt.Expr = {
+    def toSMT(expr : lang.Expr, scope : lang.Scope) : smt.Expr = _exprToSMT(expr, scope, idToSMT)
+    def toSMTs(es : List[lang.Expr], scope : lang.Scope) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e, scope))
 
      expr match {
-       case id : lang.Identifier => idToSMT(id)
+       case id : lang.Identifier => idToSMT(id, scope)
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
-       case lang.Tuple(args) => smt.MakeTuple(toSMTs(args))
-       case lang.OperatorApplication(op,args) =>
-         smt.OperatorApplication(opToSMT(op), args.map((a) => exprToSMT(a, scope + lang.OperatorApplication(op, args))))
+       case lang.Tuple(args) => smt.MakeTuple(toSMTs(args, scope))
+       case opapp : lang.OperatorApplication =>
+         opapp.op match {
+           case lang.OldOperator() =>
+             throw new Utils.UnimplementedException("Old operator is not yet implemented.")
+           case _ =>
+             val op = opapp.op
+             val args = opapp.operands
+             val scopeWOpApp = scope + opapp
+             val argsInSMT = toSMTs(args, scopeWOpApp)
+             smt.OperatorApplication(opToSMT(op), argsInSMT)
+         }
        case lang.ArraySelectOperation(a,index) =>
-         smt.ArraySelectOperation(toSMT(a), toSMTs(index))
+         smt.ArraySelectOperation(toSMT(a, scope), toSMTs(index, scope))
        case lang.ArrayStoreOperation(a,index,value) =>
-         smt.ArrayStoreOperation(toSMT(a), toSMTs(index), toSMT(value))
+         smt.ArrayStoreOperation(toSMT(a, scope), toSMTs(index, scope), toSMT(value, scope))
        case lang.FuncApplication(f,args) => f match {
          case lang.Identifier(id) =>
-           smt.FunctionApplication(toSMT(f), toSMTs(args))
+           smt.FunctionApplication(toSMT(f, scope), toSMTs(args, scope))
          case lang.Lambda(idtypes,le) =>
            // FIXME: beta sub
            throw new Utils.UnimplementedException("Beta reduction is not implemented yet.")
          case _ =>
            throw new Utils.RuntimeError("Should never get here.")
        }
+       case lang.ITE(cond,t,f) =>
+         return smt.ITE(toSMT(cond, scope), toSMT(t, scope), toSMT(f, scope))
+       // Unimplemented operators.
+       case lang.Lambda(ids,le) =>
+         throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
+       // Troublesome operators.
        case lang.FreshLit(t) =>
          throw new Utils.RuntimeError("Should never get here. FreshLits must have been rewritten by this point.")
        case lang.ExternalIdentifier(_, _) =>
          throw new Utils.RuntimeError("Should never get here. ExternalIdentifiers must have been rewritten by this point.")
-       case lang.ITE(cond,t,f) =>
-         return smt.ITE(toSMT(cond), toSMT(t), toSMT(f))
-       case lang.Lambda(ids,le) =>
-         throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
     }
   }
 
-  def exprToSMT(expr : lang.Expr, symbolTable : Map[lang.Identifier, Expr], scope : lang.Scope) : smt.Expr = {
-    def toSMT(expr : lang.Expr) : smt.Expr = exprToSMT(expr, symbolTable, scope)
-    def toSMTs(es : List[lang.Expr]) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e))
-     expr match {
-       case id : lang.Identifier =>
-         if (scope.typeOf(id).isEmpty) {
-           println("Trouble for id: " + id.toString)
-         }
-         val typ = scope.typeOf(id).get
-         if (scope.isQuantifierVar(id)) {
-           Symbol(id.name, typeToSMT(typ))
-         } else {
-           symbolTable(id)
-         }
-       case lang.IntLit(n) => smt.IntLit(n)
-       case lang.BoolLit(b) => smt.BooleanLit(b)
-       case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
-       case lang.Tuple(args) => smt.MakeTuple(toSMTs(args))
-       case opapp : lang.OperatorApplication =>
-         return smt.OperatorApplication(
-             opToSMT(opapp.op), opapp.operands.map((a) => exprToSMT(a, symbolTable, scope + opapp)))
-       case lang.ArraySelectOperation(a,index) =>
-         return smt.ArraySelectOperation(toSMT(a), toSMTs(index))
-       case lang.ArrayStoreOperation(a,index,value) =>
-         return smt.ArrayStoreOperation(toSMT(a), toSMTs(index), toSMT(value))
-       case lang.FuncApplication(f,args) => f match {
-         case lang.Identifier(id) =>
-           return smt.FunctionApplication(toSMT(f), toSMTs(args))
-         case lang.Lambda(idtypes,le) =>
-           // FIXME: beta sub
-           throw new Utils.UnimplementedException("Beta reduction is not implemented yet.")
-         case _ =>
-           throw new Utils.RuntimeError("Should never get here.")
-       }
-       case lang.ITE(cond,t,f) =>
-         return smt.ITE(toSMT(cond), toSMT(t), toSMT(f))
-       case lang.Lambda(ids,le) =>
-         throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
-       case lang.ExternalIdentifier(_, _) =>
-         throw new Utils.RuntimeError("External identifiers should have been eliminated by now.")
-       case lang.FreshLit(t) =>
-         throw new Utils.RuntimeError("Fresh literals should have been eliminated by now.")
+  def exprToSMT(expr : lang.Expr, scope : lang.Scope) : smt.Expr = {
+    def idToSMT(id : lang.Identifier, scope : lang.Scope) : smt.Expr = {
+      val typ = scope.typeOf(id).get
+      smt.Symbol(id.name, typeToSMT(typ))
     }
+    _exprToSMT(expr, scope, idToSMT)
+  }
+
+  def exprToSMT(expr : lang.Expr, symbolTable : SymbolTable, scope : lang.Scope) : smt.Expr = {
+    def idToSMT(id : lang.Identifier, scope : lang.Scope) : smt.Expr = {
+      val typOpt = scope.typeOf(id)
+      Utils.assert(typOpt.isDefined, "Unknown id in scope: " + id.toString())
+      if (scope.isQuantifierVar(id)) { Symbol(id.name, typeToSMT(typOpt.get)) } 
+      else { symbolTable(id) }
+    }
+    _exprToSMT(expr, scope, idToSMT)
   }
 
   def renameSymbols(expr : smt.Expr, renamerFn : ((String, smt.Type) => String)) : smt.Expr = {
