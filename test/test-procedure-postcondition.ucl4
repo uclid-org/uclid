@@ -38,6 +38,6 @@ module main
     sum_verif := verify(sum);
     decide;
     // print_results;
-    // print_cex(a, b, c);
+    add_verif->print_cex(a, b, c);
   }
 }

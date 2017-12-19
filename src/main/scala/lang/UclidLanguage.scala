@@ -798,13 +798,30 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
 }
 sealed abstract class ProofCommand extends ASTNode
 
-case class GenericProofCommand(name : Identifier, params: List[Identifier], args : List[Expr], resultVar: Option[Identifier], resultObj: Option[Identifier]) extends ProofCommand {
+case class GenericProofCommand(name : Identifier, params: List[Identifier], args : List[Expr], resultVar: Option[Identifier], argObj: Option[Identifier]) extends ProofCommand {
+  def getContext(context : Scope) : Scope = {
+    argObj match {
+      case Some(arg) =>
+        val mod = context.module.get
+        val verifCmd = context.get(arg).get.asInstanceOf[Scope.VerifResultVar].cmd
+        if (verifCmd.isVerify) {
+          val procName = verifCmd.args(0).asInstanceOf[Identifier]
+          val proc = mod.procedures.find(p => p.id == procName).get
+          context + proc
+        } else {
+          context
+        }
+      case None => context
+    }
+  }
+  def isVerify : Boolean = { name == Identifier("verify") }
   override def toString = {
     val nameStr = name.toString
     val paramStr = if (params.size > 0) { "[" + Utils.join(params.map(_.toString), ", ") + "]" } else { "" }
     val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
     val resultStr = resultVar match { case Some(id) => id.toString + " := "; case None => "" }
-    resultStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
+    val objStr = argObj match { case Some(id) => id.toString + "->"; case None => "" }
+    resultStr + objStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
   }
 }
 

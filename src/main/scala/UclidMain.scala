@@ -114,7 +114,7 @@ object UclidMain {
     }
     catch  {
       case (p : Utils.ParserError) =>
-        println("%s error at %s. %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        println("%s error at %s. %s\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {

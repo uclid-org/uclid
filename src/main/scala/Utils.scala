@@ -40,13 +40,13 @@ object Utils {
       throw new AssertionError(err)
     }
   }
-  def raiseParsingError(err: String, pos : Position, fileName : Option[String]) : Unit = {
+  def raiseParsingError(err: => String, pos : => Position, fileName : => Option[String]) : Unit = {
     throw new ParserError(err, Some(pos), fileName)
   }
-  def checkParsingError(b : Boolean, err: => String, pos : Position, fileName : Option[String]) : Unit = {
+  def checkParsingError(b : Boolean, err: => String, pos : => Position, fileName : => Option[String]) : Unit = {
     if (!b) { raiseParsingError(err, pos, fileName) }
   }
-  def checkError(b : Boolean, err: String) : Unit = {
+  def checkError(b : Boolean, err: => String) : Unit = {
     if (!b) { throw new ParserError(err, None, None) }
   }
   class UnimplementedException (msg:String=null, cause:Throwable=null) extends java.lang.UnsupportedOperationException (msg, cause)

@@ -461,7 +461,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case Some(id) => visitIdentifier(id, result, contextP)
       case None => result
     }
-    result = cmd.resultObj match {
+    result = cmd.argObj match {
       case Some(id) => visitIdentifier(id, result, contextP)
       case None => result
     }
@@ -1179,8 +1179,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val contextP = context + cmd
     val argsP = cmd.args.map(e => visitExpr(e, contextP)).flatten
     val resultVarP = cmd.resultVar.flatMap(r => visitIdentifier(r, contextP))
-    val resultObjP = cmd.resultObj.flatMap(r => visitIdentifier(r, contextP))
-    val cmdP = pass.rewriteCommand(GenericProofCommand(cmd.name, cmd.params, argsP, resultVarP, resultObjP), context)
+    val argObjP = cmd.argObj.flatMap(r => visitIdentifier(r, contextP))
+    val cmdP = pass.rewriteCommand(GenericProofCommand(cmd.name, cmd.params, argsP, resultVarP, argObjP), context)
     return ASTNode.introducePos(setFilename, cmdP, cmd.position)
   }
 

@@ -35,6 +35,12 @@ package uclid
 package lang
 
 class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
+  def checkNoResultVar(cmd : GenericProofCommand, filename: Option[String]) {
+    Utils.checkParsingError(cmd.resultVar.isEmpty, "'%s' command does not produce a result.".format(cmd.name.toString), cmd.pos, filename)
+  }
+  def checkNoArgObj(cmd : GenericProofCommand, filename: Option[String]) {
+    Utils.checkParsingError(cmd.argObj.isEmpty, "'%s' command does not expect an argument object.".format(cmd.name.toString), cmd.pos, filename)
+  }
   def checkNoArgs(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size == 0, "'%s' command does not expect any arguments.".format(cmd.name.toString), cmd.pos, filename)
   }
@@ -70,15 +76,20 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       case "clear_context" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)
+        checkNoResultVar(cmd, filename)
+        checkNoArgObj(cmd, filename)
       case "unroll" =>
         checkNoParams(cmd, filename)
         checkHasOneIntLitArg(cmd, filename)
+        checkNoArgObj(cmd, filename)
       case "induction" =>
         checkNoParams(cmd, filename)
         checkHasZeroOrOneIntLitArg(cmd, filename)
+        checkNoArgObj(cmd, filename)
       case "verify" =>
         checkNoParams(cmd, filename)
         checkHasOneIdentifierArg(cmd, filename)
+        checkNoArgObj(cmd, filename)
         val arg = cmd.args(0).asInstanceOf[Identifier]
         val module = context.module.get
         lazy val errorMsg = "Unknown procedure: '%s'.".format(arg.toString())
@@ -86,14 +97,20 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       case "decide" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)
+        checkNoArgObj(cmd, filename)
+        checkNoResultVar(cmd, filename)
       case "print_results" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)
+        checkNoArgObj(cmd, filename)
       case "print_cex" =>
         checkNoParams(cmd, filename)
+        checkNoResultVar(cmd, filename)
       case "print_module" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)
+        checkNoArgObj(cmd, filename)
+        checkNoResultVar(cmd, filename)
       case _ =>
         Utils.raiseParsingError("Unknown control command: " + cmd.name.toString, cmd.pos, filename)
     }
