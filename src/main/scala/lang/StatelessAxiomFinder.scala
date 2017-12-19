@@ -49,7 +49,8 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
                Scope.TypeSynonym(_, _)          | Scope.Procedure(_, _)            | 
                Scope.ProcedureInputArg(_ , _)   | Scope.ProcedureOutputArg(_ , _)  |
                Scope.ProcedureLocalVar(_ , _)   | Scope.ForIndexVar(_ , _)         | 
-               Scope.SpecVar(_ , _)             | Scope.AxiomVar(_ , _)            => 
+               Scope.SpecVar(_ , _)             | Scope.AxiomVar(_ , _)            |
+               Scope.VerifResultVar(_, _) => 
              throw new Utils.RuntimeError("Can't have this identifier in assertion.") 
         }
       case None =>
@@ -93,7 +94,8 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
                Scope.ProcedureLocalVar(_ , _)   | Scope.ForIndexVar(_ , _)           | 
                Scope.SpecVar(_ , _)             | Scope.AxiomVar(_ , _)              |
                Scope.LambdaVar(_ , _)           | Scope.ForallVar(_, _)              |
-               Scope.ExistsVar(_, _)            | Scope.EnumIdentifier(_, _) => 
+               Scope.ExistsVar(_, _)            | Scope.EnumIdentifier(_, _)         |
+               Scope.VerifResultVar(_, _) => 
               id
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _) =>
              ExternalIdentifier(moduleName, id)

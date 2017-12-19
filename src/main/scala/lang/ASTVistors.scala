@@ -144,7 +144,7 @@ trait ReadOnlyPass[T] {
   def applyOnITE(d : TraversalDirection.T, ite : ITE, in : T, context : Scope) : T = { in }
   def applyOnLambda(d : TraversalDirection.T, lambda : Lambda, in : T, context : Scope) : T = { in }
   def applyOnExprDecorator(d : TraversalDirection.T, dec : ExprDecorator, in : T, context : Scope) : T = { in }
-  def applyOnCmd(d : TraversalDirection.T, cmd : ProofCommand, in : T, context : Scope) : T = { in }
+  def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : T, context : Scope) : T = { in }
   def applyOnGrammar(d : TraversalDirection.T, grammar : Grammar, in : T, context : Scope) : T = { in }
 }
 
@@ -156,7 +156,7 @@ trait RewritePass {
 
   def rewriteModule(module : Module, ctx : Scope) : Option[Module] = { Some(module) }
   def rewriteDecl(decl : Decl, ctx : Scope) : Option[Decl] = { Some(decl) }
-  def rewriteCommand(cmd : ProofCommand, ctx : Scope) : Option[ProofCommand] = { Some(cmd) }
+  def rewriteCommand(cmd : GenericProofCommand, ctx : Scope) : Option[GenericProofCommand] = { Some(cmd) }
   def rewriteInstance(inst : InstanceDecl, ctx : Scope) : Option[InstanceDecl] = { Some(inst) }
   def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : Scope) : Option[FunctionDecl] = { Some(func) }
@@ -266,7 +266,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnModule(TraversalDirection.Down, module, result, initContext)
     result = visitIdentifier(module.id, result, context)
     result = module.decls.foldLeft(result)((acc, i) => visitDecl(i, acc, context))
-    result = module.cmds.foldLeft(result)((acc, i) => visitCmd(i, acc, context))
+    val initR : (T, Scope) = (result, context)
+    result = module.cmds.foldLeft(initR)((acc, i) => (visitCmd(i, acc._1, acc._2), acc._2 + i))._1
     result = pass.applyOnModule(TraversalDirection.Up, module, result, initContext)
     return result
   }
@@ -451,10 +452,19 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnNext(TraversalDirection.Up, next, result, context)
     return result
   }
-  def visitCmd(cmd : ProofCommand, in : T, context : Scope) : T = {
+  def visitCmd(cmd : GenericProofCommand, in : T, context : Scope) : T = {
     var result : T = in
+    val contextP = context + cmd
     result = pass.applyOnCmd(TraversalDirection.Down, cmd, result, context)
-    result = cmd.args.foldLeft(result)((r, expr) => visitExpr(expr, r, context + cmd))
+    result = cmd.args.foldLeft(result)((r, expr) => visitExpr(expr, r, contextP))
+    result = cmd.resultVar match {
+      case Some(id) => visitIdentifier(id, result, contextP)
+      case None => result
+    }
+    result = cmd.resultObj match {
+      case Some(id) => visitIdentifier(id, result, contextP)
+      case None => result
+    }
     result = pass.applyOnCmd(TraversalDirection.Up, cmd, result, context)
     return result
   }
@@ -945,7 +955,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val context = initContext + module
     val id = visitIdentifier(module.id, context)
     val decls = module.decls.map(visitDecl(_, context)).flatten
-    val cmds = module.cmds.map(visitCommand(_, context)).flatten
+    val initR : (List[Option[GenericProofCommand]], Scope) = (List.empty, initContext)
+    val cmds = module.cmds.foldRight(initR)((cmd, acc) => (visitCommand(cmd, acc._2) :: acc._1, acc._2 + cmd))._1.flatten
     val moduleIn = id.flatMap((i) => Some(Module(i, decls, cmds)))
     val moduleP = moduleIn.flatMap((m) => pass.rewriteModule(m, initContext))
 
@@ -1164,9 +1175,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setFilename, nextP, next.position)
   }
 
-  def visitCommand(cmd : ProofCommand, context : Scope) : Option[ProofCommand] = {
-    val argsP = cmd.args.map(e => visitExpr(e, context + cmd)).flatten
-    val cmdP = pass.rewriteCommand(ProofCommand(cmd.name, cmd.params, argsP), context)
+  def visitCommand(cmd : GenericProofCommand, context : Scope) : Option[GenericProofCommand] = {
+    val contextP = context + cmd
+    val argsP = cmd.args.map(e => visitExpr(e, contextP)).flatten
+    val resultVarP = cmd.resultVar.flatMap(r => visitIdentifier(r, contextP))
+    val resultObjP = cmd.resultObj.flatMap(r => visitIdentifier(r, contextP))
+    val cmdP = pass.rewriteCommand(GenericProofCommand(cmd.name, cmd.params, argsP, resultVarP, resultObjP), context)
     return ASTNode.introducePos(setFilename, cmdP, cmd.position)
   }
 

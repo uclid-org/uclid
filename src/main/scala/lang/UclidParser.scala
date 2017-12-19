@@ -527,19 +527,23 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "[" <~ "]" ^^ { case _ => List.empty }
 
 
-    lazy val Cmd : PackratParser[lang.ProofCommand] = positioned {
-      Id <~ ";" ^^ { case id => lang.ProofCommand(id, List.empty, List.empty) } |
-      Id ~ IdParamList <~ ";" ^^ { case id ~ idparams => lang.ProofCommand(id, idparams, List.empty) } |
-      Id ~ ExprList <~ ";" ^^ { case id ~ es => lang.ProofCommand(id, List.empty, es) } |
-      Id ~ IdParamList ~ ExprList <~ ";" ^^ { case id ~ idparams ~ es => lang.ProofCommand(id, idparams, es) }
+    lazy val Cmd : PackratParser[lang.GenericProofCommand] = positioned {
+      (Id <~ ":=").? ~ (Id <~ "->").? ~ Id <~ ";" ^^ 
+        { case rId ~ oId ~ id => lang.GenericProofCommand(id, List.empty, List.empty, rId, oId) } |
+      (Id <~ ":=").? ~ (Id <~ "->").? ~ Id ~ IdParamList <~ ";" ^^ 
+        { case rId ~ oId ~ id ~ idparams => lang.GenericProofCommand(id, idparams, List.empty, rId, oId) } |
+      (Id <~ ":=").? ~ (Id <~ "->").? ~ Id ~ ExprList <~ ";" ^^ 
+        { case rId ~ oId ~ id ~ es => lang.GenericProofCommand(id, List.empty, es, rId, oId) } |
+      (Id <~ ":=").? ~ (Id <~ "->").? ~ Id ~ IdParamList ~ ExprList <~ ";" ^^ 
+        { case rId ~ oId ~ id ~ idparams ~ es => lang.GenericProofCommand(id, idparams, es, rId, oId) }
     }
 
-    lazy val CmdBlock : PackratParser[List[ProofCommand]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
+    lazy val CmdBlock : PackratParser[List[GenericProofCommand]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
 
     lazy val Module: PackratParser[lang.Module] = positioned {
       KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( CmdBlock.? ) <~ "}") ^^ {
         case id ~ (decls ~ Some(cs)) => lang.Module(id, decls, cs)
-        case id ~ (decls ~ None) => lang.Module(id, decls, List[ProofCommand]())
+        case id ~ (decls ~ None) => lang.Module(id, decls, List[GenericProofCommand]())
       }
     }
 

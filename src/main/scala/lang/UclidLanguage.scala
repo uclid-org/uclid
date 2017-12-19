@@ -796,16 +796,19 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
     case _ => List.empty
   }
 }
-case class ProofCommand(name : Identifier, params: List[Identifier], args : List[Expr]) extends ASTNode {
+sealed abstract class ProofCommand extends ASTNode
+
+case class GenericProofCommand(name : Identifier, params: List[Identifier], args : List[Expr], resultVar: Option[Identifier], resultObj: Option[Identifier]) extends ProofCommand {
   override def toString = {
     val nameStr = name.toString
     val paramStr = if (params.size > 0) { "[" + Utils.join(params.map(_.toString), ", ") + "]" } else { "" }
     val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
-    nameStr + paramStr + argStr + ";" + " // " + position.toString
+    val resultStr = resultVar match { case Some(id) => id.toString + " := "; case None => "" }
+    resultStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
   }
 }
 
-case class Module(id: Identifier, decls: List[Decl], cmds : List[ProofCommand]) extends ASTNode {
+case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCommand]) extends ASTNode {
   // create a new module with with the filename set.
   def withFilename(name : String) : Module = {
     val newModule = Module(id, decls, cmds)

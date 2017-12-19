@@ -35,13 +35,13 @@ package uclid
 package lang
 
 class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
-  def checkNoArgs(cmd : ProofCommand, filename : Option[String]) {
+  def checkNoArgs(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size == 0, "'%s' command does not expect any arguments.".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkNoParams(cmd : ProofCommand, filename : Option[String]) {
+  def checkNoParams(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.params.size == 0, "'%s' command does not except any parameters.".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkHasOneIntLitArg(cmd : ProofCommand, filename : Option[String]) {
+  def checkHasOneIntLitArg(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument.".format(cmd.name.toString), cmd.pos, filename)
     val cntLit = cmd.args(0)
     Utils.checkParsingError(cntLit.isInstanceOf[IntLit], "'%s' command expects a constant integer argument.".format(cmd.name.toString), cmd.pos, filename)
@@ -49,12 +49,12 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     val cntInt = cnt.intValue()
     Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large.".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkHasOneIdentifierArg(cmd : ProofCommand, filename : Option[String]) {
+  def checkHasOneIdentifierArg(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument.".format(cmd.name.toString), cmd.pos, filename)
     val cntLit = cmd.args(0)
     Utils.checkParsingError(cntLit.isInstanceOf[Identifier], "'%s' command expects a identifier as argument.".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkHasZeroOrOneIntLitArg(cmd : ProofCommand, filename : Option[String]) {
+  def checkHasZeroOrOneIntLitArg(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size <= 1, "'%s' command expects no more than one argument.".format(cmd.name.toString), cmd.pos, filename)
     if (cmd.args.size > 0) {
       val cntLit = cmd.args(0)
@@ -64,7 +64,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large.".format(cmd.name.toString), cmd.pos, filename)
     }
   }
-  override def applyOnCmd(d : TraversalDirection.T, cmd : ProofCommand, in : Unit, context : Scope) : Unit = {
+  override def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : Unit, context : Scope) : Unit = {
     val filename = context.module.flatMap(_.filename)
     cmd.name.toString match {
       case "clear_context" =>

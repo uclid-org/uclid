@@ -41,7 +41,7 @@ class AddFilenamePass(var filename : Option[String]) extends RewritePass {
     decl.filename = filename
     Some(decl)
   }
-  override def rewriteCommand(cmd : ProofCommand, ctx : Scope) : Option[ProofCommand] = {
+  override def rewriteCommand(cmd : GenericProofCommand, ctx : Scope) : Option[GenericProofCommand] = {
     cmd.filename = filename
     Some(cmd)
   }

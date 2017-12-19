@@ -62,6 +62,7 @@ object Scope {
   case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends ReadOnlyNamedExpression(enumId, enumTyp)
   case class ForallVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ExistsVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
+  case class VerifResultVar(vId : Identifier, cmd : GenericProofCommand) extends ReadOnlyNamedExpression(vId, UndefinedType())
 
   type IdentifierMap = Map[Identifier, NamedExpression]
   def addToMap(map : Scope.IdentifierMap, expr: Scope.NamedExpression) : Scope.IdentifierMap = {
@@ -96,7 +97,7 @@ object Scope {
 }
 
 
-case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[ProofCommand]) {
+case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[GenericProofCommand]) {
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: Identifier) = map.contains(name)
   /** Check if a variable is readonly. */
@@ -242,8 +243,12 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
   }
 
   /** Return a new context for this command. */
-  def +(command : ProofCommand) : Scope = {
-    Scope(map, module, procedure, Some(command))
+  def +(command : GenericProofCommand) : Scope = {
+    val mapP = command.resultVar match {
+      case Some(id) => map + (id -> Scope.VerifResultVar(id, command))
+      case None => map
+    }
+    Scope(mapP, module, procedure, Some(command))
   }
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {

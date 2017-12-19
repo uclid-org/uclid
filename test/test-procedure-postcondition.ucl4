@@ -34,8 +34,8 @@ module main
 
   control {
     // print_module;
-    verify(add);
-    verify(sum);
+    add_verif := verify(add);
+    sum_verif := verify(sum);
     decide;
     // print_results;
     // print_cex(a, b, c);
