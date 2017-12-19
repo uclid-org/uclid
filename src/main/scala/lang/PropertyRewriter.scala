@@ -180,95 +180,117 @@ class LTLNegatedNormalFormRewriterPass extends RewritePass {
 class LTLNegatedNormalFormRewriter extends ASTRewriter(
   "LTLNegatedNormalFormRewriter", new LTLNegatedNormalFormRewriterPass())
 
-// This pass is written under the assumption that inner expressions are visited before outer expressions.
-// Thus we can recursively replace inner expressions with z_i variables
-class LTLConjunctiveClauseRewriterPass extends RewritePass {
-  var clauseCounter = 0
-  var clauses = List[OperatorApplication]()
-
-  override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
-    if (context.inLTLSpec) {
-      val ret = Identifier("z" + clauseCounter.toString)
-      clauseCounter += 1
-      val imp = OperatorApplication(new ImplicationOp, List(ret, opapp))
-      // We store conjuncts involving temporal operators wrapped in a globally op
-      if (opapp.op.isInstanceOf[TemporalOperator]) {
-        clauses = OperatorApplication(new GloballyTemporalOp, List(imp)) :: clauses
-      } else {
-        // Implications on z_i variables are stored alongside other conjuncts but will be converted into assume stmts
-        clauses = imp :: clauses
-      }
-      Some(ret)
-    } else {
-      Some(opapp)
-    }
-  }
-
-  // We slightly abuse an Operator Application here to store all conjuncts in a single list
-  override def rewriteSpec(spec: SpecDecl, context: Scope): Option[SpecDecl] = {
-    if (context.inLTLSpec) {
-      var conjuncts : List[Expr] = clauses
-      clauses = List[OperatorApplication]()
-      Some(SpecDecl(spec.id, OperatorApplication(new ConjunctionOp, conjuncts), spec.params))
-    } else {
-      Some(spec)
-    }
-  }
-}
-
-class LTLConjunctiveClauseRewriter extends ASTRewriter("LTLConjunctiveClauseRewriter", new LTLConjunctiveClauseRewriterPass()) {
-  override def visitSpec(spec : SpecDecl, context : Scope) : Option[SpecDecl] = {
-    val idP = visitIdentifier(spec.id, context)
-    if (spec.params.contains(LTLExprDecorator)) {
-      context.inLTLSpec = true
-    }
-    val exprP = visitExpr(spec.expr, context)
-    context.inLTLSpec = false
-    val decsP = spec.params.flatMap(visitExprDecorator(_, context))
-    val specP = (idP, exprP) match {
-      case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr, decsP), context)
-      case _ => None
-    }
-    ASTNode.introducePos(_setFilename, specP, spec.position)
-  }
-}
-
 
 class LTLPropertyRewriterPass extends RewritePass {
-  var specCounter = 0
+  var conjCounter = 0
+  var circuits : List[(Identifier, Expr)] = List[(Identifier, Expr)]()
+  var specMap : Map[SpecDecl, (List[(Identifier, Expr)], Identifier, Identifier)] = Map[SpecDecl, (List[(Identifier, Expr)], Identifier, Identifier)]()
 
-  // Probably need to factor this into its own rewriter pass
-  override def rewriteSpec(spec : SpecDecl, context : Scope) : Option[SpecDecl] = {
+  lazy val manager : PassManager = analysis.manager
+  lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
+
+  def replace(expr: Expr, spec: SpecDecl, context: Scope) : Expr = {
+    if (exprTypeChecker.typeOf(expr, context).isBool) {
+      expr match {
+        case OperatorApplication(op, operands) =>
+          for (opr <- operands) {
+            replace(opr, spec, context)
+          }
+          val ret = Identifier("z" concat conjCounter.toString)
+          conjCounter += 1
+          circuits = (ret, expr) :: circuits
+          ret
+        case _ =>
+          expr
+      }
+    } else {
+      expr
+    }
+  }
+
+  override def rewriteSpec(spec: SpecDecl, context: Scope): Option[SpecDecl] = {
     if (context.inLTLSpec) {
-      val failed = Identifier("failed" concat specCounter.toString)
-      specCounter += 1
-      Some(SpecDecl(spec.id, OperatorApplication(new NegationOp, List(failed)), spec.params))
+      val ret = replace(spec.expr, spec, context).asInstanceOf[Identifier]
+      conjCounter = 0
+      val fail = Identifier(spec.id.name concat "_failed")
+      specMap +=  (spec -> (circuits, ret, fail))
+      Some(SpecDecl(spec.id, OperatorApplication(new NegationOp, List(fail)), spec.params))
     } else {
       Some(spec)
     }
   }
 
-  override def rewriteModule(module: Module, context: Scope): Option[Module] = {
-    var decls = module.decls
-    // Remove LTL SpecDecl
-    val LTLSpecs = module.decls.filter(p => p.isInstanceOf[SpecDecl] && p.asInstanceOf[SpecDecl].params.contains(LTLExprDecorator))
-    decls = decls.filter(p => !p.isInstanceOf[SpecDecl] || !p.asInstanceOf[SpecDecl].params.contains(LTLExprDecorator))
-
-    // Add conjuncts properties
-    for (s <- LTLSpecs) {
-      var spec = s.asInstanceOf[SpecDecl]
-      for (c <- spec.expr.asInstanceOf[OperatorApplication].operands) {
-        c match {
-          case OperatorApplication(op: GloballyTemporalOp, operands: List[Expr]) =>
-            // convert implications G (zi => Xb) into assert statement circuits placed at beginning of next block
-          case OperatorApplication(op: ImplicationOp, operands: List[Expr]) =>
-            // convert implications zi => zk && zj into assume(zi => zk && zj) placed at the end of next block
+  override def rewriteModule(module: Module, ctx: Scope): Option[Module] = {
+    var allDecls = module.decls
+    var newNext = module.next.get.body
+    for ((spec: SpecDecl, (circuits: List[(Identifier, Expr)], start: Identifier, failed: Identifier)) <- specMap) {
+      allDecls = StateVarDecl(failed, new BoolType) :: allDecls
+      var failExpr = OperatorApplication(new NegationOp, List(BoolLit(false)))
+      for ((z: Identifier, expr: Expr) <- circuits) {
+        // how do we initialize the values of these vars?
+        allDecls = StateVarDecl(z, new BoolType) :: allDecls
+        expr match {
+          case OperatorApplication(op: GloballyTemporalOp, operands) =>
+            var pending = Identifier(spec.id.name concat z.name concat "_pending")
+            allDecls = StateVarDecl(pending, new BoolType) :: allDecls
+            // Update pending: pending = (Y pending) ∨ z
+            var newPending = OperatorApplication(new DisjunctionOp, List(pending, z))
+            newNext = AssignStmt(List(LhsId(pending)), List(newPending)) :: newNext
+            // Update failed: failed = pending ∧ ¬a
+            var newFailed = OperatorApplication(new ConjunctionOp, List(pending, OperatorApplication(new NegationOp, operands)))
+            failExpr = OperatorApplication(new ConjunctionOp, List(OperatorApplication(new NegationOp, List(newFailed)), failExpr))
+            newNext = AssignStmt(List(LhsId(failed)), List(newFailed)) :: newNext
+          case OperatorApplication(op: NextTemporalOp, operands) =>
+            var y_z = Identifier("y_" concat z.name)
+            allDecls = StateVarDecl(y_z, new BoolType) :: allDecls
+            var pending = Identifier(spec.id.name concat z.name concat "_pending")
+            allDecls = StateVarDecl(pending, new BoolType) :: allDecls
+            // Update pending: pending = z
+            newNext = AssignStmt(List(LhsId(pending)), List(z)) :: newNext
+            // Update failed: failed = Yz ∧ ¬a
+            var newFailed = OperatorApplication(new ConjunctionOp, List(y_z, OperatorApplication(new NegationOp, operands)))
+            failExpr = OperatorApplication(new ConjunctionOp, List(OperatorApplication(new NegationOp, List(newFailed)), failExpr))
+            newNext = AssignStmt(List(LhsId(failed)), List(newFailed)) :: newNext
+            // Update y_z
+            newNext = AssignStmt(List(LhsId(y_z)), List(z)) :: newNext
+          case OperatorApplication(op: UntilTemporalOp, operands) =>
+            // this is a liveness property
+          case OperatorApplication(op: FinallyTemporalOp, operands) =>
+            // this is a liveness property
+          case OperatorApplication(op: ReleaseTemporalOp, operands) =>
+            // we use the following identity from wikipedia: a R b <==> b W (a && b)
+            var pending = Identifier(spec.id.name concat z.name concat "_pending")
+            allDecls = StateVarDecl(pending, new BoolType) :: allDecls
+            // Update pending: pending = (z ∨ (Y pending )) ∧ ¬(b ∧ a)
+            var inner1 = OperatorApplication(new DisjunctionOp, List(z, pending))
+            var inner2 = OperatorApplication(new NegationOp, List(OperatorApplication(new ConjunctionOp, List(operands.head, operands.last))))
+            var newPending = OperatorApplication(new ConjunctionOp, List(inner1, inner2))
+            newNext = AssignStmt(List(LhsId(pending)), List(z)) :: newNext
+            // Update failed: failed = failed ∧ ¬b
+            var newFailed = OperatorApplication(new ConjunctionOp, List(pending, OperatorApplication(new NegationOp, List(operands.last))))
+            failExpr = OperatorApplication(new ConjunctionOp, List(OperatorApplication(new NegationOp, List(newFailed)), failExpr))
+            newNext = AssignStmt(List(LhsId(failed)), List(newFailed)) :: newNext
+          case OperatorApplication(op: WUntilTemporalOp, operands) =>
+            var pending = Identifier(spec.id.name concat z.name concat "_pending")
+            allDecls = StateVarDecl(pending, new BoolType) :: allDecls
+            // Update pending: pending = (z ∨ (Y pending )) ∧ ¬b
+            var inner = OperatorApplication(new DisjunctionOp, List(z, pending))
+            var newPending = OperatorApplication(new ConjunctionOp, List(inner, OperatorApplication(new NegationOp, List(operands.last))))
+            newNext = AssignStmt(List(LhsId(pending)), List(z)) :: newNext
+            // Update failed: failed = failed ∧ ¬a
+            var newFailed = OperatorApplication(new ConjunctionOp, List(pending, OperatorApplication(new NegationOp, List(operands.head))))
+            failExpr = OperatorApplication(new ConjunctionOp, List(OperatorApplication(new NegationOp, List(newFailed)), failExpr))
+            newNext = AssignStmt(List(LhsId(failed)), List(newFailed)) :: newNext
           case _ =>
-            // error case here?
+            // do we want to append instead of prepend?
+            newNext = AssumeStmt(OperatorApplication(new ImplicationOp, List(z, expr)), None) :: newNext
         }
       }
     }
-    Some(Module(module.id, decls, module.cmds))
+    // replace with new Next declaration
+    allDecls = allDecls.filter(d => !d.isInstanceOf[NextDecl])
+    allDecls = NextDecl(newNext) :: allDecls
+    Some(Module(module.id, allDecls, module.cmds))
   }
 }
 

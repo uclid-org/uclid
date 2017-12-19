@@ -177,8 +177,7 @@ object UclidMain {
     passManager.addPass(new CaseEliminator())
     passManager.addPass(new ControlCommandChecker())
     passManager.addPass(new LTLNegatedNormalFormRewriter())
-    // passManager.addPass(new LTLConjunctiveClauseRewriter())
-    // passManager.addPass(new LTLPropertyRewriter())
+    passManager.addPass(new LTLPropertyRewriter())
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
     def parseFile(srcFile : String) : List[Module] = {
