@@ -80,9 +80,8 @@ class SymbolicSimulator (module : Module) {
           case "clear_context" =>
             resetState()
             proofResults = List.empty
-          case "initialize" =>
+          case "unroll" =>
             initialize(false, true, false, context, "initialize")
-          case "simulate" =>
             simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false, context, "simulate")
           case "induction" =>
             val k = if (cmd.args.size > 0) { 

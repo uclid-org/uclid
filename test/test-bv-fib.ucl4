@@ -17,8 +17,7 @@ module main {
   }
   
   control {
-    initialize;
-  	simulate (5);
+  	unroll (5);
   	decide;
   }
 }

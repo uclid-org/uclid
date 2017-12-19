@@ -70,10 +70,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       case "clear_context" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)
-      case "initialize" =>
-        checkNoArgs(cmd, filename)
-        checkNoParams(cmd, filename)
-      case "simulate" =>
+      case "unroll" =>
         checkNoParams(cmd, filename)
         checkHasOneIntLitArg(cmd, filename)
       case "induction" =>

@@ -150,11 +150,9 @@ module main {
     // Some commands for debugging.
     // print_module;
 
-    // initialize creates symbolic expressions for the init statements.
-    initialize;
-    // simulate(3) "unrolls" the module for 3 steps and creates symbolic
+    // unroll(3) "unrolls" the module for 3 steps and creates symbolic
     // expressions for the assertions encountered during those three steps.
-    simulate(3);
+    unroll(3);
     // decide actually checks if these assertions hold.
     decide;
     // this prints out the results of the verification.

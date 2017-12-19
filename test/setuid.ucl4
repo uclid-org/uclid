@@ -74,8 +74,7 @@ module main {
         (process_ruid == privileged || process_euid == privileged || process_suid == privileged);
         
   control {
-    initialize;
-    simulate (4);
+    unroll(4);
     decide;
     print_results;
     // print_cex (invocation, operand_ruid, operand_euid, operand_suid, operand_fsuid, process_ruid, process_euid, process_suid, process_fsuid);

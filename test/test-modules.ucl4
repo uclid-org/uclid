@@ -72,8 +72,7 @@ module main {
   }
   
   control {
-    initialize;
-    simulate(3);
+    unroll(3);
     decide;
   }
 }

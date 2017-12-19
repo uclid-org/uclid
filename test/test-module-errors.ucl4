@@ -29,8 +29,7 @@ module main
   }
 
   control {
-    initialize;
-    simulate (4);
+    unroll (4);
     decide;
     print_results;
     print_cex(sum, value, numbers[0], numbers[1], numbers[2], numbers[3]);
