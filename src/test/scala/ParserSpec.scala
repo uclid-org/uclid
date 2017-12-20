@@ -186,21 +186,19 @@ class ParserSpec extends FlatSpec {
         // XXX: continue testing here
     }
   }
-  /* Disabling this test. */
-  
-  //"test/test-modules-2.ucl4" should "not parse successfully." in {
-  //  try {
-  //   val fileModules = UclidMain.compile(List("test/test-modules-2.ucl4"), lang.Identifier("main"))
-  //    // should never get here.
-  //    assert (false);
-  //  }
-  //  catch {
-  //    // this list has all the errors from parsing
-  //    case p : Utils.TypeErrorList =>
-  //      assert (p.errors.size == 4)
-  //      // XXX: continue testing here
-  //  }
-  //}
+  "test/test-modules-2.ucl4" should "not parse successfully." in {
+    try {
+     val fileModules = UclidMain.compile(List("test/test-modules-2.ucl4"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 4)
+        // XXX: continue testing here
+    }
+  }
   "test/test-procedure-checker-1.ucl4" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(List("test/test-procedure-checker-1.ucl4"), lang.Identifier("main"))

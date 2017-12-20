@@ -454,7 +454,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   }
   def visitCmd(cmd : GenericProofCommand, in : T, context : Scope) : T = {
     var result : T = in
-    val contextP = context + cmd
+    val contextP = cmd.getContext(context + cmd)
     result = pass.applyOnCmd(TraversalDirection.Down, cmd, result, context)
     result = cmd.args.foldLeft(result)((r, expr) => visitExpr(expr, r, contextP))
     result = cmd.resultVar match {
@@ -1176,7 +1176,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitCommand(cmd : GenericProofCommand, context : Scope) : Option[GenericProofCommand] = {
-    val contextP = context + cmd
+    val contextP = cmd.getContext(context + cmd)
     val argsP = cmd.args.map(e => visitExpr(e, contextP)).flatten
     val resultVarP = cmd.resultVar.flatMap(r => visitIdentifier(r, contextP))
     val argObjP = cmd.argObj.flatMap(r => visitIdentifier(r, contextP))

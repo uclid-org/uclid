@@ -802,14 +802,20 @@ case class GenericProofCommand(name : Identifier, params: List[Identifier], args
   def getContext(context : Scope) : Scope = {
     argObj match {
       case Some(arg) =>
-        val mod = context.module.get
-        val verifCmd = context.get(arg).get.asInstanceOf[Scope.VerifResultVar].cmd
-        if (verifCmd.isVerify) {
-          val procName = verifCmd.args(0).asInstanceOf[Identifier]
-          val proc = mod.procedures.find(p => p.id == procName).get
-          context + proc
-        } else {
-          context
+        try {
+          val mod = context.module.get
+          val verifCmd = context.get(arg).get.asInstanceOf[Scope.VerifResultVar].cmd
+          if (verifCmd.isVerify) {
+            val procName = verifCmd.args(0).asInstanceOf[Identifier]
+            val proc = mod.procedures.find(p => p.id == procName).get
+            context + proc
+          } else {
+            context
+          }
+        } catch {
+          // if something goes wrong return context unchanged.
+          case e : java.util.NoSuchElementException => context
+          case e : scala.ClassCastException => context
         }
       case None => context
     }
