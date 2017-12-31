@@ -90,8 +90,8 @@ module Sys {
   }
 
   next {
-    call (main_f); 
-    call (ISR_f);
+    next (main_f); 
+    next (ISR_f);
     M_enable := (mode == main_t);
     I_enable := (mode == ISR_t);
     if (mode == main_t && assert_intr) { mode := ISR_t; }
@@ -122,7 +122,7 @@ module main {
   init { havoc turn; }
 
   next { 
-    if (turn) { call (Sys_i); } else { call (Env_i); }
+    if (turn) { next (Sys_i); } else { next (Env_i); }
     havoc turn; 
   }
 
