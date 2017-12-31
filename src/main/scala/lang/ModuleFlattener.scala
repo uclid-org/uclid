@@ -1,30 +1,30 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Author: Pramod Subramanyan
 
  * Module Instantiation.
@@ -50,7 +50,7 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
               if (actualTyp.matches(expTyp)) {
                 acc
               } else {
-                val msg = "Incorrect type for module " + argType + ": " + id.toString + ". Expected " + 
+                val msg = "Incorrect type for module " + argType + ": " + id.toString + ". Expected " +
                           actualTyp.toString + ", got " + expTyp.toString + " instead."
                 ModuleError(msg, id.position) :: acc
               }
@@ -64,7 +64,7 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
 
     // first check there are no unknown arguments (arguments that don't correspond to the I/Os of module).
     val badArgs = instT.args.map(_._1).filter(a => !modT.argSet.contains(a))
-    val errs1 = badArgs.foldLeft(in) { 
+    val errs1 = badArgs.foldLeft(in) {
       (acc, arg) => {
         ModuleError("Unknown module input/output: " + arg.toString, arg.position) :: acc
       }
@@ -93,7 +93,7 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
         val err1 = doesInstanceTypeMatch(targetModT, inst.instType.get, in)
         // make sure all outputs are wired to identifiers.
         val outputExprs = inst.arguments.filter(a => targetModT.outputMap.contains(a._1) && a._2.isDefined).map(_._2.get)
-        outputExprs.foldLeft(err1) { 
+        outputExprs.foldLeft(err1) {
           (acc, arg) => {
             arg match {
               case Identifier(name) =>
@@ -148,51 +148,22 @@ class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identi
 }
 
 class ModuleDependencyFinder(modules : List[Module], mainModuleName : Identifier) extends ASTAnalyzer(
-    "LeafModuleFinder", new ModuleDependencyFinderPass())
+    "ModuleDependencyFinder", new ModuleDependencyFinderPass())
 {
   var moduleInstantiationOrder : Option[List[Identifier]] = None
   var cyclicalDependency : Option[Boolean] = None
   override def reset() {
     in = Some(Map.empty[Identifier, Set[Identifier]])
   }
-  def findCyclicDependencies(graph : Map[Identifier, Set[Identifier]], start : Identifier) : List[ModuleError] = {
-    def visit(node : Identifier, stack : Set[Identifier], errorsIn : List[ModuleError]) : List[ModuleError] = {
-      if (stack contains node) {
-        val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
-        val error = ModuleError(msg, node.position)
-        error :: errorsIn
-      } else {
-        graph.get(node) match {
-          case Some(nodes) =>
-            nodes.foldLeft(errorsIn)((acc, n) => visit(n, stack + node, acc))
-          case None =>
-            errorsIn
-        }
-      }
-    }
-    visit(start, Set.empty[Identifier], List.empty[ModuleError])
-  }
 
   override def finish() {
     val depGraph = out.get
-    def visit(mod : Identifier, visitOrder : Map[Identifier, Int]) : Map[Identifier, Int] = {
-      if (visitOrder.contains(mod)) {
-        visitOrder
-      } else {
-        val visitOrderP = visitOrder + (mod -> visitOrder.size)
-        depGraph.get(mod) match {
-          case Some(modules) =>
-            modules.foldLeft(visitOrderP)((acc, m) => visit(m, acc))
-          case None =>
-            visitOrderP
-        }
-      }
+    val moduleInstantiationOrder = Some(Utils.topoSort(List(mainModuleName), depGraph))
+    def cyclicModuleError(node : Identifier, stack : List[Identifier]) : ModuleError = {
+      val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
+      ModuleError(msg, node.position)
     }
-    // now walk through the dep graph
-    val order = visit(mainModuleName, Map.empty[Identifier, Int])
-    val instantiationOrder = order.toList.sortWith((p1, p2) => p1._2 > p2._2).map(p => p._1)
-    moduleInstantiationOrder = Some(instantiationOrder)
-    val errors = findCyclicDependencies(depGraph, mainModuleName)
+    val errors = Utils.findCyclicDependencies(depGraph, List(mainModuleName), cyclicModuleError)
     if (errors.size > 0) {
       throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)))
     }
@@ -200,7 +171,7 @@ class ModuleDependencyFinder(modules : List[Module], mainModuleName : Identifier
 }
 
 object ModuleInstantiatorPass {
-  sealed abstract class InstanceVarRenaming(val ident : Identifier, val typ : Type) 
+  sealed abstract class InstanceVarRenaming(val ident : Identifier, val typ : Type)
   case class BoundInput(id : Identifier, t : Type, expr : Expr) extends InstanceVarRenaming(id, t)
   case class UnboundInput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class BoundOutput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
@@ -222,7 +193,7 @@ object ModuleInstantiatorPass {
   // Convert a RewriteMap into a VarMap
   def toRewriteMap(varMap : VarMap) : RewriteMap = {
     val empty : RewriteMap = Map.empty
-    varMap.foldLeft(empty) { 
+    varMap.foldLeft(empty) {
       (acc, mapping) => acc + (mapping._1 -> mapping._2.ident)
     }
   }
@@ -239,14 +210,14 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     // sanity check
     Utils.assert(targetModule.instances.size == 0, "All instances in target module must have been flattened by now!")
     val nameProvider = new ContextualNameProvider(Scope.empty + module, "$inst:" + inst.instanceId.toString)
-    
+
     val idMap0 : VarMap = Map.empty
     // map each input
     val idMap1 = targetModule.inputs.foldLeft(idMap0) {
       (mapAcc, inp) => {
         inst.argMap.get(inp.id) match {
           case Some(expr) =>  mapAcc + (inp.id -> MIP.BoundInput(nameProvider(inp.id, "bound_input"), inp.typ, expr))
-          case None => mapAcc + (inp.id -> MIP.UnboundInput(nameProvider(inp.id, "unbound_input"), inp.typ)) 
+          case None => mapAcc + (inp.id -> MIP.UnboundInput(nameProvider(inp.id, "unbound_input"), inp.typ))
         }
       }
     }
@@ -264,11 +235,14 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       (mapAcc, v) => mapAcc + (v.id -> MIP.StateVariable(nameProvider(v.id, "var"), v.typ))
     }
     // map each constant.
-    val idMap4 = targetModule.constants.foldLeft(idMap3) {
-      (mapAcc, v) => mapAcc + (v.id -> MIP.Constant(nameProvider(v.id, "const"), v.typ))
+    val map4 = targetModule.constants.foldLeft((idMap3, initExternalSymbolMap)) {
+      (acc, c) => {
+        val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, c.id), c)
+        (acc._1 + (c.id -> MIP.Constant(newName, c.typ)), extSymMapP)
+      }
     }
     // map each function.
-    val map5 = targetModule.functions.foldLeft((idMap4, initExternalSymbolMap)) {
+    val map5 = targetModule.functions.foldLeft(map4) {
       (acc, f) => {
         val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, f.id), f)
         (acc._1 + (f.id -> MIP.Function(newName, f.sig)), extSymMapP)
@@ -290,9 +264,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
           case MIP.BoundInput(id, t, _t) => Some(StateVarDecl(id, t))
           case MIP.UnboundOutput(id, t) => Some(StateVarDecl(id, t))
           case MIP.StateVariable(id, t) => Some(StateVarDecl(id, t))
-          case MIP.Constant(id, t) => Some(ConstantDecl(id, t))
-          case MIP.Function(_, _) | MIP.UnboundInput(_, _) | MIP.BoundOutput(_, _) => 
-            None
+          case MIP.Constant(_, _) | MIP.Function(_, _) | 
+               MIP.UnboundInput(_, _) | MIP.BoundOutput(_, _) =>  None
         }
       }
     }.toList.flatten
@@ -318,7 +291,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
         v._2 match {
           case MIP.BoundInput(id, t, expr) =>
             Some(AssignStmt(List(LhsId(id)), List(expr)))
-          case _ => 
+          case _ =>
             None
         }
       }
@@ -327,21 +300,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   val (varMap, externalSymbolMap) = createVarMap()
   val newModule = createNewModule(varMap)
-  
+
   val newVariables = createNewVariables(varMap)
   val newInputs = createNewInputs(varMap)
   val newInputAssignments = createInputAssignments(varMap)
   val newNextStatements = newModule.next match {
     case Some(nextD) => nextD.body
     case _ => List.empty[Statement]
-  }
-  
-  // rewrite external identifiers.
-  override def rewriteExternalIdentifier(extId : ExternalIdentifier, context : Scope) : Option[Expr] = {
-    externalSymbolMap.functionMap.get(extId) match {
-      case Some((newId, _)) => Some(newId)
-      case None => throw new Utils.RuntimeError("Unknown external identifiers must have been eliminated by now.")
-    }
   }
 
   // rewrite SelectFromInstance operations.
@@ -351,8 +316,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
         val instance = opapp.operands(0)
         if (instance == inst.instanceId) {
           val fldP = varMap.get(field)
-          Utils.assert(fldP.isDefined, "Non-existent field should have been detected by now!")
-          Some(fldP.get.ident)
+          if (fldP.isEmpty && context.cmd.isDefined) {
+            Some(opapp)
+          } else { 
+            Utils.assert(fldP.isDefined, "Non-existent field should have been detected by now!")
+            Some(fldP.get.ident)
+          }
         } else {
           Some(opapp)
         }
@@ -378,7 +347,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   // add new variables and inputs.
   override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
-    val declsP : List[Decl] = newVariables ++ newInputs ++ module.decls 
+    val declsP : List[Decl] = newVariables ++ newInputs ++ module.decls
     val moduleP = Module(module.id, declsP, module.cmds)
     Some(moduleP)
   }
@@ -416,8 +385,8 @@ class ModuleFlattenerPass(modules : List[Module], moduleName : Identifier) exten
         val modP = rewriter.visit(module, Scope.empty).get
         rewrite(modP, extSymbolMapP)
       case Nil =>
-        val funcDecls = extSymMap.functionMap.map(p => FunctionDecl(p._2._1, p._2._2.sig)).toList
-        Module(module.id, funcDecls ++ module.decls, module.cmds)
+        val rewriter = new ExternalSymbolRewriter(extSymMap)
+        rewriter.visit(module, Scope.empty).get
     }
   }
   override def rewriteModule(moduleIn : Module, ctx : Scope) : Option[Module] = {

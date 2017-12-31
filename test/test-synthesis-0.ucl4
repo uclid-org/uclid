@@ -1,0 +1,28 @@
+ /* Toy example #0 to test drive synthesis. */
+module main
+{
+  input a, b : int;
+  var sum : int;
+  var prev_sum : int;
+  
+  synthesis function max2 (x : int, y : int) : int;
+  
+  init {
+    sum := 0;
+    prev_sum := 0;
+  }
+  
+  next {
+    prev_sum := sum;
+    sum := sum + max2(max2(a, b), 0);
+  }
+  
+  property sum_monotonically_incr : (sum >= prev_sum);
+  
+  control {
+    initialize;
+    simulate(5);
+    decide;
+    print_results;
+  }
+}

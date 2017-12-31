@@ -25,28 +25,26 @@
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
  *
- * Author : Pramod Subramanyan
+ * Author: Pramod Subramanyan
  *
- * This file eliminate case statements from the AST and replaces them with ifs.
+ * Rewrite old(x) annotations into the special old operator.
  *
  */
+
 package uclid
 package lang
 
-class CaseEliminatorPass extends RewritePass {
-  def casesToIfs(cases : List[(Expr, List[Statement])]) : List[Statement] = {
-    cases match {
-      case Nil =>
-        List.empty[Statement]
-      case head :: rest =>
-        List(IfElseStmt(head._1, head._2, casesToIfs(rest)))
+class OldExprRewriterPass extends RewritePass {
+  override def rewriteFuncApp(fapp : FuncApplication, ctx : Scope) : Option[Expr] = { 
+    val exprP = fapp.e match {
+      case Identifier(fnName) =>
+        if (fnName == "old") {
+          OperatorApplication(OldOperator(), fapp.args)
+        } else { fapp }
+      case _ => fapp
     }
-  }
-
-  override def rewriteCase(st : CaseStmt, ctx : Scope) : List[Statement] = {
-    casesToIfs(st.body)
+    Some(exprP)
   }
 }
 
-class CaseEliminator extends ASTRewriter(
-    "CaseEliminator", new CaseEliminatorPass())
+class OldExprRewriter extends ASTRewriter("OldExprRewriter", new OldExprRewriterPass())

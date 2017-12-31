@@ -4,25 +4,25 @@ package lang
 import scala.reflect.ClassTag
 
 class ExternalSymbolMap (
-  val nameProvider : Option[ContextualNameProvider], val functionMap: Map[ExternalIdentifier, (Identifier, FunctionDecl)]) {
+  val nameProvider : Option[ContextualNameProvider], val externalMap: Map[ExternalIdentifier, (Identifier, ModuleExternal)]) {
 
   def + (module : Module, context : Scope) : ExternalSymbolMap = {
-    val newProvider = new ContextualNameProvider(context, "$external_function")
-    new ExternalSymbolMap(Some(newProvider), functionMap)
+    val newProvider = new ContextualNameProvider(context, "$external")
+    new ExternalSymbolMap(Some(newProvider), externalMap)
   }
 
-  def + (extId : ExternalIdentifier, funcDecl : FunctionDecl) : ExternalSymbolMap = {
-    val newName : Identifier = nameProvider.get.apply(funcDecl.id, extId.moduleId.toString)
-    new ExternalSymbolMap(nameProvider, functionMap + (extId -> (newName, funcDecl)))
+  def + (extId : ExternalIdentifier, extDecl : ModuleExternal) : ExternalSymbolMap = {
+    val newName : Identifier = nameProvider.get.apply(extDecl.extName, extId.moduleId.toString)
+    new ExternalSymbolMap(nameProvider, externalMap + (extId -> (newName, extDecl)))
   }
-  
-  def getOrAdd(extId : ExternalIdentifier, funcDecl : FunctionDecl) : (ExternalSymbolMap, Identifier) = {
-    functionMap.get(extId) match {
-      case Some((newName, funcDecl)) =>
+
+  def getOrAdd(extId : ExternalIdentifier, extDecl : ModuleExternal) : (ExternalSymbolMap, Identifier) = {
+    externalMap.get(extId) match {
+      case Some((newName, extDecl)) =>
         (this, newName)
       case None =>
-        val newMap = this + (extId, funcDecl)
-        (newMap, newMap.functionMap.get(extId).get._1)
+        val newMap = this + (extId, extDecl)
+        (newMap, newMap.externalMap.get(extId).get._1)
     }
   }
 }
@@ -40,10 +40,8 @@ class ExternalSymbolAnalysisPass extends ReadOnlyPass[ExternalSymbolMap] {
   override def applyOnExternalIdentifier(d : TraversalDirection.T, eId : ExternalIdentifier, in  : ExternalSymbolMap, context : Scope) : ExternalSymbolMap = {
     context.moduleDefinitionMap.get(eId.moduleId) match {
       case Some(mod) =>
-        mod.functionMap.get (eId.id) match {
-          case Some(funcDecl) =>
-            val inP = in + (eId, funcDecl)
-            inP
+        mod.externalMap.get (eId.id) match {
+          case Some(modExt) => in + (eId, modExt)
           case None =>
             throw new Utils.RuntimeError("Unknown ExternalIdentifiers must have been eliminated by now.")
         }
@@ -59,19 +57,23 @@ class ExternalSymbolAnalysis extends ASTAnalyzer("ExternalSymbolAnalysis", new E
   }
 }
 
-  /*
-  override def rewriteModule(mod : Module, context : Scope) : Option[Module] = {
-    val funcMap : Map[ExternalIdentifier, (Identifier, FunctionDecl)] = externalTypeAnalysis.out.get.functionMap
-    val newFunctions : List[FunctionDecl] = funcMap.map(e => FunctionDecl(e._2._1, e._2._2.sig)).toList
-    val modP = Module(mod.id, newFunctions ++ mod.decls, mod.cmds)
-    Some(modP)
+class ExternalSymbolRewriterPass(externalSymbolMap: ExternalSymbolMap) extends RewritePass {
+  override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
+    val extDecls = externalSymbolMap.externalMap.map(p => {
+      p._2._2 match {
+        case f : FunctionDecl => FunctionDecl(p._2._1, f.sig)
+        case c : ConstantDecl => ConstantDecl(p._2._1, c.typ)
+      }
+    }).toList
+    Some(Module(module.id, extDecls ++ module.decls, module.cmds))
   }
-
-  override def rewriteExternalIdentifier(eId : ExternalIdentifier, context : Scope) : Option[Expr] = {
-    val funcMap : Map[ExternalIdentifier, (Identifier, FunctionDecl)] = externalTypeAnalysis.out.get.functionMap
-    val idP = funcMap.get(eId)
-    Utils.assert(idP.isDefined, "Unknown external identifiers must have been eliminated by now: " + eId.toString)
-    Some(idP.get._1)
+  override def rewriteExternalIdentifier(extId : ExternalIdentifier, context : Scope) : Option[Expr] = {
+    externalSymbolMap.externalMap.get(extId) match {
+      case Some((newId, _)) => Some(newId)
+      case None => throw new Utils.RuntimeError("Unknown external identifiers must have been eliminated by now: " + extId.toString)
+    }
   }
-  */
+}
 
+class ExternalSymbolRewriter(externalSymbolMap: ExternalSymbolMap) extends ASTRewriter(
+    "ExternalSymbolRewriter", new ExternalSymbolRewriterPass(externalSymbolMap))

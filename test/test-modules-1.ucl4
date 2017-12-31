@@ -33,14 +33,13 @@ module main {
   instance c1 : cpu(mem : (mem));
   instance c2 : cpu(mem : (mem));
   next {
-    call (c1);
-    call (c2);
+    next (c1);
+    next (c2);
   }
   
   property eq_pc : (c1->pc == c2->pc);
   control {
-    initialize;
-    simulate(3);
+    unroll(3);
     decide;
   }
 }

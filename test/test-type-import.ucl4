@@ -70,7 +70,7 @@ module main {
   type regindex_t = cpu :: regindex_t;
   
   const r0index : regindex_t;
-  var sum : word_t; 
+  var sum : common :: word_t;
 
   instance cpu_i : cpu();
   init {
@@ -80,7 +80,7 @@ module main {
     sum := 1bv8;
   }
   next {
-    call (cpu_i);
+    next (cpu_i);
     sum := sum + sum;
   }
   
@@ -88,8 +88,7 @@ module main {
   control {
     //print_module;
 
-    initialize;
-    simulate(4);
+    unroll (4);
     decide;
     //print_results;
     //print_cex (cpu_i->regs[r0index], sum, cpu_i->r0, cpu_i->r1, cpu_i->result);

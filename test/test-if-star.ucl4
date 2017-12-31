@@ -1,0 +1,30 @@
+module main {
+  var x : int;
+  var y : int;
+  var n : int;
+  
+  init {
+    x := 0;
+    y := 0;
+    n := 0;
+  }
+  
+  next {
+    if (*) {
+      x := x + 1;
+    } else {
+      y := y + 1;
+    }
+    
+    n := n + 1;
+  }
+  
+  property eq_nxy : (n == (x + y));
+  property le_xn  : (x <= n);
+  property le_yn  : (y <= n);
+
+  control {
+    unroll(3);
+    decide;
+  }
+}

@@ -32,7 +32,7 @@ class ExternalTypeAnalysisPass extends ReadOnlyPass[ExternalTypeMap] {
     context.moduleDefinitionMap.get(extT.moduleId) match {
       case Some(mod) =>
         mod.typeDeclarationMap.get(extT.typeId) match {
-          case Some(typ) => 
+          case Some(typ) =>
             in + (extT, typ)
           case None =>
             val error = ModuleError("Unknown type '%s' in module '%s'.".format(extT.typeId.toString, mod.id.toString), extT.typeId.position)
@@ -51,7 +51,7 @@ class ExternalTypeAnalysisPass extends ReadOnlyPass[ExternalTypeMap] {
     }
     context.moduleDefinitionMap.get(eId.moduleId) match {
       case Some(mod) =>
-        mod.functionMap.get (eId.id) match {
+        mod.externalMap.get (eId.id) match {
           case Some(funcDecl) => in
           case None =>
             val error = ModuleError("Unknown identifier '%s' in module '%s'".format(eId.id, eId.moduleId), eId.id.position)
@@ -69,7 +69,7 @@ class ExternalTypeAnalysis extends ASTAnalyzer("ExternalTypeAnalysis", new Exter
     in = Some(ExternalTypeMap.empty)
   }
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    val analysisResult = visitModule(module, _in.get, context) 
+    val analysisResult = visitModule(module, _in.get, context)
     if (analysisResult.errors.size > 0) {
       throw analysisResult.toParserErrorList
     }

@@ -81,8 +81,8 @@ module main {
 
   next {
     // These call statements invoke the next state function of the two CPU module instances.
-    call (cpu_i_1);
-    call (cpu_i_2);
+    next (cpu_i_1);
+    next (cpu_i_2);
   }
   
   // These are our properties.
@@ -91,8 +91,7 @@ module main {
   // The control block defines the commands that will executed as part of the proof script.
   control {
     print_module;
-    initialize;
-    simulate(1);
+    unroll(1);
     decide;
     print_results;
 
