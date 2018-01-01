@@ -2,7 +2,7 @@ package uclid
 package lang
 
 object FindFreshLiteralsPass {
-  case class T(nameProvider : Option[ContextualNameProvider], inputs: List[(IdGenerator.Id, InputVarDecl)]) {
+  case class T(nameProvider : Option[ContextualNameProvider], inputs: List[(IdGenerator.Id, InputVarsDecl)]) {
     def getNewName(name : Identifier, tag : String) = {
       nameProvider match {
         case Some(provider) =>
@@ -24,15 +24,15 @@ class FindFreshLiteralsPass extends ReadOnlyPass[FindFreshLiteralsPass.T] {
     }
   }
   override def applyOnFreshLit(d : TraversalDirection.T, f : FreshLit, in : T, context : Scope) : T = {
-    val newInput = InputVarDecl(in.getNewName(Identifier("nd"), f.typ.toString), f.typ)
+    val newInput = InputVarsDecl(List(in.getNewName(Identifier("nd"), f.typ.toString)), f.typ)
     FindFreshLiteralsPass.T(in.nameProvider, (f.astNodeId, newInput) :: in.inputs)
   }
 }
 
 class FindFreshLiterals extends ASTAnalyzer("FindFreshLiterals", new FindFreshLiteralsPass()) {
   in = Some(FindFreshLiteralsPass.T(None, List.empty))
-  lazy val literalMap : Map[IdGenerator.Id, InputVarDecl] = out.get.inputs.toMap
-  lazy val declarations : List[InputVarDecl] = out.get.inputs.map(_._2)
+  lazy val literalMap : Map[IdGenerator.Id, InputVarsDecl] = out.get.inputs.toMap
+  lazy val declarations : List[InputVarsDecl] = out.get.inputs.map(_._2)
 }
 
 class RewriteFreshLiteralsPass extends RewritePass {
@@ -45,7 +45,7 @@ class RewriteFreshLiteralsPass extends RewritePass {
   }
   override def rewriteFreshLit(f : FreshLit, context : Scope) : Option[Expr] = {
     findFreshLiterals.literalMap.get(f.astNodeId) match {
-      case Some(inpDecl) => Some(inpDecl.id)
+      case Some(inpDecl) => Some(inpDecl.ids(0))
       case None          => throw new Utils.RuntimeError("All FreshLit instances must be in map.")
     }
   }

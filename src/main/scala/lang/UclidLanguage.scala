@@ -712,18 +712,10 @@ case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "type " + id + " = " + typ + "; // " + position.toString
   override def declNames = List(id)
 }
-/** StateVarsDecl represents var declarations of the form: vars x1, x2 : int.
- */
 case class StateVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
   override def toString = "var " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
   override def declNames = ids
 }
-case class InputVarDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "input " + id + ": " + typ + "; // " + position.toString
-  override def declNames = List(id)
-}
-/** InputVarsDecl is analogous to StateVarsDecl.
- */
 case class InputVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
   override def toString = "input " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
   override def declNames = ids
@@ -835,9 +827,8 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     return newModule
   }
   // module inputs.
-  lazy val inputs : List[InputVarDecl] =
-    decls.filter(_.isInstanceOf[InputVarDecl]).map(_.asInstanceOf[InputVarDecl]) ++
-    decls.filter(_.isInstanceOf[InputVarsDecl]).map(_.asInstanceOf[InputVarsDecl]).flatMap(i => i.ids.map(id => InputVarDecl(id, i.typ)))
+  lazy val inputs : List[(Identifier, Type)] =
+    decls.filter(_.isInstanceOf[InputVarsDecl]).map(_.asInstanceOf[InputVarsDecl]).flatMap(i => i.ids.map(id => (id, i.typ)))
   // module outputs.
   lazy val outputs : List[OutputVarDecl] =
     decls.filter(_.isInstanceOf[OutputVarDecl]).map(_.asInstanceOf[OutputVarDecl]) ++
@@ -874,7 +865,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
 
   // compute the "type" of this module.
   lazy val moduleType : ModuleType = ModuleType(
-      inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)),
+      inputs.map(i => (i._1, i._2)), outputs.map(o => (o.id, o.typ)),
       constants.map(c => (c.id, c.typ)), vars.map(v => (v._1, v._2)),
       functions.map(c => (c.id, c.sig)),
       instances.map(inst => (inst.instanceId, inst.modType.get)))

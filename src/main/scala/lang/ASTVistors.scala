@@ -82,7 +82,6 @@ trait ReadOnlyPass[T] {
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : Scope) : T = { in }
   def applyOnSynthesisFunction(d : TraversalDirection.T, synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = { in }
   def applyOnStateVars(d : TraversalDirection.T, stVars : StateVarsDecl, in : T, context : Scope) : T = { in }
-  def applyOnInputVar(d : TraversalDirection.T, inpvar : InputVarDecl, in : T, context : Scope) : T = { in }
   def applyOnInputVars(d : TraversalDirection.T, inpVars : InputVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnOutputVar(d : TraversalDirection.T, outvar : OutputVarDecl, in : T, context : Scope) : T = { in }
   def applyOnOutputVars(d : TraversalDirection.T, outvars : OutputVarsDecl, in : T, context : Scope) : T = { in }
@@ -161,7 +160,6 @@ trait RewritePass {
   def rewriteFunction(func : FunctionDecl, ctx : Scope) : Option[FunctionDecl] = { Some(func) }
   def rewriteSynthesisFunction(synFunc : SynthesisFunctionDecl, ctx : Scope) : Option[SynthesisFunctionDecl] = { Some(synFunc) }
   def rewriteStateVars(stVars : StateVarsDecl, ctx : Scope) : Option[StateVarsDecl] = { Some(stVars) }
-  def rewriteInputVar(inpvar : InputVarDecl, ctx : Scope) : Option[InputVarDecl] = { Some(inpvar) }
   def rewriteInputVars(inpVars : InputVarsDecl, ctx : Scope) : Option[InputVarsDecl] = { Some(inpVars) }
   def rewriteOutputVar(outvar : OutputVarDecl, ctx : Scope) : Option[OutputVarDecl] = { Some(outvar) }
   def rewriteOutputVars(outvars : OutputVarsDecl, ctx : Scope) : Option[OutputVarsDecl] = { Some(outvars) }
@@ -277,7 +275,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case proc: ProcedureDecl => visitProcedure(proc, result, context)
       case typ : TypeDecl => visitTypeDecl(typ, result, context)
       case stVars : StateVarsDecl => visitStateVars(stVars, result, context)
-      case inpVar : InputVarDecl => visitInputVar(inpVar, result, context)
       case inpVars : InputVarsDecl => visitInputVars(inpVars, result, context)
       case outVar : OutputVarDecl => visitOutputVar(outVar, result, context)
       case outVars : OutputVarsDecl => visitOutputVars(outVars, result, context)
@@ -357,14 +354,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = stVars.ids.foldLeft(result)((acc, id) => visitIdentifier(id, acc, context))
     result = visitType(stVars.typ, result, context)
     result = pass.applyOnStateVars(TraversalDirection.Up, stVars, result, context)
-    return result
-  }
-  def visitInputVar(inpvar : InputVarDecl, in : T, context : Scope) : T = {
-    var result : T = in
-    result = pass.applyOnInputVar(TraversalDirection.Down, inpvar, result, context)
-    result = visitIdentifier(inpvar.id, result, context)
-    result = visitType(inpvar.typ, result, context)
-    result = pass.applyOnInputVar(TraversalDirection.Up, inpvar, result, context)
     return result
   }
   def visitInputVars(inpVars : InputVarsDecl, in : T, context : Scope) : T = {
@@ -966,7 +955,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case procDecl : ProcedureDecl => visitProcedure(procDecl, context)
       case typeDecl : TypeDecl => visitTypeDecl(typeDecl, context)
       case stateVars : StateVarsDecl => visitStateVars(stateVars, context)
-      case inputVar : InputVarDecl => visitInputVar(inputVar, context)
       case inputVars : InputVarsDecl => visitInputVars(inputVars, context)
       case outputVar : OutputVarDecl => visitOutputVar(outputVar, context)
       case outputVars : OutputVarsDecl => visitOutputVars(outputVars, context)
@@ -1061,16 +1049,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       None
     }
     return ASTNode.introducePos(setFilename, stateVarsP, stVars.position)
-  }
-
-  def visitInputVar(inpvar : InputVarDecl, context : Scope) : Option[InputVarDecl] = {
-    val idP = visitIdentifier(inpvar.id, context)
-    var typP = visitType(inpvar.typ, context)
-    val inpVarP = (idP, typP) match {
-      case (Some(id), Some(typ)) => pass.rewriteInputVar(InputVarDecl(id, typ), context)
-      case _ => None
-    }
-    return ASTNode.introducePos(setFilename, inpVarP, inpvar.position)
   }
 
   def visitInputVars(inpVars : InputVarsDecl, context : Scope) : Option[InputVarsDecl] = {

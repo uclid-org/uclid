@@ -215,9 +215,9 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     // map each input
     val idMap1 = targetModule.inputs.foldLeft(idMap0) {
       (mapAcc, inp) => {
-        inst.argMap.get(inp.id) match {
-          case Some(expr) =>  mapAcc + (inp.id -> MIP.BoundInput(nameProvider(inp.id, "bound_input"), inp.typ, expr))
-          case None => mapAcc + (inp.id -> MIP.UnboundInput(nameProvider(inp.id, "unbound_input"), inp.typ))
+        inst.argMap.get(inp._1) match {
+          case Some(expr) =>  mapAcc + (inp._1 -> MIP.BoundInput(nameProvider(inp._1, "bound_input"), inp._2, expr))
+          case None => mapAcc + (inp._1 -> MIP.UnboundInput(nameProvider(inp._1, "unbound_input"), inp._2))
         }
       }
     }
@@ -271,11 +271,11 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }.toList.flatten
   }
 
-  def createNewInputs(varMap : VarMap) : List[InputVarDecl] = {
+  def createNewInputs(varMap : VarMap) : List[InputVarsDecl] = {
     varMap.map {
       v => {
         v._2 match {
-          case MIP.UnboundInput(id, t) => Some(InputVarDecl(id, t))
+          case MIP.UnboundInput(id, t) => Some(InputVarsDecl(List(id), t))
           case MIP.BoundInput(_, _, _) | MIP.BoundOutput(_, _) |
                MIP.UnboundOutput(_, _) | MIP.StateVariable(_, _) |
                MIP.Constant(_, _) | MIP.Function(_, _) =>
