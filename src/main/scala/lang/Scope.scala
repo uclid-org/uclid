@@ -49,6 +49,7 @@ object Scope {
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
   case class InputVar(inpId : Identifier, inpTyp: Type) extends ReadOnlyNamedExpression(inpId, inpTyp)
   case class OutputVar(outId : Identifier, outTyp: Type) extends NamedExpression(outId, outTyp)
+  case class SharedVar(varId : Identifier, varTyp : Type) extends NamedExpression(varId, varTyp)
   case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
@@ -161,6 +162,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
         case StateVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.StateVar(id, typ)))
         case InputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.InputVar(id, typ)))
         case OutputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.OutputVar(id, typ)))
+        case SharedVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.SharedVar(id, typ)))
         case ConstantDecl(id, typ) => Scope.addToMap(mapAcc, Scope.ConstantVar(id, typ))
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SynthesisFunctionDecl(id, sig, _, _, _) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
@@ -190,6 +192,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
         case StateVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case InputVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case OutputVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case SharedVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ConstantDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }

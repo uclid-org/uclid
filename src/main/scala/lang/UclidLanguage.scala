@@ -724,6 +724,10 @@ case class OutputVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
   override def toString = "output " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
   override def declNames = ids
 }
+case class SharedVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
+  override def toString = "sharedvar " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString()
+  override def declNames = ids
+}
 /** This is base trait for all entities that are exported from a module. */
 sealed abstract trait ModuleExternal {
   def extName : Identifier

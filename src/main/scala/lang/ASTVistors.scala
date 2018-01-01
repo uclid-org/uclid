@@ -84,6 +84,7 @@ trait ReadOnlyPass[T] {
   def applyOnStateVars(d : TraversalDirection.T, stVars : StateVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnInputVars(d : TraversalDirection.T, inpVars : InputVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnOutputVars(d : TraversalDirection.T, outvars : OutputVarsDecl, in : T, context : Scope) : T = { in }
+  def applyOnSharedVars(d : TraversalDirection.T, sharedVars : SharedVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnConstant(d : TraversalDirection.T, cnst : ConstantDecl, in : T, context : Scope) : T = { in }
   def applyOnSpec(d : TraversalDirection.T, spec : SpecDecl, in : T, context : Scope) : T = { in }
   def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : Scope) : T = { in }
@@ -161,6 +162,7 @@ trait RewritePass {
   def rewriteStateVars(stVars : StateVarsDecl, ctx : Scope) : Option[StateVarsDecl] = { Some(stVars) }
   def rewriteInputVars(inpVars : InputVarsDecl, ctx : Scope) : Option[InputVarsDecl] = { Some(inpVars) }
   def rewriteOutputVars(outvars : OutputVarsDecl, ctx : Scope) : Option[OutputVarsDecl] = { Some(outvars) }
+  def rewriteSharedVars(sharedVars : SharedVarsDecl, ctx : Scope) : Option[SharedVarsDecl] = { Some(sharedVars) }
   def rewriteConstant(cnst : ConstantDecl, ctx : Scope) : Option[ConstantDecl] = { Some(cnst) }
   def rewriteSpec(spec : SpecDecl, ctx : Scope) : Option[SpecDecl] = { Some(spec) }
   def rewriteAxiom(axiom : AxiomDecl, ctx : Scope) : Option[AxiomDecl] = { Some(axiom) }
@@ -275,6 +277,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case stVars : StateVarsDecl => visitStateVars(stVars, result, context)
       case inpVars : InputVarsDecl => visitInputVars(inpVars, result, context)
       case outVars : OutputVarsDecl => visitOutputVars(outVars, result, context)
+      case sharedVars : SharedVarsDecl => visitSharedVars(sharedVars, result, context)
       case const : ConstantDecl => visitConstant(const, result, context)
       case func : FunctionDecl => visitFunction(func, result, context)
       case synFunc : SynthesisFunctionDecl => visitSynthesisFunction(synFunc, result, context)
@@ -367,6 +370,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = outVars.ids.foldLeft(result)((acc, id) => visitIdentifier(id, acc, context))
     result = visitType(outVars.typ, result, context)
     result = pass.applyOnOutputVars(TraversalDirection.Up, outVars, result, context)
+    return result
+  }
+  def visitSharedVars(sharedVars : SharedVarsDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnSharedVars(TraversalDirection.Down, sharedVars, result, context)
+    result = sharedVars.ids.foldLeft(result)((acc, id) => visitIdentifier(id, acc, context))
+    result = visitType(sharedVars.typ, result, context)
+    result = pass.applyOnSharedVars(TraversalDirection.Up, sharedVars, result, context)
     return result
   }
   def visitConstant(cnst : ConstantDecl, in : T, context : Scope) : T = {
@@ -946,6 +957,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case stateVars : StateVarsDecl => visitStateVars(stateVars, context)
       case inputVars : InputVarsDecl => visitInputVars(inputVars, context)
       case outputVars : OutputVarsDecl => visitOutputVars(outputVars, context)
+      case sharedVars : SharedVarsDecl => visitSharedVars(sharedVars, context)
       case constDecl : ConstantDecl => visitConstant(constDecl, context)
       case funcDecl : FunctionDecl => visitFunction(funcDecl, context)
       case synFuncDecl : SynthesisFunctionDecl => visitSynthesisFunction(synFuncDecl, context)
@@ -1042,24 +1054,35 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitInputVars(inpVars : InputVarsDecl, context : Scope) : Option[InputVarsDecl] = {
     val idsP = (inpVars.ids.map((id) => visitIdentifier(id, context))).flatten
     val typP = visitType(inpVars.typ, context)
-    val stateVarsP = if (idsP.size > 0 && typP.isDefined) {
+    val inpVarsP = if (idsP.size > 0 && typP.isDefined) {
       pass.rewriteInputVars(InputVarsDecl(idsP, typP.get), context)
     } else {
       None
     }
-    return ASTNode.introducePos(setFilename, stateVarsP, inpVars.position)
+    return ASTNode.introducePos(setFilename, inpVarsP, inpVars.position)
   }
 
 
   def visitOutputVars(outVars : OutputVarsDecl, context : Scope) : Option[OutputVarsDecl] = {
     val idsP = (outVars.ids.map((id) => visitIdentifier(id, context))).flatten
     val typP = visitType(outVars.typ, context)
-    val stateVarsP = if (idsP.size > 0 && typP.isDefined) {
+    val outVarsP = if (idsP.size > 0 && typP.isDefined) {
       pass.rewriteOutputVars(OutputVarsDecl(idsP, typP.get), context)
     } else {
       None
     }
-    return ASTNode.introducePos(setFilename, stateVarsP, outVars.position)
+    return ASTNode.introducePos(setFilename, outVarsP, outVars.position)
+  }
+
+  def visitSharedVars(sharedVars : SharedVarsDecl, context : Scope) : Option[SharedVarsDecl] = {
+    val idsP = (sharedVars.ids.map((id) => visitIdentifier(id, context))).flatten
+    val typP = visitType(sharedVars.typ, context)
+    val sharedVarsP = if (idsP.size > 0 && typP.isDefined) {
+      pass.rewriteSharedVars(SharedVarsDecl(idsP, typP.get), context)
+    } else {
+      None
+    }
+    return ASTNode.introducePos(setFilename, sharedVarsP, sharedVars.position)
   }
 
   def visitConstant(cnst : ConstantDecl, context : Scope) : Option[ConstantDecl] = {

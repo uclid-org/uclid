@@ -39,7 +39,8 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
     context.get(id) match {
       case Some(namedExpr) =>
         namedExpr match {
-          case Scope.StateVar(_, _)  | Scope.InputVar(_, _)  | Scope.OutputVar(_, _) => 
+          case Scope.StateVar(_, _)  | Scope.InputVar(_, _)  | 
+               Scope.OutputVar(_, _) | Scope.SharedVar(_, _) => 
              false
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
@@ -87,7 +88,8 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
     context.get(id) match {
       case Some(namedExpr) =>
         namedExpr match {
-          case Scope.StateVar(_, _)  | Scope.InputVar(_, _)  | Scope.OutputVar(_, _) | 
+          case Scope.StateVar(_, _)             | Scope.InputVar(_, _)               | 
+               Scope.OutputVar(_, _)            | Scope.SharedVar(_, _)              | 
                Scope.ModuleDefinition(_)        | Scope.Instance(_, _, _)            | 
                Scope.TypeSynonym(_, _)          | Scope.Procedure(_, _)              | 
                Scope.ProcedureInputArg(_ , _)   | Scope.ProcedureOutputArg(_ , _)    |
