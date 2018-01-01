@@ -224,9 +224,9 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     // map each output
     val idMap2 = targetModule.outputs.foldLeft(idMap1) {
       (mapAcc, out) => {
-        inst.argMap.get(out.id) match {
-          case Some(expr) => mapAcc + (out.id -> MIP.BoundOutput(MIP.extractId(expr).get, out.typ))
-          case None => mapAcc + (out.id -> MIP.UnboundOutput(nameProvider(out.id, "unbound_output"), out.typ))
+        inst.argMap.get(out._1) match {
+          case Some(expr) => mapAcc + (out._1 -> MIP.BoundOutput(MIP.extractId(expr).get, out._2))
+          case None => mapAcc + (out._1 -> MIP.UnboundOutput(nameProvider(out._1, "unbound_output"), out._2))
         }
       }
     }
