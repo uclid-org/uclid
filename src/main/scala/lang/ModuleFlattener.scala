@@ -232,7 +232,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
     // map each state variable.
     val idMap3 = targetModule.vars.foldLeft(idMap2) {
-      (mapAcc, v) => mapAcc + (v.id -> MIP.StateVariable(nameProvider(v.id, "var"), v.typ))
+      (mapAcc, v) => mapAcc + (v._1 -> MIP.StateVariable(nameProvider(v._1, "var"), v._2))
     }
     // map each constant.
     val map4 = targetModule.constants.foldLeft((idMap3, initExternalSymbolMap)) {
@@ -261,9 +261,9 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     varMap.map {
       v => {
         v._2 match {
-          case MIP.BoundInput(id, t, _t) => Some(StateVarDecl(id, t))
-          case MIP.UnboundOutput(id, t) => Some(StateVarDecl(id, t))
-          case MIP.StateVariable(id, t) => Some(StateVarDecl(id, t))
+          case MIP.BoundInput(id, t, _t) => Some(StateVarsDecl(List(id), t))
+          case MIP.UnboundOutput(id, t) => Some(StateVarsDecl(List(id), t))
+          case MIP.StateVariable(id, t) => Some(StateVarsDecl(List(id), t))
           case MIP.Constant(_, _) | MIP.Function(_, _) | 
                MIP.UnboundInput(_, _) | MIP.BoundOutput(_, _) =>  None
         }

@@ -712,10 +712,6 @@ case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "type " + id + " = " + typ + "; // " + position.toString
   override def declNames = List(id)
 }
-case class StateVarDecl(id: Identifier, typ: Type) extends Decl {
-  override def toString = "var " + id + ": " + typ + "; // " + position.toString
-  override def declNames = List(id)
-}
 /** StateVarsDecl represents var declarations of the form: vars x1, x2 : int.
  */
 case class StateVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
@@ -847,9 +843,8 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     decls.filter(_.isInstanceOf[OutputVarDecl]).map(_.asInstanceOf[OutputVarDecl]) ++
     decls.filter(_.isInstanceOf[OutputVarsDecl]).map(_.asInstanceOf[OutputVarsDecl]).flatMap(o => o.ids.map(id => OutputVarDecl(id, o.typ)))
   // module state variables.
-  lazy val vars : List[StateVarDecl] =
-    decls.filter(_.isInstanceOf[StateVarDecl]).map(_.asInstanceOf[StateVarDecl]) ++
-    decls.filter(_.isInstanceOf[StateVarsDecl]).map(_.asInstanceOf[StateVarsDecl]).flatMap(s => s.ids.map(id => StateVarDecl(id, s.typ)))
+  lazy val vars : List[(Identifier, Type)] =
+    decls.filter(_.isInstanceOf[StateVarsDecl]).map(_.asInstanceOf[StateVarsDecl]).flatMap(s => s.ids.map(id => (id, s.typ)))
   // module constants.
   lazy val constants : List[ConstantDecl] =
     decls.filter(_.isInstanceOf[ConstantDecl]).map(_.asInstanceOf[ConstantDecl])
@@ -880,7 +875,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   // compute the "type" of this module.
   lazy val moduleType : ModuleType = ModuleType(
       inputs.map(i => (i.id, i.typ)), outputs.map(o => (o.id, o.typ)),
-      constants.map(c => (c.id, c.typ)), vars.map(v => (v.id, v.typ)),
+      constants.map(c => (c.id, c.typ)), vars.map(v => (v._1, v._2)),
       functions.map(c => (c.id, c.sig)),
       instances.map(inst => (inst.instanceId, inst.modType.get)))
 

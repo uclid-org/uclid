@@ -90,14 +90,14 @@ class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
     val initNameProvider = new ContextualNameProvider(ctx, "init$" + procToInline.id)
     val nextNameProvider = new ContextualNameProvider(ctx, "next$" + procToInline.id)
 
-    val decls = m.decls.foldLeft((List.empty[Decl], List.empty[StateVarDecl]))((acc, decl) => {
+    val decls = m.decls.foldLeft((List.empty[Decl], List.empty[StateVarsDecl]))((acc, decl) => {
       decl match {
         case InitDecl(body) =>
           val (stmts, vars) = inlineProcedureCalls((id, p) => initNameProvider(id, p), body)
-          (acc._1 ++ List(InitDecl(stmts)), acc._2 ++ vars.map((t) => StateVarDecl(t._1, t._2)))
+          (acc._1 ++ List(InitDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
         case NextDecl(body) =>
           val (stmts, vars) = inlineProcedureCalls((id, p) => nextNameProvider(id, p), body)
-          (acc._1 ++ List(NextDecl(stmts)), acc._2 ++ vars.map((t) => StateVarDecl(t._1, t._2)))
+          (acc._1 ++ List(NextDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
         case stmt =>
           (acc._1 ++ List(stmt), acc._2)
       }

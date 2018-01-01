@@ -126,6 +126,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwAssert = "assert"
     lazy val KwHavoc = "havoc"
     lazy val KwVar = "var"
+    lazy val KwSharedVar = "sharedvar"
     lazy val KwConst = "const"
     lazy val KwSkip = "skip"
     lazy val KwCall = "call"
@@ -175,7 +176,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNeg, OpMinus,
       "false", "true", "bv", KwProcedure, KwBool, KwInt, KwReturns,
-      KwAssume, KwAssert, KwVar, KwHavoc, KwCall, KwIf, KwElse,
+      KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwIf, KwElse,
       KwCase, KwEsac, KwFor, KwIn, KwRange, KwInstance, KwInput, KwOutput,
       KwConst, KwModule, KwType, KwEnum, KwRecord, KwSkip,
       KwFunction, KwControl, KwInit, KwNext, KwITE, KwLambda, KwModifies,
@@ -463,9 +464,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val VarsDecl : PackratParser[lang.StateVarsDecl] = positioned {
       KwVar ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.StateVarsDecl(ids, typ) }
     }
-    lazy val VarDecl : PackratParser[lang.StateVarDecl] = positioned {
-      KwVar ~> IdType <~ ";" ^^ { case (id,typ) => lang.StateVarDecl(id,typ)}
-    }
     lazy val InputDecl : PackratParser[lang.InputVarDecl] = positioned {
       KwInput ~> IdType <~ ";" ^^ { case (id,typ) => lang.InputVarDecl(id,typ)}
     }
@@ -518,7 +516,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Decl: PackratParser[Decl] =
       positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl | SynthFuncDecl |
-                  VarDecl | VarsDecl | InputDecl | InputsDecl | OutputDecl | OutputsDecl |
+                  VarsDecl | InputDecl | InputsDecl | OutputDecl | OutputsDecl |
                   ConstDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl | AxiomDecl)
 
     // control commands.
