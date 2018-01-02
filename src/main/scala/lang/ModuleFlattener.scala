@@ -38,7 +38,7 @@ import scala.collection.immutable.Map
 class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[List[ModuleError]] {
   val moduleMap = modules.map(m => (m.id -> m)).toMap
 
-  def doesInstanceTypeMatch(modT : ModuleType, instT : ModuleInstanceType, in : List[ModuleError]) : List[ModuleError] = {
+  def doesInstanceTypeMatch(modT : ModuleType, instT : ModuleInstanceType, in : List[ModuleError], pos : ASTPosition) : List[ModuleError] = {
     // check the types of a list of pairs of identifiers and types..
     def checkTypes(args : List[(Identifier, Type)], in : List[ModuleError], argType : String, typeMap : Map[Identifier, Type]) : List[ModuleError] = {
       args.foldLeft(in) {
@@ -50,8 +50,8 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
               if (actualTyp.matches(expTyp)) {
                 acc
               } else {
-                val msg = "Incorrect type for module " + argType + ": " + id.toString + ". Expected " +
-                          actualTyp.toString + ", got " + expTyp.toString + " instead."
+                val msg = "Incorrect type for module " + argType + ": " + id.toString + ". Got " +
+                          actualTyp.toString + ", expected " + expTyp.toString + " instead"
                 ModuleError(msg, id.position) :: acc
               }
             case None =>
@@ -78,7 +78,16 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
     val wiredOutputs = instT.args.filter((a) => modT.outputMap.contains(a._1) && a._2.isDefined).map((a) => (a._1, a._2.get))
     // check output types.
     val errs3 = checkTypes(wiredOutputs, errs2, "output", modT.outputMap)
-    errs3
+
+    // filter out shared variables.
+    val wiredSharedVars = instT.args.filter((a) => modT.sharedVarMap.contains(a._1) && a._2.isDefined).map((a) => (a._1, a._2.get))
+    val errs4 = checkTypes(wiredSharedVars, errs3, "sharedvar", modT.sharedVarMap)
+
+    // ensure all shared variables are mapped.
+    val unwiredSharedVars = modT.sharedVarMap.filter(v => !instT.argMap.contains(v._1))
+    val unwiredSharedVarsErrors = unwiredSharedVars.map(v => ModuleError("Unmapped shared variable: " + v._1.toString, pos))
+ 
+    errs4 ++ unwiredSharedVarsErrors
   }
 
   def checkInstance(inst : InstanceDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
@@ -90,17 +99,19 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
       case Some(targetMod) =>
         val targetModT = targetMod.moduleType
         Utils.assert(inst.instType.isDefined, "Instance type must be defined at this point!")
-        val err1 = doesInstanceTypeMatch(targetModT, inst.instType.get, in)
+        val err1 = doesInstanceTypeMatch(targetModT, inst.instType.get, in, inst.position)
         // make sure all outputs are wired to identifiers.
-        val outputExprs = inst.arguments.filter(a => targetModT.outputMap.contains(a._1) && a._2.isDefined).map(_._2.get)
-        outputExprs.foldLeft(err1) {
+        val outputExprs = inst.arguments.filter(a => targetModT.outputMap.contains(a._1) && a._2.isDefined).map(a => (a._2.get, "module output"))
+        val sharedVarExprs = inst.arguments.filter(a => targetModT.sharedVarMap.contains(a._1) && a._2.isDefined).map(a => (a._2.get, "shared variable"))
+        val identExprs = outputExprs ++ sharedVarExprs
+        identExprs.foldLeft(err1) {
           (acc, arg) => {
-            arg match {
+            arg._1 match {
               case Identifier(name) =>
                 acc
               case _ =>
-                val msg = "Invalid module output: " + arg.toString() + "."
-                ModuleError(msg, arg.position) :: acc
+                val msg = "Invalid %s : '%s'".format(arg._2.toString, arg._1.toString)
+                ModuleError(msg, arg._1.position) :: acc
             }
           }
         }
@@ -177,6 +188,7 @@ object ModuleInstantiatorPass {
   case class BoundOutput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class UnboundOutput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class StateVariable(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
+  case class SharedVariable(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class Constant(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class Function(id : Identifier, sig : FunctionSig) extends InstanceVarRenaming(id, sig.typ)
   type VarMap = Map[Identifier, InstanceVarRenaming]
@@ -230,25 +242,34 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
         }
       }
     }
+    // map each shared variable
+    val idMap3 = targetModule.sharedVars.foldLeft(idMap2) {
+      (mapAcc, sharedVar) => {
+        val mapping = inst.argMap.get(sharedVar._1)
+        Utils.assert(mapping.isDefined, "All shared variables must be mapped.")
+        val origVar = MIP.extractId(mapping.get).get
+        mapAcc + (sharedVar._1 -> MIP.SharedVariable(origVar, sharedVar._2))
+      }
+    }
     // map each state variable.
-    val idMap3 = targetModule.vars.foldLeft(idMap2) {
+    val idMap4 = targetModule.vars.foldLeft(idMap3) {
       (mapAcc, v) => mapAcc + (v._1 -> MIP.StateVariable(nameProvider(v._1, "var"), v._2))
     }
     // map each constant.
-    val map4 = targetModule.constants.foldLeft((idMap3, initExternalSymbolMap)) {
+    val map5 = targetModule.constants.foldLeft((idMap4, initExternalSymbolMap)) {
       (acc, c) => {
         val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, c.id), c)
         (acc._1 + (c.id -> MIP.Constant(newName, c.typ)), extSymMapP)
       }
     }
     // map each function.
-    val map5 = targetModule.functions.foldLeft(map4) {
+    val map6 = targetModule.functions.foldLeft(map5) {
       (acc, f) => {
         val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, f.id), f)
         (acc._1 + (f.id -> MIP.Function(newName, f.sig)), extSymMapP)
       }
     }
-    map5
+    map6
   }
 
   def createNewModule(varMap : VarMap) : Module = {
@@ -264,8 +285,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
           case MIP.BoundInput(id, t, _t) => Some(StateVarsDecl(List(id), t))
           case MIP.UnboundOutput(id, t) => Some(StateVarsDecl(List(id), t))
           case MIP.StateVariable(id, t) => Some(StateVarsDecl(List(id), t))
-          case MIP.Constant(_, _) | MIP.Function(_, _) | 
-               MIP.UnboundInput(_, _) | MIP.BoundOutput(_, _) =>  None
+          case MIP.Constant(_, _) | MIP.Function(_, _) | MIP.UnboundInput(_, _) | 
+               MIP.BoundOutput(_, _) | MIP.SharedVariable(_, _) =>  None
         }
       }
     }.toList.flatten
@@ -278,7 +299,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
           case MIP.UnboundInput(id, t) => Some(InputVarsDecl(List(id), t))
           case MIP.BoundInput(_, _, _) | MIP.BoundOutput(_, _) |
                MIP.UnboundOutput(_, _) | MIP.StateVariable(_, _) |
-               MIP.Constant(_, _) | MIP.Function(_, _) =>
+               MIP.SharedVariable(_, _) | MIP.Constant(_, _) | MIP.Function(_, _) =>
              None
         }
       }

@@ -534,7 +534,7 @@ case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends T
   override def toString = "(" + Utils.join(args.map(argToString(_)), ", ") + ")"
 }
 case class ModuleType(
-    inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)],
+    inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)], sharedVars: List[(Identifier, Type)],
     constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
     functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, ModuleType)]) extends Type {
 
@@ -544,9 +544,10 @@ case class ModuleType(
   def argsToString(args: List[(Identifier, Type)]) =
     Utils.join(args.map(argToString(_)), ", ")
 
-  lazy val inputMap : Map[Identifier, Type] = inputs.map(a => (a._1 -> a._2)).toMap
-  lazy val outputMap : Map[Identifier, Type] = outputs.map(a => (a._1 -> a._2)).toMap
-  lazy val argSet = inputs.map(_._1).toSet union outputs.map(_._1).toSet
+  lazy val inputMap : Map[Identifier, Type] = inputs.toMap
+  lazy val outputMap : Map[Identifier, Type] = outputs.toMap
+  lazy val sharedVarMap : Map[Identifier, Type] = sharedVars.toMap
+  lazy val argSet = inputs.map(_._1).toSet union outputs.map(_._1).toSet union sharedVars.map(_._1).toSet
   lazy val constantMap : Map[Identifier, Type] = constants.map(a => (a._1 -> a._2)).toMap
   lazy val varMap : Map[Identifier, Type] = variables.map(a => (a._1 -> a._2)).toMap
   lazy val funcMap : Map[Identifier, FunctionSig] = functions.map(a => (a._1 -> a._2)).toMap
@@ -833,6 +834,8 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   // module state variables.
   lazy val vars : List[(Identifier, Type)] =
     decls.filter(_.isInstanceOf[StateVarsDecl]).map(_.asInstanceOf[StateVarsDecl]).flatMap(s => s.ids.map(id => (id, s.typ)))
+  lazy val sharedVars: List[(Identifier, Type)] =
+    decls.filter(_.isInstanceOf[SharedVarsDecl]).map(_.asInstanceOf[SharedVarsDecl]).flatMap(s => s.ids.map(id => (id, s.typ)))
   // module constants.
   lazy val constants : List[ConstantDecl] =
     decls.filter(_.isInstanceOf[ConstantDecl]).map(_.asInstanceOf[ConstantDecl])
@@ -862,8 +865,8 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
 
   // compute the "type" of this module.
   lazy val moduleType : ModuleType = ModuleType(
-      inputs.map(i => (i._1, i._2)), outputs.map(o => (o._1, o._2)),
-      constants.map(c => (c.id, c.typ)), vars.map(v => (v._1, v._2)),
+      inputs, outputs, sharedVars,
+      constants.map(c => (c.id, c.typ)), vars,
       functions.map(c => (c.id, c.sig)),
       instances.map(inst => (inst.instanceId, inst.modType.get)))
 

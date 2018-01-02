@@ -11,16 +11,14 @@ module alu  {
   type regs_t = common::regs_t;
   type cmd_t = common::cmd_t;
 
-  input regs_in  : regs_t;
+  sharedvar regs : regs_t;
   input r0ind, r1ind : regindex_t;
   input cmd : cmd_t;
-
   var r0, r1, result : word_t;
-  output regs_out : regs_t;
 
   next {
-    r0 := regs_in[r0ind];
-    r1 := regs_in[r1ind];
+    r0 := regs[r0ind];
+    r1 := regs[r1ind];
 
 
     case
@@ -32,9 +30,7 @@ module alu  {
         result := r0 - r1;
       }
     esac
-
-    regs_out := regs_in;
-    regs_out[r0ind] := result;
+    regs[r0ind] := result;
   }
 }
 
@@ -44,17 +40,17 @@ module main {
   type regs_t = common::regs_t;
   type cmd_t = common::cmd_t;
 
-  var regs   : regs_t;
+  var regfile   : regs_t;
   var shadow : word_t;
 
   init {
     shadow := 1bv8;
-    assume (forall (r : regindex_t) :: regs[r] == 1bv8);
+    assume (forall (r : regindex_t) :: regfile[r] == 1bv8);
   }
 
-  instance alu_i : alu (cmd : (add), r0ind : (0bv2), r1ind : (0bv2), regs_in : (regs), regs_out : (regs));
+  instance alu_i : alu (cmd : (add), r0ind : (0bv2), r1ind : (0bv2), regs : (regfile));
 
-  property shadow_eq_r0 : (shadow == regs[0bv2]);
+  property shadow_eq_r0 : (shadow == regfile[0bv2]);
 
   next {
     next (alu_i);
@@ -64,7 +60,7 @@ module main {
   control {
     x := unroll(3);
     decide;
-    print_results;
-    x->print_cex (shadow, regs[0bv2]);
+    // print_results;
+    // x->print_cex (shadow, regfile[0bv2]);
   }
 }

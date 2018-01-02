@@ -125,4 +125,7 @@ class VerifierSpec extends FlatSpec {
   "test/test-procedure-postcondition.ucl4" should "verify all but one assertion." in {
     nTestsFail("./test/test-procedure-postcondition.ucl4", 1)
   }
+  "test/test-mem-inout.ucl4" should "verify all assertions." in {
+    nTestsFail("./test/test-meminout.ucl4", 0)
+  }
 }
