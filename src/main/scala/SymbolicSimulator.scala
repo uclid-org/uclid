@@ -170,20 +170,19 @@ class SymbolicSimulator (module : Module) {
   {
     var currentState = symbolTable
     var states = new ArrayBuffer[SymbolTable]()
-
+    // add initial state.
     for (step <- 1 to number_of_steps) {
       // println("*** BEFORE STEP " + step.toString + "****")
       // printSymbolTable(currentState)
       val stWInputs = newInputSymbols(currentState, step, scope)
       states += stWInputs
       currentState = simulate(step, stWInputs, scope, label);
+      frameTable += currentState
       if (addAssertions) { addAsserts(step, currentState, label, scope)  }
       if (addAssertionsAsAssumes) { assumeAssertions(symbolTable, scope) }
-      frameTable += currentState
       // println("*** AFTER STEP " + step.toString + "****")
       // printSymbolTable(currentState)
     }
-
     return currentState
   }
 

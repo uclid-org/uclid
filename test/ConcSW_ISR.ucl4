@@ -37,7 +37,7 @@ module ISR_func {
  type pc_t = enum {idle, D, E};
 
  input enable : bool;
- input timerCount : int;
+ sharedvar timerCount : int;
 
  var pc : pc_t;
 

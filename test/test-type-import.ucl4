@@ -86,11 +86,11 @@ module main {
   
   property add_property : (sum == cpu_i->regs[r0index]);
   control {
-    //print_module;
+    // print_module;
 
-    unroll (4);
+    x := unroll (1);
     decide;
-    //print_results;
-    //print_cex (cpu_i->regs[r0index], sum, cpu_i->r0, cpu_i->r1, cpu_i->result);
+    // print_results;
+    // x->print_cex (cpu_i->regs[r0index], sum, cpu_i->r0, cpu_i->r1, cpu_i->result);
   }
 }
