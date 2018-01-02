@@ -204,8 +204,8 @@ object UclidMain {
 
     // create pass manager.
     val passManager = new PassManager()
-    passManager.addPass(new ModuleInstanceChecker(moduleList))
-    passManager.addPass(new ModuleDependencyFinder(moduleList, mainModuleName))
+    passManager.addPass(new ModuleInstanceChecker())
+    passManager.addPass(new ModuleDependencyFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomFinder())
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
     passManager.addPass(new ExternalSymbolAnalysis())

@@ -35,9 +35,7 @@ package lang
 
 import scala.collection.immutable.Map
 
-class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[List[ModuleError]] {
-  val moduleMap = modules.map(m => (m.id -> m)).toMap
-
+class ModuleInstanceCheckerPass() extends ReadOnlyPass[List[ModuleError]] {
   def doesInstanceTypeMatch(modT : ModuleType, instT : ModuleInstanceType, in : List[ModuleError], pos : ASTPosition) : List[ModuleError] = {
     // check the types of a list of pairs of identifiers and types..
     def checkTypes(args : List[(Identifier, Type)], in : List[ModuleError], argType : String, typeMap : Map[Identifier, Type]) : List[ModuleError] = {
@@ -91,29 +89,35 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
   }
 
   def checkInstance(inst : InstanceDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
-    val targetModOption = moduleMap.get(inst.moduleId)
-    targetModOption match {
+    val targetModNamedExpr = context.map.get(inst.moduleId)
+    targetModNamedExpr match {
       case None =>
         val error = ModuleError("Unknown module being instantiated: " + inst.moduleId.toString, inst.moduleId.position)
         error :: in
-      case Some(targetMod) =>
-        val targetModT = targetMod.moduleType
-        Utils.assert(inst.instType.isDefined, "Instance type must be defined at this point!")
-        val err1 = doesInstanceTypeMatch(targetModT, inst.instType.get, in, inst.position)
-        // make sure all outputs are wired to identifiers.
-        val outputExprs = inst.arguments.filter(a => targetModT.outputMap.contains(a._1) && a._2.isDefined).map(a => (a._2.get, "module output"))
-        val sharedVarExprs = inst.arguments.filter(a => targetModT.sharedVarMap.contains(a._1) && a._2.isDefined).map(a => (a._2.get, "shared variable"))
-        val identExprs = outputExprs ++ sharedVarExprs
-        identExprs.foldLeft(err1) {
-          (acc, arg) => {
-            arg._1 match {
-              case Identifier(name) =>
-                acc
-              case _ =>
-                val msg = "Invalid %s : '%s'".format(arg._2.toString, arg._1.toString)
-                ModuleError(msg, arg._1.position) :: acc
+      case Some(namedExpr) =>
+        namedExpr match {
+          case Scope.ModuleDefinition(targetMod) =>
+            val targetModT = targetMod.moduleType
+            Utils.assert(inst.instType.isDefined, "Instance type must be defined at this point!")
+            val err1 = doesInstanceTypeMatch(targetModT, inst.instType.get, in, inst.position)
+            // make sure all outputs are wired to identifiers.
+            val outputExprs = inst.arguments.filter(a => targetModT.outputMap.contains(a._1) && a._2.isDefined).map(a => (a._2.get, "module output"))
+            val sharedVarExprs = inst.arguments.filter(a => targetModT.sharedVarMap.contains(a._1) && a._2.isDefined).map(a => (a._2.get, "shared variable"))
+            val identExprs = outputExprs ++ sharedVarExprs
+            identExprs.foldLeft(err1) {
+              (acc, arg) => {
+                arg._1 match {
+                  case Identifier(name) =>
+                    acc
+                  case _ =>
+                    val msg = "Invalid %s : '%s'".format(arg._2.toString, arg._1.toString)
+                    ModuleError(msg, arg._1.position) :: acc
+                }
+              }
             }
-          }
+          case _ =>
+            val error = ModuleError("Module not in scope: " + inst.moduleId.toString, inst.moduleId.position)
+            error :: in
         }
     }
   }
@@ -128,8 +132,8 @@ class ModuleInstanceCheckerPass(modules : List[Module]) extends ReadOnlyPass[Lis
   }
 }
 
-class ModuleInstanceChecker(modules : List[Module]) extends ASTAnalyzer(
-    "ModuleInstanceChecker", new ModuleInstanceCheckerPass(modules))
+class ModuleInstanceChecker() extends ASTAnalyzer(
+    "ModuleInstanceChecker", new ModuleInstanceCheckerPass())
 {
   override def reset() {
     in = Some(List.empty[ModuleError])
@@ -158,7 +162,7 @@ class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identi
   }
 }
 
-class ModuleDependencyFinder(modules : List[Module], mainModuleName : Identifier) extends ASTAnalyzer(
+class ModuleDependencyFinder(mainModuleName : Identifier) extends ASTAnalyzer(
     "ModuleDependencyFinder", new ModuleDependencyFinderPass())
 {
   var moduleInstantiationOrder : Option[List[Identifier]] = None
