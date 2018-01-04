@@ -35,7 +35,8 @@ module main {
   }
   
   control {
-  	unroll (3);
+  	x := unroll (3);
   	decide;
+  	// x->print_results;
   }
 }

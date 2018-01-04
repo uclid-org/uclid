@@ -81,38 +81,54 @@ class SymbolicSimulator (module : Module) {
             resetState()
             proofResults = List.empty
           case "unroll" =>
-            initialize(false, true, false, context, "initialize")
-            simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false, context, "simulate")
+            val label : String = cmd.resultVar match {
+              case Some(l) => l.toString
+              case None    => "unroll"
+            }
+            initialize(false, true, false, context, label)
+            simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false, context, label)
           case "induction" =>
+            val labelBase : String = cmd.resultVar match {
+              case Some(l) => l.toString
+              case None    => "induction (base case)"
+            }
+            val labelStep : String = cmd.resultVar match {
+              case Some(l) => l.toString
+              case None    => "induction (step)"
+            }
             val k = if (cmd.args.size > 0) { 
               cmd.args(0).asInstanceOf[IntLit].value.toInt 
             } else { 1 }
 
             // base case.
             resetState()
-            initialize(false, true, false, context, "induction (base case)")
-            simulate(k, true, false, context, "induction (base case)")
+            initialize(false, true, false, context, labelBase)
+            simulate(k, true, false, context, labelBase)
 
             // inductive step
             resetState()
-            initialize(true, false, true, context, "induction (inductive step)")
-            simulate(k-1, false, true, context, "induction (inductive step)")
-            simulate(1, true,  false, context, "induction (inductive step)")
+            initialize(true, false, true, context, labelStep)
+            simulate(k-1, false, true, context, labelStep)
+            simulate(1, true,  false, context, labelStep)
 
             // go back to original state.
             resetState()
           case "verify" =>
             val procName = cmd.args(0).asInstanceOf[Identifier]
             val proc = module.procedures.find(p => p.id == procName).get
-            verifyProcedure(proc, "verify(%s)".format(procName.toString))
+            val label : String = cmd.resultVar match {
+              case Some(l) => l.toString
+              case None    => "verify(%s)".format(procName.toString)
+            }
+            verifyProcedure(proc, label)
           case "decide" =>
             // assumes.foreach((e) => println("assumption : " + e.toString))
             // asserts.foreach((e) => println("assertion  : " + e.toString + "; " + e.expr.toString))
             proofResults = assertionTree.verify(solver)
           case "print_results" =>
-            printResults(proofResults)
+            printResults(proofResults, cmd.argObj)
           case "print_cex" =>
-            printCEX(proofResults, cmd.args)
+            printCEX(proofResults, cmd.args, cmd.argObj)
           case "print_module" =>
             println(module.toString)
           case _ =>
@@ -186,10 +202,16 @@ class SymbolicSimulator (module : Module) {
     return currentState
   }
 
-  def printResults(assertionResults : List[CheckResult]) {
-    val passCount = assertionResults.count((p) => p.result.isTrue)
-    val failCount = assertionResults.count((p) => p.result.isFalse)
-    val undetCount = assertionResults.count((p) => p.result.isUndefined)
+  def printResults(assertionResults : List[CheckResult], arg : Option[Identifier]) {
+    def labelMatches(p : AssertInfo) : Boolean = {
+      arg match {
+        case Some(id) => id.toString == p.label
+        case None => true
+      }
+    }
+    val passCount = assertionResults.count((p) => labelMatches(p.assert) && p.result.isTrue)
+    val failCount = assertionResults.count((p) => labelMatches(p.assert) && p.result.isFalse)
+    val undetCount = assertionResults.count((p) => labelMatches(p.assert) && p.result.isUndefined)
 
     Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
     println("%d assertions passed.".format(passCount))
@@ -212,9 +234,15 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def printCEX(results : List[CheckResult], exprs : List[Expr]) {
+  def printCEX(results : List[CheckResult], exprs : List[Expr], arg : Option[Identifier]) {
+    def labelMatches(p : AssertInfo) : Boolean = {
+      arg match {
+        case Some(id) => id.toString == p.label
+        case None => true
+      }
+    }
     results.foreach((res) => {
-      if (res.result.isModelDefined) {
+      if (labelMatches(res.assert) && res.result.isModelDefined) {
         printCEX(res, exprs)
       }
     })
