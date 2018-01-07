@@ -145,6 +145,7 @@ object UclidMain {
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     val filenameAdderPass = new AddFilenameRewriter(None)
     passManager.addPass(filenameAdderPass)
+    passManager.addPass(new ModuleCanonicalizer())
     passManager.addPass(new LTLOperatorArgumentChecker())
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new ExternalTypeAnalysis())

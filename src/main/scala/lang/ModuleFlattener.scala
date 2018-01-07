@@ -426,11 +426,7 @@ class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
     extSymMap = externalSymbolAnalysis.out.get
   }
   override def rewriteModule(moduleIn : Module, ctx : Scope) : Option[Module] = {
-    val moduleInP = moduleIn.init match {
-      case Some(initStmts) => moduleIn
-      case None => Module(moduleIn.id, InitDecl(List.empty) :: moduleIn.decls, moduleIn.cmds)
-    }
-    val modP = rewrite(moduleInP, ctx)
+    val modP = rewrite(moduleIn, ctx)
     Some(modP)
   }
 }
