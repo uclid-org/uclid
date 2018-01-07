@@ -49,35 +49,38 @@ class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
     ret
   }
   override def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up) {
+    if (d == TraversalDirection.Up || !context.inLTLSpec) {
       in
     } else {
       var ret = in
       fapp.e match {
-        case Identifier(name : String) => name match {
-          case "globally" =>
-            var numOps = fapp.args.length
-            if (numOps != 1) {
-              ret = ret + ModuleError("globally operator expected 1 argument but received %s".format(numOps), fapp.position)
-            }
-          case "next" =>
-            var numOps = fapp.args.length
-            if (numOps != 1) {
-              ret = ret + ModuleError("next operator expected 1 argument but received %s".format(numOps), fapp.position)
-            }
-          case "until" =>
-            var numOps = fapp.args.length
-            if (numOps != 2) {
-              ret = ret + ModuleError("until operator expected 2 argument but received %s".format(numOps), fapp.position)
-            }
-          case "finally" =>
-            var numOps = fapp.args.length
-            if (numOps != 1) {
-              ret = ret + ModuleError("finally operator expected 1 argument but received %s".format(numOps), fapp.position)
-            }
-          case _ => in
-        }
+        case Identifier(name) =>
+          name match {
+            case "globally" =>
+              var numOps = fapp.args.length
+              if (numOps != 1) {
+                ret = ret + ModuleError("globally operator expected 1 argument but received %s".format(numOps), fapp.position)
+              }
+            case "next" =>
+              var numOps = fapp.args.length
+              if (numOps != 1) {
+                ret = ret + ModuleError("next operator expected 1 argument but received %s".format(numOps), fapp.position)
+              }
+            case "until" =>
+              var numOps = fapp.args.length
+              if (numOps != 2) {
+                ret = ret + ModuleError("until operator expected 2 argument but received %s".format(numOps), fapp.position)
+              }
+            case "finally" =>
+              var numOps = fapp.args.length
+              if (numOps != 1) {
+                ret = ret + ModuleError("finally operator expected 1 argument but received %s".format(numOps), fapp.position)
+              }
+            case _ => in
+          }
           checkBooleans(fapp.args, context, ret)
+        case _ =>
+          in
       }
     }
   }
@@ -100,24 +103,23 @@ class LTLOperatorRewriterPass extends RewritePass {
 
   override def rewriteFuncApp(fapp: FuncApplication, context: Scope): Option[Expr] = {
     if (context.inLTLSpec) {
-      var top : TemporalOperator = null
       fapp.e match {
         case Identifier(name : String) => name match {
           case "globally" =>
-            top = new GloballyTemporalOp
+            Some(OperatorApplication(new GloballyTemporalOp, fapp.args))
           case "next" =>
-            top = new NextTemporalOp
+            Some(OperatorApplication(new NextTemporalOp, fapp.args))
           case "until" =>
-            top = new UntilTemporalOp
+            Some(OperatorApplication(new UntilTemporalOp, fapp.args))
           case "finally" =>
-            top = new FinallyTemporalOp
+            Some(OperatorApplication(new FinallyTemporalOp, fapp.args))
           case "release" =>
-            top = new ReleaseTemporalOp
+            Some(OperatorApplication(new ReleaseTemporalOp, fapp.args))
           case _ =>
             Some(fapp)
         }
+        case _ => Some(fapp) 
       }
-      Some(OperatorApplication(top, fapp.args))
     } else {
       Some(fapp)
     }
@@ -171,6 +173,8 @@ class LTLNegatedNormalFormRewriterPass extends RewritePass {
           val wu = OperatorApplication(new WUntilTemporalOp, List(negA, negB))
           val fin = OperatorApplication(new FinallyTemporalOp, List(negB))
           Some(OperatorApplication(new ConjunctionOp, List(wu, fin)))
+        case _ =>
+          Some(opapp)
       }
     }
     Some(opapp)
