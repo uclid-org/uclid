@@ -1,0 +1,66 @@
+module common {
+  type word_t = bv8;
+  type regindex_t = bv2;
+  type regs_t = [regindex_t]word_t;
+  type cmd_t = enum { add, sub, nop };
+}
+
+module alu  {
+  type word_t = common::word_t;
+  type regindex_t = common::regindex_t;
+  type regs_t = common::regs_t;
+  type cmd_t = common::cmd_t;
+
+  sharedvar regs : regs_t;
+  input r0ind, r1ind : regindex_t;
+  input cmd : cmd_t;
+  var r0, r1, result : word_t;
+
+  next {
+    r0 := regs[r0ind];
+    r1 := regs[r1ind];
+
+
+    case
+      (cmd == add) : {
+        result := r0 + r1;
+      }
+
+      (cmd == sub) :  {
+        result := r0 - r1;
+      }
+    esac
+    regs[r0ind] := result;
+  }
+}
+
+module main {
+  type word_t = common::word_t;
+  type regindex_t = common::regindex_t;
+  type regs_t = common::regs_t;
+  type cmd_t = common::cmd_t;
+
+  var regfile   : regs_t;
+  var shadow : word_t;
+
+  init {
+    shadow := 1bv8;
+    assume (forall (r : regindex_t) :: regfile[r] == 1bv8);
+  }
+
+  instance alu_i : alu (cmd : (add), r0ind : (0bv2), r1ind : (0bv2), regs : (regfile));
+
+  property shadow_eq_r0 : (shadow == regfile[0bv2]);
+
+  next {
+    next (alu_i);
+	shadow := shadow + shadow;
+  }
+  
+  control {
+    x := unroll(3);
+    decide;
+    // print_results;
+    // x->print_cex (shadow, regfile[0bv2]);
+  }
+}

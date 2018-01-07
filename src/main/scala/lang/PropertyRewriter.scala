@@ -129,11 +129,12 @@ class LTLOperatorRewriterPass extends RewritePass {
 class LTLOperatorRewriter extends ASTRewriter("LTLOperatorRewriter", new LTLOperatorRewriterPass()) {
   override def visitSpec(spec : SpecDecl, context : Scope) : Option[SpecDecl] = {
     val idP = visitIdentifier(spec.id, context)
-    if (spec.params.contains(LTLExprDecorator)) {
-      context.inLTLSpec = true
+    val contextP = if (spec.params.contains(LTLExprDecorator)) {
+      context.withLTLSpec
+    } else {
+      context
     }
-    val exprP = visitExpr(spec.expr, context)
-    context.inLTLSpec = false
+    val exprP = visitExpr(spec.expr, contextP)
     val decsP = spec.params.flatMap(visitExprDecorator(_, context))
     val specP = (idP, exprP) match {
       case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr, decsP), context)
@@ -228,15 +229,15 @@ class LTLPropertyRewriterPass extends RewritePass {
     var allDecls = module.decls
     var newNext = module.next.get.body
     for ((spec: SpecDecl, (circuits: List[(Identifier, Expr)], start: Identifier, failed: Identifier)) <- specMap) {
-      allDecls = StateVarDecl(failed, new BoolType) :: allDecls
+      allDecls = StateVarsDecl(List(failed), new BoolType) :: allDecls
       var failExpr = OperatorApplication(new NegationOp, List(BoolLit(false)))
       for ((z: Identifier, expr: Expr) <- circuits) {
         // how do we initialize the values of these vars?
-        allDecls = StateVarDecl(z, new BoolType) :: allDecls
+        allDecls = StateVarsDecl(List(z), new BoolType) :: allDecls
         expr match {
           case OperatorApplication(op: GloballyTemporalOp, operands) =>
             var pending = Identifier(spec.id.name concat z.name concat "_pending")
-            allDecls = StateVarDecl(pending, new BoolType) :: allDecls
+            allDecls = StateVarsDecl(List(pending), new BoolType) :: allDecls
             // Update pending: pending = (Y pending) ∨ z
             var newPending = OperatorApplication(new DisjunctionOp, List(pending, z))
             newNext = AssignStmt(List(LhsId(pending)), List(newPending)) :: newNext
@@ -246,9 +247,9 @@ class LTLPropertyRewriterPass extends RewritePass {
             newNext = AssignStmt(List(LhsId(failed)), List(newFailed)) :: newNext
           case OperatorApplication(op: NextTemporalOp, operands) =>
             var y_z = Identifier("y_" concat z.name)
-            allDecls = StateVarDecl(y_z, new BoolType) :: allDecls
+            allDecls = StateVarsDecl(List(y_z), new BoolType) :: allDecls
             var pending = Identifier(spec.id.name concat z.name concat "_pending")
-            allDecls = StateVarDecl(pending, new BoolType) :: allDecls
+            allDecls = StateVarsDecl(List(pending), new BoolType) :: allDecls
             // Update pending: pending = z
             newNext = AssignStmt(List(LhsId(pending)), List(z)) :: newNext
             // Update failed: failed = Yz ∧ ¬a
@@ -264,7 +265,7 @@ class LTLPropertyRewriterPass extends RewritePass {
           case OperatorApplication(op: ReleaseTemporalOp, operands) =>
             // we use the following identity from wikipedia: a R b <==> b W (a && b)
             var pending = Identifier(spec.id.name concat z.name concat "_pending")
-            allDecls = StateVarDecl(pending, new BoolType) :: allDecls
+            allDecls = StateVarsDecl(List(pending), new BoolType) :: allDecls
             // Update pending: pending = (z ∨ (Y pending )) ∧ ¬(b ∧ a)
             var inner1 = OperatorApplication(new DisjunctionOp, List(z, pending))
             var inner2 = OperatorApplication(new NegationOp, List(OperatorApplication(new ConjunctionOp, List(operands.head, operands.last))))
@@ -276,7 +277,7 @@ class LTLPropertyRewriterPass extends RewritePass {
             newNext = AssignStmt(List(LhsId(failed)), List(newFailed)) :: newNext
           case OperatorApplication(op: WUntilTemporalOp, operands) =>
             var pending = Identifier(spec.id.name concat z.name concat "_pending")
-            allDecls = StateVarDecl(pending, new BoolType) :: allDecls
+            allDecls = StateVarsDecl(List(pending), new BoolType) :: allDecls
             // Update pending: pending = (z ∨ (Y pending )) ∧ ¬b
             var inner = OperatorApplication(new DisjunctionOp, List(z, pending))
             var newPending = OperatorApplication(new ConjunctionOp, List(inner, OperatorApplication(new NegationOp, List(operands.last))))
@@ -301,11 +302,12 @@ class LTLPropertyRewriterPass extends RewritePass {
 class LTLPropertyRewriter extends ASTRewriter("LTLPropertyRewriter", new LTLPropertyRewriterPass()) {
   override def visitSpec(spec : SpecDecl, context : Scope) : Option[SpecDecl] = {
     val idP = visitIdentifier(spec.id, context)
-    if (spec.params.contains(LTLExprDecorator)) {
-      context.inLTLSpec = true
+    val contextP = if (spec.params.contains(LTLExprDecorator)) {
+      context.withLTLSpec
+    } else {
+      context
     }
-    val exprP = visitExpr(spec.expr, context)
-    context.inLTLSpec = false
+    val exprP = visitExpr(spec.expr, contextP)
     val decsP = spec.params.flatMap(visitExprDecorator(_, context))
     val specP = (idP, exprP) match {
       case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr, decsP), context)

@@ -1,0 +1,44 @@
+module main
+{
+  input w  : int;
+  var nums : [int]int;
+  var x    : int; 
+
+  procedure add(a : int, b : int) returns (c : int)
+    requires (a >= 0 && a < 10);
+    requires (b >= 0 && b < 10);
+    ensures c == a + b;
+    ensures (c >= 0 && c < 18);
+  {
+    c := a + b;
+  }
+
+  procedure sum(n : int) returns (numbers : [int]int)
+    requires (n > 0);
+    requires (n < 5);
+    ensures (forall (i : int) :: (i > 0 && i < n) ==> numbers[i] == i+1);
+    ensures (x == old(x) + 1);
+    modifies x;
+  {
+    for i in range(1, 5) {
+      if (i < n) {
+        numbers[i] := i+1;
+      }
+    }
+    x := x + 1;
+  }
+
+  next {
+    call (nums) := sum(w);
+  }
+
+  control {
+    // print_module;
+    add_verif := verify(add);
+    sum_verif := verify(sum);
+    decide;
+    // print_results;
+    // add_verif->print_cex(a, b, c);
+    // sum_verif->print_cex(n, x, numbers[1], numbers[2], numbers[3], numbers[4], numbers[5]);
+  }
+}

@@ -17,8 +17,9 @@ module main {
   }
   
   control {
-    initialize;
-  	simulate (5);
+  	x := unroll (5);
   	decide;
+  	// print_results;
+  	// x->print_cex;
   }
 }

@@ -1,0 +1,101 @@
+// 
+// Test for type checking in print_cex commands.
+//
+
+module common {
+  // This module declares types that are used in the rest of the model.
+
+  // Types can be bitvectors.
+  type addr_t = bv8;
+  type word_t = bv8;
+
+  // Or SMT arrays.
+  type mem_t = [addr_t]word_t;
+}
+
+module cpu {
+  // Import type aliases from common.
+  type addr_t = common :: addr_t;
+  type mem_t  = common :: mem_t;
+  type word_t = common :: word_t;
+  
+  // Types can also be uninterpreted.
+  type regindex_t; 
+  // And we can use them in maps.
+  type regs_t = [regindex_t]word_t;
+
+  // This is an input to the module.
+  input inst : word_t;
+  
+  // These are the state variables of this module.
+  var dmem : mem_t;
+  var regs : regs_t;
+
+  // These are (uninterpreted) functions.
+  function word2reg0   ( w : word_t )  : regindex_t;
+  function word2reg1   ( w : word_t )  : regindex_t;
+
+  // More state variables.
+  input nd   : bool;
+  var r0ind  : regindex_t;
+  var r1ind  : regindex_t;
+  var r0     : word_t;
+  var r1     : word_t;
+
+  // Define initial state for the modules.
+  init {
+    assume (forall (r : regindex_t) :: regs[r] == 0bv8);
+    assume (forall (a : addr_t) :: dmem[a] == 0bv8);
+  }
+
+  // Define "next" transition.
+  next {
+    // and its operands
+    r0ind := word2reg0(inst);
+    r1ind := word2reg1(inst);
+    r0 := regs[r0ind];
+    r1 := regs[r1ind];
+    havoc r0;
+    havoc r1;
+    
+    // now execute
+    if (nd) { 
+      dmem[r0] := r1; 
+    }
+  }
+}
+  
+module main {
+  // The is the "main" module: i.e. the module from which proof script commands are executed.
+
+  // Import types
+  type addr_t     = common :: addr_t;
+  type word_t     = common :: word_t;
+  
+  // instruction memory is the same for both CPUs.
+  var inst : word_t;
+
+  // Create two instances of the CPU module.
+  instance cpu_i_1 : cpu(inst : (inst));
+  instance cpu_i_2 : cpu(inst : (inst));
+
+  next {
+    // These call statements invoke the next state function of the two CPU module instances.
+    next (cpu_i_1);
+    next (cpu_i_2);
+  }
+  
+  // These are our properties.
+  property eq_mem  : (forall (a : addr_t) :: cpu_i_1->dmem[a] == cpu_i_2->dmem[a]);
+
+  // The control block defines the commands that will executed as part of the proof script.
+  control {
+    print_module;
+    unroll(1);
+    decide;
+    print_results;
+
+    // NOTE: This command is expected to create typechecking errors.
+    print_cex (cpu_i_1->r0d /* Unknown field. */, cpu_i_2->r0d  /* Unknown field. */, cpu_1->r1  /* Unknown instance. */, cpu_2->r1 /* Unknown instance. */);
+  }
+}

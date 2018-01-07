@@ -1,32 +1,32 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
+ *
+ * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * All Rights Reserved.
+ *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for educational, research, and not-for-profit purposes,
  * without fee and without a signed licensing agreement, is hereby granted,
  * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
+ * paragraphs appear in all copies, modifications, and distributions.
+ *
  * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
  * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
  * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
+ *
  * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
  * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
  * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
  * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
  * Authors: Norman Mu, Pramod Subramanyan
-
+ *
  * All sorts of type inference and type checking functionality is in here.
  *
  */
@@ -46,7 +46,7 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
   type TypeSet = MutableSet[Identifier]
   var typeDeclMap : TypeMap = MutableMap.empty
   var typeSynonyms : TypeSet = MutableSet.empty
-  
+
   override def reset () {
     typeDeclMap.clear()
     typeSynonyms.clear()
@@ -74,8 +74,8 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
   def validateSynonyms(module : Module) {
     typeSynonyms.foreach {
       (syn) => Utils.checkParsingError(
-          typeDeclMap.contains(syn), 
-          "Type synonym '" + syn.toString + "' used without declaration in module '" + module.id + "'", 
+          typeDeclMap.contains(syn),
+          "Type synonym '" + syn.toString + "' used without declaration in module '" + module.id + "'",
           syn.pos, module.filename
       )
     }
@@ -184,7 +184,7 @@ object ReplacePolymorphicOperators {
   def rewrite(e : Expr, typ : NumericType) : Expr = {
     def r(e : Expr) : Expr = rewrite(e, typ)
     def rs(es : List[Expr])  = es.map(r(_))
-    
+
     e match {
       case i : Identifier => e
       case ei : ExternalIdentifier => e
@@ -199,7 +199,7 @@ object ReplacePolymorphicOperators {
       case ArraySelectOperation(expr, indices) =>
         ArraySelectOperation(r(expr), rs(indices))
       case ArrayStoreOperation(expr, indices, value) =>
-        ArrayStoreOperation(r(expr), rs(indices), r(value)) 
+        ArrayStoreOperation(r(expr), rs(indices), r(value))
       case FuncApplication(expr, args) =>
         FuncApplication(r(expr), rs(args))
       case ITE(c, t, f) =>
@@ -216,15 +216,15 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
   type Memo = MutableMap[IdGenerator.Id, Type]
   var memo : Memo = MutableMap.empty
   type ErrorList = Set[Utils.TypeError]
-  
+
   var polyOpMap : MutableMap[IdGenerator.Id, Operator] = MutableMap.empty
   var bvOpMap : MutableMap[IdGenerator.Id, Int] = MutableMap.empty
-  
+
   override def reset() = {
     memo.clear()
     polyOpMap.clear()
   }
-  
+
   override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : ErrorList, ctx : Scope) : ErrorList = {
     if (d == TraversalDirection.Down) {
       try {
@@ -237,7 +237,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     }
     return in
   }
-  
+
   override def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : ErrorList, ctx : Scope) : ErrorList = {
     if (d == TraversalDirection.Up) {
       try {
@@ -271,7 +271,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     checkTypeError(typOpt.isDefined, "Unknown variable in LHS: " + id.toString, lhs.pos, c.filename)
     val typ = typOpt.get
     val resultType = lhs match {
-      case LhsId(id) => 
+      case LhsId(id) =>
         typ
       case LhsArraySelect(id, indices) =>
         checkTypeError(typ.isArray, "Lhs variable in array index operation must be of type array: " + id.toString, lhs.pos, c.filename)
@@ -312,7 +312,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
       opapp.op match {
         case polyOp : PolymorphicOperator => {
           checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.", opapp.pos, c.filename)
-          checkTypeError(argTypes(0) == argTypes(1), 
+          checkTypeError(argTypes(0) == argTypes(1),
               "Arguments to operator '" + opapp.op.toString + "' must be of the same type. Types of expression '" +
               opapp.toString() + "' are " + argTypes(0).toString() + " and " + argTypes(1).toString() + ".",
               opapp.pos, c.filename)
@@ -359,10 +359,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         }
         case boolOp : BooleanOperator => {
           boolOp match {
-            case NegationOp() => 
+            case NegationOp() =>
               checkTypeError(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.", opapp.pos, c.filename)
               checkTypeError(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool. (" + opapp.toString() + ").", opapp.pos, c.filename)
-            case _ => 
+            case _ =>
               checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments.", opapp.pos, c.filename)
               checkTypeError(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool.", opapp.pos, c.filename)
           }
@@ -383,11 +383,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           extrOp match {
             case ConstExtractOp(slice) => {
               checkTypeError(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument.", opapp.pos, c.filename)
-              checkTypeError(argTypes(0).isInstanceOf[BitVectorType], "Operand to operator '" + opapp.op.toString + "' must be of type BitVector.", opapp.pos, c.filename) 
-              checkTypeError(argTypes(0).asInstanceOf[BitVectorType].width > slice.hi, "Operand to operator '" + opapp.op.toString + "' must have width > "  + slice.hi.toString + ".", opapp.pos, c.filename) 
-              checkTypeError(slice.hi >= slice.lo, "High-operand must be greater than or equal to low operand for operator '" + opapp.op.toString + "'.", opapp.pos, c.filename) 
-              checkTypeError(slice.hi >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.", opapp.pos, c.filename) 
-              checkTypeError(slice.lo >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.", opapp.pos, c.filename) 
+              checkTypeError(argTypes(0).isInstanceOf[BitVectorType], "Operand to operator '" + opapp.op.toString + "' must be of type BitVector.", opapp.pos, c.filename)
+              checkTypeError(argTypes(0).asInstanceOf[BitVectorType].width > slice.hi, "Operand to operator '" + opapp.op.toString + "' must have width > "  + slice.hi.toString + ".", opapp.pos, c.filename)
+              checkTypeError(slice.hi >= slice.lo, "High-operand must be greater than or equal to low operand for operator '" + opapp.op.toString + "'.", opapp.pos, c.filename)
+              checkTypeError(slice.hi >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.", opapp.pos, c.filename)
+              checkTypeError(slice.lo >= 0, "Operand to operator '" + opapp.op.toString + "' must be non-negative.", opapp.pos, c.filename)
               BitVectorType(slice.hi - slice.lo + 1)
             }
             case VarExtractOp(slice) => {
@@ -422,26 +422,29 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case SelectFromInstance(fld) => {
           Utils.assert(argTypes.size == 1, "Expected exactly one argument to SelectFromInstance.")
           val inst = argTypes(0)
-          checkTypeError(inst.isInstanceOf[ModuleType], "Argument to select operator must be module instance.", inst.pos, c.filename)
+          checkTypeError(inst.isInstanceOf[ModuleType], "Argument to select operator must be module instance.", fld.pos, c.filename)
           val modT = inst.asInstanceOf[ModuleType]
           val fldT = modT.typeMap.get(fld)
           checkTypeError(fldT.isDefined, "Unknown type for selection: %s.".format(fld.toString), fld.pos, c.filename)
           fldT.get
         }
+        case OldOperator() =>
+          checkTypeError(argTypes.size == 1, "Expect exactly one argument to 'old'.", opapp.pos, c.filename)
+          argTypes(0)
       }
     }
-    
+
     def arraySelectType(arrSel : ArraySelectOperation) : Type = {
       checkTypeError(typeOf(arrSel.e, c).isInstanceOf[ArrayType], "Type error in the array operand of select operation.", arrSel.pos, c.filename)
       val indTypes = arrSel.index.map(typeOf(_, c))
       val arrayType = typeOf(arrSel.e, c).asInstanceOf[ArrayType]
-      lazy val message = "Array index type error. Expected: (" + 
+      lazy val message = "Array index type error. Expected: (" +
                           Utils.join(arrayType.inTypes.map((t) => t.toString), ", ") + "). Got: (" +
                           Utils.join(indTypes.map((t) => t.toString), ", ") + ")."
       checkTypeError(arrayType.inTypes == indTypes, message, arrSel.pos, c.filename)
       return arrayType.outType
     }
-    
+
     def arrayStoreType(arrStore : ArrayStoreOperation) : Type = {
       checkTypeError(typeOf(arrStore.e, c).isInstanceOf[ArrayType], "Type error in the array operand of store operation.", arrStore.pos, c.filename)
       val indTypes = arrStore.index.map(typeOf(_, c))
@@ -451,9 +454,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
       checkTypeError(arrayType.outType == valueType, "Array update value type error.", arrStore.pos, c.filename)
       return arrayType
     }
-    
+
     def funcAppType(fapp : FuncApplication) : Type = {
-      val funcType1 = typeOf(fapp.e, c) 
+      val funcType1 = typeOf(fapp.e, c)
       lazy val typeErrorMsg = "Type error in function application (not a function). %s is of type '%s'.".format(fapp.e.toString, funcType1.toString)
       checkTypeError(funcType1.isInstanceOf[MapType], typeErrorMsg, fapp.pos, c.filename)
       val funcType = funcType1.asInstanceOf[MapType]
@@ -461,17 +464,17 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
       checkTypeError(funcType.inTypes == argTypes, "Type error in function application (argument type error).", fapp.pos, c.filename)
       return funcType.outType
     }
-    
+
     def iteType(ite : ITE) : Type = {
       checkTypeError(typeOf(ite.e, c).isBool, "Type error in ITE condition operand.", ite.pos, c.filename)
       checkTypeError(typeOf(ite.t, c) == typeOf(ite.f, c), "ITE operand types don't match.", ite.pos, c.filename)
       return typeOf(ite.t, c)
     }
-    
+
     def lambdaType(lambda : Lambda) : Type = {
       return MapType(lambda.ids.map(_._2), typeOf(lambda.e, c))
     }
-    
+
     val cachedType = memo.get(e.astNodeId)
     if (cachedType.isEmpty) {
       val typ = e match {
@@ -486,12 +489,13 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           val moduleTypeP = moduleTypeOption.get
           checkTypeError(moduleTypeP.isInstanceOf[ModuleType], "Identifier '%s' is not a module.".format(mId.toString), mId.pos, c.filename)
           val moduleType = moduleTypeP.asInstanceOf[ModuleType]
-          moduleType.funcMap.get(fId) match {
-            case None => 
-              raiseTypeError("Unknown function '%s' in module '%s'.".format(fId.toString, mId.toString), fId.pos, c.filename)
+          moduleType.externalTypeMap.get(fId) match {
+            case None =>
+              raiseTypeError("Unknown external '%s' in module '%s'.".format(fId.toString, mId.toString), fId.pos, c.filename)
               UndefinedType()
-            case Some(fSig) => fSig.typ
+            case Some(typ) => typ
           }
+        case f : FreshLit => f.typ
         case b : BoolLit => new BoolType()
         case i : IntLit => new IntType()
         case bv : BitVectorLit => new BitVectorType(bv.width)
@@ -522,175 +526,11 @@ class ExpressionTypeChecker extends ASTAnalyzer("ExpressionTypeChecker", new Exp
   }
 }
 
-class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
-{
-  type T = Set[ModuleError]
-  lazy val manager : PassManager = analysis.manager
-  lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
-  override def applyOnStatement(d : TraversalDirection.T, st : Statement, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up) {
-      in
-    } else {
-      st match {
-        case AssertStmt(e, id) =>
-          val eType = exprTypeChecker.typeOf(e, context)
-          if (!(eType.isBool || eType.isTemporal)) {
-            in + ModuleError("Assertion expression must be of Boolean or Temporal type.", st.position)
-          } else {
-            in
-          }
-        case AssumeStmt(e, id) =>
-          val eType = exprTypeChecker.typeOf(e, context)
-          if (!eType.isBool) {
-            in + ModuleError("Assumption must be Boolean.", st.position)
-          } else {
-            in
-          }
-        case HavocStmt(id) =>
-          if (!context.doesNameExist(id)) {
-            in + ModuleError("Unknown identifier in havoc statement.", st.position)
-          } else {
-            in
-          }
-        case AssignStmt(lhss, rhss) =>
-          var ret = in
-
-          for ((lh, rh) <- lhss zip rhss) {
-            val lhType = exprTypeChecker.typeOf(lh, context)
-            val rhType = exprTypeChecker.typeOf(rh, context)
-            if (!lhType.matches(rhType)) {
-              lh.ident.toString
-              ret = in + ModuleError("%s expected type %s but received type %s.".format(lh.ident.toString, lhType.toString, rhType.toString), st.position)
-            }
-          }
-
-          val l1 = lhss.length
-          val l2 = rhss.length
-
-          if (l1 != l2) {
-            ret = ret + ModuleError("Assignment expected %d expressions but received %d.".format(l1, l2), st.position)
-          }
-
-          ret
-
-        case IfElseStmt(cond, _, _) =>
-          val cType = exprTypeChecker.typeOf(cond, context)
-          if (!cType.isBool) {
-            in + ModuleError("Condition in if statement must be of type boolean.", st.position)
-          } else {
-            in
-          }
-        case ForStmt(_, range, _) =>
-          range._1 match {
-            case i: IntLit =>
-              range._2 match {
-                case j: IntLit =>
-                  if (i.value > j.value) {
-                    in + ModuleError("Range lower bound must be less than upper bound.", st.position) 
-                  } else {
-                    in
-                  }
-                case _ =>
-                  in + ModuleError("Range lower and upper bounds must be of same type.", st.position)
-              }
-            case b: BitVectorLit =>
-              range._2 match {
-                case c: BitVectorLit =>
-                  if (b.value > c.value) {
-                    in + ModuleError("Range lower bound must be less than upper bound.", st.position)
-                  } else if (b.width != c.width) {
-                    in + ModuleError("Range lower and upper bounds must be of same width", st.position)
-                  } else {
-                    in
-                  }
-                case _ =>
-                  in + ModuleError("Range lower and upper bounds must be of same type.", st.position) 
-              }
-          }
-        case CaseStmt(body) =>
-          body.foldLeft(in) {
-            (acc, c) => {
-              var cType = exprTypeChecker.typeOf(c._1, context)
-              if (!cType.isBool) {
-                acc + ModuleError("Case clause must be of type boolean.", st.position) 
-              } else {
-                acc
-              }
-            }
-          }
-        case ProcedureCallStmt(id, callLhss, args) =>
-          var ret = in
-          if (context.module.isEmpty) {
-            ret = ret + ModuleError("Procedure does not exist.", st.position) 
-          }
-          val procOption = context.module.get.decls.find((p) => p.isInstanceOf[ProcedureDecl] && p.asInstanceOf[ProcedureDecl].id == id)
-
-          if (procOption.isEmpty) {
-            ret = ret + ModuleError("Procedure does not exist.", st.position) 
-          }
-
-          val proc = procOption.get.asInstanceOf[ProcedureDecl]
-          for ((param, arg) <- proc.sig.inParams zip args) {
-            var (pId, pType) = param.asInstanceOf[(Identifier, Type)]
-            var aType = exprTypeChecker.typeOf(arg.asInstanceOf[Expr], context)
-            if (!pType.matches(aType)) {
-              ret = ret + ModuleError("Parameter %s expected argument of type %s but received type %s.".format(pId.name, pType.toString, aType.toString), st.position) 
-            }
-          }
-
-          var l1 = proc.sig.inParams.length
-          var l2 = args.length
-
-          if (l1 != l2) {
-            ret = ret + ModuleError("Procedure expected %d arguments but received %d.".format(l1, l2), st.position) 
-          }
-
-          for ((retval, lh) <- proc.sig.outParams zip callLhss) {
-            val rType = retval.asInstanceOf[(Identifier, Type)]._2
-            val lType = exprTypeChecker.typeOf(lh, context)
-            if (!rType.matches(lType)) {
-              ret = ret + ModuleError("Left hand variable %s expected return value of type %s but received type %s."
-                .format(lh.toString, lType.toString, rType.toString), st.position) 
-            }
-          }
-
-          l1 = proc.sig.outParams.length
-          l2 = callLhss.length
-
-          if (l1 != l2) {
-            ret = ret + ModuleError("Left hand side expected %d return values but received %d.".format(l1, l2), st.position) 
-          }
-          ret
-        case ModuleCallStmt(id) =>
-          val instanceNames : Set[Identifier] = context.module.get.instanceNames
-          if (!instanceNames.contains(id)) {
-            val error = ModuleError("Unknown module instance: " + id.toString, id.position)
-            in + error
-          } else {
-            in
-          }
-        case SkipStmt() => in
-      }
-    }
-  }
-}
-
-class ModuleTypeChecker extends ASTAnalyzer("ModuleTypeChecker", new ModuleTypeCheckerPass())  {
-  override def visit(module : Module, context : Scope) : Option[Module] = {
-    val out = visitModule(module, Set.empty[ModuleError], context)
-    if (out.size > 0) {
-      val errors = out.map((me) => (me.msg, me.position)).toList
-      throw new Utils.ParserErrorList(errors)
-    }
-    return Some(module)
-  }
-}
-
 class PolymorphicTypeRewriterPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
   lazy val typeCheckerPass = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
   override def rewriteOperator(op : Operator, ctx : Scope) : Option[Operator] = {
-    
+
     op match {
       case p : PolymorphicOperator => {
         val reifiedOp = typeCheckerPass.polyOpMap.get(p.astNodeId)
@@ -710,7 +550,7 @@ class PolymorphicTypeRewriterPass extends RewritePass {
             case _ => Some(bv)
           }
           newOp match {
-            case Some(newOp) => 
+            case Some(newOp) =>
               val opWithPos = newOp
               opWithPos.pos = bv.pos
               Some(opWithPos)
@@ -728,4 +568,4 @@ class PolymorphicTypeRewriterPass extends RewritePass {
 }
 class PolymorphicTypeRewriter extends ASTRewriter(
     "PolymorphicTypeRewriter", new PolymorphicTypeRewriterPass())
-  
+
