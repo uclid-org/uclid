@@ -161,7 +161,7 @@ case class IffOp() extends BooleanOperator { override def toString = "<==>" }
 case class ImplicationOp() extends BooleanOperator { override def toString = "==>" }
 case class NegationOp() extends BooleanOperator {
   override def toString = "!"
-  override def fixity = Operator.INFIX
+  override def fixity = Operator.PREFIX
 }
 // Quantifiers
 sealed abstract class QuantifiedBooleanOperator extends BooleanOperator {
@@ -186,7 +186,7 @@ case class InequalityOp() extends ComparisonOperator { override def toString = "
 
 sealed abstract class TemporalOperator() extends Operator { override def fixity = Operator.PREFIX }
 case class GloballyTemporalOp() extends TemporalOperator { override def toString = "globally" }
-case class NextTemporalOp() extends TemporalOperator { override def toString = "next" }
+case class NextTemporalOp() extends TemporalOperator { override def toString = "nxt" }
 case class UntilTemporalOp() extends TemporalOperator { override def toString = "until" }
 case class FinallyTemporalOp() extends TemporalOperator { override def toString = "finally" }
 case class ReleaseTemporalOp() extends TemporalOperator { override def toString = "release" }
@@ -354,8 +354,12 @@ case class LhsVarSliceSelect(id: Identifier, bitslice: VarBitVectorSlice) extend
 
 /** Type decorators for expressions. */
 sealed abstract class ExprDecorator extends ASTNode
-case class UnknownDecorator(value: String) extends ExprDecorator
-case object LTLExprDecorator extends ExprDecorator
+case class UnknownDecorator(value: String) extends ExprDecorator {
+  override def toString = value
+}
+case object LTLExprDecorator extends ExprDecorator {
+  override def toString = "LTL"
+}
 
 object ExprDecorator {
   /** Factory constructor. */
@@ -766,7 +770,14 @@ case class NextDecl(body: List[Statement]) extends Decl {
   override def declNames = List.empty
 }
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
-  override def toString = "property " + id + " : " + expr + ";  // " + id.position.toString
+  override def toString = {
+    val declString = if (params.size > 0) { 
+      "[" + Utils.join(params.map(_.toString), ", ") + "]"
+    } else {
+      ""
+    }
+    "property %s%s : %s; // %s".format(id.toString, declString, expr.toString, position.toString) 
+  }
   override def declNames = List(id)
   def name = "property " + id.toString()
 }

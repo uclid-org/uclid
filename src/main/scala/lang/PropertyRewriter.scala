@@ -61,7 +61,7 @@ class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
               if (numOps != 1) {
                 ret = ret + ModuleError("globally operator expected 1 argument but received %s".format(numOps), fapp.position)
               }
-            case "next" =>
+            case "nxt" =>
               var numOps = fapp.args.length
               if (numOps != 1) {
                 ret = ret + ModuleError("next operator expected 1 argument but received %s".format(numOps), fapp.position)
@@ -107,7 +107,7 @@ class LTLOperatorRewriterPass extends RewritePass {
         case Identifier(name : String) => name match {
           case "globally" =>
             Some(OperatorApplication(new GloballyTemporalOp, fapp.args))
-          case "next" =>
+          case "nxt" =>
             Some(OperatorApplication(new NextTemporalOp, fapp.args))
           case "until" =>
             Some(OperatorApplication(new UntilTemporalOp, fapp.args))
@@ -127,21 +127,6 @@ class LTLOperatorRewriterPass extends RewritePass {
 }
 
 class LTLOperatorRewriter extends ASTRewriter("LTLOperatorRewriter", new LTLOperatorRewriterPass()) {
-  override def visitSpec(spec : SpecDecl, context : Scope) : Option[SpecDecl] = {
-    val idP = visitIdentifier(spec.id, context)
-    val contextP = if (spec.params.contains(LTLExprDecorator)) {
-      context.withLTLSpec
-    } else {
-      context
-    }
-    val exprP = visitExpr(spec.expr, contextP)
-    val decsP = spec.params.flatMap(visitExprDecorator(_, context))
-    val specP = (idP, exprP) match {
-      case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr, decsP), context)
-      case _ => None
-    }
-    ASTNode.introducePos(_setFilename, specP, spec.position)
-  }
 }
 
 

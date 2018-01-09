@@ -378,7 +378,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type.", opapp.pos, c.filename)
           BoolType()
         }
-        case tOp : TemporalOperator => new TemporalType()
+        case tOp : TemporalOperator => BoolType()
         case extrOp : ExtractOp => {
           extrOp match {
             case ConstExtractOp(slice) => {
