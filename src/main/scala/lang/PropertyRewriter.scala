@@ -131,40 +131,6 @@ class LTLOperatorRewriter extends ASTRewriter("LTLOperatorRewriter", new LTLOper
 
 
 class LTLNegatedNormalFormRewriterPass extends RewritePass {
-  override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
-    if (opapp.op.isInstanceOf[NegationOp]) {
-      opapp.operands.head match {
-        // !globally(a) -> finally(!a)
-        case OperatorApplication(op : GloballyTemporalOp, operands) =>
-          val negA = OperatorApplication(new NegationOp, List(operands.head))
-          Some(OperatorApplication(new FinallyTemporalOp, List(negA)))
-        // !next(a) -> next(!a)
-        case OperatorApplication(op : NextTemporalOp, operands) =>
-          val negA = OperatorApplication(new NegationOp, List(operands.head))
-          Some(OperatorApplication(new NextTemporalOp, List(negA)))
-        // !until(a, b) -> wuntil(!b, !a && !b)
-        case OperatorApplication(op : UntilTemporalOp, operands) =>
-          val negA = OperatorApplication(new NegationOp, List(operands.head))
-          val negB = OperatorApplication(new NegationOp, List(operands.last))
-          val conj = OperatorApplication(new ConjunctionOp, List(negA, negB))
-          Some(OperatorApplication(new WUntilTemporalOp, List(negB, conj)))
-        // !finally(a) -> globally(!a)
-        case OperatorApplication(op : FinallyTemporalOp, operands) =>
-          val negA = OperatorApplication(new NegationOp, List(operands.head))
-          Some(OperatorApplication(new GloballyTemporalOp, List(negA)))
-        // !release(a, b) -> wuntil(!a, !b) && finally(!b)
-        case OperatorApplication(op : ReleaseTemporalOp, operands) =>
-          val negA = OperatorApplication(new NegationOp, List(operands.head))
-          val negB = OperatorApplication(new NegationOp, List(operands.last))
-          val wu = OperatorApplication(new WUntilTemporalOp, List(negA, negB))
-          val fin = OperatorApplication(new FinallyTemporalOp, List(negB))
-          Some(OperatorApplication(new ConjunctionOp, List(wu, fin)))
-        case _ =>
-          Some(opapp)
-      }
-    }
-    Some(opapp)
-  }
 }
 
 class LTLNegatedNormalFormRewriter extends ASTRewriter(
@@ -178,6 +144,55 @@ class LTLPropertyRewriterPass extends RewritePass {
 
   lazy val manager : PassManager = analysis.manager
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
+
+  def negate(expr : Expr) : Expr = OperatorApplication(NegationOp(), List(expr))
+  def convertToNNF(expr : Expr) : Expr = {
+    def recurse(e :  Expr) = convertToNNF(e)
+    expr match {
+      case id : Identifier => id
+      case eId : ExternalIdentifier => eId
+      case lit : Literal => lit
+      case tup : Tuple => Tuple(tup.values.map(recurse(_)))
+      case opapp : OperatorApplication =>
+        opapp.op match {
+          case NegationOp() =>
+            Utils.assert(opapp.operands.size == 1, "Negation operation must have only one operand.")
+            val operand = opapp.operands(0)
+            operand match {
+              case OperatorApplication(op, operands) =>
+                val negOps = operands.map(op => recurse(negate(op)))
+                op match {
+                  case GloballyTemporalOp() =>
+                    OperatorApplication(FinallyTemporalOp(), negOps)
+                  case NextTemporalOp() =>
+                    OperatorApplication(NextTemporalOp(), negOps)
+                  case UntilTemporalOp() =>
+                    OperatorApplication(ReleaseTemporalOp(), negOps)
+                  case FinallyTemporalOp() =>
+                    OperatorApplication(GloballyTemporalOp(), negOps)
+                  case ReleaseTemporalOp() =>
+                    OperatorApplication(UntilTemporalOp(), negOps)
+                  case _ =>
+                    OperatorApplication(op, operands.map(recurse(_)))
+                }
+              case _ =>
+                OperatorApplication(opapp.op, opapp.operands.map(recurse(_)))
+            }
+          case _ =>
+            OperatorApplication(opapp.op, opapp.operands.map(recurse(_)))
+        }
+      case arrSel : ArraySelectOperation =>
+        ArraySelectOperation(recurse(arrSel.e), arrSel.index.map(recurse(_)))
+      case arrUpd : ArrayStoreOperation =>
+        ArrayStoreOperation(recurse(arrUpd.e), arrUpd.index.map(recurse(_)), recurse(arrUpd.value))
+      case funcApp : FuncApplication =>
+        FuncApplication(recurse(funcApp.e), funcApp.args.map(recurse(_)))
+      case ite : ITE =>
+        ITE(recurse(ite.e), recurse(ite.t), recurse(ite.f))
+      case lambda : Lambda =>
+        Lambda(lambda.ids, recurse(lambda.e))
+    }
+  }
 
   def replace(expr: Expr, spec: SpecDecl, context: Scope) : Expr = {
     if (exprTypeChecker.typeOf(expr, context).isBool) {
@@ -199,18 +214,23 @@ class LTLPropertyRewriterPass extends RewritePass {
   }
 
   override def rewriteSpec(spec: SpecDecl, context: Scope): Option[SpecDecl] = {
-    if (context.inLTLSpec) {
-      val ret = replace(spec.expr, spec, context).asInstanceOf[Identifier]
-      conjCounter = 0
-      val fail = Identifier(spec.id.name concat "_failed")
-      specMap +=  (spec -> (circuits, ret, fail))
-      Some(SpecDecl(spec.id, OperatorApplication(new NegationOp, List(fail)), spec.params))
+    if (spec.params.exists(p => p == LTLExprDecorator)) {
+      println("LTL property: " + spec.expr.toString)
+      println("Negated property: " + convertToNNF(negate(spec.expr)).toString)
+      Some(spec)
+      //val ret = replace(spec.expr, spec, context).asInstanceOf[Identifier]
+      //conjCounter = 0
+      //val fail = Identifier(spec.id.name concat "_failed")
+      //specMap +=  (spec -> (circuits, ret, fail))
+      //Some(SpecDecl(spec.id, OperatorApplication(new NegationOp, List(fail)), spec.params))
     } else {
       Some(spec)
     }
   }
 
   override def rewriteModule(module: Module, ctx: Scope): Option[Module] = {
+    Some(module)
+    /*
     var allDecls = module.decls
     var newNext = module.next.get.body
     for ((spec: SpecDecl, (circuits: List[(Identifier, Expr)], start: Identifier, failed: Identifier)) <- specMap) {
@@ -281,23 +301,10 @@ class LTLPropertyRewriterPass extends RewritePass {
     allDecls = allDecls.filter(d => !d.isInstanceOf[NextDecl])
     allDecls = NextDecl(newNext) :: allDecls
     Some(Module(module.id, allDecls, module.cmds))
+    * 
+    */
   }
 }
 
-class LTLPropertyRewriter extends ASTRewriter("LTLPropertyRewriter", new LTLPropertyRewriterPass()) {
-  override def visitSpec(spec : SpecDecl, context : Scope) : Option[SpecDecl] = {
-    val idP = visitIdentifier(spec.id, context)
-    val contextP = if (spec.params.contains(LTLExprDecorator)) {
-      context.withLTLSpec
-    } else {
-      context
-    }
-    val exprP = visitExpr(spec.expr, contextP)
-    val decsP = spec.params.flatMap(visitExprDecorator(_, context))
-    val specP = (idP, exprP) match {
-      case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr, decsP), context)
-      case _ => None
-    }
-    ASTNode.introducePos(_setFilename, specP, spec.position)
-  }
-}
+class LTLPropertyRewriter extends ASTRewriter(
+    "LTLPropertyRewriter", new LTLPropertyRewriterPass())
