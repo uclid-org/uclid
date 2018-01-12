@@ -154,13 +154,16 @@ class LTLPropertyRewriterPass extends RewritePass {
       case lit : Literal => lit
       case tup : Tuple => Tuple(tup.values.map(recurse(_)))
       case opapp : OperatorApplication =>
+        val op = opapp.op
+        val args = opapp.operands
+        lazy val opappP = OperatorApplication(op, args.map(recurse(_)))
         opapp.op match {
           case NegationOp() =>
-            Utils.assert(opapp.operands.size == 1, "Negation operation must have only one operand.")
-            val operand = opapp.operands(0)
+            Utils.assert(args.size == 1, "Negation operation must have only one operand.")
+            val operand = args(0)
             operand match {
               case OperatorApplication(op, operands) =>
-                val negOps = operands.map(op => recurse(negate(op)))
+                lazy val negOps = operands.map(op => recurse(negate(op)))
                 op match {
                   case GloballyTemporalOp() =>
                     OperatorApplication(FinallyTemporalOp(), negOps)
@@ -173,13 +176,13 @@ class LTLPropertyRewriterPass extends RewritePass {
                   case ReleaseTemporalOp() =>
                     OperatorApplication(UntilTemporalOp(), negOps)
                   case _ =>
-                    OperatorApplication(op, operands.map(recurse(_)))
+                    opappP
                 }
               case _ =>
-                OperatorApplication(opapp.op, opapp.operands.map(recurse(_)))
+                opappP
             }
           case _ =>
-            OperatorApplication(opapp.op, opapp.operands.map(recurse(_)))
+            opappP
         }
       case arrSel : ArraySelectOperation =>
         ArraySelectOperation(recurse(arrSel.e), arrSel.index.map(recurse(_)))

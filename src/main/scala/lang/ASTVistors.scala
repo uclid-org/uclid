@@ -92,7 +92,6 @@ trait ReadOnlyPass[T] {
   def applyOnInit(d : TraversalDirection.T, init : InitDecl, in : T, context : Scope) : T = { in }
   def applyOnNext(d : TraversalDirection.T, next : NextDecl, in : T, context : Scope) : T = { in }
   def applyOnType(d : TraversalDirection.T, typ: Type, in : T, context : Scope) : T = { in }
-  def applyOnTemporalType(d : TraversalDirection.T, tempT : TemporalType, in : T, context : Scope) : T = { in }
   def applyOnUndefinedType(d : TraversalDirection.T, undefT : UndefinedType, in : T, context : Scope) : T = { in }
   def applyOnUninterpretedType(d : TraversalDirection.T, unintT : UninterpretedType, in : T, context : Scope) : T = { in }
   def applyOnBoolType(d : TraversalDirection.T, boolT : BoolType, in : T, context : Scope) : T = { in }
@@ -170,7 +169,6 @@ trait RewritePass {
   def rewriteInit(init : InitDecl, ctx : Scope) : Option[InitDecl] = { Some(init) }
   def rewriteNext(next : NextDecl, ctx : Scope) : Option[NextDecl] = { Some(next) }
   def rewriteType(typ: Type, ctx : Scope) : Option[Type] = { Some(typ) }
-  def rewriteTemporalType(tempT : TemporalType, context : Scope) : Option[TemporalType] = { Some(tempT) }
   def rewriteUndefinedType(undefT : UndefinedType, context : Scope) : Option[Type] = { Some(undefT) }
   def rewriteUninterpretedType(unintT : UninterpretedType, context : Scope) : Option[UninterpretedType] = { Some(unintT) }
   def rewriteBoolType(boolT : BoolType, context : Scope) : Option[BoolType] = { Some(boolT) }
@@ -456,7 +454,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnType(TraversalDirection.Down, typ, result, context)
     result = typ match {
-      case tempT : TemporalType => visitTemporalType(tempT, result, context)
       case undefT : UndefinedType => visitUndefinedType(undefT, result, context)
       case unintT : UninterpretedType => visitUninterpretedType(unintT, result, context)
       case boolT : BoolType => visitBoolType(boolT, result, context)
@@ -474,12 +471,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case modT : ModuleType => visitModuleType(modT, result, context)
     }
     result = pass.applyOnType(TraversalDirection.Up, typ, result, context)
-    return result
-  }
-  def visitTemporalType(tempT : TemporalType, in : T, context : Scope) : T = {
-    var result : T = in
-    result = pass.applyOnTemporalType(TraversalDirection.Down, tempT, result, context)
-    result = pass.applyOnTemporalType(TraversalDirection.Up, tempT, result, context)
     return result
   }
   def visitUndefinedType(undefT : UndefinedType, in : T, context : Scope) : T = {
@@ -1156,7 +1147,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitType(typ: Type, context : Scope) : Option[Type] = {
     val typP = (typ match {
-      case tempT : TemporalType => visitTemporalType(tempT, context)
       case undefT : UndefinedType => visitUndefinedType(undefT, context)
       case unintT : UninterpretedType => visitUninterpretedType(unintT, context)
       case boolT : BoolType => visitBoolType(boolT, context)
@@ -1174,11 +1164,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case modT : ModuleType => visitModuleType(modT, context)
     }).flatMap(pass.rewriteType(_, context))
     return ASTNode.introducePos(setFilename, typP, typ.position)
-  }
-
-  def visitTemporalType(tempT : TemporalType, context : Scope) : Option[TemporalType] = {
-    val tempTP = pass.rewriteTemporalType(tempT, context)
-    return ASTNode.introducePos(setFilename, tempTP, tempT.position)
   }
 
   def visitUndefinedType(undefT : UndefinedType, context : Scope) : Option[Type] = {
