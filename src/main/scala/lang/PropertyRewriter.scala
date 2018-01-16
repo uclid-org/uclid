@@ -175,6 +175,20 @@ class LTLPropertyRewriterPass extends RewritePass {
                     OperatorApplication(GloballyTemporalOp(), negOps)
                   case ReleaseTemporalOp() =>
                     OperatorApplication(UntilTemporalOp(), negOps)
+                  case ConjunctionOp() =>
+                    OperatorApplication(DisjunctionOp(), negOps)
+                  case DisjunctionOp() =>
+                    OperatorApplication(ConjunctionOp(), negOps)
+                  case IffOp() =>
+                    OperatorApplication(InequalityOp(), args)
+                  case ImplicationOp() =>
+                    OperatorApplication(ConjunctionOp(), List(args(0), negOps(1)))
+                  case NegationOp() =>
+                    args(0)
+                  case EqualityOp() =>
+                    OperatorApplication(InequalityOp(), args)
+                  case InequalityOp() =>
+                    OperatorApplication(EqualityOp(), args)
                   case _ =>
                     opappP
                 }
