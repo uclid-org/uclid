@@ -149,7 +149,7 @@ module main {
 
 A simple \uclid{} module that computes the Fibonacci sequence is shown in Figure~\ref{fig:simple-model}.  Let us walk through each line in this model to understand the basics of \uclid{}.
 
-The top-level syntactic structure in \uclid{} is a \keywordbf{module}. All modeling, verification and synthesis code in \uclid{} is contained within modules. In Figure~\ref{fig:simple-model}, we have defined one \keyword{module} named \ident{main}. This module starts on line 1 and ends on line 18. The module can be conceptually split into three parts: a system model, a specification and proof script. In the example, these three conceptual parts are also kept separate in the code. The following subsections will describe each of these sections of the module. 
+The top-level syntactic structure in \uclid{} is a \keywordbf{module}. All modeling, verification and synthesis code in \uclid{} is contained within modules. In Figure~\ref{fig:simple-model}, we have defined one \keyword{module} named \ident{main}. This module starts on line 1 and ends on line 18. The module can be conceptually split into three parts: a system model, a specification and proof script. In the example, these three conceptual parts are also kept separate in the code.\footnote{This is not required by the \uclid{} syntax but is a good design practice.} The following subsections will describe each of these sections of the module. 
 
 \subsubsection{The System Model}
 This part of a \uclid{} module describes the functionality of the transition system that is being modeled: it tells us \emph{what the system does}.
@@ -170,7 +170,7 @@ The third and final part of the \uclid{} module is a set of commands to the \ucl
 
 The proof script is contained within the \keywordbf{control} block. The commands here execute the system for 3 steps and check whether all of the systems properties (in this case, we only have one property: \ident{a\_le\_b}) are satisfied for each of these steps. 
 
-The command \proofcmd{unroll} executes the system for 3 steps. This execution generates four \emph{proof obligations}. These proof obligations ask whether the system satisfies the property \ident{a\_le\_b} is satisfied in the initial state and the 3 steps after the initial state. The \proofcmd{decide} command \emph{checks} whether these proof obligations are satisfied and the \proofcmd{print\_results} prints out the results of these checks.
+The command \proofcmd{unroll} executes the system for 3 steps. This execution generates four \emph{proof obligations}. These proof obligations ask whether the system satisfies the property \ident{a\_le\_b} in the initial state and in each of the 3 states reached next. The \proofcmd{decide} command \emph{checks} whether these proof obligations are satisfied and the \proofcmd{print\_results} prints out the results of these checks.
 
 \subsection{Installing and Running \uclid{}}
 
