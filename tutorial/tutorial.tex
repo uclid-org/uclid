@@ -1,7 +1,154 @@
 \documentclass{article}
 \usepackage{syntax}
+\usepackage{color}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{amsmath}
+\usepackage{xspace}
+\usepackage{pgf}
+\usepackage{tikz}
+\usepackage{comment}
+\usepackage{xifthen}
+\usepackage{listings}
+
+\makeatletter
+\makeatother
+
+\usetikzlibrary{shapes}
+\usetikzlibrary{snakes}
+\usetikzlibrary{patterns}
+\usetikzlibrary{circuits}
+\usetikzlibrary{arrows}
+\usetikzlibrary{calc}
+\usetikzlibrary{fit}
+
+\let\ab\allowbreak
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+ 
+\newcommand{\uclid}{{\sc{Uclid}}}
+\newcommand{\keyword}[1]{\textcolor{magenta}{\texttt{#1}}}
+\newcommand{\ident}[1]{\textcolor{blue}{\texttt{#1}}}
+\newcommand{\keywordbf}[1]{\textcolor{magenta}{\texttt{\textbf{#1}}}}
+
+\lstdefinestyle{uclid}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstdefinelanguage{uclid}{
+  sensitive = true,
+  keywords={module, forall, exists, Lambda, if, else, assert, assume, havoc, 
+            for, skip, case, esac, init, next, control, function, procedure, 
+            returns, call, type, var, input, output, const, property, 
+            invariant, synthesis, grammar, requires, ensures, instance, axiom},
+ %otherkeywords={% Operators
+ %   >, <, ==, <=, >=, +, -, *, !=
+ % },
+  numbers=left,
+  numberstyle=\scriptsize,
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  frame=top,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{1.0,1.0,1.0}
+ 
+\lstdefinestyle{uclidstyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
 
 \begin{document}
+\title{Getting Started with \uclid{}}
+\maketitle
+
+\section{Introduction}
+\uclid{} is a verification and synthesis focused modeling language. The \uclid{} toolchain aims to:
+\begin{enumerate}
+\item Enable modeling of finite and infinite state transition systems.
+\item Verification of safety and k-safety properties on these systems. 
+\item Allow syntax-guided synthesis of models and model invariants on these transitions systems.
+\end{enumerate}
+
+This document serves as introduction to \uclid{} modeling language and verification/synthesis toolchain.
+
+\subsection{A Simple \uclid{} Model}
+
+\begin{figure}[htbp]
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+module main {
+  var a, b : int;
+
+  init {
+    a = 0b0; // binary literal
+    b = 0x1; // hexadecimal literal
+  }
+  next {
+    a, b = b, a + b;
+  }
+
+  property a_le_b: a <= b;
+  
+  control {
+    unroll (3);
+    decide;
+  }
+}
+\end{lstlisting}
+\label{fig:simple-model}
+\caption{A \uclid{} model that computes the Fibonacci sequence.}
+\end{figure}
+
+A simple \uclid{} module that computes the Fibonacci sequence is shown in Figure~\ref{fig:simple-model}.  Let us walk through each line in this model to understand the basics of \uclid{}.
+
+The top-level syntactic structure in \uclid{} is a \keywordbf{module}. All modeling, verification and synthesis code in \uclid{} is contained within modules. In Figure~\ref{fig:simple-model}, we have defined one \keyword{module} named \ident{main}. This module starts on line 1 and ends on line 18.
+
+The next item of interest in the module \ident{main} are \emph{state variables}. These are declared using the \keywordbf{var} keyword. The module \ident{main} declares two state variables: \ident{a} and \ident{b} on line~2. These are both of type \keywordbf{int}, which corresponds to mathematical integers.\footnote{Mathematical integer types, as opposed to the machine integer types present in languages like C/C++ and Java, do not have a fixed bit-width and do not overflow.}
+
+The \keywordbf{init} block appears next and spans lines 4 to 7. It defines the initial values of the states variables in the module. We see that \ident{a} is initialized to 0 while \ident{b} is initialized to 1.
+
+The \keywordbf{next} block appears after this and it defines the transition relation of the module. In the figure, the next statement spans from lines 8 to 10; \ident{a} is assigned to the (old) value of \ident{b}, while b is assigned to the value \ident{a} + \ident{b}. 
+
 \paragraph{Default settings}
 \begin{grammar}
 

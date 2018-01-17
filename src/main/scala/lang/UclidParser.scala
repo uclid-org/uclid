@@ -168,7 +168,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     // lazy val TemporalOpRelease = "R"
 
     lexical.delimiters ++= List("(", ")", ",", "[", "]",
-      "bv", "{", "}", ";", "=", ":=", ":", "::", ".", "->", "*",
+      "bv", "{", "}", ";", "=", ":", "::", ".", "->", "*",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat,
       OpNeg, OpMinus, OpSelectFromInstance)
@@ -219,7 +219,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^
       {case e ~ es => (e :: es) }
     lazy val ArrayStoreOp: Parser[(List[Expr],Expr)] =
-      ("[" ~> (Expr ~ rep("," ~> Expr) ~ (":=" ~> Expr)) <~ "]") ^^
+      ("[" ~> (Expr ~ rep("," ~> Expr) ~ ("=" ~> Expr)) <~ "]") ^^
       {case e ~ es ~ r => (e :: es, r)}
     lazy val ConstBitVectorSlice: Parser[lang.ConstBitVectorSlice] =
       positioned { ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt) } }
@@ -257,11 +257,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "(" ~ KwExists ~> IdTypeList ~ ("::" ~> E1) <~ ")" ^^ { case ids ~ expr => OperatorApplication(ExistsOp(ids), List(expr)) } |
       E2
 
-    /** E2 := E3 OpEquiv E2 | E3  **/
+    /** E2 = E3 OpEquiv E2 | E3  **/
     lazy val E2: PackratParser[Expr] = positioned { E3 ~ OpBiImpl ~ E2 ^^ ast_binary | E3 }
-    /** E3 := E4 OpImpl E3 | E4  **/
+    /** E3 = E4 OpImpl E3 | E4  **/
     lazy val E3: PackratParser[Expr] = positioned { E4 ~ OpImpl ~ E3 ^^ ast_binary | E4 }
-    /** E4 := E5 OpAnd E4 | E5 OpOr E4 | E5 **/
+    /** E4 = E5 OpAnd E4 | E5 OpOr E4 | E5 **/
     lazy val E4: PackratParser[Expr] = positioned {
         E5 ~ OpAnd ~ E4 ^^ ast_binary   |
         E5 ~ OpOr ~ E4 ^^ ast_binary    |
@@ -270,23 +270,23 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         E5 ~ OpBvXor ~ E4 ^^ ast_binary |
         E5
     }
-    /** E5 := E6 OpRel E5 | E6  **/
+    /** E5 = E6 OpRel E5 | E6  **/
     lazy val E5: PackratParser[Expr] = positioned ( E6 ~ RelOp ~ E6 ^^ ast_binary | E6 )
-    /** E6 := E7 OpConcat E6 | E7 **/
+    /** E6 = E7 OpConcat E6 | E7 **/
     lazy val E6: PackratParser[Expr] = positioned ( E7 ~ OpConcat ~ E6 ^^ ast_binary | E7 )
-    /** E7 := E8 OpAdd E7 | E8 **/
+    /** E7 = E8 OpAdd E7 | E8 **/
     lazy val E7: PackratParser[Expr] = positioned ( E8 ~ OpAdd ~ E7 ^^ ast_binary | E8 )
-    /** E8 := E8 OpSub E8 | E9 **/
+    /** E8 = E8 OpSub E8 | E9 **/
     lazy val E8: PackratParser[Expr] = positioned ( E9 ~ OpSub ~ E9 ^^ ast_binary | E9 )
-    /** E9 := E9 OpMul E8 | E9 **/
+    /** E9 = E9 OpMul E8 | E9 **/
     lazy val E9: PackratParser[Expr] = E10 ~ OpMul ~ E10 ^^ ast_binary | E10
-    /** E10 := UnOp E11 | E11 **/
+    /** E10 = UnOp E11 | E11 **/
     lazy val E10: PackratParser[Expr] = positioned {
         OpNeg ~> E11 ^^ { case e => OperatorApplication(NegationOp(), List(e)) } |
         OpBvNot ~> E11 ^^ { case e => OperatorApplication(BVNotOp(0), List(e)) } |
         E11
     }
-    /** E11 := E12 MapOp | E12 **/
+    /** E11 = E12 MapOp | E12 **/
     lazy val E11: PackratParser[Expr] = positioned {
         E12 ~ ArraySelectOp ^^ { case e ~ m => ArraySelectOperation(e, m) } |
         E12 ~ ArrayStoreOp ^^ { case e ~ m => ArrayStoreOperation(e, m._1, m._2) } |
@@ -309,7 +309,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         } |
         E13
     }
-    /** E12 := false | true | Number | Id FuncApplication | (Expr) **/
+    /** E12 = false | true | Number | Id FuncApplication | (Expr) **/
     lazy val E13: PackratParser[Expr] = positioned {
         Bool |
         Number |
@@ -323,7 +323,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         Id
     }
 
-    /** Expr := E1 (Used to be TemporalExpr0) **/
+    /** Expr = E1 (Used to be TemporalExpr0) **/
     lazy val Expr: PackratParser[Expr] = positioned ( E1 ) // Used to be TemporalExpr0
     lazy val ExprList: Parser[List[Expr]] =
       ("(" ~> Expr ~ rep("," ~> Expr) <~ ")") ^^ { case e ~ es => e::es } |
@@ -392,9 +392,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwAssert ~> Expr <~ ";" ^^ { case e => AssertStmt(e, None) } |
       KwAssume ~> Expr <~ ";" ^^ { case e => AssumeStmt(e, None) } |
       KwHavoc ~> Id <~ ";" ^^ { case id => HavocStmt(id) } |
-      Lhs ~ rep("," ~> Lhs) ~ ":=" ~ Expr ~ rep("," ~> Expr) <~ ";" ^^
-        { case l ~ ls ~ ":=" ~ r ~ rs => AssignStmt(l::ls, r::rs) } |
-      KwCall ~> LhsList ~ (":=" ~> Id) ~ ExprList <~ ";" ^^
+      Lhs ~ rep("," ~> Lhs) ~ "=" ~ Expr ~ rep("," ~> Expr) <~ ";" ^^
+        { case l ~ ls ~ "=" ~ r ~ rs => AssignStmt(l::ls, r::rs) } |
+      KwCall ~> LhsList ~ ("=" ~> Id) ~ ExprList <~ ";" ^^
         { case lhss ~ id ~ args => ProcedureCallStmt(id, lhss, args) } |
       KwNext ~ "(" ~> Id <~ ")" ~ ";" ^^
         { case id => lang.ModuleCallStmt(id) } |
@@ -522,13 +522,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
 
     lazy val Cmd : PackratParser[lang.GenericProofCommand] = positioned {
-      (Id <~ ":=").? ~ (Id <~ "->").? ~ Id <~ ";" ^^ 
+      (Id <~ "=").? ~ (Id <~ "->").? ~ Id <~ ";" ^^ 
         { case rId ~ oId ~ id => lang.GenericProofCommand(id, List.empty, List.empty, rId, oId) } |
-      (Id <~ ":=").? ~ (Id <~ "->").? ~ Id ~ IdParamList <~ ";" ^^ 
+      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ IdParamList <~ ";" ^^ 
         { case rId ~ oId ~ id ~ idparams => lang.GenericProofCommand(id, idparams, List.empty, rId, oId) } |
-      (Id <~ ":=").? ~ (Id <~ "->").? ~ Id ~ ExprList <~ ";" ^^ 
+      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ ExprList <~ ";" ^^ 
         { case rId ~ oId ~ id ~ es => lang.GenericProofCommand(id, List.empty, es, rId, oId) } |
-      (Id <~ ":=").? ~ (Id <~ "->").? ~ Id ~ IdParamList ~ ExprList <~ ";" ^^ 
+      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ IdParamList ~ ExprList <~ ";" ^^ 
         { case rId ~ oId ~ id ~ idparams ~ es => lang.GenericProofCommand(id, idparams, es, rId, oId) }
     }
 

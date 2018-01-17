@@ -17,20 +17,20 @@ module alu  {
   var r0, r1, result : word_t;
 
   next {
-    r0 := regs[r0ind];
-    r1 := regs[r1ind];
+    r0 = regs[r0ind];
+    r1 = regs[r1ind];
 
 
     case
       (cmd == add) : {
-        result := r0 + r1;
+        result = r0 + r1;
       }
 
       (cmd == sub) :  {
-        result := r0 - r1;
+        result = r0 - r1;
       }
     esac
-    regs[r0ind] := result;
+    regs[r0ind] = result;
   }
 }
 
@@ -44,7 +44,7 @@ module main {
   var shadow : word_t;
 
   init {
-    shadow := 1bv8;
+    shadow = 1bv8;
     assume (forall (r : regindex_t) :: regfile[r] == 1bv8);
   }
 
@@ -54,11 +54,11 @@ module main {
 
   next {
     next (alu_i);
-	shadow := shadow + shadow;
+	shadow = shadow + shadow;
   }
   
   control {
-    x := unroll(3);
+    x = unroll(3);
     decide;
     // print_results;
     // x->print_cex (shadow, regfile[0bv2]);

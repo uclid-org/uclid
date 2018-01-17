@@ -12,30 +12,30 @@ module main {
   output result : word_t;
   
   procedure full_adder(a : bit, b : bit, c_in : bit) returns (s : bit, c_out : bit) {
-	s := a ^ b ^ c_in;
-	c_out := (a & b) | (b & c_in) | (c_in & a);
+	s = a ^ b ^ c_in;
+	c_out = (a & b) | (b & c_in) | (c_in & a);
   }
   
   procedure add_unrolled(a : word_t, b : word_t) returns (sum : word_t) {
     var cout : word_t;
-  	call (sum[0:0], cout[0:0]) := full_adder(a[0:0], b[0:0], 0bv1);
-  	call (sum[1:1], cout[1:1]) := full_adder(a[1:1], b[1:1], cout[0:0]);
-  	call (sum[2:2], cout[2:2]) := full_adder(a[2:2], b[2:2], cout[1:1]);
-  	call (sum[3:3], cout[3:3]) := full_adder(a[3:3], b[3:3], cout[2:2]);
+  	call (sum[0:0], cout[0:0]) = full_adder(a[0:0], b[0:0], 0bv1);
+  	call (sum[1:1], cout[1:1]) = full_adder(a[1:1], b[1:1], cout[0:0]);
+  	call (sum[2:2], cout[2:2]) = full_adder(a[2:2], b[2:2], cout[1:1]);
+  	call (sum[3:3], cout[3:3]) = full_adder(a[3:3], b[3:3], cout[2:2]);
   }
   
   next {
-  	rdy := false;
-  	t1 := (arg0 & ~arg1) | (~arg0 & arg1);
-  	t2 := (arg0 ^ arg1);
+  	rdy = false;
+  	t1 = (arg0 & ~arg1) | (~arg0 & arg1);
+  	t2 = (arg0 ^ arg1);
   	
-  	call (result) := add_unrolled(arg0, arg1);
+  	call (result) = add_unrolled(arg0, arg1);
   	assert (result == (arg0 + arg1));
   	assert (t1 == t2);
   }
   
   control {
-  	x := unroll (3);
+  	x = unroll (3);
   	decide;
   	// x->print_results;
   }

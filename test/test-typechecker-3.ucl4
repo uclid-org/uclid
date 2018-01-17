@@ -7,17 +7,17 @@ module main {
   var c : Number;
 
   init {
-    a := 0;
-    b := 1;
+    a = 0;
+    b = 1;
     if(a+b) {
-      b := 2;
+      b = 2;
     }
     if (c) {
-      b := 2;
+      b = 2;
     }
   }
   next {
-    a := a + 1;
+    a = a + 1;
   }
 
   control {

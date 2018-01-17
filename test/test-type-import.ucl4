@@ -35,22 +35,22 @@ module cpu {
   procedure next_instruction() returns () {
 
       // get the next instruction.
-      inst := mem[pc];
+      inst = mem[pc];
       // find its operation
-      op := word2op(inst);
+      op = word2op(inst);
       // and its operands
-      r0ind := word2reg0(inst);
-      r1ind := word2reg1(inst);
-      r0 := regs[r0ind];
-      r1 := regs[r1ind];
+      r0ind = word2reg0(inst);
+      r1ind = word2reg1(inst);
+      r0 = regs[r0ind];
+      r1 = regs[r1ind];
       // now execute
       case
-        (op == add)   : { result := r0 + r1; }
-        (op == sub)   : { result := r0 - r1; }
-        (op == load)  : { result := mem[r1]; }
-        (op == store) : { result := r0; mem[r0] := r1; }
+        (op == add)   : { result = r0 + r1; }
+        (op == sub)   : { result = r0 - r1; }
+        (op == load)  : { result = mem[r1]; }
+        (op == store) : { result = r0; mem[r0] = r1; }
       esac
-      regs[r0ind] := result;
+      regs[r0ind] = result;
   }
 
   init {
@@ -58,7 +58,7 @@ module cpu {
   }
 
   next {
-      call () := next_instruction();
+      call () = next_instruction();
   }
 }
   
@@ -77,18 +77,18 @@ module main {
     assume (forall (a : addr_t) :: (cpu::word2op(cpu_i->mem[a])) == add);
     assume (forall (a : addr_t) :: (cpu::word2reg0(cpu_i->mem[a])) == r0index);
     assume (forall (a : addr_t) :: (cpu::word2reg1(cpu_i->mem[a])) == r0index);
-    sum := 1bv8;
+    sum = 1bv8;
   }
   next {
     next (cpu_i);
-    sum := sum + sum;
+    sum = sum + sum;
   }
   
   property add_property : (sum == cpu_i->regs[r0index]);
   control {
     // print_module;
 
-    x := unroll (1);
+    x = unroll (1);
     decide;
     // print_results;
     // x->print_cex (cpu_i->regs[r0index], sum, cpu_i->r0, cpu_i->r1, cpu_i->result);

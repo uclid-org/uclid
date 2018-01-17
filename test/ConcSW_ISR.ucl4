@@ -8,7 +8,7 @@ module main_func {
   var pc : pc_t;
 
   init {
-    pc := A;
+    pc = A;
   }
 
 // potentially we could have modeled the main program naturally
@@ -18,15 +18,15 @@ module main_func {
     if (enable) {
       case
         pc == A : {
-                   if (timerCount == 0) { pc := C; }
-                   else { pc := B; }
+                   if (timerCount == 0) { pc = C; }
+                   else { pc = B; }
                 }
-        pc == B : { pc := A; } 
-        pc == C : { pc := C; }
+        pc == B : { pc = A; } 
+        pc == C : { pc = C; }
       esac
     }
     else {
-      pc := pc; // perhaps unnecessary?
+      pc = pc; // perhaps unnecessary?
     }
   }
 
@@ -44,22 +44,22 @@ module ISR_func {
  output return_ISR : bool;
 
  init {
-   pc := idle;
-   return_ISR := false;
+   pc = idle;
+   return_ISR = false;
  }
 
  next {
    if (enable) {
      case
-       pc == idle : { pc := D; return_ISR := false; }
-       pc == D && timerCount != 0 : { pc := E; return_ISR := false; }
-       pc == D && timerCount == 0 : { pc := idle; return_ISR := true; }
-       pc == E : { timerCount := timerCount-1; pc := idle; return_ISR := true; }
+       pc == idle : { pc = D; return_ISR = false; }
+       pc == D && timerCount != 0 : { pc = E; return_ISR = false; }
+       pc == D && timerCount == 0 : { pc = idle; return_ISR = true; }
+       pc == E : { timerCount = timerCount-1; pc = idle; return_ISR = true; }
 
      esac
    }
    else {
-      pc := pc; return_ISR := false;
+      pc = pc; return_ISR = false;
    }
  }
 
@@ -83,20 +83,20 @@ module Sys {
   instance ISR_f : ISR_func (enable : (I_enable), timerCount : (timerCount), return_ISR : (return_ISR));
 
   init {
-    mode := main_t;
-    timerCount := 2000;
-    M_enable := true; // since mode == main_t initially
-    I_enable := false;
+    mode = main_t;
+    timerCount = 2000;
+    M_enable = true; // since mode == main_t initially
+    I_enable = false;
   }
 
   next {
     next (main_f); 
     next (ISR_f);
-    M_enable := (mode == main_t);
-    I_enable := (mode == ISR_t);
-    if (mode == main_t && assert_intr) { mode := ISR_t; }
+    M_enable = (mode == main_t);
+    I_enable = (mode == ISR_t);
+    if (mode == main_t && assert_intr) { mode = ISR_t; }
     else {
-      if (mode == ISR_t && return_ISR) { mode := main_t; }
+      if (mode == ISR_t && return_ISR) { mode = main_t; }
     }
   }   
 

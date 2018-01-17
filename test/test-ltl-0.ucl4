@@ -9,19 +9,19 @@ module main {
   var ready_next : bool;
   
   init {
-    a_past := 0;
-    b_past := 0;
+    a_past = 0;
+    b_past = 0;
   }
   
   next {
-    sum := a_past + b_past;
-    ready := ready_next;
+    sum = a_past + b_past;
+    ready = ready_next;
     
     if (valid) {
-      a_past := a;
-      b_past := b;
+      a_past = a;
+      b_past = b;
     }
-    ready_next := valid;
+    ready_next = valid;
   }
   
   property sum_property[LTL] : globally(valid ==> nxt(ready));

@@ -3,12 +3,12 @@ module main {
   var x4 : t4;
   
   init {
-    x4.c.d := false;
-    x4.a := 0;
+    x4.c.d = false;
+    x4.a = 0;
   }
   
   next {
-    x4.c.d := !x4.c.d;
-    x4.a := x4.a + 1;
+    x4.c.d = !x4.c.d;
+    x4.a = x4.a + 1;
   }
 }

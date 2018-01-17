@@ -114,19 +114,19 @@ object UclidMain {
     }
     catch  {
       case (p : Utils.ParserError) =>
-        println("%s error at %s. %s\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        println("%s error at %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
           (p) => {
-            println("Type error at %s. %s\n%s".format(p.positionStr, p.getMessage, p.fullStr))
+            println("Type error at %s: %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
           }
         }
         println("Parsing failed. %d errors found.".format(typeErrors.errors.size))
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
-            println("Error at " + err._2.toString + ". " + err._1 + ".\n" + err._2.pos.longString)
+            println("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString)
           }
         }
         println("Parsing failed. " + ps.errors.size.toString + " errors found.")

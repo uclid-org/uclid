@@ -60,52 +60,52 @@ module cpu {
   init {
     assume (forall (r : regindex_t) :: regs[r] == 0bv8);
     assume (forall (a : addr_t) :: dmem[a] == 0bv8);
-    pc   := 0bv8;
-    inst := 0bv8;
-    mode := sup_mode;
+    pc   = 0bv8;
+    inst = 0bv8;
+    mode = sup_mode;
   }
 
   // Define "next" transition.
   next {
     // get the next instruction.
-    inst := imem[pc];
+    inst = imem[pc];
     // find its operation
-    op := word2op(inst);
+    op = word2op(inst);
     // and its operands
-    r0ind := word2reg0(inst);
-    r1ind := word2reg1(inst);
-    r0 := regs[r0ind];
-    r1 := regs[r1ind];
+    r0ind = word2reg0(inst);
+    r1ind = word2reg1(inst);
+    r0 = regs[r0ind];
+    r1 = regs[r1ind];
     
     // now execute
     case
       // we have case statements!
-      (op == op_mov)     : { result := word2imm(inst); pc := pc + 1bv8;}
-      (op == op_add)     : { result := r0 + r1; pc := pc + 1bv8; }
-      (op == op_sub)     : { result := r0 - r1; pc := pc + 1bv8; }
-      (op == op_load)    : { result := dmem[r1]; pc := pc + 1bv8; }
+      (op == op_mov)     : { result = word2imm(inst); pc = pc + 1bv8;}
+      (op == op_add)     : { result = r0 + r1; pc = pc + 1bv8; }
+      (op == op_sub)     : { result = r0 - r1; pc = pc + 1bv8; }
+      (op == op_load)    : { result = dmem[r1]; pc = pc + 1bv8; }
       (op == op_store)   : { 
-        result := r0;
+        result = r0;
         // And if statements
         if (mode == sup_mode || r0 < sup_range_lo || r0 >= sup_range_hi) {
-          dmem[r0] := r1; 
+          dmem[r0] = r1; 
         }
-        pc := pc + 1bv8;
+        pc = pc + 1bv8;
       }
       (op == op_syscall) : { 
-        result := r0;
+        result = r0;
         if (r0 >= sup_range_lo && r0 < sup_range_hi) {
-          mode := sup_mode; 
+          mode = sup_mode; 
         }
-        pc := pc + 1bv8;
+        pc = pc + 1bv8;
       }
       (op == op_sysret)  : { 
-        result := r0;
-        mode := usr_mode; 
-        pc := pc + 1bv8;
+        result = r0;
+        mode = usr_mode; 
+        pc = pc + 1bv8;
       }
     esac
-    regs[r0ind] := result;
+    regs[r0ind] = result;
   }
 }
   

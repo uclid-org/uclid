@@ -3,23 +3,23 @@ module test {
     var x: int;
     var z : record {a : int, b : int};
     
-    x := z.k + z.k;
-    z.k := x;
+    x = z.k + z.k;
+    z.k = x;
     
     assume (x > 0); 
     assert (x < 1); 
     havoc x; 
-    x,y := y,x; 
+    x,y = y,x; 
     if (x && 1) { 
-      x := 2; 
-      call (x) := g(); 
+      x = 2; 
+      call (x) = g(); 
     } else {  
-      y:= 2; 
-      call (x) := f((x+1)[2],2); 
-      x := h(x,u);
+      y= 2; 
+      call (x) = f((x+1)[2],2); 
+      x = h(x,u);
     }
     for i in range(0,4) { 
-      call () := print(s); 
+      call () = print(s); 
     }
   }
 }

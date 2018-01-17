@@ -51,16 +51,16 @@ module cpu {
   // Define "next" transition.
   next {
     // and its operands
-    r0ind := word2reg0(inst);
-    r1ind := word2reg1(inst);
-    r0 := regs[r0ind];
-    r1 := regs[r1ind];
+    r0ind = word2reg0(inst);
+    r1ind = word2reg1(inst);
+    r0 = regs[r0ind];
+    r1 = regs[r1ind];
     havoc r0;
     havoc r1;
     
     // now execute
     if (nd) { 
-      dmem[r0] := r1; 
+      dmem[r0] = r1; 
     }
   }
 }

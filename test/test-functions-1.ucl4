@@ -8,19 +8,19 @@ module main {
   var r, q : rec_t;
   
   init {
-    x := 0;
-    y := 0;
-    r.x := 0; 
-    r.y := 0;
+    x = 0;
+    y = 0;
+    r.x = 0; 
+    r.y = 0;
   }
   
   next {
-    x := f(x);
-    y := f(y);
+    x = f(x);
+    y = f(y);
     
-    q := r;
-    r.x := h(r);
-    r.y := h(q);
+    q = r;
+    r.x = h(r);
+    r.y = h(q);
 
 	assert (f(r.x) == f(r.y));
     assert (x == y);

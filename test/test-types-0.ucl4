@@ -18,8 +18,8 @@ module main {
     assert (x_local <= 1); 
     havoc x_local; 
     case 
-        x_local > 0 : { z := x + y; }
-        x_local <= 0 : { z := x - y; }
+        x_local > 0 : { z = x + y; }
+        x_local <= 0 : { z = x - y; }
     esac 
   }
   
@@ -31,7 +31,7 @@ module main {
   }
   
   next {
-    call (y_global) := f(y_global, z_global);
-    z_global := y_global + 1;  
+    call (y_global) = f(y_global, z_global);
+    z_global = y_global + 1;  
   }
 }

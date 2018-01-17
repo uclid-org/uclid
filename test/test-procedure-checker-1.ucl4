@@ -12,14 +12,14 @@ module main
   {
     for i in range(1, 5) {
       if (i < n) {
-        numbers[i] := i;
+        numbers[i] = i;
       }
     }
-    x := x + 1;
+    x = x + 1;
   }
 
   next {
-    call (nums) := sum(n);
+    call (nums) = sum(n);
   }
 
   control {
