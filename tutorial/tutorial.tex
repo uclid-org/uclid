@@ -11,6 +11,7 @@
 \usepackage{comment}
 \usepackage{xifthen}
 \usepackage{listings}
+\usepackage{courier}
 
 \makeatletter
 \makeatother
@@ -29,36 +30,39 @@
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
 \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
- 
+\definecolor{darkmagenta}{rgb}{0.55,0,0.55}
+
 \newcommand{\uclid}{{\sc{Uclid}}}
 \newcommand{\keyword}[1]{\textcolor{magenta}{\texttt{#1}}}
-\newcommand{\ident}[1]{\textcolor{blue}{\texttt{#1}}}
-\newcommand{\keywordbf}[1]{\textcolor{magenta}{\texttt{\textbf{#1}}}}
+\newcommand{\ident}[1]{\textcolor{black}{\texttt{#1}}}
+\newcommand{\keywordbf}[1]{\textcolor{magenta}{\texttt{{#1}}}}
+\newcommand{\proofcmd}[1]{\textcolor{blue}{\texttt{{#1}}}}
 
+%\lstset{basicstyle=\normalsize\ttfamily,breaklines=true}
 \lstdefinestyle{uclid}{
-    backgroundcolor=\color{backcolour},   
+    backgroundcolor=\color{backcolour},
     commentstyle=\color{codegreen},
     keywordstyle=\color{magenta},
     numberstyle=\tiny\color{codegray},
     stringstyle=\color{codepurple},
-    basicstyle=\footnotesize,
-    breakatwhitespace=false,         
-    breaklines=true,                 
-    captionpos=b,                    
-    keepspaces=true,                 
-    numbers=left,                    
-    numbersep=5pt,                  
-    showspaces=false,                
+    basicstyle=\footnotesize\ttfamily,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
     showstringspaces=false,
-    showtabs=false,                  
+    showtabs=false,
     tabsize=2
 }
 
 \lstdefinelanguage{uclid}{
   sensitive = true,
-  keywords={module, forall, exists, Lambda, if, else, assert, assume, havoc, 
-            for, skip, case, esac, init, next, control, function, procedure, 
-            returns, call, type, var, input, output, const, property, 
+  keywords={module, forall, exists, Lambda, if, else, assert, assume, havoc,
+            for, skip, case, esac, init, next, control, function, procedure,
+            returns, call, type, var, input, output, const, property,
             invariant, synthesis, grammar, requires, ensures, instance, axiom},
  %otherkeywords={% Operators
  %   >, <, ==, <=, >=, +, -, *, !=
@@ -78,23 +82,23 @@
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
 \definecolor{backcolour}{rgb}{1.0,1.0,1.0}
- 
+
 \lstdefinestyle{uclidstyle}{
-    backgroundcolor=\color{backcolour},   
+    backgroundcolor=\color{backcolour},
     commentstyle=\color{codegreen},
     keywordstyle=\color{magenta},
     numberstyle=\tiny\color{codegray},
     stringstyle=\color{codepurple},
     basicstyle=\footnotesize,
-    breakatwhitespace=false,         
-    breaklines=true,                 
-    captionpos=b,                    
-    keepspaces=true,                 
-    numbers=left,                    
-    numbersep=5pt,                  
-    showspaces=false,                
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
     showstringspaces=false,
-    showtabs=false,                  
+    showtabs=false,
     tabsize=2
 }
 
@@ -106,7 +110,7 @@
 \uclid{} is a verification and synthesis focused modeling language. The \uclid{} toolchain aims to:
 \begin{enumerate}
 \item Enable modeling of finite and infinite state transition systems.
-\item Verification of safety and k-safety properties on these systems. 
+\item Verification of safety and k-safety properties on these systems.
 \item Allow syntax-guided synthesis of models and model invariants on these transitions systems.
 \end{enumerate}
 
@@ -117,6 +121,7 @@ This document serves as introduction to \uclid{} modeling language and verificat
 \begin{figure}[htbp]
 \begin{lstlisting}[language=uclid,style=uclidstyle]
 module main {
+  // Part 1: System description.
   var a, b : int;
 
   init {
@@ -127,11 +132,14 @@ module main {
     a, b = b, a + b;
   }
 
+  // Part 2: System specification.
   property a_le_b: a <= b;
-  
+
+  // Part 3: Proof script.
   control {
     unroll (3);
     decide;
+    print_results;
   }
 }
 \end{lstlisting}
@@ -141,37 +149,58 @@ module main {
 
 A simple \uclid{} module that computes the Fibonacci sequence is shown in Figure~\ref{fig:simple-model}.  Let us walk through each line in this model to understand the basics of \uclid{}.
 
-The top-level syntactic structure in \uclid{} is a \keywordbf{module}. All modeling, verification and synthesis code in \uclid{} is contained within modules. In Figure~\ref{fig:simple-model}, we have defined one \keyword{module} named \ident{main}. This module starts on line 1 and ends on line 18.
+The top-level syntactic structure in \uclid{} is a \keywordbf{module}. All modeling, verification and synthesis code in \uclid{} is contained within modules. In Figure~\ref{fig:simple-model}, we have defined one \keyword{module} named \ident{main}. This module starts on line 1 and ends on line 18. The module can be conceptually split into three parts: a system model, a specification and proof script. In the example, these three conceptual parts are also kept separate in the code. The following subsections will describe each of these sections of the module. 
 
-The next item of interest in the module \ident{main} are \emph{state variables}. These are declared using the \keywordbf{var} keyword. The module \ident{main} declares two state variables: \ident{a} and \ident{b} on line~2. These are both of type \keywordbf{int}, which corresponds to mathematical integers.\footnote{Mathematical integer types, as opposed to the machine integer types present in languages like C/C++ and Java, do not have a fixed bit-width and do not overflow.}
+\subsubsection{The System Model}
+This part of a \uclid{} module describes the functionality of the transition system that is being modeled: it tells us \emph{what the system does}.
+
+The first item of interest within the module \ident{main} are \emph{state variables}. These are declared using the \keywordbf{var} keyword. The module \ident{main} declares two state variables: \ident{a} and \ident{b} on line~2. These are both of type \keywordbf{int}, which corresponds to mathematical integers.\footnote{Mathematical integer types, as opposed to the machine integer types present in languages like C/C++ and Java, do not have a fixed bit-width and do not overflow.}
 
 The \keywordbf{init} block appears next and spans lines 4 to 7. It defines the initial values of the states variables in the module. We see that \ident{a} is initialized to 0 while \ident{b} is initialized to 1.
 
-The \keywordbf{next} block appears after this and it defines the transition relation of the module. In the figure, the next statement spans from lines 8 to 10; \ident{a} is assigned to the (old) value of \ident{b}, while b is assigned to the value \ident{a} + \ident{b}. 
+The \keywordbf{next} block appears after this and it defines the transition relation of the module. In the figure, the next statement spans from lines 8 to 10; \ident{a} is assigned to the (old) value of \ident{b}, while b is assigned to the value \ident{a} + \ident{b}.
+
+\subsubsection{The System Specification}
+The specification answers the question: \emph{what is the system supposed to do?}. 
+
+In our example, we have a single \keywordbf{property} that comprises that entire specification. Line 12 defines this \keyword{property}. It is named \ident{a\_le\_b} and as the name suggests, it states that \ident{a} must be less than or equal to \ident{b} for every reachable state of the system.
+
+\subsubsection{The Proof Script}
+The third and final part of the \uclid{} module is a set of commands to the \uclid{} verification engine. These tell how we should go about proving\footnote{Note we are using a very broad definition of the word prove here to refer to any systematic method that gives us assurance that the specification is (perhaps partially) satisfied.} that the system satisfies itself specification.
+
+The proof script is contained within the \keywordbf{control} block. The commands here execute the system for 3 steps and check whether all of the systems properties (in this case, we only have one property: \ident{a\_le\_b}) are satisfied for each of these steps. 
+
+The command \proofcmd{unroll} executes the system for 3 steps. This execution generates four \emph{proof obligations}. These proof obligations ask whether the system satisfies the property \ident{a\_le\_b} is satisfied in the initial state and the 3 steps after the initial state. The \proofcmd{decide} command \emph{checks} whether these proof obligations are satisfied and the \proofcmd{print\_results} prints out the results of these checks.
+
+\subsection{Installing and Running \uclid{}}
+
+\section{\uclid{} Grammar}
+
+\textbf{TODO}: Fix this.
 
 \paragraph{Default settings}
 \begin{grammar}
 
-<statement> ::= <ident> `=' <expr> 
-\alt `for' <ident> `=' <expr> `to' <expr> `do' <statement> 
-\alt `{' <stat-list> `}' 
-\alt <empty> 
+<statement> ::= <ident> `=' <expr>
+\alt `for' <ident> `=' <expr> `to' <expr> `do' <statement>
+\alt `{' <stat-list> `}'
+\alt <empty>
 
-<stat-list> ::= <statement> `;' <stat-list> | <statement> 
+<stat-list> ::= <statement> `;' <stat-list> | <statement>
 
 \end{grammar}
 \paragraph{Increase the two lengths}
 \setlength{\grammarparsep}{20pt plus 1pt minus 1pt} % increase separation between rules
-\setlength{\grammarindent}{12em} % increase separation between LHS/RHS 
+\setlength{\grammarindent}{12em} % increase separation between LHS/RHS
 
 \begin{grammar}
 
-<statement> ::= <ident> `=' <expr> 
-\alt `for' <ident> `=' <expr> `to' <expr> `do' <statement> 
-\alt `{' <stat-list> `}' 
-\alt <empty> 
+<statement> ::= <ident> `=' <expr>
+\alt `for' <ident> `=' <expr> `to' <expr> `do' <statement>
+\alt `{' <stat-list> `}'
+\alt <empty>
 
-<stat-list> ::= <statement> `;' <stat-list> | <statement> 
+<stat-list> ::= <statement> `;' <stat-list> | <statement>
 
 \end{grammar}
 \end{document}
