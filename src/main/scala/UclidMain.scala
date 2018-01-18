@@ -114,19 +114,19 @@ object UclidMain {
     }
     catch  {
       case (p : Utils.ParserError) =>
-        println("%s error at %s. %s\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        println("%s error at %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
           (p) => {
-            println("Type error at %s. %s\n%s".format(p.positionStr, p.getMessage, p.fullStr))
+            println("Type error at %s: %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
           }
         }
         println("Parsing failed. %d errors found.".format(typeErrors.errors.size))
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
-            println("Error at " + err._2.toString + ". " + err._1 + ".\n" + err._2.pos.longString)
+            println("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString)
           }
         }
         println("Parsing failed. " + ps.errors.size.toString + " errors found.")
@@ -145,6 +145,9 @@ object UclidMain {
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     val filenameAdderPass = new AddFilenameRewriter(None)
     passManager.addPass(filenameAdderPass)
+    passManager.addPass(new ModuleCanonicalizer())
+    // passManager.addPass(new LTLOperatorArgumentChecker())
+    passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new OldExprRewriter())
@@ -165,6 +168,9 @@ object UclidMain {
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new CaseEliminator())
+    passManager.addPass(new LTLPropertyRewriter())
+    // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
+    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
     passManager.addPass(new FindFreshLiterals())
     passManager.addPass(new RewriteFreshLiterals())
 
@@ -204,12 +210,13 @@ object UclidMain {
 
     // create pass manager.
     val passManager = new PassManager()
-    passManager.addPass(new ModuleInstanceChecker(moduleList))
-    passManager.addPass(new ModuleDependencyFinder(moduleList, mainModuleName))
+    passManager.addPass(new ModuleInstanceChecker())
+    passManager.addPass(new ModuleDependencyFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomFinder())
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
     passManager.addPass(new ExternalSymbolAnalysis())
-    passManager.addPass(new ModuleFlattener(moduleList, mainModuleName))
+    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
+    passManager.addPass(new ModuleFlattener(mainModuleName))
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new ModuleCleaner())
     passManager.addPass(new ExpressionTypeChecker())

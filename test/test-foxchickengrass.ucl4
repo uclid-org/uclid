@@ -4,32 +4,32 @@ module main {
   input move : bv2;
   
   init {
-    fox := false;
-    chicken := false;
-    grass := false;
-    farmer := false;
+    fox = false;
+    chicken = false;
+    grass = false;
+    farmer = false;
   }
   
   next {
     if (move == 0bv2) {
       if (farmer == fox) {
-        fox := !fox;
+        fox = !fox;
       }
     } else {
       if (move == 1bv2) {
         if (farmer == chicken) {
-          chicken := !chicken;
+          chicken = !chicken;
         }
       } else {
         if (move == 2bv2) {
           if (farmer == grass) {
-            grass := !grass;
+            grass = !grass;
           }
         }
       }
     }
     
-    farmer := !farmer;
+    farmer = !farmer;
     
      assume (!farmer ==> (fox && chicken));
      assume (!farmer ==> (chicken && grass));

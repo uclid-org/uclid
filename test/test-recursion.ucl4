@@ -6,14 +6,14 @@ module main  {
 
   procedure foo(x : int, y : int) returns (z : int) {
     if (x <= 0) {
-      z := y;
+      z = y;
     } else {
-      call (z) := foo(x - 1, y+1);
+      call (z) = foo(x - 1, y+1);
     }
   }
 
   next {
-    call (y) := foo(x, y);
+    call (y) = foo(x, y);
   }
   
   control {

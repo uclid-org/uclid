@@ -3,7 +3,7 @@ module main
   var sum, fake, i : int;
   
   init {
-    i := 0;
+    i = 0;
   }
   
   next {
@@ -16,7 +16,7 @@ module main
     assume (fake == (sum + sum));
     assert false;
 
-    i := i + 1;
+    i = i + 1;
   }
   
   control {

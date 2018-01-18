@@ -3,19 +3,19 @@ module main {
   const one : int;
 
   procedure fib(x: int, y: int) returns (z:int, w:int) {
-    one := one + 1;
-    x := x + one; 
-    z, w := y, x + y;
+    one = one + 1;
+    x = x + one; 
+    z, w = y, x + y;
   }
 
   init {
-    one := 1;
-    a := 0b0; // binary literal
-    b := 0x1; // hexadecimal literal
+    one = 1;
+    a = 0b0; // binary literal
+    b = 0x1; // hexadecimal literal
   }
 
   next {
-    call (a, b) := fib(a, b);
+    call (a, b) = fib(a, b);
     assert (a <= b);
     assert (a < b);
     // These weird assertions are to check the +/- arithmetic operators.

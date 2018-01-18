@@ -9,28 +9,28 @@ module main {
   var w : rec2;
   
   procedure foo(p : rec1) returns (pn : rec1) {
-    pn.a := p.a + 1;
-    pn.b := p.a + p.b;
-    pn.c := !(p.c);
+    pn.a = p.a + 1;
+    pn.b = p.a + p.b;
+    pn.c = !(p.c);
   }
   
   procedure bar(p : rec1) returns (pn : rec1) {
-    pn.b := p.a + p.b + 1;
-    pn.a := pn.b - p.b;
-    pn.c := !p.c;
+    pn.b = p.a + p.b + 1;
+    pn.a = pn.b - p.b;
+    pn.c = !p.c;
   }
   
   init {
-    // p := {0, 1, false};
-    p.a := 0;
-    p.b := 1;
-    p.c := false;
+    // p = {0, 1, false};
+    p.a = 0;
+    p.b = 1;
+    p.c = false;
   }
   
   next {
-    call (q1) := foo(w);
-    call (q2) := foo(p);
-    p := q1;
+    call (q1) = foo(w);
+    call (q2) = foo(p);
+    p = q1;
     
     assert (q1.a == q2.a);
     assert (q1.b == q2.b);

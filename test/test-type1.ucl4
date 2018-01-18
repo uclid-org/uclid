@@ -2,14 +2,14 @@ module test {
   var a, b : int;
 
   procedure fib(x: int, y: int) returns (z:int, w:int) { 
-    z, w := y, x + y;
+    z, w = y, x + y;
   }
   init {
-    a := 0;
-    b := 1;
+    a = 0;
+    b = 1;
   }
   next {
-    call (a, b) := fib(a, b);
+    call (a, b) = fib(a, b);
   }
   
   control {
@@ -22,10 +22,10 @@ module test {
   var z : bool;
 
   init {
-    y := 0;
+    y = 0;
   }
   next {
-    y := y + 1;
-    z := !z;
+    y = y + 1;
+    z = !z;
   }
 }

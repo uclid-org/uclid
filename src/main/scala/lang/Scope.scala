@@ -94,11 +94,11 @@ object Scope {
     }
   }
   /** Create an empty context. */
-  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None)
+  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None, false)
 }
 
 
-case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[GenericProofCommand]) {
+case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[GenericProofCommand], inLTLSpec : Boolean) {
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: Identifier) = map.contains(name)
   /** Check if a variable is readonly. */
@@ -137,17 +137,25 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
     }
   }.toMap
 
+  /** Return a new context with the inLTLSpec flag set. */
+  def withLTLSpec : Scope = {
+    Scope(map, module, procedure, cmd, true)
+  }
+  /** Return new context with the inLTLSpec flag reset. */
+  def withoutLTLSpec : Scope = {
+    Scope(map, module, procedure, cmd, false)
+  }
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : Scope = {
-    Scope(map + (expr.id -> expr), module, procedure, cmd)
+    Scope(map + (expr.id -> expr), module, procedure, cmd, inLTLSpec)
   }
   def +(typ : Type) : Scope = {
-    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd)
+    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, inLTLSpec)
   }
 
   /** Add a reference to this module (don't expand the module's declarations). */
   def +&(m : Module) : Scope = {
-    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd)
+    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, inLTLSpec)
   }
 
   /** Return a new context with the declarations in this module added to it. */
@@ -197,7 +205,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
         case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
-    Scope(m2, Some(m), None, None)
+    Scope(m2, Some(m), None, None, false)
   }
   /** Return a new context with the declarations in this procedure added to it. */
   def +(proc: ProcedureDecl) : Scope = {
@@ -211,14 +219,14 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
     val map3 = proc.decls.foldLeft(map2){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureLocalVar(arg.id, arg.typ))
     }
-    return Scope(map3, module, Some(proc), None)
+    return Scope(map3, module, Some(proc), None, false)
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
   def +(lambda: Lambda) : Scope = {
     val newMap = lambda.ids.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }
-    return Scope(newMap, module, procedure, cmd)
+    return Scope(newMap, module, procedure, cmd, inLTLSpec)
   }
   /** Return a new context with quantifier variables added. */
   def +(opapp : OperatorApplication) : Scope = {
@@ -230,11 +238,11 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
       case ForallOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd)
+          module, procedure, cmd, inLTLSpec)
       case ExistsOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd)
+          module, procedure, cmd, inLTLSpec)
       case _ => this
     }
   }
@@ -245,7 +253,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
       case Some(id) => map + (id -> Scope.VerifResultVar(id, command))
       case None => map
     }
-    Scope(mapP, module, procedure, Some(command))
+    Scope(mapP, module, procedure, Some(command), inLTLSpec)
   }
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {

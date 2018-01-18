@@ -111,6 +111,7 @@ object Operator {
 sealed trait Operator extends ASTNode {
   def fixity : Int
   def isPolymorphic = false
+  def isTemporal = false
 }
 // This is the polymorphic operator type. Typerchecker.rewrite converts these operators
 // to either the integer or bitvector versions.
@@ -161,7 +162,7 @@ case class IffOp() extends BooleanOperator { override def toString = "<==>" }
 case class ImplicationOp() extends BooleanOperator { override def toString = "==>" }
 case class NegationOp() extends BooleanOperator {
   override def toString = "!"
-  override def fixity = Operator.INFIX
+  override def fixity = Operator.PREFIX
 }
 // Quantifiers
 sealed abstract class QuantifiedBooleanOperator extends BooleanOperator {
@@ -184,15 +185,17 @@ sealed abstract class ComparisonOperator() extends Operator {
 case class EqualityOp() extends ComparisonOperator { override def toString = "==" }
 case class InequalityOp() extends ComparisonOperator { override def toString = "!=" }
 
-sealed abstract class TemporalOperator() extends Operator
-sealed abstract class TemporalInfixOperator() extends TemporalOperator { override def fixity = Operator.INFIX }
-sealed abstract class TemporalPrefixOperator() extends TemporalOperator { override def fixity = Operator.INFIX }
-case class UntilTemporalOp() extends TemporalInfixOperator { override def toString = "U" }
-case class WUntilTemporalOp() extends TemporalInfixOperator { override def toString = "W" }
-case class ReleaseTemporalOp() extends TemporalInfixOperator { override def toString = "R" }
-case class FinallyTemporalOp() extends TemporalPrefixOperator { override def toString = "F" }
-case class GloballyTemporalOp() extends TemporalPrefixOperator { override def toString = "G" }
-case class NextTemporalOp() extends TemporalPrefixOperator { override def toString = "X" }
+sealed abstract class TemporalOperator() extends Operator { 
+  override def fixity = Operator.PREFIX
+  override def isTemporal = true
+}
+case class GloballyTemporalOp() extends TemporalOperator { override def toString = "globally" }
+case class NextTemporalOp() extends TemporalOperator { override def toString = "nxt" }
+case class UntilTemporalOp() extends TemporalOperator { override def toString = "until" }
+case class FinallyTemporalOp() extends TemporalOperator { override def toString = "finally" }
+case class ReleaseTemporalOp() extends TemporalOperator { override def toString = "release" }
+// For internal use only:
+case class WUntilTemporalOp() extends TemporalOperator { override def toString = "wuntil" }
 
 // "Old" operator.
 case class OldOperator() extends Operator {
@@ -244,6 +247,7 @@ case class SelectFromInstance(varId : Identifier) extends Operator {
 sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
   def isConstant = false
+  def isTemporal = false
 }
 
 case class Identifier(name : String) extends Expr {
@@ -293,6 +297,7 @@ case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
 
 case class Tuple(values: List[Expr]) extends Expr {
   override def toString = "{" + Utils.join(values.map(_.toString), ", ") + "}"
+  override def isTemporal = values.exists(v => v.isTemporal)
 }
 //for symbols interpreted by underlying Theory solvers
 case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr {
@@ -315,6 +320,7 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
         }
     }
   }
+  override def isTemporal = op.isTemporal || operands.exists(_.isTemporal)
 }
 case class ArraySelectOperation(e: Expr, index: List[Expr]) extends Expr {
   override def toString = e + "[" + index.tail.fold(index.head.toString)
@@ -331,6 +337,7 @@ case class FuncApplication(e: Expr, args: List[Expr]) extends Expr {
 }
 case class ITE(e: Expr, t: Expr, f: Expr) extends Expr {
   override def toString = "ITE(" + e + "," + t + "," + f + ")"
+  override def isTemporal = e.isTemporal || t.isTemporal || f.isTemporal 
 }
 case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
   override def toString = "Lambda(" + ids + "). " + e
@@ -355,8 +362,12 @@ case class LhsVarSliceSelect(id: Identifier, bitslice: VarBitVectorSlice) extend
 
 /** Type decorators for expressions. */
 sealed abstract class ExprDecorator extends ASTNode
-case class UnknownDecorator(value: String) extends ExprDecorator
-case object LTLExprDecorator extends ExprDecorator
+case class UnknownDecorator(value: String) extends ExprDecorator {
+  override def toString = value
+}
+case object LTLExprDecorator extends ExprDecorator {
+  override def toString = "LTL"
+}
 
 object ExprDecorator {
   /** Factory constructor. */
@@ -405,14 +416,7 @@ sealed abstract class NumericType extends PrimitiveType {
   override def isNumeric = true
 }
 
-/**
- * Temporal types.
- */
-case class TemporalType() extends Type {
-  override def toString = "temporal"
-  override def isTemporal = true
-}
-/** Undefined type. These will eventually be replaced.
+/** Undefined type. These will eventually be rewritten in the AST.
  */
 case class UndefinedType() extends Type {
   override def toString = "undefined"
@@ -767,7 +771,14 @@ case class NextDecl(body: List[Statement]) extends Decl {
   override def declNames = List.empty
 }
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
-  override def toString = "property " + id + " : " + expr + ";  // " + id.position.toString
+  override def toString = {
+    val declString = if (params.size > 0) { 
+      "[" + Utils.join(params.map(_.toString), ", ") + "]"
+    } else {
+      ""
+    }
+    "property %s%s : %s; // %s".format(id.toString, declString, expr.toString, position.toString) 
+  }
   override def declNames = List(id)
   def name = "property " + id.toString()
 }

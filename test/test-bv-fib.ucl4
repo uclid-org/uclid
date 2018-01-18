@@ -1,14 +1,14 @@
 module main {
   var a, b : bv16;
   procedure fib(x: bv16, y: bv16) returns (z:bv16, w:bv16) { 
-    z, w := y, x + y;
+    z, w = y, x + y;
   }
   init {
-    a := 0bv16;
-    b := 1bv16;
+    a = 0bv16;
+    b = 1bv16;
   }
   next {
-    call (a, b) := fib(a, b);
+    call (a, b) = fib(a, b);
     assert (a <= b);
     assert (a < b);
     // These weird assertions are to check the +/- arithmetic operators.
@@ -17,7 +17,9 @@ module main {
   }
   
   control {
-  	unroll (5);
+  	x = unroll (5);
   	decide;
+  	// print_results;
+  	// x->print_cex;
   }
 }

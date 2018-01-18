@@ -1,0 +1,22 @@
+module main {
+  // Part 1: System description.
+  var a, b : int;
+
+  init {
+    a = 0b0; // binary literal
+    b = 0x1; // hexadecimal literal
+  }
+  next {
+    a, b = b, a + b;
+  }
+
+  // Part 2: System specification.
+  property a_le_b: a <= b;
+
+  // Part 3: Proof script.
+  control {
+    unroll (3);
+    decide;
+    print_results;
+  }
+}

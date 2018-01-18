@@ -10,21 +10,21 @@ module main {
         case
           y == 0 : 
           {
-            z := x;
-            w := 0;
+            z = x;
+            w = 0;
           }
           default :  
           {
             case
 	          (x > 100) :
 	          {
-	              z := x - 10;
-	              w := y - 1;
+	              z = x - 10;
+	              w = y - 1;
 	          }
 	          default : 
 	          {
-	              z := x + 11;
-	              w := y + 1;
+	              z = x + 11;
+	              w = y + 1;
 	          }
             esac
           }
@@ -33,11 +33,11 @@ module main {
 
     init {
         havoc n_init;
-        n := n_init;
-        c := 1;
+        n = n_init;
+        c = 1;
     }
     next {
-        call (n, c) := mc91(n, c);
+        call (n, c) = mc91(n, c);
         assert ((c == 0) && (n_init <= 100)) ==> (n == 91);
     }
 

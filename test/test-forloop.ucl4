@@ -8,24 +8,24 @@ module main {
   output result : word_t;
   
   procedure full_adder(a : bit, b : bit, c_in : bit) returns (s : bit, c_out : bit) {
-	s := a ^ b ^ c_in;
-	c_out := (a & b) | (b & c_in) | (c_in & a);
+	s = a ^ b ^ c_in;
+	c_out = (a & b) | (b & c_in) | (c_in & a);
   }
   
   procedure add(a : word_t, b : word_t) returns (sum : word_t) {
     var cout : bv5;
-    cout[0:0] := 0bv1;
+    cout[0:0] = 0bv1;
     for i in range(0, 3)  {
-      call (sum[i:i], cout[i+1:i+1]) := full_adder(a[i:i], b[i:i], cout[i:i]); 
+      call (sum[i:i], cout[i+1:i+1]) = full_adder(a[i:i], b[i:i], cout[i:i]); 
     }
   }
   
   next {
-  	t1 := (arg0 & ~arg1) | (~arg0 & arg1);
-  	t2 := (arg0 ^ arg1);
+  	t1 = (arg0 & ~arg1) | (~arg0 & arg1);
+  	t2 = (arg0 ^ arg1);
   	assert (t1 == t2);
   	
-  	call (result) := add(arg0, arg1);
+  	call (result) = add(arg0, arg1);
   	assert (result == (arg0 + arg1));
   }
   

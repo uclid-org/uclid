@@ -8,26 +8,26 @@ module main {
     // taken from a tail-recursive definition of the McCarthy 91 function.
     procedure mc91(x: YetAnotherNumber, y: YetAnotherNumber) returns (z:YetAnotherNumber, w: YetAnotherNumber) {
         if (y == 0) {
-            z := x;
-            w := 0;
+            z = x;
+            w = 0;
         } else {
         	if (x > 100) {
-            	z := x - 10;
-            	w := y - 1;
+            	z = x - 10;
+            	w = y - 1;
         	} else {
-            	z := x + 11;
-            	w := y + 1;
+            	z = x + 11;
+            	w = y + 1;
         	}
     	}
     }
 
     init {
         havoc n_init;
-        n := n_init;
-        c := 1;
+        n = n_init;
+        c = 1;
     }
     next {
-        call (n, c) := mc91(n, c);
+        call (n, c) = mc91(n, c);
         assert ((c == 0) && (n_init <= 100)) ==> (n == 91);
     }
 

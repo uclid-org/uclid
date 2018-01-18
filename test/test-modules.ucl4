@@ -9,11 +9,11 @@ module alu  {
   next {
     case
       (cmd == add) : {
-        result := a + b;
+        result = a + b;
       }
 
       (cmd == sub) :  { 
-        result := a - b;
+        result = a - b;
       }
     esac
   }
@@ -40,9 +40,9 @@ module main {
 
   init {
 	assume (forall (r : regindex_t) :: regs[r] == 1bv4);
-	cnt := 1bv4;
+	cnt = 1bv4;
 	assume (forall (a : addr_t) :: mem[a] == 0bv6);
-    pc := 0bv8;
+    pc = 0bv8;
   }
 
   instance alu_i : alu (cmd : (cmd), a : (r0), b : (r1), result : (res));
@@ -50,25 +50,25 @@ module main {
   property cnt_eq_r0 : (cnt == regs[0bv2]);
 
   next {
-    opcode := mem[pc];
+    opcode = mem[pc];
     case 
-      opcode[1:0] == 0bv2 : { cmd := add; }
-      opcode[1:0] == 1bv2 : { cmd := sub; }
-      default             : { cmd := nop; }
+      opcode[1:0] == 0bv2 : { cmd = add; }
+      opcode[1:0] == 1bv2 : { cmd = sub; }
+      default             : { cmd = nop; }
     esac
 
-    r0ind := opcode[3:2];
-    r1ind := opcode[5:4];
+    r0ind = opcode[3:2];
+    r1ind = opcode[5:4];
 
-    r0 := regs[r0ind];
-    r1 := regs[r1ind];
+    r0 = regs[r0ind];
+    r1 = regs[r1ind];
     
 	next (alu_i);
 	
-	regs[r0ind] := res[3:0];
+	regs[r0ind] = res[3:0];
 
-	cnt := cnt + cnt;
-	pc := pc + 1bv8;
+	cnt = cnt + cnt;
+	pc = pc + 1bv8;
   }
   
   control {

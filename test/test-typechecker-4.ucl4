@@ -5,20 +5,20 @@ module main {
   var b : int;
 
   init {
-    a := 0;
-    b := 1;
+    a = 0;
+    b = 1;
     for i in range(10, 1)  {
-      a := a + 1;
+      a = a + 1;
     }
     for i in range(1bv8, 10bv16)  {
-      a := a + 1;
+      a = a + 1;
     }
     for i in range(10bv8, 0bv8)  {
-      a := a + 1;
+      a = a + 1;
     }
   }
   next {
-    a := a + 1;
+    a = a + 1;
   }
 
   control {

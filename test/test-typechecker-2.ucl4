@@ -3,14 +3,14 @@ module main {
   var b : int;
   var c : bv4;
   procedure fib(x: int, y: int) returns (z:int, w:int) { 
-    z, w := y, x + y;
+    z, w = y, x + y;
   }
   init {
-    a := 0;
-    b := 1;
+    a = 0;
+    b = 1;
   }
   next {
-    call (a, b) := fib(c, b);
+    call (a, b) = fib(c, b);
   }
   
   control {

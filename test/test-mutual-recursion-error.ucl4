@@ -3,9 +3,9 @@ module main {
 
   procedure foo(a : int, b : int) returns (z : int) {
     if (a > 0) {
-      call (z) := bar(a + b);
+      call (z) = bar(a + b);
     } else {
-      z := a + b;
+      z = a + b;
     }
   }
 
@@ -13,16 +13,16 @@ module main {
     var x : int;
     var y : int;
     
-    call (x, y) := zoom(s + s, 2);
-    w := x + y;
+    call (x, y) = zoom(s + s, 2);
+    w = x + y;
   }
 
   procedure zoom(s1 : int, s2 : int) returns (x : int,  y : int) {
-    call (x) := foo(s1 + s2, s1);
-    call (y) := foo(s1, s1 + s2);
+    call (x) = foo(s1 + s2, s1);
+    call (y) = foo(s1, s1 + s2);
   }
 
   next {
-    call (s1) := foo(s1, s2);
+    call (s1) = foo(s1, s2);
   }
 }
