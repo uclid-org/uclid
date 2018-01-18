@@ -145,16 +145,9 @@ class Z3FileInterface() extends SolverInterface {
   }
 
   override def check(e : Expr) : SolverResult = {
-    def assertionToString(e : Expr) : String = "(assert " + translateExpr(e) + ")\n"
-
-    val symbols_e = findSymbols(e)
-    val symbols = expressions.foldRight(symbols_e)((ex, s) => s ++ findSymbols(ex))
-    val decl = symbols.foldLeft(""){(acc,x) => acc + generateDeclaration(x)}
-    val datatypes = generateDatatypes(symbols)
-    val assertions = (e :: expressions).foldRight("")((e, str) => assertionToString(e) + str)
-    val formula = datatypes + decl + assertions + "\n(check-sat)\n"
+    // FIXME
+    val formula = toSMT2(e, List.empty, "check")
     def getCurrentDirectory = new java.io.File( "." ).getCanonicalPath
-
     Files.write(Paths.get(getCurrentDirectory + "/tmp.z3"), formula.getBytes(StandardCharsets.UTF_8))
     val z3_output = ("z3 " + getCurrentDirectory + "/tmp.z3 -smt2" !!).trim
 
@@ -163,6 +156,18 @@ class Z3FileInterface() extends SolverInterface {
       case "unsat" => SolverResult(Some(false), None)
       case _ => SolverResult(None, None)
     }
+  }
+
+  override def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
+    def assertionToString(e : Expr) : String = "(assert " + translateExpr(e) + ")\n"
+
+    val symbols_e = findSymbols(e)
+    val symbols = expressions.foldRight(symbols_e)((ex, s) => s ++ findSymbols(ex))
+    val decl = symbols.foldLeft(""){(acc,x) => acc + generateDeclaration(x)}
+    val datatypes = generateDatatypes(symbols)
+    val assertions = (e :: expressions).foldRight("")((e, str) => assertionToString(e) + str)
+    val formula = datatypes + decl + assertions + "\n(check-sat)\n"
+    return formula
   }
 
   override def addAssumptions(es : List[Expr]) {

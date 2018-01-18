@@ -455,6 +455,8 @@ abstract class SolverInterface {
   def addConstraint(e : Expr)
   // Check whether 'e' is satisfiable in the current solver context.
   def check(e : Expr) : SolverResult
+  // Produce SMT2 output for this expression.
+  def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String
   // Add a list of assumptions
   def addAssumptions(es : List[Expr])
   // Pop the the last added list of assumptions

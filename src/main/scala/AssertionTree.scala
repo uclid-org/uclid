@@ -100,4 +100,19 @@ class AssertionTree {
     node.results ++ childResults
   }
   def verify(solver : smt.SolverInterface) : List[CheckResult] = _verify(root, solver)
+  
+      /*
+  def _printSMT(node : TreeNode, label : Option[String], solver : smt.SolverInterface) : List[String] = {
+    val assumptions = node.assumptions.toList
+    val filteredAssertions = label match {
+      case None        => node.assertions
+      case Some(label) =>
+        node.assertions.filter{ 
+          e => {
+            e.label == 
+          }
+        }
+    }
+  }
+  * */
 }
