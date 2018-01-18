@@ -3,7 +3,7 @@ module main_func {
   type pc_t = enum {A, B, C};
 
   input enable : bool;
-  input timerCount : int;
+  sharedvar timerCount : int;
 
   var pc : pc_t;
 
