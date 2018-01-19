@@ -3,8 +3,8 @@ module main {
   var a, b : int;
 
   init {
-    a = 0b0; // binary literal
-    b = 0x1; // hexadecimal literal
+    a = 0;
+    b = 1;
   }
   next {
     a, b = b, a + b;
