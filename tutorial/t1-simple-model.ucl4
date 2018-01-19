@@ -11,12 +11,12 @@ module main {
   }
 
   // Part 2: System specification.
-  property a_le_b: a <= b;
+  invariant a_le_b: a <= b;
 
   // Part 3: Proof script.
   control {
     unroll (3);
-    decide;
+    check;
     print_results;
   }
 }
