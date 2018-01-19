@@ -22,7 +22,7 @@ module main
   control {
     initialize;
     simulate(5);
-    decide;
+    check;
     print_results;
   }
 }

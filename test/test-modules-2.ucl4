@@ -92,7 +92,7 @@ module main {
   control {
     print_module;
     unroll(1);
-    decide;
+    check;
     print_results;
 
     // NOTE: This command is expected to create typechecking errors.

@@ -21,7 +21,7 @@ module main
   control {
     initialize;
     simulate(4);
-    decide;
+    check;
     print_results;
     print_cex(a, b, z, z1, z2);
   }

@@ -25,6 +25,6 @@ module main {
 
   control {
     unroll(3);
-    decide;
+    check;
   }
 }

@@ -26,7 +26,7 @@ module main {
   control {
     // print_module;
     unroll(5);
-    decide;
+    check;
     // print_results;
     // print_cex(sum, num);
   }

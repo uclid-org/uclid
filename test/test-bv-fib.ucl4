@@ -18,7 +18,7 @@ module main {
   
   control {
   	x = unroll (5);
-  	decide;
+  	check;
   	// print_results;
   	// x->print_cex;
   }

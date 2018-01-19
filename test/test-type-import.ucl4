@@ -89,7 +89,7 @@ module main {
     // print_module;
 
     x = unroll (1);
-    decide;
+    check;
     // print_results;
     // x->print_cex (cpu_i->regs[r0index], sum, cpu_i->r0, cpu_i->r1, cpu_i->result);
   }

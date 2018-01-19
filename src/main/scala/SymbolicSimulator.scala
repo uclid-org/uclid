@@ -121,7 +121,7 @@ class SymbolicSimulator (module : Module) {
               case None    => "verify(%s)".format(procName.toString)
             }
             verifyProcedure(proc, label)
-          case "decide" =>
+          case "check" =>
             // assumes.foreach((e) => println("assumption : " + e.toString))
             // asserts.foreach((e) => println("assertion  : " + e.toString + "; " + e.expr.toString))
             proofResults = assertionTree.verify(solver)

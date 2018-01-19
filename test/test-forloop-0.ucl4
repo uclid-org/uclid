@@ -35,6 +35,6 @@ module main {
   }
   control {
     unroll (5);
-    decide;
+    check;
   }
 }

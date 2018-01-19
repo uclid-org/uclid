@@ -97,7 +97,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         val module = context.module.get
         lazy val errorMsg = "Unknown procedure: '%s'.".format(arg.toString())
         Utils.checkParsingError(module.procedures.find(p => p.id == arg).isDefined, errorMsg, arg.pos, filename)
-      case "decide" =>
+      case "check" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)
         checkNoArgObj(cmd, filename)

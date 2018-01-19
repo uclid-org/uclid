@@ -75,7 +75,7 @@ module main {
         
   control {
     x = unroll(4);
-    decide;
+    check;
     print_results;
     x->print_cex (invocation, operand_ruid, operand_euid, operand_suid, operand_fsuid, process_ruid, process_euid, process_suid, process_fsuid);
   }

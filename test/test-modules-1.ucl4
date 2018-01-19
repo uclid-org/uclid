@@ -40,6 +40,6 @@ module main {
   property eq_pc : (c1->pc == c2->pc);
   control {
     unroll(3);
-    decide;
+    check;
   }
 }

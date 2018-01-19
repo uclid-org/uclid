@@ -59,7 +59,7 @@ module main {
   
   control {
     x = unroll(3);
-    decide;
+    check;
     // print_results;
     // x->print_cex (shadow, regfile[0bv2]);
   }

@@ -140,10 +140,10 @@ module main {
   }
   
   // These are our properties.
-  property eq_regs : (forall (ri : regindex_t) :: cpu_i_1->regs[ri] == cpu_i_2->regs[ri]);
-  property eq_mem  : (forall (a : addr_t) :: cpu_i_1->dmem[a] == cpu_i_2->dmem[a]);
-  property eq_pc   : (cpu_i_1->pc == cpu_i_2->pc);
-  property eq_inst : (cpu_i_1->inst == cpu_i_2->inst);
+  invariant eq_regs : (forall (ri : regindex_t) :: cpu_i_1->regs[ri] == cpu_i_2->regs[ri]);
+  invariant eq_mem  : (forall (a : addr_t) :: cpu_i_1->dmem[a] == cpu_i_2->dmem[a]);
+  invariant eq_pc   : (cpu_i_1->pc == cpu_i_2->pc);
+  invariant eq_inst : (cpu_i_1->inst == cpu_i_2->inst);
 
   // The control block defines the commands that will executed as part of the proof script.
   control {
@@ -153,8 +153,8 @@ module main {
     // unroll(3) "unrolls" the module for 3 steps and creates symbolic
     // expressions for the assertions encountered during those three steps.
     unroll(3);
-    // decide actually checks if these assertions hold.
-    decide;
+    // check actually checks if these assertions hold.
+    check;
     // this prints out the results of the verification.
     print_results;
 

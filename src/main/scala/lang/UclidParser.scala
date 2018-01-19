@@ -500,14 +500,14 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val SpecDecl: PackratParser[lang.SpecDecl] = positioned {
-      KwDefineProp ~> Id ~ (":" ~> Expr) <~ ";" ^^ { case id ~ expr => lang.SpecDecl(id,expr, List.empty) } |
-      KwDefineProp ~> Id ~ ("[" ~> rep(Expr) <~ "]") ~  (":" ~> Expr) <~ ";" ^^
+      (KwInvariant | KwDefineProp) ~> Id ~ (":" ~> Expr) <~ ";" ^^ { case id ~ expr => lang.SpecDecl(id,expr, List.empty) } |
+      (KwInvariant | KwDefineProp) ~> Id ~ ("[" ~> rep(Expr) <~ "]") ~  (":" ~> Expr) <~ ";" ^^
          { case id ~ es ~ expr => lang.SpecDecl(id, expr, es.map(ExprDecorator.parse(_))) }
     }
 
     lazy val AxiomDecl: PackratParser[lang.AxiomDecl] = positioned {
-      KwDefineAxiom ~> Id ~ (":" ~> Expr) <~ ";" ^^ { case id ~ expr => lang.AxiomDecl(Some(id), expr) } |
-      KwDefineAxiom ~> Expr <~ ";" ^^ { case expr => lang.AxiomDecl(None, expr) }
+      (KwAssume | KwDefineAxiom) ~> Id ~ (":" ~> Expr) <~ ";" ^^ { case id ~ expr => lang.AxiomDecl(Some(id), expr) } |
+      (KwAssume | KwDefineAxiom) ~> Expr <~ ";" ^^ { case expr => lang.AxiomDecl(None, expr) }
     }
 
     lazy val Decl: PackratParser[Decl] =
