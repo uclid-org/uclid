@@ -35,11 +35,11 @@ class ExternalTypeAnalysisPass extends ReadOnlyPass[ExternalTypeMap] {
           case Some(typ) =>
             in + (extT, typ)
           case None =>
-            val error = ModuleError("Unknown type '%s' in module '%s'.".format(extT.typeId.toString, mod.id.toString), extT.typeId.position)
+            val error = ModuleError("Unknown type '%s' in module '%s'".format(extT.typeId.toString, mod.id.toString), extT.typeId.position)
             in + error
         }
       case None =>
-        val error = ModuleError("Unknown module: %s.".format(extT.moduleId.toString), extT.moduleId.position)
+        val error = ModuleError("Unknown module: %s".format(extT.moduleId.toString), extT.moduleId.position)
         in + error
     }
   }
@@ -58,7 +58,7 @@ class ExternalTypeAnalysisPass extends ReadOnlyPass[ExternalTypeMap] {
             in + error
         }
       case None =>
-        val error = ModuleError("Unknown module: %s.".format(eId.moduleId.toString), eId.moduleId.position)
+        val error = ModuleError("Unknown module: %s".format(eId.moduleId.toString), eId.moduleId.position)
         in + error
     }
   }

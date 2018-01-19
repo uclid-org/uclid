@@ -39,7 +39,7 @@ class InstanceModuleNameCheckerPass extends ReadOnlyPass[List[ModuleError]] {
     context.moduleDefinitionMap.get(instD.moduleId) match {
       case Some(mod) => in
       case None =>
-        val msg = "Unknown module: %s.".format(instD.moduleId.toString)
+        val msg = "Unknown module: %s".format(instD.moduleId.toString)
         ModuleError(msg, instD.moduleId.position) :: in
     }
   }
