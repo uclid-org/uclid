@@ -113,7 +113,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val OpEQ = "=="
     lazy val OpNE = "!="
     lazy val OpConcat = "++"
-    lazy val OpNeg = "!"
+    lazy val OpNeg = "-"
+    lazy val OpNot = "!"
     lazy val OpMinus = "-"
     lazy val OpSelectFromInstance = "->"
     lazy val KwProcedure = "procedure"
@@ -171,10 +172,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "bv", "{", "}", ";", "=", ":", "::", ".", "->", "*",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat,
-      OpNeg, OpMinus, OpSelectFromInstance)
+      OpNot, OpMinus, OpSelectFromInstance)
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE,
-      OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNeg, OpMinus,
+      OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus,
       "false", "true", "bv", KwProcedure, KwBool, KwInt, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwIf, KwElse,
       KwCase, KwEsac, KwFor, KwIn, KwRange, KwInstance, KwInput, KwOutput,
@@ -209,7 +210,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val RelOp: Parser[String] = OpGT | OpLT | OpEQ | OpNE | OpGE | OpLE
-    lazy val UnOp: Parser[String] = OpNeg | OpMinus
+    lazy val UnOp: Parser[String] = OpNot | OpMinus
     lazy val RecordSelectOp: Parser[Identifier] = positioned { ("." ~> Id) }
     lazy val SelectFromInstanceOp : Parser[Identifier] = positioned { (OpSelectFromInstance ~> Id) }
     lazy val SelectFromModuleOp : Parser[(Identifier, Identifier)] = {
@@ -282,7 +283,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val E9: PackratParser[Expr] = E10 ~ OpMul ~ E10 ^^ ast_binary | E10
     /** E10 = UnOp E11 | E11 **/
     lazy val E10: PackratParser[Expr] = positioned {
-        OpNeg ~> E11 ^^ { case e => OperatorApplication(NegationOp(), List(e)) } |
+        OpNeg ~> E11 ^^ { case e => OperatorApplication(UnaryMinusOp(), List(e)) } |
+        OpNot ~> E11 ^^ { case e => OperatorApplication(NegationOp(), List(e)) } |
         OpBvNot ~> E11 ^^ { case e => OperatorApplication(BVNotOp(0), List(e)) } |
         E11
     }

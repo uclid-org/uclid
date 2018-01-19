@@ -147,6 +147,10 @@ object IntSubOp extends IntResultOp {
 object IntMulOp extends IntResultOp {
   override def toString = "*"
 }
+object IntMinusOp extends IntResultOp {
+  override def toString = "-"
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 1); checkAllArgTypes(args, IntType.t) }
+}
 
 // Operators that return bitvectors.
 abstract class BVResultOp(width : Int) extends Operator {
@@ -162,6 +166,10 @@ case class BVSubOp(w : Int) extends BVResultOp(w) {
 }
 case class BVMulOp(w : Int) extends BVResultOp(w) {
   override def toString = "bvmul"
+}
+case class BVMinusOp(w : Int) extends BVResultOp(w) {
+  override def toString = "bvneg"
+  override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 1); checkAllArgTypes(args, BitVectorType.t(w)) }
 }
 case class BVAndOp(w : Int) extends BVResultOp(w) {
   override def toString = "bvand"

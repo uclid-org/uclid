@@ -126,6 +126,10 @@ case class GEOp() extends PolymorphicOperator { override def toString = ">=" }
 case class AddOp() extends PolymorphicOperator { override def toString = "+" }
 case class SubOp() extends PolymorphicOperator { override def toString = "-" }
 case class MulOp() extends PolymorphicOperator { override def toString = "*" }
+case class UnaryMinusOp() extends PolymorphicOperator { 
+  override def toString = "-"
+  override def fixity = Operator.PREFIX
+}
 // These are operators with integer operators.
 sealed abstract class IntArgOperator extends Operator {
   override def fixity = Operator.INFIX
@@ -137,6 +141,10 @@ case class IntGEOp() extends IntArgOperator { override def toString = ">=" }
 case class IntAddOp() extends IntArgOperator { override def toString ="+" }
 case class IntSubOp() extends IntArgOperator { override def toString = "-" }
 case class IntMulOp() extends IntArgOperator { override def toString = "*" }
+case class IntUnaryMinusOp() extends IntArgOperator { 
+  override def toString = "-"
+  override def fixity = Operator.PREFIX
+}
 // These operators take bitvector operands.
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
   override def fixity = Operator.INFIX
@@ -152,6 +160,10 @@ case class BVAndOp(override val w : Int) extends BVArgOperator(w) { override def
 case class BVOrOp(override val w : Int) extends BVArgOperator(w) { override def toString = "|" }
 case class BVXorOp(override val w : Int) extends BVArgOperator(w) { override def toString = "^" }
 case class BVNotOp(override val w : Int) extends BVArgOperator(w) { override def toString = "~" }
+case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString = "-"
+  override def fixity = Operator.PREFIX
+}
 // Boolean operators.
 sealed abstract class BooleanOperator extends Operator {
   override def fixity = Operator.INFIX

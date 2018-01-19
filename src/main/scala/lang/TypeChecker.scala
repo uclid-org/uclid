@@ -158,6 +158,7 @@ object ReplacePolymorphicOperators {
       case AddOp() => IntAddOp()
       case SubOp() => IntSubOp()
       case MulOp() => IntMulOp()
+      case UnaryMinusOp() => IntUnaryMinusOp()
     }
     intOp.pos = op.pos
     intOp
@@ -171,6 +172,7 @@ object ReplacePolymorphicOperators {
       case AddOp() => BVAddOp(w)
       case SubOp() => BVSubOp(w)
       case MulOp() => BVMulOp(w)
+      case UnaryMinusOp() => BVUnaryMinusOp(w)
     }
     bvOp.pos = op.pos
     bvOp
@@ -304,18 +306,27 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     def polyResultType(op : PolymorphicOperator, argType : Type) : Type = {
       op match {
         case LTOp() | LEOp() | GTOp() | GEOp() => new BoolType()
-        case AddOp() | SubOp() | MulOp() => argType
+        case AddOp() | SubOp() | MulOp() | UnaryMinusOp() => argType
       }
     }
     def opAppType(opapp : OperatorApplication) : Type = {
       val argTypes = opapp.operands.map(typeOf(_, c + opapp))
       opapp.op match {
         case polyOp : PolymorphicOperator => {
-          checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
-          checkTypeError(argTypes(0) == argTypes(1),
-              "Arguments to operator '" + opapp.op.toString + "' must be of the same type. Types of expression '" +
-              opapp.toString() + "' are " + argTypes(0).toString() + " and " + argTypes(1).toString(),
-              opapp.pos, c.filename)
+          def numArgs(op : PolymorphicOperator) : Int = {
+            op match {
+              case UnaryMinusOp() => 1
+              case _ => 2
+            }
+          }
+          val nArgs = numArgs(polyOp)
+          checkTypeError(argTypes.size == nArgs, "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
+          if (nArgs > 1) {
+            checkTypeError(argTypes(0) == argTypes(1),
+                "Arguments to operator '" + opapp.op.toString + "' must be of the same type. Types of expression '" +
+                opapp.toString() + "' are " + argTypes(0).toString() + " and " + argTypes(1).toString(),
+                opapp.pos, c.filename)
+          }
           checkTypeError(argTypes.forall(_.isNumeric), "Arguments to operator '" + opapp.op.toString + "' must be of a numeric type", opapp.pos, c.filename)
           typeOf(opapp.operands(0), c) match {
             case i : IntType =>
@@ -328,17 +339,23 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           }
         }
         case intOp : IntArgOperator => {
-          checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
+          def numArgs(op : IntArgOperator) : Int = {
+            op match {
+              case IntUnaryMinusOp() => 1
+              case _ => 2
+            }
+          }
+          checkTypeError(argTypes.size == numArgs(intOp), "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
           checkTypeError(argTypes.forall(_.isInstanceOf[IntType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer", opapp.pos, c.filename)
           intOp match {
             case IntLTOp() | IntLEOp() | IntGTOp() | IntGEOp() => new BoolType()
-            case IntAddOp() | IntSubOp() | IntMulOp() => new IntType()
+            case IntAddOp() | IntSubOp() | IntMulOp() | IntUnaryMinusOp() => new IntType()
           }
         }
         case bvOp : BVArgOperator => {
           def numArgs(op : BVArgOperator) : Int = {
             op match {
-              case BVNotOp(_) => 1
+              case BVNotOp(_) | BVUnaryMinusOp(_) => 1
               case _ => 2
             }
           }
@@ -346,7 +363,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
           bvOp match {
             case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) => new BoolType()
-            case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) => new BitVectorType(bvOp.w)
+            case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVUnaryMinusOp(_) => new BitVectorType(bvOp.w)
             case BVAndOp(_) | BVOrOp(_) | BVXorOp(_) | BVNotOp(_) =>
               val t = new BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width)
               bvOpMap.put(bvOp.astNodeId, t.width)

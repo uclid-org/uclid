@@ -75,6 +75,7 @@ object Converter {
       case lang.IntAddOp() => return smt.IntAddOp
       case lang.IntSubOp() => return smt.IntSubOp
       case lang.IntMulOp() => return smt.IntMulOp
+      case lang.IntUnaryMinusOp() => return smt.IntMinusOp
       // Bitvector operators.
       case lang.BVLTOp(w) => return smt.BVLTOp(w)
       case lang.BVLEOp(w) => return smt.BVLEOp(w)
@@ -83,6 +84,7 @@ object Converter {
       case lang.BVAddOp(w) => return smt.BVAddOp(w)
       case lang.BVSubOp(w) => return smt.BVSubOp(w)
       case lang.BVMulOp(w) => return smt.BVMulOp(w)
+      case lang.BVUnaryMinusOp(w) => smt.BVMinusOp(w)
       case lang.BVAndOp(w) => return smt.BVAndOp(w)
       case lang.BVOrOp(w) => return smt.BVOrOp(w)
       case lang.BVXorOp(w) => return smt.BVXorOp(w)
