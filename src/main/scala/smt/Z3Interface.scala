@@ -363,6 +363,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
   override def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
     val z3Expr = exprToZ3(e).asInstanceOf[z3.BoolExpr]
     val z3Assumptions = assumptions.map(a => exprToZ3(a).asInstanceOf[z3.BoolExpr]).toArray
+    z3Ctx.setPrintMode(z3.Z3_PRINT_SMTLIB2_COMPLIANT)
     val formula = z3Ctx.benchmarkToSMTString(name, "", "unknown", "", z3Assumptions, z3Expr)
     return formula
   }

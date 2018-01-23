@@ -101,18 +101,17 @@ class AssertionTree {
   }
   def verify(solver : smt.SolverInterface) : List[CheckResult] = _verify(root, solver)
   
-      /*
-  def _printSMT(node : TreeNode, label : Option[String], solver : smt.SolverInterface) : List[String] = {
-    val assumptions = node.assumptions.toList
-    val filteredAssertions = label match {
+  def _printSMT(node : TreeNode, parentAssumptions : List[smt.Expr], label : Option[Identifier], solver : smt.SolverInterface) : List[String] = {
+    val allAssumptions = parentAssumptions ++ node.assumptions.toList
+    val filteredAssertions = (label match {
       case None        => node.assertions
       case Some(label) =>
-        node.assertions.filter{ 
-          e => {
-            e.label == 
-          }
-        }
-    }
+        node.assertions.filter{e => e.label == label.name}
+    }).toList
+    
+    val theseSMTFormulas = filteredAssertions.map(a => solver.toSMT2(a.expr, allAssumptions, "uclid"))
+    val childResults = node.children.flatMap(c => _printSMT(c, allAssumptions, label, solver))
+    theseSMTFormulas ++ childResults
   }
-  * */
+  def printSMT(label : Option[Identifier], solver : smt.SolverInterface) = _printSMT(root, List.empty, label, solver)
 }

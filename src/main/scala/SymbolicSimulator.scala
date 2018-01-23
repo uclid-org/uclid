@@ -129,6 +129,8 @@ class SymbolicSimulator (module : Module) {
             printResults(proofResults, cmd.argObj)
           case "print_cex" =>
             printCEX(proofResults, cmd.args, cmd.argObj)
+          case "print_smt2" =>
+            printSMT2(assertionTree, cmd.argObj, solver)
           case "print_module" =>
             println(module.toString)
           case _ =>
@@ -269,6 +271,11 @@ class SymbolicSimulator (module : Module) {
     }}
   }
 
+  def printSMT2(aTree : AssertionTree, label : Option[Identifier], solver : smt.SolverInterface) {
+    aTree.printSMT(label, solver).foreach {
+      (f) => println(f)
+    }
+  }
   def printFrame(f : SymbolTable, m : smt.Model, exprs : List[Expr], scope : Scope) {
     def expr(id : lang.Identifier) : Option[smt.Expr] = {
       if (f.contains(id)) { Some(evaluate(id, f, scope)) }

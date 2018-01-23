@@ -1,0 +1,24 @@
+module main {
+  var a, b : int;
+  procedure fib(x: int, y: int) returns (z:int, w:int) { 
+    z, w = y, x + y;
+  }
+  init {
+    a = 0b0; // binary literal
+    b = 0x1; // hexadecimal literal
+  }
+  next {
+    call (a, b) = fib(a, b);
+    assert (a <= b);
+    assert (a < b);
+    // These weird assertions are to check the +/- arithmetic operators.
+    assert (a+b <= b+b);
+    assert (a-a <= b-a);
+  }
+  
+  control {
+  	f = unroll (3);
+  	check;
+  	f->print_smt2;
+  }
+}
