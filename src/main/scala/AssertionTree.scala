@@ -109,7 +109,15 @@ class AssertionTree {
         node.assertions.filter{e => e.label == label.name}
     }).toList
     
-    val theseSMTFormulas = filteredAssertions.map(a => solver.toSMT2(a.expr, allAssumptions, "uclid"))
+    val theseSMTFormulas = filteredAssertions.map{
+      a => {
+        val name = label match {
+          case None => "uclid: [%s]; step %d".format(a.pos.toString, a.iter)
+          case Some(label) => "uclid(%s): [%s]; step %d".format(label, a.pos.toString, a.iter)
+        }
+        solver.toSMT2(a.expr, allAssumptions, name)
+      }
+    }
     val childResults = node.children.flatMap(c => _printSMT(c, allAssumptions, label, solver))
     theseSMTFormulas ++ childResults
   }
