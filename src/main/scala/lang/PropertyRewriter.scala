@@ -100,20 +100,19 @@ class LTLOperatorArgumentChecker extends ASTAnalyzer(
 }
 
 class LTLOperatorRewriterPass extends RewritePass {
-
   override def rewriteFuncApp(fapp: FuncApplication, context: Scope): Option[Expr] = {
     if (context.inLTLSpec) {
       fapp.e match {
         case Identifier(name : String) => name match {
-          case "globally" =>
+          case "G" =>
             Some(OperatorApplication(new GloballyTemporalOp, fapp.args))
-          case "nxt" =>
+          case "X" =>
             Some(OperatorApplication(new NextTemporalOp, fapp.args))
-          case "until" =>
+          case "U" =>
             Some(OperatorApplication(new UntilTemporalOp, fapp.args))
-          case "finally" =>
+          case "F" =>
             Some(OperatorApplication(new FinallyTemporalOp, fapp.args))
-          case "release" =>
+          case "R" =>
             Some(OperatorApplication(new ReleaseTemporalOp, fapp.args))
           case _ =>
             Some(fapp)
@@ -180,9 +179,9 @@ class LTLPropertyRewriterPass extends RewritePass {
                   case DisjunctionOp() =>
                     OperatorApplication(ConjunctionOp(), negOps)
                   case IffOp() =>
-                    OperatorApplication(InequalityOp(), args)
+                    OperatorApplication(InequalityOp(), operands)
                   case ImplicationOp() =>
-                    OperatorApplication(ConjunctionOp(), List(args(0), negOps(1)))
+                    OperatorApplication(ConjunctionOp(), List(operands(0), negOps(1)))
                   case NegationOp() =>
                     args(0)
                   case EqualityOp() =>
@@ -230,10 +229,62 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
+  def createTseitinExpr(specName : Identifier, expr : Expr, nameProvider : ContextualNameProvider) : (Identifier, List[(Identifier, Expr)]) = {
+    val isExprTemporal = expr match {
+      case tExpr : PossiblyTemporalExpr => tExpr.isTemporal
+      case ntExpr : Expr => false
+    }
+    if (!isExprTemporal) {
+      val newVar = nameProvider(specName, "z")
+      val newImpl = (newVar, expr)
+      (newVar, List(newImpl))
+    } else {
+      // Recurse on operator applications.
+      def createTseitinExprOpapp(opapp : OperatorApplication) : (Identifier, List[(Identifier, Expr)]) = {
+        val argResults = opapp.operands.map(arg => createTseitinExpr(specName, arg, nameProvider))
+        val argResultIds = argResults.map(_._1)
+        val argImpls = argResults.flatMap(a => a._2)
+        
+        val newVar = nameProvider(specName, "z")
+        val innerExpr = OperatorApplication(opapp.op, argResultIds)
+        val newImpl = (newVar, innerExpr)
+        (newVar, newImpl :: argImpls)
+      }
+      // Recurse on a temporal operator.
+      val tExpr = expr.asInstanceOf[PossiblyTemporalExpr]
+      tExpr match {
+        case opapp : OperatorApplication =>
+          val op = opapp.op
+          op match {
+            case op : BooleanOperator =>
+              Utils.assert(!op.isQuantified, "Temporal expression within quantifier: " + expr.toString)
+              createTseitinExprOpapp(opapp)
+            case cOp : ComparisonOperator =>
+              createTseitinExprOpapp(opapp)
+            case tOp : TemporalOperator =>
+              createTseitinExprOpapp(opapp)
+            case _ =>
+              throw new Utils.AssertionError("Invalid temporal expression: " + expr.toString)
+          }
+      }
+    }
+  }
+
+  def rewriteLTLSpec(spec: SpecDecl, context: Scope, nameProvider : ContextualNameProvider): SpecDecl = {
+    println("original: " + spec.expr.toString)
+    val negExpr = convertToNNF(negate(spec.expr))
+    println("NNF: " + negExpr.toString)
+    val transformedExpr = createTseitinExpr(spec.id, negExpr, nameProvider)
+    println ("root: " + transformedExpr._1.toString)
+    transformedExpr._2.foreach {
+      (r) => println("%s ==> %s".format(r._1.toString, r._2.toString)) 
+    }
+    spec
+  }
+
   override def rewriteSpec(spec: SpecDecl, context: Scope): Option[SpecDecl] = {
     if (spec.params.exists(p => p == LTLExprDecorator)) {
-      println("LTL property: " + spec.expr.toString)
-      println("Negated property: " + convertToNNF(negate(spec.expr)).toString)
+      rewriteLTLSpec(spec, context, new ContextualNameProvider(context, "ltl"))
       Some(spec)
       //val ret = replace(spec.expr, spec, context).asInstanceOf[Identifier]
       //conjCounter = 0

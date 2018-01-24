@@ -447,6 +447,20 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         }
         case OldOperator() =>
           checkTypeError(argTypes.size == 1, "Expect exactly one argument to 'old'", opapp.pos, c.filename)
+          checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "First argument to old operator must be an identifier", opapp.pos, c.filename)
+          argTypes(0)
+        case HistoryOperator() =>
+          checkTypeError(argTypes.size == 2, "Expect exactly two arguments to 'history'", opapp.pos, c.filename)
+          checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "First argument to history operator must be an identifier", opapp.pos, c.filename)
+          checkTypeError(opapp.operands(1).isInstanceOf[IntLit], "Second argument to history must be an integer literal", opapp.pos, c.filename)
+          val historyIndex = opapp.operands(1).asInstanceOf[IntLit].value
+          checkTypeError(historyIndex > 0, "History index must be non-negative", opapp.pos, c.filename)
+          checkTypeError(historyIndex.toInt < 65536, "History index is too large", opapp.pos, c.filename)
+          argTypes(0)
+        case PastOperator() =>
+          checkTypeError(argTypes.size == 1, "Expect exactly one argument to 'old'", opapp.pos, c.filename)
+          checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "First argument to past operator must be an identifier", opapp.pos, c.filename)
+          checkTypeError(argTypes(0).isBool, "Arguments to past operators must be of type Boolean", opapp.pos, c.filename)
           argTypes(0)
       }
     }

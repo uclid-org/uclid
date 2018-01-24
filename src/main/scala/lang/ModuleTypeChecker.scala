@@ -46,7 +46,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       st match {
         case AssertStmt(e, id) =>
           val eType = exprTypeChecker.typeOf(e, context)
-          if (!(eType.isBool || eType.isTemporal)) {
+          if (!eType.isBool) {
             in + ModuleError("Assertion expression must be of Boolean or Temporal type", st.position)
           } else {
             in

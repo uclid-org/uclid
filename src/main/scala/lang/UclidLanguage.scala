@@ -167,6 +167,7 @@ case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) {
 // Boolean operators.
 sealed abstract class BooleanOperator extends Operator {
   override def fixity = Operator.INFIX
+  def isQuantified = false
 }
 case class ConjunctionOp() extends BooleanOperator { override def toString = "&&" }
 case class DisjunctionOp() extends BooleanOperator { override def toString = "||" }
@@ -179,6 +180,7 @@ case class NegationOp() extends BooleanOperator {
 // Quantifiers
 sealed abstract class QuantifiedBooleanOperator extends BooleanOperator {
   override def fixity = Operator.PREFIX
+  override def isQuantified = true
   def variables : List[(Identifier, Type)]
 }
 case class ForallOp(vs : List[(Identifier, Type)]) extends QuantifiedBooleanOperator {
@@ -201,25 +203,31 @@ sealed abstract class TemporalOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def isTemporal = true
 }
-case class GloballyTemporalOp() extends TemporalOperator { override def toString = "globally" }
-case class NextTemporalOp() extends TemporalOperator { override def toString = "nxt" }
-case class UntilTemporalOp() extends TemporalOperator { override def toString = "until" }
-case class FinallyTemporalOp() extends TemporalOperator { override def toString = "finally" }
-case class ReleaseTemporalOp() extends TemporalOperator { override def toString = "release" }
+case class GloballyTemporalOp() extends TemporalOperator { override def toString = "G" }
+case class NextTemporalOp() extends TemporalOperator { override def toString = "X" }
+case class UntilTemporalOp() extends TemporalOperator { override def toString = "U" }
+case class FinallyTemporalOp() extends TemporalOperator { override def toString = "F" }
+case class ReleaseTemporalOp() extends TemporalOperator { override def toString = "R" }
 // For internal use only:
-case class WUntilTemporalOp() extends TemporalOperator { override def toString = "wuntil" }
+case class WUntilTemporalOp() extends TemporalOperator { override def toString = "W" }
 
 // "Old" operator.
 case class OldOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def toString = "old"
 }
-
+case class HistoryOperator() extends Operator {
+  override def fixity = Operator.PREFIX
+  override def toString = "history"
+}
+case class PastOperator() extends Operator {
+  override def fixity = Operator.PREFIX
+  override def toString = "past"
+}
 abstract class BitVectorSlice extends ASTNode {
   def width : Option[Int]
   def isConstantWidth : Boolean
 }
-
 case class ConstBitVectorSlice(hi: Int, lo: Int) extends BitVectorSlice  {
   Utils.assert(hi >= lo && hi >= 0 && lo >= 0, "Invalid bitvector slice: [" + hi.toString + ":" + lo.toString + "].")
   override def width = Some(hi - lo + 1)
@@ -261,6 +269,7 @@ sealed abstract class Expr extends ASTNode {
   def isConstant = false
   def isTemporal = false
 }
+sealed abstract class PossiblyTemporalExpr extends Expr
 
 case class Identifier(name : String) extends Expr {
   override def toString = name.toString
@@ -309,10 +318,11 @@ case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
 
 case class Tuple(values: List[Expr]) extends Expr {
   override def toString = "{" + Utils.join(values.map(_.toString), ", ") + "}"
-  override def isTemporal = values.exists(v => v.isTemporal)
+  // FIXME: We should not have temporal values inside of a tuple.
+  override def isTemporal = false
 }
 //for symbols interpreted by underlying Theory solvers
-case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr {
+case class OperatorApplication(op: Operator, operands: List[Expr]) extends PossiblyTemporalExpr {
   override def isConstant = operands.forall(_.isConstant)
   override def toString = {
     op match {
@@ -404,7 +414,6 @@ sealed abstract class Type extends PositionedNode {
   def isNumeric = false
   def isInt = false
   def isBitVector = false
-  def isTemporal = false
   def isPrimitive = false
   def isProduct = false
   def isRecord = false
@@ -413,6 +422,7 @@ sealed abstract class Type extends PositionedNode {
   def isArray = false
   def isUninterpreted = false
   def matches (t2 : Type) = (this == t2)
+  def defaultValue : Option[Expr] = None
 }
 
 /**
@@ -446,10 +456,12 @@ case class UninterpretedType(name: Identifier) extends Type {
 case class BoolType() extends PrimitiveType {
   override def toString = "bool"
   override def isBool = true
+  override def defaultValue = Some(BoolLit(false))
 }
 case class IntType() extends NumericType {
   override def toString = "int"
   override def isInt = true
+  override def defaultValue = Some(IntLit(0))
 }
 case class BitVectorType(width: Int) extends NumericType {
   override def toString = "bv" + width.toString
@@ -457,10 +469,17 @@ case class BitVectorType(width: Int) extends NumericType {
   def isValidSlice(slice : ConstBitVectorSlice) : Boolean = {
     return (slice.lo >= 0 && slice.hi < width)
   }
+  override def defaultValue = Some(BitVectorLit(0, width))
 }
 case class EnumType(ids: List[Identifier]) extends Type {
   override def toString = "enum {" +
     ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i} + "}"
+  override def defaultValue = {
+    ids match {
+      case hd :: tl => Some(hd)
+      case nil => None
+    }
+  }
 }
 abstract sealed class ProductType extends Type {
   override def isProduct = true
@@ -499,6 +518,14 @@ case class TupleType(fieldTypes: List[Type]) extends ProductType {
   override def fields = fieldTypes.zipWithIndex.map(p  => (Identifier("_" + (p._2+1).toString), p._1))
   override def toString = "{" + Utils.join(fieldTypes.map(_.toString), ", ") + "}"
   override def isTuple = true
+  override def defaultValue = {
+    val defaults = fieldTypes.map(_.defaultValue).flatten
+    if (defaults.size == fieldTypes.size) {
+      Some(Tuple(defaults))
+    } else {
+      None
+    }
+  }
 }
 
 case class RecordType(members : List[(Identifier,Type)]) extends ProductType {

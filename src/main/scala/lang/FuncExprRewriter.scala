@@ -34,12 +34,16 @@
 package uclid
 package lang
 
-class OldExprRewriterPass extends RewritePass {
+class FuncExprRewriterPass extends RewritePass {
   override def rewriteFuncApp(fapp : FuncApplication, ctx : Scope) : Option[Expr] = { 
     val exprP = fapp.e match {
       case Identifier(fnName) =>
         if (fnName == "old") {
           OperatorApplication(OldOperator(), fapp.args)
+        } else if (fnName == "history") {
+          OperatorApplication(HistoryOperator(), fapp.args)
+        } else if (fnName == "past") {
+          OperatorApplication(PastOperator(), fapp.args)
         } else { fapp }
       case _ => fapp
     }
@@ -47,4 +51,4 @@ class OldExprRewriterPass extends RewritePass {
   }
 }
 
-class OldExprRewriter extends ASTRewriter("OldExprRewriter", new OldExprRewriterPass())
+class FuncExprRewriter extends ASTRewriter("OldExprRewriter", new FuncExprRewriterPass())

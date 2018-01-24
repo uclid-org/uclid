@@ -38,11 +38,11 @@ class ModuleCanonicalizerPass extends RewritePass {
   override def rewriteModule(moduleIn : Module, ctx : Scope) : Option[Module] = {
     val initP = moduleIn.init match {
       case None => Some(InitDecl(List.empty))
-      case Some(init) => Some(init)
+      case Some(init) => None
     }
     val nextP = moduleIn.next match {
       case None => Some(NextDecl(List.empty))
-      case Some(next) => Some(next)
+      case Some(next) => None
     }
     val newDecls = moduleIn.decls ++ List(initP, nextP).flatten
     // FIXME: sort the declarations in the module.
