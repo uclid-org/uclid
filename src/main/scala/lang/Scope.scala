@@ -94,11 +94,22 @@ object Scope {
     }
   }
   /** Create an empty context. */
-  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None, false)
+  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None, ComputeContext, false)
 }
 
+sealed abstract class ExpressionContext
+case object ComputeContext extends ExpressionContext
+case object RequiresContext extends ExpressionContext
+case object EnsuresContext extends ExpressionContext
+case object AssertContext extends ExpressionContext
+case object AssumeContext extends ExpressionContext
+case object SpecContext extends ExpressionContext
+case object AxiomContext extends ExpressionContext
 
-case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[GenericProofCommand], inLTLSpec : Boolean) {
+case class Scope (
+    map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[GenericProofCommand], 
+    inVerificationContext : ExpressionContext, inLTLSpec : Boolean) 
+{
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: Identifier) = map.contains(name)
   /** Check if a variable is readonly. */
@@ -139,23 +150,27 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
 
   /** Return a new context with the inLTLSpec flag set. */
   def withLTLSpec : Scope = {
-    Scope(map, module, procedure, cmd, true)
+    Scope(map, module, procedure, cmd, inVerificationContext, true)
   }
   /** Return new context with the inLTLSpec flag reset. */
   def withoutLTLSpec : Scope = {
-    Scope(map, module, procedure, cmd, false)
+    Scope(map, module, procedure, cmd, inVerificationContext, false)
+  }
+  /** Return a new context with the inVerificationContext set. */
+  def withVerificationContext (vctx : ExpressionContext) : Scope = {
+    Scope(map, module, procedure, cmd, vctx, inLTLSpec)
   }
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : Scope = {
-    Scope(map + (expr.id -> expr), module, procedure, cmd, inLTLSpec)
+    Scope(map + (expr.id -> expr), module, procedure, cmd, inVerificationContext, inLTLSpec)
   }
   def +(typ : Type) : Scope = {
-    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, inLTLSpec)
+    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, inVerificationContext, inLTLSpec)
   }
 
   /** Add a reference to this module (don't expand the module's declarations). */
   def +&(m : Module) : Scope = {
-    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, inLTLSpec)
+    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, inVerificationContext, inLTLSpec)
   }
 
   /** Return a new context with the declarations in this module added to it. */
@@ -205,7 +220,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
         case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
-    Scope(m2, Some(m), None, None, false)
+    Scope(m2, Some(m), None, None, inVerificationContext, false)
   }
   /** Return a new context with the declarations in this procedure added to it. */
   def +(proc: ProcedureDecl) : Scope = {
@@ -219,14 +234,14 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
     val map3 = proc.decls.foldLeft(map2){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureLocalVar(arg.id, arg.typ))
     }
-    return Scope(map3, module, Some(proc), None, false)
+    return Scope(map3, module, Some(proc), None, inVerificationContext, false)
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
   def +(lambda: Lambda) : Scope = {
     val newMap = lambda.ids.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }
-    return Scope(newMap, module, procedure, cmd, inLTLSpec)
+    return Scope(newMap, module, procedure, cmd, inVerificationContext, inLTLSpec)
   }
   /** Return a new context with quantifier variables added. */
   def +(opapp : OperatorApplication) : Scope = {
@@ -238,11 +253,11 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
       case ForallOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd, inLTLSpec)
+          module, procedure, cmd, inVerificationContext, inLTLSpec)
       case ExistsOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd, inLTLSpec)
+          module, procedure, cmd, inVerificationContext, inLTLSpec)
       case _ => this
     }
   }
@@ -253,7 +268,7 @@ case class Scope (map: Scope.IdentifierMap, module : Option[Module], procedure :
       case Some(id) => map + (id -> Scope.VerifResultVar(id, command))
       case None => map
     }
-    Scope(mapP, module, procedure, Some(command), inLTLSpec)
+    Scope(mapP, module, procedure, Some(command), inVerificationContext, inLTLSpec)
   }
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {

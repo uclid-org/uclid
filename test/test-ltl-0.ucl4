@@ -29,6 +29,8 @@ module main {
       }
     }
     assert (inited && history(valid, 1)) ==> (a_past == history(a, 1));
+    assert (inited && old(valid)) ==> (a_past == old(a));
+    assert (old(valid) == history(valid, 1));
     if (valid) {
       a_past = a;
       b_past = b;
@@ -41,7 +43,7 @@ module main {
   
   control {
     print_module;
-    f = unroll (2);
+    f = unroll (3);
     check;
     print_results;
     f->print_cex(inited, a_past, a, valid, history(a_past, 1));
