@@ -1,4 +1,4 @@
-https://travis-ci.org/uclid-org/uclid.svg?branch=master
+<a href="https://travis-ci.org/uclid-org/uclid"><img src="https://travis-ci.org/uclid-org/uclid.svg?branch=master"></a>
 
 # Installing Uclid
 
