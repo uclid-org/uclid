@@ -1,5 +1,6 @@
 language: scala
 scala:
     - 2.12.0
+script: sbt ++$TRAVIS_SCALA_VERSION -Djava.library.path lib/com.microsoft.z3.jar test
 
 
