@@ -229,7 +229,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
-  def createTseitinExpr(specName : Identifier, expr : Expr, nameProvider : ContextualNameProvider) : (Identifier, List[(Identifier, Expr)]) = {
+  def createTseitinExpr(specName : Identifier, expr : Expr, nameProvider : ContextualNameProvider) : (Identifier, List[(Identifier, Expr)], List[(Identifier, Expr)], List[Identifier], List[Identifier]) = {
     val isExprTemporal = expr match {
       case tExpr : PossiblyTemporalExpr => tExpr.isTemporal
       case ntExpr : Expr => false
@@ -237,18 +237,61 @@ class LTLPropertyRewriterPass extends RewritePass {
     if (!isExprTemporal) {
       val newVar = nameProvider(specName, "z")
       val newImpl = (newVar, expr)
-      (newVar, List(newImpl))
+      // FIXME: Revisit this for expressions that don't involve any temporal operators.
+      (newVar, List(newImpl), List.empty, List.empty, List.empty)
     } else {
-      // Recurse on operator applications.
-      def createTseitinExprOpapp(opapp : OperatorApplication) : (Identifier, List[(Identifier, Expr)]) = {
+      // Recurse on operator applications and create "Tseitin" variables for the inner AST nodes.
+      def createTseitinExprOpapp(opapp : OperatorApplication) : (Identifier, List[(Identifier, Expr)], List[(Identifier, Expr)], List[Identifier], List[Identifier]) = {
         val argResults = opapp.operands.map(arg => createTseitinExpr(specName, arg, nameProvider))
-        val argResultIds = argResults.map(_._1)
+        val args = argResults.map(_._1)
         val argImpls = argResults.flatMap(a => a._2)
+        val argNexts = argResults.flatMap(a => a._3)
+        val argFaileds = argResults.flatMap(a => a._4)
+        val argAccepts = argResults.flatMap(a => a._5)
         
-        val newVar = nameProvider(specName, "z")
-        val innerExpr = OperatorApplication(opapp.op, argResultIds)
-        val newImpl = (newVar, innerExpr)
-        (newVar, newImpl :: argImpls)
+        val z = nameProvider(specName, "z")
+        val innerExpr = OperatorApplication(opapp.op, args)
+        val zImpl = (z, innerExpr)
+        if (opapp.op.isInstanceOf[TemporalOperator]) {
+          val tOp = opapp.op.asInstanceOf[TemporalOperator]
+          def Y(x : Expr) = OperatorApplication(HistoryOperator(), List(x, IntLit(1)))
+          def not(x : Expr) = OperatorApplication(NegationOp(), List(x))
+          def and(x : Expr, y : Expr) = OperatorApplication(ConjunctionOp(), List(x, y))
+          def or(x : Expr, y : Expr) = OperatorApplication(DisjunctionOp(), List(x, y))
+          
+          tOp match {
+            case NextTemporalOp() =>
+              // pending = z
+              val pendingVar = nameProvider(specName, "pending")
+              val pendingNext = (pendingVar, z)
+              // failed = Ypending /\ !args(0)
+              val failedVar = nameProvider(specName, "failed")
+              val failedNext = (failedVar, and(Y(pendingVar), not(args(0))))
+              (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts)
+            case GloballyTemporalOp() =>
+              // pending = Ypending) \/ z
+              val pendingVar = nameProvider(specName, "pending")
+              val pendingNext = (pendingVar, or(Y(pendingVar), z))
+              // failed = pending /\ !args(0)
+              val failedVar = nameProvider(specName, "failed")
+              val failedNext = (failedVar, and(pendingVar, not(args(0))))
+              (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts)
+            case FinallyTemporalOp() =>
+              // pending = (z \/ Ypending) /\ ~args(0)
+              val pendingVar = nameProvider(specName, "pending")
+              val pendingExpr = and(or(z, Y(pendingVar)), not(args(0)))
+              val pendingNext = (pendingVar, pendingExpr)
+              // accept = ~pending
+              val acceptVar = nameProvider(specName, "accept")
+              val acceptNext = (acceptVar, not(pendingVar))
+              (z, zImpl :: argImpls, pendingNext :: acceptNext :: argNexts, argFaileds, acceptVar :: argAccepts)
+            case _ =>
+              // FIXME
+              throw new Utils.UnimplementedException("Need more cases here.")
+          }
+        } else {
+          (z, zImpl :: argImpls, argNexts, argFaileds, argAccepts)
+        }
       }
       // Recurse on a temporal operator.
       val tExpr = expr.asInstanceOf[PossiblyTemporalExpr]
@@ -276,9 +319,16 @@ class LTLPropertyRewriterPass extends RewritePass {
     println("NNF: " + negExpr.toString)
     val transformedExpr = createTseitinExpr(spec.id, negExpr, nameProvider)
     println ("root: " + transformedExpr._1.toString)
+    println ("implications:")
     transformedExpr._2.foreach {
       (r) => println("%s ==> %s".format(r._1.toString, r._2.toString)) 
     }
+    println("next assignments:")
+    transformedExpr._3.foreach {
+      (r) => println("%s = %s".format(r._1.toString, r._2.toString))
+    }
+    println("pendings: " + Utils.join(transformedExpr._4.map(_.toString), ", "))
+    println("accepts: " + Utils.join(transformedExpr._5.map(_.toString), ", "))
     spec
   }
 

@@ -38,15 +38,15 @@ module main {
     ready_next = valid;
   }
   
-  // property sum_property[LTL] : G(valid ==> X(ready));
+  property sum_property[LTL] : G(valid ==> X(ready));
   // property ready_property : (inited && history(valid, 2)) ==> history(ready, 1);
   
   control {
     print_module;
-    f = unroll (3);
-    check;
-    print_results;
-    f->print_cex(inited, a_past, a, valid, history(a_past, 1));
+    // f = unroll (3);
+    // check;
+    // print_results;
+    // f->print_cex(inited, a_past, a, valid /*, history(a_past, 1)*/);
     // f->print_smt2;
   }
 }
