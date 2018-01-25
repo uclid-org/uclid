@@ -169,8 +169,6 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new CaseEliminator())
     passManager.addPass(new LTLPropertyRewriter())
-    passManager.addPass(new IdentifyHistoryRewrites())
-    passManager.addPass(new RewriteHistoryOperators())
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
     passManager.addPass(new FindFreshLiterals())

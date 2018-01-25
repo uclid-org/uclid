@@ -127,6 +127,8 @@ object Converter {
          op match {
            case lang.OldOperator() =>
              toSMT(args(0), scope, 1)
+           case lang.HistoryOperator() =>
+             toSMT(args(0), scope, args(1).asInstanceOf[lang.IntLit].value.toInt)
            case _ =>
              val scopeWOpApp = scope + opapp
              val argsInSMT = toSMTs(args, scopeWOpApp, past)
@@ -166,26 +168,7 @@ object Converter {
     _exprToSMT(expr, scope, 0, idToSMT)
   }
 
-  def exprToSMT(expr : lang.Expr, thisFrame : SymbolTable, pastFrame : Option[SymbolTable], scope : lang.Scope) : smt.Expr = {
-    def idToSMT(id : lang.Identifier, scope : lang.Scope, past : Int) : smt.Expr = {
-      val typOpt = scope.typeOf(id)
-      if (typOpt.isEmpty) {
-        throw new Utils.UnknownIdentifierException(id)
-      }
-      if (scope.isQuantifierVar(id)) { Symbol(id.name, typeToSMT(typOpt.get)) } 
-      else {
-        past match {
-          case 0 => thisFrame(id)
-          case 1 =>
-            pastFrame match {
-              case Some(pFrame) => pFrame(id)
-              case None => throw new Utils.RuntimeError("Unexpected 'old' operator.")
-            }
-          case _ =>
-            throw new Utils.RuntimeError("Invalid past value: " + past.toString)
-        }
-      }
-    }
+  def exprToSMT(expr : lang.Expr, idToSMT : (lang.Identifier, lang.Scope, Int) => smt.Expr, scope : lang.Scope) : smt.Expr = {
     _exprToSMT(expr, scope, 0, idToSMT)
   }
 
