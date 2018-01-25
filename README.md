@@ -1,3 +1,5 @@
+https://travis-ci.org/uclid-org/uclid.svg?branch=master
+
 # Installing Uclid
 
 Ensure you have sbt v1.0 or greater installed. Install instructions 
