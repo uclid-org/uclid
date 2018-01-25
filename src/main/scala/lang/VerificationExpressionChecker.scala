@@ -26,27 +26,39 @@
  * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
  *
  * Author: Pramod Subramanyan
- *
- * Rewrite old(x) and history(x, i) into the old and history operators.
+
+ * Ensure that old(x) and history(x) are used only in verification expressions
+ * (assertions, invariants etc.).
  *
  */
-
 package uclid
 package lang
 
-class FuncExprRewriterPass extends RewritePass {
-  override def rewriteFuncApp(fapp : FuncApplication, ctx : Scope) : Option[Expr] = { 
-    val exprP = fapp.e match {
-      case Identifier(fnName) =>
-        if (fnName == "old") {
-          OperatorApplication(OldOperator(), fapp.args)
-        } else if (fnName == "history") {
-          OperatorApplication(HistoryOperator(), fapp.args)
-        } else { fapp }
-      case _ => fapp
+class VerificationExpressionPass extends ReadOnlyPass[List[ModuleError]]
+{
+  type T = List[ModuleError]
+  override def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down || context.inVerificationContext != ComputeContext) {
+      in
+    } else {
+      opapp.op match {
+        case OldOperator() | HistoryOperator() =>
+          ModuleError("Operator can only be used in a verification expression", opapp.position) :: in
+        case _ =>
+          in
+      }
     }
-    Some(exprP)
+    
   }
 }
 
-class FuncExprRewriter extends ASTRewriter("OldExprRewriter", new FuncExprRewriterPass())
+class VerificationExpressionChecker extends ASTAnalyzer("VerificationExpressionChecker", new VerificationExpressionPass())  {
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val out = visitModule(module, List.empty[ModuleError], context)
+    if (out.size > 0) {
+      val errors = out.map((me) => (me.msg, me.position)).toList
+      throw new Utils.ParserErrorList(errors)
+    }
+    return Some(module)
+  }
+}

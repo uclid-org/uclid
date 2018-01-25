@@ -220,10 +220,6 @@ case class HistoryOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def toString = "history"
 }
-case class PastOperator() extends Operator {
-  override def fixity = Operator.PREFIX
-  override def toString = "past"
-}
 abstract class BitVectorSlice extends ASTNode {
   def width : Option[Int]
   def isConstantWidth : Boolean

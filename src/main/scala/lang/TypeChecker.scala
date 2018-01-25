@@ -457,11 +457,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(historyIndex > 0, "History index must be non-negative", opapp.pos, c.filename)
           checkTypeError(historyIndex.toInt < 65536, "History index is too large", opapp.pos, c.filename)
           argTypes(0)
-        case PastOperator() =>
-          checkTypeError(argTypes.size == 1, "Expect exactly one argument to 'old'", opapp.pos, c.filename)
-          checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "First argument to past operator must be an identifier", opapp.pos, c.filename)
-          checkTypeError(argTypes(0).isBool, "Arguments to past operators must be of type Boolean", opapp.pos, c.filename)
-          argTypes(0)
       }
     }
 
