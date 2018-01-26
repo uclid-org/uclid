@@ -386,7 +386,12 @@ case class UnknownDecorator(value: String) extends ExprDecorator {
 case object LTLExprDecorator extends ExprDecorator {
   override def toString = "LTL"
 }
-
+case object LTLSafetyFragmentDecorator extends ExprDecorator {
+  override def toString = "LTLSafetyFragment"
+}
+case object LTLLivenessFragmentDecorator extends ExprDecorator {
+  override def toString = "LTLLivenessFragment"
+}
 object ExprDecorator {
   /** Factory constructor. */
   def parse(e : Expr) : ExprDecorator = {

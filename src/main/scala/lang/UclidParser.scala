@@ -239,20 +239,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val BitVector: PackratParser[lang.BitVectorLit] =
       positioned { bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) } }
     lazy val Number : PackratParser[lang.NumericLit] = positioned (Integer | BitVector)
-    /*
-    lazy val TemporalExpr0: PackratParser[Expr] =
-        positioned { TemporalExpr1 ~ TemporalOpUntil  ~ TemporalExpr0 ^^ ast_binary | TemporalExpr1 }
-    lazy val TemporalExpr1: PackratParser[Expr] =
-      positioned { TemporalExpr2 ~ TemporalOpWUntil  ~ TemporalExpr1 ^^ ast_binary | TemporalExpr2 }
-    lazy val TemporalExpr2: PackratParser[Expr] =
-      positioned { TemporalExpr3 ~ TemporalOpRelease  ~ TemporalExpr2 ^^ ast_binary | TemporalExpr3 }
-    lazy val TemporalExpr3: PackratParser[Expr] =
-      positioned { TemporalOpFinally ~> TemporalExpr4 ^^ { case expr => OperatorApplication(FinallyTemporalOp(), List(expr)) } | TemporalExpr4 }
-    lazy val TemporalExpr4: PackratParser[Expr] =
-      positioned { TemporalOpGlobally ~> TemporalExpr5 ^^ { case expr => OperatorApplication(GloballyTemporalOp(), List(expr)) } | TemporalExpr5 }
-    lazy val TemporalExpr5: PackratParser[Expr] =
-      positioned { TemporalOpNext ~> E0 ^^ { case expr => OperatorApplication(NextTemporalOp(), List(expr)) } | E0 }
-    */
     lazy val E1: PackratParser[Expr] =
       "(" ~ KwForall ~> IdTypeList ~ ("::" ~> E1) <~ ")" ^^ { case ids ~ expr => OperatorApplication(ForallOp(ids), List(expr)) } |
       "(" ~ KwExists ~> IdTypeList ~ ("::" ~> E1) <~ ")" ^^ { case ids ~ expr => OperatorApplication(ExistsOp(ids), List(expr)) } |

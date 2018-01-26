@@ -229,7 +229,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
-  def createTseitinExpr(specName : Identifier, expr : Expr, nameProvider : ContextualNameProvider) : (Identifier, List[(Identifier, Expr)], List[(Identifier, Expr)], List[Identifier], List[Identifier]) = {
+  def createTseitinExpr(specName : Identifier, expr : Expr, nameProvider : ContextualNameProvider) : 
+    (Identifier, List[(Identifier, Expr)], List[(Identifier, Expr)], List[Identifier], List[Identifier], List[Identifier]) = {
     val isExprTemporal = expr match {
       case tExpr : PossiblyTemporalExpr => tExpr.isTemporal
       case ntExpr : Expr => false
@@ -238,16 +239,17 @@ class LTLPropertyRewriterPass extends RewritePass {
       val newVar = nameProvider(specName, "z")
       val newImpl = (newVar, expr)
       // FIXME: Revisit this for expressions that don't involve any temporal operators.
-      (newVar, List(newImpl), List.empty, List.empty, List.empty)
+      (newVar, List(newImpl), List.empty, List.empty, List.empty, List.empty)
     } else {
       // Recurse on operator applications and create "Tseitin" variables for the inner AST nodes.
-      def createTseitinExprOpapp(opapp : OperatorApplication) : (Identifier, List[(Identifier, Expr)], List[(Identifier, Expr)], List[Identifier], List[Identifier]) = {
+      def createTseitinExprOpapp(opapp : OperatorApplication) : (Identifier, List[(Identifier, Expr)], List[(Identifier, Expr)], List[Identifier], List[Identifier], List[Identifier]) = {
         val argResults = opapp.operands.map(arg => createTseitinExpr(specName, arg, nameProvider))
         val args = argResults.map(_._1)
         val argImpls = argResults.flatMap(a => a._2)
         val argNexts = argResults.flatMap(a => a._3)
         val argFaileds = argResults.flatMap(a => a._4)
         val argAccepts = argResults.flatMap(a => a._5)
+        val argPendings = argResults.flatMap(a => a._6)
         
         val z = nameProvider(specName, "z")
         val innerExpr = OperatorApplication(opapp.op, args)
@@ -267,7 +269,7 @@ class LTLPropertyRewriterPass extends RewritePass {
               // failed = Ypending /\ !args(0)
               val failedVar = nameProvider(specName, "failed")
               val failedNext = (failedVar, and(Y(pendingVar), not(args(0))))
-              (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts)
+              (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
             case GloballyTemporalOp() =>
               // pending = Ypending) \/ z
               val pendingVar = nameProvider(specName, "pending")
@@ -275,7 +277,7 @@ class LTLPropertyRewriterPass extends RewritePass {
               // failed = pending /\ !args(0)
               val failedVar = nameProvider(specName, "failed")
               val failedNext = (failedVar, and(pendingVar, not(args(0))))
-              (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts)
+              (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
             case FinallyTemporalOp() =>
               // pending = (z \/ Ypending) /\ ~args(0)
               val pendingVar = nameProvider(specName, "pending")
@@ -284,13 +286,13 @@ class LTLPropertyRewriterPass extends RewritePass {
               // accept = ~pending
               val acceptVar = nameProvider(specName, "accept")
               val acceptNext = (acceptVar, not(pendingVar))
-              (z, zImpl :: argImpls, pendingNext :: acceptNext :: argNexts, argFaileds, acceptVar :: argAccepts)
+              (z, zImpl :: argImpls, pendingNext :: acceptNext :: argNexts, argFaileds, acceptVar :: argAccepts, pendingVar :: argPendings)
             case _ =>
               // FIXME
               throw new Utils.UnimplementedException("Need more cases here.")
           }
         } else {
-          (z, zImpl :: argImpls, argNexts, argFaileds, argAccepts)
+          (z, zImpl :: argImpls, argNexts, argFaileds, argAccepts, argPendings)
         }
       }
       // Recurse on a temporal operator.
@@ -313,114 +315,73 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
-  def rewriteLTLSpec(spec: SpecDecl, context: Scope, nameProvider : ContextualNameProvider): SpecDecl = {
-    println("original: " + spec.expr.toString)
-    val negExpr = convertToNNF(negate(spec.expr))
-    println("NNF: " + negExpr.toString)
-    val transformedExpr = createTseitinExpr(spec.id, negExpr, nameProvider)
-    println ("root: " + transformedExpr._1.toString)
-    println ("implications:")
-    transformedExpr._2.foreach {
-      (r) => println("%s ==> %s".format(r._1.toString, r._2.toString)) 
-    }
-    println("next assignments:")
-    transformedExpr._3.foreach {
-      (r) => println("%s = %s".format(r._1.toString, r._2.toString))
-    }
-    println("pendings: " + Utils.join(transformedExpr._4.map(_.toString), ", "))
-    println("accepts: " + Utils.join(transformedExpr._5.map(_.toString), ", "))
-    spec
-  }
-
-  override def rewriteSpec(spec: SpecDecl, context: Scope): Option[SpecDecl] = {
-    if (spec.params.exists(p => p == LTLExprDecorator)) {
-      rewriteLTLSpec(spec, context, new ContextualNameProvider(context, "ltl"))
-      Some(spec)
-      //val ret = replace(spec.expr, spec, context).asInstanceOf[Identifier]
-      //conjCounter = 0
-      //val fail = Identifier(spec.id.name concat "_failed")
-      //specMap +=  (spec -> (circuits, ret, fail))
-      //Some(SpecDecl(spec.id, OperatorApplication(new NegationOp, List(fail)), spec.params))
-    } else {
-      Some(spec)
-    }
-  }
-
   override def rewriteModule(module: Module, ctx: Scope): Option[Module] = {
-    Some(module)
-    /*
-    var allDecls = module.decls
-    var newNext = module.next.get.body
-    for ((spec: SpecDecl, (circuits: List[(Identifier, Expr)], start: Identifier, failed: Identifier)) <- specMap) {
-      allDecls = StateVarsDecl(List(failed), new BoolType) :: allDecls
-      var failExpr = OperatorApplication(new NegationOp, List(BoolLit(false)))
-      for ((z: Identifier, expr: Expr) <- circuits) {
-        // how do we initialize the values of these vars?
-        allDecls = StateVarsDecl(List(z), new BoolType) :: allDecls
-        expr match {
-          case OperatorApplication(op: GloballyTemporalOp, operands) =>
-            var pending = Identifier(spec.id.name concat z.name concat "_pending")
-            allDecls = StateVarsDecl(List(pending), new BoolType) :: allDecls
-            // Update pending: pending = (Y pending) ∨ z
-            var newPending = OperatorApplication(new DisjunctionOp, List(pending, z))
-            newNext = AssignStmt(List(LhsId(pending)), List(newPending)) :: newNext
-            // Update failed: failed = pending ∧ ¬a
-            var newFailed = OperatorApplication(new ConjunctionOp, List(pending, OperatorApplication(new NegationOp, operands)))
-            failExpr = OperatorApplication(new ConjunctionOp, List(OperatorApplication(new NegationOp, List(newFailed)), failExpr))
-            newNext = AssignStmt(List(LhsId(failed)), List(newFailed)) :: newNext
-          case OperatorApplication(op: NextTemporalOp, operands) =>
-            var y_z = Identifier("y_" concat z.name)
-            allDecls = StateVarsDecl(List(y_z), new BoolType) :: allDecls
-            var pending = Identifier(spec.id.name concat z.name concat "_pending")
-            allDecls = StateVarsDecl(List(pending), new BoolType) :: allDecls
-            // Update pending: pending = z
-            newNext = AssignStmt(List(LhsId(pending)), List(z)) :: newNext
-            // Update failed: failed = Yz ∧ ¬a
-            var newFailed = OperatorApplication(new ConjunctionOp, List(y_z, OperatorApplication(new NegationOp, operands)))
-            failExpr = OperatorApplication(new ConjunctionOp, List(OperatorApplication(new NegationOp, List(newFailed)), failExpr))
-            newNext = AssignStmt(List(LhsId(failed)), List(newFailed)) :: newNext
-            // Update y_z
-            newNext = AssignStmt(List(LhsId(y_z)), List(z)) :: newNext
-          case OperatorApplication(op: UntilTemporalOp, operands) =>
-            // this is a liveness property
-          case OperatorApplication(op: FinallyTemporalOp, operands) =>
-            // this is a liveness property
-          case OperatorApplication(op: ReleaseTemporalOp, operands) =>
-            // we use the following identity from wikipedia: a R b <==> b W (a && b)
-            var pending = Identifier(spec.id.name concat z.name concat "_pending")
-            allDecls = StateVarsDecl(List(pending), new BoolType) :: allDecls
-            // Update pending: pending = (z ∨ (Y pending )) ∧ ¬(b ∧ a)
-            var inner1 = OperatorApplication(new DisjunctionOp, List(z, pending))
-            var inner2 = OperatorApplication(new NegationOp, List(OperatorApplication(new ConjunctionOp, List(operands.head, operands.last))))
-            var newPending = OperatorApplication(new ConjunctionOp, List(inner1, inner2))
-            newNext = AssignStmt(List(LhsId(pending)), List(z)) :: newNext
-            // Update failed: failed = failed ∧ ¬b
-            var newFailed = OperatorApplication(new ConjunctionOp, List(pending, OperatorApplication(new NegationOp, List(operands.last))))
-            failExpr = OperatorApplication(new ConjunctionOp, List(OperatorApplication(new NegationOp, List(newFailed)), failExpr))
-            newNext = AssignStmt(List(LhsId(failed)), List(newFailed)) :: newNext
-          case OperatorApplication(op: WUntilTemporalOp, operands) =>
-            var pending = Identifier(spec.id.name concat z.name concat "_pending")
-            allDecls = StateVarsDecl(List(pending), new BoolType) :: allDecls
-            // Update pending: pending = (z ∨ (Y pending )) ∧ ¬b
-            var inner = OperatorApplication(new DisjunctionOp, List(z, pending))
-            var newPending = OperatorApplication(new ConjunctionOp, List(inner, OperatorApplication(new NegationOp, List(operands.last))))
-            newNext = AssignStmt(List(LhsId(pending)), List(z)) :: newNext
-            // Update failed: failed = failed ∧ ¬a
-            var newFailed = OperatorApplication(new ConjunctionOp, List(pending, OperatorApplication(new NegationOp, List(operands.head))))
-            failExpr = OperatorApplication(new ConjunctionOp, List(OperatorApplication(new NegationOp, List(newFailed)), failExpr))
-            newNext = AssignStmt(List(LhsId(failed)), List(newFailed)) :: newNext
-          case _ =>
-            // do we want to append instead of prepend?
-            newNext = AssumeStmt(OperatorApplication(new ImplicationOp, List(z, expr)), None) :: newNext
-        }
+    val moduleSpecs = module.decls.collect{ case spec : SpecDecl => spec }
+    val ltlSpecs = moduleSpecs.filter(s => s.params.exists(d => d == LTLExprDecorator))
+    if (ltlSpecs.size == 0) {
+      Some(module)
+    } else {
+      val otherSpecs = moduleSpecs.filter(s => !s.params.exists(d => d == LTLExprDecorator))
+      Some(rewriteSpecs(module, ctx, ltlSpecs, otherSpecs)) 
+    }
+  }
+
+  def rewriteSpecs(module : Module, ctx : Scope, ltlSpecs : List[SpecDecl], otherSpecs : List[SpecDecl]) : Module = {
+    val nameProvider = new ContextualNameProvider(ctx, "ltl")
+    val isInit = nameProvider(module.id, "is_init")
+    val rewrites = ltlSpecs.map(s => (createTseitinExpr(s.id, convertToNNF(s.expr), nameProvider)))
+    val specNames = ltlSpecs.map(s => s.id)
+    val monitorVars = rewrites.map(r => (r._4, r._5, r._6))
+
+    def orExpr(a : Expr, b : Expr) : Expr = OperatorApplication(DisjunctionOp(), List(a, b))
+    def andExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ConjunctionOp(), List(a, b))
+    def notExpr(a : Expr) : Expr = OperatorApplication(NegationOp(), List(a))
+    // create the hasFailed and pending variables.
+    val monitorExprs = (specNames zip monitorVars).map { 
+      p => {
+        val failedVars = p._2._1
+        val hasFailedVar = nameProvider(p._1, "has_failed")
+        val hasFailedExpr : Expr = failedVars.foldLeft(hasFailedVar.asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
+
+        val pendingVars = p._2._3
+        val pendingVar = nameProvider(p._1, "PENDING")
+        val pendingExpr : Expr = pendingVars.foldLeft(BoolLit(false).asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
+
+        val acceptVars = p._2._2
+        val safetyExpr = orExpr(pendingVar, hasFailedVar)
+        
+        (p._1, (hasFailedVar, hasFailedExpr), (pendingVar, pendingExpr), acceptVars, safetyExpr)
+        
       }
     }
-    // replace with new Next declaration
-    allDecls = allDecls.filter(d => !d.isInstanceOf[NextDecl])
-    allDecls = NextDecl(newNext) :: allDecls
-    Some(Module(module.id, allDecls, module.cmds))
-    * 
-    */
+    val newInputDecls = InputVarsDecl(rewrites.flatMap(r => r._2).map(_._1), BoolType())
+    val monitorVarsInt = rewrites.flatMap(r => r._3).map(_._1)
+    val monitorVarsExt = isInit :: monitorExprs.map(_._2._1) ++ monitorExprs.map(_._3._1)
+    val varsToInit : List[Identifier] = monitorVarsExt ++ monitorVarsInt
+    val newVarDecls = StateVarsDecl(varsToInit, BoolType())
+    val newInits = List(AssignStmt(varsToInit.map(LhsId(_)), BoolLit(true) :: List.fill(varsToInit.size - 1)(BoolLit(false))))
+
+    def implExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ImplicationOp(), List(a, b))
+    def eqExpr(a : Expr, b : Expr) : Expr = OperatorApplication(EqualityOp(), List(a, b))
+
+    val rootVars = rewrites.map(_._1)
+    val rootAssumes = rootVars.map(r => AssumeStmt(eqExpr(r, isInit), None))
+    val rewriteImpls = rewrites.flatMap(r => r._2)
+    val implicationAssumes = rewriteImpls.map(r => AssumeStmt(implExpr(r._1, r._2), None))
+
+    val assignmentPairs = rewrites.flatMap(r => r._3)
+    val newAssigns = assignmentPairs.map(p => AssignStmt(List(LhsId(p._1)), List(p._2)))
+    val newHFAssigns = monitorExprs.map(p => AssignStmt(List(LhsId(p._2._1)), List(p._2._2)))
+    val newPendingAssigns = monitorExprs.map(p => AssignStmt(List(LhsId(p._3._1)), List(p._3._2)))
+    val newNexts = newAssigns ++ newHFAssigns ++ newPendingAssigns
+
+    val otherDecls = module.decls.filter(p => !p.isInstanceOf[SpecDecl] && !p.isInstanceOf[InitDecl] && !p.isInstanceOf[NextDecl]) ++ otherSpecs
+    val newInitDecl = InitDecl(module.init.get.body ++ newInits)
+    val newNextDecl = NextDecl(module.next.get.body ++ newNexts)
+    val newSafetyProperties = monitorExprs.map(p => SpecDecl(p._1, p._5, List(LTLSafetyFragmentDecorator)))
+    val moduleDecls = otherDecls ++ List(newInputDecls, newVarDecls, newInitDecl, newNextDecl) ++ newSafetyProperties
+
+    Module(module.id, moduleDecls, module.cmds)
   }
 }
 
