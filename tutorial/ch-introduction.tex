@@ -36,13 +36,13 @@ module main {
   }
 }
 \end{lstlisting}
-\label{fig:simple-model}
+\label{ex:fib-model}
 \caption{A \uclid{} model that computes the Fibonacci sequence.}
 \end{uclidlisting}
 
-A simple \uclid{} module that computes the Fibonacci sequence is shown in Figure~\ref{fig:simple-model}.  Let us walk through each line in this model to understand the basics of \uclid{}.
+A simple \uclid{} module that computes the Fibonacci sequence is shown in Example~\ref{ex:fib-model}.  Let us walk through each line in this model to understand the basics of \uclid{}.
 
-The top-level syntactic structure in \uclid{} is a \keywordbf{module}. All modeling, verification and synthesis code in \uclid{} is contained within modules. In Figure~\ref{fig:simple-model}, we have defined one \keyword{module} named \ident{main}. This module starts on line 1 and ends on line 18. The module can be conceptually split into three parts: a system model, a specification and proof script. In the example, these three conceptual parts are also kept separate in the code.\footnote{This is not required by the \uclid{} syntax but is a good design practice.} The following subsections will describe each of these sections of the module. 
+The top-level syntactic structure in \uclid{} is a \keywordbf{module}. All modeling, verification and synthesis code in \uclid{} is contained within modules. In Example~\ref{ex:fib-model}, we have defined one \keyword{module} named \ident{main}. This module starts on line 1 and ends on line 18. The module can be conceptually split into three parts: a system model, a specification and proof script. In the example, these three conceptual parts are also kept separate in the code.\footnote{This is not required by the \uclid{} syntax but is a good design practice.} The following subsections will describe each of these sections of the module. 
 
 \subsubsection{The System Model}
 This part of a \uclid{} module describes the functionality of the transition system that is being modeled: it tells us \emph{what the system does}.
@@ -90,8 +90,9 @@ Next, follow these instructions which are provided for the bash shell running on
 
   \codelike{\$ unzip uclid-0.9.zip}.
 
+\begin{comment}
   This should produce output similar to the following.
-\begin{verbatim}
+\begin{Verbatim}[frame=single]
 Archive:  uclid-0.9.zip
   inflating: uclid-0.9/lib/default.uclid-0.9.jar  
   inflating: uclid-0.9/lib/com.microsoft.z3.jar  
@@ -101,7 +102,8 @@ Archive:  uclid-0.9.zip
   inflating: uclid-0.9/lib/org.scala-lang.scala-reflect-2.12.0.jar  
   inflating: uclid-0.9/bin/uclid     
   inflating: uclid-0.9/bin/uclid.bat  
-\end{verbatim}
+\end{Verbatim}
+\end{comment}
 
 
   \item Add the \codelike{uclid} binary to your path.
@@ -113,7 +115,7 @@ Archive:  uclid-0.9.zip
   \codelike{\$ uclid}
 
   This should produce output similar to the following.
-\begin{verbatim}
+\begin{Verbatim}[frame=single, samepage=true]
 $ uclid
 
     Usage: uclid [options] filename [filenames]
@@ -123,8 +125,25 @@ $ uclid
       -d/--debug : Debug options.
   
 Error : Unable to find main module.
-\end{verbatim}
+\end{Verbatim}
 \end{itemize}
 
 \subsection{Running \uclid{}}
 
+Invoke \uclid{} on a model is easy. Just run the \codelike{uclid} binary and provide the model as a command-line argument.
+
+Example~\ref{ex:fib-model} is part of the \uclid{} distribution in the \codelike{examples/tutorial/} sub-directory. You can run \uclid{} on this model as:
+
+\begin{verbatim}
+$ uclid examples/tutorial/ex1-fib-module.ucl4 
+\end{verbatim}
+
+This should produce the following output.
+\begin{Verbatim}[frame=single, samepage=true]
+4 assertions passed.
+0 assertions failed.
+0 assertions indeterminate.
+\end{Verbatim}
+
+\section{Looking Forward}
+Hopefully, this chapter has provided an flavor of \uclid{}'s features and an introduction of how to use the \uclid{} toolchain. The rest of this tutorial will take a more detailed looked at more of \uclid{}'s features.

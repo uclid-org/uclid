@@ -15,6 +15,7 @@
 \usepackage{listings}
 \usepackage{courier}
 \usepackage{newfloat}
+\usepackage{fancyvrb}
 
 \makeatletter
 \makeatother
@@ -42,7 +43,7 @@
 \newcommand{\proofcmd}[1]{\textcolor{blue}{\texttt{{#1}}}}
 \newcommand{\codelike}[1]{\texttt{#1}}
 
-\DeclareFloatingEnvironment[fileext=frm,name={Example}]{uclidlisting}
+\DeclareFloatingEnvironment[fileext=frm,name={Example},listname={List of \uclid{} Examples}]{uclidlisting}
 
 \lstdefinestyle{uclid}{
     backgroundcolor=\color{backcolour},
@@ -109,9 +110,14 @@
 
 \begin{document}
 \title{Getting Started with \uclid{}}
+\date{January 2018}
 \maketitle
 
+\tableofcontents
+\listofuclidlisting
+
 \input{ch-introduction}
+\appendix
 \input{ch-grammar}
 
 \end{document}
