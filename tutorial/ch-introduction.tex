@@ -7,7 +7,7 @@
 \item Allow syntax-guided synthesis of models and model invariants on these transitions systems.
 \end{enumerate}
 
-This document serves as introduction to \uclid{} modeling language and toolchain.
+This document serves as introduction to the \uclid{} modeling language and toolchain.
 
 \section{Getting Started: A Simple \uclid{} Model}
 
@@ -40,7 +40,7 @@ module main {
 \caption{A \uclid{} model that computes the Fibonacci sequence.}
 \end{uclidlisting}
 
-A simple \uclid{} module that computes the Fibonacci sequence is shown in Example~\ref{ex:fib-model}.  Let us walk through each line in this model to understand the basics of \uclid{}.
+A simple \uclid{} module that computes the Fibonacci sequence is shown in Example~\ref{ex:fib-model}.  We will now walk through each line in this model to understand the basics of \uclid{}.
 
 The top-level syntactic structure in \uclid{} is a \keywordbf{module}. All modeling, verification and synthesis code in \uclid{} is contained within modules. In Example~\ref{ex:fib-model}, we have defined one \keyword{module} named \ident{main}. This module starts on line 1 and ends on line 18. The module can be conceptually split into three parts: a system model, a specification and proof script. In the example, these three conceptual parts are also kept separate in the code.\footnote{This is not required by the \uclid{} syntax but is a good design practice.} The following subsections will describe each of these sections of the module. 
 
@@ -75,9 +75,11 @@ More detailed instructions for installation are as follows.
 
 \uclid{} has two prerequisites. 
 \begin{enumerate}
-\item \uclid{} requires that the \textbf{Java Runtime Environment} be installed on your machine. You can download the latest Java Runtime Environment for your platform from \url{https://www.java.com.com}. 
+    \item \uclid{} requires that the Java\texttrademark{} Runtime Environment be installed on your machine. You can download the latest Java Runtime Environment for your platform from \url{https://www.java.com.com}. 
 \item \uclid{} uses the Z3 SMT solver. You can install Z3 from: \url{https://github.com/Z3Prover/z3/releases}. Make sure the `z3' or `z3.exe' binary is in your path after Z3 installed. Also make sure, the shared libraries for libz3 and libz3java are in the dynamic library load path (\codelike{LD\_LIBRARY\_PATH} on Unix-like systems).
 \end{enumerate}
+
+\uclid{} has been tested with Java\texttrademark{} SE Runtime Environment version 1.8.0 and Z3 versions 4.5.1 and 4.6.0.
 
 \subsection{Detailed Installation Instructions}
 
@@ -146,4 +148,4 @@ This should produce the following output.
 \end{Verbatim}
 
 \section{Looking Forward}
-Hopefully, this chapter has provided an flavor of \uclid{}'s features and an introduction of how to use the \uclid{} toolchain. The rest of this tutorial will take a more detailed looked at more of \uclid{}'s features.
+This chapter has provided an brief overview of \uclid{}'s features and toolchain. The rest of this tutorial will take a more detailed looked at more of \uclid{}'s features.

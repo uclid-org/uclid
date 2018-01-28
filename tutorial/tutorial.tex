@@ -36,10 +36,10 @@
 \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
 \definecolor{darkmagenta}{rgb}{0.55,0,0.55}
 
-\newcommand{\uclid}{{\sc{Uclid5}}}
-\newcommand{\keyword}[1]{\textcolor{magenta}{\texttt{#1}}}
+\newcommand{\uclid}{\textsc{Uclid5}}
+\newcommand{\keyword}[1]{\textcolor{darkmagenta}{\texttt{#1}}}
 \newcommand{\ident}[1]{\textcolor{black}{\texttt{#1}}}
-\newcommand{\keywordbf}[1]{\textcolor{magenta}{\texttt{{#1}}}}
+\newcommand{\keywordbf}[1]{\textcolor{darkmagenta}{\texttt{{#1}}}}
 \newcommand{\proofcmd}[1]{\textcolor{blue}{\texttt{{#1}}}}
 \newcommand{\codelike}[1]{\texttt{#1}}
 
@@ -90,22 +90,22 @@
 \definecolor{backcolour}{rgb}{1.0,1.0,1.0}
 
 \lstdefinestyle{uclidstyle}{
-    backgroundcolor=\color{backcolour},
-    commentstyle=\color{codegreen},
-    keywordstyle=\color{magenta},
-    numberstyle=\tiny\color{codegray},
-    stringstyle=\color{codepurple},
-    basicstyle=\footnotesize,
-    breakatwhitespace=false,
-    breaklines=true,
-    captionpos=b,
-    keepspaces=true,
-    numbers=left,
-    numbersep=5pt,
-    showspaces=false,
-    showstringspaces=false,
-    showtabs=false,
-    tabsize=2
+  backgroundcolor=\color{backcolour},
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{magenta},
+  numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},
+  basicstyle=\footnotesize,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=5pt,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2
 }
 
 \begin{document}
@@ -117,6 +117,9 @@
 \listofuclidlisting
 
 \input{ch-introduction}
+\input{ch-basics}
+\input{ch-verification}
+\input{ch-compositionality}
 \appendix
 \input{ch-grammar}
 
