@@ -18,7 +18,7 @@ If all goes well, running update, clean, compile and test in sbt should all work
 
     $ sbt update clean compile test
 
-#Installing Uclid
+# Installing Uclid
 
 If compilation and tests pass, you can build a universal package.
 
