@@ -1,6 +1,10 @@
 <a href="https://travis-ci.org/uclid-org/uclid"><img src="https://travis-ci.org/uclid-org/uclid.svg?branch=master"></a>
 
-# Installing Uclid
+# Uclid Tutorial
+
+See the [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf). It also has installation instructions.
+
+# Compiling and Installing Uclid
 
 Ensure you have sbt v1.0 or greater installed. Install instructions 
 for sbt are available at http://www.scala-sbt.org/1.0/docs/Setup.html.
@@ -25,24 +29,5 @@ binary in the bin/ subdirectory. Unzip this file, and add it to your path.
 
 Now you can run uclid using the 'uclid' command. For example:
 
-    $ uclid test/setuid.cul4
-    $ uclid test/setuid_fixed.ucl4
-
-# Basic Commands
-
-You can compile Uclid using:
-
-    $ sbt compile
-
-You can run the test suite with the test command:
-
-    $ sbt test
-
-You can run a specific test by using the command:
-
-    $ sbt "run <test>"
-
-An example is:
-
-    $ sbt "run ./test/test-int-fib.ucl4"
+    $ uclid examples/tutorial/ex1.1-fib-model.ucl4
 
