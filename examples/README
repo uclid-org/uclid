@@ -1,0 +1,28 @@
+The examples from the tutorial are in the tutorial/ subfolder.
+
+The names correspond to the example numbers in the tutorial with the
+exception that all of the CPU model is in ex4.1-cpu but the tutorial presents
+it in pieces as Examples 4.1, 4.2, 4.3 and 4.4
+
+tutorials/
+  - ex1.1-fib-model.ucl4
+  - ex2.1-alu.ucl4
+  - ex3.1-fib-induction.ucl4
+  - ex3.2-fib-induction-cex.ucl4
+  - ex3.3-fib-induction-proof.ucl4
+  - ex4.1-cpu.ucl4
+
+
+cpu_unint_addr 
+- This is the CPU model from Chapter 4 of the tutorial but uses uninterpreted
+  types for the addresses.
+
+setuid
+- This is a model based on the automaton in the paper: 
+  Setuid Demystified. Chen, Wagen and Dean [Usenix Security 2002].
+
+setuid_fixed
+ - This is a "fixed" version of the setuid model.
+
+
+
