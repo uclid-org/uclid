@@ -1,13 +1,9 @@
 \chapter{Basics: Types and Statements}
-
-\begin{uclidlisting}
+\begin{uclidlisting}[htbp]
 \begin{lstlisting}[language=uclid,style=uclidstyle]
-// Model of an ALU
 module main
 {
-  // Synonym for an enumerated type.
   type cmd_t = enum { add, sub, mov_imm };
-  // Synonym for a record type.
   type result_t = record { valid : bool, value : bv8 };
 
   input valid       : bool;
@@ -17,15 +13,10 @@ module main
   output result     : result_t;
 
   var regs          : [bv3]bv8;
-
-  // Temporary var to hold register values.
   var r1val, r2val  : bv8;
-
-  // Variable for the test harness.
   var cnt           : bv8; 
 
   init {
-    // All registers initialized to one.
     for i in range(0bv3, 7bv3) {
       regs[i] = 1bv8;
     }
@@ -34,17 +25,14 @@ module main
   }
 
   next {
-    // Do we have a valid command?
-    if (valid) {
+    if (valid) { // Do we have a valid command?
       r1val = regs[r1];
       r2val = regs[r2];
-      // Case-split on the operation to be performed.
-      case
+      case // Case-split on the operation to be performed.
         (cmd == add)      : { regs[r1] = r1val + r2val; }
         (cmd == sub)      : { regs[r1] = r1val - r2val; }
         (cmd == mov_imm)  : { regs[r1] = immed; }
       esac
-      // Set the output result.
       result.valid = true;
       result.value = regs[r1];
     } else {
@@ -102,7 +90,7 @@ Example~\ref{ex:alu} also provides examples of the most commonly used statements
 \subsection{For Loops}
 The \keyword{init} block uses a \keyword{for} loop to initialize each value in the array \codelike{regs} to the bit-vector value 1.\footnote{\codelike{1bv8} here refers to the bit-vector value 1 of width 8.} The loop iterates over the values between 0 and 7 (both-inclusive). 
 
-The range over which a \keyword{for} loop iterates must be a statically defined constant.
+The range over which a \keyword{for} loop iterates must be defined by two numeric literals.
 
 \subsection{If and Case Statements}
 Also worth pointing out are the \keyword{if} statement that appears on line~34, and the \keyword{case} statement that appears on line~38. Syntax for \keyword{if} statements should be familiar. 
@@ -122,7 +110,7 @@ Execution of the model in Example~\ref{ex:alu} starts with the \keyword{init} bl
 \subsection{Next State Computation}
 The next state of each state variable in the model is computed according to the \keyword{next} block. Any variables not assigned to in the \keyword{next} block retain their ``old'' values. 
 
-The \keyword{input} variables of the model are assigned non-deterministic values for each step of the transition system. These values can be controlled by using assumptions. Indeed, the model uses the three assumptions on lines 54, 55 and 56 to constrain the input to the ALU to always be an \codelike{add} operation, where both operands refer to register index 0. 
+The \keyword{input} variables of the model are assigned (possibly different) non-deterministic values for each step of the transition system. These values can be controlled by using assumptions. Indeed, the model uses the three assumptions on lines 54, 55 and 56 to constrain the input to the ALU to always be an \codelike{add} operation, where both operands refer to register index 0. 
 
 \subsection{Verification}
 As in Example~\ref{ex:fib-model}, the verification script in Example~\ref{ex:alu} unrolls the transition system for 5 steps and checks if the \keyword{invariant} on line~57 is violated in any of these steps. 

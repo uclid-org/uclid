@@ -1,9 +1,9 @@
 \chapter{Verification Techniques}
 
-Thus far, we have only used \uclid{} for bounded model checking. \uclid{} can also be used to do inductive proofs and provides support for debugging counterexamples. This chapter will describe these features of \uclid{}.
+Thus far, we have only used \uclid{} for bounded model checking. \uclid{} can also be used to do unbounded inductive proofs and also provides support for debugging counterexamples. This chapter will describe these features of \uclid{}.
 
 \section{Inductive Proofs}
-Let us revisit the model from Example~\ref{ex:fib-model}. This is now shown again in Example~\ref{ex:fib-induction}, but with a different proof script.
+Let us revisit the model from Example~\ref{ex:fib-model}. This is now shown again in Example~\ref{ex:fib-induction}, but with a different proof script. Instead of using the \codelike{unroll} command for bounded model checking, we are using the \codelike{induction} command to attempt an inductive proof.
 
 \begin{uclidlisting}[htbp]
 \begin{lstlisting}[language=uclid,style=uclidstyle]
@@ -109,7 +109,7 @@ To understand the counterexample, it is helpful to review how the inductive proo
 
 The counterexample shows us that we do start in a state where $\codelike{a} \le \codelike{b}$ with $\codelike{a}=-1$ and $\codelike{b}=0$. We execute the \keyword{next} block and now \codelike{a} gets the value of \codelike{b}, becoming 0 and \codelike{b} gets the value $\codelike{a} + \codelike{b}$, becoming -1. This new state does not satisfy the invariant!
 
-What is the real problem here? Taking a closer look at Example~\ref{ex:fib-induction-cex}, we see that this specific counterexample can never occur in our model because \codelike{a} and \codelike{b} are always $\ge 0$. But \uclid{} does not know this when attempting the inductive proof. Therefore, we have to strengthen the inductive argument with this information in order to help \uclid{} complete its proof.
+What is the real problem here? Taking a closer look at Example~\ref{ex:fib-induction-cex}, we see that this specific counterexample can never occur in our model because \codelike{a} and \codelike{b} are always $\ge 0$. But \uclid{} does not know this when attempting the inductive proof. Therefore, we have to strengthen the inductive argument with this information in order to help \uclid{}'s proof.
 
 \subsection{Inductive Proof for the Fibonacci Model}
 
@@ -155,5 +155,5 @@ $ uclid examples/tutorial/ex3.3-fib-induction-proof.ucl4
 0 assertions indeterminate.
 \end{Verbatim}
 
-Success! The invariants hold. We have shown that our system model satisfies its specification.
+Success! We have shown that our system model satisfies its specification.
 

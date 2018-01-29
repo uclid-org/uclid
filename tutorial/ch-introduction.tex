@@ -49,7 +49,7 @@ This part of a \uclid{} module describes the functionality of the transition sys
 
 The first item of interest within the module \ident{main} are \emph{state variables}. These are declared using the \keywordbf{var} keyword. The module \ident{main} declares two state variables: \ident{a} and \ident{b} on line~2. These are both of type \keywordbf{int}, which corresponds to mathematical integers.\footnote{Mathematical integer types, as opposed to the machine integer types present in languages like C/C++ and Java, do not have a fixed bit-width and do not overflow.}
 
-The \keywordbf{init} block appears next and spans lines 4 to 7. It defines the initial values of the states variables in the module. We see that \ident{a} is initialized to 0 while \ident{b} is initialized to 1.
+The \keywordbf{init} block appears next and spans lines 4 to 7. It defines the initial values of the state variables in the module. We see that \ident{a} is initialized to 0 while \ident{b} is initialized to 1.
 
 The \keywordbf{next} block appears after this and it defines the transition relation of the module. In the figure, the next statement spans from lines 8 to 10; \ident{a} is assigned to the (old) value of \ident{b}, while b is assigned to the value \ident{a} + \ident{b}.
 
@@ -59,7 +59,7 @@ The specification answers the question: \emph{what is the system supposed to do?
 In our example, we have a single \keywordbf{invariant} that comprises that entire specification. Line 12 defines this \keyword{invariant}. It is named \ident{a\_le\_b} and as the name suggests, it states that \ident{a} must be less than or equal to \ident{b} for every reachable state of the system.
 
 \subsubsection{The Proof Script}
-The third and final part of the \uclid{} module is a set of commands to the \uclid{} verification engine. These tell how we should go about proving\footnote{Note we are using a very broad definition of the word prove here to refer to any systematic method that gives us assurance that the specification is (perhaps partially) satisfied.} that the system satisfies itself specification.
+The third and final part of the \uclid{} module is a set of commands to the \uclid{} verification engine. These tell how we should go about proving\footnote{We are using a broad definition of the word prove here to refer to any systematic method that gives us assurance that the specification is (perhaps partially) satisfied.} that the system satisfies its specification.
 
 The proof script is contained within the \keywordbf{control} block. The commands here execute the system for 3 steps and check whether all of the systems properties (in this case, we only have one invariant: \ident{a\_le\_b}) are satisfied for each of these steps. 
 
@@ -90,27 +90,27 @@ Next, follow these instructions which are provided for the bash shell running on
 \begin{itemize}
   \item Unzip the archive.
 
-  \codelike{\$ unzip uclid-0.9.zip}.
+  \codelike{\$ unzip uclid-0.8.zip}.
 
 \begin{comment}
   This should produce output similar to the following.
 \begin{Verbatim}[frame=single]
-Archive:  uclid-0.9.zip
-  inflating: uclid-0.9/lib/default.uclid-0.9.jar  
-  inflating: uclid-0.9/lib/com.microsoft.z3.jar  
-  inflating: uclid-0.9/lib/org.scala-lang.scala-library-2.12.0.jar  
-  inflating: uclid-0.9/lib/org.scala-lang.modules.scala-parser-combinators_2.12-1.0.6.jar  
-  inflating: uclid-0.9/lib/org.scalactic.scalactic_2.12-3.0.1.jar  
-  inflating: uclid-0.9/lib/org.scala-lang.scala-reflect-2.12.0.jar  
-  inflating: uclid-0.9/bin/uclid     
-  inflating: uclid-0.9/bin/uclid.bat  
+Archive:  uclid-0.8.zip
+  inflating: uclid-0.8/lib/default.uclid-0.8.jar  
+  inflating: uclid-0.8/lib/com.microsoft.z3.jar  
+  inflating: uclid-0.8/lib/org.scala-lang.scala-library-2.12.0.jar  
+  inflating: uclid-0.8/lib/org.scala-lang.modules.scala-parser-combinators_2.12-1.0.6.jar  
+  inflating: uclid-0.8/lib/org.scalactic.scalactic_2.12-3.0.1.jar  
+  inflating: uclid-0.8/lib/org.scala-lang.scala-reflect-2.12.0.jar  
+  inflating: uclid-0.8/bin/uclid     
+  inflating: uclid-0.8/bin/uclid.bat  
 \end{Verbatim}
 \end{comment}
 
 
   \item Add the \codelike{uclid} binary to your path.
 
-  \codelike{\$ export PATH=\$PATH:\$PWD/uclid-0.9/bin/}
+  \codelike{\$ export PATH=\$PATH:\$PWD/uclid-0.8/bin/}
 
   \item Check that the \texttt{uclid} works.
 
