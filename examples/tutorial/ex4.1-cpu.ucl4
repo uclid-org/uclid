@@ -110,7 +110,7 @@ module cpu {
 }
   
 module main {
-  // The is the "main" module: i.e. the module from which proof script commands are executed.
+  // This the "main" module.
 
   // Import types
   type addr_t     = common :: addr_t;
@@ -133,8 +133,8 @@ module main {
   }
 
   next {
-    // These call statements invoke the next state function of the two CPU module instances.
-    // FIXME: next (cpu_i_1)
+    // These call statements invoke the next state function 
+    // of the two CPU module instances.
     next (cpu_i_1);
     next (cpu_i_2);
   }
@@ -147,19 +147,12 @@ module main {
 
   // The control block defines the commands that will executed as part of the proof script.
   control {
-    // Some commands for debugging.
-    // print_module;
-
     // unroll(3) "unrolls" the module for 3 steps and creates symbolic
     // expressions for the assertions encountered during those three steps.
     unroll(3);
-    // check actually checks if these assertions hold.
+    // check if these assertions hold.
     check;
     // this prints out the results of the verification.
     print_results;
-
-    // print_cex (cpu_i_1->op, cpu_i_2->op, cpu_i_1->mem, cpu_i_2->mem);
-    // print_cex (cpu_i_1->inst, cpu_i_2->inst, cpu_i_1->op, cpu_i_2->op, cpu_i_1->regs[0bv1], cpu_i_2->regs[0bv1], cpu_i_1->regs[1bv1], cpu_i_2->regs[1bv1]);
-    // print_cex (cpu_i_1->inst, cpu_i_2->inst);
   }
 }

@@ -92,7 +92,7 @@ The input \codelike{valid} is of type \keyword{bool}. Register indices \codelike
 
 Line~7 declares a type synonym for a \keyword{record}. It declares \codelike{result_t} as being a record consisting of two fields: a Boolean field \codelike{valid} and a bit-vector field \codelike{value}. The output \codelike{result} is declared to be of type \codelike{result_t} on Line~13.
 
-The final point-of-interest, type-wise, in Example~\ref{ex:alu} is line~15. The state variable \codelike{regs} is declared to be of type array: indices to the array are of type \codelike{bv3} and elements of the array are of type \codelike{bv8}. This is used to model an 8-entry register file, where each register is a bit-vector of width 8.
+The final point-of-interest, type-wise, is line~15. The state variable \codelike{regs} is declared to be of type array: indices to the array are of type \codelike{bv3} and elements of the array are of type \codelike{bv8}. This is used to model an 8-entry register file, where each register is a bit-vector of width 8.
 
 \section{Statements in \uclid{}}
 
@@ -104,17 +104,17 @@ The \keyword{init} block uses a \keyword{for} loop to initialize each value in t
 \subsection{If and Case Statements}
 Also worth pointing out are the \keyword{if} statement that appears on line~34, and the \keyword{case} statement that appears on line~38. Syntax for \keyword{if} statements should be familiar. 
 
-\keyword{case} statements are delimited by \keyword{case} and \keyword{esac} and contain within them a list of boolean expressions and associated statement blocks. These expressions are evaluated in the order in which appear, and if any of them evaluate to \codelike{true}, the corresponding block is executed. If none of the case-expressions evaluate to \codelike{true}, then nothing is executed. The keyword \keyword{default} can be used as a ``catch-all'' case like in C/C++. 
+\keyword{case} statements are delimited by \keyword{case} and \keyword{esac} and contain within them a list of boolean expressions and associated statement blocks. These expressions are evaluated in the order in which appear, and if any of them evaluate to \codelike{true}, the corresponding block is executed. If none of the case-expressions evaluate to \codelike{true}, nothing is executed. The keyword \keyword{default} can be used as a ``catch-all'' case like in C/C++. 
 
 \subsection{Expressions}
 
 The syntax for expressions in \uclid{} is similar to languages like C/C++/Java. Index \codelike{i} of array \codelike{regs} is accessed using the syntax \codelike{regs[i]}. Field \codelike{value} in the record \codelike{result} is accessed as \codelike{result.value}. 
 
 \section{Computation/Verification Model}
-We now describe how the computation specified by Example~\ref{ex:alu} is specified.
+This section briefly describes the execution semantics of Example~\ref{ex:alu}.
 
 \subsection{Initialization}
-``Execution'' of the model in Example~\ref{ex:alu} starts with the \keyword{init} block. This block assigns initial values to \codelike{regs}, \codelike{cnt} and \codelike{result.value}. The other variables (e.g. \codelike{r1val} and \codelike{r2val}) are not assigned to in the \keyword{init} block and will be initialized non-deterministically.
+Execution of the model in Example~\ref{ex:alu} starts with the \keyword{init} block. This block assigns initial values to \codelike{regs}, \codelike{cnt} and \codelike{result.value}. The other variables (e.g. \codelike{r1val} and \codelike{r2val}) are not assigned to in the \keyword{init} block and will be initialized non-deterministically.
 
 \subsection{Next State Computation}
 The next state of each state variable in the model is computed according to the \keyword{next} block. Any variables not assigned to in the \keyword{next} block retain their ``old'' values. 
