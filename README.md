@@ -2,11 +2,13 @@
 
 # Uclid Tutorial
 
-See the [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf). It also has installation instructions.
+See the [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf).
 
 # Pre-requisites
 
-You will need the [Z3 SMT solver](https://github.com/Z3Prover/z3) to be installed on your system. If you are building Z3 from source, make sure the Z3/Java interface is enabled in your build (typically by passing `--java` to the `mk_make.py` script). Uclid requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms).
+You will need the [Z3 SMT solver](https://github.com/Z3Prover/z3) to be installed on your system. If you are building Z3 from source, make sure the Z3/Java interface is enabled in your build (typically by passing `--java` to the `mk_make.py` script). 
+
+Uclid requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix like systems; just `PATH` on Windows).
 
 # Compiling Uclid
 
