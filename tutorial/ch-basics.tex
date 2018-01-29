@@ -84,6 +84,7 @@ Types supported by \uclid{} are of the following kinds:
     \item \keyword{enum}: enumerated types.
     \item Tuples and records.
     \item Array types.
+    \item Uninterpreted types.
 \end{enumerate}
 
 An enumerated type is used in line~4 of Example~\ref{ex:alu}. This declares a \textit{type synonym}: \codelike{cmd_t} is an alias for the enumerated type consisting of three values: \codelike{add}, \codelike{sub} and \codelike{mov_imm}. The input \codelike{cmd} is then declared to be of type \codelike{cmd_t} in line~9. 
@@ -100,6 +101,8 @@ Example~\ref{ex:alu} also provides examples of the most commonly used statements
 
 \subsection{For Loops}
 The \keyword{init} block uses a \keyword{for} loop to initialize each value in the array \codelike{regs} to the bit-vector value 1.\footnote{\codelike{1bv8} here refers to the bit-vector value 1 of width 8.} The loop iterates over the values between 0 and 7 (both-inclusive). 
+
+The range over which a \keyword{for} loop iterates must be a statically defined constant.
 
 \subsection{If and Case Statements}
 Also worth pointing out are the \keyword{if} statement that appears on line~34, and the \keyword{case} statement that appears on line~38. Syntax for \keyword{if} statements should be familiar. 
