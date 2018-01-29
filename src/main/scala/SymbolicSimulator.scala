@@ -199,6 +199,7 @@ class SymbolicSimulator (module : Module) {
       val numPastFrames = frameTable.size
       val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap 
       frameTable += currentState
+      addModuleAssumptions(currentState, pastTables, scope)
       if (addAssertions) { addAsserts(step, currentState, pastTables, label, scope)  }
       if (addAssertionsAsAssumes) { assumeAssertions(symbolTable, pastTables, scope) }
       // println("*** AFTER STEP " + step.toString + "****")

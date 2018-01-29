@@ -3,6 +3,8 @@
 \newcommand{\paratitle}[1]{\textsf{\textbf{#1}}}
 \newcommand{\nonterminal}[1]{$\langle \textit{#1} \rangle$}
 
+\setlength{\grammarindent}{12em} % increase separation between LHS/RHS 
+
 This appendix describes \uclid{}'s grammar.
 
 \section{Grammar of Modules and Declarations}
@@ -93,16 +95,18 @@ followed by optional pre-/post-conditions and the list of state variables modifi
              
 \end{grammar}
 
-\paratitle{Axioms} refer to assumptions while a \paratitle{specification declaration} can be a \keywordbf{property} or \keywordbf{invariant} of the design. Note \keywordbf{property} and \keywordbf{invariant} are synonyms.
+\paratitle{Axioms} refer to assumptions while a \paratitle{specification declaration} refers to design \keywordbf{invariants}. Note \keywordbf{axiom} and \keywordbf{assume} are synonyms, as are \keywordbf{property} and \keywordbf{invariant}.
 
 \begin{grammar}
-     <AxiomDecl> ::= \keywordbf{axiom} <Id> `:' <Expr> `;'
-                 \alt \keywordbf{axiom} <Expr> `;'
+     <AxiomDecl> ::= <AxiomKW> <Id> `:' <Expr> `;'
+                 \alt <AxiomKW> <Expr> `;'
+
+     <AxiomKW> ::= \keywordbf{axiom} | \keywordbf{assume}
 
      <SpecDecl> ::= <PropertyKW> <Id> `:' <Expr> `;'
                  \alt <PropertyKW> <Expr> `;'
 
-     <PropertyKW> ::= \keywordbf{property} \alt \keywordbf{invariant}
+     <PropertyKW> ::= \keywordbf{property} | \keywordbf{invariant}
 \end{grammar}
 
 \paratitle{Init} and \paratitle{next} blocks consist of lists of statements.
@@ -242,7 +246,7 @@ And finally, we have the terminal symbols, identifiers, tuples and the if-then-e
 %%     }
 \end{grammar}
 
-Supported primitive types are Booleans, integers and bit-vectors. Bit-vector types are defined according the regular expression `bv[0-9]+' and the number following `bv' is the length of the bit-vector.
+Supported primitive types are Booleans, integers and bit-vectors. Bit-vector types are defined according the regular expression `bv[0-9]+' and the number following `bv' is the width of the bit-vector.
 
 \begin{grammar}
     <PrimitiveType> ::= \keywordbf{bool} | \keywordbf{int} | <BitVectorType>
