@@ -123,3 +123,16 @@ The \keyword{input} variables of the model are assigned non-deterministic values
 
 \subsection{Verification}
 As in Example~\ref{ex:fib-model}, the verification script in Example~\ref{ex:alu} unrolls the transition system for 5 steps and checks if the \keyword{invariant} on line~57 is violated in any of these steps. 
+
+\subsection{Running \uclid{}}
+
+Running \uclid{} on Example~\ref{ex:alu} produces the following output.
+
+\begin{Verbatim}[frame=single, samepage=true]
+$ uclid examples/tutorial/ex2.1-alu.ucl4 
+6 assertions passed.
+0 assertions failed.
+0 assertions indeterminate.
+\end{Verbatim}
+
+\uclid{} is able to prove that the \keyword{invariant} on line~57 holds for all states reachable within 5 steps of the initial state, under the assumptions specified in lines~54-56.

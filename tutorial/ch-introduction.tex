@@ -37,7 +37,7 @@ module main {
 }
 \end{lstlisting}
 \label{ex:fib-model}
-\caption{A \uclid{} model that computes the Fibonacci sequence.}
+\caption{A \uclid{} model that computes the Fibonacci sequence}
 \end{uclidlisting}
 
 A simple \uclid{} module that computes the Fibonacci sequence is shown in Example~\ref{ex:fib-model}.  We will now walk through each line in this model to understand the basics of \uclid{}.
@@ -132,12 +132,12 @@ Error : Unable to find main module.
 
 \subsection{Running \uclid{}}
 
-Invoke \uclid{} on a model is easy. Just run the \codelike{uclid} binary and provide the model as a command-line argument. When invoked, \uclid{} looks for a module named \codelike{main} and executes the commands in its control block.\footnote{The \codelike{--main} command line argument can be used to specify a different name for the ``main'' module.} If no \codelike{main} module is found, \uclid{} will exit with an error, as we saw in the previous section when \codelike{uclid} was invoked without arguments.
+Invoke \uclid{} on a model is easy. Just run the \codelike{uclid} binary and provide the file containing the model as a command-line argument. When invoked, \uclid{} looks for a module named \codelike{main} and executes the commands in its control block.\footnote{The \codelike{--main} command line argument can be used to specify a different name for the ``main'' module.} If no \codelike{main} module is found, \uclid{} will exit with an error, as we saw in the previous section when \codelike{uclid} was invoked without arguments.
 
 Example~\ref{ex:fib-model} is part of the \uclid{} distribution in the \codelike{examples/tutorial/} sub-directory. You can run \uclid{} on this model as:
 
 \begin{verbatim}
-$ uclid examples/tutorial/ex1-fib-module.ucl4 
+$ uclid examples/tutorial/ex1.1-fib-model.ucl4 
 \end{verbatim}
 
 This should produce the following output.
