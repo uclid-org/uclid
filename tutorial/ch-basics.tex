@@ -81,7 +81,7 @@ The input \codelike{valid} is of type \keyword{bool}. Register indices \codelike
 
 Line~7 declares a type synonym for a \keyword{record}. It declares \codelike{result_t} as being a record consisting of two fields: a Boolean field \codelike{valid} and a bit-vector field \codelike{value}. The output \codelike{result} is declared to be of type \codelike{result_t} on Line~13.
 
-The final point-of-interest, type-wise, is line~15. The state variable \codelike{regs} is declared to be of type array: indices to the array are of type \codelike{bv3} and elements of the array are of type \codelike{bv8}. This is used to model an 8-entry register file, where each register is a bit-vector of width 8.
+The final point of interest, type-wise, is line~15. The state variable \codelike{regs} is declared to be of type array: indices to the array are of type \codelike{bv3} and elements of the array are of type \codelike{bv8}. This is used to model an 8-entry register file, where each register is a bit-vector of width 8.
 
 \section{Statements in \uclid{}}
 
