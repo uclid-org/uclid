@@ -4,12 +4,23 @@
 verification, and synthesis of computational systems. 
 The \uclid{} toolchain aims to:
 \begin{enumerate}
-	\item Enable compositional (modular) modeling of finite and infinite state transition systems across a range of concurrency models;
+	\item Enable compositional (modular) modeling of finite and infinite state transition systems across a range of concurrency models and background logical theories;
 \item Verification of a range of properties, including assertions, invariants, and temporal properties, and % mention hyperproperties in a future release
 \item Integrate modeling and verification with algorithmic and inductive synthesis.
 \end{enumerate}
 
-This document serves as introduction to the \uclid{} modeling language and toolchain.
+\uclid draws inspiration from the earlier {UCLID} system for modeling
+and verification of systems~\cite{bryant-cav02,uclid-www}, in particular
+the idea of modeling concurrent systems in first-order logic 
+with a range of background theories, and the use of proof scripts
+within the model. However, the \uclid modeling
+language and verification capabilities go beyond the original modeling 
+language, and the planned integration with synthesis is novel.
+
+This document serves as introduction to the \uclid{} modeling 
+language and toolchain. With the \uclid system under active
+development, we expect this document to undergo several changes
+as the system and its applications evolve.
 
 \section{Getting Started: A Simple \uclid{} Model}
 
