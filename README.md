@@ -33,5 +33,5 @@ This will create uclid/target/universal/uclid-0.8.zip, which contains the uclid 
 
 Now you can run uclid using the 'uclid' command. For example:
 
-    $ uclid examples/tutorial/ex1.1-fib-model.ucl4
+    $ uclid examples/tutorial/ex1.1-fib-model.ucl
 

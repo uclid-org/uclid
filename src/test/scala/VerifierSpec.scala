@@ -47,85 +47,85 @@ class VerifierSpec extends FlatSpec {
     assert (results.count((e) => e.result.isUndefined) == 0);
   }
 
-  "test/test-array-0.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-array-0.ucl4", 0)
+  "test/test-array-0.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-array-0.ucl", 0)
   }
-  "test/test-bv-assign.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-bv-assign.ucl4", 0)
+  "test/test-bv-assign.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-bv-assign.ucl", 0)
   }
-  "test/test-bv-fib.ucl4" should "verify successfully all but one assertion." in {
-    nTestsFail("./test/test-bv-fib.ucl4", 1)
+  "test/test-bv-fib.ucl" should "verify successfully all but one assertion." in {
+    nTestsFail("./test/test-bv-fib.ucl", 1)
   }
-  "test/test-case-mc91.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-case-mc91.ucl4", 0)
+  "test/test-case-mc91.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-case-mc91.ucl", 0)
   }
-  "test/test-forloop.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-forloop.ucl4", 0)
+  "test/test-forloop.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-forloop.ucl", 0)
   }
-  "test/test-forloop-0.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-forloop-0.ucl4", 0)
+  "test/test-forloop-0.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-forloop-0.ucl", 0)
   }
-  "test/test-forloop-1.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-forloop-1.ucl4", 0)
+  "test/test-forloop-1.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-forloop-1.ucl", 0)
   }
-  "test/test-inliner.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-inliner.ucl4", 0)
+  "test/test-inliner.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-inliner.ucl", 0)
   }
-  "test/test-inliner-1.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-inliner-1.ucl4", 0)
+  "test/test-inliner-1.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-inliner-1.ucl", 0)
   }
-  "test/test-int-fib.ucl4" should "verify successfully all but one assertion." in {
-    nTestsFail("./test/test-int-fib.ucl4", 1)
+  "test/test-int-fib.ucl" should "verify successfully all but one assertion." in {
+    nTestsFail("./test/test-int-fib.ucl", 1)
   }
-  "test/test-mc91.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-mc91.ucl4", 0)
+  "test/test-mc91.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-mc91.ucl", 0)
   }
-  "test/test-record-1.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-record-1.ucl4", 0)
+  "test/test-record-1.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-record-1.ucl", 0)
   }
-  "test/test-tuple-record-1.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-tuple-record-1.ucl4", 0)
+  "test/test-tuple-record-1.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-tuple-record-1.ucl", 0)
   }
-  "test/test-types-0.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-types-0.ucl4", 0)
+  "test/test-types-0.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-types-0.ucl", 0)
   }
-  "test/test-functions-1.ucl4" should "verify successfully." in {
-    nTestsFail("./test/test-functions-1.ucl4", 0)
+  "test/test-functions-1.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-functions-1.ucl", 0)
   }
-  "test/test-array-1.ucl4" should "verify four assertions and fail to verify two assertions." in {
-    nTestsFail("./test/test-array-1.ucl4", 2)
+  "test/test-array-1.ucl" should "verify four assertions and fail to verify two assertions." in {
+    nTestsFail("./test/test-array-1.ucl", 2)
   }
-  "test/test-enum-1.ucl4" should "verify all assertions." in {
-    nTestsFail("./test/test-enum-1.ucl4", 0)
+  "test/test-enum-1.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-enum-1.ucl", 0)
   }
-  "test/test-forall-0.ucl4" should "verify all assertions." in {
-    nTestsFail("./test/test-forall-0.ucl4", 0)
+  "test/test-forall-0.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-forall-0.ucl", 0)
   }
-  "test/test-exists-0.ucl4" should "verify all assertions." in {
-    nTestsFail("./test/test-exists-0.ucl4", 0)
+  "test/test-exists-0.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-exists-0.ucl", 0)
   }
-  "test/test-type2.ucl4" should "verify all assertions." in {
-    nTestsFail("./test/test-type2.ucl4", 0)
+  "test/test-type2.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-type2.ucl", 0)
   }
-  "test/test-modules.ucl4" should "verify all assertions." in {
-    nTestsFail("./test/test-modules.ucl4", 0)
+  "test/test-modules.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-modules.ucl", 0)
   }
-  "test/test-modules-1.ucl4" should "verify all assertions." in {
-    nTestsFail("./test/test-modules-1.ucl4", 0)
+  "test/test-modules-1.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-modules-1.ucl", 0)
   }
-  "test/test-type-import.ucl4" should "verify all assertions." in {
-    nTestsFail("./test/test-type-import.ucl4", 0)
+  "test/test-type-import.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-type-import.ucl", 0)
   }
-  "test/test-const-import.ucl4" should "verify all assertions." in {
-    nTestsFail("./test/test-const-import.ucl4", 0)
+  "test/test-const-import.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-const-import.ucl", 0)
   }
-  "test/test-if-star.ucl4" should "verify all assertions." in {
-    nTestsFail("./test/test-if-star.ucl4", 0)
+  "test/test-if-star.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-if-star.ucl", 0)
   }
-  "test/test-procedure-postcondition.ucl4" should "verify all but one assertion." in {
-    nTestsFail("./test/test-procedure-postcondition.ucl4", 1)
+  "test/test-procedure-postcondition.ucl" should "verify all but one assertion." in {
+    nTestsFail("./test/test-procedure-postcondition.ucl", 1)
   }
-  "test/test-mem-inout.ucl4" should "verify all assertions." in {
-    nTestsFail("./test/test-meminout.ucl4", 0)
+  "test/test-mem-inout.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-meminout.ucl", 0)
   }
 }

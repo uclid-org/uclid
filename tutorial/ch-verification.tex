@@ -38,12 +38,12 @@ module main {
 
 Let us try running \uclid{} on Example~\ref{ex:fib-induction} with the new proof script.
 \begin{Verbatim}[frame=single, samepage=true]
-$ uclid examples/tutorial/ex3.1-fib-induction.ucl4 
+$ uclid examples/tutorial/ex3.1-fib-induction.ucl 
 2 assertions passed.
 1 assertions failed.
 0 assertions indeterminate.
   FAILED -> induction (step) [Step #1] property 
-  a_le_b @ examples/tutorial/ex3-fib-induction.ucl4, line 14
+  a_le_b @ examples/tutorial/ex3-fib-induction.ucl, line 14
 \end{Verbatim}
 
 Uh oh, we seem to have a problem! \uclid{} is telling us that the inductive proof failed. We can try to examine why the proof failed by using the \codelike{print_cex} command to examine the counterexample to the proof.
@@ -88,10 +88,10 @@ Running \uclid{} on Example~\ref{ex:fib-induction-cex} produces the following.
 1 assertions failed.
 0 assertions indeterminate.
   FAILED -> vobj [Step #1] property 
-  a_le_b @ examples/tutorial/ex3.2-fib-induction-cex.ucl4, 
+  a_le_b @ examples/tutorial/ex3.2-fib-induction-cex.ucl, 
   line 14
 CEX for vobj [Step #1] property 
-a_le_b @ examples/tutorial/ex3.2-fib-induction-cex.ucl4, 
+a_le_b @ examples/tutorial/ex3.2-fib-induction-cex.ucl, 
 line 14
 =================================
 Step #0
@@ -149,7 +149,7 @@ module main {
 Let us now run \uclid{} on this new model.
 
 \begin{Verbatim}[frame=single, samepage=true]
-$ uclid examples/tutorial/ex3.3-fib-induction-proof.ucl4 
+$ uclid examples/tutorial/ex3.3-fib-induction-proof.ucl 
 6 assertions passed.
 0 assertions failed.
 0 assertions indeterminate.
