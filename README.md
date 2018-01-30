@@ -51,6 +51,6 @@ This repository consists of the following sub-directories.
  - project: Build scripts.
  - src/main/scala: uclid5 source.
  - src/test/scala: uclid5 test suite.
- - test: test programs for ucli5.
+ - test: test programs for uclid5.
  - tutorial: uclid5 tutorial (with LaTeX source)
  - vim: vim syntax highlighting for uclid5. 
