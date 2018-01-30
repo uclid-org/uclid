@@ -17,7 +17,7 @@ cpu_unint_addr.ucl
 - This is the CPU model from Chapter 4 of the tutorial but uses uninterpreted
   types for the addresses.
 
-setui.ucl
+setuid.ucl
 - This is a model based on the automaton in the paper: 
   Setuid Demystified. Chen, Wagen and Dean [Usenix Security 2002].
 
