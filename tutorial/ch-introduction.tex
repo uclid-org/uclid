@@ -4,7 +4,7 @@
 verification, and synthesis of computational systems. 
 The \uclid{} toolchain aims to:
 \begin{enumerate}
-	\item Enable compositional (modular) modeling of finite and infinite state transition systems across a range of concurrency models and background logical theories;
+\item Enable compositional (modular) modeling of finite and infinite state transition systems across a range of concurrency models and background logical theories;
 \item Verification of a range of properties, including assertions, invariants, and temporal properties, and % mention hyperproperties in a future release
 \item Integrate modeling and verification with algorithmic and inductive synthesis.
 \end{enumerate}
@@ -55,7 +55,9 @@ module main {
 
 A simple \uclid{} module that computes the Fibonacci sequence is shown in Example~\ref{ex:fib-model}.  We will now walk through each line in this model to understand the basics of \uclid{}.
 
-The top-level syntactic structure in \uclid{} is a \keywordbf{module}. All modeling, verification and synthesis code in \uclid{} is contained within modules. In Example~\ref{ex:fib-model}, we have defined one \keyword{module} named \ident{main}. This module starts on line 1 and ends on line 18. The module can be conceptually split into three parts: a system model, a specification and proof script. In the example, these three conceptual parts are also kept separate in the code.\footnote{This is not required by the \uclid{} syntax but is a good design practice.} The following subsections will describe each of these sections of the module. 
+The top-level syntactic structure in \uclid{} is a \keywordbf{module}. All modeling, verification and synthesis code in \uclid{} is contained within modules. In Example~\ref{ex:fib-model}, we have defined one \keyword{module} named \ident{main}. This module starts on line 1 and ends on line 18. The module can be conceptually split into three parts: a system model, a specification and proof script. 
+
+In the example, these three conceptual parts are also kept separate in the code.\footnote{This is not required by \uclid{} syntax, as \keywordbf{invariant} declarations and assumptions can be interleaved with \keyword{init}, \keyword{next}, \keyword{var} declarations as well other types of declarations. However, keeping these conceptually different parts of separate is good design practice. \uclid{} does require that if a \keyword{control} block is specified, then it is the very last element of a module.} The following subsections will describe each of these sections of the module. 
 
 \subsubsection{The System Model}
 This part of a \uclid{} module describes the functionality of the transition system that is being modeled: it tells us \emph{what the system does}.
