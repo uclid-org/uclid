@@ -72,7 +72,7 @@ The specification answers the question: \emph{what is the system supposed to do?
 In our example, we have a single \keywordbf{invariant} that comprises that entire specification. Line 12 defines this \keyword{invariant}. It is named \ident{a\_le\_b} and as the name suggests, it states that \ident{a} must be less than or equal to \ident{b} for every reachable state of the system.
 
 \subsubsection{The Proof Script}
-The third and final part of the \uclid{} module is a set of commands to the \uclid{} verification engine. These tell how we should go about proving\footnote{We are using a broad definition of the word prove here to refer to any systematic method that gives us assurance that the specification is (perhaps partially) satisfied.} that the system satisfies its specification.
+The third and final part of the \uclid{} module is a set of commands to the \uclid{} verification engine. These tell how we should go about proving\footnote{We are using a broad definition of the word ``prove'' here to refer to any systematic method that gives us assurance that the specification is satisfied.} that the system satisfies its specification.
 
 The proof script is contained within the \keywordbf{control} block. The commands here execute the system for 3 steps and check whether all of the systems properties (in this case, we only have one invariant: \ident{a\_le\_b}) are satisfied for each of these steps. 
 
