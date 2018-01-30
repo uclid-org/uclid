@@ -1,11 +1,13 @@
-CONTACT AUTHORS
-===============
+## Contact Authors
 
-Pramod Subramanyan spramod@eecs.berkeley.edu
-Sanjit Seshia      sseshia@eecs.berkeley.edu
-Rohit Sinha        rsinha@eecs.berkeley.edu
+| ------------------ | ------------------------- |
+| Pramod Subramanyan | spramod@eecs.berkeley.edu |
+| Sanjit Seshia      | sseshia@eecs.berkeley.edu |
+| Rohit Sinha        | rsinha@eecs.berkeley.edu  |
+| ------------------ | ------------------------- |
 
-WITH MANY THANKS TO:
-===================
+## With Many Thanks To
 
-Norman Mu          thenorm@berkeley.edu
+| ------------------ | ------------------------- |
+| Norman Mu          | thenorm@berkeley.edu      |
+| ------------------ | ------------------------- |

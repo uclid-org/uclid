@@ -1,24 +1,28 @@
 <a href="https://travis-ci.org/uclid-org/uclid"><img src="https://travis-ci.org/uclid-org/uclid.svg?branch=master"></a>
 
-# Uclid Tutorial
+# Uclid5 Tutorial
 
-See the [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf).
+The [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf) has a gentle introduction to using Uclid5.
 
 # Pre-requisites
 
 You will need the [Z3 SMT solver](https://github.com/Z3Prover/z3) to be installed on your system. If you are building Z3 from source, make sure the Z3/Java interface is enabled in your build (typically by passing `--java` to the `mk_make.py` script). 
 
-Uclid requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix-like platforms; just `PATH` on Windows).
+Uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix-like platforms; just `PATH` on Windows).
 
-# Compiling Uclid
+# Download
+
+Download the latest stable pre-built package from [releases tab](https://github.com/uclid-org/uclid/releases).
+
+# Compiling Uclid5
 
 Ensure you have Z3 and sbt v1.0 or greater installed. Install instructions for sbt are available at http://www.scala-sbt.org/1.0/docs/Setup.html.
 
-If all goes well, running update, clean, compile and test in sbt should all work. The command to do all this is:
+If all goes well, running update, clean, compile and test in sbt from the uclid5 directory should do the trick. The command to do all this is:
 
     $ sbt update clean compile test
 
-# Installing Uclid
+# Installing Uclid5
 
 If compilation and tests pass, you can build a universal package.
 
