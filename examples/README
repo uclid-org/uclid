@@ -21,7 +21,7 @@ setui.ucl
 - This is a model based on the automaton in the paper: 
   Setuid Demystified. Chen, Wagen and Dean [Usenix Security 2002].
 
-setuid_fixe.ucl
+setuid_fixed.ucl
  - This is a "fixed" version of the setuid model.
 
 
