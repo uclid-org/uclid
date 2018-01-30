@@ -1,4 +1,4 @@
-## Contact Authors
+## Main Contributors 
 
 | Name               | E-mail                    |
 | ------------------ | ------------------------- |
@@ -6,7 +6,7 @@
 | Sanjit Seshia      | sseshia@eecs.berkeley.edu |
 | Rohit Sinha        | rsinha@eecs.berkeley.edu  |
 
-## With Many Thanks To
+## Other Contributors
 
 | Name               | E-mail                    |
 | ------------------ | ------------------------- |
