@@ -1,7 +1,7 @@
-\chapter{Compositional Modeling and Reasoning}
+\chapter{Compositional Modeling and Abstraction}
 \label{ch:compositional}
 
-This chapter describes \uclid{}'s features for compositional and modular verification.
+This chapter describes \uclid{}'s features for compositional and modular verification, and the use of abstraction.
 
 We will use a running example of a CPU model constructed in the \uclid{} and use bounded model checking to prove that the execution of this CPU is deterministic: i.e. we show that given two identical instruction memories, the state updates performed by this CPU will be identical.
 
@@ -162,7 +162,8 @@ module main {
 Isolating commonly used types into a single module in this manner allows the construction of large models parameterized by this types. These common types can be changed and the ramifications of these changes on the model's behavior can be studied easily.
 
 \section{Uninterpreted Functions and Types}
-A convenient mechanism for abstraction in \uclid{} is through the use of uninterpreted functions and types.
+A convenient mechanism for abstraction in \uclid{} is through the use of uninterpreted functions and types. This is one of the novel modeling
+aspects for transition systems introduced by the original UCLID system~\cite{bryant-cav02}.
 
 \subsection{Uninterpreted Types}
 Example~\ref{ex:cpu-cpu-p1} shows the use of the \emph{uninterpreted type}: \codelike{regindex_t} on line~9. The index type to the register is an \emph{abstract} type, as opposed to a specific type (e.g. \codelike{bv3}). This allows us to reason about an abstract register file that has an undefined (and unbounded) number of entries, as opposed to proving facts about some specific register file implementation, potentially enabling more general proofs about system behavior.
