@@ -14,7 +14,11 @@ Uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platform
 
 Download the latest stable pre-built package from [releases tab](https://github.com/uclid-org/uclid/releases).
 
-# Compiling Uclid5
+# Install From Source
+
+Or, you could clone this repository and build from source.
+
+## Compiling Uclid5
 
 Ensure you have Z3 and sbt v1.0 or greater installed. Install instructions for sbt are available at http://www.scala-sbt.org/1.0/docs/Setup.html.
 
@@ -22,7 +26,7 @@ If all goes well, running update, clean, compile and test in sbt from the uclid5
 
     $ sbt update clean compile test
 
-# Installing Uclid5
+## Installing Uclid5
 
 If compilation and tests pass, you can build a universal package.
 
