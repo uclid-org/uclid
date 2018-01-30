@@ -1,8 +1,10 @@
 \chapter{Verification Techniques}
+\label{ch:verif}
 
-Thus far, we have only used \uclid{} for bounded model checking. \uclid{} can also be used to do unbounded inductive proofs and also provides support for debugging counterexamples. This chapter will describe these features of \uclid{}.
+In the examples covered thus far, we have only used \uclid{} for bounded model checking of invariants. 
+\uclid{} can also be used to do unbounded inductive proofs and also provides support for debugging counterexamples. This chapter will describe these features of \uclid{}. Further features are being implemented and will be described in a future version of this document.
 
-\section{Inductive Proofs}
+\section*{Inductive Proofs} % change to \section when we have more sections!
 Let us revisit the model from Example~\ref{ex:fib-model}. This is now shown again in Example~\ref{ex:fib-induction}, but with a different proof script. Instead of using the \codelike{unroll} command for bounded model checking, we are using the \codelike{induction} command to attempt an inductive proof.
 
 \begin{uclidlisting}[htbp]
