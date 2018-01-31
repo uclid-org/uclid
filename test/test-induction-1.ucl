@@ -1,0 +1,22 @@
+module main {
+  var x, y : int;
+
+  init {
+    x = 1;
+    y = 1;
+  }
+
+  next {
+    y = y + 1;
+    x = x + y;
+  }
+
+  property ind_strengthen : x >= 0 && y >= 0;
+  property y_le_x : y <= x;
+
+  control {
+  	induction;
+    check;
+    // print_results;
+  }
+}

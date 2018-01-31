@@ -1,0 +1,22 @@
+// UCLID model with recursion.
+// This is expected to fail compilation.
+
+module main  {
+  var x, y : int;
+
+  procedure foo(x : int, y : int) returns (z : int) {
+    if (x <= 0) {
+      z = y;
+    } else {
+      call (z) = foo(x - 1, y+1);
+    }
+  }
+
+  next {
+    call (y) = foo(x, y);
+  }
+  
+  control {
+    print_module;
+  }
+}

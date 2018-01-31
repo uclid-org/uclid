@@ -1,0 +1,25 @@
+module main {
+  var a, b : bv16;
+  procedure fib(x: bv16, y: bv16) returns (z:bv16, w:bv16) { 
+    z, w = y, x + y;
+  }
+  init {
+    a = 0bv16;
+    b = 1bv16;
+  }
+  next {
+    call (a, b) = fib(a, b);
+    assert (a <= b);
+    assert (a < b);
+    // These weird assertions are to check the +/- arithmetic operators.
+    assert (a+b <= b+b);
+    assert (a-a <= b-a);
+  }
+  
+  control {
+  	x = unroll (5);
+  	check;
+  	// print_results;
+  	// x->print_cex;
+  }
+}

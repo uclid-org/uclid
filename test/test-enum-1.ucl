@@ -1,0 +1,26 @@
+module main {
+  type id_t = enum { privileged, unprivileged, invalid };
+  type syscall_t = enum { setresuid, setfsuid, noop };
+  
+  input invocation : syscall_t;
+  input operand_ruid, operand_euid, operand_suid, operand_fsuid : id_t;
+  
+  var systemcall : syscall_t;
+  
+  init {
+    systemcall = noop;
+  }
+  
+  next {
+    assert (systemcall == noop);
+    assert (systemcall != setresuid);
+    assert (operand_ruid == privileged   || 
+            operand_ruid == unprivileged ||
+            operand_ruid == invalid);
+  }
+  
+  control {
+    unroll (5);
+    check;
+  }
+}

@@ -1,0 +1,46 @@
+module main {
+  type rec = record { a : int, b : int, c : bool };
+  type struct = record { c1 : rec, c2 : rec };
+  
+  var s : struct;
+  input n : int;
+  
+  procedure zero() returns (s : rec) {
+    s.a = 0;
+    s.b = 0;
+    s.c = false;
+  }
+  
+  procedure updateV1(r : rec, n : int) returns (s : rec) {
+    s.a = r.a + 1;
+    s.b = r.b + n;
+    s.c = s.a == s.b;
+  }
+  
+  procedure updateV2(r : rec, n : int) returns (s : rec) {
+    s.a = r.a + 1;
+    s.b = r.b + n;
+    s.c = (s.a == s.b);
+  }
+  
+  init {
+    call (s.c1) = zero();
+    call (s.c2) = zero();
+  }
+  
+  next {
+    assume (n <= 2);
+    
+    call (s.c1) = updateV1(s.c1, n);
+    call (s.c2) = updateV2(s.c2, n);
+    
+    assert s.c1.a == s.c2.a;
+    assert s.c1.b == s.c2.b;
+    assert s.c1.c == s.c2.c;
+  }
+  
+  control {
+    unroll (3);
+    check;
+  }
+}

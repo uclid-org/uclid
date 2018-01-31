@@ -1,0 +1,167 @@
+module common {
+  // This module declares types that are used in the rest of the model.
+
+  // Types can be bitvectors.
+  type addr_t ;
+  type word_t = bv8;
+
+  // Or enums.
+  type op_t   = enum { op_mov, op_add, op_sub, op_load, op_store, op_syscall, op_sysret };
+  type mode_t = enum { usr_mode, sup_mode };
+
+  // Or SMT arrays.
+  type mem_t = [addr_t]word_t;
+}
+
+module cpu {
+  // Import type aliases from common.
+  type addr_t = common :: addr_t;
+  type mem_t  = common :: mem_t;
+  type word_t = common :: word_t;
+  type op_t   = common :: op_t;
+  type mode_t = common :: mode_t;
+  
+  // Types can also be uninterpreted.
+  type regindex_t; 
+  // And we can use them in maps.
+  type regs_t = [regindex_t]word_t;
+
+  // This is an input to the module.
+  input imem : mem_t;
+  
+  // These are the state variables of this module.
+  var dmem : mem_t;
+  var regs : regs_t;
+  var pc   : addr_t;
+  var mode : mode_t;
+
+  // These are the constants in this module.
+  const sup_range_lo : addr_t;
+  const sup_range_hi : addr_t;
+  const init_pc : addr_t;
+  
+  // These are (uninterpreted) functions.
+  function word2op     ( w : word_t )  : op_t;
+  function word2reg0   ( w : word_t )  : regindex_t;
+  function word2reg1   ( w : word_t )  : regindex_t;
+  function word2imm    ( w : word_t )  : word_t;
+  function word2nextPC ( w : addr_t )  : addr_t;
+  function word2addr ( w : word_t) : addr_t;
+
+  // More state variables.
+  input nd : bool;
+  var inst   : word_t;
+  var op     : op_t;
+  var r0ind  : regindex_t;
+  var r1ind  : regindex_t;
+  var r0     : word_t;
+  var r1     : word_t;
+  var result : word_t;
+
+  // Define initial state for the modules.
+  init {
+    assume (forall (r : regindex_t) :: regs[r] == 0bv8);
+    assume (forall (a : addr_t) :: dmem[a] == 0bv8);
+    assume (pc == init_pc);
+    inst = 0bv8;
+    mode = sup_mode;
+  }
+
+  // Define "next" transition.
+  next {
+    // get the next instruction.
+    inst = imem[pc];
+    // find its operation
+    op = word2op(inst);
+    // and its operands
+    r0ind = word2reg0(inst);
+    r1ind = word2reg1(inst);
+    r0 = regs[r0ind];
+    r1 = regs[r1ind];
+    
+    // now execute
+    case
+      // we have case statements!
+      (op == op_mov)     : { result = word2imm(inst); pc = word2nextPC(pc);}
+      (op == op_add)     : { result = r0 + r1; pc = word2nextPC(pc); }
+      (op == op_sub)     : { result = r0 - r1; pc = word2nextPC(pc); }
+      (op == op_load)    : { result = dmem[word2addr(inst)]; pc = word2nextPC(pc); }
+      (op == op_store)   : { 
+        result = r0;
+        // And if statements
+        //if (mode == sup_mode || r0 < sup_range_lo || r0 >= sup_range_hi) {
+        //  dmem[r0] = r1; 
+        //}
+        pc = word2nextPC(pc);
+      }
+      (op == op_syscall) : { 
+        result = r0;
+        //if (r0 >= sup_range_lo && r0 < sup_range_hi) {
+        //  mode = sup_mode; 
+        //}
+        pc = word2nextPC(pc);
+      }
+      (op == op_sysret)  : { 
+        result = r0;
+        mode = usr_mode; 
+        pc = word2nextPC(pc);
+      }
+    esac
+    regs[r0ind] = result;
+  }
+}
+  
+module main {
+  // The is the "main" module: i.e. the module from which proof script commands are executed.
+
+  // Import types
+  type addr_t     = common :: addr_t;
+  type mem_t      = common :: mem_t;
+  type word_t     = common :: word_t;
+  type op_t       = common :: op_t;
+  type regindex_t = cpu :: regindex_t;
+  
+  // instruction memory is the same for both CPUs.
+  var imem : mem_t;
+
+  // Create two instances of the CPU module.
+  instance cpu_i_1 : cpu(imem : (imem));
+  instance cpu_i_2 : cpu(imem : (imem));
+
+  init {
+    // Assume the two CPUs have the same initial state.
+    assume (cpu_i_1->sup_range_lo == cpu_i_2->sup_range_lo);
+    assume (cpu_i_1->sup_range_hi == cpu_i_2->sup_range_hi);
+  }
+
+  next {
+    // These call statements invoke the next state function of the two CPU module instances.
+    // FIXME: next (cpu_i_1)
+    next (cpu_i_1);
+    next (cpu_i_2);
+  }
+  
+  // These are our properties.
+  invariant eq_regs : (forall (ri : regindex_t) :: cpu_i_1->regs[ri] == cpu_i_2->regs[ri]);
+  invariant eq_mem  : (forall (a : addr_t) :: cpu_i_1->dmem[a] == cpu_i_2->dmem[a]);
+  invariant eq_pc   : (cpu_i_1->pc == cpu_i_2->pc);
+  invariant eq_inst : (cpu_i_1->inst == cpu_i_2->inst);
+
+  // The control block defines the commands that will executed as part of the proof script.
+  control {
+    // Some commands for debugging.
+    print_module;
+
+    // unroll(3) "unrolls" the module for 3 steps and creates symbolic
+    // expressions for the assertions encountered during those three steps.
+    unroll(3);
+    // check actually checks if these assertions hold.
+    check;
+    // this prints out the results of the verification.
+    print_results;
+
+    // print_cex (cpu_i_1->op, cpu_i_2->op, cpu_i_1->mem, cpu_i_2->mem);
+    // print_cex (cpu_i_1->inst, cpu_i_2->inst, cpu_i_1->op, cpu_i_2->op, cpu_i_1->regs[0bv1], cpu_i_2->regs[0bv1], cpu_i_1->regs[1bv1], cpu_i_2->regs[1bv1]);
+    // print_cex (cpu_i_1->inst, cpu_i_2->inst);
+  }
+}

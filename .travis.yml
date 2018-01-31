@@ -1,0 +1,15 @@
+language: scala
+scala:
+    - 2.12.0
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt
+before_script:
+  - wget https://github.com/Z3Prover/z3/releases/download/z3-4.6.0/z3-4.6.0-x64-ubuntu-14.04.zip 
+  - unzip z3-4.6.0-x64-ubuntu-14.04.zip
+  - export PATH=$PATH:$PWD/z3-4.6.0-x64-ubuntu-14.04/bin/
+  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/z3-4.6.0-x64-ubuntu-14.04/bin/
+script: sbt ++$TRAVIS_SCALA_VERSION test
+
+

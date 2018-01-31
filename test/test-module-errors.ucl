@@ -1,0 +1,37 @@
+module main
+{
+  type rec_t = record { a : int, a : bool, c : int };
+  input value : int;
+  var numbers : [int]int;
+  var sum, index : int;
+  output value : int;
+  var r : rec_t;
+  
+  function f(g : int, g : int) : int;
+
+  procedure add(a : int, b : int) returns (a : int) {
+    a = a + b;
+  }
+
+  init {
+    assume (forall (i : int) :: numbers[i] == 0);
+    sum = 0;
+    index = 0;
+  }
+
+  next {
+    sum = sum + value;
+    numbers[index] = value;
+    
+    index = index + 1;
+    
+    assert ((numbers[0] + numbers[1] + numbers[2] + numbers[3]) == sum);
+  }
+
+  control {
+    unroll (4);
+    check;
+    print_results;
+    print_cex(sum, value, numbers[0], numbers[1], numbers[2], numbers[3]);
+  }
+}

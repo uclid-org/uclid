@@ -1,0 +1,304 @@
+\chapter{Appendix: \uclid{} Grammar}
+
+\newcommand{\paratitle}[1]{\textsf{\textbf{#1}}}
+\newcommand{\nonterminal}[1]{$\langle \textit{#1} \rangle$}
+
+\setlength{\grammarindent}{12em} % increase separation between LHS/RHS 
+
+This appendix describes \uclid{}'s grammar.
+
+\section{Grammar of Modules and Declarations}
+\paratitle{A model} consist of a list of modules. Each module consists of a list of declarations followed by an optional control block.
+\begin{grammar}
+     <Model> ::= <Module>*
+
+     <Module> ::= \keywordbf{module} <Id>~~ `{' <Decl>* <ControlBlock>? `}'
+\end{grammar}
+
+\paratitle{Declarations} can be of the following types.
+\begin{grammar}
+     <Decl> ::= <TypeDecl> 
+            \alt <InputsDecl> 
+            \alt <OutputsDecl> 
+            \alt <VarsDecl> 
+            \alt <ConstsDecl> 
+            \alt <SharedVarsDecl> 
+            \alt <FuncDecl> 
+            \alt <ProcedureDecl> 
+            \alt <InstanceDecl>
+            \alt <InitDecl> 
+            \alt <NextDecl> 
+            \alt <AxiomDecl>
+            \alt <SpecDecl> 
+\end{grammar}
+
+\paratitle{Type declarations} declare either a type synonym or an uninterpreted type.
+\begin{grammar}
+     <TypeDecl> ::= \keywordbf{type} <Id> `=' <Type> `;'
+              \alt \keywordbf{type} <Id> `;'
+
+\end{grammar}
+
+\paratitle{Variable declarations} can refer to inputs, outputs, state variables or shared variables.
+\begin{grammar}
+     <InputsDecl> ::=
+       \keywordbf{input} ~ <IdList> `:' <Type> `;'
+
+     <OutputsDecl> ::=
+       \keywordbf{output} ~ <IdList> `:' <Type> `;'
+
+     <VarsDecl> ::=
+       \keywordbf{var} ~ <IdList> `:' <Type> `;'
+
+     <ConstsDecl> ::=
+       \keywordbf{const} ~ <IdList> `:' <Type> `;'
+
+     <SharedVarsDecl> ::=
+       \keywordbf{sharedvar} ~ <IdList> `:' <Type> `;'
+
+\end{grammar}
+
+\paratitle{Function declarations} refer to uninterpreted functions. 
+\begin{grammar}
+     <FuncDecl> ::= 
+       \keywordbf{function} <Id> `(' <IdTypeList> `)' `:' <Type> `;'
+
+\end{grammar}
+
+\paratitle{Procedure declarations} consist of a formal parameter list, a list of return values and types, 
+followed by optional pre-/post-conditions and the list of state variables modified by procedure.
+\begin{grammar}
+     <ProcedureDecl> ::=
+       \keywordbf{procedure} <Id> `(' <IdTypeList> ')' <ProcReturnArg>? \\
+       <RequireExprs> <EnsureExprs> <ModifiesExprs> \\
+       `{' <VarsDecls>* <Statement>* `}'
+
+     <ProcReturnArg> ::= \keywordbf{returns} `(' <IdTypeList> `)'
+
+     <RequireExprs> ::= ( \keywordbf{requires} <Expr> `;' )*
+
+     <EnsureExprs> ::= ( \keywordbf{ensures} <Expr> `;' )*
+
+     <ModifiesExprs> ::= ( \keywordbf{modifies} <IdList> `;' )*
+
+\end{grammar}
+
+\paratitle{Instance declarations} allow the instantiation (duh!) of other modules. They consist of the instance name, the name of the module being instantiated and the list of mappings for the instances' inputs, output and shared variables. 
+\begin{grammar}
+     <InstanceDecl> ::= \keywordbf{instance} <Id> `:' <Id> <ArgMapList> `;'
+
+     <ArgMapList>   ::= `(' `)' 
+                    \alt `(' <ArgMap> `,' <ArgMap> `)'
+
+     <ArgMap> ::= <Id> `:' `(' `)' 
+              \alt <Id> `:' `(' <Expr> `)'
+             
+\end{grammar}
+
+\paratitle{Axioms} refer to assumptions while a \paratitle{specification declaration} refers to design \keywordbf{invariants}. Note \keywordbf{axiom} and \keywordbf{assume} are synonyms, as are \keywordbf{property} and \keywordbf{invariant}.
+
+\begin{grammar}
+     <AxiomDecl> ::= <AxiomKW> <Id> `:' <Expr> `;'
+                 \alt <AxiomKW> <Expr> `;'
+
+     <AxiomKW> ::= \keywordbf{axiom} | \keywordbf{assume}
+
+     <SpecDecl> ::= <PropertyKW> <Id> `:' <Expr> `;'
+                 \alt <PropertyKW> <Expr> `;'
+
+     <PropertyKW> ::= \keywordbf{property} | \keywordbf{invariant}
+\end{grammar}
+
+\paratitle{Init} and \paratitle{next} blocks consist of lists of statements.
+\begin{grammar}
+     <InitDecl> ::= \keywordbf{init} `{' <Statement>* `}'
+
+     <NextDecl> ::= \keywordbf{next} `{' <Statement>* `}'
+
+\end{grammar}
+
+\section{Statement Grammar}
+\paratitle{Statements} are the following types, most of which should be familiar. Note the support for simultaneous assignment \`a la Python. The keyword \keywordbf{next} allows for synchronous scheduling of instantiated modules.
+\begin{grammar}
+     <Statement> 
+       ::= \keywordbf{skip} `;' 
+       \alt \keywordbf{assert} <Expr> `;'
+       \alt \keywordbf{assume} <Expr> `;'
+       \alt \keywordbf{havoc} <Id>  `;'
+       \alt <LhsList> `=' <ExprList> `;'
+       \alt \keywordbf{call} `(' <LhsList> `)' `=' <Id> <ExprList> `;'
+       \alt \keywordbf{next} `(' <Id> `)' `;'
+       \alt <IfStmt>
+       \alt <CaseStmt>
+       \alt <ForLoop>
+\end{grammar}
+
+\paratitle{Assignments} and \paratitle{call} statements refer to the nonterminal \nonterminal{LhsList}. As the name suggests, this is a list of syntactic forms that can appear on the left hand side of an assignment. \nonterminal{Lhs} are of four types: (i) identifiers, bitvector slices within identifiers, (iii) array indices, and (iv) fields within records.
+\begin{grammar}
+    <LhsList> ::= <Lhs> (`,' <Lhs>)*
+
+    <Lhs> ::= <Id>
+          \alt <Id> `[' <Expr> `:' <Expr> `]'
+          \alt <Id> `[' <ExprList> `]'
+          \alt <Id> (`.' <Id>)+
+\end{grammar}
+
+\paratitle{If} statements are as per usual. ``Braceless'' if statements are not permitted.
+\begin{grammar}
+    <IfStmt> ::= 
+    \keywordbf{if} `(' <IfExpr> `)'  `{' <Statement>* `}' \\ \keywordbf{else} `{' <Statement>* `}'
+    \alt \keywordbf{if} `(' <IfExpr> `)'  `{' <Statement>* `}'
+
+    <IfExpr> ::= <Expr> | *
+\end{grammar}
+
+\paratitle{Case} statements are as follows.
+\begin{grammar}
+    <CaseStmt> ::= \keywordbf{case} <CaseBlock>* \keywordbf{esac}
+
+    <CaseBlock> ::= <Expr> `:' `{' <Statement>* `}'
+                \alt \keywordbf{default} `:' `{' <Statement>* `}'
+\end{grammar}
+
+\paratitle{For loops} allow iteration over a statically defined range of values.
+\begin{grammar}
+    <ForLoop> ::= \keywordbf{for} <Id> \keywordbf{in} \keywordbf{range} `(' <Number> ',' <Number> `)' \\
+                  `{' <Statement>* `}'
+\end{grammar}
+
+\section{Expression Grammar}
+Let us turn to \paratitle{expressions}, which may be quantified. 
+\begin{grammar}
+    <Expr> ::= <E1>
+
+    <E1> ::= <E2>
+         \alt `(' \keywordbf{forall} `(' <IdTypeList> `)' `::' E1 `)'
+         \alt `(' \keywordbf{exists} `(' <IdTypeList> `)' `::' E1 `)'
+
+\end{grammar}
+
+The usual logical and bitwise operators are allowed.
+\begin{grammar}
+    <E2> ::= <E3> `<==>' <E2> | <E3>
+
+    <E3> ::= <E4> `==>' <E3> | <E4>
+
+    <E4> ::=  <E5> `&&' <E4> | <E5> `||' <E4> | 
+         \alt <E5> `&' <E4> | <E5> `|' <E4> | <E5> `^' <E4> 
+         \alt <E5>
+\end{grammar}
+
+As are relational operators, bitvector concatentation (++) and arithmetic.
+
+\begin{grammar}
+<E5> ::=  <E6> <RelOp> <E6> 
+
+<RelOp> ::= `>' | `<' | `=' | `!=' | `>=' | `<='
+
+<E6> ::=  <E7> `++' <E6> 
+
+<E7> ::=  <E8> `+' <E7>
+
+<E8> ::=  <E9> `-' <E9>
+
+<E9> ::= <E10> `*' <E10>
+\end{grammar}
+
+The unary operators are arithmetic negation (unary minus), logical negation and bitwise negation of bitvectors.
+\begin{grammar}
+    <E10> ::= <UnOp> <E11> | <E11>
+
+    <UnOp> ::= `-' | `!' | `~'
+\end{grammar}
+
+Array select, update and bitvector select operators are defined \`a la Boogie.
+\begin{grammar}
+    <E11> ::= <E12> `[' <Expr> (`,' <Expr>)* `]'
+          \alt <E12> `[' <Expr> (`,' <Expr>)* = <Expr> `]'
+          \alt <E12> `[' <Expr> `:' <Expr> `]'
+          \alt <E12>
+\end{grammar}
+
+Function invocation, record selection, and access to variables in instantiated modules is as follows.
+\begin{grammar}
+    <E12> ::=  <E13> `(' <ExprList> `)'
+          \alt <E13> (`.' <Id>)+
+          \alt <E13> (`->' <Id>)+
+\end{grammar}
+
+And finally, we have the terminal symbols, identifiers, tuples and the if-then-else operator.
+\begin{grammar}
+    <E12> ::= \keywordbf{false} | \keywordbf{true} | <Number>
+          \alt <Id> | <Id> `::' <Id>
+          \alt `{' <Expr> (`,' <Expr>)* `}'
+          \alt \keywordbf{ite} `(' <Expr> `,' <Expr> `,' <Expr> `)'
+\end{grammar}
+
+\section{Types}
+
+\begin{grammar}
+<Type> ::= <PrimitiveType> 
+       \alt <EnumType> 
+       \alt <TupleType> | <RecordType> 
+       \alt <ArrayType> 
+       \alt <SynonymType> 
+       \alt <ExternalType> 
+%%     }
+\end{grammar}
+
+Supported primitive types are Booleans, integers and bit-vectors. Bit-vector types are defined according the regular expression `bv[0-9]+' and the number following `bv' is the width of the bit-vector.
+
+\begin{grammar}
+    <PrimitiveType> ::= \keywordbf{bool} | \keywordbf{int} | <BitVectorType>
+\end{grammar}
+
+Enumerated types are defined using the \keywordbf{enum} keyword.
+\begin{grammar}
+    <EnumType> ::= \keywordbf{enum} `{' <IdList> `}'
+\end{grammar}
+
+Tuple types are declared using curly brace notation.
+\begin{grammar}
+    <TupleType> ::= `{' <Type>  (`,' <Type>)* `}'
+\end{grammar}
+
+Record types use the keyword \keywordbf{record}.
+\begin{grammar}
+    <Recordtype> ::= \keywordbf{record} `{' <IdTypeList> `}'
+\end{grammar}
+
+Array types are defined using square brackets. The list of types within square brackets defined the array's index type.
+\begin{grammar}
+    <ArrayType> ::= `[' <Type> (`,' <Type>)* `]' <Type>
+\end{grammar}
+
+Type synonyms are just identifiers, while external types refer to synonym types defined in a different module.
+\begin{grammar}
+    <SynonymType> ::= <Id>
+
+    <ExternalType> ::= <Id> `::' <Id>
+\end{grammar}
+
+\section{Control Block}
+\paratitle{The control block} consists of a list of commands. A command can have an optional result object, an optional argument object, an optional list of command parameters and finally an optional list of argument expressions. 
+\begin{grammar}
+     <ControlBlock> ::= \keywordbf{control}~~ `{' <Cmd>* `}'
+
+     <Cmd> ::= (<Id> `=' )? (<Id> `->')? <Id> \\
+              (`[' <IdList> `]')? <ExprList>? `;'
+
+\end{grammar}
+
+\section{Miscellaneous Nonterminals} 
+
+\nonterminal{IdList}, \nonterminal{IdTypeList} and \nonterminal{ExprList} are non-empty, comma-separated list of identifiers, identifier/type tuples and expressions respectively.
+\begin{grammar}
+     <IdList> ::= <Id> \alt <Id> `,' <IdList>
+
+     <IdTypeList> ::=  <Id> `:' <Type> 
+                  \alt <Id> `:' <Type> `,' <IdTypeList>
+
+     <ExprList> ::=  <Expr>
+                \alt <Expr> `,' <ExprList>
+\end{grammar}
+

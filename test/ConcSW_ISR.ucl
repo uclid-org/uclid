@@ -1,0 +1,129 @@
+module main_func {
+
+  type pc_t = enum {A, B, C};
+
+  input enable : bool;
+  sharedvar timerCount : int;
+
+  var pc : pc_t;
+
+  init {
+    pc = A;
+  }
+
+// potentially we could have modeled the main program naturally
+// without the use of an explicit PC -- next version of this model
+// could do that
+  next {
+    if (enable) {
+      case
+        pc == A : {
+                   if (timerCount == 0) { pc = C; }
+                   else { pc = B; }
+                }
+        pc == B : { pc = A; } 
+        pc == C : { pc = C; }
+      esac
+    }
+    else {
+      pc = pc; // perhaps unnecessary?
+    }
+  }
+
+} // end module main_func
+
+
+module ISR_func {
+ type pc_t = enum {idle, D, E};
+
+ input enable : bool;
+ sharedvar timerCount : int;
+
+ var pc : pc_t;
+
+ output return_ISR : bool;
+
+ init {
+   pc = idle;
+   return_ISR = false;
+ }
+
+ next {
+   if (enable) {
+     case
+       pc == idle : { pc = D; return_ISR = false; }
+       pc == D && timerCount != 0 : { pc = E; return_ISR = false; }
+       pc == D && timerCount == 0 : { pc = idle; return_ISR = true; }
+       pc == E : { timerCount = timerCount-1; pc = idle; return_ISR = true; }
+
+     esac
+   }
+   else {
+      pc = pc; return_ISR = false;
+   }
+ }
+
+} // end module ISR_func
+
+
+module Sys {
+
+  type mode_t = enum {main_t, ISR_t};
+
+  input assert_intr : bool;
+
+// define and initialize timerCount here as a state variable
+  var timerCount : int;
+  var mode : mode_t;
+  var M_enable, I_enable: bool;
+  var return_ISR : bool;
+
+  // main and ISR functions composed synchronously
+  instance main_f : main_func (enable : (M_enable), timerCount : (timerCount));
+  instance ISR_f : ISR_func (enable : (I_enable), timerCount : (timerCount), return_ISR : (return_ISR));
+
+  init {
+    mode = main_t;
+    timerCount = 2000;
+    M_enable = true; // since mode == main_t initially
+    I_enable = false;
+  }
+
+  next {
+    next (main_f); 
+    next (ISR_f);
+    M_enable = (mode == main_t);
+    I_enable = (mode == ISR_t);
+    if (mode == main_t && assert_intr) { mode = ISR_t; }
+    else {
+      if (mode == ISR_t && return_ISR) { mode = main_t; }
+    }
+  }   
+
+}
+
+module Env {
+  output assert_intr : bool;
+
+  init { havoc assert_intr; }
+
+  next { havoc assert_intr; }
+}
+
+module main {
+
+// explicitly model interleaving async composition with an ND scheduler
+  var turn : bool;
+  var assert_intr : bool;
+
+  instance Env_i : Env(assert_intr : (assert_intr));
+  instance Sys_i : Sys(assert_intr : (assert_intr));
+
+  init { havoc turn; }
+
+  next { 
+    if (turn) { next (Sys_i); } else { next (Env_i); }
+    havoc turn; 
+  }
+
+}

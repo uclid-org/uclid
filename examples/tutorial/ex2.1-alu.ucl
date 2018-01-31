@@ -1,0 +1,64 @@
+// Model of an ALU
+module main
+{
+  // Synonym for an enumerated type.
+  type cmd_t = enum { add, sub, mov_imm };
+  // Synonym for a record type.
+  type result_t = record { valid : bool, value : bv8 };
+
+  input valid       : bool;
+  input cmd         : cmd_t;
+  input r1, r2      : bv3;
+  input immed       : bv8;
+  output result     : result_t;
+
+  var regs          : [bv3]bv8;
+
+  // Temporary var to hold register values.
+  var r1val, r2val  : bv8;
+
+  // Variable for the test harness.
+  var cnt           : bv8; 
+
+  init {
+    // All registers initialized to one.
+    for i in range(0bv3, 7bv3) {
+      regs[i] = 1bv8;
+    }
+    cnt = 1bv8;
+    result.value = 1bv8;
+  }
+
+  next {
+    // Do we have a valid command?
+    if (valid) {
+      r1val = regs[r1];
+      r2val = regs[r2];
+      // Case-split on the operation to be performed.
+      case
+        (cmd == add)      : { regs[r1] = r1val + r2val; }
+        (cmd == sub)      : { regs[r1] = r1val - r2val; }
+        (cmd == mov_imm)  : { regs[r1] = immed; }
+      esac
+      // Set the output result.
+      result.valid = true;
+      result.value = regs[r1];
+    } else {
+      result.valid = false;
+    }
+    // This code is only for testing this module.
+    cnt = cnt + cnt;
+  }
+
+  // Specification.
+  axiom regindex_zero:      (r1 == 0bv3 && r2 == 0bv3);
+  axiom cmd_is_add:         (cmd == add);
+  axiom cmd_is_valid:       (valid);
+  invariant result_eq_cnd:  (cnt == result.value);
+
+  control {
+    f = unroll (5);
+    check;
+    print_results;
+  }
+}

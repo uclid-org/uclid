@@ -1,0 +1,138 @@
+\documentclass[oneside]{scrbook}
+\usepackage{syntax}
+\usepackage{hypernat}
+\usepackage[hidelinks]{hyperref}
+\usepackage{color}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{amsmath}
+\usepackage{xspace}
+\usepackage{pgf}
+\usepackage{tikz}
+\usepackage{comment}
+\usepackage{xifthen}
+\usepackage{listings}
+\usepackage{courier}
+\usepackage{newfloat}
+\usepackage{fancyvrb}
+
+\makeatletter
+\makeatother
+
+\usetikzlibrary{shapes}
+\usetikzlibrary{snakes}
+\usetikzlibrary{patterns}
+\usetikzlibrary{circuits}
+\usetikzlibrary{arrows}
+\usetikzlibrary{calc}
+\usetikzlibrary{fit}
+
+\let\ab\allowbreak
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{darkmagenta}{rgb}{0.55,0,0.55}
+
+\newcommand{\uclid}{{\textsc{Uclid5}}\xspace}
+\newcommand{\keyword}[1]{\textcolor{darkmagenta}{\texttt{#1}}}
+\newcommand{\ident}[1]{\textcolor{black}{\texttt{#1}}}
+\newcommand{\keywordbf}[1]{\textcolor{darkmagenta}{\texttt{{#1}}}}
+\newcommand{\proofcmd}[1]{\textcolor{blue}{\texttt{{#1}}}}
+\newcommand{\codelike}[1]{\texttt{#1}}
+
+\DeclareFloatingEnvironment[fileext=frm,name={Example},listname={List of \uclid{} Examples}]{uclidlisting}
+
+\lstdefinestyle{uclid}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize\ttfamily,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstdefinelanguage{uclid}{
+  sensitive = true,
+  keywords={module, forall, exists, Lambda, if, else, assert, assume, havoc,
+            for, range, skip, case, esac, init, next, control, function, procedure,
+            returns, call, type, var, input, output, const, property,
+            invariant, synthesis, grammar, requires, ensures, modifies, instance, axiom, 
+            enum, record, int, bool, true, false},
+ %otherkeywords={% types
+ %   int, bool, true, false,
+ %   bv1, bv2, bv3, bv4, bv5, bv6, bv7, bv8, bv9, bv10, bv11, bv12, bv13, bv14, bv15, 
+ %   bv16, bv17, bv18, bv19, bv20, bv21, bv22, bv23, bv24, bv25, bv26, bv27, bv28, bv29, bv30, bv31, 
+ %   bv32, bv33, bv34, bv35, bv36, bv37, bv38, bv39, bv40, bv41, bv42, bv43, bv44, bv45, bv46, bv47, 
+ %   bv48, bv49, bv50, bv51, bv52, bv53, bv54, bv55, bv56, bv57, bv58, bv59, bv60, bv61, bv62, bv63
+ %   %>, <, ==, <=, >=, +, -, *, !=
+ %},
+  numbers=left,
+  numberstyle=\scriptsize,
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  frame=top,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{1.0,1.0,1.0}
+
+\lstdefinestyle{uclidstyle}{
+  backgroundcolor=\color{backcolour},
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{magenta},
+  numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},
+  basicstyle=\footnotesize,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=5pt,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2
+}
+
+\begin{document}
+\title{Getting Started with {\uclid}\\Alpha release, version 0.8}
+\author{Pramod Subramanyan and Sanjit A. Seshia \\
+        \textit{\{spramod, sseshia\}@eecs.berkeley.edu}}
+\date{January 2018}
+\maketitle
+
+\tableofcontents
+\listofuclidlisting
+
+\input{ch-introduction}
+\input{ch-basics}
+\input{ch-verification}
+\input{ch-compositionality}
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\appendix
+\input{ch-grammar}
+
+\end{document}

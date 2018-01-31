@@ -1,0 +1,13 @@
+module main {
+  var s : int;
+
+  procedure foo(i : int) returns (o : int) {
+    o = i + 1;
+    o = o + 1;
+  }
+
+  next {
+    call (s) = foo(s);
+    call (s) = foo(s);
+  }
+}

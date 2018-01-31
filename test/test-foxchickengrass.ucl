@@ -1,0 +1,46 @@
+module main {
+  var fox, chicken, grass, farmer : bool;
+  
+  input move : bv2;
+  
+  init {
+    fox = false;
+    chicken = false;
+    grass = false;
+    farmer = false;
+  }
+  
+  next {
+    if (move == 0bv2) {
+      if (farmer == fox) {
+        fox = !fox;
+      }
+    } else {
+      if (move == 1bv2) {
+        if (farmer == chicken) {
+          chicken = !chicken;
+        }
+      } else {
+        if (move == 2bv2) {
+          if (farmer == grass) {
+            grass = !grass;
+          }
+        }
+      }
+    }
+    
+    farmer = !farmer;
+    
+     assume (!farmer ==> (fox && chicken));
+     assume (!farmer ==> (chicken && grass));
+     assume (farmer ==> (!fox && !chicken));
+     assume (farmer ==> (!chicken && !grass));
+    
+     assert (!(fox && chicken && grass));
+   }
+  
+   control {
+     unroll (5);
+     check;
+   }
+ }
