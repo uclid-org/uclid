@@ -4,7 +4,7 @@
 In the examples covered thus far, we have only used \uclid{} for bounded model checking of invariants. 
 \uclid{} can also be used to do unbounded inductive proofs and also provides support for debugging counterexamples. This chapter will describe these features of \uclid{}. Further features are being implemented and will be described in a future version of this document.
 
-\section*{Inductive Proofs} % change to \section when we have more sections!
+\section{Inductive Proofs} % change to \section when we have more sections!
 Let us revisit the model from Example~\ref{ex:fib-model}. This is now shown again in Example~\ref{ex:fib-induction}, but with a different proof script. Instead of using the \codelike{unroll} command for bounded model checking, we are using the \codelike{induction} command to attempt an inductive proof.
 
 \begin{uclidlisting}[htbp]
@@ -159,3 +159,58 @@ $ uclid examples/tutorial/ex3.3-fib-induction-proof.ucl
 
 Success! We have shown that our system model satisfies its specification.
 
+\section{Bounded Model Checking}
+
+\begin{uclidlisting}[htbp]
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+module main {
+  // System description.
+  var a, b : int;
+
+  init {
+    // embedded assumptions.
+    assume (a <= b);
+    assume (a >= 0 && b >= 0);
+  }
+  next {
+    a, b = b, a + b;
+    // embedded assertion.
+    assert (a <= b);
+  }
+
+  // Proof script.
+  control {
+    unroll (3);
+    check;
+    print_results;
+  }
+}
+\end{lstlisting}
+\label{ex:fib-model-v2}
+    \caption{Revisiting the Fibonacci model from Example~\ref{ex:fib-model}.}
+\end{uclidlisting}
+
+Let us return to the model of Example~\ref{ex:fib-model} which is reproduced as Example~\ref{ex:fib-model-v2} with a few changes. We used the \codelike{unroll} command for verification. This command performs bounded model checking and takes a single argument -- the number of steps to unroll the model for. In Example~\ref{ex:fib-model-v2}, we are unrolling the model for 3 steps. 
+
+\subsection{Embedded assume and assert statements}
+
+A second difference with between Example~\ref{ex:fib-model} and Example~\ref{ex:fib-model-v2} is on lines 7~and~13.
+
+Instead of using a module-level assumption declarations as in Example~\ref{ex:fib-model}, we have an embedded assumption in the \keywordbf{init} block on line 7, and an embedded assertion in the \keywordbf{next} block on line 13. A module-level assumption is assumed to hold by the solver at every step of execution, while an embedded assumption is assumed ``instantaneously.'' In particular, the assumption on line~7 tells the solver to assume that $\codelike{a} \leq \codelike{b}$ at the end of the \keywordbf{init} block. Notice that we are not assigning specific values to \codelike{a} and \codelike{b}, instead we are asking \uclid{} to consider all values of \codelike{a} and \codelike{b} where $\codelike{a} \leq \codelike{b}$, $\codelike{a} \geq 0$ and $\codelike{b} \geq 0$.
+
+Similarly the assertion on line~13 is evaluated at that specific location in the code (the end of the \keywordbf{next} block), whereas a module-level assertion would be evaluated after the \keywordbf{init} block and after the \keywordbf{next} block is evaluated at each step.
+
+\subsection{Running \uclid{}}
+
+Running \uclid{} on Example~\ref{ex:fib-model-v2} shows that the embedded assertion does indeed hold for all states reachable within 3 steps of the initial state.
+
+\begin{Verbatim}[frame=single, samepage=true]
+$ uclid examples/tutorial/ex3.4-fib-model-revisted.ucl 
+3 assertions passed.
+0 assertions failed.
+0 assertions indeterminate.
+\end{Verbatim}
+
+\section{Future Directions}
+
+Future versions of \uclid{} will have support for the verification of properties specified in linear temporal logic (LTL), as well as support for synthesizing invariants using Syntax-Guided Synthesis (SyGuS).

@@ -2,6 +2,8 @@ all: tutorial.pdf
 
 tutorial.pdf: *.tex
 	pdflatex -halt-on-error tutorial.tex
+	bibtex tutorial
+	pdflatex -halt-on-error tutorial.tex
 	pdflatex -halt-on-error tutorial.tex
 		
 .PHONY: clean
