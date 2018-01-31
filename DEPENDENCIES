@@ -1,0 +1,13 @@
+The following is a list of software packages and associated
+licenses that uclid5 depends on.
+
+* Z3: MIT License
+* Scala Library: BSD 3-Clause
+* SBT Native Packager: BSD 2-Clause
+* SBT Eclipse Plugin: Apache 2.0
+* Scalatest/Scalactic: Apache 2.0
+
+All of these except for Z3 are installed using SBT. The lib/
+subdirectory contains a jar file with the Z3 Java API.
+
+
