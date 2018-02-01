@@ -1,0 +1,25 @@
+module main
+{
+  input a, b : int;
+  var inited : bool;
+  output sum : int;
+  
+  init {
+    inited = false;
+  }
+  next {
+	inited = true;    
+    sum = a + b;
+  }
+  
+  property p1[LTL] : G(inited ==> (sum == a + b + 1));
+  
+  
+  control {
+    print_module;
+    vobj = unroll (3);
+    check;
+    print_results;
+    vobj->print_cex;
+  }
+}
