@@ -17,7 +17,8 @@ module main {
   property snext[LTL] : G((state == s1) ==> X(state == s2));
   
   control {
-    f = unroll(10);
+    print_module;
+    f = unroll(3);
     check;
     print_results;
   } 
