@@ -1,52 +1,24 @@
 module main {
-
-  input  a, b  : int;
-  input  valid : bool;
-  output sum   : int;
-  output ready : bool;
-  
-  var a_past, b_past : int;
-  var ready_next : bool;
-  var stepcnt : int;
-  var inited : bool;
+  type state_t = enum { s1, s2, s3 };
+  var state : state_t;
   
   init {
-    a_past = 0;
-    b_past = 0;
-    ready_next = false;
-
-    inited  = false;
-    stepcnt = 0;
+    state = s1;
   }
   
   next {
-    sum = a_past + b_past;
-    ready = ready_next;
-    if (!inited) {
-      stepcnt = stepcnt + 1;
-      if (stepcnt > 1) {
-        inited = true;
-      }
-    }
-    assert (inited && history(valid, 1)) ==> (a_past == history(a, 1));
-    assert (inited && old(valid)) ==> (a_past == old(a));
-    assert (old(valid) == history(valid, 1));
-    if (valid) {
-      a_past = a;
-      b_past = b;
-    }
-    ready_next = valid;
+	case
+	  (state == s1) : { state = s2; }
+	  (state == s2) : { state = s3; }
+	  (state == s3) : { state = s1; }
+	esac
   }
   
-  property sum_property[LTL] : G(valid ==> X(ready));
-  // property ready_property : (inited && history(valid, 2)) ==> history(ready, 1);
+  property snext[LTL] : G((state == s1) ==> X(state == s2));
   
   control {
-    print_module;
-    // f = unroll (3);
-    // check;
-    // print_results;
-    // f->print_cex(inited, a_past, a, valid /*, history(a_past, 1)*/);
-    // f->print_smt2;
-  }
+    f = unroll(10);
+    check;
+    print_results;
+  } 
 }

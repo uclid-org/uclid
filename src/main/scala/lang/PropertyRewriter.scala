@@ -374,7 +374,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     val newVarDecls = StateVarsDecl(varsToInitTrue ++ varsToInitFalse, BoolType())
     val newInitFalse = AssignStmt(varsToInitFalse.map(LhsId(_)), List.fill(varsToInitFalse.size)(BoolLit(false)))
     val newInitTrue = AssignStmt(varsToInitTrue.map(LhsId(_)), List.fill(varsToInitTrue.size)(BoolLit(true)))
-    val newInits = newInitFalse :: newInitTrue :: rootAssumes
+    val newInits = List(newInitFalse, newInitTrue) 
 
     val rewriteImpls = rewrites.flatMap(r => r._2)
     val implicationHavocs = rewriteImpls.map(r => HavocStmt(r._1))
@@ -384,7 +384,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     val newAssigns = assignmentPairs.map(p => AssignStmt(List(LhsId(p._1)), List(p._2)))
     val newHFAssigns = monitorExprs.map(p => AssignStmt(List(LhsId(p._2._1)), List(p._2._2)))
     val newPendingAssigns = monitorExprs.map(p => AssignStmt(List(LhsId(p._3._1)), List(p._3._2)))
-    val newNexts = rootAssumes ++ implicationHavocs ++ implicationAssumes ++ newAssigns ++ newHFAssigns ++ newPendingAssigns
+    val newNexts = implicationHavocs ++ rootAssumes ++ implicationAssumes ++ newAssigns ++ newHFAssigns ++ newPendingAssigns
 
     val otherDecls = module.decls.filter(p => !p.isInstanceOf[SpecDecl] && !p.isInstanceOf[InitDecl] && !p.isInstanceOf[NextDecl]) ++ otherSpecs
     val newInitDecl = InitDecl(module.init.get.body ++ newInits ++ newNexts)
