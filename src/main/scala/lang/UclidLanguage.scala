@@ -392,6 +392,10 @@ case object LTLSafetyFragmentDecorator extends ExprDecorator {
 case object LTLLivenessFragmentDecorator extends ExprDecorator {
   override def toString = "LTLLivenessFragment"
 }
+case object CoverDecorator extends ExprDecorator {
+  override def toString = "cover"
+}
+
 object ExprDecorator {
   /** Factory constructor. */
   def parse(e : Expr) : ExprDecorator = {

@@ -37,7 +37,14 @@ import uclid.lang._
 
 import scala.collection.mutable.ListBuffer
 
-case class AssertInfo(name : String, label : String, frameTable : SymbolicSimulator.FrameTable, context : Scope, iter : Int, expr : smt.Expr, pos : ASTPosition) {
+case class AssertInfo(
+    name : String, label : String, 
+    frameTable : SymbolicSimulator.FrameTable, 
+    context : Scope, 
+    iter : Int, 
+    expr : smt.Expr,
+    decorators : List[ExprDecorator],
+    pos : ASTPosition) {
   override def toString = {
     label + " [Step #" + iter.toString + "] " + name + " @ " + pos.toString
   }
@@ -85,7 +92,12 @@ class AssertionTree {
     solver.addAssumptions(node.assumptions.toList)
     node.results = (node.assertions.map {
       e => {
-        val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e.expr)))
+        val assertExpr = if (e.decorators.contains(CoverDecorator)) {
+          e.expr
+        } else {
+          smt.OperatorApplication(smt.NegationOp, List(e.expr))
+        }
+        val sat = solver.check(assertExpr)
         val result = sat.result match {
           case Some(true)  => smt.SolverResult(Some(false), sat.model)
           case Some(false) => smt.SolverResult(Some(true), sat.model)
