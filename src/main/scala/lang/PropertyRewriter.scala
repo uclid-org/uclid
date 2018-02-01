@@ -184,7 +184,7 @@ class LTLPropertyRewriterPass extends RewritePass {
         OperatorApplication(EqualityOp(), args)
       // !(a ==> b) -> a && !b
       case OperatorApplication(NegationOp(), List(OperatorApplication(ImplicationOp(), args))) =>
-        OperatorApplication(ConjunctionOp(), List(args(0), negate(args(1))))
+        OperatorApplication(ConjunctionOp(), List(args(0), recurse(negate(args(1)))))
       // !(a <==> b) -> (a != b)
       case OperatorApplication(NegationOp(), List(OperatorApplication(IffOp(), args))) =>
         OperatorApplication(InequalityOp(), args)
@@ -329,8 +329,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     val rewrites = ltlSpecs.map { 
       (s) => {
         val nnf = convertToNNF(negate(s.expr))
-        // println("exp: " + s.expr.toString)
-        // println("nnf: " + nnf.toString)
+        println("exp: " + s.expr.toString)
+        println("nnf: " + nnf.toString)
         createTseitinExpr(s.id, nnf, nameProvider)
       }
     }
