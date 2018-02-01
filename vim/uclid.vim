@@ -34,19 +34,18 @@ syn match   ucl4Identifier      display "[A-Za-z_][A-Za-z0-9_]\*"
 " TODO: include strings ?
 "
 syn keyword ucl4Todo contained TODO FIXME XXX NOTE
-syn region  ucl4MultilineComment start="\/\*"  end="\*\/" contains=ucl4Todo
-hi def link ucl4MultilineComment Comment
-syn match   ucl4TrailingComment "\/\/.*$" contains=ucl4Todo
-hi def link ucl4TrailingComment  Comment
-syn match   ucl4LineComment "\/\/.*$" contains=ucl4Todo
-hi def link ucl4LineComment Comment
+syn region ucl4MultilineComment start="/\*"  end="\*/" contains=ucl4Todo keepend fold
+hi link ucl4MultilineComment Comment
+syn match ucl4TrailingComment "//.*" contains=ucl4Todo
+hi link ucl4TrailingComment  Comment
+
 " unicode characters
 syn match   ucl4Number      "\<\(0[0-7]*\|0[xX]\x\+\|\d\+\)[lL]\=\>"
 syn match   ucl4Number      "\(\<\d\+\.\d*\|\.\d\+\)\([eE][-+]\=\d\+\)\=[fFdD]\="
 syn match   ucl4Number      "\<\d\+[eE][-+]\=\d\+[fFdD]\=\>"
 syn match   ucl4Number      "\<\d\+\([eE][-+]\=\d\+\)\=[fFdD]\>"
 syn match   ucl4Number      "\<\d\+bv\d\+\>"
-syn match   ucl4Operator    ":=\|==\|+\|-\|*\|&&\|||\|^\|!"
+syn match   ucl4Operator    "=\|==\|+\|-\|*\|&&\|||\|^\|!\|==>\|<==>"
 
 " The default highlighting.
 hi def link ucl4Type            Type
@@ -57,15 +56,8 @@ hi def link ucl4Constant        Constant
 hi def link ucl4Cmd             Define
 hi def link ucl4Operator        Operator
 
-hi def link ucl4Todo             Todo
+hi def link ucl4Todo             TODO
 
 hi def link ucl4Number          Number
 
-let b:current_syntax = "ucl4"
-
-" let &cpo = s:ucl4_cpo_save
-" unlet s:ucl4_cpo_save
-
-" set efm+=%f(%l\\,%c):\ %m
-
-" vim: ts=8
+let b:current_syntax = "ucl"
