@@ -39,7 +39,7 @@ import uclid.{lang => l}
 
 class VerifierSpec extends FlatSpec {
   def nTestsFail(filename: String, nFail : Int) {
-    val modules = UclidMain.compile(List(filename), lang.Identifier("main"))
+    val modules = UclidMain.compile(List(filename), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(modules, l.Identifier("main"))
     assert (mainModule.isDefined)
     val results = UclidMain.execute(mainModule.get)
@@ -127,5 +127,14 @@ class VerifierSpec extends FlatSpec {
   }
   "test/test-mem-inout.ucl" should "verify all assertions." in {
     nTestsFail("./test/test-meminout.ucl", 0)
+  }
+  "test/test-history-1.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-history-1.ucl", 0)
+  }
+  "test/test-ltl-0-safe.ucl" should "verify all assertions." in {
+    nTestsFail("./test/test-ltl-0-safe.ucl", 0)
+  }
+  "test/test-ltl-0-unsafe.ucl" should "should fail to verify 3 assertions." in {
+    nTestsFail("./test/test-ltl-0-unsafe.ucl", 3)
   }
 }

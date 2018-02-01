@@ -329,8 +329,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     val rewrites = ltlSpecs.map { 
       (s) => {
         val nnf = convertToNNF(negate(s.expr))
-        println("exp: " + s.expr.toString)
-        println("nnf: " + nnf.toString)
+        // println("exp: " + s.expr.toString)
+        // println("nnf: " + nnf.toString)
         createTseitinExpr(s.id, nnf, nameProvider)
       }
     }
@@ -362,7 +362,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     def iffExpr(a : Expr, b : Expr) : Expr = OperatorApplication(IffOp(), List(a, b))
     def eqExpr(a : Expr, b : Expr) : Expr = OperatorApplication(EqualityOp(), List(a, b))
 
-    val isInitAssign = AssignStmt(List(LhsId(isInit)), List(BoolLit(true)))
+    val isInitAssign = AssignStmt(List(LhsId(isInit)), List(BoolLit(false)))
     val rootVars = rewrites.map(_._1)
     val rootAssumes = rootVars.map(r => AssumeStmt(iffExpr(r, isInit), None))
 
@@ -370,8 +370,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     val monitorVarsInt = rewrites.flatMap(r => r._3).map(_._1)
     val monitorVarsExtFalse = monitorExprs.map(_._2._1) 
     val monitorVarsExtTrue = monitorExprs.map(_._3._1)
-    val varsToInitFalse : List[Identifier] = isInit :: monitorVarsExtFalse ++ monitorVarsInt
-    val varsToInitTrue : List[Identifier] = monitorVarsExtTrue
+    val varsToInitFalse : List[Identifier] = monitorVarsExtFalse ++ monitorVarsInt
+    val varsToInitTrue : List[Identifier] = isInit :: monitorVarsExtTrue
     val newVarDecls = StateVarsDecl(varsToInitTrue ++ varsToInitFalse, BoolType())
     val newInitFalse = AssignStmt(varsToInitFalse.map(LhsId(_)), List.fill(varsToInitFalse.size)(BoolLit(false)))
     val newInitTrue = AssignStmt(varsToInitTrue.map(LhsId(_)), List.fill(varsToInitTrue.size)(BoolLit(true)))

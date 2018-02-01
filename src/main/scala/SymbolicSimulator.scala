@@ -382,12 +382,17 @@ class SymbolicSimulator (module : Module) {
   }
 
   def simulate(iter : Int, s: Statement, symbolTable: SymbolTable, scope : Scope, label : String) : SymbolTable = {
+    val numPastFrames = frameTable.size
+    lazy val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
+
     def recordSelect(field : String, rec : smt.Expr) = {
       smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
     }
+
     def recordUpdate(field : String, rec : smt.Expr, newVal : smt.Expr) = {
       smt.OperatorApplication(smt.RecordUpdateOp(field), List(rec, newVal))
     }
+
     def simulateRecordUpdateExpr(st : smt.Expr, fields : List[String], newVal : smt.Expr) : smt.Expr = {
       fields match {
         case hd :: tl =>
@@ -407,7 +412,7 @@ class SymbolicSimulator (module : Module) {
           case LhsId(id) =>
             st = st + (id -> rhs(x))
           case LhsArraySelect(id, indices) =>
-            st = st + (id -> smt.ArrayStoreOperation(st(id), indices.map(i => evaluate(i, st, Map.empty, scope)), rhs(x)))
+            st = st + (id -> smt.ArrayStoreOperation(st(id), indices.map(i => evaluate(i, st, pastTables, scope)), rhs(x)))
           case LhsRecordSelect(id, fields) =>
             st = st + (id -> simulateRecordUpdateExpr(st(id), fields.map(_.toString), rhs(x)))
           case LhsSliceSelect(id, slice) =>
@@ -422,24 +427,21 @@ class SymbolicSimulator (module : Module) {
       }
       return st
     }
+
     s match {
       case SkipStmt() => return symbolTable
       case AssertStmt(e, id) =>
-        val numPastFrames = frameTable.size
-        val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
         val frameTableP = frameTable.clone()
         frameTableP += symbolTable
         addAssert(AssertInfo("assertion", label, frameTableP, scope, iter, evaluate(e,symbolTable, pastTables, scope), List.empty, s.position))
         return symbolTable
       case AssumeStmt(e, id) =>
-        val numPastFrames = frameTable.size
-        val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap 
         addAssumption(evaluate(e,symbolTable, pastTables, scope))
         return symbolTable
       case HavocStmt(id) =>
         return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(scope.typeOf(id).get)))
       case AssignStmt(lhss,rhss) =>
-        val es = rhss.map(i => evaluate(i, symbolTable, Map.empty, scope));
+        val es = rhss.map(i => evaluate(i, symbolTable, pastTables, scope));
         return simulateAssign(lhss, es, symbolTable, label)
       case IfElseStmt(e,then_branch,else_branch) =>
         var then_modifies : Set[Identifier] = writeSet(then_branch)
@@ -449,7 +451,7 @@ class SymbolicSimulator (module : Module) {
         var else_st : SymbolTable = simulate(iter, else_branch, symbolTable, scope, label)
         return symbolTable.keys.filter { id => then_modifies.contains(id) || else_modifies.contains(id) }.
           foldLeft(symbolTable){ (acc,id) =>
-            acc.updated(id, smt.ITE(evaluate(e, symbolTable, Map.empty, scope), then_st(id), else_st(id)))
+            acc.updated(id, smt.ITE(evaluate(e, symbolTable, pastTables, scope), then_st(id), else_st(id)))
           }
       case ForStmt(id, range, body) => throw new Utils.UnimplementedException("Cannot symbolically execute For loop")
       case CaseStmt(body) => throw new Utils.UnimplementedException("Cannot symbolically execute Case stmt")
@@ -544,7 +546,6 @@ class SymbolicSimulator (module : Module) {
         }
       }
     }
-
     smt.Converter.exprToSMT(e, idToSMT, scope)
   }
 }

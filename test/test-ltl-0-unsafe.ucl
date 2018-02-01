@@ -16,10 +16,7 @@ module main
   
   
   control {
-    print_module;
     vobj = unroll (3);
     check;
-    print_results;
-    vobj->print_cex;
   }
 }

@@ -137,7 +137,7 @@ object UclidMain {
     }
   }
 
-  def compile(srcFiles : List[String], mainModuleName : Identifier) : List[Module] = {
+  def compile(srcFiles : List[String], mainModuleName : Identifier, test : Boolean = false) : List[Module] = {
     type NameCountMap = Map[Identifier, Int]
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
 
@@ -157,7 +157,7 @@ object UclidMain {
     passManager.addPass(new TypeSynonymRewriter())
     passManager.addPass(new BitVectorSliceFindWidth())
     passManager.addPass(new ExpressionTypeChecker())
-    passManager.addPass(new VerificationExpressionChecker())
+    if (!test) passManager.addPass(new VerificationExpressionChecker())
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())

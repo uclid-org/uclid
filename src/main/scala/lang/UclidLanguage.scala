@@ -346,7 +346,7 @@ case class ArraySelectOperation(e: Expr, index: List[Expr]) extends Expr {
 }
 case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr {
   override def toString = e + "[" + index.tail.fold(index.head.toString)
-    { (acc,i) => acc + "," + i } + "]" + " := " + value
+    { (acc,i) => acc + "," + i } + "]" + " = " + value
 }
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class FuncApplication(e: Expr, args: List[Expr]) extends Expr {
@@ -630,7 +630,7 @@ case class HavocStmt(id: Identifier) extends Statement {
 }
 case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines =
-    List(Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
+    List(Utils.join(lhss.map (_.toString), ", ") + " = " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
 }
 case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Statement]) extends Statement {
   lazy val lines : List[String] = if (elseblock.size > 0) {
@@ -659,7 +659,7 @@ case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
 }
 case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr])  extends Statement {
   override def toLines = List("call (" +
-    Utils.join(callLhss.map(_.toString), ", ") + ") := " + id + "(" +
+    Utils.join(callLhss.map(_.toString), ", ") + ") = " + id + "(" +
     Utils.join(args.map(_.toString), ", ") + ") // " + id.position.toString)
 }
 case class ModuleCallStmt(id: Identifier) extends Statement {
@@ -867,7 +867,7 @@ case class GenericProofCommand(name : Identifier, params: List[Identifier], args
     val nameStr = name.toString
     val paramStr = if (params.size > 0) { "[" + Utils.join(params.map(_.toString), ", ") + "]" } else { "" }
     val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
-    val resultStr = resultVar match { case Some(id) => id.toString + " := "; case None => "" }
+    val resultStr = resultVar match { case Some(id) => id.toString + " = "; case None => "" }
     val objStr = argObj match { case Some(id) => id.toString + "->"; case None => "" }
     resultStr + objStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
   }
