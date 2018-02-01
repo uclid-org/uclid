@@ -346,7 +346,7 @@ class SymbolicSimulator (module : Module) {
       e => {
         val name = "postcondition"
         val expr = evaluate(e, finalState, Map(1 -> initProcState), procScope)
-        assertionTree.addAssert(AssertInfo(name, label, frameTable, procScope, 1, expr, e.position))
+        assertionTree.addAssert(AssertInfo(name, label, frameTable, procScope, 1, expr, List.empty, e.position))
       }
     }
     resetState()
@@ -356,7 +356,9 @@ class SymbolicSimulator (module : Module) {
   def addAsserts(iter : Int, symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable], label : String, scope : Scope) {
     scope.specs.foreach(specVar => {
       val prop = module.properties.find(p => p.id == specVar.varId).get
-      val property = AssertInfo(prop.name, label, frameTable.clone(), scope, iter, evaluate(prop.expr, symbolTable, pastTables, scope), prop.expr.position)
+      var table = frameTable.clone()
+      table += symbolTable
+      val property = AssertInfo(prop.name, label, table, scope, iter, evaluate(prop.expr, symbolTable, pastTables, scope), prop.params, prop.expr.position)
       // println ("addAsserts: " + property.toString + "; " + property.expr.toString)
       addAssert(property)
     })
@@ -427,7 +429,7 @@ class SymbolicSimulator (module : Module) {
         val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
         val frameTableP = frameTable.clone()
         frameTableP += symbolTable
-        addAssert(AssertInfo("assertion", label, frameTableP, scope, iter, evaluate(e,symbolTable, pastTables, scope), s.position))
+        addAssert(AssertInfo("assertion", label, frameTableP, scope, iter, evaluate(e,symbolTable, pastTables, scope), List.empty, s.position))
         return symbolTable
       case AssumeStmt(e, id) =>
         val numPastFrames = frameTable.size

@@ -253,7 +253,6 @@ class LTLPropertyRewriterPass extends RewritePass {
         
         val z = nameProvider(specName, "z")
         val innerExpr = OperatorApplication(opapp.op, args)
-        val zImpl = (z, innerExpr)
         if (opapp.op.isInstanceOf[TemporalOperator]) {
           val tOp = opapp.op.asInstanceOf[TemporalOperator]
           def Y(x : Expr) = OperatorApplication(HistoryOperator(), List(x, IntLit(1)))
@@ -263,6 +262,7 @@ class LTLPropertyRewriterPass extends RewritePass {
           
           tOp match {
             case NextTemporalOp() =>
+              val zImpl = (z, args(0))
               // pending = z
               val pendingVar = nameProvider(specName, "pending")
               val pendingNext = (pendingVar, z)
@@ -271,6 +271,7 @@ class LTLPropertyRewriterPass extends RewritePass {
               val failedNext = (failedVar, and(Y(pendingVar), not(args(0))))
               (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
             case GloballyTemporalOp() =>
+              val zImpl = (z, args(0))
               // pending = Ypending) \/ z
               val pendingVar = nameProvider(specName, "pending")
               val pendingNext = (pendingVar, or(Y(pendingVar), z))
@@ -279,6 +280,7 @@ class LTLPropertyRewriterPass extends RewritePass {
               val failedNext = (failedVar, and(pendingVar, not(args(0))))
               (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
             case FinallyTemporalOp() =>
+              val zImpl = (z, args(0))
               // pending = (z \/ Ypending) /\ ~args(0)
               val pendingVar = nameProvider(specName, "pending")
               val pendingExpr = and(or(z, Y(pendingVar)), not(args(0)))
@@ -292,6 +294,7 @@ class LTLPropertyRewriterPass extends RewritePass {
               throw new Utils.UnimplementedException("Need more cases here.")
           }
         } else {
+          val zImpl = (z, innerExpr)
           (z, zImpl :: argImpls, argNexts, argFaileds, argAccepts, argPendings)
         }
       }
@@ -348,37 +351,45 @@ class LTLPropertyRewriterPass extends RewritePass {
         val pendingExpr : Expr = pendingVars.foldLeft(BoolLit(false).asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
 
         val acceptVars = p._2._2
-        val safetyExpr = orExpr(pendingVar, hasFailedVar)
+        val safetyExpr = andExpr(notExpr(pendingVar), notExpr(hasFailedVar))
         
         (p._1, (hasFailedVar, hasFailedExpr), (pendingVar, pendingExpr), acceptVars, safetyExpr)
         
       }
     }
-    val newInputDecls = InputVarsDecl(rewrites.flatMap(r => r._2).map(_._1), BoolType())
-    val monitorVarsInt = rewrites.flatMap(r => r._3).map(_._1)
-    val monitorVarsExt = isInit :: monitorExprs.map(_._2._1) ++ monitorExprs.map(_._3._1)
-    val varsToInit : List[Identifier] = monitorVarsExt ++ monitorVarsInt
-    val newVarDecls = StateVarsDecl(varsToInit, BoolType())
-    val newInits = List(AssignStmt(varsToInit.map(LhsId(_)), BoolLit(true) :: List.fill(varsToInit.size - 1)(BoolLit(false))))
-
     def implExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ImplicationOp(), List(a, b))
+    def iffExpr(a : Expr, b : Expr) : Expr = OperatorApplication(IffOp(), List(a, b))
     def eqExpr(a : Expr, b : Expr) : Expr = OperatorApplication(EqualityOp(), List(a, b))
 
+    val isInitAssign = AssignStmt(List(LhsId(isInit)), List(BoolLit(true)))
     val rootVars = rewrites.map(_._1)
-    val rootAssumes = rootVars.map(r => AssumeStmt(eqExpr(r, isInit), None))
+    val rootAssumes = rootVars.map(r => AssumeStmt(iffExpr(r, isInit), None))
+
+    val newInputDecls = StateVarsDecl(rewrites.flatMap(r => r._2).map(_._1), BoolType())
+    val monitorVarsInt = rewrites.flatMap(r => r._3).map(_._1)
+    val monitorVarsExtFalse = monitorExprs.map(_._2._1) 
+    val monitorVarsExtTrue = monitorExprs.map(_._3._1)
+    val varsToInitFalse : List[Identifier] = isInit :: monitorVarsExtFalse ++ monitorVarsInt
+    val varsToInitTrue : List[Identifier] = monitorVarsExtTrue
+    val newVarDecls = StateVarsDecl(varsToInitTrue ++ varsToInitFalse, BoolType())
+    val newInitFalse = AssignStmt(varsToInitFalse.map(LhsId(_)), List.fill(varsToInitFalse.size)(BoolLit(false)))
+    val newInitTrue = AssignStmt(varsToInitTrue.map(LhsId(_)), List.fill(varsToInitTrue.size)(BoolLit(true)))
+    val newInits = newInitFalse :: newInitTrue :: rootAssumes
+
     val rewriteImpls = rewrites.flatMap(r => r._2)
-    val implicationAssumes = rewriteImpls.map(r => AssumeStmt(implExpr(r._1, r._2), None))
+    val implicationHavocs = rewriteImpls.map(r => HavocStmt(r._1))
+    val implicationAssumes = rewriteImpls.map(r => AssumeStmt(iffExpr(r._1, r._2), None))
 
     val assignmentPairs = rewrites.flatMap(r => r._3)
     val newAssigns = assignmentPairs.map(p => AssignStmt(List(LhsId(p._1)), List(p._2)))
     val newHFAssigns = monitorExprs.map(p => AssignStmt(List(LhsId(p._2._1)), List(p._2._2)))
     val newPendingAssigns = monitorExprs.map(p => AssignStmt(List(LhsId(p._3._1)), List(p._3._2)))
-    val newNexts = newAssigns ++ newHFAssigns ++ newPendingAssigns
+    val newNexts = rootAssumes ++ implicationHavocs ++ implicationAssumes ++ newAssigns ++ newHFAssigns ++ newPendingAssigns
 
     val otherDecls = module.decls.filter(p => !p.isInstanceOf[SpecDecl] && !p.isInstanceOf[InitDecl] && !p.isInstanceOf[NextDecl]) ++ otherSpecs
-    val newInitDecl = InitDecl(module.init.get.body ++ newInits)
-    val newNextDecl = NextDecl(module.next.get.body ++ newNexts)
-    val newSafetyProperties = monitorExprs.map(p => SpecDecl(p._1, p._5, List(LTLSafetyFragmentDecorator)))
+    val newInitDecl = InitDecl(module.init.get.body ++ newInits ++ newNexts)
+    val newNextDecl = NextDecl(isInitAssign :: module.next.get.body ++ newNexts)
+    val newSafetyProperties = monitorExprs.map(p => SpecDecl(p._1, p._5, List(LTLSafetyFragmentDecorator, CoverDecorator)))
     val moduleDecls = otherDecls ++ List(newInputDecls, newVarDecls, newInitDecl, newNextDecl) ++ newSafetyProperties
 
     Module(module.id, moduleDecls, module.cmds)
