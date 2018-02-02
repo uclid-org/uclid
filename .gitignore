@@ -9,3 +9,12 @@ project/target/*
 .cache-tests
 .settings/*
 .idea
+test/target/*
+tutorial/tutorial.aux
+tutorial/tutorial.bbl
+tutorial/tutorial.blg
+tutorial/tutorial.frm
+tutorial/tutorial.lof
+tutorial/tutorial.log
+tutorial/tutorial.out
+tutorial/tutorial.toc
