@@ -262,8 +262,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     // map each constant.
     val map5 = targetModule.constants.foldLeft((idMap4, initExternalSymbolMap)) {
       (acc, c) => {
-        val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, c.id), c)
-        (acc._1 + (c.id -> MIP.Constant(newName, c.typ)), extSymMapP)
+        val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, c._1), ConstantsDecl(List(c._1), c._2))
+        (acc._1 + (c._1 -> MIP.Constant(newName, c._2)), extSymMapP)
       }
     }
     // map each function.

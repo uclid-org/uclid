@@ -779,20 +779,20 @@ case class SharedVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
 }
 /** This is base trait for all entities that are exported from a module. */
 sealed abstract trait ModuleExternal {
-  def extName : Identifier
+  def extNames : List[Identifier]
   def extType : Type
 }
 
-case class ConstantDecl(id: Identifier, typ: Type) extends Decl with ModuleExternal {
-  override def toString = "constant " + id + ": " + typ + "; // " + position.toString
-  override def declNames = List(id)
-  override def extName = id
+case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with ModuleExternal {
+  override def toString = "constant " + Utils.join(ids.map(_.toString), ", ") + ": " + typ + "; // " + position.toString
+  override def declNames = ids
+  override def extNames = ids
   override def extType = typ
 }
 case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with ModuleExternal {
   override def toString = "function " + id + sig + ";  // " + position.toString
   override def declNames = List(id)
-  override def extName = id
+  override def extNames = List(id)
   override def extType = sig.typ
 }
 case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, requires: List[Expr], ensures: List[Expr], grammar : Option[Grammar]) extends Decl {
@@ -882,18 +882,19 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   }
   // module inputs.
   lazy val inputs : List[(Identifier, Type)] =
-    decls.filter(_.isInstanceOf[InputVarsDecl]).map(_.asInstanceOf[InputVarsDecl]).flatMap(i => i.ids.map(id => (id, i.typ)))
+    decls.collect { case inps : InputVarsDecl => inps }.flatMap(i => i.ids.map(id => (id, i.typ)))
   // module outputs.
   lazy val outputs : List[(Identifier, Type)] =
-    decls.filter(_.isInstanceOf[OutputVarsDecl]).map(_.asInstanceOf[OutputVarsDecl]).flatMap(o => o.ids.map(id => (id, o.typ)))
+    decls.collect { case outs : OutputVarsDecl => outs }.flatMap(o => o.ids.map(id => (id, o.typ)))
   // module state variables.
   lazy val vars : List[(Identifier, Type)] =
-    decls.filter(_.isInstanceOf[StateVarsDecl]).map(_.asInstanceOf[StateVarsDecl]).flatMap(s => s.ids.map(id => (id, s.typ)))
+    decls.collect { case vars : StateVarsDecl => vars }.flatMap(v => v.ids.map(id => (id, v.typ)))
   lazy val sharedVars: List[(Identifier, Type)] =
-    decls.filter(_.isInstanceOf[SharedVarsDecl]).map(_.asInstanceOf[SharedVarsDecl]).flatMap(s => s.ids.map(id => (id, s.typ)))
+    decls.collect { case sVars : SharedVarsDecl => sVars }.flatMap(sVar => sVar.ids.map(id => (id, sVar.typ)))
   // module constants.
-  lazy val constants : List[ConstantDecl] =
-    decls.filter(_.isInstanceOf[ConstantDecl]).map(_.asInstanceOf[ConstantDecl])
+  lazy val constantDecls = decls.collect { case cnsts : ConstantsDecl => cnsts }  
+  lazy val constants : List[(Identifier, Type)] =
+    constantDecls.flatMap(cnst => cnst.ids.map(id => (id, cnst.typ)))
   // module functions.
   lazy val functions : List[FunctionDecl] =
     decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
@@ -901,7 +902,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   lazy val properties : List[SpecDecl] = decls.collect{ case spec : SpecDecl => spec }
 
   lazy val externalMap : Map[Identifier, ModuleExternal] =
-    (functions.map(f => (f.id -> f)) ++ constants.map(c => (c.id -> c))).toMap
+    (functions.map(f => (f.id -> f)) ++ (constantDecls.flatMap(c => c.ids.map(id => (id, c))).map(p => p._1 -> p._2))).toMap
 
   // module procedures.
   lazy val procedures : List[ProcedureDecl] = decls.filter(_.isInstanceOf[ProcedureDecl]).map(_.asInstanceOf[ProcedureDecl])
@@ -921,7 +922,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   // compute the "type" of this module.
   lazy val moduleType : ModuleType = ModuleType(
       inputs, outputs, sharedVars,
-      constants.map(c => (c.id, c.typ)), vars,
+      constants, vars,
       functions.map(c => (c.id, c.sig)),
       instances.map(inst => (inst.instanceId, inst.modType.get)))
 

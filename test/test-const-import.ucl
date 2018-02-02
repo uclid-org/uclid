@@ -1,6 +1,6 @@
 module common {
   type word_t = bv8;
-  const k1_word_t : word_t;
+  const k0_word_t, k1_word_t : word_t;
   axiom k1_word_t == 1bv8;
 }
 
