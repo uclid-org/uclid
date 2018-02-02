@@ -14,11 +14,12 @@ module main {
 	esac
   }
   
-  property snext[LTL] : G((state == s1) ==> X(state == s2));
+  property snext[LTL] : G((state == s1) ==> X(state == s2)) &&
+  						G((state == s2) ==> X(state == s3)) &&
+  						G((state == s3) ==> X(state == s1));
   
   control {
-    print_module;
-    f = unroll(3);
+    f = unroll(6);
     check;
     print_results;
   } 
