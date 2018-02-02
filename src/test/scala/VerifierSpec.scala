@@ -143,4 +143,7 @@ class VerifierSpec extends FlatSpec {
   "test/test-ltl-1-unsafe.ucl" should "should fail to verify 6 assertions." in {
     nTestsFail("./test/test-ltl-1-unsafe.ucl", 6)
   }
+  "test/test-axiom-1.ucl" should "should verify all assertions." in {
+    nTestsFail("./test/test-axiom-1.ucl", 0)
+  }
 }
