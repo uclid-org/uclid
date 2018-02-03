@@ -103,12 +103,14 @@ class SymbolicSimulator (module : Module) {
             // base case.
             resetState()
             initialize(false, true, false, context, labelBase)
-            simulate(k, true, false, context, labelBase)
+            simulate(k-1, true, false, context, labelBase)
 
             // inductive step
             resetState()
             initialize(true, false, true, context, labelStep)
-            simulate(k-1, false, true, context, labelStep)
+            if (k - 1 > 0) {
+              simulate(k-1, false, true, context, labelStep)
+            }
             simulate(1, true,  false, context, labelStep)
 
             // go back to original state.

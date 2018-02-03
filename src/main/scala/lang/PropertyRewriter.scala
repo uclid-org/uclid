@@ -283,9 +283,19 @@ class LTLPropertyRewriterPass extends RewritePass {
               val acceptVar = nameProvider(specName, "accept")
               val acceptNext = (acceptVar, not(pendingVar))
               (z, zImpl :: argImpls, pendingNext :: acceptNext :: argNexts, argFaileds, acceptVar :: argAccepts, pendingVar :: argPendings)
+            case WUntilTemporalOp() =>
+              val zImpl = (z, None)
+              // pending = (z \/ Y pending) /\ !args(1)
+              val pendingVar = nameProvider(specName, "pending")
+              val pendingExpr = and(or(z, Y(pendingVar)), not(args(1)))
+              val pendingNext = (pendingVar, pendingExpr)
+              // failed = pending /\ !args(0)
+              val failedVar = nameProvider(specName, "failed")
+              val failedExpr = and(pendingExpr, not(args(0)))
+              val failedNext = (failedVar, failedExpr)
+              (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
             case _ =>
-              // FIXME
-              throw new Utils.UnimplementedException("Need more cases here.")
+              throw new Utils.AssertionError("Unexpected temporal operator here: " + tOp.toString)
           }
         } else {
           val zImpl = (z, Some(innerExpr))
