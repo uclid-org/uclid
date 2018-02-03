@@ -23,7 +23,7 @@ module main {
   property s3XX[LTL]  : G((state == s3) ==> X(X(state == s2)));
   
   control {
-    f = unroll(6);
+    f = bmc[s1X, s2X, s3X, s1XX, s2XX, s3XX](6);
     check;
   } 
 }

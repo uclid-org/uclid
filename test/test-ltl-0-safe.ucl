@@ -13,10 +13,14 @@ module main
   }
   
   property p1[LTL] : G(inited ==> (sum == a + b));
+  // This property is obviously not satisfied, but we 
+  // won't include it in the call to the 'bmc' command below.
+  property p2[LTL] : G(false);
   
   
   control {
-    vobj = unroll (3);
+    vobj = bmc[p1] (3);
     check;
+    print_results;
   }
 }

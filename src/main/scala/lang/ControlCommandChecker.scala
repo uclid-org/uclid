@@ -73,6 +73,22 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large.".format(cmd.name.toString), cmd.pos, filename)
     }
   }
+  def checkParamsAreProperties(cmd : GenericProofCommand, context : Scope, filename : Option[String]) {
+    def idIsProperty(id : Identifier) : Boolean = {
+      context.get(id) match {
+        case Some(Scope.SpecVar(_, _)) => true
+        case _ => false
+      }
+    }
+    val badParams = cmd.params.filter(p => !idIsProperty(p))
+    lazy val badParamStr = Utils.join(badParams.map(_.toString), ", ")
+    lazy val errorMsg = if (badParams.size == 1) {
+      "Unknown property in %s command: %s".format(cmd.name.toString, badParamStr)
+    } else {
+      "Unknown properties in %s command: %s".format(cmd.name.toString, badParamStr)
+    }
+    Utils.checkParsingError(badParams.size == 0, errorMsg, cmd.pos, filename)
+  }
   override def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : Unit, context : Scope) : Unit = {
     val filename = context.module.flatMap(_.filename)
     cmd.name.toString match {
@@ -88,6 +104,10 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       case "induction" =>
         checkNoParams(cmd, filename)
         checkHasZeroOrOneIntLitArg(cmd, filename)
+        checkNoArgObj(cmd, filename)
+      case "bmc" =>
+        checkParamsAreProperties(cmd, context, filename)
+        checkHasOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
       case "verify" =>
         checkNoParams(cmd, filename)

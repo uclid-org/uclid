@@ -411,6 +411,9 @@ object ExprDecorator {
     dec.pos = e.pos
     return dec
   }
+  def isLTLProperty(decs : List[ExprDecorator]) : Boolean = {
+    decs.exists(p => p == LTLSafetyFragmentDecorator || p == LTLLivenessFragmentDecorator)
+  }
 }
 
 

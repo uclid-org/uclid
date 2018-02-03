@@ -73,6 +73,7 @@ class SymbolicSimulator (module : Module) {
   }
   def execute(solver : smt.SolverInterface) : List[CheckResult] = {
     var proofResults : List[CheckResult] = List.empty
+    def noLTLFilter(name : Identifier, decorators : List[ExprDecorator]) : Boolean = !ExprDecorator.isLTLProperty(decorators)
     // add axioms as assumptions.
     module.cmds.foreach {
       (cmd) => {
@@ -85,8 +86,18 @@ class SymbolicSimulator (module : Module) {
               case Some(l) => l.toString
               case None    => "unroll"
             }
-            initialize(false, true, false, context, label)
-            simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false, context, label)
+            initialize(false, true, false, context, label, noLTLFilter)
+            simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+          case "bmc" =>
+            val label : String = cmd.resultVar match {
+              case Some(l) => l.toString()
+              case None => "bmc"
+            }
+            def LTLFilter(name : Identifier, decorators: List[ExprDecorator]) : Boolean = {
+              ExprDecorator.isLTLProperty(decorators) &&  (cmd.params.isEmpty || cmd.params.contains(name))
+            }
+            initialize(false, true, false, context, label, LTLFilter)
+            simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false, context, label, LTLFilter)
           case "induction" =>
             val labelBase : String = cmd.resultVar match {
               case Some(l) => l.toString
@@ -102,16 +113,16 @@ class SymbolicSimulator (module : Module) {
 
             // base case.
             resetState()
-            initialize(false, true, false, context, labelBase)
-            simulate(k-1, true, false, context, labelBase)
+            initialize(false, true, false, context, labelBase, noLTLFilter)
+            simulate(k-1, true, false, context, labelBase, noLTLFilter)
 
             // inductive step
             resetState()
-            initialize(true, false, true, context, labelStep)
+            initialize(true, false, true, context, labelStep, noLTLFilter)
             if (k - 1 > 0) {
-              simulate(k-1, false, true, context, labelStep)
+              simulate(k-1, false, true, context, labelStep, noLTLFilter)
             }
-            simulate(1, true,  false, context, labelStep)
+            simulate(1, true,  false, context, labelStep, noLTLFilter)
 
             // go back to original state.
             resetState()
@@ -159,7 +170,7 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean, scope : Scope, label : String) {
+  def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean, scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) {
     val initSymbolTable = getInitSymbolTable(scope)     
     symbolTable = if (!havocInit && module.init.isDefined) {
       simulate(0, module.init.get.body, initSymbolTable, scope, label)
@@ -170,7 +181,7 @@ class SymbolicSimulator (module : Module) {
     val pastTable = Map(1 -> initSymbolTable)
     addModuleAssumptions(symbolTable, pastTable, scope)
 
-    if (addAssertions) { addAsserts(0, symbolTable, pastTable, label, scope) }
+    if (addAssertions) { addAsserts(0, symbolTable, pastTable, label, scope, filter) }
     if (addAssumptions) { assumeAssertions(symbolTable, pastTable, scope) }
     frameTable.clear()
     frameTable += symbolTable
@@ -187,7 +198,7 @@ class SymbolicSimulator (module : Module) {
     })
   }
 
-  def simulate(number_of_steps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean, scope : Scope, label : String) : SymbolTable =
+  def simulate(number_of_steps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean, scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) : SymbolTable =
   {
     var currentState = symbolTable
     var states = new ArrayBuffer[SymbolTable]()
@@ -202,7 +213,7 @@ class SymbolicSimulator (module : Module) {
       val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap 
       frameTable += currentState
       addModuleAssumptions(currentState, pastTables, scope)
-      if (addAssertions) { addAsserts(step, currentState, pastTables, label, scope)  }
+      if (addAssertions) { addAsserts(step, currentState, pastTables, label, scope, filter)  }
       if (addAssertionsAsAssumes) { assumeAssertions(symbolTable, pastTables, scope) }
       // println("*** AFTER STEP " + step.toString + "****")
       // printSymbolTable(currentState)
@@ -355,14 +366,16 @@ class SymbolicSimulator (module : Module) {
 
   }
   /** Add module specifications (properties) to the list of proof obligations */
-  def addAsserts(iter : Int, symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable], label : String, scope : Scope) {
+  def addAsserts(iter : Int, symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable], label : String, scope : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean)) {
     scope.specs.foreach(specVar => {
       val prop = module.properties.find(p => p.id == specVar.varId).get
       var table = frameTable.clone()
       table += symbolTable
-      val property = AssertInfo(prop.name, label, table, scope, iter, evaluate(prop.expr, symbolTable, pastTables, scope), prop.params, prop.expr.position)
-      // println ("addAsserts: " + property.toString + "; " + property.expr.toString)
-      addAssert(property)
+      if (filter(prop.id, prop.params)) {
+        val property = AssertInfo(prop.name, label, table, scope, iter, evaluate(prop.expr, symbolTable, pastTables, scope), prop.params, prop.expr.position)
+        // println ("addAsserts: " + property.toString + "; " + property.expr.toString)
+        addAssert(property)
+      }
     })
   }
   /** Add module-level axioms/assumptions. */

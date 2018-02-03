@@ -14,9 +14,9 @@ module main
   
   property p1[LTL] : G(inited ==> (sum == a + b + 1));
   
-  
   control {
-    vobj = unroll (3);
+    vobj = bmc (3);
     check;
+    // print_results;
   }
 }
