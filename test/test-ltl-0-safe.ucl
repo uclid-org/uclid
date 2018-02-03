@@ -21,6 +21,6 @@ module main
   control {
     vobj = bmc[p1] (3);
     check;
-    print_results;
+    // print_results;
   }
 }
