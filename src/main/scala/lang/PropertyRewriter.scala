@@ -374,21 +374,20 @@ class LTLPropertyRewriterPass extends RewritePass {
         createTseitinExpr(s.id, nnf, nameProvider)
       }
     }
-    val specNames = ltlSpecs.map(s => s.id)
     val monitorVars = rewrites.map(r => (r._4, r._5, r._6))
 
     def orExpr(a : Expr, b : Expr) : Expr = OperatorApplication(DisjunctionOp(), List(a, b))
     def andExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ConjunctionOp(), List(a, b))
     def notExpr(a : Expr) : Expr = OperatorApplication(NegationOp(), List(a))
     // create the hasFailed and pending variables.
-    val monitorExprs = (specNames zip monitorVars).map { 
+    val monitorExprs = (ltlSpecs zip monitorVars).map { 
       p => {
         val failedVars = p._2._1
-        val hasFailedVar = nameProvider(p._1, "has_failed")
+        val hasFailedVar = nameProvider(p._1.id, "has_failed")
         val hasFailedExpr : Expr = failedVars.foldLeft(hasFailedVar.asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
 
         val pendingVars = p._2._3
-        val pendingVar = nameProvider(p._1, "PENDING")
+        val pendingVar = nameProvider(p._1.id, "PENDING")
         val pendingExpr : Expr = pendingVars.foldLeft(BoolLit(false).asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
 
         val acceptVars = p._2._2
@@ -430,7 +429,15 @@ class LTLPropertyRewriterPass extends RewritePass {
     val otherDecls = module.decls.filter(p => !p.isInstanceOf[SpecDecl] && !p.isInstanceOf[InitDecl] && !p.isInstanceOf[NextDecl]) ++ otherSpecs
     val newInitDecl = InitDecl(module.init.get.body ++ newInits ++ newNexts)
     val newNextDecl = NextDecl(isInitAssign :: module.next.get.body ++ newNexts)
-    val newSafetyProperties = monitorExprs.map(p => SpecDecl(p._1, p._5, List(LTLSafetyFragmentDecorator, CoverDecorator)))
+    val newSafetyProperties = monitorExprs.map { 
+      p => {
+        val pName = Identifier(p._1.id.name + ":safety")
+        val pNameWithPos = ASTNode.introducePos(true, pName, p._1.id.position)
+        val exprWithPos = ASTNode.introducePos(true, p._5, p._1.expr.position)
+        val pPrime = SpecDecl(pNameWithPos, exprWithPos, List(LTLSafetyFragmentDecorator, CoverDecorator))
+        ASTNode.introducePos(true, pPrime, p._1.position)
+      }
+    }
     val moduleDecls = otherDecls ++ List(newInputDecls, newVarDecls, newInitDecl, newNextDecl) ++ newSafetyProperties
 
     Module(module.id, moduleDecls, module.cmds)

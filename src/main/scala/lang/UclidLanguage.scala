@@ -73,6 +73,13 @@ sealed  trait PositionedNode extends Positional {
 }
 
 object ASTNode {
+  def introducePos[T <: PositionedNode](setFilename : Boolean, node : T, pos : ASTPosition) : T = {
+    var nodeP = node
+    if (setFilename) { nodeP.filename = pos.filename }
+    nodeP.pos = pos.pos
+    nodeP
+  }
+
   def introducePos[T <: PositionedNode](setFilename : Boolean, node : Option[T], pos : ASTPosition) : Option[T] = {
     node match {
       case Some(n) =>

@@ -94,7 +94,16 @@ class SymbolicSimulator (module : Module) {
               case None => "bmc"
             }
             def LTLFilter(name : Identifier, decorators: List[ExprDecorator]) : Boolean = {
-              ExprDecorator.isLTLProperty(decorators) &&  (cmd.params.isEmpty || cmd.params.contains(name))
+              val nameStr = name.name
+              val nameStrToCheck = if (nameStr.endsWith(":safety")) {
+                nameStr.substring(0, nameStr.size - 7)
+              } else if (nameStr.endsWith(":liveness")) {
+                nameStr.substring(0, nameStr.size - 9)
+              } else {
+                nameStr
+              }
+              val nameToCheck = Identifier(nameStrToCheck)
+              ExprDecorator.isLTLProperty(decorators) &&  (cmd.params.isEmpty || cmd.params.contains(nameToCheck))
             }
             initialize(false, true, false, context, label, LTLFilter)
             simulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false, context, label, LTLFilter)
