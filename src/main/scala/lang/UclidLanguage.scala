@@ -107,6 +107,11 @@ object Operator {
   val PREFIX = 0
   val INFIX = 1
   val POSTFIX = 2
+
+  def Y(x : Expr) = OperatorApplication(HistoryOperator(), List(x, IntLit(1)))
+  def not(x : Expr) = OperatorApplication(NegationOp(), List(x))
+  def and(x : Expr, y : Expr) = OperatorApplication(ConjunctionOp(), List(x, y))
+  def or(x : Expr, y : Expr) = OperatorApplication(DisjunctionOp(), List(x, y))
 }
 sealed trait Operator extends ASTNode {
   def fixity : Int

@@ -33,7 +33,6 @@
 package uclid
 package lang
 
-
 class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
   type T = Set[ModuleError]
   lazy val manager : PassManager = analysis.manager
@@ -99,7 +98,7 @@ class LTLOperatorArgumentChecker extends ASTAnalyzer(
   }
 }
 
-class LTLOperatorRewriterPass extends RewritePass {
+class LTLOperatorIntroducerPass extends RewritePass {
   override def rewriteFuncApp(fapp: FuncApplication, context: Scope): Option[Expr] = {
     if (context.inLTLSpec) {
       fapp.e match {
@@ -125,15 +124,46 @@ class LTLOperatorRewriterPass extends RewritePass {
   }
 }
 
-class LTLOperatorRewriter extends ASTRewriter("LTLOperatorRewriter", new LTLOperatorRewriterPass()) {
+class LTLOperatorIntroducer extends ASTRewriter(
+    "LTLOperatorIntroducer", new LTLOperatorIntroducerPass())
+
+
+class LTLOperatorRewriterPass extends RewritePass {
+  def and(x : Expr, y : Expr) = Operator.and(x, y)
+  def or(x : Expr, y : Expr) = Operator.or(x, y)
+  def not(x : Expr) = Operator.not(x)
+  def F(x : Expr) = OperatorApplication(FinallyTemporalOp(), List(x))
+  def W(x : Expr, y : Expr) = OperatorApplication(WUntilTemporalOp(), List(x, y))
+  def U(x : Expr, y : Expr) = OperatorApplication(UntilTemporalOp(), List(x, y))
+
+  def rewriteTemporalOp(tOp : TemporalOperator, args : List[Expr]) : Expr = {
+    tOp match {
+      case GloballyTemporalOp() | NextTemporalOp() | FinallyTemporalOp() | WUntilTemporalOp() =>
+        OperatorApplication(tOp, args)
+      case UntilTemporalOp() =>
+        val x = args(0)
+        val y = args(1)
+        and(W(x, y), F(x))
+      case ReleaseTemporalOp() =>
+        val x = args(0)
+        val y = args(1)
+        not(U(not(x), not(y)))
+    }
+  }
+
+  override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
+    val op = opapp.op
+    op match {
+      case tOp : TemporalOperator => 
+        Some(rewriteTemporalOp(tOp, opapp.operands))
+      case _ => 
+        Some(opapp)
+    }
+  }
 }
 
-
-class LTLNegatedNormalFormRewriterPass extends RewritePass {
-}
-
-class LTLNegatedNormalFormRewriter extends ASTRewriter(
-  "LTLNegatedNormalFormRewriter", new LTLNegatedNormalFormRewriterPass())
+class LTLOperatorRewriter extends ASTRewriter(
+  "LTLOperatorRewriter", new LTLOperatorRewriterPass())
 
 
 class LTLPropertyRewriterPass extends RewritePass {
@@ -144,7 +174,11 @@ class LTLPropertyRewriterPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
 
-  def negate(expr : Expr) : Expr = OperatorApplication(NegationOp(), List(expr))
+  def Y(x : Expr) = Operator.Y(x)
+  def and(x : Expr, y : Expr) = Operator.and(x, y)
+  def or(x : Expr, y : Expr) = Operator.or(x, y)
+  def not(x : Expr) = Operator.not(x)
+
   def convertToNNF(expr : Expr) : Expr = {
     def recurse(e :  Expr) = convertToNNF(e)
     expr match {
@@ -154,25 +188,25 @@ class LTLPropertyRewriterPass extends RewritePass {
       case tup : Tuple => Tuple(tup.values.map(recurse(_)))
       // !G x -> F !x
       case OperatorApplication(NegationOp(), List(OperatorApplication(GloballyTemporalOp(), args))) =>
-        OperatorApplication(FinallyTemporalOp(), args.map(a => recurse(negate(a))))
+        OperatorApplication(FinallyTemporalOp(), args.map(a => recurse(not(a))))
       // !F x -> G !x
       case OperatorApplication(NegationOp(), List(OperatorApplication(FinallyTemporalOp(), args))) =>
-        OperatorApplication(GloballyTemporalOp(), args.map(a => recurse(negate(a))))
+        OperatorApplication(GloballyTemporalOp(), args.map(a => recurse(not(a))))
       // !(x U y) -> !x R !y
       case OperatorApplication(NegationOp(), List(OperatorApplication(UntilTemporalOp(), args))) =>
-        OperatorApplication(ReleaseTemporalOp(), args.map(a => recurse(negate(a))))
+        OperatorApplication(ReleaseTemporalOp(), args.map(a => recurse(not(a))))
       // !(x R y) -> !x U !y
       case OperatorApplication(NegationOp(), List(OperatorApplication(ReleaseTemporalOp(), args))) =>
-        OperatorApplication(UntilTemporalOp(), args.map(a => recurse(negate(a))))
+        OperatorApplication(UntilTemporalOp(), args.map(a => recurse(not(a))))
       // !X a -> X !a
       case OperatorApplication(NegationOp(), List(OperatorApplication(NextTemporalOp(), args))) =>
-        OperatorApplication(NextTemporalOp(), args.map(a => recurse(negate(a))))
+        OperatorApplication(NextTemporalOp(), args.map(a => recurse(not(a))))
       // !(a && b) -> !a || !b
       case OperatorApplication(NegationOp(), List(OperatorApplication(ConjunctionOp(), args))) =>
-        OperatorApplication(DisjunctionOp(), args.map(a => recurse(negate(a))))
+        OperatorApplication(DisjunctionOp(), args.map(a => recurse(not(a))))
       // !(a || b) -> !a && !b
       case OperatorApplication(NegationOp(), List(OperatorApplication(DisjunctionOp(), args))) =>
-        OperatorApplication(ConjunctionOp(), args.map(a => recurse(negate(a))))
+        OperatorApplication(ConjunctionOp(), args.map(a => recurse(not(a))))
       // !(!a) -> a
       case OperatorApplication(NegationOp(), List(OperatorApplication(NegationOp(), args))) =>
         args(0)
@@ -184,7 +218,7 @@ class LTLPropertyRewriterPass extends RewritePass {
         OperatorApplication(EqualityOp(), args)
       // !(a ==> b) -> a && !b
       case OperatorApplication(NegationOp(), List(OperatorApplication(ImplicationOp(), args))) =>
-        OperatorApplication(ConjunctionOp(), List(args(0), recurse(negate(args(1)))))
+        OperatorApplication(ConjunctionOp(), List(args(0), recurse(not(args(1)))))
       // !(a <==> b) -> (a != b)
       case OperatorApplication(NegationOp(), List(OperatorApplication(IffOp(), args))) =>
         OperatorApplication(InequalityOp(), args)
@@ -249,10 +283,6 @@ class LTLPropertyRewriterPass extends RewritePass {
         val innerExpr = OperatorApplication(opapp.op, args)
         if (opapp.op.isInstanceOf[TemporalOperator]) {
           val tOp = opapp.op.asInstanceOf[TemporalOperator]
-          def Y(x : Expr) = OperatorApplication(HistoryOperator(), List(x, IntLit(1)))
-          def not(x : Expr) = OperatorApplication(NegationOp(), List(x))
-          def and(x : Expr, y : Expr) = OperatorApplication(ConjunctionOp(), List(x, y))
-          def or(x : Expr, y : Expr) = OperatorApplication(DisjunctionOp(), List(x, y))
           
           tOp match {
             case NextTemporalOp() =>
@@ -338,7 +368,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     val isInit = nameProvider(module.id, "is_init")
     val rewrites = ltlSpecs.map { 
       (s) => {
-        val nnf = convertToNNF(negate(s.expr))
+        val nnf = convertToNNF(not(s.expr))
         // println("exp: " + s.expr.toString)
         // println("nnf: " + nnf.toString)
         createTseitinExpr(s.id, nnf, nameProvider)
