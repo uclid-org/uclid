@@ -70,6 +70,11 @@ class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
               if (numOps != 2) {
                 ret = ret + ModuleError("until operator expected 2 argument but received %s".format(numOps), fapp.position)
               }
+            case "W" =>
+              var numOps = fapp.args.length
+              if (numOps != 2) {
+                ret = ret + ModuleError("Weak-until operator expected 2 argument but received %s".format(numOps), fapp.position)
+              }
             case "F" =>
               var numOps = fapp.args.length
               if (numOps != 1) {
@@ -109,6 +114,8 @@ class LTLOperatorIntroducerPass extends RewritePass {
             Some(OperatorApplication(new NextTemporalOp, fapp.args))
           case "U" =>
             Some(OperatorApplication(new UntilTemporalOp, fapp.args))
+          case "W" =>
+            Some(OperatorApplication(new WUntilTemporalOp, fapp.args))
           case "F" =>
             Some(OperatorApplication(new FinallyTemporalOp, fapp.args))
           case "R" =>
