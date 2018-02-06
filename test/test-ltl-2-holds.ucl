@@ -1,0 +1,20 @@
+module main {
+  var state : bool;
+  
+  init {
+    state = false;
+  }
+  
+  next {
+    if (*) {
+	  state = !state;
+	}
+  }
+  
+  property state_false_reachable[LTL] : G(F(!state));
+  
+  control {
+    print_module;
+    check;
+  } 
+}
