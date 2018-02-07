@@ -264,8 +264,27 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
-  def createTseitinExpr(specName : Identifier, expr : Expr, nameProvider : ContextualNameProvider) : 
-    (Identifier, List[(Identifier, Option[Expr])], List[(Identifier, Expr)], List[Identifier], List[Identifier], List[Identifier]) = {
+  /** This class is the return value of createMonitorExpressions.
+   *  
+   *  z is the name of the "Tseitin" variable corresponding to the top of the expression's AST.
+   *  biImplications are the list of equivalences between Tseitin variables and corresponding expressions.
+   *  assignments is a list of assignments to monitor variables.
+   *  failed, accept and pending are the corresponding monitor variables. 
+   */
+  case class MonitorInfo(
+    z : Identifier,
+    biImplications : List[(Identifier, Option[Expr])],
+    assignments : List[(Identifier, Expr)],
+    failedVars : List[Identifier],
+    acceptVars : List[Identifier],
+    pendingVars : List[Identifier]
+  )
+
+  /** This function creates the monitor expressions for each temporal and non-temporal operator.
+   *  
+   *  The conversion to the negated normal form must have been done before calling this method.
+   */
+  def createMonitorExpressions(specName : Identifier, expr : Expr, nameProvider : ContextualNameProvider) : MonitorInfo = {
     val isExprTemporal = expr match {
       case tExpr : PossiblyTemporalExpr => tExpr.isTemporal
       case ntExpr : Expr => false
@@ -274,17 +293,17 @@ class LTLPropertyRewriterPass extends RewritePass {
       val newVar = nameProvider(specName, "z")
       val newImpl = (newVar, Some(expr))
       // FIXME: Revisit this for expressions that don't involve any temporal operators.
-      (newVar, List(newImpl), List.empty, List.empty, List.empty, List.empty)
+      MonitorInfo(newVar, List(newImpl), List.empty, List.empty, List.empty, List.empty)
     } else {
       // Recurse on operator applications and create "Tseitin" variables for the inner AST nodes.
-      def createTseitinExprOpapp(opapp : OperatorApplication) : (Identifier, List[(Identifier, Option[Expr])], List[(Identifier, Expr)], List[Identifier], List[Identifier], List[Identifier]) = {
-        val argResults = opapp.operands.map(arg => createTseitinExpr(specName, arg, nameProvider))
-        val args = argResults.map(_._1)
-        val argImpls = argResults.flatMap(a => a._2)
-        val argNexts = argResults.flatMap(a => a._3)
-        val argFaileds = argResults.flatMap(a => a._4)
-        val argAccepts = argResults.flatMap(a => a._5)
-        val argPendings = argResults.flatMap(a => a._6)
+      def createMonitorsForOpApp(opapp : OperatorApplication) : MonitorInfo = {
+        val argResults = opapp.operands.map(arg => createMonitorExpressions(specName, arg, nameProvider))
+        val args = argResults.map(a => a.z)
+        val argImpls = argResults.flatMap(a => a.biImplications)
+        val argNexts = argResults.flatMap(a => a.assignments)
+        val argFaileds = argResults.flatMap(a => a.failedVars)
+        val argAccepts = argResults.flatMap(a => a.acceptVars)
+        val argPendings = argResults.flatMap(a => a.pendingVars)
         
         val z = nameProvider(specName, "z")
         val innerExpr = OperatorApplication(opapp.op, args)
@@ -300,7 +319,7 @@ class LTLPropertyRewriterPass extends RewritePass {
               // failed = Ypending /\ !args(0)
               val failedVar = nameProvider(specName, "failed")
               val failedNext = (failedVar, and(Y(pendingVar), not(args(0))))
-              (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
+              MonitorInfo(z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
             case GloballyTemporalOp() =>
               val zImpl = (z, None)
               // pending = Ypending) \/ z
@@ -309,7 +328,7 @@ class LTLPropertyRewriterPass extends RewritePass {
               // failed = pending /\ !args(0)
               val failedVar = nameProvider(specName, "failed")
               val failedNext = (failedVar, and(pendingVar, not(args(0))))
-              (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
+              MonitorInfo(z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
             case FinallyTemporalOp() =>
               val zImpl = (z, None)
               // pending = (z \/ Ypending) /\ !args(0)
@@ -319,7 +338,7 @@ class LTLPropertyRewriterPass extends RewritePass {
               // accept = !pending
               val acceptVar = nameProvider(specName, "accept")
               val acceptNext = (acceptVar, not(pendingVar))
-              (z, zImpl :: argImpls, pendingNext :: acceptNext :: argNexts, argFaileds, acceptVar :: argAccepts, pendingVar :: argPendings)
+              MonitorInfo(z, zImpl :: argImpls, pendingNext :: acceptNext :: argNexts, argFaileds, acceptVar :: argAccepts, pendingVar :: argPendings)
             case WUntilTemporalOp() =>
               val zImpl = (z, None)
               // pending = (z \/ Y pending) /\ !args(1)
@@ -330,13 +349,13 @@ class LTLPropertyRewriterPass extends RewritePass {
               val failedVar = nameProvider(specName, "failed")
               val failedExpr = and(pendingExpr, not(args(0)))
               val failedNext = (failedVar, failedExpr)
-              (z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
+              MonitorInfo(z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
             case _ =>
               throw new Utils.AssertionError("Unexpected temporal operator here: " + tOp.toString)
           }
         } else {
           val zImpl = (z, Some(innerExpr))
-          (z, zImpl :: argImpls, argNexts, argFaileds, argAccepts, argPendings)
+          MonitorInfo(z, zImpl :: argImpls, argNexts, argFaileds, argAccepts, argPendings)
         }
       }
       // Recurse on a temporal operator.
@@ -347,11 +366,11 @@ class LTLPropertyRewriterPass extends RewritePass {
           op match {
             case op : BooleanOperator =>
               Utils.assert(!op.isQuantified, "Temporal expression within quantifier: " + expr.toString)
-              createTseitinExprOpapp(opapp)
+              createMonitorsForOpApp(opapp)
             case cOp : ComparisonOperator =>
-              createTseitinExprOpapp(opapp)
+              createMonitorsForOpApp(opapp)
             case tOp : TemporalOperator =>
-              createTseitinExprOpapp(opapp)
+              createMonitorsForOpApp(opapp)
             case _ =>
               throw new Utils.AssertionError("Invalid temporal expression: " + expr.toString)
           }
@@ -402,88 +421,89 @@ class LTLPropertyRewriterPass extends RewritePass {
 
   def rewriteSpecs(module : Module, ctx : Scope, ltlSpecs : List[SpecDecl], otherSpecs : List[SpecDecl]) : Module = {
     val nameProvider = new ContextualNameProvider(ctx, "ltl")
-    val varsCopy = newVars(module, nameProvider)
-    val newVarsDecls = varsCopy.map(v => StateVarsDecl(List(v._1), v._2))
-    val lassoCopyNonDet = nameProvider(module.id, "lasso_copy_nondet")
+    val stateVarsP = newVars(module, nameProvider)
+    val newVarsDecls = stateVarsP.map(v => StateVarsDecl(List(v._1), v._2))
+    val copyLassoInput = nameProvider(module.id, "copy_lasso_in")
     val lassoCopied = nameProvider(module.id, "lasso_copied")
-    val lassoCopyStmt = guardedAssignment(lassoCopyNonDet, lassoCopied, module.vars, varsCopy)
+    val lassoCopyStmt = guardedAssignment(copyLassoInput, lassoCopied, module.vars, stateVarsP)
 
     val isInit = nameProvider(module.id, "is_init")
-    val rewrites = ltlSpecs.map { 
+    val monitors = ltlSpecs.map { 
       (s) => {
         val nnf = convertToNNF(not(s.expr))
         // println("exp: " + s.expr.toString)
         // println("nnf: " + nnf.toString)
-        createTseitinExpr(s.id, nnf, nameProvider)
+        createMonitorExpressions(s.id, nnf, nameProvider)
       }
     }
-    val monitorVars = rewrites.map(r => (r._4, r._5, r._6))
     // val acceptVars = monitorVars.map(p => (p._1, p._2))
     // println("accept vars: " + acceptVars.toString)
 
     // create the hasFailed and pending variables.
-    val monitorExprs = (ltlSpecs zip monitorVars).map { 
-      p => {
-        val failedVars = p._2._1
-        val hasFailedVar = nameProvider(p._1.id, "FAILED")
-        val hasFailedExpr : Expr = failedVars.foldLeft(hasFailedVar.asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
+    val monitorExprs = (ltlSpecs zip monitors).map { 
+      case (spec, monitor) => {
+        val hasFailedVar = nameProvider(spec.id, "FAILED")
+        val hasFailedExpr : Expr = monitor.failedVars.foldLeft(hasFailedVar.asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
 
-        val pendingVars = p._2._3
-        val pendingVar = nameProvider(p._1.id, "PENDING")
+        val pendingVars = monitor.pendingVars
+        val pendingVar = nameProvider(spec.id, "PENDING")
         val pendingExpr : Expr = pendingVars.foldLeft(BoolLit(false).asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
 
-        val acceptVars = p._2._2
         // has accepted is true if this trace has been accepted at least once in the cycle
-        val hasAcceptedVars = acceptVars.map(aVar => nameProvider(aVar, "HAS_ACCEPTED"))
-        val hasAcceptedExprs = (acceptVars zip hasAcceptedVars).map {
+        val hasAcceptedVars = monitor.acceptVars.map(aVar => nameProvider(aVar, "HAS_ACCEPTED"))
+        val hasAcceptedExprs = (monitor.acceptVars zip hasAcceptedVars).map {
           case (aVar, haVar) => orExpr(haVar, andExpr(aVar, lassoCopied))
         }
         // has accepted trace is true if all of the accept vars of this trace have been accepted at least
         // once in this cycle.
         val foldInit : Expr = BoolLit(false)
-        val hasAcceptedTrace = nameProvider(p._1.id, "HAS_ACCEPTED_TRACE")
+        val hasAcceptedTrace = nameProvider(spec.id, "HAS_ACCEPTED_TRACE")
         val hasAcceptedTraceExpr = hasAcceptedVars.foldLeft(foldInit)((acc, v) => orExpr(acc, v))
         
-        val acceptTuple = (acceptVars, (hasAcceptedVars, hasAcceptedExprs), (hasAcceptedTrace, hasAcceptedTraceExpr))
+        val acceptTuple = (monitor.acceptVars, (hasAcceptedVars, hasAcceptedExprs), (hasAcceptedTrace, hasAcceptedTraceExpr))
         
         val safetyExpr = andExpr(notExpr(pendingVar), notExpr(hasFailedVar))
-        (p._1, (hasFailedVar, hasFailedExpr), (pendingVar, pendingExpr), acceptTuple, safetyExpr)
+        (spec, (hasFailedVar, hasFailedExpr), (pendingVar, pendingExpr), acceptTuple, safetyExpr)
       }
     }
     def implExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ImplicationOp(), List(a, b))
     def iffExpr(a : Expr, b : Expr) : Expr = OperatorApplication(IffOp(), List(a, b))
     def eqExpr(a : Expr, b : Expr) : Expr = OperatorApplication(EqualityOp(), List(a, b))
 
-    val isInitAssign = AssignStmt(List(LhsId(isInit)), List(BoolLit(false)))
-    val rootVars = rewrites.map(_._1)
-    val rootAssumes = rootVars.map(r => AssumeStmt(iffExpr(r, isInit), None))
+    // This is the assignment to is_init in next.
+    val isInitAssignNext = AssignStmt(List(LhsId(isInit)), List(BoolLit(false)))
+    
+    // The top-level 'z' variables.
+    val zVars = monitors.map(_.z)
+    val zAssumes = zVars.map(r => AssumeStmt(iffExpr(r, isInit), None))
 
-    val newInpsDecl = InputVarsDecl(List(lassoCopyNonDet), BoolType())
-    val newBooleanVarsDecl = StateVarsDecl(lassoCopied :: rewrites.flatMap(r => r._2).map(_._1), BoolType())
-    val monitorVarsInt = rewrites.flatMap(r => r._3).map(_._1)
-    val monitorVarsExtFalse = monitorExprs.map(_._2._1) 
-    val monitorVarsExtTrue = monitorExprs.map(_._3._1)
-    val varsToInitFalse : List[Identifier] = monitorVarsExtFalse ++ monitorVarsInt
-    val varsToInitTrue : List[Identifier] = isInit :: monitorVarsExtTrue
+    // Input declaration for the lassoCopyNonDet input.
+    val copyLassoInputDecl = InputVarsDecl(List(copyLassoInput), BoolType())
+    val monitorInputsDecl = StateVarsDecl(lassoCopied :: monitors.flatMap(r => r.biImplications).map(_._1), BoolType())
+    val monitorVars = monitors.flatMap(r => r.assignments).map(_._1)
+    val hasFailedVars = monitorExprs.map(_._2._1) 
+    val pendingVars = monitorExprs.map(_._3._1)
+    val varsToInitFalse : List[Identifier] = hasFailedVars ++ monitorVars
+    val varsToInitTrue : List[Identifier] = isInit :: pendingVars
     val newVarDecls = StateVarsDecl(varsToInitTrue ++ varsToInitFalse, BoolType())
     val newInitFalse = AssignStmt(varsToInitFalse.map(LhsId(_)), List.fill(varsToInitFalse.size)(BoolLit(false)))
     val newInitTrue = AssignStmt(varsToInitTrue.map(LhsId(_)), List.fill(varsToInitTrue.size)(BoolLit(true)))
     val newInitCopied = AssignStmt(List(LhsId(lassoCopied)), List(BoolLit(false)))
     val newInits = List(newInitFalse, newInitTrue, newInitCopied) 
 
-    val rewriteImpls = rewrites.flatMap(r => r._2)
+    val rewriteImpls = monitors.flatMap(r => r.biImplications)
     val implicationHavocs = rewriteImpls.map(r => HavocStmt(r._1))
     val implicationAssumes = rewriteImpls.collect{ case (id, Some(expr)) => AssumeStmt(iffExpr(id, expr), None) }
 
-    val assignmentPairs = rewrites.flatMap(r => r._3)
+    val assignmentPairs = monitors.flatMap(r => r.assignments)
     val newAssigns = assignmentPairs.map(p => AssignStmt(List(LhsId(p._1)), List(p._2)))
     val newHFAssigns = monitorExprs.map(p => AssignStmt(List(LhsId(p._2._1)), List(p._2._2)))
     val newPendingAssigns = monitorExprs.map(p => AssignStmt(List(LhsId(p._3._1)), List(p._3._2)))
-    val newNexts = implicationHavocs ++ rootAssumes ++ implicationAssumes ++ newAssigns ++ newHFAssigns ++ newPendingAssigns
+    val newNexts = implicationHavocs ++ zAssumes ++ implicationAssumes ++ newAssigns ++ newHFAssigns ++ newPendingAssigns
 
     val otherDecls = module.decls.filter(p => !p.isInstanceOf[SpecDecl] && !p.isInstanceOf[InitDecl] && !p.isInstanceOf[NextDecl]) ++ otherSpecs
     val newInitDecl = InitDecl(module.init.get.body ++ newInits ++ newNexts)
-    val newNextDecl = NextDecl(lassoCopyStmt :: isInitAssign :: module.next.get.body ++ newNexts)
+    val newNextDecl = NextDecl(lassoCopyStmt :: isInitAssignNext :: module.next.get.body ++ newNexts)
     val newSafetyProperties = monitorExprs.map {
       p => {
         val pName = Identifier(p._1.id.name + ":safety")
@@ -493,7 +513,7 @@ class LTLPropertyRewriterPass extends RewritePass {
         ASTNode.introducePos(true, pPrime, p._1.position)
       }
     }
-    val moduleDecls = newInpsDecl :: newVarsDecls ++ otherDecls ++ List(newBooleanVarsDecl, newVarDecls, newInitDecl, newNextDecl) ++ newSafetyProperties
+    val moduleDecls = copyLassoInputDecl :: newVarsDecls ++ otherDecls ++ List(monitorInputsDecl, newVarDecls, newInitDecl, newNextDecl) ++ newSafetyProperties
 
     Module(module.id, moduleDecls, module.cmds)
   }
