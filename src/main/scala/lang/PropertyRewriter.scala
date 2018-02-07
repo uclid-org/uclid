@@ -397,6 +397,8 @@ class LTLPropertyRewriterPass extends RewritePass {
   def andExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ConjunctionOp(), List(a, b))
   def notExpr(a : Expr) : Expr = OperatorApplication(NegationOp(), List(a))
   def eqExpr(a : Expr, b : Expr) : Expr = OperatorApplication(EqualityOp(), List(a, b))
+  def implExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ImplicationOp(), List(a, b))
+  def iffExpr(a : Expr, b : Expr) : Expr = OperatorApplication(IffOp(), List(a, b))
 
   def assignToVars(varsLeft : List[(Identifier, Type)], varsRight : List[(Identifier, Type)]) : List[AssignStmt] = {
     Utils.assert(varsLeft.size == varsRight.size, "Var arrays must be the same size.")
@@ -419,40 +421,55 @@ class LTLPropertyRewriterPass extends RewritePass {
     eqExprs.foldLeft(initExpr)((acc, e) => orExpr(acc, e)) 
   }
 
+  def createRepeatedAssignment(vars : List[Identifier], value : Expr) : AssignStmt = {
+    AssignStmt(vars.map(LhsId(_)), List.fill(vars.size)(value))
+  }
+
   def rewriteSpecs(module : Module, ctx : Scope, ltlSpecs : List[SpecDecl], otherSpecs : List[SpecDecl]) : Module = {
     val nameProvider = new ContextualNameProvider(ctx, "ltl")
+    
+    // create a copy of the state variables and non-deterministically assign the current state to it.
     val stateVarsP = newVars(module, nameProvider)
-    val newVarsDecls = stateVarsP.map(v => StateVarsDecl(List(v._1), v._2))
-    val copyLassoInput = nameProvider(module.id, "copy_lasso_in")
-    val lassoCopied = nameProvider(module.id, "lasso_copied")
-    val lassoCopyStmt = guardedAssignment(copyLassoInput, lassoCopied, module.vars, stateVarsP)
-
-    val isInit = nameProvider(module.id, "is_init")
+    val stateVarsPDecl = stateVarsP.map(v => StateVarsDecl(List(v._1), v._2))
+    val copyStateInput = nameProvider(module.id, "copy_state_in")
+    val stateCopiedVar = nameProvider(module.id, "state_copied")
+    val copyStateInputDecl = InputVarsDecl(List(copyStateInput), BoolType())
+    val stateCopiedVarDecl = StateVarsDecl(List(stateCopiedVar), BoolType())
+    val stateCopyStmt = guardedAssignment(copyStateInput, stateCopiedVar, module.vars, stateVarsP)
     val monitors = ltlSpecs.map { 
       (s) => {
         val nnf = convertToNNF(not(s.expr))
-        // println("exp: " + s.expr.toString)
-        // println("nnf: " + nnf.toString)
         createMonitorExpressions(s.id, nnf, nameProvider)
       }
     }
-    // val acceptVars = monitorVars.map(p => (p._1, p._2))
-    // println("accept vars: " + acceptVars.toString)
 
-    // create the hasFailed and pending variables.
-    val monitorExprs = (ltlSpecs zip monitors).map { 
+    // create the "FAILED" variables.
+    val hasFailedExprs = (ltlSpecs zip monitors).map {
       case (spec, monitor) => {
         val hasFailedVar = nameProvider(spec.id, "FAILED")
         val hasFailedExpr : Expr = monitor.failedVars.foldLeft(hasFailedVar.asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
-
-        val pendingVars = monitor.pendingVars
+        (hasFailedVar, hasFailedExpr)
+      }
+    }
+    // create the "PENDING" variables.
+    val pendingExprs = (ltlSpecs zip monitors).map {
+      case (spec, monitor) => {
         val pendingVar = nameProvider(spec.id, "PENDING")
-        val pendingExpr : Expr = pendingVars.foldLeft(BoolLit(false).asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
+        val pendingExpr : Expr = monitor.pendingVars.foldLeft(BoolLit(false).asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
+        (pendingVar, pendingExpr)
+      }
+    }
+    // create the ACCEPT variables.
+    val monitorExprs = (ltlSpecs zip monitors).map { 
+      case (spec, monitor) => {
+        // val hasFailedVar = nameProvider(spec.id, "FAILED")
+        // val hasFailedExpr : Expr = monitor.failedVars.foldLeft(hasFailedVar.asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
+
 
         // has accepted is true if this trace has been accepted at least once in the cycle
         val hasAcceptedVars = monitor.acceptVars.map(aVar => nameProvider(aVar, "HAS_ACCEPTED"))
         val hasAcceptedExprs = (monitor.acceptVars zip hasAcceptedVars).map {
-          case (aVar, haVar) => orExpr(haVar, andExpr(aVar, lassoCopied))
+          case (aVar, haVar) => orExpr(haVar, andExpr(aVar, stateCopiedVar))
         }
         // has accepted trace is true if all of the accept vars of this trace have been accepted at least
         // once in this cycle.
@@ -462,34 +479,43 @@ class LTLPropertyRewriterPass extends RewritePass {
         
         val acceptTuple = (monitor.acceptVars, (hasAcceptedVars, hasAcceptedExprs), (hasAcceptedTrace, hasAcceptedTraceExpr))
         
-        val safetyExpr = andExpr(notExpr(pendingVar), notExpr(hasFailedVar))
-        (spec, (hasFailedVar, hasFailedExpr), (pendingVar, pendingExpr), acceptTuple, safetyExpr)
+        (spec, (0, 0), (0, 0), acceptTuple, 0)
       }
     }
-    def implExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ImplicationOp(), List(a, b))
-    def iffExpr(a : Expr, b : Expr) : Expr = OperatorApplication(IffOp(), List(a, b))
-    def eqExpr(a : Expr, b : Expr) : Expr = OperatorApplication(EqualityOp(), List(a, b))
+
+    val safetyExprs = (hasFailedExprs zip pendingExprs) map {
+      case ((hasFailedVar, _), (pendingVar, _)) =>
+        andExpr(notExpr(pendingVar), notExpr(hasFailedVar))
+    }
 
     // This is the assignment to is_init in next.
-    val isInitAssignNext = AssignStmt(List(LhsId(isInit)), List(BoolLit(false)))
+    val isInitStateVar = nameProvider(module.id, "is_init")
+    val isInitAssignNext = AssignStmt(List(LhsId(isInitStateVar)), List(BoolLit(false)))
     
     // The top-level 'z' variables.
     val zVars = monitors.map(_.z)
-    val zAssumes = zVars.map(r => AssumeStmt(iffExpr(r, isInit), None))
+    val zAssumes = zVars.map(r => AssumeStmt(iffExpr(r, isInitStateVar), None))
 
-    // Input declaration for the lassoCopyNonDet input.
-    val copyLassoInputDecl = InputVarsDecl(List(copyLassoInput), BoolType())
-    val monitorInputsDecl = StateVarsDecl(lassoCopied :: monitors.flatMap(r => r.biImplications).map(_._1), BoolType())
+    // These are the monitor inputs. (The 'z' variables.)
+    val monitorInputs = monitors.flatMap(m => m.biImplications.map(_._1))
+    val monitorInputsDecl = StateVarsDecl(monitorInputs, BoolType())
+    // These are the monitor variables. ('z' variables which are not the top-level.)
     val monitorVars = monitors.flatMap(r => r.assignments).map(_._1)
-    val hasFailedVars = monitorExprs.map(_._2._1) 
-    val pendingVars = monitorExprs.map(_._3._1)
+    val monitorVarsDecl = StateVarsDecl(monitorVars, BoolType())
+    // These are the has failed and pending variables.
+    val hasFailedVars = hasFailedExprs.map(_._1)
+    val pendingVars = pendingExprs.map(_._1)
+    val hasFailedVarsDecl = StateVarsDecl(hasFailedVars, BoolType())
+    val pendingVarsDecl = StateVarsDecl(pendingVars, BoolType())
     val varsToInitFalse : List[Identifier] = hasFailedVars ++ monitorVars
-    val varsToInitTrue : List[Identifier] = isInit :: pendingVars
+    val varsToInitTrue : List[Identifier] = isInitStateVar :: pendingVars
     val newVarDecls = StateVarsDecl(varsToInitTrue ++ varsToInitFalse, BoolType())
-    val newInitFalse = AssignStmt(varsToInitFalse.map(LhsId(_)), List.fill(varsToInitFalse.size)(BoolLit(false)))
-    val newInitTrue = AssignStmt(varsToInitTrue.map(LhsId(_)), List.fill(varsToInitTrue.size)(BoolLit(true)))
-    val newInitCopied = AssignStmt(List(LhsId(lassoCopied)), List(BoolLit(false)))
-    val newInits = List(newInitFalse, newInitTrue, newInitCopied) 
+    
+    val newInitCopied = AssignStmt(List(LhsId(stateCopiedVar)), List(BoolLit(false)))
+    val newInits = List(
+                    createRepeatedAssignment(hasFailedVars ++ monitorVars, BoolLit(false)), 
+                    createRepeatedAssignment(isInitStateVar :: pendingVars, BoolLit(true)), 
+                    newInitCopied) 
 
     val rewriteImpls = monitors.flatMap(r => r.biImplications)
     val implicationHavocs = rewriteImpls.map(r => HavocStmt(r._1))
@@ -497,23 +523,23 @@ class LTLPropertyRewriterPass extends RewritePass {
 
     val assignmentPairs = monitors.flatMap(r => r.assignments)
     val newAssigns = assignmentPairs.map(p => AssignStmt(List(LhsId(p._1)), List(p._2)))
-    val newHFAssigns = monitorExprs.map(p => AssignStmt(List(LhsId(p._2._1)), List(p._2._2)))
-    val newPendingAssigns = monitorExprs.map(p => AssignStmt(List(LhsId(p._3._1)), List(p._3._2)))
+    val newHFAssigns = hasFailedExprs.map(p => AssignStmt(List(LhsId(p._1)), List(p._2)))
+    val newPendingAssigns = pendingExprs.map(p => AssignStmt(List(LhsId(p._1)), List(p._2)))
     val newNexts = implicationHavocs ++ zAssumes ++ implicationAssumes ++ newAssigns ++ newHFAssigns ++ newPendingAssigns
 
     val otherDecls = module.decls.filter(p => !p.isInstanceOf[SpecDecl] && !p.isInstanceOf[InitDecl] && !p.isInstanceOf[NextDecl]) ++ otherSpecs
     val newInitDecl = InitDecl(module.init.get.body ++ newInits ++ newNexts)
-    val newNextDecl = NextDecl(lassoCopyStmt :: isInitAssignNext :: module.next.get.body ++ newNexts)
-    val newSafetyProperties = monitorExprs.map {
+    val newNextDecl = NextDecl(stateCopyStmt :: isInitAssignNext :: module.next.get.body ++ newNexts)
+    val newSafetyProperties = (ltlSpecs zip safetyExprs).map {
       p => {
         val pName = Identifier(p._1.id.name + ":safety")
         val pNameWithPos = ASTNode.introducePos(true, pName, p._1.id.position)
-        val exprWithPos = ASTNode.introducePos(true, p._5, p._1.expr.position)
+        val exprWithPos = ASTNode.introducePos(true, p._2, p._1.expr.position)
         val pPrime = SpecDecl(pNameWithPos, exprWithPos, List(LTLSafetyFragmentDecorator, CoverDecorator))
         ASTNode.introducePos(true, pPrime, p._1.position)
       }
     }
-    val moduleDecls = copyLassoInputDecl :: newVarsDecls ++ otherDecls ++ List(monitorInputsDecl, newVarDecls, newInitDecl, newNextDecl) ++ newSafetyProperties
+    val moduleDecls = copyStateInputDecl :: stateCopiedVarDecl :: stateVarsPDecl ++ otherDecls ++ List(monitorInputsDecl, newVarDecls, newInitDecl, newNextDecl) ++ newSafetyProperties
 
     Module(module.id, moduleDecls, module.cmds)
   }
