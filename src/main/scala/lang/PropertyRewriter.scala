@@ -370,8 +370,44 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
+  def newVars(module : Module, nameProvider : ContextualNameProvider) : List[(Identifier, Type)] = {
+    module.vars.map((p) => (nameProvider(p._1, module.id.toString + "$liveness"), p._2))
+  }
+
+  def orExpr(a : Expr, b : Expr) : Expr = OperatorApplication(DisjunctionOp(), List(a, b))
+  def andExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ConjunctionOp(), List(a, b))
+  def notExpr(a : Expr) : Expr = OperatorApplication(NegationOp(), List(a))
+  def eqExpr(a : Expr, b : Expr) : Expr = OperatorApplication(EqualityOp(), List(a, b))
+
+  def assignToVars(varsLeft : List[(Identifier, Type)], varsRight : List[(Identifier, Type)]) : List[AssignStmt] = {
+    Utils.assert(varsLeft.size == varsRight.size, "Var arrays must be the same size.")
+    (varsLeft zip varsRight).map {
+      case (varDecl1, varDecl2) => AssignStmt(List(LhsId(varDecl1._1)), List(varDecl2._1))
+    }
+  }
+  def guardedAssignment(guardVar : Identifier, copyVar : Identifier, origVars : List[(Identifier, Type)], newVars : List[(Identifier, Type)]) : Statement = {
+    val thenBlock = AssignStmt(List(LhsId(copyVar)), List(BoolLit(true))) :: assignToVars(newVars, origVars)
+    val ifStmt = IfElseStmt(andExpr(guardVar, notExpr(copyVar)), thenBlock, List.empty)
+    ifStmt
+  }
+
+  def eqVarsExpr(varsLeft : List[(Identifier, Type)], varsRight : List[(Identifier, Type)]) : Expr = {
+    Utils.assert(varsLeft.size == varsRight.size, "Var arrays must be the same size.")
+    val eqExprs = (varsLeft zip varsRight) map {
+      case (v1, v2) => eqExpr(v1._1, v2._1)
+    }
+    val initExpr : Expr = BoolLit(true)
+    eqExprs.foldLeft(initExpr)((acc, e) => orExpr(acc, e)) 
+  }
+
   def rewriteSpecs(module : Module, ctx : Scope, ltlSpecs : List[SpecDecl], otherSpecs : List[SpecDecl]) : Module = {
     val nameProvider = new ContextualNameProvider(ctx, "ltl")
+    val varsCopy = newVars(module, nameProvider)
+    val newVarsDecls = varsCopy.map(v => StateVarsDecl(List(v._1), v._2))
+    val lassoCopyNonDet = nameProvider(module.id, "lasso_copy_nondet")
+    val lassoCopied = nameProvider(module.id, "lasso_copied")
+    val lassoCopyStmt = guardedAssignment(lassoCopyNonDet, lassoCopied, module.vars, varsCopy)
+
     val isInit = nameProvider(module.id, "is_init")
     val rewrites = ltlSpecs.map { 
       (s) => {
@@ -382,15 +418,14 @@ class LTLPropertyRewriterPass extends RewritePass {
       }
     }
     val monitorVars = rewrites.map(r => (r._4, r._5, r._6))
+    // val acceptVars = monitorVars.map(p => (p._1, p._2))
+    // println("accept vars: " + acceptVars.toString)
 
-    def orExpr(a : Expr, b : Expr) : Expr = OperatorApplication(DisjunctionOp(), List(a, b))
-    def andExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ConjunctionOp(), List(a, b))
-    def notExpr(a : Expr) : Expr = OperatorApplication(NegationOp(), List(a))
     // create the hasFailed and pending variables.
     val monitorExprs = (ltlSpecs zip monitorVars).map { 
       p => {
         val failedVars = p._2._1
-        val hasFailedVar = nameProvider(p._1.id, "has_failed")
+        val hasFailedVar = nameProvider(p._1.id, "FAILED")
         val hasFailedExpr : Expr = failedVars.foldLeft(hasFailedVar.asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
 
         val pendingVars = p._2._3
@@ -398,10 +433,21 @@ class LTLPropertyRewriterPass extends RewritePass {
         val pendingExpr : Expr = pendingVars.foldLeft(BoolLit(false).asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
 
         val acceptVars = p._2._2
+        // has accepted is true if this trace has been accepted at least once in the cycle
+        val hasAcceptedVars = acceptVars.map(aVar => nameProvider(aVar, "HAS_ACCEPTED"))
+        val hasAcceptedExprs = (acceptVars zip hasAcceptedVars).map {
+          case (aVar, haVar) => orExpr(haVar, andExpr(aVar, lassoCopied))
+        }
+        // has accepted trace is true if all of the accept vars of this trace have been accepted at least
+        // once in this cycle.
+        val foldInit : Expr = BoolLit(false)
+        val hasAcceptedTrace = nameProvider(p._1.id, "HAS_ACCEPTED_TRACE")
+        val hasAcceptedTraceExpr = hasAcceptedVars.foldLeft(foldInit)((acc, v) => orExpr(acc, v))
+        
+        val acceptTuple = (acceptVars, (hasAcceptedVars, hasAcceptedExprs), (hasAcceptedTrace, hasAcceptedTraceExpr))
+        
         val safetyExpr = andExpr(notExpr(pendingVar), notExpr(hasFailedVar))
-        
-        (p._1, (hasFailedVar, hasFailedExpr), (pendingVar, pendingExpr), acceptVars, safetyExpr)
-        
+        (p._1, (hasFailedVar, hasFailedExpr), (pendingVar, pendingExpr), acceptTuple, safetyExpr)
       }
     }
     def implExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ImplicationOp(), List(a, b))
@@ -412,7 +458,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     val rootVars = rewrites.map(_._1)
     val rootAssumes = rootVars.map(r => AssumeStmt(iffExpr(r, isInit), None))
 
-    val newInputDecls = StateVarsDecl(rewrites.flatMap(r => r._2).map(_._1), BoolType())
+    val newInpsDecl = InputVarsDecl(List(lassoCopyNonDet), BoolType())
+    val newBooleanVarsDecl = StateVarsDecl(lassoCopied :: rewrites.flatMap(r => r._2).map(_._1), BoolType())
     val monitorVarsInt = rewrites.flatMap(r => r._3).map(_._1)
     val monitorVarsExtFalse = monitorExprs.map(_._2._1) 
     val monitorVarsExtTrue = monitorExprs.map(_._3._1)
@@ -421,7 +468,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     val newVarDecls = StateVarsDecl(varsToInitTrue ++ varsToInitFalse, BoolType())
     val newInitFalse = AssignStmt(varsToInitFalse.map(LhsId(_)), List.fill(varsToInitFalse.size)(BoolLit(false)))
     val newInitTrue = AssignStmt(varsToInitTrue.map(LhsId(_)), List.fill(varsToInitTrue.size)(BoolLit(true)))
-    val newInits = List(newInitFalse, newInitTrue) 
+    val newInitCopied = AssignStmt(List(LhsId(lassoCopied)), List(BoolLit(false)))
+    val newInits = List(newInitFalse, newInitTrue, newInitCopied) 
 
     val rewriteImpls = rewrites.flatMap(r => r._2)
     val implicationHavocs = rewriteImpls.map(r => HavocStmt(r._1))
@@ -435,8 +483,8 @@ class LTLPropertyRewriterPass extends RewritePass {
 
     val otherDecls = module.decls.filter(p => !p.isInstanceOf[SpecDecl] && !p.isInstanceOf[InitDecl] && !p.isInstanceOf[NextDecl]) ++ otherSpecs
     val newInitDecl = InitDecl(module.init.get.body ++ newInits ++ newNexts)
-    val newNextDecl = NextDecl(isInitAssign :: module.next.get.body ++ newNexts)
-    val newSafetyProperties = monitorExprs.map { 
+    val newNextDecl = NextDecl(lassoCopyStmt :: isInitAssign :: module.next.get.body ++ newNexts)
+    val newSafetyProperties = monitorExprs.map {
       p => {
         val pName = Identifier(p._1.id.name + ":safety")
         val pNameWithPos = ASTNode.introducePos(true, pName, p._1.id.position)
@@ -445,7 +493,7 @@ class LTLPropertyRewriterPass extends RewritePass {
         ASTNode.introducePos(true, pPrime, p._1.position)
       }
     }
-    val moduleDecls = otherDecls ++ List(newInputDecls, newVarDecls, newInitDecl, newNextDecl) ++ newSafetyProperties
+    val moduleDecls = newInpsDecl :: newVarsDecls ++ otherDecls ++ List(newBooleanVarsDecl, newVarDecls, newInitDecl, newNextDecl) ++ newSafetyProperties
 
     Module(module.id, moduleDecls, module.cmds)
   }
