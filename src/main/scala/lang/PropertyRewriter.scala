@@ -424,6 +424,12 @@ class LTLPropertyRewriterPass extends RewritePass {
   def createRepeatedAssignment(vars : List[Identifier], value : Expr) : AssignStmt = {
     AssignStmt(vars.map(LhsId(_)), List.fill(vars.size)(value))
   }
+  def createAssign(v : Identifier, e : Expr) : AssignStmt = {
+    AssignStmt(List(LhsId(v)), List(e))
+  }
+  def createAssign(vs : List[Identifier], es : List[Expr]) : AssignStmt = {
+    AssignStmt(vs.map(LhsId(_)), es)
+  }
 
   def rewriteSpecs(module : Module, ctx : Scope, ltlSpecs : List[SpecDecl], otherSpecs : List[SpecDecl]) : Module = {
     val nameProvider = new ContextualNameProvider(ctx, "ltl")
@@ -444,7 +450,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
 
     // create the "FAILED" variables.
-    val hasFailedExprs = (ltlSpecs zip monitors).map {
+    val hasFaileds = (ltlSpecs zip monitors).map {
       case (spec, monitor) => {
         val hasFailedVar = nameProvider(spec.id, "FAILED")
         val hasFailedExpr : Expr = monitor.failedVars.foldLeft(hasFailedVar.asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
@@ -452,7 +458,7 @@ class LTLPropertyRewriterPass extends RewritePass {
       }
     }
     // create the "PENDING" variables.
-    val pendingExprs = (ltlSpecs zip monitors).map {
+    val pendings = (ltlSpecs zip monitors).map {
       case (spec, monitor) => {
         val pendingVar = nameProvider(spec.id, "PENDING")
         val pendingExpr : Expr = monitor.pendingVars.foldLeft(BoolLit(false).asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
@@ -460,12 +466,8 @@ class LTLPropertyRewriterPass extends RewritePass {
       }
     }
     // create the ACCEPT variables.
-    val monitorExprs = (ltlSpecs zip monitors).map { 
+    val hasAccepteds = (ltlSpecs zip monitors).map { 
       case (spec, monitor) => {
-        // val hasFailedVar = nameProvider(spec.id, "FAILED")
-        // val hasFailedExpr : Expr = monitor.failedVars.foldLeft(hasFailedVar.asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
-
-
         // has accepted is true if this trace has been accepted at least once in the cycle
         val hasAcceptedVars = monitor.acceptVars.map(aVar => nameProvider(aVar, "HAS_ACCEPTED"))
         val hasAcceptedExprs = (monitor.acceptVars zip hasAcceptedVars).map {
@@ -477,19 +479,18 @@ class LTLPropertyRewriterPass extends RewritePass {
         val hasAcceptedTrace = nameProvider(spec.id, "HAS_ACCEPTED_TRACE")
         val hasAcceptedTraceExpr = hasAcceptedVars.foldLeft(foldInit)((acc, v) => orExpr(acc, v))
         
-        val acceptTuple = (monitor.acceptVars, (hasAcceptedVars, hasAcceptedExprs), (hasAcceptedTrace, hasAcceptedTraceExpr))
-        
-        (spec, (0, 0), (0, 0), acceptTuple, 0)
+        ((hasAcceptedVars, hasAcceptedExprs), (hasAcceptedTrace, hasAcceptedTraceExpr))
       }
     }
 
-    val safetyExprs = (hasFailedExprs zip pendingExprs) map {
+    val safetyExprs = (hasFaileds zip pendings) map {
       case ((hasFailedVar, _), (pendingVar, _)) =>
         andExpr(notExpr(pendingVar), notExpr(hasFailedVar))
     }
 
     // This is the assignment to is_init in next.
     val isInitStateVar = nameProvider(module.id, "is_init")
+    val isInitStateVarDecl = StateVarsDecl(List(isInitStateVar), BoolType())
     val isInitAssignNext = AssignStmt(List(LhsId(isInitStateVar)), List(BoolLit(false)))
     
     // The top-level 'z' variables.
@@ -502,34 +503,56 @@ class LTLPropertyRewriterPass extends RewritePass {
     // These are the monitor variables. ('z' variables which are not the top-level.)
     val monitorVars = monitors.flatMap(r => r.assignments).map(_._1)
     val monitorVarsDecl = StateVarsDecl(monitorVars, BoolType())
-    // These are the has failed and pending variables.
-    val hasFailedVars = hasFailedExprs.map(_._1)
-    val pendingVars = pendingExprs.map(_._1)
+    // These are the has failed variables.
+    val hasFailedVars = hasFaileds.map(_._1)
     val hasFailedVarsDecl = StateVarsDecl(hasFailedVars, BoolType())
+    // Now for the pending variables.
+    val pendingVars = pendings.map(_._1)
     val pendingVarsDecl = StateVarsDecl(pendingVars, BoolType())
-    val varsToInitFalse : List[Identifier] = hasFailedVars ++ monitorVars
-    val varsToInitTrue : List[Identifier] = isInitStateVar :: pendingVars
-    val newVarDecls = StateVarsDecl(varsToInitTrue ++ varsToInitFalse, BoolType())
-    
-    val newInitCopied = AssignStmt(List(LhsId(stateCopiedVar)), List(BoolLit(false)))
-    val newInits = List(
-                    createRepeatedAssignment(hasFailedVars ++ monitorVars, BoolLit(false)), 
-                    createRepeatedAssignment(isInitStateVar :: pendingVars, BoolLit(true)), 
-                    newInitCopied) 
+    // Now for the accept var variables.
+    val hasAcceptedVars = hasAccepteds.flatMap(e => e._1._1)
+    val hasAcceptedVarsDecl = StateVarsDecl(hasAcceptedVars, BoolType())
+    // And then then accept trace variables.
+    val hasAcceptedTraceVars = hasAccepteds.map(e => e._2._1)
+    val hasAcceptedTraceVarsDecl = StateVarsDecl(hasAcceptedTraceVars, BoolType())
 
-    val rewriteImpls = monitors.flatMap(r => r.biImplications)
-    val implicationHavocs = rewriteImpls.map(r => HavocStmt(r._1))
-    val implicationAssumes = rewriteImpls.collect{ case (id, Some(expr)) => AssumeStmt(iffExpr(id, expr), None) }
+    // new variable declarations.    
+    val varDecls = List(copyStateInputDecl, stateCopiedVarDecl, 
+                      isInitStateVarDecl, hasFailedVarsDecl, 
+                      pendingVarsDecl, hasAcceptedVarsDecl, hasAcceptedTraceVarsDecl,
+                      monitorInputsDecl, monitorVarsDecl) ++ stateVarsPDecl
 
+    // now construct the next block.
+    val stateCopiedInitStmt = AssignStmt(List(LhsId(stateCopiedVar)), List(BoolLit(false)))
+    val postInitStmts = List(
+                    createRepeatedAssignment(hasFailedVars, BoolLit(false)), 
+                    createRepeatedAssignment(monitorVars, BoolLit(false)), 
+                    createRepeatedAssignment(hasAcceptedVars, BoolLit(false)), 
+                    createRepeatedAssignment(hasAcceptedTraceVars, BoolLit(false)), 
+                    createRepeatedAssignment(isInitStateVar :: pendingVars, BoolLit(true)),
+                    stateCopiedInitStmt) 
+
+    // monitor iff "assignments"
+    val monitorBiImpls = monitors.flatMap(r => r.biImplications)
+    val biImplHavocs = monitorBiImpls.map(r => HavocStmt(r._1))
+    val biImplAssumes = monitorBiImpls.collect{ case (id, Some(expr)) => AssumeStmt(iffExpr(id, expr), None) }
+
+    // monitor internal assignments.
     val assignmentPairs = monitors.flatMap(r => r.assignments)
-    val newAssigns = assignmentPairs.map(p => AssignStmt(List(LhsId(p._1)), List(p._2)))
-    val newHFAssigns = hasFailedExprs.map(p => AssignStmt(List(LhsId(p._1)), List(p._2)))
-    val newPendingAssigns = pendingExprs.map(p => AssignStmt(List(LhsId(p._1)), List(p._2)))
-    val newNexts = implicationHavocs ++ zAssumes ++ implicationAssumes ++ newAssigns ++ newHFAssigns ++ newPendingAssigns
+    val monitorAssignments = assignmentPairs.map(p => createAssign(p._1, p._2))
+    val hasFailedAssignments = hasFaileds.map(p => createAssign(p._1, p._2))
+    val pendingAssignments = pendings.map(p => createAssign(p._1, p._2))
+    val hasAcceptedAssignments = hasAccepteds.map(p => createAssign(p._1._1, p._1._2))
+    val hasAcceptedTraceAssignments = hasAccepteds.map(p => createAssign(p._2._1, p._2._2))
+    val preNextStmts = List(stateCopyStmt, isInitAssignNext)
+    val postNextStmts = biImplHavocs ++ zAssumes ++ biImplAssumes ++ monitorAssignments ++ 
+                        hasFailedAssignments ++ pendingAssignments ++ 
+                        hasAcceptedAssignments ++ hasAcceptedTraceAssignments
 
-    val otherDecls = module.decls.filter(p => !p.isInstanceOf[SpecDecl] && !p.isInstanceOf[InitDecl] && !p.isInstanceOf[NextDecl]) ++ otherSpecs
-    val newInitDecl = InitDecl(module.init.get.body ++ newInits ++ newNexts)
-    val newNextDecl = NextDecl(stateCopyStmt :: isInitAssignNext :: module.next.get.body ++ newNexts)
+    // new init/next.
+    val newInitDecl = InitDecl(module.init.get.body ++ postInitStmts ++ postNextStmts)
+    val newNextDecl = NextDecl(preNextStmts ++ module.next.get.body ++ postNextStmts)
+    // new safety properties.
     val newSafetyProperties = (ltlSpecs zip safetyExprs).map {
       p => {
         val pName = Identifier(p._1.id.name + ":safety")
@@ -539,8 +562,13 @@ class LTLPropertyRewriterPass extends RewritePass {
         ASTNode.introducePos(true, pPrime, p._1.position)
       }
     }
-    val moduleDecls = copyStateInputDecl :: stateCopiedVarDecl :: stateVarsPDecl ++ otherDecls ++ List(monitorInputsDecl, newVarDecls, newInitDecl, newNextDecl) ++ newSafetyProperties
-
+    // extract the rest of the module as-is.
+    val otherDecls = module.decls.filter(
+        p => !p.isInstanceOf[SpecDecl] && 
+             !p.isInstanceOf[InitDecl] && 
+             !p.isInstanceOf[NextDecl]) ++ otherSpecs
+    // assemble the new module.
+    val moduleDecls = otherDecls ++ varDecls ++ List(newInitDecl, newNextDecl) ++ newSafetyProperties
     Module(module.id, moduleDecls, module.cmds)
   }
 }
