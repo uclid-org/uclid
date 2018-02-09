@@ -50,6 +50,12 @@ class VerifierSpec extends FlatSpec {
   "test/test-array-0.ucl" should "verify successfully." in {
     nTestsFail("./test/test-array-0.ucl", 0)
   }
+  "test/test-array-1.ucl" should "verify successfully." in {
+    nTestsFail("./test/test-array-1.ucl", 0)
+  }
+  "test/test-array-1-unsafe.ucl" should "verify all but 4 assertions." in {
+    nTestsFail("./test/test-array-1-unsafe.ucl", 4)
+  }
   "test/test-bv-assign.ucl" should "verify successfully." in {
     nTestsFail("./test/test-bv-assign.ucl", 0)
   }
