@@ -282,13 +282,19 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     rewriter.visit(targetModule, Scope.empty).get
   }
 
+  def fixPosition[T <: PositionedNode](node : Option[T], pos : ASTPosition) : Option[T] = {
+    ASTNode.introducePos(true, true, node, pos)
+  }
+  def fixPosition[T <: PositionedNode](nodes : List[T], pos : ASTPosition) : List[T] = {
+    ASTNode.introducePos(true, true, nodes, pos)
+  }
   def createNewVariables(varMap : VarMap) : List[Decl] = {
     varMap.map {
       v => {
         v._2 match {
-          case MIP.BoundInput(id, t, _t) => Some(StateVarsDecl(List(id), t))
-          case MIP.UnboundOutput(id, t) => Some(StateVarsDecl(List(id), t))
-          case MIP.StateVariable(id, t) => Some(StateVarsDecl(List(id), t))
+          case MIP.BoundInput(id, t, _t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
+          case MIP.UnboundOutput(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
+          case MIP.StateVariable(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.Constant(_, _) | MIP.Function(_, _) | MIP.UnboundInput(_, _) | 
                MIP.BoundOutput(_, _) | MIP.SharedVariable(_, _) =>  None
         }
@@ -300,7 +306,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     varMap.map {
       v => {
         v._2 match {
-          case MIP.UnboundInput(id, t) => Some(InputVarsDecl(List(id), t))
+          case MIP.UnboundInput(id, t) => fixPosition(Some(InputVarsDecl(List(id), t)), id.position)
           case MIP.BoundInput(_, _, _) | MIP.BoundOutput(_, _) |
                MIP.UnboundOutput(_, _) | MIP.StateVariable(_, _) |
                MIP.SharedVariable(_, _) | MIP.Constant(_, _) | MIP.Function(_, _) =>
@@ -315,7 +321,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       v => {
         v._2 match {
           case MIP.BoundInput(id, t, expr) =>
-            Some(AssignStmt(List(LhsId(id)), List(expr)))
+            fixPosition(Some(AssignStmt(List(LhsId(id)), List(expr))), id.position)
           case _ =>
             None
         }
@@ -336,7 +342,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   // rewrite SelectFromInstance operations.
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
-    opapp.op match {
+    val opappP = opapp.op match {
       case SelectFromInstance(field) =>
         val instance = opapp.operands(0)
         if (instance == inst.instanceId) {
@@ -352,6 +358,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
         }
       case _ => Some(opapp)
     }
+    fixPosition(opappP, opapp.position)
   }
   // add initialization for the instance.
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
@@ -388,7 +395,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 }
 
 class ModuleInstantiator(passName : String, module : Module, inst : InstanceDecl, targetModule : Module, externalSymbolMap : ExternalSymbolMap) extends ASTRewriter(
-    passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap))
+    passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false)
 
 class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
   lazy val manager : PassManager = analysis.manager

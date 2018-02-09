@@ -563,19 +563,19 @@ class LTLPropertyRewriterPass extends RewritePass {
     val newSafetyProperties = (ltlSpecs zip safetyExprs).map {
       p => {
         val pName = Identifier(p._1.id.name + ":safety")
-        val pNameWithPos = ASTNode.introducePos(true, pName, p._1.id.position)
-        val exprWithPos = ASTNode.introducePos(true, p._2, p._1.expr.position)
+        val pNameWithPos = ASTNode.introducePos(true, true, pName, p._1.id.position)
+        val exprWithPos = ASTNode.introducePos(true, true, p._2, p._1.expr.position)
         val pPrime = SpecDecl(pNameWithPos, exprWithPos, List(LTLSafetyFragmentDecorator, CoverDecorator))
-        ASTNode.introducePos(true, pPrime, p._1.position)
+        ASTNode.introducePos(true, true, pPrime, p._1.position)
       }
     }
     val newLivenessProperties = (ltlSpecs zip livenessExprs).map {
       p => {
         val pName = Identifier(p._1.id.name + ":liveness")
-        val pNameWithPos = ASTNode.introducePos(true, pName, p._1.id.position)
-        val exprWithPos = ASTNode.introducePos(true, p._2, p._1.expr.position)
+        val pNameWithPos = ASTNode.introducePos(true, true, pName, p._1.id.position)
+        val exprWithPos = ASTNode.introducePos(true, true, p._2, p._1.expr.position)
         val pPrime = SpecDecl(pNameWithPos, exprWithPos, List(LTLLivenessFragmentDecorator, CoverDecorator))
-        ASTNode.introducePos(true, pPrime, p._1.position)
+        ASTNode.introducePos(true, true, pPrime, p._1.position)
       }
     }
     // extract the rest of the module as-is.

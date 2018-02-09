@@ -73,31 +73,43 @@ sealed  trait PositionedNode extends Positional {
 }
 
 object ASTNode {
-  def introducePos[T <: PositionedNode](setFilename : Boolean, node : T, pos : ASTPosition) : T = {
-    var nodeP = node
-    if (setFilename) { nodeP.filename = pos.filename }
-    nodeP.pos = pos.pos
-    nodeP
+  def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename : Boolean, node : T, pos : ASTPosition) : T = {
+    if (setPosition) {
+      var nodeP = node
+      if (setFilename) { nodeP.filename = pos.filename }
+      nodeP.pos = pos.pos
+      nodeP
+    } else {
+      node
+    }
   }
 
-  def introducePos[T <: PositionedNode](setFilename : Boolean, node : Option[T], pos : ASTPosition) : Option[T] = {
-    node match {
-      case Some(n) =>
+  def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename : Boolean, node : Option[T], pos : ASTPosition) : Option[T] = {
+    if (setPosition) {
+      node match {
+        case Some(n) =>
+          var nP = n
+          if (setFilename) { nP.filename = pos.filename }
+          nP.pos = pos.pos
+          Some(nP)
+        case None =>
+          None
+      }
+    } else {
+      node
+    }
+  }
+  def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename: Boolean, nodes : List[T], pos : ASTPosition) : List[T] = {
+    if (setPosition) {
+      nodes.map((n) => {
         var nP = n
         if (setFilename) { nP.filename = pos.filename }
         nP.pos = pos.pos
-        Some(nP)
-      case None =>
-        None
+        nP
+      })
+    } else {
+      nodes
     }
-  }
-  def introducePos[T <: PositionedNode](setFilename: Boolean, nodes : List[T], pos : ASTPosition) : List[T] = {
-    nodes.map((n) => {
-      var nP = n
-      if (setFilename) { nP.filename = pos.filename }
-      nP.pos = pos.pos
-      nP
-    })
   }
 }
 
