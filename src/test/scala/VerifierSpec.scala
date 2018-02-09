@@ -92,8 +92,8 @@ class VerifierSpec extends FlatSpec {
   "test/test-functions-1.ucl" should "verify successfully." in {
     nTestsFail("./test/test-functions-1.ucl", 0)
   }
-  "test/test-array-1.ucl" should "verify four assertions and fail to verify two assertions." in {
-    nTestsFail("./test/test-array-1.ucl", 2)
+  "test/test-exprs-1.ucl" should "verify four assertions and fail to verify two assertions." in {
+    nTestsFail("./test/test-exprs-1.ucl", 2)
   }
   "test/test-enum-1.ucl" should "verify all assertions." in {
     nTestsFail("./test/test-enum-1.ucl", 0)
