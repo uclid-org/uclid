@@ -16,6 +16,8 @@ module queue
 
   input op : op_t;
   input data : int;
+
+  // macrovar is_empty = (head == tail);
  
   init {
      head = 0;
@@ -26,22 +28,29 @@ module queue
   }
 
   next {
+    first = contents[head];
     case
 	(op == push) : { 
-		tail = tail+1;
 		contents[tail] = data;
+		tail = tail+1;
                 }
 	(op == pop) : { 
-		head = head+1;
+                if (head < tail) {
+		        head = head+1;
+                }
 		}
 	(op == nop) : { } /* no change */
-    esac
-    first = contents[head];
-
-    assert(head > tail);
+    esac;
   }
 
   invariant head_le_tail: head <= tail;
+
+  control {
+      v = unroll(2);
+      check;
+      print_results;
+      v->print_cex(op, head, tail);
+  }
 }
 
 
@@ -76,5 +85,6 @@ module main
   control {
     unroll (5);
     check;
+    print_results;
   }
 }

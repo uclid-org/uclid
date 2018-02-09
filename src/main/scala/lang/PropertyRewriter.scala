@@ -389,8 +389,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
-  def newVars(module : Module, nameProvider : ContextualNameProvider) : List[(Identifier, Type)] = {
-    module.vars.map((p) => (nameProvider(p._1, module.id.toString + "$liveness"), p._2))
+  def newVars(module : Module, nameProvider : ContextualNameProvider) : List[(Identifier, Identifier, Type)] = {
+    module.vars.map((p) => (p._1, nameProvider(p._1, module.id.toString + "$liveness"), p._2))
   }
 
   def orExpr(a : Expr, b : Expr) : Expr = OperatorApplication(DisjunctionOp(), List(a, b))
@@ -418,7 +418,7 @@ class LTLPropertyRewriterPass extends RewritePass {
       case (v1, v2) => eqExpr(v1._1, v2._1)
     }
     val initExpr : Expr = BoolLit(true)
-    eqExprs.foldLeft(initExpr)((acc, e) => orExpr(acc, e)) 
+    eqExprs.foldLeft(initExpr)((acc, e) => andExpr(acc, e)) 
   }
 
   def createRepeatedAssignment(vars : List[Identifier], value : Expr) : AssignStmt = {
@@ -435,7 +435,10 @@ class LTLPropertyRewriterPass extends RewritePass {
     val nameProvider = new ContextualNameProvider(ctx, "ltl")
     
     // create a copy of the state variables and non-deterministically assign the current state to it.
-    val stateVarsP = newVars(module, nameProvider)
+    val stateVarsPairs = newVars(module, nameProvider)
+    val stateVars = stateVarsPairs.map(p => (p._1, p._3))
+    val stateVarsP = stateVarsPairs.map(p => (p._2, p._3))
+    val stateVarsEqExpr = eqVarsExpr(stateVars, stateVarsP)
     val stateVarsPDecl = stateVarsP.map(v => StateVarsDecl(List(v._1), v._2))
     val copyStateInput = nameProvider(module.id, "copy_state_in")
     val stateCopiedVar = nameProvider(module.id, "state_copied")
@@ -488,6 +491,10 @@ class LTLPropertyRewriterPass extends RewritePass {
         andExpr(notExpr(pendingVar), notExpr(hasFailedVar))
     }
 
+    val livenessExprs = (hasFaileds zip hasAccepteds) map {
+      case ((hasFailedVar, _), ((_, _), (hasAcceptedTrace, _))) =>
+        andExpr(stateVarsEqExpr, andExpr(notExpr(hasFailedVar), hasAcceptedTrace)) 
+    }
     // This is the assignment to is_init in next.
     val isInitStateVar = nameProvider(module.id, "is_init")
     val isInitStateVarDecl = StateVarsDecl(List(isInitStateVar), BoolType())
@@ -562,13 +569,22 @@ class LTLPropertyRewriterPass extends RewritePass {
         ASTNode.introducePos(true, pPrime, p._1.position)
       }
     }
+    val newLivenessProperties = (ltlSpecs zip livenessExprs).map {
+      p => {
+        val pName = Identifier(p._1.id.name + ":liveness")
+        val pNameWithPos = ASTNode.introducePos(true, pName, p._1.id.position)
+        val exprWithPos = ASTNode.introducePos(true, p._2, p._1.expr.position)
+        val pPrime = SpecDecl(pNameWithPos, exprWithPos, List(LTLLivenessFragmentDecorator, CoverDecorator))
+        ASTNode.introducePos(true, pPrime, p._1.position)
+      }
+    }
     // extract the rest of the module as-is.
     val otherDecls = module.decls.filter(
         p => !p.isInstanceOf[SpecDecl] && 
              !p.isInstanceOf[InitDecl] && 
              !p.isInstanceOf[NextDecl]) ++ otherSpecs
     // assemble the new module.
-    val moduleDecls = otherDecls ++ varDecls ++ List(newInitDecl, newNextDecl) ++ newSafetyProperties
+    val moduleDecls = otherDecls ++ varDecls ++ List(newInitDecl, newNextDecl) ++ newSafetyProperties ++ newLivenessProperties
     Module(module.id, moduleDecls, module.cmds)
   }
 }

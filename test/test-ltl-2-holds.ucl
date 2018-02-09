@@ -11,10 +11,12 @@ module main {
 	}
   }
   
-  property state_false_reachable[LTL] : G(F(!state));
+  property ss[LTL] : G(F(state));
   
   control {
     print_module;
+    bmc(5);
     check;
+    print_results;
   } 
 }
