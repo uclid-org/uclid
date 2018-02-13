@@ -42,6 +42,7 @@ case class AssertInfo(
     frameTable : SymbolicSimulator.FrameTable, 
     context : Scope, 
     iter : Int, 
+    pathCond : smt.Expr,
     expr : smt.Expr,
     decorators : List[ExprDecorator],
     pos : ASTPosition) {
@@ -92,12 +93,18 @@ class AssertionTree {
     solver.addAssumptions(node.assumptions.toList)
     node.results = (node.assertions.map {
       e => {
+        val pcExpr = e.pathCond
         val assertExpr = if (e.decorators.contains(CoverDecorator)) {
           e.expr
         } else {
           smt.OperatorApplication(smt.NegationOp, List(e.expr))
         }
-        val sat = solver.check(assertExpr)
+        val checkExpr = if (pcExpr == smt.BooleanLit(true)) {
+          assertExpr
+        } else {
+          smt.OperatorApplication(smt.ConjunctionOp, List(pcExpr, assertExpr))
+        }
+        val sat = solver.check(checkExpr)
         val result = sat.result match {
           case Some(true)  => smt.SolverResult(Some(false), sat.model)
           case Some(false) => smt.SolverResult(Some(true), sat.model)
@@ -120,14 +127,15 @@ class AssertionTree {
       case Some(label) =>
         node.assertions.filter{e => e.label == label.name}
     }).toList
-    
+
     val theseSMTFormulas = filteredAssertions.map{
       a => {
         val name = label match {
           case None => "uclid: [%s]; step %d".format(a.pos.toString, a.iter)
           case Some(label) => "uclid(%s): [%s]; step %d".format(label, a.pos.toString, a.iter)
         }
-        solver.toSMT2(a.expr, allAssumptions, name)
+        solver.toSMT2(smt.OperatorApplication(smt.ConjunctionOp, List(a.pathCond, a.expr)), 
+                      allAssumptions, name)
       }
     }
     val childResults = node.children.flatMap(c => _printSMT(c, allAssumptions, label, solver))
