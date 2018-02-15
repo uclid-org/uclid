@@ -58,13 +58,18 @@ class SymbolicSimulator (module : Module) {
   var symbolTable : SymbolTable = Map.empty
   var frameTable : FrameTable = ArrayBuffer.empty
 
-  def newHavocSymbol(name: String, t: smt.Type) =
-    new smt.Symbol("$undef_" + UniqueIdGenerator.unique() + "_" + name, t)
+  def newHavocSymbol(name: String, t: smt.Type) = {
+    new smt.Symbol("$havoc_" + UniqueIdGenerator.unique() + "_" + name, t)
+  }
   def newInputSymbol(name: String, step: Int, t: smt.Type) = {
     new smt.Symbol("$input_" + step + "_" + name, t)
   }
-  def newConstantSymbol(name: String, t: smt.Type) =
+  def newStateSymbol(name: String, step: Int, t: smt.Type) = {
+    new smt.Symbol("$state_" + step + "_" + name, t)
+  }
+  def newConstantSymbol(name: String, t: smt.Type) = {
     new smt.Symbol("$const_"+name, t)
+  }
 
   def resetState() {
     assertionTree.resetToInitial()
@@ -207,6 +212,19 @@ class SymbolicSimulator (module : Module) {
     })
   }
 
+  /* This can be used as a post-processing step which might make unrolling complex expressions faster. */
+  def renameStates(st : SymbolTable, step : Int, scope : Scope) : SymbolTable = {
+    val renamedExprs = scope.map.map(_._2).filter(!_.typ.isArray)collect {
+      case Scope.StateVar(id, typ) =>
+        val newVariable = newStateSymbol(id.name, step, smt.Converter.typeToSMT(typ))
+        val stateExpr = st.get(id).get
+        val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
+        (id, newVariable, smtExpr)
+    }
+    renamedExprs.foreach(p => addAssumption(p._3))
+    renamedExprs.foldLeft(st)((acc, p) => st + (p._1 -> p._2))
+  }
+
   def symbolicSimulate(number_of_steps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean, scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) : SymbolTable =
   {
     var currentState = symbolTable
@@ -217,7 +235,7 @@ class SymbolicSimulator (module : Module) {
       // printSymbolTable(currentState)
       val stWInputs = newInputSymbols(currentState, step, scope)
       states += stWInputs
-      currentState = simulate(step, stWInputs, scope, label);
+      currentState = simulate(step, stWInputs, scope, label)
       val numPastFrames = frameTable.size
       val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap 
       frameTable += currentState

@@ -76,7 +76,7 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
   override def applyOnAssign(d : TraversalDirection.T, stmt : AssignStmt, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       if (stmt.lhss.size != stmt.rhss.size) {
-        val msg = "Number of left and right hand sides on assignement statement don't match."
+        val msg = "Number of left and right hand sides on assignement statement don't match"
         ModuleError(msg, stmt.position) :: in
       } else { in }
     } else { in }

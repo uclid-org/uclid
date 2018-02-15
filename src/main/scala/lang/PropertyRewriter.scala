@@ -42,7 +42,7 @@ class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
     for (op <- operands) {
       var oType = exprTypeChecker.typeOf(op, context)
       if (!oType.isBool) {
-        ret = ret + ModuleError("LTL operator expected argument of type boolean but received argument of type %s.".format(oType.toString), op.position)
+        ret = ret + ModuleError("LTL operator expected argument of type boolean but received argument of type %s".format(oType.toString), op.position)
       }
     }
     ret

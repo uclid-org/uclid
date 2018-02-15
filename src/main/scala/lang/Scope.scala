@@ -78,7 +78,7 @@ object Scope {
               namedExpr match {
                 case EnumIdentifier(eId, eTyp) =>
                   Utils.checkParsingError(eTyp == enumTyp,
-                      "Identifier " + eId.name + " redeclared as a member of a different enum.",
+                      "Identifier " + eId.name + " redeclared as a member of a different enum",
                       eTyp.pos, module.flatMap(_.filename))
                   m
                 case _ =>

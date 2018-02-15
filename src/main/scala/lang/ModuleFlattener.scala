@@ -175,7 +175,7 @@ class ModuleDependencyFinder(mainModuleName : Identifier) extends ASTAnalyzer(
     val depGraph = out.get
     val moduleInstantiationOrder = Some(Utils.topoSort(List(mainModuleName), depGraph))
     def cyclicModuleError(node : Identifier, stack : List[Identifier]) : ModuleError = {
-      val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
+      val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ")
       ModuleError(msg, node.position)
     }
     val errors = Utils.findCyclicDependencies(depGraph, List(mainModuleName), cyclicModuleError)

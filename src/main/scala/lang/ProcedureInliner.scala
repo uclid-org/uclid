@@ -60,7 +60,7 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
 
   override def visit(module : Module, context : Scope) : Option[Module] = {
     def recursionError(proc : Identifier, stack : List[Identifier]) : ModuleError = {
-      val msg = "Recursion involving procedures: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
+      val msg = "Recursion involving procedures: " + Utils.join(stack.map(_.toString).toList, ", ")
       ModuleError(msg, proc.position)
     }
 
