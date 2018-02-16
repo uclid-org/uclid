@@ -316,7 +316,7 @@ case class BoolLit(value: Boolean) extends Literal {
 }
 case class IntLit(value: BigInt) extends NumericLit {
   override def toString = value.toString
-  override def typeOf : NumericType = IntType()
+  override def typeOf : NumericType = IntegerType()
   override def to (n : NumericLit) : Seq[NumericLit]  = {
     n match {
       case i : IntLit => (value to i.value).map(IntLit(_))
@@ -490,8 +490,8 @@ case class BoolType() extends PrimitiveType {
   override def isBool = true
   override def defaultValue = Some(BoolLit(false))
 }
-case class IntType() extends NumericType {
-  override def toString = "int"
+case class IntegerType() extends NumericType {
+  override def toString = "integer"
   override def isInt = true
   override def defaultValue = Some(IntLit(0))
 }

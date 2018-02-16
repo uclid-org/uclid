@@ -1,7 +1,7 @@
 module main
 {
-  var a : int;
-  var b : int;
+  var a : integer;
+  var b : integer;
   var z : bool;
   var z1 : bool;
   var z2 : bool;

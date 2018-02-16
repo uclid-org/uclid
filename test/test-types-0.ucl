@@ -1,5 +1,5 @@
 module main {
-  type t0 = int;
+  type t0 = integer;
   type t1 = bool;
   type t2 = enum {red, green, blue};
   type t3a = {t0, t0, t1};
@@ -10,7 +10,7 @@ module main {
   var y_global: t0;
   var z_global : t0;
 
-  input mem_in : int -> int;
+  input mem_in : integer -> integer;
 
   procedure f(x: t0, y: t0) returns (z:t0) { 
     var x_local: t0;
@@ -23,7 +23,7 @@ module main {
     esac 
   }
   
-  output mem_out : [int] int;
+  output mem_out : [integer] integer;
   
   init {
     havoc y_global;

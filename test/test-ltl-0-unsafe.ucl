@@ -1,9 +1,9 @@
 module main
 {
-  input a, b : int;
+  input a, b : integer;
   var inited : bool;
-  var n : int;
-  output sum : int;
+  var n : integer;
+  output sum : integer;
   
   init {
     inited = false;

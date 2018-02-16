@@ -41,7 +41,7 @@ object Converter {
     typ match {
       case lang.UninterpretedType(id) =>
         smt.UninterpretedType(id.name)
-      case lang.IntType() =>
+      case lang.IntegerType() =>
         smt.IntType()
       case lang.BoolType() =>
         smt.BoolType()

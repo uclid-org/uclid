@@ -1,13 +1,13 @@
 module main {
 
-  input  a, b  : int;
+  input  a, b  : integer;
   input  valid : bool;
-  output sum   : int;
+  output sum   : integer;
   output ready : bool;
   
-  var a_past, b_past : int;
+  var a_past, b_past : integer;
   var ready_next : bool;
-  var stepcnt : int;
+  var stepcnt : integer;
   var inited : bool;
   
   init {

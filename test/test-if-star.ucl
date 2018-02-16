@@ -1,7 +1,7 @@
 module main {
-  var x : int;
-  var y : int;
-  var n : int;
+  var x : integer;
+  var y : integer;
+  var n : integer;
   
   init {
     x = 0;

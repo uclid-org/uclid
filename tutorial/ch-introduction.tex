@@ -28,7 +28,7 @@ as the system and its applications evolve.
 \begin{lstlisting}[language=uclid,style=uclidstyle]
 module main {
   // Part 1: System description.
-  var a, b : int;
+  var a, b : integer;
 
   init {
     a = 0;
@@ -62,7 +62,7 @@ In the example, these three conceptual parts are also kept separate in the code.
 \subsubsection{The System Model}
 This part of a \uclid{} module describes the functionality of the transition system that is being modeled: it tells us \emph{what the system does}.
 
-The first item of interest within the module \ident{main} are \emph{state variables}. These are declared using the \keywordbf{var} keyword. The module \ident{main} declares two state variables: \ident{a} and \ident{b} on line~2. These are both of type \keywordbf{int}, which corresponds to mathematical integers.\footnote{Mathematical integer types, as opposed to the machine integer types present in languages like C/C++ and Java, do not have a fixed bit-width and do not overflow.}
+The first item of interest within the module \ident{main} are \emph{state variables}. These are declared using the \keywordbf{var} keyword. The module \ident{main} declares two state variables: \ident{a} and \ident{b} on line~2. These are both of type \keywordbf{integer}, which corresponds to mathematical integers.\footnote{Mathematical integer types, as opposed to the machine integer types present in languages like C/C++ and Java, do not have a fixed bit-width and do not overflow.}
 
 The \keywordbf{init} block appears next and spans lines 4 to 7. It defines the initial values of the state variables in the module. We see that \ident{a} is initialized to 0 while \ident{b} is initialized to 1.
 

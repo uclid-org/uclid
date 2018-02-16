@@ -1,6 +1,6 @@
 module main {
-  var a, b : int;
-  procedure fib(x: int, y: int) returns (z:int, w:int) { 
+  var a, b : integer;
+  procedure fib(x: integer, y: integer) returns (z:integer, w:integer) { 
     z, w = y, x + y;
   }
   init {

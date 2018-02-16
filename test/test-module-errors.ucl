@@ -1,20 +1,20 @@
 module main
 {
-  type rec_t = record { a : int, a : bool, c : int };
-  input value : int;
-  var numbers : [int]int;
-  var sum, index : int;
-  output value : int;
+  type rec_t = record { a : integer, a : bool, c : integer };
+  input value : integer;
+  var numbers : [integer]integer;
+  var sum, index : integer;
+  output value : integer;
   var r : rec_t;
   
-  function f(g : int, g : int) : int;
+  function f(g : integer, g : integer) : integer;
 
-  procedure add(a : int, b : int) returns (a : int) {
+  procedure add(a : integer, b : integer) returns (a : integer) {
     a = a + b;
   }
 
   init {
-    assume (forall (i : int) :: numbers[i] == 0);
+    assume (forall (i : integer) :: numbers[i] == 0);
     sum = 0;
     index = 0;
   }

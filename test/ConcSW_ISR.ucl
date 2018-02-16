@@ -3,7 +3,7 @@ module main_func {
   type pc_t = enum {A, B, C};
 
   input enable : bool;
-  sharedvar timerCount : int;
+  sharedvar timerCount : integer;
 
   var pc : pc_t;
 
@@ -37,7 +37,7 @@ module ISR_func {
  type pc_t = enum {idle, D, E};
 
  input enable : bool;
- sharedvar timerCount : int;
+ sharedvar timerCount : integer;
 
  var pc : pc_t;
 
@@ -73,7 +73,7 @@ module Sys {
   input assert_intr : bool;
 
 // define and initialize timerCount here as a state variable
-  var timerCount : int;
+  var timerCount : integer;
   var mode : mode_t;
   var M_enable, I_enable: bool;
   var return_ISR : bool;

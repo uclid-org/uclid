@@ -1,8 +1,8 @@
 module main {
-  var a, b : int;
-  const one : int;
+  var a, b : integer;
+  const one : integer;
 
-  procedure fib(x: int, y: int) returns (z:int, w:int) {
+  procedure fib(x: integer, y: integer) returns (z:integer, w:integer) {
     one = one + 1;
     x = x + one; 
     z, w = y, x + y;

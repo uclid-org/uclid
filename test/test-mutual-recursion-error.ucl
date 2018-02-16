@@ -1,7 +1,7 @@
 module main {
-  var s1, s2 : int;
+  var s1, s2 : integer;
 
-  procedure foo(a : int, b : int) returns (z : int) {
+  procedure foo(a : integer, b : integer) returns (z : integer) {
     if (a > 0) {
       call (z) = bar(a + b);
     } else {
@@ -9,15 +9,15 @@ module main {
     }
   }
 
-  procedure bar(s : int) returns (w : int) {
-    var x : int;
-    var y : int;
+  procedure bar(s : integer) returns (w : integer) {
+    var x : integer;
+    var y : integer;
     
     call (x, y) = zoom(s + s, 2);
     w = x + y;
   }
 
-  procedure zoom(s1 : int, s2 : int) returns (x : int,  y : int) {
+  procedure zoom(s1 : integer, s2 : integer) returns (x : integer,  y : integer) {
     call (x) = foo(s1 + s2, s1);
     call (y) = foo(s1, s1 + s2);
   }

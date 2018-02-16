@@ -1,13 +1,13 @@
 module main
 {
-  input n  : int;
-  var nums : [int]int;
-  var x : int; 
+  input n  : integer;
+  var nums : [integer]integer;
+  var x : integer; 
 
-  procedure sum(n : int) returns (numbers : [int]int)
+  procedure sum(n : integer) returns (numbers : [integer]integer)
     requires (n > 0);
     requires (n < 5);
-    ensures (forall (i : int) :: (i > 0 && i < 5) ==> numbers[i] == i);
+    ensures (forall (i : integer) :: (i > 0 && i < 5) ==> numbers[i] == i);
     modifies z;
   {
     for i in range(1, 5) {

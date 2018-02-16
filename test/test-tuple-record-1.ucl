@@ -1,9 +1,9 @@
 module main {
-  type rec = record { a : int, b : int, c : bool };
+  type rec = record { a : integer, b : integer, c : bool };
   type struct = record { c1 : rec, c2 : rec };
   
   var s : struct;
-  input n : int;
+  input n : integer;
   
   procedure zero() returns (s : rec) {
     s.a = 0;
@@ -11,13 +11,13 @@ module main {
     s.c = false;
   }
   
-  procedure updateV1(r : rec, n : int) returns (s : rec) {
+  procedure updateV1(r : rec, n : integer) returns (s : rec) {
     s.a = r.a + 1;
     s.b = r.b + n;
     s.c = s.a == s.b;
   }
   
-  procedure updateV2(r : rec, n : int) returns (s : rec) {
+  procedure updateV2(r : rec, n : integer) returns (s : rec) {
     s.a = r.a + 1;
     s.b = r.b + n;
     s.c = (s.a == s.b);

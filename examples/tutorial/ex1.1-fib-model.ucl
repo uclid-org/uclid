@@ -1,6 +1,6 @@
 module main {
   // Part 1: System description.
-  var a, b : int;
+  var a, b : integer;
 
   init {
     a = 0;

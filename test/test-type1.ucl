@@ -1,7 +1,7 @@
 module test {
-  var a, b : int;
+  var a, b : integer;
 
-  procedure fib(x: int, y: int) returns (z:int, w:int) { 
+  procedure fib(x: integer, y: integer) returns (z:integer, w:integer) { 
     z, w = y, x + y;
   }
   init {
@@ -18,7 +18,7 @@ module test {
 }
 
 module test {
-  var y: int;
+  var y: integer;
   var z : bool;
 
   init {

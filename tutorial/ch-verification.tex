@@ -11,7 +11,7 @@ Let us revisit the model from Example~\ref{ex:fib-model}. This is now shown agai
 \begin{lstlisting}[language=uclid,style=uclidstyle]
 module main {
   // Part 1: System description.
-  var a, b : int;
+  var a, b : integer;
 
   init {
     a = 0;
@@ -55,7 +55,7 @@ Uh oh, we seem to have a problem! \uclid{} is telling us that the inductive proo
 \begin{lstlisting}[language=uclid,style=uclidstyle]
 module main {
   // Part 1: System description.
-  var a, b : int;
+  var a, b : integer;
 
   init {
     a = 0;
@@ -121,7 +121,7 @@ Example~\ref{ex:fib-induction-proof} shows the same model as Example~\ref{ex:fib
 \begin{lstlisting}[language=uclid,style=uclidstyle]
 module main {
   // Part 1: System description.
-  var a, b : int;
+  var a, b : integer;
 
   init {
     a = 0;
@@ -165,7 +165,7 @@ Success! We have shown that our system model satisfies its specification.
 \begin{lstlisting}[language=uclid,style=uclidstyle]
 module main {
   // System description.
-  var a, b : int;
+  var a, b : integer;
 
   init {
     // embedded assumptions.

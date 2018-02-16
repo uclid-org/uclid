@@ -1,8 +1,8 @@
 module main {
-  var cnt, cntp, cntq : int;
+  var cnt, cntp, cntq : integer;
   
   
-  procedure add10(x : int) returns (y : int) {
+  procedure add10(x : integer) returns (y : integer) {
     y = x;
     for i in range(1, 3) {
       for j in range(1, 3) {
@@ -12,7 +12,7 @@ module main {
     y = y + 1;
   }
   
-  procedure add10b(x : int) returns (y : int) {
+  procedure add10b(x : integer) returns (y : integer) {
     y = x;
     for i in range(1, 4) {
       y = y + i;

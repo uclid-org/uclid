@@ -56,8 +56,8 @@ import uclid.smt.{ExpressionAnalyzer => ExpressionAnalyzer}
 
 class BitVectorSliceFindWidthPass extends RewritePass {
   def rewriteSlice(slice : VarBitVectorSlice, ctx : Scope) : VarBitVectorSlice = {
-    val hiP = ReplacePolymorphicOperators.rewrite(slice.hi, IntType())
-    val loP = ReplacePolymorphicOperators.rewrite(slice.lo, IntType())
+    val hiP = ReplacePolymorphicOperators.rewrite(slice.hi, IntegerType())
+    val loP = ReplacePolymorphicOperators.rewrite(slice.lo, IntegerType())
     val hiExp = Converter.exprToSMT(hiP, ctx)
     val loExp = Converter.exprToSMT(loP, ctx)
     val subExp = smt.OperatorApplication(smt.IntSubOp, List(hiExp, loExp))

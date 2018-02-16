@@ -2,7 +2,7 @@ module main
 {
     type color_t = enum { red, blue };
 
-    var red_cnt : int;
+    var red_cnt : integer;
     var color : color_t;
 
 	init { }

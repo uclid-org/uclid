@@ -1,6 +1,6 @@
 module main
 {
-  var sum, fake, i : int;
+  var sum, fake, i : integer;
   
   init {
     i = 0;

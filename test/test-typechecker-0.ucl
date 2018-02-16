@@ -1,7 +1,7 @@
 module test {
-  procedure f(x: int, y: int) returns (z:int) { 
-    var x: int;
-    var z : record {a : int, b : int};
+  procedure f(x: integer, y: integer) returns (z:integer) { 
+    var x: integer;
+    var z : record {a : integer, b : integer};
     
     x = z.k + z.k;
     z.k = x;

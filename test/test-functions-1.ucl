@@ -1,10 +1,10 @@
 module main {
-  type rec_t = record { x : int, y : int };
+  type rec_t = record { x : integer, y : integer };
   
-  function h(rec : rec_t) : int;
-  function f(g : int) : int;
+  function h(rec : rec_t) : integer;
+  function f(g : integer) : integer;
   
-  var x, y : int;
+  var x, y : integer;
   var r, q : rec_t;
   
   init {

@@ -119,7 +119,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val OpSelectFromInstance = "->"
     lazy val KwProcedure = "procedure"
     lazy val KwBool = "bool"
-    lazy val KwInt = "int"
+    lazy val KwInteger = "integer"
     lazy val KwEnum = "enum"
     lazy val KwRecord = "record"
     lazy val KwReturns = "returns"
@@ -176,7 +176,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus,
-      "false", "true", "bv", KwProcedure, KwBool, KwInt, KwReturns,
+      "false", "true", "bv", KwProcedure, KwBool, KwInteger, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwIf, KwElse,
       KwCase, KwEsac, KwFor, KwIn, KwRange, KwInstance, KwInput, KwOutput,
       KwConst, KwModule, KwType, KwEnum, KwRecord, KwSkip,
@@ -320,7 +320,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     /** Examples of allowed types are bool | int | [int,int,bool] int **/
     lazy val PrimitiveType : PackratParser[Type] = positioned {
       KwBool ^^ {case _ => BoolType()}   |
-      KwInt ^^ {case _ => IntType()}     |
+      KwInteger ^^ {case _ => IntegerType()}     |
       bitVectorType ^^ {case bvType => BitVectorType(bvType.width)}
     }
 

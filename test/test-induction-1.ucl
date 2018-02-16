@@ -1,5 +1,5 @@
 module main {
-  var x, y : int;
+  var x, y : integer;
 
   init {
     x = 1;

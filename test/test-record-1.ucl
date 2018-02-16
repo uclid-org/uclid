@@ -1,5 +1,5 @@
 module main {
-  type num = int;
+  type num = integer;
   type bit = bool;
   type rec1 = record {a : num, b : num, c : bit };
 

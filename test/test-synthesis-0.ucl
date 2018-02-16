@@ -1,11 +1,11 @@
  /* Toy example #0 to test drive synthesis. */
 module main
 {
-  input a, b : int;
-  var sum : int;
-  var prev_sum : int;
+  input a, b : integer;
+  var sum : integer;
+  var prev_sum : integer;
   
-  synthesis function max2 (x : int, y : int) : int;
+  synthesis function max2 (x : integer, y : integer) : integer;
   
   init {
     sum = 0;

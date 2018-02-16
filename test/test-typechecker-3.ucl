@@ -1,9 +1,9 @@
 // Test that an if-else statement with non-boolean condition results in a compiler error.
 
 module main {
-  type Number = int;
-  var a : int;
-  var b : int;
+  type Number = integer;
+  var a : integer;
+  var b : integer;
   var c : Number;
 
   init {

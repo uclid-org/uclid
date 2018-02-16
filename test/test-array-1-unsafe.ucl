@@ -1,9 +1,9 @@
 module main
 {
-  type num_t = int;
-  var numbers : [bool, num_t]int;
+  type num_t = integer;
+  var numbers : [bool, num_t]integer;
 
-  var sum, index : int;
+  var sum, index : integer;
   
   init {
     for i in range(0, 9) {

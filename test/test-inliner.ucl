@@ -6,7 +6,7 @@ module main {
   output s, s1, s2, s3, s4 : word_t;
   output c1, c2, c3, c4 : bit_t;
   
-  procedure incr(w : int) returns (u: int) {
+  procedure incr(w : integer) returns (u: integer) {
     u = w + 1;
   }
   
@@ -16,7 +16,7 @@ module main {
   }
   
   procedure half_adder1(a : bit_t, b : bit_t) returns (s : bit_t, c_out : bit_t) {
-    var cnt : int;
+    var cnt : integer;
     
   	if (a == 1bv1 && b == 0bv1) {
   	  s = 1bv1;
@@ -45,7 +45,7 @@ module main {
   }
   
   procedure full_adder1(a : bit_t, b : bit_t, c_in : bit_t) returns (s : bit_t, c_out : bit_t) {
-    var cnt : int;
+    var cnt : integer;
 	s = a ^ b ^ c_in;
 	cnt = 0;
 	

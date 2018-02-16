@@ -1,8 +1,8 @@
 module main
 {
-  input a, b : int;
+  input a, b : integer;
   var inited : bool;
-  output sum : int;
+  output sum : integer;
   
   init {
     inited = false;

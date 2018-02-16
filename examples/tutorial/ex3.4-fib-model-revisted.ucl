@@ -1,6 +1,6 @@
 module main {
   // System description.
-  var a, b : int;
+  var a, b : integer;
 
   init {
     havoc a;

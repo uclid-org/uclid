@@ -1,7 +1,7 @@
 module common {
  type op_t = enum {push, pop, nop};
 
- const c0 : [int]int;
+ const c0 : [integer]integer;
 }
 
 
@@ -9,13 +9,13 @@ module queue
 {
   type op_t = common :: op_t; /* do I need to do this, or can I just use common :: op_t instead? */
 
-  var contents : [int]int;
-  var head, tail: int;
+  var contents : [integer]integer;
+  var head, tail: integer;
 
-  output first: int;
+  output first: integer;
 
   input op : op_t;
-  input data : int;
+  input data : integer;
 
   // macrovar is_empty = (head == tail);
  
@@ -59,9 +59,9 @@ module main
   type op_t = common :: op_t;
 
   var op : op_t;
-  var data : int;
+  var data : integer;
 
-  var step : int;
+  var step : integer;
   
   instance queue_i : queue(op : (op), data : (data));
 

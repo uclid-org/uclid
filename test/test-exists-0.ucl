@@ -1,11 +1,11 @@
 module main
 {
-  input i1, i2 : int;
-  var tmp, index : int;
-  var numbers : [int]int;
-  const some_int : int;
+  input i1, i2 : integer;
+  var tmp, index : integer;
+  var numbers : [integer]integer;
+  const some_int : integer;
 
-  procedure find_value(num : int) returns (v : int) {
+  procedure find_value(num : integer) returns (v : integer) {
     v = 0;
     for i in range(1, 10) {
       if(numbers[i] == num) {
@@ -15,7 +15,7 @@ module main
   }
 
   init {
-    assume (exists (i : int) :: (i > 0) && (i < 11) && numbers[i] != some_int);
+    assume (exists (i : integer) :: (i > 0) && (i < 11) && numbers[i] != some_int);
     assume (index > 0 && index < 11);
     assume (numbers[index] == some_int);
   }
@@ -33,8 +33,8 @@ module main
     call (index) = find_value(some_int);
   }
 
-  property ind_existence : (exists (i : int) :: (i > 0) && (i < 11) && (numbers[i] == some_int));
-  property ind_inexistence : (exists (i : int) :: (i > 0) && (i < 11) && (numbers[i] != some_int));
+  property ind_existence : (exists (i : integer) :: (i > 0) && (i < 11) && (numbers[i] == some_int));
+  property ind_inexistence : (exists (i : integer) :: (i > 0) && (i < 11) && (numbers[i] != some_int));
   property ind_found : (index != 0);
 
   control {

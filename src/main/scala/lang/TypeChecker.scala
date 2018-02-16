@@ -179,7 +179,7 @@ object ReplacePolymorphicOperators {
   }
   def toType(op : PolymorphicOperator, typ : NumericType) = {
     typ match {
-      case intTyp : IntType => toInt(op)
+      case intTyp : IntegerType => toInt(op)
       case bvTyp : BitVectorType => toBitvector(op, bvTyp.width)
     }
   }
@@ -329,7 +329,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           }
           checkTypeError(argTypes.forall(_.isNumeric), "Arguments to operator '" + opapp.op.toString + "' must be of a numeric type", opapp.pos, c.filename)
           typeOf(opapp.operands(0), c) match {
-            case i : IntType =>
+            case i : IntegerType =>
               polyOpMap.put(polyOp.astNodeId, ReplacePolymorphicOperators.toInt(polyOp))
               polyResultType(polyOp, i)
             case bv : BitVectorType =>
@@ -346,10 +346,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             }
           }
           checkTypeError(argTypes.size == numArgs(intOp), "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
-          checkTypeError(argTypes.forall(_.isInstanceOf[IntType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer", opapp.pos, c.filename)
+          checkTypeError(argTypes.forall(_.isInstanceOf[IntegerType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer", opapp.pos, c.filename)
           intOp match {
             case IntLTOp() | IntLEOp() | IntGTOp() | IntGEOp() => new BoolType()
-            case IntAddOp() | IntSubOp() | IntMulOp() | IntUnaryMinusOp() => new IntType()
+            case IntAddOp() | IntSubOp() | IntMulOp() | IntUnaryMinusOp() => new IntegerType()
           }
         }
         case bvOp : BVArgOperator => {
@@ -523,7 +523,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           }
         case f : FreshLit => f.typ
         case b : BoolLit => new BoolType()
-        case i : IntLit => new IntType()
+        case i : IntLit => new IntegerType()
         case bv : BitVectorLit => new BitVectorType(bv.width)
         case r : Tuple => new TupleType(r.values.map(typeOf(_, c)))
         case opapp : OperatorApplication => opAppType(opapp)
