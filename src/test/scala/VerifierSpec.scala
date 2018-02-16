@@ -166,6 +166,9 @@ class LTLVerifSpec extends FlatSpec {
   "test-ltl-2-holds.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-2-holds.ucl", 0)
   }
+  "test-ltl-2-fails.ucl" should "fail to verify 4 assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-2-fails.ucl", 4)
+  }
   "test-ltl-3-holds.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-3-holds.ucl", 0)
   }
