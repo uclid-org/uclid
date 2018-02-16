@@ -36,7 +36,7 @@ module cpu {
   function word2reg1   ( w : word_t )  : regindex_t;
 
   // More state variables.
-  input nd   : bool;
+  input nd   : boolean;
   var r0ind  : regindex_t;
   var r1ind  : regindex_t;
   var r0     : word_t;

@@ -17,7 +17,7 @@ set cpo&vim
 
 
 " type
-syn keyword ucl4Type            bool integer bv\d\+ enum
+syn keyword ucl4Type            boolean integer bv\d\+ enum
 " repeat / condition / label
 syn keyword ucl4Expr            forall exists Lambda 
 syn keyword ucl4Stmt            if else assert assume havoc for skip case esac

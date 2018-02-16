@@ -485,8 +485,8 @@ case class UninterpretedType(name: Identifier) extends Type {
 /**
  * Regular types.
  */
-case class BoolType() extends PrimitiveType {
-  override def toString = "bool"
+case class BooleanType() extends PrimitiveType {
+  override def toString = "boolean"
   override def isBool = true
   override def defaultValue = Some(BoolLit(false))
 }

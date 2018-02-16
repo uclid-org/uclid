@@ -1,7 +1,7 @@
 module main
 {
   input a, b : integer;
-  var inited : bool;
+  var inited : boolean;
   var n : integer;
   output sum : integer;
   

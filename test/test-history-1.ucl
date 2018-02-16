@@ -1,5 +1,5 @@
 module main {
-  var ltl__pending__p1_4 : bool;
+  var ltl__pending__p1_4 : boolean;
   init {
     ltl__pending__p1_4 = true;
   }

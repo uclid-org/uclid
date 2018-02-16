@@ -118,7 +118,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val OpMinus = "-"
     lazy val OpSelectFromInstance = "->"
     lazy val KwProcedure = "procedure"
-    lazy val KwBool = "bool"
+    lazy val KwBoolean = "boolean"
     lazy val KwInteger = "integer"
     lazy val KwEnum = "enum"
     lazy val KwRecord = "record"
@@ -176,7 +176,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus,
-      "false", "true", "bv", KwProcedure, KwBool, KwInteger, KwReturns,
+      "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwIf, KwElse,
       KwCase, KwEsac, KwFor, KwIn, KwRange, KwInstance, KwInput, KwOutput,
       KwConst, KwModule, KwType, KwEnum, KwRecord, KwSkip,
@@ -319,7 +319,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     /** Examples of allowed types are bool | int | [int,int,bool] int **/
     lazy val PrimitiveType : PackratParser[Type] = positioned {
-      KwBool ^^ {case _ => BoolType()}   |
+      KwBoolean ^^ {case _ => BooleanType()}   |
       KwInteger ^^ {case _ => IntegerType()}     |
       bitVectorType ^^ {case bvType => BitVectorType(bvType.width)}
     }
@@ -387,9 +387,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwNext ~ "(" ~> Id <~ ")" ~ ";" ^^
         { case id => lang.ModuleCallStmt(id) } |
       KwIf ~ "(" ~ "*" ~ ")" ~> (BlockStatement <~ KwElse) ~ BlockStatement ^^
-        { case tblk ~ fblk => lang.IfElseStmt(lang.FreshLit(lang.BoolType()), tblk, fblk) } |
+        { case tblk ~ fblk => lang.IfElseStmt(lang.FreshLit(lang.BooleanType()), tblk, fblk) } |
       KwIf ~ "(" ~ "*" ~ ")" ~> BlockStatement ^^
-        { case blk => IfElseStmt(lang.FreshLit(lang.BoolType()), blk, List.empty) } |
+        { case blk => IfElseStmt(lang.FreshLit(lang.BooleanType()), blk, List.empty) } |
       KwIf ~ "(" ~> (Expr <~ ")") ~ BlockStatement ~ (KwElse ~> BlockStatement) ^^
         { case e ~ f ~ g => IfElseStmt(e,f,g)} |
       KwIf ~> (Expr ~ BlockStatement) ^^

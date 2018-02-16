@@ -4,9 +4,9 @@ module main
   // Synonym for an enumerated type.
   type cmd_t = enum { add, sub, mov_imm };
   // Synonym for a record type.
-  type result_t = record { valid : bool, value : bv8 };
+  type result_t = record { valid : boolean, value : bv8 };
 
-  input valid       : bool;
+  input valid       : boolean;
   input cmd         : cmd_t;
   input r1, r2      : bv3;
   input immed       : bv8;

@@ -19,7 +19,7 @@ module test {
 
 module test {
   var y: integer;
-  var z : bool;
+  var z : boolean;
 
   init {
     y = 0;

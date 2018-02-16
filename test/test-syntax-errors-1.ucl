@@ -2,9 +2,9 @@ module main
 {
   var a : integer;
   var b : integer;
-  var z : bool;
-  var z1 : bool;
-  var z2 : bool;
+  var z : boolean;
+  var z1 : boolean;
+  var z2 : boolean;
   init {
     a = 0;
     b = 0;

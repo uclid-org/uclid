@@ -5,10 +5,10 @@ module main {
   
   input cmd   : cmd_t;
   input arg0, arg1  : word_t;
-  input valid : bool;
+  input valid : boolean;
 
   var t1, t2 : word_t;
-  output rdy    : bool;
+  output rdy    : boolean;
   output result : word_t;
   
   procedure full_adder(a : bit, b : bit, c_in : bit) returns (s : bit, c_out : bit) {

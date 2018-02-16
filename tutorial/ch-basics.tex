@@ -4,9 +4,9 @@
 module main
 {
   type cmd_t = enum { add, sub, mov_imm };
-  type result_t = record { valid : bool, value : bv8 };
+  type result_t = record { valid : boolean, value : bv8 };
 
-  input valid       : bool;
+  input valid       : boolean;
   input cmd         : cmd_t;
   input r1, r2      : bv3;
   input immed       : bv8;
@@ -67,7 +67,7 @@ This chapter will provide an overview of \uclid{}'s type system and modelling fe
 Types supported by \uclid{} are of the following kinds: 
 \begin{enumerate}
     \item \keyword{integer}: the type of mathematical integers.
-    \item \keyword{bool}: the Boolean type. This type has two values: \keyword{true} and \keyword{false}.
+    \item \keyword{boolean}: the Boolean type. This type has two values: \keyword{true} and \keyword{false}.
     \item \keyword{bv\textit{W}}: The family of bit-vector types parameterized by their width ($W$).
     \item \keyword{enum}: enumerated types.
     \item Tuples and records.
@@ -77,7 +77,7 @@ Types supported by \uclid{} are of the following kinds:
 
 An enumerated type is used in line~4 of Example~\ref{ex:alu}. This declares a \textit{type synonym}: \codelike{cmd_t} is an alias for the enumerated type consisting of three values: \codelike{add}, \codelike{sub} and \codelike{mov_imm}. The input \codelike{cmd} is then declared to be of type \codelike{cmd_t} in line~9. 
 
-The input \codelike{valid} is of type \keyword{bool}. Register indices \codelike{r1} and \codelike{r2} are bit-vectors of width 3 (\keyword{bv3}), while \codelike{immed}, \codelike{result}, \codelike{r1val} and \codelike{r2val} are bit-vectors of width 8 (\keyword{bv8}).
+The input \codelike{valid} is of type \keyword{boolean}. Register indices \codelike{r1} and \codelike{r2} are bit-vectors of width 3 (\keyword{bv3}), while \codelike{immed}, \codelike{result}, \codelike{r1val} and \codelike{r2val} are bit-vectors of width 8 (\keyword{bv8}).
 
 Line~7 declares a type synonym for a \keyword{record}. It declares \codelike{result_t} as being a record consisting of two fields: a Boolean field \codelike{valid} and a bit-vector field \codelike{value}. The output \codelike{result} is declared to be of type \codelike{result_t} on Line~13.
 

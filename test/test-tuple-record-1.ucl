@@ -1,5 +1,5 @@
 module main {
-  type rec = record { a : integer, b : integer, c : bool };
+  type rec = record { a : integer, b : integer, c : boolean };
   type struct = record { c1 : rec, c2 : rec };
   
   var s : struct;

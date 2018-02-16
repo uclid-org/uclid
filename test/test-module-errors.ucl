@@ -1,6 +1,6 @@
 module main
 {
-  type rec_t = record { a : integer, a : bool, c : integer };
+  type rec_t = record { a : integer, a : boolean, c : integer };
   input value : integer;
   var numbers : [integer]integer;
   var sum, index : integer;

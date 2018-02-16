@@ -1,6 +1,6 @@
 module main
 {
-  var b : bool;
+  var b : boolean;
   
   init {
     b = false;

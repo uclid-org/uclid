@@ -444,15 +444,15 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
 
     // create a copy of the state variables and non-deterministically assign the current state to it.
-    val allPendingVars = monitors.flatMap(s => s.pendingVars.map(s => (s, BoolType())))
+    val allPendingVars = monitors.flatMap(s => s.pendingVars.map(s => (s, BooleanType())))
     val varsToCopy = module.vars ++ allPendingVars
     val varCopyPairs = newVars(varsToCopy, nameProvider)
     val varsToCopyP = varCopyPairs.map(p => (p._2, p._3))
     val varsToCopyPDecl = varsToCopyP.map(v => StateVarsDecl(List(v._1), v._2))
     val copyStateInput = nameProvider(module.id, "copy_state_in")
     val stateCopiedVar = nameProvider(module.id, "state_copied")
-    val copyStateInputDecl = InputVarsDecl(List(copyStateInput), BoolType())
-    val stateCopiedVarDecl = StateVarsDecl(List(stateCopiedVar), BoolType())
+    val copyStateInputDecl = InputVarsDecl(List(copyStateInput), BooleanType())
+    val stateCopiedVarDecl = StateVarsDecl(List(stateCopiedVar), BooleanType())
     val stateCopyStmt = guardedAssignment(copyStateInput, stateCopiedVar, varsToCopy, varsToCopyP)
     val stateVarsEqExpr = eqVarsExpr(varsToCopy, varsToCopyP)
 
@@ -500,7 +500,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
     // This is the assignment to is_init in next.
     val isInitStateVar = nameProvider(module.id, "is_init")
-    val isInitStateVarDecl = StateVarsDecl(List(isInitStateVar), BoolType())
+    val isInitStateVarDecl = StateVarsDecl(List(isInitStateVar), BooleanType())
     val isInitAssignNext = AssignStmt(List(LhsId(isInitStateVar)), List(BoolLit(false)))
     
     // The top-level 'z' variables.
@@ -509,22 +509,22 @@ class LTLPropertyRewriterPass extends RewritePass {
 
     // These are the monitor inputs. (The 'z' variables.)
     val monitorInputs = monitors.flatMap(m => m.biImplications.map(_._1))
-    val monitorInputsDecl = StateVarsDecl(monitorInputs, BoolType())
+    val monitorInputsDecl = StateVarsDecl(monitorInputs, BooleanType())
     // These are the monitor variables. ('z' variables which are not the top-level.)
     val monitorVars = monitors.flatMap(r => r.assignments).map(_._1)
-    val monitorVarsDecl = StateVarsDecl(monitorVars, BoolType())
+    val monitorVarsDecl = StateVarsDecl(monitorVars, BooleanType())
     // These are the has failed variables.
     val hasFailedVars = hasFaileds.map(_._1)
-    val hasFailedVarsDecl = StateVarsDecl(hasFailedVars, BoolType())
+    val hasFailedVarsDecl = StateVarsDecl(hasFailedVars, BooleanType())
     // Now for the pending variables.
     val pendingVars = pendings.map(_._1)
-    val pendingVarsDecl = StateVarsDecl(pendingVars, BoolType())
+    val pendingVarsDecl = StateVarsDecl(pendingVars, BooleanType())
     // Now for the accept var variables.
     val hasAcceptedVars = hasAccepteds.flatMap(e => e._1._1)
-    val hasAcceptedVarsDecl = StateVarsDecl(hasAcceptedVars, BoolType())
+    val hasAcceptedVarsDecl = StateVarsDecl(hasAcceptedVars, BooleanType())
     // And then then accept trace variables.
     val hasAcceptedTraceVars = hasAccepteds.map(e => e._2._1)
-    val hasAcceptedTraceVarsDecl = StateVarsDecl(hasAcceptedTraceVars, BoolType())
+    val hasAcceptedTraceVarsDecl = StateVarsDecl(hasAcceptedTraceVars, BooleanType())
 
     // new variable declarations.    
     val varDecls = List(copyStateInputDecl, stateCopiedVarDecl, 

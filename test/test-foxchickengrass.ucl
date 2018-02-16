@@ -1,5 +1,5 @@
 module main {
-  var fox, chicken, grass, farmer : bool;
+  var fox, chicken, grass, farmer : boolean;
   
   input move : bv2;
   

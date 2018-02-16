@@ -1,5 +1,5 @@
 module main {
-  var state : bool;
+  var state : boolean;
   
   init {
     state = false;

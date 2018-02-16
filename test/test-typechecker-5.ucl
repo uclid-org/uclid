@@ -1,5 +1,5 @@
 module main {
-  type t4 = record {a: integer, b: integer, c: record {d: bool , e: t4}};
+  type t4 = record {a: integer, b: integer, c: record {d: boolean , e: t4}};
   var x4 : t4;
   
   init {

@@ -1,6 +1,6 @@
 module main {
   type t0 = integer;
-  type t1 = bool;
+  type t1 = boolean;
   type t2 = enum {red, green, blue};
   type t3a = {t0, t0, t1};
   type t3b = record {a: t0, b: t0, c: t1};
