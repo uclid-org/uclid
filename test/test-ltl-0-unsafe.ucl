@@ -2,19 +2,25 @@ module main
 {
   input a, b : int;
   var inited : bool;
+  var n : int;
   output sum : int;
   
   init {
     inited = false;
+    n = 1;
   }
   next {
 	inited = true;    
     sum = a + b;
+
+    if (n == 0) { n = 1; }
+    else { n = 0; }
   }
   
-  property p1[LTL] : G(inited ==> (sum == a + b + 1));
+  property p1[LTL] : G(inited ==> (sum == (a + b + n)));
   
   control {
+  	// print_module;
     vobj = bmc (3);
     check;
     // print_results;

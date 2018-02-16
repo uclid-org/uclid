@@ -6,17 +6,18 @@ module main {
   }
   
   next {
-    if (*) {
+    //if (*) {
 	  state = !state;
-	}
+	//}
   }
   
   property ss[LTL] : G(F(state));
   
   control {
-    print_module;
-    bmc(5);
+    //print_module;
+    v = bmc(4);
     check;
-    print_results;
+    //print_results;
+    //v->print_cex;
   } 
 }

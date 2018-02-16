@@ -143,7 +143,7 @@ class ModuleVerifSpec extends FlatSpec {
   "test-mem-inout.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-meminout.ucl", 0)
   }
-  "test-axiom-1.ucl" should "should verify all assertions." in {
+  "test-axiom-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-axiom-1.ucl", 0)
   }
 }
@@ -154,13 +154,19 @@ class LTLVerifSpec extends FlatSpec {
   "test-ltl-0-safe.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-0-safe.ucl", 0)
   }
-  "test-ltl-0-unsafe.ucl" should "should fail to verify 3 assertions." in {
-    VerifierSpec.expectedFails("./test/test-ltl-0-unsafe.ucl", 3)
+  "test-ltl-0-unsafe.ucl" should " fail to verify 3 assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-0-unsafe.ucl", 2)
   }
   "test-ltl-1-safe.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-1-safe.ucl", 0)
   }
-  "test-ltl-1-unsafe.ucl" should "should fail to verify 6 assertions." in {
-    VerifierSpec.expectedFails("./test/test-ltl-1-unsafe.ucl", 6)
+  "test-ltl-1-unsafe.ucl" should "fail to verify 6 assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-1-unsafe.ucl", 10)
+  }
+  "test-ltl-2-holds.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-2-holds.ucl", 0)
+  }
+  "test-ltl-3-holds.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-3-holds.ucl", 0)
   }
 }

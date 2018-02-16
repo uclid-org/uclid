@@ -389,8 +389,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
-  def newVars(module : Module, nameProvider : ContextualNameProvider) : List[(Identifier, Identifier, Type)] = {
-    module.vars.map((p) => (p._1, nameProvider(p._1, module.id.toString + "$liveness"), p._2))
+  def newVars(vars : List[(Identifier, Type)], nameProvider : ContextualNameProvider) : List[(Identifier, Identifier, Type)] = {
+    vars.map((p) => (p._1, nameProvider(p._1, "copy2"), p._2))
   }
 
   def orExpr(a : Expr, b : Expr) : Expr = OperatorApplication(DisjunctionOp(), List(a, b))
@@ -434,23 +434,27 @@ class LTLPropertyRewriterPass extends RewritePass {
   def rewriteSpecs(module : Module, ctx : Scope, ltlSpecs : List[SpecDecl], otherSpecs : List[SpecDecl]) : Module = {
     val nameProvider = new ContextualNameProvider(ctx, "ltl")
     
+    val monitors = ltlSpecs.map { 
+      (s) => {
+        val nnf = convertToNNF(not(s.expr))
+        // println("exp: " + s.expr.toString)
+        // println("nnf: " + nnf.toString)
+        createMonitorExpressions(s.id, nnf, nameProvider)
+      }
+    }
+
     // create a copy of the state variables and non-deterministically assign the current state to it.
-    val stateVarsPairs = newVars(module, nameProvider)
-    val stateVars = stateVarsPairs.map(p => (p._1, p._3))
-    val stateVarsP = stateVarsPairs.map(p => (p._2, p._3))
-    val stateVarsEqExpr = eqVarsExpr(stateVars, stateVarsP)
-    val stateVarsPDecl = stateVarsP.map(v => StateVarsDecl(List(v._1), v._2))
+    val allPendingVars = monitors.flatMap(s => s.pendingVars.map(s => (s, BoolType())))
+    val varsToCopy = module.vars ++ allPendingVars
+    val varCopyPairs = newVars(varsToCopy, nameProvider)
+    val varsToCopyP = varCopyPairs.map(p => (p._2, p._3))
+    val varsToCopyPDecl = varsToCopyP.map(v => StateVarsDecl(List(v._1), v._2))
     val copyStateInput = nameProvider(module.id, "copy_state_in")
     val stateCopiedVar = nameProvider(module.id, "state_copied")
     val copyStateInputDecl = InputVarsDecl(List(copyStateInput), BoolType())
     val stateCopiedVarDecl = StateVarsDecl(List(stateCopiedVar), BoolType())
-    val stateCopyStmt = guardedAssignment(copyStateInput, stateCopiedVar, module.vars, stateVarsP)
-    val monitors = ltlSpecs.map { 
-      (s) => {
-        val nnf = convertToNNF(not(s.expr))
-        createMonitorExpressions(s.id, nnf, nameProvider)
-      }
-    }
+    val stateCopyStmt = guardedAssignment(copyStateInput, stateCopiedVar, varsToCopy, varsToCopyP)
+    val stateVarsEqExpr = eqVarsExpr(varsToCopy, varsToCopyP)
 
     // create the "FAILED" variables.
     val hasFaileds = (ltlSpecs zip monitors).map {
@@ -478,9 +482,9 @@ class LTLPropertyRewriterPass extends RewritePass {
         }
         // has accepted trace is true if all of the accept vars of this trace have been accepted at least
         // once in this cycle.
-        val foldInit : Expr = BoolLit(false)
+        val foldInit : Expr = BoolLit(true)
         val hasAcceptedTrace = nameProvider(spec.id, "HAS_ACCEPTED_TRACE")
-        val hasAcceptedTraceExpr = hasAcceptedVars.foldLeft(foldInit)((acc, v) => orExpr(acc, v))
+        val hasAcceptedTraceExpr = hasAcceptedVars.foldLeft(foldInit)((acc, v) => andExpr(acc, v))
         
         ((hasAcceptedVars, hasAcceptedExprs), (hasAcceptedTrace, hasAcceptedTraceExpr))
       }
@@ -490,7 +494,6 @@ class LTLPropertyRewriterPass extends RewritePass {
       case ((hasFailedVar, _), (pendingVar, _)) =>
         andExpr(notExpr(pendingVar), notExpr(hasFailedVar))
     }
-
     val livenessExprs = (hasFaileds zip hasAccepteds) map {
       case ((hasFailedVar, _), ((_, _), (hasAcceptedTrace, _))) =>
         andExpr(stateVarsEqExpr, andExpr(notExpr(hasFailedVar), hasAcceptedTrace)) 
@@ -527,7 +530,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     val varDecls = List(copyStateInputDecl, stateCopiedVarDecl, 
                       isInitStateVarDecl, hasFailedVarsDecl, 
                       pendingVarsDecl, hasAcceptedVarsDecl, hasAcceptedTraceVarsDecl,
-                      monitorInputsDecl, monitorVarsDecl) ++ stateVarsPDecl
+                      monitorInputsDecl, monitorVarsDecl) ++ varsToCopyPDecl
 
     // now construct the next block.
     val stateCopiedInitStmt = AssignStmt(List(LhsId(stateCopiedVar)), List(BoolLit(false)))
@@ -584,7 +587,7 @@ class LTLPropertyRewriterPass extends RewritePass {
              !p.isInstanceOf[InitDecl] && 
              !p.isInstanceOf[NextDecl]) ++ otherSpecs
     // assemble the new module.
-    val moduleDecls = otherDecls ++ varDecls ++ List(newInitDecl, newNextDecl) ++ newSafetyProperties // ++ newLivenessProperties
+    val moduleDecls = otherDecls ++ varDecls ++ List(newInitDecl, newNextDecl) ++ newSafetyProperties ++ newLivenessProperties
     Module(module.id, moduleDecls, module.cmds)
   }
 }

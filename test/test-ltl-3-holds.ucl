@@ -1,0 +1,22 @@
+module main
+{
+  var b : bool;
+  
+  init {
+    b = false;
+  }
+  next {
+	b = !b;    
+  }
+  
+  property p[LTL] : G(b ==> !X(b)) &&
+  					G(!b ==> X(b));
+  
+  control {
+    // print_module;
+    v = bmc(2);
+    check;
+    // print_results;
+    // v->print_cex;
+  }
+}

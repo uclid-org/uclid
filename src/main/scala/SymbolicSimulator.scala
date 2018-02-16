@@ -202,7 +202,7 @@ class SymbolicSimulator (module : Module) {
     // println("*** INITIAL ****")
     // printSymbolTable(symbolTable)
   }
-  
+
   def newInputSymbols(st : SymbolTable, step : Int, scope : Scope) : SymbolTable = {
     scope.map.foldLeft(st)((acc, decl) => {
       decl._2 match {
