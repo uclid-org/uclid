@@ -1,0 +1,21 @@
+module main
+{
+  var cnt : bv2;
+  
+  init {
+    cnt = 0bv2;
+  }
+  
+  next {
+    if (cnt != 3bv2) {
+      cnt = cnt + 1bv2;
+    }
+  }
+  
+  property stable[LTL]: F(G(cnt == 2bv2));
+  
+  control  {
+    v = bmc(5);
+    check;
+  }
+}
