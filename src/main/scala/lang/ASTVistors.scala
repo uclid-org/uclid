@@ -81,6 +81,7 @@ trait ReadOnlyPass[T] {
   def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : Scope) : T = { in }
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : Scope) : T = { in }
   def applyOnSynthesisFunction(d : TraversalDirection.T, synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = { in }
+  def applyOnDefine(d : TraversalDirection.T, defDecl : DefineDecl, in : T, context : Scope) : T = { in }
   def applyOnStateVars(d : TraversalDirection.T, stVars : StateVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnInputVars(d : TraversalDirection.T, inpVars : InputVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnOutputVars(d : TraversalDirection.T, outvars : OutputVarsDecl, in : T, context : Scope) : T = { in }
@@ -158,6 +159,7 @@ trait RewritePass {
   def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : Scope) : Option[FunctionDecl] = { Some(func) }
   def rewriteSynthesisFunction(synFunc : SynthesisFunctionDecl, ctx : Scope) : Option[SynthesisFunctionDecl] = { Some(synFunc) }
+  def rewriteDefine(defDecl : DefineDecl, ctx : Scope) : Option[DefineDecl] = { Some(defDecl) }
   def rewriteStateVars(stVars : StateVarsDecl, ctx : Scope) : Option[StateVarsDecl] = { Some(stVars) }
   def rewriteInputVars(inpVars : InputVarsDecl, ctx : Scope) : Option[InputVarsDecl] = { Some(inpVars) }
   def rewriteOutputVars(outvars : OutputVarsDecl, ctx : Scope) : Option[OutputVarsDecl] = { Some(outvars) }
@@ -279,6 +281,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case const : ConstantsDecl => visitConstants(const, result, context)
       case func : FunctionDecl => visitFunction(func, result, context)
       case synFunc : SynthesisFunctionDecl => visitSynthesisFunction(synFunc, result, context)
+      case defDecl : DefineDecl => visitDefine(defDecl, in, context)
       case init : InitDecl => visitInit(init, result, context)
       case next : NextDecl => visitNext(next, result, context)
       case spec : SpecDecl => visitSpec(spec, result, context)
@@ -336,9 +339,9 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnSynthesisFunction(TraversalDirection.Down, synFunc, result, context)
     result = visitIdentifier(synFunc.id, result, context)
     result = visitFunctionSig(synFunc.sig, result, context)
-    // FIXME: add function parameters to context
-    result = synFunc.requires.foldLeft(result)((acc, reqExp) => visitExpr(reqExp, acc, context))
-    result = synFunc.ensures.foldLeft(result)((acc, ensExp) => visitExpr(ensExp, acc, context))
+    val contextP = context + synFunc.sig
+    result = synFunc.requires.foldLeft(result)((acc, reqExp) => visitExpr(reqExp, acc, contextP))
+    result = synFunc.ensures.foldLeft(result)((acc, ensExp) => visitExpr(ensExp, acc, contextP))
     result = synFunc.grammar match {
       case Some(g) => visitGrammar(g, result, context)
       case None => result
@@ -346,6 +349,17 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnSynthesisFunction(TraversalDirection.Up, synFunc, result, context)
     return result
   }
+  def visitDefine(defDecl : DefineDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnDefine(TraversalDirection.Down, defDecl, result, context)
+    result = visitIdentifier(defDecl.id, result, context)
+    result = visitFunctionSig(defDecl.sig, result, context)
+    val contextP = context + defDecl.sig
+    result = visitExpr(defDecl.expr, result, contextP)
+    result = pass.applyOnDefine(TraversalDirection.Up, defDecl, result, context)
+    return result
+  }
+
   def visitStateVars(stVars : StateVarsDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnStateVars(TraversalDirection.Down, stVars, result, context)
@@ -958,6 +972,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case constDecl : ConstantsDecl => visitConstants(constDecl, context)
       case funcDecl : FunctionDecl => visitFunction(funcDecl, context)
       case synFuncDecl : SynthesisFunctionDecl => visitSynthesisFunction(synFuncDecl, context)
+      case defDecl : DefineDecl => visitDefine(defDecl, context)
       case initDecl : InitDecl => visitInit(initDecl, context)
       case nextDecl : NextDecl => visitNext(nextDecl, context)
       case specDecl : SpecDecl => visitSpec(specDecl, context)
@@ -1025,10 +1040,10 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitSynthesisFunction(synFunc : SynthesisFunctionDecl, context : Scope) : Option[SynthesisFunctionDecl] = {
     val idP = visitIdentifier(synFunc.id, context)
     val sigP = visitFunctionSig(synFunc.sig, context)
-    // FIXME: need to add function variables to context
-    val requiresP = synFunc.requires.map(e => visitExpr(e, context)).flatten
-    val ensuresP = synFunc.ensures.map(e => visitExpr(e, context)).flatten
-    val grammarP = synFunc.grammar.flatMap(g => visitGrammar(g, context))
+    val contextP = context + synFunc.sig
+    val requiresP = synFunc.requires.map(e => visitExpr(e, contextP)).flatten
+    val ensuresP = synFunc.ensures.map(e => visitExpr(e, contextP)).flatten
+    val grammarP = synFunc.grammar.flatMap(g => visitGrammar(g, contextP))
     (idP, sigP) match {
       case (Some(id), Some(sig)) =>
         val synFuncP = SynthesisFunctionDecl(id, sig, requiresP, ensuresP, grammarP)
@@ -1037,6 +1052,19 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
   }
 
+  def visitDefine(defDecl : DefineDecl, context : Scope) : Option[DefineDecl] = {
+    val idP = visitIdentifier(defDecl.id, context)
+    val sigP = visitFunctionSig(defDecl.sig, context)
+    val contextP = context + defDecl.sig
+    val exprP = visitExpr(defDecl.expr, contextP)
+    (idP, sigP, exprP) match {
+      case (Some(id), Some(sig), Some(expr)) =>
+        val defDeclP = DefineDecl(id, sig, expr)
+        pass.rewriteDefine(defDeclP, context)
+      case _ =>
+        None
+    }
+  }
   def visitStateVars(stVars : StateVarsDecl, context : Scope) : Option[StateVarsDecl] = {
     val idsP = (stVars.ids.map((id) => visitIdentifier(id, context))).flatten
     val typP = visitType(stVars.typ, context)

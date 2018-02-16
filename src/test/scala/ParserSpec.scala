@@ -239,4 +239,30 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.exists(p => p._1.contains("Operator can only be used in a verification expression")))
     }
   }
+  "test/test-typechecker-7.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-typechecker-7.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.exists(p => p.msg.contains("Arguments to operator '+' must be of the same type")))
+    }
+  }
+  "test/test-typechecker-8.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-typechecker-8.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.exists(p => p._1.contains("Return type and expression type do not match")))
+    }
+  }
 }

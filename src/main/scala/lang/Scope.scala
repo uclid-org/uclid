@@ -52,10 +52,12 @@ object Scope {
   case class SharedVar(varId : Identifier, varTyp : Type) extends NamedExpression(varId, varTyp)
   case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
+  case class Define(dId : Identifier, dTyp : Type) extends ReadOnlyNamedExpression(dId, dTyp)
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class ProcedureOutputArg(argId : Identifier, argTyp: Type) extends NamedExpression(argId, argTyp)
   case class ProcedureLocalVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
+  case class FunctionArg(argId : Identifier, argTyp : Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ForIndexVar(iId : Identifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
   case class SpecVar(varId : Identifier, expr: Expr) extends ReadOnlyNamedExpression(varId, BooleanType())
@@ -189,6 +191,7 @@ case class Scope (
         case ConstantsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.ConstantVar(id, typ)))
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SynthesisFunctionDecl(id, sig, _, _, _) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
+        case DefineDecl(id, sig, _) => Scope.addToMap(mapAcc, Scope.Define(id, sig.retType)) 
         case SpecDecl(id, expr, _) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))
         case AxiomDecl(sId, expr) => sId match {
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr))
@@ -208,6 +211,10 @@ case class Scope (
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
         case SynthesisFunctionDecl(id, sig, _, _, _) =>
+          val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
+          val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
+          m2
+        case DefineDecl(id, sig, _) =>
           val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
@@ -240,6 +247,13 @@ case class Scope (
   def +(lambda: Lambda) : Scope = {
     val newMap = lambda.ids.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
+    }
+    return Scope(newMap, module, procedure, cmd, inVerificationContext, inLTLSpec)
+  }
+  /** Return a new context with the function's arguments included. */
+  def +(sig : FunctionSig) : Scope = {
+    val newMap = sig.args.foldLeft(map){
+      (mapAcc, id) => Scope.addToMap(mapAcc, Scope.FunctionArg(id._1, id._2))
     }
     return Scope(newMap, module, procedure, cmd, inVerificationContext, inLTLSpec)
   }

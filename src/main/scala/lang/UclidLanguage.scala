@@ -822,6 +822,10 @@ case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with Modu
   override def extNames = List(id)
   override def extType = sig.typ
 }
+case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl {
+  override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
+  override def declNames = List(id)
+}
 case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, requires: List[Expr], ensures: List[Expr], grammar : Option[Grammar]) extends Decl {
   // FIXME: printout requires and ensures conditions.
   override def toString = "synthesis function " + id + sig + "; //" + position.toString()

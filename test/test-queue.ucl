@@ -7,7 +7,7 @@ module common {
 
 module queue
 {
-  type op_t = common :: op_t; /* do I need to do this, or can I just use common :: op_t instead? */
+  type op_t = common :: op_t;
 
   var contents : [integer]integer;
   var head, tail: integer;
@@ -17,42 +17,40 @@ module queue
   input op : op_t;
   input data : integer;
 
-  // macrovar is_empty = (head == tail);
- 
+  define is_empty() : boolean = (head == tail) + 0;
+
   init {
-     head = 0;
-     tail = 0;
-     
-     contents = common :: c0;
-     first = contents[head];
+    head = 0;
+    tail = 0; 
+    contents = common :: c0;
+    first = contents[head];
   }
 
   next {
     first = contents[head];
     case
-	(op == push) : { 
-		contents[tail] = data;
-		tail = tail+1;
-                }
-	(op == pop) : { 
-                if (head < tail) {
-		        head = head+1;
-                }
-		}
+	(op == push) : {
+	  contents[tail] = data;
+      tail = tail+1;
+    }
+	(op == pop) : {
+      if (head < tail) {
+	    head = head+1;
+      }
+	}
 	(op == nop) : { } /* no change */
     esac;
   }
 
-  invariant head_le_tail: head <= tail;
+  invariant head_le_tail: head <= tail; 
 
   control {
-      v = unroll(2);
-      check;
-      print_results;
-      v->print_cex(op, head, tail);
+    v = unroll(5);
+    check;
+    print_results;
+    v->print_cex(op, head, tail);
   }
 }
-
 
 module main
 {

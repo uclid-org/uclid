@@ -73,14 +73,6 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
       SemanticAnalyzerPass.checkIdRedeclaration(params, in)
     } else { in }
   }
-  override def applyOnAssign(d : TraversalDirection.T, stmt : AssignStmt, in : List[ModuleError], context : Scope) : List[ModuleError] = {
-    if (d == TraversalDirection.Down) {
-      if (stmt.lhss.size != stmt.rhss.size) {
-        val msg = "Number of left and right hand sides on assignement statement don't match"
-        ModuleError(msg, stmt.position) :: in
-      } else { in }
-    } else { in }
-  }
   override def applyOnRecordType(d : TraversalDirection.T, recordT : RecordType, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       val fieldNames = recordT.members.map((f) => (f._1, f._1.position))

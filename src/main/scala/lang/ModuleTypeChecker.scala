@@ -187,6 +187,20 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       }
     }
   }
+  override def applyOnDefine(d : TraversalDirection.T, defDecl : DefineDecl, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down) {
+      val contextP = context + defDecl.sig
+      val exprType = exprTypeChecker.typeOf(defDecl.expr, context + defDecl.sig)
+      if (exprType != defDecl.sig.retType) {
+        val error = ModuleError("Return type and expression type do not match", defDecl.expr.position)
+        in + error
+      } else {
+        in
+      }
+    } else {
+      in
+    }
+  }
 }
 
 class ModuleTypeChecker extends ASTAnalyzer("ModuleTypeChecker", new ModuleTypeCheckerPass())  {

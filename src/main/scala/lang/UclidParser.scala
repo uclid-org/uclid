@@ -155,6 +155,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwSynthesis = "synthesis"
     lazy val KwGrammar = "grammar"
     lazy val KwRequires = "requires"
+    lazy val KwDefine = "define"
     lazy val KwEnsures = "ensures"
     lazy val KwInvariant = "invariant"
     lazy val KwDefineProp = "property"
@@ -179,7 +180,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwIf, KwElse,
       KwCase, KwEsac, KwFor, KwIn, KwRange, KwInstance, KwInput, KwOutput,
-      KwConst, KwModule, KwType, KwEnum, KwRecord, KwSkip,
+      KwConst, KwModule, KwType, KwEnum, KwRecord, KwSkip, KwDefine,
       KwFunction, KwControl, KwInit, KwNext, KwITE, KwLambda, KwModifies,
       KwDefineProp, KwDefineAxiom, KwForall, KwExists, KwDefault,
       KwSynthesis, KwGrammar, KwRequires, KwEnsures, KwInvariant)
@@ -478,6 +479,14 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
           lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), List.empty, List.empty, None)
       }
     }
+    lazy val DefineDecl : PackratParser[lang.DefineDecl] = positioned {
+      KwDefine ~> Id ~ IdTypeList ~ (":" ~> Type) ~ ("=" ~> Expr) <~ ";" ^^
+      { 
+        case id ~ idTypeList ~ retType ~ expr => { 
+          lang.DefineDecl(id, FunctionSig(idTypeList, retType), expr)
+        }
+      }
+    }
     lazy val InitDecl : PackratParser[lang.InitDecl] = positioned {
       KwInit ~> BlockStatement ^^
         { case b => lang.InitDecl(b) }
@@ -502,7 +511,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val Decl: PackratParser[Decl] =
-      positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl | SynthFuncDecl |
+      positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl |
+                  SynthFuncDecl | DefineDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl | AxiomDecl)
 
