@@ -9,7 +9,7 @@ module main
 	b = !b;    
   }
   
-  property p[LTL] : G(b ==> !X(b)) &&
+  property[LTL] p : G(b ==> !X(b)) &&
   					G(!b ==> X(b));
   
   control {

@@ -12,10 +12,10 @@ module main
     sum = a + b;
   }
   
-  property p1[LTL] : G(inited ==> (sum == a + b));
+  property[LTL] p1 : G(inited ==> (sum == a + b));
   // This property is obviously not satisfied, but we 
   // won't include it in the call to the 'bmc' command below.
-  property p2[LTL] : G(false);
+  property[LTL] p2 : G(false);
   
   
   control {

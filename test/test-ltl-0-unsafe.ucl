@@ -17,7 +17,7 @@ module main
     else { n = 0; }
   }
   
-  property p1[LTL] : G(inited ==> (sum == (a + b + n)));
+  property[LTL] p1 : G(inited ==> (sum == (a + b + n)));
   
   control {
   	// print_module;

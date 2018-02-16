@@ -14,11 +14,11 @@ module main {
 	esac
   }
   
-  property sX[LTL]  : G((state == s1) ==> X(state == s2)) &&
+  property[LTL] sX  : G((state == s1) ==> X(state == s2)) &&
     				  G((state == s2) ==> X(state == s3)) &&
   					  G((state == s3) ==> X(state == s1));
   
-  property sXX[LTL] : G((state == s1) ==> X(state == s2)) &&
+  property[LTL] sXX : G((state == s1) ==> X(state == s2)) &&
   					  G((state == s2) ==> X(state == s3)) &&
   					  G((state == s3) ==> X(state == s1));
   control {

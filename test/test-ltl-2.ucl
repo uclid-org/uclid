@@ -38,7 +38,7 @@ module main {
     ready_next = valid;
   }
   
-  property sum_property[LTL] : G(valid ==> X(ready));
+  property[LTL] sum_property : G(valid ==> X(ready));
   // property ready_property : (inited && history(valid, 2)) ==> history(ready, 1);
   
   control {

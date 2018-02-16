@@ -11,7 +11,7 @@ module main {
 	}
   }
   
-  property ss[LTL] : G(F(state));
+  property[LTL] ss : G(F(state));
   
   control {
     //print_module;

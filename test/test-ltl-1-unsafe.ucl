@@ -14,13 +14,13 @@ module main {
 	esac
   }
   
-  property s1X[LTL]  : G((state == s1) ==> X(state == s3));
-  property s2X[LTL]  : G((state == s2) ==> X(state == s3));
-  property s3X[LTL]  : G((state == s3) ==> X(state == s1));
+  property[LTL] s1X  : G((state == s1) ==> X(state == s3));
+  property[LTL] s2X  : G((state == s2) ==> X(state == s3));
+  property[LTL] s3X  : G((state == s3) ==> X(state == s1));
 
-  property s1XX[LTL]  : G((state == s1) ==> X(X(state == s3)));
-  property s2XX[LTL]  : G((state == s2) ==> X(X(state == s1)));
-  property s3XX[LTL]  : G((state == s3) ==> X(X(state == s2)));
+  property[LTL] s1XX  : G((state == s1) ==> X(X(state == s3)));
+  property[LTL] s2XX  : G((state == s2) ==> X(X(state == s1)));
+  property[LTL] s3XX  : G((state == s3) ==> X(X(state == s2)));
   
   control {
     f = bmc[s1X, s2X, s3X, s1XX, s2XX, s3XX](6);

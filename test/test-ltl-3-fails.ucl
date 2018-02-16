@@ -12,7 +12,7 @@ module main
     }
   }
   
-  property stable[LTL]: F(G(cnt == 2bv2));
+  property[LTL] stable: F(G(cnt == 2bv2));
   
   control  {
     v = bmc(5);
