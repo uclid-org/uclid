@@ -91,8 +91,15 @@ object Scope {
               m + (id -> EnumIdentifier(id, enumTyp))
           }
         })
-      case _ =>
-        map
+      case prodType : ProductType =>
+        prodType.fields.foldLeft(map)((m, f) => addTypeToMap(m, f._2, module))
+      case mapType : MapType =>
+        val m1 = mapType.inTypes.foldLeft(map)((m, a) => addTypeToMap(m, a, module))
+        addTypeToMap(m1, mapType.outType, module)
+      case arrayType : ArrayType =>
+        val m1 = arrayType.inTypes.foldLeft(map)((m, i) => addTypeToMap(m, i, module))
+        addTypeToMap(m1, arrayType.outType, module)
+      case _ => map
     }
   }
   /** Create an empty context. */

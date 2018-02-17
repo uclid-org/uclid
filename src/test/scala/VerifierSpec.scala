@@ -112,6 +112,9 @@ class BasicVerifierSpec extends FlatSpec {
   "test-enum-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-enum-1.ucl", 0)
   }
+  "test-enum-2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-enum-2.ucl", 0)
+  }
   "test-type2.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-type2.ucl", 0)
   }
