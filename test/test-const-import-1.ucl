@@ -13,8 +13,8 @@ module main {
     num = common::k1_word_t;
   }
   
-  instance c1 : common();
-  instance c2 : common();
+  // instance c1 : common();
+  // instance c2 : common();
 
   next {
     sum = sum + 1bv8;

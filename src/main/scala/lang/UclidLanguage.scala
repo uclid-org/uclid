@@ -810,7 +810,7 @@ sealed abstract trait ModuleExternal {
 }
 
 case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with ModuleExternal {
-  override def toString = "constant " + Utils.join(ids.map(_.toString), ", ") + ": " + typ + "; // " + position.toString
+  override def toString = "const " + Utils.join(ids.map(_.toString), ", ") + ": " + typ + "; // " + position.toString
   override def declNames = ids
   override def extNames = ids
   override def extType = typ
