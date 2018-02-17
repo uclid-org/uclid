@@ -17,7 +17,8 @@ module queue
   input op : op_t;
   input data : integer;
 
-  define is_empty() : boolean = (head == tail) + 0;
+  define is_empty() : boolean = (head == tail);
+  define ptrs_valid() : boolean = (head <= tail);
 
   init {
     head = 0;
@@ -34,7 +35,7 @@ module queue
       tail = tail+1;
     }
 	(op == pop) : {
-      if (head < tail) {
+      if (!is_empty()) {
 	    head = head+1;
       }
 	}
@@ -42,9 +43,10 @@ module queue
     esac;
   }
 
-  invariant head_le_tail: head <= tail; 
+  invariant head_le_tail: ptrs_valid(); 
 
   control {
+    print_module;
     v = unroll(5);
     check;
     print_results;

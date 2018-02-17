@@ -33,5 +33,23 @@
 package uclid
 package lang
 
-class RewriteDefines {
+class RewriteDefinesPass extends RewritePass {
+  def rewrite(defDecl : DefineDecl, args : List[Expr], ctx : Scope) : Option[Expr] = {
+    val rewriteMap : Map[Expr, Expr] = (defDecl.sig.args zip args).map(p => p._1._1 -> p._2).toMap
+    val exprRewriter = new ExprRewriter("DefineRewriter", rewriteMap)
+    exprRewriter.visitExpr(defDecl.expr, ctx)
+  }
+
+  override def rewriteFuncApp(fapp : FuncApplication, ctx : Scope) : Option[Expr] = {
+    fapp.e match {
+      case id : Identifier =>
+        ctx.map.get(id) match {
+          case Some(Scope.Define(id, sig, defDecl)) => rewrite(defDecl, fapp.args, ctx)
+          case _ => Some(fapp)
+        }
+      case _ => Some(fapp)
+    }
+  }
 }
+
+class RewriteDefines extends ASTRewriter("RewriteDefines", new RewriteDefinesPass())

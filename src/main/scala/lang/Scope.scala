@@ -52,7 +52,7 @@ object Scope {
   case class SharedVar(varId : Identifier, varTyp : Type) extends NamedExpression(varId, varTyp)
   case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
-  case class Define(dId : Identifier, dTyp : Type) extends ReadOnlyNamedExpression(dId, dTyp)
+  case class Define(dId : Identifier, dTyp : Type, defDecl: DefineDecl) extends ReadOnlyNamedExpression(dId, dTyp)
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class ProcedureOutputArg(argId : Identifier, argTyp: Type) extends NamedExpression(argId, argTyp)
@@ -114,7 +114,7 @@ case class Scope (
 {
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: Identifier) = map.contains(name)
-  /** Check if a variable is readonly. */
+  /** Check if a variable is read-only. */
   def isNameReadOnly(name: Identifier) = {
     map.get(name) match {
       case Some(namedExpr) => namedExpr.isReadOnly
@@ -191,7 +191,7 @@ case class Scope (
         case ConstantsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.ConstantVar(id, typ)))
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SynthesisFunctionDecl(id, sig, _, _, _) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
-        case DefineDecl(id, sig, _) => Scope.addToMap(mapAcc, Scope.Define(id, sig.retType)) 
+        case DefineDecl(id, sig, expr) => Scope.addToMap(mapAcc, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr))) 
         case SpecDecl(id, expr, _) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))
         case AxiomDecl(sId, expr) => sId match {
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr))

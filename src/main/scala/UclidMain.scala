@@ -165,6 +165,7 @@ object UclidMain {
     passManager.addPass(new ControlCommandChecker())
     passManager.addPass(new ComputeInstanceTypes())
     passManager.addPass(new FindProcedureDependency())
+    passManager.addPass(new RewriteDefines())
     passManager.addPass(new ProcedureInliner())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())

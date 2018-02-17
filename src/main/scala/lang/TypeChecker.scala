@@ -483,11 +483,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
 
     def funcAppType(fapp : FuncApplication) : Type = {
       val funcType1 = typeOf(fapp.e, c)
-      lazy val typeErrorMsg = "Type error in function application (not a function). %s is of type '%s'".format(fapp.e.toString, funcType1.toString)
+      lazy val typeErrorMsg = "Cannot apply %s, which is of type %s".format(fapp.e.toString, funcType1.toString)
       checkTypeError(funcType1.isInstanceOf[MapType], typeErrorMsg, fapp.pos, c.filename)
       val funcType = funcType1.asInstanceOf[MapType]
       val argTypes = fapp.args.map(typeOf(_, c))
-      checkTypeError(funcType.inTypes == argTypes, "Type error in function application (argument type error)", fapp.pos, c.filename)
+      checkTypeError(funcType.inTypes == argTypes, "Argument type error in application", fapp.pos, c.filename)
       return funcType.outType
     }
 

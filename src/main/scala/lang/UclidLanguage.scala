@@ -374,8 +374,7 @@ case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends 
 }
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class FuncApplication(e: Expr, args: List[Expr]) extends Expr {
-  override def toString = e + "(" + args.tail.fold(args.head.toString)
-    { (acc,i) => acc + "," + i } + ")"
+  override def toString = e + "(" + Utils.join(args.map(_.toString), ", ") + ")"
 }
 case class ITE(e: Expr, t: Expr, f: Expr) extends Expr {
   override def toString = "ITE(" + e + "," + t + "," + f + ")"
@@ -583,7 +582,7 @@ case class ProcedureType(inTypes : List[Type], outTypes: List[Type]) extends Typ
         "(" + Utils.join(outTypes.map(_.toString), ", ") + ")"
 }
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
-  override def toString = "[" + Utils.join(inTypes.map(_.toString), " * ") + "] " + outType.toString
+  override def toString = "[" + Utils.join(inTypes.map(_.toString), " * ") + "]" + outType.toString
   override def isArray = true
 }
 case class SynonymType(id: Identifier) extends Type {
