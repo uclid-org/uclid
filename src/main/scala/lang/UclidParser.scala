@@ -132,6 +132,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwSkip = "skip"
     lazy val KwCall = "call"
     lazy val KwIf = "if"
+    lazy val KwThen = "then"
     lazy val KwElse = "else"
     lazy val KwCase = "case"
     lazy val KwEsac = "esac"
@@ -145,8 +146,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwInit = "init"
     lazy val KwNext = "next"
     lazy val KwModule = "module"
-    lazy val KwITE = "ITE"
-    lazy val KwLambda = "Lambda"
+    lazy val KwLambda = "lambda"
     lazy val KwFunction = "function"
     lazy val KwControl = "control"
     lazy val KwForall = "forall"
@@ -178,12 +178,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus,
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
-      KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwIf, KwElse,
-      KwCase, KwEsac, KwFor, KwIn, KwRange, KwInstance, KwInput, KwOutput,
-      KwConst, KwModule, KwType, KwEnum, KwRecord, KwSkip, KwDefine,
-      KwFunction, KwControl, KwInit, KwNext, KwITE, KwLambda, KwModifies,
-      KwDefineProp, KwDefineAxiom, KwForall, KwExists, KwDefault,
-      KwSynthesis, KwGrammar, KwRequires, KwEnsures, KwInvariant)
+      KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, 
+      KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, 
+      KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum, 
+      KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit, 
+      KwNext, KwLambda, KwModifies, KwDefineProp, KwDefineAxiom, 
+      KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires, 
+      KwEnsures, KwInvariant)
       // TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
       // TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
 
@@ -243,67 +244,70 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val E1: PackratParser[Expr] =
       "(" ~ KwForall ~> IdTypeList ~ ("::" ~> E1) <~ ")" ^^ { case ids ~ expr => OperatorApplication(ForallOp(ids), List(expr)) } |
       "(" ~ KwExists ~> IdTypeList ~ ("::" ~> E1) <~ ")" ^^ { case ids ~ expr => OperatorApplication(ExistsOp(ids), List(expr)) } |
-      E2
+      E3
 
-    /** E2 = E3 OpEquiv E2 | E3  **/
-    lazy val E2: PackratParser[Expr] = positioned { E3 ~ OpBiImpl ~ E2 ^^ ast_binary | E3 }
-    /** E3 = E4 OpImpl E3 | E4  **/
-    lazy val E3: PackratParser[Expr] = positioned { E4 ~ OpImpl ~ E3 ^^ ast_binary | E4 }
-    /** E4 = E5 OpAnd E4 | E5 OpOr E4 | E5 **/
-    lazy val E4: PackratParser[Expr] = positioned {
-        E5 ~ OpAnd ~ E4 ^^ ast_binary   |
-        E5 ~ OpOr ~ E4 ^^ ast_binary    |
-        E5 ~ OpBvAnd ~ E4 ^^ ast_binary |
-        E5 ~ OpBvOr ~ E4 ^^ ast_binary  |
-        E5 ~ OpBvXor ~ E4 ^^ ast_binary |
-        E5
+    /** E3 = E4 OpEquiv E3 | E4  **/
+    lazy val E3: PackratParser[Expr] = positioned { E4 ~ OpBiImpl ~ E3 ^^ ast_binary | E4 }
+    /** E4 = E5 OpImpl E4 | E5  **/
+    lazy val E4: PackratParser[Expr] = positioned { E5 ~ OpImpl ~ E4 ^^ ast_binary | E5 }
+    /** E5 = E6 <Bool_Or_Bv_Op> E5 | E6 **/
+    lazy val E5: PackratParser[Expr] = positioned {
+        E6 ~ OpAnd ~ E5 ^^ ast_binary   |
+        E6 ~ OpOr ~ E5 ^^ ast_binary    |
+        E6 ~ OpBvAnd ~ E5 ^^ ast_binary |
+        E6 ~ OpBvOr ~ E5 ^^ ast_binary  |
+        E6 ~ OpBvXor ~ E5 ^^ ast_binary |
+        E6
     }
-    /** E5 = E6 OpRel E5 | E6  **/
-    lazy val E5: PackratParser[Expr] = positioned ( E6 ~ RelOp ~ E6 ^^ ast_binary | E6 )
-    /** E6 = E7 OpConcat E6 | E7 **/
-    lazy val E6: PackratParser[Expr] = positioned ( E7 ~ OpConcat ~ E6 ^^ ast_binary | E7 )
-    /** E7 = E8 OpAdd E7 | E8 **/
-    lazy val E7: PackratParser[Expr] = positioned ( E8 ~ OpAdd ~ E7 ^^ ast_binary | E8 )
-    /** E8 = E8 OpSub E8 | E9 **/
-    lazy val E8: PackratParser[Expr] = positioned ( E9 ~ OpSub ~ E9 ^^ ast_binary | E9 )
-    /** E9 = E9 OpMul E8 | E9 **/
-    lazy val E9: PackratParser[Expr] = E10 ~ OpMul ~ E10 ^^ ast_binary | E10
-    /** E10 = UnOp E11 | E11 **/
-    lazy val E10: PackratParser[Expr] = positioned {
-        OpNeg ~> E11 ^^ { case e => OperatorApplication(UnaryMinusOp(), List(e)) } |
-        OpNot ~> E11 ^^ { case e => OperatorApplication(NegationOp(), List(e)) } |
-        OpBvNot ~> E11 ^^ { case e => OperatorApplication(BVNotOp(0), List(e)) } |
-        E11
-    }
-    /** E11 = E12 MapOp | E12 **/
+    /** E6 = E7 OpRel E7 | E7  **/
+    lazy val E6: PackratParser[Expr] = positioned ( E7 ~ RelOp ~ E7 ^^ ast_binary | E7 )
+    /** E7 = E8 OpConcat E7 | E8 **/
+    lazy val E7: PackratParser[Expr] = positioned ( E8 ~ OpConcat ~ E7 ^^ ast_binary | E8 )
+    /** E8 = E9 OpAdd E8 | E9 **/
+    lazy val E8: PackratParser[Expr] = positioned ( E9 ~ OpAdd ~ E8 ^^ ast_binary | E9 )
+    /** E9 = E9 OpSub E10 | E10 **/
+    lazy val E9: PackratParser[Expr] = positioned ( E10 ~ OpSub ~ E10 ^^ ast_binary | E10 )
+    /** E10 = E11 OpMul E11 | E11 **/
+    lazy val E10: PackratParser[Expr] = E11 ~ OpMul ~ E11 ^^ ast_binary | E11
+    /** E11 = UnOp E12 | E12 **/
     lazy val E11: PackratParser[Expr] = positioned {
-        E12 ~ ArraySelectOp ^^ { case e ~ m => ArraySelectOperation(e, m) } |
-        E12 ~ ArrayStoreOp ^^ { case e ~ m => ArrayStoreOperation(e, m._1, m._2) } |
-        E12 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |
+        OpNeg ~> E12 ^^ { case e => OperatorApplication(UnaryMinusOp(), List(e)) } |
+        OpNot ~> E12 ^^ { case e => OperatorApplication(NegationOp(), List(e)) } |
+        OpBvNot ~> E12 ^^ { case e => OperatorApplication(BVNotOp(0), List(e)) } |
         E12
     }
+    /** E12 = E13 MapOp | E13 **/
     lazy val E12: PackratParser[Expr] = positioned {
-        E13 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
-        E13 ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ {
+        E13 ~ ArraySelectOp ^^ { case e ~ m => ArraySelectOperation(e, m) } |
+        E13 ~ ArrayStoreOp ^^ { case e ~ m => ArrayStoreOperation(e, m._1, m._2) } |
+        E13 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |
+        E13
+    }
+    /** E14 = E14 (ExprList) | E14 (.RecordSelect)* | E14 (->InstanceField)* | E14 */
+    lazy val E13: PackratParser[Expr] = positioned {
+        E14 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
+        E14 ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ {
           case e ~ r ~ rs =>
             (r :: rs).foldLeft(e){
               (acc, f) => OperatorApplication(RecordSelect(f), List(acc))
             }
         } |
-        E13 ~ SelectFromInstanceOp ~ rep(SelectFromInstanceOp) ^^ {
+        E14 ~ SelectFromInstanceOp ~ rep(SelectFromInstanceOp) ^^ {
           case e ~ f ~ fs =>
             (f :: fs).foldLeft(e) {
               (acc, f) => OperatorApplication(SelectFromInstance(f), List(acc))
             }
         } |
-        E13
+        E14
     }
-    /** E12 = false | true | Number | Id FuncApplication | (Expr) **/
-    lazy val E13: PackratParser[Expr] = positioned {
+    /** E14 = false | true | Number | Id FuncApplication | (Expr) **/
+    lazy val E14: PackratParser[Expr] = positioned {
         Bool |
         Number |
         "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
-        KwITE ~> ("(" ~> Expr ~ ("," ~> Expr) ~ ("," ~> Expr) <~ ")") ^^ { case e ~ t ~ f => ITE(e,t,f) } |
+        KwIf ~> ("(" ~> E3 <~ ")") ~ (KwThen ~> E3) ~ (KwElse ~> Expr) ^^ {
+          case expr ~ thenExpr ~ elseExpr => lang.ITE(expr, thenExpr, elseExpr)
+        } |
         KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => Lambda(idtyps, expr) } |
         "(" ~> Expr <~ ")" |
         SelectFromModuleOp  ^^ {

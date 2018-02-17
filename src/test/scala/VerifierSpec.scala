@@ -79,6 +79,9 @@ class BasicVerifierSpec extends FlatSpec {
   "test-forloop-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-forloop-1.ucl", 0)
   }
+  "test-ite.ucl" should "verify all but 6 assertions successfully." in {
+    VerifierSpec.expectedFails("./test/test-ite.ucl", 6)
+  }
   "test-inliner.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-inliner.ucl", 0)
   }
