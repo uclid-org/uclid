@@ -195,10 +195,11 @@ class SymbolicSimulator (module : Module) {
     val pastTable = Map(1 -> initSymbolTable)
     addModuleAssumptions(symbolTable, pastTable, scope)
 
-    if (addAssertions) { addAsserts(0, symbolTable, pastTable, label, scope, filter) }
-    if (addAssumptions) { assumeAssertions(symbolTable, pastTable, scope) }
     frameTable.clear()
     frameTable += symbolTable
+
+    if (addAssertions) { addAsserts(0, symbolTable, pastTable, label, scope, filter) }
+    if (addAssumptions) { assumeAssertions(symbolTable, pastTable, scope) }
     // println("*** INITIAL ****")
     // printSymbolTable(symbolTable)
   }
@@ -321,6 +322,7 @@ class SymbolicSimulator (module : Module) {
       (f) => println(f)
     }
   }
+
   def printFrame(f : SymbolTable, pastFrames : Map[Int, SymbolTable], m : smt.Model, exprs : List[Expr], scope : Scope) {
     def expr(id : lang.Identifier) : Option[smt.Expr] = {
       if (f.contains(id)) { Some(evaluate(id, f, pastFrames, scope)) }
@@ -392,12 +394,15 @@ class SymbolicSimulator (module : Module) {
     resetState()
 
   }
+
   /** Add module specifications (properties) to the list of proof obligations */
-  def addAsserts(iter : Int, symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable], label : String, scope : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean)) {
+  def addAsserts(iter : Int, symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable], 
+                label : String, scope : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean)) {
+    
+    val table = frameTable.clone()
+      
     scope.specs.foreach(specVar => {
       val prop = module.properties.find(p => p.id == specVar.varId).get
-      var table = frameTable.clone()
-      table += symbolTable
       if (filter(prop.id, prop.params)) {
         val property = AssertInfo(prop.name, label, table, scope, iter, smt.BooleanLit(true), evaluate(prop.expr, symbolTable, pastTables, scope), prop.params, prop.expr.position)
         // println ("addAsserts: " + property.toString + "; " + property.expr.toString)
@@ -405,10 +410,12 @@ class SymbolicSimulator (module : Module) {
       }
     })
   }
+
   /** Add module-level axioms/assumptions. */
   def addModuleAssumptions(symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable], scope : Scope) {
     module.axioms.foreach(ax => addAssumption(evaluate(ax.expr, symbolTable, pastTables, scope)))
   }
+
   /** Assume assertions (for inductive proofs). */
   def assumeAssertions(symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable], scope : Scope) {
     scope.specs.foreach(sp => addAssumption(evaluate(sp.expr, symbolTable, pastTables, scope)))

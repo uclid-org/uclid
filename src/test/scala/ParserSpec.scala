@@ -157,7 +157,7 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.TypeErrorList =>
         assert (p.errors.size == 1)
-        assert (p.errors(0).getMessage().contains("Type error in function application"))
+        assert (p.errors(0).getMessage().contains("Cannot apply foo, which is of type procedure"))
     }
   }
   "test/test-syntax-errors-1.ucl" should "not parse successfully." in {
