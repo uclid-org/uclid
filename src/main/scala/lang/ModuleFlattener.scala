@@ -260,14 +260,15 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       (mapAcc, v) => mapAcc + (v._1 -> MIP.StateVariable(nameProvider(v._1, "var"), v._2))
     }
     // map each constant.
-    val map5 = targetModule.constants.foldLeft((idMap4, initExternalSymbolMap)) {
-      (acc, c) => {
-        val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, c._1), ConstantsDecl(List(c._1), c._2))
-        (acc._1 + (c._1 -> MIP.Constant(newName, c._2)), extSymMapP)
-      }
+    val map5 = targetModule.constants.foldLeft((idMap4)) {
+      (acc, c) => acc + (c._1 -> MIP.Constant(nameProvider(c._1, "const"), c._2))
+      // {
+      //   val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, c._1), ConstantsDecl(List(c._1), c._2))
+      //   (acc._1 + (c._1 -> MIP.Constant(newName, c._2)), extSymMapP)
+      // }
     }
     // map each function.
-    val map6 = targetModule.functions.foldLeft(map5) {
+    val map6 = targetModule.functions.foldLeft(map5, initExternalSymbolMap) {
       (acc, f) => {
         val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, f.id), f)
         (acc._1 + (f.id -> MIP.Function(newName, f.sig)), extSymMapP)
@@ -295,7 +296,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
           case MIP.BoundInput(id, t, _t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.UnboundOutput(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.StateVariable(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
-          case MIP.Constant(_, _) | MIP.Function(_, _) | MIP.UnboundInput(_, _) | 
+          case MIP.Constant(id, t) => fixPosition(Some(ConstantsDecl(List(id), t)), id.position)
+          case MIP.Function(_, _) | MIP.UnboundInput(_, _) | 
                MIP.BoundOutput(_, _) | MIP.SharedVariable(_, _) =>  None
         }
       }

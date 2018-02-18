@@ -18,9 +18,9 @@ module main {
   invariant should_fail : false;
 
   control {
-    print_module;
+    //print_module;
     unroll(3);
     check;
-    print_results;
+    //print_results;
   }
 }
