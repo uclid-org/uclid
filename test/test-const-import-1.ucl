@@ -21,7 +21,7 @@ module main {
   property sum_num : sum == num;
 
   control {
-    print_module;
+    // print_module;
     unroll(5);
     check;
     // print_results;
