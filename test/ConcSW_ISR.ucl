@@ -113,15 +113,16 @@ module Sys {
   }   
 
 /* This doesn't work --- since it seems only module
-   names can work with a ::
+   names can work with a :: --- and should it be ISR_f::idle?
+*/
  invariant pc_ISR: (ISR_f::pc == idle) <==> (ISR_f::return_ISR);
+ // invariant pc_ISR: (ISR_func::pc == idle) <==> (ISR_func::return_ISR);
 
  control {
      unroll(5);
      check;
      print_results;
   }
-   */
 }
 
 module Env {
