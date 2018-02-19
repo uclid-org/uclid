@@ -61,8 +61,20 @@ module ISR_func {
    else {
       pc = pc; return_ISR = false;
    }
+
  }
 
+/* This doesn't work as timerCount is a sharedvar
+   defined in a higher level module.
+
+ invariant pc_ISR: (pc == idle) <==> (return_ISR);
+
+ control {
+     unroll(5);
+     check;
+     print_results;
+  }
+*/
 } // end module ISR_func
 
 
@@ -100,6 +112,16 @@ module Sys {
     }
   }   
 
+/* This doesn't work --- since it seems only module
+   names can work with a ::
+ invariant pc_ISR: (ISR_f::pc == idle) <==> (ISR_f::return_ISR);
+
+ control {
+     unroll(5);
+     check;
+     print_results;
+  }
+   */
 }
 
 module Env {
@@ -125,5 +147,6 @@ module main {
     if (turn) { next (Sys_i); } else { next (Env_i); }
     havoc turn; 
   }
+
 
 }
