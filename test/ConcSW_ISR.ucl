@@ -81,6 +81,7 @@ module ISR_func {
 module Sys {
 
   type mode_t = enum {main_t, ISR_t};
+  type ISR_func_pc_t = ISR_func::pc_t;
 
   input assert_intr : boolean;
 
@@ -115,13 +116,15 @@ module Sys {
 /* This doesn't work --- since it seems only module
    names can work with a :: --- and should it be ISR_f::idle?
 */
- invariant pc_ISR: (ISR_f::pc == idle) <==> (ISR_f::return_ISR);
+ invariant pc_ISR: (ISR_f->pc == idle) <==> (ISR_f->return_ISR);
  // invariant pc_ISR: (ISR_func::pc == idle) <==> (ISR_func::return_ISR);
 
  control {
-     unroll(5);
+     v = unroll(5);
      check;
      print_results;
+     v->print_cex;
+
   }
 }
 
