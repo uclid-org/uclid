@@ -137,7 +137,13 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     }
   }
   val getArraySort = new Memo[(List[Type], Type), z3.ArraySort]((arrayType : (List[Type], Type)) => {
-    ctx.mkArraySort(getTupleSort(arrayType._1), getZ3Sort(arrayType._2))
+    val indexTypeIn = arrayType._1
+    val z3IndexType = if (indexTypeIn.size == 1) { 
+      getZ3Sort(indexTypeIn(0)) 
+    } else {
+      getTupleSort(indexTypeIn)
+    }
+    ctx.mkArraySort(z3IndexType, getZ3Sort(arrayType._2))
   })
   val getEnumSort = new Memo[List[String], z3.EnumSort]((enumConstants : List[String]) => {
     ctx.mkEnumSort(getEnumName(), enumConstants :_ *)
@@ -294,6 +300,13 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
 
   /** Convert an smt.Expr object into a Z3 AST.  */
   val exprToZ3 : Memo[Expr, z3.AST] = new Memo[Expr, z3.AST]((e) => {
+    def toArrayIndex(index : List[Expr], indexType : List[Type]) : z3.Expr = {
+      if (index.size == 1) {
+        exprToZ3(index(0)).asInstanceOf[z3.Expr]
+      } else {
+        getTuple(index.map((arg) => exprToZ3(arg)), indexType)
+      }
+    }
     val z3AST : z3.AST = e match {
       case Symbol(id, typ) =>
         symbolToZ3(Symbol(id, typ))
@@ -302,14 +315,14 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case ArraySelectOperation(e, index) =>
         val arrayType = e.typ.asInstanceOf[ArrayType]
         val arrayIndexType = arrayType.inTypes
-        val indexTuple = getTuple(index.map((arg) => exprToZ3(arg)), arrayIndexType)
-        ctx.mkSelect(exprToZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple)
+        val arrayIndex = toArrayIndex(index, arrayIndexType)
+        ctx.mkSelect(exprToZ3(e).asInstanceOf[z3.ArrayExpr], arrayIndex)
       case ArrayStoreOperation(e, index, value) =>
         val arrayType = e.typ.asInstanceOf[ArrayType]
         val arrayIndexType = arrayType.inTypes
-        val indexTuple = getTuple(index.map((arg) => exprToZ3(arg)), arrayIndexType)
+        val arrayIndex = toArrayIndex(index, arrayIndexType)
         val data = exprToZ3(value).asInstanceOf[z3.Expr]
-        ctx.mkStore(exprToZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple, data)
+        ctx.mkStore(exprToZ3(e).asInstanceOf[z3.ArrayExpr], arrayIndex, data)
       case FunctionApplication(e, args) =>
         val func = exprToZ3(e).asInstanceOf[z3.FuncDecl]
         func.apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)

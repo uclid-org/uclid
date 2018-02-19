@@ -11,6 +11,7 @@ module queue
 
   var contents : [integer]integer;
   var head, tail: integer;
+  var inited : boolean;
 
   output first: integer;
 
@@ -18,16 +19,18 @@ module queue
   input data : integer;
 
   define is_empty() : boolean = (head == tail);
-  define ptrs_valid() : boolean = (head <= tail);
+  define in_queue(v : integer) : boolean = 
+  	(exists (i : integer) :: (i >= head && i < tail && contents[i] == v));
 
   init {
+    inited = false;
     head = 0;
     tail = 0; 
-    contents = common :: c0;
     first = contents[head];
   }
 
   next {
+    inited = true;
     first = contents[head];
     case
 	(op == push) : {
@@ -43,14 +46,20 @@ module queue
     esac;
   }
 
-  invariant head_le_tail: ptrs_valid(); 
-
+  const pushed_data : integer;
+  invariant[LTL] head_le_tail : head <= tail;
+  invariant[LTL] queue_inserts : G((inited && op == push && data == pushed_data && X(op != pop)) 
+  									  ==> X(in_queue(pushed_data)));
+  invariant[LTL] push_eventually_pops :
+  	G(F(op == pop)) ==> // assume a pop will always happen.
+  	G((inited && op == push && data == pushed_data) ==>
+  	  F(op == pop && first == pushed_data));
   control {
-    print_module;
-    v = unroll(5);
+    // print_module;
+    v = bmc(5);
     check;
     print_results;
-    v->print_cex(op, head, tail);
+    v->print_cex(op, data, pushed_data, head, tail, contents);
   }
 }
 
