@@ -40,7 +40,7 @@ import uclid.{lang => l}
 object VerifierSpec {
   def expectedFails(filename: String, nFail : Int) {
     val modules = UclidMain.compile(List(filename), lang.Identifier("main"), true)
-    val mainModule = UclidMain.instantiate(modules, l.Identifier("main"))
+    val mainModule = UclidMain.instantiate(modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
     val results = UclidMain.execute(mainModule.get)
     assert (results.count((e) => e.result.isFalse) == nFail)

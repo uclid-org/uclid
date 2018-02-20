@@ -106,7 +106,7 @@ object UclidMain {
     try {
       val mainModuleName = Identifier(options.mainModule)
       val modules = compile(options.srcFiles, mainModuleName)
-      val mainModule = instantiate(modules, mainModuleName)
+      val mainModule = instantiate(modules, mainModuleName, true)
       mainModule match {
         case Some(m) => execute(m)
         case None    => throw new Utils.ParserError("Unable to find main module", None, None)
@@ -165,6 +165,7 @@ object UclidMain {
     passManager.addPass(new ControlCommandChecker())
     passManager.addPass(new ComputeInstanceTypes())
     passManager.addPass(new FindProcedureDependency())
+    passManager.addPass(new DefDepGraphChecker())
     passManager.addPass(new RewriteDefines())
     passManager.addPass(new ProcedureInliner())
     passManager.addPass(new ForLoopUnroller())
@@ -206,11 +207,7 @@ object UclidMain {
     }._1
   }
 
-  def instantiate(moduleList : List[Module], mainModuleName : Identifier) : Option[Module] = {
-    if (moduleList.find(m => m.id == mainModuleName).isEmpty) {
-      return None
-    }
-
+  def instantiateModules(moduleList: List[Module], mainModuleName : Identifier) : List[Module] = {
     // create pass manager.
     val passManager = new PassManager()
     passManager.addPass(new ModuleInstanceChecker())
@@ -228,8 +225,17 @@ object UclidMain {
     // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
 
     // run passes.
-    val moduleListP = passManager.run(moduleList)
+    passManager.run(moduleList)
+  }
 
+  def instantiate(moduleList : List[Module], mainModuleName : Identifier, verbose : Boolean) : Option[Module] = {
+    if (moduleList.find(m => m.id == mainModuleName).isEmpty) {
+      return None
+    }
+    val moduleListP = instantiateModules(moduleList, mainModuleName) 
+    if (verbose) {
+      println("Successfully parsed %d and instantiated %d module(s).".format(moduleList.size, moduleListP.size))
+    }
     // return main module.
     moduleListP.find((m) => m.id == mainModuleName)
   }

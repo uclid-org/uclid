@@ -265,4 +265,22 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.exists(p => p._1.contains("Return type and expression type do not match")))
     }
   }
+  "test/test-define-expand.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List("test/test-define-expand.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test/test-define-recursive.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List("test/test-define-recursive.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 3)
+        assert (p.errors.exists(p => p._1.contains("Recursion involving define declarations")))
+    }
+  }
 }
