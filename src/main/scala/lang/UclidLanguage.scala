@@ -731,8 +731,6 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
     ": " + retType
 }
 
-sealed abstract class Grammar extends ASTNode
-
 sealed abstract class Decl extends ASTNode {
   def declNames : List[Identifier]
 }
@@ -825,11 +823,69 @@ case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl
   override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
   override def declNames = List(id)
 }
-case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, requires: List[Expr], ensures: List[Expr], grammar : Option[Grammar]) extends Decl {
+
+sealed abstract class GrammarTerm extends ASTNode
+case class FuncAppTerm(id: Identifier, args: List[GrammarTerm]) extends GrammarTerm {
+  override def toString = {
+    val argString = Utils.join(args.map(_.toString), ", ")
+    "%s(%s)".format(id.toString, argString)
+  }
+}
+case class OpAppTerm(op: Operator, args: List[GrammarTerm]) extends GrammarTerm {
+  override def toString = {
+    val argStr = args.map(_.toString)
+    val str = if (op.fixity == Operator.INFIX) {
+      Utils.join(argStr, " " + op.toString)
+    } else if(op.fixity == Operator.PREFIX) {
+      op.toString + "(" + Utils.join(argStr, ", ") + ")"
+    } else {
+      "(" + Utils.join(argStr, ", ") + ")" + op.toString
+    }
+    "(" + str + ")"
+  }
+}
+
+case class LiteralTerm(lit: Literal) extends GrammarTerm {
+  override def toString = lit.toString()
+}
+case class SymbolTerm(id: Identifier) extends GrammarTerm {
+  override def toString = id.toString()
+}
+case class ConstantTerm(typ: Type) extends GrammarTerm {
+  override def toString = "const " + typ.toString()
+}
+case class VariableTerm(typ: Type) extends GrammarTerm {
+  override def toString = "var " + typ.toString()
+}
+case class InputVariableTerm(typ: Type) extends GrammarTerm {
+  override def toString = "function input " + typ.toString()
+}
+case class LetVariableTerm(typ: Type) extends GrammarTerm {
+  override def toString = "function var " + typ.toString()
+}
+// case class LetTerm(assigns: List[(Identifier, Type, GrammarTerm)], expr: GrammarTerm) extends GrammarTerm
+
+case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) extends ASTNode {
+  override def toString = 
+    "%s : %s ::= %s".format(id.toString, typ.toString, Utils.join(terms.map(_.toString), " "))
+}
+
+case class GrammarDecl(id: Identifier, args: List[(Identifier, Type)], rTyp: Type, nonterminals: List[GrammarTerm]) extends Decl {
+  override def toString = {
+    val argTypes = Utils.join(args.map(a => a._1.toString + ": " + a._2.toString), ", ")
+    val header :String = "grammar %d (%s) : %s".format(id.toString, argTypes, rTyp.toString) + "  { // " + position.toString
+    val lines = nonterminals.map(PrettyPrinter.indent(2) + _.toString)
+    header + Utils.join(lines, "\n") + "\n" + PrettyPrinter.indent(1) + "}"
+  }
+  override def declNames = List(id)
+}
+
+case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : Identifier, conditions: List[Expr]) extends Decl {
   // FIXME: printout requires and ensures conditions.
   override def toString = "synthesis function " + id + sig + "; //" + position.toString()
   override def declNames = List(id)
 }
+
 case class InitDecl(body: List[Statement]) extends Decl {
   override def toString =
     "init { // " + position.toString + "\n" +

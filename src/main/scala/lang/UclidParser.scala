@@ -425,7 +425,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val InstanceDecl : PackratParser[lang.InstanceDecl] = positioned {
       KwInstance ~> Id ~ ":" ~ Id ~ ArgMapList <~ ";" ^^ { case instId ~ ":" ~ moduleId ~ args => lang.InstanceDecl(instId, moduleId, args, None, None) }
     }
-
     lazy val RequireExpr : PackratParser[lang.Expr] = positioned {
       KwRequires ~> Expr <~ ";"
     }
@@ -478,9 +477,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val SynthFuncDecl : PackratParser[lang.SynthesisFunctionDecl] = positioned {
-      KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) <~ ";" ^^
-      { case id ~ idtyps ~ rt =>
-          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), List.empty, List.empty, None)
+      KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~ (KwGrammar ~> Id) <~ ";" ^^
+      { case id ~ idtyps ~ rt ~ gId =>
+          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), gId, List.empty)
       }
     }
     lazy val DefineDecl : PackratParser[lang.DefineDecl] = positioned {
