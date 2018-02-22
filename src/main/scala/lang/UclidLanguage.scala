@@ -835,7 +835,7 @@ case class OpAppTerm(op: Operator, args: List[GrammarTerm]) extends GrammarTerm 
   override def toString = {
     val argStr = args.map(_.toString)
     val str = if (op.fixity == Operator.INFIX) {
-      Utils.join(argStr, " " + op.toString)
+      Utils.join(argStr, " " + op.toString + " ")
     } else if(op.fixity == Operator.PREFIX) {
       op.toString + "(" + Utils.join(argStr, ", ") + ")"
     } else {
@@ -872,8 +872,9 @@ case class LetTerm(assigns: List[(Identifier, Type, GrammarTerm)], expr: Grammar
 }
 
 case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) extends ASTNode {
-  override def toString = 
+  override def toString = {
     "(%s : %s) ::= %s;".format(id.toString, typ.toString, Utils.join(terms.map(_.toString), " | "))
+  }
 }
 
 case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonTerminal]) extends Decl {

@@ -486,17 +486,49 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val SymbolTerm: PackratParser[lang.SymbolTerm] = positioned {
       Id ^^ { case id => lang.SymbolTerm(id) }
     }
-    
+
+    lazy val GrammarInfixBinaryOp: PackratParser[lang.Operator] = positioned {
+      OpBiImpl ^^ { case _ => IffOp() } |
+      OpImpl ^^ { case _ => ImplicationOp() } |
+      OpAnd ^^ { case _ => ConjunctionOp() } |
+      OpOr ^^ { case _ => DisjunctionOp() } |
+      OpBvAnd ^^ { case _ => BVAndOp(0) } |
+      OpBvOr ^^ { case _ => BVOrOp(0) } |
+      OpBvXor ^^ { case _ => BVXorOp(0) } |
+      OpLT ^^ { case _ => LTOp() } |
+      OpGT ^^ { case _ => GTOp() } |
+      OpLE ^^ { case _ => LEOp() } |
+      OpGE ^^ { case _ => GEOp() } |
+      OpEQ ^^ { case _ => EqualityOp() } |
+      OpNE ^^ { case _ => InequalityOp() } |
+      OpConcat ^^ { case _ => ConcatOp() } |
+      OpAdd ^^ { case _ => AddOp() } |
+      OpSub ^^ { case _ => SubOp() } |
+      OpMul ^^ { case _ => MulOp() }
+    }
+
+    lazy val UnaryOpAppTerm: PackratParser[lang.OpAppTerm] = positioned {
+      "(" ~ OpNeg ~> GrammarTerm <~ ")" ^^ { case t => lang.OpAppTerm(UnaryMinusOp(), List(t)) } |
+      "(" ~ OpNot ~> GrammarTerm <~ ")" ^^ { case t => lang.OpAppTerm(NegationOp(), List(t)) } |
+      "(" ~ OpBvNot ~> GrammarTerm <~ ")" ^^ { case t => lang.OpAppTerm(BVNotOp(0), List(t)) }
+    }
+
+    lazy val BinaryOpAppTerm: PackratParser[lang.OpAppTerm] = positioned {
+      "(" ~> GrammarTerm ~ GrammarInfixBinaryOp ~ GrammarTerm <~ ")" ^^ { 
+        case t1 ~ op ~ t2 => lang.OpAppTerm(op, List(t1, t2))  
+      }
+    }
+
     lazy val ConstantTerm: PackratParser[lang.ConstantTerm] = positioned {
       KwConst ~> Type ^^ { case typ => lang.ConstantTerm(typ) }
     }
-    
+
     lazy val ParameterTerm: PackratParser[lang.ParameterTerm] = positioned {
       KwParameter ~> Type ^^ { case typ => lang.ParameterTerm(typ) }
     }
 
     lazy val GrammarTerm : PackratParser[lang.GrammarTerm] = positioned { 
-      LiteralTerm | SymbolTerm | ConstantTerm | ParameterTerm 
+      UnaryOpAppTerm | BinaryOpAppTerm | LiteralTerm | SymbolTerm | ConstantTerm | ParameterTerm 
     }
 
     lazy val GrammarTermList : PackratParser[List[lang.GrammarTerm]] = {

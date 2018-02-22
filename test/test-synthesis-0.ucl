@@ -6,10 +6,13 @@ module main
   var prev_sum : integer;
   
   grammar max_grammar (x : integer, y : integer) : integer = {
-    (start : integer) ::= 0 | 1 | x | y;
+    (start : integer) ::= 0 | 1 | x | y | (start + start) | (start - start);
   }
-  synthesis function max2 (x : integer, y : integer) : integer grammar max_grammar;
-  
+  synthesis function max2 (x : integer, y : integer) : integer
+    grammar max_grammar // (x, y)
+    // condition (max2(x, y) >= x && max2(x, y) >= y);
+  ;
+
   init {
     sum = 0;
     prev_sum = 0;
