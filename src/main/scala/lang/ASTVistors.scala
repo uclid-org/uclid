@@ -80,6 +80,8 @@ trait ReadOnlyPass[T] {
   def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : Scope) : T = { in }
   def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : Scope) : T = { in }
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : Scope) : T = { in }
+  def applyOnGrammarTerm(d : TraversalDirection.T, gTerm : GrammarTerm, in : T, context : Scope) : T = { in }
+  def applyOnGrammar(d : TraversalDirection.T, grammar: GrammarDecl, in : T, context : Scope) : T = { in }
   def applyOnSynthesisFunction(d : TraversalDirection.T, synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = { in }
   def applyOnDefine(d : TraversalDirection.T, defDecl : DefineDecl, in : T, context : Scope) : T = { in }
   def applyOnStateVars(d : TraversalDirection.T, stVars : StateVarsDecl, in : T, context : Scope) : T = { in }
@@ -157,6 +159,8 @@ trait RewritePass {
   def rewriteInstance(inst : InstanceDecl, ctx : Scope) : Option[InstanceDecl] = { Some(inst) }
   def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : Scope) : Option[FunctionDecl] = { Some(func) }
+  def rewriteGrammarTerm(gTerm : GrammarTerm, ctx : Scope) : Option[GrammarTerm] = { Some(gTerm) }
+  def rewriteGrammar(grammar : GrammarDecl, ctx : Scope) : Option[GrammarDecl] = { Some(grammar) }
   def rewriteSynthesisFunction(synFunc : SynthesisFunctionDecl, ctx : Scope) : Option[SynthesisFunctionDecl] = { Some(synFunc) }
   def rewriteDefine(defDecl : DefineDecl, ctx : Scope) : Option[DefineDecl] = { Some(defDecl) }
   def rewriteStateVars(stVars : StateVarsDecl, ctx : Scope) : Option[StateVarsDecl] = { Some(stVars) }
@@ -278,6 +282,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case sharedVars : SharedVarsDecl => visitSharedVars(sharedVars, result, context)
       case const : ConstantsDecl => visitConstants(const, result, context)
       case func : FunctionDecl => visitFunction(func, result, context)
+      case grammar : GrammarDecl => visitGrammar(grammar, result, context)
       case synFunc : SynthesisFunctionDecl => visitSynthesisFunction(synFunc, result, context)
       case defDecl : DefineDecl => visitDefine(defDecl, in, context)
       case init : InitDecl => visitInit(init, result, context)
@@ -331,6 +336,21 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitFunctionSig(func.sig, result, context)
     result = pass.applyOnFunction(TraversalDirection.Up, func, result, context)
     return result
+  }
+  def visitGrammarTerms(gTerms : List[GrammarTerm], in : T, context : Scope) : T = {
+    var result : T = in
+    result = gTerms.foldLeft(result)((acc, gt) => pass.applyOnGrammarTerm(TraversalDirection.Down, gt, acc, context))
+    result = gTerms.foldLeft(result)((acc, gt) => pass.applyOnGrammarTerm(TraversalDirection.Up, gt, acc, context))
+    result
+  }
+  def visitGrammar(grammar : GrammarDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnGrammar(TraversalDirection.Down, grammar, result, context)
+    result = visitIdentifier(grammar.id, result, context)
+    result = visitFunctionSig(grammar.sig, result, context)
+    result = visitGrammarTerms(grammar.nonterminals, result, context)
+    result = pass.applyOnGrammar(TraversalDirection.Up, grammar, result, context)
+    result
   }
   def visitSynthesisFunction(synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = {
     var result : T = in

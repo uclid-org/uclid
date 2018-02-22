@@ -870,10 +870,10 @@ case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) exte
     "%s : %s ::= %s".format(id.toString, typ.toString, Utils.join(terms.map(_.toString), " "))
 }
 
-case class GrammarDecl(id: Identifier, args: List[(Identifier, Type)], rTyp: Type, nonterminals: List[GrammarTerm]) extends Decl {
+case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[GrammarTerm]) extends Decl {
   override def toString = {
-    val argTypes = Utils.join(args.map(a => a._1.toString + ": " + a._2.toString), ", ")
-    val header :String = "grammar %d (%s) : %s".format(id.toString, argTypes, rTyp.toString) + "  { // " + position.toString
+    val argTypes = Utils.join(sig.args.map(a => a._1.toString + ": " + a._2.toString), ", ")
+    val header :String = "grammar %d (%s) : %s".format(id.toString, argTypes, sig.retType.toString) + "  { // " + position.toString
     val lines = nonterminals.map(PrettyPrinter.indent(2) + _.toString)
     header + Utils.join(lines, "\n") + "\n" + PrettyPrinter.indent(1) + "}"
   }
