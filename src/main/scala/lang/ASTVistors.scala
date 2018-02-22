@@ -80,7 +80,7 @@ trait ReadOnlyPass[T] {
   def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : Scope) : T = { in }
   def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : Scope) : T = { in }
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : Scope) : T = { in }
-  def applyOnGrammarTerm(d : TraversalDirection.T, gTerm : GrammarTerm, in : T, context : Scope) : T = { in }
+  def applyOnNonterminal(d : TraversalDirection.T, nonterm : NonTerminal, in : T, context : Scope) : T = { in }
   def applyOnGrammar(d : TraversalDirection.T, grammar: GrammarDecl, in : T, context : Scope) : T = { in }
   def applyOnSynthesisFunction(d : TraversalDirection.T, synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = { in }
   def applyOnDefine(d : TraversalDirection.T, defDecl : DefineDecl, in : T, context : Scope) : T = { in }
@@ -159,7 +159,7 @@ trait RewritePass {
   def rewriteInstance(inst : InstanceDecl, ctx : Scope) : Option[InstanceDecl] = { Some(inst) }
   def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : Scope) : Option[FunctionDecl] = { Some(func) }
-  def rewriteGrammarTerm(gTerm : GrammarTerm, ctx : Scope) : Option[GrammarTerm] = { Some(gTerm) }
+  def rewriteNonterminal(nonterm : NonTerminal, ctx : Scope) : Option[NonTerminal] = { Some(nonterm) }
   def rewriteGrammar(grammar : GrammarDecl, ctx : Scope) : Option[GrammarDecl] = { Some(grammar) }
   def rewriteSynthesisFunction(synFunc : SynthesisFunctionDecl, ctx : Scope) : Option[SynthesisFunctionDecl] = { Some(synFunc) }
   def rewriteDefine(defDecl : DefineDecl, ctx : Scope) : Option[DefineDecl] = { Some(defDecl) }
@@ -337,10 +337,10 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnFunction(TraversalDirection.Up, func, result, context)
     return result
   }
-  def visitGrammarTerms(gTerms : List[GrammarTerm], in : T, context : Scope) : T = {
+  def visitNonterminals(nonterminals : List[NonTerminal], in : T, context : Scope) : T = {
     var result : T = in
-    result = gTerms.foldLeft(result)((acc, gt) => pass.applyOnGrammarTerm(TraversalDirection.Down, gt, acc, context))
-    result = gTerms.foldLeft(result)((acc, gt) => pass.applyOnGrammarTerm(TraversalDirection.Up, gt, acc, context))
+    result = nonterminals.foldLeft(result)((acc, nt) => pass.applyOnNonterminal(TraversalDirection.Down, nt, acc, context))
+    result = nonterminals.foldLeft(result)((acc, nt) => pass.applyOnNonterminal(TraversalDirection.Up, nt, acc, context))
     result
   }
   def visitGrammar(grammar : GrammarDecl, in : T, context : Scope) : T = {
@@ -348,7 +348,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnGrammar(TraversalDirection.Down, grammar, result, context)
     result = visitIdentifier(grammar.id, result, context)
     result = visitFunctionSig(grammar.sig, result, context)
-    result = visitGrammarTerms(grammar.nonterminals, result, context)
+    result = visitNonterminals(grammar.nonterminals, result, context + grammar.sig)
     result = pass.applyOnGrammar(TraversalDirection.Up, grammar, result, context)
     result
   }
@@ -978,6 +978,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case sharedVars : SharedVarsDecl => visitSharedVars(sharedVars, context)
       case constDecl : ConstantsDecl => visitConstants(constDecl, context)
       case funcDecl : FunctionDecl => visitFunction(funcDecl, context)
+      case grammarDecl : GrammarDecl => visitGrammar(grammarDecl, context)
       case synFuncDecl : SynthesisFunctionDecl => visitSynthesisFunction(synFuncDecl, context)
       case defDecl : DefineDecl => visitDefine(defDecl, context)
       case initDecl : InitDecl => visitInit(initDecl, context)
@@ -1042,6 +1043,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, funcP, func.position)
+  }
+
+  def visitNonterminals(nonterms : List[NonTerminal], context : Scope) : List[NonTerminal] = {
+    nonterms.map(nt => ASTNode.introducePos(setPosition, setFilename, pass.rewriteNonterminal(nt, context), nt.position)).flatten
+  }
+
+  def visitGrammar(grammar: GrammarDecl, context: Scope) : Option[GrammarDecl] = {
+    val idOpt = visitIdentifier(grammar.id, context)
+    val sigOpt = visitFunctionSig(grammar.sig, context)
+    val nonterminalsP = visitNonterminals(grammar.nonterminals, context + grammar.sig)
+    val grammarP = (idOpt, sigOpt) match {
+      case (Some(id), Some(sig)) => pass.rewriteGrammar(GrammarDecl(id, sig, nonterminalsP), context)
+      case _ => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, grammarP, grammar.position)
   }
 
   def visitSynthesisFunction(synFunc : SynthesisFunctionDecl, context : Scope) : Option[SynthesisFunctionDecl] = {

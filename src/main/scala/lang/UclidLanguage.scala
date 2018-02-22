@@ -727,8 +727,8 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
   type T = (Identifier,Type)
   val typ = MapType(args.map(_._2), retType)
   val printfn = {(a: T) => a._1.toString + ": " + a._2}
-  override def toString = "(" + Utils.join(args.map(printfn(_)), ", ") + ")" +
-    ": " + retType
+  override def toString = 
+    "(" + Utils.join(args.map(printfn(_)), ", ") + ")" + ": " + retType
 }
 
 sealed abstract class Decl extends ASTNode {
@@ -854,28 +854,34 @@ case class SymbolTerm(id: Identifier) extends GrammarTerm {
 case class ConstantTerm(typ: Type) extends GrammarTerm {
   override def toString = "const " + typ.toString()
 }
-case class VariableTerm(typ: Type) extends GrammarTerm {
-  override def toString = "var " + typ.toString()
-}
-case class InputVariableTerm(typ: Type) extends GrammarTerm {
+case class ParameterTerm(typ: Type) extends GrammarTerm {
   override def toString = "function input " + typ.toString()
 }
+// These three terms aren't supported yet.
 case class LetVariableTerm(typ: Type) extends GrammarTerm {
   override def toString = "function var " + typ.toString()
 }
-// case class LetTerm(assigns: List[(Identifier, Type, GrammarTerm)], expr: GrammarTerm) extends GrammarTerm
+case class VariableTerm(typ: Type) extends GrammarTerm {
+  override def toString = "var " + typ.toString()
+}
+case class LetTerm(assigns: List[(Identifier, Type, GrammarTerm)], expr: GrammarTerm) extends GrammarTerm {
+  override def toString = "let (%s) = (%s) in %s".format(
+      Utils.join(assigns.map(a => "(" + a._1.toString + ": " + a._2.toString + ")"), ", "),
+      Utils.join(assigns.map(_._3.toString), ", "),
+      expr.toString)
+}
 
 case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) extends ASTNode {
   override def toString = 
-    "%s : %s ::= %s".format(id.toString, typ.toString, Utils.join(terms.map(_.toString), " "))
+    "(%s : %s) ::= %s;".format(id.toString, typ.toString, Utils.join(terms.map(_.toString), " | "))
 }
 
-case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[GrammarTerm]) extends Decl {
+case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonTerminal]) extends Decl {
   override def toString = {
     val argTypes = Utils.join(sig.args.map(a => a._1.toString + ": " + a._2.toString), ", ")
-    val header :String = "grammar %d (%s) : %s".format(id.toString, argTypes, sig.retType.toString) + "  { // " + position.toString
+    val header :String = "grammar %s %s = { // %s".format(id.toString, sig.toString(), position.toString)
     val lines = nonterminals.map(PrettyPrinter.indent(2) + _.toString)
-    header + Utils.join(lines, "\n") + "\n" + PrettyPrinter.indent(1) + "}"
+    header + "\n" + Utils.join(lines, "\n") + "\n" + PrettyPrinter.indent(1) + "}"
   }
   override def declNames = List(id)
 }

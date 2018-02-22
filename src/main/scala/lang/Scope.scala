@@ -52,6 +52,7 @@ object Scope {
   case class SharedVar(varId : Identifier, varTyp : Type) extends NamedExpression(varId, varTyp)
   case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
+  case class Grammar(gId : Identifier, gTyp : Type) extends ReadOnlyNamedExpression(gId, gTyp)
   case class Define(dId : Identifier, dTyp : Type, defDecl: DefineDecl) extends ReadOnlyNamedExpression(dId, dTyp)
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
@@ -196,6 +197,7 @@ case class Scope (
         case OutputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.OutputVar(id, typ)))
         case SharedVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.SharedVar(id, typ)))
         case ConstantsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.ConstantVar(id, typ)))
+        case GrammarDecl(id, sig, _) => Scope.addToMap(mapAcc, Scope.Grammar(id, sig.typ))
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SynthesisFunctionDecl(id, sig, _, _) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ)) // FIXME
         case DefineDecl(id, sig, expr) => Scope.addToMap(mapAcc, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr))) 
@@ -214,6 +216,10 @@ case class Scope (
           val m2 = sig.outParams.foldLeft(m1)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           m2
         case FunctionDecl(id, sig) =>
+          val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
+          val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
+          m2
+        case GrammarDecl(id, sig, _) =>
           val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2

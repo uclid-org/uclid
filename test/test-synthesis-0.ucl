@@ -5,7 +5,10 @@ module main
   var sum : integer;
   var prev_sum : integer;
   
-  synthesis function max2 (x : integer, y : integer) : integer;
+  grammar max_grammar (x : integer, y : integer) : integer = {
+    (start : integer) ::= 0 | 1 | x | y;
+  }
+  synthesis function max2 (x : integer, y : integer) : integer grammar max_grammar;
   
   init {
     sum = 0;
@@ -20,8 +23,8 @@ module main
   property sum_monotonically_incr : (sum >= prev_sum);
   
   control {
-    initialize;
-    simulate(5);
+  	print_module;
+    unroll(5);
     check;
     print_results;
   }

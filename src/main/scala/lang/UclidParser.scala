@@ -161,6 +161,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwDefineProp = "property"
     lazy val KwDefineAxiom = "axiom"
     lazy val KwModifies = "modifies"
+    lazy val KwParameter = "parameter"
 
     // lazy val TemporalOpGlobally = "G"
     // lazy val TemporalOpFinally = "F"
@@ -170,7 +171,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     // lazy val TemporalOpRelease = "R"
 
     lexical.delimiters ++= List("(", ")", ",", "[", "]",
-      "bv", "{", "}", ";", "=", ":", "::", ".", "->", "*",
+      "bv", "{", "}", ";", "=", ":", "::", ".", "->", "*", "::=",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat,
       OpNot, OpMinus, OpSelectFromInstance)
@@ -184,7 +185,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit, 
       KwNext, KwLambda, KwModifies, KwDefineProp, KwDefineAxiom, 
       KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires, 
-      KwEnsures, KwInvariant)
+      KwEnsures, KwInvariant, KwParameter)
       // TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
       // TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
 
@@ -476,6 +477,44 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       { case id ~ idtyps ~ rt => lang.FunctionDecl(id, lang.FunctionSig(idtyps, rt)) }
     }
 
+    // Grammar parsing begins here. //
+    lazy val LiteralTerm : PackratParser[lang.LiteralTerm] = positioned {
+      Bool ^^ { case b => lang.LiteralTerm(b) } |
+      Number ^^ { case num => lang.LiteralTerm(num) }
+    }
+    
+    lazy val SymbolTerm: PackratParser[lang.SymbolTerm] = positioned {
+      Id ^^ { case id => lang.SymbolTerm(id) }
+    }
+    
+    lazy val ConstantTerm: PackratParser[lang.ConstantTerm] = positioned {
+      KwConst ~> Type ^^ { case typ => lang.ConstantTerm(typ) }
+    }
+    
+    lazy val ParameterTerm: PackratParser[lang.ParameterTerm] = positioned {
+      KwParameter ~> Type ^^ { case typ => lang.ParameterTerm(typ) }
+    }
+
+    lazy val GrammarTerm : PackratParser[lang.GrammarTerm] = positioned { 
+      LiteralTerm | SymbolTerm | ConstantTerm | ParameterTerm 
+    }
+
+    lazy val GrammarTermList : PackratParser[List[lang.GrammarTerm]] = {
+      GrammarTerm ~ rep("|" ~> GrammarTerm) ^^ {
+        case term ~ terms => term :: terms 
+      }
+    }
+    lazy val NonTerminal : PackratParser[lang.NonTerminal] = positioned {
+      "(" ~> Id ~ (":" ~> Type <~ ")") ~ ("::=" ~> GrammarTermList) <~ ";" ^^ {
+        case id ~ typ ~ terms => lang.NonTerminal(id, typ, terms)
+      }
+    }
+    lazy val GrammarDecl : PackratParser[lang.GrammarDecl] = positioned {
+      KwGrammar ~> Id ~ IdTypeList ~ (":" ~> Type) ~ ("=" ~ "{" ~> rep(NonTerminal) <~ "}") ^^ {
+        case id ~ argTypes ~ retType ~ nonterminals => lang.GrammarDecl(id, lang.FunctionSig(argTypes, retType), nonterminals) 
+      }
+      
+    }
     lazy val SynthFuncDecl : PackratParser[lang.SynthesisFunctionDecl] = positioned {
       KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~ (KwGrammar ~> Id) <~ ";" ^^
       { case id ~ idtyps ~ rt ~ gId =>
@@ -515,7 +554,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Decl: PackratParser[Decl] =
       positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl |
-                  SynthFuncDecl | DefineDecl |
+                  SynthFuncDecl | DefineDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl | AxiomDecl)
 
