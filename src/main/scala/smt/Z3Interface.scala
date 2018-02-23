@@ -272,6 +272,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case InequalityOp           => ctx.mkDistinct(exprArgs(0), exprArgs(1))
       case ConjunctionOp          => ctx.mkAnd (boolArgs : _*)
       case DisjunctionOp          => ctx.mkOr (boolArgs : _*)
+      case ITEOp                  => ctx.mkITE(exprArgs(0).asInstanceOf[z3.BoolExpr], exprArgs(1), exprArgs(2))
       case ForallOp(vs)           =>
         // val qTyps = vs.map((v) => getZ3Sort(v.typ)).toArray
         val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
@@ -326,8 +327,6 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case FunctionApplication(e, args) =>
         val func = exprToZ3(e).asInstanceOf[z3.FuncDecl]
         func.apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
-      case ITE(e,t,f) =>
-        ctx.mkITE(exprToZ3(e).asInstanceOf[z3.BoolExpr], exprToZ3(t).asInstanceOf[z3.Expr], exprToZ3(f).asInstanceOf[z3.Expr])
       case Lambda(_,_) =>
         throw new Utils.RuntimeError("Lambdas in assertions should have been beta-reduced.")
       case IntLit(i) => getIntLit(i)

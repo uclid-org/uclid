@@ -130,10 +130,6 @@ class Z3FileInterface() extends SolverInterface {
         "(" + translateExpr(e) +
           args.foldLeft(""){(acc,i) =>
             acc + " " + translateExpr(i)} + ")"
-      case ITE(e,t,f) =>
-        "(ite " + translateExpr(e) + " " +
-          translateExpr(t) + " " +
-          translateExpr(f) +")"
       case Lambda(_,_) =>
         throw new Exception("yo lambdas in assertions should have been beta-reduced")
       case IntLit(value) => value.toString()

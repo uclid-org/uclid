@@ -204,8 +204,6 @@ object ReplacePolymorphicOperators {
         ArrayStoreOperation(r(expr), rs(indices), r(value))
       case FuncApplication(expr, args) =>
         FuncApplication(r(expr), rs(args))
-      case ITE(c, t, f) =>
-        ITE(r(c), r(t), r(f))
       case Lambda(args, expr) =>
         Lambda(args, r(expr))
     }
@@ -457,6 +455,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(historyIndex > 0, "History index must be non-negative", opapp.pos, c.filename)
           checkTypeError(historyIndex.toInt < 65536, "History index is too large", opapp.pos, c.filename)
           argTypes(0)
+        case ITEOp =>
+          checkTypeError(argTypes.size == 3, "Expect exactly three arguments to if-then-else expressions", opapp.pos, c.filename)
+          checkTypeError(argTypes(0).isBool, "Condition in if-then-else must be boolean", opapp.pos, c.filename)
+          checkTypeError(argTypes(1) == argTypes(2), "Then- and else- expressions in an if-then-else must be of the same type", opapp.pos, c.filename)
+          argTypes(1)
       }
     }
 
@@ -489,12 +492,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
       val argTypes = fapp.args.map(typeOf(_, c))
       checkTypeError(funcType.inTypes == argTypes, "Argument type error in application", fapp.pos, c.filename)
       return funcType.outType
-    }
-
-    def iteType(ite : ITE) : Type = {
-      checkTypeError(typeOf(ite.e, c).isBool, "Type error in ITE condition operand", ite.pos, c.filename)
-      checkTypeError(typeOf(ite.t, c) == typeOf(ite.f, c), "ITE operand types don't match", ite.pos, c.filename)
-      return typeOf(ite.t, c)
     }
 
     def lambdaType(lambda : Lambda) : Type = {
@@ -530,7 +527,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case arrSel : ArraySelectOperation => arraySelectType(arrSel)
         case arrStore : ArrayStoreOperation => arrayStoreType(arrStore)
         case fapp : FuncApplication => funcAppType(fapp)
-        case ite : ITE => iteType(ite)
         case lambda : Lambda => lambdaType(lambda)
       }
       memo.put(e.astNodeId, typ)

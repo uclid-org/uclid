@@ -229,6 +229,9 @@ class LTLPropertyRewriterPass extends RewritePass {
       // !(a <==> b) -> (a != b)
       case OperatorApplication(NegationOp(), List(OperatorApplication(IffOp(), args))) =>
         OperatorApplication(InequalityOp(), args)
+      // !(if e then texp else fexp) -> if e then !texp else !fexp
+      case OperatorApplication(NegationOp(), List(OperatorApplication(ITEOp, args))) =>
+        OperatorApplication(ITEOp, List(recurse(args(0)), recurse(not(args(1))), recurse(not(args(2)))))
       // any other operator, just recurse.
       case OperatorApplication(op, args) =>
         OperatorApplication(op, args.map(a => recurse(a)))
@@ -238,8 +241,6 @@ class LTLPropertyRewriterPass extends RewritePass {
         ArrayStoreOperation(recurse(arrUpd.e), arrUpd.index.map(recurse(_)), recurse(arrUpd.value))
       case funcApp : FuncApplication =>
         FuncApplication(recurse(funcApp.e), funcApp.args.map(recurse(_)))
-      case ite : ITE =>
-        ITE(recurse(ite.e), recurse(ite.t), recurse(ite.f))
       case lambda : Lambda =>
         Lambda(lambda.ids, recurse(lambda.e))
     }

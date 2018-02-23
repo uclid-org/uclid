@@ -511,7 +511,7 @@ class SymbolicSimulator (module : Module) {
         var else_st : SymbolTable = simulate(iter, condExpr :: pathConditions, else_branch, symbolTable, scope, label)
         return symbolTable.keys.filter { id => then_modifies.contains(id) || else_modifies.contains(id) }.
           foldLeft(symbolTable){ (acc,id) =>
-            acc.updated(id, smt.ITE(condExpr, then_st(id), else_st(id)))
+            acc.updated(id, smt.OperatorApplication(smt.ITEOp, List(condExpr, then_st(id), else_st(id))))
           }
       case ForStmt(id, range, body) => throw new Utils.UnimplementedException("Cannot symbolically execute For loop")
       case CaseStmt(body) => throw new Utils.UnimplementedException("Cannot symbolically execute Case stmt")
@@ -553,8 +553,6 @@ class SymbolicSimulator (module : Module) {
          return ArrayStoreOperation(a, index.map(x => substitute(x, id, arg)), substitute(value, id, arg))
        case FuncApplication(f,args) =>
          return FuncApplication(substitute(f,id,arg), args.map(x => substitute(x,id,arg)))
-       case ITE(cond,t,f) =>
-         return ITE(substitute(cond,id,arg), substitute(t,id,arg), substitute(f,id,arg))
        case Lambda(idtypes, le) =>
          Utils.assert(idtypes.exists(x => x._1.name == id.name), "Lambda arguments of the same name")
          return Lambda(idtypes, substitute(le, id, arg))
@@ -575,8 +573,6 @@ class SymbolicSimulator (module : Module) {
          return smt.ArrayStoreOperation(a, index.map(x => substituteSMT(x, s, arg)), substituteSMT(value, s, arg))
        case smt.FunctionApplication(f,args) =>
          return smt.FunctionApplication(substituteSMT(f,s,arg), args.map(x => substituteSMT(x,s,arg)))
-       case smt.ITE(cond,t,f) =>
-         return smt.ITE(substituteSMT(cond,s,arg), substituteSMT(t,s,arg), substituteSMT(f,s,arg))
        case smt.Lambda(idtypes, le) =>
          Utils.assert(idtypes.exists(x => x.id == s.id), "Lambda arguments of the same name")
          return smt.Lambda(idtypes, substituteSMT(le, s, arg))

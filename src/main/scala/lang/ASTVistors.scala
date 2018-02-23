@@ -141,7 +141,6 @@ trait ReadOnlyPass[T] {
   def applyOnArraySelect(d : TraversalDirection.T, arrSel : ArraySelectOperation, in : T, context : Scope) : T = { in }
   def applyOnArrayStore(d : TraversalDirection.T, arrStore : ArrayStoreOperation, in : T, context : Scope) : T = { in }
   def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : Scope) : T = { in }
-  def applyOnITE(d : TraversalDirection.T, ite : ITE, in : T, context : Scope) : T = { in }
   def applyOnLambda(d : TraversalDirection.T, lambda : Lambda, in : T, context : Scope) : T = { in }
   def applyOnExprDecorator(d : TraversalDirection.T, dec : ExprDecorator, in : T, context : Scope) : T = { in }
   def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : T, context : Scope) : T = { in }
@@ -220,7 +219,6 @@ trait RewritePass {
   def rewriteArraySelect(arrSel : ArraySelectOperation, ctx : Scope) : Option[Expr] = { Some(arrSel) }
   def rewriteArrayStore(arrStore : ArrayStoreOperation, ctx : Scope) : Option[Expr] = { Some(arrStore) }
   def rewriteFuncApp(fapp : FuncApplication, ctx : Scope) : Option[Expr] = { Some(fapp) }
-  def rewriteITE(ite : ITE, ctx : Scope) : Option[Expr] = { Some(ite) }
   def rewriteExprDecorator(dec : ExprDecorator, ctx : Scope) : Option[ExprDecorator] = { Some(dec) }
   def rewriteLambda(lambda : Lambda, ctx : Scope) : Option[Lambda] = { Some(lambda) }
 }
@@ -772,7 +770,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case arrSel : ArraySelectOperation => visitArraySelectOp(arrSel, result, context)
       case arrUpd : ArrayStoreOperation => visitArrayStoreOp(arrUpd, result, context)
       case fapp : FuncApplication => visitFuncApp(fapp, result, context)
-      case ite : ITE => visitITE(ite, result, context)
       case lambda : Lambda => visitLambda(lambda, result, context)
     }
     result = pass.applyOnExpr(TraversalDirection.Up, e, result, context)
@@ -904,15 +901,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitExpr(fapp.e, result, context)
     result = fapp.args.foldLeft(result)((acc, arg) => visitExpr(arg, acc, context))
     result = pass.applyOnFuncApp(TraversalDirection.Up, fapp, result, context)
-    return result
-  }
-  def visitITE(ite: ITE, in : T, context : Scope) : T = {
-    var result : T = in
-    result = pass.applyOnITE(TraversalDirection.Down, ite, result, context)
-    result = visitExpr(ite.e, result, context)
-    result = visitExpr(ite.t, result, context)
-    result = visitExpr(ite.f, result, context)
-    result = pass.applyOnITE(TraversalDirection.Up, ite, result, context)
     return result
   }
   def visitLambda(lambda: Lambda, in : T, contextIn : Scope) : T = {
@@ -1520,7 +1508,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case arrSel : ArraySelectOperation => visitArraySelectOp(arrSel, context)
       case arrUpd : ArrayStoreOperation => visitArrayStoreOp(arrUpd, context)
       case fapp : FuncApplication => visitFuncApp(fapp, context)
-      case ite : ITE => visitITE(ite, context)
       case lambda : Lambda => visitLambda(lambda, context)
     }).flatMap(pass.rewriteExpr(_, context))
     return ASTNode.introducePos(setPosition, setFilename, eP, e.position)
@@ -1656,18 +1643,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, fappP, fapp.position)
-  }
-
-  def visitITE(ite: ITE, context : Scope) : Option[Expr] = {
-    val condP = visitExpr(ite.e, context)
-    val tP = visitExpr(ite.t, context)
-    val fP = visitExpr(ite.f, context)
-
-    val iteP = (condP, tP, fP) match {
-      case (Some(cond), Some(t), Some(f)) => pass.rewriteITE(ITE(cond, t, f), context)
-      case _ => None
-    }
-    return ASTNode.introducePos(setPosition, setFilename, iteP, ite.position)
   }
 
   def visitLambda(lambda: Lambda, contextIn : Scope) : Option[Lambda] = {

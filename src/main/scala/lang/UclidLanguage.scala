@@ -244,6 +244,12 @@ case class HistoryOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def toString = "history"
 }
+// ITE operator
+case object ITEOp extends Operator {
+  override def toString = "ite"
+  override def fixity = Operator.PREFIX
+}
+
 abstract class BitVectorSlice extends ASTNode {
   def width : Option[Int]
   def isConstantWidth : Boolean
@@ -375,10 +381,6 @@ case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends 
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class FuncApplication(e: Expr, args: List[Expr]) extends Expr {
   override def toString = e + "(" + Utils.join(args.map(_.toString), ", ") + ")"
-}
-case class ITE(e: Expr, t: Expr, f: Expr) extends Expr {
-  override def toString = "ITE(" + e + "," + t + "," + f + ")"
-  override def isTemporal = e.isTemporal || t.isTemporal || f.isTemporal 
 }
 case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
   override def toString = "Lambda(" + ids + "). " + e

@@ -333,6 +333,16 @@ case class RecordUpdateOp(name: String) extends Operator {
   def resultType(args: List[Expr]) : Type = args(0).typ
   override def fixity = PREFIX
 }
+case object ITEOp extends Operator {
+  override def toString = "ite"
+  override def typeCheck(args: List[Expr]) : Unit = {
+    checkNumArgs(args, 3)
+    Utils.assert(args(0).typ.isBool, "Condition in ITE must be a boolean")
+    Utils.assert(args(1).typ == args(1).typ, "Types in then- and else- expressions must be the same")
+  }
+  def resultType(args: List[Expr]) : Type = args(1).typ
+  override def fixity = PREFIX
+}
 // Expressions
 abstract class Expr(exprType: Type) {
   val typ = exprType
@@ -398,9 +408,6 @@ case class FunctionApplication(e: Expr, args: List[Expr])
   override def toString = e.toString + "(" + args.tail.fold(args.head.toString)
     { (acc,i) => acc + "," + i.toString } + ")"
 }
-case class ITE(e: Expr, t: Expr, f: Expr) extends Expr (t.typ) {
-  override def toString = "ITE(" + e.toString + "," + t.toString + "," + f.toString + ")"
-}
 case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType(ids.map(id => id.typ), e.typ)) {
   override def toString = "Lambda(" + ids + "). " + e.toString
 }
@@ -445,10 +452,6 @@ abstract class SolverInterface {
         return index.foldLeft(findSymbols(value, findSymbols(e, syms)))((acc,i) => findSymbols(i, acc))
       case FunctionApplication(e, args) =>
         return args.foldLeft(findSymbols(e, syms))((acc,i) => findSymbols(i, acc))
-      case ITE(e,t,f) =>
-        return findSymbols(e, syms) ++
-          findSymbols(t, Set()) ++
-          findSymbols(f, Set())
       case Lambda(_,_) =>
         throw new Exception("lambdas in assertions should have been beta-reduced")
       case IntLit(_) => return Set.empty[Symbol]
