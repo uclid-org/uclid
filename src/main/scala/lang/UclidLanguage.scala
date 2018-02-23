@@ -119,7 +119,6 @@ object ASTNode {
  */
 sealed trait ASTNode extends Positional with PositionedNode {
   val astNodeId = IdGenerator.newId()
-  def toSexpr : String = toString()
 }
 
 
@@ -176,52 +175,40 @@ sealed abstract class BVArgOperator(val w : Int) extends Operator {
 }
 case class BVLTOp(override val w : Int) extends BVArgOperator(w) { 
   override def toString = "<" 
-  override def toSexpr = "bvslt"
 }
 case class BVLEOp(override val w : Int) extends BVArgOperator(w) { 
   override def toString = "<=" 
-  override def toSexpr = "bvsle"
 }
 case class BVGTOp(override val w : Int) extends BVArgOperator(w) { 
   override def toString = ">" 
-  override def toSexpr = "bvsgt"
 }
 case class BVGEOp(override val w : Int) extends BVArgOperator(w) { 
   override def toString = ">=" 
-  override def toSexpr = "bvsge"
 }
 case class BVAddOp(override val w : Int) extends BVArgOperator(w) { 
   override def toString ="+"  
-  override def toSexpr = "bvadd"
 }
 case class BVSubOp(override val w : Int) extends BVArgOperator(w) { 
   override def toString = "-" 
-  override def toSexpr = "bvsub"
 }
 case class BVMulOp(override val w : Int) extends BVArgOperator(w) { 
   override def toString = "*" 
-  override def toSexpr = "bvmul"
 }
 case class BVAndOp(override val w : Int) extends BVArgOperator(w) { 
   override def toString = "&" 
-  override def toSexpr = "bvand"
 }
 case class BVOrOp(override val w : Int) extends BVArgOperator(w) { 
   override def toString = "|" 
-  override def toSexpr = "bvor"
 }
 case class BVXorOp(override val w : Int) extends BVArgOperator(w) { 
   override def toString = "^" 
-  override def toSexpr = "bvxor"
 }
 case class BVNotOp(override val w : Int) extends BVArgOperator(w) { 
   override def toString = "~" 
-  override def toSexpr = "bvnot"
 }
 case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) { 
   override def fixity = Operator.PREFIX
   override def toString = "-"
-  override def toSexpr = "bvneg"
 }
 // Boolean operators.
 sealed abstract class BooleanOperator extends Operator {
@@ -230,24 +217,19 @@ sealed abstract class BooleanOperator extends Operator {
 }
 case class ConjunctionOp() extends BooleanOperator { 
   override def toString = "&&" 
-  override def toSexpr = "and"
 }
 case class DisjunctionOp() extends BooleanOperator { 
   override def toString = "||" 
-  override def toSexpr = "or"
 }
 case class IffOp() extends BooleanOperator { 
   override def toString = "<==>" 
-  override def toSexpr = "="
 }
 case class ImplicationOp() extends BooleanOperator { 
   override def toString = "==>" 
-  override def toSexpr = "=>"
 }
 case class NegationOp() extends BooleanOperator {
   override def fixity = Operator.PREFIX
   override def toString = "!"
-  override def toSexpr = "not"
 }
 // Quantifiers
 sealed abstract class QuantifiedBooleanOperator extends BooleanOperator {
@@ -504,7 +486,6 @@ sealed abstract class Type extends PositionedNode {
   def isUninterpreted = false
   def matches (t2 : Type) = (this == t2)
   def defaultValue : Option[Expr] = None
-  def toSexpr = toString
 }
 
 /**
@@ -539,13 +520,11 @@ case class BooleanType() extends PrimitiveType {
   override def toString = "boolean"
   override def isBool = true
   override def defaultValue = Some(BoolLit(false))
-  override def toSexpr = "Bool"
 }
 case class IntegerType() extends NumericType {
   override def toString = "integer"
   override def isInt = true
   override def defaultValue = Some(IntLit(0))
-  override def toSexpr = "Int"
 }
 case class BitVectorType(width: Int) extends NumericType {
   override def toString = "bv" + width.toString
@@ -554,7 +533,6 @@ case class BitVectorType(width: Int) extends NumericType {
     return (slice.lo >= 0 && slice.hi < width)
   }
   override def defaultValue = Some(BitVectorLit(0, width))
-  override def toSexpr = "(BitVec %s)".format(width.toString)
 }
 case class EnumType(ids: List[Identifier]) extends Type {
   override def toString = "enum {" +
@@ -565,7 +543,6 @@ case class EnumType(ids: List[Identifier]) extends Type {
       case nil => None
     }
   }
-  override def toSexpr = "(Enum %s)".format(Utils.join(ids.map(_.toSexpr), " "))
 }
 abstract sealed class ProductType extends Type {
   override def isProduct = true
@@ -640,13 +617,6 @@ case class ProcedureType(inTypes : List[Type], outTypes: List[Type]) extends Typ
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = "[" + Utils.join(inTypes.map(_.toString), " * ") + "]" + outType.toString
   override def isArray = true
-  override def toSexpr = {
-    if (inTypes.size == 1) {
-      "(Array %s %s)".format(inTypes(0).toSexpr, outType.toSexpr)
-    } else {
-      throw new Utils.UnimplementedException("Unsupported type in to Sexpr")
-    }
-  }
 }
 case class SynonymType(id: Identifier) extends Type {
   override def toString = id.toString
@@ -792,10 +762,6 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
   val printfn = {(a: T) => a._1.toString + ": " + a._2}
   override def toString = 
     "(" + Utils.join(args.map(printfn(_)), ", ") + ")" + ": " + retType
-  override def toSexpr = {
-    def argToStr (arg: (Identifier, Type)) = "(%s %s)".format(arg._1.toSexpr, arg._2.toSexpr)
-    "(%s) %s".format(Utils.join(args.map(a => argToStr(a)), " "), retType.toSexpr)
-  }
 }
 
 sealed abstract class Decl extends ASTNode {
@@ -897,9 +863,6 @@ case class FuncAppTerm(id: Identifier, args: List[GrammarTerm]) extends GrammarT
     val argString = Utils.join(args.map(_.toString), ", ")
     "%s(%s)".format(id.toString, argString)
   }
-  override def toSexpr = {
-    "(%s %s)".format(id.toString, Utils.join(args.map(_.toSexpr), " "))
-  }
 }
 case class OpAppTerm(op: Operator, args: List[GrammarTerm]) extends GrammarTerm {
   override def toString = {
@@ -913,42 +876,26 @@ case class OpAppTerm(op: Operator, args: List[GrammarTerm]) extends GrammarTerm 
     }
     "(" + str + ")"
   }
-  override def toSexpr = {
-    "(%s %s)".format(op.toString, Utils.join(args.map(_.toSexpr), " "))
-  }
 }
 
 case class LiteralTerm(lit: Literal) extends GrammarTerm {
   override def toString = lit.toString()
-  override  def toSexpr = {
-    lit match {
-      case BoolLit(t) => t.toString()
-      case IntLit(n) => n.toString()
-      case BitVectorLit(bv, w) => "#x%s".format(bv.toString(16))
-      case FreshLit(_) => throw new Utils.AssertionError("Unexpected literal type.")
-    }
-  }
 }
 case class SymbolTerm(id: Identifier) extends GrammarTerm {
   override def toString = id.toString()
-  override def toSexpr = id.toString()
 }
 case class ConstantTerm(typ: Type) extends GrammarTerm {
   override def toString = "const " + typ.toString()
-  override def toSexpr = "(Constant %s)".format(typ.toSexpr)
 }
 case class ParameterTerm(typ: Type) extends GrammarTerm {
   override def toString = "function input " + typ.toString()
-  override def toSexpr = "(InputVariable %s)".format(typ.toSexpr)
 }
 // These three terms aren't supported yet.
 case class LetVariableTerm(typ: Type) extends GrammarTerm {
   override def toString = "function var " + typ.toString()
-  override def toSexpr = "(LocalVariable %s)".format(typ.toSexpr)
 }
 case class VariableTerm(typ: Type) extends GrammarTerm {
   override def toString = "var " + typ.toString()
-  override def toSexpr = "(Variable %s)".format(typ.toSexpr)
 }
 case class LetTerm(assigns: List[(Identifier, Type, GrammarTerm)], expr: GrammarTerm) extends GrammarTerm {
   override def toString = {
@@ -957,23 +904,11 @@ case class LetTerm(assigns: List[(Identifier, Type, GrammarTerm)], expr: Grammar
       Utils.join(assigns.map(_._3.toString), ", "),
       expr.toString)
   }
-
-  override def toSexpr = {
-    def assignToSexpr(id: Identifier, typ: Type, gTerm: GrammarTerm) = {
-      "(%s %s %s)".format(id.toString, typ.toSexpr, gTerm.toSexpr)
-    }
-    val assignStr = assigns.map(a => assignToSexpr(a._1, a._2, a._3))
-    "(let (%s) %s)".format(assignStr, expr.toSexpr)
-  }
 }
 
 case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) extends ASTNode {
   override def toString = {
     "(%s : %s) ::= %s;".format(id.toString, typ.toString, Utils.join(terms.map(_.toString), " | "))
-  }
-  override def toSexpr = {
-    val termString = Utils.join(terms.map(_.toSexpr), " ")
-    "(%s %s %s)".format(id.toString, typ.toSexpr, termString)
   }
 }
 
@@ -988,12 +923,8 @@ case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonT
 }
 
 case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : Identifier, grammarArgs: List[Identifier], conditions: List[Expr]) extends Decl {
-  // FIXME: printout requires and ensures conditions.
   override def toString = "synthesis function " + id + sig + "; //" + position.toString()
   override def declNames = List(id)
-  override def toSexpr = {
-    "(synth-fun %s %s)".format(id.toSexpr, sig.toSexpr) 
-  }
 }
 
 case class InitDecl(body: List[Statement]) extends Decl {
