@@ -44,6 +44,7 @@ sealed trait Type {
   def isArray = false
   def isEnum = false
   def isUninterpreted = false
+  def isSynonym = false
 }
 // Uninterpreted types.
 case class UninterpretedType(name: String) extends Type {
@@ -52,7 +53,7 @@ case class UninterpretedType(name: String) extends Type {
 }
 // The Boolean type.
 case class BoolType() extends Type {
-  override def toString = "bool"
+  override def toString = "Bool"
   override def isBool = true
 }
 object BoolType {
@@ -60,7 +61,7 @@ object BoolType {
 }
 // The integer type.
 case class IntType() extends Type {
-  override def toString = "int"
+  override def toString = "Int"
   override def isInt = true
 }
 object IntType {
@@ -69,7 +70,7 @@ object IntType {
 // The bit-vector type.
 case class BitVectorType(width: Int) extends Type
 {
-  override def toString = "bv" + (width.toString)
+  override def toString = "BitVec %s" + (width.toString)
   override def isBitVector = true
 }
 object BitVectorType {
@@ -82,30 +83,68 @@ sealed abstract class ProductType(fields : List[(String, Type)]) extends Type {
   def fieldType(name: String) : Option[Type] = fields.find((p) => p._1 == name).flatMap((f) => Some(f._2))
   def hasField(name: String) : Boolean = fields.find((p) => p._1 == name).isDefined
   def fieldIndex(name: String) : Int = fields.indexWhere((p) => p._1 == name)
-  override def toString = "record [" + Utils.join(fields.map((f) => (f._1 + ": " + f._2.toString)), ", ") + "]"
+  val typeName : String 
 }
 case class TupleType(types: List[Type]) extends ProductType(((1 to types.length).map("_" + _.toString)).zip(types).toList) {
   override def toString = "tuple [" + Utils.join(types.map(_.toString), ", ") + "]"
   override def isTuple = true
+  override val typeName = "tuple"
 }
 case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields_) {
   override def toString = "record [" + Utils.join(fields_.map((f) => f._1.toString + " : " + f._2.toString), ", ") + "]"
   override def isRecord = true
+  override val typeName = "record"
 }
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
-  override def toString = "map [" + inTypes.tail.fold(inTypes.head.toString)
-                          { (acc,i) => acc + "," + i.toString } + "] " + outType
+  override def toString = { 
+    "map [" +
+    inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + "," + i.toString } +
+    "] " + outType
+  }
   override def isMap = true
 }
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
-  override def toString = "array [" + inTypes.tail.fold(inTypes.head.toString)
-  { (acc,i) => acc + "," + i.toString } + "] " + outType
+  override def toString = {  
+    "array [" +
+    inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + "," + i.toString } +
+    "] " + outType
+  }
   override def isArray = true
 }
 case class EnumType(members : List[String]) extends Type {
   override def toString  = "enum {" + Utils.join(members, ", ") + "}"
   override def isEnum = true
   def fieldIndex(name : String) : Int = members.indexWhere(_ == name)
+}
+case class SynonymType(name: String, typ: Type) extends Type {
+  override def toString = "type %s = %s".format(name, typ.toString)
+  override def isSynonym = true
+}
+object Type {
+  type NameProviderFn = (String, Option[String]) => String
+  type TypeNameMap = Map[String, Type]
+  def flatten(typ: Type, nameProvider: NameProviderFn, namedTypes: TypeNameMap) : TypeNameMap = {
+    typ match {
+      case BoolType() | IntType() | BitVectorType(_) =>
+        namedTypes
+      case unintTyp : UninterpretedType =>
+        val typeName = nameProvider("UninterpretedType", Some(unintTyp.name))
+        namedTypes + (typeName -> unintTyp)
+      case tupleTyp : TupleType =>
+        val typeName = nameProvider("TupleType", None)
+        val namedTypesP1 = tupleTyp.types.foldLeft(namedTypes)((mapAcc, fTyp) => flatten(fTyp, nameProvider, mapAcc))
+        namedTypesP1 + (typeName -> tupleTyp)
+      case recordType : RecordType =>
+        val typeName = nameProvider("RecordType", None)
+        val namedTypesP1 = recordType.fields_.foldLeft(namedTypes)((mapAcc, fld) => flatten(fld._2, nameProvider, mapAcc))
+        namedTypesP1 + (typeName -> recordType)
+      case mapType : MapType =>
+        val typeName = nameProvider("MapType", None)
+        val namedTypesP1 = mapType.inTypes.foldLeft(namedTypes)((mapAcc, t) => flatten(t, nameProvider, mapAcc))
+        val namedTypesP2 = flatten(mapType.outType, nameProvider, namedTypesP1)
+        namedTypesP2 + (typeName -> mapType)
+    }
+  }
 }
 object OperatorFixity extends scala.Enumeration {
   type OperatorFixity = Value

@@ -103,7 +103,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
 
   /** Returns tuple field names. */
   val getTupleFieldNames = new Memo[Int, Array[z3.Symbol]]((n : Int) => {
-    (1 to n).map((i => ctx.mkSymbol("__fld_" + i.toString))).toArray
+    (1 to n).map((i => ctx.mkSymbol("__f" + i.toString))).toArray
   })
 
 
