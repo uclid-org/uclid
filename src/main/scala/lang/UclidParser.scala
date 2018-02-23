@@ -307,7 +307,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         Number |
         "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
         KwIf ~> ("(" ~> E3 <~ ")") ~ (KwThen ~> E3) ~ (KwElse ~> Expr) ^^ {
-          case expr ~ thenExpr ~ elseExpr => lang.OperatorApplication(lang.ITEOp, List(expr, thenExpr, elseExpr))
+          case expr ~ thenExpr ~ elseExpr => lang.OperatorApplication(lang.ITEOp(), List(expr, thenExpr, elseExpr))
         } |
         KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => Lambda(idtyps, expr) } |
         "(" ~> Expr <~ ")" |

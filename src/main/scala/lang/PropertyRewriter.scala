@@ -230,8 +230,8 @@ class LTLPropertyRewriterPass extends RewritePass {
       case OperatorApplication(NegationOp(), List(OperatorApplication(IffOp(), args))) =>
         OperatorApplication(InequalityOp(), args)
       // !(if e then texp else fexp) -> if e then !texp else !fexp
-      case OperatorApplication(NegationOp(), List(OperatorApplication(ITEOp, args))) =>
-        OperatorApplication(ITEOp, List(recurse(args(0)), recurse(not(args(1))), recurse(not(args(2)))))
+      case OperatorApplication(NegationOp(), List(OperatorApplication(ITEOp(), args))) =>
+        OperatorApplication(ITEOp(), List(recurse(args(0)), recurse(not(args(1))), recurse(not(args(2)))))
       // any other operator, just recurse.
       case OperatorApplication(op, args) =>
         OperatorApplication(op, args.map(a => recurse(a)))

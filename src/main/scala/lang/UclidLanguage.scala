@@ -245,7 +245,7 @@ case class HistoryOperator() extends Operator {
   override def toString = "history"
 }
 // ITE operator
-case object ITEOp extends Operator {
+case class ITEOp() extends Operator {
   override def toString = "ite"
   override def fixity = Operator.PREFIX
 }

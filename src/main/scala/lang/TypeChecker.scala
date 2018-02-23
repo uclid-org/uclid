@@ -455,7 +455,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(historyIndex > 0, "History index must be non-negative", opapp.pos, c.filename)
           checkTypeError(historyIndex.toInt < 65536, "History index is too large", opapp.pos, c.filename)
           argTypes(0)
-        case ITEOp =>
+        case ITEOp() =>
           checkTypeError(argTypes.size == 3, "Expect exactly three arguments to if-then-else expressions", opapp.pos, c.filename)
           checkTypeError(argTypes(0).isBool, "Condition in if-then-else must be boolean", opapp.pos, c.filename)
           checkTypeError(argTypes(1) == argTypes(2), "Then- and else- expressions in an if-then-else must be of the same type", opapp.pos, c.filename)
