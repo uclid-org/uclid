@@ -1055,9 +1055,10 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     // FIXME
     val conditionsP = synFunc.conditions
     val gIdP = synFunc.grammarId
+    val gArgsP = synFunc.grammarArgs
     (idP, sigP) match {
       case (Some(id), Some(sig)) =>
-        val synFuncP = SynthesisFunctionDecl(id, sig, gIdP, conditionsP)
+        val synFuncP = SynthesisFunctionDecl(id, sig, gIdP, gArgsP, conditionsP)
         pass.rewriteSynthesisFunction(synFuncP, context)
       case _ => None
     }

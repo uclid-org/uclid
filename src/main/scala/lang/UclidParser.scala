@@ -519,6 +519,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       }
     }
 
+    lazy val ITETerm: PackratParser[lang.OpAppTerm] = positioned {
+      "(" ~ KwIf ~ "(" ~> (GrammarTerm <~ ")") ~ (KwThen ~> GrammarTerm) ~ (KwElse ~> GrammarTerm) <~ ")" ^^ {
+        case c ~ t ~ f => lang.OpAppTerm(ITEOp(), List(c, t, f))
+      }
+    }
+
     lazy val ConstantTerm: PackratParser[lang.ConstantTerm] = positioned {
       KwConst ~> Type ^^ { case typ => lang.ConstantTerm(typ) }
     }
@@ -528,7 +534,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val GrammarTerm : PackratParser[lang.GrammarTerm] = positioned { 
-      UnaryOpAppTerm | BinaryOpAppTerm | LiteralTerm | SymbolTerm | ConstantTerm | ParameterTerm 
+      UnaryOpAppTerm | BinaryOpAppTerm | ITETerm | LiteralTerm | SymbolTerm | ConstantTerm | ParameterTerm 
     }
 
     lazy val GrammarTermList : PackratParser[List[lang.GrammarTerm]] = {
@@ -548,9 +554,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       
     }
     lazy val SynthFuncDecl : PackratParser[lang.SynthesisFunctionDecl] = positioned {
-      KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~ (KwGrammar ~> Id) <~ ";" ^^
-      { case id ~ idtyps ~ rt ~ gId =>
-          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), gId, List.empty)
+      KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~ 
+        (KwGrammar ~> Id ) ~ ("(" ~> IdList <~ ")") ~ 
+        rep(KwEnsures ~> Expr) <~ ";" ^^
+      { case id ~ idtyps ~ rt ~ gId ~ gArgs ~ eArgs =>
+          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), gId, gArgs, eArgs)
       }
     }
     lazy val DefineDecl : PackratParser[lang.DefineDecl] = positioned {
