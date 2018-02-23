@@ -318,10 +318,10 @@ case class Scope (
 class ContextualNameProvider(ctx : Scope, prefix : String) {
   var index = 1
   def apply(name: Identifier, tag : String) : Identifier = {
-    var newId = Identifier(prefix + "$" + tag + "$" + name + "_" + index.toString)
+    var newId = Identifier(prefix + "_" + tag + "_" + name + "_" + index.toString)
     index = index + 1
     while (ctx.doesNameExist(newId)) {
-      newId = Identifier(prefix + "$" + tag + "$" + name + "_" + index.toString)
+      newId = Identifier(prefix + "_" + tag + "_" + name + "_" + index.toString)
       index = index + 1
     }
     return newId

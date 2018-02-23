@@ -344,11 +344,13 @@ case object ITEOp extends Operator {
   override def fixity = PREFIX
 }
 // Expressions
-abstract class Expr(exprType: Type) {
-  val typ = exprType
+abstract class Expr(val typ: Type) {
+  val isConstant = false
 }
 // Literals.
-abstract class Literal(exprType : Type) extends Expr (exprType)
+abstract class Literal(exprType : Type) extends Expr (exprType) {
+  override val isConstant = true
+}
 
 case class IntLit(value: BigInt) extends Literal (IntType.t) {
   override def toString = value.toString
@@ -373,6 +375,7 @@ case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {
 // Tuple creation.
 case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ))) {
   override def toString = "(mk-tuple " + Utils.join(args.map(_.toString), " ") + ")"
+  override val isConstant = args.forall(p => p.isConstant) 
 }
 
 
@@ -387,6 +390,7 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
       case PREFIX => "(" + operands.foldLeft(op.toString){(acc, i) => acc + " " + i} + ")"
     }
   }
+  override val isConstant = operands.forall(p => p.isConstant)
 }
 
 case class ArraySelectOperation(e: Expr, index: List[Expr])
@@ -394,11 +398,13 @@ case class ArraySelectOperation(e: Expr, index: List[Expr])
 {
   override def toString = "(" + e.toString + ")" + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + "]"
+  override val isConstant = e.isConstant && index.forall(i => i.isConstant)
 }
 case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr(e.typ)
 {
   override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + " := " + value.toString + "]"
+  override val isConstant = e.isConstant && index.forall(i => i.isConstant) && value.isConstant
 }
 
 //For uninterpreted function symbols or anonymous functions defined by Lambda expressions
@@ -407,10 +413,48 @@ case class FunctionApplication(e: Expr, args: List[Expr])
 {
   override def toString = e.toString + "(" + args.tail.fold(args.head.toString)
     { (acc,i) => acc + "," + i.toString } + ")"
+  override val isConstant = e.isConstant && args.forall(a => a.isConstant)
 }
+
 case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType(ids.map(id => id.typ), e.typ)) {
   override def toString = "Lambda(" + ids + "). " + e.toString
+  override val isConstant = e.isConstant
 }
+
+object Expr {
+  /**
+   *  Helper function that finds the list of all symbols (constants in SMT parlance) in an expression.
+   */
+  def findSymbols(e : Expr, syms : Set[Symbol]) : Set[Symbol] = {
+    e match {
+      case sym : Symbol =>
+        return syms + sym
+      case OperatorApplication(op,operands) =>
+        return operands.foldLeft(syms)((acc,i) => findSymbols(i, acc))
+      case ArraySelectOperation(e, index) =>
+        return index.foldLeft(findSymbols(e, syms))((acc, i) => findSymbols(i, acc))
+      case ArrayStoreOperation(e, index, value) =>
+        return index.foldLeft(findSymbols(value, findSymbols(e, syms)))((acc,i) => findSymbols(i, acc))
+      case FunctionApplication(e, args) =>
+        return args.foldLeft(findSymbols(e, syms))((acc,i) => findSymbols(i, acc))
+      case Lambda(_,_) =>
+        throw new Exception("lambdas in assertions should have been beta-reduced")
+      case IntLit(_) => return Set.empty[Symbol]
+      case BitVectorLit(_,_) => return Set.empty[Symbol]
+      case BooleanLit(_) => return Set.empty[Symbol]
+    }
+  }
+
+  def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set()) }
+}
+
+// Solver command.
+sealed abstract class Command
+case class DeclVarCmd(id: Symbol, typ: Type) extends Command
+case class DeclSortCmd(id: Symbol, typ: Type) extends Command
+case class PushCmd() extends Command
+case class PopCmd() extends Command
+case class CheckCmd(e: Expr) extends Command
 
 abstract class Model {
   def evaluate(e : Expr) : Expr = {
@@ -437,31 +481,6 @@ case class SolverResult(result : Option[Boolean], model: Option[Model]) {
 }
 
 abstract class SolverInterface {
-  /**
-   *  Helper function that finds the list of all symbols (constants in SMT parlance) in an expression.
-   */
-  def findSymbols(e : Expr, syms : Set[Symbol]) : Set[Symbol] = {
-    e match {
-      case Symbol(_,_) =>
-        return syms + e.asInstanceOf[Symbol]
-      case OperatorApplication(op,operands) =>
-        return operands.foldLeft(syms)((acc,i) => findSymbols(i, acc))
-      case ArraySelectOperation(e, index) =>
-        return index.foldLeft(findSymbols(e, syms))((acc, i) => findSymbols(i, acc))
-      case ArrayStoreOperation(e, index, value) =>
-        return index.foldLeft(findSymbols(value, findSymbols(e, syms)))((acc,i) => findSymbols(i, acc))
-      case FunctionApplication(e, args) =>
-        return args.foldLeft(findSymbols(e, syms))((acc,i) => findSymbols(i, acc))
-      case Lambda(_,_) =>
-        throw new Exception("lambdas in assertions should have been beta-reduced")
-      case IntLit(_) => return Set.empty[Symbol]
-      case BitVectorLit(_,_) => return Set.empty[Symbol]
-      case BooleanLit(_) => return Set.empty[Symbol]
-    }
-  }
-
-  def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set()) }
-
   // Assert 'e' in the solver. (Modifies solver context to contain 'e'.)
   def addConstraint(e : Expr)
   // Check whether 'e' is satisfiable in the current solver context.

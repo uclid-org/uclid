@@ -84,26 +84,26 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
   val solver = z3Solver
 
   /* Unique names for Tuples. */
-  val tupleNamer = new UniqueNamer("$tuple")
+  val tupleNamer = new UniqueNamer("_tuple")
   def getTupleName() : z3.Symbol = {
     return ctx.mkSymbol(tupleNamer.newName())
   }
   /* Unique names for Enums. */
-  val enumNamer = new UniqueNamer("$enum")
+  val enumNamer = new UniqueNamer("_enum")
   def getEnumName() : String = {
     enumNamer.newName()
   }
   /* Unique names for quantifiers. */
-  val forallNamer = new UniqueNamer("$forall")
+  val forallNamer = new UniqueNamer("_forall")
   def getForallName() = ctx.mkSymbol(forallNamer.newName())
-  val existsNamer = new UniqueNamer("$exists")
+  val existsNamer = new UniqueNamer("_exists")
   def getExistsName() = ctx.mkSymbol(existsNamer.newName())
-  val skolemNamer = new UniqueNamer("$skolem")
+  val skolemNamer = new UniqueNamer("_skolem")
   def getSkolemName() = ctx.mkSymbol(skolemNamer.newName())
 
   /** Returns tuple field names. */
   val getTupleFieldNames = new Memo[Int, Array[z3.Symbol]]((n : Int) => {
-    (1 to n).map((i => ctx.mkSymbol(i.toString + "__ucl_tuple_field" ))).toArray
+    (1 to n).map((i => ctx.mkSymbol("__fld_" + i.toString))).toArray
   })
 
 
