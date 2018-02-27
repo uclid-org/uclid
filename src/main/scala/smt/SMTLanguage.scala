@@ -123,26 +123,38 @@ case class SynonymType(name: String, typ: Type) extends Type {
 object Type {
   type NameProviderFn = (String, Option[String]) => String
   type TypeNameMap = Map[String, Type]
-  def flatten(typ: Type, nameProvider: NameProviderFn, namedTypes: TypeNameMap) : TypeNameMap = {
+  def flatten(typ: Type, nameProvider: NameProviderFn, namedTypes: TypeNameMap) : (Type, TypeNameMap) = {
     typ match {
       case BoolType() | IntType() | BitVectorType(_) =>
-        namedTypes
+        (typ, namedTypes)
       case unintTyp : UninterpretedType =>
         val typeName = nameProvider("UninterpretedType", Some(unintTyp.name))
-        namedTypes + (typeName -> unintTyp)
+        val newMap = namedTypes + (typeName -> unintTyp)
+        (SynonymType(typeName, unintTyp), newMap)
       case tupleTyp : TupleType =>
         val typeName = nameProvider("TupleType", None)
-        val namedTypesP1 = tupleTyp.types.foldLeft(namedTypes)((mapAcc, fTyp) => flatten(fTyp, nameProvider, mapAcc))
-        namedTypesP1 + (typeName -> tupleTyp)
+        val foldInit : (List[Type], TypeNameMap) = (List.empty, namedTypes) 
+        val (newTypes, namedTypesP1) = tupleTyp.types.foldRight(foldInit){ 
+          (fTyp, mapAcc) => { 
+            val (newType, newAcc) = flatten(fTyp, nameProvider, mapAcc._2)
+            (newType :: mapAcc._1, newAcc)
+          }
+        }
+        val newTupleTyp = TupleType(newTypes)
+        val newMap = namedTypesP1 + (typeName -> newTupleTyp)
+        (SynonymType(typeName, newTupleTyp), newMap)
       case recordType : RecordType =>
         val typeName = nameProvider("RecordType", None)
-        val namedTypesP1 = recordType.fields_.foldLeft(namedTypes)((mapAcc, fld) => flatten(fld._2, nameProvider, mapAcc))
-        namedTypesP1 + (typeName -> recordType)
-      case mapType : MapType =>
-        val typeName = nameProvider("MapType", None)
-        val namedTypesP1 = mapType.inTypes.foldLeft(namedTypes)((mapAcc, t) => flatten(t, nameProvider, mapAcc))
-        val namedTypesP2 = flatten(mapType.outType, nameProvider, namedTypesP1)
-        namedTypesP2 + (typeName -> mapType)
+        val foldInit : (List[(String, Type)], TypeNameMap) = (List.empty, namedTypes)
+        val (newFields, namedTypesP1) = recordType.fields_.foldRight(foldInit){
+          (fld, mapAcc) => {
+            val (newType, newAcc) = flatten(fld._2, nameProvider, mapAcc._2)
+            ((fld._1, newType) :: mapAcc._1, newAcc)
+          }
+        }
+          val newRecordType = RecordType(newFields)
+        val newMap = namedTypesP1 + (typeName -> newRecordType)
+        (SynonymType(typeName, newRecordType), newMap)
     }
   }
 }
