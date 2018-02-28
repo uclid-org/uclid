@@ -1000,6 +1000,11 @@ case class GenericProofCommand(name : Identifier, params: List[Identifier], args
   }
 }
 
+sealed abstract class Annotation extends ASTNode
+case class InstVarMapAnnotation(map: Map[List[Identifier], Identifier]) extends Annotation {
+  
+}
+
 case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCommand]) extends ASTNode {
   // create a new module with with the filename set.
   def withFilename(name : String) : Module = {

@@ -48,9 +48,25 @@ case class SynonymMap(fwdMap: Map[String, Type], val revMap: Map[Type, Type]) {
 
 object SynonymMap {
   def empty = SynonymMap(Map.empty, Map.empty)
+}
+
+// Solver command.
+sealed abstract class Command
+case class DeclVarCmd(id: Symbol, typ: Type) extends Command
+case class DeclSortCmd(id: Symbol, typ: Type) extends Command
+case class PushCmd() extends Command
+case class PopCmd() extends Command
+case class CheckCmd(e: Expr) extends Command
+
+class Context {
+  var typeMap : SynonymMap = SynonymMap.empty
+  var sorts : List[(String, Type)] = List.empty
+  var variables : List[(String, Type)] = List.empty
+  var commands : List[Command] = List.empty
+
   type NameProviderFn = (String, Option[String]) => String
 
-  /* Flatten a type and add it to the type synonym map. */
+  /** Flatten a type and add it to the type synonym map. */
   def flatten(typ: Type, nameProvider: NameProviderFn, synMap: SynonymMap) : (Type, SynonymMap) = {
     // Define a couple of helper functions.
     /* Recurse on a list of types. */
@@ -130,6 +146,17 @@ object SynonymMap {
             val synMapP = synMapP1.addSynonym(synTyp.name, newType)
             (newType, synMapP)
         }
+    }
+  }
+
+  def replaceTypes(e : Expr, nameProvider : NameProviderFn, tMap : SynonymMap) : (Expr, SynonymMap) = {
+    e match {
+      case intLit : IntLit => (intLit, tMap)
+      case bvLit : BitVectorLit => (bvLit, tMap)
+      case boolLit : BooleanLit => (boolLit, tMap)
+      case enumLit : EnumLit =>
+        val (enumTypeP, tMapP) = flatten(enumLit.eTyp, nameProvider, tMap)
+        (enumLit, tMapP)
     }
   }
 }

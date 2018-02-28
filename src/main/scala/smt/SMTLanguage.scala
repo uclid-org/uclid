@@ -462,13 +462,6 @@ object Expr {
   def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set()) }
 }
 
-// Solver command.
-sealed abstract class Command
-case class DeclVarCmd(id: Symbol, typ: Type) extends Command
-case class DeclSortCmd(id: Symbol, typ: Type) extends Command
-case class PushCmd() extends Command
-case class PopCmd() extends Command
-case class CheckCmd(e: Expr) extends Command
 
 abstract class Model {
   def evaluate(e : Expr) : Expr = {
