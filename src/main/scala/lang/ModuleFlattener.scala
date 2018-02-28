@@ -273,20 +273,26 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     map6
   }
 
-  def createInstVarMap(varMap : VarMap, initInstVarMap : InstVarMap) : InstVarMap = {
-    varMap.foldLeft(initInstVarMap) { 
+  def createInstVarMap(varMap : VarMap) : InstVarMap = {
+    val initInstVarMap : InstVarMap = (targetModule.getAnnotation[InstanceVarMapAnnotation]()).get.iMap
+    // println("initInstVarMap: " + initInstVarMap.toString)
+    // println("instance: " + inst.toString())
+    val instVarMap1 : Map[List[Identifier], Identifier] = initInstVarMap.map(p => (inst.instanceId :: p._1) -> p._2)
+    val instVarMap = varMap.foldLeft(instVarMap1) { 
       (instVarMap, renaming) => {
         renaming._2 match {
           case MIP.BoundInput(_, _, _) | MIP.UnboundInput(_, _) | 
                MIP.BoundOutput(_, _) | MIP.UnboundOutput(_, _)  | 
                MIP.StateVariable(_, _) | MIP.SharedVariable(_, _) | 
                MIP.Constant(_, _) =>
-            instVarMap + (List(inst.instanceId, renaming._2.ident) -> renaming._1)
+            instVarMap + (List(inst.instanceId, renaming._1) -> renaming._2.ident)
           case _ =>
             instVarMap
         }
       }
     }
+    // println("instVarMap: " + instVarMap.toString)
+    instVarMap
   }
 
   def createNewModule(varMap : VarMap) : Module = {
@@ -344,6 +350,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   val (varMap, externalSymbolMap) = createVarMap()
+  val instVarMap = createInstVarMap(varMap)
   val newModule = createNewModule(varMap)
 
   val newVariables = createNewVariables(varMap)
@@ -354,23 +361,32 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     case _ => List.empty[Statement]
   }
 
+  override def rewriteAnnotation(note : Annotation, context : Scope) : Option[Annotation] = {
+    note match {
+      case ivmNote : InstanceVarMapAnnotation => Some(InstanceVarMapAnnotation(ivmNote.iMap ++ instVarMap))
+      case _ => Some(note)
+    }
+  }
+
   // rewrite SelectFromInstance operations.
+  def flattenSelectFromInstance(expr : Expr) : List[Identifier] = {
+    expr match {
+      case OperatorApplication(SelectFromInstance(field), List(e)) =>
+        flattenSelectFromInstance(e) ++ List(field)
+      case id : Identifier =>
+        List(id)
+      case _ =>
+        throw new Utils.AssertionError("Unexpected AST node: " + expr.toString())
+    }
+  }
+
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     val opappP = opapp.op match {
       case SelectFromInstance(field) =>
-        val instance = opapp.operands(0)
-        if (instance == inst.instanceId) {
-          val fldP = varMap.get(field)
-          if (fldP.isEmpty && context.cmd.isDefined) {
-            Some(opapp)
-          } else { 
-            Utils.assert(fldP.isDefined, 
-                "Non-existent field; operator: %s; field: %s; instance: %s.".format(
-                    opapp.toString, field.toString, instance.toString))
-            Some(fldP.get.ident)
-          }
-        } else {
-          Some(opapp)
+        val flatList = flattenSelectFromInstance(opapp)
+        instVarMap.get(flatList) match {
+          case Some(id) => Some(id)
+          case None => Some(opapp)
         }
       case _ => Some(opapp)
     }

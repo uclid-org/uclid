@@ -619,8 +619,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Module: PackratParser[lang.Module] = positioned {
       KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( CmdBlock.? ) <~ "}") ^^ {
-        case id ~ (decls ~ Some(cs)) => lang.Module(id, decls, cs, List.empty)
-        case id ~ (decls ~ None) => lang.Module(id, decls, List.empty, List.empty)
+        case id ~ (decls ~ Some(cs)) => lang.Module(id, decls, cs, Annotation.default)
+        case id ~ (decls ~ None) => lang.Module(id, decls, List.empty, Annotation.default)
       }
     }
 

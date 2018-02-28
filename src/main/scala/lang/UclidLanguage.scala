@@ -1004,10 +1004,14 @@ sealed abstract class Annotation extends ASTNode
 case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) extends Annotation {
   override def toString : String = {
     val start = PrettyPrinter.indent(1) + "// instance_var_map { "
-    val lines = iMap.map(p => PrettyPrinter.indent(2) + "//" + Utils.join(p._1.map(_.toString), ".") + "->" + p._2.toString) 
+    val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), "->") + " ::==> " + p._2.toString) 
     val end = PrettyPrinter.indent(1) + "// } end_instance_var_map"
     Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
   }
+}
+
+object Annotation {
+  val default = List(InstanceVarMapAnnotation(Map.empty))
 }
 
 case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCommand], notes: List[Annotation]) extends ASTNode {
@@ -1076,12 +1080,35 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     decls.filter(_.isInstanceOf[AxiomDecl]).map(_.asInstanceOf[AxiomDecl])
   }
 
+  // return a specific annotation.
+  def getAnnotation[T <: Annotation]()(implicit tag: ClassTag[T]) : Option[T] = { 
+    val matchingNotes : List[T] = notes.collect { case n : T => n }
+    if (matchingNotes.size == 0) {
+      None
+    } else {
+      Some(matchingNotes(0))
+    }
+  }
+
+  // replace the first occurrence of a specific annotation.
+  def withReplacedAnnotation[T <: Annotation](note : T)(implicit tag: ClassTag[T]) : Module = {
+    val newNotes : List[Annotation] = notes.map {
+      n => {
+        n match {
+          case nt : T => note
+          case _ => n
+        }
+      }
+    }
+    Module(id, decls, cmds, newNotes)
+  }
+  
   override def toString =
     "\nmodule " + id + " {\n" +
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +
       PrettyPrinter.indent(1) + "control {" + "\n" +
       cmds.foldLeft("")  { case (acc,i) => acc + PrettyPrinter.indent(2) + i + "\n" } +
-      notes.foldLeft("")((acc, i) => acc + i) +
       PrettyPrinter.indent(1) + "}\n" +
+      notes.foldLeft("")((acc, i) => acc + i) +
     "}\n"
 }
