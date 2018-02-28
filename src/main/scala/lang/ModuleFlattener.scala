@@ -396,7 +396,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // add new variables and inputs.
   override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
     val declsP : List[Decl] = newVariables ++ newInputs ++ module.decls
-    val moduleP = Module(module.id, declsP, module.cmds)
+    val moduleP = Module(module.id, declsP, module.cmds, module.notes)
     Some(moduleP)
   }
 

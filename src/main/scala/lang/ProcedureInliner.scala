@@ -103,7 +103,7 @@ class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
       }
     })
     val moduleDecls = decls._2 ++ decls._1
-    return Some(Module(m.id, moduleDecls, m.cmds))
+    return Some(Module(m.id, moduleDecls, m.cmds, m.notes))
   }
 
   /** Inline a procedure call.

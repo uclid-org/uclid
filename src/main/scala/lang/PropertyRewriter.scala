@@ -589,7 +589,7 @@ class LTLPropertyRewriterPass extends RewritePass {
              !p.isInstanceOf[NextDecl]) ++ otherSpecs
     // assemble the new module.
     val moduleDecls = otherDecls ++ varDecls ++ List(newInitDecl, newNextDecl) ++ newSafetyProperties ++ newLivenessProperties
-    Module(module.id, moduleDecls, module.cmds)
+    Module(module.id, moduleDecls, module.cmds, module.notes)
   }
 }
 

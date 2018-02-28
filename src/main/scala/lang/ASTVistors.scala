@@ -77,6 +77,8 @@ trait ReadOnlyPass[T] {
 
   def applyOnModule(d : TraversalDirection.T, module : Module, in : T, context : Scope) : T = { in }
   def applyOnDecl(d : TraversalDirection.T, decl : Decl, in : T, context : Scope) : T = { in }
+  def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : T, context : Scope) : T = { in }
+  def applyOnAnnotation(d : TraversalDirection.T, note : Annotation, in : T, context : Scope) : T = { in }
   def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : Scope) : T = { in }
   def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : Scope) : T = { in }
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : Scope) : T = { in }
@@ -143,7 +145,6 @@ trait ReadOnlyPass[T] {
   def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : Scope) : T = { in }
   def applyOnLambda(d : TraversalDirection.T, lambda : Lambda, in : T, context : Scope) : T = { in }
   def applyOnExprDecorator(d : TraversalDirection.T, dec : ExprDecorator, in : T, context : Scope) : T = { in }
-  def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : T, context : Scope) : T = { in }
 }
 
 /* AST Visitor that rewrites and generates a new AST. */
@@ -155,6 +156,7 @@ trait RewritePass {
   def rewriteModule(module : Module, ctx : Scope) : Option[Module] = { Some(module) }
   def rewriteDecl(decl : Decl, ctx : Scope) : Option[Decl] = { Some(decl) }
   def rewriteCommand(cmd : GenericProofCommand, ctx : Scope) : Option[GenericProofCommand] = { Some(cmd) }
+  def rewriteAnnotation(note : Annotation, ctx : Scope) : Option[Annotation] = { Some(note) }
   def rewriteInstance(inst : InstanceDecl, ctx : Scope) : Option[InstanceDecl] = { Some(inst) }
   def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : Scope) : Option[FunctionDecl] = { Some(func) }
@@ -264,6 +266,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = module.decls.foldLeft(result)((acc, i) => visitDecl(i, acc, context))
     val initR : (T, Scope) = (result, context)
     result = module.cmds.foldLeft(initR)((acc, i) => (visitCmd(i, acc._1, acc._2), acc._2 + i))._1
+    result = module.notes.foldLeft(result)((acc, note) => visitNote(note, acc, context))
     result = pass.applyOnModule(TraversalDirection.Up, module, result, initContext)
     return result
   }
@@ -472,6 +475,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case None => result
     }
     result = pass.applyOnCmd(TraversalDirection.Up, cmd, result, context)
+    return result
+  }
+  def visitNote(note : Annotation, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnAnnotation(TraversalDirection.Down, note, result, context)
+    result = pass.applyOnAnnotation(TraversalDirection.Up, note, result, context)
     return result
   }
 
@@ -941,7 +950,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val decls = module.decls.map(visitDecl(_, context)).flatten
     val initR : (List[Option[GenericProofCommand]], Scope) = (List.empty, initContext)
     val cmds = module.cmds.foldRight(initR)((cmd, acc) => (visitCommand(cmd, acc._2) :: acc._1, acc._2 + cmd))._1.flatten
-    val moduleIn = id.flatMap((i) => Some(Module(i, decls, cmds)))
+    val notes = module.notes.map(note => visitNote(note, context)).flatten
+    val moduleIn = id.flatMap((i) => Some(Module(i, decls, cmds, notes)))
     val moduleP = moduleIn.flatMap((m) => pass.rewriteModule(m, initContext))
 
     return (ASTNode.introducePos(setPosition, setFilename, moduleP, module.position) match {
@@ -1183,6 +1193,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val argObjP = cmd.argObj.flatMap(r => visitIdentifier(r, contextP))
     val cmdP = pass.rewriteCommand(GenericProofCommand(cmd.name, cmd.params, argsP, resultVarP, argObjP), context)
     return ASTNode.introducePos(setPosition, setFilename, cmdP, cmd.position)
+  }
+
+  def visitNote(note : Annotation, context : Scope) : Option[Annotation] = {
+    val noteP = pass.rewriteAnnotation(note, context)
+    return ASTNode.introducePos(setPosition, setFilename, noteP, note.position)
   }
 
   def visitType(typ: Type, context : Scope) : Option[Type] = {

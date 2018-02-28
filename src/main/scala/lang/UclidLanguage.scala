@@ -1001,14 +1001,19 @@ case class GenericProofCommand(name : Identifier, params: List[Identifier], args
 }
 
 sealed abstract class Annotation extends ASTNode
-case class InstVarMapAnnotation(map: Map[List[Identifier], Identifier]) extends Annotation {
-  
+case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) extends Annotation {
+  override def toString : String = {
+    val start = PrettyPrinter.indent(1) + "// instance_var_map { "
+    val lines = iMap.map(p => PrettyPrinter.indent(2) + "//" + Utils.join(p._1.map(_.toString), ".") + "->" + p._2.toString) 
+    val end = PrettyPrinter.indent(1) + "// } end_instance_var_map"
+    Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
+  }
 }
 
-case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCommand]) extends ASTNode {
+case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCommand], notes: List[Annotation]) extends ASTNode {
   // create a new module with with the filename set.
   def withFilename(name : String) : Module = {
-    val newModule = Module(id, decls, cmds)
+    val newModule = Module(id, decls, cmds, notes)
     newModule.filename = Some(name)
     return newModule
   }
@@ -1076,6 +1081,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +
       PrettyPrinter.indent(1) + "control {" + "\n" +
       cmds.foldLeft("")  { case (acc,i) => acc + PrettyPrinter.indent(2) + i + "\n" } +
+      notes.foldLeft("")((acc, i) => acc + i) +
       PrettyPrinter.indent(1) + "}\n" +
     "}\n"
 }

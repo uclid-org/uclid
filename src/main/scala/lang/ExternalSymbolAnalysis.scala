@@ -65,7 +65,7 @@ class ExternalSymbolRewriterPass(externalSymbolMap: ExternalSymbolMap) extends R
         case c : ConstantsDecl => ConstantsDecl(List(p._2._1), c.typ)
       }
     }).toList
-    Some(Module(module.id, extDecls ++ module.decls, module.cmds))
+    Some(Module(module.id, extDecls ++ module.decls, module.cmds, module.notes))
   }
   override def rewriteExternalIdentifier(extId : ExternalIdentifier, context : Scope) : Option[Expr] = {
     externalSymbolMap.externalMap.get(extId) match {

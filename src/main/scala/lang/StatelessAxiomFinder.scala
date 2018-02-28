@@ -175,7 +175,7 @@ class StatelessAxiomImporterPass(mainModuleName : Identifier) extends RewritePas
       val axioms = statelessAxiomFinder.out.get
       val otherModuleAxioms = axioms.filter(p => p._1 != mainModuleName).map(p => p._2)
       val declsP = otherModuleAxioms ++ module.decls
-      val moduleP = Module(module.id, declsP, module.cmds)
+      val moduleP = Module(module.id, declsP, module.cmds, module.notes)
       Some(moduleP)
     } else {
       Some(module)
