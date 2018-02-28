@@ -120,44 +120,7 @@ case class SynonymType(name: String, typ: Type) extends Type {
   override def toString = "type %s = %s".format(name, typ.toString)
   override def isSynonym = true
 }
-object Type {
-  type NameProviderFn = (String, Option[String]) => String
-  type TypeNameMap = Map[String, Type]
-  def flatten(typ: Type, nameProvider: NameProviderFn, namedTypes: TypeNameMap) : (Type, TypeNameMap) = {
-    typ match {
-      case BoolType() | IntType() | BitVectorType(_) =>
-        (typ, namedTypes)
-      case unintTyp : UninterpretedType =>
-        val typeName = nameProvider("UninterpretedType", Some(unintTyp.name))
-        val newMap = namedTypes + (typeName -> unintTyp)
-        (SynonymType(typeName, unintTyp), newMap)
-      case tupleTyp : TupleType =>
-        val typeName = nameProvider("TupleType", None)
-        val foldInit : (List[Type], TypeNameMap) = (List.empty, namedTypes) 
-        val (newTypes, namedTypesP1) = tupleTyp.types.foldRight(foldInit){ 
-          (fTyp, mapAcc) => { 
-            val (newType, newAcc) = flatten(fTyp, nameProvider, mapAcc._2)
-            (newType :: mapAcc._1, newAcc)
-          }
-        }
-        val newTupleTyp = TupleType(newTypes)
-        val newMap = namedTypesP1 + (typeName -> newTupleTyp)
-        (SynonymType(typeName, newTupleTyp), newMap)
-      case recordType : RecordType =>
-        val typeName = nameProvider("RecordType", None)
-        val foldInit : (List[(String, Type)], TypeNameMap) = (List.empty, namedTypes)
-        val (newFields, namedTypesP1) = recordType.fields_.foldRight(foldInit){
-          (fld, mapAcc) => {
-            val (newType, newAcc) = flatten(fld._2, nameProvider, mapAcc._2)
-            ((fld._1, newType) :: mapAcc._1, newAcc)
-          }
-        }
-          val newRecordType = RecordType(newFields)
-        val newMap = namedTypesP1 + (typeName -> newRecordType)
-        (SynonymType(typeName, newRecordType), newMap)
-    }
-  }
-}
+
 object OperatorFixity extends scala.Enumeration {
   type OperatorFixity = Value
   val INFIX, PREFIX = Value
