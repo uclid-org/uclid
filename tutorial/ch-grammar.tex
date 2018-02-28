@@ -88,7 +88,7 @@ followed by optional pre-/post-conditions and the list of state variables modifi
      <InstanceDecl> ::= \keywordbf{instance} <Id> `:' <Id> <ArgMapList> `;'
 
      <ArgMapList>   ::= `(' `)' 
-                    \alt `(' <ArgMap> `,' <ArgMap> `)'
+                    \alt `(' <ArgMap> `,' <ArgMapList> `)'
 
      <ArgMap> ::= <Id> `:' `(' `)' 
               \alt <Id> `:' `(' <Expr> `)'
