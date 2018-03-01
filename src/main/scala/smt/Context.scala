@@ -78,15 +78,15 @@ class Context {
   var names : MutableSet[String] = MutableSet.empty
   /** Create a new (unique) name. */
   def uniqueNamer(base: String, tag: Option[String]) : String = {
-    def attempt() : String = {
+    def attempt(addRnd: Boolean) : String = {
       base + (tag match {
         case Some(t) => t
         case None => ""
-      }) + strGen.take(5)
+      }) + (if (addRnd) strGen.take(5) else "")
     }
-    var name : String = attempt() 
+    var name : String = attempt(false) 
     while (names.contains(name)) {
-      name = attempt()
+      name = attempt(true)
     }
     names += name
     return name
@@ -225,6 +225,12 @@ class Context {
         (Lambda(idsP.map(id => id.asInstanceOf[Symbol]), exprP), tMapP2)
     }
   }
+  
+  // abstract interface to the symbolic simulator.
+  def push()
+  def pop()
+  def assert(e: Expr)
+  def check() : Option[Boolean]
 }
 
 object Context 
