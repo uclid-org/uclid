@@ -274,11 +274,9 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   def createInstVarMap(varMap : VarMap) : InstVarMap = {
-    val initInstVarMap : InstVarMap = (targetModule.getAnnotation[InstanceVarMapAnnotation]()).get.iMap
     // println("initInstVarMap: " + initInstVarMap.toString)
     // println("instance: " + inst.toString())
-    val instVarMap1 : Map[List[Identifier], Identifier] = initInstVarMap.map(p => (inst.instanceId :: p._1) -> p._2)
-    val instVarMap = varMap.foldLeft(instVarMap1) { 
+    val instVarMap1 = varMap.foldLeft(Map.empty[List[Identifier], Identifier]) { 
       (instVarMap, renaming) => {
         renaming._2 match {
           case MIP.BoundInput(_, _, _) | MIP.UnboundInput(_, _) | 
@@ -291,6 +289,16 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
         }
       }
     }
+    val initInstVarMap : InstVarMap = (targetModule.getAnnotation[InstanceVarMapAnnotation]()).get.iMap
+    val instVarMap2 = (initInstVarMap.map {
+      p => {
+        val key1 = List(inst.instanceId, p._2)
+        val result = instVarMap1.get(key1).get
+        (inst.instanceId :: p._1) -> result 
+      }
+    }).toMap
+    val instVarMap = instVarMap1 ++ instVarMap2
+    // val instVarMap1 : Map[List[Identifier], Identifier] = initInstVarMap.map(p => (inst.instanceId :: p._1) -> p._2)
     // println("instVarMap: " + instVarMap.toString)
     instVarMap
   }

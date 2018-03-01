@@ -153,9 +153,10 @@ module main {
   property[LTL] reached_C :  G((Sys_i->main_f->pc == A) || (Sys_i->main_f->pc == B));
 
   control {
-    //vobj = bmc[reached_C] (2);
-    //unroll(5);
-    check;
-    print_results;
+    // print_module;
+    // vobj = bmc[reached_C] (2);
+    // unroll(5);
+    // check;
+    // print_results;
   }
 }
