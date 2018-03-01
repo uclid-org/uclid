@@ -5,9 +5,9 @@ module common {
 }
 
 module cpu {
-  type addr_t = common :: addr_t;
-  type mem_t = common :: mem_t;
-  type word_t = common :: word_t;
+  type addr_t = common.addr_t;
+  type mem_t = common.mem_t;
+  type word_t = common.word_t;
   
   input mem : mem_t;
   var pc : addr_t;
@@ -24,9 +24,9 @@ module cpu {
 }
   
 module main {
-  type addr_t = common :: addr_t;
-  type mem_t = common :: mem_t;
-  type word_t = common :: word_t;
+  type addr_t = common.addr_t;
+  type mem_t = common.mem_t;
+  type word_t = common.word_t;
 
   var mem : mem_t;
 

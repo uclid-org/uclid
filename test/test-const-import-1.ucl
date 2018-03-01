@@ -5,8 +5,8 @@ module common {
 }
 
 module main {
-  var sum : common :: word_t;
-  var num : common :: word_t;
+  var sum : common.word_t;
+  var num : common.word_t;
 
   init {
     sum = 1bv8;

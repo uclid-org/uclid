@@ -15,9 +15,9 @@ module common {
 
 module cpu {
   // Import type aliases from common.
-  type addr_t = common :: addr_t;
-  type mem_t  = common :: mem_t;
-  type word_t = common :: word_t;
+  type addr_t = common.addr_t;
+  type mem_t  = common.mem_t;
+  type word_t = common.word_t;
   
   // Types can also be uninterpreted.
   type regindex_t; 
@@ -69,8 +69,8 @@ module main {
   // The is the "main" module: i.e. the module from which proof script commands are executed.
 
   // Import types
-  type addr_t     = common :: addr_t;
-  type word_t     = common :: word_t;
+  type addr_t     = common.addr_t;
+  type word_t     = common.word_t;
   
   // instruction memory is the same for both CPUs.
   var inst : word_t;

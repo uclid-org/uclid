@@ -81,7 +81,7 @@ module ISR_func {
 module Sys {
 
   type mode_t = enum {main_t, ISR_t};
-  type ISR_func_pc_t = ISR_func::pc_t;
+  type ISR_func_pc_t = ISR_func.pc_t;
 
   input assert_intr : boolean;
 
@@ -134,7 +134,7 @@ module Env {
 
 module main {
 
-  type main_func_pc_t = main_func::pc_t;
+  type main_func_pc_t = main_func.pc_t;
 
 // explicitly model interleaving async composition with an ND scheduler
   var turn : boolean;

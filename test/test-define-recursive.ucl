@@ -7,7 +7,7 @@ module common {
 
 module queue
 {
-  type op_t = common :: op_t;
+  type op_t = common.op_t;
 
   var contents : [integer]integer;
   var head, tail: integer;
@@ -67,7 +67,7 @@ module queue
 
 module main
 {
-  type op_t = common :: op_t;
+  type op_t = common.op_t;
 
   var op : op_t;
   var data : integer;

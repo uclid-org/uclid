@@ -347,7 +347,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     lazy val SynonymType : PackratParser[lang.SynonymType] = positioned ( Id ^^ { case id => lang.SynonymType(id) } )
     lazy val ExternalType : PackratParser[lang.ExternalType] = positioned {
-      Id ~ ("::" ~> Id) ^^ { case moduleId ~ typeId => lang.ExternalType(moduleId, typeId) }
+      Id ~ ("." ~> Id) ^^ { case moduleId ~ typeId => lang.ExternalType(moduleId, typeId) }
     }
     lazy val Type : PackratParser[Type] = positioned {
       MapType | ArrayType | EnumType | TupleType | RecordType | ExternalType | SynonymType | PrimitiveType
