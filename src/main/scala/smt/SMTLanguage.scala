@@ -436,30 +436,6 @@ case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType(ids.map(id =>
 }
 
 object Expr {
-  /**
-   *  Helper function that finds the list of all symbols (constants in SMT parlance) in an expression.
-   */
-  def findSymbols(e : Expr, syms : Set[Symbol]) : Set[Symbol] = {
-    e match {
-      case sym : Symbol =>
-        return syms + sym
-      case OperatorApplication(op,operands) =>
-        return operands.foldLeft(syms)((acc,i) => findSymbols(i, acc))
-      case ArraySelectOperation(e, index) =>
-        return index.foldLeft(findSymbols(e, syms))((acc, i) => findSymbols(i, acc))
-      case ArrayStoreOperation(e, index, value) =>
-        return index.foldLeft(findSymbols(value, findSymbols(e, syms)))((acc,i) => findSymbols(i, acc))
-      case FunctionApplication(e, args) =>
-        return args.foldLeft(findSymbols(e, syms))((acc,i) => findSymbols(i, acc))
-      case Lambda(_,_) =>
-        throw new Exception("lambdas in assertions should have been beta-reduced")
-      case IntLit(_) => return Set.empty[Symbol]
-      case BitVectorLit(_,_) => return Set.empty[Symbol]
-      case BooleanLit(_) => return Set.empty[Symbol]
-    }
-  }
-
-  def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set()) }
 }
 
 

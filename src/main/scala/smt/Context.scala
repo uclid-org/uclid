@@ -33,6 +33,8 @@
 package uclid
 package smt
 
+import scala.collection.mutable.{Set => MutableSet}
+
 case class SynonymMap(fwdMap: Map[String, Type], val revMap: Map[Type, Type]) {
   def addPrimitiveType(typ: Type) = {
     SynonymMap(fwdMap, revMap + (typ -> typ))
@@ -52,11 +54,15 @@ object SynonymMap {
 
 // Solver command.
 sealed abstract class Command
-case class DeclVarCmd(id: Symbol, typ: Type) extends Command
 case class DeclSortCmd(id: Symbol, typ: Type) extends Command
+case class DeclVarCmd(id: Symbol, typ: Type) extends Command
 case class PushCmd() extends Command
 case class PopCmd() extends Command
-case class CheckCmd(e: Expr) extends Command
+case class AssertCmd(e: Expr) extends Command
+case class CheckCmd() extends Command
+case class GetModelCmd() extends Command
+
+sealed abstract class Response
 
 class Context {
   var typeMap : SynonymMap = SynonymMap.empty
@@ -66,14 +72,35 @@ class Context {
 
   type NameProviderFn = (String, Option[String]) => String
 
+  /** Random string generator. */
+  val strGen = (new scala.util.Random()).alphanumeric
+  /** Set of known names. */
+  var names : MutableSet[String] = MutableSet.empty
+  /** Create a new (unique) name. */
+  def uniqueNamer(base: String, tag: Option[String]) : String = {
+    def attempt() : String = {
+      base + (tag match {
+        case Some(t) => t
+        case None => ""
+      }) + strGen.take(5)
+    }
+    var name : String = attempt() 
+    while (names.contains(name)) {
+      name = attempt()
+    }
+    names += name
+    return name
+  }
+
+
   /** Flatten a type and add it to the type synonym map. */
-  def flatten(typ: Type, nameProvider: NameProviderFn, synMap: SynonymMap) : (Type, SynonymMap) = {
+  def flatten(typ: Type, synMap: SynonymMap) : (Type, SynonymMap) = {
     // Define a couple of helper functions.
     /* Recurse on a list of types. */
     def flattenTypeList(typeList: List[Type], synMap: SynonymMap) : (List[Type], SynonymMap) = {
       typeList.foldRight(List.empty[Type], synMap) {
         (iTyp, acc) => {
-          val (newType, newAcc) = flatten(iTyp, nameProvider, acc._2)
+          val (newType, newAcc) = flatten(iTyp, acc._2)
           (newType :: acc._1, newAcc)
         }
       }
@@ -82,7 +109,7 @@ class Context {
     def flattenFieldList(fieldList: List[(String, Type)], synMap: SynonymMap) : (List[(String, Type)], SynonymMap) = {
       fieldList.foldRight(List.empty[(String, Type)], synMap) {
         (fld, acc) => {
-          val (newType, newAcc) = flatten(fld._2, nameProvider, acc._2)
+          val (newType, newAcc) = flatten(fld._2, acc._2)
           ((fld._1, newType) :: acc._1, newAcc)
         }
       }
@@ -98,7 +125,7 @@ class Context {
             (typ, synMap)
           case unintTyp : UninterpretedType =>
             // add to map
-            val typeName = nameProvider("UninterpretedType", Some(unintTyp.name))
+            val typeName = uniqueNamer("UninterpretedType", Some(unintTyp.name))
             val synMapP = synMap.addSynonym(typeName, unintTyp)
             (synMapP.get(typeName).get, synMapP)
           case tupleTyp : TupleType =>
@@ -106,7 +133,7 @@ class Context {
             val (newTypes, synMapP1) = flattenTypeList(tupleTyp.types, synMap)
             val newTupleTyp = TupleType(newTypes)
             // add to map
-            val typeName = nameProvider("TupleType", None)
+            val typeName = uniqueNamer("TupleType", None)
             val synMapP = synMapP1.addSynonym(typeName, newTupleTyp)
             (synMapP.get(typeName).get, synMapP)
           case recordType : RecordType =>
@@ -114,46 +141,49 @@ class Context {
             val (newFields, synMapP1) = flattenFieldList(recordType.fields_, synMap) 
             val newRecordType = RecordType(newFields)
             // add to map
-            val typeName = nameProvider("RecordType", None)
+            val typeName = uniqueNamer("RecordType", None)
             val synMapP = synMapP1.addSynonym(typeName, newRecordType)
             (synMapP.get(typeName).get, synMapP)
           case mapType : MapType =>
             // create new type
             val (newInTypes, synMapP1) = flattenTypeList(mapType.inTypes, synMap)
-            val (newOutType, synMapP2) = flatten(mapType.outType, nameProvider, synMapP1)
+            val (newOutType, synMapP2) = flatten(mapType.outType, synMapP1)
             val newMapType = MapType(newInTypes, newOutType)
             // add to map
-            val typeName = nameProvider("MapType", None)
+            val typeName = uniqueNamer("MapType", None)
             val synMapP = synMapP2.addSynonym(typeName, newMapType)
             (synMapP.get(typeName).get, synMapP)
           case arrayType : ArrayType =>
             // create new type
             val (newInTypes, synMapP1) = flattenTypeList(arrayType.inTypes, synMap)
-            val (newOutType, synMapP2) = flatten(arrayType.outType, nameProvider, synMapP1)
+            val (newOutType, synMapP2) = flatten(arrayType.outType, synMapP1)
             val newArrayType = ArrayType(newInTypes, newOutType)
             // add to map
-            val typeName = nameProvider("RecordType", None)
+            val typeName = uniqueNamer("RecordType", None)
             val synMapP = synMapP2.addSynonym(typeName, newArrayType)
             (synMapP.get(typeName).get, synMapP)
           case enumType : EnumType =>
             // add to map
-            val typeName = nameProvider("EnumType", None)
+            val typeName = uniqueNamer("EnumType", None)
             val synMapP = synMap.addSynonym(typeName, enumType)
             (synMapP.get(typeName).get, synMapP)
           case synTyp : SynonymType =>
             val typeName = synTyp.name
-            val (newType, synMapP1) = flatten(synTyp.typ, nameProvider, synMap)
+            val (newType, synMapP1) = flatten(synTyp.typ, synMap)
             val synMapP = synMapP1.addSynonym(synTyp.name, newType)
             (newType, synMapP)
         }
     }
   }
 
-  def replaceTypes(e : Expr, nameProvider : NameProviderFn, tMap : SynonymMap) : (Expr, SynonymMap) = {
-    def replaceTypesInList(es : List[Expr], tMapIn : SynonymMap) : (List[Expr], SynonymMap) = {
+  /** Replace the types of all symbols in these expressions with their corresponding
+   *  flattened types.
+   */
+  def flattenTypes(e : Expr, tMap : SynonymMap) : (Expr, SynonymMap) = {
+    def flattenTypesInList(es : List[Expr], tMapIn : SynonymMap) : (List[Expr], SynonymMap) = {
       es.foldRight((List.empty[Expr], tMapIn)) {
         (arg, acc) => {
-          val (argP, tMapP1) = replaceTypes(arg, nameProvider, acc._2)
+          val (argP, tMapP1) = flattenTypes(arg, acc._2)
           (argP :: acc._1, tMapP1)
         }
       }
@@ -163,40 +193,67 @@ class Context {
       case bvLit : BitVectorLit => (bvLit, tMap)
       case boolLit : BooleanLit => (boolLit, tMap)
       case enumLit : EnumLit =>
-        val (enumTypeP, tMapP) = flatten(enumLit.eTyp, nameProvider, tMap)
+        val (enumTypeP, tMapP) = flatten(enumLit.eTyp, tMap)
         (enumLit, tMapP)
       case sym : Symbol =>
-        val (typP, tMapP) = flatten(sym.symbolTyp, nameProvider, tMap)
+        val (typP, tMapP) = flatten(sym.symbolTyp, tMap)
         (Symbol(sym.id, typP), tMapP)
       case mkTuple : MakeTuple =>
-        val (_, tMapP1) = flatten(mkTuple.typ, nameProvider, tMap)
-        val (argsP, tMapP2) = replaceTypesInList(mkTuple.args, tMapP1)
+        val (_, tMapP1) = flatten(mkTuple.typ, tMap)
+        val (argsP, tMapP2) = flattenTypesInList(mkTuple.args, tMapP1)
         (MakeTuple(argsP), tMapP2)
       case opapp : OperatorApplication =>
-        val (_, tMapP1) = flatten(opapp.typ, nameProvider, tMap)
-        val (argsP, tMapP2) = replaceTypesInList(opapp.operands, tMapP1)
+        val (_, tMapP1) = flatten(opapp.typ, tMap)
+        val (argsP, tMapP2) = flattenTypesInList(opapp.operands, tMapP1)
         (OperatorApplication(opapp.op, argsP), tMapP2)
       case arrSel : ArraySelectOperation =>
-        val (eP, tMapP1) = replaceTypes(arrSel.e, nameProvider, tMap)
-        val (indexP, tMapP2) = replaceTypesInList(arrSel.index, tMapP1)
+        val (eP, tMapP1) = flattenTypes(arrSel.e, tMap)
+        val (indexP, tMapP2) = flattenTypesInList(arrSel.index, tMapP1)
         (ArraySelectOperation(eP, indexP), tMapP2)
       case arrStore : ArrayStoreOperation =>
-        val (eP, tMapP1) = replaceTypes(arrStore.e, nameProvider, tMap)
-        val (indexP, tMapP2) = replaceTypesInList(arrStore.index, tMapP1)
-        val (valueP, tMapP3) = replaceTypes(arrStore.value, nameProvider, tMapP2)
+        val (eP, tMapP1) = flattenTypes(arrStore.e, tMap)
+        val (indexP, tMapP2) = flattenTypesInList(arrStore.index, tMapP1)
+        val (valueP, tMapP3) = flattenTypes(arrStore.value, tMapP2)
         (ArrayStoreOperation(eP, indexP, valueP), tMapP3)
       case funcApp : FunctionApplication =>
-        val (eP, tMapP1) = replaceTypes(funcApp.e, nameProvider, tMap)
-        val (argsP, tMapP2) = replaceTypesInList(funcApp.args, tMapP1)
+        val (eP, tMapP1) = flattenTypes(funcApp.e, tMap)
+        val (argsP, tMapP2) = flattenTypesInList(funcApp.args, tMapP1)
         (FunctionApplication(eP, argsP), tMapP2)
       case lambda : Lambda =>
-        val (idsP, tMapP1) = replaceTypesInList(lambda.ids, tMap)
-        val (exprP, tMapP2) = replaceTypes(lambda.e, nameProvider, tMapP1)
+        val (idsP, tMapP1) = flattenTypesInList(lambda.ids, tMap)
+        val (exprP, tMapP2) = flattenTypes(lambda.e, tMapP1)
         (Lambda(idsP.map(id => id.asInstanceOf[Symbol]), exprP), tMapP2)
     }
   }
 }
 
+object Context 
+{
+  /**
+   *  Helper function that finds the list of all symbols in an expression.
+   */
+  def findSymbols(e : Expr, syms : Set[Symbol]) : Set[Symbol] = {
+    e match {
+      case sym : Symbol =>
+        return syms + sym
+      case OperatorApplication(op,operands) =>
+        return operands.foldLeft(syms)((acc,i) => findSymbols(i, acc))
+      case ArraySelectOperation(e, index) =>
+        return index.foldLeft(findSymbols(e, syms))((acc, i) => findSymbols(i, acc))
+      case ArrayStoreOperation(e, index, value) =>
+        return index.foldLeft(findSymbols(value, findSymbols(e, syms)))((acc,i) => findSymbols(i, acc))
+      case FunctionApplication(e, args) =>
+        return args.foldLeft(findSymbols(e, syms))((acc,i) => findSymbols(i, acc))
+      case Lambda(_,_) =>
+        throw new Exception("lambdas in assertions should have been beta-reduced")
+      case IntLit(_) => return Set.empty[Symbol]
+      case BitVectorLit(_,_) => return Set.empty[Symbol]
+      case BooleanLit(_) => return Set.empty[Symbol]
+    }
+  }
+
+  def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set()) }
+}
 
 
 
