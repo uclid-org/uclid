@@ -64,7 +64,7 @@ case class GetModelCmd() extends Command
 
 sealed abstract class Response
 
-class Context {
+abstract trait Context {
   var typeMap : SynonymMap = SynonymMap.empty
   var sorts : List[(String, Type)] = List.empty
   var variables : List[(String, Type)] = List.empty
