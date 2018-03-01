@@ -150,6 +150,14 @@ class Context {
   }
 
   def replaceTypes(e : Expr, nameProvider : NameProviderFn, tMap : SynonymMap) : (Expr, SynonymMap) = {
+    def replaceTypesInList(es : List[Expr], tMapIn : SynonymMap) : (List[Expr], SynonymMap) = {
+      es.foldRight((List.empty[Expr], tMapIn)) {
+        (arg, acc) => {
+          val (argP, tMapP1) = replaceTypes(arg, nameProvider, acc._2)
+          (argP :: acc._1, tMapP1)
+        }
+      }
+    }
     e match {
       case intLit : IntLit => (intLit, tMap)
       case bvLit : BitVectorLit => (bvLit, tMap)
@@ -157,6 +165,39 @@ class Context {
       case enumLit : EnumLit =>
         val (enumTypeP, tMapP) = flatten(enumLit.eTyp, nameProvider, tMap)
         (enumLit, tMapP)
+      case sym : Symbol =>
+        val (typP, tMapP) = flatten(sym.symbolTyp, nameProvider, tMap)
+        (Symbol(sym.id, typP), tMapP)
+      case mkTuple : MakeTuple =>
+        val (_, tMapP1) = flatten(mkTuple.typ, nameProvider, tMap)
+        val (argsP, tMapP2) = replaceTypesInList(mkTuple.args, tMapP1)
+        (MakeTuple(argsP), tMapP2)
+      case opapp : OperatorApplication =>
+        val (_, tMapP1) = flatten(opapp.typ, nameProvider, tMap)
+        val (argsP, tMapP2) = replaceTypesInList(opapp.operands, tMapP1)
+        (OperatorApplication(opapp.op, argsP), tMapP2)
+      case arrSel : ArraySelectOperation =>
+        val (eP, tMapP1) = replaceTypes(arrSel.e, nameProvider, tMap)
+        val (indexP, tMapP2) = replaceTypesInList(arrSel.index, tMapP1)
+        (ArraySelectOperation(eP, indexP), tMapP2)
+      case arrStore : ArrayStoreOperation =>
+        val (eP, tMapP1) = replaceTypes(arrStore.e, nameProvider, tMap)
+        val (indexP, tMapP2) = replaceTypesInList(arrStore.index, tMapP1)
+        val (valueP, tMapP3) = replaceTypes(arrStore.value, nameProvider, tMapP2)
+        (ArrayStoreOperation(eP, indexP, valueP), tMapP3)
+      case funcApp : FunctionApplication =>
+        val (eP, tMapP1) = replaceTypes(funcApp.e, nameProvider, tMap)
+        val (argsP, tMapP2) = replaceTypesInList(funcApp.args, tMapP1)
+        (FunctionApplication(eP, argsP), tMapP2)
+      case lambda : Lambda =>
+        val (idsP, tMapP1) = replaceTypesInList(lambda.ids, tMap)
+        val (exprP, tMapP2) = replaceTypes(lambda.e, nameProvider, tMapP1)
+        (Lambda(idsP.map(id => id.asInstanceOf[Symbol]), exprP), tMapP2)
     }
   }
 }
+
+
+
+
+
