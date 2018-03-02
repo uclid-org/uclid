@@ -812,7 +812,7 @@ case class ProcedureDecl(
     "\n" + PrettyPrinter.indent(1) + "}"
   }
   override def declNames = List(id)
-  def hasPrePost = requires.size > 0 && ensures.size > 0
+  def hasPrePost = requires.size > 0 || ensures.size > 0
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "type " + id + " = " + typ + "; // " + position.toString

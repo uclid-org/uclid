@@ -62,7 +62,30 @@ case class AssertCmd(e: Expr) extends Command
 case class CheckCmd() extends Command
 case class GetModelCmd() extends Command
 
-sealed abstract class Response
+abstract class Model {
+  def evaluate(e : Expr) : Expr = {
+    throw new Utils.UnimplementedException("evaluate not implemented yet.")
+  }
+  def evalAsString(e : Expr) : String = {
+    throw new Utils.UnimplementedException("evalAsString not implemented yet.")
+  }
+}
+
+case class SolverResult(result : Option[Boolean], model: Option[Model]) {
+  def isValue(expected : Boolean) : Boolean = {
+    result match {
+      case Some(b) => b == expected
+      case None => false
+    }
+  }
+  def isTrue = isValue(true)
+  def isFalse = isValue(false)
+  def isDefined = result.isDefined
+  def isUndefined = result.isEmpty
+  def isModelDefined = model.isDefined
+  def evalAsString(e : Expr) : Option[String] = { model.flatMap((m) => Some(m.evalAsString(e))) }
+}
+
 
 abstract trait Context {
   var typeMap : SynonymMap = SynonymMap.empty
@@ -225,12 +248,13 @@ abstract trait Context {
         (Lambda(idsP.map(id => id.asInstanceOf[Symbol]), exprP), tMapP2)
     }
   }
-  
-  // abstract interface to the symbolic simulator.
+
+  // Interface to the symbolic simulator.
+
   def push()
   def pop()
   def assert(e: Expr)
-  def check() : Option[Boolean]
+  def check() : SolverResult
 }
 
 object Context 
@@ -260,7 +284,5 @@ object Context
 
   def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set()) }
 }
-
-
 
 

@@ -76,7 +76,7 @@ class SymbolicSimulator (module : Module) {
     symbolTable = Map.empty
     frameTable.clear()
   }
-  def execute(solver : smt.SolverInterface) : List[CheckResult] = {
+  def execute(solver : smt.Context) : List[CheckResult] = {
     var proofResults : List[CheckResult] = List.empty
     def noLTLFilter(name : Identifier, decorators : List[ExprDecorator]) : Boolean = !ExprDecorator.isLTLProperty(decorators)
     // add axioms as assumptions.
@@ -317,10 +317,8 @@ class SymbolicSimulator (module : Module) {
     }}
   }
 
-  def printSMT2(aTree : AssertionTree, label : Option[Identifier], solver : smt.SolverInterface) {
-    aTree.printSMT(label, solver).foreach {
-      (f) => println(f)
-    }
+  def printSMT2(aTree : AssertionTree, label : Option[Identifier], solver : smt.Context) {
+    throw new Utils.UnimplementedException("Implement print_smt2.")
   }
 
   def printFrame(f : SymbolTable, pastFrames : Map[Int, SymbolTable], m : smt.Model, exprs : List[Expr], scope : Scope) {

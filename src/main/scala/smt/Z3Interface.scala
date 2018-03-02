@@ -76,7 +76,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
 /**
  * Decide validity of SMTExpr's using a Z3 sovler.
  */
-class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterface {
+class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends Context {
   // Member variables.
   /** The Z3 context. */
   val ctx = z3Ctx
@@ -342,19 +342,19 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     else z3AST
   })
 
-  override def addConstraint(e : Expr) : Unit = {
-    solver.add(exprToZ3(e).asInstanceOf[z3.BoolExpr])
+  override def push() {
+    solver.push()
+  }
+  override def pop() {
+    solver.pop()
   }
 
+  override def assert(e : Expr) {
+    solver.add(exprToZ3(e).asInstanceOf[z3.BoolExpr])
+  }
+  
   /** Check whether a particular expression is satisfiable.  */
-  override def check (e : Expr) : SolverResult = {
-    val z3Expr = exprToZ3(e)
-    // println("SMT expression: " + e.toString)
-    // println("Z3 Expression: " + z3Expr.toString)
-
-    solver.push()
-    solver.add(z3Expr.asInstanceOf[z3.BoolExpr])
-    // println(solver.toString())
+  override def check : SolverResult = {
     val z3Result = solver.check()
     // println(z3Result.toString)
 
@@ -368,11 +368,11 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case _ =>
         SolverResult(None, None)
     }
-    solver.pop()
     return checkResult
   }
 
-  override def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
+  /*
+  def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
     val z3Expr = exprToZ3(e).asInstanceOf[z3.BoolExpr]
     val z3Assumptions = assumptions.map(a => exprToZ3(a).asInstanceOf[z3.BoolExpr]).toArray
     solver.push()
@@ -382,19 +382,9 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     solver.pop()
     return formula
   }
+  * 
+  */
 
-  override def addAssumptions(es : List[Expr]) {
-    solver.push()
-    es.foreach((e) => {
-      val eZ3 = exprToZ3(e).asInstanceOf[z3.BoolExpr]
-      // println("assumption: " + eZ3.toString)
-      solver.add(eZ3)
-    })
-  }
-  override def popAssumptions() {
-    // println("pop!")
-    solver.pop()
-  }
 }
 
 object Z3Interface {

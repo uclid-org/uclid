@@ -89,8 +89,9 @@ class AssertionTree {
     currentNode = initialRoot
   }
 
-  def _verify(node : TreeNode, solver : smt.SolverInterface) : List[CheckResult] = {
-    solver.addAssumptions(node.assumptions.toList)
+  def _verify(node : TreeNode, solver : smt.Context) : List[CheckResult] = {
+    solver.push()
+    node.assumptions.foreach(a => solver.assert(a))
     node.results = (node.assertions.map {
       e => {
         val pcExpr = e.pathCond
@@ -104,21 +105,24 @@ class AssertionTree {
         } else {
           smt.OperatorApplication(smt.ConjunctionOp, List(pcExpr, assertExpr))
         }
-        val sat = solver.check(checkExpr)
+        solver.push()
+        solver.assert(checkExpr)
+        val sat = solver.check()
         val result = sat.result match {
           case Some(true)  => smt.SolverResult(Some(false), sat.model)
           case Some(false) => smt.SolverResult(Some(true), sat.model)
           case None        => smt.SolverResult(None, None)
         }
+        solver.pop()
         CheckResult(e, result)
       }
     }).toList
     // now recurse into children
     val childResults = node.children.flatMap(c => _verify(c, solver))
-    solver.popAssumptions()
+    solver.pop()
     node.results ++ childResults
   }
-  def verify(solver : smt.SolverInterface) : List[CheckResult] = _verify(root, solver)
+  def verify(solver : smt.Context) : List[CheckResult] = _verify(root, solver)
   
   def _printSMT(node : TreeNode, parentAssumptions : List[smt.Expr], label : Option[Identifier], solver : smt.SolverInterface) : List[String] = {
     val allAssumptions = parentAssumptions ++ node.assumptions.toList

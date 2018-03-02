@@ -435,34 +435,6 @@ case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType(ids.map(id =>
   override val isConstant = e.isConstant
 }
 
-object Expr {
-}
-
-
-abstract class Model {
-  def evaluate(e : Expr) : Expr = {
-    throw new Utils.UnimplementedException("evaluate not implemented yet.")
-  }
-  def evalAsString(e : Expr) : String = {
-    throw new Utils.UnimplementedException("evalAsString not implemented yet.")
-  }
-}
-
-case class SolverResult(result : Option[Boolean], model: Option[Model]) {
-  def hasValue(expected : Boolean) : Boolean = {
-    result match {
-      case Some(b) => b == expected
-      case None => false
-    }
-  }
-  def isTrue = hasValue(true)
-  def isFalse = hasValue(false)
-  def isDefined = result.isDefined
-  def isUndefined = result.isEmpty
-  def isModelDefined = model.isDefined
-  def evalAsString(e : Expr) : Option[String] = { model.flatMap((m) => Some(m.evalAsString(e))) }
-}
-
 abstract class SolverInterface {
   // Assert 'e' in the solver. (Modifies solver context to contain 'e'.)
   def addConstraint(e : Expr)
