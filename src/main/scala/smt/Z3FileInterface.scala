@@ -42,7 +42,14 @@ import scala.sys.process._
 import scala.language.postfixOps
 
 
-class Z3FileInterface() extends SolverInterface {
+abstract class Z3FileInterface() extends SolverInterface with Context {
+  var typeMap : SynonymMap = SynonymMap.empty
+  var sorts : List[(String, Type)] = List.empty
+  var variables : List[(String, Type)] = List.empty
+  var commands : List[Command] = List.empty
+
+  type NameProviderFn = (String, Option[String]) => String
+
   var expressions : List[Expr] = List.empty
 
   override def addConstraint(e : Expr) = {
@@ -175,5 +182,5 @@ class Z3FileInterface() extends SolverInterface {
 }
 
 object Z3FileInterface {
-  def newInterface() : Z3FileInterface = { return new Z3FileInterface() }
+  // def newInterface() : Z3FileInterface = { return new Z3FileInterface() }
 }

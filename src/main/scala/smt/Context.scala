@@ -88,13 +88,6 @@ case class SolverResult(result : Option[Boolean], model: Option[Model]) {
 
 
 abstract trait Context {
-  var typeMap : SynonymMap = SynonymMap.empty
-  var sorts : List[(String, Type)] = List.empty
-  var variables : List[(String, Type)] = List.empty
-  var commands : List[Command] = List.empty
-
-  type NameProviderFn = (String, Option[String]) => String
-
   /** Random string generator. */
   val strGen = (new scala.util.Random()).alphanumeric
   /** Set of known names. */

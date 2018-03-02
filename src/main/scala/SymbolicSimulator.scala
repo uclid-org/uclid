@@ -236,7 +236,7 @@ class SymbolicSimulator (module : Module) {
       // printSymbolTable(currentState)
       val stWInputs = newInputSymbols(currentState, step, scope)
       states += stWInputs
-      currentState = simulate(step, stWInputs, scope, label)
+      currentState = renameStates(simulate(step, stWInputs, scope, label), step, scope)
       val numPastFrames = frameTable.size
       val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap 
       frameTable += currentState
