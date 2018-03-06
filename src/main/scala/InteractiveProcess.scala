@@ -50,68 +50,61 @@ class InteractiveProcess(cmd: String, args: List[String]) {
   val inputChannel = new Channel[ProcessInput]()
   val outputChannel = new Channel[ProcessOutput]()
 
-  def writeInput(str: String) {
-    println("writing: " + str)
-    inputChannel.write(ProcessInputString(str))
-  }
-  
-  def finishInput() {
-    println("finishing")
-    inputChannel.write(ProcessInputDone)
-  }
-
-  val cmdLine = cmd::args
-  val builder = new java.lang.ProcessBuilder(cmdLine.asJava)
-  val process = builder.start()
-  val stdin = process.getOutputStream()
-  val stdout = process.getInputStream()
-
-  val writerThread = new Thread(new Runnable {
-    def run() {
-      var done = false
-      while (!done) {
-        val msg = inputChannel.read
-        msg match {
-          case ProcessInputString(str) =>
-            stdin.write(str.getBytes())
-            stdin.flush()
-          case ProcessInputDone =>
-            stdin.close()
-            done = true
-        }
-      }
-    }
-  })
-  
-  val readerThread = new Thread(new Runnable {
-    def run() {
-      val done = false
-      while (!done) {
-        val bytesAvailable = stdout.available()
-        if (bytesAvailable > 0) {
-          val bytes = Array.ofDim[Byte](bytesAvailable)
-          stdout.read(bytes)
-          val string = bytes.map(_.toChar).mkString
-          print(string)
-        }
-      }
-    }
-  })
-  
-  def start() { 
-    writerThread.start()
-    readerThread.start()
-  }
 }
 
 object InteractiveProcess
 {
+  def isAlive(process : Process) : Boolean = {
+    try {
+      process.exitValue()
+      return false
+    } catch {
+      case e : IllegalThreadStateException =>
+        return true
+    }
+  }
+
+  val formula = List(
+    "(declare-fun x () Int)",
+    "(declare-fun y () Int)",
+    "(assert (and (distinct x 0) true))",
+    "(assert (and (distinct y 0) true))",
+    "(assert (and (distinct y 1) true))",
+    "(assert (and (distinct x 1) true))",
+    "(assert (= (+ x y) (* x y)))",
+    "(check-sat)"
+  )
+
+  def stringToBytes(str: String) = {
+    str.map(_.toChar).toCharArray().map(_.toByte)
+  }
   def test()
   {
-    val process = new InteractiveProcess("python", List.empty)
-    process.start()
-    process.writeInput("2+2\n")
-    process.finishInput()
-    while(process.writerThread.isAlive() && process.readerThread.isAlive()) {}
+    val builder = new ProcessBuilder("/usr/bin/z3", "-in", "-smt2")
+    builder.redirectErrorStream(true)
+    val process = builder.start()
+    val out = process.getInputStream()
+    val in = process.getOutputStream()
+
+    formula.foreach{ (l) => {
+      in.write(stringToBytes(l + "\n"))
+    }}
+    in.flush()
+    while (isAlive(process)) {
+      val numAvail = out.available()
+      if (numAvail > 0) {
+        val bytes = Array.ofDim[Byte](numAvail)
+        out.read(bytes, 0, numAvail)
+        val string = new String(bytes)
+        print(string)
+        if (string == "sat\n") {
+          in.write(stringToBytes("(get-model)\n"))
+          in.flush()
+          in.close()
+        }
+      } else {
+        Thread.sleep(0)
+      }
+    }
   }
 }
