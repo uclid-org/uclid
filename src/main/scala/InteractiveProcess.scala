@@ -33,30 +33,27 @@
 
 package uclid
 
-import scala.concurrent.Channel
+import scala.concurrent.SyncChannel
 import scala.collection.JavaConverters._
 
 class InteractiveProcess(cmd: String, args: List[String]) {
-  abstract sealed class ProcessInput
-  case object ProcessInputDone extends ProcessInput
-  case class ProcessInputString(str: String) extends ProcessInput
+  // create the process.
+  val cmdLine = (cmd :: args).asJava
+  val builder = new ProcessBuilder(cmdLine)
+  builder.redirectErrorStream(true)
+  val process = builder.start() 
+  val out = process.getInputStream()
+  val in = process.getOutputStream()
+  var exitValue : Option[Int] = None
 
-  abstract sealed class ProcessOutput
-  case class ProcessStdOut(str: String) extends ProcessOutput
-  case class ProcessStdErr(std: String) extends ProcessOutput
-  case object ProcessStdOutClose extends ProcessOutput
-  case object ProcessStdErrClose extends ProcessOutput
+  // channels for input and output.
+  val inputChannel = new SyncChannel[Option[String]]()
+  val outputChannel = new SyncChannel[Option[String]]()
 
-  val inputChannel = new Channel[ProcessInput]()
-  val outputChannel = new Channel[ProcessOutput]()
-
-}
-
-object InteractiveProcess
-{
-  def isAlive(process : Process) : Boolean = {
+  // Is this the best way of telling if a process is alive?
+  def isAlive() : Boolean = {
     try {
-      process.exitValue()
+      exitValue = Some(process.exitValue())
       return false
     } catch {
       case e : IllegalThreadStateException =>
@@ -64,47 +61,67 @@ object InteractiveProcess
     }
   }
 
-  val formula = List(
-    "(declare-fun x () Int)",
-    "(declare-fun y () Int)",
-    "(assert (and (distinct x 0) true))",
-    "(assert (and (distinct y 0) true))",
-    "(assert (and (distinct y 1) true))",
-    "(assert (and (distinct x 1) true))",
-    "(assert (= (+ x y) (* x y)))",
-    "(check-sat)"
-  )
-
+  // Some helper functions.
   def stringToBytes(str: String) = {
     str.map(_.toChar).toCharArray().map(_.toByte)
   }
-  def test()
-  {
-    val builder = new ProcessBuilder("/usr/bin/z3", "-in", "-smt2")
-    builder.redirectErrorStream(true)
-    val process = builder.start()
-    val out = process.getInputStream()
-    val in = process.getOutputStream()
-
-    formula.foreach{ (l) => {
-      in.write(stringToBytes(l + "\n"))
-    }}
-    in.flush()
-    while (isAlive(process)) {
-      val numAvail = out.available()
-      if (numAvail > 0) {
-        val bytes = Array.ofDim[Byte](numAvail)
-        out.read(bytes, 0, numAvail)
-        val string = new String(bytes)
-        print(string)
-        if (string == "sat\n") {
-          in.write(stringToBytes("(get-model)\n"))
-          in.flush()
-          in.close()
+  def bytesToString(bytes: Array[Byte]) = new String(bytes)
+  // This thread writes to process' input stream.
+  val inputWriter = new Thread(new Runnable {
+    def run() {
+      var done = false
+      while (!done && isAlive()) {
+        val str = inputChannel.read
+        str match {
+          case Some(s) =>
+            in.write(stringToBytes(s))
+            in.flush()
+          case None =>
+            in.close()
+            done = true
         }
-      } else {
-        Thread.sleep(0)
       }
     }
+  })
+  inputWriter.start()
+  
+  // This thread reads from the process' output stream
+  val outputReader = new Thread(new Runnable {
+    def run() {
+      while (isAlive()) {
+        val numAvail = out.available()
+        if (numAvail == 0) {
+          Thread.sleep(1)
+        } else {
+          val bytes = Array.ofDim[Byte](numAvail)
+          val numRead = out.read(bytes, 0, numAvail)
+          val string = bytesToString ({ 
+            if (numRead == numAvail) {
+              bytes              
+            } else {
+              bytes.slice(0, numRead)
+            }
+          })
+          outputChannel.write(Some(string))
+        }
+      }
+      outputChannel.write(None)
+    }
+  })
+  outputReader.start()
+
+  // Write to the process's input stream. 
+  // This method only pushes data onto the channel.
+  def writeInput(str: String) {
+    inputChannel.write(Some(str))
+  }
+  def finishInput() {
+    inputChannel.write(None)
+  }
+  // Read from the process's output stream.
+  // This method tries to read from the channel.
+  def readOutput() : Option[String] = {
+    val msg = outputChannel.read
+    msg
   }
 }
