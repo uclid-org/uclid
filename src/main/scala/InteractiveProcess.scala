@@ -34,9 +34,7 @@
 package uclid
 
 import scala.concurrent.Channel
-import scala.sys.process._
-import java.io.{InputStream, OutputStream, PrintWriter}
-import scala.io.Source
+import scala.collection.JavaConverters._
 
 class InteractiveProcess(cmd: String, args: List[String]) {
   abstract sealed class ProcessInput
@@ -51,65 +49,58 @@ class InteractiveProcess(cmd: String, args: List[String]) {
 
   val inputChannel = new Channel[ProcessInput]()
   val outputChannel = new Channel[ProcessOutput]()
-  var outputStreamsDone : Int = 0
-  var finished = false
-  val commandLine = cmd :: args
-  val process = commandLine.run(
-                  new ProcessIO(inputWriter, 
-                                out => outputReader(out, false), 
-                                out => outputReader(out, true)))
-
-
-
-  def inputWriter(in: OutputStream) {
-    val writer = new PrintWriter(in)
-    var done = false
-    while (!done) {
-      val input = inputChannel.read
-      input match {
-        case ProcessInputString(str) =>
-          writer.print(str)
-          writer.flush()
-        case ProcessInputDone =>
-          done = true
-      }
-    }
-    in.close()
-  }
-
-  def outputReader(out: InputStream, stderr : Boolean) {
-    while (!finished) {
-      val numBytes = out.available()
-      if (numBytes > 0) {
-        val bytes = Array.ofDim[Byte](numBytes)
-        out.read(bytes)
-        val string = (bytes.map(_.toChar)).mkString
-        println(string)
-      }
-    }
-  }
 
   def writeInput(str: String) {
+    println("writing: " + str)
     inputChannel.write(ProcessInputString(str))
   }
   
   def finishInput() {
+    println("finishing")
     inputChannel.write(ProcessInputDone)
   }
 
-  def getOutputLine() : Option[String] = {
-    if (outputStreamsDone > 2) {
-      None
-    } else {
-      val msg = outputChannel.read
-      msg match {
-        case ProcessStdOut(str) => Some(str)
-        case ProcessStdErr(str) => Some(str)
-        case ProcessStdOutClose | ProcessStdErrClose =>
-          outputStreamsDone += 1
-          getOutputLine()
+  val cmdLine = cmd::args
+  val builder = new java.lang.ProcessBuilder(cmdLine.asJava)
+  val process = builder.start()
+  val stdin = process.getOutputStream()
+  val stdout = process.getInputStream()
+
+  val writerThread = new Thread(new Runnable {
+    def run() {
+      var done = false
+      while (!done) {
+        val msg = inputChannel.read
+        msg match {
+          case ProcessInputString(str) =>
+            stdin.write(str.getBytes())
+            stdin.flush()
+          case ProcessInputDone =>
+            stdin.close()
+            done = true
+        }
       }
     }
+  })
+  
+  val readerThread = new Thread(new Runnable {
+    def run() {
+      val done = false
+      while (!done) {
+        val bytesAvailable = stdout.available()
+        if (bytesAvailable > 0) {
+          val bytes = Array.ofDim[Byte](bytesAvailable)
+          stdout.read(bytes)
+          val string = bytes.map(_.toChar).mkString
+          print(string)
+        }
+      }
+    }
+  })
+  
+  def start() { 
+    writerThread.start()
+    readerThread.start()
   }
 }
 
@@ -118,6 +109,9 @@ object InteractiveProcess
   def test()
   {
     val process = new InteractiveProcess("python", List.empty)
+    process.start()
     process.writeInput("2+2\n")
+    process.finishInput()
+    while(process.writerThread.isAlive() && process.readerThread.isAlive()) {}
   }
 }
