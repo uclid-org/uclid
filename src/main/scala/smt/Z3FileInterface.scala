@@ -42,19 +42,15 @@ import scala.sys.process._
 import scala.language.postfixOps
 
 
-abstract class Z3FileInterface() extends SolverInterface with Context {
+abstract class Z3FileInterface() extends Context {
   var typeMap : SynonymMap = SynonymMap.empty
   var sorts : List[(String, Type)] = List.empty
   var variables : List[(String, Type)] = List.empty
   var commands : List[Command] = List.empty
 
   type NameProviderFn = (String, Option[String]) => String
-
   var expressions : List[Expr] = List.empty
-
-  override def addConstraint(e : Expr) = {
-    expressions = e :: expressions
-  }
+  val z3Process = new InteractiveProcess("/usr/bin/z3", List("-smt2", "-i"))
 
   def generateDeclaration(x: Symbol) : String = {
     def printType(t: Type) : String = {
@@ -114,7 +110,6 @@ abstract class Z3FileInterface() extends SolverInterface with Context {
   }
 
   def translateExpr(e: Expr) : String = {
-
     def mkTuple(index: List[Expr]) : String = {
       if (index.size > 1) {
         "(mk-tuple" + index.size + index.foldLeft("")((acc,i) =>
@@ -147,21 +142,35 @@ abstract class Z3FileInterface() extends SolverInterface with Context {
     }
   }
 
-  override def check(e : Expr) : SolverResult = {
-    // FIXME
-    val formula = toSMT2(e, List.empty, "check")
-    def getCurrentDirectory = new java.io.File( "." ).getCanonicalPath
-    Files.write(Paths.get(getCurrentDirectory + "/tmp.z3"), formula.getBytes(StandardCharsets.UTF_8))
-    val z3_output = ("z3 " + getCurrentDirectory + "/tmp.z3 -smt2" !!).trim
+  def writeCommand(str : String) {
+    z3Process.writeInput(str + "\n")
+  }
 
-    return z3_output match {
-      case "sat" => SolverResult(Some(true), None)
-      case "unsat" => SolverResult(Some(false), None)
-      case _ => SolverResult(None, None)
+  override def check() : SolverResult = {
+    writeCommand("(check-sat)")
+    z3Process.readOutput() match {
+      case Some(strP) =>
+        val str = strP.stripLineEnd
+        str match {
+          case "sat" => SolverResult(Some(true), None)
+          case "unsat" => SolverResult(Some(false), None)
+          case _ => 
+            throw new Utils.AssertionError("Unexpected result from SMT solver: " + str.toString())
+        }
+      case None =>
+        throw new Utils.AssertionError("Unexpected EOF result from SMT solver.")
     }
   }
 
-  override def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
+  override def push() {
+    writeCommand("(push 1)")
+  }
+
+  override def pop() {
+    writeCommand("(pop 1)")
+  }
+
+  def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
     def assertionToString(e : Expr) : String = "(assert " + translateExpr(e) + ")\n"
 
     val symbols_e = Context.findSymbols(e)
@@ -171,13 +180,6 @@ abstract class Z3FileInterface() extends SolverInterface with Context {
     val assertions = (e :: expressions).foldRight("")((e, str) => assertionToString(e) + str)
     val formula = datatypes + decl + assertions + "\n(check-sat)\n"
     return formula
-  }
-
-  override def addAssumptions(es : List[Expr]) {
-    throw new Utils.UnimplementedException("Add assumptions not implemented in file-based solver.")
-  }
-  override def popAssumptions() {
-    throw new Utils.UnimplementedException("Pop assumptions not implemented in file-based solver.")
   }
 }
 

@@ -39,7 +39,7 @@ import org.scalatest.FlatSpec
 class InteractiveProcessSpec extends FlatSpec {
   behavior of "InteractiveProcess"
   
-  it should "pass the sanity check" in {
+  ignore should "pass the sanity check" in {
     val formula = List(
       "(declare-fun x () Int)\n",
       "(declare-fun y () Int)\n",

@@ -243,7 +243,6 @@ abstract trait Context {
   }
 
   // Interface to the symbolic simulator.
-
   def push()
   def pop()
   def assert(e: Expr)
