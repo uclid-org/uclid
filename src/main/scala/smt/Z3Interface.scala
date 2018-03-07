@@ -76,12 +76,15 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
 /**
  * Decide validity of SMTExpr's using a Z3 sovler.
  */
-class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends Context {
-  // Member variables.
+class Z3Interface() extends Context {
+  val cfg = new HashMap[String, String]()
+  cfg.put("model", "true")
+
   /** The Z3 context. */
-  val ctx = z3Ctx
+  val ctx = new z3.Context(cfg)
+  ctx.setPrintMode(z3.enumerations.Z3_ast_print_mode.Z3_PRINT_SMTLIB2_COMPLIANT)
   /** The Z3 solver. */
-  val solver = z3Solver
+  val solver = ctx.mkSolver()
 
   /* Unique names for Tuples. */
   val tupleNamer = new UniqueNamer("_tuple")
@@ -354,7 +357,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends Context {
   }
   
   /** Check whether a particular expression is satisfiable.  */
-  override def check : SolverResult = {
+  override def check() : SolverResult = {
     val z3Result = solver.check()
     // println(z3Result.toString)
 
@@ -371,6 +374,9 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends Context {
     return checkResult
   }
 
+  override def finish() {
+    ctx.close()
+  }
   /*
   def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
     val z3Expr = exprToZ3(e).asInstanceOf[z3.BoolExpr]
@@ -385,15 +391,4 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends Context {
   * 
   */
 
-}
-
-object Z3Interface {
-  def newInterface() : Z3Interface = {
-    var cfg = new HashMap[String, String]()
-    cfg.put("model", "true")
-    var ctx = new z3.Context(cfg)
-    ctx.setPrintMode(z3.enumerations.Z3_ast_print_mode.Z3_PRINT_SMTLIB2_COMPLIANT)
-    var solver = ctx.mkSolver()
-    return new Z3Interface(ctx, solver)
-  }
 }

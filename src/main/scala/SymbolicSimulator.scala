@@ -59,16 +59,16 @@ class SymbolicSimulator (module : Module) {
   var frameTable : FrameTable = ArrayBuffer.empty
 
   def newHavocSymbol(name: String, t: smt.Type) = {
-    new smt.Symbol("$havoc_" + UniqueIdGenerator.unique() + "_" + name, t)
+    new smt.Symbol("havoc_" + UniqueIdGenerator.unique() + "_" + name, t)
   }
   def newInputSymbol(name: String, step: Int, t: smt.Type) = {
-    new smt.Symbol("$input_" + step + "_" + name, t)
+    new smt.Symbol("input_" + step + "_" + name, t)
   }
   def newStateSymbol(name: String, step: Int, t: smt.Type) = {
-    new smt.Symbol("$state_" + step + "_" + name, t)
+    new smt.Symbol("state_" + step + "_" + name, t)
   }
   def newConstantSymbol(name: String, t: smt.Type) = {
-    new smt.Symbol("$const_"+name, t)
+    new smt.Symbol("const_" + name, t)
   }
 
   def resetState() {

@@ -17,7 +17,9 @@ module main {
   }
   
   control {
+    // print_module;
   	unroll (3);
   	check;
+  	// print_results;
   }
 }

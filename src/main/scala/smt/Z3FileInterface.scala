@@ -35,22 +35,19 @@ package uclid
 package smt
 
 import uclid.Utils
-import java.nio.file.{Paths, Files}
-import java.nio.charset.StandardCharsets
-import scala.sys.process._
+
+import scala.collection.mutable.{Map => MutableMap}
 
 import scala.language.postfixOps
 
-
-abstract class Z3FileInterface() extends Context {
+class Z3FileInterface() extends Context {
   var typeMap : SynonymMap = SynonymMap.empty
-  var sorts : List[(String, Type)] = List.empty
-  var variables : List[(String, Type)] = List.empty
-  var commands : List[Command] = List.empty
+  var sorts : MutableMap[String, Type] = MutableMap.empty
+  var variables : MutableMap[String, Type] = MutableMap.empty
 
   type NameProviderFn = (String, Option[String]) => String
   var expressions : List[Expr] = List.empty
-  val z3Process = new InteractiveProcess("/usr/bin/z3", List("-smt2", "-i"))
+  val z3Process = new InteractiveProcess("/usr/bin/z3", List("-smt2", "-in"))
 
   def generateDeclaration(x: Symbol) : String = {
     def printType(t: Type) : String = {
@@ -69,20 +66,21 @@ abstract class Z3FileInterface() extends Context {
           }
         case _ =>
           // FIXME: add more types here.
-          throw new Utils.UnimplementedException("Add support for more types!")
+          throw new Utils.UnimplementedException("Add support for more types: " + x.toString())
       }
     }
 
     return x.typ match {
-      case BoolType() => "(declare-const " + x.id + " " + printType(x.typ) + ")\n"
-      case IntType() => "(declare-const " + x.id + " " + printType(x.typ) + ")\n"
+      case BoolType() => "(declare-const %s Int)".format(x.id)
+      case IntType() => "(declare-const %s Bool)".format(x.id)
+      case BitVectorType(n) => "(declare-const %s (_ BitVec %d))".format(x.id, n)
       case MapType(ins,out) =>
-        "(declare-fun " + x.id + " " + printType(x.typ) + ")\n"
+        "(declare-fun " + x.id + " " + printType(x.typ) + ")"
       case ArrayType(ins,out) =>
-        "(declare-const " + x.id + " " + printType(x.typ) + ")\n"
+        "(declare-const " + x.id + " " + printType(x.typ) + ")"
       case _ =>
         // FIXME: add more types here.
-        throw new Utils.UnimplementedException("Add support for more types!")
+        throw new Utils.UnimplementedException("Add support for more types: " + x.typ.toString())
     }
   }
 
@@ -143,12 +141,33 @@ abstract class Z3FileInterface() extends Context {
   }
 
   def writeCommand(str : String) {
+    println(str)
     z3Process.writeInput(str + "\n")
+  }
+
+  def readResponse() : Option[String] = {
+    val msg = z3Process.readOutput()    
+    msg
+  }
+
+  override def assert (e: Expr) {
+    val (eP, typeMapP) = flattenTypes(e, typeMap)
+    typeMap = typeMapP
+    val symbolsP = Context.findSymbols(eP)
+    val newSymbols = symbolsP.filter(s => !variables.contains(s.id))
+    newSymbols.foreach {
+      (s) => {
+        variables += (s.id -> s.symbolTyp)
+        val decl = generateDeclaration(s)
+        writeCommand(decl)
+      }
+    }
+    writeCommand("(assert " + translateExpr(eP) +")")
   }
 
   override def check() : SolverResult = {
     writeCommand("(check-sat)")
-    z3Process.readOutput() match {
+    readResponse() match {
       case Some(strP) =>
         val str = strP.stripLineEnd
         str match {
@@ -160,6 +179,12 @@ abstract class Z3FileInterface() extends Context {
       case None =>
         throw new Utils.AssertionError("Unexpected EOF result from SMT solver.")
     }
+  }
+
+  override def finish() {
+    z3Process.finishInput()
+    Thread.sleep(5)
+    z3Process.kill()
   }
 
   override def push() {
@@ -181,8 +206,4 @@ abstract class Z3FileInterface() extends Context {
     val formula = datatypes + decl + assertions + "\n(check-sat)\n"
     return formula
   }
-}
-
-object Z3FileInterface {
-  // def newInterface() : Z3FileInterface = { return new Z3FileInterface() }
 }

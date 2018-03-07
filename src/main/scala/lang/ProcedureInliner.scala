@@ -48,7 +48,7 @@ class FindProcedureDependencyPass extends ReadOnlyPass[Map[Identifier, Set[Ident
     if (d == TraversalDirection.Down) {
       context.procedure match {
         case Some(currentProc) => addEdge(currentProc.id, proc.id)
-        case None => addEdge(Identifier("$top"), proc.id)
+        case None => addEdge(Identifier("_top"), proc.id)
       }
     } else { in }
   }
@@ -65,11 +65,11 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
     }
 
     val procDepGraph = visitModule(module, Map.empty[Identifier, Set[Identifier]], context)
-    val errors = Utils.findCyclicDependencies(procDepGraph, List(Identifier("$top")), recursionError)
+    val errors = Utils.findCyclicDependencies(procDepGraph, List(Identifier("_top")), recursionError)
     if (errors.size > 0) {
       throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)))
     }
-    procInliningOrder = Utils.topoSort(List(Identifier("$top")), procDepGraph)
+    procInliningOrder = Utils.topoSort(List(Identifier("_top")), procDepGraph)
     Some(module)
   }
 }
@@ -79,7 +79,7 @@ class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
   override def rewriteProcedure(p : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
     if (p.id == procToInline.id) Some(p)
     else {
-      val nameProvider = new ContextualNameProvider(ctx + p, "proc$" + p.id + "$" + procToInline.id)
+      val nameProvider = new ContextualNameProvider(ctx + p, "proc_" + p.id + "_" + procToInline.id)
       val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(id, p), p.body)
       val newDecls = newVars.map((t) => LocalVarDecl(t._1, t._2))
       Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, stmts, p.requires, p.ensures, p.modifies))
@@ -87,8 +87,8 @@ class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
   }
 
   override def rewriteModule(m : Module, ctx : Scope) : Option[Module] = {
-    val initNameProvider = new ContextualNameProvider(ctx, "init$" + procToInline.id)
-    val nextNameProvider = new ContextualNameProvider(ctx, "next$" + procToInline.id)
+    val initNameProvider = new ContextualNameProvider(ctx, "_init_" + procToInline.id)
+    val nextNameProvider = new ContextualNameProvider(ctx, "_next_" + procToInline.id)
 
     val decls = m.decls.foldLeft((List.empty[Decl], List.empty[StateVarsDecl]))((acc, decl) => {
       decl match {
@@ -173,7 +173,7 @@ class ProcedureInliner extends ASTAnalysis {
   override def visit(module : Module, context : Scope) : Option[Module] = {
     val procInliningOrder = findProcedureDependency.procInliningOrder
     def inlineProcedure(procId : Identifier, mod : Module) : Module = {
-      if (procId != Identifier("$top")) {
+      if (procId != Identifier("_top")) {
         val proc = mod.procedures.find(p => p.id == procId).get
         val rewriter = new ASTRewriter("ProcedureInliner.Inline:" + procId.toString, new InlineProcedurePass(proc))
         rewriter.visit(mod, context).get

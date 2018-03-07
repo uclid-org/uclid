@@ -110,9 +110,9 @@ object UclidMain {
       mainModule match {
         case Some(m) => execute(m)
         case None    =>
-          // InteractiveProcess.test()
           throw new Utils.ParserError("Unable to find main module", None, None)
       }
+      println("Finished execution for module: " + mainModuleName)
     }
     catch  {
       case (p : Utils.ParserError) =>
@@ -245,7 +245,10 @@ object UclidMain {
   def execute(module : Module) : List[CheckResult] = {
     // execute the control module
     var symbolicSimulator = new SymbolicSimulator(module)
-    var z3Interface = smt.Z3Interface.newInterface()
-    return symbolicSimulator.execute(z3Interface)
+    var z3Interface = new smt.Z3Interface()
+    // var z3Interface = new smt.Z3FileInterface()
+    val result = symbolicSimulator.execute(z3Interface)
+    z3Interface.finish()
+    return result
   }
 }

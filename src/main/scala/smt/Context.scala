@@ -247,6 +247,7 @@ abstract trait Context {
   def pop()
   def assert(e: Expr)
   def check() : SolverResult
+  def finish()
 }
 
 object Context 
@@ -266,11 +267,11 @@ object Context
         return index.foldLeft(findSymbols(value, findSymbols(e, syms)))((acc,i) => findSymbols(i, acc))
       case FunctionApplication(e, args) =>
         return args.foldLeft(findSymbols(e, syms))((acc,i) => findSymbols(i, acc))
+      case IntLit(_) => syms
+      case BitVectorLit(_,_) => syms
+      case BooleanLit(_) => syms
       case Lambda(_,_) =>
-        throw new Exception("lambdas in assertions should have been beta-reduced")
-      case IntLit(_) => return Set.empty[Symbol]
-      case BitVectorLit(_,_) => return Set.empty[Symbol]
-      case BooleanLit(_) => return Set.empty[Symbol]
+        throw new Utils.AssertionError("lambdas in assertions should have been beta-reduced")
     }
   }
 

@@ -399,10 +399,7 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
   Utils.assert(fix != INFIX || operands.size == 2, "Infix operators must have two operands.")
   op.typeCheck(operands)
   override def toString = {
-    fix match {
-      case INFIX => "(" + operands(0) + " " + op.toString + " " + operands(1) +  ")"
-      case PREFIX => "(" + operands.foldLeft(op.toString){(acc, i) => acc + " " + i} + ")"
-    }
+    "(" + op.toString + " " + Utils.join(operands.map(_.toString), " ") + ")" 
   }
   override val isConstant = operands.forall(p => p.isConstant)
 }

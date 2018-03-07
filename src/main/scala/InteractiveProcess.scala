@@ -66,32 +66,29 @@ class InteractiveProcess(cmd: String, args: List[String]) {
     str.map(_.toChar).toCharArray().map(_.toByte)
   }
   def bytesToString(bytes: Array[Byte]) = new String(bytes)
-  // This thread writes to process' input stream.
-  val inputWriter = new Thread(new Runnable {
-    def run() {
-      var done = false
-      while (!done && isAlive()) {
-        val str = inputChannel.read
-        str match {
-          case Some(s) =>
-            in.write(stringToBytes(s))
-            in.flush()
-          case None =>
-            in.close()
-            done = true
-        }
-      }
-    }
-  })
-  inputWriter.start()
+
   
-  // This thread reads from the process' output stream
-  val outputReader = new Thread(new Runnable {
-    def run() {
-      while (isAlive()) {
+  // Write to the process's input stream. 
+  def writeInput(str: String) {
+    in.write(stringToBytes(str))
+    in.flush()
+  }
+  // Close stdin, this may cause the process to exit.
+  def finishInput() {
+    in.flush()
+    in.close()
+  }
+  // Read from the process's output stream.
+  def readOutput() : Option[String] = {
+    var done = false
+    while (!done) {
+      if (!isAlive()) {
+        done = true
+      } else {
+        Thread.sleep(5)
         val numAvail = out.available()
         if (numAvail == 0) {
-          Thread.sleep(1)
+          Thread.sleep(5)
         } else {
           val bytes = Array.ofDim[Byte](numAvail)
           val numRead = out.read(bytes, 0, numAvail)
@@ -102,26 +99,14 @@ class InteractiveProcess(cmd: String, args: List[String]) {
               bytes.slice(0, numRead)
             }
           })
-          outputChannel.write(Some(string))
+          return Some(string)
         }
       }
-      outputChannel.write(None)
     }
-  })
-  outputReader.start()
-
-  // Write to the process's input stream. 
-  // This method only pushes data onto the channel.
-  def writeInput(str: String) {
-    inputChannel.write(Some(str))
+    return None
   }
-  def finishInput() {
-    inputChannel.write(None)
-  }
-  // Read from the process's output stream.
-  // This method tries to read from the channel.
-  def readOutput() : Option[String] = {
-    val msg = outputChannel.read
-    msg
+  // Kill the process.
+  def kill() {
+    process.destroy()
   }
 }
