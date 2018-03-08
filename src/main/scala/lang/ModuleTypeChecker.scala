@@ -67,6 +67,10 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         case AssignStmt(lhss, rhss) =>
           var ret = in
 
+          if (rhss.size == 0) {
+            ret = in + ModuleError("Right hand size of assignment must not be empty", st.position) 
+          }
+
           for ((lh, rh) <- lhss zip rhss) {
             val lhType = exprTypeChecker.typeOf(lh, context)
             val rhType = exprTypeChecker.typeOf(rh, context)

@@ -474,6 +474,9 @@ class SymbolicSimulator (module : Module) {
       return st
     }
 
+    // println("iter: " + iter.toString())
+    // println(Utils.join(s.toLines, "\n"))
+
     s match {
       case SkipStmt() => return symbolTable
       case AssertStmt(e, id) =>

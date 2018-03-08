@@ -353,7 +353,9 @@ class Z3Interface() extends Context {
   }
 
   override def assert(e : Expr) {
-    solver.add(exprToZ3(e).asInstanceOf[z3.BoolExpr])
+    val z3Expr = exprToZ3(e).asInstanceOf[z3.BoolExpr]
+    // println(z3Expr.toString())
+    solver.add(z3Expr)
   }
   
   /** Check whether a particular expression is satisfiable.  */
@@ -361,6 +363,7 @@ class Z3Interface() extends Context {
     val z3Result = solver.check()
     // println(z3Result.toString)
 
+    // println("check")
     val checkResult : SolverResult = z3Result match {
       case z3.Status.SATISFIABLE =>
         val z3Model = solver.getModel()
