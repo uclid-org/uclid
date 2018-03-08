@@ -71,16 +71,25 @@ class Z3FileInterface() extends Context {
     }
 
     return x.typ match {
-      case BoolType() => "(declare-const %s Int)".format(x.id)
-      case IntType() => "(declare-const %s Bool)".format(x.id)
+      case BoolType() => "(declare-const %s Bool)".format(x.id)
+      case IntType() => "(declare-const %s Int)".format(x.id)
       case BitVectorType(n) => "(declare-const %s (_ BitVec %d))".format(x.id, n)
-      case MapType(ins,out) =>
-        "(declare-fun " + x.id + " " + printType(x.typ) + ")"
-      case ArrayType(ins,out) =>
-        "(declare-const " + x.id + " " + printType(x.typ) + ")"
+      case SynonymType(s, typ) => "(declare-const %s %s)".format(x.id, s)
       case _ =>
         // FIXME: add more types here.
         throw new Utils.UnimplementedException("Add support for more types: " + x.typ.toString())
+    }
+  }
+
+  def generateDatatype(p : (String, Type)) : Option[String] = {
+    p._2 match {
+      case BoolType() | IntType() => None
+      case EnumType(members) =>
+        val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
+        val declDatatype = "(declare-datatypes ((%s 0)) ((%s %s)))".format(p._1, p._1, memStr)
+        //val declMembers = members.map(m => "(declare-fun %s () %s)".format(m, p._1))
+        //val str = Utils.join(declDatatype :: declMembers, "\n")
+        Some(declDatatype)
     }
   }
 
@@ -126,12 +135,12 @@ class Z3FileInterface() extends Context {
       case ArrayStoreOperation(e, index, value) =>
         "(store " + translateExpr(e) + " " + mkTuple(index) + " " + translateExpr(value) + ")"
       case FunctionApplication(e, args) =>
-        Utils.assert(e.isInstanceOf[Symbol], "Did beta sub happen?")
+        Utils.assert(e.isInstanceOf[Symbol], "Did beta substitution happen?")
         "(" + translateExpr(e) +
           args.foldLeft(""){(acc,i) =>
             acc + " " + translateExpr(i)} + ")"
       case Lambda(_,_) =>
-        throw new Exception("yo lambdas in assertions should have been beta-reduced")
+        throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
       case IntLit(value) => value.toString()
       case BitVectorLit(_,_) =>
         throw new Utils.UnimplementedException("Bitvectors unimplemented")
@@ -152,6 +161,16 @@ class Z3FileInterface() extends Context {
 
   override def assert (e: Expr) {
     val (eP, typeMapP) = flattenTypes(e, typeMap)
+    val newTypes = typeMapP.fwdMap.filter(p => !sorts.contains(p._1))
+    newTypes.foreach { 
+      (n) => {
+        sorts += (n._1 -> n._2)
+        generateDatatype(n) match {
+          case Some(s) => writeCommand(s)
+          case None => 
+        }
+      }
+    }
     typeMap = typeMapP
     val symbolsP = Context.findSymbols(eP)
     val newSymbols = symbolsP.filter(s => !variables.contains(s.id))

@@ -20,5 +20,6 @@ module main
     control {
         x = unroll(1);
         check;
+        // print_results;
     }
 }

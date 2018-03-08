@@ -270,6 +270,7 @@ object Context
       case IntLit(_) => syms
       case BitVectorLit(_,_) => syms
       case BooleanLit(_) => syms
+      case EnumLit(_, _) => syms
       case Lambda(_,_) =>
         throw new Utils.AssertionError("lambdas in assertions should have been beta-reduced")
     }

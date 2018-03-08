@@ -45,16 +45,19 @@ sealed trait Type {
   def isEnum = false
   def isUninterpreted = false
   def isSynonym = false
+  def canonical : Type
 }
 // Uninterpreted types.
 case class UninterpretedType(name: String) extends Type {
   override def toString = name.toString()
   override def isUninterpreted = true
+  override def canonical = this
 }
 // The Boolean type.
 case class BoolType() extends Type {
   override def toString = "Bool"
   override def isBool = true
+  override def canonical = this
 }
 object BoolType {
   val t = new BoolType
@@ -63,6 +66,7 @@ object BoolType {
 case class IntType() extends Type {
   override def toString = "Int"
   override def isInt = true
+  override def canonical = this
 }
 object IntType {
   val t = new IntType
@@ -72,6 +76,7 @@ case class BitVectorType(width: Int) extends Type
 {
   override def toString = "BitVec %s" + (width.toString)
   override def isBitVector = true
+  override def canonical = this
 }
 object BitVectorType {
   val t = new Memo[Int, BitVectorType]((w : Int) => new BitVectorType(w))
@@ -89,11 +94,13 @@ case class TupleType(types: List[Type]) extends ProductType(((1 to types.length)
   override def toString = "tuple [" + Utils.join(types.map(_.toString), ", ") + "]"
   override def isTuple = true
   override val typeName = "tuple"
+  override def canonical = TupleType(types.map(t => t.canonical))
 }
 case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields_) {
   override def toString = "record [" + Utils.join(fields_.map((f) => f._1.toString + " : " + f._2.toString), ", ") + "]"
   override def isRecord = true
   override val typeName = "record"
+  override def canonical = RecordType(fields_.map(f => (f._1, f._2.canonical)))
 }
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = { 
@@ -102,6 +109,7 @@ case class MapType(inTypes: List[Type], outType: Type) extends Type {
     "] " + outType
   }
   override def isMap = true
+  override def canonical = MapType(inTypes.map(_.canonical), outType.canonical)
 }
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = {  
@@ -110,15 +118,18 @@ case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
     "] " + outType
   }
   override def isArray = true
+  override def canonical = ArrayType(inTypes.map(_.canonical), outType.canonical)
 }
 case class EnumType(members : List[String]) extends Type {
   override def toString  = "enum {" + Utils.join(members, ", ") + "}"
   override def isEnum = true
   def fieldIndex(name : String) : Int = members.indexWhere(_ == name)
+  override def canonical = this
 }
 case class SynonymType(name: String, typ: Type) extends Type {
   override def toString = "type %s = %s".format(name, typ.toString)
   override def isSynonym = true
+  override def canonical = typ.canonical
 }
 
 object OperatorFixity extends scala.Enumeration {
@@ -141,7 +152,10 @@ trait Operator {
   def checkAllArgsSameType(args: List[Expr]) : Unit = {
     args match {
       case Nil => Utils.assert(false, "Expected at least one operand for '" + toString + "' operator.")
-      case head :: tail => Utils.assert(args.forall(op => op.typ == head.typ), "Operands to '" + toString + "' must of the same type.")
+      case head :: tail => 
+        Utils.assert(args.forall(op => op.typ.canonical == head.typ.canonical), 
+            "Operands to '" + toString + "' must of the same type. Got: " + 
+            Utils.join(args.map(a => a.typ.toString()), " "))
     }
   }
 }
@@ -262,11 +276,11 @@ case object ImplicationOp extends BoolResultOp {
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
 }
 case object ConjunctionOp extends BoolResultOp {
-  override def toString = "/\\"
+  override def toString = "and"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
 }
 case object DisjunctionOp extends BoolResultOp {
-  override def toString = "\\/"
+  override def toString = "or"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
 }
 case object NegationOp extends BoolResultOp {
