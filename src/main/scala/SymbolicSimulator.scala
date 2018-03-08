@@ -149,6 +149,7 @@ class SymbolicSimulator (module : Module) {
             }
             verifyProcedure(proc, label)
           case "check" =>
+            // println("In check")
             // assumes.foreach((e) => println("assumption : " + e.toString))
             // asserts.foreach((e) => println("assertion  : " + e.toString + "; " + e.expr.toString))
             proofResults = assertionTree.verify(solver)
@@ -215,7 +216,7 @@ class SymbolicSimulator (module : Module) {
 
   /* This can be used as a post-processing step which might make unrolling complex expressions faster. */
   def renameStates(st : SymbolTable, step : Int, scope : Scope) : SymbolTable = {
-    val renamedExprs = scope.map.map(_._2).filter(!_.typ.isArray)collect {
+    val renamedExprs = scope.map.map(_._2).collect {
       case Scope.StateVar(id, typ) =>
         val newVariable = newStateSymbol(id.name, step, smt.Converter.typeToSMT(typ))
         val stateExpr = st.get(id).get

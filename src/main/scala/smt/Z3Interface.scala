@@ -353,7 +353,9 @@ class Z3Interface() extends Context {
   }
 
   override def assert(e : Expr) {
+    // println("assert: " + e.toString())
     val z3Expr = exprToZ3(e).asInstanceOf[z3.BoolExpr]
+    // println("z3: " + z3Expr.toString())
     // println(z3Expr.toString())
     solver.add(z3Expr)
   }
