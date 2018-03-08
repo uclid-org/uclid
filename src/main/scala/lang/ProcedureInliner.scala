@@ -137,10 +137,10 @@ class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
             val mArgs = (argVars zip args).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2))
             val mRet  = (retVars zip retNewVars).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2._1))
             val mLocal = (procToInline.decls zip localNewVars).foldLeft(mEmpty)((map, t) => map + (t._1.id -> t._2._1))
-            val resultAssignStatment = AssignStmt(lhss, retNewVars.map(_._1))
+            val resultAssignStatment = if (lhss.size > 0) List(AssignStmt(lhss, retNewVars.map(_._1))) else List.empty
             val rewriteMap = mArgs ++ mRet ++ mLocal
             val rewriter = new ExprRewriter("ProcedureInlineRewriter", rewriteMap)
-            (acc._1 ++ rewriter.rewriteStatements(procToInline.body) ++ List(resultAssignStatment), acc._2 ++ retNewVars ++ localNewVars)
+            (acc._1 ++ rewriter.rewriteStatements(procToInline.body) ++ resultAssignStatment, acc._2 ++ retNewVars ++ localNewVars)
           }
         case ForStmt(id, range, body) =>
           val bodyP = inlineProcedureCalls(uniqNamer, body)

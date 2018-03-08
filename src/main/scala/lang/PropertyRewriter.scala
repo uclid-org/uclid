@@ -428,8 +428,12 @@ class LTLPropertyRewriterPass extends RewritePass {
   def createAssign(v : Identifier, e : Expr) : AssignStmt = {
     AssignStmt(List(LhsId(v)), List(e))
   }
-  def createAssign(vs : List[Identifier], es : List[Expr]) : AssignStmt = {
-    AssignStmt(vs.map(LhsId(_)), es)
+  def createAssign(vs : List[Identifier], es : List[Expr]) : Option[AssignStmt] = {
+    if (vs.size > 0) {
+      Some(AssignStmt(vs.map(LhsId(_)), es))
+    }  else {
+      None
+    }
   }
 
   def rewriteSpecs(module : Module, ctx : Scope, ltlSpecs : List[SpecDecl], otherSpecs : List[SpecDecl]) : Module = {
@@ -553,13 +557,12 @@ class LTLPropertyRewriterPass extends RewritePass {
     val monitorAssignments = assignmentPairs.map(p => createAssign(p._1, p._2))
     val hasFailedAssignments = hasFaileds.map(p => createAssign(p._1, p._2))
     val pendingAssignments = pendings.map(p => createAssign(p._1, p._2))
-    val hasAcceptedAssignments = hasAccepteds.map(p => createAssign(p._1._1, p._1._2))
+    val hasAcceptedAssignments = hasAccepteds.map(p => createAssign(p._1._1, p._1._2)).flatten
     val hasAcceptedTraceAssignments = hasAccepteds.map(p => createAssign(p._2._1, p._2._2))
     val preNextStmts = List(stateCopyStmt, isInitAssignNext)
     val postNextStmts = biImplHavocs ++ zAssumes ++ biImplAssumes ++ monitorAssignments ++ 
                         hasFailedAssignments ++ pendingAssignments ++ 
                         hasAcceptedAssignments ++ hasAcceptedTraceAssignments
-
     // new init/next.
     val newInitDecl = InitDecl(module.init.get.body ++ postInitStmts ++ postNextStmts)
     val newNextDecl = NextDecl(preNextStmts ++ module.next.get.body ++ postNextStmts)

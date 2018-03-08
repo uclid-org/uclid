@@ -1478,21 +1478,22 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         case varBvSlice : VarBitVectorSlice => LhsVarSliceSelect(id, varBvSlice)
       }
     }
-    val lhsP = lhsIdP.flatMap{(id) =>
-      val lhsP1 : Option[Lhs] = lhs match {
-        case LhsId(_) => Some(LhsId(id))
-        case LhsArraySelect(_, indices) =>
-          Some(LhsArraySelect(id, indices.map(visitExpr(_, context)).flatten))
-        case LhsRecordSelect(_, fields) =>
-          Some(LhsRecordSelect(id, fields.map(visitIdentifier(_, context)).flatten))
-        case LhsSliceSelect(id, slice) =>
-          val sliceP = visitBitVectorSlice(slice, context)
-          sliceP.flatMap((s) => Some(newLhsSliceSelect(id, s)))
-        case LhsVarSliceSelect(_, slice) =>
-          val sliceP = visitBitVectorSlice(slice, context)
-          sliceP.flatMap((s) => Some(newLhsSliceSelect(id, s)))
+    val lhsP = lhsIdP.flatMap{(id) => {
+        val lhsP1 : Option[Lhs] = lhs match {
+          case LhsId(_) => Some(LhsId(id))
+          case LhsArraySelect(_, indices) =>
+            Some(LhsArraySelect(id, indices.map(visitExpr(_, context)).flatten))
+          case LhsRecordSelect(_, fields) =>
+            Some(LhsRecordSelect(id, fields.map(visitIdentifier(_, context)).flatten))
+          case LhsSliceSelect(_, slice) =>
+            val sliceP = visitBitVectorSlice(slice, context)
+            sliceP.flatMap((s) => Some(newLhsSliceSelect(id, s)))
+          case LhsVarSliceSelect(_, slice) =>
+            val sliceP = visitBitVectorSlice(slice, context)
+            sliceP.flatMap((s) => Some(newLhsSliceSelect(id, s)))
+        }
+        lhsP1.flatMap((lhsPx) => pass.rewriteLHS(lhsPx, context))
       }
-      lhsP1.flatMap((lhsP) => pass.rewriteLHS(lhsP, context))
     }
     return ASTNode.introducePos(setPosition, setFilename, lhsP, lhs.position)
   }

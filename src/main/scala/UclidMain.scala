@@ -112,7 +112,7 @@ object UclidMain {
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
       }
-      println("Finished execution for module: " + mainModuleName)
+      println("Finished execution for module: %s.".format(mainModuleName.toString))
     }
     catch  {
       case (p : Utils.ParserError) =>
@@ -169,16 +169,15 @@ object UclidMain {
     passManager.addPass(new FindProcedureDependency())
     passManager.addPass(new DefDepGraphChecker())
     passManager.addPass(new RewriteDefines())
-    passManager.addPass(new ProcedureInliner())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
+    passManager.addPass(new ProcedureInliner())
     passManager.addPass(new CaseEliminator())
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
-    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
     passManager.addPass(new FindFreshLiterals())
     passManager.addPass(new RewriteFreshLiterals())
+    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
     def parseFile(srcFile : String) : List[Module] = {
       val text = scala.io.Source.fromFile(srcFile).mkString
