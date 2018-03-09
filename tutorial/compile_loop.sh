@@ -3,6 +3,6 @@
 while true; do
     make
     echo "Waiting for files to be updated ..."
-    inotifywait -e modify *.tex
+    inotifywait -e modify *.tex ../examples/tutorial/*
 done
 

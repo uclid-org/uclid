@@ -1,5 +1,5 @@
 module main {
-  // System description.
+  // System description. blah
   var a, b : integer;
 
   init {

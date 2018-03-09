@@ -6,156 +6,27 @@ This chapter describes \uclid{}'s features for compositional and modular verific
 We will use a running example of a CPU model constructed in the \uclid{} and use bounded model checking to prove that the execution of this CPU is deterministic: i.e. we show that given two identical instruction memories, the state updates performed by this CPU will be identical.
 
 \section{Common Type Definitions Across Modules}
-Example~\ref{ex:cpu-common} shows a module that defines only type synonyms. Such a module can be used to share type definitions across other modules. The types declared in Example~\ref{ex:cpu-common} are \emph{imported} in lines~3-7 of module \codelike{cpu} declared in Example~\ref{ex:cpu-cpu-p1}.
+Example~\ref{ex:cpu-common} shows a module that defines only type synonyms. Such a module can be used to share type definitions across other modules. The types declared in Example~\ref{ex:cpu-common} are \emph{imported} in lines~2-5 of module \codelike{cpu} declared in Example~\ref{ex:cpu-cpu}.
 
 \label{sec:cpu-model}
 \begin{uclidlisting}[htbp]
-\begin{lstlisting}[language=uclid,style=uclidstyle]
-// This module declares types that are used in the rest of the model.
-module common {
-  // addresses are uninterpreted types.
-  type addr_t = bv8;
-  type word_t = bv8;
-  // memory
-  type mem_t = [addr_t]word_t;
-  // CPU operation.
-  type op_t   = enum { op_mov, op_add, op_sub, op_load, op_store };
-}
-\end{lstlisting}
-\caption{Module \codelike{common} of the CPU model}
-\label{ex:cpu-common}
+%\begin{lstlisting}[language=uclid,style=uclidstyle]
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex4.1-cpu.ucl}
+    \caption{Module \codelike{common} of the CPU model}
+    \label{ex:cpu-common}
 \end{uclidlisting}
 
 \begin{uclidlisting}[htbp]
-\begin{lstlisting}[language=uclid,style=uclidstyle]
-module cpu {
-  // Import type aliases from common.
-  type addr_t = common :: addr_t;
-  type mem_t  = common :: mem_t;
-  type word_t = common :: word_t;
-  type op_t   = common :: op_t;
-  
-  // type of register file.
-  type regindex_t; 
-  type regs_t = [regindex_t]word_t;
-
-  // imem is the program memory; an input to the module.
-  input imem : mem_t;
-  
-  var dmem : mem_t;
-  var regs : regs_t;
-  var pc   : addr_t;
-
-  // These are uninterpreted functions.
-  function inst2op   (i : word_t) : op_t;
-  function inst2reg0 (i : word_t) : regindex_t;
-  function inst2reg1 (i : word_t) : regindex_t;
-  function inst2imm  (i : word_t) : word_t;
-  function inst2addr (i : word_t) : addr_t;
-
-  var inst   : word_t;
-  var result : word_t;
-
-  procedure exec_inst(inst : word_t, pc : addr_t)
-    returns (result : word_t, pc_next : addr_t)
-    modifies regs;
-  {
-    var op     : op_t;
-    var r0ind  : regindex_t;
-    var r1ind  : regindex_t;
-    var r0     : word_t;
-    var r1     : word_t;
-
-    op = inst2op(inst);
-    r0ind = inst2reg0(inst);
-    r1ind = inst2reg1(inst);
-    r0 = regs[r0ind];
-    r1 = regs[r1ind];
-    case
-      (op == op_mov)     : { result = inst2imm(inst); }
-      (op == op_add)     : { result = r0 + r1; }
-      (op == op_sub)     : { result = r0 - r1; }
-      (op == op_load)    : { result = dmem[inst2addr(inst)]; }
-      (op == op_store)   : { result = r0; }
-    esac
-    pc_next = pc + 1bv8;
-    regs[r0ind] = result;
-  }
-  // continued in Example 4.3.
-\end{lstlisting}
-\caption{Variable and Procedure Declarations of the \codelike{cpu} module}
-\label{ex:cpu-cpu-p1}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex4.2-cpu.ucl}
+    \caption{The \codelike{cpu} module in the CPU model}
+    \label{ex:cpu-cpu}
 \end{uclidlisting}
 
-\begin{uclidlisting}[htbp]
-\begin{lstlisting}[language=uclid,style=uclidstyle]
-  // continued from Example 4.2.
-
-  // Define initial state for the modules.
-  init {
-    assume (forall (r : regindex_t) :: regs[r] == 0bv8);
-    assume (forall (a : addr_t) :: dmem[a] == 0bv8);
-    pc = 0bv8;
-    inst = 0bv8;
-  }
-
-  next {
-    // get the next instruction.
-    inst = imem[pc];
-    // execute it
-    call (result, pc) = exec_inst(inst, pc);
-  }
-}
-\end{lstlisting}
-\caption{\keywordbf{init} and \keywordbf{next} blocks of the \codelike{cpu} module}
-\label{ex:cpu-cpu-p2}
-\end{uclidlisting}
 
 \begin{uclidlisting}[htbp]
-\begin{lstlisting}[language=uclid,style=uclidstyle]
-module main {
-
-  // Import types
-  type addr_t     = common :: addr_t;
-  type mem_t      = common :: mem_t;
-  type word_t     = common :: word_t;
-  type op_t       = common :: op_t;
-  type regindex_t = cpu :: regindex_t;
-  
-  // instruction memory is the same for both CPUs.
-  var imem : mem_t;
-
-  // Create two instances of the CPU module.
-  instance cpu_i_1 : cpu(imem : (imem));
-  instance cpu_i_2 : cpu(imem : (imem));
-
-  init {
-  }
-
-  next {
-    // Invoke CPU 1 and CPU 2.
-    next (cpu_i_1);
-    next (cpu_i_2);
-  }
-  
-  // These are our properties.
-  invariant eq_regs : (forall (ri : regindex_t) :: 
-                        cpu_i_1->regs[ri] == cpu_i_2->regs[ri]);
-  invariant eq_mem  : (forall (a : addr_t) :: 
-                        cpu_i_1->dmem[a] == cpu_i_2->dmem[a]);
-  invariant eq_pc   : (cpu_i_1->pc == cpu_i_2->pc);
-  invariant eq_inst : (cpu_i_1->inst == cpu_i_2->inst);
-
-  // Proof script.
-  control {
-    unroll(3);
-    check;
-    print_results;
-  }
-}
-\end{lstlisting}
-\caption{Module \codelike{main} in the CPU model}
-\label{ex:cpu-main}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex4.3-cpu.ucl}
+    \caption{Module \codelike{main} in the CPU model}
+    \label{ex:cpu-main}
 \end{uclidlisting}
 
 
@@ -166,21 +37,21 @@ A convenient mechanism for abstraction in \uclid{} is through the use of uninter
 aspects for transition systems introduced by the original UCLID system~\cite{bryant-cav02}.
 
 \subsection{Uninterpreted Types}
-Example~\ref{ex:cpu-cpu-p1} shows the use of the \emph{uninterpreted type}: \codelike{regindex_t} on line~9. The index type to the register is an \emph{abstract} type, as opposed to a specific type (e.g. \codelike{bv3}). This allows us to reason about an abstract register file that has an undefined (and unbounded) number of entries, as opposed to proving facts about some specific register file implementation, potentially enabling more general proofs about system behavior.
+Example~\ref{ex:cpu-cpu} shows the use of the \emph{uninterpreted type}: \codelike{regindex_t} on line~6. The index type to the register is an \emph{abstract} type, as opposed to a specific type (e.g. \codelike{bv3}). This allows us to reason about an abstract register file that has an undefined (and unbounded) number of entries, as opposed to proving facts about some specific register file implementation, potentially enabling more general proofs about system behavior.
 
 \subsection{Uninterpreted Functions}
-Values belonging to an uninterpreted type can be created using \emph{uninterpreted functions}. The functions \codelike{inst2op}, \codelike{inst2reg0}, \codelike{inst2reg1}, \codelike{inst2imm} and \codelike{inst2addr} on lines~20-24 of Example~\ref{ex:cpu-cpu-p1} are all examples of uninterpreted functions. An uninterpreted function $f$ is a function about which we know nothing, except that it is a function; i.e. $\forall x_1, x_2.~ x_1 = x_2 \implies f(x_1) = f(x_2)$.
+Values belonging to an uninterpreted type can be created using \emph{uninterpreted functions}. The functions \codelike{inst2op}, \codelike{inst2reg0}, \codelike{inst2reg1}, \codelike{inst2imm} and \codelike{inst2addr} on lines~15-19 of Example~\ref{ex:cpu-cpu} are all examples of uninterpreted functions. An uninterpreted function $f$ is a function about which we know nothing, except that it is a function; i.e. $\forall x_1, x_2.~ x_1 = x_2 \implies f(x_1) = f(x_2)$.
 
 Uninterpreted functions allow us to reason about an abstract CPU model without considering specific instruction encodings or decoder models. This could potentially lead to more general proofs as well as more scalable automated proofs. 
 
 
 \section{Procedure Definition}
-Besides modules, another way of managing model complexity in \uclid{} is through the use of \emph{procedures}. Example~\ref{ex:cpu-cpu-p1} defines the \keyword{procedure} \codelike{exec_inst} on line~29. The procedure takes two arguments: \codelike{inst} and \codelike{pc} and returns two values: \codelike{result} and \codelike{pc_next}.
+Besides modules, another way of managing model complexity in \uclid{} is through the use of \emph{procedures}. Example~\ref{ex:cpu-cpu} defines the \keyword{procedure} \codelike{exec_inst} on line~21. The procedure takes two arguments: \codelike{inst} and \codelike{pc} and returns two values: \codelike{result} and \codelike{pc_next}.
 
-Note that all module-level state modified by the procedure must be declared using a \keyword{modifies} clause; this is shown on line~31.
+Note that all module-level state modified by the procedure must be declared using a \keyword{modifies} clause; this is shown on line~23.
 
 \subsection{Procedure Invocation}
-Procedures are invoked using the \keyword{call} keyword. In Example~\ref{ex:cpu-cpu-p2}, procedure \codelike{exec_inst} is called on line~15 of Example~\ref{ex:cpu-cpu-p2}. The actual arguments to the procedure are \codelike{inst} and \codelike{pc}, and the return values of the procedure will be stored in the variables \codelike{result} and \codelike{pc}.
+Procedures are invoked using the \keyword{call} keyword. In Example~\ref{ex:cpu-cpu}, procedure \codelike{exec_inst} is called on line~54 of Example~\ref{ex:cpu-cpu}. The actual arguments to the procedure are \codelike{inst} and \codelike{pc}, and the return values of the procedure will be stored in the variables \codelike{result} and \codelike{pc}.
 
 \section{Module Instantiation and Scheduling}
 
@@ -197,7 +68,7 @@ The state variables of an instantiated module are accessed using the \codelike{-
 Executing \uclid{} on the complete CPU model shows that CPU is in fact deterministic. 
 
 \begin{Verbatim}[frame=single, samepage=true]
-$ uclid examples/tutorial/ex4.1-cpu.ucl 
+$ uclid examples/tutorial/ex4.{1,2,3}-cpu.ucl 
 16 assertions passed.
 0 assertions failed.
 0 assertions indeterminate.
