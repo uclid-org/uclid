@@ -42,9 +42,9 @@ object Converter {
       case lang.UninterpretedType(id) =>
         smt.UninterpretedType(id.name)
       case lang.IntegerType() =>
-        smt.IntType()
+        smt.IntType
       case lang.BooleanType() =>
-        smt.BoolType()
+        smt.BoolType
       case lang.BitVectorType(w) =>
         smt.BitVectorType(w)
       case lang.MapType(inTypes,outType) =>

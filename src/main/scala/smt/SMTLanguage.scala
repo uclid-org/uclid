@@ -33,8 +33,11 @@
 package uclid
 package smt
 import scala.collection.mutable.Map
+import scala.util.hashing.{MurmurHash3 => MH}
 
 sealed trait Type {
+  val hashBaseId = MH.mix(28615, 22575)
+  val hashId : Int
   def isBool = false
   def isInt = false
   def isBitVector = false
@@ -48,28 +51,30 @@ sealed trait Type {
 }
 // Uninterpreted types.
 case class UninterpretedType(name: String) extends Type {
+  override val hashId = MH.mix(hashBaseId, 100)
+  override val hashCode = MH.finalizeHash(hashId, 1) 
   override def toString = name.toString()
   override def isUninterpreted = true
 }
 // The Boolean type.
-case class BoolType() extends Type {
+case object BoolType extends Type {
+  override val hashId = MH.mix(hashBaseId, 101)
+  override val hashCode = MH.finalizeHash(hashId, 1) 
   override def toString = "Bool"
   override def isBool = true
 }
-object BoolType {
-  val t = new BoolType
-}
 // The integer type.
-case class IntType() extends Type {
+case object IntType extends Type {
+  override val hashId = MH.mix(hashBaseId, 102)
+  override val hashCode = MH.finalizeHash(hashId, 1) 
   override def toString = "Int"
   override def isInt = true
-}
-object IntType {
-  val t = new IntType
 }
 // The bit-vector type.
 case class BitVectorType(width: Int) extends Type
 {
+  override val hashId = MH.mix(hashBaseId, 103)
+  override val hashCode = MH.finalizeHash(MH.mixLast(width, hashId), 1) 
   override def toString = "BitVec %s" + (width.toString)
   override def isBitVector = true
 }
@@ -86,16 +91,22 @@ sealed abstract class ProductType(fields : List[(String, Type)]) extends Type {
   val typeName : String 
 }
 case class TupleType(types: List[Type]) extends ProductType(((1 to types.length).map("_" + _.toString)).zip(types).toList) {
+  override val hashId = MH.mix(hashBaseId, 104)
+  override val hashCode = MH.finalizeHash(types.foldLeft(hashId)((acc, t) => MH.mix(acc, t.hashCode)), types.size)
   override def toString = "tuple [" + Utils.join(types.map(_.toString), ", ") + "]"
   override def isTuple = true
   override val typeName = "tuple"
 }
 case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields_) {
+  override val hashId = MH.mix(hashBaseId, 105)
+  override val hashCode = MH.finalizeHash(fields_.foldLeft(hashId)((acc, f) => MH.mix(MH.mix(acc, f._1.hashCode), f._2.hashCode)), fields_.size)
   override def toString = "record [" + Utils.join(fields_.map((f) => f._1.toString + " : " + f._2.toString), ", ") + "]"
   override def isRecord = true
   override val typeName = "record"
 }
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
+  override val hashId = MH.mix(hashBaseId, 106)
+  override val hashCode = MH.finalizeHash(inTypes.foldLeft(MH.mix(hashId, outType.hashCode))((acc, t) => MH.mix(acc, t.hashCode)), inTypes.size)
   override def toString = { 
     "map [" +
     inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + "," + i.toString } +
@@ -104,6 +115,8 @@ case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override def isMap = true
 }
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
+  override val hashId = MH.mix(hashBaseId, 107)
+  override val hashCode = MH.finalizeHash(inTypes.foldLeft(MH.mix(hashId, outType.hashCode))((acc, t) => MH.mix(acc, t.hashCode)), inTypes.size)
   override def toString = {  
     "array [" +
     inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + "," + i.toString } +
@@ -112,11 +125,14 @@ case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override def isArray = true
 }
 case class EnumType(members : List[String]) extends Type {
+  override val hashId = MH.mix(hashBaseId, 108)
+  override val hashCode = MH.finalizeHash(members.foldLeft(hashId)((acc, m) => MH.mix(acc, m.hashCode)), members.size)
   override def toString  = "enum {" + Utils.join(members, ", ") + "}"
   override def isEnum = true
   def fieldIndex(name : String) : Int = members.indexWhere(_ == name)
 }
 case class SynonymType(name: String, typ: Type) extends Type {
+  override val hashId = MH.mix(hashBaseId, 109)
   override def toString = "type %s = %s".format(name, typ.toString)
   override def isSynonym = true
 }
@@ -128,6 +144,8 @@ object OperatorFixity extends scala.Enumeration {
 import OperatorFixity._
 
 trait Operator {
+  val hashBaseId : Int = MH.mix(11538, 22446)
+  val hashId : Int
   def resultType(args: List[Expr]) : Type
   def typeCheck (args: List[Expr]) : Unit = { }
   def fixity : OperatorFixity
@@ -151,22 +169,26 @@ trait Operator {
 
 // Operators that return integers.
 abstract class IntResultOp extends Operator {
-  override def resultType(args: List[Expr]) : Type = { IntType.t }
+  override def resultType(args: List[Expr]) : Type = { IntType }
   override def fixity = { PREFIX }
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
 }
 object IntAddOp extends IntResultOp {
+  override val hashId = MH.mix(hashBaseId, 200)
   override def toString = "+"
 }
 object IntSubOp extends IntResultOp {
+  override val hashId = MH.mix(hashBaseId, 201)
   override def toString = "-"
 }
 object IntMulOp extends IntResultOp {
+  override val hashId = MH.mix(hashBaseId, 202)
   override def toString = "*"
 }
 object IntMinusOp extends IntResultOp {
+  override val hashId = MH.mix(hashBaseId, 203)
   override def toString = "-"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 1); checkAllArgTypes(args, IntType.t) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 1); checkAllArgTypes(args, IntType) }
 }
 
 // Operators that return bitvectors.
@@ -176,32 +198,41 @@ abstract class BVResultOp(width : Int) extends Operator {
   override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(width)) }
 }
 case class BVAddOp(w : Int) extends BVResultOp(w) {
+  override val hashId = MH.mix(hashBaseId, 204)
   override def toString = "bvadd"
 }
 case class BVSubOp(w : Int) extends BVResultOp(w) {
+  override val hashId = MH.mix(hashBaseId, 205)
   override def toString = "bvsub"
 }
 case class BVMulOp(w : Int) extends BVResultOp(w) {
+  override val hashId = MH.mix(hashBaseId, 206)
   override def toString = "bvmul"
 }
 case class BVMinusOp(w : Int) extends BVResultOp(w) {
+  override val hashId = MH.mix(hashBaseId, 207)
   override def toString = "bvneg"
   override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 1); checkAllArgTypes(args, BitVectorType.t(w)) }
 }
 case class BVAndOp(w : Int) extends BVResultOp(w) {
+  override val hashId = MH.mix(hashBaseId, 208)
   override def toString = "bvand"
 }
 case class BVOrOp(w : Int) extends BVResultOp(w) {
+  override val hashId = MH.mix(hashBaseId, 209)
   override def toString = "bvor"
 }
 case class BVXorOp(w : Int) extends BVResultOp(w) {
+  override val hashId = MH.mix(hashBaseId, 210)
   override def toString = "bvxor"
 }
 case class BVNotOp(w : Int) extends BVResultOp(w) {
+  override val hashId = MH.mix(hashBaseId, 211)
   override def toString = "bvneg"
   override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 1); checkAllArgTypes(args, BitVectorType.t(w)) }
 }
 case class BVExtractOp(hi : Int, lo : Int) extends BVResultOp(hi - lo + 1) {
+  override val hashId = MH.mix(hashBaseId, 212)
   override def toString = "bvextract " + hi + " " + lo
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 1);
@@ -211,6 +242,7 @@ case class BVExtractOp(hi : Int, lo : Int) extends BVResultOp(hi - lo + 1) {
   }
 }
 case class BVConcatOp(w : Int) extends BVResultOp(w) {
+  override val hashId = MH.mix(hashBaseId, 213)
   override def toString = "bvconcat"
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 2);
@@ -220,6 +252,7 @@ case class BVConcatOp(w : Int) extends BVResultOp(w) {
   }
 }
 case class BVReplaceOp(w : Int, hi : Int, lo : Int) extends BVResultOp(w) {
+  override val hashId = MH.mix(hashBaseId, 214)
   override def toString = "bvreplace " + hi + " " + lo
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 2);
@@ -230,7 +263,7 @@ case class BVReplaceOp(w : Int, hi : Int, lo : Int) extends BVResultOp(w) {
 }
 // Operators that return Booleans.
 abstract class BoolResultOp extends Operator {
-  override def resultType(args: List[Expr]) : Type = { BoolType.t }
+  override def resultType(args: List[Expr]) : Type = { BoolType }
   override def fixity = { INFIX }
 }
 
@@ -245,15 +278,18 @@ abstract class QuantifierOp extends BoolResultOp {
 }
 
 case class ForallOp(vs : List[Symbol]) extends QuantifierOp {
+  override val hashId = MH.mix(hashBaseId, 215)
   override def variables = vs
   override def toString = "forall (" + Utils.join(vs.map(i => i.toString + ": " + i.typ.toString), ", ") + "): "
 }
 case class ExistsOp(vs : List[Symbol]) extends QuantifierOp {
+  override val hashId = MH.mix(hashBaseId, 216)
   override def variables = vs
   override def toString = "exists (" + Utils.join(vs.map(i => i.toString + ": " + i.typ.toString), ", ") + "): "
 }
 
 case object IffOp extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 217)
   override def toString = "<==>"
   override def typeCheck (args: List[Expr]) = {
     Utils.assert(args.size == 2, "Iff must have two operands.")
@@ -261,73 +297,88 @@ case object IffOp extends BoolResultOp {
   }
 }
 case object ImplicationOp extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 218)
   override def toString  = "==>"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType) }
 }
 case object ConjunctionOp extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 219)
   override def toString = "and"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType) }
 }
 case object DisjunctionOp extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 220)
   override def toString = "or"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType.t) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType) }
 }
 case object NegationOp extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 221)
   override def toString = "not"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 1); checkAllArgTypes(args, BoolType.t) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 1); checkAllArgTypes(args, BoolType) }
   override def fixity = PREFIX
 }
 case object EqualityOp extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 222)
   override def toString = "="
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
 }
 case object InequalityOp extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 223)
   override def toString = "distinct"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
 }
 // Integer comparison.
 case object IntLTOp extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 224)
   override def toString = "<"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
   override def fixity = PREFIX
 }
 case object IntLEOp extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 225)
   override def toString = "<="
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
   override def fixity = PREFIX
 }
 case object IntGTOp extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 226)
   override def toString = ">"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
   override def fixity = PREFIX
 }
 case object IntGEOp extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 227)
   override def toString = ">="
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType.t) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
   override def fixity = PREFIX
 }
 // Bitvector comparison.
 case class BVLTOp(w : Int) extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 228)
   override def toString = "bvslt"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
   override def fixity = PREFIX
 }
 case class BVLEOp(w : Int) extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 229)
   override def toString = "bvsle"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
   override def fixity = PREFIX
 }
 case class BVGTOp(w : Int) extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 230)
   override def toString = "bvugt"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
   override def fixity = PREFIX
 }
 case class BVGEOp(w : Int) extends BoolResultOp {
+  override val hashId = MH.mix(hashBaseId, 231)
   override def toString = "bvuge"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
   override def fixity = PREFIX
 }
 case class RecordSelectOp(name : String) extends Operator {
+  override val hashId = MH.mix(hashBaseId, 232)
   override def toString = "get-field " + name
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 1);
@@ -340,6 +391,7 @@ case class RecordSelectOp(name : String) extends Operator {
   override def fixity = PREFIX
 }
 case class RecordUpdateOp(name: String) extends Operator {
+  override val hashId = MH.mix(hashBaseId, 233)
   override def toString = "update-field " + name
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 2)
@@ -351,6 +403,7 @@ case class RecordUpdateOp(name: String) extends Operator {
   override def fixity = PREFIX
 }
 case object ITEOp extends Operator {
+  override val hashId = MH.mix(hashBaseId, 234)
   override def toString = "ite"
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 3)
@@ -362,6 +415,8 @@ case object ITEOp extends Operator {
 }
 // Expressions
 abstract class Expr(val typ: Type) {
+  val hashBaseId : Int = MH.mix(662, 32716)
+  val hashId : Int
   val isConstant = false
 }
 // Literals.
@@ -369,34 +424,41 @@ abstract class Literal(exprType : Type) extends Expr (exprType) {
   override val isConstant = true
 }
 
-case class IntLit(value: BigInt) extends Literal (IntType.t) {
+case class IntLit(value: BigInt) extends Literal (IntType) {
+  override val hashId = MH.mix(hashBaseId, 300)
   override def toString = value.toString
 }
 
 case class BitVectorLit(value: BigInt, width: Int) extends Literal (BitVectorType.t(width)) {
   Utils.assert(value.bitCount <= width, "Value (" + value.toString + ") too big for BitVector of width " + width + " bits.")
+  override val hashId = MH.mix(hashBaseId, 301)
   override def toString = "(_ bv" + value.toString + " " + width.toString +")"
 }
 
-case class BooleanLit(value: Boolean) extends Literal (BoolType.t) {
+case class BooleanLit(value: Boolean) extends Literal (BoolType) {
+  override val hashId = MH.mix(hashBaseId, 302)
   override def toString = value.toString
 }
 
 case class EnumLit(id : String, eTyp : EnumType) extends Literal (eTyp) {
+  override val hashId = MH.mix(hashBaseId, 303)
   override def toString  = id.toString
 }
 
 case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {
+  override val hashId = MH.mix(hashBaseId, 304)
   override def toString = id.toString
 }
 // Tuple creation.
 case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ))) {
+  override val hashId = MH.mix(hashBaseId, 305)
   override def toString = "(mk-tuple " + Utils.join(args.map(_.toString), " ") + ")"
   override val isConstant = args.forall(p => p.isConstant) 
 }
 
 
 case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr (op.resultType(operands)) {
+  override val hashId = MH.mix(hashBaseId, 306)
   val fix = op.fixity
   Utils.assert(fix == INFIX || fix == PREFIX, "Unknown fixity.")
   Utils.assert(fix != INFIX || operands.size == 2, "Infix operators must have two operands.")
@@ -410,12 +472,14 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
 case class ArraySelectOperation(e: Expr, index: List[Expr])
   extends Expr (e.typ.asInstanceOf[ArrayType].outType)
 {
+  override val hashId = MH.mix(hashBaseId, 307)
   override def toString = "(" + e.toString + ")" + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + "]"
   override val isConstant = e.isConstant && index.forall(i => i.isConstant)
 }
 case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr(e.typ)
 {
+  override val hashId = MH.mix(hashBaseId, 308)
   override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + " := " + value.toString + "]"
   override val isConstant = e.isConstant && index.forall(i => i.isConstant) && value.isConstant
@@ -425,12 +489,14 @@ case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends 
 case class FunctionApplication(e: Expr, args: List[Expr])
   extends Expr (e.typ.asInstanceOf[MapType].outType)
 {
+  override val hashId = MH.mix(hashBaseId, 309)
   override def toString = e.toString + "(" + args.tail.fold(args.head.toString)
     { (acc,i) => acc + "," + i.toString } + ")"
   override val isConstant = e.isConstant && args.forall(a => a.isConstant)
 }
 
 case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType(ids.map(id => id.typ), e.typ)) {
+  override val hashId = MH.mix(hashBaseId, 310)
   override def toString = "Lambda(" + ids + "). " + e.toString
   override val isConstant = e.isConstant
 }

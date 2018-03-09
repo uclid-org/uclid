@@ -11,10 +11,10 @@ module common {
 
 module cpu {
   // Import type aliases from common.
-  type addr_t = common :: addr_t;
-  type mem_t  = common :: mem_t;
-  type word_t = common :: word_t;
-  type op_t   = common :: op_t;
+  type addr_t = common.addr_t;
+  type mem_t  = common.mem_t;
+  type word_t = common.word_t;
+  type op_t   = common.op_t;
   
   // type of register file.
   type regindex_t; 
@@ -86,11 +86,11 @@ module cpu {
 module main {
 
   // Import types
-  type addr_t     = common :: addr_t;
-  type mem_t      = common :: mem_t;
-  type word_t     = common :: word_t;
-  type op_t       = common :: op_t;
-  type regindex_t = cpu :: regindex_t;
+  type addr_t     = common.addr_t;
+  type mem_t      = common.mem_t;
+  type word_t     = common.word_t;
+  type op_t       = common.op_t;
+  type regindex_t = cpu.regindex_t;
   
   // instruction memory is the same for both CPUs.
   var imem : mem_t;

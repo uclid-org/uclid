@@ -136,7 +136,7 @@ abstract trait Context {
       case Some(t) => (t, synMap)
       case None =>
         typ match {
-          case BoolType() | IntType() | BitVectorType(_) =>
+          case BoolType | IntType | BitVectorType(_) =>
             synMap.addPrimitiveType(typ)
             (typ, synMap)
           case unintTyp : UninterpretedType =>

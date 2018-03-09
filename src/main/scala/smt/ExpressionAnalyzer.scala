@@ -49,7 +49,7 @@ object ExpressionAnalyzer {
     val isConst = smtResult.isFalse
     if (!isConst) return None
     else {
-      val intLit = Symbol("$IntegerValue", smt.IntType())
+      val intLit = Symbol("$IntegerValue", smt.IntType)
       val eqExpr = smt.OperatorApplication(smt.EqualityOp, List(smtExpr1, intLit))
       z3ConstInterface.push()
       z3ConstInterface.assert(eqExpr)

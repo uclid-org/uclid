@@ -52,8 +52,8 @@ class Z3FileInterface() extends Context {
   def generateDeclaration(x: Symbol) : String = {
     def printType(t: Type) : String = {
       t match {
-        case BoolType() => "Bool"
-        case IntType() => "Int"
+        case BoolType => "Bool"
+        case IntType => "Int"
         case MapType(ins,out) =>
           "(" + ins.foldLeft(""){(acc,i) =>
             acc + " " + printType(i)} + ") " + printType(out)
@@ -71,8 +71,8 @@ class Z3FileInterface() extends Context {
     }
 
     return x.typ match {
-      case BoolType() => "(declare-const %s Bool)".format(x.id)
-      case IntType() => "(declare-const %s Int)".format(x.id)
+      case BoolType => "(declare-const %s Bool)".format(x.id)
+      case IntType => "(declare-const %s Int)".format(x.id)
       case BitVectorType(n) => "(declare-const %s (_ BitVec %d))".format(x.id, n)
       case SynonymType(s, typ) => "(declare-const %s %s)".format(x.id, s)
       case _ =>
@@ -83,7 +83,7 @@ class Z3FileInterface() extends Context {
 
   def generateDatatype(p : (String, Type)) : Option[String] = {
     p._2 match {
-      case BoolType() | IntType() => None
+      case BoolType | IntType => None
       case EnumType(members) =>
         val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
         val declDatatype = "(declare-datatypes ((%s 0)) ((%s %s)))".format(p._1, p._1, memStr)

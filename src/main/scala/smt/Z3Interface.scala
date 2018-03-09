@@ -156,8 +156,8 @@ class Z3Interface() extends Context {
   def getZ3Sort (typ : smt.Type) : z3.Sort = {
     typ  match {
       case UninterpretedType(n) => getUninterpretedSort(n)
-      case BoolType()           => boolSort
-      case IntType()            => intSort
+      case BoolType             => boolSort
+      case IntType              => intSort
       case BitVectorType(w)     => getBitVectorSort(w)
       case TupleType(ts)        => getTupleSort(ts)
       case RecordType(rs)       => getRecordSort(rs)
@@ -196,8 +196,8 @@ class Z3Interface() extends Context {
 
     val exprSort = (sym.typ) match {
       case UninterpretedType(name) => VarSort(getUninterpretedSort(name))
-      case BoolType() => VarSort(boolSort)
-      case IntType() => VarSort(intSort)
+      case BoolType => VarSort(boolSort)
+      case IntType => VarSort(intSort)
       case BitVectorType(w) => VarSort(getBitVectorSort(w))
       case TupleType(ts) => VarSort(getTupleSort(ts))
       case RecordType(rs) => VarSort(getRecordSort(rs))
