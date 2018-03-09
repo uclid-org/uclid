@@ -65,6 +65,16 @@ case class ASTPosition(filename : Option[String], pos : Position)  {
       case None     => "line " + pos.line.toString
     }
   }
+  def errorString() : String = {
+    if (pos.line > 0) {
+      filename match {
+        case Some(fn) => " at " + fn + ", line " + pos.line.toString()
+        case None => "at line " + pos.line.toString()
+      }
+    } else {
+      ""
+    }
+  }
 }
 
 sealed  trait PositionedNode extends Positional {

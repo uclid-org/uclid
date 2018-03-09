@@ -115,8 +115,11 @@ object UclidMain {
       println("Finished execution for module: %s.".format(mainModuleName.toString))
     }
     catch  {
+      case (e : java.io.FileNotFoundException) =>
+        println("Error: " + e.getMessage() + ".")
+        System.exit(1)
       case (p : Utils.ParserError) =>
-        println("%s error at %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        println("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
