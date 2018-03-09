@@ -478,17 +478,18 @@ class SymbolicSimulator (module : Module) {
     // println("iter: " + iter.toString())
     // println(Utils.join(s.toLines, "\n"))
 
+    lazy val initPathCondExpr : smt.Expr = smt.BooleanLit(true)
+    lazy val pathCondExpr = pathConditions.foldLeft(initPathCondExpr) {
+      (acc, pc) => {
+        smt.OperatorApplication(smt.ConjunctionOp, List(acc, pc))
+      }
+    }
+    
     s match {
       case SkipStmt() => return symbolTable
       case AssertStmt(e, id) =>
         val frameTableP = frameTable.clone()
         frameTableP += symbolTable
-        val initPathCondExpr : smt.Expr = smt.BooleanLit(true)
-        val pathCondExpr = pathConditions.foldLeft(initPathCondExpr) {
-          (acc, pc) => {
-            smt.OperatorApplication(smt.ConjunctionOp, List(acc, pc))
-          }
-        }
         addAssert(
             AssertInfo(
                 "assertion", label, frameTableP, 
@@ -497,7 +498,9 @@ class SymbolicSimulator (module : Module) {
                 List.empty, s.position))
         return symbolTable
       case AssumeStmt(e, id) =>
-        addAssumption(evaluate(e,symbolTable, pastTables, scope))
+        val assumpExpr = evaluate(e,symbolTable, pastTables, scope) 
+        val effectiveExpr = smt.OperatorApplication(smt.ImplicationOp, List(pathCondExpr, assumpExpr)) 
+        addAssumption(effectiveExpr)
         return symbolTable
       case HavocStmt(id) =>
         return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(scope.typeOf(id).get)))

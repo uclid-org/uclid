@@ -121,6 +121,9 @@ class BasicVerifierSpec extends FlatSpec {
   "test-if-star.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-if-star.ucl", 0)
   }
+  "test-assume-1.ucl" should "fail to verify five assertions." in {
+    VerifierSpec.expectedFails("./test/test-assume-1.ucl", 5)
+  }
 }
 class QuantiferVerifSpec extends FlatSpec {
   "test-forall-0.ucl" should "verify all assertions." in {

@@ -1,0 +1,24 @@
+module main
+{
+  var n, np : integer;
+  
+  init {
+    n = 0;
+  }
+  
+  next {
+    havoc np;
+    case
+      (n == 0) : { assume (np == 1); }
+      (n == 1) : { assume (np == 0); }
+    esac
+    n = np;
+    
+    assert (n == 5);
+  }
+  
+  control {
+    unroll(5);
+    check;
+  }
+}

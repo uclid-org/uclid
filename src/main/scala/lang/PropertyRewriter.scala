@@ -422,8 +422,12 @@ class LTLPropertyRewriterPass extends RewritePass {
     eqExprs.foldLeft(initExpr)((acc, e) => andExpr(acc, e)) 
   }
 
-  def createRepeatedAssignment(vars : List[Identifier], value : Expr) : AssignStmt = {
-    AssignStmt(vars.map(LhsId(_)), List.fill(vars.size)(value))
+  def createRepeatedAssignment(vars : List[Identifier], value : Expr) : Option[AssignStmt] = {
+    if (vars.size > 0) {
+      Some(AssignStmt(vars.map(LhsId(_)), List.fill(vars.size)(value)))
+    } else {
+      None
+    }
   }
   def createAssign(v : Identifier, e : Expr) : AssignStmt = {
     AssignStmt(List(LhsId(v)), List(e))
@@ -545,7 +549,7 @@ class LTLPropertyRewriterPass extends RewritePass {
                     createRepeatedAssignment(hasAcceptedVars, BoolLit(false)), 
                     createRepeatedAssignment(hasAcceptedTraceVars, BoolLit(false)), 
                     createRepeatedAssignment(isInitStateVar :: pendingVars, BoolLit(true)),
-                    stateCopiedInitStmt) 
+                    Some(stateCopiedInitStmt)).flatten
 
     // monitor iff "assignments"
     val monitorBiImpls = monitors.flatMap(r => r.biImplications)
