@@ -145,8 +145,6 @@ object UclidMain {
 
     val passManager = new PassManager()
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
-    val filenameAdderPass = new AddFilenameRewriter(None)
-    passManager.addPass(filenameAdderPass)
     passManager.addPass(new ModuleCanonicalizer())
     // passManager.addPass(new LTLOperatorArgumentChecker())
     passManager.addPass(new LTLOperatorIntroducer())
@@ -179,14 +177,16 @@ object UclidMain {
     passManager.addPass(new RewriteFreshLiterals())
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
+    val filenameAdderPass = new AddFilenameRewriter(None)
     def parseFile(srcFile : String) : List[Module] = {
       val text = scala.io.Source.fromFile(srcFile).mkString
       filenameAdderPass.setFilename(srcFile)
-      UclidParser.parseModel(srcFile, text)
+      val modules = UclidParser.parseModel(srcFile, text)
+      modules.map(m => filenameAdderPass.visit(m, Scope.empty)).flatten
     }
 
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
-      (acc, srcFile) => acc ++ parseFile(srcFile)
+      (acc, srcFile) => parseFile(srcFile) ++ acc
     }
     val modIdSeq = parsedModules.map(m => (m.id, m.position))
     val moduleErrors = SemanticAnalyzerPass.checkIdRedeclaration(modIdSeq, List.empty[ModuleError])
