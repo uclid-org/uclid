@@ -76,34 +76,37 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
 /**
  * Decide validity of SMTExpr's using a Z3 sovler.
  */
-class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterface {
-  // Member variables.
+class Z3Interface() extends Context {
+  val cfg = new HashMap[String, String]()
+  cfg.put("model", "true")
+
   /** The Z3 context. */
-  val ctx = z3Ctx
+  val ctx = new z3.Context(cfg)
+  ctx.setPrintMode(z3.enumerations.Z3_ast_print_mode.Z3_PRINT_SMTLIB2_COMPLIANT)
   /** The Z3 solver. */
-  val solver = z3Solver
+  val solver = ctx.mkSolver()
 
   /* Unique names for Tuples. */
-  val tupleNamer = new UniqueNamer("$tuple")
+  val tupleNamer = new UniqueNamer("_tuple")
   def getTupleName() : z3.Symbol = {
     return ctx.mkSymbol(tupleNamer.newName())
   }
   /* Unique names for Enums. */
-  val enumNamer = new UniqueNamer("$enum")
+  val enumNamer = new UniqueNamer("_enum")
   def getEnumName() : String = {
     enumNamer.newName()
   }
   /* Unique names for quantifiers. */
-  val forallNamer = new UniqueNamer("$forall")
+  val forallNamer = new UniqueNamer("_forall")
   def getForallName() = ctx.mkSymbol(forallNamer.newName())
-  val existsNamer = new UniqueNamer("$exists")
+  val existsNamer = new UniqueNamer("_exists")
   def getExistsName() = ctx.mkSymbol(existsNamer.newName())
-  val skolemNamer = new UniqueNamer("$skolem")
+  val skolemNamer = new UniqueNamer("_skolem")
   def getSkolemName() = ctx.mkSymbol(skolemNamer.newName())
 
   /** Returns tuple field names. */
   val getTupleFieldNames = new Memo[Int, Array[z3.Symbol]]((n : Int) => {
-    (1 to n).map((i => ctx.mkSymbol(i.toString + "__ucl_tuple_field" ))).toArray
+    (1 to n).map((i => ctx.mkSymbol("__f" + i.toString))).toArray
   })
 
 
@@ -137,7 +140,13 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     }
   }
   val getArraySort = new Memo[(List[Type], Type), z3.ArraySort]((arrayType : (List[Type], Type)) => {
-    ctx.mkArraySort(getTupleSort(arrayType._1), getZ3Sort(arrayType._2))
+    val indexTypeIn = arrayType._1
+    val z3IndexType = if (indexTypeIn.size == 1) { 
+      getZ3Sort(indexTypeIn(0)) 
+    } else {
+      getTupleSort(indexTypeIn)
+    }
+    ctx.mkArraySort(z3IndexType, getZ3Sort(arrayType._2))
   })
   val getEnumSort = new Memo[List[String], z3.EnumSort]((enumConstants : List[String]) => {
     ctx.mkEnumSort(getEnumName(), enumConstants :_ *)
@@ -147,15 +156,16 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
   def getZ3Sort (typ : smt.Type) : z3.Sort = {
     typ  match {
       case UninterpretedType(n) => getUninterpretedSort(n)
-      case BoolType()           => boolSort
-      case IntType()            => intSort
+      case BoolType             => boolSort
+      case IntType              => intSort
       case BitVectorType(w)     => getBitVectorSort(w)
       case TupleType(ts)        => getTupleSort(ts)
       case RecordType(rs)       => getRecordSort(rs)
       case ArrayType(rs, d)     => getArraySort(rs, d)
       case EnumType(ids)        => getEnumSort(ids)
-      case MapType(rs, d)       =>
-        throw new Utils.RuntimeError("Must not use getZ3Sort to convert MapSorts.")
+      case SynonymType(_, _) | 
+           MapType(_, _)       =>
+        throw new Utils.RuntimeError("Must not use getZ3Sort to convert type: " + typ.toString() + ".")
     }
   }
 
@@ -187,14 +197,16 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
 
     val exprSort = (sym.typ) match {
       case UninterpretedType(name) => VarSort(getUninterpretedSort(name))
-      case BoolType() => VarSort(boolSort)
-      case IntType() => VarSort(intSort)
+      case BoolType => VarSort(boolSort)
+      case IntType => VarSort(intSort)
       case BitVectorType(w) => VarSort(getBitVectorSort(w))
       case TupleType(ts) => VarSort(getTupleSort(ts))
       case RecordType(rs) => VarSort(getRecordSort(rs))
       case MapType(ins, out) => MapSort(ins, out)
       case ArrayType(ins, out) => VarSort(getArraySort(ins, out))
       case EnumType(ids) => VarSort(getEnumSort(ids))
+      case SynonymType(_, _) => 
+        throw new Utils.RuntimeError("Must not use symbolToZ3 on: " + sym.typ.toString() + ".")
     }
 
     exprSort match {
@@ -266,6 +278,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case InequalityOp           => ctx.mkDistinct(exprArgs(0), exprArgs(1))
       case ConjunctionOp          => ctx.mkAnd (boolArgs : _*)
       case DisjunctionOp          => ctx.mkOr (boolArgs : _*)
+      case ITEOp                  => ctx.mkITE(exprArgs(0).asInstanceOf[z3.BoolExpr], exprArgs(1), exprArgs(2))
       case ForallOp(vs)           =>
         // val qTyps = vs.map((v) => getZ3Sort(v.typ)).toArray
         val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
@@ -294,6 +307,13 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
 
   /** Convert an smt.Expr object into a Z3 AST.  */
   val exprToZ3 : Memo[Expr, z3.AST] = new Memo[Expr, z3.AST]((e) => {
+    def toArrayIndex(index : List[Expr], indexType : List[Type]) : z3.Expr = {
+      if (index.size == 1) {
+        exprToZ3(index(0)).asInstanceOf[z3.Expr]
+      } else {
+        getTuple(index.map((arg) => exprToZ3(arg)), indexType)
+      }
+    }
     val z3AST : z3.AST = e match {
       case Symbol(id, typ) =>
         symbolToZ3(Symbol(id, typ))
@@ -302,19 +322,17 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case ArraySelectOperation(e, index) =>
         val arrayType = e.typ.asInstanceOf[ArrayType]
         val arrayIndexType = arrayType.inTypes
-        val indexTuple = getTuple(index.map((arg) => exprToZ3(arg)), arrayIndexType)
-        ctx.mkSelect(exprToZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple)
+        val arrayIndex = toArrayIndex(index, arrayIndexType)
+        ctx.mkSelect(exprToZ3(e).asInstanceOf[z3.ArrayExpr], arrayIndex)
       case ArrayStoreOperation(e, index, value) =>
         val arrayType = e.typ.asInstanceOf[ArrayType]
         val arrayIndexType = arrayType.inTypes
-        val indexTuple = getTuple(index.map((arg) => exprToZ3(arg)), arrayIndexType)
+        val arrayIndex = toArrayIndex(index, arrayIndexType)
         val data = exprToZ3(value).asInstanceOf[z3.Expr]
-        ctx.mkStore(exprToZ3(e).asInstanceOf[z3.ArrayExpr], indexTuple, data)
+        ctx.mkStore(exprToZ3(e).asInstanceOf[z3.ArrayExpr], arrayIndex, data)
       case FunctionApplication(e, args) =>
         val func = exprToZ3(e).asInstanceOf[z3.FuncDecl]
         func.apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
-      case ITE(e,t,f) =>
-        ctx.mkITE(exprToZ3(e).asInstanceOf[z3.BoolExpr], exprToZ3(t).asInstanceOf[z3.Expr], exprToZ3(f).asInstanceOf[z3.Expr])
       case Lambda(_,_) =>
         throw new Utils.RuntimeError("Lambdas in assertions should have been beta-reduced.")
       case IntLit(i) => getIntLit(i)
@@ -330,22 +348,27 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     else z3AST
   })
 
-  override def addConstraint(e : Expr) : Unit = {
-    solver.add(exprToZ3(e).asInstanceOf[z3.BoolExpr])
+  override def push() {
+    solver.push()
+  }
+  override def pop() {
+    solver.pop()
   }
 
+  override def assert(e : Expr) {
+    // println("assert: " + e.toString())
+    val z3Expr = exprToZ3(e).asInstanceOf[z3.BoolExpr]
+    // println("z3: " + z3Expr.toString())
+    // println(z3Expr.toString())
+    solver.add(z3Expr)
+  }
+  
   /** Check whether a particular expression is satisfiable.  */
-  override def check (e : Expr) : SolverResult = {
-    val z3Expr = exprToZ3(e)
-    // println("SMT expression: " + e.toString)
-    // println("Z3 Expression: " + z3Expr.toString)
-
-    solver.push()
-    solver.add(z3Expr.asInstanceOf[z3.BoolExpr])
-    // println(solver.toString())
+  override def check() : SolverResult = {
     val z3Result = solver.check()
     // println(z3Result.toString)
 
+    // println("check")
     val checkResult : SolverResult = z3Result match {
       case z3.Status.SATISFIABLE =>
         val z3Model = solver.getModel()
@@ -356,11 +379,14 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
       case _ =>
         SolverResult(None, None)
     }
-    solver.pop()
     return checkResult
   }
 
-  override def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
+  override def finish() {
+    ctx.close()
+  }
+  /*
+  def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
     val z3Expr = exprToZ3(e).asInstanceOf[z3.BoolExpr]
     val z3Assumptions = assumptions.map(a => exprToZ3(a).asInstanceOf[z3.BoolExpr]).toArray
     solver.push()
@@ -370,28 +396,7 @@ class Z3Interface(z3Ctx : z3.Context, z3Solver : z3.Solver) extends SolverInterf
     solver.pop()
     return formula
   }
+  * 
+  */
 
-  override def addAssumptions(es : List[Expr]) {
-    solver.push()
-    es.foreach((e) => {
-      val eZ3 = exprToZ3(e).asInstanceOf[z3.BoolExpr]
-      // println("assumption: " + eZ3.toString)
-      solver.add(eZ3)
-    })
-  }
-  override def popAssumptions() {
-    // println("pop!")
-    solver.pop()
-  }
-}
-
-object Z3Interface {
-  def newInterface() : Z3Interface = {
-    var cfg = new HashMap[String, String]()
-    cfg.put("model", "true")
-    var ctx = new z3.Context(cfg)
-    ctx.setPrintMode(z3.enumerations.Z3_ast_print_mode.Z3_PRINT_SMTLIB2_COMPLIANT)
-    var solver = ctx.mkSolver()
-    return new Z3Interface(ctx, solver)
-  }
 }

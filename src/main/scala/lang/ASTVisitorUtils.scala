@@ -59,10 +59,11 @@ class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
   override def rewriteIdentifier(i: Identifier, context: Scope) : Option[Identifier] = {
     rewrites.get(i) match {
       case None => Some(i)
-      case Some(eprime) => eprime match {
-        case idprime : Identifier => Some(idprime)
-        case _ => Some(i)
-      }
+      case Some(eprime) =>
+        eprime match {
+          case id : Identifier => Some(id)
+          case _ => Some(i)
+        }
     }
   }
 }

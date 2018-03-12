@@ -13,8 +13,8 @@ module main {
   var process_suid  : id_t;     // saved
   var process_fsuid : id_t;     // filesystem
 
-  var precond_setresuid : bool;
-  var precond_setfsuid  : bool;
+  var precond_setresuid : boolean;
+  var precond_setfsuid  : boolean;
   
   init {
     process_ruid  = privileged;

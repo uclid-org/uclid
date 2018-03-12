@@ -179,7 +179,7 @@ object ReplacePolymorphicOperators {
   }
   def toType(op : PolymorphicOperator, typ : NumericType) = {
     typ match {
-      case intTyp : IntType => toInt(op)
+      case intTyp : IntegerType => toInt(op)
       case bvTyp : BitVectorType => toBitvector(op, bvTyp.width)
     }
   }
@@ -204,8 +204,6 @@ object ReplacePolymorphicOperators {
         ArrayStoreOperation(r(expr), rs(indices), r(value))
       case FuncApplication(expr, args) =>
         FuncApplication(r(expr), rs(args))
-      case ITE(c, t, f) =>
-        ITE(r(c), r(t), r(f))
       case Lambda(args, expr) =>
         Lambda(args, r(expr))
     }
@@ -228,7 +226,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
   }
 
   override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : ErrorList, ctx : Scope) : ErrorList = {
-    if (d == TraversalDirection.Down) {
+    if (d == TraversalDirection.Up) {
       try {
         typeOf(e, ctx)
       } catch {
@@ -305,7 +303,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
   def typeOf(e : Expr, c : Scope) : Type = {
     def polyResultType(op : PolymorphicOperator, argType : Type) : Type = {
       op match {
-        case LTOp() | LEOp() | GTOp() | GEOp() => new BoolType()
+        case LTOp() | LEOp() | GTOp() | GEOp() => new BooleanType()
         case AddOp() | SubOp() | MulOp() | UnaryMinusOp() => argType
       }
     }
@@ -329,7 +327,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           }
           checkTypeError(argTypes.forall(_.isNumeric), "Arguments to operator '" + opapp.op.toString + "' must be of a numeric type", opapp.pos, c.filename)
           typeOf(opapp.operands(0), c) match {
-            case i : IntType =>
+            case i : IntegerType =>
               polyOpMap.put(polyOp.astNodeId, ReplacePolymorphicOperators.toInt(polyOp))
               polyResultType(polyOp, i)
             case bv : BitVectorType =>
@@ -346,10 +344,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             }
           }
           checkTypeError(argTypes.size == numArgs(intOp), "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
-          checkTypeError(argTypes.forall(_.isInstanceOf[IntType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer", opapp.pos, c.filename)
+          checkTypeError(argTypes.forall(_.isInstanceOf[IntegerType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer", opapp.pos, c.filename)
           intOp match {
-            case IntLTOp() | IntLEOp() | IntGTOp() | IntGEOp() => new BoolType()
-            case IntAddOp() | IntSubOp() | IntMulOp() | IntUnaryMinusOp() => new IntType()
+            case IntLTOp() | IntLEOp() | IntGTOp() | IntGEOp() => new BooleanType()
+            case IntAddOp() | IntSubOp() | IntMulOp() | IntUnaryMinusOp() => new IntegerType()
           }
         }
         case bvOp : BVArgOperator => {
@@ -362,7 +360,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes.size == numArgs(bvOp), "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
           checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
           bvOp match {
-            case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) => new BoolType()
+            case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) => new BooleanType()
             case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVUnaryMinusOp(_) => new BitVectorType(bvOp.w)
             case BVAndOp(_) | BVOrOp(_) | BVXorOp(_) | BVNotOp(_) =>
               val t = new BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width)
@@ -371,19 +369,19 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           }
         }
         case qOp : QuantifiedBooleanOperator => {
-          checkTypeError(argTypes(0).isInstanceOf[BoolType], "Operand to the quantifier '" + qOp.toString + "' must be boolean", opapp.pos, c.filename)
-          BoolType()
+          checkTypeError(argTypes(0).isInstanceOf[BooleanType], "Operand to the quantifier '" + qOp.toString + "' must be boolean", opapp.pos, c.filename)
+          BooleanType()
         }
         case boolOp : BooleanOperator => {
           boolOp match {
             case NegationOp() =>
               checkTypeError(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument", opapp.pos, c.filename)
-              checkTypeError(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool", opapp.pos, c.filename)
+              checkTypeError(argTypes.forall(_.isInstanceOf[BooleanType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool", opapp.pos, c.filename)
             case _ =>
               checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
-              checkTypeError(argTypes.forall(_.isInstanceOf[BoolType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool", opapp.pos, c.filename)
+              checkTypeError(argTypes.forall(_.isInstanceOf[BooleanType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool", opapp.pos, c.filename)
           }
-          BoolType()
+          BooleanType()
         }
         case cmpOp : ComparisonOperator => {
           // println("typeOf: " + e.toString)
@@ -393,9 +391,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           // Utils.assert(argTypes.size == 2, "Trouble!")
           checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
           checkTypeError(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type", opapp.pos, c.filename)
-          BoolType()
+          BooleanType()
         }
-        case tOp : TemporalOperator => BoolType()
+        case tOp : TemporalOperator => BooleanType()
         case extrOp : ExtractOp => {
           extrOp match {
             case ConstExtractOp(slice) => {
@@ -433,7 +431,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               tupType.fieldTypes(indexI-1)
             case _ =>
               checkTypeError(false, "Argument to record select operator must be of type record", opapp.pos, c.filename)
-              new BoolType()
+              new BooleanType()
           }
         }
         case SelectFromInstance(fld) => {
@@ -457,6 +455,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(historyIndex > 0, "History index must be non-negative", opapp.pos, c.filename)
           checkTypeError(historyIndex.toInt < 65536, "History index is too large", opapp.pos, c.filename)
           argTypes(0)
+        case ITEOp() =>
+          checkTypeError(argTypes.size == 3, "Expect exactly three arguments to if-then-else expressions", opapp.pos, c.filename)
+          checkTypeError(argTypes(0).isBool, "Condition in if-then-else must be boolean", opapp.pos, c.filename)
+          checkTypeError(argTypes(1) == argTypes(2), "Then- and else- expressions in an if-then-else must be of the same type", opapp.pos, c.filename)
+          argTypes(1)
       }
     }
 
@@ -483,18 +486,12 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
 
     def funcAppType(fapp : FuncApplication) : Type = {
       val funcType1 = typeOf(fapp.e, c)
-      lazy val typeErrorMsg = "Type error in function application (not a function). %s is of type '%s'".format(fapp.e.toString, funcType1.toString)
+      lazy val typeErrorMsg = "Cannot apply %s, which is of type %s".format(fapp.e.toString, funcType1.toString)
       checkTypeError(funcType1.isInstanceOf[MapType], typeErrorMsg, fapp.pos, c.filename)
       val funcType = funcType1.asInstanceOf[MapType]
       val argTypes = fapp.args.map(typeOf(_, c))
-      checkTypeError(funcType.inTypes == argTypes, "Type error in function application (argument type error)", fapp.pos, c.filename)
+      checkTypeError(funcType.inTypes == argTypes, "Argument type error in application", fapp.pos, c.filename)
       return funcType.outType
-    }
-
-    def iteType(ite : ITE) : Type = {
-      checkTypeError(typeOf(ite.e, c).isBool, "Type error in ITE condition operand", ite.pos, c.filename)
-      checkTypeError(typeOf(ite.t, c) == typeOf(ite.f, c), "ITE operand types don't match", ite.pos, c.filename)
-      return typeOf(ite.t, c)
     }
 
     def lambdaType(lambda : Lambda) : Type = {
@@ -522,15 +519,14 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case Some(typ) => typ
           }
         case f : FreshLit => f.typ
-        case b : BoolLit => new BoolType()
-        case i : IntLit => new IntType()
+        case b : BoolLit => new BooleanType()
+        case i : IntLit => new IntegerType()
         case bv : BitVectorLit => new BitVectorType(bv.width)
         case r : Tuple => new TupleType(r.values.map(typeOf(_, c)))
         case opapp : OperatorApplication => opAppType(opapp)
         case arrSel : ArraySelectOperation => arraySelectType(arrSel)
         case arrStore : ArrayStoreOperation => arrayStoreType(arrStore)
         case fapp : FuncApplication => funcAppType(fapp)
-        case ite : ITE => iteType(ite)
         case lambda : Lambda => lambdaType(lambda)
       }
       memo.put(e.astNodeId, typ)

@@ -1,6 +1,6 @@
 module main {
-  type num = int;
-  type bit = bool;
+  type num = integer;
+  type bit = boolean;
   type rec1 = record {a : num, b : num, c : bit };
 
   var p, q1, q2 : rec1;

@@ -40,7 +40,7 @@ class RewriteFreshLiteralsPass extends RewritePass {
   lazy val findFreshLiterals = manager.pass("FindFreshLiterals").asInstanceOf[FindFreshLiterals]
 
   override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
-    val moduleP = Module(module.id, findFreshLiterals.declarations ++ module.decls, module.cmds)
+    val moduleP = Module(module.id, findFreshLiterals.declarations ++ module.decls, module.cmds, module.notes)
     Some(moduleP)
   }
   override def rewriteFreshLit(f : FreshLit, context : Scope) : Option[Expr] = {

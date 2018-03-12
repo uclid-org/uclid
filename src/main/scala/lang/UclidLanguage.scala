@@ -65,6 +65,16 @@ case class ASTPosition(filename : Option[String], pos : Position)  {
       case None     => "line " + pos.line.toString
     }
   }
+  def errorString() : String = {
+    if (pos.line > 0) {
+      filename match {
+        case Some(fn) => " at " + fn + ", line " + pos.line.toString()
+        case None => "at line " + pos.line.toString()
+      }
+    } else {
+      ""
+    }
+  }
 }
 
 sealed  trait PositionedNode extends Positional {
@@ -73,24 +83,43 @@ sealed  trait PositionedNode extends Positional {
 }
 
 object ASTNode {
-  def introducePos[T <: PositionedNode](setFilename : Boolean, node : Option[T], pos : ASTPosition) : Option[T] = {
-    node match {
-      case Some(n) =>
+  def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename : Boolean, node : T, pos : ASTPosition) : T = {
+    if (setPosition) {
+      var nodeP = node
+      if (setFilename) { nodeP.filename = pos.filename }
+      nodeP.pos = pos.pos
+      nodeP
+    } else {
+      node
+    }
+  }
+
+  def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename : Boolean, node : Option[T], pos : ASTPosition) : Option[T] = {
+    if (setPosition) {
+      node match {
+        case Some(n) =>
+          var nP = n
+          if (setFilename) { nP.filename = pos.filename }
+          nP.pos = pos.pos
+          Some(nP)
+        case None =>
+          None
+      }
+    } else {
+      node
+    }
+  }
+  def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename: Boolean, nodes : List[T], pos : ASTPosition) : List[T] = {
+    if (setPosition) {
+      nodes.map((n) => {
         var nP = n
         if (setFilename) { nP.filename = pos.filename }
         nP.pos = pos.pos
-        Some(nP)
-      case None =>
-        None
+        nP
+      })
+    } else {
+      nodes
     }
-  }
-  def introducePos[T <: PositionedNode](setFilename: Boolean, nodes : List[T], pos : ASTPosition) : List[T] = {
-    nodes.map((n) => {
-      var nP = n
-      if (setFilename) { nP.filename = pos.filename }
-      nP.pos = pos.pos
-      nP
-    })
   }
 }
 
@@ -107,6 +136,11 @@ object Operator {
   val PREFIX = 0
   val INFIX = 1
   val POSTFIX = 2
+
+  def Y(x : Expr) = OperatorApplication(HistoryOperator(), List(x, IntLit(1)))
+  def not(x : Expr) = OperatorApplication(NegationOp(), List(x))
+  def and(x : Expr, y : Expr) = OperatorApplication(ConjunctionOp(), List(x, y))
+  def or(x : Expr, y : Expr) = OperatorApplication(DisjunctionOp(), List(x, y))
 }
 sealed trait Operator extends ASTNode {
   def fixity : Int
@@ -149,33 +183,63 @@ case class IntUnaryMinusOp() extends IntArgOperator {
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
   override def fixity = Operator.INFIX
 }
-case class BVLTOp(override val w : Int) extends BVArgOperator(w) { override def toString = "<" }
-case class BVLEOp(override val w : Int) extends BVArgOperator(w) { override def toString = "<=" }
-case class BVGTOp(override val w : Int) extends BVArgOperator(w) { override def toString = ">" }
-case class BVGEOp(override val w : Int) extends BVArgOperator(w) { override def toString = ">=" }
-case class BVAddOp(override val w : Int) extends BVArgOperator(w) { override def toString ="+"  }
-case class BVSubOp(override val w : Int) extends BVArgOperator(w) { override def toString = "-" }
-case class BVMulOp(override val w : Int) extends BVArgOperator(w) { override def toString = "*" }
-case class BVAndOp(override val w : Int) extends BVArgOperator(w) { override def toString = "&" }
-case class BVOrOp(override val w : Int) extends BVArgOperator(w) { override def toString = "|" }
-case class BVXorOp(override val w : Int) extends BVArgOperator(w) { override def toString = "^" }
-case class BVNotOp(override val w : Int) extends BVArgOperator(w) { override def toString = "~" }
+case class BVLTOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString = "<" 
+}
+case class BVLEOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString = "<=" 
+}
+case class BVGTOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString = ">" 
+}
+case class BVGEOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString = ">=" 
+}
+case class BVAddOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString ="+"  
+}
+case class BVSubOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString = "-" 
+}
+case class BVMulOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString = "*" 
+}
+case class BVAndOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString = "&" 
+}
+case class BVOrOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString = "|" 
+}
+case class BVXorOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString = "^" 
+}
+case class BVNotOp(override val w : Int) extends BVArgOperator(w) { 
+  override def toString = "~" 
+}
 case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "-"
   override def fixity = Operator.PREFIX
+  override def toString = "-"
 }
 // Boolean operators.
 sealed abstract class BooleanOperator extends Operator {
   override def fixity = Operator.INFIX
   def isQuantified = false
 }
-case class ConjunctionOp() extends BooleanOperator { override def toString = "&&" }
-case class DisjunctionOp() extends BooleanOperator { override def toString = "||" }
-case class IffOp() extends BooleanOperator { override def toString = "<==>" }
-case class ImplicationOp() extends BooleanOperator { override def toString = "==>" }
+case class ConjunctionOp() extends BooleanOperator { 
+  override def toString = "&&" 
+}
+case class DisjunctionOp() extends BooleanOperator { 
+  override def toString = "||" 
+}
+case class IffOp() extends BooleanOperator { 
+  override def toString = "<==>" 
+}
+case class ImplicationOp() extends BooleanOperator { 
+  override def toString = "==>" 
+}
 case class NegationOp() extends BooleanOperator {
-  override def toString = "!"
   override def fixity = Operator.PREFIX
+  override def toString = "!"
 }
 // Quantifiers
 sealed abstract class QuantifiedBooleanOperator extends BooleanOperator {
@@ -220,6 +284,12 @@ case class HistoryOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def toString = "history"
 }
+// ITE operator
+case class ITEOp() extends Operator {
+  override def toString = "ite"
+  override def fixity = Operator.PREFIX
+}
+
 abstract class BitVectorSlice extends ASTNode {
   def width : Option[Int]
   def isConstantWidth : Boolean
@@ -292,7 +362,7 @@ case class BoolLit(value: Boolean) extends Literal {
 }
 case class IntLit(value: BigInt) extends NumericLit {
   override def toString = value.toString
-  override def typeOf : NumericType = IntType()
+  override def typeOf : NumericType = IntegerType()
   override def to (n : NumericLit) : Seq[NumericLit]  = {
     n match {
       case i : IntLit => (value to i.value).map(IntLit(_))
@@ -346,16 +416,11 @@ case class ArraySelectOperation(e: Expr, index: List[Expr]) extends Expr {
 }
 case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr {
   override def toString = e + "[" + index.tail.fold(index.head.toString)
-    { (acc,i) => acc + "," + i } + "]" + " := " + value
+    { (acc,i) => acc + "," + i } + "]" + " = " + value
 }
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class FuncApplication(e: Expr, args: List[Expr]) extends Expr {
-  override def toString = e + "(" + args.tail.fold(args.head.toString)
-    { (acc,i) => acc + "," + i } + ")"
-}
-case class ITE(e: Expr, t: Expr, f: Expr) extends Expr {
-  override def toString = "ITE(" + e + "," + t + "," + f + ")"
-  override def isTemporal = e.isTemporal || t.isTemporal || f.isTemporal 
+  override def toString = e + "(" + Utils.join(args.map(_.toString), ", ") + ")"
 }
 case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
   override def toString = "Lambda(" + ids + "). " + e
@@ -392,6 +457,10 @@ case object LTLSafetyFragmentDecorator extends ExprDecorator {
 case object LTLLivenessFragmentDecorator extends ExprDecorator {
   override def toString = "LTLLivenessFragment"
 }
+case object CoverDecorator extends ExprDecorator {
+  override def toString = "cover"
+}
+
 object ExprDecorator {
   /** Factory constructor. */
   def parse(e : Expr) : ExprDecorator = {
@@ -406,6 +475,9 @@ object ExprDecorator {
     }
     dec.pos = e.pos
     return dec
+  }
+  def isLTLProperty(decs : List[ExprDecorator]) : Boolean = {
+    decs.exists(p => p == LTLSafetyFragmentDecorator || p == LTLLivenessFragmentDecorator)
   }
 }
 
@@ -454,13 +526,13 @@ case class UninterpretedType(name: Identifier) extends Type {
 /**
  * Regular types.
  */
-case class BoolType() extends PrimitiveType {
-  override def toString = "bool"
+case class BooleanType() extends PrimitiveType {
+  override def toString = "boolean"
   override def isBool = true
   override def defaultValue = Some(BoolLit(false))
 }
-case class IntType() extends NumericType {
-  override def toString = "int"
+case class IntegerType() extends NumericType {
+  override def toString = "integer"
   override def isInt = true
   override def defaultValue = Some(IntLit(0))
 }
@@ -546,13 +618,14 @@ case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = Utils.join(inTypes.map(_.toString), " * ") + " -> " + outType.toString
   override def isMap = true
 }
+
 case class ProcedureType(inTypes : List[Type], outTypes: List[Type]) extends Type {
   override def toString =
     "procedure (" + Utils.join(inTypes.map(_.toString), ", ") + ") returns " +
         "(" + Utils.join(outTypes.map(_.toString), ", ") + ")"
 }
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
-  override def toString = "[" + Utils.join(inTypes.map(_.toString), " * ") + "] " + outType.toString
+  override def toString = "[" + Utils.join(inTypes.map(_.toString), " * ") + "]" + outType.toString
   override def isArray = true
 }
 case class SynonymType(id: Identifier) extends Type {
@@ -626,7 +699,7 @@ case class HavocStmt(id: Identifier) extends Statement {
 }
 case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines =
-    List(Utils.join(lhss.map (_.toString), ", ") + " := " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
+    List(Utils.join(lhss.map (_.toString), ", ") + " = " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
 }
 case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Statement]) extends Statement {
   lazy val lines : List[String] = if (elseblock.size > 0) {
@@ -655,7 +728,7 @@ case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
 }
 case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr])  extends Statement {
   override def toLines = List("call (" +
-    Utils.join(callLhss.map(_.toString), ", ") + ") := " + id + "(" +
+    Utils.join(callLhss.map(_.toString), ", ") + ") = " + id + "(" +
     Utils.join(args.map(_.toString), ", ") + ") // " + id.position.toString)
 }
 case class ModuleCallStmt(id: Identifier) extends Statement {
@@ -697,11 +770,9 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
   type T = (Identifier,Type)
   val typ = MapType(args.map(_._2), retType)
   val printfn = {(a: T) => a._1.toString + ": " + a._2}
-  override def toString = "(" + Utils.join(args.map(printfn(_)), ", ") + ")" +
-    ": " + retType
+  override def toString = 
+    "(" + Utils.join(args.map(printfn(_)), ", ") + ")" + ": " + retType
 }
-
-sealed abstract class Grammar extends ASTNode
 
 sealed abstract class Decl extends ASTNode {
   def declNames : List[Identifier]
@@ -751,7 +822,7 @@ case class ProcedureDecl(
     "\n" + PrettyPrinter.indent(1) + "}"
   }
   override def declNames = List(id)
-  def hasPrePost = requires.size > 0 && ensures.size > 0
+  def hasPrePost = requires.size > 0 || ensures.size > 0
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "type " + id + " = " + typ + "; // " + position.toString
@@ -775,27 +846,97 @@ case class SharedVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
 }
 /** This is base trait for all entities that are exported from a module. */
 sealed abstract trait ModuleExternal {
-  def extName : Identifier
+  def extNames : List[Identifier]
   def extType : Type
 }
 
-case class ConstantDecl(id: Identifier, typ: Type) extends Decl with ModuleExternal {
-  override def toString = "constant " + id + ": " + typ + "; // " + position.toString
-  override def declNames = List(id)
-  override def extName = id
+case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with ModuleExternal {
+  override def toString = "const " + Utils.join(ids.map(_.toString), ", ") + ": " + typ + "; // " + position.toString
+  override def declNames = ids
+  override def extNames = ids
   override def extType = typ
 }
 case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with ModuleExternal {
   override def toString = "function " + id + sig + ";  // " + position.toString
   override def declNames = List(id)
-  override def extName = id
+  override def extNames = List(id)
   override def extType = sig.typ
 }
-case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, requires: List[Expr], ensures: List[Expr], grammar : Option[Grammar]) extends Decl {
-  // FIXME: printout requires and ensures conditions.
+case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl {
+  override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
+  override def declNames = List(id)
+}
+
+sealed abstract class GrammarTerm extends ASTNode
+case class FuncAppTerm(id: Identifier, args: List[GrammarTerm]) extends GrammarTerm {
+  override def toString = {
+    val argString = Utils.join(args.map(_.toString), ", ")
+    "%s(%s)".format(id.toString, argString)
+  }
+}
+case class OpAppTerm(op: Operator, args: List[GrammarTerm]) extends GrammarTerm {
+  override def toString = {
+    val argStr = args.map(_.toString)
+    val str = if (op.fixity == Operator.INFIX) {
+      Utils.join(argStr, " " + op.toString + " ")
+    } else if(op.fixity == Operator.PREFIX) {
+      op.toString + "(" + Utils.join(argStr, ", ") + ")"
+    } else {
+      "(" + Utils.join(argStr, ", ") + ")" + op.toString
+    }
+    "(" + str + ")"
+  }
+}
+
+case class LiteralTerm(lit: Literal) extends GrammarTerm {
+  override def toString = lit.toString()
+}
+case class SymbolTerm(id: Identifier) extends GrammarTerm {
+  override def toString = id.toString()
+}
+case class ConstantTerm(typ: Type) extends GrammarTerm {
+  override def toString = "const " + typ.toString()
+}
+case class ParameterTerm(typ: Type) extends GrammarTerm {
+  override def toString = "function input " + typ.toString()
+}
+// These three terms aren't supported yet.
+case class LetVariableTerm(typ: Type) extends GrammarTerm {
+  override def toString = "function var " + typ.toString()
+}
+case class VariableTerm(typ: Type) extends GrammarTerm {
+  override def toString = "var " + typ.toString()
+}
+case class LetTerm(assigns: List[(Identifier, Type, GrammarTerm)], expr: GrammarTerm) extends GrammarTerm {
+  override def toString = {
+    "let (%s) = (%s) in %s".format(
+      Utils.join(assigns.map(a => "(" + a._1.toString + ": " + a._2.toString + ")"), ", "),
+      Utils.join(assigns.map(_._3.toString), ", "),
+      expr.toString)
+  }
+}
+
+case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) extends ASTNode {
+  override def toString = {
+    "(%s : %s) ::= %s;".format(id.toString, typ.toString, Utils.join(terms.map(_.toString), " | "))
+  }
+}
+
+case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonTerminal]) extends Decl {
+  override def toString = {
+    val argTypes = Utils.join(sig.args.map(a => a._1.toString + ": " + a._2.toString), ", ")
+    val header :String = "grammar %s %s = { // %s".format(id.toString, sig.toString(), position.toString)
+    val lines = nonterminals.map(PrettyPrinter.indent(2) + _.toString)
+    header + "\n" + Utils.join(lines, "\n") + "\n" + PrettyPrinter.indent(1) + "}"
+  }
+  override def declNames = List(id)
+}
+
+case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : Identifier, grammarArgs: List[Identifier], conditions: List[Expr]) extends Decl {
   override def toString = "synthesis function " + id + sig + "; //" + position.toString()
   override def declNames = List(id)
 }
+
 case class InitDecl(body: List[Statement]) extends Decl {
   override def toString =
     "init { // " + position.toString + "\n" +
@@ -863,33 +1004,48 @@ case class GenericProofCommand(name : Identifier, params: List[Identifier], args
     val nameStr = name.toString
     val paramStr = if (params.size > 0) { "[" + Utils.join(params.map(_.toString), ", ") + "]" } else { "" }
     val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
-    val resultStr = resultVar match { case Some(id) => id.toString + " := "; case None => "" }
+    val resultStr = resultVar match { case Some(id) => id.toString + " = "; case None => "" }
     val objStr = argObj match { case Some(id) => id.toString + "->"; case None => "" }
     resultStr + objStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
   }
 }
 
-case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCommand]) extends ASTNode {
+sealed abstract class Annotation extends ASTNode
+case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) extends Annotation {
+  override def toString : String = {
+    val start = PrettyPrinter.indent(1) + "// instance_var_map { "
+    val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), "->") + " ::==> " + p._2.toString) 
+    val end = PrettyPrinter.indent(1) + "// } end_instance_var_map"
+    Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
+  }
+}
+
+object Annotation {
+  val default = List(InstanceVarMapAnnotation(Map.empty))
+}
+
+case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCommand], notes: List[Annotation]) extends ASTNode {
   // create a new module with with the filename set.
   def withFilename(name : String) : Module = {
-    val newModule = Module(id, decls, cmds)
+    val newModule = Module(id, decls, cmds, notes)
     newModule.filename = Some(name)
     return newModule
   }
   // module inputs.
   lazy val inputs : List[(Identifier, Type)] =
-    decls.filter(_.isInstanceOf[InputVarsDecl]).map(_.asInstanceOf[InputVarsDecl]).flatMap(i => i.ids.map(id => (id, i.typ)))
+    decls.collect { case inps : InputVarsDecl => inps }.flatMap(i => i.ids.map(id => (id, i.typ)))
   // module outputs.
   lazy val outputs : List[(Identifier, Type)] =
-    decls.filter(_.isInstanceOf[OutputVarsDecl]).map(_.asInstanceOf[OutputVarsDecl]).flatMap(o => o.ids.map(id => (id, o.typ)))
+    decls.collect { case outs : OutputVarsDecl => outs }.flatMap(o => o.ids.map(id => (id, o.typ)))
   // module state variables.
   lazy val vars : List[(Identifier, Type)] =
-    decls.filter(_.isInstanceOf[StateVarsDecl]).map(_.asInstanceOf[StateVarsDecl]).flatMap(s => s.ids.map(id => (id, s.typ)))
+    decls.collect { case vars : StateVarsDecl => vars }.flatMap(v => v.ids.map(id => (id, v.typ)))
   lazy val sharedVars: List[(Identifier, Type)] =
-    decls.filter(_.isInstanceOf[SharedVarsDecl]).map(_.asInstanceOf[SharedVarsDecl]).flatMap(s => s.ids.map(id => (id, s.typ)))
+    decls.collect { case sVars : SharedVarsDecl => sVars }.flatMap(sVar => sVar.ids.map(id => (id, sVar.typ)))
   // module constants.
-  lazy val constants : List[ConstantDecl] =
-    decls.filter(_.isInstanceOf[ConstantDecl]).map(_.asInstanceOf[ConstantDecl])
+  lazy val constantDecls = decls.collect { case cnsts : ConstantsDecl => cnsts }  
+  lazy val constants : List[(Identifier, Type)] =
+    constantDecls.flatMap(cnst => cnst.ids.map(id => (id, cnst.typ)))
   // module functions.
   lazy val functions : List[FunctionDecl] =
     decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
@@ -897,7 +1053,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   lazy val properties : List[SpecDecl] = decls.collect{ case spec : SpecDecl => spec }
 
   lazy val externalMap : Map[Identifier, ModuleExternal] =
-    (functions.map(f => (f.id -> f)) ++ constants.map(c => (c.id -> c))).toMap
+    (functions.map(f => (f.id -> f)) ++ (constantDecls.flatMap(c => c.ids.map(id => (id, c))).map(p => p._1 -> p._2))).toMap
 
   // module procedures.
   lazy val procedures : List[ProcedureDecl] = decls.filter(_.isInstanceOf[ProcedureDecl]).map(_.asInstanceOf[ProcedureDecl])
@@ -917,7 +1073,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   // compute the "type" of this module.
   lazy val moduleType : ModuleType = ModuleType(
       inputs, outputs, sharedVars,
-      constants.map(c => (c.id, c.typ)), vars,
+      constants, vars,
       functions.map(c => (c.id, c.sig)),
       instances.map(inst => (inst.instanceId, inst.modType.get)))
 
@@ -934,11 +1090,35 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     decls.filter(_.isInstanceOf[AxiomDecl]).map(_.asInstanceOf[AxiomDecl])
   }
 
+  // return a specific annotation.
+  def getAnnotation[T <: Annotation]()(implicit tag: ClassTag[T]) : Option[T] = { 
+    val matchingNotes : List[T] = notes.collect { case n : T => n }
+    if (matchingNotes.size == 0) {
+      None
+    } else {
+      Some(matchingNotes(0))
+    }
+  }
+
+  // replace the first occurrence of a specific annotation.
+  def withReplacedAnnotation[T <: Annotation](note : T)(implicit tag: ClassTag[T]) : Module = {
+    val newNotes : List[Annotation] = notes.map {
+      n => {
+        n match {
+          case nt : T => note
+          case _ => n
+        }
+      }
+    }
+    Module(id, decls, cmds, newNotes)
+  }
+  
   override def toString =
     "\nmodule " + id + " {\n" +
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +
       PrettyPrinter.indent(1) + "control {" + "\n" +
       cmds.foldLeft("")  { case (acc,i) => acc + PrettyPrinter.indent(2) + i + "\n" } +
       PrettyPrinter.indent(1) + "}\n" +
+      notes.foldLeft("")((acc, i) => acc + i) +
     "}\n"
 }

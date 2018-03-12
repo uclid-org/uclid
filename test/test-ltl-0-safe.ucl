@@ -1,0 +1,27 @@
+module main
+{
+  input a, b : integer;
+  var inited : boolean;
+  output sum : integer;
+  
+  init {
+    inited = false;
+  }
+  next {
+	inited = true;    
+    sum = a + b;
+  }
+  
+  property[LTL] p1 : G(inited ==> (sum == a + b));
+  // This property is obviously not satisfied, but we 
+  // won't include it in the call to the 'bmc' command below.
+  property[LTL] p2 : G(false);
+  
+  
+  control {
+    // print_module;
+    vobj = bmc[p1] (3);
+    check;
+    // print_results;
+  }
+}

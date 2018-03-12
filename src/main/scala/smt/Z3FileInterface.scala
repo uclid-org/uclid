@@ -35,25 +35,25 @@ package uclid
 package smt
 
 import uclid.Utils
-import java.nio.file.{Paths, Files}
-import java.nio.charset.StandardCharsets
-import scala.sys.process._
+
+import scala.collection.mutable.{Map => MutableMap}
 
 import scala.language.postfixOps
 
+class Z3FileInterface() extends Context {
+  var typeMap : SynonymMap = SynonymMap.empty
+  var sorts : MutableMap[String, Type] = MutableMap.empty
+  var variables : MutableMap[String, Type] = MutableMap.empty
 
-class Z3FileInterface() extends SolverInterface {
+  type NameProviderFn = (String, Option[String]) => String
   var expressions : List[Expr] = List.empty
-
-  override def addConstraint(e : Expr) = {
-    expressions = e :: expressions
-  }
+  val z3Process = new InteractiveProcess("/usr/bin/z3", List("-smt2", "-in"))
 
   def generateDeclaration(x: Symbol) : String = {
     def printType(t: Type) : String = {
       t match {
-        case BoolType() => "Bool"
-        case IntType() => "Int"
+        case BoolType => "Bool"
+        case IntType => "Int"
         case MapType(ins,out) =>
           "(" + ins.foldLeft(""){(acc,i) =>
             acc + " " + printType(i)} + ") " + printType(out)
@@ -66,20 +66,31 @@ class Z3FileInterface() extends SolverInterface {
           }
         case _ =>
           // FIXME: add more types here.
-          throw new Utils.UnimplementedException("Add support for more types!")
+          throw new Utils.UnimplementedException("Add support for more types: " + x.toString())
       }
     }
 
     return x.typ match {
-      case BoolType() => "(declare-const " + x.id + " " + printType(x.typ) + ")\n"
-      case IntType() => "(declare-const " + x.id + " " + printType(x.typ) + ")\n"
-      case MapType(ins,out) =>
-        "(declare-fun " + x.id + " " + printType(x.typ) + ")\n"
-      case ArrayType(ins,out) =>
-        "(declare-const " + x.id + " " + printType(x.typ) + ")\n"
+      case BoolType => "(declare-const %s Bool)".format(x.id)
+      case IntType => "(declare-const %s Int)".format(x.id)
+      case BitVectorType(n) => "(declare-const %s (_ BitVec %d))".format(x.id, n)
+      case SynonymType(s, typ) => "(declare-const %s %s)".format(x.id, s)
       case _ =>
         // FIXME: add more types here.
-        throw new Utils.UnimplementedException("Add support for more types!")
+        throw new Utils.UnimplementedException("Add support for more types: " + x.typ.toString())
+    }
+  }
+
+  def generateDatatype(p : (String, Type)) : Option[String] = {
+    p._2 match {
+      case BoolType | IntType => None
+      case EnumType(members) =>
+        val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
+        val declDatatype = "(declare-datatypes ((%s 0)) ((%s %s)))".format(p._1, p._1, memStr)
+        //val declMembers = members.map(m => "(declare-fun %s () %s)".format(m, p._1))
+        //val str = Utils.join(declDatatype :: declMembers, "\n")
+        Some(declDatatype)
+      case _ => throw new Utils.UnimplementedException("TODO: Implement more types in Z3FileInterface.generateDatatype")
     }
   }
 
@@ -107,7 +118,6 @@ class Z3FileInterface() extends SolverInterface {
   }
 
   def translateExpr(e: Expr) : String = {
-
     def mkTuple(index: List[Expr]) : String = {
       if (index.size > 1) {
         "(mk-tuple" + index.size + index.foldLeft("")((acc,i) =>
@@ -126,16 +136,12 @@ class Z3FileInterface() extends SolverInterface {
       case ArrayStoreOperation(e, index, value) =>
         "(store " + translateExpr(e) + " " + mkTuple(index) + " " + translateExpr(value) + ")"
       case FunctionApplication(e, args) =>
-        Utils.assert(e.isInstanceOf[Symbol], "Did beta sub happen?")
+        Utils.assert(e.isInstanceOf[Symbol], "Did beta substitution happen?")
         "(" + translateExpr(e) +
           args.foldLeft(""){(acc,i) =>
             acc + " " + translateExpr(i)} + ")"
-      case ITE(e,t,f) =>
-        "(ite " + translateExpr(e) + " " +
-          translateExpr(t) + " " +
-          translateExpr(f) +")"
       case Lambda(_,_) =>
-        throw new Exception("yo lambdas in assertions should have been beta-reduced")
+        throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
       case IntLit(value) => value.toString()
       case BitVectorLit(_,_) =>
         throw new Utils.UnimplementedException("Bitvectors unimplemented")
@@ -144,40 +150,80 @@ class Z3FileInterface() extends SolverInterface {
     }
   }
 
-  override def check(e : Expr) : SolverResult = {
-    // FIXME
-    val formula = toSMT2(e, List.empty, "check")
-    def getCurrentDirectory = new java.io.File( "." ).getCanonicalPath
-    Files.write(Paths.get(getCurrentDirectory + "/tmp.z3"), formula.getBytes(StandardCharsets.UTF_8))
-    val z3_output = ("z3 " + getCurrentDirectory + "/tmp.z3 -smt2" !!).trim
+  def writeCommand(str : String) {
+    println(str)
+    z3Process.writeInput(str + "\n")
+  }
 
-    return z3_output match {
-      case "sat" => SolverResult(Some(true), None)
-      case "unsat" => SolverResult(Some(false), None)
-      case _ => SolverResult(None, None)
+  def readResponse() : Option[String] = {
+    val msg = z3Process.readOutput()    
+    msg
+  }
+
+  override def assert (e: Expr) {
+    val (eP, typeMapP) = flattenTypes(e, typeMap)
+    val newTypes = typeMapP.fwdMap.filter(p => !sorts.contains(p._1))
+    newTypes.foreach { 
+      (n) => {
+        sorts += (n._1 -> n._2)
+        generateDatatype(n) match {
+          case Some(s) => writeCommand(s)
+          case None => 
+        }
+      }
+    }
+    typeMap = typeMapP
+    val symbolsP = Context.findSymbols(eP)
+    val newSymbols = symbolsP.filter(s => !variables.contains(s.id))
+    newSymbols.foreach {
+      (s) => {
+        variables += (s.id -> s.symbolTyp)
+        val decl = generateDeclaration(s)
+        writeCommand(decl)
+      }
+    }
+    writeCommand("(assert " + translateExpr(eP) +")")
+  }
+
+  override def check() : SolverResult = {
+    writeCommand("(check-sat)")
+    readResponse() match {
+      case Some(strP) =>
+        val str = strP.stripLineEnd
+        str match {
+          case "sat" => SolverResult(Some(true), None)
+          case "unsat" => SolverResult(Some(false), None)
+          case _ => 
+            throw new Utils.AssertionError("Unexpected result from SMT solver: " + str.toString())
+        }
+      case None =>
+        throw new Utils.AssertionError("Unexpected EOF result from SMT solver.")
     }
   }
 
-  override def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
+  override def finish() {
+    z3Process.finishInput()
+    Thread.sleep(5)
+    z3Process.kill()
+  }
+
+  override def push() {
+    writeCommand("(push 1)")
+  }
+
+  override def pop() {
+    writeCommand("(pop 1)")
+  }
+
+  def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
     def assertionToString(e : Expr) : String = "(assert " + translateExpr(e) + ")\n"
 
-    val symbols_e = findSymbols(e)
-    val symbols = expressions.foldRight(symbols_e)((ex, s) => s ++ findSymbols(ex))
+    val symbols_e = Context.findSymbols(e)
+    val symbols = expressions.foldRight(symbols_e)((ex, s) => s ++ Context.findSymbols(ex))
     val decl = symbols.foldLeft(""){(acc,x) => acc + generateDeclaration(x)}
     val datatypes = generateDatatypes(symbols)
     val assertions = (e :: expressions).foldRight("")((e, str) => assertionToString(e) + str)
     val formula = datatypes + decl + assertions + "\n(check-sat)\n"
     return formula
   }
-
-  override def addAssumptions(es : List[Expr]) {
-    throw new Utils.UnimplementedException("Add assumptions not implemented in file-based solver.")
-  }
-  override def popAssumptions() {
-    throw new Utils.UnimplementedException("Pop assumptions not implemented in file-based solver.")
-  }
-}
-
-object Z3FileInterface {
-  def newInterface() : Z3FileInterface = { return new Z3FileInterface() }
 }

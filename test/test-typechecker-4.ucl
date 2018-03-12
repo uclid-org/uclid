@@ -1,8 +1,8 @@
 // Test that a for loop with invalid ranges results in a compiler error.
 
 module main {
-  var a : int;
-  var b : int;
+  var a : integer;
+  var b : integer;
 
   init {
     a = 0;

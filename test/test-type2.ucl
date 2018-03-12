@@ -1,11 +1,11 @@
 module main {
   type hash_t;
   
-  function hash_int(x : int) : hash_t;
-  axiom (forall (x1 : int, x2 : int) :: hash_int(x1) != hash_int(x2));
+  function hash_int(x : integer) : hash_t;
+  axiom (forall (x1 : integer, x2 : integer) :: hash_int(x1) != hash_int(x2));
   
   
-  input i : int;
+  input i : integer;
   var v1, v2 : hash_t;
   
   init {

@@ -106,15 +106,20 @@ object UclidMain {
     try {
       val mainModuleName = Identifier(options.mainModule)
       val modules = compile(options.srcFiles, mainModuleName)
-      val mainModule = instantiate(modules, mainModuleName)
+      val mainModule = instantiate(modules, mainModuleName, true)
       mainModule match {
         case Some(m) => execute(m)
-        case None    => throw new Utils.ParserError("Unable to find main module.", None, None)
+        case None    =>
+          throw new Utils.ParserError("Unable to find main module", None, None)
       }
+      println("Finished execution for module: %s.".format(mainModuleName.toString))
     }
     catch  {
+      case (e : java.io.FileNotFoundException) =>
+        println("Error: " + e.getMessage() + ".")
+        System.exit(1)
       case (p : Utils.ParserError) =>
-        println("%s error at %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        println("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
@@ -137,17 +142,15 @@ object UclidMain {
     }
   }
 
-  def compile(srcFiles : List[String], mainModuleName : Identifier) : List[Module] = {
+  def compile(srcFiles : List[String], mainModuleName : Identifier, test : Boolean = false) : List[Module] = {
     type NameCountMap = Map[Identifier, Int]
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
 
     val passManager = new PassManager()
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
-    val filenameAdderPass = new AddFilenameRewriter(None)
-    passManager.addPass(filenameAdderPass)
     passManager.addPass(new ModuleCanonicalizer())
     // passManager.addPass(new LTLOperatorArgumentChecker())
-    passManager.addPass(new LTLOperatorRewriter())
+    passManager.addPass(new LTLOperatorIntroducer())
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new FuncExprRewriter())
@@ -157,7 +160,7 @@ object UclidMain {
     passManager.addPass(new TypeSynonymRewriter())
     passManager.addPass(new BitVectorSliceFindWidth())
     passManager.addPass(new ExpressionTypeChecker())
-    passManager.addPass(new VerificationExpressionChecker())
+    if (!test) passManager.addPass(new VerificationExpressionChecker())
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())
@@ -165,24 +168,28 @@ object UclidMain {
     passManager.addPass(new ControlCommandChecker())
     passManager.addPass(new ComputeInstanceTypes())
     passManager.addPass(new FindProcedureDependency())
-    passManager.addPass(new ProcedureInliner())
+    passManager.addPass(new DefDepGraphChecker())
+    passManager.addPass(new RewriteDefines())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
+    passManager.addPass(new ProcedureInliner())
     passManager.addPass(new CaseEliminator())
+    passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
-    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
     passManager.addPass(new FindFreshLiterals())
     passManager.addPass(new RewriteFreshLiterals())
+    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
+    val filenameAdderPass = new AddFilenameRewriter(None)
     def parseFile(srcFile : String) : List[Module] = {
       val text = scala.io.Source.fromFile(srcFile).mkString
       filenameAdderPass.setFilename(srcFile)
-      UclidParser.parseModel(srcFile, text)
+      val modules = UclidParser.parseModel(srcFile, text)
+      modules.map(m => filenameAdderPass.visit(m, Scope.empty)).flatten
     }
 
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
-      (acc, srcFile) => acc ++ parseFile(srcFile)
+      (acc, srcFile) => parseFile(srcFile) ++ acc
     }
     val modIdSeq = parsedModules.map(m => (m.id, m.position))
     val moduleErrors = SemanticAnalyzerPass.checkIdRedeclaration(modIdSeq, List.empty[ModuleError])
@@ -204,11 +211,7 @@ object UclidMain {
     }._1
   }
 
-  def instantiate(moduleList : List[Module], mainModuleName : Identifier) : Option[Module] = {
-    if (moduleList.find(m => m.id == mainModuleName).isEmpty) {
-      return None
-    }
-
+  def instantiateModules(moduleList: List[Module], mainModuleName : Identifier) : List[Module] = {
     // create pass manager.
     val passManager = new PassManager()
     passManager.addPass(new ModuleInstanceChecker())
@@ -216,8 +219,8 @@ object UclidMain {
     passManager.addPass(new StatelessAxiomFinder())
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
     passManager.addPass(new ExternalSymbolAnalysis())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
     passManager.addPass(new ModuleFlattener(mainModuleName))
+    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new ModuleCleaner())
     passManager.addPass(new ExpressionTypeChecker())
@@ -226,8 +229,17 @@ object UclidMain {
     // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
 
     // run passes.
-    val moduleListP = passManager.run(moduleList)
+    passManager.run(moduleList)
+  }
 
+  def instantiate(moduleList : List[Module], mainModuleName : Identifier, verbose : Boolean) : Option[Module] = {
+    if (moduleList.find(m => m.id == mainModuleName).isEmpty) {
+      return None
+    }
+    val moduleListP = instantiateModules(moduleList, mainModuleName) 
+    if (verbose) {
+      println("Successfully parsed %d and instantiated %d module(s).".format(moduleList.size, moduleListP.size))
+    }
     // return main module.
     moduleListP.find((m) => m.id == mainModuleName)
   }
@@ -235,7 +247,10 @@ object UclidMain {
   def execute(module : Module) : List[CheckResult] = {
     // execute the control module
     var symbolicSimulator = new SymbolicSimulator(module)
-    var z3Interface = smt.Z3Interface.newInterface()
-    return symbolicSimulator.execute(z3Interface)
+    var z3Interface = new smt.Z3Interface()
+    // var z3Interface = new smt.Z3FileInterface()
+    val result = symbolicSimulator.execute(z3Interface)
+    z3Interface.finish()
+    return result
   }
 }

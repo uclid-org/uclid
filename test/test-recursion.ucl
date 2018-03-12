@@ -2,9 +2,9 @@
 // This is expected to fail compilation.
 
 module main  {
-  var x, y : int;
+  var x, y : integer;
 
-  procedure foo(x : int, y : int) returns (z : int) {
+  procedure foo(x : integer, y : integer) returns (z : integer) {
     if (x <= 0) {
       z = y;
     } else {

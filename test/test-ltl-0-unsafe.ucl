@@ -1,0 +1,28 @@
+module main
+{
+  input a, b : integer;
+  var inited : boolean;
+  var n : integer;
+  output sum : integer;
+  
+  init {
+    inited = false;
+    n = 1;
+  }
+  next {
+	inited = true;    
+    sum = a + b;
+
+    if (n == 0) { n = 1; }
+    else { n = 0; }
+  }
+  
+  property[LTL] p1 : G(inited ==> (sum == (a + b + n)));
+  
+  control {
+  	// print_module;
+    vobj = bmc (3);
+    check;
+    // print_results;
+  }
+}

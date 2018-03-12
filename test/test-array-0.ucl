@@ -1,7 +1,7 @@
 module main
 {
-  var numbers : [int]int;
-  var sum, index : int;
+  var numbers : [integer]integer;
+  var sum, index : integer;
   
   init {
     for i in range(0, 9) {

@@ -7,6 +7,5 @@ module main
   control {
     f = unroll(3);
     check;
-    print_results;
   }
 }

@@ -1,26 +1,35 @@
 module main
 {
-  var sum, fake, i : int;
+  type num_t = integer;
+  var numbers : [boolean, num_t]integer;
+
+  var sum, index : integer;
   
   init {
-    i = 0;
+    for i in range(0, 9) {
+      numbers[true, i] = 0;
+      numbers[false, i] = 0;
+    }
+    sum = 0;
+    index = 0;
   }
   
   next {
-    assert ((i == 0) || (fake == 2*sum));
-    havoc sum;
-    havoc fake;
-    assume (fake == (sum+sum+1));
-    assert (fake == (sum+1+sum));
-    havoc fake;
-    assume (fake == (sum + sum));
-    assert false;
+    sum = sum + index;
+    numbers[true, index] = index;
+    numbers[false, index] = -index;
+    
+    index = index + 1;
+    
+    assert ((numbers[true, 0] + numbers[true, 1] + numbers[true, 2] + numbers[true, 3] + 
+    		 numbers[true, 4] + numbers[true, 5] + numbers[true, 6] + numbers[true, 7]) == sum);
 
-    i = i + 1;
+    assert ((numbers[false, 0] + numbers[false, 1] + numbers[false, 2] + numbers[false, 3] + 
+    		 numbers[false, 4] + numbers[false, 5] + numbers[false, 6] + numbers[false, 7]) == -sum);
   }
   
   control {
-    unroll (2);
+    unroll (5);
     check;
   }
 }

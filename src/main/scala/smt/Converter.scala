@@ -41,10 +41,10 @@ object Converter {
     typ match {
       case lang.UninterpretedType(id) =>
         smt.UninterpretedType(id.name)
-      case lang.IntType() =>
-        smt.IntType()
-      case lang.BoolType() =>
-        smt.BoolType()
+      case lang.IntegerType() =>
+        smt.IntType
+      case lang.BooleanType() =>
+        smt.BoolType
       case lang.BitVectorType(w) =>
         smt.BitVectorType(w)
       case lang.MapType(inTypes,outType) =>
@@ -104,6 +104,7 @@ object Converter {
       // Quantifiers
       case lang.ForallOp(vs) => return smt.ForallOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
       case lang.ExistsOp(vs) => return smt.ExistsOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
+      case lang.ITEOp() => return smt.ITEOp
       // Polymorphic operators are not allowed.
       case p : lang.PolymorphicOperator =>
         throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")
@@ -147,8 +148,6 @@ object Converter {
          case _ =>
            throw new Utils.RuntimeError("Should never get here.")
        }
-       case lang.ITE(cond,t,f) =>
-         return smt.ITE(toSMT(cond, scope, past), toSMT(t, scope, past), toSMT(f, scope, past))
        // Unimplemented operators.
        case lang.Lambda(ids,le) =>
          throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
@@ -185,8 +184,6 @@ object Converter {
         return ArrayStoreOperation(rename(e), index.map(rename(_)), rename(value))
       case FunctionApplication(e, args) =>
         return FunctionApplication(rename(e), args.map(rename(_)))
-      case ITE(e,t,f) =>
-        return ITE(rename(e), rename(t), rename(f))
       case Lambda(syms,e) =>
         return Lambda(syms.map((sym) => Symbol(renamerFn(sym.id, sym.typ), sym.typ)), rename(e))
       case IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) =>

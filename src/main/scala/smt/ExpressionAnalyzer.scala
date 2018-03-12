@@ -37,17 +37,24 @@ package smt
 import scala.collection.immutable.Map
 
 object ExpressionAnalyzer {
-  var z3ConstInterface = Z3Interface.newInterface()
+  var z3ConstInterface = new Z3Interface()
   def getConstIntValue(expr : smt.Expr, scope : lang.Scope) : Option[Int] = {
     Utils.assert(expr.typ.isInt, "Expected an integer-sorted expression.")
     val smtExpr1 = Converter.renameSymbols(expr, (s, t) => s + "_1")
     val smtExpr2 = Converter.renameSymbols(expr, (s, t) => s + "_2")
-    val isConst = z3ConstInterface.check(smt.OperatorApplication(smt.InequalityOp, List(smtExpr1, smtExpr2))).isFalse
+    z3ConstInterface.push()
+    z3ConstInterface.assert(smt.OperatorApplication(smt.InequalityOp, List(smtExpr1, smtExpr2)))
+    val smtResult = z3ConstInterface.check()
+    z3ConstInterface.pop()
+    val isConst = smtResult.isFalse
     if (!isConst) return None
     else {
-      val intLit = Symbol("$IntegerValue", smt.IntType())
+      val intLit = Symbol("$IntegerValue", smt.IntType)
       val eqExpr = smt.OperatorApplication(smt.EqualityOp, List(smtExpr1, intLit))
-      val smtResult = z3ConstInterface.check(eqExpr)
+      z3ConstInterface.push()
+      z3ConstInterface.assert(eqExpr)
+      val smtResult = z3ConstInterface.check()
+      z3ConstInterface.pop()
       smtResult.model match {
         case Some(m) =>
           m.evaluate(intLit) match {
@@ -57,10 +64,5 @@ object ExpressionAnalyzer {
         case None => None
       }
     }
-  }
-  def isExprConst(expr : smt.Expr, scope : lang.Scope) : Boolean = {
-    val smtExpr1 = Converter.renameSymbols(expr, (s, t) => s + "_1")
-    val smtExpr2 = Converter.renameSymbols(expr, (s, t) => s + "_2")
-    z3ConstInterface.check(smt.OperatorApplication(smt.InequalityOp, List(smtExpr1, smtExpr2))).isFalse
   }
 }

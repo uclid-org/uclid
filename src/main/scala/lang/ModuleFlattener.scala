@@ -165,7 +165,6 @@ class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identi
 class ModuleDependencyFinder(mainModuleName : Identifier) extends ASTAnalyzer(
     "ModuleDependencyFinder", new ModuleDependencyFinderPass())
 {
-  var moduleInstantiationOrder : Option[List[Identifier]] = None
   var cyclicalDependency : Option[Boolean] = None
   override def reset() {
     in = Some(Map.empty[Identifier, Set[Identifier]])
@@ -173,9 +172,8 @@ class ModuleDependencyFinder(mainModuleName : Identifier) extends ASTAnalyzer(
 
   override def finish() {
     val depGraph = out.get
-    val moduleInstantiationOrder = Some(Utils.topoSort(List(mainModuleName), depGraph))
     def cyclicModuleError(node : Identifier, stack : List[Identifier]) : ModuleError = {
-      val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ") + "."
+      val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ")
       ModuleError(msg, node.position)
     }
     val errors = Utils.findCyclicDependencies(depGraph, List(mainModuleName), cyclicModuleError)
@@ -196,6 +194,7 @@ object ModuleInstantiatorPass {
   case class Constant(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class Function(id : Identifier, sig : FunctionSig) extends InstanceVarRenaming(id, sig.typ)
   type VarMap = Map[Identifier, InstanceVarRenaming]
+  type InstVarMap = Map[List[Identifier], Identifier]
   type RewriteMap = Map[Expr, Expr]
 
   // Convert an expression to an identifier. (if possible)
@@ -220,6 +219,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   val targetModuleName = targetModule.id
 
   type VarMap = MIP.VarMap
+  type InstVarMap = MIP.InstVarMap
   type RewriteMap = MIP.RewriteMap
 
   def createVarMap() : (VarMap, ExternalSymbolMap) = {
@@ -260,14 +260,11 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       (mapAcc, v) => mapAcc + (v._1 -> MIP.StateVariable(nameProvider(v._1, "var"), v._2))
     }
     // map each constant.
-    val map5 = targetModule.constants.foldLeft((idMap4, initExternalSymbolMap)) {
-      (acc, c) => {
-        val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, c.id), c)
-        (acc._1 + (c.id -> MIP.Constant(newName, c.typ)), extSymMapP)
-      }
+    val map5 = targetModule.constants.foldLeft((idMap4)) {
+      (acc, c) => acc + (c._1 -> MIP.Constant(nameProvider(c._1, "const"), c._2))
     }
     // map each function.
-    val map6 = targetModule.functions.foldLeft(map5) {
+    val map6 = targetModule.functions.foldLeft(map5, initExternalSymbolMap) {
       (acc, f) => {
         val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, f.id), f)
         (acc._1 + (f.id -> MIP.Function(newName, f.sig)), extSymMapP)
@@ -276,20 +273,57 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     map6
   }
 
+  def createInstVarMap(varMap : VarMap) : InstVarMap = {
+    // println("initInstVarMap: " + initInstVarMap.toString)
+    // println("instance: " + inst.toString())
+    val instVarMap1 = varMap.foldLeft(Map.empty[List[Identifier], Identifier]) { 
+      (instVarMap, renaming) => {
+        renaming._2 match {
+          case MIP.BoundInput(_, _, _) | MIP.UnboundInput(_, _) | 
+               MIP.BoundOutput(_, _) | MIP.UnboundOutput(_, _)  | 
+               MIP.StateVariable(_, _) | MIP.SharedVariable(_, _) | 
+               MIP.Constant(_, _) =>
+            instVarMap + (List(inst.instanceId, renaming._1) -> renaming._2.ident)
+          case _ =>
+            instVarMap
+        }
+      }
+    }
+    val initInstVarMap : InstVarMap = (targetModule.getAnnotation[InstanceVarMapAnnotation]()).get.iMap
+    val instVarMap2 = (initInstVarMap.map {
+      p => {
+        val key1 = List(inst.instanceId, p._2)
+        val result = instVarMap1.get(key1).get
+        (inst.instanceId :: p._1) -> result 
+      }
+    }).toMap
+    val instVarMap = instVarMap1 ++ instVarMap2
+    // val instVarMap1 : Map[List[Identifier], Identifier] = initInstVarMap.map(p => (inst.instanceId :: p._1) -> p._2)
+    // println("instVarMap: " + instVarMap.toString)
+    instVarMap
+  }
+
   def createNewModule(varMap : VarMap) : Module = {
     val rewriteMap = MIP.toRewriteMap(varMap)
     val rewriter = new ExprRewriter("MIP:" + inst.instanceId.toString, rewriteMap)
     rewriter.visit(targetModule, Scope.empty).get
   }
 
+  def fixPosition[T <: PositionedNode](node : Option[T], pos : ASTPosition) : Option[T] = {
+    ASTNode.introducePos(true, true, node, pos)
+  }
+  def fixPosition[T <: PositionedNode](nodes : List[T], pos : ASTPosition) : List[T] = {
+    ASTNode.introducePos(true, true, nodes, pos)
+  }
   def createNewVariables(varMap : VarMap) : List[Decl] = {
     varMap.map {
       v => {
         v._2 match {
-          case MIP.BoundInput(id, t, _t) => Some(StateVarsDecl(List(id), t))
-          case MIP.UnboundOutput(id, t) => Some(StateVarsDecl(List(id), t))
-          case MIP.StateVariable(id, t) => Some(StateVarsDecl(List(id), t))
-          case MIP.Constant(_, _) | MIP.Function(_, _) | MIP.UnboundInput(_, _) | 
+          case MIP.BoundInput(id, t, _t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
+          case MIP.UnboundOutput(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
+          case MIP.StateVariable(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
+          case MIP.Constant(id, t) => fixPosition(Some(ConstantsDecl(List(id), t)), id.position)
+          case MIP.Function(_, _) | MIP.UnboundInput(_, _) | 
                MIP.BoundOutput(_, _) | MIP.SharedVariable(_, _) =>  None
         }
       }
@@ -300,7 +334,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     varMap.map {
       v => {
         v._2 match {
-          case MIP.UnboundInput(id, t) => Some(InputVarsDecl(List(id), t))
+          case MIP.UnboundInput(id, t) => fixPosition(Some(InputVarsDecl(List(id), t)), id.position)
           case MIP.BoundInput(_, _, _) | MIP.BoundOutput(_, _) |
                MIP.UnboundOutput(_, _) | MIP.StateVariable(_, _) |
                MIP.SharedVariable(_, _) | MIP.Constant(_, _) | MIP.Function(_, _) =>
@@ -315,7 +349,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       v => {
         v._2 match {
           case MIP.BoundInput(id, t, expr) =>
-            Some(AssignStmt(List(LhsId(id)), List(expr)))
+            fixPosition(Some(AssignStmt(List(LhsId(id)), List(expr))), id.position)
           case _ =>
             None
         }
@@ -324,6 +358,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   val (varMap, externalSymbolMap) = createVarMap()
+  val instVarMap = createInstVarMap(varMap)
   val newModule = createNewModule(varMap)
 
   val newVariables = createNewVariables(varMap)
@@ -334,24 +369,36 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     case _ => List.empty[Statement]
   }
 
+  override def rewriteAnnotation(note : Annotation, context : Scope) : Option[Annotation] = {
+    note match {
+      case ivmNote : InstanceVarMapAnnotation => Some(InstanceVarMapAnnotation(ivmNote.iMap ++ instVarMap))
+      case _ => Some(note)
+    }
+  }
+
   // rewrite SelectFromInstance operations.
+  def flattenSelectFromInstance(expr : Expr) : List[Identifier] = {
+    expr match {
+      case OperatorApplication(SelectFromInstance(field), List(e)) =>
+        flattenSelectFromInstance(e) ++ List(field)
+      case id : Identifier =>
+        List(id)
+      case _ =>
+        throw new Utils.AssertionError("Unexpected AST node: " + expr.toString())
+    }
+  }
+
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
-    opapp.op match {
+    val opappP = opapp.op match {
       case SelectFromInstance(field) =>
-        val instance = opapp.operands(0)
-        if (instance == inst.instanceId) {
-          val fldP = varMap.get(field)
-          if (fldP.isEmpty && context.cmd.isDefined) {
-            Some(opapp)
-          } else { 
-            Utils.assert(fldP.isDefined, "Non-existent field should have been detected by now!")
-            Some(fldP.get.ident)
-          }
-        } else {
-          Some(opapp)
+        val flatList = flattenSelectFromInstance(opapp)
+        instVarMap.get(flatList) match {
+          case Some(id) => Some(id)
+          case None => Some(opapp)
         }
       case _ => Some(opapp)
     }
+    fixPosition(opappP, opapp.position)
   }
   // add initialization for the instance.
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
@@ -373,7 +420,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // add new variables and inputs.
   override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
     val declsP : List[Decl] = newVariables ++ newInputs ++ module.decls
-    val moduleP = Module(module.id, declsP, module.cmds)
+    val moduleP = Module(module.id, declsP, module.cmds, module.notes)
     Some(moduleP)
   }
 
@@ -388,7 +435,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 }
 
 class ModuleInstantiator(passName : String, module : Module, inst : InstanceDecl, targetModule : Module, externalSymbolMap : ExternalSymbolMap) extends ASTRewriter(
-    passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap))
+    passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false)
 
 class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
   lazy val manager : PassManager = analysis.manager
@@ -406,7 +453,7 @@ class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
         val passName = "ModuleInstantiator:" + module.id + ":" + inst.instanceId
         val rewriter = new ModuleInstantiator(passName, module, inst, targetModule, extSymMap)
         // println("rewriting module:%s inst:%s targetModule:%s.".format(module.id.toString, inst.instanceId.toString, targetModule.id.toString))
-        // update external symbolm map.
+        // update external symbol map.
         extSymMap = rewriter.pass.asInstanceOf[ModuleInstantiatorPass].externalSymbolMap
         // println("original module:\n%s".format(module.toString))
         val modP = rewriter.visit(module, ctx).get

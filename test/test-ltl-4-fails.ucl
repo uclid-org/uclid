@@ -1,0 +1,21 @@
+module main
+{
+    var cnt : bv2;
+
+    init {
+        cnt = 0bv2;
+    }
+
+    next {
+        cnt = if (cnt == 2bv2) then 0bv2 else (cnt + 1bv2);
+    }
+
+    property[LTL] cnt_eventually_3: F(cnt == 3bv2);
+
+    control {
+        v = bmc[cnt_eventually_3](3);
+        check;
+        // print_results;
+        // v->print_cex;
+    }
+}

@@ -2,8 +2,8 @@ module main_func {
 
   type pc_t = enum {A, B, C};
 
-  input enable : bool;
-  sharedvar timerCount : int;
+  input enable : boolean;
+  sharedvar timerCount : integer;
 
   var pc : pc_t;
 
@@ -36,12 +36,12 @@ module main_func {
 module ISR_func {
  type pc_t = enum {idle, D, E};
 
- input enable : bool;
- sharedvar timerCount : int;
+ input enable : boolean;
+ sharedvar timerCount : integer;
 
  var pc : pc_t;
 
- output return_ISR : bool;
+ output return_ISR : boolean;
 
  init {
    pc = idle;
@@ -61,22 +61,35 @@ module ISR_func {
    else {
       pc = pc; return_ISR = false;
    }
+
  }
 
+/* This doesn't work as timerCount is a sharedvar
+   defined in a higher level module.
+
+ invariant pc_ISR: (pc == idle) <==> (return_ISR);
+
+ control {
+     unroll(5);
+     check;
+     print_results;
+  }
+*/
 } // end module ISR_func
 
 
 module Sys {
 
   type mode_t = enum {main_t, ISR_t};
+  type ISR_func_pc_t = ISR_func::pc_t;
 
-  input assert_intr : bool;
+  input assert_intr : boolean;
 
 // define and initialize timerCount here as a state variable
-  var timerCount : int;
+  var timerCount : integer;
   var mode : mode_t;
-  var M_enable, I_enable: bool;
-  var return_ISR : bool;
+  var M_enable, I_enable: boolean;
+  var return_ISR : boolean;
 
   // main and ISR functions composed synchronously
   instance main_f : main_func (enable : (M_enable), timerCount : (timerCount));
@@ -100,10 +113,19 @@ module Sys {
     }
   }   
 
+ invariant pc_ISR: (ISR_f->pc == idle) <==> (ISR_f->return_ISR);
+
+ control {
+     v = unroll(5);
+     check;
+     print_results;
+     v->print_cex;
+
+  }
 }
 
 module Env {
-  output assert_intr : bool;
+  output assert_intr : boolean;
 
   init { havoc assert_intr; }
 
@@ -112,9 +134,11 @@ module Env {
 
 module main {
 
+  type main_func_pc_t = main_func::pc_t;
+
 // explicitly model interleaving async composition with an ND scheduler
-  var turn : bool;
-  var assert_intr : bool;
+  var turn : boolean;
+  var assert_intr : boolean;
 
   instance Env_i : Env(assert_intr : (assert_intr));
   instance Sys_i : Sys(assert_intr : (assert_intr));
@@ -126,4 +150,11 @@ module main {
     havoc turn; 
   }
 
+  property[LTL] reached_C :  G((Sys_i->main_f->pc == A) || (Sys_i->main_f->pc == B));
+
+  control {
+    vobj = bmc[reached_C] (2);
+    check;
+    print_results;
+  }
 }

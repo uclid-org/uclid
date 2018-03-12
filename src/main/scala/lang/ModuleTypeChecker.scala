@@ -67,6 +67,10 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         case AssignStmt(lhss, rhss) =>
           var ret = in
 
+          if (rhss.size == 0) {
+            ret = in + ModuleError("Right hand size of assignment must not be empty", st.position) 
+          }
+
           for ((lh, rh) <- lhss zip rhss) {
             val lhType = exprTypeChecker.typeOf(lh, context)
             val rhType = exprTypeChecker.typeOf(rh, context)
@@ -185,6 +189,20 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           }
         case SkipStmt() => in
       }
+    }
+  }
+  override def applyOnDefine(d : TraversalDirection.T, defDecl : DefineDecl, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down) {
+      val contextP = context + defDecl.sig
+      val exprType = exprTypeChecker.typeOf(defDecl.expr, context + defDecl.sig)
+      if (exprType != defDecl.sig.retType) {
+        val error = ModuleError("Return type and expression type do not match", defDecl.expr.position)
+        in + error
+      } else {
+        in
+      }
+    } else {
+      in
     }
   }
 }

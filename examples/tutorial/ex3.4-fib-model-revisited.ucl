@@ -1,0 +1,24 @@
+module main {
+  // System description. blah
+  var a, b : integer;
+
+  init {
+    havoc a;
+    havoc b;
+    // embedded assumptions.
+    assume (a <= b);
+    assume (a >= 0 && b >= 0);
+  }
+  next {
+    a, b = b, a + b;
+    // embedded assertion.
+    assert (a <= b);
+  }
+
+  // Proof script.
+  control {
+    unroll (3);
+    check;
+    print_results;
+  }
+}

@@ -1,10 +1,10 @@
 module main
 {
-  input w  : int;
-  var nums : [int]int;
-  var x    : int; 
+  input w  : integer;
+  var nums : [integer]integer;
+  var x    : integer; 
 
-  procedure add(a : int, b : int) returns (c : int)
+  procedure add(a : integer, b : integer) returns (c : integer)
     requires (a >= 0 && a < 10);
     requires (b >= 0 && b < 10);
     ensures c == a + b;
@@ -13,10 +13,10 @@ module main
     c = a + b;
   }
 
-  procedure sum(n : int) returns (numbers : [int]int)
+  procedure sum(n : integer) returns (numbers : [integer]integer)
     requires (n > 0);
     requires (n < 5);
-    ensures (forall (i : int) :: (i > 0 && i < n) ==> numbers[i] == i+1);
+    ensures (forall (i : integer) :: (i > 0 && i < n) ==> numbers[i] == i+1);
     ensures (x == old(x) + 1);
     modifies x;
   {

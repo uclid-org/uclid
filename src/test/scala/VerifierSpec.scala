@@ -37,95 +37,163 @@ package test
 import org.scalatest.FlatSpec
 import uclid.{lang => l}
 
-class VerifierSpec extends FlatSpec {
-  def nTestsFail(filename: String, nFail : Int) {
-    val modules = UclidMain.compile(List(filename), lang.Identifier("main"))
-    val mainModule = UclidMain.instantiate(modules, l.Identifier("main"))
+object VerifierSpec {
+  def expectedFails(filename: String, nFail : Int) {
+    val modules = UclidMain.compile(List(filename), lang.Identifier("main"), true)
+    val mainModule = UclidMain.instantiate(modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
     val results = UclidMain.execute(mainModule.get)
     assert (results.count((e) => e.result.isFalse) == nFail)
     assert (results.count((e) => e.result.isUndefined) == 0);
   }
+}
 
-  "test/test-array-0.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-array-0.ucl", 0)
+class BasicVerifierSpec extends FlatSpec {
+  "test-assert-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-assert-1.ucl", 0)
   }
-  "test/test-bv-assign.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-bv-assign.ucl", 0)
+  "test-array-0.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-array-0.ucl", 0)
   }
-  "test/test-bv-fib.ucl" should "verify successfully all but one assertion." in {
-    nTestsFail("./test/test-bv-fib.ucl", 1)
+  "test-array-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-array-1.ucl", 0)
   }
-  "test/test-case-mc91.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-case-mc91.ucl", 0)
+  "test-array-1-unsafe.ucl" should "verify all but 4 assertions." in {
+    VerifierSpec.expectedFails("./test/test-array-1-unsafe.ucl", 4)
   }
-  "test/test-forloop.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-forloop.ucl", 0)
+  "test-bv-assign.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bv-assign.ucl", 0)
   }
-  "test/test-forloop-0.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-forloop-0.ucl", 0)
+  "test-bv-fib.ucl" should "verify successfully all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-bv-fib.ucl", 1)
   }
-  "test/test-forloop-1.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-forloop-1.ucl", 0)
+  "test-case-mc91.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-case-mc91.ucl", 0)
   }
-  "test/test-inliner.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-inliner.ucl", 0)
+  "test-forloop.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-forloop.ucl", 0)
   }
-  "test/test-inliner-1.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-inliner-1.ucl", 0)
+  "test-forloop-0.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-forloop-0.ucl", 0)
   }
-  "test/test-int-fib.ucl" should "verify successfully all but one assertion." in {
-    nTestsFail("./test/test-int-fib.ucl", 1)
+  "test-forloop-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-forloop-1.ucl", 0)
   }
-  "test/test-mc91.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-mc91.ucl", 0)
+  "test-ite.ucl" should "verify all but 6 assertions successfully." in {
+    VerifierSpec.expectedFails("./test/test-ite.ucl", 6)
   }
-  "test/test-record-1.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-record-1.ucl", 0)
+  "test-inliner.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-inliner.ucl", 0)
   }
-  "test/test-tuple-record-1.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-tuple-record-1.ucl", 0)
+  "test-inliner-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-inliner-1.ucl", 0)
   }
-  "test/test-types-0.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-types-0.ucl", 0)
+  "test-int-fib.ucl" should "verify successfully all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-int-fib.ucl", 1)
   }
-  "test/test-functions-1.ucl" should "verify successfully." in {
-    nTestsFail("./test/test-functions-1.ucl", 0)
+  "test-mc91.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-mc91.ucl", 0)
   }
-  "test/test-array-1.ucl" should "verify four assertions and fail to verify two assertions." in {
-    nTestsFail("./test/test-array-1.ucl", 2)
+  "test-record-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
   }
-  "test/test-enum-1.ucl" should "verify all assertions." in {
-    nTestsFail("./test/test-enum-1.ucl", 0)
+  "test-tuple-record-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-tuple-record-1.ucl", 0)
   }
-  "test/test-forall-0.ucl" should "verify all assertions." in {
-    nTestsFail("./test/test-forall-0.ucl", 0)
+  "test-types-0.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-types-0.ucl", 0)
   }
-  "test/test-exists-0.ucl" should "verify all assertions." in {
-    nTestsFail("./test/test-exists-0.ucl", 0)
+  "test-functions-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-functions-1.ucl", 0)
   }
-  "test/test-type2.ucl" should "verify all assertions." in {
-    nTestsFail("./test/test-type2.ucl", 0)
+  "test-exprs-1.ucl" should "verify four assertions and fail to verify two assertions." in {
+    VerifierSpec.expectedFails("./test/test-exprs-1.ucl", 2)
   }
-  "test/test-modules.ucl" should "verify all assertions." in {
-    nTestsFail("./test/test-modules.ucl", 0)
+  "test-enum-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-enum-1.ucl", 0)
   }
-  "test/test-modules-1.ucl" should "verify all assertions." in {
-    nTestsFail("./test/test-modules-1.ucl", 0)
+  "test-enum-2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-enum-2.ucl", 0)
   }
-  "test/test-type-import.ucl" should "verify all assertions." in {
-    nTestsFail("./test/test-type-import.ucl", 0)
+  "test-type2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-type2.ucl", 0)
   }
-  "test/test-const-import.ucl" should "verify all assertions." in {
-    nTestsFail("./test/test-const-import.ucl", 0)
+  "test-if-star.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-if-star.ucl", 0)
   }
-  "test/test-if-star.ucl" should "verify all assertions." in {
-    nTestsFail("./test/test-if-star.ucl", 0)
+  "test-assume-1.ucl" should "fail to verify five assertions." in {
+    VerifierSpec.expectedFails("./test/test-assume-1.ucl", 5)
   }
-  "test/test-procedure-postcondition.ucl" should "verify all but one assertion." in {
-    nTestsFail("./test/test-procedure-postcondition.ucl", 1)
+}
+class QuantiferVerifSpec extends FlatSpec {
+  "test-forall-0.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-forall-0.ucl", 0)
   }
-  "test/test-mem-inout.ucl" should "verify all assertions." in {
-    nTestsFail("./test/test-meminout.ucl", 0)
+  "test-exists-0.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-exists-0.ucl", 0)
+  }
+}
+class ModuleVerifSpec extends FlatSpec {
+  "test-modules.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-modules.ucl", 0)
+  }
+  "test-modules-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-modules-1.ucl", 0)
+  }
+  "test-type-import.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-type-import.ucl", 0)
+  }
+  "test-const-import-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-const-import-1.ucl", 0)
+  }
+  "test-const-import-2.ucl" should "should failed to verify 4 assertions." in {
+    VerifierSpec.expectedFails("./test/test-const-import-2.ucl", 4)
+  }
+  "test-func-import-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-func-import-1.ucl", 0)
+  }
+  "test-procedure-postcondition.ucl" should "verify all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-procedure-postcondition.ucl", 1)
+  }
+  "test-mem-inout.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-meminout.ucl", 0)
+  }
+  "test-axiom-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-axiom-1.ucl", 0)
+  }
+}
+class LTLVerifSpec extends FlatSpec {
+  "test-history-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-history-1.ucl", 0)
+  }
+  "test-ltl-0-safe.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-0-safe.ucl", 0)
+  }
+  "test-ltl-0-unsafe.ucl" should " fail to verify 3 assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-0-unsafe.ucl", 2)
+  }
+  "test-ltl-1-safe.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-1-safe.ucl", 0)
+  }
+  "test-ltl-1-unsafe.ucl" should "fail to verify 6 assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-1-unsafe.ucl", 10)
+  }
+  "test-ltl-2-holds.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-2-holds.ucl", 0)
+  }
+  "test-ltl-2-fails.ucl" should "fail to verify 4 assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-2-fails.ucl", 4)
+  }
+  "test-ltl-3-holds.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-3-holds.ucl", 0)
+  }
+  "test-ltl-3-fails.ucl" should "failed to verify 2 assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-3-fails.ucl", 2)
+  }
+  "test-ltl-4-holds.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-4-holds.ucl", 0)
+  }
+  "test-ltl-4-fails.ucl" should "failed to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-ltl-4-fails.ucl", 1)
   }
 }

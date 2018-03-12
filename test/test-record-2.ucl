@@ -1,7 +1,7 @@
 // This file must not compile because of incorrect argument types being passed to the procedure foo.
 module main {
-  type num = int;
-  type bit = bool;
+  type num = integer;
+  type bit = boolean;
   type rec1 = record {a : num, b : num, c : bit };
   type rec2 = record { test : num, best : num, fest : bit };
 

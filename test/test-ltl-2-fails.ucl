@@ -1,0 +1,23 @@
+module main {
+  var state : boolean;
+  
+  init {
+    state = false;
+  }
+  
+  next {
+    if (*) {
+	  state = !state;
+	}
+  }
+  
+  property[LTL] ss : G(F(state));
+  
+  control {
+    //print_module;
+    v = bmc(4);
+    check;
+    // print_results;
+    //v->print_cex;
+  } 
+}

@@ -12,7 +12,7 @@ class ExternalSymbolMap (
   }
 
   def + (extId : ExternalIdentifier, extDecl : ModuleExternal) : ExternalSymbolMap = {
-    val newName : Identifier = nameProvider.get.apply(extDecl.extName, extId.moduleId.toString)
+    val newName : Identifier = nameProvider.get.apply(extId.id, extId.moduleId.toString)
     new ExternalSymbolMap(nameProvider, externalMap + (extId -> (newName, extDecl)))
   }
 
@@ -62,10 +62,10 @@ class ExternalSymbolRewriterPass(externalSymbolMap: ExternalSymbolMap) extends R
     val extDecls = externalSymbolMap.externalMap.map(p => {
       p._2._2 match {
         case f : FunctionDecl => FunctionDecl(p._2._1, f.sig)
-        case c : ConstantDecl => ConstantDecl(p._2._1, c.typ)
+        case c : ConstantsDecl => ConstantsDecl(List(p._2._1), c.typ)
       }
     }).toList
-    Some(Module(module.id, extDecls ++ module.decls, module.cmds))
+    Some(Module(module.id, extDecls ++ module.decls, module.cmds, module.notes))
   }
   override def rewriteExternalIdentifier(extId : ExternalIdentifier, context : Scope) : Option[Expr] = {
     externalSymbolMap.externalMap.get(extId) match {

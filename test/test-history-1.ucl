@@ -1,0 +1,14 @@
+module main {
+  var ltl__pending__p1_4 : boolean;
+  init {
+    ltl__pending__p1_4 = true;
+  }
+  next {
+    ltl__pending__p1_4 = history(ltl__pending__p1_4, 1);
+    assert (ltl__pending__p1_4);
+  }
+  control {
+    unroll(5);
+    check;
+  }
+}

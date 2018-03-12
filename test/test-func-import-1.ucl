@@ -1,0 +1,40 @@
+module common {
+  input n : integer;
+  var   h : integer;
+
+  function hash(v : integer, h : integer) : integer;
+  axiom collision_resistance: 
+  	(forall (n1 : integer, n2 : integer, h1 : integer, h2 : integer) :: (n1 != n2 || h1 != h2) <==> hash(n1, h1) != hash(n2, h2));
+  axiom second_preimage_resistance: 
+  	(forall (n1 : integer, n2 : integer, h1 : integer, h2 : integer) :: (n1 == n2 && h1 == h2) <==> hash(n1, h1) != hash(n2, h2));
+  
+
+  init {
+    h = 0;
+  }
+  next {
+    h = hash(n, h);
+  }  
+}
+
+module main {
+  input n : integer;
+
+  instance c1 : common ( n : (n));
+  instance c2 : common ( n : (n));
+  
+  next {
+    next(c1);
+    next(c2);
+  }
+
+  property hashes_equal : c1->h == c2->h;
+
+  control {
+    //print_module;
+    v = unroll(2);
+    check;
+    //print_results;
+    //v->print_cex(n, c1->h, c2->h);
+  }
+}

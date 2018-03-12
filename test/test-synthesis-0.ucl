@@ -1,12 +1,22 @@
  /* Toy example #0 to test drive synthesis. */
 module main
 {
-  input a, b : int;
-  var sum : int;
-  var prev_sum : int;
+  input a, b : integer;
+  var sum : integer;
+  var prev_sum : integer;
   
-  synthesis function max2 (x : int, y : int) : int;
+  grammar max_grammar (x : integer, y : integer) : integer = {
+    (start : integer) ::= 0 | 1 | x | y | 
+    					 (start + start) | (start - start) |
+    					 (if (cond) then start else start);
+    (cond : boolean) ::= true | false | (!cond) | (start <= start);
+  }
+
+  synthesis function max2 (x : integer, y : integer) : integer
+    grammar max_grammar(x, y)
+    ensures (max2(x, y) >= x && max2(x, y) >= y);
   
+
   init {
     sum = 0;
     prev_sum = 0;
@@ -20,8 +30,8 @@ module main
   property sum_monotonically_incr : (sum >= prev_sum);
   
   control {
-    initialize;
-    simulate(5);
+  	print_module;
+    unroll(5);
     check;
     print_results;
   }

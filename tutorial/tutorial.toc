@@ -5,7 +5,7 @@
 \contentsline {subsubsection}{\nonumberline The Proof Script}{7}{section*.5}
 \contentsline {section}{\numberline {1.2}Installing {\textsc {Uclid5}}\xspace {}}{7}{section.1.2}
 \contentsline {subsection}{\numberline {1.2.1}Prerequisites}{7}{subsection.1.2.1}
-\contentsline {subsection}{\numberline {1.2.2}Detailed Installation Instructions}{7}{subsection.1.2.2}
+\contentsline {subsection}{\numberline {1.2.2}Detailed Installation Instructions}{8}{subsection.1.2.2}
 \contentsline {subsection}{\numberline {1.2.3}Running {\textsc {Uclid5}}\xspace {}}{8}{subsection.1.2.3}
 \contentsline {section}{\numberline {1.3}Looking Forward}{9}{section.1.3}
 \contentsline {chapter}{\numberline {2}Basics: Types and Statements}{10}{chapter.2}
@@ -30,11 +30,11 @@
 \contentsline {chapter}{\numberline {4}Compositional Modeling and Abstraction}{20}{chapter.4}
 \contentsline {section}{\numberline {4.1}Common Type Definitions Across Modules}{20}{section.4.1}
 \contentsline {section}{\numberline {4.2}Uninterpreted Functions and Types}{20}{section.4.2}
-\contentsline {subsection}{\numberline {4.2.1}Uninterpreted Types}{22}{subsection.4.2.1}
-\contentsline {subsection}{\numberline {4.2.2}Uninterpreted Functions}{22}{subsection.4.2.2}
-\contentsline {section}{\numberline {4.3}Procedure Definition}{22}{section.4.3}
-\contentsline {subsection}{\numberline {4.3.1}Procedure Invocation}{24}{subsection.4.3.1}
-\contentsline {section}{\numberline {4.4}Module Instantiation and Scheduling}{24}{section.4.4}
+\contentsline {subsection}{\numberline {4.2.1}Uninterpreted Types}{23}{subsection.4.2.1}
+\contentsline {subsection}{\numberline {4.2.2}Uninterpreted Functions}{23}{subsection.4.2.2}
+\contentsline {section}{\numberline {4.3}Procedure Definition}{23}{section.4.3}
+\contentsline {subsection}{\numberline {4.3.1}Procedure Invocation}{23}{subsection.4.3.1}
+\contentsline {section}{\numberline {4.4}Module Instantiation and Scheduling}{23}{section.4.4}
 \contentsline {subsection}{\numberline {4.4.1}Accessing Instance Variables}{24}{subsection.4.4.1}
 \contentsline {section}{\numberline {4.5}Running {\textsc {Uclid5}}\xspace {}}{24}{section.4.5}
 \contentsline {subsection}{\numberline {4.5.1}Exercise: Inductive Proof of CPU model}{24}{subsection.4.5.1}

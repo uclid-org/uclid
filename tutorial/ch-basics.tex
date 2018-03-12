@@ -1,62 +1,7 @@
 \chapter{Basics: Types and Statements}
 \begin{uclidlisting}[htbp]
-\begin{lstlisting}[language=uclid,style=uclidstyle]
-module main
-{
-  type cmd_t = enum { add, sub, mov_imm };
-  type result_t = record { valid : bool, value : bv8 };
-
-  input valid       : bool;
-  input cmd         : cmd_t;
-  input r1, r2      : bv3;
-  input immed       : bv8;
-  output result     : result_t;
-
-  var regs          : [bv3]bv8;
-  var r1val, r2val  : bv8;
-  var cnt           : bv8; 
-
-  init {
-    for i in range(0bv3, 7bv3) {
-      regs[i] = 1bv8;
-    }
-    cnt = 1bv8;
-    result.value = 1bv8;
-  }
-
-  next {
-    if (valid) { // Do we have a valid command?
-      r1val = regs[r1];
-      r2val = regs[r2];
-      case // Case-split on the operation to be performed.
-        (cmd == add)      : { regs[r1] = r1val + r2val; }
-        (cmd == sub)      : { regs[r1] = r1val - r2val; }
-        (cmd == mov_imm)  : { regs[r1] = immed; }
-      esac
-      result.valid = true;
-      result.value = regs[r1];
-    } else {
-      result.valid = false;
-    }
-    // This code is only for testing this module.
-    cnt = cnt + cnt;
-  }
-
-  // Specification.
-  assume regindex_zero:      (r1 == 0bv3 && r2 == 0bv3);
-  assume cmd_is_add:         (cmd == add);
-  assume cmd_is_valid:       (valid);
-  invariant result_eq_cnd:  (cnt == result.value);
-
-  // Proof script.
-  control {
-    f = unroll (5);
-    check;
-    print_results;
-  }
-}
-\end{lstlisting}
-\caption{Model of a simple ALU}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex2.1-alu.ucl}
+    \caption{Model of a simple ALU}
 \label{ex:alu}
 \end{uclidlisting}
 
@@ -66,8 +11,8 @@ This chapter will provide an overview of \uclid{}'s type system and modelling fe
 
 Types supported by \uclid{} are of the following kinds: 
 \begin{enumerate}
-    \item \keyword{int}: the type of mathematical integers.
-    \item \keyword{bool}: the Boolean type. This type has two values: \keyword{true} and \keyword{false}.
+    \item \keyword{integer}: the type of mathematical integers.
+    \item \keyword{boolean}: the Boolean type. This type has two values: \keyword{true} and \keyword{false}.
     \item \keyword{bv\textit{W}}: The family of bit-vector types parameterized by their width ($W$).
     \item \keyword{enum}: enumerated types.
     \item Tuples and records.
@@ -75,13 +20,13 @@ Types supported by \uclid{} are of the following kinds:
     \item Uninterpreted types.
 \end{enumerate}
 
-An enumerated type is used in line~4 of Example~\ref{ex:alu}. This declares a \textit{type synonym}: \codelike{cmd_t} is an alias for the enumerated type consisting of three values: \codelike{add}, \codelike{sub} and \codelike{mov_imm}. The input \codelike{cmd} is then declared to be of type \codelike{cmd_t} in line~9. 
+An enumerated type is used in line~4 of Example~\ref{ex:alu}. This declares a \textit{type synonym}: \codelike{cmd_t} is an alias for the enumerated type consisting of three values: \codelike{add}, \codelike{sub} and \codelike{mov_imm}. The input \codelike{cmd} is then declared to be of type \codelike{cmd_t} on line~8. 
 
-The input \codelike{valid} is of type \keyword{bool}. Register indices \codelike{r1} and \codelike{r2} are bit-vectors of width 3 (\keyword{bv3}), while \codelike{immed}, \codelike{result}, \codelike{r1val} and \codelike{r2val} are bit-vectors of width 8 (\keyword{bv8}).
+The input \codelike{valid} is of type \keyword{boolean}. Register indices \codelike{r1} and \codelike{r2} are bit-vectors of width 3 (\keyword{bv3}), while \codelike{immed}, \codelike{result}, \codelike{r1val} and \codelike{r2val} are bit-vectors of width 8 (\keyword{bv8}).
 
-Line~7 declares a type synonym for a \keyword{record}. It declares \codelike{result_t} as being a record consisting of two fields: a Boolean field \codelike{valid} and a bit-vector field \codelike{value}. The output \codelike{result} is declared to be of type \codelike{result_t} on Line~13.
+Line~5 declares a type synonym for a \keyword{record}. It declares \codelike{result_t} as consisting of two fields: a Boolean field \codelike{valid} and a bit-vector field \codelike{value}. The output \codelike{result} is declared to be of type \codelike{result_t} on Line~11.
 
-The final point of interest, type-wise, is line~15. The state variable \codelike{regs} is declared to be of type array: indices to the array are of type \codelike{bv3} and elements of the array are of type \codelike{bv8}. This is used to model an 8-entry register file, where each register is a bit-vector of width 8.
+The final point of interest, type-wise, is line~13. The state variable \codelike{regs} is declared to be of type array: indices to the array are of type \codelike{bv3} and elements of the array are of type \codelike{bv8}. This is used to model an 8-entry register file, where each register is a bit-vector of width 8.
 
 \section{Statements in \uclid{}}
 
@@ -93,7 +38,7 @@ The \keyword{init} block uses a \keyword{for} loop to initialize each value in t
 The range over which a \keyword{for} loop iterates must be defined by two numeric literals.
 
 \subsection{If and Case Statements}
-Also worth pointing out are the \keyword{if} statement that appears on line~34, and the \keyword{case} statement that appears on line~38. Syntax for \keyword{if} statements should be familiar. 
+Also worth pointing out are the \keyword{if} statement that appears on line~25, and the \keyword{case} statement that appears on line~28. Syntax for \keyword{if} statements should be familiar. 
 
 \keyword{case} statements are delimited by \keyword{case} and \keyword{esac} and contain within them a list of boolean expressions and associated statement blocks. These expressions are evaluated in the order in which appear, and if any of them evaluate to \codelike{true}, the corresponding block is executed. If none of the case-expressions evaluate to \codelike{true}, nothing is executed. The keyword \keyword{default} can be used as a ``catch-all'' case like in C/C++. 
 
@@ -110,10 +55,10 @@ Execution of the model in Example~\ref{ex:alu} starts with the \keyword{init} bl
 \subsection{Next State Computation}
 The next state of each state variable in the model is computed according to the \keyword{next} block. Any variables not assigned to in the \keyword{next} block retain their ``old'' values. 
 
-The \keyword{input} variables of the model are assigned (possibly different) non-deterministic values for each step of the transition system. These values can be controlled by using assumptions. Indeed, the model uses the three assumptions on lines 54, 55 and 56 to constrain the input to the ALU to always be an \codelike{add} operation, where both operands refer to register index 0. 
+The \keyword{input} variables of the model are assigned (possibly different) non-deterministic values for each step of the transition system. These values can be controlled by using assumptions. Indeed, the model uses the three assumptions on lines 43--45 to constrain the input to the ALU to always be an \codelike{add} operation, where both operands refer to register index 0. 
 
 \subsection{Verification}
-As in Example~\ref{ex:fib-model}, the verification script in Example~\ref{ex:alu} unrolls the transition system for 5 steps and checks if the \keyword{invariant} on line~57 is violated in any of these steps. 
+As in Example~\ref{ex:fib-model}, the verification script in Example~\ref{ex:alu} unrolls the transition system for 5 steps and checks if the \keyword{invariant} on line~46 is violated in any of these steps. 
 
 \subsection{Running \uclid{}}
 
@@ -126,4 +71,4 @@ $ uclid examples/tutorial/ex2.1-alu.ucl
 0 assertions indeterminate.
 \end{Verbatim}
 
-\uclid{} is able to prove that the \keyword{invariant} on line~57 holds for all states reachable within 5 steps of the initial state, under the assumptions specified in lines~54-56.
+\uclid{} is able to prove that the \keyword{invariant} on line~46 holds for all states reachable within 5 steps of the initial state, under the assumptions specified in lines~43--45.

@@ -1,0 +1,26 @@
+module main
+{
+  var sum, fake, i : integer;
+  
+  init {
+    i = 0;
+  }
+  
+  next {
+    assert ((i == 0) || (fake == 2*sum));
+    havoc sum;
+    havoc fake;
+    assume (fake == (sum+sum+1));
+    assert (fake == (sum+1+sum));
+    havoc fake;
+    assume (fake == (sum + sum));
+    assert false;
+
+    i = i + 1;
+  }
+  
+  control {
+    unroll (2);
+    check;
+  }
+}

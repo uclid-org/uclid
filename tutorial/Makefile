@@ -1,6 +1,6 @@
 all: tutorial.pdf
 
-tutorial.pdf: *.tex
+tutorial.pdf: *.tex ../examples/tutorial/*
 	pdflatex -halt-on-error tutorial.tex
 	bibtex tutorial
 	pdflatex -halt-on-error tutorial.tex

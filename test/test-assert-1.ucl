@@ -1,0 +1,25 @@
+module main
+{
+    type color_t = enum { red, blue };
+
+    var red_cnt : integer;
+    var color : color_t;
+
+	init { }
+	
+    next {
+    	color = blue;
+    	if(red_cnt > 0) {
+			color = red;
+        }
+        if(color == red) {
+            assert (red_cnt > 0);
+        }
+    }
+
+    control {
+        x = unroll(1);
+        check;
+        // print_results;
+    }
+}

@@ -1,0 +1,50 @@
+// Model of an ALU
+module main
+{
+  type op_t = enum { add, sub, mov_imm, mov_out};
+  type cmd_t = record { valid : boolean,  op : op_t};
+
+  input cmd         : cmd_t;
+  input r1, r2      : bv3;
+  input immed       : bv8;
+  output result     : bv8;
+
+  var regs          : [bv3]bv8;
+  var cnt           : bv8; // testing var.
+
+  // temporary var to hold register values..
+  var r1val, r2val  : bv8;
+
+  init {
+    // all registers initialized to one.
+    assume (forall (ri : bv3) :: regs[ri] == 1bv8);
+    cnt = 1bv8;
+  }
+
+  next {
+    if (cmd.valid) {
+      r1val = regs[r1];
+      r2val = regs[r2];
+      case
+        (cmd.op == add)      : { result = r1val + r2val; }
+        (cmd.op == sub)      : { result = r1val - r2val; }
+        (cmd.op == mov_imm)  : { result = immed; }
+        (cmd.op == mov_out)  : { result = r1val; }
+      esac
+      regs[r1] = result;
+    }
+
+    // this code is only for testing the module.
+    assume (r1 == 0bv3 && r2 == 0bv3);
+    assume (cmd.valid);
+    assume (cmd.op == add);
+    cnt = cnt + cnt;
+    assert (cnt == result);
+  }
+
+  control {
+    f = unroll (5);
+    check;
+  }
+}
+

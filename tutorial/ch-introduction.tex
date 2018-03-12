@@ -25,31 +25,8 @@ as the system and its applications evolve.
 \section{Getting Started: A Simple \uclid{} Model}
 
 \begin{uclidlisting}[htbp]
-\begin{lstlisting}[language=uclid,style=uclidstyle]
-module main {
-  // Part 1: System description.
-  var a, b : int;
-
-  init {
-    a = 0;
-    b = 1;
-  }
-  next {
-    a, b = b, a + b;
-  }
-
-  // Part 2: System specification.
-  invariant a_le_b: a <= b;
-
-  // Part 3: Proof script.
-  control {
-    unroll (3);
-    check;
-    print_results;
-  }
-}
-\end{lstlisting}
-\label{ex:fib-model}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex1.1-fib-model.ucl}
+    \label{ex:fib-model}
 \caption{A \uclid{} model that computes the Fibonacci sequence}
 \end{uclidlisting}
 
@@ -62,16 +39,16 @@ In the example, these three conceptual parts are also kept separate in the code.
 \subsubsection{The System Model}
 This part of a \uclid{} module describes the functionality of the transition system that is being modeled: it tells us \emph{what the system does}.
 
-The first item of interest within the module \ident{main} are \emph{state variables}. These are declared using the \keywordbf{var} keyword. The module \ident{main} declares two state variables: \ident{a} and \ident{b} on line~2. These are both of type \keywordbf{int}, which corresponds to mathematical integers.\footnote{Mathematical integer types, as opposed to the machine integer types present in languages like C/C++ and Java, do not have a fixed bit-width and do not overflow.}
+The first item of interest within the module \ident{main} are \emph{state variables}. These are declared using the \keywordbf{var} keyword. The module \ident{main} declares two state variables: \ident{a} and \ident{b} on line~3. These are both of type \keywordbf{integer}, which corresponds to mathematical integers.\footnote{Mathematical integer types, as opposed to the machine integer types present in languages like C/C++ and Java, do not have a fixed bit-width and do not overflow.}
 
-The \keywordbf{init} block appears next and spans lines 4 to 7. It defines the initial values of the state variables in the module. We see that \ident{a} is initialized to 0 while \ident{b} is initialized to 1.
+The \keywordbf{init} block appears next and spans lines 5 to 8. It defines the initial values of the state variables in the module. We see that \ident{a} is initialized to 0 while \ident{b} is initialized to 1.
 
-The \keywordbf{next} block appears after this and it defines the transition relation of the module. In the figure, the next statement spans from lines 8 to 10; \ident{a} is assigned to the (old) value of \ident{b}, while b is assigned to the value \ident{a} + \ident{b}.
+The \keywordbf{next} block appears after this and it defines the transition relation of the module. In the figure, the next statement spans from lines 9 to 11; \ident{a} is assigned to the (old) value of \ident{b}, while b is assigned to the value \ident{a} + \ident{b}.
 
 \subsubsection{The System Specification}
 The specification answers the question: \emph{what is the system supposed to do?}. 
 
-In our example, we have a single \keywordbf{invariant} that comprises that entire specification. Line 12 defines this \keyword{invariant}. It is named \ident{a\_le\_b} and as the name suggests, it states that \ident{a} must be less than or equal to \ident{b} for every reachable state of the system.
+In our example, we have a single \keywordbf{invariant} that comprises that entire specification. Line 14 defines this \keyword{invariant}. It is named \ident{a\_le\_b} and as the name suggests, it states that \ident{a} must be less than or equal to \ident{b} for every reachable state of the system.
 
 \subsubsection{The Proof Script}
 The third and final part of the \uclid{} module is a set of commands to the \uclid{} verification engine. These tell how we should go about proving\footnote{We are using a broad definition of the word ``prove'' here to refer to any systematic method that gives us assurance that the specification is satisfied.} that the system satisfies its specification.
@@ -105,27 +82,27 @@ Next, follow these instructions which are provided for the bash shell running on
 \begin{itemize}
   \item Unzip the archive.
 
-  \codelike{\$ unzip uclid-0.8.zip}.
+  \codelike{\$ unzip uclid-0.9.zip}.
 
 \begin{comment}
   This should produce output similar to the following.
 \begin{Verbatim}[frame=single]
-Archive:  uclid-0.8.zip
-  inflating: uclid-0.8/lib/default.uclid-0.8.jar  
-  inflating: uclid-0.8/lib/com.microsoft.z3.jar  
-  inflating: uclid-0.8/lib/org.scala-lang.scala-library-2.12.0.jar  
-  inflating: uclid-0.8/lib/org.scala-lang.modules.scala-parser-combinators_2.12-1.0.6.jar  
-  inflating: uclid-0.8/lib/org.scalactic.scalactic_2.12-3.0.1.jar  
-  inflating: uclid-0.8/lib/org.scala-lang.scala-reflect-2.12.0.jar  
-  inflating: uclid-0.8/bin/uclid     
-  inflating: uclid-0.8/bin/uclid.bat  
+Archive:  uclid-0.9.zip
+  inflating: uclid-0.9/lib/default.uclid-0.9.jar  
+  inflating: uclid-0.9/lib/com.microsoft.z3.jar  
+  inflating: uclid-0.9/lib/org.scala-lang.scala-library-2.12.0.jar  
+  inflating: uclid-0.9/lib/org.scala-lang.modules.scala-parser-combinators_2.12-1.0.6.jar  
+  inflating: uclid-0.9/lib/org.scalactic.scalactic_2.12-3.0.1.jar  
+  inflating: uclid-0.9/lib/org.scala-lang.scala-reflect-2.12.0.jar  
+  inflating: uclid-0.9/bin/uclid     
+  inflating: uclid-0.9/bin/uclid.bat  
 \end{Verbatim}
 \end{comment}
 
 
   \item Add the \codelike{uclid} binary to your path.
 
-  \codelike{\$ export PATH=\$PATH:\$PWD/uclid-0.8/bin/}
+  \codelike{\$ export PATH=\$PATH:\$PWD/uclid-0.9/bin/}
 
   \item Check that the \texttt{uclid} works.
 
@@ -147,7 +124,7 @@ Error : Unable to find main module.
 
 \subsection{Running \uclid{}}
 
-Invoke \uclid{} on a model is easy. Just run the \codelike{uclid} binary and provide the file containing the model as a command-line argument. When invoked, \uclid{} looks for a module named \codelike{main} and executes the commands in its control block.\footnote{The \codelike{--main} command line argument can be used to specify a different name for the ``main'' module.} If no \codelike{main} module is found, \uclid{} will exit with an error, as we saw in the previous section when \codelike{uclid} was invoked without arguments.
+Invoke \uclid{} on a model is easy. Just run the \codelike{uclid} binary and provide a list of files containing the model as a command-line argument. When invoked, \uclid{} will parse each of these files and look for a module named \codelike{main} among them. It will execute the commands in the \codelike{main} module's control block. The \codelike{--main} command line argument can be used to specify a different name for the ``main'' module. Note only the \codelike{main} module's control blocks will be executed, even if the \codelike{main} module instantiates other modules with control blocks. If no \codelike{main} module is found, \uclid{} will exit with an error, as we saw in the previous section when \codelike{uclid} was invoked without arguments.
 
 Example~\ref{ex:fib-model} is part of the \uclid{} distribution in the \codelike{examples/tutorial/} sub-directory. You can run \uclid{} on this model as:
 

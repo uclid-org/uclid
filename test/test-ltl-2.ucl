@@ -1,14 +1,14 @@
 module main {
 
-  input  a, b  : int;
-  input  valid : bool;
-  output sum   : int;
-  output ready : bool;
+  input  a, b  : integer;
+  input  valid : boolean;
+  output sum   : integer;
+  output ready : boolean;
   
-  var a_past, b_past : int;
-  var ready_next : bool;
-  var stepcnt : int;
-  var inited : bool;
+  var a_past, b_past : integer;
+  var ready_next : boolean;
+  var stepcnt : integer;
+  var inited : boolean;
   
   init {
     a_past = 0;
@@ -38,7 +38,7 @@ module main {
     ready_next = valid;
   }
   
-  property sum_property[LTL] : G(valid ==> X(ready));
+  property[LTL] sum_property : G(valid ==> X(ready));
   // property ready_property : (inited && history(valid, 2)) ==> history(ready, 1);
   
   control {

@@ -1,11 +1,11 @@
 module main
 {
-  input value : int;
-  var numbers : [int]int;
-  var sum, index : int;
+  input value : integer;
+  var numbers : [integer]integer;
+  var sum, index : integer;
   
   init {
-    assume (forall (i : int) :: numbers[i] == 0);
+    assume (forall (i : integer) :: numbers[i] == 0);
     sum = 0;
     index = 0;
   }

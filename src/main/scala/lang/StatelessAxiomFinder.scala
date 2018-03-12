@@ -39,8 +39,9 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
     context.get(id) match {
       case Some(namedExpr) =>
         namedExpr match {
-          case Scope.StateVar(_, _)  | Scope.InputVar(_, _)  | 
-               Scope.OutputVar(_, _) | Scope.SharedVar(_, _) => 
+          case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  | 
+               Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
+               Scope.FunctionArg(_, _) | Scope.Define(_, _, _) => 
              false
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
@@ -51,7 +52,7 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
                Scope.ProcedureInputArg(_ , _)   | Scope.ProcedureOutputArg(_ , _)  |
                Scope.ProcedureLocalVar(_ , _)   | Scope.ForIndexVar(_ , _)         | 
                Scope.SpecVar(_ , _)             | Scope.AxiomVar(_ , _)            |
-               Scope.VerifResultVar(_, _) => 
+               Scope.VerifResultVar(_, _)       | Scope.Grammar(_, _)              => 
              throw new Utils.RuntimeError("Can't have this identifier in assertion.") 
         }
       case None =>
@@ -78,8 +79,6 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
         isStatelessExpr(arrUpd.value, context)
       case fapp : FuncApplication =>
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
-      case ite : ITE =>
-        isStatelessExpr(ite.e, context) && isStatelessExpr(ite.t, context) && isStatelessExpr(ite.f, context)
       case lambda : Lambda =>
         isStatelessExpr(lambda.e, context + lambda)
     }
@@ -97,7 +96,8 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
                Scope.SpecVar(_ , _)             | Scope.AxiomVar(_ , _)              |
                Scope.LambdaVar(_ , _)           | Scope.ForallVar(_, _)              |
                Scope.ExistsVar(_, _)            | Scope.EnumIdentifier(_, _)         |
-               Scope.VerifResultVar(_, _) => 
+               Scope.VerifResultVar(_, _)       | Scope.FunctionArg(_, _)            |
+               Scope.Define(_, _, _)            | Scope.Grammar(_, _)                => 
               id
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _) =>
              ExternalIdentifier(moduleName, id)
@@ -134,11 +134,6 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
         val eP = rewrite(fapp.e, context)
         val argsP = fapp.args.map(rewrite(_, context))
         FuncApplication(eP, argsP)
-      case ite : ITE =>
-        val condP = rewrite(ite.e, context)
-        val tExpP = rewrite(ite.t, context)
-        val fExpP = rewrite(ite.f, context)
-        ITE(condP, tExpP, fExpP)
       case lambda : Lambda =>
         val expP = rewrite(lambda.e, context + lambda)
         Lambda(lambda.ids, expP)
@@ -180,7 +175,7 @@ class StatelessAxiomImporterPass(mainModuleName : Identifier) extends RewritePas
       val axioms = statelessAxiomFinder.out.get
       val otherModuleAxioms = axioms.filter(p => p._1 != mainModuleName).map(p => p._2)
       val declsP = otherModuleAxioms ++ module.decls
-      val moduleP = Module(module.id, declsP, module.cmds)
+      val moduleP = Module(module.id, declsP, module.cmds, module.notes)
       Some(moduleP)
     } else {
       Some(module)

@@ -37,7 +37,15 @@ import uclid.lang._
 
 import scala.collection.mutable.ListBuffer
 
-case class AssertInfo(name : String, label : String, frameTable : SymbolicSimulator.FrameTable, context : Scope, iter : Int, expr : smt.Expr, pos : ASTPosition) {
+case class AssertInfo(
+    name : String, label : String, 
+    frameTable : SymbolicSimulator.FrameTable, 
+    context : Scope, 
+    iter : Int, 
+    pathCond : smt.Expr,
+    expr : smt.Expr,
+    decorators : List[ExprDecorator],
+    pos : ASTPosition) {
   override def toString = {
     label + " [Step #" + iter.toString + "] " + name + " @ " + pos.toString
   }
@@ -81,25 +89,40 @@ class AssertionTree {
     currentNode = initialRoot
   }
 
-  def _verify(node : TreeNode, solver : smt.SolverInterface) : List[CheckResult] = {
-    solver.addAssumptions(node.assumptions.toList)
+  def _verify(node : TreeNode, solver : smt.Context) : List[CheckResult] = {
+    solver.push()
+    node.assumptions.foreach(a => solver.assert(a))
     node.results = (node.assertions.map {
       e => {
-        val sat = solver.check(smt.OperatorApplication(smt.NegationOp, List(e.expr)))
+        val pcExpr = e.pathCond
+        val assertExpr = if (e.decorators.contains(CoverDecorator)) {
+          e.expr
+        } else {
+          smt.OperatorApplication(smt.NegationOp, List(e.expr))
+        }
+        val checkExpr = if (pcExpr == smt.BooleanLit(true)) {
+          assertExpr
+        } else {
+          smt.OperatorApplication(smt.ConjunctionOp, List(pcExpr, assertExpr))
+        }
+        solver.push()
+        solver.assert(checkExpr)
+        val sat = solver.check()
         val result = sat.result match {
           case Some(true)  => smt.SolverResult(Some(false), sat.model)
           case Some(false) => smt.SolverResult(Some(true), sat.model)
           case None        => smt.SolverResult(None, None)
         }
+        solver.pop()
         CheckResult(e, result)
       }
     }).toList
     // now recurse into children
     val childResults = node.children.flatMap(c => _verify(c, solver))
-    solver.popAssumptions()
+    solver.pop()
     node.results ++ childResults
   }
-  def verify(solver : smt.SolverInterface) : List[CheckResult] = _verify(root, solver)
+  def verify(solver : smt.Context) : List[CheckResult] = _verify(root, solver)
   
   def _printSMT(node : TreeNode, parentAssumptions : List[smt.Expr], label : Option[Identifier], solver : smt.SolverInterface) : List[String] = {
     val allAssumptions = parentAssumptions ++ node.assumptions.toList
@@ -108,14 +131,15 @@ class AssertionTree {
       case Some(label) =>
         node.assertions.filter{e => e.label == label.name}
     }).toList
-    
+
     val theseSMTFormulas = filteredAssertions.map{
       a => {
         val name = label match {
           case None => "uclid: [%s]; step %d".format(a.pos.toString, a.iter)
           case Some(label) => "uclid(%s): [%s]; step %d".format(label, a.pos.toString, a.iter)
         }
-        solver.toSMT2(a.expr, allAssumptions, name)
+        solver.toSMT2(smt.OperatorApplication(smt.ConjunctionOp, List(a.pathCond, a.expr)), 
+                      allAssumptions, name)
       }
     }
     val childResults = node.children.flatMap(c => _printSMT(c, allAssumptions, label, solver))

@@ -1,6 +1,6 @@
 module main {
-  type num = int;
-  type bit = bool;
+  type num = integer;
+  type bit = boolean;
   type tup1 = {num, num, bit};
   type rec1 = record {a : num, b : num, c : bit };
   type rec2 = record { r : rec1, b : num };
