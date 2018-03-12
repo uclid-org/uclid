@@ -90,6 +90,7 @@ class Z3FileInterface() extends Context {
         //val declMembers = members.map(m => "(declare-fun %s () %s)".format(m, p._1))
         //val str = Utils.join(declDatatype :: declMembers, "\n")
         Some(declDatatype)
+      case _ => throw new Utils.UnimplementedException("TODO: Implement more types in Z3FileInterface.generateDatatype")
     }
   }
 
