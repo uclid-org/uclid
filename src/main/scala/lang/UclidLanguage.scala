@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Authors: Rohit Sinha, Pramod Subramanyan
 
@@ -160,7 +166,7 @@ case class GEOp() extends PolymorphicOperator { override def toString = ">=" }
 case class AddOp() extends PolymorphicOperator { override def toString = "+" }
 case class SubOp() extends PolymorphicOperator { override def toString = "-" }
 case class MulOp() extends PolymorphicOperator { override def toString = "*" }
-case class UnaryMinusOp() extends PolymorphicOperator { 
+case class UnaryMinusOp() extends PolymorphicOperator {
   override def toString = "-"
   override def fixity = Operator.PREFIX
 }
@@ -175,7 +181,7 @@ case class IntGEOp() extends IntArgOperator { override def toString = ">=" }
 case class IntAddOp() extends IntArgOperator { override def toString ="+" }
 case class IntSubOp() extends IntArgOperator { override def toString = "-" }
 case class IntMulOp() extends IntArgOperator { override def toString = "*" }
-case class IntUnaryMinusOp() extends IntArgOperator { 
+case class IntUnaryMinusOp() extends IntArgOperator {
   override def toString = "-"
   override def fixity = Operator.PREFIX
 }
@@ -183,40 +189,40 @@ case class IntUnaryMinusOp() extends IntArgOperator {
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
   override def fixity = Operator.INFIX
 }
-case class BVLTOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "<" 
+case class BVLTOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "<"
 }
-case class BVLEOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "<=" 
+case class BVLEOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "<="
 }
-case class BVGTOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = ">" 
+case class BVGTOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = ">"
 }
-case class BVGEOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = ">=" 
+case class BVGEOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = ">="
 }
-case class BVAddOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString ="+"  
+case class BVAddOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString ="+"
 }
-case class BVSubOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "-" 
+case class BVSubOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "-"
 }
-case class BVMulOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "*" 
+case class BVMulOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "*"
 }
-case class BVAndOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "&" 
+case class BVAndOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "&"
 }
-case class BVOrOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "|" 
+case class BVOrOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "|"
 }
-case class BVXorOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "^" 
+case class BVXorOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "^"
 }
-case class BVNotOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "~" 
+case class BVNotOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "~"
 }
-case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) { 
+case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "-"
 }
@@ -225,17 +231,17 @@ sealed abstract class BooleanOperator extends Operator {
   override def fixity = Operator.INFIX
   def isQuantified = false
 }
-case class ConjunctionOp() extends BooleanOperator { 
-  override def toString = "&&" 
+case class ConjunctionOp() extends BooleanOperator {
+  override def toString = "&&"
 }
-case class DisjunctionOp() extends BooleanOperator { 
-  override def toString = "||" 
+case class DisjunctionOp() extends BooleanOperator {
+  override def toString = "||"
 }
-case class IffOp() extends BooleanOperator { 
-  override def toString = "<==>" 
+case class IffOp() extends BooleanOperator {
+  override def toString = "<==>"
 }
-case class ImplicationOp() extends BooleanOperator { 
-  override def toString = "==>" 
+case class ImplicationOp() extends BooleanOperator {
+  override def toString = "==>"
 }
 case class NegationOp() extends BooleanOperator {
   override def fixity = Operator.PREFIX
@@ -263,7 +269,7 @@ sealed abstract class ComparisonOperator() extends Operator {
 case class EqualityOp() extends ComparisonOperator { override def toString = "==" }
 case class InequalityOp() extends ComparisonOperator { override def toString = "!=" }
 
-sealed abstract class TemporalOperator() extends Operator { 
+sealed abstract class TemporalOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def isTemporal = true
 }
@@ -770,7 +776,7 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
   type T = (Identifier,Type)
   val typ = MapType(args.map(_._2), retType)
   val printfn = {(a: T) => a._1.toString + ": " + a._2}
-  override def toString = 
+  override def toString =
     "(" + Utils.join(args.map(printfn(_)), ", ") + ")" + ": " + retType
 }
 
@@ -806,7 +812,7 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
 }
 
 case class ProcedureDecl(
-    id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: List[Statement], 
+    id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: List[Statement],
     requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier]) extends Decl {
   override def toString = {
     val modifiesString = if (modifies.size > 0) {
@@ -953,12 +959,12 @@ case class NextDecl(body: List[Statement]) extends Decl {
 }
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
   override def toString = {
-    val declString = if (params.size > 0) { 
+    val declString = if (params.size > 0) {
       "[" + Utils.join(params.map(_.toString), ", ") + "]"
     } else {
       ""
     }
-    "property %s%s : %s; // %s".format(id.toString, declString, expr.toString, position.toString) 
+    "property %s%s : %s; // %s".format(id.toString, declString, expr.toString, position.toString)
   }
   override def declNames = List(id)
   def name = "property " + id.toString()
@@ -1014,7 +1020,7 @@ sealed abstract class Annotation extends ASTNode
 case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) extends Annotation {
   override def toString : String = {
     val start = PrettyPrinter.indent(1) + "// instance_var_map { "
-    val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), "->") + " ::==> " + p._2.toString) 
+    val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), "->") + " ::==> " + p._2.toString)
     val end = PrettyPrinter.indent(1) + "// } end_instance_var_map"
     Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
   }
@@ -1043,7 +1049,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   lazy val sharedVars: List[(Identifier, Type)] =
     decls.collect { case sVars : SharedVarsDecl => sVars }.flatMap(sVar => sVar.ids.map(id => (id, sVar.typ)))
   // module constants.
-  lazy val constantDecls = decls.collect { case cnsts : ConstantsDecl => cnsts }  
+  lazy val constantDecls = decls.collect { case cnsts : ConstantsDecl => cnsts }
   lazy val constants : List[(Identifier, Type)] =
     constantDecls.flatMap(cnst => cnst.ids.map(id => (id, cnst.typ)))
   // module functions.
@@ -1091,7 +1097,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   }
 
   // return a specific annotation.
-  def getAnnotation[T <: Annotation]()(implicit tag: ClassTag[T]) : Option[T] = { 
+  def getAnnotation[T <: Annotation]()(implicit tag: ClassTag[T]) : Option[T] = {
     val matchingNotes : List[T] = notes.collect { case n : T => n }
     if (matchingNotes.size == 0) {
       None
@@ -1112,7 +1118,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     }
     Module(id, decls, cmds, newNotes)
   }
-  
+
   override def toString =
     "\nmodule " + id + " {\n" +
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +

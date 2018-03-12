@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Authors: Rohit Sinha, Pramod Subramanyan
  *
@@ -41,7 +47,7 @@ sealed trait Hashable {
    */
   val hashBaseId : Int
   val hashId : Int
-  
+
   def mix(a : Int, b : Int) = MH.mix(a, b)
   def mix(a : Int, bs : List[Any]) : Int = bs.foldLeft(a)((acc, h) => mix(acc, h.hashCode))
   def finalize(h : Int, l : Int) : Int = MH.finalizeHash(h, l)
@@ -49,7 +55,7 @@ sealed trait Hashable {
   def computeHash = finalize(hashBaseValue, 1)
   def computeHash(a : Any) = finalize(mix(hashBaseValue, a.hashCode()), 1)
   def computeHash(a : Any, b : Any) = finalize(mix(mix(hashBaseValue, a.hashCode()), b.hashCode()), 2)
-  def computeHash(bs : List[Any]) : Int = 
+  def computeHash(bs : List[Any]) : Int =
     finalize(bs.foldLeft(hashBaseId)((acc, h) => mix(acc, h.hashCode)), bs.size)
   def computeHash(bs : List[Any], b : Any) : Int =
     finalize(bs.foldLeft(mix(hashBaseValue, b.hashCode))((acc, b) => mix(acc, b.hashCode)), bs.size+1)
@@ -78,14 +84,14 @@ sealed trait Type extends Hashable {
 // Uninterpreted types.
 case class UninterpretedType(name: String) extends Type {
   override val hashId = 100
-  override val hashCode = computeHash 
+  override val hashCode = computeHash
   override def toString = name.toString()
   override def isUninterpreted = true
 }
 // The Boolean type.
 case object BoolType extends Type {
   override val hashId = 101
-  override val hashCode = computeHash 
+  override val hashCode = computeHash
   override def toString = "Bool"
   override def isBool = true
 }
@@ -114,7 +120,7 @@ sealed abstract class ProductType(fields : List[(String, Type)]) extends Type {
   def fieldType(name: String) : Option[Type] = fields.find((p) => p._1 == name).flatMap((f) => Some(f._2))
   def hasField(name: String) : Boolean = fields.find((p) => p._1 == name).isDefined
   def fieldIndex(name: String) : Int = fields.indexWhere((p) => p._1 == name)
-  val typeName : String 
+  val typeName : String
 }
 case class TupleType(types: List[Type]) extends ProductType(((1 to types.length).map("_" + _.toString)).zip(types).toList) {
   override val hashId = 104
@@ -133,7 +139,7 @@ case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override val hashId = 106
   override val hashCode = computeHash(inTypes, outType)
-  override def toString = { 
+  override def toString = {
     "map [" +
     inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + "," + i.toString } +
     "] " + outType
@@ -143,7 +149,7 @@ case class MapType(inTypes: List[Type], outType: Type) extends Type {
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override val hashId = 107
   override val hashCode = computeHash(inTypes, outType)
-  override def toString = {  
+  override def toString = {
     "array [" +
     inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + "," + i.toString } +
     "] " + outType
@@ -185,9 +191,9 @@ trait Operator extends Hashable {
   def checkAllArgsSameType(args: List[Expr]) : Unit = {
     args match {
       case Nil => Utils.assert(false, "Expected at least one operand for '" + toString + "' operator.")
-      case head :: tail => 
-        Utils.assert(args.forall(op => op.typ == head.typ), 
-            "Operands to '" + toString + "' must of the same type. Got: " + 
+      case head :: tail =>
+        Utils.assert(args.forall(op => op.typ == head.typ),
+            "Operands to '" + toString + "' must of the same type. Got: " +
             Utils.join(args.map(a => a.typ.toString()), " "))
     }
   }
@@ -519,7 +525,7 @@ case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ)))
   override val hashId = 305
   override val hashCode = computeHash(args)
   override def toString = "(mk-tuple " + Utils.join(args.map(_.toString), " ") + ")"
-  override val isConstant = args.forall(p => p.isConstant) 
+  override val isConstant = args.forall(p => p.isConstant)
 }
 
 
@@ -531,7 +537,7 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
   Utils.assert(fix != INFIX || operands.size == 2, "Infix operators must have two operands.")
   op.typeCheck(operands)
   override def toString = {
-    "(" + op.toString + " " + Utils.join(operands.map(_.toString), " ") + ")" 
+    "(" + op.toString + " " + Utils.join(operands.map(_.toString), " ") + ")"
   }
   override val isConstant = operands.forall(p => p.isConstant)
 }

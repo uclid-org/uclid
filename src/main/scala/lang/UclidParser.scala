@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Authors: Rohit Sinha, Pramod Subramanyan
 
@@ -179,12 +185,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus,
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
-      KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, 
-      KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, 
-      KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum, 
-      KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit, 
-      KwNext, KwLambda, KwModifies, KwDefineProp, KwDefineAxiom, 
-      KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires, 
+      KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall,
+      KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange,
+      KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
+      KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit,
+      KwNext, KwLambda, KwModifies, KwDefineProp, KwDefineAxiom,
+      KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires,
       KwEnsures, KwInvariant, KwParameter)
       // TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
       // TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
@@ -436,17 +442,17 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwModifies ~> Id ~ rep("," ~> Id) <~ ";" ^^ { case id ~ ids => id :: ids }
     }
     lazy val ProcedureDecl : PackratParser[lang.ProcedureDecl] = positioned {
-      KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~ 
+      KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
       rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~
         ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
         { case id ~ args ~ outs ~ requires ~ ensures ~ modifies ~ decls ~ body =>
-          lang.ProcedureDecl(id, lang.ProcedureSig(args,outs), decls, body, 
+          lang.ProcedureDecl(id, lang.ProcedureSig(args,outs), decls, body,
                              requires, ensures, (modifies.flatMap(m => m)).toSet) } |
       // procedure with no return value
-      KwProcedure ~> Id ~ IdTypeList ~ rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~ 
+      KwProcedure ~> Id ~ IdTypeList ~ rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~
       ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
         { case id ~ args ~ requires ~ ensures ~ modifies ~ decls ~ body =>
-          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty[(Identifier,Type)]), decls, body, 
+          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty[(Identifier,Type)]), decls, body,
                              requires, ensures, (modifies.flatMap(m => m)).toSet) }
     }
 
@@ -482,7 +488,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       Bool ^^ { case b => lang.LiteralTerm(b) } |
       Number ^^ { case num => lang.LiteralTerm(num) }
     }
-    
+
     lazy val SymbolTerm: PackratParser[lang.SymbolTerm] = positioned {
       Id ^^ { case id => lang.SymbolTerm(id) }
     }
@@ -514,8 +520,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val BinaryOpAppTerm: PackratParser[lang.OpAppTerm] = positioned {
-      "(" ~> GrammarTerm ~ GrammarInfixBinaryOp ~ GrammarTerm <~ ")" ^^ { 
-        case t1 ~ op ~ t2 => lang.OpAppTerm(op, List(t1, t2))  
+      "(" ~> GrammarTerm ~ GrammarInfixBinaryOp ~ GrammarTerm <~ ")" ^^ {
+        case t1 ~ op ~ t2 => lang.OpAppTerm(op, List(t1, t2))
       }
     }
 
@@ -533,13 +539,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwParameter ~> Type ^^ { case typ => lang.ParameterTerm(typ) }
     }
 
-    lazy val GrammarTerm : PackratParser[lang.GrammarTerm] = positioned { 
-      UnaryOpAppTerm | BinaryOpAppTerm | ITETerm | LiteralTerm | SymbolTerm | ConstantTerm | ParameterTerm 
+    lazy val GrammarTerm : PackratParser[lang.GrammarTerm] = positioned {
+      UnaryOpAppTerm | BinaryOpAppTerm | ITETerm | LiteralTerm | SymbolTerm | ConstantTerm | ParameterTerm
     }
 
     lazy val GrammarTermList : PackratParser[List[lang.GrammarTerm]] = {
       GrammarTerm ~ rep("|" ~> GrammarTerm) ^^ {
-        case term ~ terms => term :: terms 
+        case term ~ terms => term :: terms
       }
     }
     lazy val NonTerminal : PackratParser[lang.NonTerminal] = positioned {
@@ -549,13 +555,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     lazy val GrammarDecl : PackratParser[lang.GrammarDecl] = positioned {
       KwGrammar ~> Id ~ IdTypeList ~ (":" ~> Type) ~ ("=" ~ "{" ~> rep(NonTerminal) <~ "}") ^^ {
-        case id ~ argTypes ~ retType ~ nonterminals => lang.GrammarDecl(id, lang.FunctionSig(argTypes, retType), nonterminals) 
+        case id ~ argTypes ~ retType ~ nonterminals => lang.GrammarDecl(id, lang.FunctionSig(argTypes, retType), nonterminals)
       }
-      
+
     }
     lazy val SynthFuncDecl : PackratParser[lang.SynthesisFunctionDecl] = positioned {
-      KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~ 
-        (KwGrammar ~> Id ) ~ ("(" ~> IdList <~ ")") ~ 
+      KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~
+        (KwGrammar ~> Id ) ~ ("(" ~> IdList <~ ")") ~
         rep(KwEnsures ~> Expr) <~ ";" ^^
       { case id ~ idtyps ~ rt ~ gId ~ gArgs ~ eArgs =>
           lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), gId, gArgs, eArgs)
@@ -563,8 +569,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     lazy val DefineDecl : PackratParser[lang.DefineDecl] = positioned {
       KwDefine ~> Id ~ IdTypeList ~ (":" ~> Type) ~ ("=" ~> Expr) <~ ";" ^^
-      { 
-        case id ~ idTypeList ~ retType ~ expr => { 
+      {
+        case id ~ idTypeList ~ retType ~ expr => {
           lang.DefineDecl(id, FunctionSig(idTypeList, retType), expr)
         }
       }
@@ -605,13 +611,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
 
     lazy val Cmd : PackratParser[lang.GenericProofCommand] = positioned {
-      (Id <~ "=").? ~ (Id <~ "->").? ~ Id <~ ";" ^^ 
+      (Id <~ "=").? ~ (Id <~ "->").? ~ Id <~ ";" ^^
         { case rId ~ oId ~ id => lang.GenericProofCommand(id, List.empty, List.empty, rId, oId) } |
-      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ IdParamList <~ ";" ^^ 
+      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ IdParamList <~ ";" ^^
         { case rId ~ oId ~ id ~ idparams => lang.GenericProofCommand(id, idparams, List.empty, rId, oId) } |
-      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ ExprList <~ ";" ^^ 
+      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ ExprList <~ ";" ^^
         { case rId ~ oId ~ id ~ es => lang.GenericProofCommand(id, List.empty, es, rId, oId) } |
-      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ IdParamList ~ ExprList <~ ";" ^^ 
+      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ IdParamList ~ ExprList <~ ";" ^^
         { case rId ~ oId ~ id ~ idparams ~ es => lang.GenericProofCommand(id, idparams, es, rId, oId) }
     }
 

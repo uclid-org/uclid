@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Authors: Rohit Sinha, Pramod Subramanyan
 
@@ -121,8 +127,8 @@ class SymbolicSimulator (module : Module) {
               case Some(l) => l.toString
               case None    => "induction (step)"
             }
-            val k = if (cmd.args.size > 0) { 
-              cmd.args(0).asInstanceOf[IntLit].value.toInt 
+            val k = if (cmd.args.size > 0) {
+              cmd.args(0).asInstanceOf[IntLit].value.toInt
             } else { 1 }
 
             // base case.
@@ -186,7 +192,7 @@ class SymbolicSimulator (module : Module) {
   }
 
   def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean, scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) {
-    val initSymbolTable = getInitSymbolTable(scope)     
+    val initSymbolTable = getInitSymbolTable(scope)
     symbolTable = if (!havocInit && module.init.isDefined) {
       simulate(0, List.empty, module.init.get.body, initSymbolTable, scope, label)
     } else {
@@ -239,7 +245,7 @@ class SymbolicSimulator (module : Module) {
       states += stWInputs
       currentState = renameStates(simulate(step, stWInputs, scope, label), step, scope)
       val numPastFrames = frameTable.size
-      val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap 
+      val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
       frameTable += currentState
       addModuleAssumptions(currentState, pastTables, scope)
       if (addAssertions) { addAsserts(step, currentState, pastTables, label, scope, filter)  }
@@ -377,7 +383,7 @@ class SymbolicSimulator (module : Module) {
     // create frame table.
     val frameTable = new FrameTable()
     frameTable += initProcState
-    frameTable += finalState 
+    frameTable += finalState
 
     // println("**** finalState ****")
     // printSymbolTable(finalState)
@@ -395,11 +401,11 @@ class SymbolicSimulator (module : Module) {
   }
 
   /** Add module specifications (properties) to the list of proof obligations */
-  def addAsserts(iter : Int, symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable], 
+  def addAsserts(iter : Int, symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable],
                 label : String, scope : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean)) {
-    
+
     val table = frameTable.clone()
-      
+
     scope.specs.foreach(specVar => {
       val prop = module.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {
@@ -484,7 +490,7 @@ class SymbolicSimulator (module : Module) {
         smt.OperatorApplication(smt.ConjunctionOp, List(acc, pc))
       }
     }
-    
+
     s match {
       case SkipStmt() => return symbolTable
       case AssertStmt(e, id) =>
@@ -492,14 +498,14 @@ class SymbolicSimulator (module : Module) {
         frameTableP += symbolTable
         addAssert(
             AssertInfo(
-                "assertion", label, frameTableP, 
-                scope, iter, pathCondExpr, 
-                evaluate(e,symbolTable, pastTables, scope), 
+                "assertion", label, frameTableP,
+                scope, iter, pathCondExpr,
+                evaluate(e,symbolTable, pastTables, scope),
                 List.empty, s.position))
         return symbolTable
       case AssumeStmt(e, id) =>
-        val assumpExpr = evaluate(e,symbolTable, pastTables, scope) 
-        val effectiveExpr = smt.OperatorApplication(smt.ImplicationOp, List(pathCondExpr, assumpExpr)) 
+        val assumpExpr = evaluate(e,symbolTable, pastTables, scope)
+        val effectiveExpr = smt.OperatorApplication(smt.ImplicationOp, List(pathCondExpr, assumpExpr))
         addAssumption(effectiveExpr)
         return symbolTable
       case HavocStmt(id) =>
@@ -594,8 +600,8 @@ class SymbolicSimulator (module : Module) {
         case Some(typ) => smt.Converter.typeToSMT(typ)
         case None => throw new Utils.UnknownIdentifierException(id)
       }
-      
-      if (scope.isQuantifierVar(id)) { smt.Symbol(id.name, smtType) } 
+
+      if (scope.isQuantifierVar(id)) { smt.Symbol(id.name, smtType) }
       else {
         past match {
           case 0 => symbolTable(id)

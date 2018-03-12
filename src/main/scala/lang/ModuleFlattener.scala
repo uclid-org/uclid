@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Pramod Subramanyan
 
@@ -84,7 +90,7 @@ class ModuleInstanceCheckerPass() extends ReadOnlyPass[List[ModuleError]] {
     // ensure all shared variables are mapped.
     val unwiredSharedVars = modT.sharedVarMap.filter(v => !instT.argMap.contains(v._1))
     val unwiredSharedVarsErrors = unwiredSharedVars.map(v => ModuleError("Unmapped shared variable: " + v._1.toString, pos))
- 
+
     errs4 ++ unwiredSharedVarsErrors
   }
 
@@ -276,12 +282,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   def createInstVarMap(varMap : VarMap) : InstVarMap = {
     // println("initInstVarMap: " + initInstVarMap.toString)
     // println("instance: " + inst.toString())
-    val instVarMap1 = varMap.foldLeft(Map.empty[List[Identifier], Identifier]) { 
+    val instVarMap1 = varMap.foldLeft(Map.empty[List[Identifier], Identifier]) {
       (instVarMap, renaming) => {
         renaming._2 match {
-          case MIP.BoundInput(_, _, _) | MIP.UnboundInput(_, _) | 
-               MIP.BoundOutput(_, _) | MIP.UnboundOutput(_, _)  | 
-               MIP.StateVariable(_, _) | MIP.SharedVariable(_, _) | 
+          case MIP.BoundInput(_, _, _) | MIP.UnboundInput(_, _) |
+               MIP.BoundOutput(_, _) | MIP.UnboundOutput(_, _)  |
+               MIP.StateVariable(_, _) | MIP.SharedVariable(_, _) |
                MIP.Constant(_, _) =>
             instVarMap + (List(inst.instanceId, renaming._1) -> renaming._2.ident)
           case _ =>
@@ -294,7 +300,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       p => {
         val key1 = List(inst.instanceId, p._2)
         val result = instVarMap1.get(key1).get
-        (inst.instanceId :: p._1) -> result 
+        (inst.instanceId :: p._1) -> result
       }
     }).toMap
     val instVarMap = instVarMap1 ++ instVarMap2
@@ -323,7 +329,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
           case MIP.UnboundOutput(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.StateVariable(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.Constant(id, t) => fixPosition(Some(ConstantsDecl(List(id), t)), id.position)
-          case MIP.Function(_, _) | MIP.UnboundInput(_, _) | 
+          case MIP.Function(_, _) | MIP.UnboundInput(_, _) |
                MIP.BoundOutput(_, _) | MIP.SharedVariable(_, _) =>  None
         }
       }
