@@ -493,7 +493,11 @@ class LTLPropertyRewriterPass extends RewritePass {
         // once in this cycle.
         val foldInit : Expr = BoolLit(true)
         val hasAcceptedTrace = nameProvider(spec.id, "HAS_ACCEPTED_TRACE")
-        val hasAcceptedTraceExpr = hasAcceptedVars.foldLeft(foldInit)((acc, v) => andExpr(acc, v))
+        val hasAcceptedTraceExpr = if (hasAcceptedVars.size == 0) {
+          stateCopiedVar
+        } else {
+          hasAcceptedVars.foldLeft(foldInit)((acc, v) => andExpr(acc, v))
+        }
         
         ((hasAcceptedVars, hasAcceptedExprs), (hasAcceptedTrace, hasAcceptedTraceExpr))
       }
