@@ -89,12 +89,6 @@ class BasicVerifierSpec extends FlatSpec {
   "test-ite.ucl" should "verify all but 6 assertions successfully." in {
     VerifierSpec.expectedFails("./test/test-ite.ucl", 6)
   }
-  "test-inliner.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-inliner.ucl", 0)
-  }
-  "test-inliner-1.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-inliner-1.ucl", 0)
-  }
   "test-int-fib.ucl" should "verify successfully all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-int-fib.ucl", 1)
   }
@@ -130,6 +124,17 @@ class BasicVerifierSpec extends FlatSpec {
   }
   "test-assume-1.ucl" should "fail to verify five assertions." in {
     VerifierSpec.expectedFails("./test/test-assume-1.ucl", 5)
+  }
+}
+class ProcedureVerifSpec extends FlatSpec {
+  "test-inliner.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-inliner.ucl", 0)
+  }
+  "test-inliner-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-inliner-1.ucl", 0)
+  }
+  "test-procedure-checker-2.ucl" should "verify all but 7 invariants successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-checker-2.ucl", 7)
   }
 }
 class QuantiferVerifSpec extends FlatSpec {

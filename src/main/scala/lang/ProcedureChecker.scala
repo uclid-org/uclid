@@ -78,7 +78,7 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           context.get(v) match {
             case Some(namedExpr) =>
               namedExpr match {
-                case Scope.StateVar(_, _) => false
+                case Scope.StateVar(_, _) | Scope.OutputVar(_, _) => false
                 case _                    => true
               }
             case None => true
