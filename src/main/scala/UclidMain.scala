@@ -32,7 +32,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Authors: Rohit Sinha, Pramod Subramanyan
-
+ *
+ * Created by Rohit Sinha on 5/23/15.
+ * With lots of updates by Pramod Subramanyan in the summer of 2017.
+ *
  * UCLID main file.
  *
  */
@@ -45,11 +48,23 @@ import uclid.lang._
 import lang.Module
 import lang.Identifier
 
-/**
- * Created by Rohit Sinha on 5/23/15.
- * With lots of updates by Pramod Subramanyan in the summer of 2017.
+/** This is the main class for Uclid.
+ *
  */
 object UclidMain {
+  def main(args: Array[String]) {
+    parseOptions(args) match {
+      case None =>
+      case Some(config) => main(config)
+    }
+  }
+
+  /** Command-line configuration flags for uclid5.
+   *
+   * @param mainModuleName The name of the main module.
+   * @param smtSolver The location of an SMT solver executable along with arguments that must be passed to it.
+   * @param files List of files that should parsed and analyzed.
+   */
   case class Config(
       mainModuleName : String = "main",
       smtSolver: List[String] = List.empty,
@@ -77,13 +92,8 @@ object UclidMain {
     parser.parse(args, Config())
   }
 
-  def main(args: Array[String]) {
-    parseOptions(args) match {
-      case None =>
-      case Some(config) => main(config)
-    }
-  }
-
+  /** This version of 'main' does all the real work.
+   */
   def main(config : Config) {
     try {
       val mainModuleName = Identifier(config.mainModuleName)
@@ -124,6 +134,7 @@ object UclidMain {
     }
   }
 
+  /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
   def compile(srcFiles : Seq[java.io.File], mainModuleName : Identifier, test : Boolean = false) : List[Module] = {
     type NameCountMap = Map[Identifier, Int]
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
@@ -131,7 +142,6 @@ object UclidMain {
     val passManager = new PassManager()
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new ModuleCanonicalizer())
-    // passManager.addPass(new LTLOperatorArgumentChecker())
     passManager.addPass(new LTLOperatorIntroducer())
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
@@ -194,8 +204,8 @@ object UclidMain {
     }._1
   }
 
+  /** Intantiate module helper. */
   def instantiateModules(moduleList: List[Module], mainModuleName : Identifier) : List[Module] = {
-    // create pass manager.
     val passManager = new PassManager()
     passManager.addPass(new ModuleInstanceChecker())
     passManager.addPass(new ModuleDependencyFinder(mainModuleName))
@@ -203,7 +213,6 @@ object UclidMain {
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ModuleFlattener(mainModuleName))
-    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new ModuleCleaner())
     passManager.addPass(new ExpressionTypeChecker())
@@ -215,6 +224,12 @@ object UclidMain {
     passManager.run(moduleList)
   }
 
+  /** Instantiate modules.
+   *
+   * @param moduleList List of modules to be analyzed.
+   * @param mainModuleName Name of main module.
+   * @param verbose If this is true, we print the message describing the number of modules parsed and instantiated.
+   */
   def instantiate(moduleList : List[Module], mainModuleName : Identifier, verbose : Boolean) : Option[Module] = {
     if (moduleList.find(m => m.id == mainModuleName).isEmpty) {
       return None
@@ -227,8 +242,10 @@ object UclidMain {
     moduleListP.find((m) => m.id == mainModuleName)
   }
 
+  /** Execute the control module.
+   *
+   */
   def execute(module : Module, config : Config) : List[CheckResult] = {
-    // execute the control module
     var symbolicSimulator = new SymbolicSimulator(module)
     var z3Interface = if (config.smtSolver.size > 0) {
       println("args: " + config.smtSolver)
