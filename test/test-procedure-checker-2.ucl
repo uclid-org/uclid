@@ -1,0 +1,63 @@
+module traffic_light
+{
+  type light_t = enum { red, yellow, green };
+  var step : integer;
+  output light : light_t;
+
+  procedure next_light()
+    modifies light;
+  {
+    if (step == 0) {
+      case
+	    (light == red) : {
+	      light = yellow;
+	    }
+	    (light == yellow) : {
+	      light = green;
+	      step = 5;
+	    }
+	    (light == green) : {
+	      light = red;
+	      step = 5;
+	    }
+	  esac
+    } else {
+      step = step - 1;
+    }
+  }
+
+  init {
+    step = 5;
+  }
+
+  next {
+    call () = next_light();
+  }
+}
+
+module main
+{
+  type light_t = traffic_light.light_t;
+
+  instance light1 : traffic_light();
+  instance light2 : traffic_light();
+
+  init {
+    assume (light1->light == red);
+    assume (light2->light == green);
+  }
+
+  next {
+    next (light1);
+    next (light2);
+  }
+  
+  invariant no_simultaneous_green: (light1->light != green) || (light1->light != green);
+  invariant steps_non_negative: (light1->step >= 0) && (light2->step >= 0);
+  control {
+    v = unroll(20);
+    check;
+    // print_results;
+    // v->print_cex(light1->light, light2->light);
+  }
+}
