@@ -57,7 +57,7 @@ class InteractiveProcessSpec extends FlatSpec {
       "(check-sat)\n"
     )
 
-    val interactive = new InteractiveProcess("/usr/bin/z3", List("-in", "-smt2"))
+    val interactive = new InteractiveProcess(List("/usr/bin/z3", "-in", "-smt2"))
     formula.foreach(l => interactive.writeInput(l))
     val satResult = interactive.readOutput()
     assert (satResult == Some("sat\n"))
