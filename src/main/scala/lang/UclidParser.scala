@@ -122,6 +122,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val OpNeg = "-"
     lazy val OpNot = "!"
     lazy val OpMinus = "-"
+    lazy val OpPrime = "'"
     lazy val OpSelectFromInstance = "->"
     lazy val KwProcedure = "procedure"
     lazy val KwBoolean = "boolean"
@@ -180,10 +181,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "bv", "{", "}", ";", "=", ":", "::", ".", "->", "*", "::=",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat,
-      OpNot, OpMinus, OpSelectFromInstance)
+      OpNot, OpMinus, OpSelectFromInstance, OpPrime)
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE,
-      OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus,
+      OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall,
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange,
@@ -192,13 +193,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwNext, KwLambda, KwModifies, KwDefineProp, KwDefineAxiom,
       KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires,
       KwEnsures, KwInvariant, KwParameter)
-      // TemporalOpGlobally, TemporalOpFinally, TemporalOpNext,
-      // TemporalOpUntil, TemporalOpWUntil, TemporalOpRelease)
 
     lazy val ast_binary: Expr ~ String ~ Expr => Expr = {
-      // case x ~ TemporalOpUntil   ~ y => OperatorApplication(UntilTemporalOp(), List(x, y))
-      // case x ~ TemporalOpWUntil  ~ y => OperatorApplication(WUntilTemporalOp(), List(x, y))
-      // case x ~ TemporalOpRelease ~ y => OperatorApplication(ReleaseTemporalOp(), List(x, y))
       case x ~ OpBiImpl ~ y => OperatorApplication(IffOp(), List(x, y))
       case x ~ OpImpl ~ y => OperatorApplication(ImplicationOp(), List(x, y))
       case x ~ OpAnd ~ y => OperatorApplication(ConjunctionOp(), List(x, y))
@@ -367,9 +363,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "(" ~ ")" ^^ { case _~_ => List.empty[(Identifier,Type)] }
 
     lazy val Lhs : PackratParser[lang.Lhs] = positioned {
-      Id ~ VarBitVectorSlice ^^ { case id ~ slice => lang.LhsVarSliceSelect(id, slice) }  |
-      Id ~ ArraySelectOp ^^ { case id ~ mapOp => lang.LhsArraySelect(id, mapOp) }        |
-      Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { case id ~ rOp ~ rOps => lang.LhsRecordSelect(id, rOp::rOps) }    |
+      Id ~ VarBitVectorSlice ^^ { case id ~ slice => lang.LhsVarSliceSelect(id, slice) } |
+      Id ~ ArraySelectOp ^^ { case id ~ mapOp => lang.LhsArraySelect(id, mapOp) } |
+      Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { case id ~ rOp ~ rOps => lang.LhsRecordSelect(id, rOp::rOps) }  |
+      Id <~ OpPrime ^^ { case id => LhsNextId(id) } |
       Id ^^ { case id => lang.LhsId(id) }
     }
 

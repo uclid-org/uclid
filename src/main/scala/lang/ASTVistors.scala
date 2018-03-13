@@ -751,7 +751,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnLHS(TraversalDirection.Down, lhs, result, context)
     result = visitIdentifier(lhs.ident, result, context)
     result = lhs match {
-      case LhsId(id) => result
+      case LhsId(_) | LhsNextId(_) => result
       case LhsArraySelect(id, indices) => indices.foldLeft(result)((acc, ind) => visitExpr(ind, acc, context))
       case LhsRecordSelect(id, fields) => fields.foldLeft(result)((acc, fld) => visitIdentifier(fld, acc, context))
       case LhsSliceSelect(id, slice) => visitBitVectorSlice(slice, result, context)
@@ -1486,7 +1486,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     val lhsP = lhsIdP.flatMap{(id) => {
         val lhsP1 : Option[Lhs] = lhs match {
-          case LhsId(_) => Some(LhsId(id))
+          case LhsId(_) | LhsNextId(_) => Some(LhsId(id))
           case LhsArraySelect(_, indices) =>
             Some(LhsArraySelect(id, indices.map(visitExpr(_, context)).flatten))
           case LhsRecordSelect(_, fields) =>

@@ -8,7 +8,7 @@ module main {
     b = 0x1; // hexadecimal literal
   }
   next {
-    call (a, b) = fib(a, b);
+    call (a', b') = fib(a, b);
     assert (a <= b);
     assert (a < b);
     // These weird assertions are to check the +/- arithmetic operators.

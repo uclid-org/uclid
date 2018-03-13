@@ -334,7 +334,10 @@ case class SelectFromInstance(varId : Identifier) extends Operator {
   override def toString = "->" + varId
   override def fixity = Operator.INFIX
 }
-
+case class GetFinalValue() extends Operator {
+  override def toString = "'"
+  override def fixity = Operator.POSTFIX
+}
 
 sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
@@ -433,6 +436,9 @@ case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
 }
 
 sealed abstract class Lhs(val ident: Identifier) extends ASTNode
+case class LhsNextId(id: Identifier) extends Lhs(id) {
+  override def toString = id.toString + "'"
+}
 case class LhsId(id: Identifier) extends Lhs(id) {
   override def toString = id.toString
 }

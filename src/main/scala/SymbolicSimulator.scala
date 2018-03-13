@@ -481,6 +481,8 @@ class SymbolicSimulator (module : Module) {
         lhs(x) match {
           case LhsId(id) =>
             st = st + (id -> rhs(x))
+          case LhsNextId(id) =>
+            st = st + (id -> rhs(x))
           case LhsArraySelect(id, indices) =>
             st = st + (id -> smt.ArrayStoreOperation(st(id), indices.map(i => evaluate(i, st, pastTables, scope)), rhs(x)))
           case LhsRecordSelect(id, fields) =>

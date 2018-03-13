@@ -277,7 +277,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     checkTypeError(typOpt.isDefined, "Unknown variable in LHS: " + id.toString, lhs.pos, c.filename)
     val typ = typOpt.get
     val resultType = lhs match {
-      case LhsId(id) =>
+      case LhsId(_) | LhsNextId(_) =>
         typ
       case LhsArraySelect(id, indices) =>
         checkTypeError(typ.isArray, "Lhs variable in array index operation must be of type array: " + id.toString, lhs.pos, c.filename)
@@ -449,6 +449,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(fldT.isDefined, "Unknown type for selection: %s".format(fld.toString), fld.pos, c.filename)
           fldT.get
         }
+        case GetFinalValue() =>
+          Utils.assert(argTypes.size == 1, "Expected exactly one argument to GetFinalValue")
+          argTypes(0)
         case OldOperator() =>
           checkTypeError(argTypes.size == 1, "Expect exactly one argument to 'old'", opapp.pos, c.filename)
           checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "First argument to old operator must be an identifier", opapp.pos, c.filename)
