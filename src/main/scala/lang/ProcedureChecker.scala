@@ -86,7 +86,7 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         }
       }
       val errors = badVariables.map {
-        (v) => ModuleError("Unknown state variable declared as modifiable: %s".format(v.toString), v.position)
+        (v) => ModuleError("Variable cannot be declared modifiable: %s".format(v.toString), v.position)
       }.toSet
       errors ++ in
     } else { in }
