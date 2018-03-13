@@ -77,16 +77,7 @@ object UclidMain {
     parser.parse(args, Config())
   }
 
-  val usage = """
-    Usage: UclidMain [options] filename [filenames]
-    Options:
-      -h/--help : This message.
-      -m/--main : Set the main module.
-      -d/--debug : Debug options.
-  """
   def main(args: Array[String]) {
-    // if (args.length == 0) println(usage)
-    // val opts = getOptions(args)
     parseOptions(args) match {
       case None =>
       case Some(config) => main(config)
@@ -172,16 +163,17 @@ object UclidMain {
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
     val filenameAdderPass = new AddFilenameRewriter(None)
+    // Helper function to parse a single file.
     def parseFile(srcFile : String) : List[Module] = {
       val text = scala.io.Source.fromFile(srcFile).mkString
       filenameAdderPass.setFilename(srcFile)
       val modules = UclidParser.parseModel(srcFile, text)
       modules.map(m => filenameAdderPass.visit(m, Scope.empty)).flatten
     }
-
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
-      (acc, srcFile) => parseFile(srcFile.getPath()) ++ acc
+      (acc, srcFile) => acc ++ parseFile(srcFile.getPath())
     }
+
     val modIdSeq = parsedModules.map(m => (m.id, m.position))
     val moduleErrors = SemanticAnalyzerPass.checkIdRedeclaration(modIdSeq, List.empty[ModuleError])
     if (moduleErrors.size > 0) {

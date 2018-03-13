@@ -61,7 +61,7 @@ case class CheckResult(assert : AssertInfo, result : smt.SolverResult)
 
 class AssertionTree {
   class TreeNode(p : Option[TreeNode], assumps : List[smt.Expr]) {
-    var parent : Option[TreeNode] = p
+    var parent : Option[TreeNode] = p // Root does not have a parent, so parent = None for root and Some(p) for all other nodes.
     var children : ListBuffer[TreeNode] = ListBuffer.empty
     var assumptions: ListBuffer[smt.Expr] = assumps.to[ListBuffer]
     var assertions: ListBuffer[AssertInfo] = ListBuffer.empty
@@ -101,6 +101,7 @@ class AssertionTree {
     node.results = (node.assertions.map {
       e => {
         val pcExpr = e.pathCond
+        // If assertExpr has a CoverDecorator then we should not negate the expression here.
         val assertExpr = if (e.decorators.contains(CoverDecorator)) {
           e.expr
         } else {

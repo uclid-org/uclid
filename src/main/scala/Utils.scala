@@ -52,9 +52,6 @@ object Utils {
   def checkParsingError(b : Boolean, err: => String, pos : => Position, fileName : => Option[String]) : Unit = {
     if (!b) { raiseParsingError(err, pos, fileName) }
   }
-  def checkError(b : Boolean, err: => String) : Unit = {
-    if (!b) { throw new ParserError(err, None, None) }
-  }
   class UnimplementedException (msg:String=null, cause:Throwable=null) extends java.lang.UnsupportedOperationException (msg, cause)
   class RuntimeError (msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause)
   class EvaluationError(msg : String, cause: Throwable = null) extends RuntimeError(msg, cause)

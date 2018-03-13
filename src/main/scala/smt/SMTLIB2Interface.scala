@@ -53,7 +53,7 @@ class SMTLIB2Interface(args: List[String]) extends Context {
 
   type NameProviderFn = (String, Option[String]) => String
   var expressions : List[Expr] = List.empty
-  val z3Process = new InteractiveProcess(args)
+  val solverProcess = new InteractiveProcess(args)
 
   def generateDeclaration(x: Symbol) : String = {
     def printType(t: Type) : String = {
@@ -157,11 +157,11 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   }
 
   def writeCommand(str : String) {
-    z3Process.writeInput(str + "\n")
+    solverProcess.writeInput(str + "\n")
   }
 
   def readResponse() : Option[String] = {
-    val msg = z3Process.readOutput()
+    val msg = solverProcess.readOutput()
     msg
   }
 
@@ -207,9 +207,9 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   }
 
   override def finish() {
-    z3Process.finishInput()
+    solverProcess.finishInput()
     Thread.sleep(5)
-    z3Process.kill()
+    solverProcess.kill()
   }
 
   override def push() {
