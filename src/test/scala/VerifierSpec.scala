@@ -41,14 +41,15 @@ package uclid
 package test
 
 import org.scalatest.FlatSpec
+import java.io.File
 import uclid.{lang => l}
 
 object VerifierSpec {
   def expectedFails(filename: String, nFail : Int) {
-    val modules = UclidMain.compile(List(filename), lang.Identifier("main"), true)
+    val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
-    val results = UclidMain.execute(mainModule.get)
+    val results = UclidMain.execute(mainModule.get, new UclidMain.Config())
     assert (results.count((e) => e.result.isFalse) == nFail)
     assert (results.count((e) => e.result.isUndefined) == 0);
   }

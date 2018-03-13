@@ -50,48 +50,31 @@ import lang.Identifier
  * With lots of updates by Pramod Subramanyan in the summer of 2017.
  */
 object UclidMain {
-  object options {
-      var help : Boolean = false
-      var mainModule: String = "main"
-      var srcFiles: List[String] = Nil
-      var debugOptions : Set[String] = Set.empty[String]
-  }
+  case class Config(
+      mainModuleName : String = "main",
+      smtSolver: List[String] = List.empty,
+      files : Seq[java.io.File] = Seq()
+  )
 
-  def getOptions(args: Array[String]) {
-    def isSwitch(s : String) = (s(0) == '-')
-    var ignore = false
+  def parseOptions(args: Array[String]) : Option[Config] = {
+    val parser = new scopt.OptionParser[Config]("scopt") {
+      head("uclid", "0.9.0")
 
-    for (i <- args.indices) {
-      if (ignore) {
-        ignore = false
-      } else if ( isSwitch(args(i)) ) {
-        if (args(i) == "--main" || args(i) == "-m") {
-          if (i+1 < args.length) {
-            options.mainModule = args(i+1)
-            ignore = true
-          } else {
-            println("Expected name of main module after switch '" + args(i) + "'")
-            options.help = true;
-          }
-        } else if (args(i) == "--debug" || args(i) == "-d") {
-          if (i+1 < args.length) {
-            options.debugOptions = args(i+1).split("+").toSet
-            ignore = true
-          } else {
-            println("Expected list of debug modules after switch '" + args(i) + "'")
-            options.help = true;
-          }
-        } else if (args(i) == "--help" || args(i) == "-h") {
-          options.help = true;
-        } else {
-          println("Unknown argument: " + args(i))
-          println(usage)
-          sys.exit(1)
-        }
-      } else {
-        options.srcFiles = args(i) :: options.srcFiles
-      }
+      opt[String]('m', "main").valueName("<Module>").action{ 
+        (x, c) => c.copy(mainModuleName = x) 
+      }.text("Name of the main module.")
+
+      opt[String]("smt-solver").valueName("<Binary>").action{ 
+        (exec, c) => c.copy(smtSolver = exec.split(" ").toList) 
+      }.text("External SMT solver binary.")
+
+      arg[java.io.File]("<file> ...").unbounded().required().action {
+        (x, c) => c.copy(files = c.files :+ x)
+      }.text("List of files to analyze.")
+      
+      // override def renderingMode = scopt.RenderingMode.OneColumn
     }
+    parser.parse(args, Config())
   }
 
   val usage = """
@@ -102,19 +85,21 @@ object UclidMain {
       -d/--debug : Debug options.
   """
   def main(args: Array[String]) {
-    if (args.length == 0) println(usage)
-    val opts = getOptions(args)
-
-    if (options.help) {
-      println(usage)
-      sys.exit(1)
+    // if (args.length == 0) println(usage)
+    // val opts = getOptions(args)
+    parseOptions(args) match {
+      case None =>
+      case Some(config) => main(config)
     }
+  }
+
+  def main(config : Config) {
     try {
-      val mainModuleName = Identifier(options.mainModule)
-      val modules = compile(options.srcFiles, mainModuleName)
+      val mainModuleName = Identifier(config.mainModuleName)
+      val modules = compile(config.files, mainModuleName)
       val mainModule = instantiate(modules, mainModuleName, true)
       mainModule match {
-        case Some(m) => execute(m)
+        case Some(m) => execute(m, config)
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
       }
@@ -148,7 +133,7 @@ object UclidMain {
     }
   }
 
-  def compile(srcFiles : List[String], mainModuleName : Identifier, test : Boolean = false) : List[Module] = {
+  def compile(srcFiles : Seq[java.io.File], mainModuleName : Identifier, test : Boolean = false) : List[Module] = {
     type NameCountMap = Map[Identifier, Int]
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
 
@@ -195,7 +180,7 @@ object UclidMain {
     }
 
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
-      (acc, srcFile) => parseFile(srcFile) ++ acc
+      (acc, srcFile) => parseFile(srcFile.getPath()) ++ acc
     }
     val modIdSeq = parsedModules.map(m => (m.id, m.position))
     val moduleErrors = SemanticAnalyzerPass.checkIdRedeclaration(modIdSeq, List.empty[ModuleError])
@@ -250,11 +235,14 @@ object UclidMain {
     moduleListP.find((m) => m.id == mainModuleName)
   }
 
-  def execute(module : Module) : List[CheckResult] = {
+  def execute(module : Module, config : Config) : List[CheckResult] = {
     // execute the control module
     var symbolicSimulator = new SymbolicSimulator(module)
-    var z3Interface = new smt.Z3Interface()
-    // var z3Interface = new smt.Z3FileInterface()
+    var z3Interface = if (config.smtSolver.size > 0) {
+      new smt.Z3FileInterface()
+    } else {
+      new smt.Z3Interface()
+    }
     val result = symbolicSimulator.execute(z3Interface)
     z3Interface.finish()
     return result
