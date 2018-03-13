@@ -42,9 +42,9 @@ package uclid
 import scala.concurrent.SyncChannel
 import scala.collection.JavaConverters._
 
-class InteractiveProcess(cmd: String, args: List[String]) {
+class InteractiveProcess(args: List[String]) {
   // create the process.
-  val cmdLine = (cmd :: args).asJava
+  val cmdLine = (args).asJava
   val builder = new ProcessBuilder(cmdLine)
   builder.redirectErrorStream(true)
   val process = builder.start()
@@ -58,13 +58,7 @@ class InteractiveProcess(cmd: String, args: List[String]) {
 
   // Is this the best way of telling if a process is alive?
   def isAlive() : Boolean = {
-    try {
-      exitValue = Some(process.exitValue())
-      return false
-    } catch {
-      case e : IllegalThreadStateException =>
-        return true
-    }
+    process.isAlive()
   }
 
   // Some helper functions.
@@ -76,6 +70,7 @@ class InteractiveProcess(cmd: String, args: List[String]) {
 
   // Write to the process's input stream.
   def writeInput(str: String) {
+    print(str)
     in.write(stringToBytes(str))
     in.flush()
   }
@@ -105,6 +100,7 @@ class InteractiveProcess(cmd: String, args: List[String]) {
               bytes.slice(0, numRead)
             }
           })
+          print(string)
           return Some(string)
         }
       }

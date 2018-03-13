@@ -46,14 +46,14 @@ import scala.collection.mutable.{Map => MutableMap}
 
 import scala.language.postfixOps
 
-class Z3FileInterface() extends Context {
+class SMTLIB2Interface(args: List[String]) extends Context {
   var typeMap : SynonymMap = SynonymMap.empty
   var sorts : MutableMap[String, Type] = MutableMap.empty
   var variables : MutableMap[String, Type] = MutableMap.empty
 
   type NameProviderFn = (String, Option[String]) => String
   var expressions : List[Expr] = List.empty
-  val z3Process = new InteractiveProcess("/usr/bin/z3", List("-smt2", "-in"))
+  val z3Process = new InteractiveProcess(args)
 
   def generateDeclaration(x: Symbol) : String = {
     def printType(t: Type) : String = {
@@ -157,7 +157,6 @@ class Z3FileInterface() extends Context {
   }
 
   def writeCommand(str : String) {
-    println(str)
     z3Process.writeInput(str + "\n")
   }
 

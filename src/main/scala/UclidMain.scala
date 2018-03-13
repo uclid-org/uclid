@@ -64,7 +64,7 @@ object UclidMain {
         (x, c) => c.copy(mainModuleName = x) 
       }.text("Name of the main module.")
 
-      opt[String]("smt-solver").valueName("<Binary>").action{ 
+      opt[String]('s', "solver").valueName("<Binary>").action{ 
         (exec, c) => c.copy(smtSolver = exec.split(" ").toList) 
       }.text("External SMT solver binary.")
 
@@ -239,7 +239,8 @@ object UclidMain {
     // execute the control module
     var symbolicSimulator = new SymbolicSimulator(module)
     var z3Interface = if (config.smtSolver.size > 0) {
-      new smt.Z3FileInterface()
+      println("args: " + config.smtSolver)
+      new smt.SMTLIB2Interface(config.smtSolver)
     } else {
       new smt.Z3Interface()
     }
