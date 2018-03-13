@@ -52,7 +52,7 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
     context.get(lhs.ident).get match {
       case Scope.StateVar(_, _) =>
         if (!proc.modifies.contains(lhs.ident)) {
-          val error = ModuleError("Assignment to variable not declared modifiable: %s".format(lhs.ident.toString), lhs.position)
+          val error = ModuleError("Assignment to identifier not declared modifiable: %s".format(lhs.ident.toString), lhs.position)
           in + error
         } else { in }
       case _ => in
@@ -86,7 +86,7 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         }
       }
       val errors = badVariables.map {
-        (v) => ModuleError("Variable cannot be declared modifiable: %s".format(v.toString), v.position)
+        (v) => ModuleError("Identifier cannot be declared modifiable: %s".format(v.toString), v.position)
       }.toSet
       errors ++ in
     } else { in }

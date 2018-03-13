@@ -217,7 +217,7 @@ class ParserSpec extends FlatSpec {
       case p : Utils.ParserErrorList =>
         assert (p.errors.size == 2)
         assert (p.errors.exists(p => p._1.contains("Assignment to variable not declared modifiable: x")))
-        assert (p.errors.exists(p => p._1.contains("Unknown state variable declared as modifiable: z")))
+        assert (p.errors.exists(p => p._1.contains("Unknown identifier declared as modifiable: z")))
     }
   }
   "test-mutual-recursion-error.ucl" should "not parse successfully." in {
