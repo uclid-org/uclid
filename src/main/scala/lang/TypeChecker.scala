@@ -449,7 +449,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(fldT.isDefined, "Unknown type for selection: %s".format(fld.toString), fld.pos, c.filename)
           fldT.get
         }
-        case GetFinalValue() =>
+        case GetNextValueOp() =>
           Utils.assert(argTypes.size == 1, "Expected exactly one argument to GetFinalValue")
           argTypes(0)
         case OldOperator() =>

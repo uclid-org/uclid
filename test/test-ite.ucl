@@ -5,17 +5,18 @@ module main
   var b : boolean;
   
   init {
-    b = false;
-    n = 0;
-    s = 0;
+    b' = false;
+    n' = 0;
+    s' = 0;
   }
   
   next {
-    n = if (b) then (n + 1) else (n + 2);
+    n' = if (b) then (n + 1) else (n + 2);
+    // noteToSelf(ReorderingTest)
     if (b) {
-      s = s + 1;
+      s' = s + 1;
     } else {
-      s = s + 2;
+      s' = s + 2;
     }
   }
   
@@ -26,5 +27,6 @@ module main
     // print_module;
     bmc(5);
     check;
+    // print_results;
   }
 }

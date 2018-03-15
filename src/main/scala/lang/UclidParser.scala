@@ -316,6 +316,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         SelectFromModuleOp  ^^ {
           case (moduleId, varId) => lang.ExternalIdentifier(moduleId, varId)
         } |
+        Id <~ OpPrime ^^ { case id => lang.OperatorApplication(GetNextValueOp(), List(id)) } |
         Id
     }
 
@@ -391,6 +392,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwHavoc ~> Id <~ ";" ^^ { case id => HavocStmt(id) } |
       Lhs ~ rep("," ~> Lhs) ~ "=" ~ Expr ~ rep("," ~> Expr) <~ ";" ^^
         { case l ~ ls ~ "=" ~ r ~ rs => AssignStmt(l::ls, r::rs) } |
+      KwCall ~> Id ~ ExprList <~ ";" ^^
+        { case id ~ args => ProcedureCallStmt(id, List.empty, args) } |
       KwCall ~> LhsList ~ ("=" ~> Id) ~ ExprList <~ ";" ^^
         { case lhss ~ id ~ args => ProcedureCallStmt(id, lhss, args) } |
       KwNext ~ "(" ~> Id <~ ")" ~ ";" ^^

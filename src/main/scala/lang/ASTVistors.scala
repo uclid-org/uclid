@@ -1486,7 +1486,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     val lhsP = lhsIdP.flatMap{(id) => {
         val lhsP1 : Option[Lhs] = lhs match {
-          case LhsId(_) | LhsNextId(_) => Some(LhsId(id))
+          case LhsId(_) => Some(LhsId(id))
+          case LhsNextId(_) => Some(LhsNextId(id))
           case LhsArraySelect(_, indices) =>
             Some(LhsArraySelect(id, indices.map(visitExpr(_, context)).flatten))
           case LhsRecordSelect(_, fields) =>

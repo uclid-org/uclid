@@ -1,7 +1,6 @@
 module main {
   var cnt, cntp, cntq : integer;
-  
-  
+
   procedure add10(x : integer) returns (y : integer) {
     y = x;
     for i in range(1, 3) {
@@ -11,7 +10,7 @@ module main {
     }
     y = y + 1;
   }
-  
+
   procedure add10b(x : integer) returns (y : integer) {
     y = x;
     for i in range(1, 4) {
@@ -20,21 +19,24 @@ module main {
   }
   
   init {
-    cnt = 0;
-    cntp = 0;
-    cntq = 0;
+    cnt' = 0;
+    cntp' = 0;
+    cntq' = 0;
   }
+
   next {
-    call (cnt) = add10(cnt);
-    call (cntq) = add10b(cntq);
-    cntp = cntp + 10;
+    call (cnt') = add10(cnt);
+    call (cntq') = add10b(cntq);
+    cntp' = cntp + 10;
     
-    
-    assert (cnt == cntp);
-    assert (cntq == cntp);
+    // noteToSelf(ReorderingTest)
+    assert (cnt' == cntp');
+    assert (cntq' == cntp');
   }
+
   control {
     unroll (5);
     check;
+    // print_results;
   }
 }

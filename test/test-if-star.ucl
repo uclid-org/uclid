@@ -4,19 +4,20 @@ module main {
   var n : integer;
   
   init {
-    x = 0;
-    y = 0;
-    n = 0;
+    x' = 0;
+    y' = 0;
+    n' = 0;
   }
   
   next {
+    // noteToSelf(ReorderingTest)
     if (*) {
-      x = x + 1;
+      x' = x + 1;
     } else {
-      y = y + 1;
+      y' = y + 1;
     }
     
-    n = n + 1;
+    n' = n + 1;
   }
   
   property eq_nxy : (n == (x + y));

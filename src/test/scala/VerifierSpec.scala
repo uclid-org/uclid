@@ -101,9 +101,6 @@ class BasicVerifierSpec extends FlatSpec {
   "test-tuple-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-tuple-record-1.ucl", 0)
   }
-  "test-types-0.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-types-0.ucl", 0)
-  }
   "test-functions-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-functions-1.ucl", 0)
   }

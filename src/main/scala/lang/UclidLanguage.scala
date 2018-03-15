@@ -336,7 +336,7 @@ case class SelectFromInstance(varId : Identifier) extends Operator {
   override def toString = "->" + varId
   override def fixity = Operator.INFIX
 }
-case class GetFinalValue() extends Operator {
+case class GetNextValueOp() extends Operator {
   override def toString = "'"
   override def fixity = Operator.POSTFIX
 }

@@ -48,11 +48,11 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
   lazy val manager : PassManager = analysis.manager
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
 
-  def checkLhs(proc : ProcedureDecl, lhs : Lhs, context : Scope, in : T) : T = {
-    context.get(lhs.ident).get match {
-      case Scope.StateVar(_, _) =>
-        if (!proc.modifies.contains(lhs.ident)) {
-          val error = ModuleError("Assignment to identifier that was not declared modifiable: %s".format(lhs.ident.toString), lhs.position)
+  def checkIdent(proc : ProcedureDecl, id : Identifier, context : Scope, in : T) : T = {
+    context.get(id).get match {
+      case Scope.StateVar(_, _) | Scope.OutputVar(_, _) =>
+        if (!proc.modifies.contains(id)) {
+          val error = ModuleError("Identifier was not declared modifiable: %s".format(id.toString), id.position)
           in + error
         } else { in }
       case _ => in
@@ -60,10 +60,20 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
   }
 
   override def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Down) {
+    if (d == TraversalDirection.Up) {
       context.procedure match {
         case Some(proc) =>
-          checkLhs(proc, lhs, context, in)
+          checkIdent(proc, lhs.ident, context, in)
+        case None => in
+      }
+    } else { in }
+  }
+
+  override def applyOnHavoc(d : TraversalDirection.T, havocStmt : HavocStmt, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Up) {
+      context.procedure match {
+        case Some(proc) =>
+          checkIdent(proc, havocStmt.id, context, in)
         case None => in
       }
     } else { in }

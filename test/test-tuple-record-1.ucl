@@ -23,24 +23,35 @@ module main {
     s.c = (s.a == s.b);
   }
   
-  init {
+  procedure init_s() returns (s : struct)
+  {
     call (s.c1) = zero();
     call (s.c2) = zero();
   }
-  
-  next {
-    assume (n <= 2);
-    
+
+  init {
+    call (s') = init_s();
+  }
+
+  procedure set_next_s()
+    modifies s;
+  {
     call (s.c1) = updateV1(s.c1, n);
     call (s.c2) = updateV2(s.c2, n);
-    
-    assert s.c1.a == s.c2.a;
-    assert s.c1.b == s.c2.b;
-    assert s.c1.c == s.c2.c;
+  }
+  next {
+    assume (n <= 2);
+    call set_next_s();
+
+    // noteToSelf(ReorderingTest)
+    assert s'.c1.a == s'.c2.a;
+    assert s'.c1.b == s'.c2.b;
+    assert s'.c1.c == s'.c2.c;
   }
   
   control {
     unroll (3);
     check;
+    // print_results;
   }
 }

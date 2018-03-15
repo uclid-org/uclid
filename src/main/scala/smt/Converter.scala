@@ -136,6 +136,8 @@ object Converter {
              toSMT(args(0), scope, 1)
            case lang.HistoryOperator() =>
              toSMT(args(0), scope, args(1).asInstanceOf[lang.IntLit].value.toInt)
+           case lang.GetNextValueOp() =>
+             toSMT(args(0), scope, past)
            case _ =>
              val scopeWOpApp = scope + opapp
              val argsInSMT = toSMTs(args, scopeWOpApp, past)

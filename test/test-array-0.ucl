@@ -4,23 +4,30 @@ module main
   var sum, index : integer;
   
   procedure init_state()
+    modifies numbers, sum, index;
   {
-    
-  }
-
-  init {
     for i in range(0, 9) {
       numbers[i] = 0;
     }
     sum = 0;
     index = 0;
   }
+
+  procedure next_state() 
+    returns (sumP : integer, numbersP : [integer]integer, indexP : integer)
+  {
+    sumP = sum + index;
+    numbersP = numbers;
+    numbersP[index] = index;
+    indexP = index + 1;
+  }
+
+  init {
+    call init_state();
+  }
   
   next {
-    sum = sum + index;
-    numbers[index] = index;
-    
-    index = index + 1;
+    call (sum', numbers', index') = next_state();
     
     assert ((numbers[0] + numbers[1] + numbers[2] + numbers[3] + 
     		 numbers[4] + numbers[5] + numbers[6] + numbers[7]) == sum);

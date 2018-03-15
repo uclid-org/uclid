@@ -16,10 +16,11 @@ module main
         assert (red_cnt > 0);
       }
     }
+
 	init { }
 	
     next {
-      call () = next_color();
+      call next_color();
     }
 
     control {

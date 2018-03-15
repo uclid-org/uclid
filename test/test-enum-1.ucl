@@ -8,7 +8,7 @@ module main {
   var systemcall : syscall_t;
   
   init {
-    systemcall = noop;
+    systemcall' = noop;
   }
   
   next {

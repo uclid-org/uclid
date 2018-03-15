@@ -6,28 +6,40 @@ module main {
   
   var x, y : integer;
   var r, q : rec_t;
-  
-  init {
-    x = 0;
-    y = 0;
-    r.x = 0; 
-    r.y = 0;
-  }
-  
-  next {
-    x = f(x);
-    y = f(y);
-    
-    q = r;
-    r.x = h(r);
-    r.y = h(q);
 
-	assert (f(r.x) == f(r.y));
-    assert (x == y);
+  procedure zero_r() returns (rp : rec_t)
+  {
+    rp.x = 0;
+    rp.y = 0;
+  }
+
+  init {
+    x' = 0;
+    y' = 0;
+    call (r') = zero_r();
+  }
+
+  procedure next_r() returns (rp : rec_t)
+  {
+    rp.x = h(r);
+    rp.y = h(q);
+  }
+
+  next {
+    x' = f(x);
+    y' = f(y);
+    
+    q' = r;
+    call (r') = next_r();
+
+    // noteToSelf(ReorderingTest)
+	assert (f(r'.x) == f(r'.y));
+    assert (x' == y');
   }
   
   control {
     unroll (5);
     check;
+    // print_results;
   }
 }

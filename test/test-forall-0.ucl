@@ -6,17 +6,20 @@ module main
   
   init {
     assume (forall (i : integer) :: numbers[i] == 0);
-    sum = 0;
-    index = 0;
+    sum' = 0;
+    index' = 0;
   }
   
-  next {
+  procedure next_value()
+    modifies sum, numbers, index;
+  {
     sum = sum + value;
     numbers[index] = value;
-    
     index = index + 1;
-    
-    assert ((numbers[0] + numbers[1] + numbers[2] + numbers[3]) == sum);
+  }
+  next {
+    call next_value();
+    assert ((numbers'[0] + numbers'[1] + numbers'[2] + numbers'[3]) == sum');
   }
   
   control {

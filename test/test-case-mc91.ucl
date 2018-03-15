@@ -32,13 +32,13 @@ module main {
     }
 
     init {
-        havoc n_init;
-        n = n_init;
-        c = 1;
+        // noteToSelf(ReorderingTest)
+        n' = n_init;
+        c' = 1;
     }
     next {
-        call (n, c) = mc91(n, c);
-        assert ((c == 0) && (n_init <= 100)) ==> (n == 91);
+        call (n', c') = mc91(n, c);
+        assert ((c' == 0) && (n_init' <= 100)) ==> (n' == 91);
     }
 
     control {

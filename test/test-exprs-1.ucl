@@ -3,11 +3,12 @@ module main
   var sum, fake, i : integer;
   
   init {
-    i = 0;
+    i' = 0;
   }
   
-  next {
-    assert ((i == 0) || (fake == 2*sum));
+  procedure next_state()
+    modifies i, sum, fake;
+  {
     havoc sum;
     havoc fake;
     assume (fake == (sum+sum+1));
@@ -15,12 +16,16 @@ module main
     havoc fake;
     assume (fake == (sum + sum));
     assert false;
-
     i = i + 1;
+  }
+  next {
+    assert ((i == 0) || (fake == 2*sum));
+    call next_state();
   }
   
   control {
     unroll (2);
     check;
+    // print_results;
   }
 }
