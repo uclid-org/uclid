@@ -23,6 +23,7 @@ module main
   invariant[LTL] s_eq_n_plus_1 : G(s == (n+1));
 
   control {
+    // print_module;
     bmc(5);
     check;
   }

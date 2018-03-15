@@ -540,10 +540,9 @@ class SymbolicSimulator (module : Module) {
           foldLeft(symbolTable){ (acc,id) =>
             acc.updated(id, smt.OperatorApplication(smt.ITEOp, List(condExpr, then_st(id), else_st(id))))
           }
-      case ForStmt(id, range, body) => throw new Utils.UnimplementedException("Cannot symbolically execute For loop")
-      case CaseStmt(body) => throw new Utils.UnimplementedException("Cannot symbolically execute Case stmt")
-      case ProcedureCallStmt(id,lhss,args) =>
-        throw new Utils.RuntimeError("ProcedureCallStmt must have been inlined by now.")
+      case ForStmt(id, range, body) => throw new Utils.AssertionError("Cannot symbolically execute for loops.")
+      case CaseStmt(body) => throw new Utils.AssertionError("Cannot symbolically execute case statement.")
+      case ProcedureCallStmt(id,lhss,args) => throw new Utils.AssertionError("Cannot symbolically execute procedure calls.")
       case _ => return symbolTable
     }
   }

@@ -74,6 +74,18 @@ class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
   }
 }
 
+object ExprRewriter
+{
+  def rewriteExpr(e : Expr, rewrites : Map[Expr, Expr], context : Scope) : Expr = {
+    val rewriter = new ASTRewriter("", new ExprRewriterPass(rewrites))
+    rewriter.visitExpr(e, context).get
+  }
+  def rewriteLHS(lhs : Lhs, rewrites: Map[Expr, Expr], context : Scope) : Lhs = {
+    val rewriter = new ASTRewriter("", new ExprRewriterPass(rewrites))
+    rewriter.visitLhs(lhs, context).get
+  }
+}
+
 class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   extends ASTRewriter(name, new ExprRewriterPass(rewrites))
 {
