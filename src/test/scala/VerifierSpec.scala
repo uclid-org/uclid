@@ -134,7 +134,7 @@ class ProcedureVerifSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/test-procedure-checker-2.ucl", 7)
   }
 }
-class QuantiferVerifSpec extends FlatSpec {
+class QuantifierVerifSpec extends FlatSpec {
   "test-forall-0.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-forall-0.ucl", 0)
   }
