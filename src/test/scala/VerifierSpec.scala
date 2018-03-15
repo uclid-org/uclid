@@ -167,7 +167,7 @@ class ModuleVerifSpec extends FlatSpec {
   "test-procedure-postcondition.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-procedure-postcondition.ucl", 1)
   }
-  "test-mem-inout.ucl" should "verify all assertions." in {
+  "test-meminout.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-meminout.ucl", 0)
   }
   "test-axiom-1.ucl" should "verify all assertions." in {

@@ -63,9 +63,7 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
     if (d == TraversalDirection.Down) {
       context.procedure match {
         case Some(proc) =>
-          if (proc.hasPrePost) {
-            checkLhs(proc, lhs, context, in)
-          } else { in }
+          checkLhs(proc, lhs, context, in)
         case None => in
       }
     } else { in }

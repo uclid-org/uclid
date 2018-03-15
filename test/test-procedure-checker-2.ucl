@@ -6,6 +6,7 @@ module traffic_light
 
   procedure next_light()
     modifies light;
+    modifies step;
   {
     if (step == 0) {
       case

@@ -437,24 +437,32 @@ case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
   override def toString = "Lambda(" + ids + "). " + e
 }
 
-sealed abstract class Lhs(val ident: Identifier) extends ASTNode
-case class LhsNextId(id: Identifier) extends Lhs(id) {
-  override def toString = id.toString + "'"
+sealed abstract class Lhs(val ident: Identifier) extends ASTNode {
+  def isSequentialLhs : Boolean
 }
 case class LhsId(id: Identifier) extends Lhs(id) {
   override def toString = id.toString
+  override def isSequentialLhs = true
+}
+case class LhsNextId(id: Identifier) extends Lhs(id) {
+  override def toString = id.toString + "'"
+  override def isSequentialLhs = false
 }
 case class LhsArraySelect(id: Identifier, indices: List[Expr]) extends Lhs(id) {
   override def toString = id.toString + "[" + Utils.join(indices.map(_.toString), ", ") + "]"
+  override def isSequentialLhs = true
 }
 case class LhsRecordSelect(id: Identifier, fields: List[Identifier]) extends Lhs(id) {
   override def toString = id.toString + "." + Utils.join(fields.map(_.toString), ".")
+  override def isSequentialLhs = true
 }
 case class LhsSliceSelect(id: Identifier, bitslice : ConstBitVectorSlice) extends Lhs(id) {
   override def toString = id.toString + bitslice.toString
+  override def isSequentialLhs = true
 }
 case class LhsVarSliceSelect(id: Identifier, bitslice: VarBitVectorSlice) extends Lhs(id) {
   override def toString = id.toString + bitslice.toString
+  override def isSequentialLhs = true
 }
 
 /** Type decorators for expressions. */

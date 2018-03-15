@@ -214,7 +214,6 @@ object UclidMain {
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ModuleFlattener(mainModuleName))
     passManager.addPass(new ModuleEliminator(mainModuleName))
-    // passManager.addPass(new IfEliminator())
     passManager.addPass(new ModuleCleaner())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())

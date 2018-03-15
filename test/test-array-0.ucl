@@ -3,6 +3,11 @@ module main
   var numbers : [integer]integer;
   var sum, index : integer;
   
+  procedure init_state()
+  {
+    
+  }
+
   init {
     for i in range(0, 9) {
       numbers[i] = 0;

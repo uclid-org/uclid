@@ -32,7 +32,10 @@ module cpu {
   var r1 : word_t;
   var result : word_t;
 
-  procedure next_instruction() returns () {
+  procedure next_instruction() returns ()
+    modifies inst, op, r0ind, r1ind, r0, r1, regs;
+    modifies mem, result; 
+  {
 
       // get the next instruction.
       inst = mem[pc];
