@@ -205,7 +205,7 @@ object UclidMain {
     }._1
   }
 
-  /** Intantiate module helper. */
+  /** Instantiate module helper. */
   def instantiateModules(moduleList: List[Module], mainModuleName : Identifier) : List[Module] = {
     val passManager = new PassManager()
     passManager.addPass(new ModuleInstanceChecker())
