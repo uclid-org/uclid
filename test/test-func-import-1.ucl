@@ -10,10 +10,10 @@ module common {
   
 
   init {
-    h = 0;
+    h' = 0;
   }
   next {
-    h = hash(n, h);
+    h' = hash(n, h);
   }  
 }
 

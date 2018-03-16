@@ -47,9 +47,11 @@ module cpu {
     assume (forall (r : regindex_t) :: regs[r] == 0bv8);
     assume (forall (a : addr_t) :: dmem[a] == 0bv8);
   }
-
-  // Define "next" transition.
-  next {
+  
+  procedure next_inst()
+    modifies r0ind, r1ind;
+    modifies r0, r1, dmem;
+  {
     // and its operands
     r0ind = word2reg0(inst);
     r1ind = word2reg1(inst);
@@ -62,6 +64,11 @@ module cpu {
     if (nd) { 
       dmem[r0] = r1; 
     }
+  }
+
+  // Define "next" transition.
+  next {
+    call next_inst();
   }
 }
   

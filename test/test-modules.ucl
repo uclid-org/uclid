@@ -1,19 +1,19 @@
 module alu  {
   type cmd_t = enum { add, sub, nop };
   type data_t = bv4;
-  
+
   input a, b : data_t;
   input cmd : cmd_t;
   output result : data_t;
-  
+
   next {
     case
       (cmd == add) : {
-        result = a + b;
+        result' = a + b;
       }
 
       (cmd == sub) :  { 
-        result = a - b;
+        result' = a - b;
       }
     esac
   }
@@ -25,31 +25,37 @@ module main {
   type opcode_t = bv6;  
   type data_t = bv4;
   type regindex_t = bv2;
-  
-  var   mem    : [addr_t]opcode_t;
-  var   regs   : [regindex_t]data_t;
-  var   pc     : addr_t;
-  var   opcode : opcode_t;
-  var   cmd    : cmd_t;
-  var   r0ind  : regindex_t;
-  var   r1ind  : regindex_t;  
-  var   r0     : data_t;
-  var   r1     : data_t;
-  var   res    : data_t;
-  var   cnt    : data_t;
+
+  var mem    : [addr_t]opcode_t;
+  var regs   : [regindex_t]data_t;
+  var cmd    : cmd_t;
+  var pc     : addr_t;
+  var res    : data_t;
+  var cnt    : data_t;
+  var r0     : data_t;
+  var r1     : data_t;
+  var index  : regindex_t;
 
   init {
 	assume (forall (r : regindex_t) :: regs[r] == 1bv4);
-	cnt = 1bv4;
 	assume (forall (a : addr_t) :: mem[a] == 0bv6);
-    pc = 0bv8;
+	cnt' = 1bv4;
+    pc' = 0bv8;
   }
 
-  instance alu_i : alu (cmd : (cmd), a : (r0), b : (r1), result : (res));
+  instance alu_i : alu (cmd : (cmd'), a : (r0'), b : (r1'), result : (res'));
 
   property cnt_eq_r0 : (cnt == regs[0bv2]);
 
-  next {
+  procedure next_inst()
+    returns (r0ind : regindex_t)
+
+    modifies cmd;
+    modifies r0, r1;
+  {
+    var opcode : opcode_t;
+    var r1ind  : regindex_t;
+
     opcode = mem[pc];
     case 
       opcode[1:0] == 0bv2 : { cmd = add; }
@@ -62,17 +68,33 @@ module main {
 
     r0 = regs[r0ind];
     r1 = regs[r1ind];
-    
-	next (alu_i);
-	
-	regs[r0ind] = res[3:0];
+  }
 
-	cnt = cnt + cnt;
-	pc = pc + 1bv8;
+  procedure set_regs(index : regindex_t, res : data_t)
+    modifies regs;
+  {
+    regs[index] = res;
+  }
+
+  next {
+    // noteToSelf(ReorderingTest)
+
+    // noteToSelf(Revisit): We need to create a test which checks
+    // that if we try to set regs inside next_inst() then the analysis
+    // will fail after detecting a cyclical assignment.
+
+    call (index') = next_inst();
+	next (alu_i);
+	call set_regs(index', res');
+	cnt' = cnt + cnt;
+	pc' = pc + 1bv8;
   }
   
   control {
-    unroll(3);
+    v = unroll(3);
     check;
+    // print_results;
+    // v->print_cex(cnt, res);
+    
   }
 }

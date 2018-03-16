@@ -29,7 +29,7 @@ module main
   }
 
   next {
-    call (nums) = sum(w);
+    call (nums') = sum(w);
   }
 
   control {

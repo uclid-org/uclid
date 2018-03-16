@@ -16,7 +16,10 @@ module alu  {
   input cmd : cmd_t;
   var r0, r1, result : word_t;
 
-  next {
+  procedure next_step()
+    modifies r0, r1;
+    modifies result, regs;
+  {
     r0 = regs[r0ind];
     r1 = regs[r1ind];
 
@@ -32,6 +35,10 @@ module alu  {
     esac
     regs[r0ind] = result;
   }
+
+  next {
+    call next_step();
+  }
 }
 
 module main {
@@ -44,7 +51,7 @@ module main {
   var shadow : word_t;
 
   init {
-    shadow = 1bv8;
+    shadow' = 1bv8;
     assume (forall (r : regindex_t) :: regfile[r] == 1bv8);
   }
 
@@ -54,7 +61,7 @@ module main {
 
   next {
     next (alu_i);
-	shadow = shadow + shadow;
+	shadow' = shadow + shadow;
   }
   
   control {

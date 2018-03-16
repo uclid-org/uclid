@@ -113,7 +113,7 @@ class ModuleInstanceCheckerPass() extends ReadOnlyPass[List[ModuleError]] {
             identExprs.foldLeft(err1) {
               (acc, arg) => {
                 arg._1 match {
-                  case Identifier(name) =>
+                  case Identifier(_) | OperatorApplication(GetNextValueOp(), List(Identifier(_))) =>
                     acc
                   case _ =>
                     val msg = "Invalid %s : '%s'".format(arg._2.toString, arg._1.toString)
@@ -193,7 +193,7 @@ object ModuleInstantiatorPass {
   sealed abstract class InstanceVarRenaming(val ident : Identifier, val typ : Type)
   case class BoundInput(id : Identifier, t : Type, expr : Expr) extends InstanceVarRenaming(id, t)
   case class UnboundInput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
-  case class BoundOutput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
+  case class BoundOutput(lhs : Lhs, t : Type) extends InstanceVarRenaming(lhs.ident, t)
   case class UnboundOutput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class StateVariable(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class SharedVariable(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
@@ -203,10 +203,20 @@ object ModuleInstantiatorPass {
   type InstVarMap = Map[List[Identifier], Identifier]
   type RewriteMap = Map[Expr, Expr]
 
-  // Convert an expression to an identifier. (if possible)
+  // Convert an expression to an Identifier (if possible).
   def extractId (e : Expr) : Option[Identifier] = {
     e match {
       case id : Identifier => Some(id)
+      case _ => None
+    }
+  }
+  // Convert an expression to an Lhs (if possible).
+  def extractLhs (e : Expr) : Option[Lhs] = {
+    e match {
+      case Identifier(id) =>
+        Some(LhsId(Identifier(id)))
+      case OperatorApplication(GetNextValueOp(), List(Identifier(id))) =>
+        Some(LhsNextId(Identifier(id)))
       case _ => None
     }
   }
@@ -247,7 +257,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val idMap2 = targetModule.outputs.foldLeft(idMap1) {
       (mapAcc, out) => {
         inst.argMap.get(out._1) match {
-          case Some(expr) => mapAcc + (out._1 -> MIP.BoundOutput(MIP.extractId(expr).get, out._2))
+          case Some(expr) => mapAcc + (out._1 -> MIP.BoundOutput(MIP.extractLhs(expr).get, out._2))
           case None => mapAcc + (out._1 -> MIP.UnboundOutput(nameProvider(out._1, "unbound_output"), out._2))
         }
       }

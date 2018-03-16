@@ -14,12 +14,12 @@ module cpu {
   var inst : word_t;
 
   init {
-      pc = 0bv8;
+      pc' = 0bv8;
   }
 
   next {
-      inst = mem[pc];
-      pc = pc + 1bv8;
+      inst' = mem[pc];
+      pc' = pc' + 1bv8;
   }
 }
   
@@ -41,5 +41,6 @@ module main {
   control {
     unroll(3);
     check;
+    // print_results;
   }
 }
