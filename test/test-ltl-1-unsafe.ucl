@@ -3,14 +3,14 @@ module main {
   var state : state_t;
   
   init {
-    state = s1;
+    state' = s1;
   }
   
   next {
 	case
-	  (state == s1) : { state = s2; }
-	  (state == s2) : { state = s3; }
-	  (state == s3) : { state = s1; }
+	  (state == s1) : { state' = s2; }
+	  (state == s2) : { state' = s3; }
+	  (state == s3) : { state' = s1; }
 	esac
   }
   

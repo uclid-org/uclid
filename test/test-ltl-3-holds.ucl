@@ -3,10 +3,10 @@ module main
   var b : boolean;
   
   init {
-    b = false;
+    b' = false;
   }
   next {
-	b = !b;    
+	b' = !b;    
   }
   
   property[LTL] p : G(b ==> !X(b)) &&

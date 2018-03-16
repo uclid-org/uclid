@@ -5,11 +5,11 @@ module main
   output sum : integer;
   
   init {
-    inited = false;
+    inited' = false;
   }
   next {
-	inited = true;    
-    sum = a + b;
+	inited' = true;    
+    sum' = a + b;
   }
   
   property[LTL] p1 : G(inited ==> (sum == a + b));
