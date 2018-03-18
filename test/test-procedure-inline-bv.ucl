@@ -9,6 +9,6 @@ module main
   }
   
   next {
-    call (goo) = foo(moo);
+    call (goo') = foo(moo);
   }
 }

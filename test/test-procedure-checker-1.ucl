@@ -19,7 +19,7 @@ module main
   }
 
   next {
-    call (nums) = sum(n);
+    call (nums') = sum(n);
   }
 
   control {

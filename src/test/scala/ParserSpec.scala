@@ -216,7 +216,7 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.ParserErrorList =>
         assert (p.errors.size == 2)
-        assert (p.errors.exists(p => p._1.contains("Assignment to identifier that was not declared modifiable: x")))
+        assert (p.errors.exists(p => p._1.contains("Identifier was not declared modifiable: x")))
         assert (p.errors.exists(p => p._1.contains("Identifier cannot be declared modifiable: z")))
     }
   }

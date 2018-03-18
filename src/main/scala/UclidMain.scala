@@ -47,6 +47,7 @@ import scala.collection.immutable._
 import uclid.lang._
 import lang.Module
 import lang.Identifier
+import uclid.Utils.ParserErrorList
 
 /** This is the main class for Uclid.
  *
@@ -185,24 +186,24 @@ object UclidMain {
       (acc, srcFile) => acc ++ parseFile(srcFile.getPath())
     }
 
-    val modIdSeq = parsedModules.map(m => (m.id, m.position))
-    val moduleErrors = SemanticAnalyzerPass.checkIdRedeclaration(modIdSeq, List.empty[ModuleError])
-    if (moduleErrors.size > 0) {
-      val errors = moduleErrors.map((me) => (me.msg, me.position))
-      throw new Utils.ParserErrorList(errors)
-    }
     // now process each module
     val init = (List.empty[Module], Scope.empty)
     // NOTE: The foldLeft/:: combination here reverses the order of modules.
     // The PassManager in instantiate calls run(ms : List[Module]); this version of run uses foldRight.
     // So modules end up being processed in the same order in both PassManagers.
-    return parsedModules.foldLeft(init) {
+    val processedModules = parsedModules.foldLeft(init) {
       (acc, m) =>
         val modules = acc._1
         val context = acc._2
         val mP = passManager.run(m, context).get
         (mP :: modules, context +& mP)
     }._1
+    val moduleNames = processedModules.map(m => (m.id, m.id.position)).reverse
+    val errors = SemanticAnalyzerPass.checkIdRedeclaration(moduleNames, List.empty)
+    if (errors.size > 0) {
+      throw new ParserErrorList(errors.map(e => (e.msg, e.position)))
+    }
+    processedModules
   }
 
   /** Instantiate module helper. */

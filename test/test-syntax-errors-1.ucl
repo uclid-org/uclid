@@ -6,13 +6,13 @@ module main
   var z1 : boolean;
   var z2 : boolean;
   init {
-    a = 0;
-    b = 0;
-    z = true;
+    a' = 0;
+    b' = 0;
+    z' = true;
   }
   next {
-    a = a + 1;
-    b = b + 2;
+    a' = a + 1;
+    b' = b + 2;
   }
   property global_z : z;
   property x0 : z -> z1 || z2;

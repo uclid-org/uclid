@@ -74,17 +74,17 @@ module main {
   }
   
   init {
-    st = {0, 0, true};
-    r1 = {{0, 0, true}, 0};
-    stp = st;
-    cnt = 0; 
+    st' = {0, 0, true};
+    r1' = {{0, 0, true}, 0};
+    stp' = st;
+    cnt' = 0; 
   }
   
   next {
-    call (st, stp) = foo(st);
-    call (r1, r2) = bar(r1);
+    call (st', stp') = foo(st);
+    call (r1', r2') = bar(r1);
      
-    cnt = cnt + 1;
+    cnt' = cnt + 1;
     
     assert (stp._1 == st._1);
     assert (stp._2 == st._2);

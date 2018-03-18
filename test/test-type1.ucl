@@ -5,15 +5,15 @@ module test {
     z, w = y, x + y;
   }
   init {
-    a = 0;
-    b = 1;
+    a' = 0;
+    b' = 1;
   }
   next {
-    call (a, b) = fib(a, b);
+    call (a', b') = fib(a, b);
   }
   
   control {
-  	simulate (5);
+  	unroll (5);
   }
 }
 
@@ -22,10 +22,10 @@ module test {
   var z : boolean;
 
   init {
-    y = 0;
+    y' = 0;
   }
   next {
-    y = y + 1;
-    z = !z;
+    y' = y + 1;
+    z' = !z;
   }
 }

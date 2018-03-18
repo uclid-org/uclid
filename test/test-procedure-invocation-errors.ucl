@@ -5,6 +5,6 @@ module main {
 
   var p : integer;
   next {
-    p = foo(p);
+    p' = foo(p);
   }
 }

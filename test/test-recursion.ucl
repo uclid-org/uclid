@@ -13,7 +13,7 @@ module main  {
   }
 
   next {
-    call (y) = foo(x, y);
+    call (y') = foo(x, y);
   }
   
   control {
