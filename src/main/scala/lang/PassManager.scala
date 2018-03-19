@@ -42,8 +42,11 @@ package uclid
 package lang
 
 import scala.collection.mutable.{ListBuffer,Set}
+import com.typesafe.scalalogging.Logger
 
-class PassManager {
+class PassManager(name : => String) {
+  lazy val logger = Logger(classOf[PassManager])
+
   type PassList = ListBuffer[ASTAnalysis]
   var passes : PassList = new PassList()
   var passNames : Set[String] = Set.empty
@@ -61,6 +64,7 @@ class PassManager {
     val init : Option[Module] = Some(module)
     passes.foldLeft(init){
       (mod, pass) => {
+        logger.debug("{} => running pass: {}", name, pass.passName)
         // println("[1] running pass: %s; moduleDefined: %s".format(pass.passName, mod.isDefined.toString))
         mod.flatMap(pass.visit(_, context))
       }

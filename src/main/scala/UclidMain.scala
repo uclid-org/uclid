@@ -140,7 +140,7 @@ object UclidMain {
     type NameCountMap = Map[Identifier, Int]
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
 
-    val passManager = new PassManager()
+    val passManager = new PassManager("compile")
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new ModuleCanonicalizer())
     passManager.addPass(new LTLOperatorIntroducer())
@@ -208,7 +208,7 @@ object UclidMain {
 
   /** Instantiate module helper. */
   def instantiateModules(moduleList: List[Module], mainModuleName : Identifier) : List[Module] = {
-    val passManager = new PassManager()
+    val passManager = new PassManager("instantiate")
     passManager.addPass(new ModuleInstanceChecker())
     passManager.addPass(new ModuleDependencyFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomFinder())
