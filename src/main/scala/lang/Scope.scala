@@ -50,7 +50,7 @@ object Scope {
     override val isReadOnly = true
   }
   case class ModuleDefinition(mod : lang.Module) extends ReadOnlyNamedExpression(mod.id, mod.moduleType)
-  case class Instance(instId : Identifier, moduleId : Identifier, modTyp : Type) extends ReadOnlyNamedExpression(instId, modTyp)
+  case class Instance(instD: InstanceDecl) extends ReadOnlyNamedExpression(instD.instanceId, instD.moduleType)
   case class TypeSynonym(typId : Identifier, sTyp: Type) extends ReadOnlyNamedExpression(typId, sTyp)
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
   case class InputVar(inpId : Identifier, inpTyp: Type) extends ReadOnlyNamedExpression(inpId, inpTyp)
@@ -195,7 +195,7 @@ case class Scope (
     val m1 = m.decls.foldLeft(map){ (mapAcc, decl) =>
       decl match {
         case instD : InstanceDecl =>
-          Scope.addToMap(mapAcc, Scope.Instance(instD.instanceId, instD.moduleId, instD.moduleType))
+          Scope.addToMap(mapAcc, Scope.Instance(instD))
         case ProcedureDecl(id, sig, _, _, _, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
         case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
         case StateVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.StateVar(id, typ)))

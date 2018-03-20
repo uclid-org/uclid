@@ -19,7 +19,7 @@ module cpu {
 
   next {
       inst' = mem[pc];
-      pc' = pc' + 1bv8;
+      pc' = pc + 1bv8;
   }
 }
   

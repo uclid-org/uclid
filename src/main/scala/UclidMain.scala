@@ -167,6 +167,7 @@ object UclidMain {
     passManager.addPass(new RewriteDefines())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
+    passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new ProcedureInliner())
     passManager.addPass(new CaseEliminator())
     passManager.addPass(new IntroduceFreshHavocs())

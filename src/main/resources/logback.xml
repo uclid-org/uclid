@@ -9,6 +9,7 @@
   </appender>
 
   <logger name="uclid.lang.PassManager" level="WARN"/>
+  <logger name="uclid.lang.VariableDependencyFinder" level="WARN"/>
 
   <root level="debug">
     <appender-ref ref="STDOUT" />

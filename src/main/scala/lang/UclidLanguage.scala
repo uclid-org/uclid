@@ -819,6 +819,25 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
       }
     }
   }
+  lazy val inputMap = modType.get.inputs.map({ 
+    p => argMap.get(p._1) match {
+      case Some(expr) => Some(p._1, p._2, expr)
+      case None => None
+    }
+  }).flatten
+  lazy val sharedVarMap = modType.get.sharedVars.map({ 
+    p => argMap.get(p._1) match {
+      case Some(expr) => Some(p._1, p._2, expr)
+      case None => None
+    }
+  }).flatten
+  lazy val outputMap = modType.get.outputs.map({ 
+    p => argMap.get(p._1) match {
+      case Some(expr) => Some(p._1, p._2, expr)
+      case None => None
+    }
+  }).flatten
+
   def argToString(arg : (Identifier, Option[Expr])) = arg._2 match {
     case Some(e) => arg._1.toString + ":" + e.toString
     case None => arg._1.toString + ": ()"
