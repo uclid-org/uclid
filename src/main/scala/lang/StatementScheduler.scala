@@ -46,7 +46,12 @@ object StatementScheduler {
       case SkipStmt() => Set.empty
       case AssertStmt(e, _) => Set.empty
       case AssumeStmt(e, _) => Set.empty
-      case HavocStmt(id) => Set(id)
+      case HavocStmt(h) => 
+        h match {
+          case HavocableId(id) => Set(id)
+          case HavocableFreshLit(f) =>
+            throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
+        }
       case AssignStmt(lhss, rhss) => lhss.map(lhs => lhs.ident).toSet
       case IfElseStmt(cond, ifblock, elseblock) =>
         writeSets(ifblock, context) ++ writeSets(elseblock, context)

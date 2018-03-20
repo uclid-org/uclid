@@ -687,7 +687,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitHavocStatement(st: HavocStmt, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnHavoc(TraversalDirection.Down, st, result, context)
-    result = visitIdentifier(st.id, result, context)
+    st.havocable match {
+      case HavocableId(id) =>
+        result = visitIdentifier(id, result, context)
+      case HavocableFreshLit(f) =>
+        result = visitFreshLiteral(f, result, context)
+    }
     result = pass.applyOnHavoc(TraversalDirection.Up, st, result, context)
     return result
   }
@@ -1407,9 +1412,24 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitHavocStatement(st: HavocStmt, context : Scope) : List[Statement] = {
-    val stP = visitIdentifier(st.id, context).toList.flatMap((id) => {
-      pass.rewriteHavoc(HavocStmt(id), context)
-    })
+    val stP = st.havocable match {
+      case HavocableId(id) =>
+        visitIdentifier(id, context).toList.flatMap((idP) => {
+          pass.rewriteHavoc(HavocStmt(HavocableId(idP)), context)
+        })
+      case HavocableFreshLit(f) =>
+        visitFreshLiteral(f, context).toList.flatMap((eP) => {
+          eP match {
+            case f : FreshLit =>
+              pass.rewriteHavoc(HavocStmt(HavocableFreshLit(f)), context)
+            case id : Identifier =>
+              pass.rewriteHavoc(HavocStmt(HavocableId(id)), context)
+            case _ =>
+              None
+          }
+        })
+    }
+
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 

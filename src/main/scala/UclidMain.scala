@@ -170,7 +170,7 @@ object UclidMain {
     passManager.addPass(new ProcedureInliner())
     passManager.addPass(new CaseEliminator())
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
-    passManager.addPass(new FindFreshLiterals())
+    passManager.addPass(new IntroduceFreshHavocs())
     passManager.addPass(new RewriteFreshLiterals())
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 

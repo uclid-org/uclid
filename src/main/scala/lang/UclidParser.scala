@@ -389,7 +389,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwSkip <~ ";" ^^ { case _ => SkipStmt() } |
       KwAssert ~> Expr <~ ";" ^^ { case e => AssertStmt(e, None) } |
       KwAssume ~> Expr <~ ";" ^^ { case e => AssumeStmt(e, None) } |
-      KwHavoc ~> Id <~ ";" ^^ { case id => HavocStmt(id) } |
+      KwHavoc ~> Id <~ ";" ^^ { case id => HavocStmt(HavocableId(id)) } |
       Lhs ~ rep("," ~> Lhs) ~ "=" ~ Expr ~ rep("," ~> Expr) <~ ";" ^^
         { case l ~ ls ~ "=" ~ r ~ rs => AssignStmt(l::ls, r::rs) } |
       KwCall ~> Id ~ ExprList <~ ";" ^^

@@ -73,7 +73,12 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
     if (d == TraversalDirection.Up) {
       context.procedure match {
         case Some(proc) =>
-          checkIdent(proc, havocStmt.id, context, in)
+          havocStmt.havocable match {
+            case HavocableId(id) =>
+              checkIdent(proc, id, context, in)
+            case HavocableFreshLit(f) =>
+              in
+          }
         case None => in
       }
     } else { in }

@@ -524,8 +524,13 @@ class SymbolicSimulator (module : Module) {
         val effectiveExpr = smt.OperatorApplication(smt.ImplicationOp, List(pathCondExpr, assumpExpr))
         addAssumption(effectiveExpr)
         return symbolTable
-      case HavocStmt(id) =>
-        return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(scope.typeOf(id).get)))
+      case HavocStmt(h) =>
+        h match {
+          case HavocableId(id) =>
+            return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(scope.typeOf(id).get)))
+          case HavocableFreshLit(f) =>
+            throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
+        }
       case AssignStmt(lhss,rhss) =>
         val es = rhss.map(i => evaluate(i, symbolTable, pastTables, scope));
         return simulateAssign(lhss, es, symbolTable, label)
@@ -552,7 +557,13 @@ class SymbolicSimulator (module : Module) {
       case SkipStmt() => Set.empty
       case AssertStmt(e, id) => Set.empty
       case AssumeStmt(e, id) => Set.empty
-      case HavocStmt(id) => Set(id)
+      case HavocStmt(h) => 
+        h match {
+          case HavocableId(id) =>
+            Set(id)
+          case HavocableFreshLit(f) =>
+            throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
+        }
       case AssignStmt(lhss,rhss) =>
         return lhss.map(lhs => lhs.ident).toSet
       case IfElseStmt(e,then_branch,else_branch) =>

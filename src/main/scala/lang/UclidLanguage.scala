@@ -716,8 +716,15 @@ case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
 case class AssumeStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assume " + e + "; // " + position.toString)
 }
-case class HavocStmt(id: Identifier) extends Statement {
-  override def toLines = List("havoc " + id + "; // " + position.toString)
+sealed abstract class HavocableEntity extends ASTNode
+case class HavocableId(id : Identifier) extends HavocableEntity {
+  override def toString = id.toString()
+}
+case class HavocableFreshLit(f : FreshLit) extends HavocableEntity {
+  override def toString = f.toString()
+}
+case class HavocStmt(havocable : HavocableEntity) extends Statement {
+  override def toLines = List("havoc " + havocable.toString() + "; // " + position.toString)
 }
 case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines =
