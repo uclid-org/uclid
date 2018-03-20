@@ -564,7 +564,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     // monitor iff "assignments"
     val monitorBiImpls = monitors.flatMap(r => r.biImplications)
     val biImplHavocs = monitorBiImpls.map(r => HavocStmt(r._1))
-    val biImplAssumes = monitorBiImpls.collect{ case (id, Some(expr)) => AssumeStmt(iffExpr(id, expr), None) }
+    val biImplAssumes = monitorBiImpls.collect{ case (id, Some(expr)) => AssumeStmt(implExpr(id, expr), None) }
 
     // monitor internal assignments.
     val assignmentPairs = monitors.flatMap(r => r.assignments)

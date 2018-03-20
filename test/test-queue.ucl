@@ -58,7 +58,7 @@ module queue
   }
 
   const pushed_data : integer;
-  invariant[LTL] head_le_tail : head <= tail;
+  invariant[LTL] head_le_tail : G(head <= tail);
   invariant[LTL] queue_inserts : G((inited && op == push && data == pushed_data && X(op != pop)) 
   									  ==> X(in_queue(pushed_data)));
   invariant[LTL] push_eventually_pops :
@@ -93,6 +93,7 @@ module main
   }
 
   next {
+    assert false;
     case
 	  (step == 0) || (step == 1) : { op' = push; }
 	  (step == 2) || (step == 3) : { op' = pop; }
