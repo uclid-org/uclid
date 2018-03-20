@@ -169,7 +169,6 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new ProcedureInliner())
     passManager.addPass(new CaseEliminator())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
     passManager.addPass(new IntroduceFreshHavocs())
     passManager.addPass(new RewriteFreshLiterals())
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
