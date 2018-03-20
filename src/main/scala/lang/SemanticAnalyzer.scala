@@ -87,6 +87,14 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
       in
     }
   }
+  override def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
+    if (d == TraversalDirection.Down) {
+      val modType = inst.modType.get
+      in
+    } else {
+      in
+    }
+  }
 }
 
 class SemanticAnalyzer extends ASTAnalyzer("SemanticAnalyzer", new SemanticAnalyzerPass())  {

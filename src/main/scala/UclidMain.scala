@@ -170,6 +170,7 @@ object UclidMain {
     passManager.addPass(new CaseEliminator())
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
+    passManager.addPass(new ASTPrinter("ASTPrinter$2"))
     passManager.addPass(new FindFreshLiterals())
     passManager.addPass(new RewriteFreshLiterals())
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))

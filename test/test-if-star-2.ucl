@@ -1,0 +1,39 @@
+module main {
+  var x : integer;
+  var y : integer;
+  var n : integer;
+  
+  init {
+    x' = 0;
+    y' = 0;
+    n' = 0;
+  }
+
+  procedure set_xy() returns (xP : integer, yP : integer)
+  {
+    xP, yP = x, y;
+    for i in range(1, 2) {
+      if (*) {
+        xP = xP + 1;
+      } else {
+        yP = yP + 1;
+      }
+    }
+  }
+
+  next {
+    // noteToSelf(ReorderingTest)
+    call (x', y') = set_xy();
+    n' = n + 2;
+  }
+  
+  property eq_nxy : (n == (x + y));
+
+  control {
+    print_module;
+    v = unroll(3);
+    check;
+    print_results;
+    v->print_cex(n, x, y);
+  }
+}
