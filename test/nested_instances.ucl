@@ -90,7 +90,7 @@ module Sys {
 
   // main and ISR functions composed synchronously
   instance main_f : main_func (enable : (M_enable), timerCount : (timerCount));
-  instance ISR_f : ISR_func (enable : (I_enable), timerCount : (timerCount), return_ISR : (return_ISR));
+  instance ISR_f : ISR_func (enable : (I_enable), timerCount : (timerCount), return_ISR : (return_ISR'));
 
   init {
     mode' = main_t;
@@ -143,7 +143,7 @@ module main {
   var turn : boolean;
   var assert_intr : boolean;
 
-  instance Env_i : Env(assert_intr : (assert_intr));
+  instance Env_i : Env(assert_intr : (assert_intr'));
   instance Sys_i : Sys(assert_intr : (assert_intr));
 
   procedure havoc_turn()

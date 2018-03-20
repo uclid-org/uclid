@@ -84,7 +84,7 @@ module main
   var step : integer;
   var head : integer;
 
-  instance queue_i : queue(op : (op'), data : (data), first : (head'));
+  instance queue_i : queue(op : (op'), data : (data), first : (head));
 
   init {
     op' = nop;
