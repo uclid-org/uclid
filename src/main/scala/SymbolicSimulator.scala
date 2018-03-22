@@ -314,7 +314,7 @@ class SymbolicSimulator (module : Module) {
   def printCEX(results : List[CheckResult], exprs : List[Expr], arg : Option[Identifier]) {
     def labelMatches(p : AssertInfo) : Boolean = {
       arg match {
-        case Some(id) => id.toString == p.label
+        case Some(id) => id.toString == p.label || p.label.startsWith(id.toString + ":")
         case None => true
       }
     }
