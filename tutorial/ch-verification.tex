@@ -18,15 +18,16 @@ Let us revisit the model from Example~\ref{ex:fib-model}. This is now shown agai
 Let us try running \uclid{} on Example~\ref{ex:fib-induction} with the new proof script.
 \begin{Verbatim}[frame=single, samepage=true]
 $ uclid examples/tutorial/ex3.1-fib-induction.ucl 
+Successfully parsed 1 and instantiated 1 module(s).
 1 assertions passed.
 1 assertions failed.
 0 assertions indeterminate.
-  FAILED -> induction (step) [Step #1] property 
-  a_le_b @ examples/tutorial/ex3-fib-induction.ucl, line 14
+  FAILED -> induction (step) [Step #1] 
+  property a_le_b @ ex3.1-fib-induction.ucl, line 14
+Finished execution for module: main.
 \end{Verbatim}
 
 Uh oh, we seem to have a problem! \uclid{} is telling us that the inductive proof failed. We can try to examine why the proof failed by using the \codelike{print_cex} command to examine the counterexample to the proof.
-
 
 \begin{uclidlisting}[htbp]
     \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.2-fib-induction-cex.ucl}
@@ -39,15 +40,14 @@ The only changes between Example~\ref{ex:fib-induction} and Example~\ref{ex:fib-
 Running \uclid{} on Example~\ref{ex:fib-induction-cex} produces the following.
 
 \begin{Verbatim}[frame=single, samepage=true]
+Successfully parsed 1 and instantiated 1 module(s).
 1 assertions passed.
 1 assertions failed.
 0 assertions indeterminate.
-  FAILED -> vobj [Step #1] property 
-  a_le_b @ examples/tutorial/ex3.2-fib-induction-cex.ucl, 
-  line 14
-CEX for vobj [Step #1] property 
-a_le_b @ examples/tutorial/ex3.2-fib-induction-cex.ucl, 
-line 14
+  FAILED -> vobj: induction (step) [Step #1] 
+  property a_le_b @ ex3.2-fib-induction-cex.ucl, line 14
+CEX for vobj: induction (step) [Step #1] 
+property a_le_b @ ex3.2-fib-induction-cex.ucl, line 14
 =================================
 Step #0
   a : -1
@@ -58,6 +58,7 @@ Step #1
   a : 0
   b : -1
 =================================
+Finished execution for module: main.
 \end{Verbatim}
 
 To understand the counterexample, it is helpful to review how the inductive proof engine works. When inductively proving the \keyword{invariant} \codelike{a_le_b}, \uclid{} considers some arbitrary state that satisfies this property, executes the \keyword{next} block, and checks whether \codelike{a_le_b} holds on the resultant state.
@@ -68,21 +69,23 @@ What is the real problem here? Taking a closer look at Example~\ref{ex:fib-induc
 
 \subsection{Inductive Proof for the Fibonacci Model}
 
-Example~\ref{ex:fib-induction-proof} shows the same model as Example~\ref{ex:fib-induction-cex}, but with a stronger induction hypothesis. \uclid{}'s inductive engine will now start in an arbitrary state that assumes that both invariants \codelike{a_le_b} and \codelike{a_b_ge_0} hold and attempt to prove that both of these still hold after the \keyword{next} block is executed.
-
 \begin{uclidlisting}[htbp]
     \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.3-fib-induction-proof.ucl}
     \caption{Inductive proof for the Fibonacci model}
     \label{ex:fib-induction-proof}
 \end{uclidlisting}
 
+Example~\ref{ex:fib-induction-proof} shows the same model as Example~\ref{ex:fib-induction-cex}, but with a stronger induction hypothesis. \uclid{}'s inductive engine will now start in an arbitrary state that assumes that both invariants \codelike{a_le_b} and \codelike{a_b_ge_0} hold and attempt to prove that both of these still hold after the \keyword{next} block is executed.
+
 Let us now run \uclid{} on this new model.
 
 \begin{Verbatim}[frame=single, samepage=true]
+Successfully parsed 1 and instantiated 1 module(s).
 $ uclid examples/tutorial/ex3.3-fib-induction-proof.ucl 
 4 assertions passed.
 0 assertions failed.
 0 assertions indeterminate.
+Finished execution for module: main.
 \end{Verbatim}
 
 Success! We have shown that our system model satisfies its specification.
@@ -95,25 +98,25 @@ Success! We have shown that our system model satisfies its specification.
     \label{ex:fib-model-v2}
 \end{uclidlisting}
 
-Let us return to the model of Example~\ref{ex:fib-model} which is reproduced as Example~\ref{ex:fib-model-v2} with a few changes. We used the \codelike{unroll} command for verification. This command performs bounded model checking and takes a single argument -- the number of steps to unroll the model for. In Example~\ref{ex:fib-model-v2}, we are unrolling the model for 3 steps. 
+Let us return to the model of Example~\ref{ex:fib-model} which is reproduced as Example~\ref{ex:fib-model-v2} with a few changes. We used the \codelike{unroll} command for verification. This command performs bounded model checking and takes a single argument -- the number of steps to unroll the model for. In Example~\ref{ex:fib-model-v2}, we are unrolling the model for 3 steps. We have introduced the constant \codelike{flag} on line~4. A constant holds a symbolic value that does not change during computation. The initial value of the constant is assigned non-deterministically and can be controlled using assumptions.
 
 \subsection{Embedded assume and assert statements}
 
-A second difference with between Example~\ref{ex:fib-model} and Example~\ref{ex:fib-model-v2} is on lines 9,~10~and~15.
+A second difference with between Example~\ref{ex:fib-model} and Example~\ref{ex:fib-model-v2} is on lines 12--14, 24 and 25.  Instead of using a module-level assumption declarations as in Example~\ref{ex:fib-model}, we have three embedded assumptions in the \codelike{set\_init} procedure on lines 12--14, and two embedded assertions in the \keywordbf{next} block on lines 23 and 25. A module-level assumption is assumed to hold solver at every step of execution, while an embedded assumption is assumed ``instantaneously.'' In particular, the assumptions on lines~12--14 tells the solver to assume that $\codelike{a} \leq \codelike{b}$, $\codelike{a} >= 0$ and $\codelike{b} >= 0$ at the end of the \keywordbf{set\_init} procedure. Notice that we are not assigning specific values to \codelike{a} and \codelike{b}, instead we are asking \uclid{} to consider potential values of \codelike{a} and \codelike{b} such that $\codelike{a} \leq \codelike{b}$, $\codelike{a} \geq 0$ and $\codelike{b} \geq 0$.
 
-Instead of using a module-level assumption declarations as in Example~\ref{ex:fib-model}, we have two embedded assumptions in the \keywordbf{init} block on lines 9~and~10, and an embedded assertion in the \keywordbf{next} block on line 15. A module-level assumption is assumed to hold by the solver at every step of execution, while an embedded assumption is assumed ``instantaneously.'' In particular, the assumptions on lines~9--10 tells the solver to assume that $\codelike{a} \leq \codelike{b}$ at the end of the \keywordbf{init} block. Notice that we are not assigning specific values to \codelike{a} and \codelike{b}, instead we are asking \uclid{} to consider all values of \codelike{a} and \codelike{b} where $\codelike{a} \leq \codelike{b}$, $\codelike{a} \geq 0$ and $\codelike{b} \geq 0$.
-
-Similarly the assertion on line~15 is evaluated at that specific location in the code (the end of the \keywordbf{next} block), whereas a module-level assertion would be evaluated after the \keywordbf{init} block and after the \keywordbf{next} block is evaluated at each step.
+Similarly the assertions on lines 23 and 25 are evaluated at that specific location in the code. In particular the assertion on line 23 is only checked when \codelike{flag} is \codelike{true}, while the assertion one line 25 is checked when \codelike{flag} is \codelike{false}. Since \codelike{flag} is always \codelike{true} in our model, the assertion on line 25 will never fire. In contrast, note that a module-level assertion would be evaluated after the \keywordbf{init} block and after each execution of the \keywordbf{next} block.
 
 \subsection{Running \uclid{}}
 
-Running \uclid{} on Example~\ref{ex:fib-model-v2} shows that the embedded assertion does indeed hold for all states reachable within 3 steps of the initial state.
+Running \uclid{} on Example~\ref{ex:fib-model-v2} shows that the embedded assertions do indeed hold for all states reachable within 3 steps of the initial state.
 
 \begin{Verbatim}[frame=single, samepage=true]
 $ uclid examples/tutorial/ex3.4-fib-model-revisted.ucl 
-3 assertions passed.
+Successfully parsed 1 and instantiated 1 module(s).
+6 assertions passed.
 0 assertions failed.
 0 assertions indeterminate.
+Finished execution for module: main.
 \end{Verbatim}
 
 \section{Future Directions}

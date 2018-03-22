@@ -1,6 +1,7 @@
 module main {
   // System description. blah
-  var a, b : integer;
+  var a, b   : integer;
+  const flag : boolean;
 
   procedure set_init()
     modifies a, b;
@@ -10,6 +11,7 @@ module main {
     // embedded assumptions.
     assume (a <= b);
     assume (a >= 0 && b >= 0);
+    assume (flag);
   }
 
   init {
@@ -17,8 +19,11 @@ module main {
   }
   next {
     a', b' = b, a + b;
-    // embedded assertion.
-    assert (a' <= b');
+    if (flag) {
+      assert (a' <= b');
+    } else {
+      assert (false);
+    }
   }
 
   // Proof script.
