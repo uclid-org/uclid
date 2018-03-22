@@ -1,101 +1,71 @@
 module common {
   // This module declares types that are used in the rest of the model.
 
-  type addr_t ;
+  type addr_t;
   type word_t = bv8;
 
-  type op_t   = enum { op_mov, op_add, op_sub, op_load, op_store, op_syscall, op_sysret };
+  type op_t   = enum { op_mov, op_add, op_sub, op_load, op_store };
   type mode_t = enum { usr_mode, sup_mode };
 
   type mem_t = [addr_t]word_t;
 }
 
 module cpu {
-  // Import type aliases from common.
   type addr_t = common.addr_t;
   type mem_t  = common.mem_t;
   type word_t = common.word_t;
   type op_t   = common.op_t;
-  type mode_t = common.mode_t;
-  
-  type regindex_t; 
+  type regindex_t = bv1; // type of register file.
   type regs_t = [regindex_t]word_t;
 
-  // The program memory is an input to this module.
-  input imem : mem_t;
-  
-  var dmem : mem_t;
-  var regs : regs_t;
-  var pc   : addr_t;
-  var mode : mode_t;
+  input imem         : mem_t; // program memory.
+  var dmem           : mem_t;   // data memory.
+  var regs           : regs_t;
+  var pc             : addr_t;
+  var inst, result   : word_t;
 
-  const init_pc : addr_t;
-  
-  function word2op      ( w : word_t ) : op_t;
-  function word2reg0    ( w : word_t ) : regindex_t;
-  function word2reg1    ( w : word_t ) : regindex_t;
-  function word2imm     ( w : word_t ) : word_t;
-  function word2nextPC  ( w : addr_t ) : addr_t;
-  function word2addr    ( w : word_t ) : addr_t;
-  function in_sup_range ( w : word_t ) : boolean;
+  function inst2op   (i : word_t) : op_t;
+  function inst2reg0 (i : word_t) : regindex_t;
+  function inst2reg1 (i : word_t) : regindex_t;
+  function inst2imm  (i : word_t) : word_t;
+  function inst2addr (i : word_t) : addr_t;
+  function nextPC(i : word_t, pc : addr_t) : addr_t; 
 
-  input nd : boolean;
-  var inst   : word_t;
-  var op     : op_t;
-  var r0ind  : regindex_t;
-  var r1ind  : regindex_t;
-  var r0     : word_t;
-  var r1     : word_t;
-  var result : word_t;
+  procedure exec_inst(inst : word_t, pc : addr_t)
+    returns (result : word_t, pc_next : addr_t)
+    modifies regs, dmem;
+  {
+    var op           : op_t;
+    var r0ind        : regindex_t;
+    var r1ind        : regindex_t;
+    var r0           : word_t;
+    var r1           : word_t;
 
-  // Define initial state for the modules.
+    op = inst2op(inst);
+    r0ind, r1ind = inst2reg0(inst), inst2reg1(inst);
+    r0, r1 = regs[r0ind], regs[r1ind];
+    case
+      (op == op_mov)     : { result = inst2imm(inst); }
+      (op == op_add)     : { result = r0 + r1; }
+      (op == op_sub)     : { result = r0 - r1; }
+      (op == op_load)    : { result = dmem[inst2addr(inst)]; }
+      (op == op_store)   : { result = r0; dmem[inst2addr(inst)] = r0; }
+    esac
+    pc_next = nextPC(inst, pc);
+    regs[r0ind] = result;
+  }
+
   init {
     assume (forall (r : regindex_t) :: regs[r] == 0bv8);
     assume (forall (a : addr_t) :: dmem[a] == 0bv8);
-    assume (pc == init_pc);
-    inst = 0bv8;
-    mode = sup_mode;
   }
 
-  // Define "next" transition.
   next {
-    // get the next instruction.
-    inst = imem[pc];
-    // find its operation
-    op = word2op(inst);
-    // and its operands
-    r0ind = word2reg0(inst);
-    r1ind = word2reg1(inst);
-    r0 = regs[r0ind];
-    r1 = regs[r1ind];
-    
-    // now execute
-    case
-      (op == op_mov)     : { result = word2imm(inst); pc = word2nextPC(pc);}
-      (op == op_add)     : { result = r0 + r1; pc = word2nextPC(pc); }
-      (op == op_sub)     : { result = r0 - r1; pc = word2nextPC(pc); }
-      (op == op_load)    : { result = dmem[word2addr(inst)]; pc = word2nextPC(pc); }
-      (op == op_store)   : { 
-        result = r0;
-        dmem[word2addr(inst)] = r1; 
-        pc = word2nextPC(pc);
-      }
-      // These next two instructions don't do anything yet.
-      (op == op_syscall) : { 
-        result = r0;
-        mode = sup_mode; 
-        pc = word2nextPC(pc);
-      }
-      (op == op_sysret)  : { 
-        result = r0;
-        mode = usr_mode; 
-        pc = word2nextPC(pc);
-      }
-    esac
-    regs[r0ind] = result;
+    inst' = imem[pc];
+    call (result', pc') = exec_inst(inst, pc);
   }
 }
-  
+
 module main {
   // Import types
   type addr_t     = common.addr_t;
@@ -113,6 +83,8 @@ module main {
 
   init {
     // Nothing here.
+    assume (cpu1->pc == cpu2->pc);
+    assume (cpu1->inst == cpu2->inst);
   }
 
   next {
@@ -133,6 +105,6 @@ module main {
     v = unroll(3);
     check;
     print_results;
-    v->print_cex (cpu1->op, cpu2->op);
+    v->print_cex(cpu1->inst, cpu2->inst, cpu1->result, cpu2->result, cpu1->regs[0bv1], cpu2->regs[0bv1]);
   }
 }

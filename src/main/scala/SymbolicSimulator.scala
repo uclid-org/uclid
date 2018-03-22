@@ -120,11 +120,11 @@ class SymbolicSimulator (module : Module) {
             symbolicSimulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false, context, label, LTLFilter)
           case "induction" =>
             val labelBase : String = cmd.resultVar match {
-              case Some(l) => l.toString
-              case None    => "induction (base case)"
+              case Some(l) => l.toString + ": induction (base)"
+              case None    => "induction (base)"
             }
             val labelStep : String = cmd.resultVar match {
-              case Some(l) => l.toString
+              case Some(l) => l.toString + ": induction (step)"
               case None    => "induction (step)"
             }
             val k = if (cmd.args.size > 0) {
@@ -152,7 +152,7 @@ class SymbolicSimulator (module : Module) {
             val procName = cmd.args(0).asInstanceOf[Identifier]
             val proc = module.procedures.find(p => p.id == procName).get
             val label : String = cmd.resultVar match {
-              case Some(l) => l.toString
+              case Some(l) => l.toString + ": verify(%s)".format(procName.toString())
               case None    => "verify(%s)".format(procName.toString)
             }
             verifyProcedure(proc, label)

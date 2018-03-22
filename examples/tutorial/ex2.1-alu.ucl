@@ -11,16 +11,24 @@ module main
   output result     : result_t;
 
   var regs          : [bv3]bv8;
-  var r1val, r2val  : bv8;
   var cnt           : bv8; 
 
-  init {
+  procedure set_init_state()
+    modifies regs, cnt, result;
+  {
     for i in range(0bv3, 7bv3) { regs[i] = 1bv8; }
     cnt = 1bv8;
     result.value = 1bv8;
   }
+  
+  init {
+    call set_init_state();
+  }
 
-  next {
+  procedure exec_cmd() returns (r : result_t)
+    modifies regs;
+  {
+    var r1val, r2val  : bv8;
     // Do we have a valid command?
     if (valid) {
       r1val = regs[r1];
@@ -30,13 +38,16 @@ module main
         (cmd == sub)      : { regs[r1] = r1val - r2val; }
         (cmd == mov_imm)  : { regs[r1] = immed; }
       esac
-      result.valid = true;
-      result.value = regs[r1];
+      r.valid = true;
+      r.value = regs[r1];
     } else {
-      result.valid = false;
+      r.valid = false;
     }
-    // This code is only for testing this module.
-    cnt = cnt + cnt;
+  }
+    
+  next {
+    call (result') = exec_cmd();
+    cnt' = cnt + cnt;
   }
 
   // Specification.

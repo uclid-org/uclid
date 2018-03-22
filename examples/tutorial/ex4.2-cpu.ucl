@@ -20,7 +20,7 @@ module cpu {
 
   procedure exec_inst(inst : word_t, pc : addr_t)
     returns (result : word_t, pc_next : addr_t)
-    modifies regs;
+    modifies regs, dmem;
   {
     var op           : op_t;
     var r0ind        : regindex_t;
@@ -36,7 +36,7 @@ module cpu {
       (op == op_add)     : { result = r0 + r1; }
       (op == op_sub)     : { result = r0 - r1; }
       (op == op_load)    : { result = dmem[inst2addr(inst)]; }
-      (op == op_store)   : { result = r0; }
+      (op == op_store)   : { result = r0; dmem[inst2addr(inst)] = r0; }
     esac
     pc_next = pc + 1bv8;
     regs[r0ind] = result;
@@ -45,12 +45,12 @@ module cpu {
   init {
     assume (forall (r : regindex_t) :: regs[r] == 0bv8);
     assume (forall (a : addr_t) :: dmem[a] == 0bv8);
-    pc = 0bv8;
-    inst = 0bv8;
+    pc' = 0bv8;
+    inst' = 0bv8;
   }
 
   next {
-    inst = imem[pc];
-    call (result, pc) = exec_inst(inst, pc);
+    inst' = imem[pc];
+    call (result', pc') = exec_inst(inst, pc);
   }
 }

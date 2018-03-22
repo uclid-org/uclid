@@ -2,17 +2,23 @@ module main {
   // System description. blah
   var a, b : integer;
 
-  init {
+  procedure set_init()
+    modifies a, b;
+  {
     havoc a;
     havoc b;
     // embedded assumptions.
     assume (a <= b);
     assume (a >= 0 && b >= 0);
   }
+
+  init {
+    call set_init();
+  }
   next {
-    a, b = b, a + b;
+    a', b' = b, a + b;
     // embedded assertion.
-    assert (a <= b);
+    assert (a' <= b');
   }
 
   // Proof script.
