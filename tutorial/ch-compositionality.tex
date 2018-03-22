@@ -45,14 +45,6 @@ Values belonging to an uninterpreted type can be created using \emph{uninterpret
 Uninterpreted functions allow us to reason about an abstract CPU model without considering specific instruction encodings or decoder models. This could potentially lead to more general proofs as well as more scalable automated proofs. 
 
 
-\section{Procedure Definition}
-Besides modules, another way of managing model complexity in \uclid{} is through the use of \emph{procedures}. Example~\ref{ex:cpu-cpu} defines the \keyword{procedure} \codelike{exec_inst} on line~21. The procedure takes two arguments: \codelike{inst} and \codelike{pc} and returns two values: \codelike{result} and \codelike{pc_next}.
-
-Note that all module-level state modified by the procedure must be declared using a \keyword{modifies} clause; this is shown on line~23.
-
-\subsection{Procedure Invocation}
-Procedures are invoked using the \keyword{call} keyword. In Example~\ref{ex:cpu-cpu}, procedure \codelike{exec_inst} is called on line~54 of Example~\ref{ex:cpu-cpu}. The actual arguments to the procedure are \codelike{inst} and \codelike{pc}, and the return values of the procedure will be stored in the variables \codelike{result} and \codelike{pc}.
-
 \section{Module Instantiation and Scheduling}
 
 Modules are instantiated using the \keyword{instance} keyword. Lines 14~and~15 of Example~\ref{ex:cpu-main} show two instantiations of the module \codelike{cpu}. For each instance, the module input \codelike{imem} is mapped to the state variable \codelike{imem} of module \codelike{main}.
@@ -68,13 +60,15 @@ The state variables of an instantiated module are accessed using the \codelike{-
 Executing \uclid{} on the complete CPU model shows that CPU is in fact deterministic. 
 
 \begin{Verbatim}[frame=single, samepage=true]
-$ uclid examples/tutorial/ex4.{1,2,3}-cpu.ucl 
+$ uclid ex4.1-cpu.ucl ex4.2-cpu.ucl ex4.3-cpu.ucl 
+Successfully parsed 3 and instantiated 1 module(s).
 16 assertions passed.
 0 assertions failed.
 0 assertions indeterminate.
+Finished execution for module: main.
 \end{Verbatim}
 
-Note the file \codelike{ex4.1-cpu.ucl} contains three modules. Each of these modules could potentially have \keyword{control} blocks. Which \uclid{} is invoked on this model, it executes only the \keyword{control} block of the \codelike{main} module.  If we wanted to include a \keyword{control} block for the \codelike{alu} module in order to verify properties of this module, we would have to invoke \uclid{} on this specific module using the \codelike{--main} command-line option.
+Note the file \codelike{ex4.1-cpu.ucl} contains three modules. Each of these modules could potentially have \keyword{control} blocks. Which \uclid{} is invoked on this model, it executes only the \keyword{control} block of the \codelike{main} module.  If we had included a \keyword{control} block for the \codelike{alu} module and wished to verify properties of this module, we would have to invoke \uclid{} on this specific module using the \codelike{--main} command-line option.
 
 \subsection{Exercise: Inductive Proof of CPU model}
 Prove determinism of the CPU model using induction rather than bounded model checking. You will need to add strengthening inductive invariants relating the two CPU instances.

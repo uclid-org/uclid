@@ -24,8 +24,10 @@ module main {
   }
   
   // These are our properties.
-  invariant eq_regs : (forall (ri : regindex_t) :: cpu_i_1->regs[ri] == cpu_i_2->regs[ri]);
-  invariant eq_mem  : (forall (a : addr_t) :: cpu_i_1->dmem[a] == cpu_i_2->dmem[a]);
+  invariant eq_regs : 
+    (forall (ri : regindex_t) :: cpu_i_1->regs[ri] == cpu_i_2->regs[ri]);
+  invariant eq_mem  : 
+    (forall (a : addr_t) :: cpu_i_1->dmem[a] == cpu_i_2->dmem[a]);
   invariant eq_pc   : (cpu_i_1->pc == cpu_i_2->pc);
   invariant eq_inst : (cpu_i_1->inst == cpu_i_2->inst);
 

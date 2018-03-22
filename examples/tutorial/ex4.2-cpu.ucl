@@ -7,7 +7,7 @@ module cpu {
   type regs_t = [regindex_t]word_t;
 
   input imem         : mem_t; // program memory.
-  var dmem           : mem_t;   // data memory.
+  var dmem           : mem_t; // data memory.
   var regs           : regs_t;
   var pc             : addr_t;
   var inst, result   : word_t;
@@ -23,10 +23,8 @@ module cpu {
     modifies regs, dmem;
   {
     var op           : op_t;
-    var r0ind        : regindex_t;
-    var r1ind        : regindex_t;
-    var r0           : word_t;
-    var r1           : word_t;
+    var r0ind, r1ind : regindex_t;
+    var r0, r1       : word_t;
 
     op = inst2op(inst);
     r0ind, r1ind = inst2reg0(inst), inst2reg1(inst);
@@ -45,8 +43,7 @@ module cpu {
   init {
     assume (forall (r : regindex_t) :: regs[r] == 0bv8);
     assume (forall (a : addr_t) :: dmem[a] == 0bv8);
-    pc' = 0bv8;
-    inst' = 0bv8;
+    pc', inst' = 0bv8, 0bv8;
   }
 
   next {
