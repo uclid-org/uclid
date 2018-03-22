@@ -3,16 +3,17 @@ module main {
   init {
     ltl__pending__p1_4' = true;
   }
-  procedure do_havoc()
+  procedure set_ltl__pending__p1_4()
     modifies ltl__pending__p1_4;
   {
     havoc ltl__pending__p1_4;
+    assume (ltl__pending__p1_4 == history(ltl__pending__p1_4, 1));
   }
   next {
-    call do_havoc();
-    assume (ltl__pending__p1_4 == history(ltl__pending__p1_4, 1));
-    assert (ltl__pending__p1_4);
+    call set_ltl__pending__p1_4();
   }
+  invariant pending_is_true: (ltl__pending__p1_4);
+  
   control {
     unroll(5);
     check;

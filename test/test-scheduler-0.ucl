@@ -1,0 +1,23 @@
+module main
+{
+  var a, b : integer;
+
+  init {
+    a' = 0;
+    b' = a' + 1;
+  }
+
+  next {
+    b' = a' + 1;
+    a' = a + 1;
+  }
+
+  invariant a_le_b: a <= b;
+
+  control {
+    // print_module;
+    v = unroll(5);
+    check;
+    // print_results;
+  }
+}

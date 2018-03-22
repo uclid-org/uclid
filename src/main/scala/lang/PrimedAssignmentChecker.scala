@@ -64,18 +64,19 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
     if (d == TraversalDirection.Down) {
       in
     } else {
+      def checkSeqConstruct(name : String) : T = {
+        context.procedure match {
+          case Some(proc) => in
+          case None =>
+            in + ModuleError("Sequential construct %s cannot be used outside a procedure".format(name), st.position)
+        }
+      }
       st match {
-        case AssertStmt(_, _) | AssumeStmt(_, _) | IfElseStmt(_, _, _) | ForStmt(_, _, _) |
-             CaseStmt(_) | ProcedureCallStmt(_, _, _) | ModuleCallStmt(_) | SkipStmt() => 
-          in
+        case IfElseStmt(_, _, _) | ForStmt(_, _, _) | CaseStmt(_) |
+             ProcedureCallStmt(_, _, _) | ModuleCallStmt(_) | SkipStmt() |
+             AssertStmt(_, _) | AssumeStmt(_, _) => in
         case HavocStmt(_) =>
-          context.procedure match {
-            case Some(proc) =>
-              in
-            case None =>
-              in + ModuleError("Havoc cannot be used outside a procedure", st.position)
-          }
-        
+          checkSeqConstruct("havoc")
         case AssignStmt(lhss, rhss) =>
           checkLhs(lhss, in, context)
       }

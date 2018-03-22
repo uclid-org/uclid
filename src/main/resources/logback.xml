@@ -12,6 +12,8 @@
   <logger name="uclid.lang.VariableDependencyFinder" level="OFF"/>
   <logger name="uclid.lang.StatementSchedulerPass" level="OFF"/>
   <logger name="uclid.lang.StatementScheduler" level="OFF"/>
+  <logger name="uclid.Utils.topoSort" level="OFF"/>
+  <logger name="uclid.Utils.schedule" level="OFF"/>
 
   <root level="debug">
     <appender-ref ref="STDOUT" />

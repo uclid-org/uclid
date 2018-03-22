@@ -55,7 +55,8 @@ object VerifierSpec {
       assert (results.count((e) => e.result.isUndefined) == 0);
     }
     catch {
-      case _ : Throwable =>
+      case p : Throwable =>
+        println(p.toString())
         assert (false)
     }
   }
@@ -127,6 +128,9 @@ class BasicVerifierSpec extends FlatSpec {
   }
   "test-if-star-2.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-if-star-2.ucl", 0)
+  }
+  "test-scheduler-0.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-scheduler-0.ucl", 0)
   }
   "test-assume-1.ucl" should "fail to verify five assertions." in {
     VerifierSpec.expectedFails("./test/test-assume-1.ucl", 5)

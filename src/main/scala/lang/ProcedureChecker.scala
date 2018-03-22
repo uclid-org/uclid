@@ -48,11 +48,11 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
   lazy val manager : PassManager = analysis.manager
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
 
-  def checkIdent(proc : ProcedureDecl, id : Identifier, context : Scope, in : T) : T = {
+  def checkIdent(proc : ProcedureDecl, id : Identifier, pos : ASTPosition, context : Scope, in : T) : T = {
     context.get(id).get match {
       case Scope.StateVar(_, _) | Scope.OutputVar(_, _) =>
         if (!proc.modifies.contains(id)) {
-          val error = ModuleError("Identifier was not declared modifiable: %s".format(id.toString), id.position)
+          val error = ModuleError("Identifier was not declared modifiable: %s".format(id.toString), pos)
           in + error
         } else { in }
       case _ => in
@@ -63,19 +63,32 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
     if (d == TraversalDirection.Up) {
       context.procedure match {
         case Some(proc) =>
-          checkIdent(proc, lhs.ident, context, in)
+          checkIdent(proc, lhs.ident, lhs.ident.position, context, in)
         case None => in
       }
     } else { in }
   }
 
+  override def applyOnProcedureCall(d : TraversalDirection.T, call : ProcedureCallStmt, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Up) {
+      context.procedure match {
+        case Some(proc) =>
+          val calledProc = context.module.get.procedures.find(p => p.id == call.id).get
+          calledProc.modifies.foldLeft(in)((acc, id) => checkIdent(proc, id, call.position, context, acc))
+        case None =>
+          in
+      }
+    } else {
+      in
+    }
+  }
   override def applyOnHavoc(d : TraversalDirection.T, havocStmt : HavocStmt, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       context.procedure match {
         case Some(proc) =>
           havocStmt.havocable match {
             case HavocableId(id) =>
-              checkIdent(proc, id, context, in)
+              checkIdent(proc, id, id.position, context, in)
             case HavocableFreshLit(f) =>
               in
           }

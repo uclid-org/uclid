@@ -70,7 +70,11 @@ object StatementScheduler {
         writeSets(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => writeSets(b._2, context)).toSet
-      case ProcedureCallStmt(id, callLhss, args) => callLhss.map(_.ident).toSet
+      case ProcedureCallStmt(id, callLhss, args) => 
+        val module = context.module.get
+        val procedure = module.procedures.find(p => p.id == id).get
+        val modifies = procedure.modifies
+        callLhss.map(_.ident).toSet ++ modifies.toSet
       case ModuleCallStmt(id) =>
         val namedExprOpt = context.map.get(id)
         Utils.assert(namedExprOpt.isDefined, "Must not haven an unknown instance here: " + id.toString())
@@ -233,29 +237,81 @@ class VariableDependencyFinder() extends ASTAnalyzer(
   lazy val logger = Logger(classOf[VariableDependencyFinder])
 
   var cyclicalDependency : Option[Boolean] = None
-  override def reset() {
-    in = Some(List.empty)
-  }
-
-  override def finish() {
-    val errors = out.get
-    if (errors.size > 0) {
-      throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)))
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val out = visitModule(module, List.empty, context)
+    if (out.size > 0) {
+      throw new Utils.ParserErrorList(out.map(e => (e.msg, e.position)))
     }
+    Some(module)
   }
 }
 
 class StatementSchedulerPass extends RewritePass {
   lazy val logger = Logger(classOf[StatementSchedulerPass])
-  override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
-    val stmts = next.body
+  type StmtDepGraph = Map[IdGenerator.Id, Set[IdGenerator.Id]]
+  type IdToStmtMap = Map[Identifier, IdGenerator.Id]
+
+  def reorderStatements(stmts : List[Statement], context : Scope) : List[Statement] = {
     val deps = StatementScheduler.getReadWriteSets(stmts, context)
-    val graph = StatementScheduler.addEdges(Map.empty, deps)
-    val module = context.module.get
-    val roots = module.vars.map(v => v._1) ++ module.outputs.map(v => v._1)
-    val order = Utils.topoSort(roots, graph)
-    logger.debug("Order: {}", order.toString())
-    Some(next)
+    val nodeIds = stmts.map(st => st.astNodeId)
+    val idToStmtIdMap : IdToStmtMap = (nodeIds zip deps).flatMap(p => p._2._2.map(id => (id -> p._1))).toMap
+    val stmtIdToStmtMap : Map[IdGenerator.Id, Statement] = stmts.map(st => (st.astNodeId -> st)).toMap
+    val stmtIdToIndexMap : Map[IdGenerator.Id, Int] = (nodeIds zip (1 to nodeIds.length)).toMap
+    logger.debug("Statement Id Map: {}", stmtIdToStmtMap.toString())
+    val stmtDepGraph = (stmts zip deps).foldLeft(Map.empty[IdGenerator.Id, Set[IdGenerator.Id]]) {
+      (acc, p) => {
+        val st = p._1
+        val ins = p._2._1
+        val outs = p._2._2
+        // add an edge from st.astNodeId to each of the statements that produce the ins
+        logger.debug("st: {}; ins: {}", st.astNodeId.toString(), ins.toString())
+        val inIds = ins.map(id => idToStmtIdMap.get(id)).flatten
+        acc + (st.astNodeId -> inIds)
+      }
+    }
+    logger.debug("stmt dep graph: {}", stmtDepGraph.toString())
+    val sortedOrder = Utils.schedule(nodeIds, stmtDepGraph)
+    logger.debug("sortedOrder: {}", sortedOrder.toString())
+    sortedOrder.map(id => stmtIdToStmtMap.get(id).get)
+  }
+  override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
+    val bodyP = reorderStatements(next.body, context)
+    Some(NextDecl(bodyP))
+  }
+  override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
+    val bodyP = reorderStatements(init.body, context)
+    Some(InitDecl(bodyP))
+  }
+  override def rewriteIfElse(ifelse : IfElseStmt, context : Scope) : List[Statement] = {
+    if (context.procedure.isEmpty) {
+      val ifBlockP = reorderStatements(ifelse.ifblock, context)
+      val elseBlockP = reorderStatements(ifelse.elseblock, context)
+      val ifElseP = IfElseStmt(ifelse.cond, ifBlockP, elseBlockP)
+      List(ifElseP)
+    } else {
+      List(ifelse)
+    }
+  }
+  override def rewriteFor(forStmt : ForStmt, context : Scope) : List[Statement] = {
+    if (context.procedure.isEmpty) {
+      val bodyP = reorderStatements(forStmt.body, context)
+      val forP = ForStmt(forStmt.id, forStmt.range, bodyP)
+      List(forP)
+    } else {
+      List(forStmt)
+    }
+  }
+  override def rewriteCase(caseStmt : CaseStmt, context : Scope) : List[Statement] = {
+    if (context.procedure.isEmpty) {
+      val bodiesP = caseStmt.body.map {
+        body => {
+          (body._1, reorderStatements(body._2, context))
+        }
+      }
+      List(CaseStmt(bodiesP))
+    } else {
+      List(caseStmt)
+    }
   }
 }
 
