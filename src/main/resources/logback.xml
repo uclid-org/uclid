@@ -14,6 +14,7 @@
   <logger name="uclid.lang.StatementScheduler" level="OFF"/>
   <logger name="uclid.Utils.topoSort" level="OFF"/>
   <logger name="uclid.Utils.schedule" level="OFF"/>
+  <logger name="uclid.smt.Z3Interface.assert" level="OFF"/>
 
   <root level="debug">
     <appender-ref ref="STDOUT" />

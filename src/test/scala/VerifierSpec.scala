@@ -61,8 +61,7 @@ object VerifierSpec {
     }
   }
 }
-
-class BasicVerifierSpec extends FlatSpec {
+class VerifierSanitySpec extends FlatSpec {
   "test-assert-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-assert-1.ucl", 0)
   }
@@ -75,14 +74,40 @@ class BasicVerifierSpec extends FlatSpec {
   "test-array-1-unsafe.ucl" should "verify all but 4 assertions." in {
     VerifierSpec.expectedFails("./test/test-array-1-unsafe.ucl", 4)
   }
-  "test-bv-assign.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-bv-assign.ucl", 0)
-  }
   "test-bv-fib.ucl" should "verify successfully all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-bv-fib.ucl", 1)
   }
   "test-case-mc91.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-case-mc91.ucl", 0)
+  }
+  "test-int-fib.ucl" should "verify successfully all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-int-fib.ucl", 1)
+  }
+  "test-mc91.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-mc91.ucl", 0)
+  }
+  "test-if-star.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-if-star.ucl", 0)
+  }
+  "test-if-star-2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-if-star-2.ucl", 0)
+  }
+  "test-scheduler-0.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-scheduler-0.ucl", 0)
+  }
+  "test-assume-1.ucl" should "fail to verify five assertions." in {
+    VerifierSpec.expectedFails("./test/test-assume-1.ucl", 5)
+  }
+  "test-assert-2.ucl" should "fail to verify five assertions." in {
+    VerifierSpec.expectedFails("./test/test-assert-2.ucl", 5)
+  }
+  "test-assert-3.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-assert-3.ucl", 0)
+  }
+}
+class BasicVerifierSpec extends FlatSpec {
+  "test-bv-assign.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bv-assign.ucl", 0)
   }
   "test-forloop.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-forloop.ucl", 0)
@@ -95,12 +120,6 @@ class BasicVerifierSpec extends FlatSpec {
   }
   "test-ite.ucl" should "verify all but 6 assertions successfully." in {
     VerifierSpec.expectedFails("./test/test-ite.ucl", 6)
-  }
-  "test-int-fib.ucl" should "verify successfully all but one assertion." in {
-    VerifierSpec.expectedFails("./test/test-int-fib.ucl", 1)
-  }
-  "test-mc91.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-mc91.ucl", 0)
   }
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
@@ -122,18 +141,6 @@ class BasicVerifierSpec extends FlatSpec {
   }
   "test-type2.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-type2.ucl", 0)
-  }
-  "test-if-star.ucl" should "verify all assertions." in {
-    VerifierSpec.expectedFails("./test/test-if-star.ucl", 0)
-  }
-  "test-if-star-2.ucl" should "verify all assertions." in {
-    VerifierSpec.expectedFails("./test/test-if-star-2.ucl", 0)
-  }
-  "test-scheduler-0.ucl" should "verify all assertions." in {
-    VerifierSpec.expectedFails("./test/test-scheduler-0.ucl", 0)
-  }
-  "test-assume-1.ucl" should "fail to verify five assertions." in {
-    VerifierSpec.expectedFails("./test/test-assume-1.ucl", 5)
   }
 }
 class ProcedureVerifSpec extends FlatSpec {

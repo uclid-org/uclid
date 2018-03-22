@@ -539,8 +539,9 @@ class SymbolicSimulator (module : Module) {
         var else_modifies : Set[Identifier] = writeSet(else_branch)
         // compute in parallel.
         val condExpr = evaluate(e, symbolTable, pastTables, scope)
+        val negCondExpr = smt.OperatorApplication(smt.NegationOp, List(condExpr))
         var then_st : SymbolTable = simulate(frameNumber, condExpr :: pathConditions, then_branch, symbolTable, scope, label)
-        var else_st : SymbolTable = simulate(frameNumber, condExpr :: pathConditions, else_branch, symbolTable, scope, label)
+        var else_st : SymbolTable = simulate(frameNumber, negCondExpr :: pathConditions, else_branch, symbolTable, scope, label)
         return symbolTable.keys.filter { id => then_modifies.contains(id) || else_modifies.contains(id) }.
           foldLeft(symbolTable){ (acc,id) =>
             acc.updated(id, smt.OperatorApplication(smt.ITEOp, List(condExpr, then_st(id), else_st(id))))

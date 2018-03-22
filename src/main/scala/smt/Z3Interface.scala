@@ -46,6 +46,8 @@ import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
 import com.microsoft.z3.enumerations.Z3_lbool
 
+import com.typesafe.scalalogging.Logger
+
 /**
  * Result of solving a Z3 instance.
  */
@@ -83,6 +85,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
  * Decide validity of SMTExpr's using a Z3 sovler.
  */
 class Z3Interface() extends Context {
+
   val cfg = new HashMap[String, String]()
   cfg.put("model", "true")
 
@@ -361,11 +364,11 @@ class Z3Interface() extends Context {
     solver.pop()
   }
 
+  lazy val assertLogger = Logger("uclid.smt.Z3Interface.assert")
   override def assert(e : Expr) {
-    // println("assert: " + e.toString())
     val z3Expr = exprToZ3(e).asInstanceOf[z3.BoolExpr]
-    // println("z3: " + z3Expr.toString())
-    // println(z3Expr.toString())
+    assertLogger.debug("assert: {}", e.toString)
+    assertLogger.debug("z3expr: {}", z3Expr.toString())
     solver.add(z3Expr)
   }
 
