@@ -1,3 +1,3 @@
 #! /bin/bash
-cd target/universal/ && unzip -o uclid-0.9.0.zip
+cd target/universal/ && unzip -o uclid-0.9.1.zip
 
