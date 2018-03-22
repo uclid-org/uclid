@@ -20,25 +20,68 @@ Types supported by \uclid{} are of the following kinds:
     \item Uninterpreted types.
 \end{enumerate}
 
-An enumerated type is used in line~4 of Example~\ref{ex:alu}. This declares a \textit{type synonym}: \codelike{cmd_t} is an alias for the enumerated type consisting of three values: \codelike{add}, \codelike{sub} and \codelike{mov_imm}. The input \codelike{cmd} is then declared to be of type \codelike{cmd_t} on line~8. 
+An enumerated type is used in line~3 of Example~\ref{ex:alu}. This declares a \textit{type synonym}: \codelike{cmd_t} is an alias for the enumerated type consisting of three values: \codelike{add}, \codelike{sub} and \codelike{mov_imm}. The input \codelike{cmd} is then declared to be of type \codelike{cmd_t} on line~8. 
 
 The input \codelike{valid} is of type \keyword{boolean}. Register indices \codelike{r1} and \codelike{r2} are bit-vectors of width 3 (\keyword{bv3}), while \codelike{immed}, \codelike{result}, \codelike{r1val} and \codelike{r2val} are bit-vectors of width 8 (\keyword{bv8}).
 
-Line~5 declares a type synonym for a \keyword{record}. It declares \codelike{result_t} as consisting of two fields: a Boolean field \codelike{valid} and a bit-vector field \codelike{value}. The output \codelike{result} is declared to be of type \codelike{result_t} on Line~11.
+Line~3 declares a type synonym for a \keyword{record}. It declares \codelike{result_t} as consisting of two fields: a Boolean field \codelike{valid} and a bit-vector field \codelike{value}. The output \codelike{result} is declared to be of type \codelike{result_t} on Line~9.
 
-The final point of interest, type-wise, is line~13. The state variable \codelike{regs} is declared to be of type array: indices to the array are of type \codelike{bv3} and elements of the array are of type \codelike{bv8}. This is used to model an 8-entry register file, where each register is a bit-vector of width 8.
+The final point of interest, type-wise, is line~10. The state variable \codelike{regs} is declared to be of type array: indices to the array are of type \codelike{bv3} and elements of the array are of type \codelike{bv8}. This is used to model an 8-entry register file, where each register is a bit-vector of width 8.
 
 \section{Statements in \uclid{}}
 
-Example~\ref{ex:alu} also provides examples of the most commonly used statements in \uclid{}. 
+\uclid{} allows the modeling of both sequential and parallel computation. Sequential computation is performed by defining a \keyword{procedure} while parallel computation occurs in the \keyword{init} and \keyword{next} blocks. 
+
+\subsection{Parallel vs. Sequential Computation}
+Assignments inside procedures are called \textbf{sequential assignments} and must be of the form \codelike{variable = expression;} Assignments inside the \codelike{init} and \codelike{next} blocks are \textbf{parallel assignments} must be of the form \codelike{variable' = expression;} and \uclid{} uses the notation \codelike{variable'} to distinguish parallel from sequential assignments.
+
+An example of sequential computation is the following:
+
+%\begin{uclidlisting}[htbp]
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  x = 1;
+  x = x + 2;
+  x = x + 3;
+\end{lstlisting}
+
+Recall that these sequential assignments \emph{must} appear inside a procedure. Executing these three statements will result \codelike{x} having the value 6. 
+
+    In contrast, the following sequence of parallel assignments is \textbf{not} allowed and will result in a compiler error.
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  x' = 1;
+  x' = x + 2;
+  x' = x + 3;
+\end{lstlisting}
+Only a single parallel assignment to a state/output variable is allowed in a code block. And since parallel assignments are computed in data-flow order, the order in which they are specified does not matter. This means that the following two snippets of code are equivalent:
+
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  x' = 0;
+  y' = x' + 1;
+\end{lstlisting}
+
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  y' = x' + 1;
+  x' = 0;
+\end{lstlisting}
+
+\uclid{} will determine that since \codelike{y'} depends on the value of \codelike{x'}, \codelike{x'} has to computed first and this value has to be used in the computation of \codelike{y'}. This is regardless of the order in which these assignments appear in the \codelike{init}/\codelike{next} block.
+%\caption{Example of sequential assignment.}
+%\label{ex:seq-assignment}
+%\end{uclidlisting}
+
+    %\lstinputlisting
+\subsection{Procedures}
+Example~\ref{ex:alu} demonstrates how sequential computation is used in concert with parallel computation. The \codelike{procedure} \codelike{set\_init\_state} (lines~13--18) is used to initialize the values of the registers (state variable \codelike{regs}), the variables \codelike{cnt} and \codelike{result}. Since this procedure updates the module's state variables, a \codelike{modifies} clause (line~14) is required to explicitly specify that these updates are intended. The procedure is called on line~21 in the \codelike{init} block. Updates to a state variable not mentioned in a modifies clause will result in a compilation error.
+
+Similarly, \codelike{procedure} \codelike{exec\_cmd} executes a single ALU command and returns (line 25) a single value of type \codelike{result\_t}. The procedure is invoked on line~41 in the \codelike{next} block, and its return value is assigned to the output variable \codelike{result}. Note we are again using the notation \codelike{result'} to refer to parallel assignment.
 
 \subsection{For Loops}
-The \keyword{init} block uses a \keyword{for} loop to initialize each value in the array \codelike{regs} to the bit-vector value 1.\footnote{\codelike{1bv8} here refers to the bit-vector value 1 of width 8.} The loop iterates over the values between 0 and 7 (both-inclusive). 
+The procedure \codelike{set\_init\_state} uses a \keyword{for} loop to initialize each value in the array \codelike{regs} to the bit-vector value 1.\footnote{\codelike{1bv8} here refers to the bit-vector value 1 of width 8.} The loop iterates over the values between 0 and 7 (both-inclusive). 
 
 The range over which a \keyword{for} loop iterates must be defined by two numeric literals.
 
 \subsection{If and Case Statements}
-Also worth pointing out are the \keyword{if} statement that appears on line~25, and the \keyword{case} statement that appears on line~28. Syntax for \keyword{if} statements should be familiar. 
+Also worth pointing out are the \keyword{if} statement that appears on line~28, and the \keyword{case} statement that appears on line~31. Syntax for \keyword{if} statements should be familiar. 
 
 \keyword{case} statements are delimited by \keyword{case} and \keyword{esac} and contain within them a list of boolean expressions and associated statement blocks. These expressions are evaluated in the order in which appear, and if any of them evaluate to \codelike{true}, the corresponding block is executed. If none of the case-expressions evaluate to \codelike{true}, nothing is executed. The keyword \keyword{default} can be used as a ``catch-all'' case like in C/C++. 
 
@@ -46,19 +89,19 @@ Also worth pointing out are the \keyword{if} statement that appears on line~25, 
 
 The syntax for expressions in \uclid{} is similar to languages like C/C++/Java. Index \codelike{i} of array \codelike{regs} is accessed using the syntax \codelike{regs[i]}. Field \codelike{value} in the record \codelike{result} is accessed as \codelike{result.value}. 
 
-\section{Computation/Verification Model}
+\section{Verification Model}
 This section briefly describes the execution semantics of Example~\ref{ex:alu}.
 
 \subsection{Initialization}
-Execution of the model in Example~\ref{ex:alu} starts with the \keyword{init} block. This block assigns initial values to \codelike{regs}, \codelike{cnt} and \codelike{result.value}. The other variables (e.g. \codelike{r1val} and \codelike{r2val}) are not assigned to in the \keyword{init} block and will be initialized non-deterministically.
+Execution of the model in Example~\ref{ex:alu} starts with the \keyword{init} block. This block invokes \codelike{set\_init\_state} and assigns initial values to \codelike{regs}, \codelike{cnt} and \codelike{result.value}. The other variables (e.g. \codelike{r1val} and \codelike{r2val}) are not assigned to in the \keyword{init} block and will be initialized non-deterministically.
 
 \subsection{Next State Computation}
 The next state of each state variable in the model is computed according to the \keyword{next} block. Any variables not assigned to in the \keyword{next} block retain their ``old'' values. 
 
-The \keyword{input} variables of the model are assigned (possibly different) non-deterministic values for each step of the transition system. These values can be controlled by using assumptions. Indeed, the model uses the three assumptions on lines 43--45 to constrain the input to the ALU to always be an \codelike{add} operation, where both operands refer to register index 0. 
+The \keyword{input} variables of the model are assigned (possibly different) non-deterministic values for each step of the transition system. These values can be controlled by using assumptions. Indeed, the model uses the three assumptions on lines 45--46 to constrain the input to the ALU to always be an \codelike{add} operation, where both operands refer to register index 0. 
 
 \subsection{Verification}
-As in Example~\ref{ex:fib-model}, the verification script in Example~\ref{ex:alu} unrolls the transition system for 5 steps and checks if the \keyword{invariant} on line~46 is violated in any of these steps. 
+As in Example~\ref{ex:fib-model}, the verification script in Example~\ref{ex:alu} unrolls the transition system for 5 steps and checks if the \keyword{invariant} on line~47 is violated in any of these steps. 
 
 \subsection{Running \uclid{}}
 
@@ -66,9 +109,11 @@ Running \uclid{} on Example~\ref{ex:alu} produces the following output.
 
 \begin{Verbatim}[frame=single, samepage=true]
 $ uclid examples/tutorial/ex2.1-alu.ucl 
+Successfully parsed 1 and instantiated 1 module(s).
 6 assertions passed.
 0 assertions failed.
 0 assertions indeterminate.
+Finished execution for module: main.
 \end{Verbatim}
 
-\uclid{} is able to prove that the \keyword{invariant} on line~46 holds for all states reachable within 5 steps of the initial state, under the assumptions specified in lines~43--45.
+\uclid{} is able to prove that the \keyword{invariant} on line~46 holds for all states reachable within 5 steps of the initial state, under the assumptions specified in lines~45--46.

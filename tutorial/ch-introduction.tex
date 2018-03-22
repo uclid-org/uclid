@@ -41,7 +41,7 @@ This part of a \uclid{} module describes the functionality of the transition sys
 
 The first item of interest within the module \ident{main} are \emph{state variables}. These are declared using the \keywordbf{var} keyword. The module \ident{main} declares two state variables: \ident{a} and \ident{b} on line~3. These are both of type \keywordbf{integer}, which corresponds to mathematical integers.\footnote{Mathematical integer types, as opposed to the machine integer types present in languages like C/C++ and Java, do not have a fixed bit-width and do not overflow.}
 
-The \keywordbf{init} block appears next and spans lines 5 to 8. It defines the initial values of the state variables in the module. We see that \ident{a} is initialized to 0 while \ident{b} is initialized to 1.
+The \keywordbf{init} block appears next and spans lines 5 to 8. It defines the initial values of the state variables in the module. The notation \codelike{a'} refers to the value of the state variable \ident{a} at the end of the current ``step'', which in this case refers to initial state. The model is specifying that after the \codelike{init} block is executed, \codelike{a} and \codelike{b} have the values 0 and 1 respectively.
 
 The \keywordbf{next} block appears after this and it defines the transition relation of the module. In the figure, the next statement spans from lines 9 to 11; \ident{a} is assigned to the (old) value of \ident{b}, while b is assigned to the value \ident{a} + \ident{b}.
 
@@ -82,27 +82,27 @@ Next, follow these instructions which are provided for the bash shell running on
 \begin{itemize}
   \item Unzip the archive.
 
-  \codelike{\$ unzip uclid-0.9.zip}.
+  \codelike{\$ unzip uclid-0.9.1.zip}.
 
 \begin{comment}
   This should produce output similar to the following.
 \begin{Verbatim}[frame=single]
-Archive:  uclid-0.9.zip
-  inflating: uclid-0.9/lib/default.uclid-0.9.jar  
-  inflating: uclid-0.9/lib/com.microsoft.z3.jar  
-  inflating: uclid-0.9/lib/org.scala-lang.scala-library-2.12.0.jar  
-  inflating: uclid-0.9/lib/org.scala-lang.modules.scala-parser-combinators_2.12-1.0.6.jar  
-  inflating: uclid-0.9/lib/org.scalactic.scalactic_2.12-3.0.1.jar  
-  inflating: uclid-0.9/lib/org.scala-lang.scala-reflect-2.12.0.jar  
-  inflating: uclid-0.9/bin/uclid     
-  inflating: uclid-0.9/bin/uclid.bat  
+Archive:  uclid-0.9.1.zip
+  inflating: uclid-0.9.1/lib/default.uclid-0.9.1.jar  
+  inflating: uclid-0.9.1/lib/com.microsoft.z3.jar  
+  inflating: uclid-0.9.1/lib/org.scala-lang.scala-library-2.12.0.jar  
+  inflating: uclid-0.9.1/lib/org.scala-lang.modules.scala-parser-combinators_2.12-1.0.6.jar  
+  inflating: uclid-0.9.1/lib/org.scalactic.scalactic_2.12-3.0.1.jar  
+  inflating: uclid-0.9.1/lib/org.scala-lang.scala-reflect-2.12.0.jar  
+  inflating: uclid-0.9.1/bin/uclid     
+  inflating: uclid-0.9.1/bin/uclid.bat  
 \end{Verbatim}
 \end{comment}
 
 
   \item Add the \codelike{uclid} binary to your path.
 
-  \codelike{\$ export PATH=\$PATH:\$PWD/uclid-0.9/bin/}
+  \codelike{\$ export PATH=\$PATH:\$PWD/uclid-0.9.1/bin/}
 
   \item Check that the \texttt{uclid} works.
 
@@ -134,9 +134,11 @@ $ uclid examples/tutorial/ex1.1-fib-model.ucl
 
 This should produce the following output.
 \begin{Verbatim}[frame=single, samepage=true]
+Successfully parsed 1 and instantiated 1 module(s).
 4 assertions passed.
 0 assertions failed.
 0 assertions indeterminate.
+Finished execution for module: main.
 \end{Verbatim}
 
 \section{Looking Forward}
