@@ -43,6 +43,8 @@ package lang
 import com.typesafe.scalalogging.Logger
 
 object StatementScheduler {
+  lazy val logger = Logger(classOf[StatementScheduler])
+
   def extractId(n : Expr) : Identifier = {
     n match {
       case OperatorApplication(GetNextValueOp(), List(id : Identifier)) => id
@@ -87,8 +89,8 @@ object StatementScheduler {
   def readSet(st : Statement, context : Scope) : Set[Identifier] = {
     st match {
       case SkipStmt() => Set.empty
-      case AssertStmt(e, _) => Set.empty
-      case AssumeStmt(e, _) => Set.empty
+      case AssertStmt(e, _) => readSet(e)
+      case AssumeStmt(e, _) => readSet(e)
       case HavocStmt(h) => Set.empty
       case AssignStmt(lhss, rhss) => readSets(rhss)
       case IfElseStmt(cond, ifblock, elseblock) =>
@@ -96,7 +98,7 @@ object StatementScheduler {
       case ForStmt(_, _, body) =>
         readSets(body, context)
       case CaseStmt(bodies) =>
-        bodies.flatMap(b => readSets(b._2, context)).toSet
+        bodies.flatMap(b => readSet(b._1) ++ readSets(b._2, context)).toSet
       case ProcedureCallStmt(_, lhss, args) =>
         readSets(args)
       case ModuleCallStmt(id) =>
@@ -132,30 +134,24 @@ object StatementScheduler {
       case Lambda(ids, expr) => readSet(expr)
     }
   }
-}
-
-class VariableDependencyFinderPass extends ReadOnlyPass[(Map[Identifier, Set[Identifier]], List[Identifier])] {
-  lazy val logger = Logger(classOf[VariableDependencyFinder])
-
-  type T = (Map[Identifier, Set[Identifier]], List[Identifier])
-  override def applyOnModule(d : TraversalDirection.T, module : Module, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up) {
-      val ctxP = context + module
-      val graph1 = addEdges(in._1, module.init.get.body, ctxP)
-      val graph2 = addEdges(graph1, module.next.get.body, ctxP)
-      (graph2, module.vars.map(v => v._1) ++ module.outputs.map(v => v._1))
-    } else {
-      in
-    }
-  }
-  def addEdges(graph : Map[Identifier, Set[Identifier]], statements : List[Statement], context : Scope) : Map[Identifier, Set[Identifier]] = {
-    statements.foldLeft(graph) {
-      (accSt, st) => {
-        val ins = StatementScheduler.readSet(st, context)
-        val outs = StatementScheduler.writeSet(st, context)
+  type StmtDepGraph = Map[Identifier, Set[Identifier]]
+  def getReadWriteSets(statements : List[Statement], context : Scope) : List[(Set[Identifier], Set[Identifier])] = {
+    statements.map {
+      st => {
+        val ins = readSet(st, context)
+        val outs = writeSet(st, context)
         logger.debug("Statement: {}", st.toString())
         logger.debug("Input Dependencies: {}", ins.toString())
-        logger.debug("Output Dependencies: {}", ins.toString())
+        logger.debug("Output Dependencies: {}", outs.toString())
+        (ins, outs)
+      }
+    }
+  }
+  def addEdges(graph : StmtDepGraph, deps : List[(Set[Identifier], Set[Identifier])]) : StmtDepGraph = {
+    deps.foldLeft(graph) {
+      (accSt, dep) => {
+        val ins = dep._1
+        val outs = dep._2
         outs.foldLeft(accSt) {
           (accId, out) => {
             accId.get(out) match {
@@ -169,6 +165,68 @@ class VariableDependencyFinderPass extends ReadOnlyPass[(Map[Identifier, Set[Ide
   }
 }
 
+class VariableDependencyFinderPass extends ReadOnlyPass[List[ModuleError]] {
+  lazy val logger = Logger(classOf[VariableDependencyFinder])
+
+  type T = List[ModuleError]
+  override def applyOnInit(d : TraversalDirection.T, init : InitDecl, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Up) { checkBlock(init.body, in, context) }
+    else { in }
+  }
+  override def applyOnNext(d : TraversalDirection.T, next : NextDecl, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Up) { checkBlock(next.body, in, context) }
+    else { in }
+  }
+  override def applyOnIfElse(d : TraversalDirection.T, ifelse : IfElseStmt, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Up && context.procedure.isEmpty) {
+      checkBlock(ifelse.ifblock, in, context) ++ checkBlock(ifelse.elseblock, in, context)
+    } else {
+      in
+    }
+  }
+  override def applyOnFor(d : TraversalDirection.T, forLoop : ForStmt, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Up && context.procedure.isEmpty) {
+      checkBlock(forLoop.body, in, context)
+    } else {
+      in
+    }
+  }
+  override def applyOnCase(d : TraversalDirection.T, caseStmt : CaseStmt, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Up && context.procedure.isEmpty) {
+      caseStmt.body.foldLeft(in)((acc, b) => checkBlock(b._2, acc, context))
+    } else {
+      in
+    }
+  }
+  def checkBlock(stmts : List[Statement], in : T, context : Scope) : T = {
+    val deps = StatementScheduler.getReadWriteSets(stmts, context)
+    val graph = StatementScheduler.addEdges(Map.empty, deps)
+    val (writeSet, errors) = deps.foldLeft((Set.empty[Identifier], in)) {
+      (acc, dep) => {
+        val repeatVars = dep._2.intersect(acc._1)
+        val errorsP = if (repeatVars.size > 0) {
+          val repeatVarsList = repeatVars.toList
+          val msg = "Multiple updates to identifier(s): " + Utils.join(repeatVarsList.map(_.toString()), ", ")
+          ModuleError(msg, repeatVarsList(0).position) :: acc._2
+        } else {
+          acc._2
+        }
+        val vars = acc._1 ++ dep._2
+        (vars, errorsP)
+      }
+    }
+    isCyclic(graph, writeSet.toSeq, errors)
+  }
+  def isCyclic(graph : StatementScheduler.StmtDepGraph, roots : Seq[Identifier], in : T) : T = {
+    def cyclicModuleError(node : Identifier, stack : List[Identifier]) : ModuleError = {
+      val msg = "Cyclical dependency involving variable(s): " + Utils.join(stack.map(_.toString).toList, ", ")
+      ModuleError(msg, node.position)
+    }
+    val errors = Utils.findCyclicDependencies(graph, roots, cyclicModuleError)
+    in ++ errors
+  }
+}
+
 class VariableDependencyFinder() extends ASTAnalyzer(
     "VariableDependencyFinder", new VariableDependencyFinderPass())
 {
@@ -176,20 +234,29 @@ class VariableDependencyFinder() extends ASTAnalyzer(
 
   var cyclicalDependency : Option[Boolean] = None
   override def reset() {
-    in = Some(Map.empty[Identifier, Set[Identifier]], List.empty[Identifier])
+    in = Some(List.empty)
   }
 
   override def finish() {
-    val depGraph = out.get._1
-    val variables = out.get._2
-    logger.debug("Dependency graph: {}", depGraph.toString())
-    def cyclicModuleError(node : Identifier, stack : List[Identifier]) : ModuleError = {
-      val msg = "Cyclical dependency among variables: " + Utils.join(stack.map(_.toString).toList, ", ")
-      ModuleError(msg, node.position)
-    }
-    val errors = Utils.findCyclicDependencies(depGraph, variables, cyclicModuleError)
+    val errors = out.get
     if (errors.size > 0) {
       throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)))
     }
   }
 }
+
+class StatementSchedulerPass extends RewritePass {
+  lazy val logger = Logger(classOf[StatementSchedulerPass])
+  override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
+    val stmts = next.body
+    val deps = StatementScheduler.getReadWriteSets(stmts, context)
+    val graph = StatementScheduler.addEdges(Map.empty, deps)
+    val module = context.module.get
+    val roots = module.vars.map(v => v._1) ++ module.outputs.map(v => v._1)
+    val order = Utils.topoSort(roots, graph)
+    logger.debug("Order: {}", order.toString())
+    Some(next)
+  }
+}
+
+class StatementScheduler extends ASTRewriter("StatementScheduler", new StatementSchedulerPass())

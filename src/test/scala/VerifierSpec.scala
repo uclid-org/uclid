@@ -46,12 +46,18 @@ import uclid.{lang => l}
 
 object VerifierSpec {
   def expectedFails(filename: String, nFail : Int) {
-    val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
-    val mainModule = UclidMain.instantiate(modules, l.Identifier("main"), false)
-    assert (mainModule.isDefined)
-    val results = UclidMain.execute(mainModule.get, new UclidMain.Config())
-    assert (results.count((e) => e.result.isFalse) == nFail)
-    assert (results.count((e) => e.result.isUndefined) == 0);
+    try {
+      val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
+      val mainModule = UclidMain.instantiate(modules, l.Identifier("main"), false)
+      assert (mainModule.isDefined)
+      val results = UclidMain.execute(mainModule.get, new UclidMain.Config())
+      assert (results.count((e) => e.result.isFalse) == nFail)
+      assert (results.count((e) => e.result.isUndefined) == 0);
+    }
+    catch {
+      case _ : Throwable =>
+        assert (false)
+    }
   }
 }
 

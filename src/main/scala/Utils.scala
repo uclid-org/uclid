@@ -127,7 +127,7 @@ object Utils {
     order.sortWith((x, y) => x._2 < y._2).map(p => p._1)
   }
 
-  def findCyclicDependencies[U, V](graph : Map[U, Set[U]], roots : List[U], errorFn : ((U, List[U]) => V)) : List[V] = {
+  def findCyclicDependencies[U, V](graph : Map[U, Set[U]], roots : Seq[U], errorFn : ((U, List[U]) => V)) : List[V] = {
     def visit(node : U, stack : List[U], errorsIn : List[V]) : List[V] = {
       if (stack contains node) {
         val cycleError = errorFn(node, stack)

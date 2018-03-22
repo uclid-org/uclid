@@ -305,4 +305,24 @@ class ParserSpec extends FlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
+  "test-multiple-writes.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-multiple-writes.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 2)
+        assert (p.errors.forall(p => p._1.contains("Multiple updates to identifier(s)")))
+    }
+  }
+  "test-cyclic-deps.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-cyclic-deps.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 2)
+        assert (p.errors.forall(p => p._1.contains("Cyclical dependency involving variable(s)")))
+    }
+  }
 }

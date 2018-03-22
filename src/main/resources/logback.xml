@@ -8,8 +8,10 @@
     </encoder>
   </appender>
 
-  <logger name="uclid.lang.PassManager" level="WARN"/>
-  <logger name="uclid.lang.VariableDependencyFinder" level="WARN"/>
+  <logger name="uclid.lang.PassManager" level="OFF"/>
+  <logger name="uclid.lang.VariableDependencyFinder" level="OFF"/>
+  <logger name="uclid.lang.StatementSchedulerPass" level="OFF"/>
+  <logger name="uclid.lang.StatementScheduler" level="OFF"/>
 
   <root level="debug">
     <appender-ref ref="STDOUT" />
