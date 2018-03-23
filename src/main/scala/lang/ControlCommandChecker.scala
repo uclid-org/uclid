@@ -59,22 +59,22 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
   def checkHasOneIntLitArg(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument".format(cmd.name.toString), cmd.pos, filename)
     val cntLit = cmd.args(0)
-    Utils.checkParsingError(cntLit.isInstanceOf[IntLit], "'%s' command expects a constant integer argument".format(cmd.name.toString), cmd.pos, filename)
-    val cnt = cntLit.asInstanceOf[IntLit].value
+    Utils.checkParsingError(cntLit._1.isInstanceOf[IntLit], "'%s' command expects a constant integer argument".format(cmd.name.toString), cmd.pos, filename)
+    val cnt = cntLit._1.asInstanceOf[IntLit].value
     val cntInt = cnt.intValue()
     Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large".format(cmd.name.toString), cmd.pos, filename)
   }
   def checkHasOneIdentifierArg(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument".format(cmd.name.toString), cmd.pos, filename)
     val cntLit = cmd.args(0)
-    Utils.checkParsingError(cntLit.isInstanceOf[Identifier], "'%s' command expects a identifier as argument".format(cmd.name.toString), cmd.pos, filename)
+    Utils.checkParsingError(cntLit._1.isInstanceOf[Identifier], "'%s' command expects a identifier as argument".format(cmd.name.toString), cmd.pos, filename)
   }
   def checkHasZeroOrOneIntLitArg(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size <= 1, "'%s' command expects no more than one argument".format(cmd.name.toString), cmd.pos, filename)
     if (cmd.args.size > 0) {
       val cntLit = cmd.args(0)
-      Utils.checkParsingError(cntLit.isInstanceOf[IntLit], "'%s' command expects a constant integer argument".format(cmd.name.toString), cmd.pos, filename)
-      val cnt = cntLit.asInstanceOf[IntLit].value
+      Utils.checkParsingError(cntLit._1.isInstanceOf[IntLit], "'%s' command expects a constant integer argument".format(cmd.name.toString), cmd.pos, filename)
+      val cnt = cntLit._1.asInstanceOf[IntLit].value
       val cntInt = cnt.intValue()
       Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large".format(cmd.name.toString), cmd.pos, filename)
     }
@@ -119,7 +119,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkNoParams(cmd, filename)
         checkHasOneIdentifierArg(cmd, filename)
         checkNoArgObj(cmd, filename)
-        val arg = cmd.args(0).asInstanceOf[Identifier]
+        val arg = cmd.args(0)._1.asInstanceOf[Identifier]
         val module = context.module.get
         lazy val errorMsg = "Unknown procedure: '%s'".format(arg.toString())
         Utils.checkParsingError(module.procedures.find(p => p.id == arg).isDefined, errorMsg, arg.pos, filename)

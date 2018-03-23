@@ -761,7 +761,7 @@ case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Exp
     Utils.join(args.map(_.toString), ", ") + ") // " + id.position.toString)
 }
 case class ModuleCallStmt(id: Identifier) extends Statement {
-  override def toLines = List("call (" + id.toString +")")
+  override def toLines = List("next (" + id.toString +")")
 }
 case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
   override def toString = "var " + id + ": " + typ + "; // " + id.position.toString
@@ -1042,7 +1042,7 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
 }
 sealed abstract class ProofCommand extends ASTNode
 
-case class GenericProofCommand(name : Identifier, params: List[Identifier], args : List[Expr], resultVar: Option[Identifier], argObj: Option[Identifier]) extends ProofCommand {
+case class GenericProofCommand(name : Identifier, params: List[Identifier], args : List[(Expr, String)], resultVar: Option[Identifier], argObj: Option[Identifier]) extends ProofCommand {
   def getContext(context : Scope) : Scope = {
     argObj match {
       case Some(arg) =>
@@ -1077,6 +1077,13 @@ case class GenericProofCommand(name : Identifier, params: List[Identifier], args
 
 sealed abstract class Annotation extends ASTNode
 case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) extends Annotation {
+  lazy val rMap : Map[Identifier, String] = {
+    iMap.map {
+      p => {
+        p._2 -> Utils.join(p._1.map(id => id.toString()), "->")
+      }
+    }
+  }
   override def toString : String = {
     val start = PrettyPrinter.indent(1) + "// instance_var_map { "
     val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), "->") + " ::==> " + p._2.toString)
@@ -1161,6 +1168,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     if (matchingNotes.size == 0) {
       None
     } else {
+      Utils.assert(matchingNotes.size == 1, "Too many annotations of type: " + tag.toString())
       Some(matchingNotes(0))
     }
   }

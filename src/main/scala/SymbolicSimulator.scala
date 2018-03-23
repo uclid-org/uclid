@@ -98,7 +98,7 @@ class SymbolicSimulator (module : Module) {
               case None    => "unroll"
             }
             initialize(false, true, false, context, label, noLTLFilter)
-            symbolicSimulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+            symbolicSimulate(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
           case "bmc" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString()
@@ -117,7 +117,7 @@ class SymbolicSimulator (module : Module) {
               ExprDecorator.isLTLProperty(decorators) &&  (cmd.params.isEmpty || cmd.params.contains(nameToCheck))
             }
             initialize(false, true, false, context, label, LTLFilter)
-            symbolicSimulate(cmd.args(0).asInstanceOf[IntLit].value.toInt, true, false, context, label, LTLFilter)
+            symbolicSimulate(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, LTLFilter)
           case "induction" =>
             val labelBase : String = cmd.resultVar match {
               case Some(l) => l.toString + ": induction (base)"
@@ -128,7 +128,7 @@ class SymbolicSimulator (module : Module) {
               case None    => "induction (step)"
             }
             val k = if (cmd.args.size > 0) {
-              cmd.args(0).asInstanceOf[IntLit].value.toInt
+              cmd.args(0)._1.asInstanceOf[IntLit].value.toInt
             } else { 1 }
 
             // base case.
@@ -149,7 +149,7 @@ class SymbolicSimulator (module : Module) {
             // go back to original state.
             resetState()
           case "verify" =>
-            val procName = cmd.args(0).asInstanceOf[Identifier]
+            val procName = cmd.args(0)._1.asInstanceOf[Identifier]
             val proc = module.procedures.find(p => p.id == procName).get
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString + ": verify(%s)".format(procName.toString())
@@ -311,7 +311,7 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def printCEX(results : List[CheckResult], exprs : List[Expr], arg : Option[Identifier]) {
+  def printCEX(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier]) {
     def labelMatches(p : AssertInfo) : Boolean = {
       arg match {
         case Some(id) => id.toString == p.label || p.label.startsWith(id.toString + ":")
@@ -325,12 +325,21 @@ class SymbolicSimulator (module : Module) {
     })
   }
 
-  def printCEX(res : CheckResult, exprs : List[Expr]) {
+  def printCEX(res : CheckResult, exprs : List[(Expr, String)]) {
     println("CEX for %s".format(res.assert.toString, res.assert.pos.toString))
     val scope = res.assert.context
-    val exprsToPrint = if (exprs.size == 0) {
-      val vars = (scope.inputs ++ scope.vars ++ scope.outputs).map(_.id)
-      vars.toList.sortWith((l, r) => l.name < r.name)
+    lazy val instVarMap = module.getAnnotation[InstanceVarMapAnnotation]().get
+
+    val exprsToPrint : List[(Expr, String)] = if (exprs.size == 0) {
+      val vars = ((scope.inputs ++ scope.vars ++ scope.outputs).map { 
+        p => {
+          instVarMap.rMap.get(p.id) match {
+            case Some(str) => (p.id, str)
+            case None => (p.id, p.id.toString)
+          }
+        }
+      })
+      vars.toList.sortWith((l, r) => l._2 < r._2)
     } else {
       exprs
     }
@@ -351,7 +360,7 @@ class SymbolicSimulator (module : Module) {
     throw new Utils.UnimplementedException("Implement print_smt2.")
   }
 
-  def printFrame(f : SymbolTable, pastFrames : Map[Int, SymbolTable], m : smt.Model, exprs : List[Expr], scope : Scope) {
+  def printFrame(f : SymbolTable, pastFrames : Map[Int, SymbolTable], m : smt.Model, exprs : List[(Expr, String)], scope : Scope) {
     def expr(id : lang.Identifier) : Option[smt.Expr] = {
       if (f.contains(id)) { Some(evaluate(id, f, pastFrames, scope)) }
       else { None }
@@ -359,8 +368,8 @@ class SymbolicSimulator (module : Module) {
 
     exprs.foreach { (e) => {
       try {
-        val result = m.evalAsString(evaluate(e, f, pastFrames, scope))
-        println("  " + e.toString + " : " + result)
+        val result = m.evalAsString(evaluate(e._1, f, pastFrames, scope))
+        println("  " + e._2 + " : " + result)
       } catch {
         case excp : Utils.UnknownIdentifierException =>
           println("  " + e.toString + " : <UNDEF> ")

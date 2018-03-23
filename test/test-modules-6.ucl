@@ -1,0 +1,47 @@
+module incr
+{
+  input x : integer;
+  output y : integer;
+  var c : integer;
+
+  init {
+    c' = 0;
+  }
+
+  next {
+    c' = c + 1;
+    y' = x + c';
+  }
+}
+
+module main
+{
+  var a, b, q : integer;
+  var inited : boolean;
+
+  instance incr1 : incr(x : (a'), y: (b'));
+
+  init {
+    a' = 0;
+    b' = 0;
+    inited' = false;
+  }
+
+  next {
+    inited' = true;
+    q' = b' + 1;
+    next (incr1);
+    a' = a + 1;
+  }
+
+  invariant b_prop: inited ==> (b > 2 && b > a && q > b);
+
+  control {
+    print_module;
+    v = unroll(5);
+    check;
+    print_results;
+    v->print_cex;
+    v->print_cex(incr1->c, incr1->y, a, b);
+  }
+}

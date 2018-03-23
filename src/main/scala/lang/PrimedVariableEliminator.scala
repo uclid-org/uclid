@@ -44,7 +44,7 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
   type T = (Map[Identifier, Identifier], Option[ContextualNameProvider])
   override def applyOnModule(d : TraversalDirection.T, module : Module , in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
-      val nameProvider = new ContextualNameProvider(context, "prime_")
+      val nameProvider = new ContextualNameProvider(context, "_prime_")
       (in._1, Some(nameProvider))
     } else {
       (in._1, None)

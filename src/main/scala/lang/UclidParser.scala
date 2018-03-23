@@ -621,9 +621,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ IdParamList <~ ";" ^^
         { case rId ~ oId ~ id ~ idparams => lang.GenericProofCommand(id, idparams, List.empty, rId, oId) } |
       (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ ExprList <~ ";" ^^
-        { case rId ~ oId ~ id ~ es => lang.GenericProofCommand(id, List.empty, es, rId, oId) } |
+        { case rId ~ oId ~ id ~ es => lang.GenericProofCommand(id, List.empty, es.map(e => (e, e.toString())), rId, oId) } |
       (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ IdParamList ~ ExprList <~ ";" ^^
-        { case rId ~ oId ~ id ~ idparams ~ es => lang.GenericProofCommand(id, idparams, es, rId, oId) }
+        { case rId ~ oId ~ id ~ idparams ~ es => lang.GenericProofCommand(id, idparams, es.map(e => (e, e.toString())), rId, oId) }
     }
 
     lazy val CmdBlock : PackratParser[List[GenericProofCommand]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
