@@ -1,12 +1,12 @@
 " Vim syntax file
-" Language: Uclid5
+" Language: uclid
 " Maintainer:   Pramod Subramanyan <pramod.subramanyan@gmail.com>
 " Last Change:  Thu Oct 10 17:35:44 EDT 2017
 " Filenames:    *.ucl
 
 " Comments: 
 " Make sure to create a file name .vim/ftdetect/ucl.vim containing this line:
-" au BufRead,BufNewFile *.ucl set filetype=Uclid5
+" au BufRead,BufNewFile *.ucl set filetype=uclid
 
 if exists("b:current_syntax")
     finish

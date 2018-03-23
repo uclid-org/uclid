@@ -73,7 +73,7 @@ object UclidMain {
   )
 
   def parseOptions(args: Array[String]) : Option[Config] = {
-    val parser = new scopt.OptionParser[Config]("scopt") {
+    val parser = new scopt.OptionParser[Config]("uclid") {
       head("uclid", "0.9.1")
 
       opt[String]('m', "main").valueName("<Module>").action{ 
