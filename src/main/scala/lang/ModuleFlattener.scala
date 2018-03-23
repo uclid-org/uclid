@@ -40,6 +40,7 @@ package uclid
 package lang
 
 import scala.collection.immutable.Map
+import com.typesafe.scalalogging.Logger
 
 class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
   type T = Map[Identifier, Set[Identifier]]
@@ -120,6 +121,7 @@ object ModuleInstantiatorPass {
 }
 
 class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule : Module, initExternalSymbolMap : ExternalSymbolMap) extends RewritePass {
+  lazy val logger = Logger(classOf[ModuleInstantiatorPass])
   val MIP = ModuleInstantiatorPass
   val targetModuleName = targetModule.id
 
@@ -339,8 +341,10 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 }
 
-class ModuleInstantiator(passName : String, module : Module, inst : InstanceDecl, targetModule : Module, externalSymbolMap : ExternalSymbolMap) extends ASTRewriter(
-    passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false)
+class ModuleInstantiator(
+    passName : String, module : Module, inst : InstanceDecl,
+    targetModule : Module, externalSymbolMap : ExternalSymbolMap)
+extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false)
 
 class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
   lazy val manager : PassManager = analysis.manager

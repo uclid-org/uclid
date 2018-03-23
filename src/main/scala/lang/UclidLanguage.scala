@@ -90,7 +90,7 @@ sealed  trait PositionedNode extends Positional {
 
 object ASTNode {
   def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename : Boolean, node : T, pos : ASTPosition) : T = {
-    if (setPosition) {
+    if (setPosition || node.pos.line == 0) {
       var nodeP = node
       if (setFilename) { nodeP.filename = pos.filename }
       nodeP.pos = pos.pos
@@ -101,31 +101,31 @@ object ASTNode {
   }
 
   def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename : Boolean, node : Option[T], pos : ASTPosition) : Option[T] = {
-    if (setPosition) {
-      node match {
-        case Some(n) =>
+    node match {
+      case Some(n) =>
+        if (setPosition || n.pos.line == 0) {
           var nP = n
           if (setFilename) { nP.filename = pos.filename }
           nP.pos = pos.pos
           Some(nP)
-        case None =>
-          None
-      }
-    } else {
-      node
+        } else {
+          Some(n)
+        }
+      case None =>
+        None
     }
   }
   def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename: Boolean, nodes : List[T], pos : ASTPosition) : List[T] = {
-    if (setPosition) {
-      nodes.map((n) => {
+    nodes.map((n) => {
+      if (setPosition || n.pos.line == 0) {
         var nP = n
         if (setFilename) { nP.filename = pos.filename }
         nP.pos = pos.pos
         nP
-      })
-    } else {
-      nodes
-    }
+      } else {
+        n
+      }
+    })
   }
 }
 
