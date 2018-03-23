@@ -1,0 +1,25 @@
+module main {
+  var a : integer;
+  
+  init {
+    a' = 0;
+  }
+  
+  procedure set_a()
+    modifies a;
+  {
+    a = a + 1;
+    assert (a < a');
+  }
+  next {
+    call set_a();
+    assert (a < a');
+  }
+  
+  control {
+    // print_module;
+    unroll(3);
+    check;
+    // print_results;
+  }
+}

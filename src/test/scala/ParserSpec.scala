@@ -335,4 +335,25 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.forall(p => p._1.contains("Module output ('b') must be primed")))
     }
   }
+  "test-modules-4.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-modules-4.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 2)
+        assert (p.errors.exists(p => p._1.contains("Primed assignments are not allowed in procedures")))
+        assert (p.errors.exists(p => p._1.contains("Parallel construct next cannot be used inside a procedure")))
+    }
+  }
+  "test-primed-variables-2.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-primed-variables-2.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.exists(p => p._1.contains("Primed variables can't be referenced inside procedures")))
+    }
+  }
 }

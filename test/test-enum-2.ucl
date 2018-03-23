@@ -53,11 +53,11 @@ module main
     // this code is only for testing the module.
     assume (r1 == 0bv3 && r2 == 0bv3);
     cnt = cnt + cnt;
-    assert (cnt' == result');
   }
 
   next {
     call next_sequential();
+    assert (cnt' == result');
   }
 
   control {

@@ -18,13 +18,18 @@ module main
 {
   var a, b : integer;
   
-  instance incr1 : incr(x : (a), y: (b));
+  instance incr1 : incr(x : (a), y: (b'));
   
   init {
     a' = 0;
     b' = 0;
   }
-
+  procedure do_next()
+    modifies a;
+  {
+    a' = a + 1;
+    next(incr1);
+  }
   next {
     a' = a + 1;
     next (incr1);
@@ -32,4 +37,3 @@ module main
   
   invariant b_prop: (b >= 0 && b >= a);
 }
-    

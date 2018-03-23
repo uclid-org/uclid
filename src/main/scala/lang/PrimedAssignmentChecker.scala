@@ -60,6 +60,27 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         }
     }
   }
+  override def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down) {
+      in
+    } else {
+      opapp.op match {
+        case GetNextValueOp() =>
+          val arg1 = opapp.operands(0)
+          val err1 = arg1 match {
+            case id : Identifier => in
+            case _ => in + ModuleError("Invalid application of prime operator", arg1.position)
+          }
+          if (context.procedure.isDefined) {
+            err1 + ModuleError("Primed variables can't be referenced inside procedures".format(opapp.toString()), opapp.position)
+          } else {
+            err1
+          }
+        case _ =>
+          in
+      }
+    }
+  }
   override def applyOnStatement(d : TraversalDirection.T, st : Statement, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
       in
@@ -71,10 +92,19 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
             in + ModuleError("Sequential construct %s cannot be used outside a procedure".format(name), st.position)
         }
       }
+      def checkParallelConstruct(name : String) : T = {
+        context.procedure match {
+          case None => in
+          case Some(proc) =>
+            in + ModuleError("Parallel construct %s cannot be used inside a procedure".format(name), st.position)
+        }
+      }
       st match {
         case IfElseStmt(_, _, _) | ForStmt(_, _, _) | CaseStmt(_) |
-             ProcedureCallStmt(_, _, _) | ModuleCallStmt(_) | SkipStmt() |
+             ProcedureCallStmt(_, _, _) | SkipStmt() |
              AssertStmt(_, _) | AssumeStmt(_, _) => in
+        case ModuleCallStmt(_) =>
+          checkParallelConstruct("next")
         case HavocStmt(_) =>
           checkSeqConstruct("havoc")
         case AssignStmt(lhss, rhss) =>
