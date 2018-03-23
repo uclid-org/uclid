@@ -5,7 +5,7 @@ module main {
   function f(g : integer) : integer;
   
   var x, y : integer;
-  var r, q : rec_t;
+  var r    : rec_t;
 
   procedure zero_r() returns (rp : rec_t)
   {
@@ -22,14 +22,13 @@ module main {
   procedure next_r() returns (rp : rec_t)
   {
     rp.x = h(r);
-    rp.y = h(q);
+    rp.y = h(r);
   }
 
   next {
     x' = f(x);
     y' = f(y);
     
-    q' = r;
     call (r') = next_r();
 
     // noteToSelf(ReorderingTest)

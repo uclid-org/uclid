@@ -31,15 +31,16 @@ module main
   next {
     call next_state();
 
-    assert ((numbers[true, 0] + numbers[true, 1] + numbers[true, 2] + numbers[true, 3] + 
-    		 numbers[true, 4] + numbers[true, 5] + numbers[true, 6] + numbers[true, 7]) == sum);
+    assert ((numbers'[true, 0] + numbers'[true, 1] + numbers'[true, 2] + numbers'[true, 3] + 
+             numbers'[true, 4] + numbers'[true, 5] + numbers'[true, 6] + numbers'[true, 7]) == sum');
 
-    assert ((numbers[false, 0] + numbers[false, 1] + numbers[false, 2] + numbers[false, 3] + 
-    		 numbers[false, 4] + numbers[false, 5] + numbers[false, 6] + numbers[false, 7]) == sum);
+    assert ((numbers'[false, 0] + numbers'[false, 1] + numbers'[false, 2] + numbers'[false, 3] + 
+             numbers'[false, 4] + numbers'[false, 5] + numbers'[false, 6] + numbers'[false, 7]) == sum');
   }
   
   control {
     unroll (5);
     check;
+    // print_results;
   }
 }

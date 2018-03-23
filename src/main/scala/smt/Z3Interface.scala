@@ -367,17 +367,17 @@ class Z3Interface() extends Context {
   lazy val assertLogger = Logger("uclid.smt.Z3Interface.assert")
   override def assert(e : Expr) {
     val z3Expr = exprToZ3(e).asInstanceOf[z3.BoolExpr]
-    assertLogger.debug("assert: {}", e.toString)
-    assertLogger.debug("z3expr: {}", z3Expr.toString())
+    assertLogger.debug(e.toString)
+    assertLogger.debug(z3Expr.toString())
     solver.add(z3Expr)
   }
 
+  lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
   override def check() : SolverResult = {
+    checkLogger.debug(solver.toString())
     val z3Result = solver.check()
-    // println(z3Result.toString)
 
-    // println("check")
     val checkResult : SolverResult = z3Result match {
       case z3.Status.SATISFIABLE =>
         val z3Model = solver.getModel()
@@ -394,18 +394,4 @@ class Z3Interface() extends Context {
   override def finish() {
     ctx.close()
   }
-  /*
-  def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
-    val z3Expr = exprToZ3(e).asInstanceOf[z3.BoolExpr]
-    val z3Assumptions = assumptions.map(a => exprToZ3(a).asInstanceOf[z3.BoolExpr]).toArray
-    solver.push()
-    z3Assumptions.foreach(a => solver.add(a))
-    solver.add(z3Expr)
-    val formula = "; " + name + "\n" + solver.toString()
-    solver.pop()
-    return formula
-  }
-  *
-  */
-
 }
