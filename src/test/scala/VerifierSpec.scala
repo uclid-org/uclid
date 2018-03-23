@@ -46,19 +46,12 @@ import uclid.{lang => l}
 
 object VerifierSpec {
   def expectedFails(filename: String, nFail : Int) {
-    try {
-      val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
-      val mainModule = UclidMain.instantiate(modules, l.Identifier("main"), false)
-      assert (mainModule.isDefined)
-      val results = UclidMain.execute(mainModule.get, new UclidMain.Config())
-      assert (results.count((e) => e.result.isFalse) == nFail)
-      assert (results.count((e) => e.result.isUndefined) == 0);
-    }
-    catch {
-      case p : Throwable =>
-        println(p.toString())
-        assert (false)
-    }
+    val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
+    val mainModule = UclidMain.instantiate(modules, l.Identifier("main"), false)
+    assert (mainModule.isDefined)
+    val results = UclidMain.execute(mainModule.get, new UclidMain.Config())
+    assert (results.count((e) => e.result.isFalse) == nFail)
+    assert (results.count((e) => e.result.isUndefined) == 0);
   }
 }
 class VerifierSanitySpec extends FlatSpec {
@@ -103,6 +96,9 @@ class VerifierSanitySpec extends FlatSpec {
   }
   "test-assert-3.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-assert-3.ucl", 0)
+  }
+  "test-primed-variables-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-primed-variables-1.ucl", 0)
   }
 }
 class BasicVerifierSpec extends FlatSpec {

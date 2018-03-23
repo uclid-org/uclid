@@ -169,6 +169,8 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
+    passManager.addPass(new PrimedVariableCollector())
+    passManager.addPass(new PrimedVariableEliminator())
     passManager.addPass(new ProcedureInliner())
     passManager.addPass(new CaseEliminator())
     passManager.addPass(new IntroduceFreshHavocs())

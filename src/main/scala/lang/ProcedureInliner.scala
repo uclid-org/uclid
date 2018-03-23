@@ -80,7 +80,7 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
   }
 }
 
-class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
+class InlineProcedurePass(procToInline : ProcedureDecl, primeVarMap : Map[Identifier, Identifier]) extends RewritePass {
   type UniqueNameProvider = (Identifier, String) => Identifier
   override def rewriteProcedure(p : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
     if (p.id == procToInline.id) Some(p)
@@ -143,10 +143,13 @@ class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
             val mArgs = (argVars zip args).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2))
             val mRet  = (retVars zip retNewVars).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2._1))
             val mLocal = (procToInline.decls zip localNewVars).foldLeft(mEmpty)((map, t) => map + (t._1.id -> t._2._1))
+            val mModifies = (procToInline.modifies.map(m => (m -> primeVarMap.get(m).get.asInstanceOf[Expr])))
+            val resultHavocStmts = retNewVars.map(retVar => HavocStmt(HavocableId(retVar._1)))
             val resultAssignStatment = if (lhss.size > 0) List(AssignStmt(lhss, retNewVars.map(_._1))) else List.empty
-            val rewriteMap = mArgs ++ mRet ++ mLocal
+            val rewriteMap = mArgs ++ mRet ++ mLocal ++ mModifies
             val rewriter = new ExprRewriter("ProcedureInlineRewriter", rewriteMap)
-            (acc._1 ++ rewriter.rewriteStatements(procToInline.body) ++ resultAssignStatment, acc._2 ++ retNewVars ++ localNewVars)
+            (acc._1 ++ resultHavocStmts ++ rewriter.rewriteStatements(procToInline.body) ++ resultAssignStatment, 
+                acc._2 ++ retNewVars ++ localNewVars)
           }
         case ForStmt(id, range, body) =>
           val bodyP = inlineProcedureCalls(uniqNamer, body)
@@ -173,15 +176,17 @@ class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
 }
 
 class ProcedureInliner extends ASTAnalysis {
+  lazy val primedVariableCollector = manager.pass("PrimedVariableCollector").asInstanceOf[PrimedVariableCollector]
   lazy val findProcedureDependency = manager.pass("FindProcedureDependency").asInstanceOf[FindProcedureDependency]
   override def passName = "ProcedureInliner"
 
   override def visit(module : Module, context : Scope) : Option[Module] = {
+    val primeVarMap = primedVariableCollector.primeVarMap.get
     val procInliningOrder = findProcedureDependency.procInliningOrder
     def inlineProcedure(procId : Identifier, mod : Module) : Module = {
       if (procId != Identifier("_top")) {
         val proc = mod.procedures.find(p => p.id == procId).get
-        val rewriter = new ASTRewriter("ProcedureInliner.Inline:" + procId.toString, new InlineProcedurePass(proc))
+        val rewriter = new ASTRewriter("ProcedureInliner.Inline:" + procId.toString, new InlineProcedurePass(proc, primeVarMap))
         rewriter.visit(mod, context).get
       } else {
         module

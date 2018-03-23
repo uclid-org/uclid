@@ -1,0 +1,19 @@
+module main {
+  var a : integer;
+  
+  init {
+    a' = 0;
+  }
+  
+  next {
+    a' = a + 1;
+    assert (a < a');
+  }
+  
+  control {
+    // print_module;
+    unroll(3);
+    check;
+    // print_results;
+  }
+}
