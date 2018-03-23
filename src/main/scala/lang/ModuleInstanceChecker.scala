@@ -40,7 +40,11 @@ package uclid
 package lang
 
 import scala.collection.immutable.Map
+import com.typesafe.scalalogging.Logger
+
 class ModuleInstanceCheckerPass() extends ReadOnlyPass[List[ModuleError]] {
+  lazy val logger = Logger(classOf[ModuleInstanceCheckerPass])
+
   def doesInstanceTypeMatch(modT : ModuleType, instT : ModuleInstanceType, in : List[ModuleError], pos : ASTPosition) : List[ModuleError] = {
     // check the types of a list of pairs of identifiers and types..
     def checkTypes(args : List[(Identifier, Type)], in : List[ModuleError], argType : String, typeMap : Map[Identifier, Type]) : List[ModuleError] = {
@@ -108,6 +112,7 @@ class ModuleInstanceCheckerPass() extends ReadOnlyPass[List[ModuleError]] {
             // make sure all outputs are wired to identifiers.
             val outputExprs = inst.arguments.filter(a => targetModT.outputMap.contains(a._1) && a._2.isDefined).map(a => a._2.get)
             val sharedVarExprs = inst.arguments.filter(a => targetModT.sharedVarMap.contains(a._1) && a._2.isDefined).map(a => a._2.get)
+            logger.debug("Outputs: {}", outputExprs.toString())
             val err2 = outputExprs.foldLeft(err1) {
               (acc, arg) => {
                 arg match {
@@ -152,14 +157,12 @@ class ModuleInstanceCheckerPass() extends ReadOnlyPass[List[ModuleError]] {
 class ModuleInstanceChecker() extends ASTAnalyzer(
     "ModuleInstanceChecker", new ModuleInstanceCheckerPass())
 {
-  override def reset() {
-    in = Some(List.empty[ModuleError])
-  }
-  override def finish() {
-    val errors = out.get
-    if (errors.size > 0) {
-      throw new Utils.ParserErrorList(errors.map((e) => (e.msg, e.position)))
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val out = visitModule(module, List.empty, context)
+    if (out.size > 0) {
+      throw new Utils.ParserErrorList(out.map(e => (e.msg, e.position)))
     }
+    Some(module)
   }
 }
 
