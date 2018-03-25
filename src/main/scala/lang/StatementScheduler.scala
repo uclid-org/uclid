@@ -45,13 +45,6 @@ import com.typesafe.scalalogging.Logger
 object StatementScheduler {
   lazy val logger = Logger(classOf[StatementScheduler])
 
-  def extractId(n : Expr) : Identifier = {
-    n match {
-      case OperatorApplication(GetNextValueOp(), List(id : Identifier)) => id
-      case _ => throw new Utils.AssertionError("Unexpected value where primed identifier was expected.")
-    }
-  }
-
   def writeSet(st : Statement, context : Scope) : Set[Identifier] = {
     st match {
       case SkipStmt() => Set.empty
@@ -82,7 +75,7 @@ object StatementScheduler {
         Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
         val moduleType : ModuleType = instD.modType.get.asInstanceOf[ModuleType]
-        instD.outputMap.map(p => extractId(p._3)).toSet
+        instD.outputMap.map(p => p._3.asInstanceOf[Identifier]).toSet
     }
   }
 
@@ -182,21 +175,21 @@ class VariableDependencyFinderPass extends ReadOnlyPass[List[ModuleError]] {
     else { in }
   }
   override def applyOnIfElse(d : TraversalDirection.T, ifelse : IfElseStmt, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up && context.procedure.isEmpty) {
+    if (d == TraversalDirection.Up && context.environment == SequentialEnvironment) {
       checkBlock(ifelse.ifblock, in, context) ++ checkBlock(ifelse.elseblock, in, context)
     } else {
       in
     }
   }
   override def applyOnFor(d : TraversalDirection.T, forLoop : ForStmt, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up && context.procedure.isEmpty) {
+    if (d == TraversalDirection.Up && context.environment == SequentialEnvironment) {
       checkBlock(forLoop.body, in, context)
     } else {
       in
     }
   }
   override def applyOnCase(d : TraversalDirection.T, caseStmt : CaseStmt, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up && context.procedure.isEmpty) {
+    if (d == TraversalDirection.Up && context.environment == SequentialEnvironment) {
       caseStmt.body.foldLeft(in)((acc, b) => checkBlock(b._2, acc, context))
     } else {
       in
@@ -205,13 +198,14 @@ class VariableDependencyFinderPass extends ReadOnlyPass[List[ModuleError]] {
   def checkBlock(stmts : List[Statement], in : T, context : Scope) : T = {
     val deps = StatementScheduler.getReadWriteSets(stmts, context)
     val graph = StatementScheduler.addEdges(Map.empty, deps)
-    val (writeSet, errors) = deps.foldLeft((Set.empty[Identifier], in)) {
-      (acc, dep) => {
+    val (writeSet, errors) = (stmts zip deps).foldLeft((Set.empty[Identifier], in)) {
+      (acc, p) => {
+        val (stmt, dep) = p
         val repeatVars = dep._2.intersect(acc._1)
         val errorsP = if (repeatVars.size > 0) {
           val repeatVarsList = repeatVars.toList
           val msg = "Multiple updates to identifier(s): " + Utils.join(repeatVarsList.map(_.toString()), ", ")
-          ModuleError(msg, repeatVarsList(0).position) :: acc._2
+          ModuleError(msg, stmt.position) :: acc._2
         } else {
           acc._2
         }
@@ -283,7 +277,7 @@ class StatementSchedulerPass extends RewritePass {
     Some(InitDecl(bodyP))
   }
   override def rewriteIfElse(ifelse : IfElseStmt, context : Scope) : List[Statement] = {
-    if (context.procedure.isEmpty) {
+    if (context.environment == SequentialEnvironment) {
       val ifBlockP = reorderStatements(ifelse.ifblock, context)
       val elseBlockP = reorderStatements(ifelse.elseblock, context)
       val ifElseP = IfElseStmt(ifelse.cond, ifBlockP, elseBlockP)
@@ -293,7 +287,7 @@ class StatementSchedulerPass extends RewritePass {
     }
   }
   override def rewriteFor(forStmt : ForStmt, context : Scope) : List[Statement] = {
-    if (context.procedure.isEmpty) {
+    if (context.environment == SequentialEnvironment) {
       val bodyP = reorderStatements(forStmt.body, context)
       val forP = ForStmt(forStmt.id, forStmt.range, bodyP)
       List(forP)
@@ -302,7 +296,7 @@ class StatementSchedulerPass extends RewritePass {
     }
   }
   override def rewriteCase(caseStmt : CaseStmt, context : Scope) : List[Statement] = {
-    if (context.procedure.isEmpty) {
+    if (context.environment == SequentialEnvironment) {
       val bodiesP = caseStmt.body.map {
         body => {
           (body._1, reorderStatements(body._2, context))

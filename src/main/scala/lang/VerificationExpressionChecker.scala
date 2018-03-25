@@ -39,22 +39,42 @@
  */
 package uclid
 package lang
+import com.typesafe.scalalogging.Logger
+
 
 class VerificationExpressionPass extends ReadOnlyPass[List[ModuleError]]
 {
+  lazy val logger = Logger(classOf[VerificationExpressionPass])
   type T = List[ModuleError]
   override def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Down || context.inVerificationContext != ComputeContext) {
-      in
-    } else {
-      opapp.op match {
-        case OldOperator() | HistoryOperator() =>
-          ModuleError("Operator can only be used in a verification expression", opapp.position) :: in
-        case _ =>
+    logger.debug("Visiting: {}; Env: {}", opapp.toString, context.environment.toString())
+    if (d == TraversalDirection.Up) {
+      if (context.environment.isModuleLevel && context.environment.isVerificationContext) {
+        opapp.op match {
+          case GetNextValueOp() =>
+            ModuleError("Primed variables are not allowed in module-level assertions/assumptions", opapp.position) :: in
+          case _ =>
           in
+        }
+      } else if (context.environment.isProcedural) {
+        opapp.op match {
+          case GetNextValueOp() =>
+            ModuleError("Primed variables can't be referenced inside procedures", opapp.position) :: in
+          case _ => in
+        }
+      } else if (!context.environment.isVerificationContext) {
+        opapp.op match {
+          case OldOperator() | HistoryOperator() =>
+            ModuleError("Operator can only be used in a verification expression", opapp.position) :: in
+          case _ =>
+            in
+        }
+      } else {
+        in
       }
+    } else {
+      in
     }
-
   }
 }
 

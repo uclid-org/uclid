@@ -332,7 +332,7 @@ class ParserSpec extends FlatSpec {
     } catch {
       case p : Utils.ParserErrorList =>
         assert (p.errors.size == 1)
-        assert (p.errors.forall(p => p._1.contains("Module output ('b') must be primed")))
+        assert (p.errors.forall(p => p._1.contains("Invalid module output")))
     }
   }
   "test-modules-4.ucl" should "not parse successfully." in {

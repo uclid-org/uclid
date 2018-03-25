@@ -43,7 +43,7 @@ module main {
     pc' = 0bv8;
   }
 
-  instance alu_i : alu (cmd : (cmd'), a : (r0'), b : (r1'), result : (res'));
+  instance alu_i : alu (cmd : (cmd'), a : (r0'), b : (r1'), result : (res));
 
   property cnt_eq_r0 : (cnt == regs[0bv2]);
 

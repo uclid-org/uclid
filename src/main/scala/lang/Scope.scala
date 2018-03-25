@@ -110,21 +110,54 @@ object Scope {
     }
   }
   /** Create an empty context. */
-  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None, ComputeContext, false)
+  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None, ModuleEnvironment, false)
 }
 
-sealed abstract class ExpressionContext
-case object ComputeContext extends ExpressionContext
-case object RequiresContext extends ExpressionContext
-case object EnsuresContext extends ExpressionContext
-case object AssertContext extends ExpressionContext
-case object AssumeContext extends ExpressionContext
-case object SpecContext extends ExpressionContext
-case object AxiomContext extends ExpressionContext
+sealed abstract class ExpressionEnvironment {
+  def isVerificationContext : Boolean = false
+  def isModuleLevel : Boolean = false
+  def isProcedural : Boolean = false
+}
+case object ModuleEnvironment extends ExpressionEnvironment {
+  override def isModuleLevel = true
+}
+case object SequentialEnvironment extends ExpressionEnvironment {
+}
+case object ProceduralEnvironment extends ExpressionEnvironment {
+  override def isProcedural = true
+}
+case object RequiresEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+}
+case object EnsuresEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+}
+case object AssertEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+}
+case object AssumeEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+}
+case object ProceduralAssertEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+  override def isProcedural = true
+}
+case object ProceduralAssumeEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+  override def isProcedural = true
+}
+case object SpecEnvironment extends ExpressionEnvironment {
+  override def isModuleLevel = true
+  override def isVerificationContext = true
+}
+case object AxiomEnvironment extends ExpressionEnvironment {
+  override def isModuleLevel = true
+  override def isVerificationContext = true
+}
 
 case class Scope (
     map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[GenericProofCommand],
-    inVerificationContext : ExpressionContext, inLTLSpec : Boolean)
+    environment : ExpressionEnvironment, inLTLSpec : Boolean)
 {
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: Identifier) = map.contains(name)
@@ -166,27 +199,27 @@ case class Scope (
 
   /** Return a new context with the inLTLSpec flag set. */
   def withLTLSpec : Scope = {
-    Scope(map, module, procedure, cmd, inVerificationContext, true)
+    Scope(map, module, procedure, cmd, environment, true)
   }
   /** Return new context with the inLTLSpec flag reset. */
   def withoutLTLSpec : Scope = {
-    Scope(map, module, procedure, cmd, inVerificationContext, false)
+    Scope(map, module, procedure, cmd, environment, false)
   }
   /** Return a new context with the inVerificationContext set. */
-  def withVerificationContext (vctx : ExpressionContext) : Scope = {
+  def withEnvironment (vctx : ExpressionEnvironment) : Scope = {
     Scope(map, module, procedure, cmd, vctx, inLTLSpec)
   }
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : Scope = {
-    Scope(map + (expr.id -> expr), module, procedure, cmd, inVerificationContext, inLTLSpec)
+    Scope(map + (expr.id -> expr), module, procedure, cmd, environment, inLTLSpec)
   }
   def +(typ : Type) : Scope = {
-    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, inVerificationContext, inLTLSpec)
+    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, environment, inLTLSpec)
   }
 
   /** Add a reference to this module (don't expand the module's declarations). */
   def +&(m : Module) : Scope = {
-    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, inVerificationContext, inLTLSpec)
+    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, environment, inLTLSpec)
   }
 
   /** Return a new context with the declarations in this module added to it. */
@@ -246,7 +279,7 @@ case class Scope (
         case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
-    Scope(m2, Some(m), None, None, inVerificationContext, false)
+    Scope(m2, Some(m), None, None, environment, false)
   }
   /** Return a new context with the declarations in this procedure added to it. */
   def +(proc: ProcedureDecl) : Scope = {
@@ -260,21 +293,21 @@ case class Scope (
     val map3 = proc.decls.foldLeft(map2){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureLocalVar(arg.id, arg.typ))
     }
-    return Scope(map3, module, Some(proc), None, inVerificationContext, false)
+    return Scope(map3, module, Some(proc), None, ProceduralEnvironment, false)
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
   def +(lambda: Lambda) : Scope = {
     val newMap = lambda.ids.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }
-    return Scope(newMap, module, procedure, cmd, inVerificationContext, inLTLSpec)
+    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec)
   }
   /** Return a new context with the function's arguments included. */
   def +(sig : FunctionSig) : Scope = {
     val newMap = sig.args.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.FunctionArg(id._1, id._2))
     }
-    return Scope(newMap, module, procedure, cmd, inVerificationContext, inLTLSpec)
+    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec)
   }
   /** Return a new context with quantifier variables added. */
   def +(opapp : OperatorApplication) : Scope = {
@@ -286,11 +319,11 @@ case class Scope (
       case ForallOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd, inVerificationContext, inLTLSpec)
+          module, procedure, cmd, environment, inLTLSpec)
       case ExistsOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd, inVerificationContext, inLTLSpec)
+          module, procedure, cmd, environment, inLTLSpec)
       case _ => this
     }
   }
@@ -301,7 +334,7 @@ case class Scope (
       case Some(id) => map + (id -> Scope.VerifResultVar(id, command))
       case None => map
     }
-    Scope(mapP, module, procedure, Some(command), inVerificationContext, inLTLSpec)
+    Scope(mapP, module, procedure, Some(command), environment, inLTLSpec)
   }
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {

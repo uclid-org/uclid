@@ -116,11 +116,7 @@ class ModuleInstanceCheckerPass() extends ReadOnlyPass[List[ModuleError]] {
             val err2 = outputExprs.foldLeft(err1) {
               (acc, arg) => {
                 arg match {
-                  case OperatorApplication(GetNextValueOp(), List(Identifier(_))) =>
-                    acc
-                  case Identifier(_) =>
-                    val msg = "Module output ('%s') must be primed".format(arg.toString)
-                    ModuleError(msg, arg.position) :: acc
+                  case Identifier(_) => acc
                   case _ =>
                     val msg = "Invalid module output : '%s'".format(arg.toString)
                     ModuleError(msg, arg.position) :: acc

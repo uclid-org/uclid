@@ -18,7 +18,7 @@ module main
 {
   var a, b : integer;
   
-  instance incr1 : incr(x : (a), y: (b));
+  instance incr1 : incr(x : (a), y: (b'));
   
   init {
     a' = 0;

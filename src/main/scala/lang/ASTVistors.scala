@@ -292,8 +292,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case grammar : GrammarDecl => visitGrammar(grammar, result, context)
       case synFunc : SynthesisFunctionDecl => visitSynthesisFunction(synFunc, result, context)
       case defDecl : DefineDecl => visitDefine(defDecl, in, context)
-      case init : InitDecl => visitInit(init, result, context)
-      case next : NextDecl => visitNext(next, result, context)
+      case init : InitDecl => visitInit(init, result, context.withEnvironment(SequentialEnvironment))
+      case next : NextDecl => visitNext(next, result, context.withEnvironment(SequentialEnvironment))
       case spec : SpecDecl => visitSpec(spec, result, context)
       case axiom : AxiomDecl => visitAxiom(axiom, result, context)
     }
@@ -330,8 +330,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitProcedureSig(proc.sig, result, context)
     result = proc.decls.foldLeft(result)((acc, i) => visitLocalVar(i, acc, context))
     result = proc.body.foldLeft(result)((acc, i) => visitStatement(i, acc, context))
-    result = proc.requires.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withVerificationContext(RequiresContext)))
-    result = proc.ensures.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withVerificationContext(EnsuresContext)))
+    result = proc.requires.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(RequiresEnvironment)))
+    result = proc.ensures.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(EnsuresEnvironment)))
     result = proc.modifies.foldLeft(result)((acc, r) => visitIdentifier(r, acc, context))
     result = pass.applyOnProcedure(TraversalDirection.Up, proc, result, contextIn)
     return result
@@ -429,7 +429,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     }
     result = pass.applyOnSpec(TraversalDirection.Down, spec, result, context)
     result = visitIdentifier(spec.id, result, context)
-    result = visitExpr(spec.expr, result, contextP.withVerificationContext(SpecContext))
+    result = visitExpr(spec.expr, result, contextP.withEnvironment(SpecEnvironment))
     result = spec.params.foldLeft(result)((acc, d) => visitExprDecorator(d, acc, context))
     result = pass.applyOnSpec(TraversalDirection.Up, spec, result, context)
     return result
@@ -441,7 +441,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case Some(id) => visitIdentifier(id, result, context)
       case None => result
     }
-    result = visitExpr(axiom.expr, result, context.withVerificationContext(AxiomContext))
+    result = visitExpr(axiom.expr, result, context.withEnvironment(AxiomEnvironment))
     result = pass.applyOnAxiom(TraversalDirection.Up, axiom, result, context)
     return result
   }
@@ -673,14 +673,16 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case None     => result
       case Some(id) => visitIdentifier(id, result, context)
     }
-    result = visitExpr(st.e, result, context.withVerificationContext(AssertContext))
+    val envP = if (context.environment == ProceduralEnvironment) ProceduralAssertEnvironment else AssertEnvironment
+    result = visitExpr(st.e, result, context.withEnvironment(envP))
     result = pass.applyOnAssert(TraversalDirection.Up, st, result, context)
     return result
   }
   def visitAssumeStatement(st : AssumeStmt, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnAssume(TraversalDirection.Down, st, result, context)
-    result = visitExpr(st.e, result, context.withVerificationContext(AssumeContext))
+    val envP = if (context.environment == ProceduralEnvironment) ProceduralAssumeEnvironment else AssumeEnvironment
+    result = visitExpr(st.e, result, context.withEnvironment(envP))
     result = pass.applyOnAssume(TraversalDirection.Up, st, result, context)
     return result
   }
@@ -990,8 +992,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case grammarDecl : GrammarDecl => visitGrammar(grammarDecl, context)
       case synFuncDecl : SynthesisFunctionDecl => visitSynthesisFunction(synFuncDecl, context)
       case defDecl : DefineDecl => visitDefine(defDecl, context)
-      case initDecl : InitDecl => visitInit(initDecl, context)
-      case nextDecl : NextDecl => visitNext(nextDecl, context)
+      case initDecl : InitDecl => visitInit(initDecl, context.withEnvironment(SequentialEnvironment))
+      case nextDecl : NextDecl => visitNext(nextDecl, context.withEnvironment(SequentialEnvironment))
       case specDecl : SpecDecl => visitSpec(specDecl, context)
       case axiomDecl : AxiomDecl => visitAxiom(axiomDecl, context)
     }).flatMap(pass.rewriteDecl(_, context))
@@ -1034,8 +1036,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val sig = visitProcedureSig(proc.sig, context)
     val decls = proc.decls.map(visitLocalVar(_, context)).flatten
     val stmts = proc.body.map(visitStatement(_, context)).flatten
-    val reqs = proc.requires.map(r => visitExpr(r, context.withVerificationContext(RequiresContext))).flatten
-    val enss = proc.ensures.map(e => visitExpr(e, context.withVerificationContext(EnsuresContext))).flatten
+    val reqs = proc.requires.map(r => visitExpr(r, context.withEnvironment(RequiresEnvironment))).flatten
+    val enss = proc.ensures.map(e => visitExpr(e, context.withEnvironment(EnsuresEnvironment))).flatten
     val mods = proc.modifies.map(v => visitIdentifier(v, context)).flatten
     val procP = (id, sig) match {
       case (Some(i), Some(s)) => pass.rewriteProcedure(ProcedureDecl(i, s, decls, stmts, reqs, enss, mods), contextIn)
@@ -1160,7 +1162,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       context
     }
     val idP = visitIdentifier(spec.id, context)
-    val exprP = visitExpr(spec.expr, contextP.withVerificationContext(SpecContext))
+    val exprP = visitExpr(spec.expr, contextP.withEnvironment(SpecEnvironment))
     val decsP = spec.params.map(visitExprDecorator(_, context)).flatten
     val specP = (idP, exprP) match {
       case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr, decsP), context)
@@ -1171,7 +1173,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitAxiom(axiom : AxiomDecl, context : Scope) : Option[AxiomDecl] = {
     val idP = axiom.id.flatMap((id) => visitIdentifier(id, context))
-    val exprP = visitExpr(axiom.expr, context.withVerificationContext(AxiomContext))
+    val exprP = visitExpr(axiom.expr, context.withEnvironment(AxiomEnvironment))
     val axiomP = exprP.flatMap((e) => pass.rewriteAxiom(AxiomDecl(idP, e), context))
     return ASTNode.introducePos(setPosition, setFilename, axiomP, axiom.position)
   }
@@ -1405,7 +1407,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitAssertStatement(st : AssertStmt, context : Scope) : List[Statement] = {
     val idP = st.id.flatMap(id => visitIdentifier(id, context))
-    val stP = visitExpr(st.e, context.withVerificationContext(AssertContext)).toList.flatMap((e) => {
+    val envP = if (context.environment == ProceduralEnvironment) ProceduralAssertEnvironment else AssertEnvironment
+    val stP = visitExpr(st.e, context.withEnvironment(envP)).toList.flatMap((e) => {
       pass.rewriteAssert(AssertStmt(e, idP), context)
     })
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
@@ -1413,7 +1416,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitAssumeStatement(st : AssumeStmt, context : Scope) : List[Statement] = {
     val idP = st.id.flatMap(id => visitIdentifier(id, context))
-    val stP = visitExpr(st.e, context.withVerificationContext(AssumeContext)).toList.flatMap((e) => {
+    val envP = if (context.environment == ProceduralEnvironment) ProceduralAssumeEnvironment else AssumeEnvironment
+    val stP = visitExpr(st.e, context.withEnvironment(envP)).toList.flatMap((e) => {
       pass.rewriteAssume(AssumeStmt(e, idP), context)
     })
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)

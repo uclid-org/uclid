@@ -45,19 +45,18 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
   def checkLhs(lhss : List[Lhs], in : T, context : Scope) : T = {
     val seqLhs = lhss.find(p => p.isSequentialLhs)
     val primedLhs = lhss.find(p => !p.isSequentialLhs)
-    context.procedure match {
-      case Some(proc) =>
-        if (primedLhs.isDefined) {
-          in + ModuleError("Primed assignments are not allowed in procedures", primedLhs.get.position)
-        } else {
-          in
-        }
-      case None =>
-        if (seqLhs.isDefined) {
-          in + ModuleError("Sequential assignment not allowed outside procedures", seqLhs.get.position)
-        } else {
-          in
-        }
+    if (context.environment == ProceduralEnvironment) {
+      if (primedLhs.isDefined) {
+        in + ModuleError("Primed assignments are not allowed in procedures", primedLhs.get.position)
+      } else {
+        in
+      }
+    } else {
+      if (seqLhs.isDefined) {
+        in + ModuleError("Sequential assignment not allowed outside procedures", seqLhs.get.position)
+      } else {
+        in
+      }
     }
   }
   override def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = {
@@ -71,7 +70,7 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
             case id : Identifier => in
             case _ => in + ModuleError("Invalid application of prime operator", arg1.position)
           }
-          if (context.procedure.isDefined) {
+          if (context.environment == ProceduralEnvironment) {
             err1 + ModuleError("Primed variables can't be referenced inside procedures".format(opapp.toString()), opapp.position)
           } else {
             err1
@@ -85,24 +84,17 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
     if (d == TraversalDirection.Down) {
       in
     } else {
-      def checkSeqConstruct(name : String) : T = {
-        context.procedure match {
-          case Some(proc) => in
-          case None =>
-            in + ModuleError("Sequential construct %s cannot be used outside a procedure".format(name), st.position)
-        }
-      }
       def checkParallelConstruct(name : String) : T = {
-        context.procedure match {
-          case None => in
-          case Some(proc) =>
-            in + ModuleError("Parallel construct %s cannot be used inside a procedure".format(name), st.position)
+        if (context.environment == SequentialEnvironment) {
+          in
+        } else {
+          in + ModuleError("Parallel construct %s cannot be used inside a procedure".format(name), st.position)
         }
       }
       st match {
-        case IfElseStmt(_, _, _) | ForStmt(_, _, _) | CaseStmt(_) |
-             ProcedureCallStmt(_, _, _) | SkipStmt() |
-             AssertStmt(_, _) | AssumeStmt(_, _) | HavocStmt(_) => in
+        case IfElseStmt(_, _, _) | ForStmt(_, _, _) | CaseStmt(_) | ProcedureCallStmt(_, _, _) |
+             SkipStmt() | AssertStmt(_, _) | AssumeStmt(_, _) | HavocStmt(_) => 
+          in
         case ModuleCallStmt(_) =>
           checkParallelConstruct("next")
         case AssignStmt(lhss, rhss) =>
