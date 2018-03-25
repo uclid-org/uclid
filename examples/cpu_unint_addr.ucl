@@ -83,8 +83,8 @@ module main {
 
   init {
     // Nothing here.
-    assume (cpu1->pc == cpu2->pc);
-    assume (cpu1->inst == cpu2->inst);
+    assume (cpu1.pc == cpu2.pc);
+    assume (cpu1.inst == cpu2.inst);
   }
 
   next {
@@ -95,16 +95,16 @@ module main {
   }
   
   // These are our properties.
-  invariant eq_regs : (forall (ri : regindex_t) :: cpu1->regs[ri] == cpu2->regs[ri]);
-  invariant eq_mem  : (forall (a : addr_t) :: cpu1->dmem[a] == cpu2->dmem[a]);
-  invariant eq_pc   : (cpu1->pc == cpu2->pc);
-  invariant eq_inst : (cpu1->inst == cpu2->inst);
+  invariant eq_regs : (forall (ri : regindex_t) :: cpu1.regs[ri] == cpu2.regs[ri]);
+  invariant eq_mem  : (forall (a : addr_t) :: cpu1.dmem[a] == cpu2.dmem[a]);
+  invariant eq_pc   : (cpu1.pc == cpu2.pc);
+  invariant eq_inst : (cpu1.inst == cpu2.inst);
 
   // The control block defines the commands that will executed as part of the proof script.
   control {
     v = unroll(3);
     check;
     print_results;
-    v->print_cex(cpu1->inst, cpu2->inst, cpu1->result, cpu2->result, cpu1->regs[0bv1], cpu2->regs[0bv1]);
+    v.print_cex(cpu1.inst, cpu2.inst, cpu1.result, cpu2.result, cpu1.regs[0bv1], cpu2.regs[0bv1]);
   }
 }

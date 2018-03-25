@@ -83,6 +83,6 @@ module main {
     x = unroll(4);
     check;
     print_results;
-    x->print_cex (invocation, operand_ruid, operand_euid, operand_suid, operand_fsuid, process_ruid, process_euid, process_suid, process_fsuid);
+    x.print_cex (invocation, operand_ruid, operand_euid, operand_suid, operand_fsuid, process_ruid, process_euid, process_suid, process_fsuid);
   }
 }

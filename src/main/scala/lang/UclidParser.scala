@@ -123,7 +123,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val OpNot = "!"
     lazy val OpMinus = "-"
     lazy val OpPrime = "'"
-    lazy val OpSelectFromInstance = "->"
     lazy val KwProcedure = "procedure"
     lazy val KwBoolean = "boolean"
     lazy val KwInteger = "integer"
@@ -178,10 +177,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     // lazy val TemporalOpRelease = "R"
 
     lexical.delimiters ++= List("(", ")", ",", "[", "]",
-      "bv", "{", "}", ";", "=", ":", "::", ".", "->", "*", "::=",
+      "bv", "{", "}", ";", "=", ":", "::", ".", "*", "::=",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat,
-      OpNot, OpMinus, OpSelectFromInstance, OpPrime)
+      OpNot, OpMinus, OpPrime)
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
@@ -217,10 +216,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val RelOp: Parser[String] = OpGT | OpLT | OpEQ | OpNE | OpGE | OpLE
     lazy val UnOp: Parser[String] = OpNot | OpMinus
     lazy val RecordSelectOp: Parser[Identifier] = positioned { ("." ~> Id) }
-    lazy val SelectFromInstanceOp : Parser[Identifier] = positioned { (OpSelectFromInstance ~> Id) }
-    lazy val SelectFromModuleOp : Parser[(Identifier, Identifier)] = {
-      Id ~ ("::" ~> Id) ^^ { case modId ~ id => (modId, id) }
-    }
     lazy val ArraySelectOp: Parser[List[Expr]] =
       ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^
       {case e ~ es => (e :: es) }
@@ -286,36 +281,30 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         E13 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |
         E13
     }
-    /** E14 = E14 (ExprList) | E14 (.RecordSelect)* | E14 (->InstanceField)* | E14 */
+    /** E13 = E14 (ExprList) | E14 */
     lazy val E13: PackratParser[Expr] = positioned {
         E14 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
-        E14 ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ {
-          case e ~ r ~ rs =>
-            (r :: rs).foldLeft(e){
-              (acc, f) => OperatorApplication(RecordSelect(f), List(acc))
-            }
-        } |
-        E14 ~ SelectFromInstanceOp ~ rep(SelectFromInstanceOp) ^^ {
-          case e ~ f ~ fs =>
-            (f :: fs).foldLeft(e) {
-              (acc, f) => OperatorApplication(SelectFromInstance(f), List(acc))
-            }
-        } |
         E14
     }
-    /** E14 = false | true | Number | Id FuncApplication | (Expr) **/
     lazy val E14: PackratParser[Expr] = positioned {
+        E15 ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ {
+          case e ~ r ~ rs =>
+            (r :: rs).foldLeft(e){
+              (acc, f) => OperatorApplication(PolymorphicSelect(f), List(acc))
+            }
+        } |
+        E15
+    }
+    /** E15 = false | true | Number | Id FuncApplication | (Expr) **/
+    lazy val E15: PackratParser[Expr] = positioned {
         Bool |
         Number |
         "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
-        KwIf ~> ("(" ~> E3 <~ ")") ~ (KwThen ~> E3) ~ (KwElse ~> Expr) ^^ {
+        KwIf ~> ("(" ~> Expr <~ ")") ~ (KwThen ~> Expr) ~ (KwElse ~> Expr) ^^ {
           case expr ~ thenExpr ~ elseExpr => lang.OperatorApplication(lang.ITEOp(), List(expr, thenExpr, elseExpr))
         } |
         KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => Lambda(idtyps, expr) } |
         "(" ~> Expr <~ ")" |
-        SelectFromModuleOp  ^^ {
-          case (moduleId, varId) => lang.ExternalIdentifier(moduleId, varId)
-        } |
         Id <~ OpPrime ^^ { case id => lang.OperatorApplication(GetNextValueOp(), List(id)) } |
         Id
     }
@@ -616,13 +605,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
 
     lazy val Cmd : PackratParser[lang.GenericProofCommand] = positioned {
-      (Id <~ "=").? ~ (Id <~ "->").? ~ Id <~ ";" ^^
+      (Id <~ "=").? ~ (Id <~ ".").? ~ Id <~ ";" ^^
         { case rId ~ oId ~ id => lang.GenericProofCommand(id, List.empty, List.empty, rId, oId) } |
-      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ IdParamList <~ ";" ^^
+      (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ IdParamList <~ ";" ^^
         { case rId ~ oId ~ id ~ idparams => lang.GenericProofCommand(id, idparams, List.empty, rId, oId) } |
-      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ ExprList <~ ";" ^^
+      (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ ExprList <~ ";" ^^
         { case rId ~ oId ~ id ~ es => lang.GenericProofCommand(id, List.empty, es.map(e => (e, e.toString())), rId, oId) } |
-      (Id <~ "=").? ~ (Id <~ "->").? ~ Id ~ IdParamList ~ ExprList <~ ";" ^^
+      (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ IdParamList ~ ExprList <~ ";" ^^
         { case rId ~ oId ~ id ~ idparams ~ es => lang.GenericProofCommand(id, idparams, es.map(e => (e, e.toString())), rId, oId) }
     }
 

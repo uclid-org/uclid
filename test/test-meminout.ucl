@@ -68,6 +68,6 @@ module main {
     x = unroll(3);
     check;
     // print_results;
-    // x->print_cex (shadow, regfile[0bv2]);
+    // x.print_cex (shadow, regfile[0bv2]);
   }
 }

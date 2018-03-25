@@ -18,6 +18,6 @@ module main {
     v = bmc(4);
     check;
     // print_results;
-    //v->print_cex;
+    //v.print_cex;
   } 
 }

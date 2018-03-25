@@ -26,6 +26,6 @@ module main
         vobj = induction;
         check;
         print_results;
-        vobj->print_cex(n, sum);
+        vobj.print_cex(n, sum);
     }
 }

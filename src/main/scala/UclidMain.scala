@@ -149,6 +149,7 @@ object UclidMain {
     passManager.addPass(new FuncExprRewriter())
     passManager.addPass(new InstanceModuleNameChecker())
     passManager.addPass(new InstanceModuleTypeRewriter())
+    passManager.addPass(new RewritePolymorphicSelect())
     passManager.addPass(new TypeSynonymFinder())
     passManager.addPass(new TypeSynonymRewriter())
     passManager.addPass(new BitVectorSliceFindWidth())

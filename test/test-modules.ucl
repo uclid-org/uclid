@@ -94,7 +94,7 @@ module main {
     v = unroll(3);
     check;
     // print_results;
-    // v->print_cex(cnt, res);
+    // v.print_cex(cnt, res);
     
   }
 }

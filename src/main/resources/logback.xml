@@ -9,6 +9,7 @@
   </appender>
 
   <logger name="uclid.lang.PassManager" level="OFF"/>
+  <logger name="uclid.lang.ExpressionTypeCheckerPass" level="OFF"/>
   <logger name="uclid.lang.ModuleInstanceCheckerPass" level="OFF"/>
   <logger name="uclid.lang.VariableDependencyFinder" level="OFF"/>
   <logger name="uclid.lang.StatementSchedulerPass" level="OFF"/>

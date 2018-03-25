@@ -18,6 +18,6 @@ module main {
     f = induction (1);
     check;
     print_results;
-    f->print_smt2;
+    f.print_smt2;
   }
 }

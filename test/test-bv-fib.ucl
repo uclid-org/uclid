@@ -19,6 +19,6 @@ module main {
   	x = unroll (5);
   	check;
   	// print_results;
-  	// x->print_cex;
+  	// x.print_cex;
   }
 }

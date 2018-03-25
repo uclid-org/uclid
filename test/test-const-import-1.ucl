@@ -10,12 +10,12 @@ module main {
 
   init {
     sum' = 1bv8;
-    num' = common::k1_word_t;
+    num' = common.k1_word_t;
   }
 
   next {
     sum' = sum + 1bv8;
-    num' = num + common :: k1_word_t;
+    num' = num + common.k1_word_t;
   }
 
   property sum_num : sum == num;

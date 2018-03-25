@@ -44,7 +44,7 @@ import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.immutable.{Map => ImmutableMap}
 import scala.util.parsing.input.Position
-
+import com.typesafe.scalalogging.Logger
 
 class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
 {
@@ -219,6 +219,7 @@ object ReplacePolymorphicOperators {
 
 class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
 {
+  lazy val logger = Logger(classOf[ExpressionTypeCheckerPass])
   type Memo = MutableMap[IdGenerator.Id, Type]
   var memo : Memo = MutableMap.empty
   type ErrorList = Set[Utils.TypeError]
@@ -315,6 +316,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     }
     def opAppType(opapp : OperatorApplication) : Type = {
       val argTypes = opapp.operands.map(typeOf(_, c + opapp))
+      logger.debug("opAppType: {}", opapp.toString())
       opapp.op match {
         case polyOp : PolymorphicOperator => {
           def numArgs(op : PolymorphicOperator) : Int = {
@@ -422,8 +424,32 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
           new BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width + argTypes(1).asInstanceOf[BitVectorType].width)
         }
-        case RecordSelect(field) => {
-          Utils.assert(argTypes.size == 1, "Record select operator must have exactly one operand")
+        case PolymorphicSelect(field) =>
+          Utils.assert(argTypes.size == 1, "Select operator must have exactly one operand.")
+          argTypes(0) match {
+            case recType : RecordType =>
+              val typOption = recType.fieldType(field)
+              checkTypeError(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in " + recType.toString(), opapp.pos, c.filename)
+              polyOpMap.put(opapp.op.astNodeId, RecordSelect(field))
+              typOption.get
+            case tupType : TupleType =>
+              val indexS = field.name.substring(1)
+              checkTypeError(indexS.forall(Character.isDigit), "Tuple fields must be integers preceded by an underscore", opapp.pos, c.filename)
+              val indexI = indexS.toInt
+              checkTypeError(indexI >= 1 && indexI <= tupType.numFields, "Invalid tuple index: " + indexS, opapp.pos, c.filename)
+              polyOpMap.put(opapp.op.astNodeId, RecordSelect(field))
+              tupType.fieldTypes(indexI-1)
+            case modT : ModuleType =>
+              val fldT = modT.typeMap.get(field)
+              checkTypeError(fldT.isDefined, "Unknown type for selection: %s".format(field.toString), field.pos, c.filename)
+              polyOpMap.put(opapp.op.astNodeId, SelectFromInstance(field))
+              fldT.get
+            case _ =>
+              checkTypeError(false, "Argument to select operator must be of type record or instance", opapp.pos, c.filename)
+              new UndefinedType()
+          }
+        case RecordSelect(field) =>
+          Utils.assert(argTypes.size == 1, "Select operator must have exactly one operand.")
           argTypes(0) match {
             case recType : RecordType =>
               val typOption = recType.fieldType(field)
@@ -436,19 +462,17 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               checkTypeError(indexI >= 1 && indexI <= tupType.numFields, "Invalid tuple index: " + indexS, opapp.pos, c.filename)
               tupType.fieldTypes(indexI-1)
             case _ =>
-              checkTypeError(false, "Argument to record select operator must be of type record", opapp.pos, c.filename)
-              new BooleanType()
+              checkTypeError(false, "Argument to select operator must be of type record", opapp.pos, c.filename)
+              new UndefinedType()
           }
-        }
-        case SelectFromInstance(fld) => {
-          Utils.assert(argTypes.size == 1, "Expected exactly one argument to SelectFromInstance")
-          val inst = argTypes(0)
-          checkTypeError(inst.isInstanceOf[ModuleType], "Argument to select operator must be module instance", fld.pos, c.filename)
+        case SelectFromInstance(field) =>
+          Utils.assert(argTypes.size == 1, "Select operator must have exactly one operand.")
+          val inst= argTypes(0)
+          checkTypeError(inst.isInstanceOf[ModuleType], "Argument to select operator must be module instance", field.pos, c.filename)
           val modT = inst.asInstanceOf[ModuleType]
-          val fldT = modT.typeMap.get(fld)
-          checkTypeError(fldT.isDefined, "Unknown type for selection: %s".format(fld.toString), fld.pos, c.filename)
+          val fldT = modT.typeMap.get(field)
+          checkTypeError(fldT.isDefined, "Unknown type for selection: %s".format(field.toString), field.pos, c.filename)
           fldT.get
-        }
         case GetNextValueOp() =>
           Utils.assert(argTypes.size == 1, "Expected exactly one argument to GetFinalValue")
           argTypes(0)
@@ -562,13 +586,17 @@ class PolymorphicTypeRewriterPass extends RewritePass {
   lazy val typeCheckerPass = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
   override def rewriteOperator(op : Operator, ctx : Scope) : Option[Operator] = {
 
+    lazy val mappedOp = {
+      val reifiedOp = typeCheckerPass.polyOpMap.get(op.astNodeId)
+      Utils.assert(reifiedOp.isDefined, "No reified operator available for: " + op.toString)
+      assert (reifiedOp.get.pos == op.pos)
+      reifiedOp
+    }
     op match {
-      case p : PolymorphicOperator => {
-        val reifiedOp = typeCheckerPass.polyOpMap.get(p.astNodeId)
-        Utils.assert(reifiedOp.isDefined, "No reified operator available for: " + p.toString)
-        assert (reifiedOp.get.pos == p.pos)
-        reifiedOp
-      }
+      case p : PolymorphicOperator=>
+        mappedOp
+      case PolymorphicSelect(_) =>
+        mappedOp
       case bv : BVArgOperator => {
         if (bv.w == 0) {
           val width = typeCheckerPass.bvOpMap.get(bv.astNodeId)

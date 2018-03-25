@@ -15,9 +15,9 @@ module main
     b' = b + 2;
   }
   property global_z : z;
-  property x0 : z -> z1 || z2;
-  property x1 : z1 -> a > b;
-  property x2 : z2 -> b > 0;
+  property x0 : z.z1 || z2;
+  property x1 : z1.a > b;
+  property x2 : z2.b > 0;
   control {
     initialize;
     simulate(4);

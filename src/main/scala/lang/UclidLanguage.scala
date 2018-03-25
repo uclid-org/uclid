@@ -328,12 +328,16 @@ case class ConcatOp() extends Operator {
   override def toString = "++"
   override def fixity = Operator.INFIX
 }
+case class PolymorphicSelect(id : Identifier) extends Operator {
+  override def toString = "." + id
+  override def fixity = Operator.POSTFIX
+}
 case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
   override def fixity = Operator.INFIX
 }
 case class SelectFromInstance(varId : Identifier) extends Operator {
-  override def toString = "->" + varId
+  override def toString = "." + varId
   override def fixity = Operator.INFIX
 }
 case class GetNextValueOp() extends Operator {
@@ -403,10 +407,12 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
   override def isConstant = operands.forall(_.isConstant)
   override def toString = {
     op match {
+      case PolymorphicSelect(r) =>
+        operands(0).toString + "." + r.toString()
       case RecordSelect(r) =>
         operands(0).toString + "." + r.toString
       case SelectFromInstance(f) =>
-        operands(0).toString + "->" + f.toString
+        operands(0).toString + "." + f.toString
       case ForallOp(_) | ExistsOp(_) =>
         "(" + op.toString + operands(0).toString + ")"
       case _ =>
@@ -1094,6 +1100,16 @@ case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) ext
 
 object Annotation {
   val default = List(InstanceVarMapAnnotation(Map.empty))
+  def defaultVars(decls : List[Decl]) : List[Annotation] = {
+    val inputs = decls.collect{ case inps : InputVarsDecl => inps.ids }
+    val outputs = decls.collect{ case outs : OutputVarsDecl => outs.ids }
+    val vars = decls.collect{ case vars : StateVarsDecl => vars.ids }
+    val sharedVars = decls.collect{ case sharedVars : SharedVarsDecl => sharedVars.ids }
+    def flatten (l : List[List[Identifier]]) : List[Identifier] = l.flatMap(ll => ll)
+    val names = flatten(inputs) ++ flatten(outputs) ++ flatten(vars) ++ flatten(sharedVars)
+    val instMap = names.map(n => (List(n) -> n)).toMap
+    List(InstanceVarMapAnnotation(instMap))
+  }
 }
 
 case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCommand], notes: List[Annotation]) extends ASTNode {

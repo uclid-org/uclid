@@ -64,8 +64,8 @@ class PassManager(name : => String) {
     val init : Option[Module] = Some(module)
     passes.foldLeft(init){
       (mod, pass) => {
-        logger.debug("{} => running pass: {}", name, pass.passName)
-        // println("[1] running pass: %s; moduleDefined: %s".format(pass.passName, mod.isDefined.toString))
+        logger.debug("{} => running pass: {} on module: {}", 
+            name, pass.passName, (if (mod.isDefined) mod.get.id.toString() else "None"))
         mod.flatMap(pass.visit(_, context))
       }
     }
@@ -83,7 +83,6 @@ class PassManager(name : => String) {
     val modulesP = passes.foldLeft(modules) {
       (mods, pass) => {
         pass.reset()
-        // println("[2] running pass: " + pass.passName)
         val initCtx = Scope.empty
         val initModules = List.empty[Module]
         val init = (initCtx, initModules)
@@ -93,6 +92,7 @@ class PassManager(name : => String) {
             val modules = acc._2
             val mP = pass.visit(m, ctx)
             pass.rewind()
+            logger.debug("{} => running pass: {} on module: {}", name, pass.passName, m.id.toString())
             mP match {
               case None => (ctx, modules)
               case Some(modP) => (ctx +& modP, modP::modules)

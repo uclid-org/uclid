@@ -41,7 +41,7 @@ module main
     v = unroll(5);
     check;
     print_results;
-    v->print_cex;
-    v->print_cex(incr1->c, incr1->y, a, b);
+    v.print_cex;
+    v->print_cex(incr1.c, incr1.y, a, b);
   }
 }

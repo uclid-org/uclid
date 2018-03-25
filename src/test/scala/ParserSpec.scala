@@ -177,7 +177,7 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.TypeErrorList =>
         assert (p.errors.size == 3)
-        assert (p.errors.forall(e => e.getMessage().contains("Argument to select operator must be module instance")))
+        assert (p.errors.forall(e => e.getMessage().contains("Argument to select operator must be of type record or instance")))
     }
   }
   "test-typechecker-5.ucl" should "not parse successfully." in {

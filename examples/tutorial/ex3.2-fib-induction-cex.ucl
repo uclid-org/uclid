@@ -18,6 +18,6 @@ module main {
     vobj = induction;
     check;
     print_results;
-    vobj->print_cex(a, b);
+    vobj.print_cex(a, b);
   }
 }
