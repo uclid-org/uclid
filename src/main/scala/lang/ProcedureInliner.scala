@@ -80,7 +80,13 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
   }
 }
 
-class InlineProcedurePass(procToInline : ProcedureDecl, primeVarMap : Map[Identifier, Identifier]) extends RewritePass {
+object ProcedureInliner {
+  sealed abstract class RewriteOptions
+  case object RewriteNext extends RewriteOptions
+  case object RewriteInit extends RewriteOptions
+}
+
+class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, procToInline : ProcedureDecl, primeVarMap : Map[Identifier, Identifier]) extends RewritePass {
   type UniqueNameProvider = (Identifier, String) => Identifier
   override def rewriteProcedure(p : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
     if (p.id == procToInline.id) Some(p)
@@ -99,13 +105,21 @@ class InlineProcedurePass(procToInline : ProcedureDecl, primeVarMap : Map[Identi
     val decls = m.decls.foldLeft((List.empty[Decl], List.empty[StateVarsDecl]))((acc, decl) => {
       decl match {
         case InitDecl(body) =>
-          val (stmts, vars) = inlineProcedureCalls((id, p) => initNameProvider(id, p), body)
-          (acc._1 ++ List(InitDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
+          if (rewriteOptions == ProcedureInliner.RewriteInit) {
+            val (stmts, vars) = inlineProcedureCalls((id, p) => initNameProvider(id, p), body)
+            (acc._1 ++ List(InitDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
+          } else {
+            (acc._1 ++ List(decl), acc._2)
+          }
         case NextDecl(body) =>
-          val (stmts, vars) = inlineProcedureCalls((id, p) => nextNameProvider(id, p), body)
-          (acc._1 ++ List(NextDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
-        case stmt =>
-          (acc._1 ++ List(stmt), acc._2)
+          if (rewriteOptions == ProcedureInliner.RewriteNext) {
+            val (stmts, vars) = inlineProcedureCalls((id, p) => nextNameProvider(id, p), body)
+            (acc._1 ++ List(NextDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
+          } else {
+            (acc._1 ++ List(decl), acc._2)
+          }
+        case decl =>
+          (acc._1 ++ List(decl), acc._2)
       }
     })
     val moduleDecls = decls._2 ++ decls._1
@@ -175,18 +189,23 @@ class InlineProcedurePass(procToInline : ProcedureDecl, primeVarMap : Map[Identi
   }
 }
 
-class ProcedureInliner extends ASTAnalysis {
+class ProcedureInliner(rewriteOptions: ProcedureInliner.RewriteOptions) extends ASTAnalysis {
   lazy val primedVariableCollector = manager.pass("PrimedVariableCollector").asInstanceOf[PrimedVariableCollector]
   lazy val findProcedureDependency = manager.pass("FindProcedureDependency").asInstanceOf[FindProcedureDependency]
-  override def passName = "ProcedureInliner"
+  override def passName = "ProcedureInliner:"+rewriteOptions.toString()
 
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    val primeVarMap = primedVariableCollector.primeVarMap.get
+    val primeVarMap = if (rewriteOptions == ProcedureInliner.RewriteNext) {
+      primedVariableCollector.primeVarMap.get
+    } else {
+      val writeables = module.sharedVars.map(p => p._1) ++ module.vars.map(p => p._1) ++ module.outputs.map(p => p._1)
+      writeables.map(v => (v -> v)).toMap
+    }
     val procInliningOrder = findProcedureDependency.procInliningOrder
     def inlineProcedure(procId : Identifier, mod : Module) : Module = {
       if (procId != Identifier("_top")) {
         val proc = mod.procedures.find(p => p.id == procId).get
-        val rewriter = new ASTRewriter("ProcedureInliner.Inline:" + procId.toString, new InlineProcedurePass(proc, primeVarMap))
+        val rewriter = new ASTRewriter("ProcedureInliner.Inline:" + procId.toString, new InlineProcedurePass(rewriteOptions, proc, primeVarMap))
         rewriter.visit(mod, context).get
       } else {
         module
