@@ -14,10 +14,10 @@ module main {
   var process_fsuid : id_t;     // filesystem
 
   init {
-    process_ruid'  = privileged;
-    process_euid'  = privileged;
-    process_suid'  = privileged;
-    process_fsuid' = privileged;
+    process_ruid  = privileged;
+    process_euid  = privileged;
+    process_suid  = privileged;
+    process_fsuid = privileged;
   }
   
   procedure set_next_uids()
@@ -81,7 +81,7 @@ module main {
         (process_ruid == privileged || process_euid == privileged || process_suid == privileged);
         
   control {
-    x = unroll(4);
+    x = unroll(3);
     check;
     print_results;
     x.print_cex (invocation, operand_ruid, operand_euid, operand_suid, operand_fsuid, process_ruid, process_euid, process_suid, process_fsuid);

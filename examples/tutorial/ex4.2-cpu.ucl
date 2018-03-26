@@ -43,7 +43,7 @@ module cpu {
   init {
     assume (forall (r : regindex_t) :: regs[r] == 0bv8);
     assume (forall (a : addr_t) :: dmem[a] == 0bv8);
-    pc', inst' = 0bv8, 0bv8;
+    pc, inst = 0bv8, 0bv8;
   }
 
   next {

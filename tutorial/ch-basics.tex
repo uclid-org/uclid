@@ -20,7 +20,7 @@ Types supported by \uclid{} are of the following kinds:
     \item Uninterpreted types.
 \end{enumerate}
 
-An enumerated type is used in line~3 of Example~\ref{ex:alu}. This declares a \textit{type synonym}: \codelike{cmd_t} is an alias for the enumerated type consisting of three values: \codelike{add}, \codelike{sub} and \codelike{mov_imm}. The input \codelike{cmd} is then declared to be of type \codelike{cmd_t} on line~8. 
+An enumerated type is used in line~2 of Example~\ref{ex:alu}. This declares a \textit{type synonym}: \codelike{cmd_t} is an alias for the enumerated type consisting of three values: \codelike{add}, \codelike{sub} and \codelike{mov_imm}. The input \codelike{cmd} is then declared to be of type \codelike{cmd_t} on line~8. 
 
 The input \codelike{valid} is of type \keyword{boolean}. Register indices \codelike{r1} and \codelike{r2} are bit-vectors of width 3 (\keyword{bv3}), while \codelike{immed}, \codelike{result}, \codelike{r1val} and \codelike{r2val} are bit-vectors of width 8 (\keyword{bv8}).
 
@@ -30,12 +30,12 @@ The final point of interest, type-wise, is line~10. The state variable \codelike
 
 \section{Statements in \uclid{}}
 
-\uclid{} allows the modeling of both sequential and parallel computation. Sequential computation is performed by defining a \keyword{procedure} while parallel computation occurs in the \keyword{init} and \keyword{next} blocks. 
+\uclid{} allows the modeling of both sequential and parallel computation. Sequential computation is performed by defining a \keyword{procedure} (and in the \codelike{init} block) while parallel computation occurs in the \keyword{next} block. 
 
 \subsection{Parallel vs. Sequential Computation}
-Assignments inside procedures are called \textbf{sequential assignments} and must be of the form \codelike{variable = expression;} Assignments inside the \codelike{init} and \codelike{next} blocks are \textbf{parallel assignments} must be of the form \codelike{variable' = expression;} and \uclid{} uses the notation \codelike{variable'} to distinguish parallel from sequential assignments.
+Assignments inside procedures and the \codelike{init} block are called \textbf{sequential assignments} and must be of the form \codelike{variable = expression;} Assignments inside \codelike{next} block are \textbf{parallel assignments} must be of the form \codelike{variable' = expression;}. Mathematically, these assignments compute the next state of the transition system described by the model. \uclid{} uses the notation \codelike{variable'} to distinguish parallel from sequential assignments.
 
-An example of sequential computation is the following:
+An example showing the use of sequential assignments is the following:
 
 %\begin{uclidlisting}[htbp]
 \begin{lstlisting}[language=uclid,style=uclidstyle]
@@ -44,15 +44,16 @@ An example of sequential computation is the following:
   x = x + 3;
 \end{lstlisting}
 
-Recall that these sequential assignments \emph{must} appear inside a procedure. Executing these three statements will result \codelike{x} having the value 6. 
+    Recall that these sequential assignments \emph{must} appear inside a procedure or in the \codelike{init} block. Executing these three statements will result \codelike{x} having the value 6. 
 
     In contrast, the following sequence of parallel assignments is \textbf{not} allowed and will result in a compiler error.
 \begin{lstlisting}[language=uclid,style=uclidstyle]
+  // Error, will not compile.
   x' = 1;
   x' = x + 2;
   x' = x + 3;
 \end{lstlisting}
-Only a single parallel assignment to a state/output variable is allowed in a code block. And since parallel assignments are computed in data-flow order, the order in which they are specified does not matter. This means that the following two snippets of code are equivalent:
+Only a single parallel assignment to a state/output variable is allowed in a code block. Furthermore, since parallel assignments are computed in data-flow order, the order in which they are specified does not matter. This means that the following two snippets of code are equivalent:
 
 \begin{lstlisting}[language=uclid,style=uclidstyle]
   x' = 0;
