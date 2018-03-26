@@ -300,11 +300,6 @@ class ParserSpec extends FlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
-  "test-types-0.ucl" should "parse successfully." in {
-    val fileModules = UclidMain.compile(List(new File("test/nested_instances.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
-    assert (instantiatedModules.size == 1)
-  }
   "test-multiple-writes.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(List(new File("test/test-multiple-writes.ucl")), lang.Identifier("main"))
@@ -342,8 +337,8 @@ class ParserSpec extends FlatSpec {
     } catch {
       case p : Utils.ParserErrorList =>
         assert (p.errors.size == 2)
-        assert (p.errors.exists(p => p._1.contains("Primed assignments are not allowed in procedures")))
-        assert (p.errors.exists(p => p._1.contains("Parallel construct next cannot be used inside a procedure")))
+        assert (p.errors.exists(p => p._1.contains("Primed assignments are not allowed in procedural code")))
+        assert (p.errors.exists(p => p._1.contains("Parallel construct next cannot be used in procedural code")))
     }
   }
   "test-primed-variables-2.ucl" should "not parse successfully." in {

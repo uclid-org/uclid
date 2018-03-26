@@ -3,7 +3,7 @@ module main
     var cnt : bv2;
 
     init {
-        cnt' = 0bv2;
+        cnt = 0bv2;
     }
 
     next {

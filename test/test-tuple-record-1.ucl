@@ -22,15 +22,10 @@ module main {
     s.b = r.b + n;
     s.c = (s.a == s.b);
   }
-  
-  procedure init_s() returns (s : struct)
-  {
-    call (s.c1) = zero();
-    call (s.c2) = zero();
-  }
 
   init {
-    call (s') = init_s();
+    call (s.c1) = zero();
+    call (s.c2) = zero();
   }
 
   procedure set_next_s()

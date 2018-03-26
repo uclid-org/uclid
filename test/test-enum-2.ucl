@@ -16,11 +16,10 @@ module main
   procedure set_regs_1()
   {
     // all registers initialized to one.
-    assume (forall (ri : bv3) :: regs[ri] == 1bv8);
   }
   init {
-    call set_regs_1();
-    cnt' = 1bv8;
+    assume (forall (ri : bv3) :: regs[ri] == 1bv8);
+    cnt = 1bv8;
   }
 
   procedure exec_command()

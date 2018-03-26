@@ -11,12 +11,12 @@ module main {
   var inited : boolean;
   
   init {
-    a_past' = 0;
-    b_past' = 0;
-    ready_next' = false;
+    a_past = 0;
+    b_past = 0;
+    ready_next = false;
 
-    inited'  = false;
-    stepcnt' = 0;
+    inited  = false;
+    stepcnt = 0;
   }
   
   next {

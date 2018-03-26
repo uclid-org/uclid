@@ -10,8 +10,8 @@ module main {
   }
   
   init {
-    cnt' = 0bv8;
-    cntp' = 0bv8;
+    cnt = 0bv8;
+    cntp = 0bv8;
   }
   next {
     call (cnt') = add4(cnt);

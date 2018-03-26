@@ -27,11 +27,11 @@ module queue
     is_empty() && in_queue(v);
 
   init {
-    inited' = false;
-    head' = 0;
-    tail' = 0; 
-    first' = contents[head];
-    contains_data' = false;
+    inited = false;
+    head   = 0;
+    tail   = 0; 
+    first  = contents[head];
+    contains_data = false;
   }
 
   procedure _push()
@@ -86,9 +86,9 @@ module main
   instance queue_i : queue(op : (op), data : (data));
 
   init {
-    op' = nop;
-    data' = 0; 
-    step' = 0;
+    op = nop;
+    data = 0; 
+    step = 0;
   }
   
   next {

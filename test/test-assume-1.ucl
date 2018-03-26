@@ -3,7 +3,7 @@ module main
   var n, np : integer;
   
   init {
-    n' = 0;
+    n = 0;
   }
 
   procedure compute_next_n() returns (m : integer)

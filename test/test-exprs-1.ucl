@@ -3,7 +3,7 @@ module main
   var sum, fake, i : integer;
   
   init {
-    i' = 0;
+    i = 0;
   }
   
   procedure next_state()

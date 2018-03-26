@@ -80,7 +80,7 @@ module main {
     assume (forall (a : addr_t) :: (cpu.word2op(cpu_i.mem[a])) == add);
     assume (forall (a : addr_t) :: (cpu.word2reg0(cpu_i.mem[a])) == r0index);
     assume (forall (a : addr_t) :: (cpu.word2reg1(cpu_i.mem[a])) == r0index);
-    sum' = 1bv8;
+    sum = 1bv8;
   }
   next {
     next (cpu_i);

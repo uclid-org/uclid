@@ -17,15 +17,10 @@ module main {
     pn.c = !p.c;
   }
 
-  procedure init_p() returns (p : rec1)
-  {
+  init {
     p.a = 0;
     p.b = 1;
     p.c = false;
-  }
-
-  init {
-    call (p') = init_p();
   }
 
   next {

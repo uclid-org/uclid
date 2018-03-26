@@ -74,10 +74,10 @@ module main {
   }
   
   init {
-    st' = {0, 0, true};
-    r1' = {{0, 0, true}, 0};
-    stp' = st;
-    cnt' = 0; 
+    st  = {0, 0, true};
+    r1  = {{0, 0, true}, 0};
+    stp = st;
+    cnt = 0; 
   }
   
   next {

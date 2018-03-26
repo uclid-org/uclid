@@ -43,11 +43,11 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
 {
   type T = Set[ModuleError]
   def checkLhs(lhss : List[Lhs], in : T, context : Scope) : T = {
-    val seqLhs = lhss.find(p => p.isSequentialLhs)
-    val primedLhs = lhss.find(p => !p.isSequentialLhs)
+    val seqLhs = lhss.find(p => p.isProceduralLhs)
+    val primedLhs = lhss.find(p => !p.isProceduralLhs)
     if (context.environment == ProceduralEnvironment) {
       if (primedLhs.isDefined) {
-        in + ModuleError("Primed assignments are not allowed in procedures", primedLhs.get.position)
+        in + ModuleError("Primed assignments are not allowed in procedural code", primedLhs.get.position)
       } else {
         in
       }
@@ -71,7 +71,7 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
             case _ => in + ModuleError("Invalid application of prime operator", arg1.position)
           }
           if (context.environment == ProceduralEnvironment) {
-            err1 + ModuleError("Primed variables can't be referenced inside procedures".format(opapp.toString()), opapp.position)
+            err1 + ModuleError("Primed variables can't be referenced in procedural code".format(opapp.toString()), opapp.position)
           } else {
             err1
           }
@@ -88,7 +88,7 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         if (context.environment == SequentialEnvironment) {
           in
         } else {
-          in + ModuleError("Parallel construct %s cannot be used inside a procedure".format(name), st.position)
+          in + ModuleError("Parallel construct %s cannot be used in procedural code".format(name), st.position)
         }
       }
       st match {

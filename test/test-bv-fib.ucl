@@ -4,8 +4,8 @@ module main {
     z, w = y, x + y;
   }
   init {
-    a' = 0bv16;
-    b' = 1bv16;
+    a = 0bv16;
+    b = 1bv16;
   }
   next {
     call (a', b') = fib(a, b);

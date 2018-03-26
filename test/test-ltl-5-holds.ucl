@@ -3,7 +3,7 @@ module main
   var b : boolean;
   
   init {
-    b' = true;
+    b = true;
   }
   
   next {

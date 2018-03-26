@@ -8,7 +8,7 @@ module main_func {
   var pc : pc_t;
 
   init {
-    pc' = A;
+    pc = A;
   }
 
 // potentially we could have modeled the main program naturally
@@ -41,8 +41,8 @@ module ISR_func {
  output return_ISR : boolean;
 
  init {
-   pc' = idle;
-   return_ISR' = false;
+   pc = idle;
+   return_ISR = false;
  }
 
  next {
@@ -93,10 +93,10 @@ module Sys {
   instance ISR_f : ISR_func (enable : (I_enable), timerCount : (timerCount), return_ISR : (return_ISR));
 
   init {
-    mode' = main_t;
-    timerCount' = 2000;
-    M_enable' = true; // since mode == main_t initially
-    I_enable' = false;
+    mode = main_t;
+    timerCount = 2000;
+    M_enable = true; // since mode == main_t initially
+    I_enable = false;
   }
 
   next {

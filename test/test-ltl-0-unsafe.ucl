@@ -6,8 +6,8 @@ module main
   output sum : integer;
   
   init {
-    inited' = false;
-    n' = 1;
+    inited = false;
+    n = 1;
   }
   next {
 	inited' = true;    

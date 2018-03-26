@@ -22,8 +22,8 @@ module main {
   }
 
   init {
-    n' = n_init;
-    c' = 1;
+    n = n_init;
+    c = 1;
   }
   next {
     // noteToSelf(ReorderingTest)

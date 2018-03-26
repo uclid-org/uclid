@@ -166,10 +166,6 @@ class VariableDependencyFinderPass extends ReadOnlyPass[List[ModuleError]] {
   lazy val logger = Logger(classOf[VariableDependencyFinder])
 
   type T = List[ModuleError]
-  override def applyOnInit(d : TraversalDirection.T, init : InitDecl, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up) { checkBlock(init.body, in, context) }
-    else { in }
-  }
   override def applyOnNext(d : TraversalDirection.T, next : NextDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) { checkBlock(next.body, in, context) }
     else { in }
@@ -271,10 +267,6 @@ class StatementSchedulerPass extends RewritePass {
   override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
     val bodyP = reorderStatements(next.body, context)
     Some(NextDecl(bodyP))
-  }
-  override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
-    val bodyP = reorderStatements(init.body, context)
-    Some(InitDecl(bodyP))
   }
   override def rewriteIfElse(ifelse : IfElseStmt, context : Scope) : List[Statement] = {
     if (context.environment == SequentialEnvironment) {

@@ -8,8 +8,8 @@ module main {
     havoc k;
   }
   init {
-    a' = 0;
-    b' = 1;
+    a = 0;
+    b = 1;
   }
   next {
     call (a', b') = fib(a, b);

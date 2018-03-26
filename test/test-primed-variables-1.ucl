@@ -2,7 +2,7 @@ module main {
   var a : integer;
   
   init {
-    a' = 0;
+    a = 0;
   }
   
   next {

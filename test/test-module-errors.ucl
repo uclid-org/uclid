@@ -22,8 +22,8 @@ module main
 
   init {
     assume (forall (i : integer) :: numbers[i] == 0);
-    sum' = 0;
-    index' = 0;
+    sum = 0;
+    index = 0;
   }
 
   next {

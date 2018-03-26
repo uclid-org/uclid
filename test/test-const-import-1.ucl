@@ -9,8 +9,8 @@ module main {
   var num : common.word_t;
 
   init {
-    sum' = 1bv8;
-    num' = common.k1_word_t;
+    sum = 1bv8;
+    num = common.k1_word_t;
   }
 
   next {

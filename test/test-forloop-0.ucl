@@ -19,9 +19,9 @@ module main {
   }
   
   init {
-    cnt' = 0;
-    cntp' = 0;
-    cntq' = 0;
+    cnt = 0;
+    cntp = 0;
+    cntq = 0;
   }
 
   next {

@@ -28,7 +28,7 @@ module traffic_light
   }
 
   init {
-    step' = 5;
+    step = 5;
   }
 
   next {

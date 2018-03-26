@@ -39,8 +39,8 @@ module main {
   init {
 	assume (forall (r : regindex_t) :: regs[r] == 1bv4);
 	assume (forall (a : addr_t) :: mem[a] == 0bv6);
-	cnt' = 1bv4;
-    pc' = 0bv8;
+	cnt = 1bv4;
+    pc = 0bv8;
   }
 
   instance alu_i : alu (cmd : (cmd'), a : (r0'), b : (r1'), result : (res));

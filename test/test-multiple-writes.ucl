@@ -5,8 +5,8 @@ module main {
   }
 
   init {
-    a' = 0b0; // binary literal
-    b' = 0x1; // hexadecimal literal
+    a = 0b0; // binary literal
+    b = 0x1; // hexadecimal literal
   }
 
   next {

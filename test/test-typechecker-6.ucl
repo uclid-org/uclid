@@ -9,9 +9,9 @@ module main {
   }
 
   init {
-    one' = 1;
-    a' = 0b0; // binary literal
-    b' = 0x1; // hexadecimal literal
+    one = 1;
+    a = 0b0; // binary literal
+    b = 0x1; // hexadecimal literal
   }
 
   next {

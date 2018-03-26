@@ -2,7 +2,7 @@ module main
 {
   var flag : boolean;
   
-  init { flag' = true; }
+  init { flag = true; }
   next {
     if (flag) {
       skip;

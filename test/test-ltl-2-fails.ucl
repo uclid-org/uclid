@@ -2,7 +2,7 @@ module main {
   var state : boolean;
   
   init {
-    state' = false;
+    state = false;
   }
   
   next {

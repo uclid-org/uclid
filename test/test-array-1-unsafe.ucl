@@ -4,17 +4,6 @@ module main
   var numbers : [boolean, num_t]integer;
   var sum, index : integer;
 
-  procedure init_state()
-    modifies numbers, sum, index;
-  {
-    for i in range(0, 9) {
-      numbers[true, i] = 0;
-      numbers[false, i] = 0;
-    }
-    sum = 0;
-    index = 0;
-  }
-
   procedure next_state()
     modifies numbers, sum, index;
   {
@@ -25,7 +14,12 @@ module main
   }
 
   init {
-    call init_state();
+    for i in range(0, 9) {
+      numbers[true, i] = 0;
+      numbers[false, i] = 0;
+    }
+    sum = 0;
+    index = 0;
   }
 
   next {

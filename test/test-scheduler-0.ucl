@@ -3,8 +3,8 @@ module main
   var a, b : integer;
 
   init {
-    a' = 0;
-    b' = a' + 1;
+    a = 0;
+    b = a + 1;
   }
 
   next {
