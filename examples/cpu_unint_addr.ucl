@@ -1,13 +1,18 @@
 module common {
-  // This module declares types that are used in the rest of the model.
-
-  type addr_t;
+  type addr_t = bv3;
   type word_t = bv8;
-
-  type op_t   = enum { op_mov, op_add, op_sub, op_load, op_store };
+  type op_t   = enum { 
+      op_mov, op_add, op_sub, 
+      op_load, op_store,
+      op_syscall, op_sysret
+  };
   type mode_t = enum { usr_mode, sup_mode };
-
   type mem_t = [addr_t]word_t;
+
+  function k0_word_t() : word_t;
+  axiom k0_word_t() == 0bv8;
+
+  function k0_addr_t() : addr_t;
 }
 
 module cpu {
@@ -15,54 +20,100 @@ module cpu {
   type mem_t  = common.mem_t;
   type word_t = common.word_t;
   type op_t   = common.op_t;
-  type regindex_t = bv1; // type of register file.
+  type mode_t = common.mode_t;
+
+  type regindex_t; 
   type regs_t = [regindex_t]word_t;
 
   input imem         : mem_t; // program memory.
-  var dmem           : mem_t;   // data memory.
+  var dmem           : mem_t; // data memory.
   var regs           : regs_t;
   var pc             : addr_t;
   var inst, result   : word_t;
+  var mode           : mode_t;
+
+  // range of privileged memory.
+  var sup_range_lo   : addr_t;
+  var sup_range_hi   : addr_t;
 
   function inst2op   (i : word_t) : op_t;
   function inst2reg0 (i : word_t) : regindex_t;
   function inst2reg1 (i : word_t) : regindex_t;
   function inst2imm  (i : word_t) : word_t;
   function inst2addr (i : word_t) : addr_t;
-  function nextPC(i : word_t, pc : addr_t) : addr_t; 
+  function nextPC    (i : word_t, pc : addr_t)              : addr_t; 
+  function in_range  (a : addr_t, b1 : addr_t, b2 : addr_t) : boolean;
 
-  procedure exec_inst(inst : word_t, pc : addr_t)
+  define in_privileged_memory (a : addr_t) : boolean =
+    in_range(a, sup_range_lo, sup_range_hi);
+
+  procedure exec_inst(instr : word_t, pc : addr_t)
     returns (result : word_t, pc_next : addr_t)
-    modifies regs, dmem;
+    modifies regs, dmem, mode;
   {
-    var op           : op_t;
-    var r0ind        : regindex_t;
-    var r1ind        : regindex_t;
-    var r0           : word_t;
-    var r1           : word_t;
+    var op    : op_t;
+    var r0ind : regindex_t;
+    var r1ind : regindex_t;
+    var r0    : word_t;
+    var r1    : word_t;
+    var addr  : addr_t;
 
-    op = inst2op(inst);
-    r0ind, r1ind = inst2reg0(inst), inst2reg1(inst);
+    op = inst2op(instr);
+    r0ind, r1ind = inst2reg0(instr), inst2reg1(instr);
     r0, r1 = regs[r0ind], regs[r1ind];
+    pc_next = nextPC(instr, pc);
+    addr = inst2addr(instr);
+    if (mode == sup_mode) {
+      assume (in_privileged_memory(pc_next));
+      assume (in_privileged_memory(addr));
+    }
     case
-      (op == op_mov)     : { result = inst2imm(inst); }
+      (op == op_mov)     : { result = inst2imm(instr); }
       (op == op_add)     : { result = r0 + r1; }
       (op == op_sub)     : { result = r0 - r1; }
-      (op == op_load)    : { result = dmem[inst2addr(inst)]; }
-      (op == op_store)   : { result = r0; dmem[inst2addr(inst)] = r0; }
+      (op == op_load)    : {
+        if (mode == sup_mode || !in_privileged_memory(addr)) {
+          result = common.k0_word_t();
+        } else {
+          result = dmem[addr];
+        }
+      }
+      (op == op_store)   : {
+        result = common.k0_word_t();
+        if (mode == sup_mode || !in_privileged_memory(addr)) {
+          dmem[addr] = r0;
+        }
+      }
+      (op == op_syscall) : {
+        result = common.k0_word_t();
+        havoc regs;
+        assume (forall (r : regindex_t) :: regs[r] == common.k0_word_t());
+        if (in_privileged_memory(pc_next)) {
+          mode = sup_mode;
+        }
+      }
+      (op == op_sysret) : {
+        result = common.k0_word_t();
+        havoc regs;
+        assume (forall (r : regindex_t) :: regs[r] == common.k0_word_t());
+        if (in_privileged_memory(pc_next)) {
+          mode = usr_mode;
+        }
+      }
     esac
-    pc_next = nextPC(inst, pc);
     regs[r0ind] = result;
   }
 
   init {
-    assume (forall (r : regindex_t) :: regs[r] == 0bv8);
-    assume (forall (a : addr_t) :: dmem[a] == 0bv8);
+    assume (forall (r : regindex_t) :: regs[r] == common.k0_word_t());
+    inst = common.k0_word_t();
+    pc   = common.k0_addr_t();
+    mode = sup_mode;
   }
 
   next {
     inst' = imem[pc];
-    call (result', pc') = exec_inst(inst, pc);
+    call (result', pc') = exec_inst(inst', pc);
   }
 }
 
@@ -82,29 +133,38 @@ module main {
   instance cpu2 : cpu(imem : (imem));
 
   init {
-    // Nothing here.
-    assume (cpu1.pc == cpu2.pc);
-    assume (cpu1.inst == cpu2.inst);
+    assume (cpu1.sup_range_lo == cpu2.sup_range_lo);
+    assume (cpu1.sup_range_hi == cpu2.sup_range_hi);
+    assume (forall (a : addr_t) :: cpu1.dmem[a] == cpu2.dmem[a]);
   }
 
   next {
     // These call statements invoke the next state function of the two CPU module instances.
-    // FIXME: next (cpu1)
     next (cpu1);
     next (cpu2);
   }
   
   // These are our properties.
-  invariant eq_regs : (forall (ri : regindex_t) :: cpu1.regs[ri] == cpu2.regs[ri]);
-  invariant eq_mem  : (forall (a : addr_t) :: cpu1.dmem[a] == cpu2.dmem[a]);
-  invariant eq_pc   : (cpu1.pc == cpu2.pc);
-  invariant eq_inst : (cpu1.inst == cpu2.inst);
+  invariant eq_regs      : (forall (ri : regindex_t) :: cpu1.regs[ri] == cpu2.regs[ri]);
+  invariant eq_mem       : (forall (a : addr_t) :: cpu1.dmem[a] == cpu2.dmem[a]);
+  invariant eq_pc        : (cpu1.pc == cpu2.pc);
+  invariant eq_inst      : (cpu1.inst == cpu2.inst);
+  invariant eq_mode      : (cpu1.mode == cpu2.mode);
+  invariant eq_sup_range : (cpu1.sup_range_lo == cpu2.sup_range_lo) &&
+                           (cpu1.sup_range_hi == cpu2.sup_range_hi);
 
   // The control block defines the commands that will executed as part of the proof script.
   control {
-    v = unroll(3);
+    v = induction;
     check;
     print_results;
-    v.print_cex(cpu1.inst, cpu2.inst, cpu1.result, cpu2.result, cpu1.regs[0bv1], cpu2.regs[0bv1]);
+    v.print_cex(
+        cpu.inst2op(cpu1.inst), cpu.inst2op(cpu2.inst),
+        cpu1.result, cpu2.result, cpu1.mode, cpu2.mode,
+        cpu1.pc, cpu2.pc,
+        cpu1.sup_range_lo, cpu2.sup_range_lo,
+        cpu1.sup_range_hi, cpu2.sup_range_hi,
+        cpu.in_range(cpu1.pc, cpu1.sup_range_lo, cpu1.sup_range_hi),
+        cpu.in_range(cpu2.pc, cpu2.sup_range_lo, cpu2.sup_range_hi));
   }
 }
