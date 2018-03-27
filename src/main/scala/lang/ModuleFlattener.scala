@@ -128,11 +128,11 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   type VarMap = MIP.VarMap
   type InstVarMap = MIP.InstVarMap
   type RewriteMap = MIP.RewriteMap
+  val nameProvider = new ContextualNameProvider(Scope.empty + module, "_inst_" + inst.instanceId.toString)
 
   def createVarMap() : (VarMap, ExternalSymbolMap) = {
     // sanity check
     Utils.assert(targetModule.instances.size == 0, "All instances in target module must have been flattened by now. Module: %s. Instance: %s.\n%s".format(module.id.toString, inst.toString, targetModule.toString))
-    val nameProvider = new ContextualNameProvider(Scope.empty + module, "_inst_" + inst.instanceId.toString)
 
     val idMap0 : VarMap = Map.empty
     // map each input
@@ -181,8 +181,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   def createInstVarMap(varMap : VarMap) : InstVarMap = {
-    // println("initInstVarMap: " + initInstVarMap.toString)
-    // println("instance: " + inst.toString())
     val instVarMap1 = varMap.foldLeft(Map.empty[List[Identifier], Identifier]) {
       (instVarMap, renaming) => {
         renaming._2 match {
@@ -205,8 +203,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       }
     }).toMap
     val instVarMap = instVarMap1 ++ instVarMap2
-    // val instVarMap1 : Map[List[Identifier], Identifier] = initInstVarMap.map(p => (inst.instanceId :: p._1) -> p._2)
-    // println("instVarMap: " + instVarMap.toString)
     instVarMap
   }
 
@@ -271,6 +267,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   val newVariables = createNewVariables(varMap)
   val newInputs = createNewInputs(varMap)
   val newInputAssignments = createInputAssignments(varMap)
+  val newAxioms = newModule.axioms.map {
+    ax => {
+      val idP = ax.id.flatMap(axId => Some(nameProvider(axId, "axiom")))
+      AxiomDecl(idP, ax.expr)
+    }
+  }
   val newNextStatements = newModule.next match {
     case Some(nextD) => nextD.body
     case _ => List.empty[Statement]
@@ -326,7 +328,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   // add new variables and inputs.
   override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
-    val declsP : List[Decl] = newVariables ++ newInputs ++ module.decls
+    logger.debug("axioms:\n{}", newAxioms.map("  " + _.toString()))
+    val declsP : List[Decl] = newVariables ++ newInputs ++ newAxioms ++ module.decls
     val moduleP = Module(module.id, declsP, module.cmds, module.notes)
     Some(moduleP)
   }
@@ -347,6 +350,7 @@ class ModuleInstantiator(
 extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false)
 
 class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
+  val logger = Logger(classOf[ModuleFlattenerPass])
   lazy val manager : PassManager = analysis.manager
   lazy val externalSymbolAnalysis = manager.pass("ExternalSymbolAnalysis").asInstanceOf[ExternalSymbolAnalysis]
 
@@ -361,12 +365,12 @@ class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
         val targetModule = ctx.map.find(p => p._1 == inst.moduleId).get._2.asInstanceOf[Scope.ModuleDefinition].mod // modules.find(_.id == inst.moduleId).get
         val passName = "ModuleInstantiator:" + module.id + ":" + inst.instanceId
         val rewriter = new ModuleInstantiator(passName, module, inst, targetModule, extSymMap)
-        // println("rewriting module:%s inst:%s targetModule:%s.".format(module.id.toString, inst.instanceId.toString, targetModule.id.toString))
+        logger.debug("rewriting module:%s inst:%s targetModule:%s.".format(module.id.toString, inst.instanceId.toString, targetModule.id.toString))
         // update external symbol map.
         extSymMap = rewriter.pass.asInstanceOf[ModuleInstantiatorPass].externalSymbolMap
-        // println("original module:\n%s".format(module.toString))
+        logger.debug("original module:\n%s".format(module.toString))
         val modP = rewriter.visit(module, ctx).get
-        // println("rewritten module:\n%s".format(modP.toString))
+        logger.debug("rewritten module:\n%s".format(modP.toString))
         rewrite(modP, ctx)
       case Nil =>
         if (module.id == mainModule) {

@@ -180,6 +180,9 @@ class ModuleVerifSpec extends FlatSpec {
   "test-func-import-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-func-import-1.ucl", 0)
   }
+  "test-func-import-2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-func-import-2.ucl", 0)
+  }
   "test-procedure-postcondition.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-procedure-postcondition.ucl", 1)
   }
