@@ -1,5 +1,5 @@
 module common {
-  type addr_t = bv3;
+  type addr_t;
   type word_t = bv8;
   type op_t   = enum { 
       op_mov, op_add, op_sub, 
