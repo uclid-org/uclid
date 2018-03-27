@@ -13,16 +13,15 @@ tutorials/
   - ex4.1-cpu.ucl
 
 
-cpu_unint_addr.ucl
-- This is the CPU model from Chapter 4 of the tutorial but uses uninterpreted
-  types for the addresses.
+cpu_induction.ucl
+- This is an extension of the the CPU model from Chapter 4 of the tutorial. It
+  adds privilege separation to the CPU, uses uninterpreted types for the
+  addresses, and shows non-interference between supervisor mode and user mode.
 
 setuid.ucl
-- This is a model based on the automaton in the paper: 
+- This is a model based on the automaton in the paper:
   Setuid Demystified. Chen, Wagen and Dean [Usenix Security 2002].
 
 setuid_fixed.ucl
  - This is a "fixed" version of the setuid model.
-
-
 
