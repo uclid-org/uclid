@@ -146,8 +146,14 @@ class ProcedureVerifSpec extends FlatSpec {
   "test-inliner-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-inliner-1.ucl", 0)
   }
-  "test-procedure-checker-2.ucl" should "verify all but 7 invariants successfully." in {
-    VerifierSpec.expectedFails("./test/test-procedure-checker-2.ucl", 7)
+  "test-procedure-checker-2.ucl" should "verify all but 4 invariants successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-checker-2.ucl", 4)
+  }
+  "test-procedure-checker-3.ucl" should "verify all but one invariants successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-checker-3.ucl", 1)
+  }
+  "test-procedure-checker-4.ucl" should "verify all invariants successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-checker-4.ucl", 0)
   }
 }
 class QuantifierVerifSpec extends FlatSpec {

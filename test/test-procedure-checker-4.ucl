@@ -15,7 +15,7 @@ module traffic_light
 	    }
 	    (light == yellow) : {
 	      light = red;
-	      step = 1;
+	      step = 2;
 	    }
 	    (light == red) : {
 	      light = green;
@@ -25,10 +25,6 @@ module traffic_light
     } else {
       step = step - 1;
     }
-  }
-
-  init {
-    step = 1;
   }
 
   next {
@@ -44,9 +40,8 @@ module main
   instance light2 : traffic_light();
   
   init {
-    assume (light1.light != yellow);
-    assume (light2.light != yellow);
-    assume (light1.light != light2.light);
+    assume (light1.light == red && light1.step == 2);
+    assume (light2.light == green && light2.step == 1);
   }
 
   next {
@@ -54,12 +49,11 @@ module main
     next (light2);
   }
   
-  invariant atleast_one_red: (light1.light == red) || (light2.light == red);
+  invariant atleast_one_red    : (light1.light == red) || (light2.light == red);
   invariant steps_non_negative : (light1.step >= 0) && (light2.step >= 0);
-  invariant steps_upper_bound  : (light1.step <= 1) && (light2.step <= 1);
+  invariant steps_upper_bound  : (light1.step <= 2) && (light2.step <= 2);
   control {
-    // v = induction(5);
-    v = unroll(20);
+    v = induction(2);
     check;
     // print_results;
     // v.print_cex(light1.light, light1.step, light2.light, light2.step);
