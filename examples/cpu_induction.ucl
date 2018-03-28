@@ -15,8 +15,6 @@ module common {
   // define a constant that evaluates to zero.
   function k0_word_t() : word_t;
   axiom k0_word_t() == 0bv8;
-  // define the base address. (remember that address is uninterpreted)
-  function k0_addr_t() : addr_t;
   // the enter address for syscall.
   function syscall_enter_addr() : addr_t;
   // the exit address for syscalls.
