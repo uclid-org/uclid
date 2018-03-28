@@ -140,7 +140,7 @@ class SymbolicSimulator (module : Module) {
             resetState()
             // we are assuming that the assertions hold for k-1 steps (by passing false, true to initialize and symbolicSimulate)
             initialize(true, false, true, context, labelStep, noLTLFilter)
-            if (k - 1 > 0) {
+            if ((k - 1) > 0) {
               symbolicSimulate(k-1, false, true, context, labelStep, noLTLFilter)
             }
             // now are asserting that the assertion holds by pass true, false to symbolicSimulate.
@@ -274,7 +274,7 @@ class SymbolicSimulator (module : Module) {
       frameTable += currentState
       addModuleAssumptions(currentState, pastTables, scope)
       if (addAssertions) { addAsserts(step, currentState, pastTables, label, scope, filter)  }
-      if (addAssertionsAsAssumes) { assumeAssertions(symbolTable, pastTables, scope) }
+      if (addAssertionsAsAssumes) { assumeAssertions(currentState, pastTables, scope) }
     }
     return currentState
   }
