@@ -16,7 +16,9 @@ module main {
 
   procedure add10b(x : integer) returns (y : integer) {
     y = x;
-    for (i : integer) in range(one, four) {
+    // The following line results in an error as y is not
+    // a statically defined constant.
+    for (i : integer) in range(one, y) {
       y = y + i;
     }
   }

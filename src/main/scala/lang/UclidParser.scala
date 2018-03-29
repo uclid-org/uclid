@@ -364,8 +364,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       ("(" ~> Lhs ~ rep("," ~> Lhs) <~ ")") ^^ { case l ~ ls => l::ls } |
       "(" ~> ")" ^^ { case _ => List.empty[Lhs] }
 
-    lazy val RangeExpr: PackratParser[(NumericLit,NumericLit)] =
+    lazy val RangeLit: PackratParser[(NumericLit,NumericLit)] =
       KwRange ~> ("(" ~> Number ~ ("," ~> Number) <~ ")") ^^ { case x ~ y => (x,y) }
+
+    lazy val RangeExpr : PackratParser[(Expr, Expr)] =
+      KwRange ~> ("(" ~> Expr ~ ("," ~> Expr) <~ ")") ^^ { case x ~ y => (x, y) }
 
     lazy val IdList : PackratParser[List[lang.Identifier]] =
       Id ~ rep("," ~> Id) ^^ { case id ~ ids => id :: ids }
@@ -400,8 +403,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case e ~ f => IfElseStmt(e, f, List.empty[Statement]) } |
       KwCase ~> rep(CaseBlockStmt) <~ KwEsac ^^
         { case i => CaseStmt(i) } |
-      KwFor ~> (Id ~ (KwIn ~> RangeExpr) ~ BlockStatement) ^^
-        { case id ~ r ~ body => ForStmt(Identifier(id.name), r._1.typeOf, r, body) } |
+      KwFor ~> (Id ~ (KwIn ~> RangeLit) ~ BlockStatement) ^^
+        { case id ~ r ~ body => ForStmt(id, r._1.typeOf, r, body) } |
+      KwFor ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> RangeExpr) ~ BlockStatement ^^
+        { case idtyp ~ range ~ body => ForStmt(idtyp._1, idtyp._2, range, body) } |
       ";" ^^ { case _ => SkipStmt() }
     }
 

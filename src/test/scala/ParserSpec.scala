@@ -351,4 +351,14 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.exists(p => p._1.contains("Primed variables can't be referenced inside procedures")))
     }
   }
+  "test-forloop-error-1.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-forloop-error-1.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.exists(p => p._1.contains("Invalid for loop range")))
+    }
+  }
 }

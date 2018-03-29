@@ -112,34 +112,30 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           }
         case ForStmt(_,_,  range, _) =>
           // FIXME: @ConstantLitForLoop
-          range._1 match {
-            case i: IntLit =>
-              range._2 match {
-                case j: IntLit =>
-                  if (i.value > j.value) {
-                    in + ModuleError("Range lower bound must be less than upper bound", st.position)
-                  } else {
-                    in
-                  }
-                case _ =>
-                  in + ModuleError("Range lower and upper bounds must be of same type", st.position)
+          (range._1, range._2) match {
+            case (i: IntLit, j : IntLit) =>
+              if (i.value > j.value) {
+                in + ModuleError("Range lower bound must be less than upper bound", st.position)
+              } else {
+                in
               }
-            case b: BitVectorLit =>
-              range._2 match {
-                case c: BitVectorLit =>
-                  if (b.value > c.value) {
-                    in + ModuleError("Range lower bound must be less than upper bound", st.position)
-                  } else if (b.width != c.width) {
-                    in + ModuleError("Range lower and upper bounds must be of same width", st.position)
-                  } else {
-                    in
-                  }
-                case _ =>
-                  in + ModuleError("Range lower and upper bounds must be of same type", st.position)
+            case (b: BitVectorLit, c : BitVectorLit) =>
+              if (b.value > c.value) {
+                in + ModuleError("Range lower bound must be less than upper bound", st.position)
+              } else if (b.width != c.width) {
+                in + ModuleError("Range lower and upper bounds must be of same width", st.position)
+              } else {
+                in
               }
-            case _ => {
-              in + ModuleError("Invalid for-loop range", range._1.position)
-            }
+            case (a: NumericLit, b : NumericLit) =>
+              in + ModuleError("Range lower and upper bounds must be of same type", st.position)
+            // The following three cases catch the same error, but we split them so that the error points to the right location.
+            case (a: NumericLit, _) =>
+              in + ModuleError("Invalid for loop range", range._2.position)
+            case (_, b : NumericLit) =>
+              in + ModuleError("Invalid for loop range", range._1.position)
+            case _ =>
+              in + ModuleError("Invalid for loop range", range._1.position)
           }
         case CaseStmt(body) =>
           body.foldLeft(in) {
