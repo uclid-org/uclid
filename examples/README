@@ -15,8 +15,8 @@ tutorials/
 
 cpu_induction.ucl
 - This is an extension of the the CPU model from Chapter 4 of the tutorial. It
-  adds privilege separation to the CPU, uses uninterpreted types for the
-  addresses, and shows non-interference between supervisor mode and user mode.
+  adds privilege separation to the CPU, and proves non-interference between
+  supervisor mode and user mode using an inductive argument.
 
 setuid.ucl
 - This is a model based on the automaton in the paper:

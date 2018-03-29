@@ -12,9 +12,11 @@ module common {
   type mode_t = enum { usr_mode, sup_mode };
   // CPU memory type.
   type mem_t = [addr_t]word_t;
+
   // define a constant that evaluates to zero.
   function k0_word_t() : word_t;
   axiom k0_word_t() == 0bv8;
+
   // the enter address for syscall.
   function syscall_enter_addr() : addr_t;
   // the exit address for syscalls.
@@ -33,12 +35,12 @@ module cpu {
   type regindex_t;
   type regs_t = [regindex_t]word_t;
 
-  input imem         : mem_t; // program memory.
-  var dmem           : mem_t; // data memory.
-  var regs           : regs_t;
-  var pc             : addr_t;
-  var inst, result   : word_t;
-  var mode           : mode_t;
+  input imem         : mem_t;  // program memory.
+  var dmem           : mem_t;  // data memory.
+  var regs           : regs_t; // registers.
+  var pc             : addr_t; // progrma counter.
+  var inst, result   : word_t; // inst reg, result value
+  var mode           : mode_t; // usr/sup mode?
 
   // range of privileged memory.
   const sup_range_lo   : addr_t;
@@ -46,13 +48,13 @@ module cpu {
   // predicate for the above.
   function in_range  (a : addr_t, b1 : addr_t, b2 : addr_t) : boolean;
 
-  // uninterpreted function for decoding instructions.
+  // uninterpreted functions for decoding instructions.
   function inst2op   (i : word_t) : op_t;
   function inst2reg0 (i : word_t) : regindex_t;
   function inst2reg1 (i : word_t) : regindex_t;
+  function inst2addr (i : word_t, r0 : word_t, r1 : word_t) : addr_t;
   function aluOp     (i : word_t, r0 : word_t, r1 : word_t) : word_t;
-  function inst2addr (i : word_t) : addr_t;
-  function nextPC    (i : word_t, pc : addr_t)              : addr_t;
+  function nextPC    (i : word_t, pc : addr_t, r0 : word_t) : addr_t;
 
   define in_privileged_memory (a : addr_t) : boolean =
     in_range(a, sup_range_lo, sup_range_hi);
@@ -73,16 +75,21 @@ module cpu {
     var r1    : word_t;
     var addr  : addr_t;
 
+    // get opcode.
     op = inst2op(instr);
+    // get operands.
     r0ind, r1ind = inst2reg0(instr), inst2reg1(instr);
     r0, r1 = regs[r0ind], regs[r1ind];
-    pc_next = nextPC(instr, pc);
-    addr = inst2addr(instr);
+    // get next pc (might be overwritten by syscall/sysret).
+    pc_next = nextPC(instr, pc, r0);
+    // get memory address 
+    addr = inst2addr(instr, r0, r1);
 
-    // some assumptions on legal operations in supervisor mode.
+    // If we are in supervisor mode, we only set pc_next to supervisor address.
     assume (mode == sup_mode) ==> (in_privileged_memory(pc_next));
-    assume (mode == sup_mode && (op == op_load || op == op_store))
-                ==> (in_privileged_memory(addr));
+    // If we are in supervisor mode, we only read from supervisor memory.
+    assume (mode == sup_mode && op == op_load) ==> in_privileged_memory(addr);
+    // If we are already in supervisor mode, we don't execute syscalls.
     assume (mode == sup_mode) ==> (op != op_syscall);
 
     case
@@ -98,6 +105,7 @@ module cpu {
           // operation failed. return 0.
           result = common.k0_word_t();
         }
+        regs[r0ind] = result;
       }
       (op == op_store)   : {
         result = common.k0_word_t();
@@ -121,7 +129,7 @@ module cpu {
         mode = sup_mode;
       }
       (op == op_sysret) : {
-        // zero out result
+        // zero out result.
         result = common.k0_word_t();
         // zero out registers.
         havoc regs;
@@ -135,11 +143,13 @@ module cpu {
   }
 
   init {
-    // Reset registers.
+    // reset registers.
     assume (forall (r : regindex_t) :: regs[r] == common.k0_word_t());
-    // Setup instruction, PC, start in supervisor mode.
+    // set instruction to some deterministic value.
     inst = common.k0_word_t();
+    // start off-execution at a deterministic address.
     pc   = common.syscall_enter_addr();
+    // in supervisor mode.
     mode = sup_mode;
   }
 
@@ -169,7 +179,7 @@ module main {
     // Assume same supervisor ranges.
     assume (cpu1.sup_range_lo == cpu2.sup_range_lo);
     assume (cpu1.sup_range_hi == cpu2.sup_range_hi);
-    // Assume supervisor memory start off identical.
+    // Assume supervisor memory starts off identical.
     assume (forall (a : addr_t) ::
                 (cpu.in_range(a, cpu1.sup_range_lo, cpu2.sup_range_hi))
                     ==> (cpu1.dmem[a] == cpu2.dmem[a]));
@@ -186,7 +196,6 @@ module main {
                 ==> (cpu1.inst == cpu2.inst);
   }
 
-  // These are our properties.
   // The two CPUs change mode in sync.
   invariant eq_mode      : (cpu1.mode == cpu2.mode);
   // The two CPUs have the same PC when in supervisor mode.
@@ -199,7 +208,6 @@ module main {
   // The supervisor range of memory is the same in both CPUs.
   invariant eq_sup_range : (cpu1.sup_range_lo == cpu2.sup_range_lo) &&
                            (cpu1.sup_range_hi == cpu2.sup_range_hi);
-  // The two ranges of supervisor mode memory correspoding in the CPUs.
   // When in supervisor mode, the PC is also in the supervisor mode range.
   invariant in_pc_range1 : (cpu1.mode == sup_mode)
                                 ==> cpu.in_range(cpu1.pc, cpu1.sup_range_lo, cpu1.sup_range_hi);
