@@ -467,7 +467,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val SharedVarsDecl : PackratParser[lang.SharedVarsDecl] = positioned {
       KwSharedVar ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.SharedVarsDecl(ids, typ) }
     }
-
+    lazy val ConstLitDecl : PackratParser[lang.ConstantLitDecl] = positioned {
+      KwConst ~> Id ~ ("=" ~> Number) <~ ";" ^^ { case id ~ lit => lang.ConstantLitDecl(id, lit) }
+    }
     lazy val ConstDecl : PackratParser[lang.ConstantsDecl] = positioned {
       KwConst ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.ConstantsDecl(ids,typ)}
     }
@@ -596,7 +598,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl |
                   SynthFuncDecl | DefineDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
-                  ConstDecl | ProcedureDecl | InitDecl | NextDecl | SpecDecl | AxiomDecl)
+                  ConstLitDecl | ConstDecl | ProcedureDecl |
+                  InitDecl | NextDecl | SpecDecl | AxiomDecl)
 
     // control commands.
     lazy val IdParamList : PackratParser[List[Identifier]] =

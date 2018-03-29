@@ -680,7 +680,7 @@ case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends T
 }
 case class ModuleType(
     inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)], sharedVars: List[(Identifier, Type)],
-    constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
+    constLits : List[(Identifier, NumericLit)], constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
     functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, ModuleType)]) extends Type {
 
   def argToString(arg: (Identifier, Type)) : String = {
@@ -693,12 +693,13 @@ case class ModuleType(
   lazy val outputMap : Map[Identifier, Type] = outputs.toMap
   lazy val sharedVarMap : Map[Identifier, Type] = sharedVars.toMap
   lazy val argSet = inputs.map(_._1).toSet union outputs.map(_._1).toSet union sharedVars.map(_._1).toSet
+  lazy val constLitMap : Map[Identifier, NumericLit] = constLits.toMap
   lazy val constantMap : Map[Identifier, Type] = constants.map(a => (a._1 -> a._2)).toMap
   lazy val varMap : Map[Identifier, Type] = variables.map(a => (a._1 -> a._2)).toMap
   lazy val funcMap : Map[Identifier, FunctionSig] = functions.map(a => (a._1 -> a._2)).toMap
   lazy val instanceMap : Map[Identifier, ModuleType] = instances.map(a => (a._1 -> a._2)).toMap
   lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ funcMap.map(f => (f._1 -> f._2.typ))  ++ instanceMap
-  lazy val externalTypeMap : Map[Identifier, Type] = constantMap ++ funcMap.map(f => (f._1 -> f._2.typ))
+  lazy val externalTypeMap : Map[Identifier, Type] = constantMap ++ funcMap.map(f => (f._1 -> f._2.typ)) ++ constLitMap.map(f => (f._1 -> f._2.typeOf))
   def typeOf(id : Identifier) : Option[Type] = {
     typeMap.get(id)
   }
@@ -911,23 +912,27 @@ sealed abstract trait ModuleExternal {
   def extNames : List[Identifier]
   def extType : Type
 }
-
-case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with ModuleExternal {
+case class ConstantLitDecl(id : Identifier, lit : NumericLit) extends Decl {
   override val hashId = 908
+  override def toString = "const %s = %s; // %s".format(id.toString(), lit.toString(), position.toString())
+  override def declNames = List(id)
+}
+case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with ModuleExternal {
+  override val hashId = 909
   override def toString = "const " + Utils.join(ids.map(_.toString), ", ") + ": " + typ + "; // " + position.toString
   override def declNames = ids
   override def extNames = ids
   override def extType = typ
 }
 case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with ModuleExternal {
-  override val hashId = 909
+  override val hashId = 910
   override def toString = "function " + id + sig + ";  // " + position.toString
   override def declNames = List(id)
   override def extNames = List(id)
   override def extType = sig.typ
 }
 case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl {
-  override val hashId = 910
+  override val hashId = 911
   override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
   override def declNames = List(id)
 }
@@ -988,7 +993,7 @@ case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) exte
 }
 
 case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonTerminal]) extends Decl {
-  override val hashId = 911
+  override val hashId = 912
   override def toString = {
     val argTypes = Utils.join(sig.args.map(a => a._1.toString + ": " + a._2.toString), ", ")
     val header :String = "grammar %s %s = { // %s".format(id.toString, sig.toString(), position.toString)
@@ -999,13 +1004,13 @@ case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonT
 }
 
 case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : Identifier, grammarArgs: List[Identifier], conditions: List[Expr]) extends Decl {
-  override val hashId = 912
+  override val hashId = 913
   override def toString = "synthesis function " + id + sig + "; //" + position.toString()
   override def declNames = List(id)
 }
 
 case class InitDecl(body: List[Statement]) extends Decl {
-  override val hashId = 913
+  override val hashId = 914
   override def toString =
     "init { // " + position.toString + "\n" +
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
@@ -1013,7 +1018,7 @@ case class InitDecl(body: List[Statement]) extends Decl {
   override def declNames = List.empty
 }
 case class NextDecl(body: List[Statement]) extends Decl {
-  override val hashId = 914
+  override val hashId = 915
   override def toString =
     "next {  // " + position.toString + "\n" +
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
@@ -1021,7 +1026,7 @@ case class NextDecl(body: List[Statement]) extends Decl {
   override def declNames = List.empty
 }
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
-  override val hashId = 915
+  override val hashId = 916
   override def toString = {
     val declString = if (params.size > 0) {
       "[" + Utils.join(params.map(_.toString), ", ") + "]"
@@ -1034,7 +1039,7 @@ case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) ext
   def name = "property " + id.toString()
 }
 case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
-  override val hashId = 916
+  override val hashId = 917
   override def toString = {
     id match {
       case Some(id) => "axiom " + id.toString + " : " + expr.toString()
@@ -1130,6 +1135,8 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     decls.collect { case vars : StateVarsDecl => vars }.flatMap(v => v.ids.map(id => (id, v.typ)))
   lazy val sharedVars: List[(Identifier, Type)] =
     decls.collect { case sVars : SharedVarsDecl => sVars }.flatMap(sVar => sVar.ids.map(id => (id, sVar.typ)))
+  lazy val constLits: List[(Identifier, NumericLit)] =
+    decls.collect { case constLit : ConstantLitDecl => (constLit.id, constLit.lit) }
   // module constants.
   lazy val constantDecls = decls.collect { case cnsts : ConstantsDecl => cnsts }
   lazy val constants : List[(Identifier, Type)] =
@@ -1161,7 +1168,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   // compute the "type" of this module.
   lazy val moduleType : ModuleType = ModuleType(
       inputs, outputs, sharedVars,
-      constants, vars,
+      constLits, constants, vars,
       functions.map(c => (c.id, c.sig)),
       instances.map(inst => (inst.instanceId, inst.modType.get)))
 

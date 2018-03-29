@@ -51,7 +51,8 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
              false
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
-               Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) =>
+               Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
+               Scope.ConstantLit(_, _)    =>
              true
           case Scope.ModuleDefinition(_)      | Scope.Instance(_)               |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
@@ -103,7 +104,8 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
                Scope.LambdaVar(_ , _)         | Scope.ForallVar(_, _)           |
                Scope.ExistsVar(_, _)          | Scope.EnumIdentifier(_, _)      |
                Scope.VerifResultVar(_, _)     | Scope.FunctionArg(_, _)         |
-               Scope.Define(_, _, _)          | Scope.Grammar(_, _)             =>
+               Scope.Define(_, _, _)          | Scope.Grammar(_, _)             |
+               Scope.ConstantLit(_, _)        =>
               id
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _) =>
              ExternalIdentifier(moduleName, id)

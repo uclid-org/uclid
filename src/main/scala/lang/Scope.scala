@@ -56,6 +56,7 @@ object Scope {
   case class InputVar(inpId : Identifier, inpTyp: Type) extends ReadOnlyNamedExpression(inpId, inpTyp)
   case class OutputVar(outId : Identifier, outTyp: Type) extends NamedExpression(outId, outTyp)
   case class SharedVar(varId : Identifier, varTyp : Type) extends NamedExpression(varId, varTyp)
+  case class ConstantLit(cId : Identifier, lit : NumericLit) extends ReadOnlyNamedExpression(cId, lit.typeOf)
   case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
   case class Grammar(gId : Identifier, gTyp : Type) extends ReadOnlyNamedExpression(gId, gTyp)
@@ -235,6 +236,7 @@ case class Scope (
         case InputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.InputVar(id, typ)))
         case OutputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.OutputVar(id, typ)))
         case SharedVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.SharedVar(id, typ)))
+        case ConstantLitDecl(id, lit) => Scope.addToMap(mapAcc, Scope.ConstantLit(id, lit))
         case ConstantsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.ConstantVar(id, typ)))
         case GrammarDecl(id, sig, _) => Scope.addToMap(mapAcc, Scope.Grammar(id, sig.typ))
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
@@ -275,6 +277,7 @@ case class Scope (
         case InputVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case OutputVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case SharedVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case ConstantLitDecl(id, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
         case ConstantsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }

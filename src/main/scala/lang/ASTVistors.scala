@@ -97,6 +97,7 @@ trait ReadOnlyPass[T] {
   def applyOnOutputVars(d : TraversalDirection.T, outvars : OutputVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnSharedVars(d : TraversalDirection.T, sharedVars : SharedVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnConstant(d : TraversalDirection.T, cnst : ConstantsDecl, in : T, context : Scope) : T = { in }
+  def applyOnConstantLit(d : TraversalDirection.T, cnst : ConstantLitDecl, in : T, context : Scope) : T = { in }
   def applyOnSpec(d : TraversalDirection.T, spec : SpecDecl, in : T, context : Scope) : T = { in }
   def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : Scope) : T = { in }
   def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : T, context : Scope) : T = { in }
@@ -175,6 +176,7 @@ trait RewritePass {
   def rewriteOutputVars(outvars : OutputVarsDecl, ctx : Scope) : Option[OutputVarsDecl] = { Some(outvars) }
   def rewriteSharedVars(sharedVars : SharedVarsDecl, ctx : Scope) : Option[SharedVarsDecl] = { Some(sharedVars) }
   def rewriteConstant(cnst : ConstantsDecl, ctx : Scope) : Option[ConstantsDecl] = { Some(cnst) }
+  def rewriteConstantLit(cnst : ConstantLitDecl, ctx : Scope) : Option[ConstantLitDecl] = { Some(cnst) }
   def rewriteSpec(spec : SpecDecl, ctx : Scope) : Option[SpecDecl] = { Some(spec) }
   def rewriteAxiom(axiom : AxiomDecl, ctx : Scope) : Option[AxiomDecl] = { Some(axiom) }
   def rewriteTypeDecl(typDec : TypeDecl, ctx : Scope) : Option[TypeDecl] = { Some(typDec) }
@@ -287,6 +289,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case inpVars : InputVarsDecl => visitInputVars(inpVars, result, context)
       case outVars : OutputVarsDecl => visitOutputVars(outVars, result, context)
       case sharedVars : SharedVarsDecl => visitSharedVars(sharedVars, result, context)
+      case cnstLit : ConstantLitDecl => visitConstantLit(cnstLit, result, context)
       case const : ConstantsDecl => visitConstants(const, result, context)
       case func : FunctionDecl => visitFunction(func, result, context)
       case grammar : GrammarDecl => visitGrammar(grammar, result, context)
@@ -411,6 +414,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitType(sharedVars.typ, result, context)
     result = pass.applyOnSharedVars(TraversalDirection.Up, sharedVars, result, context)
     return result
+  }
+  def visitConstantLit(cnstLit : ConstantLitDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnConstantLit(TraversalDirection.Down, cnstLit, result, context)
+    result = visitIdentifier(cnstLit.id, result, context)
+    result = visitLiteral(cnstLit.lit, result, context)
+    result = pass.applyOnConstantLit(TraversalDirection.Up, cnstLit, result, context)
+    result
   }
   def visitConstants(cnst : ConstantsDecl, in : T, context : Scope) : T = {
     var result : T = in
@@ -987,6 +998,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case inputVars : InputVarsDecl => visitInputVars(inputVars, context)
       case outputVars : OutputVarsDecl => visitOutputVars(outputVars, context)
       case sharedVars : SharedVarsDecl => visitSharedVars(sharedVars, context)
+      case constLitDecl : ConstantLitDecl => visitConstantLit(constLitDecl, context)
       case constDecl : ConstantsDecl => visitConstants(constDecl, context)
       case funcDecl : FunctionDecl => visitFunction(funcDecl, context)
       case grammarDecl : GrammarDecl => visitGrammar(grammarDecl, context)
@@ -1145,6 +1157,17 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setPosition, setFilename, sharedVarsP, sharedVars.position)
   }
 
+  def visitConstantLit(cnstLit : ConstantLitDecl, context : Scope) : Option[ConstantLitDecl] = {
+    val idP = visitIdentifier(cnstLit.id, context)
+    val litP = visitNumericLiteral(cnstLit.lit, context)
+    (idP, litP) match {
+      case (Some(id), Some(lit)) =>
+        val cnstLitP = ConstantLitDecl(id, lit)
+        pass.rewriteConstantLit(cnstLitP, context)
+      case _ =>
+        None
+    }
+  }
   def visitConstants(cnst : ConstantsDecl, context : Scope) : Option[ConstantsDecl] = {
     val idsP = cnst.ids.map(id => visitIdentifier(id, context)).flatten
     val typP = visitType(cnst.typ, context)
