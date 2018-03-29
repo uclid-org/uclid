@@ -728,11 +728,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   }
   def visitForStatement(st : ForStmt, in : T, contextIn : Scope) : T = {
     var result : T = in
-    val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
+    val context = contextIn + Scope.ForIndexVar(st.id, st.typ)
     result = pass.applyOnFor(TraversalDirection.Down, st, result, contextIn)
     result = visitIdentifier(st.id, result, contextIn)
-    result = visitLiteral(st.range._1, result, contextIn)
-    result = visitLiteral(st.range._2, result, contextIn)
+    result = visitType(st.typ, result, contextIn)
+    result = visitExpr(st.range._1, result, contextIn)
+    result = visitExpr(st.range._2, result, contextIn)
     result = st.body.foldLeft(result)((arg, i) => visitStatement(i, arg, context))
     result = pass.applyOnFor(TraversalDirection.Up, st, result, context)
     return result
@@ -1487,14 +1488,16 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitForStatement(st : ForStmt, contextIn : Scope) : List[Statement] = {
-    val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
+    val context = contextIn + Scope.ForIndexVar(st.id, st.typ)
     val idP = visitIdentifier(st.id, contextIn)
-    val lit1P = visitNumericLiteral(st.range._1, contextIn)
-    val lit2P = visitNumericLiteral(st.range._2, contextIn)
+    val typP = visitType(st.typ, contextIn)
+    val lit1P = visitExpr(st.range._1, contextIn)
+    val lit2P = visitExpr(st.range._2, contextIn)
     val stmts = st.body.map(visitStatement(_, context)).flatten
 
-    val stP = (idP, lit1P, lit2P) match {
-      case (Some(id), Some(lit1), Some(lit2)) => pass.rewriteFor(ForStmt(id, (lit1, lit2), stmts), contextIn)
+    val stP = (idP, typP, lit1P, lit2P) match {
+      case (Some(id), Some(typ), Some(lit1), Some(lit2)) =>
+        pass.rewriteFor(ForStmt(id, typ, (lit1, lit2), stmts), contextIn)
       case _ => List.empty[Statement]
     }
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)

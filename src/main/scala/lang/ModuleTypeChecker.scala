@@ -110,7 +110,8 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           } else {
             in
           }
-        case ForStmt(_, range, _) =>
+        case ForStmt(_,_,  range, _) =>
+          // FIXME: @ConstantLitForLoop
           range._1 match {
             case i: IntLit =>
               range._2 match {
@@ -136,6 +137,9 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
                 case _ =>
                   in + ModuleError("Range lower and upper bounds must be of same type", st.position)
               }
+            case _ => {
+              in + ModuleError("Invalid for-loop range", range._1.position)
+            }
           }
         case CaseStmt(body) =>
           body.foldLeft(in) {

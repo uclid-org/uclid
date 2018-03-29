@@ -38,7 +38,7 @@ module cpu {
   input imem         : mem_t;  // program memory.
   var dmem           : mem_t;  // data memory.
   var regs           : regs_t; // registers.
-  var pc             : addr_t; // progrma counter.
+  var pc             : addr_t; // program counter.
   var inst, result   : word_t; // inst reg, result value
   var mode           : mode_t; // usr/sup mode?
 

@@ -750,7 +750,7 @@ case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Stat
   }
   override def toLines = lines
 }
-case class ForStmt(id: Identifier, range: (NumericLit,NumericLit), body: List[Statement])
+case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: List[Statement])
   extends Statement
 {
   override def isLoop = true

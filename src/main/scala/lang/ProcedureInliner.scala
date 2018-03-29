@@ -165,9 +165,9 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
             (acc._1 ++ resultHavocStmts ++ rewriter.rewriteStatements(procToInline.body) ++ resultAssignStatment, 
                 acc._2 ++ retNewVars ++ localNewVars)
           }
-        case ForStmt(id, range, body) =>
+        case ForStmt(id, typ, range, body) =>
           val bodyP = inlineProcedureCalls(uniqNamer, body)
-          val forP = ForStmt(id, range, bodyP._1)
+          val forP = ForStmt(id, typ, range, bodyP._1)
           (acc._1 ++ List(forP), acc._2 ++ bodyP._2)
         case IfElseStmt(cond, ifblock, elseblock) =>
           val ifBlockP = inlineProcedureCalls(uniqNamer, ifblock)

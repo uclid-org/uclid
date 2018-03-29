@@ -59,7 +59,7 @@ object StatementScheduler {
       case AssignStmt(lhss, rhss) => lhss.map(lhs => lhs.ident).toSet
       case IfElseStmt(cond, ifblock, elseblock) =>
         writeSets(ifblock, context) ++ writeSets(elseblock, context)
-      case ForStmt(_, _, body) =>
+      case ForStmt(_, _, _, body) =>
         writeSets(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => writeSets(b._2, context)).toSet
@@ -92,8 +92,8 @@ object StatementScheduler {
       case AssignStmt(lhss, rhss) => readSets(rhss)
       case IfElseStmt(cond, ifblock, elseblock) =>
         readSet(cond) ++ readSets(ifblock, context) ++ readSets(elseblock, context)
-      case ForStmt(_, _, body) =>
-        readSets(body, context)
+      case ForStmt(_, _, range, body) =>
+        readSet(range._1) ++ readSet(range._2) ++ readSets(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => readSet(b._1) ++ readSets(b._2, context)).toSet
       case ProcedureCallStmt(_, lhss, args) =>
@@ -281,7 +281,7 @@ class StatementSchedulerPass extends RewritePass {
   override def rewriteFor(forStmt : ForStmt, context : Scope) : List[Statement] = {
     if (context.environment == SequentialEnvironment) {
       val bodyP = reorderStatements(forStmt.body, context)
-      val forP = ForStmt(forStmt.id, forStmt.range, bodyP)
+      val forP = ForStmt(forStmt.id, forStmt.typ, forStmt.range, bodyP)
       List(forP)
     } else {
       List(forStmt)
