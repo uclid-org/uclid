@@ -757,6 +757,19 @@ case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: List[St
   override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString) ++
                          body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
 }
+case class WhileStmt(cond: Expr, body: List[Statement], invariants: List[Expr])
+  extends Statement
+{
+  override def isLoop = true
+  override def toLines = {
+    val headLine = "while(%s)  // %s".format(cond.toString(), position.toString())
+    val invLines = invariants.map(inv => PrettyPrinter.indent(1) + inv.toString() + " // " + inv.position.toString())
+    val openBraceLine = "{"
+    val bodyLines = body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
+    val closeBraceLine = "}"
+    List(headLine) ++ invLines ++ List(openBraceLine) ++ bodyLines ++ List(closeBraceLine) 
+  }
+}
 case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
   override def toLines = List("case") ++
     body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _)} ++

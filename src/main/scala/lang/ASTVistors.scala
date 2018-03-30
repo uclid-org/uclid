@@ -130,6 +130,7 @@ trait ReadOnlyPass[T] {
   def applyOnAssign(d : TraversalDirection.T, st : AssignStmt, in : T, context : Scope) : T = { in }
   def applyOnIfElse(d : TraversalDirection.T, st : IfElseStmt, in : T, context : Scope) : T = { in }
   def applyOnFor(d : TraversalDirection.T, st : ForStmt, in : T, context : Scope) : T = { in }
+  def applyOnWhile(d : TraversalDirection.T, st : WhileStmt, in : T, context : Scope) : T = { in }
   def applyOnCase(d : TraversalDirection.T, st : CaseStmt, in : T, context : Scope) : T = { in }
   def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, context : Scope) : T = { in }
   def applyOnModuleCall(d : TraversalDirection.T, st : ModuleCallStmt, in : T, context : Scope) : T = { in }
@@ -209,6 +210,7 @@ trait RewritePass {
   def rewriteAssign(st : AssignStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteIfElse(st : IfElseStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteFor(st : ForStmt, ctx : Scope) : List[Statement] = { List(st) }
+  def rewriteWhile(st : WhileStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteCase(st : CaseStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteProcedureCall(st : ProcedureCallStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteModuleCall(st : ModuleCallStmt, ctx : Scope) : List[Statement] = { List(st) }
@@ -664,6 +666,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case assignStmt : AssignStmt => visitAssignStatement(assignStmt, result, context)
       case ifElseStmt : IfElseStmt => visitIfElseStatement(ifElseStmt, result, context)
       case forStmt : ForStmt => visitForStatement(forStmt, result, context)
+      case whileStmt : WhileStmt => visitWhileStatement(whileStmt, result, context)
       case caseStmt : CaseStmt => visitCaseStatement(caseStmt, result, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, result, context)
       case modCallStmt : ModuleCallStmt => visitModuleCallStatement(modCallStmt, result, context)
@@ -736,6 +739,15 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitExpr(st.range._2, result, contextIn)
     result = st.body.foldLeft(result)((arg, i) => visitStatement(i, arg, context))
     result = pass.applyOnFor(TraversalDirection.Up, st, result, context)
+    return result
+  }
+  def visitWhileStatement(st : WhileStmt, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnWhile(TraversalDirection.Down, st, result, context)
+    result = visitExpr(st.cond, result, context)
+    result = st.invariants.foldLeft(result)((acc, inv) => visitExpr(inv, acc, context))
+    result = st.body.foldLeft(result)((acc, sti) => visitStatement(sti, acc, context))
+    result = pass.applyOnWhile(TraversalDirection.Up, st, result, context)
     return result
   }
   def visitCaseStatement(st : CaseStmt, in : T, context : Scope) : T = {
