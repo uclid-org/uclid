@@ -183,7 +183,7 @@ class ModuleVerifSpec extends FlatSpec {
   "test-const-import-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-const-import-1.ucl", 0)
   }
-  "test-const-import-2.ucl" should "should failed to verify 4 assertions." in {
+  "test-const-import-2.ucl" should "fail to verify 4 assertions." in {
     VerifierSpec.expectedFails("./test/test-const-import-2.ucl", 4)
   }
   "test-func-import-1.ucl" should "verify all assertions." in {
@@ -227,19 +227,22 @@ class LTLVerifSpec extends FlatSpec {
   "test-ltl-3-holds.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-3-holds.ucl", 0)
   }
-  "test-ltl-3-fails.ucl" should "failed to verify 2 assertions." in {
+  "test-ltl-3-fails.ucl" should "fail to verify 2 assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-3-fails.ucl", 2)
   }
   "test-ltl-4-holds.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-4-holds.ucl", 0)
   }
-  "test-ltl-4-fails.ucl" should "failed to verify 1 assertion." in {
+  "test-ltl-4-fails.ucl" should "fail to verify 1 assertion." in {
     VerifierSpec.expectedFails("./test/test-ltl-4-fails.ucl", 1)
   }
   "test-ltl-5-holds.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-5-holds.ucl", 0)
   }
-  "test-ltl-5-fails.ucl" should "failed to verify 1 assertion." in {
+  "test-ltl-5-fails.ucl" should "fail to verify 2 assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-5-fails.ucl", 2)
+  }
+  "test-ltl-6-fails.ucl" should "fail to verify 4 assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-6-fails.ucl", 4)
   }
 }
