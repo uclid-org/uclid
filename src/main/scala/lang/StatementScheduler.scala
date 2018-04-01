@@ -61,6 +61,8 @@ object StatementScheduler {
         writeSets(ifblock, context) ++ writeSets(elseblock, context)
       case ForStmt(_, _, _, body) =>
         writeSets(body, context)
+      case WhileStmt(_, body, _) =>
+        writeSets(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => writeSets(b._2, context)).toSet
       case ProcedureCallStmt(id, callLhss, args) => 
@@ -94,6 +96,8 @@ object StatementScheduler {
         readSet(cond) ++ readSets(ifblock, context) ++ readSets(elseblock, context)
       case ForStmt(_, _, range, body) =>
         readSet(range._1) ++ readSet(range._2) ++ readSets(body, context)
+      case WhileStmt(cond, body, invs) =>
+        readSet(cond) ++ readSets(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => readSet(b._1) ++ readSets(b._2, context)).toSet
       case ProcedureCallStmt(_, lhss, args) =>

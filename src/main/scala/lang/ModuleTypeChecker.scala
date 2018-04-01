@@ -137,6 +137,16 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
             case _ =>
               in + ModuleError("Invalid for loop range", range._1.position)
           }
+        case WhileStmt(cond, body, invs) =>
+          val cType = exprTypeChecker.typeOf(cond, context)
+          val inP1 = if (cType.isBool) {
+            in
+          } else {
+            in + ModuleError("While loop condition must be of type boolean", cond.position)
+          }
+          val badInvs = invs.filter(inv => !exprTypeChecker.typeOf(inv, context).isBool)
+          val invErrors = badInvs.map(bInv => ModuleError("While loop invariant must be of type boolean", bInv.position))
+          inP1 ++ invErrors
         case CaseStmt(body) =>
           body.foldLeft(in) {
             (acc, c) => {

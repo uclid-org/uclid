@@ -556,9 +556,10 @@ class SymbolicSimulator (module : Module) {
             acc.updated(id, smt.OperatorApplication(smt.ITEOp, List(condExpr, then_st(id), else_st(id))))
           }
       case ForStmt(_, _, _, _) => throw new Utils.AssertionError("Cannot symbolically execute for loops.")
+      case WhileStmt(_, _, _) => throw new Utils.AssertionError("Cannot symbolically execute while loops.")
       case CaseStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute case statement.")
       case ProcedureCallStmt(id,lhss,args) => throw new Utils.AssertionError("Cannot symbolically execute procedure calls.")
-      case _ => return symbolTable
+      case ModuleCallStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute module calls.")
     }
   }
 
@@ -579,6 +580,7 @@ class SymbolicSimulator (module : Module) {
       case IfElseStmt(e,then_branch,else_branch) =>
         return writeSet(then_branch) ++ writeSet(else_branch)
       case ForStmt(id, typ, range, body) => return writeSet(body)
+      case WhileStmt(_, body, invs) => return writeSet(body)
       case CaseStmt(body) =>
         return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2) }
       case ProcedureCallStmt(id,lhss,args) =>
