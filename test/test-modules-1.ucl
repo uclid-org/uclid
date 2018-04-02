@@ -18,8 +18,8 @@ module cpu {
   }
 
   next {
-      inst = mem[pc];
-      pc = pc + 1bv8;
+      inst' = mem[pc];
+      pc' = pc + 1bv8;
   }
 }
   
@@ -37,9 +37,10 @@ module main {
     next (c2);
   }
   
-  property eq_pc : (c1->pc == c2->pc);
+  property eq_pc : (c1.pc == c2.pc);
   control {
     unroll(3);
     check;
+    // print_results;
   }
 }

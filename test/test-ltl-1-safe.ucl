@@ -8,9 +8,9 @@ module main {
   
   next {
 	case
-	  (state == s1) : { state = s2; }
-	  (state == s2) : { state = s3; }
-	  (state == s3) : { state = s1; }
+	  (state == s1) : { state' = s2; }
+	  (state == s2) : { state' = s3; }
+	  (state == s3) : { state' = s1; }
 	esac
   }
   

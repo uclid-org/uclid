@@ -18,15 +18,12 @@ module main_func {
     if (enable) {
       case
         pc == A : {
-                   if (timerCount == 0) { pc = C; }
-                   else { pc = B; }
+                   if (timerCount == 0) { pc' = C; }
+                   else { pc' = B; }
                 }
-        pc == B : { pc = A; } 
-        pc == C : { pc = C; }
+        pc == B : { pc' = A; } 
+        pc == C : { pc' = C; }
       esac
-    }
-    else {
-      pc = pc; // perhaps unnecessary?
     }
   }
 
@@ -51,15 +48,15 @@ module ISR_func {
  next {
    if (enable) {
      case
-       pc == idle : { pc = D; return_ISR = false; }
-       pc == D && timerCount != 0 : { pc = E; return_ISR = false; }
-       pc == D && timerCount == 0 : { pc = idle; return_ISR = true; }
-       pc == E : { timerCount = timerCount-1; pc = idle; return_ISR = true; }
+       pc == idle : { pc' = D; return_ISR' = false; }
+       pc == D && timerCount != 0 : { pc' = E; return_ISR' = false; }
+       pc == D && timerCount == 0 : { pc' = idle; return_ISR' = true; }
+       pc == E : { timerCount' = timerCount-1; pc' = idle; return_ISR' = true; }
 
      esac
    }
    else {
-      pc = pc; return_ISR = false;
+      return_ISR' = false;
    }
 
  }
@@ -105,21 +102,21 @@ module Sys {
   next {
     next (main_f); 
     next (ISR_f);
-    M_enable = (mode == main_t);
-    I_enable = (mode == ISR_t);
-    if (mode == main_t && assert_intr) { mode = ISR_t; }
+    M_enable' = (mode == main_t);
+    I_enable' = (mode == ISR_t);
+    if (mode == main_t && assert_intr) { mode' = ISR_t; }
     else {
-      if (mode == ISR_t && return_ISR) { mode = main_t; }
+      if (mode == ISR_t && return_ISR) { mode' = main_t; }
     }
   }   
 
- invariant pc_ISR: (ISR_f->pc == idle) <==> (ISR_f->return_ISR);
+ invariant pc_ISR: (ISR_f.pc == idle) <==> (ISR_f.return_ISR);
 
  control {
      v = unroll(5);
      check;
      print_results;
-     v->print_cex;
+     v.print_cex;
 
   }
 }
@@ -127,9 +124,15 @@ module Sys {
 module Env {
   output assert_intr : boolean;
 
-  init { havoc assert_intr; }
+  procedure havoc_assert_intr()
+    modifies assert_intr;
+  {
+    havoc assert_intr;
+  }
 
-  next { havoc assert_intr; }
+  init { call havoc_assert_intr(); }
+
+  next { call havoc_assert_intr(); }
 }
 
 module main {
@@ -143,14 +146,20 @@ module main {
   instance Env_i : Env(assert_intr : (assert_intr));
   instance Sys_i : Sys(assert_intr : (assert_intr));
 
-  init { havoc turn; }
+  procedure havoc_turn()
+    modifies turn;
+  {
+    havoc turn;
+  }
+
+  init { call havoc_turn(); }
 
   next { 
     if (turn) { next (Sys_i); } else { next (Env_i); }
-    havoc turn; 
+    call havoc_turn(); 
   }
 
-  property[LTL] reached_C :  G((Sys_i->main_f->pc == A) || (Sys_i->main_f->pc == B));
+  property[LTL] reached_C :  G((Sys_i.main_f.pc == A) || (Sys_i.main_f.pc == B));
 
   control {
     // print_module;

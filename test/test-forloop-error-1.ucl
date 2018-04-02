@@ -1,0 +1,48 @@
+module main {
+  var cnt, cntp, cntq : integer;
+  const one = 1;
+  const three = 3;
+  const four = 4;
+
+  procedure add10(x : integer) returns (y : integer) {
+    y = x;
+    for (i : integer) in range(one, three) {
+      for (j : integer) in range(one, three) {
+        y = y + one;
+      }
+    }
+    y = y + one;
+  }
+
+  procedure add10b(x : integer) returns (y : integer) {
+    y = x;
+    // The following line results in an error as y is not
+    // a statically defined constant.
+    for (i : integer) in range(one, y) {
+      y = y + i;
+    }
+  }
+  
+  init {
+    cnt = 0;
+    cntp = 0;
+    cntq = 0;
+  }
+
+  next {
+    call (cnt') = add10(cnt);
+    call (cntq') = add10b(cntq);
+    cntp' = cntp + 10;
+    
+    // noteToSelf(ReorderingTest)
+    assert (cnt' == cntp');
+    assert (cntq' == cntp');
+  }
+
+  control {
+    // print_module;
+    unroll (5);
+    check;
+    // print_results;
+  }
+}

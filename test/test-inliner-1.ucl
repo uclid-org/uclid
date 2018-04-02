@@ -27,13 +27,15 @@ module main {
   }
   
   next {
-  	call (r1) = add_unrolled(arg0, arg1);
-  	call (r2) = add_forloop(arg0, arg1);
-  	assert (r1 == r2);
+    // noteToSelf(ReorderingTest);
+  	call (r1') = add_unrolled(arg0, arg1);
+  	call (r2') = add_forloop(arg0, arg1);
+  	assert (r1' == r2');
   }
   
   control {
   	unroll (3);
   	check;
+  	// print_results;
   }
 }

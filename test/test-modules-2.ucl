@@ -47,9 +47,11 @@ module cpu {
     assume (forall (r : regindex_t) :: regs[r] == 0bv8);
     assume (forall (a : addr_t) :: dmem[a] == 0bv8);
   }
-
-  // Define "next" transition.
-  next {
+  
+  procedure next_inst()
+    modifies r0ind, r1ind;
+    modifies r0, r1, dmem;
+  {
     // and its operands
     r0ind = word2reg0(inst);
     r1ind = word2reg1(inst);
@@ -62,6 +64,11 @@ module cpu {
     if (nd) { 
       dmem[r0] = r1; 
     }
+  }
+
+  // Define "next" transition.
+  next {
+    call next_inst();
   }
 }
   
@@ -86,7 +93,7 @@ module main {
   }
   
   // These are our properties.
-  property eq_mem  : (forall (a : addr_t) :: cpu_i_1->dmem[a] == cpu_i_2->dmem[a]);
+  property eq_mem  : (forall (a : addr_t) :: cpu_i_1.dmem[a] == cpu_i_2.dmem[a]);
 
   // The control block defines the commands that will executed as part of the proof script.
   control {
@@ -96,6 +103,6 @@ module main {
     print_results;
 
     // NOTE: This command is expected to create typechecking errors.
-    print_cex (cpu_i_1->r0d /* Unknown field. */, cpu_i_2->r0d  /* Unknown field. */, cpu_1->r1  /* Unknown instance. */, cpu_2->r1 /* Unknown instance. */);
+    print_cex (cpu_i_1.r0d /* Unknown field. */, cpu_i_2.r0d  /* Unknown field. */, cpu_1.r1  /* Unknown instance. */, cpu_2.r1 /* Unknown instance. */);
   }
 }

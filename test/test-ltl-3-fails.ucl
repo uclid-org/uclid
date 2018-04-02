@@ -8,7 +8,7 @@ module main
   
   next {
     if (cnt != 3bv2) {
-      cnt = cnt + 1bv2;
+      cnt' = cnt + 1bv2;
     }
   }
   
@@ -17,5 +17,6 @@ module main
   control  {
     v = bmc(5);
     check;
+    // print_results;
   }
 }

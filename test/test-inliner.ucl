@@ -122,16 +122,17 @@ module main {
   }
 
   next {
-  	s = x + y;
-  	call (s1, c1) = four_bit_adder0(x, y);
-  	call (s2, c2) = four_bit_adder1(x, y);
-  	call (s3, c3) = four_bit_adder2(x, y);
-  	call (s4, c4) = four_bit_adder3(x, y);
-  	assert (s == s1);
-  	assert (s == s2);
-  	assert (s == s3);
-  	assert (s == s4);
-  	assert (c1 == c2 && c2 == c3 && c3 == c4);
+    // noteToSelf(ReorderingTest)
+  	s' = x + y;
+  	call (s1', c1') = four_bit_adder0(x, y);
+  	call (s2', c2') = four_bit_adder1(x, y);
+  	call (s3', c3') = four_bit_adder2(x, y);
+  	call (s4', c4') = four_bit_adder3(x, y);
+  	assert (s' == s1');
+  	assert (s' == s2');
+  	assert (s' == s3');
+  	assert (s' == s4');
+  	assert (c1' == c2' && c2' == c3' && c3' == c4');
   }
   
   control {

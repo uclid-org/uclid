@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Authors: Norman Mu, Pramod Subramanyan
 
@@ -58,17 +64,22 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           } else {
             in
           }
-        case HavocStmt(id) =>
-          if (!context.doesNameExist(id)) {
-            in + ModuleError("Unknown identifier in havoc statement", st.position)
-          } else {
-            in
+        case HavocStmt(h) =>
+          h match {
+            case HavocableId(id) =>
+              if (!context.doesNameExist(id)) {
+                in + ModuleError("Unknown identifier in havoc statement", st.position)
+              } else {
+                in
+              }
+            case HavocableFreshLit(f) =>
+              in
           }
         case AssignStmt(lhss, rhss) =>
           var ret = in
 
           if (rhss.size == 0) {
-            ret = in + ModuleError("Right hand size of assignment must not be empty", st.position) 
+            ret = in + ModuleError("Right hand size of assignment must not be empty", st.position)
           }
 
           for ((lh, rh) <- lhss zip rhss) {
@@ -99,33 +110,43 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           } else {
             in
           }
-        case ForStmt(_, range, _) =>
-          range._1 match {
-            case i: IntLit =>
-              range._2 match {
-                case j: IntLit =>
-                  if (i.value > j.value) {
-                    in + ModuleError("Range lower bound must be less than upper bound", st.position)
-                  } else {
-                    in
-                  }
-                case _ =>
-                  in + ModuleError("Range lower and upper bounds must be of same type", st.position)
+        case ForStmt(_,_,  range, _) =>
+          // FIXME: @ConstantLitForLoop
+          (range._1, range._2) match {
+            case (i: IntLit, j : IntLit) =>
+              if (i.value > j.value) {
+                in + ModuleError("Range lower bound must be less than upper bound", st.position)
+              } else {
+                in
               }
-            case b: BitVectorLit =>
-              range._2 match {
-                case c: BitVectorLit =>
-                  if (b.value > c.value) {
-                    in + ModuleError("Range lower bound must be less than upper bound", st.position)
-                  } else if (b.width != c.width) {
-                    in + ModuleError("Range lower and upper bounds must be of same width", st.position)
-                  } else {
-                    in
-                  }
-                case _ =>
-                  in + ModuleError("Range lower and upper bounds must be of same type", st.position)
+            case (b: BitVectorLit, c : BitVectorLit) =>
+              if (b.value > c.value) {
+                in + ModuleError("Range lower bound must be less than upper bound", st.position)
+              } else if (b.width != c.width) {
+                in + ModuleError("Range lower and upper bounds must be of same width", st.position)
+              } else {
+                in
               }
+            case (a: NumericLit, b : NumericLit) =>
+              in + ModuleError("Range lower and upper bounds must be of same type", st.position)
+            // The following three cases catch the same error, but we split them so that the error points to the right location.
+            case (a: NumericLit, _) =>
+              in + ModuleError("Invalid for loop range", range._2.position)
+            case (_, b : NumericLit) =>
+              in + ModuleError("Invalid for loop range", range._1.position)
+            case _ =>
+              in + ModuleError("Invalid for loop range", range._1.position)
           }
+        case WhileStmt(cond, body, invs) =>
+          val cType = exprTypeChecker.typeOf(cond, context)
+          val inP1 = if (cType.isBool) {
+            in
+          } else {
+            in + ModuleError("While loop condition must be of type boolean", cond.position)
+          }
+          val badInvs = invs.filter(inv => !exprTypeChecker.typeOf(inv, context).isBool)
+          val invErrors = badInvs.map(bInv => ModuleError("While loop invariant must be of type boolean", bInv.position))
+          inP1 ++ invErrors
         case CaseStmt(body) =>
           body.foldLeft(in) {
             (acc, c) => {

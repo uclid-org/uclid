@@ -3,6 +3,15 @@ module main
   var numbers : [integer]integer;
   var sum, index : integer;
   
+  procedure next_state() 
+    returns (sumP : integer, numbersP : [integer]integer, indexP : integer)
+  {
+    sumP = sum + index;
+    numbersP = numbers;
+    numbersP[index] = index;
+    indexP = index + 1;
+  }
+
   init {
     for i in range(0, 9) {
       numbers[i] = 0;
@@ -12,17 +21,16 @@ module main
   }
   
   next {
-    sum = sum + index;
-    numbers[index] = index;
-    
-    index = index + 1;
+    call (sum', numbers', index') = next_state();
     
     assert ((numbers[0] + numbers[1] + numbers[2] + numbers[3] + 
     		 numbers[4] + numbers[5] + numbers[6] + numbers[7]) == sum);
   }
   
   control {
+    // print_module;
     unroll (5);
     check;
+    // print_results;
   }
 }

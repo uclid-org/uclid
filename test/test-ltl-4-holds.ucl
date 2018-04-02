@@ -7,7 +7,7 @@ module main
     }
 
     next {
-        cnt = if (cnt == 2bv2) then 0bv2 else (cnt + 1bv2);
+        cnt' = if (cnt == 2bv2) then 0bv2 else (cnt + 1bv2);
     }
 
     property[LTL] cnt_eventually_2: F(cnt == 2bv2);
@@ -16,6 +16,6 @@ module main
         v = bmc[cnt_eventually_2](3);
         check;
         // print_results;
-        // v->print_cex;
+        // v.print_cex;
     }
 }

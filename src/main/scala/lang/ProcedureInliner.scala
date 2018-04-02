@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Pramod Subramanyan
  *
@@ -74,7 +80,13 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
   }
 }
 
-class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
+object ProcedureInliner {
+  sealed abstract class RewriteOptions
+  case object RewriteNext extends RewriteOptions
+  case object RewriteInit extends RewriteOptions
+}
+
+class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, procToInline : ProcedureDecl, primeVarMap : Map[Identifier, Identifier]) extends RewritePass {
   type UniqueNameProvider = (Identifier, String) => Identifier
   override def rewriteProcedure(p : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
     if (p.id == procToInline.id) Some(p)
@@ -93,13 +105,21 @@ class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
     val decls = m.decls.foldLeft((List.empty[Decl], List.empty[StateVarsDecl]))((acc, decl) => {
       decl match {
         case InitDecl(body) =>
-          val (stmts, vars) = inlineProcedureCalls((id, p) => initNameProvider(id, p), body)
-          (acc._1 ++ List(InitDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
+          if (rewriteOptions == ProcedureInliner.RewriteInit) {
+            val (stmts, vars) = inlineProcedureCalls((id, p) => initNameProvider(id, p), body)
+            (acc._1 ++ List(InitDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
+          } else {
+            (acc._1 ++ List(decl), acc._2)
+          }
         case NextDecl(body) =>
-          val (stmts, vars) = inlineProcedureCalls((id, p) => nextNameProvider(id, p), body)
-          (acc._1 ++ List(NextDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
-        case stmt =>
-          (acc._1 ++ List(stmt), acc._2)
+          if (rewriteOptions == ProcedureInliner.RewriteNext) {
+            val (stmts, vars) = inlineProcedureCalls((id, p) => nextNameProvider(id, p), body)
+            (acc._1 ++ List(NextDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
+          } else {
+            (acc._1 ++ List(decl), acc._2)
+          }
+        case decl =>
+          (acc._1 ++ List(decl), acc._2)
       }
     })
     val moduleDecls = decls._2 ++ decls._1
@@ -137,14 +157,17 @@ class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
             val mArgs = (argVars zip args).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2))
             val mRet  = (retVars zip retNewVars).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2._1))
             val mLocal = (procToInline.decls zip localNewVars).foldLeft(mEmpty)((map, t) => map + (t._1.id -> t._2._1))
+            val mModifies = (procToInline.modifies.map(m => (m -> primeVarMap.get(m).get.asInstanceOf[Expr])))
+            val resultHavocStmts = retNewVars.map(retVar => HavocStmt(HavocableId(retVar._1)))
             val resultAssignStatment = if (lhss.size > 0) List(AssignStmt(lhss, retNewVars.map(_._1))) else List.empty
-            val rewriteMap = mArgs ++ mRet ++ mLocal
+            val rewriteMap = mArgs ++ mRet ++ mLocal ++ mModifies
             val rewriter = new ExprRewriter("ProcedureInlineRewriter", rewriteMap)
-            (acc._1 ++ rewriter.rewriteStatements(procToInline.body) ++ resultAssignStatment, acc._2 ++ retNewVars ++ localNewVars)
+            (acc._1 ++ resultHavocStmts ++ rewriter.rewriteStatements(procToInline.body) ++ resultAssignStatment, 
+                acc._2 ++ retNewVars ++ localNewVars)
           }
-        case ForStmt(id, range, body) =>
+        case ForStmt(id, typ, range, body) =>
           val bodyP = inlineProcedureCalls(uniqNamer, body)
-          val forP = ForStmt(id, range, bodyP._1)
+          val forP = ForStmt(id, typ, range, bodyP._1)
           (acc._1 ++ List(forP), acc._2 ++ bodyP._2)
         case IfElseStmt(cond, ifblock, elseblock) =>
           val ifBlockP = inlineProcedureCalls(uniqNamer, ifblock)
@@ -166,16 +189,23 @@ class InlineProcedurePass(procToInline : ProcedureDecl) extends RewritePass {
   }
 }
 
-class ProcedureInliner extends ASTAnalysis {
+class ProcedureInliner(rewriteOptions: ProcedureInliner.RewriteOptions) extends ASTAnalysis {
+  lazy val primedVariableCollector = manager.pass("PrimedVariableCollector").asInstanceOf[PrimedVariableCollector]
   lazy val findProcedureDependency = manager.pass("FindProcedureDependency").asInstanceOf[FindProcedureDependency]
-  override def passName = "ProcedureInliner"
+  override def passName = "ProcedureInliner:"+rewriteOptions.toString()
 
   override def visit(module : Module, context : Scope) : Option[Module] = {
+    val primeVarMap = if (rewriteOptions == ProcedureInliner.RewriteNext) {
+      primedVariableCollector.primeVarMap.get
+    } else {
+      val writeables = module.sharedVars.map(p => p._1) ++ module.vars.map(p => p._1) ++ module.outputs.map(p => p._1)
+      writeables.map(v => (v -> v)).toMap
+    }
     val procInliningOrder = findProcedureDependency.procInliningOrder
     def inlineProcedure(procId : Identifier, mod : Module) : Module = {
       if (procId != Identifier("_top")) {
         val proc = mod.procedures.find(p => p.id == procId).get
-        val rewriter = new ASTRewriter("ProcedureInliner.Inline:" + procId.toString, new InlineProcedurePass(proc))
+        val rewriter = new ASTRewriter("ProcedureInliner.Inline:" + procId.toString, new InlineProcedurePass(rewriteOptions, proc, primeVarMap))
         rewriter.visit(mod, context).get
       } else {
         module

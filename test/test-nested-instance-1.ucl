@@ -37,5 +37,5 @@ module main
     next(bar1);
   }
   
-  property b1: bar1->foox->a + 1 + bar1->fooy->a + 1 == y;
+  property b1: bar1.foox.a + 1 + bar1.fooy.a + 1 == y;
 }

@@ -1,32 +1,41 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Authors: Rohit Sinha, Pramod Subramanyan
-
+ *
+ * Created by Rohit Sinha on 5/23/15.
+ * With lots of updates by Pramod Subramanyan in the summer of 2017.
+ *
  * UCLID main file.
  *
  */
@@ -38,77 +47,61 @@ import scala.collection.immutable._
 import uclid.lang._
 import lang.Module
 import lang.Identifier
+import uclid.Utils.ParserErrorList
 
-/**
- * Created by Rohit Sinha on 5/23/15.
- * With lots of updates by Pramod Subramanyan in the summer of 2017.
+/** This is the main class for Uclid.
+ *
  */
 object UclidMain {
-  object options {
-      var help : Boolean = false
-      var mainModule: String = "main"
-      var srcFiles: List[String] = Nil
-      var debugOptions : Set[String] = Set.empty[String]
-  }
-
-  def getOptions(args: Array[String]) {
-    def isSwitch(s : String) = (s(0) == '-')
-    var ignore = false
-
-    for (i <- args.indices) {
-      if (ignore) {
-        ignore = false
-      } else if ( isSwitch(args(i)) ) {
-        if (args(i) == "--main" || args(i) == "-m") {
-          if (i+1 < args.length) {
-            options.mainModule = args(i+1)
-            ignore = true
-          } else {
-            println("Expected name of main module after switch '" + args(i) + "'")
-            options.help = true;
-          }
-        } else if (args(i) == "--debug" || args(i) == "-d") {
-          if (i+1 < args.length) {
-            options.debugOptions = args(i+1).split("+").toSet
-            ignore = true
-          } else {
-            println("Expected list of debug modules after switch '" + args(i) + "'")
-            options.help = true;
-          }
-        } else if (args(i) == "--help" || args(i) == "-h") {
-          options.help = true;
-        } else {
-          println("Unknown argument: " + args(i))
-          println(usage)
-          sys.exit(1)
-        }
-      } else {
-        options.srcFiles = args(i) :: options.srcFiles
-      }
-    }
-  }
-
-  val usage = """
-    Usage: UclidMain [options] filename [filenames]
-    Options:
-      -h/--help : This message.
-      -m/--main : Set the main module.
-      -d/--debug : Debug options.
-  """
   def main(args: Array[String]) {
-    if (args.length == 0) println(usage)
-    val opts = getOptions(args)
-
-    if (options.help) {
-      println(usage)
-      sys.exit(1)
+    parseOptions(args) match {
+      case None =>
+      case Some(config) => main(config)
     }
+  }
+
+  /** Command-line configuration flags for uclid5.
+   *
+   * @param mainModuleName The name of the main module.
+   * @param smtSolver The location of an SMT solver executable along with arguments that must be passed to it.
+   * @param files List of files that should parsed and analyzed.
+   */
+  case class Config(
+      mainModuleName : String = "main",
+      smtSolver: List[String] = List.empty,
+      files : Seq[java.io.File] = Seq()
+  )
+
+  def parseOptions(args: Array[String]) : Option[Config] = {
+    val parser = new scopt.OptionParser[Config]("uclid") {
+      head("uclid", "0.9.1")
+
+      opt[String]('m', "main").valueName("<Module>").action{ 
+        (x, c) => c.copy(mainModuleName = x) 
+      }.text("Name of the main module.")
+
+      opt[String]('s', "solver").valueName("<Binary>").action{ 
+        (exec, c) => c.copy(smtSolver = exec.split(" ").toList) 
+      }.text("External SMT solver binary.")
+
+      arg[java.io.File]("<file> ...").unbounded().required().action {
+        (x, c) => c.copy(files = c.files :+ x)
+      }.text("List of files to analyze.")
+      
+      // override def renderingMode = scopt.RenderingMode.OneColumn
+    }
+    parser.parse(args, Config())
+  }
+
+  /** This version of 'main' does all the real work.
+   */
+  def main(config : Config) {
     try {
-      val mainModuleName = Identifier(options.mainModule)
-      val modules = compile(options.srcFiles, mainModuleName)
+      val mainModuleName = Identifier(config.mainModuleName)
+      val modules = compile(config.files, mainModuleName)
       val mainModule = instantiate(modules, mainModuleName, true)
       mainModule match {
-        case Some(m) => execute(m)
+        case Some(m) => execute(m, config)
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
       }
@@ -142,20 +135,22 @@ object UclidMain {
     }
   }
 
-  def compile(srcFiles : List[String], mainModuleName : Identifier, test : Boolean = false) : List[Module] = {
+  /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
+  def compile(srcFiles : Seq[java.io.File], mainModuleName : Identifier, test : Boolean = false) : List[Module] = {
     type NameCountMap = Map[Identifier, Int]
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
 
-    val passManager = new PassManager()
+    val passManager = new PassManager("compile")
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new ModuleCanonicalizer())
-    // passManager.addPass(new LTLOperatorArgumentChecker())
     passManager.addPass(new LTLOperatorIntroducer())
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new FuncExprRewriter())
     passManager.addPass(new InstanceModuleNameChecker())
     passManager.addPass(new InstanceModuleTypeRewriter())
+    passManager.addPass(new RewritePolymorphicSelect())
+    passManager.addPass(new ConstantLitRewriter())
     passManager.addPass(new TypeSynonymFinder())
     passManager.addPass(new TypeSynonymRewriter())
     passManager.addPass(new BitVectorSliceFindWidth())
@@ -163,65 +158,71 @@ object UclidMain {
     if (!test) passManager.addPass(new VerificationExpressionChecker())
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new ModuleTypeChecker())
+    passManager.addPass(new PrimedAssignmentChecker())
     passManager.addPass(new SemanticAnalyzer())
     passManager.addPass(new ProcedureChecker())
     passManager.addPass(new ControlCommandChecker())
     passManager.addPass(new ComputeInstanceTypes())
+    passManager.addPass(new ModuleInstanceChecker())
     passManager.addPass(new FindProcedureDependency())
     passManager.addPass(new DefDepGraphChecker())
     passManager.addPass(new RewriteDefines())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
-    passManager.addPass(new ProcedureInliner())
+    passManager.addPass(new VariableDependencyFinder())
+    passManager.addPass(new StatementScheduler())
+    passManager.addPass(new ProcedureInliner(ProcedureInliner.RewriteInit))
+    passManager.addPass(new PrimedVariableCollector())
+    passManager.addPass(new PrimedVariableEliminator())
+    passManager.addPass(new ProcedureInliner(ProcedureInliner.RewriteNext))
     passManager.addPass(new CaseEliminator())
-    passManager.addPass(new LTLOperatorRewriter())
-    passManager.addPass(new LTLPropertyRewriter())
-    passManager.addPass(new FindFreshLiterals())
+    passManager.addPass(new IntroduceFreshHavocs())
     passManager.addPass(new RewriteFreshLiterals())
     // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
 
     val filenameAdderPass = new AddFilenameRewriter(None)
+    // Helper function to parse a single file.
     def parseFile(srcFile : String) : List[Module] = {
       val text = scala.io.Source.fromFile(srcFile).mkString
       filenameAdderPass.setFilename(srcFile)
       val modules = UclidParser.parseModel(srcFile, text)
       modules.map(m => filenameAdderPass.visit(m, Scope.empty)).flatten
     }
-
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
-      (acc, srcFile) => parseFile(srcFile) ++ acc
+      (acc, srcFile) => acc ++ parseFile(srcFile.getPath())
     }
-    val modIdSeq = parsedModules.map(m => (m.id, m.position))
-    val moduleErrors = SemanticAnalyzerPass.checkIdRedeclaration(modIdSeq, List.empty[ModuleError])
-    if (moduleErrors.size > 0) {
-      val errors = moduleErrors.map((me) => (me.msg, me.position))
-      throw new Utils.ParserErrorList(errors)
-    }
+
     // now process each module
     val init = (List.empty[Module], Scope.empty)
     // NOTE: The foldLeft/:: combination here reverses the order of modules.
     // The PassManager in instantiate calls run(ms : List[Module]); this version of run uses foldRight.
     // So modules end up being processed in the same order in both PassManagers.
-    return parsedModules.foldLeft(init) {
+    val processedModules = parsedModules.foldLeft(init) {
       (acc, m) =>
         val modules = acc._1
         val context = acc._2
         val mP = passManager.run(m, context).get
         (mP :: modules, context +& mP)
     }._1
+    val moduleNames = processedModules.map(m => (m.id, m.id.position)).reverse
+    val errors = SemanticAnalyzerPass.checkIdRedeclaration(moduleNames, List.empty)
+    if (errors.size > 0) {
+      throw new ParserErrorList(errors.map(e => (e.msg, e.position)))
+    }
+    processedModules
   }
 
+  /** Instantiate module helper. */
   def instantiateModules(moduleList: List[Module], mainModuleName : Identifier) : List[Module] = {
-    // create pass manager.
-    val passManager = new PassManager()
-    passManager.addPass(new ModuleInstanceChecker())
+    val passManager = new PassManager("instantiate")
     passManager.addPass(new ModuleDependencyFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomFinder())
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ModuleFlattener(mainModuleName))
-    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
     passManager.addPass(new ModuleEliminator(mainModuleName))
+    passManager.addPass(new LTLOperatorRewriter())
+    passManager.addPass(new LTLPropertyRewriter())
     passManager.addPass(new ModuleCleaner())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())
@@ -232,11 +233,17 @@ object UclidMain {
     passManager.run(moduleList)
   }
 
+  /** Instantiate modules.
+   *
+   * @param moduleList List of modules to be analyzed.
+   * @param mainModuleName Name of main module.
+   * @param verbose If this is true, we print the message describing the number of modules parsed and instantiated.
+   */
   def instantiate(moduleList : List[Module], mainModuleName : Identifier, verbose : Boolean) : Option[Module] = {
     if (moduleList.find(m => m.id == mainModuleName).isEmpty) {
       return None
     }
-    val moduleListP = instantiateModules(moduleList, mainModuleName) 
+    val moduleListP = instantiateModules(moduleList, mainModuleName)
     if (verbose) {
       println("Successfully parsed %d and instantiated %d module(s).".format(moduleList.size, moduleListP.size))
     }
@@ -244,11 +251,17 @@ object UclidMain {
     moduleListP.find((m) => m.id == mainModuleName)
   }
 
-  def execute(module : Module) : List[CheckResult] = {
-    // execute the control module
+  /** Execute the control module.
+   *
+   */
+  def execute(module : Module, config : Config) : List[CheckResult] = {
     var symbolicSimulator = new SymbolicSimulator(module)
-    var z3Interface = new smt.Z3Interface()
-    // var z3Interface = new smt.Z3FileInterface()
+    var z3Interface = if (config.smtSolver.size > 0) {
+      println("args: " + config.smtSolver)
+      new smt.SMTLIB2Interface(config.smtSolver)
+    } else {
+      new smt.Z3Interface()
+    }
     val result = symbolicSimulator.execute(z3Interface)
     z3Interface.finish()
     return result

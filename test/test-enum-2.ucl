@@ -12,16 +12,24 @@ module main
   var regs          : [bv3]bv8;
   var cnt           : bv8; // testing var.
 
-  // temporary var to hold register values..
-  var r1val, r2val  : bv8;
 
-  init {
+  procedure set_regs_1()
+  {
     // all registers initialized to one.
+  }
+  init {
     assume (forall (ri : bv3) :: regs[ri] == 1bv8);
     cnt = 1bv8;
   }
 
-  next {
+  procedure exec_command()
+    modifies regs, result;
+  {
+
+    // temporary var to hold register values..
+    var r1val : bv8;
+    var r2val : bv8;
+
     if (cmd.valid) {
       r1val = regs[r1];
       r2val = regs[r2];
@@ -33,18 +41,28 @@ module main
       esac
       regs[r1] = result;
     }
+  }
 
-    // this code is only for testing the module.
-    assume (r1 == 0bv3 && r2 == 0bv3);
+  procedure next_sequential()
+    modifies cnt, regs, result;
+  {
     assume (cmd.valid);
     assume (cmd.op == add);
+    call exec_command();
+    // this code is only for testing the module.
+    assume (r1 == 0bv3 && r2 == 0bv3);
     cnt = cnt + cnt;
-    assert (cnt == result);
+  }
+
+  next {
+    call next_sequential();
+    assert (cnt' == result');
   }
 
   control {
     f = unroll (5);
     check;
+    // print_results;
   }
 }
 

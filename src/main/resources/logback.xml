@@ -1,0 +1,29 @@
+<configuration>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- encoders are assigned the type
+         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+    <encoder>
+      <pattern>[%logger{36}] %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <logger name="uclid.lang.PassManager" level="OFF"/>
+  <logger name="uclid.lang.ExpressionTypeCheckerPass" level="OFF"/>
+  <logger name="uclid.lang.ModuleInstanceCheckerPass" level="OFF"/>
+  <logger name="uclid.lang.ModuleInstantiatorPass" level="OFF"/>
+  <logger name="uclid.lang.ModuleFlattenerPass" level="OFF"/>
+  <logger name="uclid.lang.VariableDependencyFinder" level="OFF"/>
+  <logger name="uclid.lang.StatementSchedulerPass" level="OFF"/>
+  <logger name="uclid.lang.ConstantLitRewriterPass" level="OFF"/>
+  <logger name="uclid.lang.StatementScheduler" level="OFF"/>
+  <logger name="uclid.lang.VerificationExpressionPass" level="OFF"/>
+  <logger name="uclid.Utils.topoSort" level="OFF"/>
+  <logger name="uclid.Utils.schedule" level="OFF"/>
+  <logger name="uclid.smt.Z3Interface.assert" level="OFF"/>
+  <logger name="uclid.smt.Z3Interface.check" level="OFF"/>
+
+  <root level="debug">
+    <appender-ref ref="STDOUT" />
+  </root>
+</configuration>

@@ -2,8 +2,9 @@ package uclid
 package lang
 
 class ModuleCleanerPass extends RewritePass {
-  override def rewriteTypeDecl(typDec : TypeDecl, ctx : Scope) : Option[TypeDecl] = {
-    None
+  override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = {
+    val declsP = module.decls.sortWith((d1, d2) => d1.hashId < d2.hashId)
+    Some(Module(module.id, declsP, module.cmds, module.notes))
   }
 }
 

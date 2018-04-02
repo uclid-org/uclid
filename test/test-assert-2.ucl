@@ -1,0 +1,19 @@
+module main
+{
+  var flag : boolean;
+  
+  init { flag = false; }
+  next {
+    if (flag) {
+      skip;
+    } else {
+      assert (false);
+    }
+  }
+  
+  control {
+    unroll(5);
+    check;
+    // print_results;
+  }
+}

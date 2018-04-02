@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Pramod Subramanyan
 
@@ -34,117 +40,7 @@ package uclid
 package lang
 
 import scala.collection.immutable.Map
-
-class ModuleInstanceCheckerPass() extends ReadOnlyPass[List[ModuleError]] {
-  def doesInstanceTypeMatch(modT : ModuleType, instT : ModuleInstanceType, in : List[ModuleError], pos : ASTPosition) : List[ModuleError] = {
-    // check the types of a list of pairs of identifiers and types..
-    def checkTypes(args : List[(Identifier, Type)], in : List[ModuleError], argType : String, typeMap : Map[Identifier, Type]) : List[ModuleError] = {
-      args.foldLeft(in) {
-        (acc, arg) => {
-          val id = arg._1
-          val actualTyp = arg._2
-          typeMap.get(id) match {
-            case Some(expTyp) =>
-              if (actualTyp.matches(expTyp)) {
-                acc
-              } else {
-                val msg = "Incorrect type for module " + argType + ": " + id.toString + ". Got " +
-                          actualTyp.toString + ", expected " + expTyp.toString + " instead"
-                ModuleError(msg, id.position) :: acc
-              }
-            case None =>
-              // we've already reported this.
-              acc
-          }
-        }
-      }
-    }
-
-    // first check there are no unknown arguments (arguments that don't correspond to the I/Os of module).
-    val badArgs = instT.args.map(_._1).filter(a => !modT.argSet.contains(a))
-    val errs1 = badArgs.foldLeft(in) {
-      (acc, arg) => {
-        ModuleError("Unknown module input/output: " + arg.toString, arg.position) :: acc
-      }
-    }
-    // for this first let's filter out the inputs who are "wired"
-    val wiredInputs = instT.args.filter((a) => modT.inputMap.contains(a._1) && a._2.isDefined).map((a) => (a._1, a._2.get))
-    // now check that all input types match.
-    val errs2 = checkTypes(wiredInputs, errs1, "input", modT.inputMap)
-
-    // filter out wired outputs.
-    val wiredOutputs = instT.args.filter((a) => modT.outputMap.contains(a._1) && a._2.isDefined).map((a) => (a._1, a._2.get))
-    // check output types.
-    val errs3 = checkTypes(wiredOutputs, errs2, "output", modT.outputMap)
-
-    // filter out shared variables.
-    val wiredSharedVars = instT.args.filter((a) => modT.sharedVarMap.contains(a._1) && a._2.isDefined).map((a) => (a._1, a._2.get))
-    val errs4 = checkTypes(wiredSharedVars, errs3, "sharedvar", modT.sharedVarMap)
-
-    // ensure all shared variables are mapped.
-    val unwiredSharedVars = modT.sharedVarMap.filter(v => !instT.argMap.contains(v._1))
-    val unwiredSharedVarsErrors = unwiredSharedVars.map(v => ModuleError("Unmapped shared variable: " + v._1.toString, pos))
- 
-    errs4 ++ unwiredSharedVarsErrors
-  }
-
-  def checkInstance(inst : InstanceDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
-    val targetModNamedExpr = context.map.get(inst.moduleId)
-    targetModNamedExpr match {
-      case None =>
-        val error = ModuleError("Unknown module being instantiated: " + inst.moduleId.toString, inst.moduleId.position)
-        error :: in
-      case Some(namedExpr) =>
-        namedExpr match {
-          case Scope.ModuleDefinition(targetMod) =>
-            val targetModT = targetMod.moduleType
-            Utils.assert(inst.instType.isDefined, "Instance type must be defined at this point!")
-            val err1 = doesInstanceTypeMatch(targetModT, inst.instType.get, in, inst.position)
-            // make sure all outputs are wired to identifiers.
-            val outputExprs = inst.arguments.filter(a => targetModT.outputMap.contains(a._1) && a._2.isDefined).map(a => (a._2.get, "module output"))
-            val sharedVarExprs = inst.arguments.filter(a => targetModT.sharedVarMap.contains(a._1) && a._2.isDefined).map(a => (a._2.get, "shared variable"))
-            val identExprs = outputExprs ++ sharedVarExprs
-            identExprs.foldLeft(err1) {
-              (acc, arg) => {
-                arg._1 match {
-                  case Identifier(name) =>
-                    acc
-                  case _ =>
-                    val msg = "Invalid %s : '%s'".format(arg._2.toString, arg._1.toString)
-                    ModuleError(msg, arg._1.position) :: acc
-                }
-              }
-            }
-          case _ =>
-            val error = ModuleError("Module not in scope: " + inst.moduleId.toString, inst.moduleId.position)
-            error :: in
-        }
-    }
-  }
-
-  override def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
-    if (d == TraversalDirection.Down) {
-      // only need to check in one direction.
-      checkInstance(inst, in, context)
-    } else {
-      in
-    }
-  }
-}
-
-class ModuleInstanceChecker() extends ASTAnalyzer(
-    "ModuleInstanceChecker", new ModuleInstanceCheckerPass())
-{
-  override def reset() {
-    in = Some(List.empty[ModuleError])
-  }
-  override def finish() {
-    val errors = out.get
-    if (errors.size > 0) {
-      throw new Utils.ParserErrorList(errors.map((e) => (e.msg, e.position)))
-    }
-  }
-}
+import com.typesafe.scalalogging.Logger
 
 class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
   type T = Map[Identifier, Set[Identifier]]
@@ -187,7 +83,7 @@ object ModuleInstantiatorPass {
   sealed abstract class InstanceVarRenaming(val ident : Identifier, val typ : Type)
   case class BoundInput(id : Identifier, t : Type, expr : Expr) extends InstanceVarRenaming(id, t)
   case class UnboundInput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
-  case class BoundOutput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
+  case class BoundOutput(lhs : Lhs, t : Type) extends InstanceVarRenaming(lhs.ident, t)
   case class UnboundOutput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class StateVariable(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class SharedVariable(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
@@ -197,10 +93,20 @@ object ModuleInstantiatorPass {
   type InstVarMap = Map[List[Identifier], Identifier]
   type RewriteMap = Map[Expr, Expr]
 
-  // Convert an expression to an identifier. (if possible)
+  // Convert an expression to an Identifier (if possible).
   def extractId (e : Expr) : Option[Identifier] = {
     e match {
       case id : Identifier => Some(id)
+      case _ => None
+    }
+  }
+  // Convert an expression to an Lhs (if possible).
+  def extractLhs (e : Expr) : Option[Lhs] = {
+    e match {
+      case Identifier(id) =>
+        Some(LhsId(Identifier(id)))
+      case OperatorApplication(GetNextValueOp(), List(Identifier(id))) =>
+        Some(LhsNextId(Identifier(id)))
       case _ => None
     }
   }
@@ -215,17 +121,18 @@ object ModuleInstantiatorPass {
 }
 
 class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule : Module, initExternalSymbolMap : ExternalSymbolMap) extends RewritePass {
+  lazy val logger = Logger(classOf[ModuleInstantiatorPass])
   val MIP = ModuleInstantiatorPass
   val targetModuleName = targetModule.id
 
   type VarMap = MIP.VarMap
   type InstVarMap = MIP.InstVarMap
   type RewriteMap = MIP.RewriteMap
+  val nameProvider = new ContextualNameProvider(Scope.empty + module, "_inst_" + inst.instanceId.toString)
 
   def createVarMap() : (VarMap, ExternalSymbolMap) = {
     // sanity check
     Utils.assert(targetModule.instances.size == 0, "All instances in target module must have been flattened by now. Module: %s. Instance: %s.\n%s".format(module.id.toString, inst.toString, targetModule.toString))
-    val nameProvider = new ContextualNameProvider(Scope.empty + module, "$inst:" + inst.instanceId.toString)
 
     val idMap0 : VarMap = Map.empty
     // map each input
@@ -241,7 +148,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val idMap2 = targetModule.outputs.foldLeft(idMap1) {
       (mapAcc, out) => {
         inst.argMap.get(out._1) match {
-          case Some(expr) => mapAcc + (out._1 -> MIP.BoundOutput(MIP.extractId(expr).get, out._2))
+          case Some(expr) => mapAcc + (out._1 -> MIP.BoundOutput(MIP.extractLhs(expr).get, out._2))
           case None => mapAcc + (out._1 -> MIP.UnboundOutput(nameProvider(out._1, "unbound_output"), out._2))
         }
       }
@@ -274,14 +181,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   def createInstVarMap(varMap : VarMap) : InstVarMap = {
-    // println("initInstVarMap: " + initInstVarMap.toString)
-    // println("instance: " + inst.toString())
-    val instVarMap1 = varMap.foldLeft(Map.empty[List[Identifier], Identifier]) { 
+    val instVarMap1 = varMap.foldLeft(Map.empty[List[Identifier], Identifier]) {
       (instVarMap, renaming) => {
         renaming._2 match {
-          case MIP.BoundInput(_, _, _) | MIP.UnboundInput(_, _) | 
-               MIP.BoundOutput(_, _) | MIP.UnboundOutput(_, _)  | 
-               MIP.StateVariable(_, _) | MIP.SharedVariable(_, _) | 
+          case MIP.BoundInput(_, _, _) | MIP.UnboundInput(_, _) |
+               MIP.BoundOutput(_, _) | MIP.UnboundOutput(_, _)  |
+               MIP.StateVariable(_, _) | MIP.SharedVariable(_, _) |
                MIP.Constant(_, _) =>
             instVarMap + (List(inst.instanceId, renaming._1) -> renaming._2.ident)
           case _ =>
@@ -294,12 +199,10 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       p => {
         val key1 = List(inst.instanceId, p._2)
         val result = instVarMap1.get(key1).get
-        (inst.instanceId :: p._1) -> result 
+        (inst.instanceId :: p._1) -> result
       }
     }).toMap
     val instVarMap = instVarMap1 ++ instVarMap2
-    // val instVarMap1 : Map[List[Identifier], Identifier] = initInstVarMap.map(p => (inst.instanceId :: p._1) -> p._2)
-    // println("instVarMap: " + instVarMap.toString)
     instVarMap
   }
 
@@ -323,7 +226,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
           case MIP.UnboundOutput(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.StateVariable(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.Constant(id, t) => fixPosition(Some(ConstantsDecl(List(id), t)), id.position)
-          case MIP.Function(_, _) | MIP.UnboundInput(_, _) | 
+          case MIP.Function(_, _) | MIP.UnboundInput(_, _) |
                MIP.BoundOutput(_, _) | MIP.SharedVariable(_, _) =>  None
         }
       }
@@ -364,6 +267,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   val newVariables = createNewVariables(varMap)
   val newInputs = createNewInputs(varMap)
   val newInputAssignments = createInputAssignments(varMap)
+  val newAxioms = newModule.axioms.map {
+    ax => {
+      val idP = ax.id.flatMap(axId => Some(nameProvider(axId, "axiom")))
+      AxiomDecl(idP, ax.expr)
+    }
+  }
   val newNextStatements = newModule.next match {
     case Some(nextD) => nextD.body
     case _ => List.empty[Statement]
@@ -419,7 +328,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   // add new variables and inputs.
   override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
-    val declsP : List[Decl] = newVariables ++ newInputs ++ module.decls
+    logger.debug("axioms:\n{}", newAxioms.map("  " + _.toString()))
+    val declsP : List[Decl] = newVariables ++ newInputs ++ newAxioms ++ module.decls
     val moduleP = Module(module.id, declsP, module.cmds, module.notes)
     Some(moduleP)
   }
@@ -434,10 +344,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 }
 
-class ModuleInstantiator(passName : String, module : Module, inst : InstanceDecl, targetModule : Module, externalSymbolMap : ExternalSymbolMap) extends ASTRewriter(
-    passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false)
+class ModuleInstantiator(
+    passName : String, module : Module, inst : InstanceDecl,
+    targetModule : Module, externalSymbolMap : ExternalSymbolMap)
+extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false)
 
 class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
+  val logger = Logger(classOf[ModuleFlattenerPass])
   lazy val manager : PassManager = analysis.manager
   lazy val externalSymbolAnalysis = manager.pass("ExternalSymbolAnalysis").asInstanceOf[ExternalSymbolAnalysis]
 
@@ -452,12 +365,12 @@ class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
         val targetModule = ctx.map.find(p => p._1 == inst.moduleId).get._2.asInstanceOf[Scope.ModuleDefinition].mod // modules.find(_.id == inst.moduleId).get
         val passName = "ModuleInstantiator:" + module.id + ":" + inst.instanceId
         val rewriter = new ModuleInstantiator(passName, module, inst, targetModule, extSymMap)
-        // println("rewriting module:%s inst:%s targetModule:%s.".format(module.id.toString, inst.instanceId.toString, targetModule.id.toString))
+        logger.debug("rewriting module:%s inst:%s targetModule:%s.".format(module.id.toString, inst.instanceId.toString, targetModule.id.toString))
         // update external symbol map.
         extSymMap = rewriter.pass.asInstanceOf[ModuleInstantiatorPass].externalSymbolMap
-        // println("original module:\n%s".format(module.toString))
+        logger.debug("original module:\n%s".format(module.toString))
         val modP = rewriter.visit(module, ctx).get
-        // println("rewritten module:\n%s".format(modP.toString))
+        logger.debug("rewritten module:\n%s".format(modP.toString))
         rewrite(modP, ctx)
       case Nil =>
         if (module.id == mainModule) {

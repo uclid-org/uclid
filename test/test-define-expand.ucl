@@ -25,32 +25,39 @@ module queue
   	(exists (i : integer) :: (i >= head && i < tail && contents[i] == v));
   define contains(v : integer) : boolean =
     is_empty() && in_queue(v);
-  /*
-  define recursive(v : integer) : boolean = recursive(v);
-  define relation1(a : integer) : boolean = relation2(a);
-  define relation2(b : integer) : boolean = relation1(b);
-  */
 
   init {
     inited = false;
-    head = 0;
-    tail = 0; 
-    first = contents[head];
+    head   = 0;
+    tail   = 0; 
+    first  = contents[head];
     contains_data = false;
   }
 
+  procedure _push()
+    modifies contents, tail;
+  {
+    contents[tail] = data;
+    tail = tail+1;
+  }
+
+  procedure _pop()
+    modifies head;
+  {
+    head = head+1;
+  }
+    
   next {
-    inited = true;
-    first = contents[head];
-    contains_data = contains(data);
+    inited' = true;
+    first' = contents[head];
+    contains_data' = contains(data);
     case
 	(op == push) : {
-	  contents[tail] = data;
-      tail = tail+1;
+	  call _push();
     }
 	(op == pop) : {
       if (!is_empty()) {
-	    head = head+1;
+	    call _pop();
       }
 	}
 	(op == nop) : { } /* no change */
@@ -86,12 +93,12 @@ module main
   
   next {
     case
-	(step == 0) || (step == 1) : { op = push; }
-	(step == 2) || (step == 3) : { op = pop; }
-	default : { op = nop; }
+	(step == 0) || (step == 1) : { op' = push; }
+	(step == 2) || (step == 3) : { op' = pop; }
+	default : { op' = nop; }
     esac
-    step = step+1;
-    data = data+1;
+    step' = step+1;
+    data' = data+1;
     next(queue_i);
   }
 }

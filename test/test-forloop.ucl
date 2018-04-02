@@ -21,12 +21,12 @@ module main {
   }
   
   next {
-  	t1 = (arg0 & ~arg1) | (~arg0 & arg1);
-  	t2 = (arg0 ^ arg1);
-  	assert (t1 == t2);
+  	t1' = (arg0 & ~arg1) | (~arg0 & arg1);
+  	t2' = (arg0 ^ arg1);
+  	assert (t1' == t2');
   	
-  	call (result) = add(arg0, arg1);
-  	assert (result == (arg0 + arg1));
+  	call (result') = add(arg0, arg1);
+  	assert (result' == (arg0 + arg1));
   }
   
   control {

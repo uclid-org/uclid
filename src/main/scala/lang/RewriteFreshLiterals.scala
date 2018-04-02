@@ -1,54 +1,45 @@
 package uclid
 package lang
 
-object FindFreshLiteralsPass {
-  case class T(nameProvider : Option[ContextualNameProvider], inputs: List[(IdGenerator.Id, InputVarsDecl)]) {
-    def getNewName(name : Identifier, tag : String) = {
-      nameProvider match {
-        case Some(provider) =>
-          provider.apply(name, tag)
-        case None =>
-          throw new Utils.RuntimeError("ContextualNameProvider not defined.")
-      }
-    }
-  }
-}
-
-class FindFreshLiteralsPass extends ReadOnlyPass[FindFreshLiteralsPass.T] {
-  type T = FindFreshLiteralsPass.T
-  override def applyOnModule(d : TraversalDirection.T, module : Module, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Down) {
-      FindFreshLiteralsPass.T(Some(new ContextualNameProvider(context, "fresh")), in.inputs)
-    } else {
-      FindFreshLiteralsPass.T(None, in.inputs)
-    }
-  }
-  override def applyOnFreshLit(d : TraversalDirection.T, f : FreshLit, in : T, context : Scope) : T = {
-    val newInput = InputVarsDecl(List(in.getNewName(Identifier("nd"), f.typ.toString)), f.typ)
-    FindFreshLiteralsPass.T(in.nameProvider, (f.astNodeId, newInput) :: in.inputs)
-  }
-}
-
-class FindFreshLiterals extends ASTAnalyzer("FindFreshLiterals", new FindFreshLiteralsPass()) {
-  in = Some(FindFreshLiteralsPass.T(None, List.empty))
-  lazy val literalMap : Map[IdGenerator.Id, InputVarsDecl] = out.get.inputs.toMap
-  lazy val declarations : List[InputVarsDecl] = out.get.inputs.map(_._2)
-}
-
 class RewriteFreshLiteralsPass extends RewritePass {
-  lazy val manager : PassManager = analysis.manager
-  lazy val findFreshLiterals = manager.pass("FindFreshLiterals").asInstanceOf[FindFreshLiterals]
+  var freshLit : Option[Identifier] = None
+  
+  override def reset() {
+    freshLit = None
+  }
 
   override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
-    val moduleP = Module(module.id, findFreshLiterals.declarations ++ module.decls, module.cmds, module.notes)
+    val declsP = freshLit match {
+      case Some(freshId) =>
+        StateVarsDecl(List(freshId), BooleanType()) :: module.decls
+      case None =>
+        module.decls
+    }
+    val moduleP = Module(module.id, declsP, module.cmds, module.notes)
     Some(moduleP)
   }
   override def rewriteFreshLit(f : FreshLit, context : Scope) : Option[Expr] = {
-    findFreshLiterals.literalMap.get(f.astNodeId) match {
-      case Some(inpDecl) => Some(inpDecl.ids(0))
-      case None          => throw new Utils.RuntimeError("All FreshLit instances must be in map.")
+    freshLit match {
+      case Some(f) => Some(f)
+      case None =>
+        val newId = new ContextualNameProvider(context, "fresh").apply(Identifier("if_star"), "")
+        freshLit = Some(newId)
+        Some(newId)
     }
   }
 }
 
 class RewriteFreshLiterals extends ASTRewriter("RewriteFreshLiterals", new RewriteFreshLiteralsPass())
+
+class IntroduceFreshHavocsPass extends RewritePass {
+  override def rewriteIfElse(st : IfElseStmt, ctx : Scope) : List[Statement] = {
+    st.cond match {
+      case f : FreshLit =>
+        val havoc = HavocStmt(HavocableFreshLit(f))
+        List(havoc, st)
+      case _ =>
+        List(st)
+    }
+  }
+}
+class IntroduceFreshHavocs extends ASTRewriter("IntroduceFreshHavocs", new IntroduceFreshHavocsPass())

@@ -14,13 +14,14 @@ module main {
     cntp = 0bv8;
   }
   next {
-    call (cnt) = add4(cnt);
-    cntp = cntp + 4bv8;
-    
-    assert (cnt == cntp);
+    call (cnt') = add4(cnt);
+    cntp' = cntp + 4bv8;
+    // noteToSelf(ReorderingTest)
+    assert (cnt' == cntp');
   }
   control {
     unroll (5);
     check;
+    // print_results;
   }
 }

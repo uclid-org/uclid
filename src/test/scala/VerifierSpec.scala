@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Pramod Subramanyan
  *
@@ -35,20 +41,20 @@ package uclid
 package test
 
 import org.scalatest.FlatSpec
+import java.io.File
 import uclid.{lang => l}
 
 object VerifierSpec {
   def expectedFails(filename: String, nFail : Int) {
-    val modules = UclidMain.compile(List(filename), lang.Identifier("main"), true)
+    val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
-    val results = UclidMain.execute(mainModule.get)
+    val results = UclidMain.execute(mainModule.get, new UclidMain.Config())
     assert (results.count((e) => e.result.isFalse) == nFail)
     assert (results.count((e) => e.result.isUndefined) == 0);
   }
 }
-
-class BasicVerifierSpec extends FlatSpec {
+class VerifierSanitySpec extends FlatSpec {
   "test-assert-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-assert-1.ucl", 0)
   }
@@ -61,14 +67,43 @@ class BasicVerifierSpec extends FlatSpec {
   "test-array-1-unsafe.ucl" should "verify all but 4 assertions." in {
     VerifierSpec.expectedFails("./test/test-array-1-unsafe.ucl", 4)
   }
-  "test-bv-assign.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-bv-assign.ucl", 0)
-  }
   "test-bv-fib.ucl" should "verify successfully all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-bv-fib.ucl", 1)
   }
   "test-case-mc91.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-case-mc91.ucl", 0)
+  }
+  "test-int-fib.ucl" should "verify successfully all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-int-fib.ucl", 1)
+  }
+  "test-mc91.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-mc91.ucl", 0)
+  }
+  "test-if-star.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-if-star.ucl", 0)
+  }
+  "test-if-star-2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-if-star-2.ucl", 0)
+  }
+  "test-scheduler-0.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-scheduler-0.ucl", 0)
+  }
+  "test-assume-1.ucl" should "fail to verify five assertions." in {
+    VerifierSpec.expectedFails("./test/test-assume-1.ucl", 5)
+  }
+  "test-assert-2.ucl" should "fail to verify five assertions." in {
+    VerifierSpec.expectedFails("./test/test-assert-2.ucl", 5)
+  }
+  "test-assert-3.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-assert-3.ucl", 0)
+  }
+  "test-primed-variables-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-primed-variables-1.ucl", 0)
+  }
+}
+class BasicVerifierSpec extends FlatSpec {
+  "test-bv-assign.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bv-assign.ucl", 0)
   }
   "test-forloop.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-forloop.ucl", 0)
@@ -82,26 +117,11 @@ class BasicVerifierSpec extends FlatSpec {
   "test-ite.ucl" should "verify all but 6 assertions successfully." in {
     VerifierSpec.expectedFails("./test/test-ite.ucl", 6)
   }
-  "test-inliner.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-inliner.ucl", 0)
-  }
-  "test-inliner-1.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-inliner-1.ucl", 0)
-  }
-  "test-int-fib.ucl" should "verify successfully all but one assertion." in {
-    VerifierSpec.expectedFails("./test/test-int-fib.ucl", 1)
-  }
-  "test-mc91.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-mc91.ucl", 0)
-  }
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
   }
   "test-tuple-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-tuple-record-1.ucl", 0)
-  }
-  "test-types-0.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-types-0.ucl", 0)
   }
   "test-functions-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-functions-1.ucl", 0)
@@ -118,14 +138,25 @@ class BasicVerifierSpec extends FlatSpec {
   "test-type2.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-type2.ucl", 0)
   }
-  "test-if-star.ucl" should "verify all assertions." in {
-    VerifierSpec.expectedFails("./test/test-if-star.ucl", 0)
+}
+class ProcedureVerifSpec extends FlatSpec {
+  "test-inliner.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-inliner.ucl", 0)
   }
-  "test-assume-1.ucl" should "fail to verify five assertions." in {
-    VerifierSpec.expectedFails("./test/test-assume-1.ucl", 5)
+  "test-inliner-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-inliner-1.ucl", 0)
+  }
+  "test-procedure-checker-2.ucl" should "verify all but 4 invariants successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-checker-2.ucl", 4)
+  }
+  "test-procedure-checker-3.ucl" should "verify all but one invariants successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-checker-3.ucl", 1)
+  }
+  "test-procedure-checker-4.ucl" should "verify all invariants successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-checker-4.ucl", 0)
   }
 }
-class QuantiferVerifSpec extends FlatSpec {
+class QuantifierVerifSpec extends FlatSpec {
   "test-forall-0.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-forall-0.ucl", 0)
   }
@@ -140,22 +171,31 @@ class ModuleVerifSpec extends FlatSpec {
   "test-modules-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-modules-1.ucl", 0)
   }
+  "test-modules-5.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-modules-5.ucl", 0)
+  }
+  "test-modules-6.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-modules-6.ucl", 0)
+  }
   "test-type-import.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-type-import.ucl", 0)
   }
   "test-const-import-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-const-import-1.ucl", 0)
   }
-  "test-const-import-2.ucl" should "should failed to verify 4 assertions." in {
+  "test-const-import-2.ucl" should "fail to verify 4 assertions." in {
     VerifierSpec.expectedFails("./test/test-const-import-2.ucl", 4)
   }
   "test-func-import-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-func-import-1.ucl", 0)
   }
+  "test-func-import-2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-func-import-2.ucl", 0)
+  }
   "test-procedure-postcondition.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-procedure-postcondition.ucl", 1)
   }
-  "test-mem-inout.ucl" should "verify all assertions." in {
+  "test-meminout.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-meminout.ucl", 0)
   }
   "test-axiom-1.ucl" should "verify all assertions." in {
@@ -187,13 +227,22 @@ class LTLVerifSpec extends FlatSpec {
   "test-ltl-3-holds.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-3-holds.ucl", 0)
   }
-  "test-ltl-3-fails.ucl" should "failed to verify 2 assertions." in {
+  "test-ltl-3-fails.ucl" should "fail to verify 2 assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-3-fails.ucl", 2)
   }
   "test-ltl-4-holds.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-4-holds.ucl", 0)
   }
-  "test-ltl-4-fails.ucl" should "failed to verify 1 assertion." in {
+  "test-ltl-4-fails.ucl" should "fail to verify 1 assertion." in {
     VerifierSpec.expectedFails("./test/test-ltl-4-fails.ucl", 1)
+  }
+  "test-ltl-5-holds.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-5-holds.ucl", 0)
+  }
+  "test-ltl-5-fails.ucl" should "fail to verify 2 assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-5-fails.ucl", 2)
+  }
+  "test-ltl-6-fails.ucl" should "fail to verify 4 assertions." in {
+    VerifierSpec.expectedFails("./test/test-ltl-6-fails.ucl", 4)
   }
 }

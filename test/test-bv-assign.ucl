@@ -7,8 +7,8 @@ module main {
   input arg0, arg1  : word_t;
   input valid : boolean;
 
+  var inited : boolean;
   var t1, t2 : word_t;
-  output rdy    : boolean;
   output result : word_t;
   
   procedure full_adder(a : bit, b : bit, c_in : bit) returns (s : bit, c_out : bit) {
@@ -23,20 +23,24 @@ module main {
   	call (sum[2:2], cout[2:2]) = full_adder(a[2:2], b[2:2], cout[1:1]);
   	call (sum[3:3], cout[3:3]) = full_adder(a[3:3], b[3:3], cout[2:2]);
   }
-  
-  next {
-  	rdy = false;
-  	t1 = (arg0 & ~arg1) | (~arg0 & arg1);
-  	t2 = (arg0 ^ arg1);
-  	
-  	call (result) = add_unrolled(arg0, arg1);
-  	assert (result == (arg0 + arg1));
-  	assert (t1 == t2);
+
+  init {
+    inited = false;
   }
-  
+
+  next {
+    // noteToSelf(ReorderingTest)
+    inited' = true;
+  	t1' = (arg0 & ~arg1) | (~arg0 & arg1);
+  	t2' = (arg0 ^ arg1);
+  	call (result') = add_unrolled(arg0, arg1);
+  }
+
+  invariant result_eq_sum: inited ==> (result == (arg0 + arg1));
+  invariant t1_eq_t2 : inited ==> (t1 == t2);
   control {
   	x = unroll (3);
   	check;
-  	// x->print_results;
+  	// x.print_results;
   }
 }

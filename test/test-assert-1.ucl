@@ -5,16 +5,22 @@ module main
     var red_cnt : integer;
     var color : color_t;
 
+    procedure next_color()
+      modifies color;
+    {
+      color = blue;
+      if (red_cnt > 0) {
+        color = red;
+      }
+      if(color == red) {
+        assert (red_cnt > 0);
+      }
+    }
+
 	init { }
 	
     next {
-    	color = blue;
-    	if(red_cnt > 0) {
-			color = red;
-        }
-        if(color == red) {
-            assert (red_cnt > 0);
-        }
+      call next_color();
     }
 
     control {

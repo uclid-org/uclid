@@ -5,6 +5,16 @@ module main
 
   var sum, index : integer;
   
+  procedure next_state()
+    modifies numbers, sum, index;
+  {
+    sum = sum + index;
+    numbers[true, index] = index;
+    numbers[false, index] = -index;
+    
+    index = index + 1;
+  }
+  
   init {
     for i in range(0, 9) {
       numbers[true, i] = 0;
@@ -15,12 +25,8 @@ module main
   }
   
   next {
-    sum = sum + index;
-    numbers[true, index] = index;
-    numbers[false, index] = -index;
-    
-    index = index + 1;
-    
+    call next_state();
+
     assert ((numbers[true, 0] + numbers[true, 1] + numbers[true, 2] + numbers[true, 3] + 
     		 numbers[true, 4] + numbers[true, 5] + numbers[true, 6] + numbers[true, 7]) == sum);
 

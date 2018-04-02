@@ -8,8 +8,8 @@ module main
     inited = false;
   }
   next {
-	inited = true;    
-    sum = a + b;
+	inited' = true;    
+    sum' = a + b;
   }
   
   property[LTL] p1 : G(inited ==> (sum == a + b));

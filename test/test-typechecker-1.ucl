@@ -5,16 +5,16 @@ module main {
   var b : integer;
   procedure fib(x: integer, y: integer) returns (z:integer, w:integer) { 
     z, w = y, x + y;
+    havoc k;
   }
   init {
     a = 0;
     b = 1;
   }
   next {
-    call (a, b) = fib(a, b);
-    havoc z;
+    call (a', b') = fib(a, b);
   }
-  
+
   control {
     initialize;
   	simulate (5);

@@ -16,7 +16,10 @@ module alu  {
   input cmd : cmd_t;
   var r0, r1, result : word_t;
 
-  next {
+  procedure next_step()
+    modifies r0, r1;
+    modifies result, regs;
+  {
     r0 = regs[r0ind];
     r1 = regs[r1ind];
 
@@ -31,6 +34,10 @@ module alu  {
       }
     esac
     regs[r0ind] = result;
+  }
+
+  next {
+    call next_step();
   }
 }
 
@@ -54,13 +61,13 @@ module main {
 
   next {
     next (alu_i);
-	shadow = shadow + shadow;
+	shadow' = shadow + shadow;
   }
   
   control {
     x = unroll(3);
     check;
     // print_results;
-    // x->print_cex (shadow, regfile[0bv2]);
+    // x.print_cex (shadow, regfile[0bv2]);
   }
 }

@@ -8,18 +8,17 @@ module main {
     b = 1bv16;
   }
   next {
-    call (a, b) = fib(a, b);
-    assert (a <= b);
-    assert (a < b);
-    // These weird assertions are to check the +/- arithmetic operators.
-    assert (a+b <= b+b);
-    assert (a-a <= b-a);
+    call (a', b') = fib(a, b);
   }
   
+  invariant a_le_b : (a <= b);
+  invariant a_lt_b : (a < b);
+  invariant a_le_b_v2 : (a+b <= b+b);
+  invariant a_le_b_v3 : (a-a <= b-a);
   control {
   	x = unroll (5);
   	check;
   	// print_results;
-  	// x->print_cex;
+  	// x.print_cex;
   }
 }

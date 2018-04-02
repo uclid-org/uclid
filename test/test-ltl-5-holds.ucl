@@ -1,0 +1,19 @@
+module main
+{
+  var b : boolean;
+  
+  init {
+    b = true;
+  }
+  
+  next {
+    b' = !b;
+  }
+  
+  property[LTL] b_false_initially: b;
+  
+  control {
+    v = bmc(1);
+    check;
+  }
+}

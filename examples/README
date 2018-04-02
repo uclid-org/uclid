@@ -1,8 +1,6 @@
 The examples from the tutorial are in the tutorial/ subfolder.
 
-The names correspond to the example numbers in the tutorial with the
-exception that all of the CPU model is in ex4.1-cpu but the tutorial presents
-it in pieces as Examples 4.1, 4.2, 4.3 and 4.4
+The names correspond to the example numbers in the tutorial.
 
 tutorials/
   - ex1.1-fib-model.ucl
@@ -10,19 +8,20 @@ tutorials/
   - ex3.1-fib-induction.ucl
   - ex3.2-fib-induction-cex.ucl
   - ex3.3-fib-induction-proof.ucl
-  - ex4.1-cpu.ucl
+  - CPU model:
+    + ex4.1-cpu.ucl
+    + ex4.2-cpu.ucl
+    + ex4.3-cpu.ucl
 
-
-cpu_unint_addr.ucl
-- This is the CPU model from Chapter 4 of the tutorial but uses uninterpreted
-  types for the addresses.
+cpu_induction.ucl
+- This is an extension of the the CPU model from Chapter 4 of the tutorial. It
+  adds privilege separation to the CPU, and proves non-interference between
+  supervisor mode and user mode using an inductive argument.
 
 setuid.ucl
-- This is a model based on the automaton in the paper: 
+- This is a model based on the automaton in the paper:
   Setuid Demystified. Chen, Wagen and Dean [Usenix Security 2002].
 
 setuid_fixed.ucl
  - This is a "fixed" version of the setuid model.
-
-
 

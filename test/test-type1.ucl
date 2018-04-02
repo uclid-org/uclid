@@ -9,11 +9,11 @@ module test {
     b = 1;
   }
   next {
-    call (a, b) = fib(a, b);
+    call (a', b') = fib(a, b);
   }
   
   control {
-  	simulate (5);
+  	unroll (5);
   }
 }
 
@@ -25,7 +25,7 @@ module test {
     y = 0;
   }
   next {
-    y = y + 1;
-    z = !z;
+    y' = y + 1;
+    z' = !z;
   }
 }

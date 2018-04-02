@@ -1,49 +1,50 @@
-// Model of an ALU
-module main
-{
+module main {
   type cmd_t = enum { add, sub, mov_imm };
   type result_t = record { valid : boolean, value : bv8 };
 
-  input valid       : boolean;
-  input cmd         : cmd_t;
-  input r1, r2      : bv3;
-  input immed       : bv8;
-  output result     : result_t;
+  input  valid  : boolean;
+  input  cmd    : cmd_t;
+  input  r1, r2 : bv3;
+  input  immed  : bv8;
+  output result : result_t;
+  var    regs   : [bv3]bv8;
+  var    cnt    : bv8; 
 
-  var regs          : [bv3]bv8;
-  var r1val, r2val  : bv8;
-  var cnt           : bv8; 
-
-  init {
+  procedure set_init_state()
+    modifies regs, cnt, result;
+  {
     for i in range(0bv3, 7bv3) { regs[i] = 1bv8; }
-    cnt = 1bv8;
-    result.value = 1bv8;
+    cnt, result.value = 1bv8, 1bv8;
+  }
+  
+  init { 
+    call set_init_state(); 
   }
 
-  next {
-    // Do we have a valid command?
+  procedure exec_cmd() 
+    returns (r : result_t)
+    modifies regs;
+  {
+    var r1val, r2val  : bv8;
     if (valid) {
-      r1val = regs[r1];
-      r2val = regs[r2];
+      r1val, r2val = regs[r1], regs[r2];
       case
-        (cmd == add)      : { regs[r1] = r1val + r2val; }
-        (cmd == sub)      : { regs[r1] = r1val - r2val; }
-        (cmd == mov_imm)  : { regs[r1] = immed; }
+        (cmd == add)     : { regs[r1] = r1val + r2val; }
+        (cmd == sub)     : { regs[r1] = r1val - r2val; }
+        (cmd == mov_imm) : { regs[r1] = immed; }
       esac
-      result.valid = true;
-      result.value = regs[r1];
-    } else {
-      result.valid = false;
-    }
-    // This code is only for testing this module.
-    cnt = cnt + cnt;
+      r.valid, r.value = true, regs[r1];
+    } else { r.valid = false; }
+  }
+    
+  next {
+    call (result') = exec_cmd();
+    cnt' = cnt + cnt;
   }
 
-  // Specification.
-  axiom regindex_zero:      (r1 == 0bv3 && r2 == 0bv3);
-  axiom cmd_is_add:         (cmd == add);
-  axiom cmd_is_valid:       (valid);
-  invariant result_eq_cnd:  (cnt == result.value);
+  assume regindex_zero    : (r1 == 0bv3 && r2 == 0bv3);
+  assume cmd_is_add       : (cmd == add) && valid;
+  invariant result_eq_cnd : (cnt == result.value);
 
   control {
     f = unroll (5);

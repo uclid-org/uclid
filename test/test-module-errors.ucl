@@ -13,6 +13,13 @@ module main
     a = a + b;
   }
 
+  procedure set_numbers()
+    returns (numbersP : [integer]integer)
+  {
+    numbersP = numbers;
+    numbersP[index] = value;
+  }
+
   init {
     assume (forall (i : integer) :: numbers[i] == 0);
     sum = 0;
@@ -20,10 +27,9 @@ module main
   }
 
   next {
-    sum = sum + value;
-    numbers[index] = value;
-    
-    index = index + 1;
+    sum' = sum + value;
+    call (numbers') = set_numbers();
+    index' = index + 1;
     
     assert ((numbers[0] + numbers[1] + numbers[2] + numbers[3]) == sum);
   }

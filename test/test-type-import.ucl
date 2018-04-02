@@ -32,7 +32,10 @@ module cpu {
   var r1 : word_t;
   var result : word_t;
 
-  procedure next_instruction() returns () {
+  procedure next_instruction() returns ()
+    modifies inst, op, r0ind, r1ind, r0, r1, regs;
+    modifies mem, result; 
+  {
 
       // get the next instruction.
       inst = mem[pc];
@@ -74,23 +77,23 @@ module main {
 
   instance cpu_i : cpu();
   init {
-    assume (forall (a : addr_t) :: (cpu::word2op(cpu_i->mem[a])) == add);
-    assume (forall (a : addr_t) :: (cpu::word2reg0(cpu_i->mem[a])) == r0index);
-    assume (forall (a : addr_t) :: (cpu::word2reg1(cpu_i->mem[a])) == r0index);
+    assume (forall (a : addr_t) :: (cpu.word2op(cpu_i.mem[a])) == add);
+    assume (forall (a : addr_t) :: (cpu.word2reg0(cpu_i.mem[a])) == r0index);
+    assume (forall (a : addr_t) :: (cpu.word2reg1(cpu_i.mem[a])) == r0index);
     sum = 1bv8;
   }
   next {
     next (cpu_i);
-    sum = sum + sum;
+    sum' = sum + sum;
   }
   
-  property add_property : (sum == cpu_i->regs[r0index]);
+  property add_property : (sum == cpu_i.regs[r0index]);
   control {
     // print_module;
 
     x = unroll (1);
     check;
     // print_results;
-    // x->print_cex (cpu_i->regs[r0index], sum, cpu_i->r0, cpu_i->r1, cpu_i->result);
+    // x.print_cex (cpu_i.regs[r0index], sum, cpu_i.r0, cpu_i.r1, cpu_i.result);
   }
 }

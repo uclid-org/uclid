@@ -6,7 +6,7 @@ module main
     b = false;
   }
   next {
-	b = !b;    
+	b' = !b;    
   }
   
   property[LTL] p : G(b ==> !X(b)) &&
@@ -17,6 +17,6 @@ module main
     v = bmc(2);
     check;
     // print_results;
-    // v->print_cex;
+    // v.print_cex;
   }
 }

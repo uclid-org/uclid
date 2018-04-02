@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Authors: Pramod Subramanyan
 
@@ -39,21 +45,22 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
     context.get(id) match {
       case Some(namedExpr) =>
         namedExpr match {
-          case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  | 
+          case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
                Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
-               Scope.FunctionArg(_, _) | Scope.Define(_, _, _) => 
+               Scope.FunctionArg(_, _) | Scope.Define(_, _, _) =>
              false
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
-               Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) => 
+               Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
+               Scope.ConstantLit(_, _)    =>
              true
-          case Scope.ModuleDefinition(_)        | Scope.Instance(_, _, _)          | 
-               Scope.TypeSynonym(_, _)          | Scope.Procedure(_, _)            | 
-               Scope.ProcedureInputArg(_ , _)   | Scope.ProcedureOutputArg(_ , _)  |
-               Scope.ProcedureLocalVar(_ , _)   | Scope.ForIndexVar(_ , _)         | 
-               Scope.SpecVar(_ , _)             | Scope.AxiomVar(_ , _)            |
-               Scope.VerifResultVar(_, _)       | Scope.Grammar(_, _)              => 
-             throw new Utils.RuntimeError("Can't have this identifier in assertion.") 
+          case Scope.ModuleDefinition(_)      | Scope.Instance(_)               |
+               Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
+               Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
+               Scope.ProcedureLocalVar(_ , _) | Scope.ForIndexVar(_ , _)        |
+               Scope.SpecVar(_ , _)           | Scope.AxiomVar(_ , _)           |
+               Scope.VerifResultVar(_, _)     | Scope.Grammar(_, _)             =>
+             throw new Utils.RuntimeError("Can't have this identifier in assertion.")
         }
       case None =>
         throw new Utils.RuntimeError("Unknown identifiers should have been detected by now.")
@@ -63,9 +70,9 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
     e match {
       case id : Identifier =>
         isStatelessExpression(id, context)
-      case ei : ExternalIdentifier => 
+      case ei : ExternalIdentifier =>
         true
-      case lit : Literal => 
+      case lit : Literal =>
         true
       case rec : Tuple =>
         rec.values.forall(e => isStatelessExpr(e, context))
@@ -74,7 +81,7 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
       case arrSel : ArraySelectOperation =>
         isStatelessExpr(arrSel.e, context) && arrSel.index.forall(i => isStatelessExpr(i, context))
       case arrUpd : ArrayStoreOperation =>
-        isStatelessExpr(arrUpd.e, context) && 
+        isStatelessExpr(arrUpd.e, context) &&
         arrUpd.index.forall(i => isStatelessExpr(i, context)) &&
         isStatelessExpr(arrUpd.value, context)
       case fapp : FuncApplication =>
@@ -87,17 +94,18 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
     context.get(id) match {
       case Some(namedExpr) =>
         namedExpr match {
-          case Scope.StateVar(_, _)             | Scope.InputVar(_, _)               | 
-               Scope.OutputVar(_, _)            | Scope.SharedVar(_, _)              | 
-               Scope.ModuleDefinition(_)        | Scope.Instance(_, _, _)            | 
-               Scope.TypeSynonym(_, _)          | Scope.Procedure(_, _)              | 
-               Scope.ProcedureInputArg(_ , _)   | Scope.ProcedureOutputArg(_ , _)    |
-               Scope.ProcedureLocalVar(_ , _)   | Scope.ForIndexVar(_ , _)           | 
-               Scope.SpecVar(_ , _)             | Scope.AxiomVar(_ , _)              |
-               Scope.LambdaVar(_ , _)           | Scope.ForallVar(_, _)              |
-               Scope.ExistsVar(_, _)            | Scope.EnumIdentifier(_, _)         |
-               Scope.VerifResultVar(_, _)       | Scope.FunctionArg(_, _)            |
-               Scope.Define(_, _, _)            | Scope.Grammar(_, _)                => 
+          case Scope.StateVar(_, _)           | Scope.InputVar(_, _)            |
+               Scope.OutputVar(_, _)          | Scope.SharedVar(_, _)           |
+               Scope.ModuleDefinition(_)      | Scope.Instance(_)               |
+               Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
+               Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
+               Scope.ProcedureLocalVar(_ , _) | Scope.ForIndexVar(_ , _)        |
+               Scope.SpecVar(_ , _)           | Scope.AxiomVar(_ , _)           |
+               Scope.LambdaVar(_ , _)         | Scope.ForallVar(_, _)           |
+               Scope.ExistsVar(_, _)          | Scope.EnumIdentifier(_, _)      |
+               Scope.VerifResultVar(_, _)     | Scope.FunctionArg(_, _)         |
+               Scope.Define(_, _, _)          | Scope.Grammar(_, _)             |
+               Scope.ConstantLit(_, _)        =>
               id
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _) =>
              ExternalIdentifier(moduleName, id)
@@ -111,9 +119,9 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
     e match {
       case id : Identifier =>
         rewriteIdentifierToExternalId(moduleName, id, context)
-      case ei : ExternalIdentifier => 
+      case ei : ExternalIdentifier =>
         ei
-      case lit : Literal => 
+      case lit : Literal =>
         lit
       case rec : Tuple =>
         val valuesP = rec.values.map(rewrite(_, context))

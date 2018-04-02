@@ -23,6 +23,6 @@ module main {
   }
 
   next {
-    call (s1) = foo(s1, s2);
+    call (s1') = foo(s1, s2);
   }
 }

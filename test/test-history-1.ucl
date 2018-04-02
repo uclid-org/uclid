@@ -1,14 +1,24 @@
 module main {
-  var ltl__pending__p1_4 : boolean;
+  var p : boolean;
   init {
-    ltl__pending__p1_4 = true;
+    p = true;
+  }
+  procedure set_p()
+    modifies p;
+  {
+    havoc p;
+    assume (p == history(p, 1));
   }
   next {
-    ltl__pending__p1_4 = history(ltl__pending__p1_4, 1);
-    assert (ltl__pending__p1_4);
+    call set_p();
   }
+  invariant pending_is_true: (p);
+  
   control {
-    unroll(5);
+    //print_module;
+    v = unroll(5);
     check;
+    //print_results;
+    //v.print_cex;
   }
 }

@@ -8,8 +8,8 @@ module main {
   instance cpu_i_2 : cpu();
 
   init {
-    assume (cpu_i_1->sup_range_lo < cpu_i_1->sup_range_hi);
-    assume (cpu_i_1->sup_range_hi < cpu_i_2->sup_range_lo);
+    assume (cpu_i_1.sup_range_lo < cpu_i_1.sup_range_hi);
+    assume (cpu_i_1.sup_range_hi < cpu_i_2.sup_range_lo);
   }
 
   next {
@@ -21,6 +21,6 @@ module main {
     //print_module;
     unroll(3);
     check;
-    //print_results;
+    // print_results;
   }
 }

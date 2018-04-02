@@ -14,8 +14,8 @@ module main {
   }
   
   next {
-    v1 = hash_int(i);
-    v2 = hash_int(i+1);
+    v1' = hash_int(i);
+    v2' = hash_int(i+1);
   }
   
   property f_neq : v1 != v2;
@@ -23,6 +23,7 @@ module main {
   control {
     unroll (3);
     check;
+    // print_results;
   }
 }
 

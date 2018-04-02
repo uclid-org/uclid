@@ -10,13 +10,14 @@ module main {
   }
   
   next {
+    // noteToSelf(ReorderingTest)
     if (*) {
-      x = x + 1;
+      x' = x + 1;
     } else {
-      y = y + 1;
+      y' = y + 1;
     }
     
-    n = n + 1;
+    n' = n + 1;
   }
   
   property eq_nxy : (n == (x + y));

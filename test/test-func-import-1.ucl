@@ -13,7 +13,7 @@ module common {
     h = 0;
   }
   next {
-    h = hash(n, h);
+    h' = hash(n, h);
   }  
 }
 
@@ -28,13 +28,13 @@ module main {
     next(c2);
   }
 
-  property hashes_equal : c1->h == c2->h;
+  property hashes_equal : c1.h == c2.h;
 
   control {
     //print_module;
     v = unroll(2);
     check;
     //print_results;
-    //v->print_cex(n, c1->h, c2->h);
+    //v.print_cex(n, c1.h, c2.h);
   }
 }

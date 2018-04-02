@@ -10,16 +10,20 @@ module main
     index = 0;
   }
   
-  next {
+  procedure next_value()
+    modifies sum, numbers, index;
+  {
     sum = sum + value;
     numbers[index] = value;
-    
     index = index + 1;
-    
-    assert ((numbers[0] + numbers[1] + numbers[2] + numbers[3]) == sum);
+  }
+  next {
+    call next_value();
+    assert ((numbers'[0] + numbers'[1] + numbers'[2] + numbers'[3]) == sum');
   }
   
   control {
+    // print_module;
     unroll (4);
     check;
     // print_results;

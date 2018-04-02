@@ -10,11 +10,11 @@ module main
     n = 1;
   }
   next {
-	inited = true;    
-    sum = a + b;
+	inited' = true;    
+    sum' = a + b;
 
-    if (n == 0) { n = 1; }
-    else { n = 0; }
+    if (n == 0) { n' = 1; }
+    else { n' = 0; }
   }
   
   property[LTL] p1 : G(inited ==> (sum == (a + b + n)));

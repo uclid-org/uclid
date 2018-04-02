@@ -1,0 +1,35 @@
+module incr
+{
+  input x : integer;
+  output y : integer;
+  var c : integer;
+  
+  init {
+    c = 0;
+  }
+  
+  next {
+    c' = c + 1;
+    y' = x + c';
+  }
+}
+
+module main
+{
+  var a, b : integer;
+  
+  instance incr1 : incr(x : (a), y: (b'));
+  
+  init {
+    a = 0;
+    b = 0;
+  }
+
+  next {
+    a' = a + 1;
+    next (incr1);
+  }
+  
+  invariant b_prop: (b >= 0 && b >= a);
+}
+    

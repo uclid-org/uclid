@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Pramod Subramanyan
 
@@ -44,12 +50,13 @@ object Scope {
     override val isReadOnly = true
   }
   case class ModuleDefinition(mod : lang.Module) extends ReadOnlyNamedExpression(mod.id, mod.moduleType)
-  case class Instance(instId : Identifier, moduleId : Identifier, modTyp : Type) extends ReadOnlyNamedExpression(instId, modTyp)
+  case class Instance(instD: InstanceDecl) extends ReadOnlyNamedExpression(instD.instanceId, instD.moduleType)
   case class TypeSynonym(typId : Identifier, sTyp: Type) extends ReadOnlyNamedExpression(typId, sTyp)
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
   case class InputVar(inpId : Identifier, inpTyp: Type) extends ReadOnlyNamedExpression(inpId, inpTyp)
   case class OutputVar(outId : Identifier, outTyp: Type) extends NamedExpression(outId, outTyp)
   case class SharedVar(varId : Identifier, varTyp : Type) extends NamedExpression(varId, varTyp)
+  case class ConstantLit(cId : Identifier, lit : NumericLit) extends ReadOnlyNamedExpression(cId, lit.typeOf)
   case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
   case class Grammar(gId : Identifier, gTyp : Type) extends ReadOnlyNamedExpression(gId, gTyp)
@@ -104,21 +111,54 @@ object Scope {
     }
   }
   /** Create an empty context. */
-  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None, ComputeContext, false)
+  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None, ModuleEnvironment, false)
 }
 
-sealed abstract class ExpressionContext
-case object ComputeContext extends ExpressionContext
-case object RequiresContext extends ExpressionContext
-case object EnsuresContext extends ExpressionContext
-case object AssertContext extends ExpressionContext
-case object AssumeContext extends ExpressionContext
-case object SpecContext extends ExpressionContext
-case object AxiomContext extends ExpressionContext
+sealed abstract class ExpressionEnvironment {
+  def isVerificationContext : Boolean = false
+  def isModuleLevel : Boolean = false
+  def isProcedural : Boolean = false
+}
+case object ModuleEnvironment extends ExpressionEnvironment {
+  override def isModuleLevel = true
+}
+case object SequentialEnvironment extends ExpressionEnvironment {
+}
+case object ProceduralEnvironment extends ExpressionEnvironment {
+  override def isProcedural = true
+}
+case object RequiresEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+}
+case object EnsuresEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+}
+case object AssertEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+}
+case object AssumeEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+}
+case object ProceduralAssertEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+  override def isProcedural = true
+}
+case object ProceduralAssumeEnvironment extends ExpressionEnvironment {
+  override def isVerificationContext = true
+  override def isProcedural = true
+}
+case object SpecEnvironment extends ExpressionEnvironment {
+  override def isModuleLevel = true
+  override def isVerificationContext = true
+}
+case object AxiomEnvironment extends ExpressionEnvironment {
+  override def isModuleLevel = true
+  override def isVerificationContext = true
+}
 
 case class Scope (
-    map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[GenericProofCommand], 
-    inVerificationContext : ExpressionContext, inLTLSpec : Boolean) 
+    map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[GenericProofCommand],
+    environment : ExpressionEnvironment, inLTLSpec : Boolean)
 {
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: Identifier) = map.contains(name)
@@ -160,27 +200,27 @@ case class Scope (
 
   /** Return a new context with the inLTLSpec flag set. */
   def withLTLSpec : Scope = {
-    Scope(map, module, procedure, cmd, inVerificationContext, true)
+    Scope(map, module, procedure, cmd, environment, true)
   }
   /** Return new context with the inLTLSpec flag reset. */
   def withoutLTLSpec : Scope = {
-    Scope(map, module, procedure, cmd, inVerificationContext, false)
+    Scope(map, module, procedure, cmd, environment, false)
   }
   /** Return a new context with the inVerificationContext set. */
-  def withVerificationContext (vctx : ExpressionContext) : Scope = {
+  def withEnvironment (vctx : ExpressionEnvironment) : Scope = {
     Scope(map, module, procedure, cmd, vctx, inLTLSpec)
   }
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : Scope = {
-    Scope(map + (expr.id -> expr), module, procedure, cmd, inVerificationContext, inLTLSpec)
+    Scope(map + (expr.id -> expr), module, procedure, cmd, environment, inLTLSpec)
   }
   def +(typ : Type) : Scope = {
-    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, inVerificationContext, inLTLSpec)
+    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, environment, inLTLSpec)
   }
 
   /** Add a reference to this module (don't expand the module's declarations). */
   def +&(m : Module) : Scope = {
-    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, inVerificationContext, inLTLSpec)
+    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, environment, inLTLSpec)
   }
 
   /** Return a new context with the declarations in this module added to it. */
@@ -189,18 +229,19 @@ case class Scope (
     val m1 = m.decls.foldLeft(map){ (mapAcc, decl) =>
       decl match {
         case instD : InstanceDecl =>
-          Scope.addToMap(mapAcc, Scope.Instance(instD.instanceId, instD.moduleId, instD.moduleType))
+          Scope.addToMap(mapAcc, Scope.Instance(instD))
         case ProcedureDecl(id, sig, _, _, _, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
         case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
         case StateVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.StateVar(id, typ)))
         case InputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.InputVar(id, typ)))
         case OutputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.OutputVar(id, typ)))
         case SharedVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.SharedVar(id, typ)))
+        case ConstantLitDecl(id, lit) => Scope.addToMap(mapAcc, Scope.ConstantLit(id, lit))
         case ConstantsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.ConstantVar(id, typ)))
         case GrammarDecl(id, sig, _) => Scope.addToMap(mapAcc, Scope.Grammar(id, sig.typ))
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SynthesisFunctionDecl(id, sig, _, _, _) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ)) // FIXME
-        case DefineDecl(id, sig, expr) => Scope.addToMap(mapAcc, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr))) 
+        case DefineDecl(id, sig, expr) => Scope.addToMap(mapAcc, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr)))
         case SpecDecl(id, expr, _) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))
         case AxiomDecl(sId, expr) => sId match {
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr))
@@ -236,11 +277,12 @@ case class Scope (
         case InputVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case OutputVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case SharedVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case ConstantLitDecl(id, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
         case ConstantsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
-    Scope(m2, Some(m), None, None, inVerificationContext, false)
+    Scope(m2, Some(m), None, None, environment, false)
   }
   /** Return a new context with the declarations in this procedure added to it. */
   def +(proc: ProcedureDecl) : Scope = {
@@ -254,21 +296,21 @@ case class Scope (
     val map3 = proc.decls.foldLeft(map2){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureLocalVar(arg.id, arg.typ))
     }
-    return Scope(map3, module, Some(proc), None, inVerificationContext, false)
+    return Scope(map3, module, Some(proc), None, ProceduralEnvironment, false)
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
   def +(lambda: Lambda) : Scope = {
     val newMap = lambda.ids.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }
-    return Scope(newMap, module, procedure, cmd, inVerificationContext, inLTLSpec)
+    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec)
   }
   /** Return a new context with the function's arguments included. */
   def +(sig : FunctionSig) : Scope = {
     val newMap = sig.args.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.FunctionArg(id._1, id._2))
     }
-    return Scope(newMap, module, procedure, cmd, inVerificationContext, inLTLSpec)
+    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec)
   }
   /** Return a new context with quantifier variables added. */
   def +(opapp : OperatorApplication) : Scope = {
@@ -280,11 +322,11 @@ case class Scope (
       case ForallOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd, inVerificationContext, inLTLSpec)
+          module, procedure, cmd, environment, inLTLSpec)
       case ExistsOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd, inVerificationContext, inLTLSpec)
+          module, procedure, cmd, environment, inLTLSpec)
       case _ => this
     }
   }
@@ -295,7 +337,7 @@ case class Scope (
       case Some(id) => map + (id -> Scope.VerifResultVar(id, command))
       case None => map
     }
-    Scope(mapP, module, procedure, Some(command), inVerificationContext, inLTLSpec)
+    Scope(mapP, module, procedure, Some(command), environment, inLTLSpec)
   }
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {

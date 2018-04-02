@@ -7,7 +7,7 @@ module main {
     b = 1;
   }
   next {
-    a, b = b, a + b;
+    a', b' = b, a + b;
   }
 
   // Part 2: System specification.
@@ -19,6 +19,6 @@ module main {
     vobj = induction;
     check;
     print_results;
-    vobj->print_cex(a, b);
+    vobj.print_cex(a, b);
   }
 }

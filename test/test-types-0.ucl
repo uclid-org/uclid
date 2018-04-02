@@ -25,13 +25,8 @@ module main {
   
   output mem_out : [integer] integer;
   
-  init {
-    havoc y_global;
-    havoc z_global;
-  }
-  
   next {
-    call (y_global) = f(y_global, z_global);
-    z_global = y_global + 1;  
+    call (y_global') = f(y_global, z_global);
+    z_global' = y_global' + 1;  
   }
 }

@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Author : Pramod Subramanyan
  *
@@ -91,6 +97,7 @@ trait ReadOnlyPass[T] {
   def applyOnOutputVars(d : TraversalDirection.T, outvars : OutputVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnSharedVars(d : TraversalDirection.T, sharedVars : SharedVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnConstant(d : TraversalDirection.T, cnst : ConstantsDecl, in : T, context : Scope) : T = { in }
+  def applyOnConstantLit(d : TraversalDirection.T, cnst : ConstantLitDecl, in : T, context : Scope) : T = { in }
   def applyOnSpec(d : TraversalDirection.T, spec : SpecDecl, in : T, context : Scope) : T = { in }
   def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : Scope) : T = { in }
   def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : T, context : Scope) : T = { in }
@@ -123,6 +130,7 @@ trait ReadOnlyPass[T] {
   def applyOnAssign(d : TraversalDirection.T, st : AssignStmt, in : T, context : Scope) : T = { in }
   def applyOnIfElse(d : TraversalDirection.T, st : IfElseStmt, in : T, context : Scope) : T = { in }
   def applyOnFor(d : TraversalDirection.T, st : ForStmt, in : T, context : Scope) : T = { in }
+  def applyOnWhile(d : TraversalDirection.T, st : WhileStmt, in : T, context : Scope) : T = { in }
   def applyOnCase(d : TraversalDirection.T, st : CaseStmt, in : T, context : Scope) : T = { in }
   def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, context : Scope) : T = { in }
   def applyOnModuleCall(d : TraversalDirection.T, st : ModuleCallStmt, in : T, context : Scope) : T = { in }
@@ -169,6 +177,7 @@ trait RewritePass {
   def rewriteOutputVars(outvars : OutputVarsDecl, ctx : Scope) : Option[OutputVarsDecl] = { Some(outvars) }
   def rewriteSharedVars(sharedVars : SharedVarsDecl, ctx : Scope) : Option[SharedVarsDecl] = { Some(sharedVars) }
   def rewriteConstant(cnst : ConstantsDecl, ctx : Scope) : Option[ConstantsDecl] = { Some(cnst) }
+  def rewriteConstantLit(cnst : ConstantLitDecl, ctx : Scope) : Option[ConstantLitDecl] = { Some(cnst) }
   def rewriteSpec(spec : SpecDecl, ctx : Scope) : Option[SpecDecl] = { Some(spec) }
   def rewriteAxiom(axiom : AxiomDecl, ctx : Scope) : Option[AxiomDecl] = { Some(axiom) }
   def rewriteTypeDecl(typDec : TypeDecl, ctx : Scope) : Option[TypeDecl] = { Some(typDec) }
@@ -201,6 +210,7 @@ trait RewritePass {
   def rewriteAssign(st : AssignStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteIfElse(st : IfElseStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteFor(st : ForStmt, ctx : Scope) : List[Statement] = { List(st) }
+  def rewriteWhile(st : WhileStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteCase(st : CaseStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteProcedureCall(st : ProcedureCallStmt, ctx : Scope) : List[Statement] = { List(st) }
   def rewriteModuleCall(st : ModuleCallStmt, ctx : Scope) : List[Statement] = { List(st) }
@@ -281,13 +291,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case inpVars : InputVarsDecl => visitInputVars(inpVars, result, context)
       case outVars : OutputVarsDecl => visitOutputVars(outVars, result, context)
       case sharedVars : SharedVarsDecl => visitSharedVars(sharedVars, result, context)
+      case cnstLit : ConstantLitDecl => visitConstantLit(cnstLit, result, context)
       case const : ConstantsDecl => visitConstants(const, result, context)
       case func : FunctionDecl => visitFunction(func, result, context)
       case grammar : GrammarDecl => visitGrammar(grammar, result, context)
       case synFunc : SynthesisFunctionDecl => visitSynthesisFunction(synFunc, result, context)
       case defDecl : DefineDecl => visitDefine(defDecl, in, context)
-      case init : InitDecl => visitInit(init, result, context)
-      case next : NextDecl => visitNext(next, result, context)
+      case init : InitDecl => visitInit(init, result, context.withEnvironment(ProceduralEnvironment))
+      case next : NextDecl => visitNext(next, result, context.withEnvironment(SequentialEnvironment))
       case spec : SpecDecl => visitSpec(spec, result, context)
       case axiom : AxiomDecl => visitAxiom(axiom, result, context)
     }
@@ -324,8 +335,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitProcedureSig(proc.sig, result, context)
     result = proc.decls.foldLeft(result)((acc, i) => visitLocalVar(i, acc, context))
     result = proc.body.foldLeft(result)((acc, i) => visitStatement(i, acc, context))
-    result = proc.requires.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withVerificationContext(RequiresContext)))
-    result = proc.ensures.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withVerificationContext(EnsuresContext)))
+    result = proc.requires.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(RequiresEnvironment)))
+    result = proc.ensures.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(EnsuresEnvironment)))
     result = proc.modifies.foldLeft(result)((acc, r) => visitIdentifier(r, acc, context))
     result = pass.applyOnProcedure(TraversalDirection.Up, proc, result, contextIn)
     return result
@@ -406,6 +417,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnSharedVars(TraversalDirection.Up, sharedVars, result, context)
     return result
   }
+  def visitConstantLit(cnstLit : ConstantLitDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnConstantLit(TraversalDirection.Down, cnstLit, result, context)
+    result = visitIdentifier(cnstLit.id, result, context)
+    result = visitLiteral(cnstLit.lit, result, context)
+    result = pass.applyOnConstantLit(TraversalDirection.Up, cnstLit, result, context)
+    result
+  }
   def visitConstants(cnst : ConstantsDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnConstant(TraversalDirection.Down, cnst, result, context)
@@ -423,7 +442,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     }
     result = pass.applyOnSpec(TraversalDirection.Down, spec, result, context)
     result = visitIdentifier(spec.id, result, context)
-    result = visitExpr(spec.expr, result, contextP.withVerificationContext(SpecContext))
+    result = visitExpr(spec.expr, result, contextP.withEnvironment(SpecEnvironment))
     result = spec.params.foldLeft(result)((acc, d) => visitExprDecorator(d, acc, context))
     result = pass.applyOnSpec(TraversalDirection.Up, spec, result, context)
     return result
@@ -435,7 +454,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case Some(id) => visitIdentifier(id, result, context)
       case None => result
     }
-    result = visitExpr(axiom.expr, result, context.withVerificationContext(AxiomContext))
+    result = visitExpr(axiom.expr, result, context.withEnvironment(AxiomEnvironment))
     result = pass.applyOnAxiom(TraversalDirection.Up, axiom, result, context)
     return result
   }
@@ -465,7 +484,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     val contextP = cmd.getContext(context + cmd)
     result = pass.applyOnCmd(TraversalDirection.Down, cmd, result, context)
-    result = cmd.args.foldLeft(result)((r, expr) => visitExpr(expr, r, contextP))
+    result = cmd.args.foldLeft(result)((r, expr) => visitExpr(expr._1, r, contextP))
     result = cmd.resultVar match {
       case Some(id) => visitIdentifier(id, result, contextP)
       case None => result
@@ -647,6 +666,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case assignStmt : AssignStmt => visitAssignStatement(assignStmt, result, context)
       case ifElseStmt : IfElseStmt => visitIfElseStatement(ifElseStmt, result, context)
       case forStmt : ForStmt => visitForStatement(forStmt, result, context)
+      case whileStmt : WhileStmt => visitWhileStatement(whileStmt, result, context)
       case caseStmt : CaseStmt => visitCaseStatement(caseStmt, result, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, result, context)
       case modCallStmt : ModuleCallStmt => visitModuleCallStatement(modCallStmt, result, context)
@@ -667,21 +687,28 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case None     => result
       case Some(id) => visitIdentifier(id, result, context)
     }
-    result = visitExpr(st.e, result, context.withVerificationContext(AssertContext))
+    val envP = if (context.environment == ProceduralEnvironment) ProceduralAssertEnvironment else AssertEnvironment
+    result = visitExpr(st.e, result, context.withEnvironment(envP))
     result = pass.applyOnAssert(TraversalDirection.Up, st, result, context)
     return result
   }
   def visitAssumeStatement(st : AssumeStmt, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnAssume(TraversalDirection.Down, st, result, context)
-    result = visitExpr(st.e, result, context.withVerificationContext(AssumeContext))
+    val envP = if (context.environment == ProceduralEnvironment) ProceduralAssumeEnvironment else AssumeEnvironment
+    result = visitExpr(st.e, result, context.withEnvironment(envP))
     result = pass.applyOnAssume(TraversalDirection.Up, st, result, context)
     return result
   }
   def visitHavocStatement(st: HavocStmt, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnHavoc(TraversalDirection.Down, st, result, context)
-    result = visitIdentifier(st.id, result, context)
+    st.havocable match {
+      case HavocableId(id) =>
+        result = visitIdentifier(id, result, context)
+      case HavocableFreshLit(f) =>
+        result = visitFreshLiteral(f, result, context)
+    }
     result = pass.applyOnHavoc(TraversalDirection.Up, st, result, context)
     return result
   }
@@ -704,13 +731,23 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   }
   def visitForStatement(st : ForStmt, in : T, contextIn : Scope) : T = {
     var result : T = in
-    val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
+    val context = contextIn + Scope.ForIndexVar(st.id, st.typ)
     result = pass.applyOnFor(TraversalDirection.Down, st, result, contextIn)
     result = visitIdentifier(st.id, result, contextIn)
-    result = visitLiteral(st.range._1, result, contextIn)
-    result = visitLiteral(st.range._2, result, contextIn)
+    result = visitType(st.typ, result, contextIn)
+    result = visitExpr(st.range._1, result, contextIn)
+    result = visitExpr(st.range._2, result, contextIn)
     result = st.body.foldLeft(result)((arg, i) => visitStatement(i, arg, context))
     result = pass.applyOnFor(TraversalDirection.Up, st, result, context)
+    return result
+  }
+  def visitWhileStatement(st : WhileStmt, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnWhile(TraversalDirection.Down, st, result, context)
+    result = visitExpr(st.cond, result, context)
+    result = st.invariants.foldLeft(result)((acc, inv) => visitExpr(inv, acc, context))
+    result = st.body.foldLeft(result)((acc, sti) => visitStatement(sti, acc, context))
+    result = pass.applyOnWhile(TraversalDirection.Up, st, result, context)
     return result
   }
   def visitCaseStatement(st : CaseStmt, in : T, context : Scope) : T = {
@@ -745,7 +782,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnLHS(TraversalDirection.Down, lhs, result, context)
     result = visitIdentifier(lhs.ident, result, context)
     result = lhs match {
-      case LhsId(id) => result
+      case LhsId(_) | LhsNextId(_) => result
       case LhsArraySelect(id, indices) => indices.foldLeft(result)((acc, ind) => visitExpr(ind, acc, context))
       case LhsRecordSelect(id, fields) => fields.foldLeft(result)((acc, fld) => visitIdentifier(fld, acc, context))
       case LhsSliceSelect(id, slice) => visitBitVectorSlice(slice, result, context)
@@ -974,13 +1011,14 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case inputVars : InputVarsDecl => visitInputVars(inputVars, context)
       case outputVars : OutputVarsDecl => visitOutputVars(outputVars, context)
       case sharedVars : SharedVarsDecl => visitSharedVars(sharedVars, context)
+      case constLitDecl : ConstantLitDecl => visitConstantLit(constLitDecl, context)
       case constDecl : ConstantsDecl => visitConstants(constDecl, context)
       case funcDecl : FunctionDecl => visitFunction(funcDecl, context)
       case grammarDecl : GrammarDecl => visitGrammar(grammarDecl, context)
       case synFuncDecl : SynthesisFunctionDecl => visitSynthesisFunction(synFuncDecl, context)
       case defDecl : DefineDecl => visitDefine(defDecl, context)
-      case initDecl : InitDecl => visitInit(initDecl, context)
-      case nextDecl : NextDecl => visitNext(nextDecl, context)
+      case initDecl : InitDecl => visitInit(initDecl, context.withEnvironment(ProceduralEnvironment))
+      case nextDecl : NextDecl => visitNext(nextDecl, context.withEnvironment(SequentialEnvironment))
       case specDecl : SpecDecl => visitSpec(specDecl, context)
       case axiomDecl : AxiomDecl => visitAxiom(axiomDecl, context)
     }).flatMap(pass.rewriteDecl(_, context))
@@ -1023,8 +1061,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val sig = visitProcedureSig(proc.sig, context)
     val decls = proc.decls.map(visitLocalVar(_, context)).flatten
     val stmts = proc.body.map(visitStatement(_, context)).flatten
-    val reqs = proc.requires.map(r => visitExpr(r, context.withVerificationContext(RequiresContext))).flatten
-    val enss = proc.ensures.map(e => visitExpr(e, context.withVerificationContext(EnsuresContext))).flatten
+    val reqs = proc.requires.map(r => visitExpr(r, context.withEnvironment(RequiresEnvironment))).flatten
+    val enss = proc.ensures.map(e => visitExpr(e, context.withEnvironment(EnsuresEnvironment))).flatten
     val mods = proc.modifies.map(v => visitIdentifier(v, context)).flatten
     val procP = (id, sig) match {
       case (Some(i), Some(s)) => pass.rewriteProcedure(ProcedureDecl(i, s, decls, stmts, reqs, enss, mods), contextIn)
@@ -1132,6 +1170,17 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setPosition, setFilename, sharedVarsP, sharedVars.position)
   }
 
+  def visitConstantLit(cnstLit : ConstantLitDecl, context : Scope) : Option[ConstantLitDecl] = {
+    val idP = visitIdentifier(cnstLit.id, context)
+    val litP = visitNumericLiteral(cnstLit.lit, context)
+    (idP, litP) match {
+      case (Some(id), Some(lit)) =>
+        val cnstLitP = ConstantLitDecl(id, lit)
+        pass.rewriteConstantLit(cnstLitP, context)
+      case _ =>
+        None
+    }
+  }
   def visitConstants(cnst : ConstantsDecl, context : Scope) : Option[ConstantsDecl] = {
     val idsP = cnst.ids.map(id => visitIdentifier(id, context)).flatten
     val typP = visitType(cnst.typ, context)
@@ -1149,7 +1198,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       context
     }
     val idP = visitIdentifier(spec.id, context)
-    val exprP = visitExpr(spec.expr, contextP.withVerificationContext(SpecContext))
+    val exprP = visitExpr(spec.expr, contextP.withEnvironment(SpecEnvironment))
     val decsP = spec.params.map(visitExprDecorator(_, context)).flatten
     val specP = (idP, exprP) match {
       case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr, decsP), context)
@@ -1160,7 +1209,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitAxiom(axiom : AxiomDecl, context : Scope) : Option[AxiomDecl] = {
     val idP = axiom.id.flatMap((id) => visitIdentifier(id, context))
-    val exprP = visitExpr(axiom.expr, context.withVerificationContext(AxiomContext))
+    val exprP = visitExpr(axiom.expr, context.withEnvironment(AxiomEnvironment))
     val axiomP = exprP.flatMap((e) => pass.rewriteAxiom(AxiomDecl(idP, e), context))
     return ASTNode.introducePos(setPosition, setFilename, axiomP, axiom.position)
   }
@@ -1188,7 +1237,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitCommand(cmd : GenericProofCommand, context : Scope) : Option[GenericProofCommand] = {
     val contextP = cmd.getContext(context + cmd)
-    val argsP = cmd.args.map(e => visitExpr(e, contextP)).flatten
+    val argsP = (cmd.args.map { 
+      e => {
+        val eP = visitExpr(e._1, contextP)
+        eP match {
+          case Some(ePP) => Some(ePP, e._2)
+          case None => None
+        }
+      }
+    }).flatten
     val resultVarP = cmd.resultVar.flatMap(r => visitIdentifier(r, contextP))
     val argObjP = cmd.argObj.flatMap(r => visitIdentifier(r, contextP))
     val cmdP = pass.rewriteCommand(GenericProofCommand(cmd.name, cmd.params, argsP, resultVarP, argObjP), context)
@@ -1372,6 +1429,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case assignStmt : AssignStmt => visitAssignStatement(assignStmt, context)
       case ifElseStmt : IfElseStmt => visitIfElseStatement(ifElseStmt, context)
       case forStmt : ForStmt => visitForStatement(forStmt, context)
+      case whileStmt : WhileStmt => visitWhileStatement(whileStmt, context)
       case caseStmt : CaseStmt => visitCaseStatement(caseStmt, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
       case modCallStmt : ModuleCallStmt => visitModuleCallStatement(modCallStmt, context)
@@ -1386,7 +1444,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitAssertStatement(st : AssertStmt, context : Scope) : List[Statement] = {
     val idP = st.id.flatMap(id => visitIdentifier(id, context))
-    val stP = visitExpr(st.e, context.withVerificationContext(AssertContext)).toList.flatMap((e) => {
+    val envP = if (context.environment == ProceduralEnvironment) ProceduralAssertEnvironment else AssertEnvironment
+    val stP = visitExpr(st.e, context.withEnvironment(envP)).toList.flatMap((e) => {
       pass.rewriteAssert(AssertStmt(e, idP), context)
     })
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
@@ -1394,16 +1453,32 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitAssumeStatement(st : AssumeStmt, context : Scope) : List[Statement] = {
     val idP = st.id.flatMap(id => visitIdentifier(id, context))
-    val stP = visitExpr(st.e, context.withVerificationContext(AssumeContext)).toList.flatMap((e) => {
+    val envP = if (context.environment == ProceduralEnvironment) ProceduralAssumeEnvironment else AssumeEnvironment
+    val stP = visitExpr(st.e, context.withEnvironment(envP)).toList.flatMap((e) => {
       pass.rewriteAssume(AssumeStmt(e, idP), context)
     })
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
   def visitHavocStatement(st: HavocStmt, context : Scope) : List[Statement] = {
-    val stP = visitIdentifier(st.id, context).toList.flatMap((id) => {
-      pass.rewriteHavoc(HavocStmt(id), context)
-    })
+    val stP = st.havocable match {
+      case HavocableId(id) =>
+        visitIdentifier(id, context).toList.flatMap((idP) => {
+          pass.rewriteHavoc(HavocStmt(HavocableId(idP)), context)
+        })
+      case HavocableFreshLit(f) =>
+        visitFreshLiteral(f, context).toList.flatMap((eP) => {
+          eP match {
+            case f : FreshLit =>
+              pass.rewriteHavoc(HavocStmt(HavocableFreshLit(f)), context)
+            case id : Identifier =>
+              pass.rewriteHavoc(HavocStmt(HavocableId(id)), context)
+            case _ =>
+              None
+          }
+        })
+    }
+
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
@@ -1426,19 +1501,31 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitForStatement(st : ForStmt, contextIn : Scope) : List[Statement] = {
-    val context = contextIn + Scope.ForIndexVar(st.id, st.range._1.typeOf)
+    val context = contextIn + Scope.ForIndexVar(st.id, st.typ)
     val idP = visitIdentifier(st.id, contextIn)
-    val lit1P = visitNumericLiteral(st.range._1, contextIn)
-    val lit2P = visitNumericLiteral(st.range._2, contextIn)
+    val typP = visitType(st.typ, contextIn)
+    val lit1P = visitExpr(st.range._1, contextIn)
+    val lit2P = visitExpr(st.range._2, contextIn)
     val stmts = st.body.map(visitStatement(_, context)).flatten
 
-    val stP = (idP, lit1P, lit2P) match {
-      case (Some(id), Some(lit1), Some(lit2)) => pass.rewriteFor(ForStmt(id, (lit1, lit2), stmts), contextIn)
+    val stP = (idP, typP, lit1P, lit2P) match {
+      case (Some(id), Some(typ), Some(lit1), Some(lit2)) =>
+        pass.rewriteFor(ForStmt(id, typ, (lit1, lit2), stmts), contextIn)
       case _ => List.empty[Statement]
     }
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
+  def visitWhileStatement(st : WhileStmt, context : Scope) : List[Statement] = {
+    val condP = visitExpr(st.cond, context)
+    val stmtsP = st.body.map(visitStatement(_, context)).flatten
+    val invP = st.invariants.map(visitExpr(_, context)).flatten
+    val whileP = (condP) match {
+      case Some(cond) => pass.rewriteWhile(WhileStmt(cond, stmtsP, invP), context)
+      case None => List.empty
+    }
+    return ASTNode.introducePos(setPosition, setFilename, whileP, st.position)
+  }
   def visitCaseStatement(st : CaseStmt, context : Scope) : List[Statement] = {
     val bodyP = st.body.map((c) => {
       // if rewriting the expression doesn't produce None.
@@ -1481,6 +1568,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val lhsP = lhsIdP.flatMap{(id) => {
         val lhsP1 : Option[Lhs] = lhs match {
           case LhsId(_) => Some(LhsId(id))
+          case LhsNextId(_) => Some(LhsNextId(id))
           case LhsArraySelect(_, indices) =>
             Some(LhsArraySelect(id, indices.map(visitExpr(_, context)).flatten))
           case LhsRecordSelect(_, fields) =>

@@ -113,13 +113,13 @@ module Sys {
     }
   }   
 
- invariant pc_ISR: (ISR_f->pc == idle) <==> (ISR_f->return_ISR);
+ invariant pc_ISR: (ISR_f.pc == idle) <==> (ISR_f.return_ISR);
 
  control {
      v = unroll(5);
      check;
      print_results;
-     v->print_cex;
+     v.print_cex;
 
   }
 }
@@ -150,7 +150,7 @@ module main {
     havoc turn; 
   }
 
-  property[LTL] reached_C :  G((Sys_i->main_f->pc == A) || (Sys_i->main_f->pc == B));
+  property[LTL] reached_C :  G((Sys_i.main_f.pc == A) || (Sys_i.main_f.pc == B));
 
   control {
     vobj = bmc[reached_C] (2);

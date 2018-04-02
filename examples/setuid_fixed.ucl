@@ -13,9 +13,6 @@ module main {
   var process_suid  : id_t;     // saved
   var process_fsuid : id_t;     // filesystem
 
-  var precond_setresuid : boolean;
-  var precond_setfsuid  : boolean;
-  
   init {
     process_ruid  = privileged;
     process_euid  = privileged;
@@ -23,7 +20,12 @@ module main {
     process_fsuid = privileged;
   }
   
-  next {
+  procedure set_next_uids()
+    modifies process_ruid, process_euid, process_suid, process_fsuid;
+  {
+    var precond_setresuid : boolean;
+    var precond_setfsuid  : boolean;
+  
     precond_setresuid = 
       (process_euid == privileged) || 
       ((operand_ruid == process_ruid || operand_ruid == process_suid || operand_ruid == process_euid || operand_ruid == invalid)     &&
@@ -47,17 +49,17 @@ module main {
             process_suid = operand_suid;
           }
 
-          /* this is the buggy code.
+		  /*
+          // this is the buggy code.
           if (operand_euid != invalid) {
             process_fsuid = operand_euid;
           }
           */
-          // this is fixed code.
+          // fixed code is like this:
           if (process_fsuid == privileged && 
               process_ruid != privileged  && process_euid != privileged  && process_suid != privileged)
           {
-            // should we set this to something else?
-            process_fsuid = operand_euid; 
+            process_fsuid = operand_euid; // should we set this to something else?
           }
         }
       }
@@ -70,14 +72,18 @@ module main {
     esac
   }
   
+  next {
+    call set_next_uids();
+  }
+  
   property fsinvariant : 
   		(process_fsuid == privileged) ==> 
         (process_ruid == privileged || process_euid == privileged || process_suid == privileged);
         
   control {
-    unroll (4);
+    x = unroll(3);
     check;
     print_results;
-    print_cex (invocation, operand_ruid, operand_euid, operand_suid, operand_fsuid, process_ruid, process_euid, process_suid, process_fsuid);
+    x.print_cex (invocation, operand_ruid, operand_euid, operand_suid, operand_fsuid, process_ruid, process_euid, process_suid, process_fsuid);
   }
 }

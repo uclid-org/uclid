@@ -1,32 +1,38 @@
 /*
  * UCLID5 Verification and Synthesis Engine
- * 
- * Copyright (c) 2017. The Regents of the University of California (Regents). 
- * All Rights Reserved. 
- * 
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions. 
- * 
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
- * 
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- * 
+ *
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
+ * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ *
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  * Author: Pramod Subramanyan
- * 
+ *
  * Compute the types of each module that is referenced in an instance declaration.
  *
  */
@@ -123,7 +129,7 @@ class LTLOperatorIntroducerPass extends RewritePass {
           case _ =>
             Some(fapp)
         }
-        case _ => Some(fapp) 
+        case _ => Some(fapp)
       }
     } else {
       Some(fapp)
@@ -161,9 +167,9 @@ class LTLOperatorRewriterPass extends RewritePass {
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     val op = opapp.op
     op match {
-      case tOp : TemporalOperator => 
+      case tOp : TemporalOperator =>
         Some(rewriteTemporalOp(tOp, opapp.operands))
-      case _ => 
+      case _ =>
         Some(opapp)
     }
   }
@@ -266,11 +272,11 @@ class LTLPropertyRewriterPass extends RewritePass {
   }
 
   /** This class is the return value of createMonitorExpressions.
-   *  
+   *
    *  z is the name of the "Tseitin" variable corresponding to the top of the expression's AST.
    *  biImplications are the list of equivalences between Tseitin variables and corresponding expressions.
    *  assignments is a list of assignments to monitor variables.
-   *  failed, accept and pending are the corresponding monitor variables. 
+   *  failed, accept and pending are the corresponding monitor variables.
    */
   case class MonitorInfo(
     z : Identifier,
@@ -282,7 +288,7 @@ class LTLPropertyRewriterPass extends RewritePass {
   )
 
   /** This function creates the monitor expressions for each temporal and non-temporal operator.
-   *  
+   *
    *  The conversion to the negated normal form must have been done before calling this method.
    */
   def createMonitorExpressions(specName : Identifier, expr : Expr, nameProvider : ContextualNameProvider) : MonitorInfo = {
@@ -305,12 +311,12 @@ class LTLPropertyRewriterPass extends RewritePass {
         val argFaileds = argResults.flatMap(a => a.failedVars)
         val argAccepts = argResults.flatMap(a => a.acceptVars)
         val argPendings = argResults.flatMap(a => a.pendingVars)
-        
+
         val z = nameProvider(specName, "z")
         val innerExpr = OperatorApplication(opapp.op, args)
         if (opapp.op.isInstanceOf[TemporalOperator]) {
           val tOp = opapp.op.asInstanceOf[TemporalOperator]
-          
+
           tOp match {
             case NextTemporalOp() =>
               val zImpl = (z, None)
@@ -386,7 +392,7 @@ class LTLPropertyRewriterPass extends RewritePass {
       Some(module)
     } else {
       val otherSpecs = moduleSpecs.filter(s => !s.params.exists(d => d == LTLExprDecorator))
-      Some(rewriteSpecs(module, ctx, ltlSpecs, otherSpecs)) 
+      Some(rewriteSpecs(module, ctx, ltlSpecs, otherSpecs))
     }
   }
 
@@ -419,7 +425,7 @@ class LTLPropertyRewriterPass extends RewritePass {
       case (v1, v2) => eqExpr(v1._1, v2._1)
     }
     val initExpr : Expr = BoolLit(true)
-    eqExprs.foldLeft(initExpr)((acc, e) => andExpr(acc, e)) 
+    eqExprs.foldLeft(initExpr)((acc, e) => andExpr(acc, e))
   }
 
   def createRepeatedAssignment(vars : List[Identifier], value : Expr) : Option[AssignStmt] = {
@@ -442,8 +448,8 @@ class LTLPropertyRewriterPass extends RewritePass {
 
   def rewriteSpecs(module : Module, ctx : Scope, ltlSpecs : List[SpecDecl], otherSpecs : List[SpecDecl]) : Module = {
     val nameProvider = new ContextualNameProvider(ctx, "ltl")
-    
-    val monitors = ltlSpecs.map { 
+
+    val monitors = ltlSpecs.map {
       (s) => {
         val nnf = convertToNNF(not(s.expr))
         // println("exp: " + s.expr.toString)
@@ -482,7 +488,7 @@ class LTLPropertyRewriterPass extends RewritePass {
       }
     }
     // create the ACCEPT variables.
-    val hasAccepteds = (ltlSpecs zip monitors).map { 
+    val hasAccepteds = (ltlSpecs zip monitors).map {
       case (spec, monitor) => {
         // has accepted is true if this trace has been accepted at least once in the cycle
         val hasAcceptedVars = monitor.acceptVars.map(aVar => nameProvider(aVar, "HAS_ACCEPTED"))
@@ -498,7 +504,7 @@ class LTLPropertyRewriterPass extends RewritePass {
         } else {
           hasAcceptedVars.foldLeft(foldInit)((acc, v) => andExpr(acc, v))
         }
-        
+
         ((hasAcceptedVars, hasAcceptedExprs), (hasAcceptedTrace, hasAcceptedTraceExpr))
       }
     }
@@ -509,13 +515,13 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
     val livenessExprs = (hasFaileds zip hasAccepteds) map {
       case ((hasFailedVar, _), ((_, _), (hasAcceptedTrace, _))) =>
-        andExpr(stateVarsEqExpr, andExpr(notExpr(hasFailedVar), hasAcceptedTrace)) 
+        andExpr(stateVarsEqExpr, andExpr(notExpr(hasFailedVar), hasAcceptedTrace))
     }
     // This is the assignment to is_init in next.
     val isInitStateVar = nameProvider(module.id, "is_init")
     val isInitStateVarDecl = StateVarsDecl(List(isInitStateVar), BooleanType())
     val isInitAssignNext = AssignStmt(List(LhsId(isInitStateVar)), List(BoolLit(false)))
-    
+
     // The top-level 'z' variables.
     val zVars = monitors.map(_.z)
     val zAssumes = zVars.map(r => AssumeStmt(iffExpr(r, isInitStateVar), None))
@@ -539,26 +545,26 @@ class LTLPropertyRewriterPass extends RewritePass {
     val hasAcceptedTraceVars = hasAccepteds.map(e => e._2._1)
     val hasAcceptedTraceVarsDecl = StateVarsDecl(hasAcceptedTraceVars, BooleanType())
 
-    // new variable declarations.    
-    val varDecls = List(copyStateInputDecl, stateCopiedVarDecl, 
-                      isInitStateVarDecl, hasFailedVarsDecl, 
+    // new variable declarations.
+    val varDecls = List(copyStateInputDecl, stateCopiedVarDecl,
+                      isInitStateVarDecl, hasFailedVarsDecl,
                       pendingVarsDecl, hasAcceptedVarsDecl, hasAcceptedTraceVarsDecl,
                       monitorInputsDecl, monitorVarsDecl) ++ varsToCopyPDecl
 
     // now construct the next block.
     val stateCopiedInitStmt = AssignStmt(List(LhsId(stateCopiedVar)), List(BoolLit(false)))
     val postInitStmts = List(
-                    createRepeatedAssignment(hasFailedVars, BoolLit(false)), 
-                    createRepeatedAssignment(monitorVars, BoolLit(false)), 
-                    createRepeatedAssignment(hasAcceptedVars, BoolLit(false)), 
-                    createRepeatedAssignment(hasAcceptedTraceVars, BoolLit(false)), 
+                    createRepeatedAssignment(hasFailedVars, BoolLit(false)),
+                    createRepeatedAssignment(monitorVars, BoolLit(false)),
+                    createRepeatedAssignment(hasAcceptedVars, BoolLit(false)),
+                    createRepeatedAssignment(hasAcceptedTraceVars, BoolLit(false)),
                     createRepeatedAssignment(isInitStateVar :: pendingVars, BoolLit(true)),
                     Some(stateCopiedInitStmt)).flatten
 
     // monitor iff "assignments"
     val monitorBiImpls = monitors.flatMap(r => r.biImplications)
-    val biImplHavocs = monitorBiImpls.map(r => HavocStmt(r._1))
-    val biImplAssumes = monitorBiImpls.collect{ case (id, Some(expr)) => AssumeStmt(iffExpr(id, expr), None) }
+    val biImplHavocs = monitorBiImpls.map(r => HavocStmt(HavocableId(r._1)))
+    val biImplAssumes = monitorBiImpls.collect{ case (id, Some(expr)) => AssumeStmt(implExpr(id, expr), None) }
 
     // monitor internal assignments.
     val assignmentPairs = monitors.flatMap(r => r.assignments)
@@ -568,8 +574,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     val hasAcceptedAssignments = hasAccepteds.map(p => createAssign(p._1._1, p._1._2)).flatten
     val hasAcceptedTraceAssignments = hasAccepteds.map(p => createAssign(p._2._1, p._2._2))
     val preNextStmts = List(stateCopyStmt, isInitAssignNext)
-    val postNextStmts = biImplHavocs ++ zAssumes ++ biImplAssumes ++ monitorAssignments ++ 
-                        hasFailedAssignments ++ pendingAssignments ++ 
+    val postNextStmts = biImplHavocs ++ zAssumes ++ biImplAssumes ++ monitorAssignments ++
+                        hasFailedAssignments ++ pendingAssignments ++
                         hasAcceptedAssignments ++ hasAcceptedTraceAssignments
     // new init/next.
     val newInitDecl = InitDecl(module.init.get.body ++ postInitStmts ++ postNextStmts)
@@ -595,8 +601,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
     // extract the rest of the module as-is.
     val otherDecls = module.decls.filter(
-        p => !p.isInstanceOf[SpecDecl] && 
-             !p.isInstanceOf[InitDecl] && 
+        p => !p.isInstanceOf[SpecDecl] &&
+             !p.isInstanceOf[InitDecl] &&
              !p.isInstanceOf[NextDecl]) ++ otherSpecs
     // assemble the new module.
     val moduleDecls = otherDecls ++ varDecls ++ List(newInitDecl, newNextDecl) ++ newSafetyProperties ++ newLivenessProperties

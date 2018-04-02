@@ -1,29 +1,35 @@
 /*
  * UCLID5 Verification and Synthesis Engine
  *
- * Copyright (c) 2017. The Regents of the University of California (Regents).
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
  * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
  *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for educational, research, and not-for-profit purposes,
- * without fee and without a signed licensing agreement, is hereby granted,
- * provided that the above copyright notice, this paragraph and the following two
- * paragraphs appear in all copies, modifications, and distributions.
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
  *
- * Contact The Office of Technology Licensing, UC Berkeley, 2150 Shattuck Avenue,
- * Suite 510, Berkeley, CA 94720-1620, (510) 643-7201, otl@berkeley.edu,
- * http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
  *
- * IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
- * INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
- * THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- * THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED HEREUNDER IS
- * PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
- * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Authors: Rohit Sinha, Pramod Subramanyan
 
@@ -84,7 +90,7 @@ sealed  trait PositionedNode extends Positional {
 
 object ASTNode {
   def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename : Boolean, node : T, pos : ASTPosition) : T = {
-    if (setPosition) {
+    if (setPosition || node.pos.line == 0) {
       var nodeP = node
       if (setFilename) { nodeP.filename = pos.filename }
       nodeP.pos = pos.pos
@@ -95,31 +101,31 @@ object ASTNode {
   }
 
   def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename : Boolean, node : Option[T], pos : ASTPosition) : Option[T] = {
-    if (setPosition) {
-      node match {
-        case Some(n) =>
+    node match {
+      case Some(n) =>
+        if (setPosition || n.pos.line == 0) {
           var nP = n
           if (setFilename) { nP.filename = pos.filename }
           nP.pos = pos.pos
           Some(nP)
-        case None =>
-          None
-      }
-    } else {
-      node
+        } else {
+          Some(n)
+        }
+      case None =>
+        None
     }
   }
   def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename: Boolean, nodes : List[T], pos : ASTPosition) : List[T] = {
-    if (setPosition) {
-      nodes.map((n) => {
+    nodes.map((n) => {
+      if (setPosition || n.pos.line == 0) {
         var nP = n
         if (setFilename) { nP.filename = pos.filename }
         nP.pos = pos.pos
         nP
-      })
-    } else {
-      nodes
-    }
+      } else {
+        n
+      }
+    })
   }
 }
 
@@ -141,6 +147,8 @@ object Operator {
   def not(x : Expr) = OperatorApplication(NegationOp(), List(x))
   def and(x : Expr, y : Expr) = OperatorApplication(ConjunctionOp(), List(x, y))
   def or(x : Expr, y : Expr) = OperatorApplication(DisjunctionOp(), List(x, y))
+  def imply(x : Expr, y : Expr) = OperatorApplication(ImplicationOp(), List(x, y))
+  def ite(c : Expr, x : Expr, y : Expr) = OperatorApplication(ITEOp(), List(c, x, y))
 }
 sealed trait Operator extends ASTNode {
   def fixity : Int
@@ -160,7 +168,7 @@ case class GEOp() extends PolymorphicOperator { override def toString = ">=" }
 case class AddOp() extends PolymorphicOperator { override def toString = "+" }
 case class SubOp() extends PolymorphicOperator { override def toString = "-" }
 case class MulOp() extends PolymorphicOperator { override def toString = "*" }
-case class UnaryMinusOp() extends PolymorphicOperator { 
+case class UnaryMinusOp() extends PolymorphicOperator {
   override def toString = "-"
   override def fixity = Operator.PREFIX
 }
@@ -175,7 +183,7 @@ case class IntGEOp() extends IntArgOperator { override def toString = ">=" }
 case class IntAddOp() extends IntArgOperator { override def toString ="+" }
 case class IntSubOp() extends IntArgOperator { override def toString = "-" }
 case class IntMulOp() extends IntArgOperator { override def toString = "*" }
-case class IntUnaryMinusOp() extends IntArgOperator { 
+case class IntUnaryMinusOp() extends IntArgOperator {
   override def toString = "-"
   override def fixity = Operator.PREFIX
 }
@@ -183,40 +191,40 @@ case class IntUnaryMinusOp() extends IntArgOperator {
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
   override def fixity = Operator.INFIX
 }
-case class BVLTOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "<" 
+case class BVLTOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "<"
 }
-case class BVLEOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "<=" 
+case class BVLEOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "<="
 }
-case class BVGTOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = ">" 
+case class BVGTOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = ">"
 }
-case class BVGEOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = ">=" 
+case class BVGEOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = ">="
 }
-case class BVAddOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString ="+"  
+case class BVAddOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString ="+"
 }
-case class BVSubOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "-" 
+case class BVSubOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "-"
 }
-case class BVMulOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "*" 
+case class BVMulOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "*"
 }
-case class BVAndOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "&" 
+case class BVAndOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "&"
 }
-case class BVOrOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "|" 
+case class BVOrOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "|"
 }
-case class BVXorOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "^" 
+case class BVXorOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "^"
 }
-case class BVNotOp(override val w : Int) extends BVArgOperator(w) { 
-  override def toString = "~" 
+case class BVNotOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "~"
 }
-case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) { 
+case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "-"
 }
@@ -225,17 +233,17 @@ sealed abstract class BooleanOperator extends Operator {
   override def fixity = Operator.INFIX
   def isQuantified = false
 }
-case class ConjunctionOp() extends BooleanOperator { 
-  override def toString = "&&" 
+case class ConjunctionOp() extends BooleanOperator {
+  override def toString = "&&"
 }
-case class DisjunctionOp() extends BooleanOperator { 
-  override def toString = "||" 
+case class DisjunctionOp() extends BooleanOperator {
+  override def toString = "||"
 }
-case class IffOp() extends BooleanOperator { 
-  override def toString = "<==>" 
+case class IffOp() extends BooleanOperator {
+  override def toString = "<==>"
 }
-case class ImplicationOp() extends BooleanOperator { 
-  override def toString = "==>" 
+case class ImplicationOp() extends BooleanOperator {
+  override def toString = "==>"
 }
 case class NegationOp() extends BooleanOperator {
   override def fixity = Operator.PREFIX
@@ -263,7 +271,7 @@ sealed abstract class ComparisonOperator() extends Operator {
 case class EqualityOp() extends ComparisonOperator { override def toString = "==" }
 case class InequalityOp() extends ComparisonOperator { override def toString = "!=" }
 
-sealed abstract class TemporalOperator() extends Operator { 
+sealed abstract class TemporalOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def isTemporal = true
 }
@@ -320,15 +328,22 @@ case class ConcatOp() extends Operator {
   override def toString = "++"
   override def fixity = Operator.INFIX
 }
+case class PolymorphicSelect(id : Identifier) extends Operator {
+  override def toString = "." + id
+  override def fixity = Operator.POSTFIX
+}
 case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
   override def fixity = Operator.INFIX
 }
 case class SelectFromInstance(varId : Identifier) extends Operator {
-  override def toString = "->" + varId
+  override def toString = "." + varId
   override def fixity = Operator.INFIX
 }
-
+case class GetNextValueOp() extends Operator {
+  override def toString = "'"
+  override def fixity = Operator.POSTFIX
+}
 
 sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
@@ -392,10 +407,12 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
   override def isConstant = operands.forall(_.isConstant)
   override def toString = {
     op match {
+      case PolymorphicSelect(r) =>
+        operands(0).toString + "." + r.toString()
       case RecordSelect(r) =>
         operands(0).toString + "." + r.toString
       case SelectFromInstance(f) =>
-        operands(0).toString + "->" + f.toString
+        operands(0).toString + "." + f.toString
       case ForallOp(_) | ExistsOp(_) =>
         "(" + op.toString + operands(0).toString + ")"
       case _ =>
@@ -426,21 +443,32 @@ case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
   override def toString = "Lambda(" + ids + "). " + e
 }
 
-sealed abstract class Lhs(val ident: Identifier) extends ASTNode
+sealed abstract class Lhs(val ident: Identifier) extends ASTNode {
+  def isProceduralLhs : Boolean
+}
 case class LhsId(id: Identifier) extends Lhs(id) {
   override def toString = id.toString
+  override def isProceduralLhs = true
+}
+case class LhsNextId(id: Identifier) extends Lhs(id) {
+  override def toString = id.toString + "'"
+  override def isProceduralLhs = false
 }
 case class LhsArraySelect(id: Identifier, indices: List[Expr]) extends Lhs(id) {
   override def toString = id.toString + "[" + Utils.join(indices.map(_.toString), ", ") + "]"
+  override def isProceduralLhs = true
 }
 case class LhsRecordSelect(id: Identifier, fields: List[Identifier]) extends Lhs(id) {
   override def toString = id.toString + "." + Utils.join(fields.map(_.toString), ".")
+  override def isProceduralLhs = true
 }
 case class LhsSliceSelect(id: Identifier, bitslice : ConstBitVectorSlice) extends Lhs(id) {
   override def toString = id.toString + bitslice.toString
+  override def isProceduralLhs = true
 }
 case class LhsVarSliceSelect(id: Identifier, bitslice: VarBitVectorSlice) extends Lhs(id) {
   override def toString = id.toString + bitslice.toString
+  override def isProceduralLhs = true
 }
 
 /** Type decorators for expressions. */
@@ -652,7 +680,7 @@ case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends T
 }
 case class ModuleType(
     inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)], sharedVars: List[(Identifier, Type)],
-    constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
+    constLits : List[(Identifier, NumericLit)], constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
     functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, ModuleType)]) extends Type {
 
   def argToString(arg: (Identifier, Type)) : String = {
@@ -665,12 +693,13 @@ case class ModuleType(
   lazy val outputMap : Map[Identifier, Type] = outputs.toMap
   lazy val sharedVarMap : Map[Identifier, Type] = sharedVars.toMap
   lazy val argSet = inputs.map(_._1).toSet union outputs.map(_._1).toSet union sharedVars.map(_._1).toSet
+  lazy val constLitMap : Map[Identifier, NumericLit] = constLits.toMap
   lazy val constantMap : Map[Identifier, Type] = constants.map(a => (a._1 -> a._2)).toMap
   lazy val varMap : Map[Identifier, Type] = variables.map(a => (a._1 -> a._2)).toMap
   lazy val funcMap : Map[Identifier, FunctionSig] = functions.map(a => (a._1 -> a._2)).toMap
   lazy val instanceMap : Map[Identifier, ModuleType] = instances.map(a => (a._1 -> a._2)).toMap
   lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ funcMap.map(f => (f._1 -> f._2.typ))  ++ instanceMap
-  lazy val externalTypeMap : Map[Identifier, Type] = constantMap ++ funcMap.map(f => (f._1 -> f._2.typ))
+  lazy val externalTypeMap : Map[Identifier, Type] = constantMap ++ funcMap.map(f => (f._1 -> f._2.typ)) ++ constLitMap.map(f => (f._1 -> f._2.typeOf))
   def typeOf(id : Identifier) : Option[Type] = {
     typeMap.get(id)
   }
@@ -694,8 +723,15 @@ case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
 case class AssumeStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assume " + e + "; // " + position.toString)
 }
-case class HavocStmt(id: Identifier) extends Statement {
-  override def toLines = List("havoc " + id + "; // " + position.toString)
+sealed abstract class HavocableEntity extends ASTNode
+case class HavocableId(id : Identifier) extends HavocableEntity {
+  override def toString = id.toString()
+}
+case class HavocableFreshLit(f : FreshLit) extends HavocableEntity {
+  override def toString = f.toString()
+}
+case class HavocStmt(havocable : HavocableEntity) extends Statement {
+  override def toLines = List("havoc " + havocable.toString() + "; // " + position.toString)
 }
 case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines =
@@ -714,12 +750,25 @@ case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Stat
   }
   override def toLines = lines
 }
-case class ForStmt(id: Identifier, range: (NumericLit,NumericLit), body: List[Statement])
+case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: List[Statement])
   extends Statement
 {
   override def isLoop = true
   override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString) ++
                          body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
+}
+case class WhileStmt(cond: Expr, body: List[Statement], invariants: List[Expr])
+  extends Statement
+{
+  override def isLoop = true
+  override def toLines = {
+    val headLine = "while(%s)  // %s".format(cond.toString(), position.toString())
+    val invLines = invariants.map(inv => PrettyPrinter.indent(1) + inv.toString() + " // " + inv.position.toString())
+    val openBraceLine = "{"
+    val bodyLines = body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
+    val closeBraceLine = "}"
+    List(headLine) ++ invLines ++ List(openBraceLine) ++ bodyLines ++ List(closeBraceLine) 
+  }
 }
 case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
   override def toLines = List("case") ++
@@ -732,7 +781,7 @@ case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Exp
     Utils.join(args.map(_.toString), ", ") + ") // " + id.position.toString)
 }
 case class ModuleCallStmt(id: Identifier) extends Statement {
-  override def toLines = List("call (" + id.toString +")")
+  override def toLines = List("next (" + id.toString +")")
 }
 case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
   override def toString = "var " + id + ": " + typ + "; // " + id.position.toString
@@ -770,16 +819,18 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
   type T = (Identifier,Type)
   val typ = MapType(args.map(_._2), retType)
   val printfn = {(a: T) => a._1.toString + ": " + a._2}
-  override def toString = 
+  override def toString =
     "(" + Utils.join(args.map(printfn(_)), ", ") + ")" + ": " + retType
 }
 
 sealed abstract class Decl extends ASTNode {
   def declNames : List[Identifier]
+  val hashId : Int
 }
 
 case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, arguments: List[(Identifier, Option[Expr])], instType : Option[ModuleInstanceType], modType : Option[ModuleType]) extends Decl
 {
+  override val hashId = 901
   lazy val argMap = arguments.foldLeft(Map.empty[Identifier, Expr]) {
     (acc, arg) => {
       arg._2 match {
@@ -788,6 +839,25 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
       }
     }
   }
+  lazy val inputMap = modType.get.inputs.map({ 
+    p => argMap.get(p._1) match {
+      case Some(expr) => Some(p._1, p._2, expr)
+      case None => None
+    }
+  }).flatten
+  lazy val sharedVarMap = modType.get.sharedVars.map({ 
+    p => argMap.get(p._1) match {
+      case Some(expr) => Some(p._1, p._2, expr)
+      case None => None
+    }
+  }).flatten
+  lazy val outputMap = modType.get.outputs.map({ 
+    p => argMap.get(p._1) match {
+      case Some(expr) => Some(p._1, p._2, expr)
+      case None => None
+    }
+  }).flatten
+
   def argToString(arg : (Identifier, Option[Expr])) = arg._2 match {
     case Some(e) => arg._1.toString + ":" + e.toString
     case None => arg._1.toString + ": ()"
@@ -806,8 +876,9 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
 }
 
 case class ProcedureDecl(
-    id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: List[Statement], 
+    id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: List[Statement],
     requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier]) extends Decl {
+  override val hashId = 902
   override def toString = {
     val modifiesString = if (modifies.size > 0) {
       PrettyPrinter.indent(2) + "modifies " + Utils.join(modifies.map(_.toString).toList, ", ") + ";\n"
@@ -825,22 +896,27 @@ case class ProcedureDecl(
   def hasPrePost = requires.size > 0 || ensures.size > 0
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
+  override val hashId = 903
   override def toString = "type " + id + " = " + typ + "; // " + position.toString
   override def declNames = List(id)
 }
 case class StateVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
+  override val hashId = 904
   override def toString = "var " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
   override def declNames = ids
 }
 case class InputVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
+  override val hashId = 905
   override def toString = "input " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
   override def declNames = ids
 }
 case class OutputVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
+  override val hashId = 906
   override def toString = "output " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
   override def declNames = ids
 }
 case class SharedVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
+  override val hashId = 907
   override def toString = "sharedvar " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString()
   override def declNames = ids
 }
@@ -849,20 +925,27 @@ sealed abstract trait ModuleExternal {
   def extNames : List[Identifier]
   def extType : Type
 }
-
+case class ConstantLitDecl(id : Identifier, lit : NumericLit) extends Decl {
+  override val hashId = 908
+  override def toString = "const %s = %s; // %s".format(id.toString(), lit.toString(), position.toString())
+  override def declNames = List(id)
+}
 case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with ModuleExternal {
+  override val hashId = 909
   override def toString = "const " + Utils.join(ids.map(_.toString), ", ") + ": " + typ + "; // " + position.toString
   override def declNames = ids
   override def extNames = ids
   override def extType = typ
 }
 case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with ModuleExternal {
+  override val hashId = 910
   override def toString = "function " + id + sig + ";  // " + position.toString
   override def declNames = List(id)
   override def extNames = List(id)
   override def extType = sig.typ
 }
 case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl {
+  override val hashId = 911
   override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
   override def declNames = List(id)
 }
@@ -923,6 +1006,7 @@ case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) exte
 }
 
 case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonTerminal]) extends Decl {
+  override val hashId = 912
   override def toString = {
     val argTypes = Utils.join(sig.args.map(a => a._1.toString + ": " + a._2.toString), ", ")
     val header :String = "grammar %s %s = { // %s".format(id.toString, sig.toString(), position.toString)
@@ -933,11 +1017,13 @@ case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonT
 }
 
 case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : Identifier, grammarArgs: List[Identifier], conditions: List[Expr]) extends Decl {
+  override val hashId = 913
   override def toString = "synthesis function " + id + sig + "; //" + position.toString()
   override def declNames = List(id)
 }
 
 case class InitDecl(body: List[Statement]) extends Decl {
+  override val hashId = 914
   override def toString =
     "init { // " + position.toString + "\n" +
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
@@ -945,6 +1031,7 @@ case class InitDecl(body: List[Statement]) extends Decl {
   override def declNames = List.empty
 }
 case class NextDecl(body: List[Statement]) extends Decl {
+  override val hashId = 915
   override def toString =
     "next {  // " + position.toString + "\n" +
     Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
@@ -952,18 +1039,20 @@ case class NextDecl(body: List[Statement]) extends Decl {
   override def declNames = List.empty
 }
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
+  override val hashId = 916
   override def toString = {
-    val declString = if (params.size > 0) { 
+    val declString = if (params.size > 0) {
       "[" + Utils.join(params.map(_.toString), ", ") + "]"
     } else {
       ""
     }
-    "property %s%s : %s; // %s".format(id.toString, declString, expr.toString, position.toString) 
+    "property %s%s : %s; // %s".format(id.toString, declString, expr.toString, position.toString)
   }
   override def declNames = List(id)
   def name = "property " + id.toString()
 }
 case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
+  override val hashId = 917
   override def toString = {
     id match {
       case Some(id) => "axiom " + id.toString + " : " + expr.toString()
@@ -977,7 +1066,7 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
 }
 sealed abstract class ProofCommand extends ASTNode
 
-case class GenericProofCommand(name : Identifier, params: List[Identifier], args : List[Expr], resultVar: Option[Identifier], argObj: Option[Identifier]) extends ProofCommand {
+case class GenericProofCommand(name : Identifier, params: List[Identifier], args : List[(Expr, String)], resultVar: Option[Identifier], argObj: Option[Identifier]) extends ProofCommand {
   def getContext(context : Scope) : Scope = {
     argObj match {
       case Some(arg) =>
@@ -1012,9 +1101,16 @@ case class GenericProofCommand(name : Identifier, params: List[Identifier], args
 
 sealed abstract class Annotation extends ASTNode
 case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) extends Annotation {
+  lazy val rMap : Map[Identifier, String] = {
+    iMap.map {
+      p => {
+        p._2 -> Utils.join(p._1.map(id => id.toString()), "->")
+      }
+    }
+  }
   override def toString : String = {
     val start = PrettyPrinter.indent(1) + "// instance_var_map { "
-    val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), "->") + " ::==> " + p._2.toString) 
+    val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), "->") + " ::==> " + p._2.toString)
     val end = PrettyPrinter.indent(1) + "// } end_instance_var_map"
     Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
   }
@@ -1022,6 +1118,16 @@ case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) ext
 
 object Annotation {
   val default = List(InstanceVarMapAnnotation(Map.empty))
+  def defaultVars(decls : List[Decl]) : List[Annotation] = {
+    val inputs = decls.collect{ case inps : InputVarsDecl => inps.ids }
+    val outputs = decls.collect{ case outs : OutputVarsDecl => outs.ids }
+    val vars = decls.collect{ case vars : StateVarsDecl => vars.ids }
+    val sharedVars = decls.collect{ case sharedVars : SharedVarsDecl => sharedVars.ids }
+    def flatten (l : List[List[Identifier]]) : List[Identifier] = l.flatMap(ll => ll)
+    val names = flatten(inputs) ++ flatten(outputs) ++ flatten(vars) ++ flatten(sharedVars)
+    val instMap = names.map(n => (List(n) -> n)).toMap
+    List(InstanceVarMapAnnotation(instMap))
+  }
 }
 
 case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCommand], notes: List[Annotation]) extends ASTNode {
@@ -1042,8 +1148,10 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     decls.collect { case vars : StateVarsDecl => vars }.flatMap(v => v.ids.map(id => (id, v.typ)))
   lazy val sharedVars: List[(Identifier, Type)] =
     decls.collect { case sVars : SharedVarsDecl => sVars }.flatMap(sVar => sVar.ids.map(id => (id, sVar.typ)))
+  lazy val constLits: List[(Identifier, NumericLit)] =
+    decls.collect { case constLit : ConstantLitDecl => (constLit.id, constLit.lit) }
   // module constants.
-  lazy val constantDecls = decls.collect { case cnsts : ConstantsDecl => cnsts }  
+  lazy val constantDecls = decls.collect { case cnsts : ConstantsDecl => cnsts }
   lazy val constants : List[(Identifier, Type)] =
     constantDecls.flatMap(cnst => cnst.ids.map(id => (id, cnst.typ)))
   // module functions.
@@ -1073,7 +1181,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   // compute the "type" of this module.
   lazy val moduleType : ModuleType = ModuleType(
       inputs, outputs, sharedVars,
-      constants, vars,
+      constLits, constants, vars,
       functions.map(c => (c.id, c.sig)),
       instances.map(inst => (inst.instanceId, inst.modType.get)))
 
@@ -1091,11 +1199,12 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   }
 
   // return a specific annotation.
-  def getAnnotation[T <: Annotation]()(implicit tag: ClassTag[T]) : Option[T] = { 
+  def getAnnotation[T <: Annotation]()(implicit tag: ClassTag[T]) : Option[T] = {
     val matchingNotes : List[T] = notes.collect { case n : T => n }
     if (matchingNotes.size == 0) {
       None
     } else {
+      Utils.assert(matchingNotes.size == 1, "Too many annotations of type: " + tag.toString())
       Some(matchingNotes(0))
     }
   }
@@ -1112,7 +1221,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     }
     Module(id, decls, cmds, newNotes)
   }
-  
+
   override def toString =
     "\nmodule " + id + " {\n" +
       decls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i + "\n" } +

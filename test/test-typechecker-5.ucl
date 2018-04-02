@@ -1,14 +1,26 @@
 module main {
   type t4 = record {a: integer, b: integer, c: record {d: boolean , e: t4}};
   var x4 : t4;
-  
-  init {
+
+  procedure set_x4_c_d(b : boolean)
+    modifies x4;
+  {
     x4.c.d = false;
-    x4.a = 0;
+  }
+
+  procedure set_x4_a(n : integer)
+    modifies x4;
+  {
+    x4.a = n;
+  }
+
+  init {
+    call set_x4_c_d(false);
+    call set_x4_a(0);
   }
   
   next {
-    x4.c.d = !x4.c.d;
-    x4.a = x4.a + 1;
+    call set_x4_c_d(!x4.c.d);
+    call set_x4_a(x4.a + 1);
   }
 }
