@@ -38,22 +38,28 @@ module main
 
   instance light1 : traffic_light();
   instance light2 : traffic_light();
-  
+
+  var cnt : integer;
+
   init {
     assume (light1.light == red && light1.step == 2);
     assume (light2.light == green && light2.step == 1);
+    cnt = 0;
   }
 
   next {
     next (light1);
     next (light2);
+    cnt' = cnt + 1;
   }
-  
+
   invariant atleast_one_red    : (light1.light == red) || (light2.light == red);
   invariant steps_non_negative : (light1.step >= 0) && (light2.step >= 0);
   invariant steps_upper_bound  : (light1.step <= 2) && (light2.step <= 2);
+  invariant steps12            : (light1.step - light2.step) <= 1 &&
+                                 (light2.step - light1.step) <= 1;
   control {
-    v = induction(2);
+    v = induction(4);
     check;
     // print_results;
     // v.print_cex(light1.light, light1.step, light2.light, light2.step);

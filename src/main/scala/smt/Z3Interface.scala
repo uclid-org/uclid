@@ -381,11 +381,14 @@ class Z3Interface() extends Context {
     val checkResult : SolverResult = z3Result match {
       case z3.Status.SATISFIABLE =>
         val z3Model = solver.getModel()
-        // println("model: " + z3Model.toString)
+        checkLogger.debug("SAT")
+        checkLogger.debug("Model: {}", z3Model.toString())
         SolverResult(Some(true), Some(new Z3Model(this, z3Model)))
       case z3.Status.UNSATISFIABLE =>
+        checkLogger.debug("UNSAT")
         SolverResult(Some(false), None)
       case _ =>
+        checkLogger.debug("UNDET")
         SolverResult(None, None)
     }
     return checkResult

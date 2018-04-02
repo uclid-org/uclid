@@ -98,7 +98,7 @@ class SymbolicSimulator (module : Module) {
               case None    => "unroll"
             }
             initialize(false, true, false, context, label, noLTLFilter)
-            symbolicSimulate(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
           case "bmc" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString()
@@ -117,7 +117,7 @@ class SymbolicSimulator (module : Module) {
               ExprDecorator.isLTLProperty(decorators) &&  (cmd.params.isEmpty || cmd.params.contains(nameToCheck))
             }
             initialize(false, true, false, context, label, LTLFilter)
-            symbolicSimulate(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, LTLFilter)
+            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, LTLFilter)
           case "induction" =>
             val labelBase : String = cmd.resultVar match {
               case Some(l) => l.toString + ": induction (base)"
@@ -134,17 +134,17 @@ class SymbolicSimulator (module : Module) {
             // base case.
             resetState()
             initialize(false, true, false, context, labelBase, noLTLFilter)
-            symbolicSimulate(k-1, true, false, context, labelBase, noLTLFilter) // if k - 1, symbolicSimulate is a NOP.
+            symbolicSimulate(0, k-1, true, false, context, labelBase, noLTLFilter) // if k - 1, symbolicSimulate is a NOP.
 
             // inductive step
             resetState()
             // we are assuming that the assertions hold for k-1 steps (by passing false, true to initialize and symbolicSimulate)
             initialize(true, false, true, context, labelStep, noLTLFilter)
             if ((k - 1) > 0) {
-              symbolicSimulate(k-1, false, true, context, labelStep, noLTLFilter)
+              symbolicSimulate(0, k-1, false, true, context, labelStep, noLTLFilter)
             }
             // now are asserting that the assertion holds by pass true, false to symbolicSimulate.
-            symbolicSimulate(1, true,  false, context, labelStep, noLTLFilter)
+            symbolicSimulate(k-1, 1, true,  false, context, labelStep, noLTLFilter)
 
             // go back to original state.
             resetState()
@@ -253,6 +253,7 @@ class SymbolicSimulator (module : Module) {
   /**
    * Create symbolic expressions for the next block.
    *
+   * @param startStep The step number from which start (usually 1, except for k-induction, where it is k.)
    * @param numberOfSteps The number of steps for which to execute.
    * @param addAssertions If this is true, then all module-level assertions are asserted. If this is false, then assertions are ignored unless addAssertionsAsAssume = true.
    * @param addAssertionsAsAsume If this is true, then module-level assertion are assumed, not asserted.
@@ -260,15 +261,17 @@ class SymbolicSimulator (module : Module) {
    * @param label A label associated with the current verification task.
    * @param filter A function which identifies which assertions are to be considered.
    */
-  def symbolicSimulate(numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean, scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) : SymbolTable =
+  def symbolicSimulate(
+      startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean, 
+      scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean))
   {
     var currentState = symbolTable
     var states = new ArrayBuffer[SymbolTable]()
     // add initial state.
     for (step <- 1 to numberOfSteps) {
-      val stWInputs = newInputSymbols(currentState, step, scope)
+      val stWInputs = newInputSymbols(currentState, step + startStep, scope)
       states += stWInputs
-      currentState = renameStates(simulate(step, stWInputs, scope, label), step, scope)
+      currentState = renameStates(simulate(step + startStep, stWInputs, scope, label), step + startStep, scope)
       val numPastFrames = frameTable.size
       val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
       frameTable += currentState
@@ -276,7 +279,7 @@ class SymbolicSimulator (module : Module) {
       if (addAssertions) { addAsserts(step, currentState, pastTables, label, scope, filter)  }
       if (addAssertionsAsAssumes) { assumeAssertions(currentState, pastTables, scope) }
     }
-    return currentState
+    symbolTable = currentState
   }
 
   def printResults(assertionResults : List[CheckResult], arg : Option[Identifier]) {
