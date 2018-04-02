@@ -1,0 +1,46 @@
+module main
+{
+  var numbers: [integer]integer;
+  var tail : integer;
+
+  input push_value   : integer;
+  input search_value : integer;
+  output value_found : boolean;
+
+  init {
+    tail = 0;
+  }
+
+  next {
+    call push();
+    call (value_found') = search();
+  }
+
+  procedure push()
+    modifies numbers, tail;
+  {
+    numbers[tail] = push_value;
+    tail = tail + 1;
+  }
+
+  procedure search()
+    returns (found : boolean)
+  {
+    var i : integer;
+
+    i = 0;
+    found = false;
+    while (i < tail)
+      invariant (exists (idx : integer) :: (idx >= 0 && idx < i) && numbers[idx] == search_value) ==> found;
+      invariant !found ==> (forall (idx : integer) :: (idx >= 0 && idx < i) ==> numbers[idx] != search_value);
+    {
+      if (numbers[i] == search_value) {
+        found = true;
+      }
+    }
+  }
+
+  control {
+    print_module;
+  }
+}

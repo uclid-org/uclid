@@ -763,7 +763,7 @@ case class WhileStmt(cond: Expr, body: List[Statement], invariants: List[Expr])
   override def isLoop = true
   override def toLines = {
     val headLine = "while(%s)  // %s".format(cond.toString(), position.toString())
-    val invLines = invariants.map(inv => PrettyPrinter.indent(1) + inv.toString() + " // " + inv.position.toString())
+    val invLines = invariants.map(inv => PrettyPrinter.indent(1) + "invariant " + inv.toString() + "; // " + inv.position.toString())
     val openBraceLine = "{"
     val bodyLines = body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
     val closeBraceLine = "}"

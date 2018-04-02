@@ -145,6 +145,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwFor = "for"
     lazy val KwIn = "in"
     lazy val KwRange = "range"
+    lazy val KwWhile = "while"
     lazy val KwInstance = "instance"
     lazy val KwType = "type"
     lazy val KwInput = "input"
@@ -186,7 +187,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall,
-      KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange,
+      KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
       KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
       KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit,
       KwNext, KwLambda, KwModifies, KwDefineProp, KwDefineAxiom,
@@ -380,6 +381,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       }
     }
 
+    lazy val Invariant : PackratParser[lang.Expr] = positioned {
+      KwInvariant ~> Expr <~ ";"
+    }
+
     lazy val Statement: PackratParser[Statement] = positioned {
       KwSkip <~ ";" ^^ { case _ => SkipStmt() } |
       KwAssert ~> Expr <~ ";" ^^ { case e => AssertStmt(e, None) } |
@@ -407,6 +412,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case id ~ r ~ body => ForStmt(id, r._1.typeOf, r, body) } |
       KwFor ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> RangeExpr) ~ BlockStatement ^^
         { case idtyp ~ range ~ body => ForStmt(idtyp._1, idtyp._2, range, body) } |
+      KwWhile ~> ("(" ~> Expr <~ ")") ~ rep(Invariant) ~ BlockStatement ^^
+        { case expr ~ invs ~ body => WhileStmt(expr, body, invs) } |
       ";" ^^ { case _ => SkipStmt() }
     }
 
