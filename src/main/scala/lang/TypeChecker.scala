@@ -235,6 +235,8 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
   override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : ErrorList, ctx : Scope) : ErrorList = {
     if (d == TraversalDirection.Up) {
       try {
+        logger.debug("expression: {}", e.toString())
+        logger.debug("ctx.map: {}", ctx.map.toString())
         typeOf(e, ctx)
       } catch {
         case p : Utils.TypeError => {
