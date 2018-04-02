@@ -1074,7 +1074,7 @@ case class GenericProofCommand(name : Identifier, params: List[Identifier], args
           val mod = context.module.get
           val verifCmd = context.get(arg).get.asInstanceOf[Scope.VerifResultVar].cmd
           if (verifCmd.isVerify) {
-            val procName = verifCmd.args(0).asInstanceOf[Identifier]
+            val procName = verifCmd.args(0)._1.asInstanceOf[Identifier]
             val proc = mod.procedures.find(p => p.id == procName).get
             context + proc
           } else {
