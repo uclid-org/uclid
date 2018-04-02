@@ -1429,6 +1429,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case assignStmt : AssignStmt => visitAssignStatement(assignStmt, context)
       case ifElseStmt : IfElseStmt => visitIfElseStatement(ifElseStmt, context)
       case forStmt : ForStmt => visitForStatement(forStmt, context)
+      case whileStmt : WhileStmt => visitWhileStatement(whileStmt, context)
       case caseStmt : CaseStmt => visitCaseStatement(caseStmt, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
       case modCallStmt : ModuleCallStmt => visitModuleCallStatement(modCallStmt, context)
@@ -1515,6 +1516,16 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
+  def visitWhileStatement(st : WhileStmt, context : Scope) : List[Statement] = {
+    val condP = visitExpr(st.cond, context)
+    val stmtsP = st.body.map(visitStatement(_, context)).flatten
+    val invP = st.invariants.map(visitExpr(_, context)).flatten
+    val whileP = (condP) match {
+      case Some(cond) => pass.rewriteWhile(WhileStmt(cond, stmtsP, invP), context)
+      case None => List.empty
+    }
+    return ASTNode.introducePos(setPosition, setFilename, whileP, st.position)
+  }
   def visitCaseStatement(st : CaseStmt, context : Scope) : List[Statement] = {
     val bodyP = st.body.map((c) => {
       // if rewriting the expression doesn't produce None.

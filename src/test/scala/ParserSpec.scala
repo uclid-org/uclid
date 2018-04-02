@@ -282,6 +282,11 @@ class ParserSpec extends FlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
+  "test-procedure-postcondition-2.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-procedure-postcondition-2.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
   "test-define-recursive.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(List(new File("test/test-define-recursive.ucl")), lang.Identifier("main"))
