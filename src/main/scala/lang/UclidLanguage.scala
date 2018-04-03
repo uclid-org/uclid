@@ -92,7 +92,7 @@ object ASTNode {
   def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename : Boolean, node : T, pos : ASTPosition) : T = {
     if (setPosition || node.pos.line == 0) {
       var nodeP = node
-      if (setFilename) { nodeP.filename = pos.filename }
+      if (setFilename || nodeP.filename.isEmpty) { nodeP.filename = pos.filename }
       nodeP.pos = pos.pos
       nodeP
     } else {
@@ -105,7 +105,7 @@ object ASTNode {
       case Some(n) =>
         if (setPosition || n.pos.line == 0) {
           var nP = n
-          if (setFilename) { nP.filename = pos.filename }
+          if (setFilename || nP.filename.isEmpty) { nP.filename = pos.filename }
           nP.pos = pos.pos
           Some(nP)
         } else {
@@ -119,7 +119,7 @@ object ASTNode {
     nodes.map((n) => {
       if (setPosition || n.pos.line == 0) {
         var nP = n
-        if (setFilename) { nP.filename = pos.filename }
+        if (setFilename || nP.filename.isEmpty) { nP.filename = pos.filename }
         nP.pos = pos.pos
         nP
       } else {
