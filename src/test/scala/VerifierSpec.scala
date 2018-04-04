@@ -117,6 +117,9 @@ class BasicVerifierSpec extends FlatSpec {
   "test-ite.ucl" should "verify all but 6 assertions successfully." in {
     VerifierSpec.expectedFails("./test/test-ite.ucl", 6)
   }
+  "test-bit-concat.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bit-concat.ucl", 0)
+  }
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
   }

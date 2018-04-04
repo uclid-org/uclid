@@ -138,6 +138,13 @@ object Converter {
              toSMT(args(0), scope, args(1).asInstanceOf[lang.IntLit].value.toInt)
            case lang.GetNextValueOp() =>
              toSMT(args(0), scope, past)
+           case lang.ConcatOp() =>
+             val scopeWOpApp = scope + opapp
+             val argsInSMT = toSMTs(args, scopeWOpApp, past)
+             Utils.assert(argsInSMT.length == 2, "Bitvector concat must have two arguments.")
+             Utils.assert(argsInSMT.forall(_.typ.isBitVector), "Argument to bitvector concat must be a bitvector.")
+             val width = argsInSMT.foldLeft(0)((acc, ai) => ai.typ.asInstanceOf[BitVectorType].width + acc)
+             smt.OperatorApplication(smt.BVConcatOp(width), argsInSMT)
            case _ =>
              val scopeWOpApp = scope + opapp
              val argsInSMT = toSMTs(args, scopeWOpApp, past)
