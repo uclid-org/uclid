@@ -1,0 +1,45 @@
+module test2 {
+
+	input valuein : boolean;
+    output ready : boolean;
+
+	init {
+        ready = false;
+	}
+
+	next {
+        ready' = true;
+	}
+
+}
+
+module main {
+	var testin : boolean;
+	var step : integer;
+    var t2_ready : boolean;
+
+	instance ex_test2 : test2(valuein : (testin), ready : (t2_ready));
+
+	init { step = 0; testin = false; }
+
+	next {
+		case
+			(step == 0) : { }
+			(step == 1) : { testin' = true; }
+			(step == 2) : { assert(testin == true);
+					assert(t2_ready' && ex_test2.valuein == true); }
+			(step == 3) : { assert(ex_test2.valuein == true); }
+			(true) : { }
+		esac
+		next(ex_test2);
+		step' = step + 1;
+	}
+
+	control {
+        print_module;
+		v = unroll(10);
+		check;
+		print_results;
+	}
+
+}

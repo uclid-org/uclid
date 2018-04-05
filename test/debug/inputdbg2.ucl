@@ -1,0 +1,36 @@
+
+module sub {
+	input x : boolean;
+}
+
+module main {
+	var a : boolean;
+	var n : integer;
+
+	instance sub_i : sub(x : (a));
+
+	init { 
+        n = 0; 
+        a = false; 
+    }
+
+	next {
+		case
+			(n == 0) : { 
+                a' = true; 
+            }
+		esac
+		next(sub_i);
+		n' = n + 1;
+	}
+
+    invariant chk1: (n == 1) ==> (a == sub_i.x);
+	control {
+        print_module;
+		v = unroll(3);
+		check;
+		print_results;
+        v.print_cex;
+	}
+
+}

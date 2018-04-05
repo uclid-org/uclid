@@ -1,0 +1,37 @@
+module sub {
+	input x : boolean;
+    var   m : integer;
+}
+
+module main {
+	var a : boolean;
+
+	instance sub_i : sub(x : (a));
+
+	init { 
+        a = false; 
+    }
+
+	next {
+		case
+			(n == 0) : { 
+                a' = true; 
+            }
+			(n == 1) : { 
+                assert (a);
+                assert (sub_i.x);
+            }
+		esac
+		next(sub_i);
+		n' = n + 1;
+	}
+
+	control {
+        print_module;
+		v = unroll(3);
+		check;
+		print_results;
+        v.print_cex(a, sub_i.x, sub_i.m, ;
+	}
+
+}
