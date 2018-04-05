@@ -38,13 +38,12 @@ module main
     }
   }
 
-  property[LTL] always_one_red: 
-    G(light1 == red || light2 == red);
+  property[LTL] always_one_red: G(light1 == red || light2 == red);
   property[LTL] eventually_green: 
     G(F(light1 == green)) && G(F(light2 == green));
 
   control {
-    v = bmc(10);
+    v = bmc[always_one_red, eventually_green](10);
     check;
     print_results;
     v.print_cex(light1, step1, light2, step2);

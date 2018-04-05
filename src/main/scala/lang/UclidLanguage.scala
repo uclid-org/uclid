@@ -1104,13 +1104,13 @@ case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) ext
   lazy val rMap : Map[Identifier, String] = {
     iMap.map {
       p => {
-        p._2 -> Utils.join(p._1.map(id => id.toString()), "->")
+        p._2 -> Utils.join(p._1.map(id => id.toString()), ".")
       }
     }
   }
   override def toString : String = {
     val start = PrettyPrinter.indent(1) + "// instance_var_map { "
-    val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), "->") + " ::==> " + p._2.toString)
+    val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), ".") + " ::==> " + p._2.toString)
     val end = PrettyPrinter.indent(1) + "// } end_instance_var_map"
     Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
   }

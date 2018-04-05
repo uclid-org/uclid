@@ -42,7 +42,7 @@ module main
   var cnt : integer;
 
   init {
-    assume (light1.light == red && light1.step == 2);
+    assume (light1.light == red   && light1.step == 2);
     assume (light2.light == green && light2.step == 1);
     cnt = 0;
   }
@@ -61,7 +61,7 @@ module main
   control {
     v = induction(4);
     check;
-    // print_results;
-    // v.print_cex(light1.light, light1.step, light2.light, light2.step);
+    print_results;
+    v.print_cex(light1.light, light1.step, light2.light, light2.step);
   }
 }
