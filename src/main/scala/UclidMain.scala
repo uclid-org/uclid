@@ -167,6 +167,7 @@ object UclidMain {
     passManager.addPass(new FindProcedureDependency())
     passManager.addPass(new DefDepGraphChecker())
     passManager.addPass(new RewriteDefines())
+    passManager.addPass(new WhileLoopRewriter())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new VariableDependencyFinder())

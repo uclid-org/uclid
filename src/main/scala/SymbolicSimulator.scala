@@ -524,9 +524,13 @@ class SymbolicSimulator (module : Module) {
       case AssertStmt(e, id) =>
         val frameTableP = frameTable.clone()
         frameTableP += symbolTable
+        val assertionName : String = id match {
+          case None => "assertion"
+          case Some(i) => i.toString()
+        }
         addAssert(
             AssertInfo(
-                "assertion", label, frameTableP,
+                assertionName, label, frameTableP,
                 scope, frameNumber, pathCondExpr,
                 evaluate(e,symbolTable, pastTables, scope),
                 List.empty, s.position))
