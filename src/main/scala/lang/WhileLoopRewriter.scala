@@ -52,7 +52,7 @@ class WhileLoopRewriterPass extends RewritePass {
     }
     val varsToHavoc = StatementScheduler.writeSets(whileSt.body, context).toList
     val havocStmts = varsToHavoc.map(v => HavocStmt(HavocableId(v)))
-    val assumeStmts = invs.map(inv => AssumeStmt(inv, None))
+    val assumeStmts = AssumeStmt(cond, None) :: invs.map(inv => AssumeStmt(inv, None))
     val assertStmts = invs.map{
       inv => {
         ASTNode.introducePos(true, true, AssertStmt(inv, Some(Identifier("loop invariant (iteration)"))), inv.position)

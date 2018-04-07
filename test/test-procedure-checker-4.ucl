@@ -61,7 +61,7 @@ module main
   control {
     v = induction(4);
     check;
-    print_results;
-    v.print_cex(light1.light, light1.step, light2.light, light2.step);
+    // print_results;
+    // v.print_cex(light1.light, light1.step, light2.light, light2.step);
   }
 }

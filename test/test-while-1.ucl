@@ -24,26 +24,60 @@ module main
     tail = tail + 1;
   }
 
+  procedure search_bc()
+    returns (found : boolean)
+  {
+    var i: integer;
+    i = 0;
+    found = false;
+    assert ((exists (idx : integer) :: ((idx >= 0) && ((idx < i) && (numbers[idx] == search_value)))) <==> found);
+    if (i < tail)
+    {
+      havoc found;
+      havoc i;
+      assume (i < tail);
+      assume ((exists (idx : integer) :: ((idx >= 0) && ((idx < i) && (numbers[idx] == search_value)))) <==> found);
+      if (numbers[i] == search_value) { found = false; }
+      i = (i + 1);
+      assert ((exists (idx : integer) :: ((idx >= 0) && ((idx < i) && (numbers[idx] == search_value)))) <==> found);
+    }
+    assume !((i < tail));
+  }
+
+  procedure search_b()
+    returns (found : boolean)
+  {
+    var i: integer;
+    havoc found;
+    havoc i;
+    assume (i < tail);
+    assume ((exists (idx : integer) :: ((idx >= 0) && ((idx < i) && (numbers[idx] == search_value)))) <==> found);
+    if (numbers[i] == search_value) { found = false; }
+    i = (i + 1);
+    assert ((exists (idx : integer) :: ((idx >= 0) && ((idx < i) && (numbers[idx] == search_value)))) <==> found);
+  }
+
   procedure search()
     returns (found : boolean)
+    ensures (exists (idx : integer) :: idx >= 0 && idx < tail && numbers[idx] == search_value) <==> found;
   {
     var i : integer;
 
     i = 0;
     found = false;
     while (i < tail)
-      invariant (exists (idx : integer) :: (idx >= 0 && idx < i) && numbers[idx] == search_value) ==> found;
-      invariant !found ==> (forall (idx : integer) :: (idx >= 0 && idx < i) ==> numbers[idx] != search_value);
+      invariant (exists (idx : integer) :: idx >= 0 && idx < i && numbers[idx] == search_value) <==> found;
     {
       if (numbers[i] == search_value) {
         found = false;
       }
+      i = i + 1;
     }
   }
 
   control {
     print_module;
-    v = verify(search);
+    v = verify(search_b);
     check;
     print_results;
   }

@@ -30,6 +30,6 @@ module main
     v = verify(add10);
     check;
     print_results;
-    v.print_cex(x, y);
+    v.print_cex(x, y, i);
   }
 }

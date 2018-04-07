@@ -42,7 +42,8 @@ package uclid
 import lang._
 
 import scala.collection.mutable.ArrayBuffer
-import uclid.smt.EnumLit
+import com.typesafe.scalalogging.Logger
+
 
 object UniqueIdGenerator {
   var i : Int = 0;
@@ -60,12 +61,16 @@ class SymbolicSimulator (module : Module) {
 
   val context = Scope.empty + module
   val assertionTree = new AssertionTree()
+  val frameLog = Logger("uclid.SymbolicSimulator.frameLog")
 
   var symbolTable : SymbolTable = Map.empty
   var frameTable : FrameTable = ArrayBuffer.empty
 
   def newHavocSymbol(name: String, t: smt.Type) = {
     new smt.Symbol("havoc_" + UniqueIdGenerator.unique() + "_" + name, t)
+  }
+  def newVarSymbol(name: String, t: smt.Type) = {
+    new smt.Symbol("var_" + UniqueIdGenerator.unique() + "_" + name, t)
   }
   def newInputSymbol(name: String, step: Int, t: smt.Type) = {
     new smt.Symbol("input_" + step + "_" + name, t)
@@ -180,7 +185,7 @@ class SymbolicSimulator (module : Module) {
         decl._2 match {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
+          case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> newHavocSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> newHavocSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> newHavocSymbol(id.name, smt.Converter.typeToSMT(typ)))
@@ -347,6 +352,9 @@ class SymbolicSimulator (module : Module) {
       exprs
     }
 
+    frameLog.debug("Assertion: {}", res.assert.expr.toString())
+    frameLog.debug("FrameTable: {}", res.assert.frameTable.toString())
+
     val model = res.result.model.get
     val ft = res.assert.frameTable
     val indices = 0 to (ft.size - 1)
@@ -405,25 +413,30 @@ class SymbolicSimulator (module : Module) {
     val initProcState1 = proc.sig.inParams.foldLeft(initProcState0)((acc, arg) => {
       acc + (arg._1 -> newInputSymbol(arg._1.name, 1, smt.Converter.typeToSMT(arg._2)))
     })
-    val initProcState = proc.sig.outParams.foldLeft(initProcState1)((acc, arg) => {
+    val initProcState2 = proc.decls.foldLeft(initProcState1)((acc, arg) => {
+      acc + (arg.id -> newVarSymbol(arg.id.name, smt.Converter.typeToSMT(arg.typ)))
+    })
+    val initProcState = proc.sig.outParams.foldLeft(initProcState2)((acc, arg) => {
       acc + (arg._1 -> newHavocSymbol(arg._1.name, smt.Converter.typeToSMT(arg._2)))
     })
-
+    frameTable.clear()
+    frameTable += initProcState
     // add assumption.
     proc.requires.foreach(r => assertionTree.addAssumption(evaluate(r, initProcState, Map.empty, procScope)))
     // simulate procedure execution.
     val finalState = simulate(1, List.empty, proc.body, initProcState, procScope, label)
     // create frame table.
-    val frameTable = new FrameTable()
-    frameTable += initProcState
     frameTable += finalState
 
+    val frameTableP = frameTable.clone()
     // add assertions.
     proc.ensures.foreach {
       e => {
         val name = "postcondition"
         val expr = evaluate(e, finalState, Map(1 -> initProcState), procScope)
-        assertionTree.addAssert(AssertInfo(name, label, frameTable, procScope, 1, smt.BooleanLit(true), expr, List.empty, e.position))
+        val assert = AssertInfo(name, label, frameTableP, procScope, 1, smt.BooleanLit(true), expr, List.empty, e.position)
+        frameLog.debug("FrameTable: {}", assert.frameTable.toString())
+        assertionTree.addAssert(assert)
       }
     }
     resetState()
@@ -528,12 +541,14 @@ class SymbolicSimulator (module : Module) {
           case None => "assertion"
           case Some(i) => i.toString()
         }
-        addAssert(
-            AssertInfo(
+        val assertExpr = evaluate(e,symbolTable, pastTables, scope)
+        val assert = AssertInfo(
                 assertionName, label, frameTableP,
                 scope, frameNumber, pathCondExpr,
-                evaluate(e,symbolTable, pastTables, scope),
-                List.empty, s.position))
+                assertExpr, List.empty, s.position)
+        frameLog.debug("Assertion: {}", e.toString)
+        frameLog.debug("FrameTableSize: {}", frameTableP.size)
+        addAssert(assert)
         return symbolTable
       case AssumeStmt(e, id) =>
         val assumpExpr = evaluate(e,symbolTable, pastTables, scope)
