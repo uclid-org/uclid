@@ -38,28 +38,10 @@ module main
       invariant (exists (idx : integer) :: idx >= 0 && idx < i && numbers[idx] == search_value) <==> found;
     {
       if (numbers[i] == search_value) {
-        found = true;
+        found = false;
       }
       i = i + 1;
     }
-  }
-
-  procedure find(flags: [integer]boolean, max: integer)
-    returns (found: boolean)
-  {
-    var iter : integer;
-    found = false;
-    
-    iter = 0;
-    while (iter < max && !found)
-      invariant (found <==> (exists (n : integer) :: (n >= 0 && n < iter && flags[n])));
-    {
-	  if (flags[iter]) {
-	    found = true;
-	  }
-	  iter = iter + 1;
-    }
-    assert (found <==> (exists (n : integer) :: (n >= 0 && n < max && flags[n])));
   }
 
   control {
