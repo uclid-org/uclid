@@ -89,8 +89,7 @@ object ExprRewriter
 class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   extends ASTRewriter(name, new ExprRewriterPass(rewrites))
 {
-  def rewriteStatements(stmts : List[Statement]) : List[Statement] = {
-    val emptyContext = Scope.empty
-    return stmts.flatMap(visitStatement(_, emptyContext))
+  def rewriteStatements(stmts : List[Statement], context : Scope) : List[Statement] = {
+    return stmts.flatMap(visitStatement(_, context))
   }
 }

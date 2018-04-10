@@ -288,6 +288,10 @@ case class OldOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def toString = "old"
 }
+case class PastOperator() extends Operator {
+  override def fixity = Operator.PREFIX
+  override def toString = "past"
+}
 case class HistoryOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def toString = "history"
@@ -894,6 +898,7 @@ case class ProcedureDecl(
   }
   override def declNames = List(id)
   def hasPrePost = requires.size > 0 || ensures.size > 0
+  def shouldInline = ensures.size == 0
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override val hashId = 903

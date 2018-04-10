@@ -480,7 +480,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           argTypes(0)
         case OldOperator() =>
           checkTypeError(argTypes.size == 1, "Expect exactly one argument to 'old'", opapp.pos, c.filename)
-          checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "First argument to old operator must be an identifier", opapp.pos, c.filename)
+          checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "Argument to old operator must be an identifier", opapp.pos, c.filename)
+          argTypes(0)
+        case PastOperator() =>
+          checkTypeError(argTypes.size == 1, "Expect exactly on argument to 'past'", opapp.pos, c.filename)
+          checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "Argument to past operator must be an identifier", opapp.pos, c.filename)
           argTypes(0)
         case HistoryOperator() =>
           checkTypeError(argTypes.size == 2, "Expect exactly two arguments to 'history'", opapp.pos, c.filename)
