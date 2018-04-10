@@ -24,41 +24,9 @@ module main
     tail = tail + 1;
   }
 
-  procedure search_bc()
-    returns (found : boolean)
-  {
-    var i: integer;
-    i = 0;
-    found = false;
-    assert ((exists (idx : integer) :: ((idx >= 0) && ((idx < i) && (numbers[idx] == search_value)))) <==> found);
-    if (i < tail)
-    {
-      havoc found;
-      havoc i;
-      assume (i < tail);
-      assume ((exists (idx : integer) :: ((idx >= 0) && ((idx < i) && (numbers[idx] == search_value)))) <==> found);
-      if (numbers[i] == search_value) { found = false; }
-      i = (i + 1);
-      assert ((exists (idx : integer) :: ((idx >= 0) && ((idx < i) && (numbers[idx] == search_value)))) <==> found);
-    }
-    assume !((i < tail));
-  }
-
-  procedure search_b()
-    returns (found : boolean)
-  {
-    var i: integer;
-    havoc found;
-    havoc i;
-    assume (i < tail);
-    assume ((exists (idx : integer) :: ((idx >= 0) && ((idx < i) && (numbers[idx] == search_value)))) <==> found);
-    if (numbers[i] == search_value) { found = false; }
-    i = (i + 1);
-    assert ((exists (idx : integer) :: ((idx >= 0) && ((idx < i) && (numbers[idx] == search_value)))) <==> found);
-  }
-
   procedure search()
     returns (found : boolean)
+    requires (tail >= 0);
     ensures (exists (idx : integer) :: idx >= 0 && idx < tail && numbers[idx] == search_value) <==> found;
   {
     var i : integer;
@@ -66,19 +34,55 @@ module main
     i = 0;
     found = false;
     while (i < tail)
+      invariant (i >= 0 && i <= tail);
       invariant (exists (idx : integer) :: idx >= 0 && idx < i && numbers[idx] == search_value) <==> found;
     {
       if (numbers[i] == search_value) {
-        found = false;
+        found = true;
       }
       i = i + 1;
     }
   }
 
+  procedure search_b()
+  {
+    var i, j : integer;
+    var found : boolean;
+
+    havoc found;
+    havoc i;
+    assume (i < tail);
+    assume ((exists (idx : integer) :: ((idx >= 0) && ((idx < i) && (numbers[idx] == search_value)))) <==> found);
+    if ((numbers[i] == search_value))
+    { 
+      found = true;
+    }
+    j = (i + 1);
+    assert ((exists (idx : integer) :: ((idx >= 0) && ((idx < j) && (numbers[idx] == search_value)))) <==> found);
+  }
+
+  procedure find(flags: [integer]boolean, max: integer)
+    returns (found: boolean)
+  {
+    var iter : integer;
+    found = false;
+    
+    iter = 0;
+    while (iter < max && !found)
+      invariant (found <==> (exists (n : integer) :: (n >= 0 && n < iter && flags[n])));
+    {
+	  if (flags[iter]) {
+	    found = true;
+	  }
+	  iter = iter + 1;
+    }
+    assert (found <==> (exists (n : integer) :: (n >= 0 && n < max && flags[n])));
+  }
+
   control {
-    print_module;
-    v = verify(search_b);
+    v = verify(search);
     check;
     print_results;
+    v.print_cex(numbers, i, search_value, found, tail);
   }
 }

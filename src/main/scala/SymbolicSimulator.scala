@@ -61,7 +61,9 @@ class SymbolicSimulator (module : Module) {
 
   val context = Scope.empty + module
   val assertionTree = new AssertionTree()
-  val frameLog = Logger("uclid.SymbolicSimulator.frameLog")
+  val frameLog = Logger("uclid.SymbolicSimulator.frame")
+  val assertLog = Logger("uclid.SymbolicSimulator.assert")
+  val verifyProcedureLog = Logger("uclid.SymbolicSimulator.verifyProc")
 
   var symbolTable : SymbolTable = Map.empty
   var frameTable : FrameTable = ArrayBuffer.empty
@@ -406,9 +408,18 @@ class SymbolicSimulator (module : Module) {
     assertionTree.addAssumption(e)
   }
 
+  /** Debug logger. */
+  def logState(logger : Logger, label : String, symTbl : SymbolTable) {
+    logger.debug("==" + label + "==")
+    symTbl.foreach {
+      case (id, expr) =>
+        logger.debug("  {} -> {}", id.toString(), expr.toString())
+    }
+  }
+
   def verifyProcedure(proc : ProcedureDecl, label : String) = {
     val procScope = context + proc
-    val initSymbolTable = simulate(0, List.empty, module.init.get.body, getInitSymbolTable(context), context, label)
+    val initSymbolTable = getInitSymbolTable(context)
     val initProcState0 = newInputSymbols(initSymbolTable, 1, context)
     val initProcState1 = proc.sig.inParams.foldLeft(initProcState0)((acc, arg) => {
       acc + (arg._1 -> newInputSymbol(arg._1.name, 1, smt.Converter.typeToSMT(arg._2)))
@@ -421,12 +432,14 @@ class SymbolicSimulator (module : Module) {
     })
     frameTable.clear()
     frameTable += initProcState
+    logState(verifyProcedureLog, "initProcState", initProcState)
     // add assumption.
     proc.requires.foreach(r => assertionTree.addAssumption(evaluate(r, initProcState, Map.empty, procScope)))
     // simulate procedure execution.
     val finalState = simulate(1, List.empty, proc.body, initProcState, procScope, label)
     // create frame table.
     frameTable += finalState
+    logState(verifyProcedureLog, "finalState", finalState)
 
     val frameTableP = frameTable.clone()
     // add assertions.
@@ -546,7 +559,8 @@ class SymbolicSimulator (module : Module) {
                 assertionName, label, frameTableP,
                 scope, frameNumber, pathCondExpr,
                 assertExpr, List.empty, s.position)
-        frameLog.debug("Assertion: {}", e.toString)
+        assertLog.debug("Assertion: {}", e.toString)
+        assertLog.debug("VC: {}", assertExpr.toString)
         frameLog.debug("FrameTableSize: {}", frameTableP.size)
         addAssert(assert)
         return symbolTable
