@@ -21,7 +21,7 @@ syn keyword ucl4Decl            module init next control function procedure retu
 syn keyword ucl4Cmd             unroll check print_module print_cex print_results k_induction_base k_induction_step induction clear_context
 " user labels
 syn keyword ucl4Constant        false true
-
+syn match   ucl4UsrType         display "[A-za-z_][A-Za-z0-9_\.]*_t\w\@!"
 syn match   ucl4Identifier      display "[A-Za-z_][A-Za-z0-9_]*"
 
 
@@ -44,6 +44,7 @@ syn region ucl4TrailingComment start="//" end="$"
 hi def link ucl4MultilineComment ucl4TrailingComment
 hi def link ucl4TrailingComment  Comment
 hi def link ucl4Identifier      Identifier
+hi def link ucl4UsrType         Type
 hi def link ucl4Type            Type
 hi def link ucl4Decl            Keyword
 hi def link ucl4Stmt            Conditional
