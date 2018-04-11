@@ -72,6 +72,9 @@ class SymbolicSimulator (module : Module) {
   def newHavocSymbol(name: String, t: smt.Type) = {
     new smt.Symbol("havoc_" + UniqueIdGenerator.unique() + "_" + name, t)
   }
+  def newInitSymbol(name: String, t : smt.Type) = {
+    new smt.Symbol("initial_" + UniqueIdGenerator.unique() + "_" + name, t)
+  }
   def newVarSymbol(name: String, t: smt.Type) = {
     new smt.Symbol("var_" + UniqueIdGenerator.unique() + "_" + name, t)
   }
@@ -195,9 +198,10 @@ class SymbolicSimulator (module : Module) {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
-          case Scope.InputVar(id, typ) => mapAcc + (id -> newHavocSymbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.OutputVar(id, typ) => mapAcc + (id -> newHavocSymbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.StateVar(id, typ) => mapAcc + (id -> newHavocSymbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.InputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.OutputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.StateVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.SharedVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case _ => mapAcc
         }
       }
