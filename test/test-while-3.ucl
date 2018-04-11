@@ -1,13 +1,16 @@
-
 module main
 {
-  var numbers: [integer]integer;
-  var tail : integer;
+  type cmd_t = record { 
+      valid : boolean,
+      value : integer
+  };
+
+  var numbers     : [integer]integer;
+  var tail        : integer;
   var initialized : boolean;
 
-  input push_valid   : boolean;
-  input push_value   : integer;
-  input search_value : integer;
+  input push_cmd     : cmd_t;
+  input search_cmd   : cmd_t;
   output value_found : boolean;
 
   init {
@@ -18,27 +21,28 @@ module main
   next {
     initialized' = true;
 
-    if (push_valid) {
+    if (push_cmd.valid) {
       call push();
     }
     // call (value_found') = search();
   }
 
-  invariant push_affects_tail: initialized ==> (push_valid ==> (tail == old(tail) + 1));
+  invariant push_affects_tail: initialized ==> (push_cmd.valid ==> (tail == past(tail) + 1));
 
   procedure push()
-    ensures numbers[old(tail)] == push_value;
-    ensures tail == old(tail) + 2;
+    requires push_cmd.valid;
+    ensures numbers[old(tail)] == push_cmd.value;
+    ensures tail == old(tail) + 1;
     modifies numbers, tail;
   {
-    numbers[tail] = push_value;
+    numbers[tail] = push_cmd.value;
     tail = tail + 1;
   }
 
   procedure search()
     returns (found : boolean)
     requires (tail >= 0);
-    ensures (exists (idx : integer) :: idx >= 0 && idx < tail && numbers[idx] == search_value) <==> found;
+    ensures (exists (idx : integer) :: idx >= 0 && idx < tail && numbers[idx] == search_cmd.value) <==> found;
   {
     var i : integer;
 
@@ -46,9 +50,9 @@ module main
     found = false;
     while (i < tail)
       invariant (i >= 0 && i <= tail);
-      invariant (exists (idx : integer) :: idx >= 0 && idx < i && numbers[idx] == search_value) <==> found;
+      invariant (exists (idx : integer) :: idx >= 0 && idx < i && numbers[idx] == search_cmd.value) <==> found;
     {
-      if (numbers[i] == search_value) {
+      if (numbers[i] == search_cmd.value) {
         found = true;
       }
       i = i + 1;
@@ -56,17 +60,9 @@ module main
   }
 
   control {
-    // v = verify(push);
-    // check;
-    // print_results;
-    // v.print_cex(numbers, tail, push_value);
-
-    clear_context;
-    print_module;
-	v = unroll(5);
+    v1 = verify(push);
+	v2 = unroll(5);
 	check;
-	print_results;
-
-    // v.print_cex(numbers, i, search_value, found, tail);
+	// print_results;
   }
 }

@@ -132,7 +132,7 @@ object Converter {
          val op = opapp.op
          val args = opapp.operands
          op match {
-           case lang.OldOperator() =>
+           case lang.OldOperator() | lang.PastOperator() =>
              toSMT(args(0), scope, 1)
            case lang.HistoryOperator() =>
              toSMT(args(0), scope, args(1).asInstanceOf[lang.IntLit].value.toInt)

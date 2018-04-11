@@ -149,6 +149,7 @@ object Operator {
   def or(x : Expr, y : Expr) = OperatorApplication(DisjunctionOp(), List(x, y))
   def imply(x : Expr, y : Expr) = OperatorApplication(ImplicationOp(), List(x, y))
   def ite(c : Expr, x : Expr, y : Expr) = OperatorApplication(ITEOp(), List(c, x, y))
+  def old(c : Identifier) = OperatorApplication(OldOperator(), List(c))
 }
 sealed trait Operator extends ASTNode {
   def fixity : Int
