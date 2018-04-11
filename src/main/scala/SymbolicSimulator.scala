@@ -60,7 +60,8 @@ class SymbolicSimulator (module : Module) {
   type FrameTable = SymbolicSimulator.FrameTable
 
   val context = Scope.empty + module
-  val assertionTree = new AssertionTree()
+  var assertionTree = new AssertionTree()
+  val defaultLog = Logger(classOf[SymbolicSimulator])
   val frameLog = Logger("uclid.SymbolicSimulator.frame")
   val assertLog = Logger("uclid.SymbolicSimulator.assert")
   val verifyProcedureLog = Logger("uclid.SymbolicSimulator.verifyProc")
@@ -89,16 +90,21 @@ class SymbolicSimulator (module : Module) {
     symbolTable = Map.empty
     frameTable.clear()
   }
+  var proofResults : List[CheckResult] = List.empty
+  def dumpResults(label: String, log : Logger) {
+    log.debug("{} --> proofResults.size = {}", label, proofResults.size.toString)
+  }
   def execute(solver : smt.Context) : List[CheckResult] = {
-    var proofResults : List[CheckResult] = List.empty
+    proofResults = List.empty
     def noLTLFilter(name : Identifier, decorators : List[ExprDecorator]) : Boolean = !ExprDecorator.isLTLProperty(decorators)
     // add axioms as assumptions.
     module.cmds.foreach {
       (cmd) => {
         cmd.name.toString match {
           case "clear_context" =>
-            resetState()
+            assertionTree = new AssertionTree()
             proofResults = List.empty
+            dumpResults("clear_context", defaultLog)
           case "unroll" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString
@@ -166,6 +172,7 @@ class SymbolicSimulator (module : Module) {
           case "check" =>
             proofResults = assertionTree.verify(solver)
           case "print_results" =>
+            dumpResults("print_results", defaultLog)
             printResults(proofResults, cmd.argObj)
           case "print_cex" =>
             printCEX(proofResults, cmd.args, cmd.argObj)
