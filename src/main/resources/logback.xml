@@ -14,6 +14,7 @@
   <logger name="uclid.lang.ExpressionTypeCheckerPass" level="OFF"/>
   <logger name="uclid.lang.InlineProcedurePass" level="OFF"/>
   <logger name="uclid.lang.ModuleInstanceCheckerPass" level="OFF"/>
+  <logger name="uclid.lang.ProcedureCheckerPass" level="OFF"/>
   <logger name="uclid.lang.ModuleInstantiatorPass" level="OFF"/>
   <logger name="uclid.lang.ModuleFlattenerPass" level="OFF"/>
   <logger name="uclid.lang.VariableDependencyFinder" level="OFF"/>
