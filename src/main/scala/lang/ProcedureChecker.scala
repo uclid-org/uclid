@@ -66,7 +66,7 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           case _ => in
         }
       case None =>
-        val error = ModuleError("Unknown identifier: %s".format(id.toString()), pos)
+        val error = ModuleError("Unknown identifier was declared modifiable: %s".format(id.toString()), pos)
         in + error
     }
   }
