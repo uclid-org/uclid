@@ -198,56 +198,6 @@ abstract trait Context {
     }
   }
 
-  /** Replace the types of all symbols in these expressions with their corresponding
-   *  flattened types.
-   */
-  def flattenTypes(e : Expr, tMap : SynonymMap) : (Expr, SynonymMap) = {
-    def flattenTypesInList(es : List[Expr], tMapIn : SynonymMap) : (List[Expr], SynonymMap) = {
-      es.foldRight((List.empty[Expr], tMapIn)) {
-        (arg, acc) => {
-          val (argP, tMapP1) = flattenTypes(arg, acc._2)
-          (argP :: acc._1, tMapP1)
-        }
-      }
-    }
-    e match {
-      case intLit : IntLit => (intLit, tMap)
-      case bvLit : BitVectorLit => (bvLit, tMap)
-      case boolLit : BooleanLit => (boolLit, tMap)
-      case enumLit : EnumLit =>
-        val (enumTypeP, tMapP) = flatten(enumLit.eTyp, tMap)
-        (enumLit, tMapP)
-      case sym : Symbol =>
-        val (typP, tMapP) = flatten(sym.symbolTyp, tMap)
-        (Symbol(sym.id, typP), tMapP)
-      case mkTuple : MakeTuple =>
-        val (_, tMapP1) = flatten(mkTuple.typ, tMap)
-        val (argsP, tMapP2) = flattenTypesInList(mkTuple.args, tMapP1)
-        (MakeTuple(argsP), tMapP2)
-      case opapp : OperatorApplication =>
-        val (_, tMapP1) = flatten(opapp.typ, tMap)
-        val (argsP, tMapP2) = flattenTypesInList(opapp.operands, tMapP1)
-        (OperatorApplication(opapp.op, argsP), tMapP2)
-      case arrSel : ArraySelectOperation =>
-        val (eP, tMapP1) = flattenTypes(arrSel.e, tMap)
-        val (indexP, tMapP2) = flattenTypesInList(arrSel.index, tMapP1)
-        (ArraySelectOperation(eP, indexP), tMapP2)
-      case arrStore : ArrayStoreOperation =>
-        val (eP, tMapP1) = flattenTypes(arrStore.e, tMap)
-        val (indexP, tMapP2) = flattenTypesInList(arrStore.index, tMapP1)
-        val (valueP, tMapP3) = flattenTypes(arrStore.value, tMapP2)
-        (ArrayStoreOperation(eP, indexP, valueP), tMapP3)
-      case funcApp : FunctionApplication =>
-        val (eP, tMapP1) = flattenTypes(funcApp.e, tMap)
-        val (argsP, tMapP2) = flattenTypesInList(funcApp.args, tMapP1)
-        (FunctionApplication(eP, argsP), tMapP2)
-      case lambda : Lambda =>
-        val (idsP, tMapP1) = flattenTypesInList(lambda.ids, tMap)
-        val (exprP, tMapP2) = flattenTypes(lambda.e, tMapP1)
-        (Lambda(idsP.map(id => id.asInstanceOf[Symbol]), exprP), tMapP2)
-    }
-  }
-
   // Interface to the symbolic simulator.
   def push()
   def pop()
@@ -261,6 +211,8 @@ object Context
   /**
    *  Helper function that finds the list of all symbols in an expression.
    */
+  def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set.empty[Symbol]) }
+
   def findSymbols(e : Expr, syms : Set[Symbol]) : Set[Symbol] = {
     e match {
       case sym : Symbol =>
@@ -278,11 +230,35 @@ object Context
       case BooleanLit(_) => syms
       case EnumLit(_, _) => syms
       case Lambda(_,_) =>
-        throw new Utils.AssertionError("lambdas in assertions should have been beta-reduced")
+        throw new Utils.AssertionError("Lambdas should have been beta-reduced by now.")
     }
   }
 
-  def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set()) }
+  /**
+   * Helper function that finds all enum literals in an expression.
+   */
+  def findEnumLits(e : Expr) : Set[EnumLit] = findEnumLits(e, Set.empty[EnumLit])
+  
+  def findEnumLits(e: Expr, eLits: Set[EnumLit]) : Set[EnumLit] = {
+    e match {
+      case Symbol(_, _) => eLits
+      case OperatorApplication(op, operands) =>
+        findEnumLits(operands, eLits)
+      case ArraySelectOperation(e, index) =>
+        findEnumLits(index, findEnumLits(e, eLits))
+      case ArrayStoreOperation(e, index, value) =>
+        findEnumLits(index, findEnumLits(e, findEnumLits(value, eLits)))
+      case FunctionApplication(e, args) =>
+        findEnumLits(args, findEnumLits(e, eLits))
+      case IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) => eLits
+      case enumLit : EnumLit => eLits + enumLit
+      case Lambda(_, _) =>
+        throw new Utils.AssertionError("Lambdas should have been beta-reduced by now.")
+    }
+  }
+  def findEnumLits(es : List[Expr], eLits: Set[EnumLit]) : Set[EnumLit] = {
+    es.foldLeft(eLits)((acc, e) => findEnumLits(e, acc))
+  }
 }
 
 

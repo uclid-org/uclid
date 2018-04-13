@@ -48,11 +48,14 @@ import uclid.lang._
 import lang.Module
 import lang.Identifier
 import uclid.Utils.ParserErrorList
+import com.typesafe.scalalogging.Logger
 
 /** This is the main class for Uclid.
  *
  */
 object UclidMain {
+  val logger = Logger("uclid.UclidMain")
+
   def main(args: Array[String]) {
     parseOptions(args) match {
       case None =>
@@ -258,7 +261,7 @@ object UclidMain {
   def execute(module : Module, config : Config) : List[CheckResult] = {
     var symbolicSimulator = new SymbolicSimulator(module)
     var z3Interface = if (config.smtSolver.size > 0) {
-      println("args: " + config.smtSolver)
+      logger.debug("args: {}", config.smtSolver)
       new smt.SMTLIB2Interface(config.smtSolver)
     } else {
       new smt.Z3Interface()

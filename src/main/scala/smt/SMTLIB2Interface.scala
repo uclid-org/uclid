@@ -40,13 +40,14 @@
 package uclid
 package smt
 
-import uclid.Utils
-
 import scala.collection.mutable.{Map => MutableMap}
+import com.typesafe.scalalogging.Logger
 
 import scala.language.postfixOps
 
 class SMTLIB2Interface(args: List[String]) extends Context {
+  val logger = Logger(classOf[SMTLIB2Interface])
+
   var typeMap : SynonymMap = SynonymMap.empty
   var sorts : MutableMap[String, Type] = MutableMap.empty
   var variables : MutableMap[String, Type] = MutableMap.empty
@@ -92,7 +93,7 @@ class SMTLIB2Interface(args: List[String]) extends Context {
       case BoolType | IntType => None
       case EnumType(members) =>
         val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
-        val declDatatype = "(declare-datatypes ((%s 0)) ((%s %s)))".format(p._1, p._1, memStr)
+        val declDatatype = "(declare-datatypes %s (%s))".format(p._1, memStr)
         //val declMembers = members.map(m => "(declare-fun %s () %s)".format(m, p._1))
         //val str = Utils.join(declDatatype :: declMembers, "\n")
         Some(declDatatype)
@@ -166,20 +167,11 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   }
 
   override def assert (e: Expr) {
-    val (eP, typeMapP) = flattenTypes(e, typeMap)
-    val newTypes = typeMapP.fwdMap.filter(p => !sorts.contains(p._1))
-    newTypes.foreach {
-      (n) => {
-        sorts += (n._1 -> n._2)
-        generateDatatype(n) match {
-          case Some(s) => writeCommand(s)
-          case None =>
-        }
-      }
-    }
-    typeMap = typeMapP
-    val symbolsP = Context.findSymbols(eP)
-    val newSymbols = symbolsP.filter(s => !variables.contains(s.id))
+    val symbols = Context.findSymbols(e)
+    val newSymbols = symbols.filter(s => !variables.contains(s.id))
+    val enumLits = Context.findEnumLits(e)
+    logger.debug("assert: {}", e.toString())
+    logger.debug("new symbols: {}", newSymbols.toString())
     newSymbols.foreach {
       (s) => {
         variables += (s.id -> s.symbolTyp)
@@ -187,10 +179,11 @@ class SMTLIB2Interface(args: List[String]) extends Context {
         writeCommand(decl)
       }
     }
-    writeCommand("(assert " + translateExpr(eP) +")")
+    writeCommand("(assert " + translateExpr(e) +")")
   }
 
   override def check() : SolverResult = {
+    Utils.assert(solverProcess.isAlive(), "Solver process is not alive!")
     writeCommand("(check-sat)")
     readResponse() match {
       case Some(strP) =>
