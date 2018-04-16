@@ -80,6 +80,7 @@ sealed trait Type extends Hashable {
   def isEnum = false
   def isUninterpreted = false
   def isSynonym = false
+  val typeNamePrefix : String
 }
 // Uninterpreted types.
 case class UninterpretedType(name: String) extends Type {
@@ -87,6 +88,7 @@ case class UninterpretedType(name: String) extends Type {
   override val hashCode = computeHash
   override def toString = name.toString()
   override def isUninterpreted = true
+  override val typeNamePrefix = "uninterpreted"
 }
 // The Boolean type.
 case object BoolType extends Type {
@@ -94,6 +96,7 @@ case object BoolType extends Type {
   override val hashCode = computeHash
   override def toString = "Bool"
   override def isBool = true
+  override val typeNamePrefix = "bool"
 }
 // The integer type.
 case object IntType extends Type {
@@ -101,6 +104,7 @@ case object IntType extends Type {
   override val hashCode = computeHash
   override def toString = "Int"
   override def isInt = true
+  override val typeNamePrefix = "int"
 }
 // The bit-vector type.
 case class BitVectorType(width: Int) extends Type
@@ -109,6 +113,7 @@ case class BitVectorType(width: Int) extends Type
   override val hashCode = computeHash
   override def toString = "BitVec %s" + (width.toString)
   override def isBitVector = true
+  override val typeNamePrefix = "bv" + width.toString()
 }
 object BitVectorType {
   val t = new Memo[Int, BitVectorType]((w : Int) => new BitVectorType(w))
@@ -128,6 +133,7 @@ case class TupleType(types: List[Type]) extends ProductType(((1 to types.length)
   override def toString = "tuple [" + Utils.join(types.map(_.toString), ", ") + "]"
   override def isTuple = true
   override val typeName = "tuple"
+  override val typeNamePrefix = "tuple"
 }
 case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields_) {
   override val hashId = 105
@@ -135,6 +141,7 @@ case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields
   override def toString = "record [" + Utils.join(fields_.map((f) => f._1.toString + " : " + f._2.toString), ", ") + "]"
   override def isRecord = true
   override val typeName = "record"
+  override val typeNamePrefix = "record"
 }
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override val hashId = 106
@@ -145,6 +152,7 @@ case class MapType(inTypes: List[Type], outType: Type) extends Type {
     "] " + outType
   }
   override def isMap = true
+  override val typeNamePrefix = "map"
 }
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override val hashId = 107
@@ -155,6 +163,7 @@ case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
     "] " + outType
   }
   override def isArray = true
+  override val typeNamePrefix = "array"
 }
 case class EnumType(members : List[String]) extends Type {
   override val hashId = 108
@@ -162,12 +171,14 @@ case class EnumType(members : List[String]) extends Type {
   override def toString  = "enum {" + Utils.join(members, ", ") + "}"
   override def isEnum = true
   def fieldIndex(name : String) : Int = members.indexWhere(_ == name)
+  override val typeNamePrefix = "enum"
 }
 case class SynonymType(name: String, typ: Type) extends Type {
   override val hashId = 109
   override val hashCode = computeHash(name, typ)
   override def toString = "type %s = %s".format(name, typ.toString)
   override def isSynonym = true
+  override val typeNamePrefix = "synonym"
 }
 
 object OperatorFixity extends scala.Enumeration {

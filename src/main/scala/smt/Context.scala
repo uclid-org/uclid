@@ -41,15 +41,12 @@ package smt
 
 import scala.collection.mutable.{Set => MutableSet}
 
-case class SynonymMap(fwdMap: Map[String, Type], val revMap: Map[Type, Type]) {
-  def addPrimitiveType(typ: Type) = {
-    SynonymMap(fwdMap, revMap + (typ -> typ))
-  }
+case class SynonymMap(fwdMap: Map[String, Type], val revMap: Map[Type, SynonymType]) {
   def addSynonym(name: String, typ: Type) = {
     SynonymMap(fwdMap + (name -> typ), revMap + (typ -> SynonymType(name, typ)))
   }
   def get(name: String) : Option[Type] = fwdMap.get(name)
-  def get(typ: Type) : Option[Type] = revMap.get(typ)
+  def get(typ: Type) : Option[SynonymType] = revMap.get(typ)
   def contains(name: String) : Boolean = fwdMap.contains(name)
   def contains(typ: Type) : Boolean = revMap.contains(typ)
 }
@@ -143,7 +140,6 @@ abstract trait Context {
       case None =>
         typ match {
           case BoolType | IntType | BitVectorType(_) =>
-            synMap.addPrimitiveType(typ)
             (typ, synMap)
           case unintTyp : UninterpretedType =>
             // add to map
@@ -238,7 +234,7 @@ object Context
    * Helper function that finds all enum literals in an expression.
    */
   def findEnumLits(e : Expr) : Set[EnumLit] = findEnumLits(e, Set.empty[EnumLit])
-  
+
   def findEnumLits(e: Expr, eLits: Set[EnumLit]) : Set[EnumLit] = {
     e match {
       case Symbol(_, _) => eLits
@@ -260,5 +256,3 @@ object Context
     es.foldLeft(eLits)((acc, e) => findEnumLits(e, acc))
   }
 }
-
-

@@ -41,6 +41,7 @@ package uclid
 package smt
 
 import scala.collection.mutable.{Map => MutableMap}
+import scala.collection.mutable.{Set => MutableSet}
 import com.typesafe.scalalogging.Logger
 
 import scala.language.postfixOps
@@ -51,53 +52,52 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   var typeMap : SynonymMap = SynonymMap.empty
   var sorts : MutableMap[String, Type] = MutableMap.empty
   var variables : MutableMap[String, Type] = MutableMap.empty
+  var enumLiterals : MutableSet[EnumLit] = MutableSet.empty
 
   type NameProviderFn = (String, Option[String]) => String
   var expressions : List[Expr] = List.empty
   val solverProcess = new InteractiveProcess(args)
 
-  def generateDeclaration(x: Symbol) : String = {
-    def printType(t: Type) : String = {
-      t match {
-        case BoolType => "Bool"
-        case IntType => "Int"
-        case MapType(ins,out) =>
-          "(" + ins.foldLeft(""){(acc,i) =>
-            acc + " " + printType(i)} + ") " + printType(out)
-        case ArrayType(ins,out) =>
-          if (ins.size > 1) {
-            "(Array " + ins.foldLeft("(MyTuple" + ins.size){(acc,i) =>
-              acc + " " + printType(i)} + ") " + printType(out) + ")"
-          } else {
-            "(Array " + printType(ins(0)) + " " + printType(out) + ")"
-          }
-        case _ =>
-          // FIXME: add more types here.
-          throw new Utils.UnimplementedException("Add support for more types: " + x.toString())
-      }
-    }
-
-    return x.typ match {
-      case BoolType => "(declare-const %s Bool)".format(x.id)
-      case IntType => "(declare-const %s Int)".format(x.id)
-      case BitVectorType(n) => "(declare-const %s (_ BitVec %d))".format(x.id, n)
-      case SynonymType(s, typ) => "(declare-const %s %s)".format(x.id, s)
-      case _ =>
-        // FIXME: add more types here.
-        throw new Utils.UnimplementedException("Add support for more types: " + x.typ.toString())
-    }
+  var typeId = 0
+  def getTypeName(suffix: String) : String = {
+    typeId += 1
+    "type_" + suffix + "_" + typeId.toString()
   }
 
-  def generateDatatype(p : (String, Type)) : Option[String] = {
-    p._2 match {
-      case BoolType | IntType => None
-      case EnumType(members) =>
-        val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
-        val declDatatype = "(declare-datatypes %s (%s))".format(p._1, memStr)
-        //val declMembers = members.map(m => "(declare-fun %s () %s)".format(m, p._1))
-        //val str = Utils.join(declDatatype :: declMembers, "\n")
-        Some(declDatatype)
-      case _ => throw new Utils.UnimplementedException("TODO: Implement more types in Z3FileInterface.generateDatatype")
+  def generateDeclaration(x: Symbol) = {
+    val typeName = generateDatatype(x.typ)
+    val cmd = "(declare-const %s %s)".format(x.id, typeName)
+    writeCommand(cmd)
+  }
+
+  def generateDatatype(t : Type) : String = {
+    typeMap.get(t) match {
+      case Some(synTyp) =>
+        synTyp.name
+      case None =>
+        t match {
+          case EnumType(members) =>
+            val typeName = getTypeName(t.typeNamePrefix)
+            val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
+            val declDatatype = "(declare-datatypes ((%s 0)) ((%s)))".format(typeName, memStr)
+            typeMap.addSynonym(typeName, t)
+            writeCommand(declDatatype)
+            typeName
+          case ArrayType(indexTypes, elementType) =>
+            val indexTypeName = if (indexTypes.size == 1) {
+              generateDatatype(indexTypes(0))
+            } else {
+              val indexTuple = TupleType(indexTypes)
+              generateDatatype(indexTuple)
+            }
+            val elementTypeName = generateDatatype(elementType)
+            "(Array %s %s)".format(indexTypeName, elementTypeName)
+          case BoolType => "Bool"
+          case IntType => "Int"
+          case BitVectorType(n) => "(_ BitVec %d)".format(n)
+          case _ => 
+            throw new Utils.UnimplementedException("TODO: Implement more types in Z3FileInterface.generateDatatype")
+        }
     }
   }
 
@@ -137,13 +137,15 @@ class SMTLIB2Interface(args: List[String]) extends Context {
 
     e match {
       case Symbol(id,_) => id
-      case OperatorApplication(op,operands) => e.toString
+      case OperatorApplication(op,operands) =>
+        val ops = operands.map(arg => translateExpr(arg))
+        "(" + op.toString() + " " + Utils.join(ops, " ") + ")"
       case ArraySelectOperation(e, index) =>
         "(select " + translateExpr(e) + " " + mkTuple(index) + ")"
       case ArrayStoreOperation(e, index, value) =>
         "(store " + translateExpr(e) + " " + mkTuple(index) + " " + translateExpr(value) + ")"
       case FunctionApplication(e, args) =>
-        Utils.assert(e.isInstanceOf[Symbol], "Did beta substitution happen?")
+        Utils.assert(e.isInstanceOf[Symbol], "Beta has not happened.")
         "(" + translateExpr(e) +
           args.foldLeft(""){(acc,i) =>
             acc + " " + translateExpr(i)} + ")"
@@ -167,16 +169,20 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   }
 
   override def assert (e: Expr) {
-    val symbols = Context.findSymbols(e)
-    val newSymbols = symbols.filter(s => !variables.contains(s.id))
-    val enumLits = Context.findEnumLits(e)
-    logger.debug("assert: {}", e.toString())
-    logger.debug("new symbols: {}", newSymbols.toString())
-    newSymbols.foreach {
+    val symbols_e = Context.findSymbols(e)
+    val symbols_new = symbols_e.filter(s => !variables.contains(s.id))
+    val enumLiterals_e = Context.findEnumLits(e)
+    val enumLiterals_new = enumLiterals_e.filter(e => !enumLiterals.contains(e))
+    val enumTypes_new = enumLiterals_new.filter(p => !typeMap.contains(p.eTyp)).map(p => p.eTyp)
+    enumTypes_new.foreach {
+      (eTyp) => {
+        generateDatatype(eTyp)
+      }
+    }
+    symbols_new.foreach {
       (s) => {
         variables += (s.id -> s.symbolTyp)
-        val decl = generateDeclaration(s)
-        writeCommand(decl)
+        generateDeclaration(s)
       }
     }
     writeCommand("(assert " + translateExpr(e) +")")
