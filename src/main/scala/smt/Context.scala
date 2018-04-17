@@ -221,6 +221,8 @@ object Context
         return index.foldLeft(findSymbols(value, findSymbols(e, syms)))((acc,i) => findSymbols(i, acc))
       case FunctionApplication(e, args) =>
         return args.foldLeft(findSymbols(e, syms))((acc,i) => findSymbols(i, acc))
+      case MakeTuple(args) =>
+        return args.foldLeft(syms)((acc, i) => findSymbols(i, acc))
       case IntLit(_) => syms
       case BitVectorLit(_,_) => syms
       case BooleanLit(_) => syms
@@ -246,6 +248,8 @@ object Context
         findEnumLits(index, findEnumLits(e, findEnumLits(value, eLits)))
       case FunctionApplication(e, args) =>
         findEnumLits(args, findEnumLits(e, eLits))
+      case MakeTuple(args) =>
+        findEnumLits(args, eLits)
       case IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) => eLits
       case enumLit : EnumLit => eLits + enumLit
       case Lambda(_, _) =>
@@ -254,5 +258,12 @@ object Context
   }
   def findEnumLits(es : List[Expr], eLits: Set[EnumLit]) : Set[EnumLit] = {
     es.foldLeft(eLits)((acc, e) => findEnumLits(e, acc))
+  }
+
+  def getMkTupleFunction(typeName: String) : String = {
+    "_make_" + typeName
+  }
+  def getFieldName(field: String) : String = {
+    "_field_" + field
   }
 }

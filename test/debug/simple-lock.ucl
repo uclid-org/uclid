@@ -1,0 +1,173 @@
+module common
+{
+  type tid_t = enum { NONE, T1, T2 };
+}
+
+module thread1
+{
+  type pc_t = enum { A, C0, C1, C2, D };
+  type tid_t = common.tid_t;
+
+  var pc : pc_t;
+  input t : tid_t;
+
+  sharedvar m : tid_t;
+  sharedvar x : integer;
+
+  procedure acquire()  returns()
+    modifies pc;
+    modifies m;
+  {
+    if (t == T1) {
+      if (m == NONE) {
+        m = T1; 
+        pc = C0;
+      }
+    }
+    else { pc = A; }
+  }
+
+  procedure release()  returns()
+    modifies m;
+  {
+    m = NONE;
+  }
+
+  procedure next_state() returns()
+    modifies x;
+    modifies m;
+    modifies pc;
+  {
+    case
+      (pc == A) : { call() = acquire(); }
+      (pc == C0) : { x = x+1; pc = C1; }
+      (pc == C1) : { assert(x > 0); pc = C2; }
+      (pc == C2) : { call() = release(); pc = D; }
+    esac
+  }
+
+  init {
+    pc = A;
+  }
+
+  next {
+    call next_state();
+  }
+
+}
+
+module thread2
+{
+  type pc_t = enum { A, B0, B1, D};
+  type tid_t = common.tid_t;
+
+  var pc : pc_t;
+  input t : tid_t;
+
+  sharedvar m : tid_t;
+  sharedvar x : integer;
+
+  procedure acquire() 
+    modifies pc;
+    modifies m;
+  {
+    if (t == T2) {
+      if (m == NONE) {
+        m = T2; 
+        pc = B0;
+      }
+    }
+    else { pc = A; }
+  }
+
+  procedure release() 
+    modifies m;
+  {
+    m = NONE;
+  }
+
+  procedure next_state()
+    modifies x;
+    modifies m;
+    modifies pc;
+  {
+    case
+      (pc == A) : { call() = acquire(); }
+      (pc == B0) : { x = 0; pc = B1; }
+      (pc == B1) : { call() = release(); pc = D; }
+    esac
+  }
+
+  init {
+    pc = A;
+  }
+
+  next {
+    call next_state();
+  }
+}
+
+
+module main
+{
+  type tid_t = common.tid_t;
+  type t1pc_t = thread1.pc_t;
+  type t2pc_t = thread2.pc_t;
+
+  var curr_tid : tid_t; // thread currently scheduled to run
+  var m : tid_t; // mutex
+  var x : integer; // shared variable
+
+  instance t1 : thread1(t: (curr_tid), m : (m), x : (x));
+  instance t2 : thread2(t: (curr_tid), m : (m), x : (x));
+
+  define t1_in_CS() : boolean = (t1.pc == C0 || t1.pc == C1 || t1.pc == C2);
+  define t2_in_CS() : boolean = (t2.pc == B0 || t2.pc == B1);
+
+  init {
+    m = NONE;
+    x = 0;
+    havoc curr_tid;
+    assume(curr_tid == T1 || curr_tid == T2);
+  }
+
+  next {
+    case
+     (curr_tid == T1) : { next (t1); }
+     (curr_tid == T2) : { next (t2); }
+    esac;
+    havoc curr_tid;
+    assume(curr_tid' == T1 || curr_tid' == T2);
+  }
+
+  invariant x_geq_0 : (x >= 0);
+//  property[LTL] eventually_threads_finish : F(t1.pc == D && t2.pc == D);
+  property[LTL] threads_never_finish : G(t1.pc != D && t2.pc != D);
+  //invariant mutex : (!(t1.pc == B && t2.pc == B));
+  invariant mutex : (!(t1_in_CS() && t2_in_CS()));
+  invariant T1_has_mutex : (t1_in_CS()) ==> (m == T1);
+  invariant T2_has_mutex : (t2_in_CS()) ==> (m == T2);
+
+  control {
+    // *** BASIC ASSERTIONS/INVARIANT
+/*
+    v = unroll(5);
+    check;
+    print_results;
+    v.print_cex(x,m,t1.pc,t2.pc,curr_tid);
+*/
+    //
+    // *** LTL
+/*
+    v = bmc(5);
+    check;
+    print_results;
+    v.print_cex(x,m,t1.pc,t2.pc,curr_tid);
+    // *** INDUCTION
+*/
+    v = induction(1); 
+    check;
+    print_results;
+    v.print_cex(x,m,t1.pc,t2.pc,curr_tid);
+  }
+}

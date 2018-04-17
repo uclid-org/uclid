@@ -120,19 +120,18 @@ object BitVectorType {
 }
 
 sealed abstract class ProductType(fields : List[(String, Type)]) extends Type {
-  val fieldNames = fields.map(_._1)
-  val fieldIndices = (0 to fields.length - 1)
+  lazy val fieldNames = fields.map(_._1)
+  lazy val fieldTypes = fields.map(_._2)
+  lazy val fieldIndices = (0 to fields.length - 1)
   def fieldType(name: String) : Option[Type] = fields.find((p) => p._1 == name).flatMap((f) => Some(f._2))
   def hasField(name: String) : Boolean = fields.find((p) => p._1 == name).isDefined
   def fieldIndex(name: String) : Int = fields.indexWhere((p) => p._1 == name)
-  val typeName : String
 }
 case class TupleType(types: List[Type]) extends ProductType(((1 to types.length).map("_" + _.toString)).zip(types).toList) {
   override val hashId = 104
   override val hashCode = computeHash(types)
   override def toString = "tuple [" + Utils.join(types.map(_.toString), ", ") + "]"
   override def isTuple = true
-  override val typeName = "tuple"
   override val typeNamePrefix = "tuple"
 }
 case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields_) {
@@ -140,7 +139,6 @@ case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields
   override val hashCode = computeHash(fields_)
   override def toString = "record [" + Utils.join(fields_.map((f) => f._1.toString + " : " + f._2.toString), ", ") + "]"
   override def isRecord = true
-  override val typeName = "record"
   override val typeNamePrefix = "record"
 }
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
@@ -455,7 +453,7 @@ case class BVGEOp(w : Int) extends BoolResultOp {
 case class RecordSelectOp(name : String) extends Operator {
   override val hashId = mix(name.hashCode(), 232)
   override val hashCode = computeHash
-  override def toString = "get-field " + name
+  override def toString = Context.getFieldName(name)
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 1);
     Utils.assert(args(0).typ.isInstanceOf[ProductType], "Argument to record select must be a product type.")
