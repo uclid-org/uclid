@@ -371,6 +371,7 @@ class Z3Interface() extends Context {
     assertLogger.debug(z3Expr.toString())
     solver.add(z3Expr)
   }
+  override def preassert(e: Expr) {}
 
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */

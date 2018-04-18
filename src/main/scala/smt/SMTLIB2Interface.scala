@@ -213,6 +213,8 @@ class SMTLIB2Interface(args: List[String]) extends Context {
     writeCommand("(assert " + translateExpr(e) +")")
   }
 
+  override def preassert(e: Expr) {}
+
   override def check() : SolverResult = {
     Utils.assert(solverProcess.isAlive(), "Solver process is not alive!")
     writeCommand("(check-sat)")

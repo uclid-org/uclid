@@ -198,6 +198,7 @@ abstract trait Context {
   def push()
   def pop()
   def assert(e: Expr)
+  def preassert(e: Expr)
   def check() : SolverResult
   def finish()
 }
