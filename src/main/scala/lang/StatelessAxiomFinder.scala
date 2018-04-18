@@ -47,20 +47,21 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
         namedExpr match {
           case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
                Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
-               Scope.FunctionArg(_, _) | Scope.Define(_, _, _) =>
+               Scope.FunctionArg(_, _) | Scope.Define(_, _, _) |
+               Scope.Instance(_)       =>
              false
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
                Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
                Scope.ConstantLit(_, _)    =>
              true
-          case Scope.ModuleDefinition(_)      | Scope.Instance(_)               |
+          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _)             |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
                Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
                Scope.ProcedureLocalVar(_ , _) | Scope.ForIndexVar(_ , _)        |
                Scope.SpecVar(_ , _)           | Scope.AxiomVar(_ , _)           |
-               Scope.VerifResultVar(_, _)     | Scope.Grammar(_, _)             =>
-             throw new Utils.RuntimeError("Can't have this identifier in assertion.")
+               Scope.VerifResultVar(_, _)     =>
+             throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
         }
       case None =>
         throw new Utils.RuntimeError("Unknown identifiers should have been detected by now.")

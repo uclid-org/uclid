@@ -42,11 +42,15 @@ package lang
 class InstanceModuleNameCheckerPass extends ReadOnlyPass[List[ModuleError]] {
   type T = List[ModuleError]
   override def applyOnInstance(d : TraversalDirection.T, instD : InstanceDecl, in : T, context : Scope) : T = {
-    context.moduleDefinitionMap.get(instD.moduleId) match {
-      case Some(mod) => in
-      case None =>
-        val msg = "Unknown module: %s".format(instD.moduleId.toString)
-        ModuleError(msg, instD.moduleId.position) :: in
+    if (d == TraversalDirection.Down) {
+      context.moduleDefinitionMap.get(instD.moduleId) match {
+        case Some(mod) => in
+        case None =>
+          val msg = "Unknown module: %s".format(instD.moduleId.toString)
+          ModuleError(msg, instD.moduleId.position) :: in
+      }
+    } else {
+      in
     }
   }
 }
@@ -54,9 +58,13 @@ class InstanceModuleNameCheckerPass extends ReadOnlyPass[List[ModuleError]] {
 class InstanceModuleNameChecker extends ASTAnalyzer(
     "InstanceModuleNameChecker", new InstanceModuleNameCheckerPass())
 {
-  override def reset() {
-    in = Some(List.empty[ModuleError])
-    pass.reset()
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val out = visitModule(module, List.empty[ModuleError], context)
+    if (out.size > 0) {
+      val errors = out.map((me) => (me.msg, me.position)).toList
+      throw new Utils.ParserErrorList(errors)
+    }
+    return Some(module)
   }
 }
 

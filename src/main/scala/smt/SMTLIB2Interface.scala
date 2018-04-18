@@ -53,7 +53,7 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   var typeMap : SynonymMap = SynonymMap.empty
   var variables : VarMap = MutableMap.empty
   var enumLiterals : MutableSet[EnumLit] = MutableSet.empty
-  var stack : List[(SynonymMap, VarMap, MutableSet[EnumLit])] = List.empty
+  var stack : List[(VarMap, MutableSet[EnumLit])] = List.empty
 
   type NameProviderFn = (String, Option[String]) => String
   var expressions : List[Expr] = List.empty
@@ -193,17 +193,9 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   }
 
   override def assert (e: Expr) {
-    val symbols_e = Context.findSymbols(e)
-    val symbols_new = symbols_e.filter(s => !variables.contains(s.id))
-    val enumLiterals_e = Context.findEnumLits(e)
-    val enumLiterals_new = enumLiterals_e.filter(e => !enumLiterals.contains(e))
-    val enumTypes_new = enumLiterals_new.filter(p => !typeMap.contains(p.eTyp)).map(p => p.eTyp)
-    enumTypes_new.foreach {
-      (eTyp) => {
-        generateDatatype(eTyp)
-      }
-    }
-    symbols_new.foreach {
+    val symbols = Context.findSymbols(e)
+    val symbolsP = symbols.filter(s => !variables.contains(s.id))
+    symbolsP.foreach {
       (s) => {
         val sIdP = getVariableName(s.id)
         variables += (s.id -> (sIdP, s.symbolTyp))
@@ -213,9 +205,20 @@ class SMTLIB2Interface(args: List[String]) extends Context {
     writeCommand("(assert " + translateExpr(e) +")")
   }
 
-  override def preassert(e: Expr) {}
+  override def preassert(e: Expr) {
+    logger.debug("preassert")
+    val symbols  = Context.findSymbols(e)
+    val enumLits = Context.findEnumLits(e) 
+    symbols.filter(s => !typeMap.contains(s.typ)).foreach {
+      symbol => generateDatatype(symbol.typ)
+    }
+    enumLits.filter(e => !typeMap.contains(e.typ)).foreach {
+      enumLit => generateDatatype(enumLit.typ)
+    }
+  }
 
   override def check() : SolverResult = {
+    logger.debug("check")
     Utils.assert(solverProcess.isAlive(), "Solver process is not alive!")
     writeCommand("(check-sat)")
     readResponse() match {
@@ -239,16 +242,17 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   }
 
   override def push() {
-    val e : (SynonymMap, VarMap, MutableSet[EnumLit]) = (typeMap, variables.clone(), enumLiterals.clone())
+    logger.debug("push")
+    val e : (VarMap, MutableSet[EnumLit]) = (variables.clone(), enumLiterals.clone())
     stack = e :: stack
     writeCommand("(push 1)")
   }
 
   override def pop() {
+    logger.debug("pop")
     val e = stack.head
-    typeMap = e._1
-    variables = e._2
-    enumLiterals = e._3
+    variables = e._1
+    enumLiterals = e._2
     stack = stack.tail
     writeCommand("(pop 1)")
   }
