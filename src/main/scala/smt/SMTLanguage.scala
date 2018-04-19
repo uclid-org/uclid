@@ -281,13 +281,13 @@ case class BVXorOp(w : Int) extends BVResultOp(w) {
 case class BVNotOp(w : Int) extends BVResultOp(w) {
   override val hashId = mix(w, 211)
   override val hashCode = computeHash
-  override def toString = "bvneg"
+  override def toString = "bvnot"
   override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 1); checkAllArgTypes(args, BitVectorType.t(w)) }
 }
 case class BVExtractOp(hi : Int, lo : Int) extends BVResultOp(hi - lo + 1) {
   override val hashId = mix(lo, mix(hi, 212))
   override val hashCode = computeHash
-  override def toString = "bvextract " + hi + " " + lo
+  override def toString = "(_ extract " + hi + " " + lo + ")"
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 1);
     Utils.assert(args(0).typ.isBitVector, "Argument to bitvector extract must be a bitvector.")
@@ -298,7 +298,7 @@ case class BVExtractOp(hi : Int, lo : Int) extends BVResultOp(hi - lo + 1) {
 case class BVConcatOp(w : Int) extends BVResultOp(w) {
   override val hashId = mix(w, 213)
   override val hashCode = computeHash
-  override def toString = "bvconcat"
+  override def toString = "concat"
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 2);
     Utils.assert(args.forall(_.typ.isBitVector), "Argument to bitvector concat must be a bitvector.")

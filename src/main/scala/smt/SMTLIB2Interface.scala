@@ -48,12 +48,14 @@ import scala.language.postfixOps
 
 class SMTLIB2Interface(args: List[String]) extends Context {
   type VarMap = MutableMap[String, (String, Type)]
+  type LetMap = MutableMap[Expr, String]
   val logger = Logger(classOf[SMTLIB2Interface])
 
   var typeMap : SynonymMap = SynonymMap.empty
   var variables : VarMap = MutableMap.empty
+  var letVariables : LetMap = MutableMap.empty
   var enumLiterals : MutableSet[EnumLit] = MutableSet.empty
-  var stack : List[(VarMap, MutableSet[EnumLit])] = List.empty
+  var stack : List[(VarMap, LetMap, MutableSet[EnumLit])] = List.empty
 
   type NameProviderFn = (String, Option[String]) => String
   var expressions : List[Expr] = List.empty
@@ -68,6 +70,11 @@ class SMTLIB2Interface(args: List[String]) extends Context {
     counterId += 1
     "_var_" + v + counterId.toString() + "_"
   }
+  def getLetVariableName(v: String) : String = {
+    counterId += 1
+    "_let_" + v + counterId.toString() + "_"
+  }
+
   def generateDeclaration(name: String, t: Type) = {
     val typeName = generateDatatype(t)
     val cmd = "(declare-const %s %s)".format(name, typeName)
@@ -149,7 +156,9 @@ class SMTLIB2Interface(args: List[String]) extends Context {
     }
   }
 
-  def translateExpr(e: Expr) : String = {
+  def translateExpr(eIn: Expr) : String = {
+    val e = Context.rewriteReplace(eIn)
+
     def mkTuple(index: List[Expr], stripSizeOne : Boolean) : String = {
       if (index.size > 1 || !stripSizeOne) {
         val tupleType = TupleType(index.map(_.typ))
@@ -250,7 +259,7 @@ class SMTLIB2Interface(args: List[String]) extends Context {
 
   override def push() {
     logger.debug("push")
-    val e : (VarMap, MutableSet[EnumLit]) = (variables.clone(), enumLiterals.clone())
+    val e : (VarMap, LetMap, MutableSet[EnumLit]) = (variables.clone(), letVariables.clone(), enumLiterals.clone())
     stack = e :: stack
     writeCommand("(push 1)")
   }
@@ -259,7 +268,8 @@ class SMTLIB2Interface(args: List[String]) extends Context {
     logger.debug("pop")
     val e = stack.head
     variables = e._1
-    enumLiterals = e._2
+    letVariables = e._2
+    enumLiterals = e._3
     stack = stack.tail
     writeCommand("(pop 1)")
   }

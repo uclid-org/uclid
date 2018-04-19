@@ -40,6 +40,7 @@ package uclid
 package smt
 
 import scala.collection.mutable.{Set => MutableSet}
+import scala.collection.mutable.{Map => MutableMap}
 
 case class SynonymMap(fwdMap: Map[String, Type], val revMap: Map[Type, SynonymType]) {
   def addSynonym(name: String, typ: Type) = {
@@ -205,92 +206,117 @@ abstract trait Context {
 
 object Context
 {
-  /**
-   *  Helper function that finds the list of all symbols in an expression.
-   */
-  def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set.empty[Symbol]) }
+  def convertReplace(w : Int, hi : Int, lo : Int, arg0 : Expr, arg1 : Expr) : Expr = {
+    val slice0 = (w-1, hi+1)
+    val slice2 = (lo-1, 0)
 
-  def findSymbols(e : Expr, syms : Set[Symbol]) : Set[Symbol] = {
-    e match {
-      case sym : Symbol =>
-        return syms + sym
-      case OperatorApplication(op,operands) =>
-        return operands.foldLeft(syms)((acc,i) => findSymbols(i, acc))
-      case ArraySelectOperation(e, index) =>
-        return index.foldLeft(findSymbols(e, syms))((acc, i) => findSymbols(i, acc))
-      case ArrayStoreOperation(e, index, value) =>
-        return index.foldLeft(findSymbols(value, findSymbols(e, syms)))((acc,i) => findSymbols(i, acc))
-      case FunctionApplication(e, args) =>
-        return args.foldLeft(findSymbols(e, syms))((acc,i) => findSymbols(i, acc))
-      case MakeTuple(args) =>
-        return args.foldLeft(syms)((acc, i) => findSymbols(i, acc))
-      case IntLit(_) => syms
-      case BitVectorLit(_,_) => syms
-      case BooleanLit(_) => syms
-      case EnumLit(_, _) => syms
-      case Lambda(_,_) =>
-        throw new Utils.AssertionError("Lambdas should have been beta-reduced by now.")
+    // Convert a valid slice into Some(bvexpr) and an invalid slice into none.
+    def getSlice(slice : (Int, Int), arg : Expr) : Option[Expr] = {
+      if (slice._1 >= slice._2) {
+        Utils.assert(slice._1 < w && slice._1 >= 0, "Invalid slice: " + slice.toString)
+        Utils.assert(slice._2 < w && slice._2 >= 0, "Invalid slice: " + slice.toString)
+        val extractOp = OperatorApplication(BVExtractOp(slice._1, slice._2), List(arg))
+        Some(extractOp)
+      } else {
+        None
+      }
     }
+    // Now merge the slices.
+    val slices : List[Expr] = List(getSlice(slice0, arg0), Some(arg1), getSlice(slice2, arg0)).flatten
+    val repl = slices.tail.foldLeft(slices.head) {
+      (r0, r1) => {
+        Utils.assert(r0.typ.isInstanceOf[BitVectorType], "Expected a bitvector.")
+        Utils.assert(r1.typ.isInstanceOf[BitVectorType], "Expected a bitvector.")
+        val r0Width = r0.typ.asInstanceOf[BitVectorType].width
+        val r1Width = r1.typ.asInstanceOf[BitVectorType].width
+        OperatorApplication(BVConcatOp(r0Width + r1Width), List(r0, r1))
+      }
+    }
+    return repl
   }
 
-  /**
-   * Helper function that finds all enum literals in an expression.
-   */
-  def findEnumLits(e : Expr) : Set[EnumLit] = findEnumLits(e, Set.empty[EnumLit])
-
-  def findEnumLits(e: Expr, eLits: Set[EnumLit]) : Set[EnumLit] = {
+  def rewriteReplace(e : Expr) : Expr = {
     e match {
-      case Symbol(_, _) => eLits
-      case OperatorApplication(op, operands) =>
-        findEnumLits(operands, eLits)
+      case Symbol(_ ,_) => e
+      case IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) =>
+        e
       case ArraySelectOperation(e, index) =>
-        findEnumLits(index, findEnumLits(e, eLits))
+        ArraySelectOperation(rewriteReplace(e), index.map(ind => rewriteReplace(ind)))
       case ArrayStoreOperation(e, index, value) =>
-        findEnumLits(index, findEnumLits(e, findEnumLits(value, eLits)))
+        ArrayStoreOperation(rewriteReplace(e), index.map(ind => rewriteReplace(ind)), rewriteReplace(value))
       case FunctionApplication(e, args) =>
-        findEnumLits(args, findEnumLits(e, eLits))
+        FunctionApplication(rewriteReplace(e), args.map(arg => rewriteReplace(arg)))
       case MakeTuple(args) =>
-        findEnumLits(args, eLits)
-      case IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) => eLits
-      case enumLit : EnumLit => eLits + enumLit
+        MakeTuple(args.map(arg => rewriteReplace(arg)))
+      case OperatorApplication(op, operands) =>
+        op match {
+          case BVReplaceOp(w, hi, lo) =>
+            val arg0 = rewriteReplace(operands(0))
+            val arg1 = rewriteReplace(operands(1))
+            convertReplace(w, hi, lo, arg0, arg1)
+          case _ =>
+            val operandsP = operands.map(arg => rewriteReplace(arg))
+            OperatorApplication(op, operandsP)
+        }
       case Lambda(_, _) =>
         throw new Utils.AssertionError("Lambdas should have been beta-reduced by now.")
     }
   }
 
-  def findEnumLits(es : List[Expr], eLits: Set[EnumLit]) : Set[EnumLit] = {
-    es.foldLeft(eLits)((acc, e) => findEnumLits(e, acc))
+  /**
+   *  Helper function that finds the list of all symbols in an expression.
+   */
+  def findSymbols(e : Expr) : Set[Symbol] = {
+    def symbolFinder(e : Expr) : Set[Symbol] = {
+      e match {
+        case sym : Symbol => Set(sym)
+        case _ => Set.empty[Symbol]
+      }
+    }
+    accumulateOverExpr(e, symbolFinder _, MutableMap.empty)
   }
+
+  def accumulateOverExpr[T](e : Expr, apply : (Expr => Set[T]), memo : MutableMap[Expr, Set[T]]) : Set[T] = {
+    memo.get(e) match {
+      case Some(result) =>
+        result
+      case None =>
+        val eResult = apply(e)
+        val results = e match {
+          case Symbol(_, _) | IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) =>
+            eResult
+          case OperatorApplication(op,operands) =>
+            eResult ++ accumulateOverExprs(operands, apply, memo)
+          case ArraySelectOperation(e, index) =>
+            eResult ++ accumulateOverExpr(e, apply, memo) ++ accumulateOverExprs(index, apply, memo)
+          case ArrayStoreOperation(e, index, value) =>
+            eResult ++ accumulateOverExpr(e, apply, memo) ++ accumulateOverExprs(index, apply, memo) ++ accumulateOverExpr(value, apply, memo)
+          case FunctionApplication(e, args) =>
+            eResult ++ accumulateOverExpr(e, apply, memo) ++ accumulateOverExprs(args, apply, memo)
+          case MakeTuple(args) =>
+            eResult ++ accumulateOverExprs(args, apply, memo)
+          case Lambda(_,_) =>
+            throw new Utils.AssertionError("Lambdas should have been beta-reduced by now.")
+        }
+        memo.put(e, results)
+        results
+    }
+  }
+  def accumulateOverExprs[T](es : List[Expr], apply : (Expr => Set[T]), memo : MutableMap[Expr, Set[T]]) : Set[T] = {
+    val empty : Set[T] = Set.empty
+    es.foldLeft(empty)((acc, e) => acc ++ accumulateOverExpr(e, apply, memo))
+  }
+
 
   /**
    * Helper function that finds all the types that appear in an expression.
    */
-  def findTypes(e : Expr, typesIn : Set[Type]) : Set[Type] = {
-    val types = typesIn + e.typ
-    e match {
-      case Symbol(_, typ) => types + typ
-      case OperatorApplication(op, args) =>
-        findTypes(args, types)
-      case ArraySelectOperation(e, index) =>
-        findTypes(e, findTypes(index, types))
-      case ArrayStoreOperation(e, index, value) =>
-        findTypes(e, findTypes(value, findTypes(index, types)))
-      case FunctionApplication(e, args) =>
-        findTypes(args, findTypes(e, types))
-      case MakeTuple(args) =>
-        findTypes(args, types)
-      case IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) =>
-        types
-      case EnumLit(_, typ) =>
-        types
-      case Lambda(_, _) =>
-        throw new Utils.AssertionError("Lambdas should have been beta-reduced by now.")
+  def findTypes(e : Expr) : Set[Type] = {
+    def typeFinder(e : Expr) : Set[Type] = {
+      Set(e.typ)
     }
+    accumulateOverExpr(e, typeFinder _, MutableMap.empty)
   }
-  def findTypes(es : List[Expr], types : Set[Type]) : Set[Type] = {
-    es.foldLeft(types)((acc, e) => findTypes(e, acc))
-  }
-  def findTypes(e : Expr) : Set[Type] = findTypes(e, Set.empty[Type])
 
   def getMkTupleFunction(typeName: String) : String = {
     "_make_" + typeName
