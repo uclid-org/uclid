@@ -1,0 +1,109 @@
+/*
+ * Example demonstrated in class on April 18, 2018.
+ * Based on an example from Lee & Seshia, "Introduction to Embedded Systems", Chapter 17 on Security
+ */
+module process1
+{
+  type pc_t = enum { A };
+
+  var pc : pc_t;
+  input s : boolean; // secret input
+  input x : boolean; // public input
+  output z: boolean; // public output
+
+  init {
+    pc = A;
+    z = false;
+  }
+
+  next {
+    z' = !x;
+  }
+
+}
+
+module process2
+{
+  type pc_t = enum { B, C };
+
+  var pc : pc_t;
+  input s : boolean; // secret input
+  input x : boolean; // public input
+  output z: boolean; // public output
+
+  procedure next_state()
+    modifies z;
+    modifies pc;
+  {
+    case
+      (pc == B) && s && !x : { pc = C; z = true; }
+      (pc == C) && s && !x : { pc = B; z = false; }
+    esac
+  }
+
+  init {
+    pc = B;
+    z = false;
+  }
+
+  next {
+    call next_state();
+  }
+}
+
+
+module main
+{
+  type t1pc_t = process1.pc_t;
+  type t2pc_t = process2.pc_t;
+
+  var x1,x2 : boolean;
+  var s1,s2 : boolean;
+  var z1,z2 : boolean;
+
+/*
+  instance p11 : process1(z: (z1), s : (s1), x : (x1));
+  instance p12 : process1(z: (z2), s : (s2), x : (x2));
+*/
+
+/* 
+*/
+  instance p21 : process2(z: (z1), s : (s1), x : (x1));
+  instance p22 : process2(z: (z2), s : (s2), x : (x2));
+
+  init {
+    havoc x1; havoc x2; 
+    havoc s1; havoc s2; 
+    assume(x1 == x2);
+  }
+
+  next {
+    havoc x1; havoc x2; 
+    havoc s1; havoc s2; 
+    assume(x1' == x2');
+    // next(p11); next(p12);
+    next(p21); next(p22);
+  }
+
+  invariant same_output_z : (z1 == z2);
+
+
+  control {
+    // *** BASIC ASSERTIONS/INVARIANT
+/*
+*/
+    v = unroll(5);
+    check;
+    print_results;
+    //v.print_cex(x1,x2,s1,s2,z1,z2,p11.pc,p12.pc);
+    v.print_cex(x1,x2,s1,s2,z1,z2,p21.pc,p22.pc);
+
+/*
+    // *** INDUCTION
+    v = induction(1); 
+    check;
+    print_results;
+    v.print_cex(x1,x2,s1,s2,z1,z2,p11.pc,p12.pc);
+*/
+  }
+}
