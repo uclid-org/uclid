@@ -1,0 +1,62 @@
+module cpu_common {
+    // Address type
+    type addr_t       = bv4;
+    // Word type
+    type word_t       = bv4;
+    // Instruction type
+    type inst_t       = bv4;
+    // List of instructions (types) supported by CPU model
+    type op_t         = enum { op_li, op_ld, op_lr,
+                               op_and, op_add, op_sub,
+                               op_mov, op_bge, no_op };
+                               // op_syscall, op_sysret };
+    // CPU mode
+    // type mode_t       = enum { usr_mode, sup_mode };
+    // Memory
+    type mem_t        = [addr_t]word_t;
+    // Cache address (uninterpreted) type
+    type cache_addr_t;
+    // Register index type
+    type regind_t     = bv3;
+    // Register file
+    type regs_t       = [regind_t]word_t;
+    // Physical register indices
+    type pregind_t    = bv5;
+    // (Unbounded) Physical register values
+    type pregs_t      = [pregind_t]word_t;
+    // (Unbounded) Physical register ready bit
+    type pregsready_t = [pregind_t]boolean;
+
+    // ROB index
+    type robind_t = bv3;
+
+    type brlvl_t = robind_t;
+
+    // Decoding instructions for the CPU
+    function inst2op     (i : inst_t) : op_t;
+    function inst2regd   (i : inst_t) : regind_t;
+    function inst2regs   (i : inst_t) : regind_t;
+    function inst2regt   (i : inst_t) : regind_t;
+    function inst2imm    (i : inst_t) : word_t;
+    // function inst2ldtime (i : inst_t) : integer;
+
+    // Decoding instructions for the cache
+    function imm2addr (i : word_t) : addr_t;
+    function addr2cache (a : addr_t) : cache_addr_t;
+
+    // The enter address for syscall
+    // function syscall_enter_addr() : addr_t;
+    // The exit address for syscalls
+    // function sysret_exit_addr() : addr_t;
+    // The above two must be different
+    // axiom syscall_enter_addr() != sysret_exit_addr();
+
+    // function in_range (a : addr_t, b1 : addr_t, b2 : addr_t) : boolean; // True iff a is within bounds b1 and b2
+}
+
+module cache_common {
+    type addr_t      = cpu_common.addr_t;
+    type caddr_t     = bv4;                 // NOTE: Should be smaller size than addr_t  
+    type cmem_t      = [caddr_t]addr_t;     // NOTE: Direct mapped cache; cmem stores the tag
+                                            //       which is exactly the physical address in dmem
+}

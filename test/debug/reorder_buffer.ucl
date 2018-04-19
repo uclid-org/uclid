@@ -1,0 +1,252 @@
+module reorder_buffer {
+    type word_t = cpu_common.word_t;
+    type op_t   = cpu_common.op_t;
+    type pregs_t = cpu_common.pregs_t;
+    type pregsready_t = cpu_common.pregsready_t;
+    type addr_t = cpu_common.addr_t;
+    type cache_addr_t = cpu_common.cache_addr_t;
+    type robind_t = cpu_common.robind_t;
+    type brlvl_t = cpu_common.brlvl_t;
+    type pregind_t    = cpu_common.pregind_t;
+
+    // CPU variables
+    input pc : addr_t;
+    input branch_level  : brlvl_t;
+    input pregs         : pregs_t;
+    input pregsready    : pregsready_t;
+    output cache         : [cache_addr_t]addr_t;
+    output cache_valid   : [cache_addr_t]boolean;
+
+    // Instruction (*) from fetch
+    input pc_in         : addr_t;     // Instruction's pc value it was fetched from
+    input op_in         : op_t;       // Op code
+    input pdind_in      : pregind_t;  // Instruction physical register destination index
+    input psind_in      : pregind_t;  // Instruction physical register 1st source index
+    input ptind_in      : pregind_t;  // Instruction physical register 2nd source index
+    input imm_in        : word_t;     // Instruction immediate value
+    input speculate     : boolean;    // True iff the current instruction at pc is a branch and we speculatively take the branch
+    input brlvl_in      : brlvl_t;    // Branch level of instruction
+    // input ldtime_in     : integer;  // If the instruction is a load (from memory), this is the number of cycles before the value is loaded into the cache 
+
+    input flush         : boolean;  // True iff the previous cycle computed a mispredicted branch
+
+    output rob_full : boolean;  // True iff the ROB is full after running next
+
+    // Instruction (**) to be executed in the current cycle
+    output executing     : boolean;     // True iff the execute stage should execute the instruction (if there exists an instruction to execute)
+    output exe_pc        : addr_t;
+    output exe_op        : op_t;
+    output exe_pdind     : pregind_t;
+    output exe_psind     : pregind_t;
+    output exe_ptind     : pregind_t;
+    output exe_imm       : word_t;
+    output exe_spec      : boolean;
+    output exe_brlvl     : brlvl_t;
+    output exe_ld_ready   : boolean;
+
+    // Reorder buffer queue
+    var pcs        : [robind_t]addr_t;
+    var ops        : [robind_t]op_t;
+    var pdinds     : [robind_t]pregind_t;
+    var psinds     : [robind_t]pregind_t;
+    var ptinds     : [robind_t]pregind_t;
+    var imms       : [robind_t]word_t;
+    var finished   : [robind_t]boolean;      // True iff instruction has executed
+    var speculated : [robind_t]boolean;      // True iff the instruction was a branch instruction and the branch predictor speculated by taking the branch
+    var brlvl      : [robind_t]brlvl_t;      // Branch level of the instruction 
+    // var loadedtime : [robind_t]integer;      // The time, with respect to timer variable, at which the instruction's destination value will be loaded into the cache
+
+    // Timing variables for loads
+    // var timer : integer;
+
+    // Buffer / queue variables
+    var head : robind_t;     // Head of the the ROB queue
+    var tail : robind_t;     // Tail of the the ROB queue (new instructions are added to the tail; contains the most recently added instruction)
+        
+    // Execute stage variables
+    output exec_entry : robind_t;   // Index of the executable entry / instruction picked by the ROB
+    var flush_entry : robind_t;  // Index of the entry where the mispredicted branch is; On a mispredict, we flush all instructions following this one.
+
+    // Options
+    var ndetpick : boolean;     // True iff we non deterministically pick an instruction from the reorder buffer (otherwise it's the most recent instruction)
+
+    /*
+        Flush ROB if the previous cycle calculated a mispredicted branch
+    */
+    procedure flush_rob()
+        modifies tail;
+    {
+        // Flush instructions from previous branch instruction
+        if (flush && head != tail) {
+            tail = flush_entry;
+        }
+    }
+
+    /*
+        Adds instruction (*) into the reorder buffer
+    */
+    procedure add_inst()
+        modifies pcs, ops, pdinds, psinds, ptinds, imms, finished, speculated, brlvl, /*loadedtime,*/ tail;
+    {
+        // Add instruction to ROB if it's not fuil
+        if (!rob_full) {
+            pcs[tail] = pc_in;
+            ops[tail] = op_in;
+            pdinds[tail] = pdind_in;
+            psinds[tail] = psind_in;
+            ptinds[tail] = ptind_in;
+            imms[tail] = imm_in;
+            finished[tail] = false;
+            speculated[tail] = (op_in == op_bge && speculate);
+            brlvl[tail] = brlvl_in;
+            // loadedtime[tail] = -ldtime_in;
+            tail = tail + 1bv3;
+        }
+    }
+
+
+    /*
+        Find an instruction in the ROB that is ready to be executed
+        - place instruction into  instruction (**) variables
+    */
+    procedure prep_exe_inst()
+        modifies exec_entry, exe_pc, exe_op, exe_pdind, exe_psind, exe_ptind, exe_imm, exe_spec, exe_brlvl, exe_ld_ready, flush_entry, /*loadedtime,*/ head, executing, finished, rob_full, /*timer,*/ ndetpick, cache, cache_valid;
+    {
+        var cache_addr  : cache_addr_t;
+        var addr        : addr_t;
+        var choose_inst : boolean;
+        var found_inst : boolean;
+        var done_flush : boolean;
+        choose_inst = true;
+        found_inst = false;
+        done_flush = false;
+
+        // NOTE: Hard coded tail for loop below because of syntax (should use a define)
+        for i in range(0bv3, 7bv3) {
+            // NOTE: By default all instructions read both source registers
+            // Add cache waiting, and have execute tell us when an instruction has "finished"
+            if (//head + i < tail &&                  // valid entry
+                    // (!(ops[head+i] == op_ld || ops[head+i] == op_lr) || loadedtime[head+i] <= timer) &&
+                    !finished[head+i] &&            // don't run finished / already ran instructions 
+                    pregsready[psinds[head+i]] &&   // source rs is ready
+                    pregsready[ptinds[head+i]]) {   // source rd is ready
+
+                // Choose an instruction to run
+                if (choose_inst) {
+                    exec_entry = head + i;
+                    found_inst = true;
+                }
+
+                // Nondeterministically decide whether or not to choose another instruction
+                if (ndetpick) {
+                    havoc choose_inst;
+                }
+            }
+        }
+
+        havoc ndetpick;
+        executing = found_inst;
+
+        if (executing) {
+            // Update finished flag since the instruction executes following stage
+            if (ops[exec_entry] == op_ld) {
+                // Cache address variables
+                addr = cpu_common.imm2addr(imms[exec_entry]);
+                cache_addr = cpu_common.addr2cache(addr);
+
+                // Check instruction load status
+                // if (loadedtime[exec_entry] <= 0) {
+                    // Start loading data from disk memory
+                    // loadedtime[exec_entry] = timer - loadedtime[exec_entry];
+                // }
+
+                // finished[exec_entry] =  (cache_valid[cache_addr] && cache[cache_addr] == addr) || (loadedtime[exec_entry] <= timer && loadedtime[exec_entry] > 0);
+                finished[exec_entry] =  (cache_valid[cache_addr] && cache[cache_addr] == addr);
+                exe_ld_ready = finished[exec_entry];
+            } else {
+                finished[exec_entry] = true;
+            }
+        }
+
+        // Update flush_executingentry to flush from if we happen to have mispredicted
+        if (exe_op == op_bge) {
+            flush_entry = exec_entry;
+        }
+
+        // Return instruction to execute
+        if (executing) {
+            // Pick an entry that can be executed
+            exe_pc    = pcs[exec_entry];
+            exe_op    = ops[exec_entry];
+            exe_pdind = pdinds[exec_entry];
+            exe_psind = psinds[exec_entry];
+            exe_ptind = ptinds[exec_entry];
+            exe_imm   = imms[exec_entry];
+            exe_spec  = speculated[exec_entry];
+            exe_brlvl = brlvl[exec_entry];
+        }
+
+        // Retire instructions from head (until the first unfinished instruction)
+        for i in range (0bv3, 7bv3) {
+            // Go to the first unfinished instruction
+            if (head != tail && finished[head]) {
+                head = head + 1bv3;
+            }
+        }
+
+        // Update ROB available / full flag
+        rob_full = (tail == head && !finished[head]);
+    }
+
+    /*
+        Increment timer
+    */
+    // procedure update_timer()
+    //     modifies timer;
+    // {
+    //     // Update timer
+    //     timer = timer + 1;
+    // }
+
+
+    /*
+        Updates the ROB
+    */
+    procedure update_rob()
+        modifies tail, pcs, ops, exe_pc, exe_ptind, exe_pdind, exe_psind, exe_imm, exe_brlvl, exe_ld_ready, head, /*timer,*/ ndetpick, exe_spec, imms, /*loadedtime,*/ exe_op, speculated, rob_full, finished, exec_entry, flush_entry, executing, psinds, ptinds, pdinds, brlvl, cache, cache_valid;
+    {
+        // TODO: Fetch instruction if you can
+        if (flush) {
+            call flush_rob();
+            executing = false;
+        } else {
+            call add_inst();
+            call prep_exe_inst();
+        }
+        // call update_timer();
+    }
+
+    init {
+        executing = false;
+        exec_entry = 0bv3;
+        flush_entry = 0bv3;
+        exe_brlvl = 0bv3;
+        head = 0bv3;   // points at the first element of the queue
+        tail = 0bv3;   // points to the end of the list (after last element)
+        // timer = 0;
+
+        assume (forall (ri : robind_t) :: ops[ri] == no_op);
+        assume (forall (ri : robind_t) :: pdinds[ri] == 0bv5);
+        assume (forall (ri : robind_t) :: psinds[ri] == 0bv5);
+        assume (forall (ri : robind_t) :: ptinds[ri] == 0bv5);
+        assume (forall (ri : robind_t) :: imms[ri] == 0bv4);
+        assume (forall (ri : robind_t) :: finished[ri] == true);
+        assume (forall (ri : robind_t) :: speculated[ri] == false);
+        assume (forall (ri : robind_t) :: brlvl[ri] == 0bv3);
+        // assume (forall (ri : robind_t) :: loadedtime[ri] == 0);
+    }
+
+    next {
+        call update_rob();
+    }
+}
