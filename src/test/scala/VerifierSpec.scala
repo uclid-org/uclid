@@ -49,9 +49,10 @@ object VerifierSpec {
     val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
-    val results = UclidMain.execute(mainModule.get, new UclidMain.Config())
+    val config = UclidMain.Config() // UclidMain.Config("main", List("/usr/bin/z3", "-in", "-smt2"), List.empty)
+    val results = UclidMain.execute(mainModule.get, config)
     assert (results.count((e) => e.result.isFalse) == nFail)
-    assert (results.count((e) => e.result.isUndefined) == 0);
+    assert (results.count((e) => e.result.isUndefined) == 0)
   }
 }
 class VerifierSanitySpec extends FlatSpec {

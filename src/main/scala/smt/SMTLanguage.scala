@@ -358,7 +358,7 @@ case object IffOp extends BoolResultOp {
 case object ImplicationOp extends BoolResultOp {
   override val hashId = 218
   override val hashCode = computeHash
-  override def toString  = "==>"
+  override def toString  = "=>"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType) }
 }
 case object ConjunctionOp extends BoolResultOp {

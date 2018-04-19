@@ -257,9 +257,40 @@ object Context
         throw new Utils.AssertionError("Lambdas should have been beta-reduced by now.")
     }
   }
+
   def findEnumLits(es : List[Expr], eLits: Set[EnumLit]) : Set[EnumLit] = {
     es.foldLeft(eLits)((acc, e) => findEnumLits(e, acc))
   }
+
+  /**
+   * Helper function that finds all the types that appear in an expression.
+   */
+  def findTypes(e : Expr, typesIn : Set[Type]) : Set[Type] = {
+    val types = typesIn + e.typ
+    e match {
+      case Symbol(_, typ) => types + typ
+      case OperatorApplication(op, args) =>
+        findTypes(args, types)
+      case ArraySelectOperation(e, index) =>
+        findTypes(e, findTypes(index, types))
+      case ArrayStoreOperation(e, index, value) =>
+        findTypes(e, findTypes(value, findTypes(index, types)))
+      case FunctionApplication(e, args) =>
+        findTypes(args, findTypes(e, types))
+      case MakeTuple(args) =>
+        findTypes(args, types)
+      case IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) =>
+        types
+      case EnumLit(_, typ) =>
+        types
+      case Lambda(_, _) =>
+        throw new Utils.AssertionError("Lambdas should have been beta-reduced by now.")
+    }
+  }
+  def findTypes(es : List[Expr], types : Set[Type]) : Set[Type] = {
+    es.foldLeft(types)((acc, e) => findTypes(e, acc))
+  }
+  def findTypes(e : Expr) : Set[Type] = findTypes(e, Set.empty[Type])
 
   def getMkTupleFunction(typeName: String) : String = {
     "_make_" + typeName

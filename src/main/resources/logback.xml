@@ -9,7 +9,7 @@
   </appender>
 
   <logger name="uclid.UclidMain" level="DEBUG"/>
-  <logger name="uclid.InteractiveProcess" level="DEBUG"/>
+  <logger name="uclid.InteractiveProcess" level="OFF"/>
   <logger name="uclid.lang.PassManager" level="OFF"/>
   <logger name="uclid.lang.ExpressionTypeCheckerPass" level="OFF"/>
   <logger name="uclid.lang.InlineProcedurePass" level="OFF"/>
@@ -30,6 +30,7 @@
   <logger name="uclid.SymbolicSimulator.verifyProc" level="OFF"/>
   <logger name="uclid.smt.Z3Interface.assert" level="OFF"/>
   <logger name="uclid.smt.Z3Interface.check" level="OFF"/>
+  <logger name="uclid.smt.SMTLIB2Interface" level="OFF"/>
 
   <root level="debug">
     <appender-ref ref="STDOUT" />

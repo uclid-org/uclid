@@ -75,6 +75,7 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   }
 
   def generateDatatype(t : Type) : String = {
+    logger.debug("generateDatatype: {}", t.toString())
     typeMap.get(t) match {
       case Some(synTyp) =>
         synTyp.name
@@ -109,9 +110,16 @@ class SMTLIB2Interface(args: List[String]) extends Context {
             writeCommand("(declare-datatypes %s ((%s %s)))".format(nameString, typeName, argString))
             typeMap = typeMap.addSynonym(typeName, t)
             typeName
-          case BoolType => "Bool"
-          case IntType => "Int"
-          case BitVectorType(n) => "(_ BitVec %d)".format(n)
+          case BoolType => 
+            typeMap = typeMap.addSynonym("Bool", t)
+            "Bool"            
+          case IntType =>
+            typeMap = typeMap.addSynonym("Int", t)
+            "Int"
+          case BitVectorType(n) => 
+            val typeStr = "(_ BitVec %d)".format(n)
+            typeMap = typeMap.addSynonym(typeStr, t)
+            typeStr
           case _ => 
             throw new Utils.UnimplementedException("TODO: Implement more types in Z3FileInterface.generateDatatype")
         }
@@ -143,9 +151,9 @@ class SMTLIB2Interface(args: List[String]) extends Context {
 
   def translateExpr(e: Expr) : String = {
     def mkTuple(index: List[Expr], stripSizeOne : Boolean) : String = {
-      val tupleType = TupleType(index.map(_.typ))
-      val tupleTypeName = generateDatatype(tupleType)
       if (index.size > 1 || !stripSizeOne) {
+        val tupleType = TupleType(index.map(_.typ))
+        val tupleTypeName = generateDatatype(tupleType)
         "(" +
           Context.getMkTupleFunction(tupleTypeName) + " " +
           Utils.join(index.map(_.toString()), " ") +
@@ -207,13 +215,12 @@ class SMTLIB2Interface(args: List[String]) extends Context {
 
   override def preassert(e: Expr) {
     logger.debug("preassert")
-    val symbols  = Context.findSymbols(e)
-    val enumLits = Context.findEnumLits(e) 
-    symbols.filter(s => !typeMap.contains(s.typ)).foreach {
-      symbol => generateDatatype(symbol.typ)
-    }
-    enumLits.filter(e => !typeMap.contains(e.typ)).foreach {
-      enumLit => generateDatatype(enumLit.typ)
+    val types  = Context.findTypes(e)
+    types.filter(typ => !typeMap.contains(typ)).foreach {
+      newType => {
+        logger.debug("type: {}", newType.toString())
+        generateDatatype(newType)
+      }
     }
   }
 
