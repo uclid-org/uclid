@@ -235,32 +235,51 @@ object Context
     return repl
   }
 
-  def rewriteReplace(e : Expr) : Expr = {
-    e match {
-      case Symbol(_ ,_) => e
-      case IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) =>
-        e
-      case ArraySelectOperation(e, index) =>
-        ArraySelectOperation(rewriteReplace(e), index.map(ind => rewriteReplace(ind)))
-      case ArrayStoreOperation(e, index, value) =>
-        ArrayStoreOperation(rewriteReplace(e), index.map(ind => rewriteReplace(ind)), rewriteReplace(value))
-      case FunctionApplication(e, args) =>
-        FunctionApplication(rewriteReplace(e), args.map(arg => rewriteReplace(arg)))
-      case MakeTuple(args) =>
-        MakeTuple(args.map(arg => rewriteReplace(arg)))
-      case OperatorApplication(op, operands) =>
-        op match {
-          case BVReplaceOp(w, hi, lo) =>
-            val arg0 = rewriteReplace(operands(0))
-            val arg1 = rewriteReplace(operands(1))
-            convertReplace(w, hi, lo, arg0, arg1)
-          case _ =>
-            val operandsP = operands.map(arg => rewriteReplace(arg))
-            OperatorApplication(op, operandsP)
+  def rewriteExpr(e : Expr, rewrite : (Expr => Expr), memo : MutableMap[Expr, Expr]) : Expr = {
+    memo.get(e) match {
+      case Some(eP) => eP
+      case None =>
+        val eP = e match {
+          case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) =>
+            rewrite(e)
+          case OperatorApplication(op, operands) =>
+            val operandsP = operands.map(arg => rewriteExpr(arg, rewrite, memo))
+            rewrite(OperatorApplication(op, operandsP))
+          case ArraySelectOperation(array, index) =>
+            val arrayP = rewriteExpr(array, rewrite, memo)
+            val indexP = index.map(ind => rewriteExpr(ind, rewrite, memo))
+            rewrite(ArraySelectOperation(arrayP, indexP))
+          case ArrayStoreOperation(array, index, value) =>
+            val arrayP = rewriteExpr(array, rewrite, memo)
+            val indexP = index.map(ind => rewriteExpr(ind, rewrite, memo))
+            val valueP = rewriteExpr(value, rewrite, memo)
+            rewrite(ArrayStoreOperation(arrayP, indexP, valueP))
+          case FunctionApplication(func, args) =>
+            val funcP = rewriteExpr(func, rewrite, memo)
+            val argsP = args.map(arg => rewriteExpr(arg, rewrite, memo))
+            rewrite(FunctionApplication(funcP, argsP))
+          case MakeTuple(args) =>
+            val argsP = args.map(arg => rewriteExpr(arg, rewrite, memo))
+            rewrite(MakeTuple(argsP))
+          case Lambda(ids, expr) =>
+            val idsP = ids.map(id => rewriteExpr(id, rewrite, memo).asInstanceOf[Symbol])
+            val exprP = rewriteExpr(expr, rewrite, memo)
+            rewrite(Lambda(idsP, exprP))
         }
-      case Lambda(_, _) =>
-        throw new Utils.AssertionError("Lambdas should have been beta-reduced by now.")
+        memo.put(e, eP)
+        eP
     }
+  }
+  def rewriteBVReplace(e : Expr) : Expr = {
+    def rewriter(e : Expr) : Expr = {
+      e match {
+        case OperatorApplication(BVReplaceOp(w, hi, lo), operands) =>
+          convertReplace(w, hi, lo, operands(0), operands(1))
+        case _ =>
+          e
+      }
+    }
+    rewriteExpr(e, rewriter, MutableMap.empty)
   }
 
   /**

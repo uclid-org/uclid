@@ -70,9 +70,9 @@ class SMTLIB2Interface(args: List[String]) extends Context {
     counterId += 1
     "_var_" + v + counterId.toString() + "_"
   }
-  def getLetVariableName(v: String) : String = {
+  def getLetVariableName() : String = {
     counterId += 1
-    "_let_" + v + counterId.toString() + "_"
+    "_let_" + counterId.toString() + "_"
   }
 
   def generateDeclaration(name: String, t: Type) = {
@@ -156,50 +156,98 @@ class SMTLIB2Interface(args: List[String]) extends Context {
     }
   }
 
-  def translateExpr(eIn: Expr) : String = {
-    val e = Context.rewriteReplace(eIn)
-
-    def mkTuple(index: List[Expr], stripSizeOne : Boolean) : String = {
-      if (index.size > 1 || !stripSizeOne) {
-        val tupleType = TupleType(index.map(_.typ))
-        val tupleTypeName = generateDatatype(tupleType)
-        "(" +
-          Context.getMkTupleFunction(tupleTypeName) + " " +
-          Utils.join(index.map(_.toString()), " ") +
-        ")"
+  case class TranslatedExpr(order : Int, expr : String, name : Option[String]) {
+    def exprString() : String = {
+      name match {
+        case Some(str) => str
+        case None => expr
       }
-      else {
-        translateExpr(index(0))
-      }
-    }
-
-    e match {
-      case Symbol(id,_) => variables.get(id).get._1
-      case EnumLit(id, _) => id
-      case OperatorApplication(op,operands) =>
-        val ops = operands.map(arg => translateExpr(arg))
-        "(" + op.toString() + " " + Utils.join(ops, " ") + ")"
-      case ArraySelectOperation(e, index) =>
-        "(select " + translateExpr(e) + " " + mkTuple(index, true) + ")"
-      case ArrayStoreOperation(e, index, value) =>
-        "(store " + translateExpr(e) + " " + mkTuple(index, true) + " " + translateExpr(value) + ")"
-      case FunctionApplication(e, args) =>
-        Utils.assert(e.isInstanceOf[Symbol], "Beta substitution has not happened.")
-        "(" + translateExpr(e) +
-          args.foldLeft(""){(acc,i) =>
-            acc + " " + translateExpr(i)} + ")"
-      case MakeTuple(args) =>
-        mkTuple(args, false)
-      case Lambda(_,_) =>
-        throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
-      case IntLit(value) => value.toString()
-      case BitVectorLit(value, width) =>
-        "(_ bv" + value.toString() + " " + width.toString() + ")"
-      case BooleanLit(value) =>
-        value match { case true => "true"; case false => "false" }
     }
   }
+  def exprString(trExprs : List[TranslatedExpr]) = {
+    Utils.join(trExprs.map(tr => tr.exprString()), " ")
+  }
 
+  type ExprMap = Map[Expr, TranslatedExpr]
+  def translateExpr(eIn: Expr, memo : ExprMap) : (TranslatedExpr, ExprMap) = {
+    logger.debug("expr: {}", eIn.toString())
+    logger.debug("memo: {}", memo.toString())
+    def mkTuple(index: List[Expr], memoIn : ExprMap) : (TranslatedExpr, ExprMap) = {
+      if (index.size > 1) { translateExpr(MakeTuple(index), memoIn) }
+      else { translateExpr(index(0), memoIn) }
+    }
+    def translateExprs(es : List[Expr], memoIn : ExprMap) : (List[TranslatedExpr], ExprMap) = {
+      es.foldRight((List.empty[TranslatedExpr], memo)){ 
+        (arg, acc) => {
+          val (tExpr, accP) = translateExpr(arg, acc._2)
+          (tExpr :: acc._1, accP)
+        }
+      }
+    }
+    val (resultExpr, resultMemo) = memo.get(eIn) match {
+      case Some(resultExpr) => (resultExpr, memo)
+      case None =>
+        val (exprStr, memoP, insert) : (String, ExprMap, Boolean) = Context.rewriteBVReplace(eIn) match {
+          case Symbol(id,_) => (variables.get(id).get._1, memo, false)
+          case EnumLit(id, _) => (id, memo, false)
+          case OperatorApplication(op,operands) =>
+            val (ops, memoP) = translateExprs(operands, memo)
+            ("(" + op.toString() + " " + exprString(ops) + ")", memoP, true)
+          case ArraySelectOperation(e, index) =>
+            val (trArray, memoP1) = translateExpr(e, memo)
+            val (trIndex, memoP2) = mkTuple(index, memoP1)
+            ("(select " + trArray.exprString() + " " + trIndex.exprString() + ")", memoP2, true)
+          case ArrayStoreOperation(e, index, value) =>
+            val (trArray, memoP1) = translateExpr(e, memo)
+            val (trIndex, memoP2) = mkTuple(index, memoP1)
+            val (trValue, memoP3) = translateExpr(value, memoP2)
+            ("(store " + trArray.exprString() + " " + trIndex.exprString() + " " + trValue.exprString() +")", memoP3, true)
+          case FunctionApplication(e, args) =>
+            Utils.assert(e.isInstanceOf[Symbol], "Beta substitution has not happened.")
+            val (trFunc, memoP1) = translateExpr(e, memo)
+            val (trArgs, memoP2) = translateExprs(args, memoP1)
+            ("(" + trFunc.exprString() + exprString(trArgs) + ")", memoP2, true)
+          case MakeTuple(args) =>
+            val tupleType = TupleType(args.map(_.typ))
+            val tupleTypeName = generateDatatype(tupleType)
+            val (trArgs, memoP1) = translateExprs(args, memo)
+            ("(" + Context.getMkTupleFunction(tupleTypeName) + " " + exprString(trArgs) + ")", memoP1, true)
+          case Lambda(_,_) =>
+            throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
+          case IntLit(value) =>
+            (value.toString(), memo, false)
+          case BitVectorLit(value, width) =>
+            ("(_ bv" + value.toString() + " " + width.toString() + ")", memo, false)
+          case BooleanLit(value) =>
+            (value match { case true => "true"; case false => "false" }, memo, false)
+        }
+        val translatedExpr = if (insert) {
+          TranslatedExpr(memoP.size, exprStr, Some(getLetVariableName()))
+        } else {
+          TranslatedExpr(memoP.size, exprStr, None)
+        }
+        (translatedExpr, memoP + (eIn -> translatedExpr))
+    }
+    logger.debug("result : {}", resultExpr.toString())
+    logger.debug("memoP  : {}", resultMemo.toString())
+    (resultExpr, resultMemo)
+  }
+  def translateExpr(e : Expr) : String = {
+    val (trExpr, memoP) = translateExpr(e, Map.empty)
+    if (memoP.size == 0) {
+      trExpr.exprString()
+    } else {
+      val letExprsIn = memoP.filter(p => p._2.name.isDefined).map(p => (p._2.order, p._2.name.get, p._2.expr)).toList
+      val letExprsSorted = letExprsIn.sortWith((p1, p2) => p1._1 < p2._1).map(p => (p._2, p._3))
+      def recurse(lets : List[(String, String)], expr : String) : String = {
+        lets match {
+          case Nil => expr
+          case hd :: tl => "(let ((" + hd._1 + " " + hd._2 + ")) " + recurse(tl, expr) + ")"
+        }
+      }
+      recurse(letExprsSorted, trExpr.exprString())
+    }
+  }
   def writeCommand(str : String) {
     solverProcess.writeInput(str + "\n")
   }
