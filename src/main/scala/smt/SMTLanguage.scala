@@ -349,7 +349,7 @@ case class ExistsOp(vs : List[Symbol]) extends QuantifierOp {
 case object IffOp extends BoolResultOp {
   override val hashId = 217
   override val hashCode = computeHash
-  override def toString = "<==>"
+  override def toString = "="
   override def typeCheck (args: List[Expr]) = {
     Utils.assert(args.size == 2, "Iff must have two operands.")
     Utils.assert(args.forall(op => op.typ.isBool), "Iff operands must be boolean.")
