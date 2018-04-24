@@ -49,6 +49,7 @@ import lang.Module
 import lang.Identifier
 import uclid.Utils.ParserErrorList
 import com.typesafe.scalalogging.Logger
+import uclid.smt.SyGuSInterface
 
 /** This is the main class for Uclid.
  *
@@ -266,7 +267,7 @@ object UclidMain {
     } else {
       new smt.Z3Interface()
     }
-    val result = symbolicSimulator.execute(z3Interface)
+    val result = symbolicSimulator.execute(z3Interface, Some(new SyGuSInterface(List.empty)))
     z3Interface.finish()
     return result
   }

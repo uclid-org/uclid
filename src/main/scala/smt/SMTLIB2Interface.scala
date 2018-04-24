@@ -46,20 +46,16 @@ import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
 import scala.language.postfixOps
 
-class SMTLIB2Interface(args: List[String]) extends Context {
+trait SMTLIB2Base {
+  val smtlib2BaseLogger = Logger(classOf[SMTLIB2Base])
+  
   type VarMap = MutableMap[String, (String, Type)]
   type LetMap = MutableMap[Expr, String]
-  val logger = Logger(classOf[SMTLIB2Interface])
-
-  var typeMap : SynonymMap = SynonymMap.empty
   var variables : VarMap = MutableMap.empty
   var letVariables : LetMap = MutableMap.empty
   var enumLiterals : MutableSet[EnumLit] = MutableSet.empty
   var stack : List[(VarMap, LetMap, MutableSet[EnumLit])] = List.empty
-
-  type NameProviderFn = (String, Option[String]) => String
-  var expressions : List[Expr] = List.empty
-  val solverProcess = new InteractiveProcess(args)
+  var typeMap : SynonymMap = SynonymMap.empty
 
   var counterId = 0
   def getTypeName(suffix: String) : String = {
@@ -74,15 +70,8 @@ class SMTLIB2Interface(args: List[String]) extends Context {
     counterId += 1
     "_let_" + counterId.toString() + "_"
   }
-
-  def generateDeclaration(name: String, t: Type) = {
-    val typeName = generateDatatype(t)
-    val cmd = "(declare-const %s %s)".format(name, typeName)
-    writeCommand(cmd)
-  }
-
-  def generateDatatype(t : Type) : String = {
-    logger.debug("generateDatatype: {}", t.toString())
+  def generateDatatype(t : Type, writeCommand : (String => Unit)) : String = {
+    smtlib2BaseLogger.debug("generateDatatype: {}", t.toString())
     typeMap.get(t) match {
       case Some(synTyp) =>
         synTyp.name
@@ -97,12 +86,12 @@ class SMTLIB2Interface(args: List[String]) extends Context {
             typeName
           case ArrayType(indexTypes, elementType) =>
             val indexTypeName = if (indexTypes.size == 1) {
-              generateDatatype(indexTypes(0))
+              generateDatatype(indexTypes(0), writeCommand)
             } else {
               val indexTuple = TupleType(indexTypes)
-              generateDatatype(indexTuple)
+              generateDatatype(indexTuple, writeCommand)
             }
-            val elementTypeName = generateDatatype(elementType)
+            val elementTypeName = generateDatatype(elementType, writeCommand)
             val arrayTypeName = "(Array %s %s)".format(indexTypeName, elementTypeName)
             typeMap = typeMap.addSynonym(arrayTypeName, t)
             arrayTypeName
@@ -110,7 +99,7 @@ class SMTLIB2Interface(args: List[String]) extends Context {
             val typeName = getTypeName(t.typeNamePrefix)
             val mkTupleFn = Context.getMkTupleFunction(typeName)
             val fieldNames = productType.fieldNames.map(f => Context.getFieldName(f))
-            val fieldTypes = productType.fieldTypes.map(generateDatatype(_))
+            val fieldTypes = productType.fieldTypes.map(generateDatatype(_, writeCommand))
             val fieldString = (fieldNames zip fieldTypes).map(p => "(%s %s)".format(p._1.toString(), p._2.toString()))
             val nameString = "((%s 0))".format(typeName)
             val argString = "(" + Utils.join(mkTupleFn :: fieldString, " ") + ")"
@@ -133,29 +122,6 @@ class SMTLIB2Interface(args: List[String]) extends Context {
     }
   }
 
-  def generateDatatypes(symbols: Set[Symbol]) : String = {
-    var arrayArities : Set[Int] = Set.empty;
-    symbols.foreach { x =>
-      x.typ match {
-        case MapType(ins,out) =>
-          arrayArities = arrayArities ++ Set(ins.size)
-        case ArrayType(ins,out) =>
-          arrayArities = arrayArities ++ Set(ins.size)
-        case _ => ()
-      }
-    }
-
-    return arrayArities.foldLeft(""){ (acc,x) =>
-      acc + "(declare-datatypes " +
-        "(" + ((1 to x).toList).foldLeft("") {
-          (acc,i) => acc + " " + "T"+i } + ")" +
-        "((MyTuple" + x + " (mk-tuple" + x +
-        ((1 to x).toList).foldLeft("") {
-            (acc,i) => acc + " (elem"+i+" T"+i+")" } +
-        "))))\n"
-    }
-  }
-
   case class TranslatedExpr(order : Int, expr : String, name : Option[String]) {
     def exprString() : String = {
       name match {
@@ -164,53 +130,53 @@ class SMTLIB2Interface(args: List[String]) extends Context {
       }
     }
   }
+  type ExprMap = Map[Expr, TranslatedExpr]
+
   def exprString(trExprs : List[TranslatedExpr]) = {
     Utils.join(trExprs.map(tr => tr.exprString()), " ")
   }
-
-  type ExprMap = Map[Expr, TranslatedExpr]
-  def translateExpr(eIn: Expr, memo : ExprMap) : (TranslatedExpr, ExprMap) = {
-    logger.debug("expr: {}", eIn.toString())
-    logger.debug("memo: {}", memo.toString())
-    def mkTuple(index: List[Expr], memoIn : ExprMap) : (TranslatedExpr, ExprMap) = {
-      if (index.size > 1) { translateExpr(MakeTuple(index), memoIn) }
-      else { translateExpr(index(0), memoIn) }
-    }
-    def translateExprs(es : List[Expr], memoIn : ExprMap) : (List[TranslatedExpr], ExprMap) = {
-      es.foldRight((List.empty[TranslatedExpr], memo)){ 
-        (arg, acc) => {
-          val (tExpr, accP) = translateExpr(arg, acc._2)
-          (tExpr :: acc._1, accP)
-        }
+  def translateOptionalTuple(index: List[Expr], memoIn : ExprMap, shouldLetify : Boolean, writeCommand : (String => Unit)) : (TranslatedExpr, ExprMap) = {
+    if (index.size > 1) { translateExpr(MakeTuple(index), memoIn, shouldLetify, writeCommand) }
+    else { translateExpr(index(0), memoIn, shouldLetify, writeCommand) }
+  }
+  def translateExprs(es : List[Expr], memoIn : ExprMap, shouldLetify : Boolean, writeCommand : (String => Unit)) : (List[TranslatedExpr], ExprMap) = {
+    es.foldRight((List.empty[TranslatedExpr], memoIn)){ 
+      (arg, acc) => {
+        val (tExpr, accP) = translateExpr(arg, acc._2, shouldLetify, writeCommand)
+        (tExpr :: acc._1, accP)
       }
     }
+  }
+  def translateExpr(eIn: Expr, memo : ExprMap, shouldLetify : Boolean, writeCommand : (String => Unit)) : (TranslatedExpr, ExprMap) = {
+    smtlib2BaseLogger.debug("expr: {}", eIn.toString())
+    smtlib2BaseLogger.debug("memo: {}", memo.toString())
     val (resultExpr, resultMemo) = memo.get(eIn) match {
       case Some(resultExpr) => (resultExpr, memo)
       case None =>
-        val (exprStr, memoP, insert) : (String, ExprMap, Boolean) = Context.rewriteBVReplace(eIn) match {
+        val (exprStr, memoP, letify) : (String, ExprMap, Boolean) = Context.rewriteBVReplace(eIn) match {
           case Symbol(id,_) => (variables.get(id).get._1, memo, false)
           case EnumLit(id, _) => (id, memo, false)
           case OperatorApplication(op,operands) =>
-            val (ops, memoP) = translateExprs(operands, memo)
+            val (ops, memoP) = translateExprs(operands, memo, shouldLetify, writeCommand)
             ("(" + op.toString() + " " + exprString(ops) + ")", memoP, true)
           case ArraySelectOperation(e, index) =>
-            val (trArray, memoP1) = translateExpr(e, memo)
-            val (trIndex, memoP2) = mkTuple(index, memoP1)
+            val (trArray, memoP1) = translateExpr(e, memo, shouldLetify, writeCommand)
+            val (trIndex, memoP2) = translateOptionalTuple(index, memoP1, shouldLetify, writeCommand)
             ("(select " + trArray.exprString() + " " + trIndex.exprString() + ")", memoP2, true)
           case ArrayStoreOperation(e, index, value) =>
-            val (trArray, memoP1) = translateExpr(e, memo)
-            val (trIndex, memoP2) = mkTuple(index, memoP1)
-            val (trValue, memoP3) = translateExpr(value, memoP2)
+            val (trArray, memoP1) = translateExpr(e, memo, shouldLetify, writeCommand)
+            val (trIndex, memoP2) = translateOptionalTuple(index, memoP1, shouldLetify, writeCommand)
+            val (trValue, memoP3) = translateExpr(value, memoP2, shouldLetify, writeCommand)
             ("(store " + trArray.exprString() + " " + trIndex.exprString() + " " + trValue.exprString() +")", memoP3, true)
           case FunctionApplication(e, args) =>
             Utils.assert(e.isInstanceOf[Symbol], "Beta substitution has not happened.")
-            val (trFunc, memoP1) = translateExpr(e, memo)
-            val (trArgs, memoP2) = translateExprs(args, memoP1)
+            val (trFunc, memoP1) = translateExpr(e, memo, shouldLetify, writeCommand)
+            val (trArgs, memoP2) = translateExprs(args, memoP1, shouldLetify, writeCommand)
             ("(" + trFunc.exprString() + exprString(trArgs) + ")", memoP2, true)
           case MakeTuple(args) =>
             val tupleType = TupleType(args.map(_.typ))
-            val tupleTypeName = generateDatatype(tupleType)
-            val (trArgs, memoP1) = translateExprs(args, memo)
+            val tupleTypeName = generateDatatype(tupleType, writeCommand)
+            val (trArgs, memoP1) = translateExprs(args, memo, shouldLetify, writeCommand)
             ("(" + Context.getMkTupleFunction(tupleTypeName) + " " + exprString(trArgs) + ")", memoP1, true)
           case Lambda(_,_) =>
             throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
@@ -221,19 +187,34 @@ class SMTLIB2Interface(args: List[String]) extends Context {
           case BooleanLit(value) =>
             (value match { case true => "true"; case false => "false" }, memo, false)
         }
-        val translatedExpr = if (insert) {
+        val translatedExpr = if (letify) {
           TranslatedExpr(memoP.size, exprStr, Some(getLetVariableName()))
         } else {
           TranslatedExpr(memoP.size, exprStr, None)
         }
         (translatedExpr, memoP + (eIn -> translatedExpr))
     }
-    logger.debug("result : {}", resultExpr.toString())
-    logger.debug("memoP  : {}", resultMemo.toString())
+    smtlib2BaseLogger.debug("result : {}", resultExpr.toString())
+    smtlib2BaseLogger.debug("memoP  : {}", resultMemo.toString())
     (resultExpr, resultMemo)
   }
-  def translateExpr(e : Expr) : String = {
-    val (trExpr, memoP) = translateExpr(e, Map.empty)
+}
+
+class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
+  val smtlibInterfaceLogger = Logger(classOf[SMTLIB2Interface])
+
+  type NameProviderFn = (String, Option[String]) => String
+  var expressions : List[Expr] = List.empty
+  val solverProcess = new InteractiveProcess(args)
+
+  def generateDeclaration(name: String, t: Type) = {
+    val typeName = generateDatatype(t, writeCommand)
+    val cmd = "(declare-const %s %s)".format(name, typeName)
+    writeCommand(cmd)
+  }
+
+  def translateExpr(e : Expr, shouldLetify : Boolean) : String = {
+    val (trExpr, memoP) = translateExpr(e, Map.empty, shouldLetify, writeCommand)
     if (memoP.size == 0) {
       trExpr.exprString()
     } else {
@@ -267,22 +248,22 @@ class SMTLIB2Interface(args: List[String]) extends Context {
         generateDeclaration(sIdP, s.symbolTyp)
       }
     }
-    writeCommand("(assert " + translateExpr(e) +")")
+    writeCommand("(assert " + translateExpr(e, true) +")")
   }
 
   override def preassert(e: Expr) {
-    logger.debug("preassert")
+    smtlibInterfaceLogger.debug("preassert")
     val types  = Context.findTypes(e)
     types.filter(typ => !typeMap.contains(typ)).foreach {
       newType => {
-        logger.debug("type: {}", newType.toString())
-        generateDatatype(newType)
+        smtlib2BaseLogger.debug("type: {}", newType.toString())
+        generateDatatype(newType, writeCommand)
       }
     }
   }
 
   override def check() : SolverResult = {
-    logger.debug("check")
+    smtlibInterfaceLogger.debug("check")
     Utils.assert(solverProcess.isAlive(), "Solver process is not alive!")
     writeCommand("(check-sat)")
     readResponse() match {
@@ -306,14 +287,14 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   }
 
   override def push() {
-    logger.debug("push")
+    smtlibInterfaceLogger.debug("push")
     val e : (VarMap, LetMap, MutableSet[EnumLit]) = (variables.clone(), letVariables.clone(), enumLiterals.clone())
     stack = e :: stack
     writeCommand("(push 1)")
   }
 
   override def pop() {
-    logger.debug("pop")
+    smtlibInterfaceLogger.debug("pop")
     val e = stack.head
     variables = e._1
     letVariables = e._2

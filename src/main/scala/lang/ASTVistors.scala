@@ -370,7 +370,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitIdentifier(synFunc.id, result, context)
     result = visitFunctionSig(synFunc.sig, result, context)
     val contextP = context + synFunc.sig
-    // FIXME
+    // FIXME: synthesis function.
     result = pass.applyOnSynthesisFunction(TraversalDirection.Up, synFunc, result, context)
     return result
   }
@@ -1100,7 +1100,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val idP = visitIdentifier(synFunc.id, context)
     val sigP = visitFunctionSig(synFunc.sig, context)
     val contextP = context + synFunc.sig
-    // FIXME
+    // FIXME: synthesis function.
     val conditionsP = synFunc.conditions
     val gIdP = synFunc.grammarId
     val gArgsP = synFunc.grammarArgs

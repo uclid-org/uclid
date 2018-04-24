@@ -1022,7 +1022,7 @@ case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonT
   override def declNames = List(id)
 }
 
-case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : Identifier, grammarArgs: List[Identifier], conditions: List[Expr]) extends Decl {
+case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : Option[Identifier], grammarArgs: List[Identifier], conditions: List[Expr]) extends Decl {
   override val hashId = 913
   override def toString = "synthesis function " + id + sig + "; //" + position.toString()
   override def declNames = List(id)

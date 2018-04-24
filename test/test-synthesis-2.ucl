@@ -1,0 +1,27 @@
+/** This is an example to test UCLID5's invariant synthesis.
+  */
+
+module main
+{
+  var x, y : integer;
+  var a    : boolean;
+  
+  init {
+    x = 0;
+    y = 1;
+    havoc a;
+  }
+  
+  next {
+    if (a) {
+      x' = x + 1;
+      y' = x + y;
+    }
+  }
+  
+  invariant always_positive: (y >= 0);
+  
+  control {
+    synthesize_invariants;
+  }
+}

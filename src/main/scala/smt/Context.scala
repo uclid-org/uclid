@@ -344,3 +344,7 @@ object Context
     "_field_" + field
   }
 }
+
+abstract trait SynthesisContext {
+  def synthesizeInvariant(initState : Map[lang.Identifier, Expr], nextState: Map[lang.Identifier, Expr], properties : List[lang.Expr], ctx : lang.Scope) : Unit
+}

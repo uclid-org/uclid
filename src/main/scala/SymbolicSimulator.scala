@@ -97,7 +97,7 @@ class SymbolicSimulator (module : Module) {
   def dumpResults(label: String, log : Logger) {
     log.debug("{} --> proofResults.size = {}", label, proofResults.size.toString)
   }
-  def execute(solver : smt.Context) : List[CheckResult] = {
+  def execute(solver : smt.Context, synthesizer : Option[smt.SynthesisContext]) : List[CheckResult] = {
     proofResults = List.empty
     def noLTLFilter(name : Identifier, decorators : List[ExprDecorator]) : Boolean = !ExprDecorator.isLTLProperty(decorators)
     // add axioms as assumptions.
@@ -174,6 +174,13 @@ class SymbolicSimulator (module : Module) {
             verifyProcedure(proc, label)
           case "check" =>
             proofResults = assertionTree.verify(solver)
+          case "synthesize_invariant" =>
+            synthesizer match {
+              case None =>
+                println("Error: Can't execute synthesize_invariant as synthesizer was not provided. ")
+              case Some(synth) => synthesizeInvariants(context, noLTLFilter, synth)
+            }
+            
           case "print_results" =>
             dumpResults("print_results", defaultLog)
             printResults(proofResults, cmd.argObj)
@@ -465,6 +472,21 @@ class SymbolicSimulator (module : Module) {
     }
     resetState()
 
+  }
+
+  def synthesizeInvariants(ctx : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean), synthesizer : smt.SynthesisContext) = {
+    resetState()
+    val initState = simulate(0, List.empty, module.init.get.body, getInitSymbolTable(ctx), ctx, "synthesize")
+    val nextState = simulate(0, List.empty, module.next.get.body, getInitSymbolTable(ctx), ctx, "synthesize")
+    val invariants = ctx.specs.map(specVar => {
+      val prop = module.properties.find(p => p.id == specVar.varId).get
+      if (filter(prop.id, prop.params)) {
+        Some(prop)
+      } else {
+        None
+      }
+    }).flatten.toList.map(p => p.expr)
+    synthesizer.synthesizeInvariant(initState, nextState, invariants, ctx)
   }
 
   /** Add module specifications (properties) to the list of proof obligations */
