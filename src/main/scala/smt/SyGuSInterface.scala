@@ -46,9 +46,6 @@ import com.typesafe.scalalogging.Logger
 class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisContext {
   val sygusLog = Logger(classOf[SyGuSInterface])
 
-  def writeCommand(cmd: String) {
-    println("-> " + cmd)
-  }
   override def getTypeName(suffix: String) : String = {
     counterId += 1
     "_type_" + suffix + "_" + counterId.toString()
@@ -68,7 +65,7 @@ class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisConte
         variables += (s.id -> (sIdP, s.symbolTyp))
       }
     }
-    val (trExpr, _) = translateExpr(eqExpr, Map.empty, false, writeCommand)
+    val (trExpr, _) = translateExpr(eqExpr, Map.empty, false)
     trExpr.expr
   }
 
