@@ -24,6 +24,7 @@ module main
 {
   var a, b, q : integer;
   var inited  : boolean;
+  var blah    : integer;
 
   instance incr1 : incr(x : (a'), y: (b));
 
@@ -37,6 +38,8 @@ module main
     inited' = true;
     q' = b' + common.k1;
     a' = a  + common.k1;
+
+    blah' = incr1.x;
 
     next (incr1);
   }

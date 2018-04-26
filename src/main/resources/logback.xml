@@ -18,9 +18,9 @@
   <logger name="uclid.lang.ModuleInstantiatorPass" level="OFF"/>
   <logger name="uclid.lang.ModuleFlattenerPass" level="OFF"/>
   <logger name="uclid.lang.VariableDependencyFinder" level="OFF"/>
-  <logger name="uclid.lang.StatementSchedulerPass" level="OFF"/>
   <logger name="uclid.lang.ConstantLitRewriterPass" level="OFF"/>
   <logger name="uclid.lang.StatementScheduler" level="OFF"/>
+  <logger name="uclid.lang.StatementSchedulerPass" level="OFF"/>
   <logger name="uclid.lang.PrimedVariableEliminatorPass" level="OFF"/>
   <logger name="uclid.lang.VerificationExpressionPass" level="OFF"/>
   <logger name="uclid.Utils.topoSort" level="OFF"/>

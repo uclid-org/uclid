@@ -112,8 +112,8 @@ object StatementScheduler {
         val moduleType : ModuleType = instD.modType.get.asInstanceOf[ModuleType]
         val moduleInputs = instD.inputMap.map(p => p._3)
         val moduleSharedVars = instD.sharedVarMap.map(p => p._3)
-        logger.debug("moduleInputs: {}", moduleInputs.toString())
-        logger.debug("moduleSharedVars: {}", moduleSharedVars.toString())
+        logger.trace("moduleInputs: {}", moduleInputs.toString())
+        logger.trace("moduleSharedVars: {}", moduleSharedVars.toString())
         readSets(moduleInputs) ++ readSets(moduleSharedVars)
     }
   }
@@ -263,7 +263,7 @@ class StatementSchedulerPass extends RewritePass {
         val ins = p._2._1
         val outs = p._2._2
         // add an edge from st.astNodeId to each of the statements that produce the ins
-        logger.debug("st: {}; ins: {}", st.astNodeId.toString(), ins.toString())
+        logger.debug("st: {}; ins: {}; outs: {}", st.astNodeId.toString(), ins.toString(), outs.toString())
         val inIds = ins.map(id => idToStmtIdMap.get(id)).flatten
         acc + (st.astNodeId -> inIds)
       }
@@ -275,6 +275,7 @@ class StatementSchedulerPass extends RewritePass {
   }
   override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
     val bodyP = reorderStatements(next.body, context)
+    logger.debug(Utils.join(bodyP.flatMap(st => st.toLines), "\n"))
     Some(NextDecl(bodyP))
   }
   override def rewriteIfElse(ifelse : IfElseStmt, context : Scope) : List[Statement] = {
