@@ -101,6 +101,8 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           havocStmt.havocable match {
             case HavocableId(id) =>
               checkIdent(proc, id, id.position, context, in)
+            case HavocableNextId(id) =>
+              throw new Utils.AssertionError("Should not have havocable next ids inside procedures.")
             case HavocableFreshLit(f) =>
               in
           }

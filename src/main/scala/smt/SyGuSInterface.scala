@@ -48,12 +48,15 @@ class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisConte
 
   override def getTypeName(suffix: String) : String = {
     counterId += 1
-    "_type_" + suffix + "_" + counterId.toString()
+    "type_" + suffix + "_" + counterId.toString()
   }
   override def getVariableName(v : String) : String = {
-    "_var_" + v
+    "var_" + v
   }
-  def getInitExpr(ident : Identifier, expr : smt.Expr, ctx : Scope) : String = {
+  def getPrimedVariableName(v : String) : String = {
+    "var_" + v + "!"
+  }
+  def getEqExpr(ident : Identifier, expr : smt.Expr, ctx : Scope, getNameFn : (String => String)) : String = {
     val typ = Converter.typeToSMT(ctx.typeOf(ident).get)
     val symbol = Symbol(ident.name, typ)
     val eqExpr : smt.Expr = OperatorApplication(EqualityOp, List(symbol, expr))
@@ -61,7 +64,7 @@ class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisConte
     val symbolsP = symbols.filter(s => !variables.contains(s.id))
     symbolsP.foreach {
       (s) => {
-        val sIdP = getVariableName(s.id)
+        val sIdP = getNameFn(s.id)
         variables += (s.id -> (sIdP, s.symbolTyp))
       }
     }
@@ -69,12 +72,44 @@ class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisConte
     trExpr.expr
   }
 
-  def getInitFun(initState : Map[Identifier, Expr], ctx : Scope) : String = {
-    val initExprs = initState.map(p => getInitExpr(p._1, p._2, ctx)).toList
-    ""
+  def getInitFun(initState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
+    val initExprs = initState.map(p => getEqExpr(p._1, p._2, ctx, getVariableName)).toList
+    val paramString = "(" + Utils.join(variables.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ") + ")"
+    val funcBody = "(and " + Utils.join(initExprs, " ") + ")"
+    val func = "(define-fun init-fn " + paramString + " " + funcBody + ")"
+    func
   }
+
+  def getNextFun(nextState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
+    val nextExprs = nextState.map(p => getEqExpr(p._1, p._2, ctx, getPrimedVariableName)).toList
+    val varString = Utils.join(variables.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ")
+    val primeString = Utils.join(variables.map(p => "(" + p._1 + "! " + generateDatatype(p._2)._1 + ")"), " ")
+    val paramString = "(" + varString + " " + primeString + ")"
+    val funcBody = "(and " + Utils.join(nextExprs, " ") + ")"
+    val func = "(define-fun trans-fn " + paramString + " " + funcBody + ")"
+    func
+  }
+
+  def getVariables(ctx : Scope) : List[(String, Type)] = {
+    (ctx.map.map {
+      p => {
+        val namedExpr = p._2
+        namedExpr match {
+          case Scope.StateVar(_, _) | Scope.InputVar(_, _) |Scope.OutputVar(_, _) | Scope.SharedVar(_, _) | Scope.ConstantVar(_, _) =>
+            Some((getVariableName(namedExpr.id.name), Converter.typeToSMT(namedExpr.typ)))
+          case _ =>
+            None
+        }
+      }
+    }).toList.flatten
+  }
+
   override def synthesizeInvariant(initState : Map[Identifier, Expr], nextState: Map[Identifier, Expr], properties : List[lang.Expr], ctx : Scope) : Unit = {
-    val initExprs = initState.map(p => getInitExpr(p._1, p._2, ctx)).toList
-    sygusLog.debug("initExpr: {}", initExprs.toString())
+    val variables = getVariables(ctx)
+    val initFun = getInitFun(initState, variables, ctx)
+    val transFun = getNextFun(nextState, variables, ctx)
+    sygusLog.debug(initFun)
+    sygusLog.debug(transFun)
   }
+
 }

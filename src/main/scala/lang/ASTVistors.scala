@@ -706,6 +706,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     st.havocable match {
       case HavocableId(id) =>
         result = visitIdentifier(id, result, context)
+      case HavocableNextId(id) =>
+        result = visitIdentifier(id, result, context)
       case HavocableFreshLit(f) =>
         result = visitFreshLiteral(f, result, context)
     }
@@ -1465,6 +1467,10 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case HavocableId(id) =>
         visitIdentifier(id, context).toList.flatMap((idP) => {
           pass.rewriteHavoc(HavocStmt(HavocableId(idP)), context)
+        })
+      case HavocableNextId(id) =>
+        visitIdentifier(id, context).toList.flatMap((idP) => {
+          pass.rewriteHavoc(HavocStmt(HavocableNextId(idP)), context)
         })
       case HavocableFreshLit(f) =>
         visitFreshLiteral(f, context).toList.flatMap((eP) => {

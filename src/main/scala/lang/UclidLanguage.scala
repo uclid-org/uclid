@@ -732,6 +732,9 @@ sealed abstract class HavocableEntity extends ASTNode
 case class HavocableId(id : Identifier) extends HavocableEntity {
   override def toString = id.toString()
 }
+case class HavocableNextId(id : Identifier) extends HavocableEntity {
+  override def toString = id.toString()
+}
 case class HavocableFreshLit(f : FreshLit) extends HavocableEntity {
   override def toString = f.toString()
 }

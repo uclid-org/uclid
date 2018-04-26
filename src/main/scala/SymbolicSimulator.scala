@@ -606,6 +606,8 @@ class SymbolicSimulator (module : Module) {
         h match {
           case HavocableId(id) =>
             return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(scope.typeOf(id).get)))
+          case HavocableNextId(id) =>
+            throw new Utils.AssertionError("HavocableNextIds should have eliminated by now.")
           case HavocableFreshLit(f) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
         }
@@ -641,6 +643,8 @@ class SymbolicSimulator (module : Module) {
         h match {
           case HavocableId(id) =>
             Set(id)
+          case HavocableNextId(id) =>
+            throw new Utils.AssertionError("HavocableNextIds should have been eliminated by now.")
           case HavocableFreshLit(f) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
         }

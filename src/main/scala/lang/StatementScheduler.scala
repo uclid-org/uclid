@@ -53,6 +53,7 @@ object StatementScheduler {
       case HavocStmt(h) => 
         h match {
           case HavocableId(id) => Set(id)
+          case HavocableNextId(id) => Set(id)
           case HavocableFreshLit(f) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
         }
@@ -109,7 +110,11 @@ object StatementScheduler {
         Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
         val moduleType : ModuleType = instD.modType.get.asInstanceOf[ModuleType]
-        readSets(instD.inputMap.map(p => p._3)) ++ readSets(instD.sharedVarMap.map(p => p._3))
+        val moduleInputs = instD.inputMap.map(p => p._3)
+        val moduleSharedVars = instD.sharedVarMap.map(p => p._3)
+        logger.debug("moduleInputs: {}", moduleInputs.toString())
+        logger.debug("moduleSharedVars: {}", moduleSharedVars.toString())
+        readSets(moduleInputs) ++ readSets(moduleSharedVars)
     }
   }
 
@@ -301,6 +306,16 @@ class StatementSchedulerPass extends RewritePass {
       List(CaseStmt(bodiesP))
     } else {
       List(caseStmt)
+    }
+  }
+  override def rewriteHavoc(havocStmt : HavocStmt, context : Scope) : List[Statement] = {
+    if (context.environment == SequentialEnvironment) {
+      havocStmt.havocable match {
+        case HavocableId(id) => List(HavocStmt(HavocableNextId(id)))
+        case _ => List(havocStmt)
+      }
+    } else {
+      List(havocStmt)
     }
   }
 }
