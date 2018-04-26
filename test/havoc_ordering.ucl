@@ -1,0 +1,20 @@
+module main
+{
+    var i : integer;
+
+    init {
+        i = 0;
+    }
+
+    next {
+        havoc i;
+        assert (i != 10);
+    }
+
+    control {
+        // print_module;
+        v = unroll(1);
+        check;
+        // print_results;
+    }
+}

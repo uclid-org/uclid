@@ -143,10 +143,12 @@ class BasicVerifierSpec extends FlatSpec {
   "test-k-induction-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-k-induction-1.ucl", 0)
   }
-  "test-k-induction-2.ucl" should "verify all assertions." in {
+  "test-k-induction-2.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-k-induction-2.ucl", 1)
   }
-}
+  "havoc_ordering.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/havoc_ordering.ucl", 0)
+  }}
 class ProcedureVerifSpec extends FlatSpec {
   "test-inliner.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-inliner.ucl", 0)
