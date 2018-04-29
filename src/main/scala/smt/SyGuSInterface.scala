@@ -68,8 +68,8 @@ class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisConte
         variables += (s.id -> (sIdP, s.symbolTyp))
       }
     }
-    val (trExpr, _) = translateExpr(eqExpr, Map.empty, false)
-    trExpr.expr
+    val trExpr = translateExpr(eqExpr, true)
+    trExpr
   }
 
   def getInitFun(initState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
@@ -81,6 +81,7 @@ class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisConte
   }
 
   def getNextFun(nextState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
+    // FIXME: some variables are not primed. Why?
     val nextExprs = nextState.map(p => getEqExpr(p._1, p._2, ctx, getPrimedVariableName)).toList
     val varString = Utils.join(variables.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ")
     val primeString = Utils.join(variables.map(p => "(" + p._1 + "! " + generateDatatype(p._2)._1 + ")"), " ")
@@ -108,6 +109,7 @@ class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisConte
     val variables = getVariables(ctx)
     val initFun = getInitFun(initState, variables, ctx)
     val transFun = getNextFun(nextState, variables, ctx)
+    sygusLog.debug(nextState.toString())
     sygusLog.debug(initFun)
     sygusLog.debug(transFun)
   }

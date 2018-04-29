@@ -144,8 +144,13 @@ object StatementScheduler {
   def getReadWriteSets(statements : List[Statement], context : Scope) : List[(Set[Identifier], Set[Identifier])] = {
     statements.map {
       st => {
-        val ins = readSet(st, context)
+        val insP = readSet(st, context)
         val outs = writeSet(st, context)
+        val ins = if (st.hasStmtBlock) {
+          insP.diff(outs)
+        } else {
+          insP
+        }
         logger.debug("Statement: {}", st.toString())
         logger.debug("Input Dependencies: {}", ins.toString())
         logger.debug("Output Dependencies: {}", outs.toString())

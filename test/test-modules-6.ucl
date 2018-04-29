@@ -42,6 +42,7 @@ module main
     blah' = incr1.x;
 
     next (incr1);
+    // assert (b < b');
   }
 
   invariant b_prop: inited ==> (b >= 2 && b > a && q > b);

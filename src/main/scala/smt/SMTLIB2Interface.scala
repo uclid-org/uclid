@@ -204,22 +204,6 @@ trait SMTLIB2Base {
     smtlib2BaseLogger.debug("memoP  : {}", resultMemo.toString())
     (resultExpr, resultMemo)
   }
-}
-
-class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
-  val smtlibInterfaceLogger = Logger(classOf[SMTLIB2Interface])
-
-  type NameProviderFn = (String, Option[String]) => String
-  var expressions : List[Expr] = List.empty
-  val solverProcess = new InteractiveProcess(args)
-
-  def generateDeclaration(name: String, t: Type) = {
-    val (typeName, newTypes) = generateDatatype(t)
-    Utils.assert(newTypes.size == 0, "No new types are expected here.")
-    val cmd = "(declare-const %s %s)".format(name, typeName)
-    writeCommand(cmd)
-  }
-
   def translateExpr(e : Expr, shouldLetify : Boolean) : String = {
     val (trExpr, memoP) = translateExpr(e, Map.empty, shouldLetify)
     if (memoP.size == 0) {
@@ -236,6 +220,22 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
       recurse(letExprsSorted, trExpr.exprString())
     }
   }
+}
+
+class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
+  val smtlibInterfaceLogger = Logger(classOf[SMTLIB2Interface])
+
+  type NameProviderFn = (String, Option[String]) => String
+  var expressions : List[Expr] = List.empty
+  val solverProcess = new InteractiveProcess(args)
+
+  def generateDeclaration(name: String, t: Type) = {
+    val (typeName, newTypes) = generateDatatype(t)
+    Utils.assert(newTypes.size == 0, "No new types are expected here.")
+    val cmd = "(declare-const %s %s)".format(name, typeName)
+    writeCommand(cmd)
+  }
+
   def writeCommand(str : String) {
     solverProcess.writeInput(str + "\n")
   }

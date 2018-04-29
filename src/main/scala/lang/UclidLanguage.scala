@@ -716,6 +716,7 @@ case class ModuleType(
 /** Statements **/
 sealed abstract class Statement extends ASTNode {
   override def toString = Utils.join(toLines, "\n") + "\n"
+  def hasStmtBlock = false
   def isLoop = false
   def toLines : List[String]
 }
@@ -746,6 +747,7 @@ case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
     List(Utils.join(lhss.map (_.toString), ", ") + " = " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
 }
 case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Statement]) extends Statement {
+  override def hasStmtBlock = true
   lazy val lines : List[String] = if (elseblock.size > 0) {
     List("if (" + cond.toString + ") // " + position.toString, "{ ") ++
     ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++
@@ -761,6 +763,7 @@ case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Stat
 case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: List[Statement])
   extends Statement
 {
+  override def hasStmtBlock = true
   override def isLoop = true
   override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString) ++
                          body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
@@ -768,6 +771,7 @@ case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: List[St
 case class WhileStmt(cond: Expr, body: List[Statement], invariants: List[Expr])
   extends Statement
 {
+  override def hasStmtBlock = true
   override def isLoop = true
   override def toLines = {
     val headLine = "while(%s)  // %s".format(cond.toString(), position.toString())
@@ -779,6 +783,7 @@ case class WhileStmt(cond: Expr, body: List[Statement], invariants: List[Expr])
   }
 }
 case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
+  override def hasStmtBlock = true
   override def toLines = List("case") ++
     body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _)} ++
     List("esac")

@@ -343,6 +343,34 @@ object Context
   def getFieldName(field: String) : String = {
     "_field_" + field
   }
+
+  def mergeCounts(m1 : Map[Expr, Int], m2 : Map[Expr, Int]) : Map[Expr, Int] = {
+    val keys = m1.keys ++ m2.keys
+    keys.map(k => {
+      val cnt = m1.get(k).getOrElse(0) +  m2.get(k).getOrElse(0)
+      k -> cnt
+    }).toMap
+  }
+  def countOccurrences(e : Expr) : Map[Expr, Int] = {
+    Map.empty
+  }
+  def foldOverExpr[T](init : T, f : ((T, Expr) => T), e : Expr) : T = {
+    val subResult = e match {
+      case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | EnumLit(_, _) =>
+        init
+      case OperatorApplication(op, operands) =>
+        foldOverExprs(init, f, operands)
+      case ArraySelectOperation(e, index) =>
+        foldOverExprs(foldOverExpr(init, f, e), f, index)
+      case ArrayStoreOperation(e, index, value) =>
+        foldOverExprs(foldOverExpr(foldOverExpr(init, f, e), f, value), f, index)
+      // FIXME: more cases here.
+    }
+    f(subResult, e)
+  }
+  def foldOverExprs[T](init : T, f : ((T, Expr) => T), es : List[Expr]) : T = {
+    es.foldLeft(init)((acc, e) => foldOverExpr(acc, f, e))
+  }
 }
 
 abstract trait SynthesisContext {

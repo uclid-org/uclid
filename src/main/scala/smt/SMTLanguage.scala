@@ -57,8 +57,10 @@ sealed trait Hashable {
   def computeHash(a : Any, b : Any) = finalize(mix(mix(hashBaseValue, a.hashCode()), b.hashCode()), 2)
   def computeHash(bs : List[Any]) : Int =
     finalize(bs.foldLeft(hashBaseId)((acc, h) => mix(acc, h.hashCode)), bs.size)
-  def computeHash(bs : List[Any], b : Any) : Int =
+  def computeHashList(bs : List[Any], b : Any) : Int =
     finalize(bs.foldLeft(mix(hashBaseValue, b.hashCode))((acc, b) => mix(acc, b.hashCode)), bs.size+1)
+  def computeHashList2(bs : List[(Any, Any)], b : Any) : Int =
+    finalize(bs.foldLeft(mix(hashBaseValue, b.hashCode))((acc, b) => mix(acc, mix(b._1.hashCode, b._2.hashCode))), bs.size+1)
   def computeHash(bs : List[Any], b : Any, c : Any) : Int =
     finalize(bs.foldLeft(mix(hashBaseValue, mix(c.hashCode, b.hashCode)))((acc, b) => mix(acc, b.hashCode)), bs.size+1)
   def computeHash(as : List[Any], bs : List[Any]) : Int = {
@@ -143,7 +145,7 @@ case class RecordType(fields_ : List[(String, Type)]) extends ProductType(fields
 }
 case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override val hashId = 106
-  override val hashCode = computeHash(inTypes, outType)
+  override val hashCode = computeHashList(inTypes, outType)
   override def toString = {
     "map [" +
     inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + "," + i.toString } +
@@ -154,7 +156,7 @@ case class MapType(inTypes: List[Type], outType: Type) extends Type {
 }
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override val hashId = 107
-  override val hashCode = computeHash(inTypes, outType)
+  override val hashCode = computeHashList(inTypes, outType)
   override def toString = {
     "array [" +
     inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + "," + i.toString } +
@@ -540,7 +542,7 @@ case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ)))
 
 case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr (op.resultType(operands)) {
   override val hashId = 306
-  override val hashCode = computeHash(operands, op)
+  override val hashCode = computeHashList(operands, op)
   val fix = op.fixity
   Utils.assert(fix == INFIX || fix == PREFIX, "Unknown fixity.")
   Utils.assert(fix != INFIX || operands.size == 2, "Infix operators must have two operands.")
@@ -555,7 +557,7 @@ case class ArraySelectOperation(e: Expr, index: List[Expr])
   extends Expr (e.typ.asInstanceOf[ArrayType].outType)
 {
   override val hashId = 307
-  override val hashCode = computeHash(index, e)
+  override val hashCode = computeHashList(index, e)
   override def toString = "(" + e.toString + ")" + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + "]"
   override val isConstant = e.isConstant && index.forall(i => i.isConstant)
@@ -568,23 +570,48 @@ case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends 
     { (acc,i) => acc + "," + i.toString } + " := " + value.toString + "]"
   override val isConstant = e.isConstant && index.forall(i => i.isConstant) && value.isConstant
 }
+case class LetExpression(letBindings : List[(Symbol, Expr)], expr : Expr) extends Expr(expr.typ)
+{
+  override val hashId = 309
+  override val hashCode = computeHashList2(letBindings, expr)
+  override def toString = {
+    val bindings = Utils.join(letBindings.map(p => "(%s %s)".format(p._1.toString(), p._2.toString())), " ")
+    "(let (%s) %s)".format(bindings)
+  }
+  override val isConstant = expr.isConstant
+}
 
 //For uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class FunctionApplication(e: Expr, args: List[Expr])
   extends Expr (e.typ.asInstanceOf[MapType].outType)
 {
-  override val hashId = 309
-  override val hashCode = computeHash(args, e)
+  override val hashId = 310
+  override val hashCode = computeHashList(args, e)
   override def toString = e.toString + "(" + args.tail.fold(args.head.toString)
     { (acc,i) => acc + "," + i.toString } + ")"
   override val isConstant = e.isConstant && args.forall(a => a.isConstant)
 }
 
 case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType(ids.map(id => id.typ), e.typ)) {
-  override val hashId = 310
-  override val hashCode = computeHash(ids, e)
+  override val hashId = 311
+  override val hashCode = computeHashList(ids, e)
   override def toString = "Lambda(" + ids + "). " + e.toString
   override val isConstant = e.isConstant
+}
+
+class Bindings(val freeVars : List[Symbol], val letVars : List[Symbol], val lambdaVars : List[Symbol], val quantifierVars: List[Symbol]) {
+  def addFreeVar(v : Symbol) = {
+    new Bindings(v :: freeVars, letVars, lambdaVars, quantifierVars)
+  }
+  def addLetVar(v : Symbol) = {
+    new Bindings(freeVars,v :: letVars, lambdaVars, quantifierVars)
+  }
+  def addLambdaVar(v : Symbol) = {
+    new Bindings(freeVars, letVars, v :: lambdaVars, quantifierVars)
+  }
+  def addQuantifierVar(v : Symbol) = {
+    new Bindings(freeVars, letVars, lambdaVars, v :: quantifierVars)
+  }
 }
 
 abstract class SolverInterface {
@@ -592,10 +619,11 @@ abstract class SolverInterface {
   def addConstraint(e : Expr)
   // Check whether 'e' is satisfiable in the current solver context.
   def check(e : Expr) : SolverResult
-  // Produce SMT2 output for this expression.
-  def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String
   // Add a list of assumptions
   def addAssumptions(es : List[Expr])
   // Pop the the last added list of assumptions
   def popAssumptions()
+
+  // Produce SMT2 output for this expression.
+  def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String
 }
