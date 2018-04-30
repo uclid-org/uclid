@@ -73,6 +73,7 @@ object UclidMain {
   case class Config(
       mainModuleName : String = "main",
       smtSolver: List[String] = List.empty,
+      synthesizer: List[String] = List.empty,
       files : Seq[java.io.File] = Seq()
   )
 
@@ -84,10 +85,13 @@ object UclidMain {
         (x, c) => c.copy(mainModuleName = x) 
       }.text("Name of the main module.")
 
-      opt[String]('s', "solver").valueName("<Binary>").action{ 
+      opt[String]('s', "solver").valueName("<Cmd>").action{ 
         (exec, c) => c.copy(smtSolver = exec.split(" ").toList) 
       }.text("External SMT solver binary.")
 
+      opt[String]('y', "synthesizer").valueName("<Cmd>").action{
+        (exec, c) => c.copy(synthesizer = exec.split(" ").toList)
+      }
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
       }.text("List of files to analyze.")
@@ -267,7 +271,11 @@ object UclidMain {
     } else {
       new smt.Z3Interface()
     }
-    val result = symbolicSimulator.execute(z3Interface, Some(new SyGuSInterface(List.empty)))
+    val sygusInterface : Option[smt.SynthesisContext] = config.synthesizer match {
+      case Nil => None
+      case lst => Some(new smt.SyGuSInterface(lst))
+    }
+    val result = symbolicSimulator.execute(z3Interface, sygusInterface)
     z3Interface.finish()
     return result
   }

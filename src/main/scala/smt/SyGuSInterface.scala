@@ -42,54 +42,12 @@ package smt
 
 import lang.{Identifier, Scope}
 import com.typesafe.scalalogging.Logger
+import scala.collection.JavaConverters._
+
+import java.io.{File, PrintWriter}
 
 class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisContext {
   val sygusLog = Logger(classOf[SyGuSInterface])
-
-  override def getTypeName(suffix: String) : String = {
-    counterId += 1
-    "type_" + suffix + "_" + counterId.toString()
-  }
-  override def getVariableName(v : String) : String = {
-    "var_" + v
-  }
-  def getPrimedVariableName(v : String) : String = {
-    "var_" + v + "!"
-  }
-  def getEqExpr(ident : Identifier, expr : smt.Expr, ctx : Scope, getNameFn : (String => String)) : String = {
-    val typ = Converter.typeToSMT(ctx.typeOf(ident).get)
-    val symbol = Symbol(ident.name, typ)
-    val eqExpr : smt.Expr = OperatorApplication(EqualityOp, List(symbol, expr))
-    val symbols = Context.findSymbols(eqExpr)
-    val symbolsP = symbols.filter(s => !variables.contains(s.id))
-    symbolsP.foreach {
-      (s) => {
-        val sIdP = getNameFn(s.id)
-        variables += (s.id -> (sIdP, s.symbolTyp))
-      }
-    }
-    val trExpr = translateExpr(eqExpr, true)
-    trExpr
-  }
-
-  def getInitFun(initState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
-    val initExprs = initState.map(p => getEqExpr(p._1, p._2, ctx, getVariableName)).toList
-    val paramString = "(" + Utils.join(variables.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ") + ")"
-    val funcBody = "(and " + Utils.join(initExprs, " ") + ")"
-    val func = "(define-fun init-fn " + paramString + " " + funcBody + ")"
-    func
-  }
-
-  def getNextFun(nextState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
-    // FIXME: some variables are not primed. Why?
-    val nextExprs = nextState.map(p => getEqExpr(p._1, p._2, ctx, getPrimedVariableName)).toList
-    val varString = Utils.join(variables.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ")
-    val primeString = Utils.join(variables.map(p => "(" + p._1 + "! " + generateDatatype(p._2)._1 + ")"), " ")
-    val paramString = "(" + varString + " " + primeString + ")"
-    val funcBody = "(and " + Utils.join(nextExprs, " ") + ")"
-    val func = "(define-fun trans-fn " + paramString + " " + funcBody + ")"
-    func
-  }
 
   def getVariables(ctx : Scope) : List[(String, Type)] = {
     (ctx.map.map {
@@ -105,13 +63,124 @@ class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisConte
     }).toList.flatten
   }
 
-  override def synthesizeInvariant(initState : Map[Identifier, Expr], nextState: Map[Identifier, Expr], properties : List[lang.Expr], ctx : Scope) : Unit = {
+  override def getTypeName(suffix: String) : String = {
+    counterId += 1
+    "type_" + suffix + "_" + counterId.toString()
+  }
+  override def getVariableName(v : String) : String = {
+    "var_" + v
+  }
+  def getPrimedVariableName(v : String) : String = {
+    "var_" + v + "!"
+  }
+  def getEqExpr(ident : Identifier, expr : smt.Expr, ctx : Scope, prime : Boolean) : String = {
+    val typ = Converter.typeToSMT(ctx.typeOf(ident).get)
+    val symbol = Symbol(if (prime) ident.name + "!" else ident.name, typ)
+    val eqExpr : smt.Expr = OperatorApplication(EqualityOp, List(symbol, expr))
+    val symbols = Context.findSymbols(eqExpr)
+    val symbolsP = symbols.filter(s => !variables.contains(s.id))
+    symbolsP.foreach {
+      (s) => {
+        val sIdP = getVariableName(s.id)
+        variables += (s.id -> (sIdP, s.symbolTyp))
+      }
+    }
+    val trExpr = translateExpr(eqExpr, false)
+    trExpr
+  }
+
+  def getDeclarations(variables : List[(String, Type)]) : String = {
+    val decls = variables.map{ v =>
+      {
+        val (typeName, otherDecls) = generateDatatype(v._2)
+        Utils.assert(otherDecls.size == 0, "Datatype declarations are not supported yet.")
+        // FIXME: to handle otherDecls
+        "(declare-primed-var %s %s)".format(v._1, typeName)
+      }
+    }
+    Utils.join(decls, "\n")
+  }
+  
+  def getStatePredicateTypeDecl(variables: List[(String, Type)]) : String = {
+    "(" + Utils.join(variables.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ") + ")" + " Bool"
+  }
+
+  def getTransRelationTypeDecl(variables: List[(String, Type)]) : String = {
+    val vars = variables.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")")
+    val varsP = variables.map(p => "(" + p._1 + "! " + generateDatatype(p._2)._1 + ")")
+    "(" + Utils.join(vars ++ varsP, " ") + ")" + " Bool"
+  }
+  
+  def getSynthFuncDecl(vars : List[(String, Type)]) : String = {
+    val types = "(" + Utils.join(vars.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ") + ")"
+    "(synth-inv inv-f %s)".format(types)
+  }
+
+  def getInitFun(initState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
+    val initExprs = initState.map(p => getEqExpr(p._1, p._2, ctx, false)).toList
+    val funcBody = "(and " + Utils.join(initExprs, " ") + ")"
+    val func = "(define-fun init-fn " + getStatePredicateTypeDecl(variables) + " " + funcBody + ")"
+    func
+  }
+
+  def getNextFun(nextState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
+    // FIXME: some variables are not primed. Why?
+    val nextExprs = nextState.map(p => getEqExpr(p._1, p._2, ctx, true)).toList
+    val funcBody = "(and " + Utils.join(nextExprs, " ") + ")"
+    val func = "(define-fun trans-fn " + getTransRelationTypeDecl(variables) + " " + funcBody + ")"
+    func
+  }
+
+  def getPostFun(properties : List[Expr], variables : List[(String, Type)], ctx : Scope) : String = {
+    val exprs = properties.map(p => translateExpr(p, false))
+    val funBody = if (exprs.size == 1) exprs(0) else "(and %s)".format(Utils.join(exprs, " "))
+    "(define-fun post-fn %s %s)".format(getStatePredicateTypeDecl(variables), funBody)
+  }
+  
+  override def synthesizeInvariant(initState : Map[Identifier, Expr], nextState: Map[Identifier, Expr], properties : List[smt.Expr], ctx : Scope) : Unit = {
     val variables = getVariables(ctx)
+    val varDecls = getDeclarations(variables)
+    val synthFunDecl = getSynthFuncDecl(variables)
+    val preamble = "(set-logic LIA)" // FIXME: need to identify logics
     val initFun = getInitFun(initState, variables, ctx)
     val transFun = getNextFun(nextState, variables, ctx)
-    sygusLog.debug(nextState.toString())
-    sygusLog.debug(initFun)
-    sygusLog.debug(transFun)
+    val postFun = getPostFun(properties, variables, ctx)
+    val postamble = "(inv-constraint inv-fn init-fn trans-fn post-fn)\n\n(check-synth)"
+    
+    val instanceLines = List(preamble, synthFunDecl, varDecls, initFun, transFun, postFun, postamble)
+    val instance = "\n" + Utils.join(instanceLines, "\n")
+    sygusLog.debug(instance)
+    val tmpFile = File.createTempFile("uclid-sygus-instance", ".sl")
+    // tmpFile.deleteOnExit()
+    new PrintWriter(tmpFile) {
+      write(instance)
+      close()
+    }
+    
+    val filename = tmpFile.getAbsolutePath()
+    val cmdLine = (args ++ List(filename)).asJava
+    sygusLog.debug("command line: {}", cmdLine.toString())
+    val builder = new ProcessBuilder(cmdLine)
+    builder.redirectErrorStream(true)
+    val process = builder.start()
+    val out = process.getInputStream()
+    val in = process.getOutputStream()
+    val numAvail = out.available()
+    if (numAvail == 0) {
+      Thread.sleep(5)
+    } else {
+      val bytes = Array.ofDim[Byte](numAvail)
+      val numRead = out.read(bytes, 0, numAvail)
+      val string = new String({
+        if (numRead == numAvail) {
+          bytes
+        } else {
+          bytes.slice(0, numRead)
+        }
+      })
+      sygusLog.debug(string)
+    }
+   
   }
 
 }

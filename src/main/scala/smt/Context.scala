@@ -374,5 +374,5 @@ object Context
 }
 
 abstract trait SynthesisContext {
-  def synthesizeInvariant(initState : Map[lang.Identifier, Expr], nextState: Map[lang.Identifier, Expr], properties : List[lang.Expr], ctx : lang.Scope) : Unit
+  def synthesizeInvariant(initState : Map[lang.Identifier, Expr], nextState: Map[lang.Identifier, Expr], properties : List[smt.Expr], ctx : lang.Scope) : Unit
 }

@@ -193,7 +193,7 @@ trait SMTLIB2Base {
           case BooleanLit(value) =>
             (value match { case true => "true"; case false => "false" }, memo, false)
         }
-        val translatedExpr = if (letify) {
+        val translatedExpr = if (letify && shouldLetify) {
           TranslatedExpr(memoP.size, exprStr, Some(getLetVariableName()))
         } else {
           TranslatedExpr(memoP.size, exprStr, None)
@@ -206,18 +206,22 @@ trait SMTLIB2Base {
   }
   def translateExpr(e : Expr, shouldLetify : Boolean) : String = {
     val (trExpr, memoP) = translateExpr(e, Map.empty, shouldLetify)
-    if (memoP.size == 0) {
-      trExpr.exprString()
-    } else {
-      val letExprsIn = memoP.filter(p => p._2.name.isDefined).map(p => (p._2.order, p._2.name.get, p._2.expr)).toList
-      val letExprsSorted = letExprsIn.sortWith((p1, p2) => p1._1 < p2._1).map(p => (p._2, p._3))
-      def recurse(lets : List[(String, String)], expr : String) : String = {
-        lets match {
-          case Nil => expr
-          case hd :: tl => "(let ((" + hd._1 + " " + hd._2 + ")) " + recurse(tl, expr) + ")"
+    if (shouldLetify) {
+      if (memoP.size == 0) {
+        trExpr.exprString()
+      } else {
+        val letExprsIn = memoP.filter(p => p._2.name.isDefined).map(p => (p._2.order, p._2.name.get, p._2.expr)).toList
+        val letExprsSorted = letExprsIn.sortWith((p1, p2) => p1._1 < p2._1).map(p => (p._2, p._3))
+        def recurse(lets : List[(String, String)], expr : String) : String = {
+          lets match {
+            case Nil => expr
+            case hd :: tl => "(let ((" + hd._1 + " " + hd._2 + ")) " + recurse(tl, expr) + ")"
+          }
         }
+        recurse(letExprsSorted, trExpr.exprString())
       }
-      recurse(letExprsSorted, trExpr.exprString())
+    } else {
+      trExpr.expr
     }
   }
 }
