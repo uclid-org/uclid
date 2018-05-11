@@ -74,6 +74,7 @@ object UclidMain {
       mainModuleName : String = "main",
       smtSolver: List[String] = List.empty,
       synthesizer: List[String] = List.empty,
+      synthesisRunDir: String = "",
       files : Seq[java.io.File] = Seq()
   )
 
@@ -91,7 +92,12 @@ object UclidMain {
 
       opt[String]('y', "synthesizer").valueName("<Cmd>").action{
         (exec, c) => c.copy(synthesizer = exec.split(" ").toList)
-      }
+      }.text("Command line to invoke SyGuS synthesizer.")
+
+      opt[String]('Y', "synthesizer-run-directory").valueName("<Dir>").action{
+        (dir, c) => c.copy(synthesisRunDir = dir)
+      }.text("Run directory for synthesizer.")
+
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
       }.text("List of files to analyze.")
@@ -273,7 +279,7 @@ object UclidMain {
     }
     val sygusInterface : Option[smt.SynthesisContext] = config.synthesizer match {
       case Nil => None
-      case lst => Some(new smt.SyGuSInterface(lst))
+      case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir))
     }
     val result = symbolicSimulator.execute(z3Interface, sygusInterface)
     z3Interface.finish()

@@ -39,6 +39,8 @@
 package uclid
 package lang
 
+import com.typesafe.scalalogging.Logger
+
 class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
   type T = Set[ModuleError]
   lazy val manager : PassManager = analysis.manager
@@ -186,6 +188,7 @@ class LTLPropertyRewriterPass extends RewritePass {
 
   lazy val manager : PassManager = analysis.manager
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
+  val logger = Logger(classOf[LTLPropertyRewriterPass])
 
   def Y(x : Expr) = Operator.Y(x)
   def and(x : Expr, y : Expr) = Operator.and(x, y)
@@ -211,6 +214,11 @@ class LTLPropertyRewriterPass extends RewritePass {
       // !(x R y) -> !x U !y
       case OperatorApplication(NegationOp(), List(OperatorApplication(ReleaseTemporalOp(), args))) =>
         OperatorApplication(UntilTemporalOp(), args.map(a => recurse(not(a))))
+      // !(x W y) -> !y U (!x /\ !y)
+      case OperatorApplication(NegationOp(), List(OperatorApplication(WUntilTemporalOp(), args))) =>
+        val notA = recurse(not(args(0)))
+        val notB = recurse(not(args(1)))
+        OperatorApplication(UntilTemporalOp(), List(notB, Operator.and(notA, notB)))
       // !X a -> X !a
       case OperatorApplication(NegationOp(), List(OperatorApplication(NextTemporalOp(), args))) =>
         OperatorApplication(NextTemporalOp(), args.map(a => recurse(not(a))))
@@ -452,6 +460,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     val monitors = ltlSpecs.map {
       (s) => {
         val nnf = convertToNNF(not(s.expr))
+        logger.debug("EXP: {}", s.expr.toString())
+        logger.debug("NNF: {}", nnf.toString()) 
         // println("exp: " + s.expr.toString)
         // println("nnf: " + nnf.toString)
         createMonitorExpressions(s.id, nnf, nameProvider)

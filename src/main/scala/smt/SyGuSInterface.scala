@@ -46,7 +46,7 @@ import scala.collection.JavaConverters._
 
 import java.io.{File, PrintWriter}
 
-class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisContext {
+class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with SynthesisContext {
   val sygusLog = Logger(classOf[SyGuSInterface])
 
   def getVariables(ctx : Scope) : List[(String, Type)] = {
@@ -161,10 +161,14 @@ class SyGuSInterface(args: List[String]) extends SMTLIB2Base with SynthesisConte
     val cmdLine = (args ++ List(filename)).asJava
     sygusLog.debug("command line: {}", cmdLine.toString())
     val builder = new ProcessBuilder(cmdLine)
+    if (dir.size > 0) {
+      builder.directory(new File(dir))
+    }
     builder.redirectErrorStream(true)
     val process = builder.start()
     val out = process.getInputStream()
     val in = process.getOutputStream()
+    while (process.isAlive()) {}
     val numAvail = out.available()
     if (numAvail == 0) {
       Thread.sleep(5)

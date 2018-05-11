@@ -236,7 +236,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
   def generateDeclaration(name: String, t: Type) = {
     val (typeName, newTypes) = generateDatatype(t)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
-    val cmd = "(declare-const %s %s)".format(name, typeName)
+    val cmd = "(declare-fun %s () %s)".format(name, typeName)
     writeCommand(cmd)
   }
 

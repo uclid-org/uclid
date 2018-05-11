@@ -22,6 +22,7 @@
   <logger name="uclid.lang.StatementScheduler" level="OFF"/>
   <logger name="uclid.lang.StatementSchedulerPass" level="OFF"/>
   <logger name="uclid.lang.PrimedVariableEliminatorPass" level="OFF"/>
+  <logger name="uclid.lang.LTLPropertyRewriterPass" level="OFF"/>
   <logger name="uclid.lang.VerificationExpressionPass" level="OFF"/>
   <logger name="uclid.Utils.topoSort" level="OFF"/>
   <logger name="uclid.Utils.schedule" level="OFF"/>

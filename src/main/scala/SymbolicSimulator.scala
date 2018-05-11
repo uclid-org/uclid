@@ -323,11 +323,14 @@ class SymbolicSimulator (module : Module) {
     println("%d assertions failed.".format(failCount))
     println("%d assertions indeterminate.".format(undetCount))
 
+    /*
     assertionResults.foreach{ (p) =>
       if (p.result.isTrue) {
         println("  PASSED -> " + p.assert.toString)
       }
     }
+    * 
+    */
     if (failCount > 0) {
       assertionResults.foreach{ (p) =>
         if (p.result.isFalse) {
