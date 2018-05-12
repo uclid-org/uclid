@@ -218,7 +218,9 @@ class LTLPropertyRewriterPass extends RewritePass {
       case OperatorApplication(NegationOp(), List(OperatorApplication(WUntilTemporalOp(), args))) =>
         val notA = recurse(not(args(0)))
         val notB = recurse(not(args(1)))
-        OperatorApplication(UntilTemporalOp(), List(notB, Operator.and(notA, notB)))
+        val wOp = OperatorApplication(WUntilTemporalOp(), List(notB, and(notA, notB)))
+        val fOp = OperatorApplication(FinallyTemporalOp(), List(notB))
+        and(wOp, fOp)
       // !X a -> X !a
       case OperatorApplication(NegationOp(), List(OperatorApplication(NextTemporalOp(), args))) =>
         OperatorApplication(NextTemporalOp(), args.map(a => recurse(not(a))))
@@ -364,7 +366,10 @@ class LTLPropertyRewriterPass extends RewritePass {
               val failedVar = nameProvider(specName, "failed")
               val failedExpr = and(pendingExpr, not(args(0)))
               val failedNext = (failedVar, failedExpr)
-              MonitorInfo(z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
+              // accept = true
+              val acceptVar = nameProvider(specName, "accept")
+              val acceptNext = (acceptVar, BoolLit(false))
+              MonitorInfo(z, zImpl :: argImpls, pendingNext :: failedNext :: acceptNext  :: argNexts, failedVar :: argFaileds, acceptVar :: argAccepts, pendingVar :: argPendings)
             case _ =>
               throw new Utils.AssertionError("Unexpected temporal operator here: " + tOp.toString)
           }
