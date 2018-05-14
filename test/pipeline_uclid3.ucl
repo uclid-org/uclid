@@ -1,0 +1,268 @@
+MODEL PipelinedDatapath
+
+(* First we define symbolic constants that will be used in
+   both implementation and specification modules *)
+CONST
+
+ pc0 : TERM;         (* The initial value of the pc *)
+ rf0 : FUNC[1];      (* The initial value of the register file *)
+ 
+ newpc : FUNC[1];    (* The functional constant for generating
+                        the next pc *)
+ src1 : FUNC[1];     (* Function to extract the first source *)
+ src2 : FUNC[1];     (* Function to extract the second source *)
+ op : FUNC[1];       (* Function to extract the op code *)
+ dest : FUNC[1];     (* Function to extract the destination *)
+ alu : FUNC[3];      (* ALU function *)
+
+ a : TERM;           (* Used as an argument to Lambdas *)
+
+
+(*********** IMPLEMENTATION MODULE *****************)
+MODULE impl
+
+INPUT
+
+  flush : TRUTH;   (* This is an external variable. It is true
+                      in a step when the pipeline is to be flushed
+                      in that step *)
+
+VAR
+
+  (* ---- State variables ---- *)
+  pPC  : TERM;      (* Program counter *)
+  pRF : FUNC[1];    (* Register file - modeled as a memory *)
+  eOP : TERM;       (* Exec stage state: Operand *)
+  eSRC2 : TERM;     (* Exec stage state: First source Reg ID *)
+  eARG1 : TERM;     (* Exec stage state: First Operand *)
+  eARG2 : TERM;     (* Exec stage state: Second Operand *)
+  eDEST : TERM;     (* Exec stage state: Destination Reg ID *)
+  eWRT : TRUTH;     (* Exec stage state: Valid bit *)
+  wVAL : TERM;      (* Writeback stage state: Result from ALU *)
+  wDEST : TERM;     (* Writeback stage state: Destination Reg *)
+  wWRT : TRUTH;     (* Writeback stage state: Valid bit *)
+
+  (* --- Macro variables --- *)
+  stall : TRUTH;    (* stall signal *)
+  fwd : TERM;       (* Forwarded result *)
+
+(* Local constants -- used for giving arbitrary start state 
+   assignments to pipeline stage registers *)
+CONST
+
+  op0 : TERM;
+  s0 : TERM;
+  a1 : TERM;
+  a2 : TERM;
+  d0 : TERM;
+  d1 : TERM;
+  x0 : TERM;
+
+  w0 : TRUTH;
+  w1 : TRUTH;
+
+(* Macro definitions *)
+DEFINE
+  (* Stall when the destination of a valid instruction in execute
+     stage is same as the source of the fetched instruction *)
+  stall := eWRT & (src1(pPC) = eDEST); 
+
+  (* Forward the result of the writeback stage if it is valid, and
+     its destination is the same as the 2nd source of the exec stage *)
+  fwd := case
+    wWRT & (wDEST = eSRC2) : wVAL;
+    default : eARG2;
+  esac;
+
+(* State assignments *)
+ASSIGN
+(* Fetch & Decode Stage *)
+  init[pPC] := pc0;         (* initially arbitrary *)
+  next[pPC] := case         (* Remains the same only if the pipeline is *)
+    (flush | stall) : pPC;  (* flushed, or if there is a stall *)
+    default : newpc(pPC);
+  esac;
+
+  init[pRF] := rf0;         (* initially arbitrary *)
+  next[pRF] := Lambda(a) .
+    case
+      wWRT & (a = wDEST) : wVAL; (* stores wVAL in wDEST if valid *)
+      default : pRF(a);
+    esac;
+(* Execute Stage *)
+
+  init[eOP] := op0;
+  next[eOP] := op(pPC);
+
+  init[eSRC2] := s0;
+  next[eSRC2] := src2(pPC);
+
+  (* Note that we use "next[pRF]" below instead of "pRF". This avoids 
+   the need to perform forwarding or stalling when the write back
+   destination matches one of the source operands in the fetch stage *)
+  init[eARG1] := a1;
+  next[eARG1] := next[pRF](src1(pPC));
+
+  init[eARG2] := a2;
+  next[eARG2] := next[pRF](src2(pPC));
+
+  init[eDEST] := d0;
+  next[eDEST] := dest(pPC);
+
+  init[eWRT] := w0;
+  next[eWRT] := ~stall & ~flush; (* valid when there is neither a
+                                    stall nor a flush *)
+(* Write back Stage *)
+  init[wVAL] := x0;
+  next[wVAL] := alu(eOP,eARG1,fwd); (* The first argument is read from
+                                       the RF, but the second is 
+                                       forwarded *)
+
+    
+  init[wDEST] := d1;
+  next[wDEST] := eDEST;
+
+  init[wWRT] := w1;
+  next[wWRT] := eWRT;
+
+
+(*********** SPECIFICATION MODULE *****************)
+MODULE spec
+
+INPUT
+
+ isa : TRUTH;           (* isa is 1 if the specification can make a 
+                           step, 0 otherwise *)
+ project_impl : TRUTH;  (* project_impl is 1 if we must project the
+                           implementation's state onto the
+                           specification's state, 0 otherwise *)
+
+
+VAR
+
+  (* State variables *)
+  sPC : TERM;           (* The program counter *)
+  sRF : FUNC[1];        (* The register file *)
+
+  (* Macro Variables *)
+  arg1 : TERM;    (* First operand *)
+  arg2 : TERM;    (* Second operand *)
+  val : TERM;     (* ALU output value *)
+
+CONST
+
+ pc1 : TERM;
+
+(* Macro definitions *)
+DEFINE
+
+  arg1 := sRF(src1(sPC));
+  arg2 := sRF(src2(sPC));
+  val := alu(op(sPC),arg1,arg2);
+
+(* State variable assignments *)
+ASSIGN
+
+  init[sPC] := pc0;  (* initially arbitrary - but same as impl. *)
+  next[sPC] := 
+    case
+      project_impl : impl.pPC;  (* Copy the implementation PC *)
+      isa : newpc(sPC);         (* if a step can be made, generate
+                                   next value of PC *)
+      default : sPC;
+    esac;
+
+  init[sRF] := rf0;  (* initially arbitrary - but same as impl. *)
+  next[sRF] := Lambda ( a ) . 
+    case
+      project_impl : impl.pRF(a);  (* Copy the implementation RF *)
+      (isa & (a = dest(sPC))) : val; (* if a step can be made, 
+                                        store val at dest(sPC) *)
+      default : sRF(a);
+    esac;
+
+
+(***** CONTROL Module *****)
+CONTROL
+
+(* external variable declarations *)
+EXTVAR
+
+(* These variables have already appeared as INPUTs. They are
+   all initialized with a default value of 0. *)
+flush : TRUTH := 0;
+isa : TRUTH := 0;
+project_impl : TRUTH := 0;
+
+(* Storage variables. These will be used to store intermediate values
+   during the simulation *)
+STOREVAR
+
+I_pc : TERM;      (* Impl PC after 1 step *)
+I_rf : FUNC[1];   (* Impl RF after 1 step *)
+
+S_pc0 : TERM;     (* Spec PC after 0 steps *)
+S_rf0 : FUNC[1];  (* Spec RF after 0 steps *)
+S_pc1 : TERM;     (* Spec PC after 1 step *)
+S_rf1 : FUNC[1];  (* Spec RF after 1 step *)
+
+CONST
+
+a1 : TERM;    (* Argument to a Lambda *)
+
+(* Statements begin *)
+EXEC
+
+(*----------------------------------------------------------------*)
+(* First, we simulate counter-clockwise from the left hand bottom to 
+   the right hand top of the diagram *)
+
+(* One step of the implementation *)
+simulate(1); 
+
+(* We need to flush for 2 steps. So set flush to 1 for the next
+   2 steps *)
+flush[1] := 1; 
+flush[2] := 1;
+
+(* Flush the pipeline *)
+simulate(2);
+
+(* Store the state of the pipeline after flushing *)
+I_pc := impl.pPC;
+I_rf := impl.pRF;
+
+(*----------------------------------------------------------------*)
+(* Reset all state variables to the initial state *)
+initialize;
+
+(*----------------------------------------------------------------*)
+(* Now, we simulate clockwise from the left hand bottom to the right 
+   hand top of the diagram *)
+
+(* First flush for two steps *)
+flush[0] := 1;
+flush[1] := 1;
+simulate(2);
+
+(* Now project the impl. state onto the spec. *)
+project_impl[2] := 1;
+simulate(1);
+(* Store the spec state variable values after 0 steps *)
+S_pc0 := spec.sPC;
+S_rf0 := spec.sRF;
+
+(* Run the spec machine for 1 step *)
+isa[3] := 1;
+simulate(1);
+(* Store the spec state variable values after 1 step *)
+S_pc1 := spec.sPC;
+S_rf1 := spec.sRF;
+
+(*----------------------------------------------------------------*)
+(******** check for correspondence ********)
+
+(* Does the PC and RF correspond, for either 0 or 1 steps of the spec.? *)
+decide((S_pc1 = I_pc) & (S_rf1(a1) = I_rf(a1)) |
+       (S_pc0 = I_pc) & (S_rf0(a1) = I_rf(a1))); 
+

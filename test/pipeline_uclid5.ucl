@@ -1,0 +1,214 @@
+// This module declares types that are used in the rest of the model.
+module common {
+  
+  type op_t   = enum { op_add, op_sub, NOP };
+  type word_t = bv8;
+  type addr_t = bv8;
+  type RF = [addr_t]word_t;
+  function src1 (i : word_t) : addr_t ;  // Function to extract the first source. 
+  function src2 (i : word_t) : addr_t ;  // Function to extract the second source. 
+  function op (i : addr_t) : op_t;       // Function to extract the op code. 
+  function dest (i : word_t) : addr_t;   // Function to extract the destination. 
+  function alu (i : op_t, j : word_t, k : word_t) : word_t; // ALU function.
+  
+  const pc0 : addr_t;
+  const rf0 : word_t;
+}
+
+module impl {
+  // Import type aliases from common.
+  type addr_t = common.addr_t;
+  type word_t = common.word_t;
+  type op_t   = common.op_t;
+  type RF = common.RF;
+  const op0 : op_t; 
+  const s0 : addr_t;
+  const a1 : word_t;
+  const a2 : word_t;
+  const d0 : addr_t;
+  const d1 : addr_t;
+  const x0 : word_t;
+
+  const w0 : boolean;
+  const w1 : boolean;
+  
+  
+  // This is an external variable. It is true in a step when the pipeline is to be flushed in that step.
+  input flush : boolean;
+
+  var pPC  : addr_t;      //Program counter
+  var pRF : RF; 	  // Register file - modeled as a memory
+  var eOP : op_t;         // Exec stage state: Operand 
+  var eSRC2 : addr_t;     // Exec stage state: First source Reg ID 
+  var eARG1 : word_t;     // Exec stage state: First Operand
+  var eARG2 : word_t;     // Exec stage state: Second Operand
+  var eDEST : addr_t;     // Exec stage state: Destination Reg ID 
+  var eWRT : boolean;        // Exec stage state: Valid bit 
+  var wVAL : word_t;      // Writeback stage state: Result from ALU 
+  var wDEST : addr_t;     // Writeback stage state: Destination Reg 
+  var wWRT : boolean;        // Writeback stage state: Valid bit 
+  
+  define stall() : boolean = eWRT && (common.src1(pPC) == eDEST);
+
+  define fwd() : word_t = eARG2;
+
+  procedure _set_impl_initilize () 
+  modifies pPC, eOP, eSRC2, eARG1, eARG2, eDEST, eWRT, wVAL, wDEST, wWRT, pRF;
+  {
+  pPC = common.pc0;
+  eOP = NOP;
+  eSRC2 = s0;
+  eARG1 = a1;
+  eARG2 = a2;
+  eDEST = d0;
+  eWRT = w0;
+  wVAL = x0;
+  wDEST = d1;
+  wWRT = w1;
+  for i in range (0bv8 , 255bv8){
+	pRF[i] = common.rf0;
+    }
+  }
+
+  procedure _impl_pipe() returns (pPC: addr_t, pRF: RF)
+  modifies eARG2, eOP, eARG1, eWRT, wWRT, wVAL, eDEST, eSRC2, wDEST;   
+  {
+     case
+    (flush || stall()) : {pPC = pPC;}  
+    default : {pPC = pPC + 1bv8;}
+    esac
+  
+   case
+    (wWRT) : {pRF[wDEST] = wVAL;}
+    esac
+
+  eOP = common.op(pPC);
+  
+  eSRC2 = common.src2(pPC);
+
+  case
+  (wWRT) : {eARG1 = wVAL;}
+  default :{eARG1 =  pRF[common.src1(pPC)];}
+  esac
+
+  case
+  (wWRT) : {eARG2 = wVAL;}
+  default :{eARG2 =  pRF[common.src2(pPC)];}
+  esac
+
+  eDEST = common.dest(pPC);
+
+  eWRT = !stall() && !flush; 
+
+  wVAL = common.alu(eOP,eARG1,fwd()); 
+
+  wDEST = eDEST;
+  
+  wWRT = eWRT;
+
+  } 
+ 
+  init {
+  call _set_impl_initilize();
+  }
+  
+  next {
+  call (pPC', pRF') = _impl_pipe();
+  }
+   
+}
+
+module spec
+{
+
+type addr_t = common.addr_t;
+type word_t = common.word_t;
+type op_t   = common.op_t;
+type RF = common.RF;
+const pc1 : addr_t;
+
+input isa : boolean;
+input project_impl : boolean;
+
+var sPC  : addr_t;      //Program counter
+var sRF : RF; 	  // Register file - modeled as a memory
+
+define arg1() : word_t = sRF[common.src1(sPC)];
+define arg2 () : word_t = sRF[common.src2(sPC)];
+define val () : word_t = common.alu(common.op(sPC),arg1(),arg2());
+
+procedure _spec () returns(sPC : addr_t, sRF : RF)
+{
+case
+      project_impl : {sPC = impl.pPC; sRF = impl.pRF; }  //Copy the implementation PC 
+      isa : {sPC = sPC + 1bv8; sRF[common.dest(sPC)] = val();}         //if a step can be made,generate next value of PC
+      default : {sPC = sPC; sRF = sRF;}
+esac;
+}
+
+init 
+{
+sPC = common.pc0;
+
+for i in range (0bv8 , 255bv8){
+    sRF[i] = common.rf0;
+    }
+}
+
+next
+{
+call (sPC', sRF') = _spec();
+}
+
+}
+
+module main {
+  
+  var step : integer;  
+  var flush : boolean;
+  var isa : boolean;
+  var project_impl : boolean;
+  var I_PC : common.addr_t;
+  var I_RF : common.RF;
+  var S_PC0 : common.addr_t;
+  var S_RF0 : common.RF;
+  var S_PC1 : common.addr_t;
+  var S_RF1 : common.RF;
+  
+  instance impl_i_1 : impl (flush : (flush));
+  instance spec_i_1 : spec (isa : (isa), project_impl : (project_impl));
+  
+  init 
+  {
+    step = 0;
+    flush = false;
+    isa = false;
+    project_impl = false;
+  }
+  
+  next  
+  {
+    next(impl_i_1);
+    next(spec_i_1);
+
+    case
+	    (step == 0) : {step' = 1;}
+        (step == 1) : {flush' = true; step' = 2;}
+        (step == 2) : {flush' = true; step' = 3;}
+        (step == 3) : {I_PC' = impl_i_1.pPC; I_RF' = impl_i_1.pRF; call impl._set_impl_initilize(); step' = 4;}
+        (step == 4) : {flush' = true; step' = 5;}
+		(step == 5) : {flush' = true; step' = 6;}
+        (step == 6) : {project_impl' = true; step' = 6;}
+        (step == 7) : {S_PC0' = spec_i_1.sPC; S_RF0' = spec_i_1.sRF; isa' = true; step' = 7;}		
+		(step == 8) : {S_PC1' = spec_i_1.sPC; S_RF1' = spec_i_1.sRF;}
+    esac
+  }
+ 
+  invariant decide_1 : (step == 9) ==> (S_pc1 == I_pc || S_pc0 == I_pc); 
+  // Proof script.
+  control {
+    unroll(8);
+    check;
+    print_results;
+  }
+}
