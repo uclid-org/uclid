@@ -107,6 +107,7 @@ trait ReadOnlyPass[T] {
   def applyOnUndefinedType(d : TraversalDirection.T, undefT : UndefinedType, in : T, context : Scope) : T = { in }
   def applyOnUninterpretedType(d : TraversalDirection.T, unintT : UninterpretedType, in : T, context : Scope) : T = { in }
   def applyOnBoolType(d : TraversalDirection.T, boolT : BooleanType, in : T, context : Scope) : T = { in }
+  def applyOnStringType(d : TraversalDirection.T, stringT : StringType, in : T, context : Scope) : T = { in }
   def applyOnIntType(d : TraversalDirection.T, intT : IntegerType, in : T, context : Scope) : T = { in }
   def applyOnBitVectorType(d : TraversalDirection.T, bvT : BitVectorType, in : T, context : Scope) : T = { in }
   def applyOnEnumType(d : TraversalDirection.T, enumT : EnumType, in : T, context : Scope) : T = { in }
@@ -145,6 +146,7 @@ trait ReadOnlyPass[T] {
   def applyOnNumericLit(d : TraversalDirection.T, b : NumericLit, in : T, context : Scope) : T = { in }
   def applyOnIntLit(d : TraversalDirection.T, i : IntLit, in : T, context : Scope) : T = { in }
   def applyOnBitVectorLit(d : TraversalDirection.T, bv : BitVectorLit, in : T, context : Scope) : T = { in }
+  def applyOnStringLit(d : TraversalDirection.T, string: StringLit, in : T, context : Scope) : T = { in }
   def applyOnTuple(d : TraversalDirection.T, rec : Tuple, in : T, context : Scope) : T = { in }
   def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = { in }
   def applyOnOperator(d : TraversalDirection.T, op : Operator, in : T, context : Scope) : T = { in }
@@ -187,6 +189,7 @@ trait RewritePass {
   def rewriteUndefinedType(undefT : UndefinedType, context : Scope) : Option[Type] = { Some(undefT) }
   def rewriteUninterpretedType(unintT : UninterpretedType, context : Scope) : Option[UninterpretedType] = { Some(unintT) }
   def rewriteBoolType(boolT : BooleanType, context : Scope) : Option[BooleanType] = { Some(boolT) }
+  def rewriteStringType(stringT : StringType, context : Scope) : Option[StringType] = { Some(stringT) }
   def rewriteIntType(intT : IntegerType, context : Scope) : Option[IntegerType] = { Some(intT)  }
   def rewriteBitVectorType(bvT : BitVectorType, context : Scope) : Option[BitVectorType] = { Some(bvT)  }
   def rewriteEnumType(enumT : EnumType, context : Scope) : Option[EnumType] = { Some(enumT)  }
@@ -225,6 +228,7 @@ trait RewritePass {
   def rewriteIntLit(i : IntLit, ctx : Scope) : Option[IntLit] = { Some(i) }
   def rewriteBitVectorLit(bv : BitVectorLit, ctx : Scope) : Option[BitVectorLit] = { Some(bv) }
   def rewriteNumericLit(n : NumericLit, ctx : Scope) : Option[NumericLit] = { Some(n) }
+  def rewriteStringLit(s : StringLit, ctx : Scope) : Option[StringLit] = { Some(s) }
   def rewriteTuple(rec : Tuple, ctx : Scope) : Option[Tuple] = { Some(rec) }
   def rewriteOperatorApp(opapp : OperatorApplication, ctx : Scope) : Option[Expr] = { Some(opapp) }
   def rewriteOperator(op : Operator, ctx : Scope) : Option[Operator] = { Some(op) }
@@ -510,6 +514,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case undefT : UndefinedType => visitUndefinedType(undefT, result, context)
       case unintT : UninterpretedType => visitUninterpretedType(unintT, result, context)
       case boolT : BooleanType => visitBoolType(boolT, result, context)
+      case stringT : StringType => visitStringType(stringT, result, context)
       case intT : IntegerType => visitIntType(intT, result, context)
       case bvT : BitVectorType => visitBitVectorType(bvT, result, context)
       case enumT : EnumType => visitEnumType(enumT, result, context)
@@ -544,6 +549,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnBoolType(TraversalDirection.Up, boolT, result, context)
     return result
   }
+  def visitStringType(stringT : StringType, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnStringType(TraversalDirection.Down, stringT, result, context)
+    result = pass.applyOnStringType(TraversalDirection.Up, stringT, result, context)
+    return result
+  }  
   def visitIntType(intT : IntegerType, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnIntType(TraversalDirection.Down, intT, result, context)
@@ -841,6 +852,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = lit match {
       case f : FreshLit => visitFreshLiteral(f, result, context)
       case b : BoolLit => visitBoolLiteral(b, result, context)
+      case s : StringLit => visitStringLiteral(s, result, context)
       case n : NumericLit => visitNumericLit(n, result, context)
     }
     result = pass.applyOnLit(TraversalDirection.Up, lit, result, context)
@@ -856,6 +868,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnBoolLit(TraversalDirection.Down, b, result, context)
     result = pass.applyOnBoolLit(TraversalDirection.Up, b, result, context)
+    return result
+  }
+  def visitStringLiteral(s : StringLit, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnStringLit(TraversalDirection.Down, s, result, context)
+    result = pass.applyOnStringLit(TraversalDirection.Up, s, result, context)
     return result
   }
   def visitNumericLit(n : NumericLit, in : T, context : Scope) : T = {
@@ -1264,6 +1282,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case undefT : UndefinedType => visitUndefinedType(undefT, context)
       case unintT : UninterpretedType => visitUninterpretedType(unintT, context)
       case boolT : BooleanType => visitBoolType(boolT, context)
+      case stringT : StringType => visitStringType(stringT, context)
       case intT : IntegerType => visitIntType(intT, context)
       case bvT : BitVectorType => visitBitVectorType(bvT, context)
       case enumT : EnumType => visitEnumType(enumT, context)
@@ -1293,6 +1312,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitBoolType(boolT : BooleanType, context : Scope) : Option[BooleanType] = {
     val boolTP = pass.rewriteBoolType(boolT, context)
     return ASTNode.introducePos(setPosition, setFilename, boolTP, boolT.position)
+  }
+
+  def visitStringType(stringT : StringType, context : Scope) : Option[StringType] = {
+    val stringTP = pass.rewriteStringType(stringT, context)
+    return ASTNode.introducePos(setPosition, setFilename, stringTP, stringT.position)
   }
 
   def visitIntType(intT : IntegerType, context : Scope) : Option[IntegerType] = {
@@ -1638,6 +1662,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val litP = (lit match {
       case f : FreshLit => visitFreshLiteral(f, context)
       case b : BoolLit => visitBoolLiteral(b, context)
+      case s : StringLit => visitStringLiteral(s, context)
       case n : NumericLit => visitNumericLiteral(n, context)
     }).flatMap{
       case l : Literal => pass.rewriteLit(l, context)
@@ -1654,6 +1679,10 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitBoolLiteral(b : BoolLit, context : Scope) : Option[BoolLit] = {
     val bP = pass.rewriteBoolLit(b, context)
     return ASTNode.introducePos(setPosition, setFilename, bP, b.position)
+  }
+  def visitStringLiteral(s : StringLit, context : Scope) : Option[StringLit] = {
+    val sP = pass.rewriteStringLit(s, context)
+    return ASTNode.introducePos(setPosition, setFilename, sP, s.position)
   }
 
   def visitNumericLiteral(n : NumericLit, context : Scope) : Option[NumericLit] = {

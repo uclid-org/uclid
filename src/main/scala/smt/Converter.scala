@@ -51,6 +51,8 @@ object Converter {
         smt.IntType
       case lang.BooleanType() =>
         smt.BoolType
+      case lang.StringType() =>
+        throw new Utils.RuntimeError("String types cannot be converted.")
       case lang.BitVectorType(w) =>
         smt.BitVectorType(w)
       case lang.MapType(inTypes,outType) =>
@@ -127,6 +129,7 @@ object Converter {
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
+       case lang.StringLit(_) => throw new Utils.RuntimeError("Strings are not supported in smt.Converter")
        case lang.Tuple(args) => smt.MakeTuple(toSMTs(args, scope, past))
        case opapp : lang.OperatorApplication =>
          val op = opapp.op

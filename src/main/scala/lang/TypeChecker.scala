@@ -560,6 +560,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case f : FreshLit => f.typ
         case b : BoolLit => new BooleanType()
         case i : IntLit => new IntegerType()
+        case s : StringLit => new StringType()
         case bv : BitVectorLit => new BitVectorType(bv.width)
         case r : Tuple => new TupleType(r.values.map(typeOf(_, c)))
         case opapp : OperatorApplication => opAppType(opapp)

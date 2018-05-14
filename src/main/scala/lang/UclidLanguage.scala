@@ -402,6 +402,10 @@ case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
   }
 }
 
+case class StringLit(value: String) extends Literal {
+  override def toString = "\"" + value + "\""
+}
+
 case class Tuple(values: List[Expr]) extends Expr {
   override def toString = "{" + Utils.join(values.map(_.toString), ", ") + "}"
   // FIXME: We should not have temporal values inside of a tuple.
@@ -576,6 +580,10 @@ case class BitVectorType(width: Int) extends NumericType {
     return (slice.lo >= 0 && slice.hi < width)
   }
   override def defaultValue = Some(BitVectorLit(0, width))
+}
+case class StringType() extends PrimitiveType {
+  override def toString = "string"
+  override def defaultValue = Some(StringLit(""))
 }
 case class EnumType(ids: List[Identifier]) extends Type {
   override def toString = "enum {" +
