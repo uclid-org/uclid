@@ -366,4 +366,28 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.exists(p => p._1.contains("Invalid for loop range")))
     }
   }
+  "test-string-0.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-string-0.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.exists(p => p._1.contains("expected type 'integer' but received type 'string'")))
+    }
+  }
+  "test-string-1.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-string-1.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserError =>
+        assert (p.msg.contains("'print' command expects a string literal as an argument"))
+    }
+  }
+  "test-string-2.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-string-2.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
 }
