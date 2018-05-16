@@ -181,6 +181,8 @@ class SymbolicSimulator (module : Module) {
               case Some(synth) => synthesizeInvariants(context, noLTLFilter, synth)
             }
             
+          case "print" =>
+            println(cmd.args(0)._1.asInstanceOf[StringLit].value)
           case "print_results" =>
             dumpResults("print_results", defaultLog)
             printResults(proofResults, cmd.argObj)

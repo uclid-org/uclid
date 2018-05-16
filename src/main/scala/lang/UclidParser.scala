@@ -240,6 +240,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val BitVector: PackratParser[lang.BitVectorLit] =
       positioned { bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) } }
     lazy val Number : PackratParser[lang.NumericLit] = positioned (Integer | BitVector)
+    lazy val String  : PackratParser[lang.StringLit] = positioned {
+      stringLit ^^ { case stringLit => lang.StringLit(stringLit) }
+    }
     lazy val E1: PackratParser[Expr] =
       KwForall ~> IdTypeList ~ ("::" ~> E1) ^^ { case ids ~ expr => OperatorApplication(ForallOp(ids), List(expr)) } |
       KwExists ~> IdTypeList ~ ("::" ~> E1) ^^ { case ids ~ expr => OperatorApplication(ExistsOp(ids), List(expr)) } |
@@ -298,8 +301,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     /** E15 = false | true | Number | Id FuncApplication | (Expr) **/
     lazy val E15: PackratParser[Expr] = positioned {
-        Bool |
-        Number |
+        Bool | Number | String |
         "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
         KwIf ~> ("(" ~> Expr <~ ")") ~ (KwThen ~> Expr) ~ (KwElse ~> Expr) ^^ {
           case expr ~ thenExpr ~ elseExpr => lang.OperatorApplication(lang.ITEOp(), List(expr, thenExpr, elseExpr))
