@@ -172,8 +172,7 @@ class Z3Interface() extends Context {
       case RecordType(rs)       => getRecordSort(rs)
       case ArrayType(rs, d)     => getArraySort(rs, d)
       case EnumType(ids)        => getEnumSort(ids)
-      case SynonymType(_, _) |
-           MapType(_, _)       =>
+      case SynonymType(_, _) | MapType(_, _) | UndefinedType =>
         throw new Utils.RuntimeError("Must not use getZ3Sort to convert type: " + typ.toString() + ".")
     }
   }
@@ -214,7 +213,7 @@ class Z3Interface() extends Context {
       case MapType(ins, out) => MapSort(ins, out)
       case ArrayType(ins, out) => VarSort(getArraySort(ins, out))
       case EnumType(ids) => VarSort(getEnumSort(ids))
-      case SynonymType(_, _) =>
+      case SynonymType(_, _) | UndefinedType =>
         throw new Utils.RuntimeError("Must not use symbolToZ3 on: " + sym.typ.toString() + ".")
     }
 

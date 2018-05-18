@@ -48,7 +48,7 @@ import scala.util.parsing.combinator.PackratParsers
 import scala.language.implicitConversions
 import scala.collection.mutable
 
-  /** This is a re-implementation of the Scala libraries StdTokenParsers with StdToken replaced by UclidToken. */
+/** This is a re-implementation of the Scala libraries StdTokenParsers with StdToken replaced by UclidToken. */
 trait UclidTokenParsers extends TokenParsers {
   type Tokens <: UclidTokens
   import lexical.{Keyword, IntegerLit, BitVectorTypeLit, BitVectorLit, StringLit, Identifier}

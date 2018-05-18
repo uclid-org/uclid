@@ -40,14 +40,19 @@
 package uclid
 package smt
 
+import scala.collection.mutable
+
 import scala.util.parsing.combinator.lexical._
 import scala.util.parsing.combinator.token._
 import scala.util.parsing.input.CharArrayReader.EofCh
-import scala.collection.mutable
-import scala.util.parsing.input.Positional
+import scala.util.parsing.combinator.token._
+import scala.util.parsing.combinator.syntactical._
+import scala.util.parsing.combinator.PackratParsers
+
+import scala.language.implicitConversions
 
 trait SExprTokens extends Tokens {
-  abstract class SExprToken extends Token with Positional
+  abstract class SExprToken extends Token
 
   /** Keywords */
   case class Keyword(chars: String) extends SExprToken {
@@ -81,14 +86,14 @@ trait SExprTokens extends Tokens {
   }
 }
 
-class SExprLexical extends Lexical with SExprTokens with Positional {
+class SExprLexical extends Lexical with SExprTokens {
   override def token: Parser[Token] =
-    ( positioned { '#' ~ 'x' ~> hexDigit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 16) } }
-    | positioned { '#' ~ 'b' ~> bit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 2) } }
-    | positioned { digit.+ ^^ { case ds => IntegerLit(ds.mkString(""), 10) } }
-    | positioned { '-' ~> digit.+ ^^ { case ds => IntegerLit("-" + ds.mkString(""), 10) } }
-    | positioned { symbolStartChar ~ rep(symbolChar) ^^ { case s ~ ss => processIdent((s :: ss).mkString("")) } }
-    | positioned { '\"' ~> quotedLiteralChar.+ <~ '\"' ^^ { case ls => QuotedLiteral(ls.mkString("")) } }
+    ( { '#' ~ 'x' ~> hexDigit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 16) } }
+    | { '#' ~ 'b' ~> bit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 2) } }
+    | { digit.+ ^^ { case ds => IntegerLit(ds.mkString(""), 10) } }
+    | { '-' ~> digit.+ ^^ { case ds => IntegerLit("-" + ds.mkString(""), 10) } }
+    | { symbolStartChar ~ rep(symbolChar) ^^ { case s ~ ss => processIdent((s :: ss).mkString("")) } }
+    | { '\"' ~> quotedLiteralChar.+ <~ '\"' ^^ { case ls => QuotedLiteral(ls.mkString("")) } }
     | EofCh                                               ^^^ EOF
     | '\"' ~> failure("unclosed string literal")
     | delim
@@ -133,6 +138,62 @@ class SExprLexical extends Lexical with SExprTokens with Positional {
 
 }
 
-class SExprParser {
-  
+/** This is a re-implementation of the Scala libraries StdTokenParsers with StdToken replaced by UclidToken. */
+trait SExprTokenParsers extends TokenParsers {
+  type Tokens <: SExprTokens
+  import lexical.{Keyword, Symbol, QuotedLiteral, IntegerLit, BitVectorLit, BoolLit}
+
+  protected val keywordCache = mutable.HashMap[String, Parser[String]]()
+
+  /** A parser which matches a single keyword token.
+   *
+   * @param chars    The character string making up the matched keyword.
+   * @return a `Parser` that matches the given string
+   */
+  implicit def keyword(chars: String): Parser[String] =
+    keywordCache.getOrElseUpdate(chars, accept(Keyword(chars)) ^^ (_.chars))
+
+  /** A parser which matches an identifier */
+  def symbol: Parser[Symbol] =
+    elem("identifier", _.isInstanceOf[Symbol]) ^^ (_.asInstanceOf[Symbol])
+
+  def quotedLiter: Parser[QuotedLiteral] =
+    elem("quoted literal", _.isInstanceOf[QuotedLiteral]) ^^ (_.asInstanceOf[QuotedLiteral])
+
+  /** A parser which matches an integer literal */
+  def integerLit: Parser[IntegerLit] =
+    elem("integer", _.isInstanceOf[IntegerLit]) ^^ (_.asInstanceOf[IntegerLit])
+
+  /** A parser which matches a bitvector literal */
+  def bitvectorLit: Parser[BitVectorLit] =
+    elem("bitvector", _.isInstanceOf[BitVectorLit]) ^^ (_.asInstanceOf[BitVectorLit])
+
+  def boolLit: Parser[BoolLit] =
+    elem("bool", _.isInstanceOf[BoolLit]) ^^ (_.asInstanceOf[BoolLit])
+}
+
+object SExprParser extends SExprTokenParsers with PackratParsers {
+  type Tokens = SExprTokens
+  val lexical = new SExprLexical
+
+  // an implicit keyword function that gives a warning when a given word is not in the reserved/delimiters list
+  override implicit def keyword(chars : String): Parser[String] = {
+    if(lexical.reserved.contains(chars) || lexical.delimiters.contains(chars)) super.keyword(chars)
+    else failure("You are trying to parse \""+chars+"\", but it is neither contained in the delimiters list, nor in the reserved keyword list of your lexical object")
+  }
+
+  lazy val OpAnd = "and"
+  lazy val OpOr = "or"
+  lazy val OpEq = "="
+  lazy val OpGE = ">="
+  lazy val OpGT = ">"
+  lazy val OpLT = "<"
+  lazy val OpLE = "<="
+  lazy val KwDefineFun = "define-fun"
+  lazy val KwInt = "Int"
+  lazy val KwBool = "Boolean"
+
+  lazy val Symbol : PackratParser[smt.Symbol] =
+    symbol ^^ { sym => smt.Symbol(sym.name, smt.UndefinedType) } 
+
 }

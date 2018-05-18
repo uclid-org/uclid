@@ -191,6 +191,8 @@ abstract trait Context {
             val (newType, synMapP1) = flatten(synTyp.typ, synMap)
             val synMapP = synMapP1.addSynonym(synTyp.name, newType)
             (newType, synMapP)
+          case UndefinedType =>
+            throw new Utils.AssertionError("Undefined types are not expected here.")
         }
     }
   }

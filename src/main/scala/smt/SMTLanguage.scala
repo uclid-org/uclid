@@ -180,7 +180,12 @@ case class SynonymType(name: String, typ: Type) extends Type {
   override def isSynonym = true
   override val typeNamePrefix = "synonym"
 }
-
+case object UndefinedType extends Type {
+  override val hashId = 110
+  override val hashCode = finalize(hashId, 0)
+  override def toString = "undefined"
+  override val typeNamePrefix = "undefined"
+}
 object OperatorFixity extends scala.Enumeration {
   type OperatorFixity = Value
   val INFIX, PREFIX = Value
@@ -599,6 +604,14 @@ case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType(ids.map(id =>
   override val isConstant = e.isConstant
 }
 
+case class DefineFun(id : Symbol, args : List[(Symbol)], e : Expr) extends Expr(MapType(args.map(a => a.typ), e.typ)) {
+  override val hashId = 312
+  override val hashCode = finalize(mix(mix(hashId, id.hashCode), args), e.hashCode)
+  override def toString = {
+    val argString = Utils.join(args.map(arg => "(%s %s)".format(arg.id.toString(), arg.symbolTyp.toString())), " ")
+    "(define-fun %s (%s) %s %s)".format(id.toString(), argString, e.typ.toString(), e.toString())
+  }
+}
 class Bindings(val freeVars : List[Symbol], val letVars : List[Symbol], val lambdaVars : List[Symbol], val quantifierVars: List[Symbol]) {
   def addFreeVar(v : Symbol) = {
     new Bindings(v :: freeVars, letVars, lambdaVars, quantifierVars)
