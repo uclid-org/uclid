@@ -261,9 +261,13 @@ class Z3Interface() extends Context {
       case IntGTOp                => ctx.mkGt (arithArgs(0), arithArgs(1))
       case IntGEOp                => ctx.mkGe (arithArgs(0), arithArgs(1))
       case IntAddOp               => ctx.mkAdd (arithArgs : _*)
-      case IntSubOp               => ctx.mkSub (arithArgs: _*)
+      case IntSubOp               =>
+        if (args.size == 1) {
+          ctx.mkUnaryMinus(arithArgs(0))
+        } else {
+          ctx.mkSub (arithArgs: _*)
+        }
       case IntMulOp               => ctx.mkMul (arithArgs : _*)
-      case IntMinusOp             => ctx.mkUnaryMinus(arithArgs(0))
       case BVLTOp(_)              => ctx.mkBVSLT(bvArgs(0), bvArgs(1))
       case BVLEOp(_)              => ctx.mkBVSLE(bvArgs(0), bvArgs(1))
       case BVGTOp(_)              => ctx.mkBVSGT(bvArgs(0), bvArgs(1))

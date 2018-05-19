@@ -190,29 +190,57 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val OpAnd = "and"
   lazy val OpOr = "or"
   lazy val OpNot = "not"
+  lazy val OpImpl = "=>"
   lazy val OpEq = "="
-  lazy val OpIntGE = ">="
   lazy val OpIntGT = ">"
   lazy val OpIntLT = "<"
+  lazy val OpIntGE = ">="
   lazy val OpIntLE = "<="
+  lazy val OpIntAdd = "+"
+  lazy val OpIntSub = "-"
+  lazy val OpIntMul = "*"
+  lazy val OpBVAdd = "bvadd"
+  lazy val OpBVSub = "bvsub"
+  lazy val OpBVMul = "bvmul"
+  lazy val OpBVNeg = "bvneg"
+  lazy val OpBVAnd = "bvand"
+  lazy val OpBVOr  = "bvor"
+  lazy val OpBVXor = "bvxor"
+  lazy val OpBVNot = "bvnot"
+
   lazy val KwDefineFun = "define-fun"
   lazy val KwInt = "Int"
   lazy val KwBool = "Bool"
+  lazy val KwBV = "BitVec"
 
   lexical.delimiters += ("(", ")")
   lexical.reserved += ("false", "true", 
-      KwDefineFun, KwInt, KwBool, OpAnd, OpOr, OpNot, 
-      OpEq, OpIntGE, OpIntGT, OpIntLT, OpIntLE)
+      KwDefineFun, KwInt, KwBool, OpAnd, OpOr, OpNot, OpImpl, 
+      OpEq, OpIntGE, OpIntGT, OpIntLT, OpIntLE, OpIntAdd, OpIntSub, OpIntMul,
+      OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, OpBVAnd, OpBVOr, OpBVXor, OpBVNot)
 
   lazy val Operator : PackratParser[smt.Operator] =
     OpAnd ^^ { _ => smt.ConjunctionOp } |
     OpOr ^^ { _ => smt.DisjunctionOp } |
     OpNot ^^ { _ => smt.NegationOp } |
+    OpImpl ^^ { _ => smt.ImplicationOp } |
     OpEq ^^ { _ => smt.EqualityOp } |
     OpIntGE ^^ { _ => smt.IntGEOp } |
     OpIntGT ^^ { _ => smt.IntGTOp } |
     OpIntLT ^^ { _ => smt.IntLTOp } |
-    OpIntLE ^^ { _ => smt.IntLEOp }
+    OpIntLE ^^ { _ => smt.IntLEOp } |
+    OpIntAdd ^^ { _ => smt.IntAddOp } |
+    OpIntSub ^^ { _ => smt.IntSubOp } |
+    OpIntMul ^^ { _ => smt.IntMulOp } |
+    OpBVAdd ^^ { _ => smt.BVAddOp(0) } |
+    OpBVSub ^^ { _ => smt.BVSubOp(0) } |
+    OpBVMul ^^ { _ => smt.BVMulOp(0) } |
+    OpBVNeg ^^ { _ => smt.BVMinusOp(0) }|
+    OpBVAnd ^^ { _ => smt.BVAndOp(0) } |
+    OpBVOr ^^ { _ => smt.BVOrOp(0) } |
+    OpBVXor ^^ { _ => smt.BVXorOp(0) } |
+    OpBVNot ^^ { _ => smt.BVNotOp(0) }
+    
 
   lazy val Symbol : PackratParser[smt.Symbol] =
     symbol ^^ { sym => smt.Symbol(sym.name, smt.UndefinedType) } 
@@ -226,7 +254,8 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
 
   lazy val Type : PackratParser[smt.Type] =
     KwInt ^^ { _ => smt.IntType } |
-    KwBool ^^ { _ => smt.BoolType }
+    KwBool ^^ { _ => smt.BoolType } |
+    KwBV ~> integerLit ^^ { case i => smt.BitVectorType(i.value.toInt) }
 
   lazy val FunArg : PackratParser[smt.Symbol] =
     "(" ~> symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.name, typ) }

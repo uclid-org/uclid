@@ -214,7 +214,7 @@ trait Operator extends Hashable {
 // Operators that return integers.
 abstract class IntResultOp extends Operator {
   override def resultType(args: List[Expr]) : Type = { IntType }
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkAllArgTypes(args, IntType) }
 }
 object IntAddOp extends IntResultOp {
   override val hashId = 200
@@ -230,12 +230,6 @@ object IntMulOp extends IntResultOp {
   override val hashId = 202
   override val hashCode = computeHash
   override def toString = "*"
-}
-object IntMinusOp extends IntResultOp {
-  override val hashId = 203
-  override val hashCode = computeHash
-  override def toString = "-"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 1); checkAllArgTypes(args, IntType) }
 }
 
 // Operators that return bitvectors.
