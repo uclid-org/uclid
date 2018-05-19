@@ -183,6 +183,8 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
         }
       })
       sygusLog.debug(string)
+      val fun = SExprParser.parseFunction(string)
+      sygusLog.debug(fun.toString())
     }
    
   }

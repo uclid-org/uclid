@@ -82,6 +82,7 @@ sealed trait Type extends Hashable {
   def isEnum = false
   def isUninterpreted = false
   def isSynonym = false
+  def isUndefined = false
   val typeNamePrefix : String
 }
 // Uninterpreted types.
@@ -185,18 +186,13 @@ case object UndefinedType extends Type {
   override val hashCode = finalize(hashId, 0)
   override def toString = "undefined"
   override val typeNamePrefix = "undefined"
+  override def isUndefined = true
 }
-object OperatorFixity extends scala.Enumeration {
-  type OperatorFixity = Value
-  val INFIX, PREFIX = Value
-}
-import OperatorFixity._
 
 trait Operator extends Hashable {
   override val hashBaseId : Int = 22446 // Random number.
   def resultType(args: List[Expr]) : Type
   def typeCheck (args: List[Expr]) : Unit = { }
-  def fixity : OperatorFixity
 
   def checkNumArgs(args: List[Expr], expectedNumOperands : Int) : Unit = {
     Utils.assert(args.size == expectedNumOperands, "Operator '" + toString + "' requires " + expectedNumOperands + " operand(s).")
@@ -218,7 +214,6 @@ trait Operator extends Hashable {
 // Operators that return integers.
 abstract class IntResultOp extends Operator {
   override def resultType(args: List[Expr]) : Type = { IntType }
-  override def fixity = { PREFIX }
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
 }
 object IntAddOp extends IntResultOp {
@@ -246,7 +241,6 @@ object IntMinusOp extends IntResultOp {
 // Operators that return bitvectors.
 abstract class BVResultOp(width : Int) extends Operator {
   override def resultType(args: List[Expr]) : Type = { BitVectorType.t(width) }
-  override def fixity = PREFIX
   override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(width)) }
 }
 case class BVAddOp(w : Int) extends BVResultOp(w) {
@@ -327,13 +321,11 @@ case class BVReplaceOp(w : Int, hi : Int, lo : Int) extends BVResultOp(w) {
 // Operators that return Booleans.
 abstract class BoolResultOp extends Operator {
   override def resultType(args: List[Expr]) : Type = { BoolType }
-  override def fixity = { INFIX }
 }
 
 abstract class QuantifierOp extends BoolResultOp {
   def variables : List[Symbol]
 
-  override def fixity = PREFIX
   override def typeCheck (args: List[Expr]) = {
     Utils.assert(args.size == 1, this.toString + " must have exactly one operand.")
     Utils.assert(args.size == 1, this.toString + " must have exactly one operand.")
@@ -372,20 +364,25 @@ case object ConjunctionOp extends BoolResultOp {
   override val hashId = 219
   override val hashCode = computeHash
   override def toString = "and"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType) }
+  override def typeCheck(args: List[Expr]) : Unit = {
+    Utils.assert(args.size > 1, "Expected two or more arguments to 'and'.")
+    checkAllArgTypes(args, BoolType)
+  }
 }
 case object DisjunctionOp extends BoolResultOp {
   override val hashId = 220
   override val hashCode = computeHash
   override def toString = "or"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType) }
+  override def typeCheck(args: List[Expr]) : Unit = {
+    Utils.assert(args.size > 1, "Expected two or more arguments to 'or'.")
+    checkAllArgTypes(args, BoolType)
+  }
 }
 case object NegationOp extends BoolResultOp {
   override val hashId = 221
   override val hashCode = computeHash
   override def toString = "not"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 1); checkAllArgTypes(args, BoolType) }
-  override def fixity = PREFIX
 }
 case object EqualityOp extends BoolResultOp {
   override val hashId = 222
@@ -405,60 +402,52 @@ case object IntLTOp extends BoolResultOp {
   override val hashCode = computeHash
   override def toString = "<"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
-  override def fixity = PREFIX
 }
 case object IntLEOp extends BoolResultOp {
   override val hashId = 225
   override val hashCode = computeHash
   override def toString = "<="
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
-  override def fixity = PREFIX
 }
 case object IntGTOp extends BoolResultOp {
   override val hashId = 226
   override val hashCode = computeHash
   override def toString = ">"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
-  override def fixity = PREFIX
 }
 case object IntGEOp extends BoolResultOp {
   override val hashId = 227
   override val hashCode = computeHash
   override def toString = ">="
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
-  override def fixity = PREFIX
 }
-// Bitvector comparison.
+// bit-vector comparison.
 case class BVLTOp(w : Int) extends BoolResultOp {
   override val hashId = mix(w, 228)
   override val hashCode = computeHash
   override def toString = "bvslt"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
-  override def fixity = PREFIX
 }
 case class BVLEOp(w : Int) extends BoolResultOp {
   override val hashId = mix(w, 229)
   override val hashCode = computeHash
   override def toString = "bvsle"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
-  override def fixity = PREFIX
 }
 case class BVGTOp(w : Int) extends BoolResultOp {
   override val hashId = mix(w, 230)
   override val hashCode = computeHash
   override def toString = "bvugt"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
-  override def fixity = PREFIX
 }
 case class BVGEOp(w : Int) extends BoolResultOp {
   override val hashId = mix(w, 231)
   override val hashCode = computeHash
   override def toString = "bvuge"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
-  override def fixity = PREFIX
 }
 case class RecordSelectOp(name : String) extends Operator {
-  override val hashId = mix(name.hashCode(), 232)
+  override val hashId = mix(name.hashCode(), 233)
   override val hashCode = computeHash
   override def toString = Context.getFieldName(name)
   override def typeCheck(args: List[Expr]) : Unit = {
@@ -469,7 +458,6 @@ case class RecordSelectOp(name : String) extends Operator {
   def resultType(args: List[Expr]) : Type = {
     args(0).typ.asInstanceOf[ProductType].fieldType(name).get
   }
-  override def fixity = PREFIX
 }
 case class RecordUpdateOp(name: String) extends Operator {
   override val hashId = mix(name.hashCode(), 232)
@@ -482,7 +470,6 @@ case class RecordUpdateOp(name: String) extends Operator {
     Utils.assert(tupleType.hasField(name), "Field '" + name + "' does not exist in product type.")
   }
   def resultType(args: List[Expr]) : Type = args(0).typ
-  override def fixity = PREFIX
 }
 case object ITEOp extends Operator {
   override val hashId = 234
@@ -494,7 +481,6 @@ case object ITEOp extends Operator {
     Utils.assert(args(1).typ == args(1).typ, "Types in then- and else- expressions must be the same")
   }
   def resultType(args: List[Expr]) : Type = args(1).typ
-  override def fixity = PREFIX
 }
 // Expressions
 abstract class Expr(val typ: Type) extends Hashable {
@@ -548,10 +534,9 @@ case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ)))
 case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr (op.resultType(operands)) {
   override val hashId = 306
   override val hashCode = computeHashList(operands, op)
-  val fix = op.fixity
-  Utils.assert(fix == INFIX || fix == PREFIX, "Unknown fixity.")
-  Utils.assert(fix != INFIX || operands.size == 2, "Infix operators must have two operands.")
-  op.typeCheck(operands)
+  if (operands.forall(!_.typ.isUndefined)) {
+    op.typeCheck(operands)
+  }
   override def toString = {
     "(" + op.toString + " " + Utils.join(operands.map(_.toString), " ") + ")"
   }

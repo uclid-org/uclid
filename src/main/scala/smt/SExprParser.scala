@@ -50,6 +50,7 @@ import scala.util.parsing.combinator.syntactical._
 import scala.util.parsing.combinator.PackratParsers
 
 import scala.language.implicitConversions
+import com.typesafe.scalalogging.Logger
 
 trait SExprTokens extends Tokens {
   abstract class SExprToken extends Token
@@ -57,12 +58,12 @@ trait SExprTokens extends Tokens {
   /** Keywords */
   case class Keyword(chars: String) extends SExprToken {
     val word = chars
-    override def toString = word
+    override def toString = "[keyword]" + word
   }
   /** Symbols. */
   case class Symbol(chars: String) extends SExprToken {
     val name = chars
-    override def toString = name
+    override def toString = "[symbol]" + name
   }
   /** QuotedLiteral. */
   case class QuotedLiteral(chars: String) extends SExprToken {
@@ -87,6 +88,7 @@ trait SExprTokens extends Tokens {
 }
 
 class SExprLexical extends Lexical with SExprTokens {
+  val log = Logger(classOf[SExprLexical])
   override def token: Parser[Token] =
     ( { '#' ~ 'x' ~> hexDigit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 16) } }
     | { '#' ~ 'b' ~> bit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 2) } }
@@ -102,7 +104,7 @@ class SExprLexical extends Lexical with SExprTokens {
 
   def hexDigit : Parser[Char] = elem("hexDigit", ((ch) => ch.isDigit || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')))
   def bit : Parser[Char] = elem("bit", ((ch) => ch == '0' || ch == '1'))
-  val specialChars = "_+−∗&|!∼<>=/%?.$^"
+  val specialChars = "_+-*&|!~<>=/%?.$^"
   def specialChar : Parser[Char] = elem("specialChar", ((ch) => specialChars.contains(ch)))
   def symbolStartChar: Parser[Char] = letter | specialChar
   def symbolChar: Parser[Char] = letter | specialChar | digit
@@ -120,8 +122,11 @@ class SExprLexical extends Lexical with SExprTokens {
   /** The set of delimiters (ordering does not matter). */
   val delimiters = new mutable.HashSet[String]
 
-  protected def processIdent(name: String) =
-    if (reserved contains name) Keyword(name) else Symbol(name)
+  protected def processIdent(name: String) = {
+    val r = if (reserved contains name) Keyword(name) else Symbol(name)
+    log.debug("name: {}; result: {}", name, r.toString())
+    r
+  }
 
   private lazy val _delim: Parser[Token] = {
     // construct parser for delimiters by |'ing together the parsers for the individual delimiters,
@@ -157,7 +162,7 @@ trait SExprTokenParsers extends TokenParsers {
   def symbol: Parser[Symbol] =
     elem("identifier", _.isInstanceOf[Symbol]) ^^ (_.asInstanceOf[Symbol])
 
-  def quotedLiter: Parser[QuotedLiteral] =
+  def quotedLiteral: Parser[QuotedLiteral] =
     elem("quoted literal", _.isInstanceOf[QuotedLiteral]) ^^ (_.asInstanceOf[QuotedLiteral])
 
   /** A parser which matches an integer literal */
@@ -184,16 +189,66 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
 
   lazy val OpAnd = "and"
   lazy val OpOr = "or"
+  lazy val OpNot = "not"
   lazy val OpEq = "="
-  lazy val OpGE = ">="
-  lazy val OpGT = ">"
-  lazy val OpLT = "<"
-  lazy val OpLE = "<="
+  lazy val OpIntGE = ">="
+  lazy val OpIntGT = ">"
+  lazy val OpIntLT = "<"
+  lazy val OpIntLE = "<="
   lazy val KwDefineFun = "define-fun"
   lazy val KwInt = "Int"
-  lazy val KwBool = "Boolean"
+  lazy val KwBool = "Bool"
+
+  lexical.delimiters += ("(", ")")
+  lexical.reserved += ("false", "true", 
+      KwDefineFun, KwInt, KwBool, OpAnd, OpOr, OpNot, 
+      OpEq, OpIntGE, OpIntGT, OpIntLT, OpIntLE)
+
+  lazy val Operator : PackratParser[smt.Operator] =
+    OpAnd ^^ { _ => smt.ConjunctionOp } |
+    OpOr ^^ { _ => smt.DisjunctionOp } |
+    OpNot ^^ { _ => smt.NegationOp } |
+    OpEq ^^ { _ => smt.EqualityOp } |
+    OpIntGE ^^ { _ => smt.IntGEOp } |
+    OpIntGT ^^ { _ => smt.IntGTOp } |
+    OpIntLT ^^ { _ => smt.IntLTOp } |
+    OpIntLE ^^ { _ => smt.IntLEOp }
 
   lazy val Symbol : PackratParser[smt.Symbol] =
     symbol ^^ { sym => smt.Symbol(sym.name, smt.UndefinedType) } 
 
+  lazy val IntegerLit : PackratParser[smt.IntLit] =
+    integerLit ^^ { iLit => smt.IntLit(iLit.value) }
+
+  lazy val Expr : PackratParser[smt.Expr] =
+    Symbol | IntegerLit |
+    "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)}
+
+  lazy val Type : PackratParser[smt.Type] =
+    KwInt ^^ { _ => smt.IntType } |
+    KwBool ^^ { _ => smt.BoolType }
+
+  lazy val FunArg : PackratParser[smt.Symbol] =
+    "(" ~> symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.name, typ) }
+
+  lazy val FunArgs : PackratParser[List[smt.Symbol]] =
+    "(" ~> rep(FunArg) <~ ")"
+
+  lazy val DefineFun : PackratParser[smt.DefineFun] =
+    "(" ~ KwDefineFun ~> symbol ~ FunArgs ~ Type ~ Expr <~ ")" ^^ {
+      case id ~ args ~ rTyp ~ expr => {
+        val funcType = MapType(args.map(a => a.typ), rTyp)
+        smt.DefineFun(smt.Symbol(id.name, funcType), args, expr)
+      }
+    }
+
+  def parseFunction(text: String): DefineFun = {
+    val tokens = new PackratReader(new lexical.Scanner(text))
+    phrase(DefineFun)(tokens) match {
+      case Success(function, _) =>
+        function
+      case NoSuccess(msg, next) =>
+        throw new Utils.SyGuSParserError("Parser Error: %s.".format(msg))
+    }
+  }
 }
