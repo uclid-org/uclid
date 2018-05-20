@@ -1,0 +1,60 @@
+// Initial attempt at building simple datapath
+// This one only performs the updating of the PC
+
+module common {
+  // Types
+  // Instructions
+  type instr_t = bv32;
+  // Program counter
+  type pc_t = bv32;
+  // Instruction memory
+  type imem_t = [pc_t]instr_t;
+
+  // Uninterpreted functions
+  // Given instruction, compute next value of PC 
+  function nextPC(i: instr_t)  : pc_t;
+}
+
+module path {
+  input pc0 : common.pc_t;
+
+  var imem : common.imem_t;
+  var pc : common.pc_t;
+
+  init {
+    pc = pc0;
+  }
+ 
+  next {
+    pc' = common.nextPC(imem[pc]);
+  }
+}
+
+module main {
+
+  var pc_init : common.pc_t;
+  var step : integer;
+
+  instance unit : path(pc0 : (pc_init));
+
+
+  init {
+    step = 0;
+  }
+
+  next {
+    step' = step + 1;
+    next(unit);
+  }
+
+  invariant initial : unit.pc0 == pc_init;
+
+  control {
+    vobj = unroll(1);
+    check;
+    // print_results;
+    // vobj.print_cex(step, pc_init, unit.pc0, unit.pc);
+  }
+
+
+}
