@@ -52,7 +52,7 @@ Modules are instantiated using the \keyword{instance} keyword. Lines 14~and~15 o
 Scheduling of instantiated modules is explicit and synchronous. The two \keyword{next} statements on lines 22~and~23 of Example~\ref{ex:cpu-main} invoke the next state transitions of the two instances of the \codelike{cpu} module.
 
 \subsection{Accessing Instance Variables}
-The state variables of an instantiated module are accessed using the \codelike{->} operator. The four invariants on lines 27-32 of Example~\ref{ex:cpu-main}, refer to the registers, memory, pc and instruction variables of the two instantiated modules. These invariants state that both instances must have identical values for these state variables.
+The state variables of an instantiated module are accessed using the \codelike{.} operator. The four invariants on lines 27-32 of Example~\ref{ex:cpu-main}, refer to the registers, memory, pc and instruction variables of the two instantiated modules. These invariants state that both instances must have identical values for these state variables.
 
 
 \section{Running \uclid{}}

@@ -69,7 +69,7 @@ next {
 }
 \end{lstlisting}
 
-    \uclid{} will determine that since \codelike{y'} depends on the value of \codelike{x'}, \codelike{x'} has to computed first. This value is then used in the computation of \codelike{y'}. This is regardless of the order in which these assignments appear in the \codelike{next} block.
+    \uclid{} will determine that since \codelike{y'} depends on the value of \codelike{x'}, \codelike{x'} has to be computed first. This value is then used in the computation of \codelike{y'}. This is regardless of the order in which these assignments appear in the \codelike{next} block.
 
     Note also that the assignment to \codelike{x'} uses the value of the variable \codelike{x} \emph{at the beginning of the current step} of the transition system (i.e., the ``old'' value of \codelike{x}). In contrast the assignment to \codelike{y'} uses the ``new'' value of \codelike{x}, which is the value of x at the \emph{end} of this step of the transition system. It is important to think carefully about which version of a variable (\codelike{var} or \codelike{var'}) must be used in a particular assignment.
 %\caption{Example of sequential assignment.}
