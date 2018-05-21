@@ -1,0 +1,18 @@
+module main
+{
+  var signal : enum { red, blue, green };
+  
+  init {
+    signal = blue;
+  }
+
+  next {
+    if (*) { signal' = green; }
+  }
+
+  property[LTL] p: W(signal == red, signal == green);
+  control {
+    v = bmc(5);
+    check;
+  }
+}

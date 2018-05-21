@@ -172,8 +172,7 @@ class Z3Interface() extends Context {
       case RecordType(rs)       => getRecordSort(rs)
       case ArrayType(rs, d)     => getArraySort(rs, d)
       case EnumType(ids)        => getEnumSort(ids)
-      case SynonymType(_, _) |
-           MapType(_, _)       =>
+      case SynonymType(_, _) | MapType(_, _) | UndefinedType =>
         throw new Utils.RuntimeError("Must not use getZ3Sort to convert type: " + typ.toString() + ".")
     }
   }
@@ -214,7 +213,7 @@ class Z3Interface() extends Context {
       case MapType(ins, out) => MapSort(ins, out)
       case ArrayType(ins, out) => VarSort(getArraySort(ins, out))
       case EnumType(ids) => VarSort(getEnumSort(ids))
-      case SynonymType(_, _) =>
+      case SynonymType(_, _) | UndefinedType =>
         throw new Utils.RuntimeError("Must not use symbolToZ3 on: " + sym.typ.toString() + ".")
     }
 
@@ -262,9 +261,13 @@ class Z3Interface() extends Context {
       case IntGTOp                => ctx.mkGt (arithArgs(0), arithArgs(1))
       case IntGEOp                => ctx.mkGe (arithArgs(0), arithArgs(1))
       case IntAddOp               => ctx.mkAdd (arithArgs : _*)
-      case IntSubOp               => ctx.mkSub (arithArgs: _*)
+      case IntSubOp               =>
+        if (args.size == 1) {
+          ctx.mkUnaryMinus(arithArgs(0))
+        } else {
+          ctx.mkSub (arithArgs: _*)
+        }
       case IntMulOp               => ctx.mkMul (arithArgs : _*)
-      case IntMinusOp             => ctx.mkUnaryMinus(arithArgs(0))
       case BVLTOp(_)              => ctx.mkBVSLT(bvArgs(0), bvArgs(1))
       case BVLEOp(_)              => ctx.mkBVSLE(bvArgs(0), bvArgs(1))
       case BVGTOp(_)              => ctx.mkBVSGT(bvArgs(0), bvArgs(1))
@@ -371,6 +374,7 @@ class Z3Interface() extends Context {
     assertLogger.debug(z3Expr.toString())
     solver.add(z3Expr)
   }
+  override def preassert(e: Expr) {}
 
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
@@ -381,11 +385,14 @@ class Z3Interface() extends Context {
     val checkResult : SolverResult = z3Result match {
       case z3.Status.SATISFIABLE =>
         val z3Model = solver.getModel()
-        // println("model: " + z3Model.toString)
+        checkLogger.debug("SAT")
+        checkLogger.debug("Model: {}", z3Model.toString())
         SolverResult(Some(true), Some(new Z3Model(this, z3Model)))
       case z3.Status.UNSATISFIABLE =>
+        checkLogger.debug("UNSAT")
         SolverResult(Some(false), None)
       case _ =>
+        checkLogger.debug("UNDET")
         SolverResult(None, None)
     }
     return checkResult

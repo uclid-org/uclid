@@ -56,6 +56,7 @@ object Utils {
   class UnimplementedException (msg:String=null, cause:Throwable=null) extends java.lang.UnsupportedOperationException (msg, cause)
   class RuntimeError (msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause)
   class EvaluationError(msg : String, cause: Throwable = null) extends RuntimeError(msg, cause)
+  class SyGuSParserError(msg : String) extends RuntimeError(msg, null)
   class AssertionError(msg:String = null, cause: Throwable=null) extends java.lang.RuntimeException(msg, cause)
   class ParserError(val msg:String, val pos : Option[Position], val filename: Option[String]) extends java.lang.RuntimeException(msg, null) {
     override def hashCode : Int = {
@@ -133,14 +134,19 @@ object Utils {
   def schedule[T](roots: List[T], graph: Map[T, Set[T]]) : List[T] = {
     lazy val logger = Logger("uclid.Utils.schedule")
     def visit(node : T, visitOrder : Map[T, Int]) : Map[T, Int] = {
+      logger.debug("visiting: {}", node.toString())
       if (visitOrder.contains(node)) {
+        logger.debug("already visited", node.toString())
         visitOrder
       } else {
+        logger.debug("recursing", node.toString())
         val visitOrderP = graph.get(node) match {
           case Some(nodes) => nodes.foldLeft(visitOrder)((acc, m) => visit(m, acc))
           case None => visitOrder
         }
-        visitOrderP + (node -> visitOrder.size)
+        val outputOrder = visitOrderP + (node -> visitOrderP.size)
+        logger.debug("visitOrder[{}]: {}", node.toString(), outputOrder.toString())
+        outputOrder
       }
     }
     val order : List[(T, Int)] = roots.foldLeft(Map.empty[T, Int])((acc, r) => visit(r, acc)).toList

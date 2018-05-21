@@ -51,6 +51,8 @@ object Converter {
         smt.IntType
       case lang.BooleanType() =>
         smt.BoolType
+      case lang.StringType() =>
+        throw new Utils.RuntimeError("String types cannot be converted.")
       case lang.BitVectorType(w) =>
         smt.BitVectorType(w)
       case lang.MapType(inTypes,outType) =>
@@ -81,7 +83,7 @@ object Converter {
       case lang.IntAddOp() => return smt.IntAddOp
       case lang.IntSubOp() => return smt.IntSubOp
       case lang.IntMulOp() => return smt.IntMulOp
-      case lang.IntUnaryMinusOp() => return smt.IntMinusOp
+      case lang.IntUnaryMinusOp() => return smt.IntSubOp
       // Bitvector operators.
       case lang.BVLTOp(w) => return smt.BVLTOp(w)
       case lang.BVLEOp(w) => return smt.BVLEOp(w)
@@ -127,17 +129,25 @@ object Converter {
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
+       case lang.StringLit(_) => throw new Utils.RuntimeError("Strings are not supported in smt.Converter")
        case lang.Tuple(args) => smt.MakeTuple(toSMTs(args, scope, past))
        case opapp : lang.OperatorApplication =>
          val op = opapp.op
          val args = opapp.operands
          op match {
-           case lang.OldOperator() =>
+           case lang.OldOperator() | lang.PastOperator() =>
              toSMT(args(0), scope, 1)
            case lang.HistoryOperator() =>
              toSMT(args(0), scope, args(1).asInstanceOf[lang.IntLit].value.toInt)
            case lang.GetNextValueOp() =>
              toSMT(args(0), scope, past)
+           case lang.ConcatOp() =>
+             val scopeWOpApp = scope + opapp
+             val argsInSMT = toSMTs(args, scopeWOpApp, past)
+             Utils.assert(argsInSMT.length == 2, "Bitvector concat must have two arguments.")
+             Utils.assert(argsInSMT.forall(_.typ.isBitVector), "Argument to bitvector concat must be a bitvector.")
+             val width = argsInSMT.foldLeft(0)((acc, ai) => ai.typ.asInstanceOf[BitVectorType].width + acc)
+             smt.OperatorApplication(smt.BVConcatOp(width), argsInSMT)
            case _ =>
              val scopeWOpApp = scope + opapp
              val argsInSMT = toSMTs(args, scopeWOpApp, past)

@@ -1,0 +1,19 @@
+module main
+{
+  type num_t = integer;
+  var numbers : [{boolean, num_t}]integer;
+  var p1, p2  :  {boolean, num_t};
+
+  init {
+    assert (p1 == {true, 10});
+    assume (p1 == p2);
+  }
+  next {
+    assert (numbers[p1] != numbers[p2]);
+  }
+
+  control {
+    unroll (1);
+    check;
+  }
+}

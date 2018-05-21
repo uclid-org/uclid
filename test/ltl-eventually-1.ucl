@@ -1,0 +1,22 @@
+module main
+{
+    var count : bv4;
+
+    init {
+        count = 0bv4;
+    }
+
+    next {
+        count' = if (count < 7bv4) then (count + 1bv4) else 0bv4;
+    }
+
+    property[LTL] count_eventually_5 : F(count == 5bv4);
+    property[LTL] count_eventually_8 : F(count == 8bv4);
+
+    control {
+        v = bmc(10);
+        check;
+        // print_results;
+        // v.print_cex(count);
+    }
+}

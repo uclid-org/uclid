@@ -58,7 +58,7 @@ class ForLoopRewriterPass(forStmtsToRewrite: Set[ForStmt]) extends RewritePass {
        def rewriteForValue(value : NumericLit) : List[Statement] = {
          val rewriteMap = Map.empty[Expr, Expr] + (st.id -> value)
          val rewriter = new ExprRewriter("ForRewriter(i)", rewriteMap)
-         rewriter.rewriteStatements(st.body)
+         rewriter.rewriteStatements(st.body, ctx)
        }
        (low to high).foldLeft(List.empty[Statement])((acc, i) => acc ++ rewriteForValue(i))
      } else {

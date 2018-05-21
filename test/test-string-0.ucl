@@ -1,0 +1,12 @@
+module main
+{
+    var x : integer;
+
+    init {
+        x = "pramod";
+    }
+
+    next {
+        x' = x + 1;
+    }
+}

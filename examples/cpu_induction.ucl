@@ -168,7 +168,7 @@ module main {
   type mode_t     = common.mode_t;
   type regindex_t = cpu.regindex_t;
 
-  // Instruction memory is the same for both CPUs.
+  // Instruction memory for the CPUs.
   var imem1, imem2 : mem_t;
 
   // Create two instances of the CPU module.

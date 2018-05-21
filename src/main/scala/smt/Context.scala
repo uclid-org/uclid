@@ -40,16 +40,14 @@ package uclid
 package smt
 
 import scala.collection.mutable.{Set => MutableSet}
+import scala.collection.mutable.{Map => MutableMap}
 
-case class SynonymMap(fwdMap: Map[String, Type], val revMap: Map[Type, Type]) {
-  def addPrimitiveType(typ: Type) = {
-    SynonymMap(fwdMap, revMap + (typ -> typ))
-  }
+case class SynonymMap(fwdMap: Map[String, Type], val revMap: Map[Type, SynonymType]) {
   def addSynonym(name: String, typ: Type) = {
     SynonymMap(fwdMap + (name -> typ), revMap + (typ -> SynonymType(name, typ)))
   }
   def get(name: String) : Option[Type] = fwdMap.get(name)
-  def get(typ: Type) : Option[Type] = revMap.get(typ)
+  def get(typ: Type) : Option[SynonymType] = revMap.get(typ)
   def contains(name: String) : Boolean = fwdMap.contains(name)
   def contains(typ: Type) : Boolean = revMap.contains(typ)
 }
@@ -143,7 +141,6 @@ abstract trait Context {
       case None =>
         typ match {
           case BoolType | IntType | BitVectorType(_) =>
-            synMap.addPrimitiveType(typ)
             (typ, synMap)
           case unintTyp : UninterpretedType =>
             // add to map
@@ -194,57 +191,9 @@ abstract trait Context {
             val (newType, synMapP1) = flatten(synTyp.typ, synMap)
             val synMapP = synMapP1.addSynonym(synTyp.name, newType)
             (newType, synMapP)
+          case UndefinedType =>
+            throw new Utils.AssertionError("Undefined types are not expected here.")
         }
-    }
-  }
-
-  /** Replace the types of all symbols in these expressions with their corresponding
-   *  flattened types.
-   */
-  def flattenTypes(e : Expr, tMap : SynonymMap) : (Expr, SynonymMap) = {
-    def flattenTypesInList(es : List[Expr], tMapIn : SynonymMap) : (List[Expr], SynonymMap) = {
-      es.foldRight((List.empty[Expr], tMapIn)) {
-        (arg, acc) => {
-          val (argP, tMapP1) = flattenTypes(arg, acc._2)
-          (argP :: acc._1, tMapP1)
-        }
-      }
-    }
-    e match {
-      case intLit : IntLit => (intLit, tMap)
-      case bvLit : BitVectorLit => (bvLit, tMap)
-      case boolLit : BooleanLit => (boolLit, tMap)
-      case enumLit : EnumLit =>
-        val (enumTypeP, tMapP) = flatten(enumLit.eTyp, tMap)
-        (enumLit, tMapP)
-      case sym : Symbol =>
-        val (typP, tMapP) = flatten(sym.symbolTyp, tMap)
-        (Symbol(sym.id, typP), tMapP)
-      case mkTuple : MakeTuple =>
-        val (_, tMapP1) = flatten(mkTuple.typ, tMap)
-        val (argsP, tMapP2) = flattenTypesInList(mkTuple.args, tMapP1)
-        (MakeTuple(argsP), tMapP2)
-      case opapp : OperatorApplication =>
-        val (_, tMapP1) = flatten(opapp.typ, tMap)
-        val (argsP, tMapP2) = flattenTypesInList(opapp.operands, tMapP1)
-        (OperatorApplication(opapp.op, argsP), tMapP2)
-      case arrSel : ArraySelectOperation =>
-        val (eP, tMapP1) = flattenTypes(arrSel.e, tMap)
-        val (indexP, tMapP2) = flattenTypesInList(arrSel.index, tMapP1)
-        (ArraySelectOperation(eP, indexP), tMapP2)
-      case arrStore : ArrayStoreOperation =>
-        val (eP, tMapP1) = flattenTypes(arrStore.e, tMap)
-        val (indexP, tMapP2) = flattenTypesInList(arrStore.index, tMapP1)
-        val (valueP, tMapP3) = flattenTypes(arrStore.value, tMapP2)
-        (ArrayStoreOperation(eP, indexP, valueP), tMapP3)
-      case funcApp : FunctionApplication =>
-        val (eP, tMapP1) = flattenTypes(funcApp.e, tMap)
-        val (argsP, tMapP2) = flattenTypesInList(funcApp.args, tMapP1)
-        (FunctionApplication(eP, argsP), tMapP2)
-      case lambda : Lambda =>
-        val (idsP, tMapP1) = flattenTypesInList(lambda.ids, tMap)
-        val (exprP, tMapP2) = flattenTypes(lambda.e, tMapP1)
-        (Lambda(idsP.map(id => id.asInstanceOf[Symbol]), exprP), tMapP2)
     }
   }
 
@@ -252,37 +201,180 @@ abstract trait Context {
   def push()
   def pop()
   def assert(e: Expr)
+  def preassert(e: Expr)
   def check() : SolverResult
   def finish()
 }
 
 object Context
 {
+  def convertReplace(w : Int, hi : Int, lo : Int, arg0 : Expr, arg1 : Expr) : Expr = {
+    val slice0 = (w-1, hi+1)
+    val slice2 = (lo-1, 0)
+
+    // Convert a valid slice into Some(bvexpr) and an invalid slice into none.
+    def getSlice(slice : (Int, Int), arg : Expr) : Option[Expr] = {
+      if (slice._1 >= slice._2) {
+        Utils.assert(slice._1 < w && slice._1 >= 0, "Invalid slice: " + slice.toString)
+        Utils.assert(slice._2 < w && slice._2 >= 0, "Invalid slice: " + slice.toString)
+        val extractOp = OperatorApplication(BVExtractOp(slice._1, slice._2), List(arg))
+        Some(extractOp)
+      } else {
+        None
+      }
+    }
+    // Now merge the slices.
+    val slices : List[Expr] = List(getSlice(slice0, arg0), Some(arg1), getSlice(slice2, arg0)).flatten
+    val repl = slices.tail.foldLeft(slices.head) {
+      (r0, r1) => {
+        Utils.assert(r0.typ.isInstanceOf[BitVectorType], "Expected a bitvector.")
+        Utils.assert(r1.typ.isInstanceOf[BitVectorType], "Expected a bitvector.")
+        val r0Width = r0.typ.asInstanceOf[BitVectorType].width
+        val r1Width = r1.typ.asInstanceOf[BitVectorType].width
+        OperatorApplication(BVConcatOp(r0Width + r1Width), List(r0, r1))
+      }
+    }
+    return repl
+  }
+
+  def rewriteExpr(e : Expr, rewrite : (Expr => Expr), memo : MutableMap[Expr, Expr]) : Expr = {
+    memo.get(e) match {
+      case Some(eP) => eP
+      case None =>
+        val eP = e match {
+          case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) =>
+            rewrite(e)
+          case OperatorApplication(op, operands) =>
+            val operandsP = operands.map(arg => rewriteExpr(arg, rewrite, memo))
+            rewrite(OperatorApplication(op, operandsP))
+          case ArraySelectOperation(array, index) =>
+            val arrayP = rewriteExpr(array, rewrite, memo)
+            val indexP = index.map(ind => rewriteExpr(ind, rewrite, memo))
+            rewrite(ArraySelectOperation(arrayP, indexP))
+          case ArrayStoreOperation(array, index, value) =>
+            val arrayP = rewriteExpr(array, rewrite, memo)
+            val indexP = index.map(ind => rewriteExpr(ind, rewrite, memo))
+            val valueP = rewriteExpr(value, rewrite, memo)
+            rewrite(ArrayStoreOperation(arrayP, indexP, valueP))
+          case FunctionApplication(func, args) =>
+            val funcP = rewriteExpr(func, rewrite, memo)
+            val argsP = args.map(arg => rewriteExpr(arg, rewrite, memo))
+            rewrite(FunctionApplication(funcP, argsP))
+          case MakeTuple(args) =>
+            val argsP = args.map(arg => rewriteExpr(arg, rewrite, memo))
+            rewrite(MakeTuple(argsP))
+          case Lambda(ids, expr) =>
+            val idsP = ids.map(id => rewriteExpr(id, rewrite, memo).asInstanceOf[Symbol])
+            val exprP = rewriteExpr(expr, rewrite, memo)
+            rewrite(Lambda(idsP, exprP))
+        }
+        memo.put(e, eP)
+        eP
+    }
+  }
+  def rewriteBVReplace(e : Expr) : Expr = {
+    def rewriter(e : Expr) : Expr = {
+      e match {
+        case OperatorApplication(BVReplaceOp(w, hi, lo), operands) =>
+          convertReplace(w, hi, lo, operands(0), operands(1))
+        case _ =>
+          e
+      }
+    }
+    rewriteExpr(e, rewriter, MutableMap.empty)
+  }
+
   /**
    *  Helper function that finds the list of all symbols in an expression.
    */
-  def findSymbols(e : Expr, syms : Set[Symbol]) : Set[Symbol] = {
-    e match {
-      case sym : Symbol =>
-        return syms + sym
-      case OperatorApplication(op,operands) =>
-        return operands.foldLeft(syms)((acc,i) => findSymbols(i, acc))
-      case ArraySelectOperation(e, index) =>
-        return index.foldLeft(findSymbols(e, syms))((acc, i) => findSymbols(i, acc))
-      case ArrayStoreOperation(e, index, value) =>
-        return index.foldLeft(findSymbols(value, findSymbols(e, syms)))((acc,i) => findSymbols(i, acc))
-      case FunctionApplication(e, args) =>
-        return args.foldLeft(findSymbols(e, syms))((acc,i) => findSymbols(i, acc))
-      case IntLit(_) => syms
-      case BitVectorLit(_,_) => syms
-      case BooleanLit(_) => syms
-      case EnumLit(_, _) => syms
-      case Lambda(_,_) =>
-        throw new Utils.AssertionError("lambdas in assertions should have been beta-reduced")
+  def findSymbols(e : Expr) : Set[Symbol] = {
+    def symbolFinder(e : Expr) : Set[Symbol] = {
+      e match {
+        case sym : Symbol => Set(sym)
+        case _ => Set.empty[Symbol]
+      }
     }
+    accumulateOverExpr(e, symbolFinder _, MutableMap.empty)
   }
 
-  def findSymbols(e : Expr) : Set[Symbol] = { findSymbols(e, Set()) }
+  def accumulateOverExpr[T](e : Expr, apply : (Expr => Set[T]), memo : MutableMap[Expr, Set[T]]) : Set[T] = {
+    memo.get(e) match {
+      case Some(result) =>
+        result
+      case None =>
+        val eResult = apply(e)
+        val results = e match {
+          case Symbol(_, _) | IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) =>
+            eResult
+          case OperatorApplication(op,operands) =>
+            eResult ++ accumulateOverExprs(operands, apply, memo)
+          case ArraySelectOperation(e, index) =>
+            eResult ++ accumulateOverExpr(e, apply, memo) ++ accumulateOverExprs(index, apply, memo)
+          case ArrayStoreOperation(e, index, value) =>
+            eResult ++ accumulateOverExpr(e, apply, memo) ++ accumulateOverExprs(index, apply, memo) ++ accumulateOverExpr(value, apply, memo)
+          case FunctionApplication(e, args) =>
+            eResult ++ accumulateOverExpr(e, apply, memo) ++ accumulateOverExprs(args, apply, memo)
+          case MakeTuple(args) =>
+            eResult ++ accumulateOverExprs(args, apply, memo)
+          case Lambda(_,_) =>
+            throw new Utils.AssertionError("Lambdas should have been beta-reduced by now.")
+        }
+        memo.put(e, results)
+        results
+    }
+  }
+  def accumulateOverExprs[T](es : List[Expr], apply : (Expr => Set[T]), memo : MutableMap[Expr, Set[T]]) : Set[T] = {
+    val empty : Set[T] = Set.empty
+    es.foldLeft(empty)((acc, e) => acc ++ accumulateOverExpr(e, apply, memo))
+  }
+
+
+  /**
+   * Helper function that finds all the types that appear in an expression.
+   */
+  def findTypes(e : Expr) : Set[Type] = {
+    def typeFinder(e : Expr) : Set[Type] = {
+      Set(e.typ)
+    }
+    accumulateOverExpr(e, typeFinder _, MutableMap.empty)
+  }
+
+  def getMkTupleFunction(typeName: String) : String = {
+    "_make_" + typeName
+  }
+  def getFieldName(field: String) : String = {
+    "_field_" + field
+  }
+
+  def mergeCounts(m1 : Map[Expr, Int], m2 : Map[Expr, Int]) : Map[Expr, Int] = {
+    val keys = m1.keys ++ m2.keys
+    keys.map(k => {
+      val cnt = m1.get(k).getOrElse(0) +  m2.get(k).getOrElse(0)
+      k -> cnt
+    }).toMap
+  }
+  def countOccurrences(e : Expr) : Map[Expr, Int] = {
+    Map.empty
+  }
+  def foldOverExpr[T](init : T, f : ((T, Expr) => T), e : Expr) : T = {
+    val subResult = e match {
+      case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | EnumLit(_, _) =>
+        init
+      case OperatorApplication(op, operands) =>
+        foldOverExprs(init, f, operands)
+      case ArraySelectOperation(e, index) =>
+        foldOverExprs(foldOverExpr(init, f, e), f, index)
+      case ArrayStoreOperation(e, index, value) =>
+        foldOverExprs(foldOverExpr(foldOverExpr(init, f, e), f, value), f, index)
+      // FIXME: more cases here.
+    }
+    f(subResult, e)
+  }
+  def foldOverExprs[T](init : T, f : ((T, Expr) => T), es : List[Expr]) : T = {
+    es.foldLeft(init)((acc, e) => foldOverExpr(acc, f, e))
+  }
 }
 
-
+abstract trait SynthesisContext {
+  def synthesizeInvariant(initState : Map[lang.Identifier, Expr], nextState: Map[lang.Identifier, Expr], properties : List[smt.Expr], ctx : lang.Scope) : Unit
+}

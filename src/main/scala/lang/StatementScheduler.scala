@@ -53,6 +53,7 @@ object StatementScheduler {
       case HavocStmt(h) => 
         h match {
           case HavocableId(id) => Set(id)
+          case HavocableNextId(id) => Set(id)
           case HavocableFreshLit(f) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
         }
@@ -109,7 +110,11 @@ object StatementScheduler {
         Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
         val moduleType : ModuleType = instD.modType.get.asInstanceOf[ModuleType]
-        readSets(instD.inputMap.map(p => p._3)) ++ readSets(instD.sharedVarMap.map(p => p._3))
+        val moduleInputs = instD.inputMap.map(p => p._3)
+        val moduleSharedVars = instD.sharedVarMap.map(p => p._3)
+        logger.trace("moduleInputs: {}", moduleInputs.toString())
+        logger.trace("moduleSharedVars: {}", moduleSharedVars.toString())
+        readSets(moduleInputs) ++ readSets(moduleSharedVars)
     }
   }
 
@@ -139,8 +144,13 @@ object StatementScheduler {
   def getReadWriteSets(statements : List[Statement], context : Scope) : List[(Set[Identifier], Set[Identifier])] = {
     statements.map {
       st => {
-        val ins = readSet(st, context)
+        val insP = readSet(st, context)
         val outs = writeSet(st, context)
+        val ins = if (st.hasStmtBlock) {
+          insP.diff(outs)
+        } else {
+          insP
+        }
         logger.debug("Statement: {}", st.toString())
         logger.debug("Input Dependencies: {}", ins.toString())
         logger.debug("Output Dependencies: {}", outs.toString())
@@ -258,7 +268,7 @@ class StatementSchedulerPass extends RewritePass {
         val ins = p._2._1
         val outs = p._2._2
         // add an edge from st.astNodeId to each of the statements that produce the ins
-        logger.debug("st: {}; ins: {}", st.astNodeId.toString(), ins.toString())
+        logger.debug("st: {}; ins: {}; outs: {}", st.astNodeId.toString(), ins.toString(), outs.toString())
         val inIds = ins.map(id => idToStmtIdMap.get(id)).flatten
         acc + (st.astNodeId -> inIds)
       }
@@ -270,6 +280,7 @@ class StatementSchedulerPass extends RewritePass {
   }
   override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
     val bodyP = reorderStatements(next.body, context)
+    logger.debug(Utils.join(bodyP.flatMap(st => st.toLines), "\n"))
     Some(NextDecl(bodyP))
   }
   override def rewriteIfElse(ifelse : IfElseStmt, context : Scope) : List[Statement] = {
@@ -301,6 +312,16 @@ class StatementSchedulerPass extends RewritePass {
       List(CaseStmt(bodiesP))
     } else {
       List(caseStmt)
+    }
+  }
+  override def rewriteHavoc(havocStmt : HavocStmt, context : Scope) : List[Statement] = {
+    if (context.environment == SequentialEnvironment) {
+      havocStmt.havocable match {
+        case HavocableId(id) => List(HavocStmt(HavocableNextId(id)))
+        case _ => List(havocStmt)
+      }
+    } else {
+      List(havocStmt)
     }
   }
 }

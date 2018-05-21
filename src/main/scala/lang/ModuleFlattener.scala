@@ -312,7 +312,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // add initialization for the instance.
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
     newModule.init match {
-      case Some(initD) => Some(InitDecl(initD.body ++ init.body))
+      case Some(initD) => Some(InitDecl(newInputAssignments ++ initD.body ++ init.body))
       case None => Some(init)
     }
   }

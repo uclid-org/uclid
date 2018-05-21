@@ -48,11 +48,15 @@ import uclid.lang._
 import lang.Module
 import lang.Identifier
 import uclid.Utils.ParserErrorList
+import com.typesafe.scalalogging.Logger
+import uclid.smt.SyGuSInterface
 
 /** This is the main class for Uclid.
  *
  */
 object UclidMain {
+  val logger = Logger("uclid.UclidMain")
+
   def main(args: Array[String]) {
     parseOptions(args) match {
       case None =>
@@ -69,6 +73,8 @@ object UclidMain {
   case class Config(
       mainModuleName : String = "main",
       smtSolver: List[String] = List.empty,
+      synthesizer: List[String] = List.empty,
+      synthesisRunDir: String = "",
       files : Seq[java.io.File] = Seq()
   )
 
@@ -80,9 +86,17 @@ object UclidMain {
         (x, c) => c.copy(mainModuleName = x) 
       }.text("Name of the main module.")
 
-      opt[String]('s', "solver").valueName("<Binary>").action{ 
+      opt[String]('s', "solver").valueName("<Cmd>").action{ 
         (exec, c) => c.copy(smtSolver = exec.split(" ").toList) 
       }.text("External SMT solver binary.")
+
+      opt[String]('y', "synthesizer").valueName("<Cmd>").action{
+        (exec, c) => c.copy(synthesizer = exec.split(" ").toList)
+      }.text("Command line to invoke SyGuS synthesizer.")
+
+      opt[String]('Y', "synthesizer-run-directory").valueName("<Dir>").action{
+        (dir, c) => c.copy(synthesisRunDir = dir)
+      }.text("Run directory for synthesizer.")
 
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
@@ -167,6 +181,7 @@ object UclidMain {
     passManager.addPass(new FindProcedureDependency())
     passManager.addPass(new DefDepGraphChecker())
     passManager.addPass(new RewriteDefines())
+    passManager.addPass(new WhileLoopRewriter())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new VariableDependencyFinder())
@@ -257,12 +272,16 @@ object UclidMain {
   def execute(module : Module, config : Config) : List[CheckResult] = {
     var symbolicSimulator = new SymbolicSimulator(module)
     var z3Interface = if (config.smtSolver.size > 0) {
-      println("args: " + config.smtSolver)
+      logger.debug("args: {}", config.smtSolver)
       new smt.SMTLIB2Interface(config.smtSolver)
     } else {
       new smt.Z3Interface()
     }
-    val result = symbolicSimulator.execute(z3Interface)
+    val sygusInterface : Option[smt.SynthesisContext] = config.synthesizer match {
+      case Nil => None
+      case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir))
+    }
+    val result = symbolicSimulator.execute(z3Interface, sygusInterface)
     z3Interface.finish()
     return result
   }

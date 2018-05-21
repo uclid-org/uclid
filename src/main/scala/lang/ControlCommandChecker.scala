@@ -64,6 +64,11 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     val cntInt = cnt.intValue()
     Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large".format(cmd.name.toString), cmd.pos, filename)
   }
+  def checkHasOneStringLitArg(cmd : GenericProofCommand, filename : Option[String]) {
+    Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument".format(cmd.name.toString), cmd.pos, filename)
+    val cntLit = cmd.args(0)
+    Utils.checkParsingError(cntLit._1.isInstanceOf[StringLit], "'%s' command expects a string literal as an argument".format(cmd.name.toString), cmd.pos, filename)
+  }
   def checkHasOneIdentifierArg(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument".format(cmd.name.toString), cmd.pos, filename)
     val cntLit = cmd.args(0)
@@ -123,8 +128,18 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         val module = context.module.get
         lazy val errorMsg = "Unknown procedure: '%s'".format(arg.toString())
         Utils.checkParsingError(module.procedures.find(p => p.id == arg).isDefined, errorMsg, arg.pos, filename)
+      case "synthesize_invariant" =>
+        checkNoArgs(cmd, filename)
+        checkNoParams(cmd, filename)
+        checkNoArgObj(cmd, filename)
+        checkNoResultVar(cmd, filename)
       case "check" | "print_module" =>
         checkNoArgs(cmd, filename)
+        checkNoParams(cmd, filename)
+        checkNoArgObj(cmd, filename)
+        checkNoResultVar(cmd, filename)
+      case "print" =>
+        checkHasOneStringLitArg(cmd, filename)
         checkNoParams(cmd, filename)
         checkNoArgObj(cmd, filename)
         checkNoResultVar(cmd, filename)

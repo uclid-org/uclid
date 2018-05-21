@@ -39,6 +39,8 @@
 package uclid
 package lang
 
+import com.typesafe.scalalogging.Logger
+
 class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifier], Option[ContextualNameProvider])]
 {
   type T = (Map[Identifier, Identifier], Option[ContextualNameProvider])
@@ -50,17 +52,29 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
       (in._1, None)
     }
   }
+  def addToMap(id : Identifier, in : T, tag : String) : T = {
+    in._1.get(id) match {
+      case Some(idP) => in
+      case None =>
+        val newId = in._2.get(id, tag)
+        val mapP = (in._1 + (id -> newId))
+        (mapP, in._2)
+    }
+  }
   override def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       lhs match {
-        case LhsNextId(id) =>
-          in._1.get(id) match {
-            case Some(idP) => in
-            case None =>
-              val newId = in._2.get(id, "lhs")
-              val mapP = (in._1 + (id -> newId))
-              (mapP, in._2)
-          }
+        case LhsNextId(id) => addToMap(id, in, "lhs")
+        case _ => in
+      }
+    } else {
+      in
+    }
+  }
+  override def applyOnHavoc(d : TraversalDirection.T, havocStmt : HavocStmt, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Up) {
+      havocStmt.havocable match {
+        case HavocableNextId(id) => addToMap(id, in, "havoc")
         case _ => in
       }
     } else {
@@ -92,6 +106,7 @@ class PrimedVariableCollector() extends ASTAnalyzer("PrimedVariableCollector", n
 }
 
 class PrimedVariableEliminatorPass extends RewritePass {
+  val logger = Logger(classOf[PrimedVariableEliminatorPass])
   lazy val manager : PassManager = analysis.manager
   lazy val primedVariableCollector = manager.pass("PrimedVariableCollector").asInstanceOf[PrimedVariableCollector]
 
@@ -122,6 +137,16 @@ class PrimedVariableEliminatorPass extends RewritePass {
   override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
     val nextP = NextDecl(getInitialAssigns() ++ next.body ++ getFinalAssigns())
     Some(nextP)
+  }
+  override def rewriteHavoc(havocStmt : HavocStmt, context : Scope) : List[Statement] = {
+    havocStmt.havocable match {
+      case HavocableNextId(id) => 
+        val primeVarMap = primedVariableCollector.primeVarMap.get
+        logger.debug("primeVarMap: {}", primeVarMap.toString())
+        List(HavocStmt(HavocableId(primeVarMap.get(id).get)))
+      case _ =>
+        List(havocStmt)
+    }
   }
   override def rewriteLHS(lhs : Lhs, context : Scope) : Option[Lhs] = {
     lazy val primeVarMap = primedVariableCollector.primeVarMap.get

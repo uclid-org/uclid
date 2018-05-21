@@ -48,7 +48,11 @@ class FuncExprRewriterPass extends RewritePass {
           OperatorApplication(OldOperator(), fapp.args)
         } else if (fnName == "history") {
           OperatorApplication(HistoryOperator(), fapp.args)
-        } else { fapp }
+        } else if (fnName == "past") {
+          OperatorApplication(PastOperator(), fapp.args)
+        } else {
+          fapp
+        }
       case _ => fapp
     }
     Some(exprP)

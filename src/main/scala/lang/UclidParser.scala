@@ -48,7 +48,7 @@ import scala.util.parsing.combinator.PackratParsers
 import scala.language.implicitConversions
 import scala.collection.mutable
 
-  /** This is a re-implementation of the Scala libraries StdTokenParsers with StdToken replaced by UclidToken. */
+/** This is a re-implementation of the Scala libraries StdTokenParsers with StdToken replaced by UclidToken. */
 trait UclidTokenParsers extends TokenParsers {
   type Tokens <: UclidTokens
   import lexical.{Keyword, IntegerLit, BitVectorTypeLit, BitVectorLit, StringLit, Identifier}
@@ -145,6 +145,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwFor = "for"
     lazy val KwIn = "in"
     lazy val KwRange = "range"
+    lazy val KwWhile = "while"
     lazy val KwInstance = "instance"
     lazy val KwType = "type"
     lazy val KwInput = "input"
@@ -186,7 +187,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall,
-      KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange,
+      KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
       KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
       KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit,
       KwNext, KwLambda, KwModifies, KwDefineProp, KwDefineAxiom,
@@ -239,6 +240,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val BitVector: PackratParser[lang.BitVectorLit] =
       positioned { bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) } }
     lazy val Number : PackratParser[lang.NumericLit] = positioned (Integer | BitVector)
+    lazy val String  : PackratParser[lang.StringLit] = positioned {
+      stringLit ^^ { case stringLit => lang.StringLit(stringLit) }
+    }
     lazy val E1: PackratParser[Expr] =
       KwForall ~> IdTypeList ~ ("::" ~> E1) ^^ { case ids ~ expr => OperatorApplication(ForallOp(ids), List(expr)) } |
       KwExists ~> IdTypeList ~ ("::" ~> E1) ^^ { case ids ~ expr => OperatorApplication(ExistsOp(ids), List(expr)) } |
@@ -297,8 +301,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     /** E15 = false | true | Number | Id FuncApplication | (Expr) **/
     lazy val E15: PackratParser[Expr] = positioned {
-        Bool |
-        Number |
+        Bool | Number | String |
         "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
         KwIf ~> ("(" ~> Expr <~ ")") ~ (KwThen ~> Expr) ~ (KwElse ~> Expr) ^^ {
           case expr ~ thenExpr ~ elseExpr => lang.OperatorApplication(lang.ITEOp(), List(expr, thenExpr, elseExpr))
@@ -380,6 +383,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       }
     }
 
+    lazy val Invariant : PackratParser[lang.Expr] = positioned {
+      KwInvariant ~> Expr <~ ";"
+    }
+
     lazy val Statement: PackratParser[Statement] = positioned {
       KwSkip <~ ";" ^^ { case _ => SkipStmt() } |
       KwAssert ~> Expr <~ ";" ^^ { case e => AssertStmt(e, None) } |
@@ -407,6 +414,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case id ~ r ~ body => ForStmt(id, r._1.typeOf, r, body) } |
       KwFor ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> RangeExpr) ~ BlockStatement ^^
         { case idtyp ~ range ~ body => ForStmt(idtyp._1, idtyp._2, range, body) } |
+      KwWhile ~> ("(" ~> Expr <~ ")") ~ rep(Invariant) ~ BlockStatement ^^
+        { case expr ~ invs ~ body => WhileStmt(expr, body, invs) } |
       ";" ^^ { case _ => SkipStmt() }
     }
 
@@ -564,8 +573,14 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~
         (KwGrammar ~> Id ) ~ ("(" ~> IdList <~ ")") ~
         rep(KwEnsures ~> Expr) <~ ";" ^^
-      { case id ~ idtyps ~ rt ~ gId ~ gArgs ~ eArgs =>
-          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), gId, gArgs, eArgs)
+      { case id ~ idtyps ~ rt ~ gId ~ gArgs ~ ensures =>
+          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), Some(gId), gArgs, ensures)
+      } |
+      KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~
+        rep(KwEnsures ~> Expr) <~ ";" ^^
+      {
+        case id ~ idtyps ~ rt ~ ensures =>
+          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), None, List.empty, ensures)
       }
     }
     lazy val DefineDecl : PackratParser[lang.DefineDecl] = positioned {
