@@ -71,6 +71,9 @@ class VerifierSanitySpec extends FlatSpec {
   "test-array-2.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-array-2.ucl", 1)
   }
+  "array-update.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/array-update.ucl", 0)
+  }
   "test-array-1-unsafe.ucl" should "verify all but 4 assertions." in {
     VerifierSpec.expectedFails("./test/test-array-1-unsafe.ucl", 4)
   }
