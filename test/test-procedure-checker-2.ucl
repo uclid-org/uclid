@@ -61,7 +61,7 @@ module main
     // v = induction(5);
     v = unroll(20);
     check;
-    // print_results;
+    print_results;
     // v.print_cex(light1.light, light1.step, light2.light, light2.step);
   }
 }

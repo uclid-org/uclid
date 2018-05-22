@@ -22,6 +22,6 @@ module main
     // print_module;
     vobj = bmc[p1] (3);
     check;
-    // print_results;
+    print_results;
   }
 }

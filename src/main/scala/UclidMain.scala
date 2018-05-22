@@ -75,6 +75,7 @@ object UclidMain {
       smtSolver: List[String] = List.empty,
       synthesizer: List[String] = List.empty,
       synthesisRunDir: String = "",
+      verbose : Int = 0,
       files : Seq[java.io.File] = Seq()
   )
 
@@ -119,31 +120,31 @@ object UclidMain {
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
       }
-      println("Finished execution for module: %s.".format(mainModuleName.toString))
+      UclidMain.println("Finished execution for module: %s.".format(mainModuleName.toString))
     }
     catch  {
       case (e : java.io.FileNotFoundException) =>
-        println("Error: " + e.getMessage() + ".")
+        UclidMain.println("Error: " + e.getMessage() + ".")
         System.exit(1)
       case (p : Utils.ParserError) =>
-        println("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        UclidMain.println("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
           (p) => {
-            println("Type error at %s: %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
+            UclidMain.println("Type error at %s: %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
           }
         }
-        println("Parsing failed. %d errors found.".format(typeErrors.errors.size))
+        UclidMain.println("Parsing failed. %d errors found.".format(typeErrors.errors.size))
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
-            println("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString)
+            UclidMain.println("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString)
           }
         }
-        println("Parsing failed. " + ps.errors.size.toString + " errors found.")
+        UclidMain.println("Parsing failed. " + ps.errors.size.toString + " errors found.")
       case(a : Utils.AssertionError) =>
-        println("[Assertion Failure]: " + a.getMessage)
+        UclidMain.println("[Assertion Failure]: " + a.getMessage)
         a.printStackTrace()
         System.exit(2)
     }
@@ -260,7 +261,7 @@ object UclidMain {
     }
     val moduleListP = instantiateModules(moduleList, mainModuleName)
     if (verbose) {
-      println("Successfully parsed %d and instantiated %d module(s).".format(moduleList.size, moduleListP.size))
+      UclidMain.println("Successfully parsed %d and instantiated %d module(s).".format(moduleList.size, moduleListP.size))
     }
     // return main module.
     moduleListP.find((m) => m.id == mainModuleName)
@@ -281,8 +282,25 @@ object UclidMain {
       case Nil => None
       case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir))
     }
-    val result = symbolicSimulator.execute(z3Interface, sygusInterface)
+    val result = symbolicSimulator.execute(z3Interface, sygusInterface, config)
     z3Interface.finish()
     return result
+  }
+
+  var stringOutput : StringBuilder = new StringBuilder()
+  var stringOutputEnabled = false
+  def enableStringOutput() {
+    stringOutputEnabled = true
+  }
+  def clearStringOutput() {
+    stringOutput.clear()
+  }
+  def println(str : String) {
+    if (stringOutputEnabled) {
+      stringOutput ++= str
+      stringOutput ++ "\n"
+    } else {
+      Console.println(str)
+    }
   }
 }

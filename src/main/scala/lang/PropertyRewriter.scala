@@ -467,8 +467,6 @@ class LTLPropertyRewriterPass extends RewritePass {
         val nnf = convertToNNF(not(s.expr))
         logger.debug("EXP: {}", s.expr.toString())
         logger.debug("NNF: {}", nnf.toString()) 
-        // println("exp: " + s.expr.toString)
-        // println("nnf: " + nnf.toString)
         createMonitorExpressions(s.id, nnf, nameProvider)
       }
     }

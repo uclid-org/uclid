@@ -125,13 +125,6 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
       }
     } while (simplified)
   }
-
-  def printTypeDeclMap() {
-    typeDeclMap.foreach {
-      case (name, decl) => println (name.toString + " --> " + decl.toString)
-    }
-    println("synonyms: " + typeSynonyms)
-  }
 }
 
 class TypeSynonymFinder extends ASTAnalyzer("TypeSynonymFinder", new TypeSynonymFinderPass())  {
@@ -394,11 +387,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           BooleanType()
         }
         case cmpOp : ComparisonOperator => {
-          // println("typeOf: " + e.toString)
-          // println("cmpOp : " + cmpOp.toString)
-          // println("args: " + opapp.operands.toString)
-          // println("argTypes: " + argTypes.toString)
-          // Utils.assert(argTypes.size == 2, "Trouble!")
           checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
           checkTypeError(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type", opapp.pos, c.filename)
           BooleanType()

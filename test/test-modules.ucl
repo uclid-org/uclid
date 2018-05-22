@@ -93,7 +93,7 @@ module main {
   control {
     v = unroll(3);
     check;
-    // print_results;
+    print_results;
     // v.print_cex(cnt, res);
     
   }

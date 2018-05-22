@@ -58,7 +58,7 @@ module main {
   control {
     vobj = bmc[irrevocable, queuelike](3);
     check;
-    // print_results;
+    print_results;
     vobj.print_cex(
         q.enq_ready, q.deq_valid,
         q.head_ptr, q.tail_ptr,

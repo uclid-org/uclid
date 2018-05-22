@@ -34,7 +34,7 @@ module main {
     //print_module;
     v = unroll(2);
     check;
-    //print_results;
+    print_results;
     //v.print_cex(n, c1.h, c2.h);
   }
 }

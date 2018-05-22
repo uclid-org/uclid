@@ -17,6 +17,6 @@ module main {
   control {
   	induction;
     check;
-    // print_results;
+    print_results;
   }
 }

@@ -386,8 +386,13 @@ class ParserSpec extends FlatSpec {
     }
   }
   "test-string-2.ucl" should "parse successfully." in {
+    UclidMain.enableStringOutput()
+    UclidMain.clearStringOutput()
     val fileModules = UclidMain.compile(List(new File("test/test-string-2.ucl")), lang.Identifier("main"))
     val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val results = UclidMain.execute(instantiatedModules(0), UclidMain.Config())
+    val stringOutput = UclidMain.stringOutput.toString().trim()
     assert (instantiatedModules.size == 1)
+    assert (stringOutput == "hello, world!")
   }
 }

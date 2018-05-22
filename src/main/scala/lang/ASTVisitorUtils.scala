@@ -44,7 +44,7 @@ package lang
 class ASTPrinterPass extends ReadOnlyPass[Unit] {
   override def applyOnModule(d : TraversalDirection.T, module : Module, in : Unit, context : Scope) : Unit = {
     if (d == TraversalDirection.Down) {
-      println(module)
+      UclidMain.println(module.toString())
     }
   }
 }

@@ -41,6 +41,6 @@ module main {
   control {
   	x = unroll (3);
   	check;
-  	// x.print_results;
+  	print_results;
   }
 }

@@ -16,7 +16,7 @@ module main
     // print_module;
     v = bmc(2);
     check;
-    // print_results;
+    print_results;
     // v.print_cex;
   }
 }

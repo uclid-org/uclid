@@ -52,7 +52,7 @@ module main {
   control {
     vobj = unroll(1);
     check;
-    // print_results;
+    print_results;
     // vobj.print_cex(step, pc_init, unit.pc0, unit.pc);
   }
 

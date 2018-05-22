@@ -21,7 +21,7 @@ module main {
     control {
         v = induction(2);
         check;
-        // print_results;
+        print_results;
         // v.print_cex;
     }
 }
