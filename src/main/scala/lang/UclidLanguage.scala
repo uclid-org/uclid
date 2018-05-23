@@ -721,11 +721,24 @@ case class ModuleType(
     "inputs (" + argsToString(inputs) + ") outputs (" + argsToString(outputs) + ")"
 }
 
+/** Havocable entities. */
+sealed abstract class HavocableEntity extends ASTNode
+case class HavocableId(id : Identifier) extends HavocableEntity {
+  override def toString = id.toString()
+}
+case class HavocableNextId(id : Identifier) extends HavocableEntity {
+  override def toString = id.toString()
+}
+case class HavocableFreshLit(f : FreshLit) extends HavocableEntity {
+  override def toString = f.toString()
+}
+
 /** Statements **/
 sealed abstract class Statement extends ASTNode {
   override def toString = Utils.join(toLines, "\n") + "\n"
   def hasStmtBlock = false
-  def isLoop = false
+  val isLoop = false
+  val hasLoop = false
   def toLines : List[String]
 }
 case class SkipStmt() extends Statement {
@@ -737,16 +750,6 @@ case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
 case class AssumeStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assume " + e + "; // " + position.toString)
 }
-sealed abstract class HavocableEntity extends ASTNode
-case class HavocableId(id : Identifier) extends HavocableEntity {
-  override def toString = id.toString()
-}
-case class HavocableNextId(id : Identifier) extends HavocableEntity {
-  override def toString = id.toString()
-}
-case class HavocableFreshLit(f : FreshLit) extends HavocableEntity {
-  override def toString = f.toString()
-}
 case class HavocStmt(havocable : HavocableEntity) extends Statement {
   override def toLines = List("havoc " + havocable.toString() + "; // " + position.toString)
 }
@@ -756,6 +759,7 @@ case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
 }
 case class BlockStmt(stmts: List[Statement]) extends Statement {
   override def hasStmtBlock = true
+  override val hasLoop = stmts.exists(st => st.hasLoop)
   override def toLines = { 
     List("{") ++ 
     stmts.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
@@ -764,25 +768,30 @@ case class BlockStmt(stmts: List[Statement]) extends Statement {
 }
 case class IfElseStmt(cond: Expr, ifblock: Statement, elseblock: Statement) extends Statement {
   override def hasStmtBlock = true
+  override val hasLoop = ifblock.hasLoop || elseblock.hasLoop
   lazy val lines : List[String] = {
     List("if") ++ ifblock.toLines ++ List("else") ++ elseblock.toLines
   }
   override def toLines = lines
 }
-case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: List[Statement])
+case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: Statement)
   extends Statement
 {
   override def hasStmtBlock = true
-  override def isLoop = true
-  override def toLines = List("for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString) ++
-                         body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
+  override val isLoop = true
+  override val hasLoop = true
+  override val toLines = {
+    val forLine = "for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString
+    List(forLine) ++ body.toLines ++ List("}")
+  }
 }
 case class WhileStmt(cond: Expr, body: List[Statement], invariants: List[Expr])
   extends Statement
 {
   override def hasStmtBlock = true
-  override def isLoop = true
-  override def toLines = {
+  override val isLoop = true
+  override val hasLoop = true
+  override val toLines = {
     val headLine = "while(%s)  // %s".format(cond.toString(), position.toString())
     val invLines = invariants.map(inv => PrettyPrinter.indent(1) + "invariant " + inv.toString() + "; // " + inv.position.toString())
     val openBraceLine = "{"

@@ -92,4 +92,7 @@ class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   def rewriteStatements(stmts : List[Statement], context : Scope) : List[Statement] = {
     return stmts.flatMap(visitStatement(_, context))
   }
+  def rewriteStatement(stmt : Statement, context : Scope) : Option[Statement] = {
+    visitStatement(stmt, context)
+  }
 }

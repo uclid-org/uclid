@@ -62,7 +62,7 @@ object StatementScheduler {
       case IfElseStmt(cond, ifblock, elseblock) =>
         writeSet(ifblock, context) ++ writeSet(elseblock, context)
       case ForStmt(_, _, _, body) =>
-        writeSets(body, context)
+        writeSet(body, context)
       case WhileStmt(_, body, _) =>
         writeSets(body, context)
       case CaseStmt(bodies) =>
@@ -98,7 +98,7 @@ object StatementScheduler {
       case IfElseStmt(cond, ifblock, elseblock) =>
         readSet(cond) ++ readSet(ifblock, context) ++ readSet(elseblock, context)
       case ForStmt(_, _, range, body) =>
-        readSet(range._1) ++ readSet(range._2) ++ readSets(body, context)
+        readSet(range._1) ++ readSet(range._2) ++ readSet(body, context)
       case WhileStmt(cond, body, invs) =>
         readSet(cond) ++ readSets(body, context)
       case CaseStmt(bodies) =>
@@ -189,13 +189,6 @@ class VariableDependencyFinderPass extends ReadOnlyPass[List[ModuleError]] {
   override def applyOnBlock(d : TraversalDirection.T, blockStmt : BlockStmt, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up && context.environment == SequentialEnvironment) {
       checkBlock(blockStmt.stmts, in, context)
-    } else {
-      in
-    }
-  }
-  override def applyOnFor(d : TraversalDirection.T, forLoop : ForStmt, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up && context.environment == SequentialEnvironment) {
-      checkBlock(forLoop.body, in, context)
     } else {
       in
     }
@@ -292,15 +285,6 @@ class StatementSchedulerPass extends RewritePass {
       Some(stmtsP)
     } else {
       Some(blk)
-    }
-  }
-  override def rewriteFor(forStmt : ForStmt, context : Scope) : Option[Statement] = {
-    if (context.environment == SequentialEnvironment) {
-      val bodyP = reorderStatements(BlockStmt(forStmt.body), context).stmts
-      val forP = ForStmt(forStmt.id, forStmt.typ, forStmt.range, bodyP)
-      Some(forP)
-    } else {
-      Some(forStmt)
     }
   }
   override def rewriteCase(caseStmt : CaseStmt, context : Scope) : Option[Statement] = {

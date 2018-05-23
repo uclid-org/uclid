@@ -762,7 +762,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitType(st.typ, result, contextIn)
     result = visitExpr(st.range._1, result, contextIn)
     result = visitExpr(st.range._2, result, contextIn)
-    result = st.body.foldLeft(result)((arg, i) => visitStatement(i, arg, context))
+    result = visitStatement(st.body, result, context)
     result = pass.applyOnFor(TraversalDirection.Up, st, result, context)
     return result
   }
@@ -1556,11 +1556,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val typP = visitType(st.typ, contextIn)
     val lit1P = visitExpr(st.range._1, contextIn)
     val lit2P = visitExpr(st.range._2, contextIn)
-    val stmts = st.body.map(visitStatement(_, context)).flatten
+    val bodyP = visitStatement(st.body, context)
 
-    val stP = (idP, typP, lit1P, lit2P) match {
-      case (Some(id), Some(typ), Some(lit1), Some(lit2)) =>
-        pass.rewriteFor(ForStmt(id, typ, (lit1, lit2), stmts), contextIn)
+    val stP = (idP, typP, lit1P, lit2P, bodyP) match {
+      case (Some(id), Some(typ), Some(lit1), Some(lit2), Some(body)) =>
+        pass.rewriteFor(ForStmt(id, typ, (lit1, lit2), body), contextIn)
       case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)

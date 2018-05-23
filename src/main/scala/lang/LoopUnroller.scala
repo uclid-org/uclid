@@ -42,7 +42,7 @@ package lang
 
 class FindInnermostLoopsPass extends ReadOnlyPass[Set[ForStmt]] {
   override def applyOnFor(d : TraversalDirection.T, st : ForStmt, in : Set[ForStmt], context : Scope) : Set[ForStmt] = {
-    if(!st.body.exists(_.isLoop)) {
+    if(!st.body.hasLoop) {
       in + st
     } else {
       in
@@ -55,12 +55,12 @@ class ForLoopRewriterPass(forStmtsToRewrite: Set[ForStmt]) extends RewritePass {
      if (forStmtsToRewrite.contains(st)) {
        val low = st.range._1.asInstanceOf[NumericLit]
        val high = st.range._2.asInstanceOf[NumericLit]
-       def rewriteForValue(value : NumericLit) : List[Statement] = {
+       def rewriteForValue(value : NumericLit) : Option[Statement] = {
          val rewriteMap = Map.empty[Expr, Expr] + (st.id -> value)
          val rewriter = new ExprRewriter("ForRewriter(i)", rewriteMap)
-         rewriter.rewriteStatements(st.body, ctx)
+         rewriter.rewriteStatement(st.body, ctx)
        }
-       val stmts = (low to high).foldLeft(List.empty[Statement])((acc, i) => acc ++ rewriteForValue(i))
+       val stmts = (low to high).foldLeft(List.empty[Statement])((acc, i) => acc ++ rewriteForValue(i).toList)
        Some(BlockStmt(stmts))
      } else {
        Some(st)

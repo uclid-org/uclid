@@ -410,9 +410,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case e ~ f => IfElseStmt(e, f, BlockStmt(List.empty)) } |
       KwCase ~> rep(CaseBlockStmt) <~ KwEsac ^^
         { case i => CaseStmt(i) } |
-      KwFor ~> (Id ~ (KwIn ~> RangeLit) ~ BlockStatement) ^^
+      KwFor ~> (Id ~ (KwIn ~> RangeLit) ~ BlkStmt) ^^
         { case id ~ r ~ body => ForStmt(id, r._1.typeOf, r, body) } |
-      KwFor ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> RangeExpr) ~ BlockStatement ^^
+      KwFor ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> RangeExpr) ~ BlkStmt ^^
         { case idtyp ~ range ~ body => ForStmt(idtyp._1, idtyp._2, range, body) } |
       KwWhile ~> ("(" ~> Expr <~ ")") ~ rep(Invariant) ~ BlockStatement ^^
         { case expr ~ invs ~ body => WhileStmt(expr, body, invs) } |
