@@ -591,8 +591,8 @@ class LTLPropertyRewriterPass extends RewritePass {
                         hasFailedAssignments ++ pendingAssignments ++
                         hasAcceptedAssignments ++ hasAcceptedTraceAssignments
     // new init/next.
-    val newInitDecl = InitDecl(module.init.get.body ++ postInitStmts ++ postNextStmts)
-    val newNextDecl = NextDecl(preNextStmts ++ module.next.get.body ++ postNextStmts)
+    val newInitDecl = InitDecl(BlockStmt(List(module.init.get.body) ++ postInitStmts ++ postNextStmts))
+    val newNextDecl = NextDecl(BlockStmt(preNextStmts ++ List(module.next.get.body) ++ postNextStmts))
     // new safety properties.
     val newSafetyProperties = (ltlSpecs zip safetyExprs).map {
       p => {

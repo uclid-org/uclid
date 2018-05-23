@@ -274,7 +274,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
   }
   val newNextStatements = newModule.next match {
-    case Some(nextD) => nextD.body
+    case Some(nextD) => List(nextD.body)
     case _ => List.empty[Statement]
   }
 
@@ -312,7 +312,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // add initialization for the instance.
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
     newModule.init match {
-      case Some(initD) => Some(InitDecl(newInputAssignments ++ initD.body ++ init.body))
+      case Some(initD) => Some(InitDecl(BlockStmt(newInputAssignments ++ List(initD.body) ++ List(init.body))))
       case None => Some(init)
     }
   }

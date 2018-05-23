@@ -110,15 +110,15 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
       decl match {
         case InitDecl(body) =>
           if (rewriteOptions == ProcedureInliner.RewriteInit) {
-            val (stmts, vars) = inlineProcedureCalls((id, p) => initNameProvider(id, p), body, context)
-            (acc._1 ++ List(InitDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
+            val (stmts, vars) = inlineProcedureCalls((id, p) => initNameProvider(id, p), List(body), context)
+            (acc._1 ++ List(InitDecl(BlockStmt(stmts))), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
           } else {
             (acc._1 ++ List(decl), acc._2)
           }
         case NextDecl(body) =>
           if (rewriteOptions == ProcedureInliner.RewriteNext) {
-            val (stmts, vars) = inlineProcedureCalls((id, p) => nextNameProvider(id, p), body, context)
-            (acc._1 ++ List(NextDecl(stmts)), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
+            val (stmts, vars) = inlineProcedureCalls((id, p) => nextNameProvider(id, p), List(body), context)
+            (acc._1 ++ List(NextDecl(BlockStmt(stmts))), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
           } else {
             (acc._1 ++ List(decl), acc._2)
           }

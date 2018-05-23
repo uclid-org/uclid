@@ -597,12 +597,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       }
     }
     lazy val InitDecl : PackratParser[lang.InitDecl] = positioned {
-      KwInit ~> BlockStatement ^^
+      KwInit ~> BlkStmt ^^
         { case b => lang.InitDecl(b) }
     }
 
     lazy val NextDecl : PackratParser[lang.NextDecl] = positioned {
-      KwNext ~> BlockStatement ^^
+      KwNext ~> BlkStmt ^^
         { case b => lang.NextDecl(b) }
     }
 

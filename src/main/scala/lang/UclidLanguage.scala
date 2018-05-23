@@ -1051,19 +1051,19 @@ case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : O
   override def declNames = List(id)
 }
 
-case class InitDecl(body: List[Statement]) extends Decl {
+case class InitDecl(body: Statement) extends Decl {
   override val hashId = 914
   override def toString =
     "init { // " + position.toString + "\n" +
-    Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
+    Utils.join(body.toLines.map(PrettyPrinter.indent(1) + _), "\n")
     "\n" + PrettyPrinter.indent(1) + "}"
   override def declNames = List.empty
 }
-case class NextDecl(body: List[Statement]) extends Decl {
+case class NextDecl(body: Statement) extends Decl {
   override val hashId = 915
   override def toString =
     "next {  // " + position.toString + "\n" +
-    Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
+    Utils.join(body.toLines.map(PrettyPrinter.indent(1) + _), "\n")
     "\n" + PrettyPrinter.indent(1) + "}"
   override def declNames = List.empty
 }

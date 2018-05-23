@@ -477,14 +477,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitInit(init : InitDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnInit(TraversalDirection.Down, init, result, context)
-    result = init.body.foldLeft(result)((acc, i) => visitStatement(i, acc, context))
+    result = visitStatement(init.body, result, context)
     result = pass.applyOnInit(TraversalDirection.Up, init, result, context)
     return result
   }
   def visitNext(next : NextDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnNext(TraversalDirection.Down, next, result, context)
-    result = next.body.foldLeft(result)((acc, i) => visitStatement(i, acc, context))
+    result = visitStatement(next.body, result, context)
     result = pass.applyOnNext(TraversalDirection.Up, next, result, context)
     return result
   }
@@ -1257,14 +1257,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
-    val body = init.body.map(visitStatement(_, context)).flatten
-    val initP = pass.rewriteInit(InitDecl(body), context)
+    val initP = visitStatement(init.body, context).flatMap(body => pass.rewriteInit(InitDecl(body), context))
     return ASTNode.introducePos(setPosition, setFilename, initP, init.position)
   }
 
   def visitNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
-    val body = next.body.map(visitStatement(_, context)).flatten
-    val nextP = pass.rewriteNext(NextDecl(body), context)
+    val nextP = visitStatement(next.body, context).flatMap(body => pass.rewriteNext(NextDecl(body), context))
     return ASTNode.introducePos(setPosition, setFilename, nextP, next.position)
   }
 
