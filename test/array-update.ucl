@@ -14,7 +14,7 @@ module main
 
   next {
     sum' = sum + index;
-    numbers' = numbers[index = index];
+    numbers' = numbers[index -> index];
     index' = index + 1;
 
   }
