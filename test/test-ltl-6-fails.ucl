@@ -76,7 +76,7 @@ module main
   control {
     r = bmc(5);
     check;
-    // print_results;
+    print_results;
     // r.print_cex(fsm1_i.st, fsm2_i.st);
   }
 }

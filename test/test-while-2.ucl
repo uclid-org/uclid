@@ -47,7 +47,7 @@ module main
   control {
     v = verify(search);
     check;
-    // print_results;
+    print_results;
     // v.print_cex(numbers, i, search_value, found, tail);
   }
 }

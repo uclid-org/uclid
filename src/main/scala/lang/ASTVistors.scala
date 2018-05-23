@@ -59,6 +59,8 @@
 package uclid
 package lang
 
+import com.typesafe.scalalogging.Logger
+
 abstract class ASTAnalysis {
   var _manager : Option[PassManager] = None
   def manager : PassManager = { _manager.get }
@@ -129,6 +131,7 @@ trait ReadOnlyPass[T] {
   def applyOnAssume(d : TraversalDirection.T, st : AssumeStmt, in : T, context : Scope) : T = { in }
   def applyOnHavoc(d : TraversalDirection.T, st : HavocStmt, in : T, context : Scope) : T = { in }
   def applyOnAssign(d : TraversalDirection.T, st : AssignStmt, in : T, context : Scope) : T = { in }
+  def applyOnBlock(d : TraversalDirection.T, st : BlockStmt, in : T, context : Scope) : T = { in }
   def applyOnIfElse(d : TraversalDirection.T, st : IfElseStmt, in : T, context : Scope) : T = { in }
   def applyOnFor(d : TraversalDirection.T, st : ForStmt, in : T, context : Scope) : T = { in }
   def applyOnWhile(d : TraversalDirection.T, st : WhileStmt, in : T, context : Scope) : T = { in }
@@ -205,18 +208,19 @@ trait RewritePass {
   def rewriteProcedureSig(sig : ProcedureSig, ctx : Scope) : Option[ProcedureSig] = { Some(sig) }
   def rewriteFunctionSig(sig : FunctionSig, ctx : Scope) : Option[FunctionSig] = { Some(sig) }
   def rewriteLocalVar(lvar : LocalVarDecl, ctx : Scope) : Option[LocalVarDecl] = { Some(lvar) }
-  def rewriteStatement(st : Statement, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteSkip(st : SkipStmt, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteAssert(st : AssertStmt, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteAssume(st : AssumeStmt, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteHavoc(st : HavocStmt, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteAssign(st : AssignStmt, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteIfElse(st : IfElseStmt, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteFor(st : ForStmt, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteWhile(st : WhileStmt, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteCase(st : CaseStmt, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteProcedureCall(st : ProcedureCallStmt, ctx : Scope) : List[Statement] = { List(st) }
-  def rewriteModuleCall(st : ModuleCallStmt, ctx : Scope) : List[Statement] = { List(st) }
+  def rewriteStatement(st : Statement, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteSkip(st : SkipStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteAssert(st : AssertStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteAssume(st : AssumeStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteHavoc(st : HavocStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteAssign(st : AssignStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteBlock(st : BlockStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteIfElse(st : IfElseStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteFor(st : ForStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteWhile(st : WhileStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteCase(st : CaseStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteProcedureCall(st : ProcedureCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteModuleCall(st : ModuleCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteLHS(lhs : Lhs, ctx : Scope) : Option[Lhs] = { Some(lhs) }
   def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : Scope) : Option[BitVectorSlice] = { Some(slice) }
   def rewriteExpr(e : Expr, ctx : Scope) : Option[Expr] = { Some(e) }
@@ -338,7 +342,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitIdentifier(proc.id, result, context)
     result = visitProcedureSig(proc.sig, result, context)
     result = proc.decls.foldLeft(result)((acc, i) => visitLocalVar(i, acc, context))
-    result = proc.body.foldLeft(result)((acc, i) => visitStatement(i, acc, context))
+    result = visitStatement(proc.body, result, context)
     result = proc.requires.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(RequiresEnvironment)))
     result = proc.ensures.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(EnsuresEnvironment)))
     result = proc.modifies.foldLeft(result)((acc, r) => visitIdentifier(r, acc, context))
@@ -473,14 +477,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitInit(init : InitDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnInit(TraversalDirection.Down, init, result, context)
-    result = init.body.foldLeft(result)((acc, i) => visitStatement(i, acc, context))
+    result = visitStatement(init.body, result, context)
     result = pass.applyOnInit(TraversalDirection.Up, init, result, context)
     return result
   }
   def visitNext(next : NextDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnNext(TraversalDirection.Down, next, result, context)
-    result = next.body.foldLeft(result)((acc, i) => visitStatement(i, acc, context))
+    result = visitStatement(next.body, result, context)
     result = pass.applyOnNext(TraversalDirection.Up, next, result, context)
     return result
   }
@@ -670,17 +674,18 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnStatement(TraversalDirection.Down, st, result, context)
     result = st match {
-      case skipStmt   : SkipStmt    => visitSkipStatement(skipStmt, result, context)
-      case assertStmt : AssertStmt => visitAssertStatement(assertStmt, result, context)
-      case assumeStmt : AssumeStmt => visitAssumeStatement(assumeStmt, result, context)
-      case havocStmt  : HavocStmt => visitHavocStatement(havocStmt, result, context)
-      case assignStmt : AssignStmt => visitAssignStatement(assignStmt, result, context)
-      case ifElseStmt : IfElseStmt => visitIfElseStatement(ifElseStmt, result, context)
-      case forStmt : ForStmt => visitForStatement(forStmt, result, context)
-      case whileStmt : WhileStmt => visitWhileStatement(whileStmt, result, context)
-      case caseStmt : CaseStmt => visitCaseStatement(caseStmt, result, context)
+      case skipStmt     : SkipStmt    => visitSkipStatement(skipStmt, result, context)
+      case assertStmt   : AssertStmt => visitAssertStatement(assertStmt, result, context)
+      case assumeStmt   : AssumeStmt => visitAssumeStatement(assumeStmt, result, context)
+      case havocStmt    : HavocStmt => visitHavocStatement(havocStmt, result, context)
+      case assignStmt   : AssignStmt => visitAssignStatement(assignStmt, result, context)
+      case blkStmt      : BlockStmt => visitBlockStatement(blkStmt, result, context)
+      case ifElseStmt   : IfElseStmt => visitIfElseStatement(ifElseStmt, result, context)
+      case forStmt      : ForStmt => visitForStatement(forStmt, result, context)
+      case whileStmt    : WhileStmt => visitWhileStatement(whileStmt, result, context)
+      case caseStmt     : CaseStmt => visitCaseStatement(caseStmt, result, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, result, context)
-      case modCallStmt : ModuleCallStmt => visitModuleCallStatement(modCallStmt, result, context)
+      case modCallStmt  : ModuleCallStmt => visitModuleCallStatement(modCallStmt, result, context)
     }
     result = pass.applyOnStatement(TraversalDirection.Up, st, result, context)
     return result
@@ -733,12 +738,19 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnAssign(TraversalDirection.Up, st, result, context)
     return result
   }
+  def visitBlockStatement(st: BlockStmt, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnBlock(TraversalDirection.Down, st, in, context)
+    result = st.stmts.foldLeft(result)((acc, st) => visitStatement(st, acc, context))
+    result = pass.applyOnBlock(TraversalDirection.Up, st, result, context)
+    result
+  }
   def visitIfElseStatement(st : IfElseStmt, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnIfElse(TraversalDirection.Down, st, result, context)
     result = visitExpr(st.cond, result, context)
-    result = st.ifblock.foldLeft(result)((arg, i) => visitStatement(i, arg, context))
-    result = st.elseblock.foldLeft(result)((arg, i) => visitStatement(i, arg, context))
+    result = visitStatement(st.ifblock, result, context)
+    result = visitStatement(st.elseblock, result, context)
     result = pass.applyOnIfElse(TraversalDirection.Up, st, result, context)
     return result
   }
@@ -750,7 +762,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitType(st.typ, result, contextIn)
     result = visitExpr(st.range._1, result, contextIn)
     result = visitExpr(st.range._2, result, contextIn)
-    result = st.body.foldLeft(result)((arg, i) => visitStatement(i, arg, context))
+    result = visitStatement(st.body, result, context)
     result = pass.applyOnFor(TraversalDirection.Up, st, result, context)
     return result
   }
@@ -759,7 +771,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnWhile(TraversalDirection.Down, st, result, context)
     result = visitExpr(st.cond, result, context)
     result = st.invariants.foldLeft(result)((acc, inv) => visitExpr(inv, acc, context))
-    result = st.body.foldLeft(result)((acc, sti) => visitStatement(sti, acc, context))
+    result = visitStatement(st.body, result, context)
     result = pass.applyOnWhile(TraversalDirection.Up, st, result, context)
     return result
   }
@@ -767,8 +779,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnCase(TraversalDirection.Down, st, result, context)
     result = st.body.foldLeft(result)(
-      (arg1, cases) => {
-        cases._2.foldLeft(visitExpr(cases._1, arg1, context))((arg2, i) => visitStatement(i, arg2, context))
+      (acc, cse) => {
+        visitStatement(cse._2, visitExpr(cse._1, acc, context), context)
       }
     )
     result = pass.applyOnCase(TraversalDirection.Up, st, result, context)
@@ -997,6 +1009,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def _setFilename = setFilename
   override def visit(module : Module, context : Scope) : Option[Module] = visitModule(module, context)
 
+  val log = Logger(classOf[ASTRewriter])
   override def reset() {
     pass.reset()
   }
@@ -1080,12 +1093,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val id = visitIdentifier(proc.id, context)
     val sig = visitProcedureSig(proc.sig, context)
     val decls = proc.decls.map(visitLocalVar(_, context)).flatten
-    val stmts = proc.body.map(visitStatement(_, context)).flatten
+    val bodyP = visitStatement(proc.body, context)
     val reqs = proc.requires.map(r => visitExpr(r, context.withEnvironment(RequiresEnvironment))).flatten
     val enss = proc.ensures.map(e => visitExpr(e, context.withEnvironment(EnsuresEnvironment))).flatten
     val mods = proc.modifies.map(v => visitIdentifier(v, context)).flatten
-    val procP = (id, sig) match {
-      case (Some(i), Some(s)) => pass.rewriteProcedure(ProcedureDecl(i, s, decls, stmts, reqs, enss, mods), contextIn)
+    val procP = (id, sig, bodyP) match {
+      case (Some(i), Some(s), Some(body)) => pass.rewriteProcedure(ProcedureDecl(i, s, decls, body, reqs, enss, mods), contextIn)
       case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, procP, proc.position)
@@ -1244,14 +1257,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
-    val body = init.body.map(visitStatement(_, context)).flatten
-    val initP = pass.rewriteInit(InitDecl(body), context)
+    val initP = visitStatement(init.body, context).flatMap(body => pass.rewriteInit(InitDecl(body), context))
     return ASTNode.introducePos(setPosition, setFilename, initP, init.position)
   }
 
   def visitNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
-    val body = next.body.map(visitStatement(_, context)).flatten
-    val nextP = pass.rewriteNext(NextDecl(body), context)
+    val nextP = visitStatement(next.body, context).flatMap(body => pass.rewriteNext(NextDecl(body), context))
     return ASTNode.introducePos(setPosition, setFilename, nextP, next.position)
   }
 
@@ -1446,13 +1457,14 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setPosition, setFilename, varP, lvar.position)
   }
 
-  def visitStatement(st : Statement, context : Scope) : List[Statement] = {
+  def visitStatement(st : Statement, context : Scope) : Option[Statement] = {
     val stP = (st match {
       case skipStmt : SkipStmt => visitSkipStatement(skipStmt, context)
       case assertStmt : AssertStmt => visitAssertStatement(assertStmt, context)
       case assumeStmt : AssumeStmt => visitAssumeStatement(assumeStmt, context)
       case havocStmt : HavocStmt => visitHavocStatement(havocStmt, context)
       case assignStmt : AssignStmt => visitAssignStatement(assignStmt, context)
+      case blkStmt : BlockStmt => visitBlockStatement(blkStmt, context)
       case ifElseStmt : IfElseStmt => visitIfElseStatement(ifElseStmt, context)
       case forStmt : ForStmt => visitForStatement(forStmt, context)
       case whileStmt : WhileStmt => visitWhileStatement(whileStmt, context)
@@ -1463,41 +1475,41 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
-  def visitSkipStatement(st : SkipStmt, context : Scope) : List[Statement] = {
+  def visitSkipStatement(st : SkipStmt, context : Scope) : Option[Statement] = {
     val stP = pass.rewriteSkip(st, context)
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
-  def visitAssertStatement(st : AssertStmt, context : Scope) : List[Statement] = {
+  def visitAssertStatement(st : AssertStmt, context : Scope) : Option[Statement] = {
     val idP = st.id.flatMap(id => visitIdentifier(id, context))
     val envP = if (context.environment == ProceduralEnvironment) ProceduralAssertEnvironment else AssertEnvironment
-    val stP = visitExpr(st.e, context.withEnvironment(envP)).toList.flatMap((e) => {
+    val stP = visitExpr(st.e, context.withEnvironment(envP)).flatMap((e) => {
       pass.rewriteAssert(AssertStmt(e, idP), context)
     })
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
-  def visitAssumeStatement(st : AssumeStmt, context : Scope) : List[Statement] = {
+  def visitAssumeStatement(st : AssumeStmt, context : Scope) : Option[Statement] = {
     val idP = st.id.flatMap(id => visitIdentifier(id, context))
     val envP = if (context.environment == ProceduralEnvironment) ProceduralAssumeEnvironment else AssumeEnvironment
-    val stP = visitExpr(st.e, context.withEnvironment(envP)).toList.flatMap((e) => {
+    val stP = visitExpr(st.e, context.withEnvironment(envP)).flatMap((e) => {
       pass.rewriteAssume(AssumeStmt(e, idP), context)
     })
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
-  def visitHavocStatement(st: HavocStmt, context : Scope) : List[Statement] = {
-    val stP = st.havocable match {
+  def visitHavocStatement(st: HavocStmt, context : Scope) : Option[Statement] = {
+    val stP : Option[Statement] = st.havocable match {
       case HavocableId(id) =>
-        visitIdentifier(id, context).toList.flatMap((idP) => {
+        visitIdentifier(id, context).flatMap((idP) => {
           pass.rewriteHavoc(HavocStmt(HavocableId(idP)), context)
         })
       case HavocableNextId(id) =>
-        visitIdentifier(id, context).toList.flatMap((idP) => {
+        visitIdentifier(id, context).flatMap((idP) => {
           pass.rewriteHavoc(HavocStmt(HavocableNextId(idP)), context)
         })
       case HavocableFreshLit(f) =>
-        visitFreshLiteral(f, context).toList.flatMap((eP) => {
+        visitFreshLiteral(f, context).flatMap((eP) => {
           eP match {
             case f : FreshLit =>
               pass.rewriteHavoc(HavocStmt(HavocableFreshLit(f)), context)
@@ -1508,81 +1520,89 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
           }
         })
     }
-
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
-  def visitAssignStatement(st : AssignStmt, context : Scope) : List[Statement] = {
+  def visitAssignStatement(st : AssignStmt, context : Scope) : Option[Statement] = {
     val lhss = st.lhss.map(visitLhs(_, context)).flatten
     val rhss = st.rhss.map(visitExpr(_, context)).flatten
     val stP = pass.rewriteAssign(AssignStmt(lhss, rhss), context)
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
-  def visitIfElseStatement(st : IfElseStmt, context : Scope) : List[Statement] = {
+  def visitBlockStatement(blkStmt : BlockStmt, context : Scope) : Option[Statement] = {
+    log.debug("visitBlockStatement\n{}", Utils.join(blkStmt.toLines, "\n"))
+    val blkStmtP1 = BlockStmt(blkStmt.stmts.flatMap(st => visitStatement(st, context)))
+    val blkStmtP = pass.rewriteBlock(blkStmtP1, context)
+    return ASTNode.introducePos(setPosition, setFilename, blkStmtP, blkStmt.position)
+  }
+  def visitIfElseStatement(st : IfElseStmt, context : Scope) : Option[Statement] = {
     val cond = visitExpr(st.cond, context)
-    val ifblock = st.ifblock.map(visitStatement(_, context)).flatten
-    val elseblock = st.elseblock.map(visitStatement(_, context)).flatten
-    val stP = cond match {
-      case Some(c) => pass.rewriteIfElse(IfElseStmt(c, ifblock, elseblock), context)
-      case _ => List.empty[Statement]
+    val ifblockP = visitStatement(st.ifblock, context)
+    val elseblockP = visitStatement(st.elseblock, context)
+    val stP = (cond, ifblockP, elseblockP) match {
+      case (Some(c), Some(ifblock), Some(elseblock)) =>
+        pass.rewriteIfElse(IfElseStmt(c, ifblock, elseblock), context)
+      case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
-  def visitForStatement(st : ForStmt, contextIn : Scope) : List[Statement] = {
+  def visitForStatement(st : ForStmt, contextIn : Scope) : Option[Statement] = {
     val context = contextIn + Scope.ForIndexVar(st.id, st.typ)
     val idP = visitIdentifier(st.id, contextIn)
     val typP = visitType(st.typ, contextIn)
     val lit1P = visitExpr(st.range._1, contextIn)
     val lit2P = visitExpr(st.range._2, contextIn)
-    val stmts = st.body.map(visitStatement(_, context)).flatten
+    val bodyP = visitStatement(st.body, context)
 
-    val stP = (idP, typP, lit1P, lit2P) match {
-      case (Some(id), Some(typ), Some(lit1), Some(lit2)) =>
-        pass.rewriteFor(ForStmt(id, typ, (lit1, lit2), stmts), contextIn)
-      case _ => List.empty[Statement]
+    val stP = (idP, typP, lit1P, lit2P, bodyP) match {
+      case (Some(id), Some(typ), Some(lit1), Some(lit2), Some(body)) =>
+        pass.rewriteFor(ForStmt(id, typ, (lit1, lit2), body), contextIn)
+      case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
-  def visitWhileStatement(st : WhileStmt, context : Scope) : List[Statement] = {
+  def visitWhileStatement(st : WhileStmt, context : Scope) : Option[Statement] = {
     val condP = visitExpr(st.cond, context)
-    val stmtsP = st.body.map(visitStatement(_, context)).flatten
+    val stmtsP = visitStatement(st.body, context)
     val invP = st.invariants.map(visitExpr(_, context)).flatten
-    val whileP = (condP) match {
-      case Some(cond) => pass.rewriteWhile(WhileStmt(cond, stmtsP, invP), context)
-      case None => List.empty
+    val whileP = (condP, stmtsP) match {
+      case (Some(cond), Some(stmts)) => pass.rewriteWhile(WhileStmt(cond, stmts, invP), context)
+      case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, whileP, st.position)
   }
-  def visitCaseStatement(st : CaseStmt, context : Scope) : List[Statement] = {
+  def visitCaseStatement(st : CaseStmt, context : Scope) : Option[Statement] = {
     val bodyP = st.body.map((c) => {
       // if rewriting the expression doesn't produce None.
-      visitExpr(c._1, context).flatMap((e) => {
-        // then rewrite each of statements associated with the case expression.
-        Some(e, c._2.map(visitStatement(_, context)).flatten)
-      })
+      val eP = visitExpr(c._1, context)
+      val bodyP = visitStatement(c._2, context)
+      (eP, bodyP) match {
+        case (Some(e), Some(body)) => Some(e, body)
+        case _ => None
+      }
     }).flatten // and finally get rid of all the Options.
     val stP = pass.rewriteCase(CaseStmt(bodyP), context)
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
-  def visitProcedureCallStatement(st : ProcedureCallStmt, context : Scope) : List[Statement] = {
+  def visitProcedureCallStatement(st : ProcedureCallStmt, context : Scope) : Option[Statement] = {
     val idP = visitIdentifier(st.id, context)
     val lhssP = st.callLhss.map(visitLhs(_, context)).flatten
     val argsP = st.args.map(visitExpr(_, context)).flatten
-    val stP = idP.toList.flatMap((id) => pass.rewriteProcedureCall(ProcedureCallStmt(id, lhssP, argsP), context))
+    val stP = idP.flatMap((id) => pass.rewriteProcedureCall(ProcedureCallStmt(id, lhssP, argsP), context))
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 
-  def visitModuleCallStatement(st : ModuleCallStmt,  context : Scope) : List[Statement] = {
+  def visitModuleCallStatement(st : ModuleCallStmt,  context : Scope) : Option[Statement] = {
     val stP = visitIdentifier(st.id, context) match {
       case Some(id) =>
         val stP1 = ModuleCallStmt(id)
         pass.rewriteModuleCall(stP1, context)
       case None =>
-        List.empty
+        None
     }
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }

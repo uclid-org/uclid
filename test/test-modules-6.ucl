@@ -51,7 +51,7 @@ module main
     // print_module;
     v = unroll(5);
     check;
-    // print_results;
+    print_results;
     // v.print_cex(a, b, q, incr1.x, incr1.y, incr1.c);
   }
 }

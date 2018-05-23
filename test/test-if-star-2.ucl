@@ -32,5 +32,6 @@ module main {
   control {
     v = unroll(3);
     check;
+    print_results;
   }
 }

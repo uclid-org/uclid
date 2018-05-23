@@ -63,6 +63,6 @@ module main
     v1 = verify(push);
 	v2 = unroll(5);
 	check;
-	// print_results;
+	print_results;
   }
 }

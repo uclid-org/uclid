@@ -93,7 +93,7 @@ module main {
 
     x = unroll (1);
     check;
-    // print_results;
+    print_results;
     // x.print_cex (cpu_i.regs[r0index], sum, cpu_i.r0, cpu_i.r1, cpu_i.result);
   }
 }

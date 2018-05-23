@@ -169,10 +169,6 @@ class StatelessAxiomFinder extends ASTAnalyzer("StatelessAxiomFinder", new State
   override def reset() {
     in = Some(List.empty)
   }
-  override def finish() {
-    // val axioms = out.get
-    // axioms.foreach(p => println(p._1.toString + " --> " + p._2.toString))
-  }
 }
 
 class StatelessAxiomImporterPass(mainModuleName : Identifier) extends RewritePass

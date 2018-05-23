@@ -42,7 +42,7 @@ package lang
 
 class FindInnermostLoopsPass extends ReadOnlyPass[Set[ForStmt]] {
   override def applyOnFor(d : TraversalDirection.T, st : ForStmt, in : Set[ForStmt], context : Scope) : Set[ForStmt] = {
-    if(!st.body.exists(_.isLoop)) {
+    if(!st.body.hasLoop) {
       in + st
     } else {
       in
@@ -51,18 +51,19 @@ class FindInnermostLoopsPass extends ReadOnlyPass[Set[ForStmt]] {
 }
 
 class ForLoopRewriterPass(forStmtsToRewrite: Set[ForStmt]) extends RewritePass {
-  override def rewriteFor(st: ForStmt, ctx : Scope) : List[Statement] = {
+  override def rewriteFor(st: ForStmt, ctx : Scope) : Option[Statement] = {
      if (forStmtsToRewrite.contains(st)) {
        val low = st.range._1.asInstanceOf[NumericLit]
        val high = st.range._2.asInstanceOf[NumericLit]
-       def rewriteForValue(value : NumericLit) : List[Statement] = {
+       def rewriteForValue(value : NumericLit) : Option[Statement] = {
          val rewriteMap = Map.empty[Expr, Expr] + (st.id -> value)
          val rewriter = new ExprRewriter("ForRewriter(i)", rewriteMap)
-         rewriter.rewriteStatements(st.body, ctx)
+         rewriter.rewriteStatement(st.body, ctx)
        }
-       (low to high).foldLeft(List.empty[Statement])((acc, i) => acc ++ rewriteForValue(i))
+       val stmts = (low to high).foldLeft(List.empty[Statement])((acc, i) => acc ++ rewriteForValue(i).toList)
+       Some(BlockStmt(stmts))
      } else {
-       List(st)
+       Some(st)
      }
   }
 }
@@ -88,15 +89,10 @@ class ForLoopUnroller extends ASTAnalysis {
           done = true
         case Some(mod) =>
           val innermostLoopSet = findInnermostLoopsAnalysis.visitModule(mod, Set.empty[ForStmt], context)
-          // println("Innermost loops: " + innermostLoopSet.toString)
           done = innermostLoopSet.size == 0
           if (!done) {
             val forLoopRewriter = new ASTRewriter("ForLoopUnroller.LoopRewriter", new ForLoopRewriterPass(innermostLoopSet))
             modP = forLoopRewriter.visit(mod, context)
-            // if(!modP.isEmpty) {
-            //  println("** AFTER UNROLLING **")
-            //  println(modP.get)
-            // }
           }
       }
       iteration = iteration + 1

@@ -100,7 +100,8 @@ module main {
   }
   
   control {
-   unroll (3);
-   check;
+    unroll (3);
+    check;
+    print_results;
   }
 }

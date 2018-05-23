@@ -30,6 +30,6 @@ module main {
     // print_module;
   	unroll (3);
   	check;
-  	// print_results;
+  	print_results;
   }
 }

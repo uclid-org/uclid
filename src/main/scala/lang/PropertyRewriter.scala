@@ -427,8 +427,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
   def guardedAssignment(guardVar : Identifier, copyVar : Identifier, origVars : List[(Identifier, Type)], newVars : List[(Identifier, Type)]) : Statement = {
-    val thenBlock = AssignStmt(List(LhsId(copyVar)), List(BoolLit(true))) :: assignToVars(newVars, origVars)
-    val ifStmt = IfElseStmt(andExpr(guardVar, notExpr(copyVar)), thenBlock, List.empty)
+    val thenBlock = BlockStmt(AssignStmt(List(LhsId(copyVar)), List(BoolLit(true))) :: assignToVars(newVars, origVars))
+    val ifStmt = IfElseStmt(andExpr(guardVar, notExpr(copyVar)), thenBlock, BlockStmt(List.empty))
     ifStmt
   }
 
@@ -467,8 +467,6 @@ class LTLPropertyRewriterPass extends RewritePass {
         val nnf = convertToNNF(not(s.expr))
         logger.debug("EXP: {}", s.expr.toString())
         logger.debug("NNF: {}", nnf.toString()) 
-        // println("exp: " + s.expr.toString)
-        // println("nnf: " + nnf.toString)
         createMonitorExpressions(s.id, nnf, nameProvider)
       }
     }
@@ -593,8 +591,8 @@ class LTLPropertyRewriterPass extends RewritePass {
                         hasFailedAssignments ++ pendingAssignments ++
                         hasAcceptedAssignments ++ hasAcceptedTraceAssignments
     // new init/next.
-    val newInitDecl = InitDecl(module.init.get.body ++ postInitStmts ++ postNextStmts)
-    val newNextDecl = NextDecl(preNextStmts ++ module.next.get.body ++ postNextStmts)
+    val newInitDecl = InitDecl(BlockStmt(List(module.init.get.body) ++ postInitStmts ++ postNextStmts))
+    val newNextDecl = NextDecl(BlockStmt(preNextStmts ++ List(module.next.get.body) ++ postNextStmts))
     // new safety properties.
     val newSafetyProperties = (ltlSpecs zip safetyExprs).map {
       p => {

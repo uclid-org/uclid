@@ -24,6 +24,6 @@ module main {
   control {
     f = bmc[sX, sXX](6);
     check;
-    // print_results;
+    print_results;
   } 
 }

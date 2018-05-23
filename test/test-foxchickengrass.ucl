@@ -42,5 +42,6 @@ module main {
    control {
      unroll (5);
      check;
+     print_results;
    }
  }

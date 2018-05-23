@@ -41,6 +41,6 @@ module main {
     // print_module;
     unroll (5);
     check;
-    // print_results;
+    print_results;
   }
 }

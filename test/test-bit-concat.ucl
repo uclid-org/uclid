@@ -19,5 +19,6 @@ module main
   control {
     bmc(5);
     check;
+    print_results;
   }
 }

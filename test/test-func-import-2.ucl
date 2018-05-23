@@ -51,6 +51,6 @@ module main {
     // print_module;
     v = induction;
     check;
-    // print_results;
+    print_results;
   }
 }

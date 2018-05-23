@@ -44,7 +44,7 @@ package lang
 class ASTPrinterPass extends ReadOnlyPass[Unit] {
   override def applyOnModule(d : TraversalDirection.T, module : Module, in : Unit, context : Scope) : Unit = {
     if (d == TraversalDirection.Down) {
-      println(module)
+      UclidMain.println(module.toString())
     }
   }
 }
@@ -91,5 +91,8 @@ class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
 {
   def rewriteStatements(stmts : List[Statement], context : Scope) : List[Statement] = {
     return stmts.flatMap(visitStatement(_, context))
+  }
+  def rewriteStatement(stmt : Statement, context : Scope) : Option[Statement] = {
+    visitStatement(stmt, context)
   }
 }

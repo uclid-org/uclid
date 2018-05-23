@@ -1,0 +1,31 @@
+module main
+{
+  var numbers : [integer]integer;
+  var sum, index : integer;
+
+
+  init {
+    for i in range(0, 9) {
+      numbers[i] = 0;
+    }
+    sum = 0;
+    index = 0;
+  }
+
+  next {
+    sum' = sum + index;
+    numbers' = numbers[index -> index];
+    index' = index + 1;
+
+  }
+
+  invariant num_sum: 
+      ((numbers[0] + numbers[1] + numbers[2] + numbers[3] + 
+        numbers[4] + numbers[5] + numbers[6] + numbers[7]) == sum);
+  control {
+    // print_module;
+    unroll (5);
+    check;
+    print_results;
+  }
+}
