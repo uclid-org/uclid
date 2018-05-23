@@ -419,9 +419,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       ";" ^^ { case _ => SkipStmt() }
     }
 
-    lazy val CaseBlockStmt: PackratParser[(Expr, List[Statement])] =
-      (Expr ~ ":" ~ BlockStatement) ^^ { case e ~ ":" ~ ss => (e,ss) } |
-      (KwDefault ~ ":" ~> BlockStatement) ^^ { case ss => (BoolLit(true), ss) }
+    lazy val CaseBlockStmt: PackratParser[(Expr, Statement)] =
+      (Expr ~ ":" ~ BlkStmt) ^^ { case e ~ ":" ~ ss => (e,ss) } |
+      (KwDefault ~ ":" ~> BlkStmt) ^^ { case ss => (BoolLit(true), ss) }
 
     lazy val BlockStatement: PackratParser[List[Statement]] =
       "{" ~> rep (Statement) <~ "}"
@@ -458,14 +458,14 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
         { case id ~ args ~ outs ~ requires ~ ensures ~ modifies ~ decls ~ body =>
           lang.ProcedureDecl(id, lang.ProcedureSig(args,outs), 
-                             decls.flatMap(d => d), body,
+                             decls.flatMap(d => d), BlockStmt(body),
                              requires, ensures, (modifies.flatMap(m => m)).toSet) } |
       // procedure with no return value
       KwProcedure ~> Id ~ IdTypeList ~ rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~
       ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
         { case id ~ args ~ requires ~ ensures ~ modifies ~ decls ~ body =>
           lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty[(Identifier,Type)]), 
-                             decls.flatMap(d => d), body,
+                             decls.flatMap(d => d), BlockStmt(body),
                              requires, ensures, (modifies.flatMap(m => m)).toSet) }
     }
 

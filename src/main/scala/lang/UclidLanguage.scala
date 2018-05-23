@@ -797,10 +797,10 @@ case class WhileStmt(cond: Expr, body: Statement, invariants: List[Expr])
     List(headLine) ++ invLines ++ body.toLines 
   }
 }
-case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {
+case class CaseStmt(body: List[(Expr,Statement)]) extends Statement {
   override def hasStmtBlock = true
   override def toLines = List("case") ++
-    body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _)} ++
+    body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.toLines } ++
     List("esac")
 }
 case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr])  extends Statement {
@@ -904,7 +904,7 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
 }
 
 case class ProcedureDecl(
-    id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: List[Statement],
+    id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: Statement,
     requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier]) extends Decl {
   override val hashId = 902
   override def toString = {
@@ -917,7 +917,7 @@ case class ProcedureDecl(
     modifiesString +
     PrettyPrinter.indent(1) + "{ // " + id.position.toString + "\n" +
     Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" +
-    Utils.join(body.flatMap(_.toLines).map(PrettyPrinter.indent(2) + _), "\n") +
+    Utils.join(body.toLines, "\n") +
     "\n" + PrettyPrinter.indent(1) + "}"
   }
   override def declNames = List(id)

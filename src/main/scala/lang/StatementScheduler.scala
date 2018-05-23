@@ -66,7 +66,7 @@ object StatementScheduler {
       case WhileStmt(_, body, _) =>
         writeSet(body, context)
       case CaseStmt(bodies) =>
-        bodies.flatMap(b => writeSets(b._2, context)).toSet
+        bodies.flatMap(b => writeSet(b._2, context)).toSet
       case ProcedureCallStmt(id, callLhss, args) => 
         val module = context.module.get
         val procedure = module.procedures.find(p => p.id == id).get
@@ -102,7 +102,7 @@ object StatementScheduler {
       case WhileStmt(cond, body, invs) =>
         readSet(cond) ++ readSet(body, context)
       case CaseStmt(bodies) =>
-        bodies.flatMap(b => readSet(b._1) ++ readSets(b._2, context)).toSet
+        bodies.flatMap(b => readSet(b._1) ++ readSet(b._2, context)).toSet
       case ProcedureCallStmt(_, lhss, args) =>
         readSets(args)
       case ModuleCallStmt(id) =>
@@ -193,13 +193,6 @@ class VariableDependencyFinderPass extends ReadOnlyPass[List[ModuleError]] {
       in
     }
   }
-  override def applyOnCase(d : TraversalDirection.T, caseStmt : CaseStmt, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up && context.environment == SequentialEnvironment) {
-      caseStmt.body.foldLeft(in)((acc, b) => checkBlock(b._2, acc, context))
-    } else {
-      in
-    }
-  }
   def checkBlock(stmts : List[Statement], in : T, context : Scope) : T = {
     val deps = StatementScheduler.getReadWriteSets(stmts, context)
     val graph = StatementScheduler.addEdges(Map.empty, deps)
@@ -285,18 +278,6 @@ class StatementSchedulerPass extends RewritePass {
       Some(stmtsP)
     } else {
       Some(blk)
-    }
-  }
-  override def rewriteCase(caseStmt : CaseStmt, context : Scope) : Option[Statement] = {
-    if (context.environment == SequentialEnvironment) {
-      val bodiesP = caseStmt.body.map {
-        body => {
-          (body._1, reorderStatements(BlockStmt(body._2), context).stmts)
-        }
-      }
-      Some(CaseStmt(bodiesP))
-    } else {
-      Some(caseStmt)
     }
   }
   override def rewriteHavoc(havocStmt : HavocStmt, context : Scope) : Option[Statement] = {

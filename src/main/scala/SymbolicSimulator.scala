@@ -681,10 +681,10 @@ class SymbolicSimulator (module : Module) {
       return writeSets(stmts)
     case IfElseStmt(e,then_branch,else_branch) =>
       return writeSet(then_branch) ++ writeSet(else_branch)
-    case ForStmt(id, typ, range, body) => return writeSets(body)
-    case WhileStmt(_, body, invs) => return writeSets(body)
+    case ForStmt(id, typ, range, body) => return writeSet(body)
+    case WhileStmt(_, body, invs) => return writeSet(body)
     case CaseStmt(body) =>
-      return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSets(i._2) }
+      return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2) }
     case ProcedureCallStmt(id,lhss,args) =>
       throw new Utils.RuntimeError("ProcedureCallStmt must have been inlined by now.")
     case ModuleCallStmt(id) =>

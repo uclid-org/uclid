@@ -95,9 +95,9 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
     if (p.id == procToInline.id) Some(p)
     else {
       val nameProvider = new ContextualNameProvider(ctx + p, "proc_" + p.id + "_" + procToInline.id)
-      val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(id, p), p.body, ctx)
+      val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(id, p), List(p.body), ctx)
       val newDecls = newVars.map((t) => LocalVarDecl(t._1, t._2))
-      Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, stmts, p.requires, p.ensures, p.modifies))
+      Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, BlockStmt(stmts), p.requires, p.ensures, p.modifies))
     }
   }
 
@@ -193,7 +193,7 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
             val modifyAssigns = modifiesMap.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
             val rewriter = new ExprRewriter("ProcedureInlineRewriter", rewriteMap)
             val procedureBody = if (procToInline.shouldInline) {
-              rewriter.rewriteStatements(procToInline.body, context) ++ resultAssignStatment
+              rewriter.rewriteStatements(List(procToInline.body), context) ++ resultAssignStatment
             } else {
               val modifyHavocs = mModifies.map(m => HavocStmt(HavocableId(m._2)))
               val postconditionAssumes = procToInline.ensures.map {
@@ -225,9 +225,9 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
           (acc._1 ++ List(ifElseP), acc._2 ++ ifBlockP._2 ++ elseBlockP._2)
 
         case CaseStmt(cases) =>
-          val caseBodiesP = cases.map((c) => inlineProcedureCalls(uniqNamer, c._2, context))
+          val caseBodiesP = cases.map((c) => inlineProcedureCalls(uniqNamer, List(c._2), context))
           val caseConds = cases.map(_._1)
-          val caseBodyStmts = caseBodiesP.map(_._1)
+          val caseBodyStmts = caseBodiesP.map(body => BlockStmt(body._1))
           val caseBodyVars = caseBodiesP.map(_._2)
           val caseStmtP = CaseStmt(caseConds zip caseBodyStmts)
           val newVars = caseBodyVars.foldLeft(List.empty[(Identifier, Type)])((acc, vars) => acc ++ vars)

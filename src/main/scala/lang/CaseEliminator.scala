@@ -44,17 +44,17 @@ import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.immutable.Map
 
 class CaseEliminatorPass extends RewritePass {
-  def casesToIfs(cases : List[(Expr, List[Statement])]) : List[Statement] = {
+  def casesToIfs(cases : List[(Expr, Statement)]) : Statement = {
     cases match {
       case Nil =>
-        List.empty
+        SkipStmt()
       case head :: rest =>
-        List(IfElseStmt(head._1, BlockStmt(head._2), BlockStmt(casesToIfs(rest))))
+        IfElseStmt(head._1, head._2, casesToIfs(rest))
     }
   }
 
   override def rewriteCase(st : CaseStmt, ctx : Scope) : Option[Statement] = {
-    Some(BlockStmt(casesToIfs(st.body)))
+    Some(casesToIfs(st.body))
   }
 }
 

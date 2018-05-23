@@ -342,7 +342,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitIdentifier(proc.id, result, context)
     result = visitProcedureSig(proc.sig, result, context)
     result = proc.decls.foldLeft(result)((acc, i) => visitLocalVar(i, acc, context))
-    result = proc.body.foldLeft(result)((acc, i) => visitStatement(i, acc, context))
+    result = visitStatement(proc.body, result, context)
     result = proc.requires.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(RequiresEnvironment)))
     result = proc.ensures.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(EnsuresEnvironment)))
     result = proc.modifies.foldLeft(result)((acc, r) => visitIdentifier(r, acc, context))
@@ -779,8 +779,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnCase(TraversalDirection.Down, st, result, context)
     result = st.body.foldLeft(result)(
-      (arg1, cases) => {
-        cases._2.foldLeft(visitExpr(cases._1, arg1, context))((arg2, i) => visitStatement(i, arg2, context))
+      (acc, cse) => {
+        visitStatement(cse._2, visitExpr(cse._1, acc, context), context)
       }
     )
     result = pass.applyOnCase(TraversalDirection.Up, st, result, context)
@@ -1093,12 +1093,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val id = visitIdentifier(proc.id, context)
     val sig = visitProcedureSig(proc.sig, context)
     val decls = proc.decls.map(visitLocalVar(_, context)).flatten
-    val stmts = proc.body.map(visitStatement(_, context)).flatten
+    val bodyP = visitStatement(proc.body, context)
     val reqs = proc.requires.map(r => visitExpr(r, context.withEnvironment(RequiresEnvironment))).flatten
     val enss = proc.ensures.map(e => visitExpr(e, context.withEnvironment(EnsuresEnvironment))).flatten
     val mods = proc.modifies.map(v => visitIdentifier(v, context)).flatten
-    val procP = (id, sig) match {
-      case (Some(i), Some(s)) => pass.rewriteProcedure(ProcedureDecl(i, s, decls, stmts, reqs, enss, mods), contextIn)
+    val procP = (id, sig, bodyP) match {
+      case (Some(i), Some(s), Some(body)) => pass.rewriteProcedure(ProcedureDecl(i, s, decls, body, reqs, enss, mods), contextIn)
       case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, procP, proc.position)
@@ -1579,10 +1579,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitCaseStatement(st : CaseStmt, context : Scope) : Option[Statement] = {
     val bodyP = st.body.map((c) => {
       // if rewriting the expression doesn't produce None.
-      visitExpr(c._1, context).flatMap((e) => {
-        // then rewrite each of statements associated with the case expression.
-        Some(e, c._2.map(visitStatement(_, context)).flatten)
-      })
+      val eP = visitExpr(c._1, context)
+      val bodyP = visitStatement(c._2, context)
+      (eP, bodyP) match {
+        case (Some(e), Some(body)) => Some(e, body)
+        case _ => None
+      }
     }).flatten // and finally get rid of all the Options.
     val stP = pass.rewriteCase(CaseStmt(bodyP), context)
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
