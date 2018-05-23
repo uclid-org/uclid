@@ -640,6 +640,8 @@ class SymbolicSimulator (module : Module) {
       case AssignStmt(lhss,rhss) =>
         val es = rhss.map(i => evaluate(i, symbolTable, pastTables, scope));
         return simulateAssign(lhss, es, symbolTable, label)
+      case BlockStmt(stmts) =>
+        simulate(frameNumber, pathConditions, stmts, symbolTable, scope, label)
       case IfElseStmt(e,then_branch,else_branch) =>
         var then_modifies : Set[Identifier] = writeSet(then_branch)
         var else_modifies : Set[Identifier] = writeSet(else_branch)
@@ -660,34 +662,36 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def writeSet(stmts: List[Statement]) : Set[Identifier] = {
-    def stmtWriteSet(stmt: Statement) : Set[Identifier] = stmt match {
-      case SkipStmt() => Set.empty
-      case AssertStmt(e, id) => Set.empty
-      case AssumeStmt(e, id) => Set.empty
-      case HavocStmt(h) => 
-        h match {
-          case HavocableId(id) =>
-            Set(id)
-          case HavocableNextId(id) =>
-            throw new Utils.AssertionError("HavocableNextIds should have been eliminated by now.")
-          case HavocableFreshLit(f) =>
-            throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
-        }
-      case AssignStmt(lhss,rhss) =>
-        return lhss.map(lhs => lhs.ident).toSet
-      case IfElseStmt(e,then_branch,else_branch) =>
-        return writeSet(then_branch) ++ writeSet(else_branch)
-      case ForStmt(id, typ, range, body) => return writeSet(body)
-      case WhileStmt(_, body, invs) => return writeSet(body)
-      case CaseStmt(body) =>
-        return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2) }
-      case ProcedureCallStmt(id,lhss,args) =>
-        throw new Utils.RuntimeError("ProcedureCallStmt must have been inlined by now.")
-      case ModuleCallStmt(id) =>
-        throw new Utils.RuntimeError("ModuleCallStmt must have been inlined by now.")
-    }
-    return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ stmtWriteSet(s)}
+  def writeSet(stmt: Statement) : Set[Identifier] = stmt match {
+    case SkipStmt() => Set.empty
+    case AssertStmt(e, id) => Set.empty
+    case AssumeStmt(e, id) => Set.empty
+    case HavocStmt(h) => 
+      h match {
+        case HavocableId(id) =>
+          Set(id)
+        case HavocableNextId(id) =>
+          throw new Utils.AssertionError("HavocableNextIds should have been eliminated by now.")
+        case HavocableFreshLit(f) =>
+          throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
+      }
+    case AssignStmt(lhss,rhss) =>
+      return lhss.map(lhs => lhs.ident).toSet
+    case BlockStmt(stmts) =>
+      return writeSets(stmts)
+    case IfElseStmt(e,then_branch,else_branch) =>
+      return writeSet(then_branch) ++ writeSet(else_branch)
+    case ForStmt(id, typ, range, body) => return writeSets(body)
+    case WhileStmt(_, body, invs) => return writeSets(body)
+    case CaseStmt(body) =>
+      return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSets(i._2) }
+    case ProcedureCallStmt(id,lhss,args) =>
+      throw new Utils.RuntimeError("ProcedureCallStmt must have been inlined by now.")
+    case ModuleCallStmt(id) =>
+      throw new Utils.RuntimeError("ModuleCallStmt must have been inlined by now.")
+  }
+  def writeSets(stmts: List[Statement]) : Set[Identifier] = {
+    return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ writeSet(s)}
   }
 
   def substitute(e: Expr, id: Identifier, arg: Expr) : Expr = {

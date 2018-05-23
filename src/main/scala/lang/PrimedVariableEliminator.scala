@@ -138,14 +138,14 @@ class PrimedVariableEliminatorPass extends RewritePass {
     val nextP = NextDecl(getInitialAssigns() ++ next.body ++ getFinalAssigns())
     Some(nextP)
   }
-  override def rewriteHavoc(havocStmt : HavocStmt, context : Scope) : List[Statement] = {
+  override def rewriteHavoc(havocStmt : HavocStmt, context : Scope) : Option[Statement] = {
     havocStmt.havocable match {
       case HavocableNextId(id) => 
         val primeVarMap = primedVariableCollector.primeVarMap.get
         logger.debug("primeVarMap: {}", primeVarMap.toString())
-        List(HavocStmt(HavocableId(primeVarMap.get(id).get)))
+        Some(HavocStmt(HavocableId(primeVarMap.get(id).get)))
       case _ =>
-        List(havocStmt)
+        Some(havocStmt)
     }
   }
   override def rewriteLHS(lhs : Lhs, context : Scope) : Option[Lhs] = {

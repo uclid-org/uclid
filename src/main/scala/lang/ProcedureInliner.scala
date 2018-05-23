@@ -136,6 +136,7 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
    *  	- rewritten statements
    *    - new variables that will need to be declared in the enclosing scope.
    */
+  // FIXME: turn stmts into BlockStmt
   def inlineProcedureCalls(uniqNamer : UniqueNameProvider, stmts : List[Statement], context : Scope) : (List[Statement], List[(Identifier, Type)]) = {
     Utils.assert(context.map.size > 0, "Context is empty.")
     val init = (List.empty[Statement], List.empty[(Identifier, Type)])
@@ -209,14 +210,18 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
             (acc._1 ++ resultHavocStmts ++ preconditionAsserts ++ modifyAssigns ++ procedureBody, 
              acc._2 ++ retNewVars ++ localNewVars ++ modifiesNewVars)
           }
+        case BlockStmt(stmts) =>
+          val (stmtsP, vars) = inlineProcedureCalls(uniqNamer, stmts, context)
+          val blockP = BlockStmt(stmtsP)
+          (acc._1 ++ List(blockP), acc._2 ++ vars)
         case ForStmt(id, typ, range, body) =>
           val bodyP = inlineProcedureCalls(uniqNamer, body, context)
           val forP = ForStmt(id, typ, range, bodyP._1)
           (acc._1 ++ List(forP), acc._2 ++ bodyP._2)
         case IfElseStmt(cond, ifblock, elseblock) =>
-          val ifBlockP = inlineProcedureCalls(uniqNamer, ifblock, context)
-          val elseBlockP = inlineProcedureCalls(uniqNamer, elseblock, context)
-          val ifElseP = IfElseStmt(cond, ifBlockP._1, elseBlockP._1)
+          val ifBlockP = inlineProcedureCalls(uniqNamer, List(ifblock), context)
+          val elseBlockP = inlineProcedureCalls(uniqNamer, List(elseblock), context)
+          val ifElseP = IfElseStmt(cond, BlockStmt(ifBlockP._1), BlockStmt(elseBlockP._1))
           (acc._1 ++ List(ifElseP), acc._2 ++ ifBlockP._2 ++ elseBlockP._2)
 
         case CaseStmt(cases) =>

@@ -754,17 +754,18 @@ case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines =
     List(Utils.join(lhss.map (_.toString), ", ") + " = " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
 }
-case class IfElseStmt(cond: Expr, ifblock: List[Statement], elseblock: List[Statement]) extends Statement {
+case class BlockStmt(stmts: List[Statement]) extends Statement {
   override def hasStmtBlock = true
-  lazy val lines : List[String] = if (elseblock.size > 0) {
-    List("if (" + cond.toString + ") // " + position.toString, "{ ") ++
-    ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++
-    List("} else {") ++
-    elseblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
-  } else {
-    List("if (" + cond.toString + ") // " + position.toString, "{ ") ++
-    ifblock.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++
+  override def toLines = { 
+    List("{") ++ 
+    stmts.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
     List("}")
+  }
+}
+case class IfElseStmt(cond: Expr, ifblock: Statement, elseblock: Statement) extends Statement {
+  override def hasStmtBlock = true
+  lazy val lines : List[String] = {
+    List("if") ++ ifblock.toLines ++ List("else") ++ elseblock.toLines
   }
   override def toLines = lines
 }

@@ -58,8 +58,9 @@ object StatementScheduler {
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
         }
       case AssignStmt(lhss, rhss) => lhss.map(lhs => lhs.ident).toSet
+      case BlockStmt(stmts) => writeSets(stmts, context)
       case IfElseStmt(cond, ifblock, elseblock) =>
-        writeSets(ifblock, context) ++ writeSets(elseblock, context)
+        writeSet(ifblock, context) ++ writeSet(elseblock, context)
       case ForStmt(_, _, _, body) =>
         writeSets(body, context)
       case WhileStmt(_, body, _) =>
@@ -93,8 +94,9 @@ object StatementScheduler {
       case AssumeStmt(e, _) => readSet(e)
       case HavocStmt(h) => Set.empty
       case AssignStmt(lhss, rhss) => readSets(rhss)
+      case BlockStmt(stmts) => readSets(stmts, context)
       case IfElseStmt(cond, ifblock, elseblock) =>
-        readSet(cond) ++ readSets(ifblock, context) ++ readSets(elseblock, context)
+        readSet(cond) ++ readSet(ifblock, context) ++ readSet(elseblock, context)
       case ForStmt(_, _, range, body) =>
         readSet(range._1) ++ readSet(range._2) ++ readSets(body, context)
       case WhileStmt(cond, body, invs) =>
@@ -184,9 +186,9 @@ class VariableDependencyFinderPass extends ReadOnlyPass[List[ModuleError]] {
     if (d == TraversalDirection.Up) { checkBlock(next.body, in, context) }
     else { in }
   }
-  override def applyOnIfElse(d : TraversalDirection.T, ifelse : IfElseStmt, in : T, context : Scope) : T = {
+  override def applyOnBlock(d : TraversalDirection.T, blockStmt : BlockStmt, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up && context.environment == SequentialEnvironment) {
-      checkBlock(ifelse.ifblock, in, context) ++ checkBlock(ifelse.elseblock, in, context)
+      checkBlock(blockStmt.stmts, in, context)
     } else {
       in
     }
@@ -225,6 +227,7 @@ class VariableDependencyFinderPass extends ReadOnlyPass[List[ModuleError]] {
     }
     isCyclic(graph, writeSet.toSeq, errors)
   }
+
   def isCyclic(graph : StatementScheduler.StmtDepGraph, roots : Seq[Identifier], in : T) : T = {
     def cyclicModuleError(node : Identifier, stack : List[Identifier]) : ModuleError = {
       val msg = "Cyclical dependency involving variable(s): " + Utils.join(stack.map(_.toString).toList, ", ")
@@ -255,14 +258,14 @@ class StatementSchedulerPass extends RewritePass {
   type StmtDepGraph = Map[IdGenerator.Id, Set[IdGenerator.Id]]
   type IdToStmtMap = Map[Identifier, IdGenerator.Id]
 
-  def reorderStatements(stmts : List[Statement], context : Scope) : List[Statement] = {
-    val deps = StatementScheduler.getReadWriteSets(stmts, context)
-    val nodeIds = stmts.map(st => st.astNodeId)
+  def reorderStatements(blkStmt: BlockStmt, context : Scope) : BlockStmt = {
+    val deps = StatementScheduler.getReadWriteSets(blkStmt.stmts, context)
+    val nodeIds = blkStmt.stmts.map(st => st.astNodeId)
     val idToStmtIdMap : IdToStmtMap = (nodeIds zip deps).flatMap(p => p._2._2.map(id => (id -> p._1))).toMap
-    val stmtIdToStmtMap : Map[IdGenerator.Id, Statement] = stmts.map(st => (st.astNodeId -> st)).toMap
+    val stmtIdToStmtMap : Map[IdGenerator.Id, Statement] = blkStmt.stmts.map(st => (st.astNodeId -> st)).toMap
     val stmtIdToIndexMap : Map[IdGenerator.Id, Int] = (nodeIds zip (1 to nodeIds.length)).toMap
     logger.debug("Statement Id Map: {}", stmtIdToStmtMap.toString())
-    val stmtDepGraph = (stmts zip deps).foldLeft(Map.empty[IdGenerator.Id, Set[IdGenerator.Id]]) {
+    val stmtDepGraph = (blkStmt.stmts zip deps).foldLeft(Map.empty[IdGenerator.Id, Set[IdGenerator.Id]]) {
       (acc, p) => {
         val st = p._1
         val ins = p._2._1
@@ -276,52 +279,50 @@ class StatementSchedulerPass extends RewritePass {
     logger.debug("stmt dep graph: {}", stmtDepGraph.toString())
     val sortedOrder = Utils.schedule(nodeIds, stmtDepGraph)
     logger.debug("sortedOrder: {}", sortedOrder.toString())
-    sortedOrder.map(id => stmtIdToStmtMap.get(id).get)
+    BlockStmt(sortedOrder.map(id => stmtIdToStmtMap.get(id).get))
   }
   override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
-    val bodyP = reorderStatements(next.body, context)
+    val bodyP = reorderStatements(BlockStmt(next.body), context).stmts
     logger.debug(Utils.join(bodyP.flatMap(st => st.toLines), "\n"))
     Some(NextDecl(bodyP))
   }
-  override def rewriteIfElse(ifelse : IfElseStmt, context : Scope) : List[Statement] = {
+  override def rewriteBlock(blk : BlockStmt, context : Scope) : Option[Statement] = {
     if (context.environment == SequentialEnvironment) {
-      val ifBlockP = reorderStatements(ifelse.ifblock, context)
-      val elseBlockP = reorderStatements(ifelse.elseblock, context)
-      val ifElseP = IfElseStmt(ifelse.cond, ifBlockP, elseBlockP)
-      List(ifElseP)
+      val stmtsP = reorderStatements(BlockStmt(blk.stmts), context)
+      Some(stmtsP)
     } else {
-      List(ifelse)
+      Some(blk)
     }
   }
-  override def rewriteFor(forStmt : ForStmt, context : Scope) : List[Statement] = {
+  override def rewriteFor(forStmt : ForStmt, context : Scope) : Option[Statement] = {
     if (context.environment == SequentialEnvironment) {
-      val bodyP = reorderStatements(forStmt.body, context)
+      val bodyP = reorderStatements(BlockStmt(forStmt.body), context).stmts
       val forP = ForStmt(forStmt.id, forStmt.typ, forStmt.range, bodyP)
-      List(forP)
+      Some(forP)
     } else {
-      List(forStmt)
+      Some(forStmt)
     }
   }
-  override def rewriteCase(caseStmt : CaseStmt, context : Scope) : List[Statement] = {
+  override def rewriteCase(caseStmt : CaseStmt, context : Scope) : Option[Statement] = {
     if (context.environment == SequentialEnvironment) {
       val bodiesP = caseStmt.body.map {
         body => {
-          (body._1, reorderStatements(body._2, context))
+          (body._1, reorderStatements(BlockStmt(body._2), context).stmts)
         }
       }
-      List(CaseStmt(bodiesP))
+      Some(CaseStmt(bodiesP))
     } else {
-      List(caseStmt)
+      Some(caseStmt)
     }
   }
-  override def rewriteHavoc(havocStmt : HavocStmt, context : Scope) : List[Statement] = {
+  override def rewriteHavoc(havocStmt : HavocStmt, context : Scope) : Option[Statement] = {
     if (context.environment == SequentialEnvironment) {
       havocStmt.havocable match {
-        case HavocableId(id) => List(HavocStmt(HavocableNextId(id)))
-        case _ => List(havocStmt)
+        case HavocableId(id) => Some(HavocStmt(HavocableNextId(id)))
+        case _ => Some(havocStmt)
       }
     } else {
-      List(havocStmt)
+      Some(havocStmt)
     }
   }
 }

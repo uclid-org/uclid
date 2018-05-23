@@ -427,8 +427,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
   def guardedAssignment(guardVar : Identifier, copyVar : Identifier, origVars : List[(Identifier, Type)], newVars : List[(Identifier, Type)]) : Statement = {
-    val thenBlock = AssignStmt(List(LhsId(copyVar)), List(BoolLit(true))) :: assignToVars(newVars, origVars)
-    val ifStmt = IfElseStmt(andExpr(guardVar, notExpr(copyVar)), thenBlock, List.empty)
+    val thenBlock = BlockStmt(AssignStmt(List(LhsId(copyVar)), List(BoolLit(true))) :: assignToVars(newVars, origVars))
+    val ifStmt = IfElseStmt(andExpr(guardVar, notExpr(copyVar)), thenBlock, BlockStmt(List.empty))
     ifStmt
   }
 

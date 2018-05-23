@@ -47,14 +47,14 @@ class CaseEliminatorPass extends RewritePass {
   def casesToIfs(cases : List[(Expr, List[Statement])]) : List[Statement] = {
     cases match {
       case Nil =>
-        List.empty[Statement]
+        List.empty
       case head :: rest =>
-        List(IfElseStmt(head._1, head._2, casesToIfs(rest)))
+        List(IfElseStmt(head._1, BlockStmt(head._2), BlockStmt(casesToIfs(rest))))
     }
   }
 
-  override def rewriteCase(st : CaseStmt, ctx : Scope) : List[Statement] = {
-    casesToIfs(st.body)
+  override def rewriteCase(st : CaseStmt, ctx : Scope) : Option[Statement] = {
+    Some(BlockStmt(casesToIfs(st.body)))
   }
 }
 

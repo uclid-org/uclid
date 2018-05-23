@@ -41,7 +41,7 @@ package uclid
 package lang
 
 class WhileLoopRewriterPass extends RewritePass {
-  override def rewriteWhile(whileSt : WhileStmt, context: Scope) : List[Statement] = {
+  override def rewriteWhile(whileSt : WhileStmt, context: Scope) : Option[Statement] = {
     val cond = whileSt.cond
     val body = whileSt.body
     val invs = whileSt.invariants
@@ -60,8 +60,8 @@ class WhileLoopRewriterPass extends RewritePass {
     }
     val finishAssump = AssumeStmt(Operator.not(cond), None)
     val ifBody = havocStmts ++ assumeStmts ++ body ++ assertStmts
-    val ifElseStmt = IfElseStmt(cond, ifBody, List.empty)
-    initialAsserts ++ List(ifElseStmt, finishAssump)
+    val ifElseStmt = IfElseStmt(cond, BlockStmt(ifBody), BlockStmt(List.empty))
+    Some(BlockStmt(initialAsserts ++ List(ifElseStmt, finishAssump)))
   }
 }
 

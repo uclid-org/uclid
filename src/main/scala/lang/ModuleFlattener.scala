@@ -335,11 +335,11 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   // rewrite module.
-  override def rewriteModuleCall(modCall : ModuleCallStmt, context : Scope) : List[Statement] = {
+  override def rewriteModuleCall(modCall : ModuleCallStmt, context : Scope) : Option[Statement] = {
     if (modCall.id == inst.instanceId) {
-      newInputAssignments ++ newNextStatements
+      Some(BlockStmt(newInputAssignments ++ newNextStatements))
     } else {
-      List(modCall)
+      Some(modCall)
     }
   }
 }

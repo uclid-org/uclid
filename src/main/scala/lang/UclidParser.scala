@@ -400,14 +400,14 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case lhss ~ id ~ args => ProcedureCallStmt(id, lhss, args) } |
       KwNext ~ "(" ~> Id <~ ")" ~ ";" ^^
         { case id => lang.ModuleCallStmt(id) } |
-      KwIf ~ "(" ~ "*" ~ ")" ~> (BlockStatement <~ KwElse) ~ BlockStatement ^^
+      KwIf ~ "(" ~ "*" ~ ")" ~> (BlkStmt <~ KwElse) ~ BlkStmt ^^
         { case tblk ~ fblk => lang.IfElseStmt(lang.FreshLit(lang.BooleanType()), tblk, fblk) } |
-      KwIf ~ "(" ~ "*" ~ ")" ~> BlockStatement ^^
-        { case blk => IfElseStmt(lang.FreshLit(lang.BooleanType()), blk, List.empty) } |
-      KwIf ~ "(" ~> (Expr <~ ")") ~ BlockStatement ~ (KwElse ~> BlockStatement) ^^
+      KwIf ~ "(" ~ "*" ~ ")" ~> BlkStmt ^^
+        { case blk => IfElseStmt(lang.FreshLit(lang.BooleanType()), blk, BlockStmt(List.empty)) } |
+      KwIf ~ "(" ~> (Expr <~ ")") ~ BlkStmt ~ (KwElse ~> BlkStmt) ^^
         { case e ~ f ~ g => IfElseStmt(e,f,g)} |
-      KwIf ~> (Expr ~ BlockStatement) ^^
-        { case e ~ f => IfElseStmt(e, f, List.empty[Statement]) } |
+      KwIf ~> (Expr ~ BlkStmt) ^^
+        { case e ~ f => IfElseStmt(e, f, BlockStmt(List.empty)) } |
       KwCase ~> rep(CaseBlockStmt) <~ KwEsac ^^
         { case i => CaseStmt(i) } |
       KwFor ~> (Id ~ (KwIn ~> RangeLit) ~ BlockStatement) ^^
@@ -425,6 +425,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val BlockStatement: PackratParser[List[Statement]] =
       "{" ~> rep (Statement) <~ "}"
+
+    lazy val BlkStmt: PackratParser[lang.BlockStmt] =
+      "{" ~> rep (Statement) <~ "}" ^^ {
+        case stmts => lang.BlockStmt(stmts)
+      }
 
     lazy val OptionalExpr : PackratParser[Option[lang.Expr]] =
       "(" ~ ")" ^^ { case _ => None } |

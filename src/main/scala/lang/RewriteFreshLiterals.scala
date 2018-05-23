@@ -32,13 +32,13 @@ class RewriteFreshLiteralsPass extends RewritePass {
 class RewriteFreshLiterals extends ASTRewriter("RewriteFreshLiterals", new RewriteFreshLiteralsPass())
 
 class IntroduceFreshHavocsPass extends RewritePass {
-  override def rewriteIfElse(st : IfElseStmt, ctx : Scope) : List[Statement] = {
+  override def rewriteIfElse(st : IfElseStmt, ctx : Scope) : Option[Statement] = {
     st.cond match {
       case f : FreshLit =>
         val havoc = HavocStmt(HavocableFreshLit(f))
-        List(havoc, st)
+        Some(BlockStmt(List(havoc, st)))
       case _ =>
-        List(st)
+        Some(st)
     }
   }
 }
