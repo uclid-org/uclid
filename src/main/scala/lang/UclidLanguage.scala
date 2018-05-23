@@ -785,7 +785,7 @@ case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: Stateme
     List(forLine) ++ body.toLines ++ List("}")
   }
 }
-case class WhileStmt(cond: Expr, body: List[Statement], invariants: List[Expr])
+case class WhileStmt(cond: Expr, body: Statement, invariants: List[Expr])
   extends Statement
 {
   override def hasStmtBlock = true
@@ -794,10 +794,7 @@ case class WhileStmt(cond: Expr, body: List[Statement], invariants: List[Expr])
   override val toLines = {
     val headLine = "while(%s)  // %s".format(cond.toString(), position.toString())
     val invLines = invariants.map(inv => PrettyPrinter.indent(1) + "invariant " + inv.toString() + "; // " + inv.position.toString())
-    val openBraceLine = "{"
-    val bodyLines = body.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ List("}")
-    val closeBraceLine = "}"
-    List(headLine) ++ invLines ++ List(openBraceLine) ++ bodyLines ++ List(closeBraceLine) 
+    List(headLine) ++ invLines ++ body.toLines 
   }
 }
 case class CaseStmt(body: List[(Expr,List[Statement])]) extends Statement {

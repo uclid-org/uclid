@@ -414,7 +414,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case id ~ r ~ body => ForStmt(id, r._1.typeOf, r, body) } |
       KwFor ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> RangeExpr) ~ BlkStmt ^^
         { case idtyp ~ range ~ body => ForStmt(idtyp._1, idtyp._2, range, body) } |
-      KwWhile ~> ("(" ~> Expr <~ ")") ~ rep(Invariant) ~ BlockStatement ^^
+      KwWhile ~> ("(" ~> Expr <~ ")") ~ rep(Invariant) ~ BlkStmt ^^
         { case expr ~ invs ~ body => WhileStmt(expr, body, invs) } |
       ";" ^^ { case _ => SkipStmt() }
     }

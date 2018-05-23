@@ -771,7 +771,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnWhile(TraversalDirection.Down, st, result, context)
     result = visitExpr(st.cond, result, context)
     result = st.invariants.foldLeft(result)((acc, inv) => visitExpr(inv, acc, context))
-    result = st.body.foldLeft(result)((acc, sti) => visitStatement(sti, acc, context))
+    result = visitStatement(st.body, result, context)
     result = pass.applyOnWhile(TraversalDirection.Up, st, result, context)
     return result
   }
@@ -1568,11 +1568,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitWhileStatement(st : WhileStmt, context : Scope) : Option[Statement] = {
     val condP = visitExpr(st.cond, context)
-    val stmtsP = st.body.map(visitStatement(_, context)).flatten
+    val stmtsP = visitStatement(st.body, context)
     val invP = st.invariants.map(visitExpr(_, context)).flatten
-    val whileP = (condP) match {
-      case Some(cond) => pass.rewriteWhile(WhileStmt(cond, stmtsP, invP), context)
-      case None => None
+    val whileP = (condP, stmtsP) match {
+      case (Some(cond), Some(stmts)) => pass.rewriteWhile(WhileStmt(cond, stmts, invP), context)
+      case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, whileP, st.position)
   }
