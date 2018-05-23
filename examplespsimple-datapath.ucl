@@ -1,0 +1,243 @@
+// Simple pipelined datapath, based on old uclid model in the old UCLID user manual 
+
+module common {
+  // Types
+  // Words -- Addresses, Data, etc.
+  type word_t = bv32;
+  // Registers
+  type reg_t = bv8; // arbit choice
+  // Register file  
+  type rf_t = [reg_t]word_t;
+  // OpCode 
+  type op_t = bv8;  // arbit choice
+
+  // Uninterpreted functions
+  function newPC(a: word_t)  : word_t;
+  const pc0 : word_t;
+  function rf0 (r : reg_t) : word_t;
+  function src1 (i : word_t) : reg_t;
+  function src2 (i : word_t) : reg_t;
+  function dest (i : word_t) : reg_t;
+  function op (i : word_t) : op_t; 
+  function alu (op : op_t, arg1: word_t, arg2 : word_t) : word_t;
+
+}
+
+// Specification/ISA model
+module spec {
+
+  input proj_impl : boolean;
+  input impl_RF : common.rf_t;
+  input impl_PC : common.word_t;
+
+  var sPC : common.word_t;
+  var sRF : common.rf_t;
+
+  procedure update_sRF() 
+    modifies sRF;
+  {
+      sRF[common.dest(sPC)] = common.alu(common.op(sPC),
+	      			         sRF[common.src1(sPC)],
+					 sRF[common.src2(sPC)]);
+  }
+
+  init {
+    sPC = common.pc0;
+    assume (forall (i : common.reg_t) :: (sRF[i] == common.rf0(i)));
+  }
+ 
+  next {
+    if (proj_impl) {
+      sPC' = impl_PC;
+      sRF' = impl_RF;
+    }
+    else {
+      sPC' = common.newPC(sPC);
+      call update_sRF();
+    }
+  }
+}
+
+// Pipeline model
+module impl {
+
+  input flush : boolean;
+  input reinit : boolean;
+
+  var pPC : common.word_t;
+  var pRF : common.rf_t;
+  var eOP : common.op_t; 
+  var eSRC2 : common.reg_t;
+  var eDEST : common.reg_t;
+  var eARG1 : common.word_t;
+  var eARG2 : common.word_t;
+  var eWRT : boolean;
+  var wVAL : common.word_t;
+  var wDEST : common.reg_t;
+  var wWRT : boolean;
+
+  const op0 : common.op_t;
+  const s0, d0, d1 : common.reg_t;
+  const a1, a2, x0 : common.word_t;
+  const w0, w1 : boolean;
+
+  procedure update_pRF() 
+    modifies pRF;
+  {
+    if (wWRT) { pRF[wDEST] = wVAL; }
+  }
+
+  define stall() : boolean = eWRT && (common.src1(pPC) == eDEST);
+
+  init {
+    // initialize PC and RF same as spec module
+    pPC = common.pc0;
+    assume (forall (i : common.reg_t) :: (pRF[i] == common.rf0(i)));
+    // all other state variables get arbit symbolic initialization 
+    eOP = op0;
+    eSRC2 = s0;
+    eARG1 = a1;
+    eARG2 = a2;
+    eDEST = d0;
+    eWRT = w0;
+    wVAL = x0;
+    wDEST = d1;
+    wWRT = w1;
+  }
+
+  
+  next {
+   if (reinit) {
+    pPC' = common.pc0;
+    havoc pRF;
+    assume (forall (i : common.reg_t) :: (pRF'[i] == common.rf0(i)));
+    // all other state variables get same arbit symbolic initialization as before
+    eOP' = op0;
+    eSRC2' = s0;
+    eARG1' = a1;
+    eARG2' = a2;
+    eDEST' = d0;
+    eWRT' = w0;
+    wVAL' = x0;
+    wDEST' = d1;
+    wWRT' = w1;
+   } 
+   else { 
+    // updates to PC and RF
+    if ((!flush) && (! stall())) { pPC' = common.newPC(pPC); }
+    call update_pRF();
+    // Execute stage
+    eOP' = common.op(pPC);
+    eSRC2' = common.src2(pPC);
+    eARG1' = pRF'[common.src1(pPC)];
+    eARG2' = pRF'[common.src2(pPC)];
+    eDEST' = common.dest(pPC);
+    eWRT' = (!stall()) && (!flush);
+    // Writeback stage
+    wDEST' = eDEST;
+    wWRT' = eWRT;
+    if (wWRT && (wDEST == eSRC2)) // fwding logic
+    {
+      wVAL' = common.alu(eOP,eARG1,wVAL);
+    } 
+    else {
+      wVAL' = common.alu(eOP,eARG1,eARG2);
+    }
+   }
+  }
+
+}
+
+// Main module
+module main {
+
+  var flush_pipeline : boolean;
+  var reinit : boolean;
+  var project_impl : boolean;
+  
+  var step : integer;
+
+  // Variables to store impl state
+  var I_pc : common.word_t;
+  var I_rf : common.rf_t;
+  // Variables to store spec state
+  var S_pc0 : common.word_t; // after 0 steps
+  var S_rf0 : common.rf_t;
+  var S_pc1 : common.word_t; // after 1 step
+  var S_rf1 : common.rf_t;
+
+  // instantiate spec and impl modules
+  instance impl_i : impl(flush : (flush_pipeline), reinit : (reinit));
+  instance spec_i : spec(proj_impl : (project_impl), impl_RF : (impl_i.pRF), impl_PC : (impl_i.pPC));
+
+  init {
+    step = 0;
+    flush_pipeline = false;
+    project_impl = false;
+    reinit = false;
+  }
+
+  next {
+    step' = step + 1;
+    case
+      (step == 0) : { 
+         flush_pipeline' = true; 
+         next(impl_i);  // step impl module, normal step
+      }
+      (step == 1) : { 
+         flush_pipeline' = true; 
+         next(impl_i);  // step impl module, flush
+      }
+      (step == 2) : { 
+         flush_pipeline' = false; 
+         reinit' = true;
+         next(impl_i);  // step impl module, flush
+      }
+      (step == 3) : { 
+         flush_pipeline' = true; 
+         reinit' = false;
+         I_pc' = impl_i.pPC; // store impl state after pipeline flushed for 2 steps
+         I_rf' = impl_i.pRF;
+         next(impl_i);  // step impl module, reinitialize
+      }
+      (step == 4) : { 
+         flush_pipeline' = true; 
+         next(impl_i);  // step impl module, flush
+      }
+      (step == 5) : { 
+         flush_pipeline' = false; 
+         project_impl' = true; 
+         next(impl_i);  // step impl module, flush
+      }
+      (step == 6) : { 
+         project_impl' = false;
+         next(spec_i); // step spec to project impl state onto spec
+      }
+      (step == 7) : { // step spec module
+         S_pc0' = spec_i.sPC; // initial state of spec
+         S_rf0' = spec_i.sRF;
+         next(spec_i); // step
+      }
+      (step == 8) : { // store spec state after one step
+         S_pc1' = spec_i.sPC;
+         S_rf1' = spec_i.sRF;
+      }
+      (step == 9) : { 
+         assert(false); // sanity check to make sure execution can get here
+         // correspondence check
+         // assert(((S_pc1 == I_pc) && (S_rf1 == I_rf)) || ((S_pc0 == I_pc) && (S_rf0 == I_rf)));
+      }
+    esac;
+
+  }
+
+
+  control {
+    vobj = unroll(10);
+    check;
+    print_results;
+    vobj.print_cex(step, flush_pipeline, reinit, project_impl, I_pc, I_rf, S_pc0, S_rf0, S_pc1, S_rf1, impl_i.pPC, impl_i.pRF, spec_i.sPC, spec_i.sRF, impl_i.wVAL);
+  }
+
+
+}
