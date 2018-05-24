@@ -57,7 +57,11 @@ object StatementScheduler {
           case HavocableFreshLit(f) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
         }
-      case AssignStmt(lhss, rhss) => lhss.map(lhs => lhs.ident).toSet
+      case AssignStmt(lhss, rhss) =>
+        lhss.map(lhs => lhs match {
+          case LhsId(_) | LhsNextId(_) => Some(lhs.ident)
+          case _ => None 
+        }).flatten.toSet
       case BlockStmt(stmts) => writeSets(stmts, context)
       case IfElseStmt(cond, ifblock, elseblock) =>
         writeSet(ifblock, context) ++ writeSet(elseblock, context)
@@ -67,6 +71,51 @@ object StatementScheduler {
         writeSet(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => writeSet(b._2, context)).toSet
+      case ProcedureCallStmt(id, callLhss, args) => 
+        val module = context.module.get
+        val procedure = module.procedures.find(p => p.id == id).get
+        val modifies = procedure.modifies
+        val modifiedIdents = callLhss.map(lhs => lhs match {
+          case LhsId(_) | LhsNextId(_) => Some(lhs.ident)
+          case _ => None 
+        }).flatten.toSet
+        modifiedIdents ++ modifies.toSet
+      case ModuleCallStmt(id) =>
+        val namedExprOpt = context.map.get(id)
+        Utils.assert(namedExprOpt.isDefined, "Must not haven an unknown instance here: " + id.toString())
+        val namedExpr = namedExprOpt.get
+        Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
+        val instD = namedExpr.asInstanceOf[Scope.Instance].instD
+        val moduleType : ModuleType = instD.modType.get.asInstanceOf[ModuleType]
+        instD.outputMap.map(p => p._3.asInstanceOf[Identifier]).toSet
+    }
+  }
+  def writeSets(stmts: List[Statement], context : Scope) : (Set[Identifier]) = {
+    stmts.foldLeft(Set.empty[Identifier])((acc, st) => acc ++ writeSet(st, context))
+  }
+
+  def writeSetIds(st : Statement, context : Scope) : Set[Identifier] = {
+    st match {
+      case SkipStmt() => Set.empty
+      case AssertStmt(e, _) => Set.empty
+      case AssumeStmt(e, _) => Set.empty
+      case HavocStmt(h) => 
+        h match {
+          case HavocableId(id) => Set(id)
+          case HavocableNextId(id) => Set(id)
+          case HavocableFreshLit(f) =>
+            throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
+        }
+      case AssignStmt(lhss, rhss) => lhss.map(lhs => lhs.ident).toSet
+      case BlockStmt(stmts) => writeSetIds(stmts, context)
+      case IfElseStmt(cond, ifblock, elseblock) =>
+        writeSetIds(ifblock, context) ++ writeSetIds(elseblock, context)
+      case ForStmt(_, _, _, body) =>
+        writeSetIds(body, context)
+      case WhileStmt(_, body, _) =>
+        writeSetIds(body, context)
+      case CaseStmt(bodies) =>
+        bodies.flatMap(b => writeSetIds(b._2, context)).toSet
       case ProcedureCallStmt(id, callLhss, args) => 
         val module = context.module.get
         val procedure = module.procedures.find(p => p.id == id).get
@@ -82,11 +131,27 @@ object StatementScheduler {
         instD.outputMap.map(p => p._3.asInstanceOf[Identifier]).toSet
     }
   }
-
-  def writeSets(stmts: List[Statement], context : Scope) : (Set[Identifier]) = {
-    stmts.foldLeft(Set.empty[Identifier])((acc, st) => acc ++ writeSet(st, context))
+  def writeSetIds(stmts: List[Statement], context : Scope) : (Set[Identifier]) = {
+    stmts.foldLeft(Set.empty[Identifier])((acc, st) => acc ++ writeSetIds(st, context))
   }
 
+  def readSet(e : Expr) : Set[Identifier] = {
+    e match {
+      case id : Identifier => Set(id)
+      case ExternalIdentifier(_, _) => Set.empty
+      case lit : Literal => Set.empty
+      case Tuple(values) => readSets(values)
+      case OperatorApplication(GetNextValueOp(), List(id : Identifier)) => Set(id)
+      case OperatorApplication(_, es) => readSets(es)
+      case ArraySelectOperation(e, index) => readSet(e) ++ readSets(index)
+      case ArrayStoreOperation(e, index, value) => readSet(e) ++ readSets(index) ++ readSet(value)
+      case FuncApplication(e, args) => readSet(e) ++ readSets(args)
+      case Lambda(ids, expr) => readSet(expr)
+    }
+  }
+  def readSets(es : List[Expr]) : Set[Identifier] = {
+    es.foldLeft(Set.empty[Identifier])((acc, e) => acc ++ readSet(e))
+  }
   def readSet(st : Statement, context : Scope) : Set[Identifier] = {
     st match {
       case SkipStmt() => Set.empty
@@ -119,35 +184,70 @@ object StatementScheduler {
         readSets(moduleInputs) ++ readSets(moduleSharedVars)
     }
   }
-
   def readSets(stmts : List[Statement], context : Scope) : (Set[Identifier]) = {
     stmts.foldLeft(Set.empty[Identifier])((acc, st) => acc ++ readSet(st, context))
   }
 
-  def readSets(es : List[Expr]) : Set[Identifier] = {
-    es.foldLeft(Set.empty[Identifier])((acc, e) => acc ++ readSet(e))
-  }
-
-  def readSet(e : Expr) : Set[Identifier] = {
+  def primeReadSet(e : Expr) : Set[Identifier] = {
     e match {
       case Identifier(_) => Set.empty
       case ExternalIdentifier(_, _) => Set.empty
       case lit : Literal => Set.empty
-      case Tuple(values) => readSets(values)
+      case Tuple(values) => primeReadSets(values)
       case OperatorApplication(GetNextValueOp(), List(id : Identifier)) => Set(id)
-      case OperatorApplication(_, es) => readSets(es)
-      case ArraySelectOperation(e, index) => readSet(e) ++ readSets(index)
-      case ArrayStoreOperation(e, index, value) => readSet(e) ++ readSets(index) ++ readSet(value)
-      case FuncApplication(e, args) => readSet(e) ++ readSets(args)
-      case Lambda(ids, expr) => readSet(expr)
+      case OperatorApplication(_, es) => primeReadSets(es)
+      case ArraySelectOperation(e, index) => primeReadSet(e) ++ primeReadSets(index)
+      case ArrayStoreOperation(e, index, value) => primeReadSet(e) ++ primeReadSets(index) ++ primeReadSet(value)
+      case FuncApplication(e, args) => primeReadSet(e) ++ primeReadSets(args)
+      case Lambda(ids, expr) => primeReadSet(expr)
     }
   }
+  def primeReadSets(es : List[Expr]) : Set[Identifier] = {
+    es.foldLeft(Set.empty[Identifier])((acc, e) => acc ++ primeReadSet(e))
+  }
+  def primeReadSet(st : Statement, context : Scope) : Set[Identifier] = {
+    st match {
+      case SkipStmt() => Set.empty
+      case AssertStmt(e, _) => primeReadSet(e)
+      case AssumeStmt(e, _) => primeReadSet(e)
+      case HavocStmt(h) => Set.empty
+      case AssignStmt(lhss, rhss) => primeReadSets(rhss)
+      case BlockStmt(stmts) => primeReadSets(stmts, context)
+      case IfElseStmt(cond, ifblock, elseblock) =>
+        primeReadSet(cond) ++ primeReadSet(ifblock, context) ++ primeReadSet(elseblock, context)
+      case ForStmt(_, _, range, body) =>
+        primeReadSet(range._1) ++ primeReadSet(range._2) ++ primeReadSet(body, context)
+      case WhileStmt(cond, body, invs) =>
+        primeReadSet(cond) ++ primeReadSet(body, context)
+      case CaseStmt(bodies) =>
+        bodies.flatMap(b => primeReadSet(b._1) ++ primeReadSet(b._2, context)).toSet
+      case ProcedureCallStmt(_, lhss, args) =>
+        primeReadSets(args)
+      case ModuleCallStmt(id) =>
+        val namedExprOpt = context.map.get(id)
+        Utils.assert(namedExprOpt.isDefined, "Must not haven an unknown instance here: " + id.toString())
+        val namedExpr = namedExprOpt.get
+        Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
+        val instD = namedExpr.asInstanceOf[Scope.Instance].instD
+        val moduleType : ModuleType = instD.modType.get.asInstanceOf[ModuleType]
+        val moduleInputs = instD.inputMap.map(p => p._3)
+        val moduleSharedVars = instD.sharedVarMap.map(p => p._3)
+        logger.trace("moduleInputs: {}", moduleInputs.toString())
+        logger.trace("moduleSharedVars: {}", moduleSharedVars.toString())
+        primeReadSets(moduleInputs) ++ primeReadSets(moduleSharedVars)
+    }
+  }
+  def primeReadSets(stmts : List[Statement], context : Scope) : (Set[Identifier]) = {
+    stmts.foldLeft(Set.empty[Identifier])((acc, st) => acc ++ primeReadSet(st, context))
+  }
+
+
   type StmtDepGraph = Map[Identifier, Set[Identifier]]
   def getReadWriteSets(statements : List[Statement], context : Scope) : List[(Set[Identifier], Set[Identifier])] = {
     statements.map {
       st => {
-        val insP = readSet(st, context)
-        val outs = writeSet(st, context)
+        val insP = primeReadSet(st, context)
+        val outs = writeSetIds(st, context)
         val ins = if (st.hasStmtBlock) {
           insP.diff(outs)
         } else {

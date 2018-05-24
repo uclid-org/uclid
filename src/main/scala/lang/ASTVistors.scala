@@ -1007,7 +1007,27 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def pass = _pass
   override def passName = _passName
   def _setFilename = setFilename
-  override def visit(module : Module, context : Scope) : Option[Module] = visitModule(module, context)
+  
+  val repeatUntilNoChange = false
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    if (repeatUntilNoChange) {
+      var m : Module = module
+      var modP : Option[Module] = None
+      var done = false
+      do {
+        val modP1 = visitModule(m, context)
+        done = (modP1 == modP)
+        modP1 match {
+          case None => done = true
+          case Some(mod) => m = mod
+        }
+        modP = modP1
+      } while(!done)
+      modP
+    } else {
+      visitModule(module, context)
+    }
+  }
 
   val log = Logger(classOf[ASTRewriter])
   override def reset() {

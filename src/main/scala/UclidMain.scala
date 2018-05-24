@@ -240,6 +240,7 @@ object UclidMain {
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
     passManager.addPass(new BlockFlattener())
+    passManager.addPass(new RedundantAssignmentEliminator())
     passManager.addPass(new ModuleCleaner())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())

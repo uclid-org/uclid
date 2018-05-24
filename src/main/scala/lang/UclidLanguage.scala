@@ -770,7 +770,7 @@ case class IfElseStmt(cond: Expr, ifblock: Statement, elseblock: Statement) exte
   override def hasStmtBlock = true
   override val hasLoop = ifblock.hasLoop || elseblock.hasLoop
   lazy val lines : List[String] = {
-    List("if") ++ ifblock.toLines ++ List("else") ++ elseblock.toLines
+    List("if(%s)".format(cond.toString())) ++ ifblock.toLines ++ List("else") ++ elseblock.toLines
   }
   override def toLines = lines
 }
