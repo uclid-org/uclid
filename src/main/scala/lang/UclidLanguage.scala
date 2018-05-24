@@ -917,7 +917,7 @@ case class ProcedureDecl(
     modifiesString +
     PrettyPrinter.indent(1) + "{ // " + id.position.toString + "\n" +
     Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" +
-    Utils.join(body.toLines, "\n") +
+    Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n") +
     "\n" + PrettyPrinter.indent(1) + "}"
   }
   override def declNames = List(id)

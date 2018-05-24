@@ -239,6 +239,7 @@ object UclidMain {
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
+    passManager.addPass(new BlockFlattener())
     passManager.addPass(new ModuleCleaner())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())
