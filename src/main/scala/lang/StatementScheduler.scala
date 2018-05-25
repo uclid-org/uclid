@@ -64,13 +64,17 @@ object StatementScheduler {
         }).flatten.toSet
       case BlockStmt(stmts) => writeSets(stmts, context)
       case IfElseStmt(cond, ifblock, elseblock) =>
-        writeSet(ifblock, context) ++ writeSet(elseblock, context)
+        val ifWrites = writeSet(ifblock, context)
+        val elseWrites = writeSet(elseblock, context)
+        ifWrites.intersect(elseWrites)
       case ForStmt(_, _, _, body) =>
         writeSet(body, context)
       case WhileStmt(_, body, _) =>
         writeSet(body, context)
       case CaseStmt(bodies) =>
-        bodies.flatMap(b => writeSet(b._2, context)).toSet
+        val writeSets = bodies.map(b => writeSet(b._2, context).toSet)
+        val allVars = writeSets.foldLeft(Set.empty[Identifier])((acc, set) => acc.union(set))
+        writeSets.foldLeft(allVars)((acc, set) => acc.intersect(set))
       case ProcedureCallStmt(id, callLhss, args) => 
         val module = context.module.get
         val procedure = module.procedures.find(p => p.id == id).get

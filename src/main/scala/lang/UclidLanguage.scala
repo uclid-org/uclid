@@ -770,7 +770,10 @@ case class IfElseStmt(cond: Expr, ifblock: Statement, elseblock: Statement) exte
   override def hasStmtBlock = true
   override val hasLoop = ifblock.hasLoop || elseblock.hasLoop
   lazy val lines : List[String] = {
-    List("if(%s)".format(cond.toString())) ++ ifblock.toLines ++ List("else") ++ elseblock.toLines
+    List("if(%s)".format(cond.toString())) ++
+    ifblock.toLines.map(PrettyPrinter.indent(1) + _) ++
+    List("else") ++
+    elseblock.toLines.map(PrettyPrinter.indent(1) + _)
   }
   override def toLines = lines
 }
@@ -782,7 +785,7 @@ case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: Stateme
   override val hasLoop = true
   override val toLines = {
     val forLine = "for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString
-    List(forLine) ++ body.toLines ++ List("}")
+    List(forLine) ++ body.toLines.map(PrettyPrinter.indent(1) + _) ++ List("}")
   }
 }
 case class WhileStmt(cond: Expr, body: Statement, invariants: List[Expr])
@@ -794,7 +797,7 @@ case class WhileStmt(cond: Expr, body: Statement, invariants: List[Expr])
   override val toLines = {
     val headLine = "while(%s)  // %s".format(cond.toString(), position.toString())
     val invLines = invariants.map(inv => PrettyPrinter.indent(1) + "invariant " + inv.toString() + "; // " + inv.position.toString())
-    List(headLine) ++ invLines ++ body.toLines 
+    List(headLine) ++ invLines ++ body.toLines.map(PrettyPrinter.indent(1) + _)
   }
 }
 case class CaseStmt(body: List[(Expr,Statement)]) extends Statement {
