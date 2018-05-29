@@ -83,7 +83,7 @@ class RedundantAssignmentEliminatorPass extends RewritePass {
         
       }
     }
-    val blkP = BlockStmt(stmtsP)
+    val blkP = BlockStmt(List.empty, stmtsP)
     if (stmtsP.size < blkStmt.stmts.size) {
       log.debug("Original :\n{}", blkStmt.toString())
       log.debug("Revised  :\n{}", blkP.toString())

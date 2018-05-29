@@ -62,7 +62,9 @@ object StatementScheduler {
           case LhsId(_) | LhsNextId(_) => Some(lhs.ident)
           case _ => None 
         }).flatten.toSet
-      case BlockStmt(stmts) => writeSets(stmts, context)
+      case BlockStmt(vars, stmts) =>
+        val declaredVars = vars.flatMap(vs => vs.ids.map(v => v)).toSet
+        writeSets(stmts, context + vars) -- declaredVars
       case IfElseStmt(cond, ifblock, elseblock) =>
         val ifWrites = writeSet(ifblock, context)
         val elseWrites = writeSet(elseblock, context)
@@ -111,7 +113,9 @@ object StatementScheduler {
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
         }
       case AssignStmt(lhss, rhss) => lhss.map(lhs => lhs.ident).toSet
-      case BlockStmt(stmts) => writeSetIds(stmts, context)
+      case BlockStmt(vars, stmts) =>
+        val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(v => v)).toSet
+        writeSetIds(stmts, context + vars) -- declaredVars
       case IfElseStmt(cond, ifblock, elseblock) =>
         writeSetIds(ifblock, context) ++ writeSetIds(elseblock, context)
       case ForStmt(_, _, _, body) =>
@@ -163,7 +167,9 @@ object StatementScheduler {
       case AssumeStmt(e, _) => readSet(e)
       case HavocStmt(h) => Set.empty
       case AssignStmt(lhss, rhss) => readSets(rhss)
-      case BlockStmt(stmts) => readSets(stmts, context)
+      case BlockStmt(vars, stmts) =>
+        val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(v => v)).toSet
+        readSets(stmts, context + vars) -- declaredVars
       case IfElseStmt(cond, ifblock, elseblock) =>
         readSet(cond) ++ readSet(ifblock, context) ++ readSet(elseblock, context)
       case ForStmt(_, _, range, body) =>
@@ -216,7 +222,9 @@ object StatementScheduler {
       case AssumeStmt(e, _) => primeReadSet(e)
       case HavocStmt(h) => Set.empty
       case AssignStmt(lhss, rhss) => primeReadSets(rhss)
-      case BlockStmt(stmts) => primeReadSets(stmts, context)
+      case BlockStmt(vars, stmts) =>
+        val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(v => v)).toSet
+        primeReadSets(stmts, context + vars) -- declaredVars
       case IfElseStmt(cond, ifblock, elseblock) =>
         primeReadSet(cond) ++ primeReadSet(ifblock, context) ++ primeReadSet(elseblock, context)
       case ForStmt(_, _, range, body) =>
@@ -345,7 +353,7 @@ class StatementSchedulerPass extends RewritePass {
   type IdToStmtMap = Map[Identifier, IdGenerator.Id]
 
   def reorderStatements(blkStmt: BlockStmt, context : Scope) : BlockStmt = {
-    val deps = StatementScheduler.getReadWriteSets(blkStmt.stmts, context)
+    val deps = StatementScheduler.getReadWriteSets(blkStmt.stmts, context + blkStmt.vars)
     val nodeIds = blkStmt.stmts.map(st => st.astNodeId)
     val idToStmtIdMap : IdToStmtMap = (nodeIds zip deps).flatMap(p => p._2._2.map(id => (id -> p._1))).toMap
     val stmtIdToStmtMap : Map[IdGenerator.Id, Statement] = blkStmt.stmts.map(st => (st.astNodeId -> st)).toMap
@@ -365,16 +373,16 @@ class StatementSchedulerPass extends RewritePass {
     logger.debug("stmt dep graph: {}", stmtDepGraph.toString())
     val sortedOrder = Utils.schedule(nodeIds, stmtDepGraph)
     logger.debug("sortedOrder: {}", sortedOrder.toString())
-    BlockStmt(sortedOrder.map(id => stmtIdToStmtMap.get(id).get))
+    BlockStmt(blkStmt.vars, sortedOrder.map(id => stmtIdToStmtMap.get(id).get))
   }
   override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
-    val bodyP = reorderStatements(BlockStmt(List(next.body)), context).stmts
+    val bodyP = reorderStatements(BlockStmt(List.empty, List(next.body)), context).stmts
     logger.debug(Utils.join(bodyP.flatMap(st => st.toLines), "\n"))
-    Some(NextDecl(BlockStmt(bodyP)))
+    Some(NextDecl(BlockStmt(List.empty, bodyP)))
   }
   override def rewriteBlock(blk : BlockStmt, context : Scope) : Option[Statement] = {
     if (context.environment == SequentialEnvironment) {
-      val stmtsP = reorderStatements(BlockStmt(blk.stmts), context)
+      val stmtsP = reorderStatements(BlockStmt(blk.vars, blk.stmts), context + blk.vars)
       Some(stmtsP)
     } else {
       Some(blk)

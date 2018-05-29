@@ -131,11 +131,11 @@ class PrimedVariableEliminatorPass extends RewritePass {
     primeVarMap.map(p => (AssignStmt(List(LhsId(p._1)), List(p._2)))).toList
   }
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
-    val initP = InitDecl(BlockStmt(List(init.body) ++ getInitialAssigns()))
+    val initP = InitDecl(BlockStmt(List.empty, List(init.body) ++ getInitialAssigns()))
     Some(initP)
   }
   override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
-    val nextP = NextDecl(BlockStmt(getInitialAssigns() ++ List(next.body) ++ getFinalAssigns()))
+    val nextP = NextDecl(BlockStmt(List.empty, getInitialAssigns() ++ List(next.body) ++ getFinalAssigns()))
     Some(nextP)
   }
   override def rewriteHavoc(havocStmt : HavocStmt, context : Scope) : Option[Statement] = {

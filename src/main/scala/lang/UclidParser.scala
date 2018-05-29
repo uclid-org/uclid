@@ -403,11 +403,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwIf ~ "(" ~ "*" ~ ")" ~> (BlkStmt <~ KwElse) ~ BlkStmt ^^
         { case tblk ~ fblk => lang.IfElseStmt(lang.FreshLit(lang.BooleanType()), tblk, fblk) } |
       KwIf ~ "(" ~ "*" ~ ")" ~> BlkStmt ^^
-        { case blk => IfElseStmt(lang.FreshLit(lang.BooleanType()), blk, BlockStmt(List.empty)) } |
+        { case blk => IfElseStmt(lang.FreshLit(lang.BooleanType()), blk, BlockStmt(List.empty, List.empty)) } |
       KwIf ~ "(" ~> (Expr <~ ")") ~ BlkStmt ~ (KwElse ~> BlkStmt) ^^
         { case e ~ f ~ g => IfElseStmt(e,f,g)} |
       KwIf ~> (Expr ~ BlkStmt) ^^
-        { case e ~ f => IfElseStmt(e, f, BlockStmt(List.empty)) } |
+        { case e ~ f => IfElseStmt(e, f, BlockStmt(List.empty, List.empty)) } |
       KwCase ~> rep(CaseBlockStmt) <~ KwEsac ^^
         { case i => CaseStmt(i) } |
       KwFor ~> (Id ~ (KwIn ~> RangeLit) ~ BlkStmt) ^^
@@ -428,7 +428,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val BlkStmt: PackratParser[lang.BlockStmt] =
       "{" ~> rep (Statement) <~ "}" ^^ {
-        case stmts => lang.BlockStmt(stmts)
+        case stmts => lang.BlockStmt(List.empty, stmts)
       }
 
     lazy val OptionalExpr : PackratParser[Option[lang.Expr]] =
@@ -458,14 +458,14 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
         { case id ~ args ~ outs ~ requires ~ ensures ~ modifies ~ decls ~ body =>
           lang.ProcedureDecl(id, lang.ProcedureSig(args,outs), 
-                             decls.flatMap(d => d), BlockStmt(body),
+                             decls.flatMap(d => d), BlockStmt(List.empty, body),
                              requires, ensures, (modifies.flatMap(m => m)).toSet) } |
       // procedure with no return value
       KwProcedure ~> Id ~ IdTypeList ~ rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~
       ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
         { case id ~ args ~ requires ~ ensures ~ modifies ~ decls ~ body =>
           lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty[(Identifier,Type)]), 
-                             decls.flatMap(d => d), BlockStmt(body),
+                             decls.flatMap(d => d), BlockStmt(List.empty, body),
                              requires, ensures, (modifies.flatMap(m => m)).toSet) }
     }
 

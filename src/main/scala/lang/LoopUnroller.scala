@@ -61,7 +61,7 @@ class ForLoopRewriterPass(forStmtsToRewrite: Set[ForStmt]) extends RewritePass {
          rewriter.rewriteStatement(st.body, ctx)
        }
        val stmts = (low to high).foldLeft(List.empty[Statement])((acc, i) => acc ++ rewriteForValue(i).toList)
-       Some(BlockStmt(stmts))
+       Some(BlockStmt(List.empty, stmts))
      } else {
        Some(st)
      }

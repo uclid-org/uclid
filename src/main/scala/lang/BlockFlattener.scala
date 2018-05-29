@@ -44,7 +44,12 @@ class BlockFlattenerPass extends RewritePass {
     val stmtsP = blkStmt.stmts.flatMap {
       (st) => {
         st match {
-          case BlockStmt(stmts) => stmts
+          case BlockStmt(vs, stmts) => 
+            if(vs.size == 0) {
+              stmts
+            } else {
+              List(st)
+            }
           case _ => List(st)
         }
       }
@@ -52,7 +57,7 @@ class BlockFlattenerPass extends RewritePass {
     stmtsP.size match {
       case 0 => Some(SkipStmt())
       case 1 => Some(stmtsP(0))
-      case _ => Some(BlockStmt(stmtsP))
+      case _ => Some(BlockStmt(blkStmt.vars, stmtsP))
     }
   }
 }

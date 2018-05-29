@@ -757,12 +757,13 @@ case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines =
     List(Utils.join(lhss.map (_.toString), ", ") + " = " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
 }
-case class BlockStmt(stmts: List[Statement]) extends Statement {
+case class BlockStmt(vars: List[BlockVarsDecl], stmts: List[Statement]) extends Statement {
   override def hasStmtBlock = true
   override val hasLoop = stmts.exists(st => st.hasLoop)
   override def toLines = { 
-    List("{") ++ 
-    stmts.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++ 
+    List("{") ++
+      vars.map(PrettyPrinter.indent(1) + _.toString()) ++
+      stmts.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++
     List("}")
   }
 }
@@ -813,6 +814,9 @@ case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Exp
 }
 case class ModuleCallStmt(id: Identifier) extends Statement {
   override def toLines = List("next (" + id.toString +")")
+}
+case class BlockVarsDecl(ids : List[Identifier], typ : Type) extends ASTNode {
+  override def toString = "var " + ids.map(id => id.toString()) + " : " + typ.toString() + "; // " + typ.position.toString()
 }
 case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
   override def toString = "var " + id + ": " + typ + "; // " + id.position.toString
@@ -1058,15 +1062,15 @@ case class InitDecl(body: Statement) extends Decl {
   override val hashId = 914
   override def toString =
     "init { // " + position.toString + "\n" +
-    Utils.join(body.toLines.map(PrettyPrinter.indent(1) + _), "\n")
+    Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n") +
     "\n" + PrettyPrinter.indent(1) + "}"
   override def declNames = List.empty
 }
 case class NextDecl(body: Statement) extends Decl {
   override val hashId = 915
   override def toString =
-    "next {  // " + position.toString + "\n" +
-    Utils.join(body.toLines.map(PrettyPrinter.indent(1) + _), "\n")
+    "next { // " + position.toString + "\n" +
+    Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n") +
     "\n" + PrettyPrinter.indent(1) + "}"
   override def declNames = List.empty
 }

@@ -1552,7 +1552,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitBlockStatement(blkStmt : BlockStmt, context : Scope) : Option[Statement] = {
     log.debug("visitBlockStatement\n{}", Utils.join(blkStmt.toLines, "\n"))
-    val blkStmtP1 = BlockStmt(blkStmt.stmts.flatMap(st => visitStatement(st, context)))
+    val contextP = context + blkStmt.vars
+    val blkStmtP1 = BlockStmt(blkStmt.vars, blkStmt.stmts.flatMap(st => visitStatement(st, contextP)))
     val blkStmtP = pass.rewriteBlock(blkStmtP1, context)
     return ASTNode.introducePos(setPosition, setFilename, blkStmtP, blkStmt.position)
   }

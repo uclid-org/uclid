@@ -97,7 +97,7 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
       val nameProvider = new ContextualNameProvider(ctx + p, "proc_" + p.id + "_" + procToInline.id)
       val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(id, p), List(p.body), ctx)
       val newDecls = newVars.map((t) => LocalVarDecl(t._1, t._2))
-      Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, BlockStmt(stmts), p.requires, p.ensures, p.modifies))
+      Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, BlockStmt(List.empty, stmts), p.requires, p.ensures, p.modifies))
     }
   }
 
@@ -111,14 +111,14 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
         case InitDecl(body) =>
           if (rewriteOptions == ProcedureInliner.RewriteInit) {
             val (stmts, vars) = inlineProcedureCalls((id, p) => initNameProvider(id, p), List(body), context)
-            (acc._1 ++ List(InitDecl(BlockStmt(stmts))), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
+            (acc._1 ++ List(InitDecl(BlockStmt(List.empty, stmts))), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
           } else {
             (acc._1 ++ List(decl), acc._2)
           }
         case NextDecl(body) =>
           if (rewriteOptions == ProcedureInliner.RewriteNext) {
             val (stmts, vars) = inlineProcedureCalls((id, p) => nextNameProvider(id, p), List(body), context)
-            (acc._1 ++ List(NextDecl(BlockStmt(stmts))), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
+            (acc._1 ++ List(NextDecl(BlockStmt(List.empty, stmts))), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
           } else {
             (acc._1 ++ List(decl), acc._2)
           }
@@ -210,24 +210,24 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
             (acc._1 ++ resultHavocStmts ++ preconditionAsserts ++ modifyAssigns ++ procedureBody, 
              acc._2 ++ retNewVars ++ localNewVars ++ modifiesNewVars)
           }
-        case BlockStmt(stmts) =>
+        case BlockStmt(vs, stmts) =>
           val (stmtsP, vars) = inlineProcedureCalls(uniqNamer, stmts, context)
-          val blockP = BlockStmt(stmtsP)
+          val blockP = BlockStmt(vs, stmtsP)
           (acc._1 ++ List(blockP), acc._2 ++ vars)
         case ForStmt(id, typ, range, body) =>
           val bodyP = inlineProcedureCalls(uniqNamer, List(body), context)
-          val forP = ForStmt(id, typ, range, BlockStmt(bodyP._1))
+          val forP = ForStmt(id, typ, range, BlockStmt(List.empty, bodyP._1))
           (acc._1 ++ List(forP), acc._2 ++ bodyP._2)
         case IfElseStmt(cond, ifblock, elseblock) =>
           val ifBlockP = inlineProcedureCalls(uniqNamer, List(ifblock), context)
           val elseBlockP = inlineProcedureCalls(uniqNamer, List(elseblock), context)
-          val ifElseP = IfElseStmt(cond, BlockStmt(ifBlockP._1), BlockStmt(elseBlockP._1))
+          val ifElseP = IfElseStmt(cond, BlockStmt(List.empty, ifBlockP._1), BlockStmt(List.empty, elseBlockP._1))
           (acc._1 ++ List(ifElseP), acc._2 ++ ifBlockP._2 ++ elseBlockP._2)
 
         case CaseStmt(cases) =>
           val caseBodiesP = cases.map((c) => inlineProcedureCalls(uniqNamer, List(c._2), context))
           val caseConds = cases.map(_._1)
-          val caseBodyStmts = caseBodiesP.map(body => BlockStmt(body._1))
+          val caseBodyStmts = caseBodiesP.map(body => BlockStmt(List.empty, body._1))
           val caseBodyVars = caseBodiesP.map(_._2)
           val caseStmtP = CaseStmt(caseConds zip caseBodyStmts)
           val newVars = caseBodyVars.foldLeft(List.empty[(Identifier, Type)])((acc, vars) => acc ++ vars)

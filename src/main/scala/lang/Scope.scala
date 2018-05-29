@@ -65,6 +65,7 @@ object Scope {
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class ProcedureOutputArg(argId : Identifier, argTyp: Type) extends NamedExpression(argId, argTyp)
   case class ProcedureLocalVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
+  case class BlockVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
   case class FunctionArg(argId : Identifier, argTyp : Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ForIndexVar(iId : Identifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
@@ -329,6 +330,12 @@ case class Scope (
           module, procedure, cmd, environment, inLTLSpec)
       case _ => this
     }
+  }
+  /** Return a new context for this block. */
+  def +(vars : List[BlockVarsDecl]) : Scope = {
+    val declaredVars = vars.flatMap(vs => vs.ids.map(v => (v, vs.typ)))
+    val mapP = declaredVars.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.BlockVar(arg._1, arg._2)))
+    Scope(mapP, module, procedure, cmd, environment, inLTLSpec)
   }
 
   /** Return a new context for this command. */

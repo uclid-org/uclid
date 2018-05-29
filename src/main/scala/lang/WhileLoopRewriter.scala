@@ -60,8 +60,8 @@ class WhileLoopRewriterPass extends RewritePass {
     }
     val finishAssump = AssumeStmt(Operator.not(cond), None)
     val ifBody = havocStmts ++ assumeStmts ++ List(body) ++ assertStmts
-    val ifElseStmt = IfElseStmt(cond, BlockStmt(ifBody), BlockStmt(List.empty))
-    Some(BlockStmt(initialAsserts ++ List(ifElseStmt, finishAssump)))
+    val ifElseStmt = IfElseStmt(cond, BlockStmt(List.empty, ifBody), BlockStmt(List.empty, List.empty))
+    Some(BlockStmt(List.empty, initialAsserts ++ List(ifElseStmt, finishAssump)))
   }
 }
 

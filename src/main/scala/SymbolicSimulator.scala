@@ -640,8 +640,28 @@ class SymbolicSimulator (module : Module) {
       case AssignStmt(lhss,rhss) =>
         val es = rhss.map(i => evaluate(i, symbolTable, pastTables, scope));
         return simulateAssign(lhss, es, symbolTable, label)
-      case BlockStmt(stmts) =>
-        simulate(frameNumber, pathConditions, stmts, symbolTable, scope, label)
+      case BlockStmt(vars, stmts) =>
+        val declaredVars = vars.flatMap(vs => vs.ids.map(v => (v, vs.typ)))
+        val initSymbolTable = symbolTable
+        val localSymbolTable = declaredVars.foldLeft(initSymbolTable) { 
+          (acc, v) => acc + (v._1 -> newHavocSymbol(v._1.name, smt.Converter.typeToSMT(v._2)))
+        }
+        val overwrittenSymbols : List[(Identifier, smt.Expr)] = declaredVars.foldLeft(List.empty[(Identifier, smt.Expr)]) {
+          (acc, v) => {
+            initSymbolTable.get(v._1) match {
+              case None => acc
+              case Some(expr) => (v._1 -> expr) :: acc
+            }
+          }
+        }
+
+        frameLog.debug("declared variables  : " + vars.toString())
+        frameLog.debug("init symbol table   : " + initSymbolTable.toString())
+        frameLog.debug("local symbol table  : " + localSymbolTable.toString())
+        frameLog.debug("overwritten symbols : " + overwrittenSymbols.toString())
+
+        val simTable = simulate(frameNumber, pathConditions, stmts, localSymbolTable, scope, label)
+        overwrittenSymbols.foldLeft(simTable)((acc, p) => acc + (p._1 -> p._2))
       case IfElseStmt(e,then_branch,else_branch) =>
         var then_modifies : Set[Identifier] = writeSet(then_branch)
         var else_modifies : Set[Identifier] = writeSet(else_branch)
@@ -677,8 +697,9 @@ class SymbolicSimulator (module : Module) {
       }
     case AssignStmt(lhss,rhss) =>
       return lhss.map(lhs => lhs.ident).toSet
-    case BlockStmt(stmts) =>
-      return writeSets(stmts)
+    case BlockStmt(vars, stmts) =>
+      val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(id => id)).toSet
+      return writeSets(stmts) -- declaredVars
     case IfElseStmt(e,then_branch,else_branch) =>
       return writeSet(then_branch) ++ writeSet(else_branch)
     case ForStmt(id, typ, range, body) => return writeSet(body)
