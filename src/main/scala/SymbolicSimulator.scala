@@ -389,7 +389,7 @@ class SymbolicSimulator (module : Module) {
     val indices = 0 to (ft.size - 1)
     (indices zip ft).foreach{ case (i, frame) => {
       UclidMain.println("=================================")
-      println("Step #" + i.toString)
+      UclidMain.println("Step #" + i.toString)
       val pastFrames = (0 to (i-1)).map(j => (j + 1) -> ft(i - 1 - j)).toMap
       printFrame(frame, pastFrames, model, exprsToPrint, scope)
       UclidMain.println("=================================")
@@ -604,6 +604,8 @@ class SymbolicSimulator (module : Module) {
       }
     }
 
+    frameLog.debug("statement: %s".format(s.toString()))
+    frameLog.debug("symbolTable: %s".format(symbolTable.toString()))
     s match {
       case SkipStmt() => return symbolTable
       case AssertStmt(e, id) =>
@@ -660,7 +662,7 @@ class SymbolicSimulator (module : Module) {
         frameLog.debug("local symbol table  : " + localSymbolTable.toString())
         frameLog.debug("overwritten symbols : " + overwrittenSymbols.toString())
 
-        val simTable = simulate(frameNumber, pathConditions, stmts, localSymbolTable, scope, label)
+        val simTable = simulate(frameNumber, pathConditions, stmts, localSymbolTable, scope + vars, label)
         overwrittenSymbols.foldLeft(simTable)((acc, p) => acc + (p._1 -> p._2))
       case IfElseStmt(e,then_branch,else_branch) =>
         var then_modifies : Set[Identifier] = writeSet(then_branch)
@@ -756,6 +758,8 @@ class SymbolicSimulator (module : Module) {
   }
 
   def evaluate(e: Expr, symbolTable: SymbolTable, pastTables : Map[Int, SymbolTable], scope : Scope) : smt.Expr = {
+    frameLog.debug("expr: %s".format(e.toString()))
+    frameLog.debug("symbolTable: %s".format(symbolTable.toString()))
     def idToSMT(id : lang.Identifier, scope : lang.Scope, past : Int) : smt.Expr = {
       val smtType = scope.typeOf(id) match {
         case Some(typ) => smt.Converter.typeToSMT(typ)

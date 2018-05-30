@@ -188,6 +188,9 @@ class ProcedureVerifSpec extends FlatSpec {
   "test-while-4.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-while-4.ucl", 6)
   }
+  "test-block-var.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-block-var.ucl", 2)
+  }
 }
 class QuantifierVerifSpec extends FlatSpec {
   "test-forall-0.ucl" should "verify all assertions." in {

@@ -305,6 +305,11 @@ class ParserSpec extends FlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
+  "test-block-var-0.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-block-var-0.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
   "test-multiple-writes.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(List(new File("test/test-multiple-writes.ucl")), lang.Identifier("main"))

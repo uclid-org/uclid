@@ -816,7 +816,8 @@ case class ModuleCallStmt(id: Identifier) extends Statement {
   override def toLines = List("next (" + id.toString +")")
 }
 case class BlockVarsDecl(ids : List[Identifier], typ : Type) extends ASTNode {
-  override def toString = "var " + ids.map(id => id.toString()) + " : " + typ.toString() + "; // " + typ.position.toString()
+  override def toString = "var " + Utils.join(ids.map(id => id.toString()), ", ") +
+                          " : " + typ.toString() + "; // " + typ.position.toString()
 }
 case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
   override def toString = "var " + id + ": " + typ + "; // " + id.position.toString

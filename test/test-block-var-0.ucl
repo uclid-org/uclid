@@ -1,0 +1,30 @@
+module main
+{
+  type cmd_t = enum { add, sub };
+  type result_t = record { valid : boolean, value : bv8 };
+
+  input  valid  : boolean;
+  input  cmd    : cmd_t;
+  input  r1, r2 : bv3;
+  input  immed  : bv8;
+  output result : result_t;
+  var    regs   : [bv3]bv8;
+  var    cnt    : bv8; 
+
+  procedure exec_cmd() 
+    returns (r : result_t)
+    modifies regs;
+  {
+    var r1val, r2val  : bv8;
+    if (valid) {
+      r1val, r2val = regs[r1], regs[r2];
+      /*
+      case
+        (cmd == add)     : { regs[r1] = r1val + r2val; }
+        (cmd == sub)     : { regs[r1] = r1val - r2val; }
+      esac
+      r.valid, r.value = true, regs[r1];
+      */
+    } else { r.valid = false; }
+  }
+}

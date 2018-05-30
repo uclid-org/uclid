@@ -125,6 +125,7 @@ trait ReadOnlyPass[T] {
   def applyOnProcedureSig(d : TraversalDirection.T, sig : ProcedureSig, in : T, context : Scope) : T = { in }
   def applyOnFunctionSig(d : TraversalDirection.T, sig : FunctionSig, in : T, context : Scope) : T = { in }
   def applyOnLocalVar(d : TraversalDirection.T, lvar : LocalVarDecl, in : T, context : Scope) : T = { in }
+  def applyOnBlockVars(d : TraversalDirection.T, bvars : BlockVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnStatement(d : TraversalDirection.T, st : Statement, in : T, context : Scope) : T = { in }
   def applyOnSkip(d : TraversalDirection.T, st : SkipStmt, in : T, context : Scope) : T = { in }
   def applyOnAssert(d : TraversalDirection.T, st : AssertStmt, in : T, context : Scope) : T = { in }
@@ -208,6 +209,7 @@ trait RewritePass {
   def rewriteProcedureSig(sig : ProcedureSig, ctx : Scope) : Option[ProcedureSig] = { Some(sig) }
   def rewriteFunctionSig(sig : FunctionSig, ctx : Scope) : Option[FunctionSig] = { Some(sig) }
   def rewriteLocalVar(lvar : LocalVarDecl, ctx : Scope) : Option[LocalVarDecl] = { Some(lvar) }
+  def rewriteBlockVars(bvars : BlockVarsDecl, ctx : Scope) : Option[BlockVarsDecl] = { Some(bvars) }
   def rewriteStatement(st : Statement, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteSkip(st : SkipStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteAssert(st : AssertStmt, ctx : Scope) : Option[Statement] = { Some(st) }
@@ -667,7 +669,17 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitLocalVar(lvar : LocalVarDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnLocalVar(TraversalDirection.Down, lvar, result, context)
+    result = visitIdentifier(lvar.id, result, context)
+    result = visitType(lvar.typ, result, context)
     result = pass.applyOnLocalVar(TraversalDirection.Up, lvar, result, context)
+    return result
+  }
+  def visitBlockVars(bvar : BlockVarsDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnBlockVars(TraversalDirection.Down, bvar, result, context)
+    result = bvar.ids.foldLeft(result)((acc, id) => visitIdentifier(id, acc, context))
+    result = visitType(bvar.typ, result, context)
+    result = pass.applyOnBlockVars(TraversalDirection.Up, bvar, result, context)
     return result
   }
   def visitStatement(st : Statement, in : T, context : Scope) : T = {
@@ -741,7 +753,9 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitBlockStatement(st: BlockStmt, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnBlock(TraversalDirection.Down, st, in, context)
-    result = st.stmts.foldLeft(result)((acc, st) => visitStatement(st, acc, context))
+    val contextP = context + st.vars
+    result = st.vars.foldLeft(result)((acc, v) => visitBlockVars(v, acc, contextP))
+    result = st.stmts.foldLeft(result)((acc, st) => visitStatement(st, acc, contextP))
     result = pass.applyOnBlock(TraversalDirection.Up, st, result, context)
     result
   }
@@ -1477,6 +1491,17 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setPosition, setFilename, varP, lvar.position)
   }
 
+  def visitBlockVars(bvar : BlockVarsDecl, context : Scope) : Option[BlockVarsDecl] = {
+    val varsP = bvar.ids.map(id => visitIdentifier(id, context)).flatten
+    val typeOP = visitType(bvar.typ, context)
+    val bvarsP2 = typeOP.flatMap {
+      (typeP) =>
+        val bvarsP1 = BlockVarsDecl(varsP, typeP)
+        pass.rewriteBlockVars(bvarsP1, context)
+    }
+    return ASTNode.introducePos(setPosition, setFilename, bvarsP2, bvar.position)
+  }
+
   def visitStatement(st : Statement, context : Scope) : Option[Statement] = {
     val stP = (st match {
       case skipStmt : SkipStmt => visitSkipStatement(skipStmt, context)
@@ -1553,7 +1578,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitBlockStatement(blkStmt : BlockStmt, context : Scope) : Option[Statement] = {
     log.debug("visitBlockStatement\n{}", Utils.join(blkStmt.toLines, "\n"))
     val contextP = context + blkStmt.vars
-    val blkStmtP1 = BlockStmt(blkStmt.vars, blkStmt.stmts.flatMap(st => visitStatement(st, contextP)))
+    val varsP = blkStmt.vars.map(v => visitBlockVars(v, contextP)).flatten
+    val blkStmtP1 = BlockStmt(varsP, blkStmt.stmts.flatMap(st => visitStatement(st, contextP)))
     val blkStmtP = pass.rewriteBlock(blkStmtP1, context)
     return ASTNode.introducePos(setPosition, setFilename, blkStmtP, blkStmt.position)
   }

@@ -39,8 +39,13 @@
 package uclid
 package lang
 
+import com.typesafe.scalalogging.Logger
+
 class BlockFlattenerPass extends RewritePass {
+  lazy val logger = Logger(classOf[BlockFlattenerPass])
+
   override def rewriteBlock(blkStmt : BlockStmt, context : Scope) : Option[Statement] = {
+    logger.debug("Input:\n" + blkStmt.toString())
     val stmtsP = blkStmt.stmts.flatMap {
       (st) => {
         st match {
@@ -54,15 +59,21 @@ class BlockFlattenerPass extends RewritePass {
         }
       }
     }
-    stmtsP.size match {
-      case 0 => Some(SkipStmt())
-      case 1 => Some(stmtsP(0))
-      case _ => Some(BlockStmt(blkStmt.vars, stmtsP))
+    val result = if (blkStmt.vars.size == 0) {
+      stmtsP.size match {
+        case 0 => SkipStmt()
+        case 1 => stmtsP(0)
+        case _ => BlockStmt(blkStmt.vars, stmtsP)
+      }
+    } else {
+      BlockStmt(blkStmt.vars, stmtsP)
     }
+    logger.debug("Result:\n" + result.toString())
+    Some(result)
   }
 }
 
-class BlockFlattener extends ASTRewriter("BlockFlattener", new BlockFlattenerPass())
+class BlockFlattener(name: String) extends ASTRewriter(name, new BlockFlattenerPass())
 {
   override val repeatUntilNoChange = true
 }

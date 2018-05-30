@@ -376,6 +376,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val IdList : PackratParser[List[lang.Identifier]] =
       Id ~ rep("," ~> Id) ^^ { case id ~ ids => id :: ids }
 
+    lazy val BlockVarsDecl : PackratParser[lang.BlockVarsDecl] = positioned {
+      KwVar ~> IdList ~ (":" ~> Type) <~ ";" ^^ {
+        case ids ~ typ => lang.BlockVarsDecl(ids, typ)
+      }
+    }
+
     lazy val LocalVarDecl : PackratParser[List[lang.LocalVarDecl]] = {
       KwVar ~> IdType <~ ";" ^^ { case (id,typ) => List(lang.LocalVarDecl(id,typ)) } |
       KwVar ~> (Id ~ rep("," ~> Id)) ~ (":" ~> Type) <~ ";" ^^ { 
@@ -416,6 +422,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case idtyp ~ range ~ body => ForStmt(idtyp._1, idtyp._2, range, body) } |
       KwWhile ~> ("(" ~> Expr <~ ")") ~ rep(Invariant) ~ BlkStmt ^^
         { case expr ~ invs ~ body => WhileStmt(expr, body, invs) } |
+      BlkStmt |
       ";" ^^ { case _ => SkipStmt() }
     }
 
@@ -427,8 +434,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "{" ~> rep (Statement) <~ "}"
 
     lazy val BlkStmt: PackratParser[lang.BlockStmt] =
-      "{" ~> rep (Statement) <~ "}" ^^ {
-        case stmts => lang.BlockStmt(List.empty, stmts)
+      "{" ~> rep (BlockVarsDecl) ~ rep (Statement) <~ "}" ^^ {
+        case vars ~ stmts => lang.BlockStmt(vars, stmts)
       }
 
     lazy val OptionalExpr : PackratParser[Option[lang.Expr]] =
@@ -454,18 +461,16 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     lazy val ProcedureDecl : PackratParser[lang.ProcedureDecl] = positioned {
       KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
-      rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~
-        ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
-        { case id ~ args ~ outs ~ requires ~ ensures ~ modifies ~ decls ~ body =>
+      rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~ BlkStmt ^^
+        { case id ~ args ~ outs ~ requires ~ ensures ~ modifies ~ body =>
           lang.ProcedureDecl(id, lang.ProcedureSig(args,outs), 
-                             decls.flatMap(d => d), BlockStmt(List.empty, body),
+                             List.empty, body,
                              requires, ensures, (modifies.flatMap(m => m)).toSet) } |
       // procedure with no return value
-      KwProcedure ~> Id ~ IdTypeList ~ rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~
-      ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
-        { case id ~ args ~ requires ~ ensures ~ modifies ~ decls ~ body =>
-          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty[(Identifier,Type)]), 
-                             decls.flatMap(d => d), BlockStmt(List.empty, body),
+      KwProcedure ~> Id ~ IdTypeList ~ rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~ BlkStmt ^^
+        { case id ~ args ~ requires ~ ensures ~ modifies ~ body =>
+          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty), 
+                             List.empty, body,
                              requires, ensures, (modifies.flatMap(m => m)).toSet) }
     }
 

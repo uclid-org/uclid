@@ -228,8 +228,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
   override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : ErrorList, ctx : Scope) : ErrorList = {
     if (d == TraversalDirection.Up) {
       try {
-        logger.debug("expression: {}", e.toString())
-        logger.debug("ctx.map: {}", ctx.map.toString())
         typeOf(e, ctx)
       } catch {
         case p : Utils.TypeError => {
@@ -303,6 +301,8 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     return resultType
   }
   def typeOf(e : Expr, c : Scope) : Type = {
+    logger.debug("e: {}", e.toString())
+    logger.debug("c: {}", c.map.keys.toString())
     def polyResultType(op : PolymorphicOperator, argType : Type) : Type = {
       op match {
         case LTOp() | LEOp() | GTOp() | GEOp() => new BooleanType()
@@ -529,7 +529,8 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     if (cachedType.isEmpty) {
       val typ = e match {
         case i : Identifier =>
-          checkTypeError(c.typeOf(i).isDefined, "Unknown identifier: %s".format(i.name), i.pos, c.filename)
+          val knownId = c.typeOf(i).isDefined
+          checkTypeError(knownId, "Unknown identifier: %s".format(i.name), i.pos, c.filename)
           (c.typeOf(i).get)
         case eId : ExternalIdentifier =>
           val mId = eId.moduleId
