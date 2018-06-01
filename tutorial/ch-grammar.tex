@@ -119,6 +119,8 @@ followed by optional pre-/post-conditions and the list of state variables modifi
      <NextDecl> ::= \keywordbf{next} `{' <Statement>* `}'
 
 \end{grammar}
+Assignment statements in the \keywordbf{next} block declaration must
+assign primed variables only, and are concurrently evaluated.
 
 \section{Statement Grammar}
 \paratitle{Statements} are the following types, most of which should be familiar. Note the support for simultaneous assignment \`a la Python. The keyword \keywordbf{next} allows for synchronous scheduling of instantiated modules.
@@ -141,6 +143,7 @@ followed by optional pre-/post-conditions and the list of state variables modifi
     <LhsList> ::= <Lhs> (`,' <Lhs>)*
 
     <Lhs> ::= <Id>
+	  \alt <Id> `'' 
           \alt <Id> `[' <Expr> `:' <Expr> `]'
           \alt <Id> `[' <ExprList> `]'
           \alt <Id> (`.' <Id>)+
