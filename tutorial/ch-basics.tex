@@ -80,7 +80,21 @@ next {
 \subsection{Procedures}
 Example~\ref{ex:alu} demonstrates how sequential computation is used in concert with parallel computation. The \codelike{procedure} \codelike{set\_init\_state} (lines~13--18) is used to initialize the values of the registers (state variable \codelike{regs}), the variables \codelike{cnt} and \codelike{result}. Since this procedure updates the module's state variables, a \codelike{modifies} clause (line~14) is required to explicitly specify that these updates are intended. The procedure is called on line~21 in the \codelike{init} block. Updates to a state variable not mentioned in a modifies clause will result in a compilation error.
 
-Similarly, \codelike{procedure} \codelike{exec\_cmd} executes a single ALU command and returns (line 25) a single value of type \codelike{result\_t}. The procedure is invoked on line~41 in the \codelike{next} block, and its return value is assigned to the output variable \codelike{result}. Note we are again using the notation \codelike{result'} to refer to parallel assignment.
+Procedures can also be used inside \codelike{next} blocks to perform
+next-state assignments to state/output variables, in addition to 
+making procedural assignments.
+In Example~\ref{ex:alu}, consider \codelike{procedure} \codelike{exec\_cmd} which executes a single ALU command and returns (line 25) a single value of type \codelike{result\_t}. The procedure is invoked on line~41 in the \codelike{next} block, and its return value is assigned to the output variable \codelike{result}. Note we are again using the notation \codelike{result'} to refer to parallel assignment.
+
+We emphasize that assignments inside procedures do not assign primed
+variables. However, if a state variable is defined to be modified by
+a procedure (mentioned in its modifies clause), then its next-state
+value is the value that variable has upon return from that procedure.
+Put another way, the post-state of the procedure determines the
+next-state assignment of all state variables modified by it.
+In our example, \codelike{procedure} \codelike{exec\_cmd} modifies
+the state variable \codelike{regs}, and thus determines its next-state
+value.
+
 
 \subsection{For Loops}
 The procedure \codelike{set\_init\_state} uses a \keyword{for} loop to initialize each value in the array \codelike{regs} to the bit-vector value 1.\footnote{\codelike{1bv8} here refers to the bit-vector value 1 of width 8.} The loop iterates over the values between 0 and 7 (both-inclusive).
