@@ -16,7 +16,7 @@ Download the latest stable pre-built package from [releases tab](https://github.
 
 # Install From Source
 
-Or, you could clone this repository and build from source.
+Or, you could clone this repository and build from source. If you run into problems here, don't forget you can always fall back on the pre-built binaries linked above.
 
 ## Compiling uclid5
 
