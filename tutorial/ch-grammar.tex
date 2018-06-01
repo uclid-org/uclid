@@ -56,6 +56,9 @@ This appendix describes \uclid{}'s grammar.
      <SharedVarsDecl> ::=
        \keywordbf{sharedvar} ~ <IdList> `:' <Type> `;'
 
+     <DefineDecl> ::= 
+       \keywordbf{define} <Id> `(' <IdTypeList> `)' `:' <Type> `=' <Expr>  `;'
+
 \end{grammar}
 
 \paratitle{Function declarations} refer to uninterpreted functions. 
