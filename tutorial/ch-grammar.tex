@@ -21,8 +21,10 @@ This appendix describes \uclid{}'s grammar.
             \alt <InputsDecl> 
             \alt <OutputsDecl> 
             \alt <VarsDecl> 
-            \alt <ConstsDecl> 
             \alt <SharedVarsDecl> 
+            \alt <DefineDecl>
+            \alt <ConstsDecl> 
+            \alt <ConstLitDecl>
             \alt <FuncDecl> 
             \alt <ProcedureDecl> 
             \alt <InstanceDecl>
@@ -39,7 +41,7 @@ This appendix describes \uclid{}'s grammar.
 
 \end{grammar}
 
-\paratitle{Variable declarations} can refer to inputs, outputs, state variables or shared variables.
+\paratitle{Variable declarations} can refer to inputs, outputs, state variables, symbolic constants, named constant literals, shared variables, or define declarations.
 \begin{grammar}
      <InputsDecl> ::=
        \keywordbf{input} ~ <IdList> `:' <Type> `;'
@@ -52,6 +54,9 @@ This appendix describes \uclid{}'s grammar.
 
      <ConstsDecl> ::=
        \keywordbf{const} ~ <IdList> `:' <Type> `;'
+
+     <ConstLitDecl> ::=
+       \keywordbf{const} ~ <Id> ~ `:' <Type> = <Number> `;'
 
      <SharedVarsDecl> ::=
        \keywordbf{sharedvar} ~ <IdList> `:' <Type> `;'
@@ -74,7 +79,7 @@ followed by optional pre-/post-conditions and the list of state variables modifi
      <ProcedureDecl> ::=
        \keywordbf{procedure} <Id> `(' <IdTypeList> ')' <ProcReturnArg>? \\
        <RequireExprs> <EnsureExprs> <ModifiesExprs> \\
-       `{' <VarsDecls>* <Statement>* `}'
+       <BlkStmt>
 
      <ProcReturnArg> ::= \keywordbf{returns} `(' <IdTypeList> `)'
 
@@ -114,9 +119,9 @@ followed by optional pre-/post-conditions and the list of state variables modifi
 
 \paratitle{Init} and \paratitle{next} blocks consist of lists of statements.
 \begin{grammar}
-     <InitDecl> ::= \keywordbf{init} `{' <Statement>* `}'
+     <InitDecl> ::= \keywordbf{init} <BlkStmt>
 
-     <NextDecl> ::= \keywordbf{next} `{' <Statement>* `}'
+     <NextDecl> ::= \keywordbf{next} <BlkStmt>
 
 \end{grammar}
 Assignment statements in the \keywordbf{next} block declaration must
@@ -132,11 +137,23 @@ assign primed variables only, and are concurrently evaluated.
        \alt \keywordbf{havoc} <Id>  `;'
        \alt <LhsList> `=' <ExprList> `;'
        \alt \keywordbf{call} `(' <LhsList> `)' `=' <Id> <ExprList> `;'
+       \alt \keywordbf{call} <Id> `(' <ExprList> `)' `;'
        \alt \keywordbf{next} `(' <Id> `)' `;'
        \alt <IfStmt>
        \alt <CaseStmt>
        \alt <ForLoop>
+       \alt <WhileLoop>
+       \alt <BlkStmt>
 \end{grammar}
+
+\paratitle{Block statements} are a list of variables with local scope, and a list of statements.
+
+\begin{grammar}
+    <BlkStmt> ::= `{' <BlockVarDecl>* <Statement>* `}'
+
+    <BlockVarDecl> ::= \keywordbf{var} <IdList> `:' <Type> `;'
+\end{grammar}
+
 
 \paratitle{Assignments} and \paratitle{call} statements refer to the nonterminal \nonterminal{LhsList}. As the name suggests, this is a list of syntactic forms that can appear on the left hand side of an assignment. \nonterminal{Lhs} are of four types: (i) identifiers, bitvector slices within identifiers, (iii) array indices, and (iv) fields within records.
 \begin{grammar}
@@ -152,8 +169,8 @@ assign primed variables only, and are concurrently evaluated.
 \paratitle{If} statements are as per usual. ``Braceless'' if statements are not permitted.
 \begin{grammar}
     <IfStmt> ::= 
-    \keywordbf{if} `(' <IfExpr> `)'  `{' <Statement>* `}' \\ \keywordbf{else} `{' <Statement>* `}'
-    \alt \keywordbf{if} `(' <IfExpr> `)'  `{' <Statement>* `}'
+    \keywordbf{if} `(' <CondExpr> `)'  <BlkStmt> \\ \keywordbf{else} <BlkStmt>
+    \alt \keywordbf{if} `(' <CondExpr> `)'  <BlkStmt>
 
     <IfExpr> ::= <Expr> | *
 \end{grammar}
@@ -162,14 +179,23 @@ assign primed variables only, and are concurrently evaluated.
 \begin{grammar}
     <CaseStmt> ::= \keywordbf{case} <CaseBlock>* \keywordbf{esac}
 
-    <CaseBlock> ::= <Expr> `:' `{' <Statement>* `}'
-                \alt \keywordbf{default} `:' `{' <Statement>* `}'
+    <CaseBlock> ::= <Expr> `:' <BlkStmt>
+                \alt \keywordbf{default} `:' <BlkStmt>
 \end{grammar}
 
 \paratitle{For loops} allow iteration over a statically defined range of values.
 \begin{grammar}
     <ForLoop> ::= \keywordbf{for} <Id> \keywordbf{in} \keywordbf{range} `(' <Number> ',' <Number> `)' \\
-                  `{' <Statement>* `}'
+                  <BlkStmt>
+\end{grammar}
+
+\paratitle{While loops} allow unbounded iteration.
+\begin{grammar}
+    <WhileLoop> ::= \keywordbf{while} `(' <CondExpr> `)' \\
+                  <InvariantClause>* \\
+                  <BlkStmt>
+
+    <InvariantClause> ::= \keywordbf{invariant} <Expr> `;'
 \end{grammar}
 
 \section{Expression Grammar}
@@ -217,10 +243,10 @@ The unary operators are arithmetic negation (unary minus), logical negation and 
     <UnOp> ::= `-' | `!' | `~'
 \end{grammar}
 
-Array select, update and bitvector select operators are defined \`a la Boogie.
+Array select, update and bitvector select operators are defined as follows.
 \begin{grammar}
     <E11> ::= <E12> `[' <Expr> (`,' <Expr>)* `]'
-          \alt <E12> `[' <Expr> (`,' <Expr>)* = <Expr> `]'
+          \alt <E12> `[' <Expr> (`,' <Expr>)* `->' <Expr> `]'
           \alt <E12> `[' <Expr> `:' <Expr> `]'
           \alt <E12>
 \end{grammar}
@@ -229,16 +255,17 @@ Function invocation, record selection, and access to variables in instantiated m
 \begin{grammar}
     <E12> ::=  <E13> `(' <ExprList> `)'
           \alt <E13> (`.' <Id>)+
-          \alt <E13> (`->' <Id>)+
 \end{grammar}
 
-And finally, we have the terminal symbols, identifiers, tuples and the if-then-else operator.
+And finally, we have the terminal symbols, identifiers, record field access, tuples and the if-then-else operator.
 \begin{grammar}
-    <E12> ::= \keywordbf{false} | \keywordbf{true} | <Number>
-          \alt <Id> | <Id> `::' <Id>
+    <E12> ::= \keywordbf{false} | \keywordbf{true} | <Number> | <String>
+          \alt <Id> | <Id> `.' <Id>
           \alt `{' <Expr> (`,' <Expr>)* `}'
           \alt \keywordbf{if} `(' <Expr> `)' \keywordbf{then} <Expr> \keywordbf{else} <Expr>
 \end{grammar}
+
+Strings can only be used as arguments to the \texttt{print} command in the control block.
 
 \section{Types}
 
@@ -282,7 +309,7 @@ Type synonyms are just identifiers, while external types refer to synonym types 
 \begin{grammar}
     <SynonymType> ::= <Id>
 
-    <ExternalType> ::= <Id> `::' <Id>
+    <ExternalType> ::= <Id> `.' <Id>
 \end{grammar}
 
 \section{Control Block}
@@ -290,9 +317,26 @@ Type synonyms are just identifiers, while external types refer to synonym types 
 \begin{grammar}
      <ControlBlock> ::= \keywordbf{control}~~ `{' <Cmd>* `}'
 
-     <Cmd> ::= (<Id> `=' )? (<Id> `->')? <Id> \\
+     <Cmd> ::= (<Id> `=' )? (<Id> `.')? <CmdName> \\
               (`[' <IdList> `]')? <ExprList>? `;'
+\end{grammar}
 
+
+The following is a list of currently accepted commands.
+
+\begin{grammar}
+    <CmdName> ::= `bmc' \alt
+                  `check' \alt
+                  `clear\_context' \alt
+                  `induction' \alt
+                  `print' \alt
+                  `print\_cex' \alt
+                  `print\_module' \alt
+                  `print\_results' \alt
+                  `print\_smt2'
+                  `synthesize\_invariant' \alt
+                  `unroll' \alt
+                  `verify'
 \end{grammar}
 
 \section{Miscellaneous Nonterminals} 

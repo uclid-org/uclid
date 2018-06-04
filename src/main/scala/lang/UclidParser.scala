@@ -430,9 +430,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       (Expr ~ ":" ~ BlkStmt) ^^ { case e ~ ":" ~ ss => (e,ss) } |
       (KwDefault ~ ":" ~> BlkStmt) ^^ { case ss => (BoolLit(true), ss) }
 
-    lazy val BlockStatement: PackratParser[List[Statement]] =
-      "{" ~> rep (Statement) <~ "}"
-
     lazy val BlkStmt: PackratParser[lang.BlockStmt] =
       "{" ~> rep (BlockVarsDecl) ~ rep (Statement) <~ "}" ^^ {
         case vars ~ stmts => lang.BlockStmt(vars, stmts)
