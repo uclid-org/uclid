@@ -1,0 +1,24 @@
+module main
+{
+  var v : integer;  
+  
+  procedure update_v()
+    modifies v;
+  {
+    v = v+1;
+  }
+
+
+  init {
+    v = 0;
+  }
+
+  next {
+    call update_v();
+    call update_v();
+  }
+  
+  control {
+    v = unroll(2);
+  }
+}
