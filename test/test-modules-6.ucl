@@ -1,7 +1,7 @@
 module common
 {
-  const k0 = 0;
-  const k1 = 1;
+  const k0 : integer = 0;
+  const k1 : integer = 1;
 }
 
 module incr
