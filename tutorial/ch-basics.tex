@@ -30,7 +30,7 @@ The final point of interest, type-wise, is line~10. The state variable \codelike
 
 \section{Statements in \uclid{}}
 
-Computation in \uclid{} can be either procedural or parallel. Procedural computation is performed by defining a \keyword{procedure} (and in the \codelike{init} block) while parallel computation occurs in the \keyword{next} block.
+Computation in \uclid{} can be either procedural (sequential) or parallel (concurrent). Procedural computation is performed by defining a \keyword{procedure} (and in the \codelike{init} block) while parallel computation occurs in the \keyword{next} block.
 
 \subsection{Parallel vs. Procedural Assignments}
 Assignments inside procedures and the \codelike{init} block are called \textbf{procedural assignments} and must be of the form \codelike{variable = expression;} Assignments inside \codelike{next} block are \textbf{parallel assignments} and must be of the form \codelike{variable' = expression;}. Mathematically, parallel assignments compute the next state of the transition system described by the model.
@@ -44,7 +44,7 @@ An example showing the use of sequential assignments is the following:
   x = x + 3;
 \end{lstlisting}
 
-    Recall that these procedural assignments \emph{must} appear inside a procedure or in the \codelike{init} block. Executing these three statements will result \codelike{x} having the value 6.
+	In this example, \codelike{x} is assigned sequentially.  Recall that these procedural assignments \emph{must} appear inside a procedure or in the \codelike{init} block. Executing these three statements will result \codelike{x} having the value 6.
 
     In contrast, the following sequence of parallel assignments is \textbf{not} allowed and will result in a compiler error.
 \begin{lstlisting}[language=uclid,style=uclidstyle]
