@@ -351,8 +351,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val IdType : PackratParser[(Identifier,Type)] =
       Id ~ (":" ~> Type) ^^ { case id ~ typ => (id,typ)}
 
+    lazy val IdsType : PackratParser[List[(Identifier, Type)]] =
+      IdList ~ (":" ~> Type) ^^ { case ids ~ typ => (ids.map((_, typ))) }
+
     lazy val IdTypeList : PackratParser[List[(Identifier,Type)]] =
-      "(" ~> IdType ~ (rep ("," ~> IdType) <~ ")") ^^ { case t ~ ts =>  t :: ts} |
+      "(" ~> IdsType ~ (rep ("," ~> IdsType) <~ ")") ^^ { case t ~ ts =>  t ++ ts.flatMap(v => v) } |
       "(" ~ ")" ^^ { case _~_ => List.empty[(Identifier,Type)] }
 
     lazy val Lhs : PackratParser[lang.Lhs] = positioned {
@@ -379,13 +382,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val BlockVarsDecl : PackratParser[lang.BlockVarsDecl] = positioned {
       KwVar ~> IdList ~ (":" ~> Type) <~ ";" ^^ {
         case ids ~ typ => lang.BlockVarsDecl(ids, typ)
-      }
-    }
-
-    lazy val LocalVarDecl : PackratParser[List[lang.LocalVarDecl]] = {
-      KwVar ~> IdType <~ ";" ^^ { case (id,typ) => List(lang.LocalVarDecl(id,typ)) } |
-      KwVar ~> (Id ~ rep("," ~> Id)) ~ (":" ~> Type) <~ ";" ^^ { 
-        case id ~ ids ~ typ => (id :: ids).map(lang.LocalVarDecl(_, typ))
       }
     }
 
