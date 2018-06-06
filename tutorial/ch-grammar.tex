@@ -345,8 +345,8 @@ The following is a list of currently accepted commands.
 \begin{grammar}
      <IdList> ::= <Id> \alt <Id> `,' <IdList>
 
-     <IdTypeList> ::=  <Id> `:' <Type> 
-                  \alt <Id> `:' <Type> `,' <IdTypeList>
+     <IdTypeList> ::=  <Id> (`,' <Id>)* `:' <Type> 
+                  \alt <Id> (`,' <Id>)* `:' <Type> `,' <IdTypeList>
 
      <ExprList> ::=  <Expr>
                 \alt <Expr> `,' <ExprList>
