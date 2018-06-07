@@ -400,6 +400,15 @@ class ParserSpec extends FlatSpec {
         assert (p.msg.contains("'print' command expects a string literal as an argument"))
     }
   }
+  "test-parser-nested-next-block.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-parser-nested-next-block.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors(0)._1.contains("Nested block statements are not allowed in a sequential environment"))
+    }
+  }
   "test-string-2.ucl" should "parse successfully." in {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()

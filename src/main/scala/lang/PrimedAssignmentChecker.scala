@@ -59,6 +59,7 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       }
     }
   }
+
   override def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
       in
@@ -103,12 +104,27 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       }
     }
   }
+
   override def applyOnProcedureCall(d : TraversalDirection.T, callStmt : ProcedureCallStmt, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
       in
     } else {
       checkLhs(callStmt.callLhss, in, context)
     }
+  }
+
+  override def applyOnBlock(d : TraversalDirection.T, blk : BlockStmt, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down) {
+      if (!context.environment.isProcedural) {
+        val blkOption = blk.stmts.find(st => st.isInstanceOf[BlockStmt])
+        blkOption match {
+          case Some(blk) =>
+            val msg = "Nested block statements are not allowed in a sequential environment"
+            in + ModuleError(msg, blk.position)
+          case None => in
+        }
+      } else { in }
+    } else { in }
   }
 }
 

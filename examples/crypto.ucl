@@ -4,13 +4,6 @@ module main
   const sk       : integer;
   input ik       : integer;
 
-  function enc(k : integer, d : integer) : integer;
-  function dec(k : integer, d : integer) : integer;
-
-  axiom dolev_yao_encryption :
-    (forall (k1 : integer, k2 : integer, d : integer) ::
-      (dec(k2, enc(k1, d)) == d) <==> (k1 == k2));
-
   init {
     ct = enc(sk, pt);
   }
