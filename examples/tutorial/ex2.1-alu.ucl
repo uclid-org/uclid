@@ -21,6 +21,8 @@ module main {
     call set_init_state(); 
   }
 
+  define double(arg : bv8) : bv8 = (arg + arg);
+
   procedure exec_cmd() 
     returns (r : result_t)
     modifies regs;
@@ -39,7 +41,7 @@ module main {
     
   next {
     call (result') = exec_cmd();
-    cnt' = cnt + cnt;
+    cnt' = double(cnt);
   }
 
   assume regindex_zero    : (r1 == 0bv3 && r2 == 0bv3);

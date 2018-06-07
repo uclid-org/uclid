@@ -30,7 +30,7 @@ The final point of interest, type-wise, is line~10. The state variable \codelike
 
 \section{Statements in \uclid{}}
 
-Computation in \uclid{} can be either procedural or parallel. Procedural computation is performed by defining a \keyword{procedure} (and in the \codelike{init} block) while parallel computation occurs in the \keyword{next} block.
+Computation in \uclid{} can be either procedural (sequential) or parallel (concurrent). Procedural computation is performed by defining a \keyword{procedure} (and in the \codelike{init} block) while parallel computation occurs in the \keyword{next} block.
 
 \subsection{Parallel vs. Procedural Assignments}
 Assignments inside procedures and the \codelike{init} block are called \textbf{procedural assignments} and must be of the form \codelike{variable = expression;} Assignments inside \codelike{next} block are \textbf{parallel assignments} and must be of the form \codelike{variable' = expression;}. Mathematically, parallel assignments compute the next state of the transition system described by the model.
@@ -44,7 +44,7 @@ An example showing the use of sequential assignments is the following:
   x = x + 3;
 \end{lstlisting}
 
-    Recall that these procedural assignments \emph{must} appear inside a procedure or in the \codelike{init} block. Executing these three statements will result \codelike{x} having the value 6.
+	In this example, \codelike{x} is assigned sequentially.  Recall that these procedural assignments \emph{must} appear inside a procedure or in the \codelike{init} block. Executing these three statements will result \codelike{x} having the value 6.
 
     In contrast, the following sequence of parallel assignments is \textbf{not} allowed and will result in a compiler error.
 \begin{lstlisting}[language=uclid,style=uclidstyle]
@@ -83,7 +83,7 @@ Example~\ref{ex:alu} demonstrates how sequential computation is used in concert 
 Procedures can also be used inside \codelike{next} blocks to perform
 next-state assignments to state/output variables, in addition to 
 making procedural assignments.
-In Example~\ref{ex:alu}, consider \codelike{procedure} \codelike{exec\_cmd} which executes a single ALU command and returns (line 25) a single value of type \codelike{result\_t}. The procedure is invoked on line~41 in the \codelike{next} block, and its return value is assigned to the output variable \codelike{result}. Note we are again using the notation \codelike{result'} to refer to parallel assignment.
+In Example~\ref{ex:alu}, consider \codelike{procedure} \codelike{exec\_cmd} which executes a single ALU command and returns (line 27) a single value of type \codelike{result\_t}. The procedure is invoked on line~43 in the \codelike{next} block, and its return value is assigned to the output variable \codelike{result}. Note we are again using the notation \codelike{result'} to refer to parallel assignment.
 
 We emphasize that assignments inside procedures do not assign primed
 variables. However, if a state variable is defined to be modified by
@@ -95,6 +95,15 @@ In our example, \codelike{procedure} \codelike{exec\_cmd} modifies
 the state variable \codelike{regs}, and thus determines its next-state
 value.
 
+\subsection{Macro Definitions}
+
+\uclid{} also supports the definition of macro expressions using
+the \keyword{define} statement. 
+Line~26 of Example~\ref{ex:alu} illustrates this construct.
+Macro definitions are useful, as in C, to define expressions
+over arguments that are instantiated in multiple places, or
+which help make the code more readable.
+
 
 \subsection{For Loops}
 The procedure \codelike{set\_init\_state} uses a \keyword{for} loop to initialize each value in the array \codelike{regs} to the bit-vector value 1.\footnote{\codelike{1bv8} here refers to the bit-vector value 1 of width 8.} The loop iterates over the values between 0 and 7 (both-inclusive).
@@ -102,7 +111,7 @@ The procedure \codelike{set\_init\_state} uses a \keyword{for} loop to initializ
 The range over which a \keyword{for} loop iterates must be defined by two numeric literals.
 
 \subsection{If and Case Statements}
-Also worth pointing out are the \keyword{if} statement that appears on line~28, and the \keyword{case} statement that appears on line~31. Syntax for \keyword{if} statements should be familiar.
+Also worth pointing out are the \keyword{if} statement that appears on line~30, and the \keyword{case} statement that appears on line~33. Syntax for \keyword{if} statements should be familiar.
 
 \keyword{case} statements are delimited by \keyword{case} and \keyword{esac} and contain within them a list of boolean expressions and associated statement blocks. These expressions are evaluated in the order in which appear, and if any of them evaluate to \codelike{true}, the corresponding block is executed. If none of the case-expressions evaluate to \codelike{true}, nothing is executed. The keyword \keyword{default} can be used as a ``catch-all'' case like in C/C++.
 
@@ -119,10 +128,10 @@ Execution of the model in Example~\ref{ex:alu} starts with the \keyword{init} bl
 \subsection{Next State Computation}
 The next state of each state variable in the model is computed according to the \keyword{next} block. Any variables not assigned to in the \keyword{next} block retain their ``old'' values.
 
-The \keyword{input} variables of the model are assigned (possibly different) non-deterministic values for each step of the transition system. These values can be controlled by using assumptions. Indeed, the model uses the three assumptions on lines 45--46 to constrain the input to the ALU to always be an \codelike{add} operation, where both operands refer to register index 0.
+The \keyword{input} variables of the model are assigned (possibly different) non-deterministic values for each step of the transition system. These values can be controlled by using assumptions. Indeed, the model uses the three assumptions on lines 47--48 to constrain the input to the ALU to always be an \codelike{add} operation, where both operands refer to register index 0.
 
 \subsection{Verification}
-As in Example~\ref{ex:fib-model}, the verification script in Example~\ref{ex:alu} unrolls the transition system for 5 steps and checks if the \keyword{invariant} on line~47 is violated in any of these steps.
+As in Example~\ref{ex:fib-model}, the verification script in Example~\ref{ex:alu} unrolls the transition system for 5 steps and checks if the \keyword{invariant} on line~49 is violated in any of these steps.
 
 \subsection{Running \uclid{}}
 
@@ -137,4 +146,4 @@ Successfully parsed 1 and instantiated 1 module(s).
 Finished execution for module: main.
 \end{Verbatim}
 
-\uclid{} is able to prove that the \keyword{invariant} on line~46 holds for all states reachable within 5 steps of the initial state, under the assumptions specified in lines~45--46.
+\uclid{} is able to prove that the \keyword{invariant} on line~49 holds for all states reachable within 5 steps of the initial state, under the assumptions specified in lines~47--48.
