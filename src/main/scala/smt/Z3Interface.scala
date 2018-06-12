@@ -62,9 +62,9 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
 
   def convertZ3ArrayString(initString : String) : String = {
 
-    val cleanString     = initString.replaceAll("(\\(let \\(\\(a!\\d+ )?(\\(store )+(a!\\d+)?", "").replaceAll("\\)\\)\\)(?! )", ") ").replaceAll("\\n?\\s+", " ")
-//    println(initString)
-//    println(cleanString)
+    val let_count       = "\\(let \\(\\(a!\\d+ ".r().findAllIn(initString).length
+    val tempString      = initString.replaceAll("(\\(let \\(\\(a!\\d+ )?(\\(store )+(a!\\d+)?", "").replaceAll("\\)\\)\\)(?=\\n)", ") ").replaceAll("\\n?\\s+", " ")
+    val cleanString     = tempString.substring(0, tempString.length() - let_count)
 
     val prefixArray     = "((as const (Array " //)))
     val prefixArrayLen  = prefixArray.length()
@@ -140,6 +140,8 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
     var index = idx;
 
     var c = str.charAt(index)
+
+    val len = str.length()
 
     while (c != ' ' || paren != 0) {
       val inc = c match {
