@@ -137,7 +137,7 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     "(define-fun post-fn %s %s)".format(getStatePredicateTypeDecl(variables), funBody)
   }
   
-  override def synthesizeInvariant(initState : Map[Identifier, Expr], nextState: Map[Identifier, Expr], properties : List[smt.Expr], ctx : Scope) : Unit = {
+  override def synthesizeInvariant(initState : Map[Identifier, Expr], nextState: Map[Identifier, Expr], properties : List[smt.Expr], ctx : Scope) : Option[smt.Expr] = {
     val variables = getVariables(ctx)
     val varDecls = getDeclarations(variables)
     val synthFunDecl = getSynthFuncDecl(variables)
@@ -172,6 +172,7 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     val numAvail = out.available()
     if (numAvail == 0) {
       Thread.sleep(5)
+      return None
     } else {
       val bytes = Array.ofDim[Byte](numAvail)
       val numRead = out.read(bytes, 0, numAvail)
@@ -183,10 +184,11 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
         }
       })
       sygusLog.debug(string)
+      UclidMain.println(string);
       val fun = SExprParser.parseFunction(string)
       sygusLog.debug(fun.toString())
+      return Some(fun)
     }
-   
   }
 
 }
