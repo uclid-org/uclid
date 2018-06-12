@@ -33,8 +33,9 @@ module main
   }
   
   control {
-    unroll (5);
+    v = unroll (5);
     check;
     print_results;
+    // v.print_cex(numbers);
   }
 }
