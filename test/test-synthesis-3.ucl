@@ -1,0 +1,30 @@
+/** This is an example to test UCLID5's invariant synthesis.
+  */
+
+module main
+{
+  var x, y : integer;
+  var w, z : integer;
+  
+  init {
+    x = 0;
+    y = 1;
+    w = 0;
+    z = 1;
+  }
+  
+  next {
+    x' = x + 1;
+    y' = x + y;
+    w' = w + 1;
+    z' = w + z;
+  }
+  
+  invariant always_positive_xy: (y >= 0);
+  invariant always_positive_wz: (z >= 0);
+  
+  control {
+    print_module;
+    synthesize_invariant;
+  }
+}
