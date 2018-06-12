@@ -54,10 +54,108 @@ import com.typesafe.scalalogging.Logger
 class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
   override def evalAsString(e : Expr) : String = {
     interface.exprToZ3(e) match {
+      case z3ArrayExpr : z3.ArrayExpr => convertZ3ArrayString(model.eval(z3ArrayExpr, true).toString)
       case z3Expr : z3.Expr => model.eval(z3Expr, true).toString
       case _ => throw new Utils.EvaluationError("Unable to evaluate expression: " + e.toString)
     }
   }
+
+  def convertZ3ArrayString(initString : String) : String = {
+
+    val cleanString     = initString.replaceAll("(\\(let \\(\\(a!\\d+ )?(\\(store )+(a!\\d+)?", "").replaceAll("\\)\\)\\)(?! )", ") ").replaceAll("\\n?\\s+", " ")
+//    println(initString)
+//    println(cleanString)
+
+    val prefixArray     = "((as const (Array " //)))
+    val prefixArrayLen  = prefixArray.length()
+
+    val totalLen        = cleanString.length()
+
+    var index           = 0;
+    var startIndex      = 0;
+
+    if (!cleanString.startsWith(prefixArray, index)) {
+      return "ERROR"
+    }
+    index += prefixArrayLen
+
+    // Skip the array type information
+    index = findNextIndexRightParen(cleanString, index, 2)
+
+    // Capture bottom value
+    startIndex = index
+
+    index = findNextIndexRightParen(cleanString, index, 1)
+
+    var bottom = cleanString.substring(startIndex, index - 2)
+
+
+    // Parse all stores operations
+    var Array : Map[String, String] = Map.empty[String, String]
+    while (index < totalLen) {
+      val arrayIndexStartIndex = index
+      index = findNextIndexSpace(cleanString, index)
+      val arrayIndex = cleanString.substring(arrayIndexStartIndex, index)
+
+      index += 1
+      val arrayValueStartIndex = index
+      index = findNextIndexRightParen(cleanString, index, 1)
+      val arrayValue = cleanString.substring(arrayValueStartIndex, index - 2)
+
+      Array += (arrayIndex -> arrayValue)
+    }
+
+
+    var output : String = ""
+    Array.foreach{ case (k,v) => {
+      if (!v.contentEquals(bottom)) {
+        output = output.concat(s"\n\t$k : $v")
+      }
+    }}
+
+    return output.concat(s"\n\tbottom : $bottom")
+
+  }
+
+  def findNextIndexRightParen(str : String, idx : Int, target : Int) : Int = {
+    var paren = 0;
+    var index = idx;
+
+    while (paren < target) {
+      val c = str.charAt(index)
+      val inc = c match {
+        case '(' => -1
+        case ')' => 1
+        case _   => 0
+      }
+      paren += inc
+      index += 1
+    }
+    return index + 1
+  }
+
+  // Find the index of the next space without open parentheses in str starting at idx
+  def findNextIndexSpace(str : String, idx : Int) : Int = {
+    var paren = 0;
+    var index = idx;
+
+    var c = str.charAt(index)
+
+    while (c != ' ' || paren != 0) {
+      val inc = c match {
+        case '(' => -1
+        case ')' => 1
+        case _   => 0
+      }
+      paren += inc
+      index += 1
+      c = str.charAt(index)
+    }
+    return index
+  }
+
+ 
+
   override def evaluate(e : Expr) : Expr = {
     interface.exprToZ3(e) match {
       case z3Expr : z3.Expr =>
