@@ -1,5 +1,5 @@
 module main {
-  // System description. blah
+  // System description. 
   var a, b   : integer;
   const flag : boolean;
 
