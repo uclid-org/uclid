@@ -26,7 +26,24 @@ The input \codelike{valid} is of type \keyword{boolean}. Register indices \codel
 
 Line~3 declares a type synonym for a \keyword{record}. It declares \codelike{result_t} as consisting of two fields: a Boolean field \codelike{valid} and a bit-vector field \codelike{value}. The output \codelike{result} is declared to be of type \codelike{result_t} on Line~9.
 
-The final point of interest, type-wise, is line~10. The state variable \codelike{regs} is declared to be of type array: indices to the array are of type \codelike{bv3} and elements of the array are of type \codelike{bv8}. This is used to model an 8-entry register file, where each register is a bit-vector of width 8.
+The final point of interest in this example, type-wise, is line~10. The state variable \codelike{regs} is declared to be of type array: indices to the array are of type \codelike{bv3} and elements of the array are of type \codelike{bv8}. This is used to model an 8-entry register file, where each register is a bit-vector of width 8.
+
+Uninterpreted functions can be declared in \uclid{} using the
+\codelike{function} declaration. These functions are typed,
+mapping a tuple of typed arguments to a return type.
+For example, the following uninterpreted function models
+the mapping of an instruction to an opcode in a simple
+CPU model given later in this tutorial as Example~\ref{ex:cpu-cpu}.
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  function inst2op   (i : word_t) : op_t;
+\end{lstlisting}
+Uninterpreted functions of zero arity, also called 
+{\em symbolic constants}, can be declared using a special
+\codelike{const} declaration, as follows:
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  const w0 : word_t;
+\end{lstlisting}
+
 
 \section{Statements in \uclid{}}
 
