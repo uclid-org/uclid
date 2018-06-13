@@ -15,6 +15,7 @@ This chapter will describe these features of \uclid{}. Further features are bein
 
 %---------------------------------------------------------
 \section{Inductive Proofs} % change to \section when we have more sections!
+
 Let us revisit the model from Example~\ref{ex:fib-model}. This is now shown again in Example~\ref{ex:fib-induction}, but with a different proof script. Instead of using the \codelike{unroll} command for bounded model checking, we are using the \codelike{induction} command to attempt an inductive proof.
 
 \begin{uclidlisting}[htbp]
@@ -169,8 +170,79 @@ The output shows that all properties are verified.
 %---------------------------------------------------------
 \section{Correspondence/Simulation Checking}
 
+\uclid{} provides constructs to check whether one transition system
+simulates another, where both are
+modeled as a \uclid{} modules. In other words, we can check
+whether one module can simulate steps of another.
+Correspondence checking, a special case of simulation checking,
+is based on constructing a commutative diagram (see Fig.~\ref{fig:comm-diag}) via symbolic simulation and checking the validity of a property
+of interest at the end~\cite{burch-cav94}. 
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8 \columnwidth]{figures/correspond.pdf}
+   \label{fig:comm-diag}
+	\caption{Commutative diagram to check an implementation (pipelined processor) is simulated by its specification.}
+\end{figure}
+
+Thus, the outline of the verification task, as
+specified in the control section of a module,
+involves simulating the two sides of the commutative (simulation)
+diagram and checking an assertion at the end.
+An example of correspondence checking, the verification of a simple
+pipelined datapath,
+is illustrated in detail in the code included below
+(also in the distribution in \codelike{examples/simple-datapath.ucl}).
+%Example~\ref{ex:simple-datapath}.
+This example is drawn from the original UCLID system~\cite{uclid-www,bryant-cav02}.
+
+%\begin{uclidlisting}[htbp]
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/simple-datapath.ucl}
+%    \label{ex:simple-datapath}
+%	\caption{\uclid{} model of a simple pipelined datapath in a processor, and verifying that it refines an instruction set architecture (ISA) level model.}
+%\end{uclidlisting}
 
 
+Running \uclid{} on the file given above produces the following output.
+%Running \uclid{} on Example~\ref{ex:simple-datapath} produces the following output.
+
+\begin{Verbatim}[frame=single, samepage=true]
+$ uclid examples/simple-datapath.ucl
+Successfully parsed 4 and instantiated 1 module(s).
+10 assertions passed.
+0 assertions failed.
+0 assertions indeterminate.
+Finished execution for module: main.
+\end{Verbatim}
+
+%---------------------------------------------------------
+\section{Verifying Two-Safety Properties}
+
+Certain security properties involve reasoning about a system
+that is composed of modules modeling
+multiple interacting agents, some of whom can be malicious. 
+For confidentiality
+properties, the goal is to ensure that secret data is not revealed to a malicious
+agent. For integrity properties, the goal is that actions of a malicious agent
+should not be able to influence the values of certain high-integrity variables.
+Such properties form a special class of the general category of {\em hyperproperties}~\cite{clarkson-jcs10}
+known as {\em $2$-safety properties}. The name arises from the way in which
+such properties are checked, by formulating them as a safety property on a
+``self-composed'' model of the system --- a model obtained by composing two
+copies of the system together synchronously.
+
+With \uclid{}, we verify $2$-safety properties via self-composition and
+inductive invariant checking. Counterexamples comprise two traces
+and are found by bounded model checking.
+The code included below shows an
+illustrative \uclid{} model drawn from the chapter on Security from the textbook
+on embedded (cyber-physical) systems by Lee and Seshia~\cite{leeseshia-16}.
+
+%\begin{uclidlisting}[htbp]
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/two-safety.ucl}
+%    \label{ex:two-safety}
+%	\caption{\uclid{} model of toy problem illustrating verification of two-safety properties}
+%\end{uclidlisting}
 
 %---------------------------------------------------------
 \section{Future Directions}
