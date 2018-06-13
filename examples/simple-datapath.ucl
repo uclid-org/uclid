@@ -223,9 +223,9 @@ module main {
          S_rf1' = spec_i.sRF;
       }
       (step == 9) : { 
-         assert(false); // sanity check to make sure execution can get here
+         // assert(false); // sanity check to make sure execution can get here
          // correspondence check
-         // assert(((S_pc1 == I_pc) && (S_rf1 == I_rf)) || ((S_pc0 == I_pc) && (S_rf0 == I_rf)));
+         assert(((S_pc1 == I_pc) && (S_rf1 == I_rf)) || ((S_pc0 == I_pc) && (S_rf0 == I_rf)));
       }
     esac;
 
