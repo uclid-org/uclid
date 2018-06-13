@@ -31,7 +31,7 @@ module main
         lightP = green;
         stepP = 1;
       }
-    esac
+      esac
     } else {
       lightP = light;
       stepP = step - 1;
