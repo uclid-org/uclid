@@ -36,6 +36,6 @@ module main
     v = unroll (5);
     check;
     print_results;
-    // v.print_cex(numbers);
+    v.print_cex(numbers);
   }
 }
