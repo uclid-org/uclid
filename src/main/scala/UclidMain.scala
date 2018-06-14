@@ -75,6 +75,7 @@ object UclidMain {
       smtSolver: List[String] = List.empty,
       synthesizer: List[String] = List.empty,
       synthesisRunDir: String = "",
+      sygusFormat: Boolean = false,
       verbose : Int = 0,
       files : Seq[java.io.File] = Seq()
   )
@@ -98,6 +99,10 @@ object UclidMain {
       opt[String]('Y', "synthesizer-run-directory").valueName("<Dir>").action{
         (dir, c) => c.copy(synthesisRunDir = dir)
       }.text("Run directory for synthesizer.")
+
+      opt[Unit]('f', "sygus-format").action{
+        (_, c) => c.copy(sygusFormat = true)
+      }.text("Generate the standard SyGuS format.")
 
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
@@ -287,7 +292,7 @@ object UclidMain {
     }
     val sygusInterface : Option[smt.SynthesisContext] = config.synthesizer match {
       case Nil => None
-      case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir))
+      case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir, config.sygusFormat))
     }
     val result = symbolicSimulator.execute(z3Interface, sygusInterface, config)
     z3Interface.finish()
