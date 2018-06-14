@@ -46,7 +46,7 @@ import scala.collection.JavaConverters._
 
 import java.io.{File, PrintWriter}
 
-class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with SynthesisContext {
+class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) extends SMTLIB2Base with SynthesisContext {
   val sygusLog = Logger(classOf[SyGuSInterface])
 
   def getVariables(ctx : Scope) : List[(String, Type)] = {
@@ -85,11 +85,24 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
         variables += (s.id -> (sIdP, s.symbolTyp))
       }
     }
+
     val trExpr = translateExpr(eqExpr, false)
     trExpr
   }
 
-  def getDeclarations(variables : List[(String, Type)]) : String = {
+  def getGeneralDeclarations(variables : List[(String, Type)]) : String = {
+    val decls = variables.map{ v =>
+      {
+        val (typeName, otherDecls) = generateDatatype(v._2)
+        Utils.assert(otherDecls.size == 0, "Datatype declarations are not supported yet.")
+        // FIXME: to handle otherDecls
+        "(declare-var %1$s %2$s)\n(declare-var %1$s! %2$s)".format(v._1, typeName)
+      }
+    }
+    Utils.join(decls, "\n")
+  }
+
+  def getPrimedDeclarations(variables : List[(String, Type)]) : String = {
     val decls = variables.map{ v =>
       {
         val (typeName, otherDecls) = generateDatatype(v._2)
@@ -111,7 +124,12 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     "(" + Utils.join(vars ++ varsP, " ") + ")" + " Bool"
   }
   
-  def getSynthFuncDecl(vars : List[(String, Type)]) : String = {
+  def getSynthFunDecl(vars : List[(String, Type)]) : String = {
+    val types = "(" + Utils.join(vars.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ") + ")"
+    "(synth-fun inv-f %s Bool)".format(types)
+  }
+
+  def getSynthInvDecl(vars : List[(String, Type)]) : String = {
     val types = "(" + Utils.join(vars.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ") + ")"
     "(synth-inv inv-f %s)".format(types)
   }
@@ -136,18 +154,46 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     val funBody = if (exprs.size == 1) exprs(0) else "(and %s)".format(Utils.join(exprs, " "))
     "(define-fun post-fn %s %s)".format(getStatePredicateTypeDecl(variables), funBody)
   }
+
+  def getInitConstraint(variables : List[(String, Type)]) : String = {
+    val args = Utils.join(variables.map(p => p._1), " ")
+    "(constraint (=> (init-fn %1$s) (inv-f %1$s)))".format(args)
+  }
+
+  def getTransConstraint(variables : List[(String, Type)]) : String = {
+    val args = Utils.join(variables.map(p => p._1), " ")
+    val argsPrimed = Utils.join(variables.map(p => p._1 + "!"), " ")
+    "(constraint (=> (and (inv-f %1$s) (trans-fn %1$s %2$s)) (inv-f %2$s)))".format(args, argsPrimed)
+  }
+
+  def getPostConstraint(variables : List[(String, Type)]) : String = {
+    val args = Utils.join(variables.map(p => p._1), " ")
+    "(constraint (=> (inv-f %1$s) (post-fn %1$s)))".format(args)
+  }
   
   override def synthesizeInvariant(initState : Map[Identifier, Expr], nextState: Map[Identifier, Expr], properties : List[smt.Expr], ctx : Scope) : Option[smt.Expr] = {
     val variables = getVariables(ctx)
-    val varDecls = getDeclarations(variables)
-    val synthFunDecl = getSynthFuncDecl(variables)
     val preamble = "(set-logic LIA)" // FIXME: need to identify logics
     val initFun = getInitFun(initState, variables, ctx)
     val transFun = getNextFun(nextState, variables, ctx)
     val postFun = getPostFun(properties, variables, ctx)
-    val postamble = "(inv-constraint inv-fn init-fn trans-fn post-fn)\n\n(check-synth)"
     
-    val instanceLines = List(preamble, synthFunDecl, varDecls, initFun, transFun, postFun, postamble)
+    val instanceLines = if (sygusFormat) {
+      // General sygus format
+      val synthFunDecl = getSynthFunDecl(variables)
+      val varDecls = getGeneralDeclarations(variables)
+      val initConstraint = getInitConstraint(variables)
+      val transConstraint = getTransConstraint(variables)
+      val postConstraint = getPostConstraint(variables)
+      val postamble = "(check-synth)"
+      List(preamble, synthFunDecl, varDecls, initFun, transFun, postFun, initConstraint, transConstraint, postConstraint, postamble)
+    } else {
+      // Loop invariant format
+      val synthInvDecl = getSynthInvDecl(variables)
+      val varDecls = getPrimedDeclarations(variables)
+      val postamble = "(inv-constraint inv-fn init-fn trans-fn post-fn)\n\n(check-synth)"
+      List(preamble, synthInvDecl, varDecls, initFun, transFun, postFun, postamble)
+    }
     val instance = "\n" + Utils.join(instanceLines, "\n")
     sygusLog.debug(instance)
     val tmpFile = File.createTempFile("uclid-sygus-instance", ".sl")
@@ -155,8 +201,7 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     new PrintWriter(tmpFile) {
       write(instance)
       close()
-    }
-    
+    }    
     val filename = tmpFile.getAbsolutePath()
     val cmdLine = (args ++ List(filename)).asJava
     sygusLog.debug("command line: {}", cmdLine.toString())
@@ -184,8 +229,19 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
         }
       })
       sygusLog.debug(string)
-      UclidMain.println(string);
-      val fun = SExprParser.parseFunction(string)
+      // Format the output string of the synthizer
+      val invString = if (sygusFormat) {
+        // Find the invariant function
+        val outputLines = string.split("\n").filter(s => s contains "inv-f")
+        // If there are no lines with inv-f, we've failed to find an invariant function
+        if (outputLines.isEmpty) return None
+        // Return the first and only invariant
+        Utils.assert(outputLines.size == 1, "The SyGuS solver should only return one invariant function.")
+        outputLines(0)
+      } else {
+        string
+      }
+      val fun = SExprParser.parseFunction(invString)
       sygusLog.debug(fun.toString())
       return Some(fun)
     }
