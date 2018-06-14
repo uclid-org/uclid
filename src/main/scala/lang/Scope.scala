@@ -364,15 +364,16 @@ case class Scope (
   }
 }
 
-class ContextualNameProvider(ctx : Scope, prefix : String) {
-  var index = 1
-  def apply(name: Identifier, tag : String) : Identifier = {
-    var newId = Identifier(prefix + "_" + tag + "_" + name + "_" + index.toString)
-    index = index + 1
-    while (ctx.doesNameExist(newId)) {
+class ContextualNameProvider(prefix : String) {
+  var names : MutableSet[Identifier] = MutableSet.empty
+  def apply(ctx : Scope, name: Identifier, tag : String) : Identifier = {
+    var newId = Identifier(prefix + "_" + tag + "_" + name)
+    var index = 1
+    while (ctx.doesNameExist(newId) || names.contains(newId)) {
       newId = Identifier(prefix + "_" + tag + "_" + name + "_" + index.toString)
       index = index + 1
     }
+    names.add(newId)
     return newId
   }
 }

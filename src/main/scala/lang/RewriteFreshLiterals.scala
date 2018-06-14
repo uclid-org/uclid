@@ -22,7 +22,7 @@ class RewriteFreshLiteralsPass extends RewritePass {
     freshLit match {
       case Some(f) => Some(f)
       case None =>
-        val newId = new ContextualNameProvider(context, "fresh").apply(Identifier("if_star"), "")
+        val newId = new ContextualNameProvider("fresh").apply(context, Identifier("if_star"), "")
         freshLit = Some(newId)
         Some(newId)
     }

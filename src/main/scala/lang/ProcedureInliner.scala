@@ -94,8 +94,9 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
   override def rewriteProcedure(p : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
     if (p.id == procToInline.id) Some(p)
     else {
-      val nameProvider = new ContextualNameProvider(ctx + p, "proc_" + p.id + "_" + procToInline.id)
-      val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(id, p), List(p.body), ctx)
+      val nameProvider = new ContextualNameProvider("proc_" + p.id + "_" + procToInline.id)
+      val ctxP = ctx + p
+      val (stmts, newVars) = inlineProcedureCalls((id, p) => nameProvider(ctxP, id, p), List(p.body), ctx)
       val newDecls = newVars.map((t) => LocalVarDecl(t._1, t._2))
       Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, BlockStmt(List.empty, stmts), p.requires, p.ensures, p.modifies))
     }
@@ -103,21 +104,21 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
 
   override def rewriteModule(m : Module, contextIn : Scope) : Option[Module] = {
     val context = contextIn + m
-    val initNameProvider = new ContextualNameProvider(context, "_init_" + procToInline.id)
-    val nextNameProvider = new ContextualNameProvider(context, "_next_" + procToInline.id)
+    val initNameProvider = new ContextualNameProvider("_init_" + procToInline.id)
+    val nextNameProvider = new ContextualNameProvider("_next_" + procToInline.id)
 
     val decls = m.decls.foldLeft((List.empty[Decl], List.empty[StateVarsDecl]))((acc, decl) => {
       decl match {
         case InitDecl(body) =>
           if (rewriteOptions == ProcedureInliner.RewriteInit) {
-            val (stmts, vars) = inlineProcedureCalls((id, p) => initNameProvider(id, p), List(body), context)
+            val (stmts, vars) = inlineProcedureCalls((id, p) => initNameProvider(context, id, p), List(body), context)
             (acc._1 ++ List(InitDecl(BlockStmt(List.empty, stmts))), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
           } else {
             (acc._1 ++ List(decl), acc._2)
           }
         case NextDecl(body) =>
           if (rewriteOptions == ProcedureInliner.RewriteNext) {
-            val (stmts, vars) = inlineProcedureCalls((id, p) => nextNameProvider(id, p), List(body), context)
+            val (stmts, vars) = inlineProcedureCalls((id, p) => nextNameProvider(context, id, p), List(body), context)
             (acc._1 ++ List(NextDecl(BlockStmt(List.empty, stmts))), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
           } else {
             (acc._1 ++ List(decl), acc._2)

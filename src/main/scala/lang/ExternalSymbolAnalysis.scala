@@ -7,21 +7,21 @@ class ExternalSymbolMap (
   val nameProvider : Option[ContextualNameProvider], val externalMap: Map[ExternalIdentifier, (Identifier, ModuleExternal)]) {
 
   def + (module : Module, context : Scope) : ExternalSymbolMap = {
-    val newProvider = new ContextualNameProvider(context, "$external")
+    val newProvider = new ContextualNameProvider("$external")
     new ExternalSymbolMap(Some(newProvider), externalMap)
   }
 
-  def + (extId : ExternalIdentifier, extDecl : ModuleExternal) : ExternalSymbolMap = {
-    val newName : Identifier = nameProvider.get.apply(extId.id, extId.moduleId.toString)
+  def + (extId : ExternalIdentifier, extDecl : ModuleExternal, context : Scope) : ExternalSymbolMap = {
+    val newName : Identifier = nameProvider.get.apply(context, extId.id, extId.moduleId.toString)
     new ExternalSymbolMap(nameProvider, externalMap + (extId -> (newName, extDecl)))
   }
 
-  def getOrAdd(extId : ExternalIdentifier, extDecl : ModuleExternal) : (ExternalSymbolMap, Identifier) = {
+  def getOrAdd(extId : ExternalIdentifier, extDecl : ModuleExternal, context : Scope) : (ExternalSymbolMap, Identifier) = {
     externalMap.get(extId) match {
       case Some((newName, extDecl)) =>
         (this, newName)
       case None =>
-        val newMap = this + (extId, extDecl)
+        val newMap = this + (extId, extDecl, context)
         (newMap, newMap.externalMap.get(extId).get._1)
     }
   }
@@ -41,7 +41,7 @@ class ExternalSymbolAnalysisPass extends ReadOnlyPass[ExternalSymbolMap] {
     context.moduleDefinitionMap.get(eId.moduleId) match {
       case Some(mod) =>
         mod.externalMap.get (eId.id) match {
-          case Some(modExt) => in + (eId, modExt)
+          case Some(modExt) => in + (eId, modExt, context)
           case None =>
             throw new Utils.RuntimeError("Unknown ExternalIdentifiers must have been eliminated by now.")
         }

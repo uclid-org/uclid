@@ -46,17 +46,17 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
   type T = (Map[Identifier, Identifier], Option[ContextualNameProvider])
   override def applyOnModule(d : TraversalDirection.T, module : Module , in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
-      val nameProvider = new ContextualNameProvider(context, "_prime_")
+      val nameProvider = new ContextualNameProvider("_prime_")
       (in._1, Some(nameProvider))
     } else {
       (in._1, None)
     }
   }
-  def addToMap(id : Identifier, in : T, tag : String) : T = {
+  def addToMap(id : Identifier, in : T, tag : String, ctx : Scope) : T = {
     in._1.get(id) match {
       case Some(idP) => in
       case None =>
-        val newId = in._2.get(id, tag)
+        val newId = in._2.get(ctx, id, tag)
         val mapP = (in._1 + (id -> newId))
         (mapP, in._2)
     }
@@ -64,7 +64,7 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
   override def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       lhs match {
-        case LhsNextId(id) => addToMap(id, in, "lhs")
+        case LhsNextId(id) => addToMap(id, in, "lhs", context)
         case _ => in
       }
     } else {
@@ -74,7 +74,7 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
   override def applyOnHavoc(d : TraversalDirection.T, havocStmt : HavocStmt, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       havocStmt.havocable match {
-        case HavocableNextId(id) => addToMap(id, in, "havoc")
+        case HavocableNextId(id) => addToMap(id, in, "havoc", context)
         case _ => in
       }
     } else {
@@ -88,7 +88,7 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
       val proc = module.procedures.find(p => p.id == procId).get
       val mapIn = in._1
       val nameProvider = in._2.get
-      val mapOut = proc.modifies.foldLeft(mapIn)((acc, m) => (acc + (m -> nameProvider(m, "modifies"))))
+      val mapOut = proc.modifies.foldLeft(mapIn)((acc, m) => (acc + (m -> nameProvider(context, m, "modifies"))))
       (mapOut, in._2)
     } else {
       in
