@@ -73,7 +73,35 @@ class BlockFlattenerPass extends RewritePass {
   }
 }
 
-class BlockFlattener(name: String) extends ASTRewriter(name, new BlockFlattenerPass())
+object BlockFlattener {
+  var index = 0
+  def getName() : String = {
+    index += 1
+    "BlockFlattener:" + index.toString()
+  }
+}
+
+class BlockFlattener() extends ASTRewriter(BlockFlattener.getName(), new BlockFlattenerPass())
 {
   override val repeatUntilNoChange = true
+}
+
+object Optimizer {
+  var index = 0
+  def getName() : String = {
+    index += 1
+    "Optimizer:" + index.toString()
+  }
+}
+
+class DummyPass extends RewritePass
+class Optimizer extends ASTRewriter(Optimizer.getName(), new DummyPass())
+{
+  val blockRewriter = new BlockFlattener()
+  val redundantAssignmentEliminator = new RedundantAssignmentEliminator()
+  override def visitModule(module: Module, context: Scope) : Option[Module] = {
+    blockRewriter.visitModule(module, context).flatMap {
+      m => redundantAssignmentEliminator.visitModule(m, context)
+    }
+  }
 }
