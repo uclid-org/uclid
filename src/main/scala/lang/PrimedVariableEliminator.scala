@@ -99,8 +99,14 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
 class PrimedVariableCollector() extends ASTAnalyzer("PrimedVariableCollector", new PrimedVariableCollectorPass())
 {
   var primeVarMap : Option[Map[Identifier, Identifier]] = None
+  var reverseMap : Option[Map[Identifier, Identifier]] = None
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    primeVarMap = Some(visitModule(module, (Map.empty, None), context)._1)
+    val fwdMap = visitModule(module, (Map.empty, None), context)._1
+    val revMap = fwdMap.foldLeft(Map.empty[Identifier, Identifier]) {
+      (acc, p) => acc + (p._2 -> p._1)
+    }
+    primeVarMap = Some(fwdMap)
+    reverseMap = Some(revMap)
     Some(module)
   }
 }
