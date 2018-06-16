@@ -44,31 +44,40 @@ import com.typesafe.scalalogging.Logger
 class BlockFlattenerPass extends RewritePass {
   lazy val logger = Logger(classOf[BlockFlattenerPass])
 
-  override def rewriteBlock(blkStmt : BlockStmt, context : Scope) : Option[Statement] = {
-    logger.debug("Input:\n" + blkStmt.toString())
-    val stmtsP = blkStmt.stmts.flatMap {
-      (st) => {
-        st match {
-          case BlockStmt(vs, stmts) => 
-            if(vs.size == 0) {
-              stmts
-            } else {
-              List(st)
-            }
-          case _ => List(st)
+  def renameBlock(blk : BlockStmt, context : Scope, nameProvider : ContextualNameProvider) : (List[Statement], List[(Identifier, Type)]) = {
+    val blkVars = blk.vars.flatMap(vs => vs.ids.map(v => (v, vs.typ)))
+    val renaming = blkVars.foldLeft(Map.empty[Identifier, (Identifier, Type)]) {
+      (map, vDec) => {
+        context.map.get(vDec._1) match {
+          case None =>
+            map + (vDec._1 -> (vDec._1, vDec._2))
+          case Some(_) =>
+            val newId = nameProvider(context, vDec._1, "")
+            map + (vDec._1 -> (newId, vDec._2))
         }
       }
     }
-    val result = if (blkStmt.vars.size == 0) {
-      stmtsP.size match {
-        case 0 => SkipStmt()
-        case 1 => stmtsP(0)
-        case _ => BlockStmt(blkStmt.vars, stmtsP)
+    val rewriteMap = renaming.filter(p => p._1 != p._2._1).map(p => p._1.asInstanceOf[Expr] -> p._2._1)
+    val varDecls = renaming.map(p => p._2).toList
+    val rewriter = new ExprRewriter("BlockFlattener:Rewrite", rewriteMap)
+    val stmtsP = rewriter.rewriteStatements(blk.stmts, context + blk.vars)
+    (stmtsP, varDecls)
+  }
+  override def rewriteBlock(blkStmt : BlockStmt, context : Scope) : Option[Statement] = {
+    logger.debug("==> [%s] Input:\n%s".format(analysis.passName, blkStmt.toString()))
+    val nameProvider = new ContextualNameProvider("blk")
+    val stmtM1 = blkStmt.stmts.map {
+      (st) => {
+        st match {
+          case blk : BlockStmt => renameBlock(blk, context, nameProvider)
+          case _ => (List(st), List.empty)
+        }
       }
-    } else {
-      BlockStmt(blkStmt.vars, stmtsP)
     }
-    logger.debug("Result:\n" + result.toString())
+    val stmts = stmtM1.map(p => p._1).flatMap(st => st)
+    val vars = stmtM1.map(p => p._2).flatMap(vs => vs.map(p => BlockVarsDecl(List(p._1), p._2)))
+    val result = BlockStmt(blkStmt.vars ++ vars, stmts)
+    logger.debug("<== Result:\n" + result.toString())
     Some(result)
   }
 }

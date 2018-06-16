@@ -49,8 +49,16 @@ class ASTPrinterPass extends ReadOnlyPass[Unit] {
     }
   }
 }
+object ASTPrinter {
+  var count = 0
+  def getName() : String  = {
+    count += 1
+    "ASTPrinter:" + count.toString()
+  }
+}
+
 /** Simple analysis that instantiates ASTPrinterPass to print module. */
-class ASTPrinter(name: String) extends ASTAnalyzer(name, new ASTPrinterPass()) {
+class ASTPrinter() extends ASTAnalyzer(ASTPrinter.getName(), new ASTPrinterPass()) {
   override def pass = super.pass.asInstanceOf[ASTPrinterPass]
   in = Some(Unit)
 }
