@@ -366,11 +366,24 @@ case class Scope (
 
 class ContextualNameProvider(prefix : String) {
   var names : MutableSet[Identifier] = MutableSet.empty
+  def toName(name : Identifier, tag : String, index : Option[Int]) : Identifier = {
+    val nameP = (prefix, tag) match {
+      case ("", "") => name.toString()
+      case ("", tg) => name.toString() + "__" + tg
+      case (pref, "") => prefix + "__" + name.toString()
+      case (pref, tg) => prefix + "__" + name.toString() + "__" + tag
+    }
+    val nameQ : String = index match {
+      case Some(i) => nameP + "__" + i.toString()
+      case None => nameP
+    }
+    Identifier(nameQ)
+  }
   def apply(ctx : Scope, name: Identifier, tag : String) : Identifier = {
-    var newId = Identifier(prefix + "_" + tag + "_" + name)
+    var newId = toName(name, tag, None)
     var index = 1
     while (ctx.doesNameExist(newId) || names.contains(newId)) {
-      newId = Identifier(prefix + "_" + tag + "_" + name + "_" + index.toString)
+      newId = toName(name, tag, Some(index))
       index = index + 1
     }
     names.add(newId)

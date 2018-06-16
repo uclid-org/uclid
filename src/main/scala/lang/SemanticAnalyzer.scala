@@ -95,6 +95,19 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
       in
     }
   }
+  override def applyOnBlock(d : TraversalDirection.T, blk : BlockStmt, in : List[ModuleError], context : Scope) : List[ModuleError] = {
+    if (d == TraversalDirection.Down) {
+      if (!context.environment.isProcedural) {
+        val blkOption = blk.stmts.find(st => st.isInstanceOf[BlockStmt])
+        blkOption match {
+          case Some(blk) =>
+            val msg = "Nested block statements are not allowed in a sequential environment"
+            ModuleError(msg, blk.position) :: in
+          case None => in
+        }
+      } else { in }
+    } else { in }
+  }
 }
 
 class SemanticAnalyzer extends ASTAnalyzer("SemanticAnalyzer", new SemanticAnalyzerPass())  {

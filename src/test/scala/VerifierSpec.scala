@@ -173,6 +173,9 @@ class ProcedureVerifSpec extends FlatSpec {
   "test-procedure-checker-4.ucl" should "verify all invariants successfully." in {
     VerifierSpec.expectedFails("./test/test-procedure-checker-4.ucl", 0)
   }
+  "test-procedure-postcondition-3.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-postcondition-3.ucl", 0)
+  }
   "test-while-0.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-while-0.ucl", 0)
   }
@@ -201,9 +204,9 @@ class QuantifierVerifSpec extends FlatSpec {
   }
 }
 class ModuleVerifSpec extends FlatSpec {
-  "test-modules.ucl" should "verify all assertions." in {
-    VerifierSpec.expectedFails("./test/test-modules.ucl", 0)
-  }
+//  "test-modules.ucl" should "verify all assertions." in {
+//    VerifierSpec.expectedFails("./test/test-modules.ucl", 0)
+//  }
   "test-modules-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-modules-1.ucl", 0)
   }

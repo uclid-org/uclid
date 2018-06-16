@@ -1,0 +1,42 @@
+module main_func {
+  type pc_t = enum {A, B, C};
+  var pc : pc_t;
+
+  next {
+    pc' = C;
+  }
+
+}
+
+
+module ISR_func {
+ type pc_t = enum {idle, D, E};
+ var pc : pc_t;
+
+ init {
+   pc = idle;
+ }
+
+ next {
+     pc' = D;
+ }
+} // end module ISR_func
+
+
+module Sys {
+  instance main_f : main_func();
+  instance ISR_f  : ISR_func();
+
+  next {
+    next (main_f); 
+    next (ISR_f);
+  }   
+}
+
+module main {
+  instance Sys_i : Sys();
+
+  next { 
+    next (Sys_i);
+  }
+}

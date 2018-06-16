@@ -300,8 +300,18 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.exists(p => p._1.contains("Recursion involving define declarations")))
     }
   }
-  ignore /*"nested_instances.ucl"*/ should "parse successfully." in {
+  "nested_instances.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/nested_instances.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-nested-modules-1.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-nested-modules-1.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-nested-modules-2.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-nested-modules-2.ucl")), lang.Identifier("main"))
     val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }

@@ -43,17 +43,22 @@ import com.typesafe.scalalogging.Logger
 
 class BlockFlattenerPass extends RewritePass {
   lazy val logger = Logger(classOf[BlockFlattenerPass])
+  var nameProvider = new ContextualNameProvider("")
+  
+  override def reset() {
+    nameProvider = new ContextualNameProvider("")
+  }
 
   def renameBlock(blk : BlockStmt, context : Scope, nameProvider : ContextualNameProvider) : (List[Statement], List[(Identifier, Type)]) = {
     val blkVars = blk.vars.flatMap(vs => vs.ids.map(v => (v, vs.typ)))
     val renaming = blkVars.foldLeft(Map.empty[Identifier, (Identifier, Type)]) {
       (map, vDec) => {
-        context.map.get(vDec._1) match {
-          case None =>
-            map + (vDec._1 -> (vDec._1, vDec._2))
-          case Some(_) =>
-            val newId = nameProvider(context, vDec._1, "")
-            map + (vDec._1 -> (newId, vDec._2))
+        if (context.map.get(vDec._1).isEmpty && !nameProvider.names.contains(vDec._1)) {
+          nameProvider.names.add(vDec._1)
+          map + (vDec._1 -> (vDec._1, vDec._2))
+        } else {
+          val newId = nameProvider(context, vDec._1, "")
+          map + (vDec._1 -> (newId, vDec._2))
         }
       }
     }
@@ -65,7 +70,6 @@ class BlockFlattenerPass extends RewritePass {
   }
   override def rewriteBlock(blkStmt : BlockStmt, context : Scope) : Option[Statement] = {
     logger.debug("==> [%s] Input:\n%s".format(analysis.passName, blkStmt.toString()))
-    val nameProvider = new ContextualNameProvider("blk")
     val stmtM1 = blkStmt.stmts.map {
       (st) => {
         st match {
@@ -110,7 +114,9 @@ class Optimizer extends ASTRewriter(Optimizer.getName(), new DummyPass())
   val redundantAssignmentEliminator = new RedundantAssignmentEliminator()
   override def visitModule(module: Module, context: Scope) : Option[Module] = {
     blockRewriter.visitModule(module, context).flatMap {
-      m => redundantAssignmentEliminator.visitModule(m, context)
+      m => {
+        redundantAssignmentEliminator.visitModule(m, context)
+      }
     }
   }
 }

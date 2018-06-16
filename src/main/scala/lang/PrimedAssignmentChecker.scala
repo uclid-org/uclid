@@ -112,20 +112,6 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       checkLhs(callStmt.callLhss, in, context)
     }
   }
-
-  override def applyOnBlock(d : TraversalDirection.T, blk : BlockStmt, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Down) {
-      if (!context.environment.isProcedural) {
-        val blkOption = blk.stmts.find(st => st.isInstanceOf[BlockStmt])
-        blkOption match {
-          case Some(blk) =>
-            val msg = "Nested block statements are not allowed in a sequential environment"
-            in + ModuleError(msg, blk.position)
-          case None => in
-        }
-      } else { in }
-    } else { in }
-  }
 }
 
 class PrimedAssignmentChecker extends ASTAnalyzer("PrimedAssignmentChecker", new PrimedAssignmentCheckerPass())  {
