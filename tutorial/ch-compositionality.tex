@@ -54,8 +54,9 @@ Modules are instantiated using the \keyword{instance} keyword. Lines 14~and~15 o
 Scheduling of instantiated modules is explicit and synchronous. The two \keyword{next} statements on lines 22~and~23 of Example~\ref{ex:cpu-main} invoke the next state transitions of the two instances of the \codelike{cpu} module.
 
 Asynchronous and partially synchronous composition can be 
-modeled by explicitly encoding a scheduler into the \uclid{} model.
-
+modeled by explicitly encoding a scheduler into the \uclid{} model
+that specifies when the \codelike{next} block of each module
+is executed.
 
 \subsection{Accessing Members of Instances}
 
