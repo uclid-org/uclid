@@ -87,7 +87,13 @@ object ExprRewriter
 {
   def rewriteExpr(e : Expr, rewrites : Map[Expr, Expr], context : Scope) : Expr = {
     val rewriter = new ASTRewriter("", new ExprRewriterPass(rewrites))
-    rewriter.visitExpr(e, context).get
+    var e1 = e
+    var e2 = rewriter.visitExpr(e1, context).get
+    do {
+      e1 = e2
+      e2 = rewriter.visitExpr(e1, context).get
+    } while (e2 != e1)
+    e2
   }
   def rewriteLHS(lhs : Lhs, rewrites: Map[Expr, Expr], context : Scope) : Lhs = {
     val rewriter = new ASTRewriter("", new ExprRewriterPass(rewrites))

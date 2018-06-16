@@ -60,9 +60,11 @@ module main
   }
 
   control {
+    // print_module;
     v1 = verify(push);
-	v2 = unroll(5);
+	v2 = unroll(1);
 	check;
 	print_results;
+	// v2.print_cex(push_cmd.valid, push_cmd.value, tail, numbers);
   }
 }

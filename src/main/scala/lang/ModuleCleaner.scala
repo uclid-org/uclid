@@ -6,9 +6,6 @@ class ModuleCleanerPass extends RewritePass {
     val declsP = module.decls.sortWith((d1, d2) => d1.hashId < d2.hashId)
     Some(Module(module.id, declsP, module.cmds, module.notes))
   }
-  override def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
-    None
-  }
 }
 
 class ModuleCleaner extends ASTRewriter(

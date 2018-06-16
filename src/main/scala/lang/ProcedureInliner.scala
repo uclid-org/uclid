@@ -199,8 +199,9 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
               val modifyHavocs = mModifies.map(m => HavocStmt(HavocableId(m._2)))
               val postconditionAssumes = procToInline.ensures.map {
                 pos => {
-                  val assumeExpr1 = ExprRewriter.rewriteExpr(pos, mOldModifies, context)
-                  val assumeExpr = ExprRewriter.rewriteExpr(assumeExpr1, rewriteMap, context)
+                  log.debug("mOldModifies: {}", mOldModifies.toString())
+                  //val assumeExpr1 = ExprRewriter.rewriteExpr(pos, mOldModifies, context)
+                  val assumeExpr = ExprRewriter.rewriteExpr(pos, rewriteMap ++ mOldModifies, context)
                   val assumeStmt = AssumeStmt(assumeExpr, None)
                   log.debug("expr: {}; rewritten: {}", pos.toString(), assumeExpr.toString()) 
                   ASTNode.introducePos(true, true, assumeStmt, assumeExpr.position)

@@ -247,7 +247,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }.toList.flatten
   }
 
-  def createInputAssignments(varMap : VarMap) : List[Statement] = {
+  def createNextInputAssignments(varMap : VarMap) : List[Statement] = {
     varMap.map {
       v => {
         v._2 match {
@@ -266,7 +266,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   val newVariables = createNewVariables(varMap)
   val newInputs = createNewInputs(varMap)
-  val newInputAssignments = createInputAssignments(varMap)
+  val newInputAssignments = createNextInputAssignments(varMap)
   val newAxioms = newModule.axioms.map {
     ax => {
       val idP = ax.id.flatMap(axId => Some(nameProvider(ctx, axId, "axiom")))

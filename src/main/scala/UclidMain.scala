@@ -250,7 +250,6 @@ object UclidMain {
     passManager.addPass(new Optimizer())
     passManager.addPass(new ModuleCleaner())
     passManager.addPass(new Optimizer())
-    passManager.addPass(new ASTPrinter())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())
