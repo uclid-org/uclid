@@ -3,9 +3,10 @@
 
 This chapter describes \uclid{}'s features for compositional and modular verification, and the use of abstraction.
 
-We will use a running example of a CPU model constructed in the \uclid{} and use bounded model checking to prove that the execution of this CPU is deterministic: i.e. we show that given two identical instruction memories, the state updates performed by this CPU will be identical.
+We will use a running example of a CPU model constructed in \uclid{} and use bounded unrolling of the model's transition relation to prove that the execution of this CPU is deterministic: i.e. we show that given two identical instruction memories, the state updates performed by this CPU will be identical.
 
 \section{Common Type Definitions Across Modules}
+
 Example~\ref{ex:cpu-common} shows a module that defines only type synonyms. Such a module can be used to share type definitions across other modules. The types declared in Example~\ref{ex:cpu-common} are \emph{imported} in lines~2-5 of module \codelike{cpu} declared in Example~\ref{ex:cpu-cpu}.
 
 \label{sec:cpu-model}
@@ -52,8 +53,9 @@ Modules are instantiated using the \keyword{instance} keyword. Lines 14~and~15 o
 
 Scheduling of instantiated modules is explicit and synchronous. The two \keyword{next} statements on lines 22~and~23 of Example~\ref{ex:cpu-main} invoke the next state transitions of the two instances of the \codelike{cpu} module.
 
-\subsection{Accessing Instance Variables}
-The state variables of an instantiated module are accessed using the \codelike{.} operator. The four invariants on lines 27-32 of Example~\ref{ex:cpu-main}, refer to the registers, memory, pc and instruction variables of the two instantiated modules. These invariants state that both instances must have identical values for these state variables.
+\subsection{Accessing Members of Instances}
+
+The state variables, types, etc. of an instantiated module are accessed using the \codelike{.} operator. The four invariants on lines 27-32 of Example~\ref{ex:cpu-main}, refer to the registers, memory, pc and instruction variables of the two instantiated modules. These invariants state that both instances must have identical values for these state variables.
 
 
 \section{Running \uclid{}}
