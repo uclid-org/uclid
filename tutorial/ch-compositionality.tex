@@ -40,9 +40,10 @@ aspects for transition systems introduced by the original UCLID system~\cite{bry
 Example~\ref{ex:cpu-cpu} shows the use of the \emph{uninterpreted type}: \codelike{regindex_t} on line~6. The index type to the register is an \emph{abstract} type, as opposed to a specific type (e.g. \codelike{bv3}). This allows us to reason about an abstract register file that has an undefined (and unbounded) number of entries, as opposed to proving facts about some specific register file implementation, potentially enabling more general proofs about system behavior.
 
 \subsection{Uninterpreted Functions}
-Values belonging to an uninterpreted type can be created using \emph{uninterpreted functions}. The functions \codelike{inst2op}, \codelike{inst2reg0}, \codelike{inst2reg1}, \codelike{inst2imm} and \codelike{inst2addr} on lines~15-19 of Example~\ref{ex:cpu-cpu} are all examples of uninterpreted functions. An uninterpreted function $f$ is a function about which we know nothing, except that it is a function; i.e. $\forall x_1, x_2.~ x_1 = x_2 \implies f(x_1) = f(x_2)$.
+Values belonging to an uninterpreted type can be created using \emph{uninterpreted functions}. The functions \codelike{inst2op}, \codelike{inst2reg0}, \codelike{inst2reg1}, \codelike{inst2imm} and \codelike{inst2addr} on lines~15-19 of Example~\ref{ex:cpu-cpu} are all examples of uninterpreted functions. An uninterpreted function $f$ is a symbol about which we know nothing, except that it is a function; i.e. $\forall x_1, x_2.~ x_1 = x_2 \implies f(x_1) = f(x_2)$.
 
-Uninterpreted functions allow us to reason about an abstract CPU model without considering specific instruction encodings or decoder models. This could potentially lead to more general proofs as well as more scalable automated proofs. 
+As an example, in the context of processor verification,
+uninterpreted functions allow us to reason about an abstract CPU model without considering specific instruction encodings or decoder models. This could potentially lead to more general proofs as well as more scalable automated proofs. 
 
 
 \section{Module Instantiation and Scheduling}
