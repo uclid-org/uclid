@@ -18,7 +18,7 @@ syn keyword ucl4Type            boolean integer enum record
 syn keyword ucl4Expr            forall exists Lambda in
 syn keyword ucl4Stmt            if then else assert assume havoc for skip case esac default
 syn keyword ucl4Decl            module init next control function procedure returns call type var input output const property invariant synthesis grammar requires ensures modifies sharedvar instance axiom define
-syn keyword ucl4Cmd             unroll check print_module print_cex print_results k_induction_base k_induction_step induction clear_context
+syn keyword ucl4Cmd             unroll check print_module print_cex print_results k_induction_base k_induction_step induction clear_context synthesize_invariant
 " user labels
 syn keyword ucl4Constant        false true
 

@@ -39,23 +39,30 @@
 package uclid
 package lang
 
+import uclid.lang.Scope.BlockVar
+
 class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
 {
   type T = Set[ModuleError]
   def checkLhs(lhss : List[Lhs], in : T, context : Scope) : T = {
-    val seqLhs = lhss.find(p => p.isProceduralLhs)
-    val primedLhs = lhss.find(p => !p.isProceduralLhs)
+    val seqLhsOpt = lhss.find(p => p.isProceduralLhs)
+    val primeLhsOpt = lhss.find(p => !p.isProceduralLhs)
     if (context.environment == ProceduralEnvironment) {
-      if (primedLhs.isDefined) {
-        in + ModuleError("Primed assignments are not allowed in procedural code", primedLhs.get.position)
+      if (primeLhsOpt.isDefined) {
+        in + ModuleError("Primed assignments are not allowed in procedural code", primeLhsOpt.get.position)
       } else {
         in
       }
     } else {
-      if (seqLhs.isDefined) {
-        in + ModuleError("Sequential assignment not allowed outside procedures", seqLhs.get.position)
-      } else {
-        in
+      seqLhsOpt match {
+        case Some(seqLhs) =>
+          context.get(seqLhs.ident) match {
+            case Some(BlockVar(_, _)) => in
+            case _ =>
+              in + ModuleError("Sequential assignment not allowed outside procedures", seqLhsOpt.get.position)
+          }
+        case None =>
+          in
       }
     }
   }

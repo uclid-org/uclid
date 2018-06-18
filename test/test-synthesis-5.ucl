@@ -1,0 +1,28 @@
+module main
+{
+  var x, y, z : integer;
+
+  init {
+    x = 0;
+  }
+
+  next {
+    if (x < 500) {
+      x' = x + 1;
+      if (*) {
+        y' = z;
+        z' = y;
+      } else {
+        y' = y;
+        z' = y;
+      }
+    }
+  }
+
+  invariant post_f : !(x >= 500 && (z < y));
+
+  control {
+    print_module;
+    synthesize_invariant;
+  }
+}

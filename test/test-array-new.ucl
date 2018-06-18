@@ -1,0 +1,34 @@
+module main
+{
+  var x, y, z : integer;
+
+  init {
+    x = 0;
+  }
+
+  next {
+    if (x < 500) {
+      var xp : integer;
+      xp = x + 2;
+      if (*) {
+        x' = xp;
+        y' = z;
+        z' = y;
+      } else {
+        x' = xp;
+        y' = y;
+        z' = y;
+      }
+      assert (x' - 1 == x);
+      assert (x + 2 == x');
+    }
+  }
+
+  invariant post_f : !(x >= 500 && (z < y));
+
+  control {
+    v = unroll(5);
+    check;
+    print_results;
+  }
+}

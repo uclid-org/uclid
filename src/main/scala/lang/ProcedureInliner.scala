@@ -236,10 +236,33 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
   }
 }
 
+class NewProcedureInlinerPass() extends RewritePass {
+  override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
+    val procId = callStmt.id
+    val proc = context.module.get.procedures.find(p => p.id == procId).get
+    val procSig = proc.sig
+
+    val argPairs : List[(Identifier, Expr)] = ((procSig.inParams.map(p => p._1)) zip (callStmt.args))
+    val retPairs : List[(Identifier, (Identifier, Type))] = procSig.outParams.map(p => (p._1 -> (NameProvider.get("ret_" + p._1.toString()), p._2)))
+    val retVars = retPairs.map(r => BlockVarsDecl(List(r._2._1), r._2._2))
+    val retIds = retPairs.map(r => r._2._1)
+    val argMap : Map[Expr, Expr] = argPairs.map(p => p._1.asInstanceOf[Expr] -> p._2).toMap
+    val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
+    
+    val rewriteMap = argMap ++ retMap
+    val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
+    val stmtP = rewriter.rewriteStatement(proc.body, Scope.empty).get
+    val returnAssign = AssignStmt(callStmt.callLhss, retIds)
+    Some(BlockStmt(retVars, List(stmtP, returnAssign)))
+  }
+}
+
+
 class ProcedureInliner(rewriteOptions: ProcedureInliner.RewriteOptions) extends ASTAnalysis {
   lazy val primedVariableCollector = manager.pass("PrimedVariableCollector").asInstanceOf[PrimedVariableCollector]
   lazy val findProcedureDependency = manager.pass("FindProcedureDependency").asInstanceOf[FindProcedureDependency]
   override def passName = "ProcedureInliner:"+rewriteOptions.toString()
+
 
   override def visit(module : Module, context : Scope) : Option[Module] = {
     val primeVarMap = if (rewriteOptions == ProcedureInliner.RewriteNext) {

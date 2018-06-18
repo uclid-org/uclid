@@ -368,6 +368,6 @@ object NameProvider {
   var index = 0
   def get(tag : String) : Identifier = {
     index += 1
-    Identifier("__ucld_%d_%s".format(index, tag))
+    Identifier("__uclid_%d_%s__".format(index, tag))
   }
 }
