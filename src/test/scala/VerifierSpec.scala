@@ -204,9 +204,9 @@ class QuantifierVerifSpec extends FlatSpec {
   }
 }
 class ModuleVerifSpec extends FlatSpec {
-//  "test-modules.ucl" should "verify all assertions." in {
-//    VerifierSpec.expectedFails("./test/test-modules.ucl", 0)
-//  }
+  "test-modules.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-modules.ucl", 0)
+  }
   "test-modules-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-modules-1.ucl", 0)
   }

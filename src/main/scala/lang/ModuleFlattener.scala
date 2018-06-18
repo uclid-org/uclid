@@ -128,7 +128,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   type VarMap = MIP.VarMap
   type InstVarMap = MIP.InstVarMap
   type RewriteMap = MIP.RewriteMap
-  val nameProvider = new ContextualNameProvider("_inst_" + inst.instanceId.toString)
   val ctx = Scope.empty + module
   def createVarMap() : (VarMap, ExternalSymbolMap) = {
     // sanity check
@@ -139,8 +138,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val idMap1 = targetModule.inputs.foldLeft(idMap0) {
       (mapAcc, inp) => {
         inst.argMap.get(inp._1) match {
-          case Some(expr) =>  mapAcc + (inp._1 -> MIP.BoundInput(nameProvider(ctx, inp._1, "bound_input"), inp._2, expr))
-          case None => mapAcc + (inp._1 -> MIP.UnboundInput(nameProvider(ctx, inp._1, "unbound_input"), inp._2))
+          case Some(expr) =>  mapAcc + (inp._1 -> MIP.BoundInput(NameProvider.get(inp._1.toString + "_bound_input"), inp._2, expr))
+          case None => mapAcc + (inp._1 -> MIP.UnboundInput(NameProvider.get(inp._1.toString + "_unbound_input"), inp._2))
         }
       }
     }
@@ -149,7 +148,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       (mapAcc, out) => {
         inst.argMap.get(out._1) match {
           case Some(expr) => mapAcc + (out._1 -> MIP.BoundOutput(MIP.extractLhs(expr).get, out._2))
-          case None => mapAcc + (out._1 -> MIP.UnboundOutput(nameProvider(ctx, out._1, "unbound_output"), out._2))
+          case None => mapAcc + (out._1 -> MIP.UnboundOutput(NameProvider.get(out._1.toString() + "_unbound_output"), out._2))
         }
       }
     }
@@ -164,11 +163,11 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
     // map each state variable.
     val idMap4 = targetModule.vars.foldLeft(idMap3) {
-      (mapAcc, v) => mapAcc + (v._1 -> MIP.StateVariable(nameProvider(ctx, v._1, "var"), v._2))
+      (mapAcc, v) => mapAcc + (v._1 -> MIP.StateVariable(NameProvider.get(v._1.toString() + "_var"), v._2))
     }
     // map each constant.
     val map5 = targetModule.constants.foldLeft((idMap4)) {
-      (acc, c) => acc + (c._1 -> MIP.Constant(nameProvider(ctx, c._1, "const"), c._2))
+      (acc, c) => acc + (c._1 -> MIP.Constant(NameProvider.get(c._1.toString() + "_const"), c._2))
     }
     // map each function.
     val map6 = targetModule.functions.foldLeft(map5, initExternalSymbolMap) {
@@ -269,7 +268,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   val newInputAssignments = createNextInputAssignments(varMap)
   val newAxioms = newModule.axioms.map {
     ax => {
-      val idP = ax.id.flatMap(axId => Some(nameProvider(ctx, axId, "axiom")))
+      val idP = ax.id.flatMap(axId => Some(NameProvider.get(axId.toString() + "_axiom")))
       AxiomDecl(idP, ax.expr)
     }
   }

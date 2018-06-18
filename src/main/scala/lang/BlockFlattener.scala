@@ -43,21 +43,18 @@ import com.typesafe.scalalogging.Logger
 
 class BlockFlattenerPass extends RewritePass {
   lazy val logger = Logger(classOf[BlockFlattenerPass])
-  var nameProvider = new ContextualNameProvider("")
   
   override def reset() {
-    nameProvider = new ContextualNameProvider("")
   }
 
-  def renameBlock(blk : BlockStmt, context : Scope, nameProvider : ContextualNameProvider) : (List[Statement], List[(Identifier, Type)]) = {
+  def renameBlock(blk : BlockStmt, context : Scope) : (List[Statement], List[(Identifier, Type)]) = {
     val blkVars = blk.vars.flatMap(vs => vs.ids.map(v => (v, vs.typ)))
     val renaming = blkVars.foldLeft(Map.empty[Identifier, (Identifier, Type)]) {
       (map, vDec) => {
-        if (context.map.get(vDec._1).isEmpty && !nameProvider.names.contains(vDec._1)) {
-          nameProvider.names.add(vDec._1)
+        if (context.map.get(vDec._1).isEmpty) {
           map + (vDec._1 -> (vDec._1, vDec._2))
         } else {
-          val newId = nameProvider(context, vDec._1, "")
+          val newId = NameProvider.get("blk")
           map + (vDec._1 -> (newId, vDec._2))
         }
       }
@@ -73,7 +70,7 @@ class BlockFlattenerPass extends RewritePass {
     val stmtM1 = blkStmt.stmts.map {
       (st) => {
         st match {
-          case blk : BlockStmt => renameBlock(blk, context, nameProvider)
+          case blk : BlockStmt => renameBlock(blk, context)
           case _ => (List(st), List.empty)
         }
       }

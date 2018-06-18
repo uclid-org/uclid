@@ -3,17 +3,15 @@ package lang
 
 import scala.reflect.ClassTag
 
-class ExternalSymbolMap (
-  val nameProvider : Option[ContextualNameProvider], val externalMap: Map[ExternalIdentifier, (Identifier, ModuleExternal)]) {
+class ExternalSymbolMap (val externalMap: Map[ExternalIdentifier, (Identifier, ModuleExternal)]) {
 
   def + (module : Module, context : Scope) : ExternalSymbolMap = {
-    val newProvider = new ContextualNameProvider("$external")
-    new ExternalSymbolMap(Some(newProvider), externalMap)
+    new ExternalSymbolMap(externalMap)
   }
 
   def + (extId : ExternalIdentifier, extDecl : ModuleExternal, context : Scope) : ExternalSymbolMap = {
-    val newName : Identifier = nameProvider.get.apply(context, extId.id, extId.moduleId.toString)
-    new ExternalSymbolMap(nameProvider, externalMap + (extId -> (newName, extDecl)))
+    val newName : Identifier = NameProvider.get(extId.id.toString + "_" + extId.moduleId.toString)
+    new ExternalSymbolMap(externalMap + (extId -> (newName, extDecl)))
   }
 
   def getOrAdd(extId : ExternalIdentifier, extDecl : ModuleExternal, context : Scope) : (ExternalSymbolMap, Identifier) = {
@@ -29,7 +27,7 @@ class ExternalSymbolMap (
 
 object ExternalSymbolMap {
   def empty = {
-    new ExternalSymbolMap(None, Map.empty)
+    new ExternalSymbolMap(Map.empty)
   }
 }
 

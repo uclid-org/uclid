@@ -41,24 +41,16 @@ package lang
 
 import com.typesafe.scalalogging.Logger
 
-class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifier], Option[ContextualNameProvider])]
+class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifier])]
 {
-  type T = (Map[Identifier, Identifier], Option[ContextualNameProvider])
-  override def applyOnModule(d : TraversalDirection.T, module : Module , in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Down) {
-      val nameProvider = new ContextualNameProvider("_prime_")
-      (in._1, Some(nameProvider))
-    } else {
-      (in._1, None)
-    }
-  }
+  type T = Map[Identifier, Identifier]
   def addToMap(id : Identifier, in : T, tag : String, ctx : Scope) : T = {
-    in._1.get(id) match {
+    in.get(id) match {
       case Some(idP) => in
       case None =>
-        val newId = in._2.get(ctx, id, tag)
-        val mapP = (in._1 + (id -> newId))
-        (mapP, in._2)
+        val newId = NameProvider.get(id.toString + "_" + tag)
+        val mapP = (in + (id -> newId))
+        mapP
     }
   }
   override def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = {
@@ -81,17 +73,15 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
       in
     }
   }
-  override def applyOnProcedureCall(d : TraversalDirection.T, callStmt : ProcedureCallStmt, in : T, context : Scope) : T = {
+  override def applyOnProcedureCall(d : TraversalDirection.T, callStmt : ProcedureCallStmt, mapIn : T, context : Scope) : T = {
     if (d == TraversalDirection.Up && context.environment == SequentialEnvironment) {
       val procId = callStmt.id
       val module = context.module.get
       val proc = module.procedures.find(p => p.id == procId).get
-      val mapIn = in._1
-      val nameProvider = in._2.get
-      val mapOut = proc.modifies.foldLeft(mapIn)((acc, m) => (acc + (m -> nameProvider(context, m, "modifies"))))
-      (mapOut, in._2)
+      val mapOut = proc.modifies.foldLeft(mapIn)((acc, m) => (acc + (m -> NameProvider.get(m.toString() + "_modifies"))))
+      mapOut
     } else {
-      in
+      mapIn
     }
   }
 }
@@ -101,7 +91,7 @@ class PrimedVariableCollector() extends ASTAnalyzer("PrimedVariableCollector", n
   var primeVarMap : Option[Map[Identifier, Identifier]] = None
   var reverseMap : Option[Map[Identifier, Identifier]] = None
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    val fwdMap = visitModule(module, (Map.empty, None), context)._1
+    val fwdMap = visitModule(module, Map.empty, context)
     val revMap = fwdMap.foldLeft(Map.empty[Identifier, Identifier]) {
       (acc, p) => acc + (p._2 -> p._1)
     }
