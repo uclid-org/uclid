@@ -3,9 +3,10 @@
 
 This chapter describes \uclid{}'s features for compositional and modular verification, and the use of abstraction.
 
-We will use a running example of a CPU model constructed in the \uclid{} and use bounded model checking to prove that the execution of this CPU is deterministic: i.e. we show that given two identical instruction memories, the state updates performed by this CPU will be identical.
+We will use a running example of a CPU model constructed in \uclid{} and use bounded unrolling of the model's transition relation to prove that the execution of this CPU is deterministic: i.e. we show that given two identical instruction memories, the state updates performed by this CPU will be identical.
 
 \section{Common Type Definitions Across Modules}
+
 Example~\ref{ex:cpu-common} shows a module that defines only type synonyms. Such a module can be used to share type definitions across other modules. The types declared in Example~\ref{ex:cpu-common} are \emph{imported} in lines~2-5 of module \codelike{cpu} declared in Example~\ref{ex:cpu-cpu}.
 
 \label{sec:cpu-model}
@@ -40,9 +41,10 @@ aspects for transition systems introduced by the original UCLID system~\cite{bry
 Example~\ref{ex:cpu-cpu} shows the use of the \emph{uninterpreted type}: \codelike{regindex_t} on line~6. The index type to the register is an \emph{abstract} type, as opposed to a specific type (e.g. \codelike{bv3}). This allows us to reason about an abstract register file that has an undefined (and unbounded) number of entries, as opposed to proving facts about some specific register file implementation, potentially enabling more general proofs about system behavior.
 
 \subsection{Uninterpreted Functions}
-Values belonging to an uninterpreted type can be created using \emph{uninterpreted functions}. The functions \codelike{inst2op}, \codelike{inst2reg0}, \codelike{inst2reg1}, \codelike{inst2imm} and \codelike{inst2addr} on lines~15-19 of Example~\ref{ex:cpu-cpu} are all examples of uninterpreted functions. An uninterpreted function $f$ is a function about which we know nothing, except that it is a function; i.e. $\forall x_1, x_2.~ x_1 = x_2 \implies f(x_1) = f(x_2)$.
+Values belonging to an uninterpreted type can be created using \emph{uninterpreted functions}. The functions \codelike{inst2op}, \codelike{inst2reg0}, \codelike{inst2reg1}, \codelike{inst2imm} and \codelike{inst2addr} on lines~15-19 of Example~\ref{ex:cpu-cpu} are all examples of uninterpreted functions. An uninterpreted function $f$ is a symbol about which we know nothing, except that it is a function; i.e. $\forall x_1, x_2.~ x_1 = x_2 \implies f(x_1) = f(x_2)$.
 
-Uninterpreted functions allow us to reason about an abstract CPU model without considering specific instruction encodings or decoder models. This could potentially lead to more general proofs as well as more scalable automated proofs. 
+As an example, in the context of processor verification,
+uninterpreted functions allow us to reason about an abstract CPU model without considering specific instruction encodings or decoder models. This could potentially lead to more general proofs as well as more scalable automated proofs. 
 
 
 \section{Module Instantiation and Scheduling}
@@ -51,8 +53,14 @@ Modules are instantiated using the \keyword{instance} keyword. Lines 14~and~15 o
 
 Scheduling of instantiated modules is explicit and synchronous. The two \keyword{next} statements on lines 22~and~23 of Example~\ref{ex:cpu-main} invoke the next state transitions of the two instances of the \codelike{cpu} module.
 
-\subsection{Accessing Instance Variables}
-The state variables of an instantiated module are accessed using the \codelike{.} operator. The four invariants on lines 27-32 of Example~\ref{ex:cpu-main}, refer to the registers, memory, pc and instruction variables of the two instantiated modules. These invariants state that both instances must have identical values for these state variables.
+Asynchronous and partially synchronous composition can be 
+modeled by explicitly encoding a scheduler into the \uclid{} model
+that specifies when the \codelike{next} block of each module
+is executed.
+
+\subsection{Accessing Members of Instances}
+
+The state variables, types, etc. of an instantiated module are accessed using the \codelike{.} operator. The four invariants on lines 27-32 of Example~\ref{ex:cpu-main}, refer to the registers, memory, pc and instruction variables of the two instantiated modules. These invariants state that both instances must have identical values for these state variables.
 
 
 \section{Running \uclid{}}
@@ -70,5 +78,6 @@ Finished execution for module: main.
 
 Note the file \codelike{ex4.1-cpu.ucl} contains three modules. Each of these modules could potentially have \keyword{control} blocks. Which \uclid{} is invoked on this model, it executes only the \keyword{control} block of the \codelike{main} module.  If we had included a \keyword{control} block for the \codelike{alu} module and wished to verify properties of this module, we would have to invoke \uclid{} on this specific module using the \codelike{--main} command-line option.
 
-\subsection{Exercise: Inductive Proof of CPU model}
-Prove determinism of the CPU model using induction rather than bounded model checking. You will need to add strengthening inductive invariants relating the two CPU instances.
+% Moved to next chapter
+%\subsection{Exercise: Inductive Proof of CPU model}
+%Prove determinism of the CPU model using induction rather than bounded model checking. You will need to add strengthening inductive invariants relating the two CPU instances.
