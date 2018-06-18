@@ -252,11 +252,18 @@ class NewProcedureInlinerPass() extends RewritePass {
     val rewriteMap = argMap ++ retMap
     val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
     val stmtP = rewriter.rewriteStatement(proc.body, Scope.empty).get
-    val returnAssign = AssignStmt(callStmt.callLhss, retIds)
-    Some(BlockStmt(retVars, List(stmtP, returnAssign)))
+    if (callStmt.callLhss.size > 0) {
+      val returnAssign = AssignStmt(callStmt.callLhss, retIds)
+      Some(BlockStmt(retVars, List(stmtP, returnAssign)))
+    } else {
+      Some(stmtP)
+    }
   }
 }
 
+class NewProcedureInliner() extends ASTRewriter("ProcedureInliner", new NewProcedureInlinerPass()) {
+  override val repeatUntilNoChange = true
+}
 
 class ProcedureInliner(rewriteOptions: ProcedureInliner.RewriteOptions) extends ASTAnalysis {
   lazy val primedVariableCollector = manager.pass("PrimedVariableCollector").asInstanceOf[PrimedVariableCollector]

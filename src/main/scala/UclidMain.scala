@@ -194,6 +194,7 @@ object UclidMain {
     passManager.addPass(new StatementScheduler())
     passManager.addPass(new BlockFlattener())
     passManager.addPass(new ProcedureInliner(ProcedureInliner.RewriteInit))
+    // passManager.addPass(new NewProcedureInliner())
     passManager.addPass(new PrimedVariableCollector())
     passManager.addPass(new PrimedVariableEliminator())
     passManager.addPass(new ProcedureInliner(ProcedureInliner.RewriteNext))
