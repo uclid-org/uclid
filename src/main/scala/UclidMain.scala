@@ -76,6 +76,7 @@ object UclidMain {
       synthesizer: List[String] = List.empty,
       synthesisRunDir: String = "",
       sygusFormat: Boolean = false,
+      printStackTrace: Boolean = false,
       verbose : Int = 0,
       files : Seq[java.io.File] = Seq()
   )
@@ -99,6 +100,10 @@ object UclidMain {
       opt[String]('Y', "synthesizer-run-directory").valueName("<Dir>").action{
         (dir, c) => c.copy(synthesisRunDir = dir)
       }.text("Run directory for synthesizer.")
+
+      opt[Unit]('X', "exception-stack-trace").action{
+        (_, c) => c.copy(printStackTrace = true)
+      }.text("Print exception stack trace.")
 
       opt[Unit]('f', "sygus-format").action{
         (_, c) => c.copy(sygusFormat = true)
@@ -130,9 +135,11 @@ object UclidMain {
     catch  {
       case (e : java.io.FileNotFoundException) =>
         UclidMain.println("Error: " + e.getMessage() + ".")
+        if(config.printStackTrace) { e.printStackTrace() }
         System.exit(1)
       case (p : Utils.ParserError) =>
         UclidMain.println("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        if(config.printStackTrace) { p.printStackTrace() }
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
@@ -141,6 +148,8 @@ object UclidMain {
           }
         }
         UclidMain.println("Parsing failed. %d errors found.".format(typeErrors.errors.size))
+        if(config.printStackTrace) { typeErrors.printStackTrace() }
+        System.exit(1)
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
@@ -148,9 +157,11 @@ object UclidMain {
           }
         }
         UclidMain.println("Parsing failed. " + ps.errors.size.toString + " errors found.")
+        if(config.printStackTrace) { ps.printStackTrace() }
+        System.exit(1)
       case(a : Utils.AssertionError) =>
         UclidMain.println("[Assertion Failure]: " + a.getMessage)
-        a.printStackTrace()
+        if(config.printStackTrace) { a.printStackTrace() }
         System.exit(2)
     }
   }
