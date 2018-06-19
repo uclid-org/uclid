@@ -43,6 +43,7 @@ package smt
 import lang.{Identifier, Scope}
 import com.typesafe.scalalogging.Logger
 import scala.collection.JavaConverters._
+import scala.util.matching.Regex
 
 import java.io.{File, PrintWriter}
 
@@ -74,6 +75,7 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     "var_" + v + "!"
   }
   def getEqExpr(ident : Identifier, expr : smt.Expr, ctx : Scope, prime : Boolean) : String = {
+    if (ctx.typeOf(ident) == None) return ""
     val typ = Converter.typeToSMT(ctx.typeOf(ident).get)
     val symbol = Symbol(if (prime) ident.name + "!" else ident.name, typ)
     val eqExpr : smt.Expr = OperatorApplication(EqualityOp, List(symbol, expr))
@@ -229,18 +231,12 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
         }
       })
       sygusLog.debug(string)
-      // Format the output string of the synthizer
-      val invString = if (sygusFormat) {
-        // Find the invariant function
-        val outputLines = string.split("\n").filter(s => s contains "inv-f")
-        // If there are no lines with inv-f, we've failed to find an invariant function
-        if (outputLines.isEmpty) return None
-        // Return the first and only invariant
-        Utils.assert(outputLines.size == 1, "The SyGuS solver should only return one invariant function.")
-        outputLines(0)
-      } else {
-        string
-      }
+      // Find the invariant function
+      val invFuncPattern = "(?s)\\(define-fun inv-f \\(.*\\).*Bool.*\\(.*\\)\\)".r
+      val invString = (invFuncPattern findFirstIn string).mkString("")
+      // No invariant matches the regular expression invFuncPattern
+      if (invString.length() == 0) return None
+      // Found an invariant
       val fun = SExprParser.parseFunction(invString)
       sygusLog.debug(fun.toString())
       return Some(fun)
