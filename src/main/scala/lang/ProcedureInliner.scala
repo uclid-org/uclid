@@ -145,8 +145,10 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
             (acc._1 ++ List(stmt), acc._2)
           } else {
             // Sanity check.
-            Utils.assert(args.size == procToInline.sig.inParams.size, "Incorrect number of arguments to procedure: " + procToInline.id + ".\nStatement: " + stmt.toString)
-            Utils.assert(lhss.size == procToInline.sig.outParams.size, "Incorrect number of return values from procedure: " + procToInline.id)
+            Utils.assert(args.size == procToInline.sig.inParams.size,
+                "Incorrect number of arguments to procedure: " + procToInline.id.toString() + ".\nStatement: " + stmt.toString)
+            Utils.assert(lhss.size == procToInline.sig.outParams.size,
+                "Incorrect number of return values from procedure: " + procToInline.id.toString())
             // what are the arguments?
             val argVars : List[Identifier] = procToInline.sig.inParams.map(_._1)
             // return values original names.
@@ -237,26 +239,94 @@ class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, proc
 }
 
 class NewProcedureInlinerPass() extends RewritePass {
+  def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope) : Statement = {
+    val procSig = proc.sig
+    def getModifyLhs(id : Identifier) = {
+      if (context.environment.isProcedural) { LhsId(id) }
+      else { LhsNextId(id) }
+    }
+
+    // formal and actual argument pairs.
+    val argPairs : List[(Identifier, Expr)] = ((procSig.inParams.map(p => p._1)) zip (callStmt.args))
+    // formal and actual return value pairs.
+    val retPairs : List[(Identifier, (Identifier, Type))] = procSig.outParams.map(p => (p._1 -> (NameProvider.get("ret_" + p._1.toString()), p._2)))
+    // list of new return variables.
+    val retIds = retPairs.map(r => r._2._1)
+    // map from formal to actual arguments.
+    val argMap : Map[Expr, Expr] = argPairs.map(p => p._1.asInstanceOf[Expr] -> p._2).toMap
+    // map from formal to the fake variables created for return values.
+    val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
+    // map from modified state variables to new variables created for them.
+    val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
+    // map from st_var -> modify_var.
+    val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1 -> p._2)).toMap
+    // map from old(var) -> var.
+    val oldModifiesMap : Map[Expr, Expr] = modifyPairs.map(p => Operator.old(p._2) -> p._1).toMap
+    // full rewrite map.
+    val rewriteMap = argMap ++ retMap ++ modifiesMap ++ oldModifiesMap
+    // rewriter object.
+    val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
+
+    // variable declarations for return values.
+    val retVars = retPairs.map(r => BlockVarsDecl(List(r._2._1), r._2._2))
+    // variable declarations for the modify variables.
+    val modifyVars : List[BlockVarsDecl] = modifyPairs.map(p => BlockVarsDecl(List(p._2), context.get(p._1).get.typ))
+    // list of all variable declarations.
+    val varsToDeclare = retVars ++ modifyVars
+
+    // statements assigning state variables to modify vars.
+    val modifyInitAssigns : List[AssignStmt] = if (proc.shouldInline) {
+      modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
+    } else {
+      List.empty
+    }
+    // statements updating the state variables at the end.
+    val modifyFinalAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(getModifyLhs(p._1)), List(p._2)))
+    // create precondition asserts
+    val preconditionAsserts : List[Statement] = proc.requires.map {
+      (req) => {
+        val exprP = rewriter.rewriteExpr(req, context)
+        AssertStmt(exprP, None)
+      }
+    }
+    // create postcondition asserts
+    val postconditionAsserts : List[Statement] = if (proc.shouldInline) {
+      proc.ensures.map {
+        (ens) => {
+          val exprP = rewriter.rewriteExpr(ens, context)
+          AssertStmt(exprP, None)
+        }
+      }
+    } else {
+      List.empty
+    }
+    // body of the procedure.
+    val bodyP = if (proc.shouldInline) {
+      rewriter.rewriteStatement(proc.body, Scope.empty).get
+    } else {
+      val postconditionAssumes : List[Statement] = proc.ensures.map {
+        (ens) => {
+          val exprP = rewriter.rewriteExpr(ens, context)
+          AssumeStmt(exprP, None)
+        }
+      }
+      BlockStmt(List.empty, postconditionAssumes)
+    }
+    val stmtsP = if (callStmt.callLhss.size > 0) {
+      val returnAssign = AssignStmt(callStmt.callLhss, retIds)
+      modifyInitAssigns ++ preconditionAsserts ++ List(bodyP, returnAssign) ++ postconditionAsserts ++ modifyFinalAssigns
+    } else {
+      modifyInitAssigns ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
+    }
+    BlockStmt(varsToDeclare, stmtsP)
+  }
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
     val procId = callStmt.id
     val proc = context.module.get.procedures.find(p => p.id == procId).get
-    val procSig = proc.sig
-
-    val argPairs : List[(Identifier, Expr)] = ((procSig.inParams.map(p => p._1)) zip (callStmt.args))
-    val retPairs : List[(Identifier, (Identifier, Type))] = procSig.outParams.map(p => (p._1 -> (NameProvider.get("ret_" + p._1.toString()), p._2)))
-    val retVars = retPairs.map(r => BlockVarsDecl(List(r._2._1), r._2._2))
-    val retIds = retPairs.map(r => r._2._1)
-    val argMap : Map[Expr, Expr] = argPairs.map(p => p._1.asInstanceOf[Expr] -> p._2).toMap
-    val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
-    
-    val rewriteMap = argMap ++ retMap
-    val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
-    val stmtP = rewriter.rewriteStatement(proc.body, Scope.empty).get
-    if (callStmt.callLhss.size > 0) {
-      val returnAssign = AssignStmt(callStmt.callLhss, retIds)
-      Some(BlockStmt(retVars, List(stmtP, returnAssign)))
+    if (!proc.body.hasCall) {
+      Some(inlineProcedureCall(callStmt, proc, context))
     } else {
-      Some(stmtP)
+      Some(callStmt)
     }
   }
 }

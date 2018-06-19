@@ -35,6 +35,7 @@ module main
   }
   
   control {
+    print_module;
     unroll (5);
     check;
     print_results;

@@ -180,6 +180,9 @@ class ProcedureVerifSpec extends FlatSpec {
   "test-procedure-postcondition-3.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-procedure-postcondition-3.ucl", 0)
   }
+  "test-procedure-postcondition-4.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-postcondition-4.ucl", 4)
+  }
   "test-while-0.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-while-0.ucl", 0)
   }

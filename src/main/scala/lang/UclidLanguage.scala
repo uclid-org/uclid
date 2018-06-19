@@ -739,23 +739,29 @@ sealed abstract class Statement extends ASTNode {
   def hasStmtBlock = false
   val isLoop = false
   val hasLoop = false
+  val hasCall : Boolean
   def toLines : List[String]
 }
 case class SkipStmt() extends Statement {
   override def toLines = List("skip; // " + position.toString)
+  override val hasCall = false
 }
 case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assert " + e + "; // " + position.toString)
+  override val hasCall = false
 }
 case class AssumeStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assume " + e + "; // " + position.toString)
+  override val hasCall = false
 }
 case class HavocStmt(havocable : HavocableEntity) extends Statement {
   override def toLines = List("havoc " + havocable.toString() + "; // " + position.toString)
+  override val hasCall = false
 }
 case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines =
     List(Utils.join(lhss.map (_.toString), ", ") + " = " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
+  override val hasCall = false
 }
 case class BlockStmt(vars: List[BlockVarsDecl], stmts: List[Statement]) extends Statement {
   override def hasStmtBlock = true
@@ -766,6 +772,7 @@ case class BlockStmt(vars: List[BlockVarsDecl], stmts: List[Statement]) extends 
       stmts.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++
     List("}")
   }
+  override val hasCall = stmts.exists(st => st.hasCall)
 }
 case class IfElseStmt(cond: Expr, ifblock: Statement, elseblock: Statement) extends Statement {
   override def hasStmtBlock = true
@@ -777,6 +784,7 @@ case class IfElseStmt(cond: Expr, ifblock: Statement, elseblock: Statement) exte
     elseblock.toLines.map(PrettyPrinter.indent(1) + _)
   }
   override def toLines = lines
+  override val hasCall = ifblock.hasCall || elseblock.hasCall
 }
 case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: Statement)
   extends Statement
@@ -788,6 +796,7 @@ case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: Stateme
     val forLine = "for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString
     List(forLine) ++ body.toLines.map(PrettyPrinter.indent(1) + _) ++ List("}")
   }
+  override val hasCall = body.hasCall
 }
 case class WhileStmt(cond: Expr, body: Statement, invariants: List[Expr])
   extends Statement
@@ -800,20 +809,24 @@ case class WhileStmt(cond: Expr, body: Statement, invariants: List[Expr])
     val invLines = invariants.map(inv => PrettyPrinter.indent(1) + "invariant " + inv.toString() + "; // " + inv.position.toString())
     List(headLine) ++ invLines ++ body.toLines.map(PrettyPrinter.indent(1) + _)
   }
+  override val hasCall = body.hasCall
 }
 case class CaseStmt(body: List[(Expr,Statement)]) extends Statement {
   override def hasStmtBlock = true
   override def toLines = List("case") ++
     body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.toLines } ++
     List("esac")
+  override val hasCall = body.exists(b => b._2.hasCall)
 }
 case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr])  extends Statement {
   override def toLines = List("call (" +
     Utils.join(callLhss.map(_.toString), ", ") + ") = " + id + "(" +
     Utils.join(args.map(_.toString), ", ") + ") // " + id.position.toString)
+  override val hasCall = true
 }
 case class ModuleCallStmt(id: Identifier) extends Statement {
   override def toLines = List("next (" + id.toString +")")
+  override val hasCall = false
 }
 case class BlockVarsDecl(ids : List[Identifier], typ : Type) extends ASTNode {
   override def toString = "var " + Utils.join(ids.map(id => id.toString()), ", ") +

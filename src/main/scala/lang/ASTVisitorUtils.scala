@@ -104,9 +104,24 @@ object ExprRewriter
 class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   extends ASTRewriter(name, new ExprRewriterPass(rewrites))
 {
+  def rewriteExprFixpoint( e : Expr, context : Scope) : Expr = {
+    var e1 = e
+    var e2 = visitExpr(e1, context).get
+    do {
+      e1 = e2
+      e2 = visitExpr(e1, context).get
+    } while (e2 != e1)
+    e2
+  }
+
+  def rewriteExpr(e : Expr, context : Scope) : Expr = {
+    visitExpr(e, context).get
+  }
+
   def rewriteStatements(stmts : List[Statement], context : Scope) : List[Statement] = {
     return stmts.flatMap(visitStatement(_, context))
   }
+
   def rewriteStatement(stmt : Statement, context : Scope) : Option[Statement] = {
     visitStatement(stmt, context)
   }
