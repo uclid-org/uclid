@@ -205,17 +205,14 @@ object UclidMain {
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
     passManager.addPass(new BlockFlattener())
-    // passManager.addPass(new ProcedureInliner(ProcedureInliner.RewriteInit))
     passManager.addPass(new NewProcedureInliner())
-    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new PrimedVariableCollector())
     passManager.addPass(new PrimedVariableEliminator())
-    // passManager.addPass(new ProcedureInliner(ProcedureInliner.RewriteNext))
     passManager.addPass(new PrimedHistoryRewriter())
     passManager.addPass(new IntroduceFreshHavocs())
     passManager.addPass(new RewriteFreshLiterals())
     passManager.addPass(new BlockFlattener())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
+    // passManager.addPass(new ASTPrinter())
 
     val filenameAdderPass = new AddFilenameRewriter(None)
     // Helper function to parse a single file.

@@ -81,163 +81,6 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
   }
 }
 
-object ProcedureInliner {
-  sealed abstract class RewriteOptions
-  case object RewriteNext extends RewriteOptions
-  case object RewriteInit extends RewriteOptions
-}
-
-class InlineProcedurePass(rewriteOptions : ProcedureInliner.RewriteOptions, procToInline : ProcedureDecl, primeVarMap : Map[Identifier, Identifier]) extends RewritePass {
-  val log = Logger(classOf[InlineProcedurePass])
-
-  type UniqueNameProvider = (Identifier, String) => Identifier
-  override def rewriteProcedure(p : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
-    if (p.id == procToInline.id) Some(p)
-    else {
-      val ctxP = ctx + p
-      val (stmts, newVars) = inlineProcedureCalls((id, p) => NameProvider.get(id.toString() + "_" + p), List(p.body), ctx)
-      val newDecls = newVars.map((t) => LocalVarDecl(t._1, t._2))
-      Some(ProcedureDecl(p.id, p.sig, p.decls ++ newDecls, BlockStmt(List.empty, stmts), p.requires, p.ensures, p.modifies))
-    }
-  }
-
-  override def rewriteModule(m : Module, contextIn : Scope) : Option[Module] = {
-    val context = contextIn + m
-    val decls = m.decls.foldLeft((List.empty[Decl], List.empty[StateVarsDecl]))((acc, decl) => {
-      decl match {
-        case InitDecl(body) =>
-          if (rewriteOptions == ProcedureInliner.RewriteInit) {
-            val (stmts, vars) = inlineProcedureCalls((id, p) => NameProvider.get(id.toString() + "_" + p), List(body), context)
-            (acc._1 ++ List(InitDecl(BlockStmt(List.empty, stmts))), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
-          } else {
-            (acc._1 ++ List(decl), acc._2)
-          }
-        case NextDecl(body) =>
-          if (rewriteOptions == ProcedureInliner.RewriteNext) {
-            val (stmts, vars) = inlineProcedureCalls((id, p) => NameProvider.get(id.toString() + "_" + p), List(body), context)
-            (acc._1 ++ List(NextDecl(BlockStmt(List.empty, stmts))), acc._2 ++ vars.map((t) => StateVarsDecl(List(t._1), t._2)))
-          } else {
-            (acc._1 ++ List(decl), acc._2)
-          }
-        case decl =>
-          (acc._1 ++ List(decl), acc._2)
-      }
-    })
-    val moduleDecls = decls._2 ++ decls._1
-    return Some(Module(m.id, moduleDecls, m.cmds, m.notes))
-  }
-
-  /** Inline a procedure call.
-   *
-   *  The return value consists of a tuple of:
-   *  	- rewritten statements
-   *    - new variables that will need to be declared in the enclosing scope.
-   */
-  // FIXME: turn stmts into BlockStmt
-  def inlineProcedureCalls(uniqNamer : UniqueNameProvider, stmts : List[Statement], context : Scope) : (List[Statement], List[(Identifier, Type)]) = {
-    Utils.assert(context.map.size > 0, "Context is empty.")
-    val init = (List.empty[Statement], List.empty[(Identifier, Type)])
-    // we walk through the list of statements accumulating inlined procedures and new declarations.
-    return stmts.foldLeft(init)((acc, stmt) => {
-      stmt match {
-        case ProcedureCallStmt(id, lhss, args) =>
-          if (id != procToInline.id) {
-            (acc._1 ++ List(stmt), acc._2)
-          } else {
-            // Sanity check.
-            Utils.assert(args.size == procToInline.sig.inParams.size,
-                "Incorrect number of arguments to procedure: " + procToInline.id.toString() + ".\nStatement: " + stmt.toString)
-            Utils.assert(lhss.size == procToInline.sig.outParams.size,
-                "Incorrect number of return values from procedure: " + procToInline.id.toString())
-            // what are the arguments?
-            val argVars : List[Identifier] = procToInline.sig.inParams.map(_._1)
-            // return values original names.
-            var retVars : List[Identifier] = procToInline.sig.outParams.map(_._1)
-            // new variables for the return values.
-            var retNewVars : List[(Identifier, Type)] = procToInline.sig.outParams.map((r) => (uniqNamer(r._1, "return"), r._2))
-            // new variables for the local variables.
-            val localNewVars : List[(Identifier, Type)] = procToInline.decls.map((v) => (uniqNamer(v.id, "local"), v.typ))
-            // new variables for the modifies.
-            val modifiesMap : List[(Identifier, Identifier, Type)] = if (procToInline.shouldInline) {
-              List.empty
-            } else {
-              (procToInline.modifies.map {
-                m => {
-                  val typMOption = context.typeOf(m)
-                  Utils.assert(typMOption.isDefined, "Unknown identifier %s in context %s.".format(m.toString, context.map.toString))
-                  (primeVarMap.get(m).get, uniqNamer(m, "modifies"), context.typeOf(m).get) 
-                }
-              }).toList
-            }
-            val modifiesNewVars = modifiesMap.map(p => (p._2, p._3))
-
-            // map procedure formal arguments to actual
-            val mEmpty = Map.empty[Expr, Expr]
-            val mArgs = (argVars zip args).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2))
-            val mRet  = (retVars zip retNewVars).foldLeft(mEmpty)((map, t) => map + (t._1 -> t._2._1))
-            val mLocal = (procToInline.decls zip localNewVars).foldLeft(mEmpty)((map, t) => map + (t._1.id -> t._2._1))
-            val mModifies : Map[Expr, Identifier] = procToInline.modifies.map(m => (m -> primeVarMap.get(m).get)).toMap
-            val mOldModifies : Map[Expr, Identifier] = modifiesMap.map(p => (Operator.old(p._1) -> p._2)).toMap
-            val resultHavocStmts = retNewVars.map(retVar => HavocStmt(HavocableId(retVar._1)))
-            val resultAssignStatment = if (lhss.size > 0) List(AssignStmt(lhss, retNewVars.map(_._1))) else List.empty
-            val rewriteMap = mArgs ++ mRet ++ mLocal ++ mModifies
-            log.debug("rewriteMap: {}", rewriteMap.toString())
-            val preconditionAsserts = procToInline.requires.map {
-              req => {
-                val assertExpr = ExprRewriter.rewriteExpr(req, rewriteMap, context)
-                val stmt = AssertStmt(assertExpr, Some(Identifier("precondition")))
-                ASTNode.introducePos(true, true, stmt, req.position)
-              }
-            }
-            val modifyAssigns = modifiesMap.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
-            val rewriter = new ExprRewriter("ProcedureInlineRewriter", rewriteMap)
-            val procedureBody = if (procToInline.shouldInline) {
-              rewriter.rewriteStatements(List(procToInline.body), context) ++ resultAssignStatment
-            } else {
-              val modifyHavocs = mModifies.map(m => HavocStmt(HavocableId(m._2)))
-              val postconditionAssumes = procToInline.ensures.map {
-                pos => {
-                  log.debug("mOldModifies: {}", mOldModifies.toString())
-                  //val assumeExpr1 = ExprRewriter.rewriteExpr(pos, mOldModifies, context)
-                  val assumeExpr = ExprRewriter.rewriteExpr(pos, rewriteMap ++ mOldModifies, context)
-                  val assumeStmt = AssumeStmt(assumeExpr, None)
-                  log.debug("expr: {}; rewritten: {}", pos.toString(), assumeExpr.toString()) 
-                  ASTNode.introducePos(true, true, assumeStmt, assumeExpr.position)
-                }
-              }
-              modifyHavocs ++ postconditionAssumes
-            }
-            (acc._1 ++ resultHavocStmts ++ preconditionAsserts ++ modifyAssigns ++ procedureBody, 
-             acc._2 ++ retNewVars ++ localNewVars ++ modifiesNewVars)
-          }
-        case BlockStmt(vs, stmts) =>
-          val (stmtsP, vars) = inlineProcedureCalls(uniqNamer, stmts, context)
-          val blockP = BlockStmt(vs, stmtsP)
-          (acc._1 ++ List(blockP), acc._2 ++ vars)
-        case ForStmt(id, typ, range, body) =>
-          val bodyP = inlineProcedureCalls(uniqNamer, List(body), context)
-          val forP = ForStmt(id, typ, range, BlockStmt(List.empty, bodyP._1))
-          (acc._1 ++ List(forP), acc._2 ++ bodyP._2)
-        case IfElseStmt(cond, ifblock, elseblock) =>
-          val ifBlockP = inlineProcedureCalls(uniqNamer, List(ifblock), context)
-          val elseBlockP = inlineProcedureCalls(uniqNamer, List(elseblock), context)
-          val ifElseP = IfElseStmt(cond, BlockStmt(List.empty, ifBlockP._1), BlockStmt(List.empty, elseBlockP._1))
-          (acc._1 ++ List(ifElseP), acc._2 ++ ifBlockP._2 ++ elseBlockP._2)
-
-        case CaseStmt(cases) =>
-          val caseBodiesP = cases.map((c) => inlineProcedureCalls(uniqNamer, List(c._2), context))
-          val caseConds = cases.map(_._1)
-          val caseBodyStmts = caseBodiesP.map(body => BlockStmt(List.empty, body._1))
-          val caseBodyVars = caseBodiesP.map(_._2)
-          val caseStmtP = CaseStmt(caseConds zip caseBodyStmts)
-          val newVars = caseBodyVars.foldLeft(List.empty[(Identifier, Type)])((acc, vars) => acc ++ vars)
-          (acc._1 ++ List(caseStmtP), acc._2 ++ newVars)
-        case _ => (acc._1 ++ List(stmt), acc._2)
-      }
-    })
-  }
-}
-
 class NewProcedureInlinerPass() extends RewritePass {
   def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope) : Statement = {
     val procSig = proc.sig
@@ -260,12 +103,14 @@ class NewProcedureInlinerPass() extends RewritePass {
     val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
     // map from st_var -> modify_var.
     val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1 -> p._2)).toMap
-    // map from old(var) -> var.
-    val oldModifiesMap : Map[Expr, Expr] = modifyPairs.map(p => Operator.old(p._2) -> p._1).toMap
     // full rewrite map.
-    val rewriteMap = argMap ++ retMap ++ modifiesMap ++ oldModifiesMap
+    val rewriteMap = argMap ++ retMap ++ modifiesMap
     // rewriter object.
     val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
+    // map from old(var) -> var.
+    val oldMap : Map[Identifier, Identifier] = modifyPairs.map(p => p._2 -> p._1).toMap
+    // rewriter object.
+    val oldRewriter = new OldExprRewriter(oldMap)
 
     // variable declarations for return values.
     val retVars = retPairs.map(r => BlockVarsDecl(List(r._2._1), r._2._2))
@@ -285,7 +130,7 @@ class NewProcedureInlinerPass() extends RewritePass {
     // create precondition asserts
     val preconditionAsserts : List[Statement] = proc.requires.map {
       (req) => {
-        val exprP = rewriter.rewriteExpr(req, context)
+        val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(req, context), context)
         AssertStmt(exprP, None)
       }
     }
@@ -293,7 +138,7 @@ class NewProcedureInlinerPass() extends RewritePass {
     val postconditionAsserts : List[Statement] = if (proc.shouldInline) {
       proc.ensures.map {
         (ens) => {
-          val exprP = rewriter.rewriteExpr(ens, context)
+          val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
           AssertStmt(exprP, None)
         }
       }
@@ -302,11 +147,11 @@ class NewProcedureInlinerPass() extends RewritePass {
     }
     // body of the procedure.
     val bodyP = if (proc.shouldInline) {
-      rewriter.rewriteStatement(proc.body, Scope.empty).get
+      oldRewriter.rewriteStatement(rewriter.rewriteStatement(proc.body, Scope.empty).get, context).get
     } else {
       val postconditionAssumes : List[Statement] = proc.ensures.map {
         (ens) => {
-          val exprP = rewriter.rewriteExpr(ens, context)
+          val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
           AssumeStmt(exprP, None)
         }
       }
@@ -333,32 +178,4 @@ class NewProcedureInlinerPass() extends RewritePass {
 
 class NewProcedureInliner() extends ASTRewriter("ProcedureInliner", new NewProcedureInlinerPass()) {
   override val repeatUntilNoChange = true
-}
-
-class ProcedureInliner(rewriteOptions: ProcedureInliner.RewriteOptions) extends ASTAnalysis {
-  lazy val primedVariableCollector = manager.pass("PrimedVariableCollector").asInstanceOf[PrimedVariableCollector]
-  lazy val findProcedureDependency = manager.pass("FindProcedureDependency").asInstanceOf[FindProcedureDependency]
-  override def passName = "ProcedureInliner:"+rewriteOptions.toString()
-
-
-  override def visit(module : Module, context : Scope) : Option[Module] = {
-    val primeVarMap = if (rewriteOptions == ProcedureInliner.RewriteNext) {
-      primedVariableCollector.primeVarMap.get
-    } else {
-      val writeables = module.sharedVars.map(p => p._1) ++ module.vars.map(p => p._1) ++ module.outputs.map(p => p._1)
-      writeables.map(v => (v -> v)).toMap
-    }
-    val procInliningOrder = findProcedureDependency.procInliningOrder
-    def inlineProcedure(procId : Identifier, mod : Module) : Module = {
-      if (procId != Identifier("_top")) {
-        val proc = mod.procedures.find(p => p.id == procId).get
-        val rewriter = new ASTRewriter("ProcedureInliner.Inline:" + procId.toString, new InlineProcedurePass(rewriteOptions, proc, primeVarMap))
-        rewriter.visit(mod, context).get
-      } else {
-        module
-      }
-    }
-    val modP = procInliningOrder.foldLeft(module)((mod, procId) => inlineProcedure(procId, mod))
-    Some(modP)
-  }
 }
