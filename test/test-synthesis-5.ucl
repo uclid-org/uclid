@@ -22,7 +22,7 @@ module main
   invariant post_f : !(x >= 500 && (z < y));
 
   control {
-    print_module;
+    jprint_module;
     synthesize_invariant;
   }
 }

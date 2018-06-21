@@ -112,7 +112,7 @@ object Scope {
     }
   }
   /** Create an empty context. */
-  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None, ModuleEnvironment, false)
+  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None, ModuleEnvironment, false, None)
 }
 
 sealed abstract class ExpressionEnvironment {
@@ -158,8 +158,11 @@ case object AxiomEnvironment extends ExpressionEnvironment {
 }
 
 case class Scope (
-    map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[GenericProofCommand],
-    environment : ExpressionEnvironment, inLTLSpec : Boolean)
+    map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], 
+    cmd : Option[GenericProofCommand],
+    environment : ExpressionEnvironment, 
+    inLTLSpec : Boolean,
+    parent : Option[Scope])
 {
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: Identifier) = map.contains(name)
@@ -201,27 +204,27 @@ case class Scope (
 
   /** Return a new context with the inLTLSpec flag set. */
   def withLTLSpec : Scope = {
-    Scope(map, module, procedure, cmd, environment, true)
+    Scope(map, module, procedure, cmd, environment, true, parent)
   }
   /** Return new context with the inLTLSpec flag reset. */
   def withoutLTLSpec : Scope = {
-    Scope(map, module, procedure, cmd, environment, false)
+    Scope(map, module, procedure, cmd, environment, false, parent)
   }
   /** Return a new context with the inVerificationContext set. */
   def withEnvironment (vctx : ExpressionEnvironment) : Scope = {
-    Scope(map, module, procedure, cmd, vctx, inLTLSpec)
+    Scope(map, module, procedure, cmd, vctx, inLTLSpec, parent)
   }
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : Scope = {
-    Scope(map + (expr.id -> expr), module, procedure, cmd, environment, inLTLSpec)
+    Scope(map + (expr.id -> expr), module, procedure, cmd, environment, inLTLSpec, parent)
   }
   def +(typ : Type) : Scope = {
-    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, environment, inLTLSpec)
+    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, environment, inLTLSpec, parent)
   }
 
   /** Add a reference to this module (don't expand the module's declarations). */
   def +&(m : Module) : Scope = {
-    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, environment, inLTLSpec)
+    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, environment, inLTLSpec, parent)
   }
 
   /** Return a new context with the declarations in this module added to it. */
@@ -283,7 +286,7 @@ case class Scope (
         case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
-    Scope(m2, Some(m), None, None, environment, false)
+    Scope(m2, Some(m), None, None, environment, false, parent)
   }
   /** Return a new context with the declarations in this procedure added to it. */
   def +(proc: ProcedureDecl) : Scope = {
@@ -297,21 +300,21 @@ case class Scope (
     val map3 = proc.decls.foldLeft(map2){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureLocalVar(arg.id, arg.typ))
     }
-    return Scope(map3, module, Some(proc), None, ProceduralEnvironment, false)
+    return Scope(map3, module, Some(proc), None, ProceduralEnvironment, false, Some(this))
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
   def +(lambda: Lambda) : Scope = {
     val newMap = lambda.ids.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }
-    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec)
+    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec, Some(this))
   }
   /** Return a new context with the function's arguments included. */
   def +(sig : FunctionSig) : Scope = {
     val newMap = sig.args.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.FunctionArg(id._1, id._2))
     }
-    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec)
+    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec, Some(this))
   }
   /** Return a new context with quantifier variables added. */
   def +(opapp : OperatorApplication) : Scope = {
@@ -323,11 +326,11 @@ case class Scope (
       case ForallOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd, environment, inLTLSpec)
+          module, procedure, cmd, environment, inLTLSpec, Some(this))
       case ExistsOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd, environment, inLTLSpec)
+          module, procedure, cmd, environment, inLTLSpec, Some(this))
       case _ => this
     }
   }
@@ -335,7 +338,7 @@ case class Scope (
   def +(vars : List[BlockVarsDecl]) : Scope = {
     val declaredVars = vars.flatMap(vs => vs.ids.map(v => (v, vs.typ)))
     val mapP = declaredVars.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.BlockVar(arg._1, arg._2)))
-    Scope(mapP, module, procedure, cmd, environment, inLTLSpec)
+    Scope(mapP, module, procedure, cmd, environment, inLTLSpec, Some(this))
   }
 
   /** Return a new context for this command. */
@@ -344,7 +347,7 @@ case class Scope (
       case Some(id) => map + (id -> Scope.VerifResultVar(id, command))
       case None => map
     }
-    Scope(mapP, module, procedure, Some(command), environment, inLTLSpec)
+    Scope(mapP, module, procedure, Some(command), environment, inLTLSpec, parent)
   }
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {

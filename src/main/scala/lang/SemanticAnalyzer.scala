@@ -58,6 +58,22 @@ object SemanticAnalyzerPass {
 }
 
 class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
+  def checkBlockNesting(blk : BlockStmt, in : List[ModuleError], context : Scope) : List[ModuleError] = {
+    if (!context.environment.isProcedural) {
+      val blkOption = blk.stmts.find(st => st.isInstanceOf[BlockStmt])
+      blkOption match {
+        case Some(blk) =>
+          val msg = "Nested block statements are not allowed in a sequential environment"
+          ModuleError(msg, blk.position) :: in
+        case None => in
+      }
+    } else { in }
+  }
+  def checkIdRedeclarations(ids : List[Identifier], in : List[ModuleError], parentContext : Scope) : List[ModuleError] = {
+    val redeclaredIds = ids.filter(id => parentContext.map.contains(id))
+    val errors = redeclaredIds.map(id => ModuleError("Redeclaration of identifier: " + id.toString(), id.position))
+    in ++ errors
+  }
   override def applyOnModule(d : TraversalDirection.T, module : Module, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       // val moduleIds = module.decls.filter((d) => d.declNames.isDefined).map((d) => (d.declName.get, d.position))
@@ -71,13 +87,19 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
       val outParams = proc.sig.outParams.map((arg) => (arg._1, arg._1.position))
       val localVars = proc.decls.map((v) => (v.id, v.position))
       SemanticAnalyzerPass.checkIdRedeclaration(inParams ++ outParams ++ localVars, in)
-    } else { in }
+    } else {
+      val newIds = proc.sig.inParams.map(p => p._1) ++ proc.sig.outParams.map(p => p._1)
+      checkIdRedeclarations(newIds, in, context)
+    }
   }
   override def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       val params = func.sig.args.map((arg) => (arg._1, arg._1.position))
       SemanticAnalyzerPass.checkIdRedeclaration(params, in)
-    } else { in }
+    } else {
+      val newIds = func.sig.args.map(p => p._1)
+      checkIdRedeclarations(newIds, in, context)
+    }
   }
   override def applyOnRecordType(d : TraversalDirection.T, recordT : RecordType, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
@@ -97,16 +119,11 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
   }
   override def applyOnBlock(d : TraversalDirection.T, blk : BlockStmt, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
-      if (!context.environment.isProcedural) {
-        val blkOption = blk.stmts.find(st => st.isInstanceOf[BlockStmt])
-        blkOption match {
-          case Some(blk) =>
-            val msg = "Nested block statements are not allowed in a sequential environment"
-            ModuleError(msg, blk.position) :: in
-          case None => in
-        }
-      } else { in }
-    } else { in }
+      checkBlockNesting(blk, in, context)
+    } else {
+      val newIds = blk.vars.map(d => d.ids).flatMap(v => v)
+      checkIdRedeclarations(newIds, in, context)
+    }
   }
 }
 
