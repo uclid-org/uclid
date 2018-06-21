@@ -18,7 +18,7 @@ module main
   invariant always_positive: (y >= 0);
   
   control {
-    print_module;
+    // print_module;
     synthesize_invariant;
   }
 }

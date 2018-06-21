@@ -68,12 +68,15 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     counterId += 1
     "type_" + suffix + "_" + counterId.toString()
   }
+
   override def getVariableName(v : String) : String = {
     "var_" + v
   }
+
   def getPrimedVariableName(v : String) : String = {
     "var_" + v + "!"
   }
+
   def getEqExpr(ident : Identifier, expr : smt.Expr, ctx : Scope, prime : Boolean) : String = {
     if (ctx.typeOf(ident) == None) return ""
     val typ = Converter.typeToSMT(ctx.typeOf(ident).get)
@@ -128,12 +131,12 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
   
   def getSynthFunDecl(vars : List[(String, Type)]) : String = {
     val types = "(" + Utils.join(vars.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ") + ")"
-    "(synth-fun inv-f %s Bool)".format(types)
+    "(synth-fun inv-fn %s Bool)".format(types)
   }
 
   def getSynthInvDecl(vars : List[(String, Type)]) : String = {
     val types = "(" + Utils.join(vars.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ") + ")"
-    "(synth-inv inv-f %s)".format(types)
+    "(synth-inv inv-fn %s)".format(types)
   }
 
   def getInitFun(initState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
@@ -173,13 +176,17 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     "(constraint (=> (inv-f %1$s) (post-fn %1$s)))".format(args)
   }
   
-  override def synthesizeInvariant(initState : Map[Identifier, Expr], nextState: Map[Identifier, Expr], properties : List[smt.Expr], ctx : Scope) : Option[smt.Expr] = {
+  override def synthesizeInvariant(initState : Map[Identifier, smt.Expr], nextState: Map[Identifier, smt.Expr], properties : List[smt.Expr], ctx : Scope) : Option[smt.Expr] = {
     val variables = getVariables(ctx)
     val preamble = "(set-logic LIA)" // FIXME: need to identify logics
+
+    sygusLog.debug("initFun: {}", initState.toString())
+    sygusLog.debug("transFun: {}", nextState.toString())
+
     val initFun = getInitFun(initState, variables, ctx)
     val transFun = getNextFun(nextState, variables, ctx)
     val postFun = getPostFun(properties, variables, ctx)
-    
+
     val instanceLines = if (sygusFormat) {
       // General sygus format
       val synthFunDecl = getSynthFunDecl(variables)
@@ -242,5 +249,4 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
       return Some(fun)
     }
   }
-
 }
