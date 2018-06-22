@@ -43,8 +43,34 @@ package smt
 import lang.{Identifier, Scope}
 import com.typesafe.scalalogging.Logger
 import scala.collection.JavaConverters._
+import scala.util.matching.Regex
 
 import java.io.{File, PrintWriter}
+
+object Constants {
+  // Naming
+  val initFnName = "init-fn"
+  val transFnName = "trans-fn"
+  val postFnName = "post-fn"
+  val invFnName = "inv-fn"
+  val SyGuSInstanceFileName = "uclid-sygus-instance"
+  // Regex
+  val SyGuSOutputInvFnRegex = "(?s)\\(define-fun " + invFnName + " \\(.*\\).*Bool.*\\(.*\\)\\)"
+  // Commands
+  val SetLIACmd = "(set-logic LIA)"
+  val SetBVCmd = "(set-logic BV)"
+  val CheckSynthCmd = "(check-synth)"
+  // General SyGuS format commands
+  val SyGuSDeclareVarCmd = "(declare-var %1$s %2$s)\n(declare-var %1$s! %2$s)"
+  val SyGuSSynthesizeFunCmd = "(synth-fun " + invFnName + " %s Bool)"
+  val initConstraintCmd = "(constraint (=> (" + initFnName + " %1$s) (" + invFnName + " %1$s)))"
+  val transConstraintCmd = "(constraint (=> (and (" + invFnName + " %1$s) (" + transFnName + " %1$s %2$s)) (" + invFnName + " %2$s)))"
+  val postConstraintCmd = "(constraint (=> (" + invFnName + " %1$s) (" + postFnName + " %1$s)))"
+  // LoopInvGen format commands
+  val LIGDeclareVarCmd = "(declare-primed-var %s %s)"
+  val LIGSynthesizeInvCmd = "(synth-inv " + invFnName + " %s)"
+  val LIGInvConstraintsCmd = "(inv-constraint %s %s %s %s)".format(invFnName, initFnName, transFnName, postFnName)
+}
 
 class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) extends SMTLIB2Base with SynthesisContext {
   val sygusLog = Logger(classOf[SyGuSInterface])
@@ -93,25 +119,13 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     trExpr
   }
 
-  def getGeneralDeclarations(variables : List[(String, Type)]) : String = {
+  def getDeclarations(variables : List[(String, Type)], declarationCmd : String) : String = {
     val decls = variables.map{ v =>
       {
         val (typeName, otherDecls) = generateDatatype(v._2)
         Utils.assert(otherDecls.size == 0, "Datatype declarations are not supported yet.")
         // FIXME: to handle otherDecls
-        "(declare-var %1$s %2$s)\n(declare-var %1$s! %2$s)".format(v._1, typeName)
-      }
-    }
-    Utils.join(decls, "\n")
-  }
-
-  def getPrimedDeclarations(variables : List[(String, Type)]) : String = {
-    val decls = variables.map{ v =>
-      {
-        val (typeName, otherDecls) = generateDatatype(v._2)
-        Utils.assert(otherDecls.size == 0, "Datatype declarations are not supported yet.")
-        // FIXME: to handle otherDecls
-        "(declare-primed-var %s %s)".format(v._1, typeName)
+        declarationCmd.format(v._1, typeName)
       }
     }
     Utils.join(decls, "\n")
@@ -127,20 +141,15 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     "(" + Utils.join(vars ++ varsP, " ") + ")" + " Bool"
   }
   
-  def getSynthFunDecl(vars : List[(String, Type)]) : String = {
+  def getSynthFunDecl(vars : List[(String, Type)], synthesizeFunCmd : String) : String = {
     val types = "(" + Utils.join(vars.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ") + ")"
-    "(synth-fun inv-fn %s Bool)".format(types)
-  }
-
-  def getSynthInvDecl(vars : List[(String, Type)]) : String = {
-    val types = "(" + Utils.join(vars.map(p => "(" + p._1 + " " + generateDatatype(p._2)._1 + ")"), " ") + ")"
-    "(synth-inv inv-fn %s)".format(types)
+    synthesizeFunCmd.format(types)
   }
 
   def getInitFun(initState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
     val initExprs = initState.map(p => getEqExpr(p._1, p._2, ctx, false)).toList
     val funcBody = "(and " + Utils.join(initExprs, " ") + ")"
-    val func = "(define-fun init-fn " + getStatePredicateTypeDecl(variables) + " " + funcBody + ")"
+    val func = "(define-fun " + Constants.initFnName + " " + getStatePredicateTypeDecl(variables) + " " + funcBody + ")"
     func
   }
 
@@ -148,35 +157,41 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     // FIXME: some variables are not primed. Why?
     val nextExprs = nextState.map(p => getEqExpr(p._1, p._2, ctx, true)).toList
     val funcBody = "(and " + Utils.join(nextExprs, " ") + ")"
-    val func = "(define-fun trans-fn " + getTransRelationTypeDecl(variables) + " " + funcBody + ")"
+    val func = "(define-fun " + Constants.transFnName + " " + getTransRelationTypeDecl(variables) + " " + funcBody + ")"
     func
   }
 
   def getPostFun(properties : List[Expr], variables : List[(String, Type)], ctx : Scope) : String = {
     val exprs = properties.map(p => translateExpr(p, false))
     val funBody = if (exprs.size == 1) exprs(0) else "(and %s)".format(Utils.join(exprs, " "))
-    "(define-fun post-fn %s %s)".format(getStatePredicateTypeDecl(variables), funBody)
+    "(define-fun %s %s %s)".format(Constants.postFnName, getStatePredicateTypeDecl(variables), funBody)
   }
 
   def getInitConstraint(variables : List[(String, Type)]) : String = {
     val args = Utils.join(variables.map(p => p._1), " ")
-    "(constraint (=> (init-fn %1$s) (inv-f %1$s)))".format(args)
+    Constants.initConstraintCmd.format(args)
   }
 
   def getTransConstraint(variables : List[(String, Type)]) : String = {
     val args = Utils.join(variables.map(p => p._1), " ")
     val argsPrimed = Utils.join(variables.map(p => p._1 + "!"), " ")
-    "(constraint (=> (and (inv-f %1$s) (trans-fn %1$s %2$s)) (inv-f %2$s)))".format(args, argsPrimed)
+    Constants.transConstraintCmd.format(args, argsPrimed)
   }
 
   def getPostConstraint(variables : List[(String, Type)]) : String = {
     val args = Utils.join(variables.map(p => p._1), " ")
-    "(constraint (=> (inv-f %1$s) (post-fn %1$s)))".format(args)
+    Constants.postConstraintCmd.format(args)
   }
   
   override def synthesizeInvariant(initState : Map[Identifier, smt.Expr], nextState: Map[Identifier, smt.Expr], properties : List[smt.Expr], ctx : Scope) : Option[smt.Expr] = {
     val variables = getVariables(ctx)
-    val preamble = "(set-logic LIA)" // FIXME: need to identify logics
+    Utils.assert(variables.size > 0, "There are no variables in the given model.")
+
+    // FIXME: need to identify logics
+    val preamble = variables(0)._2 match {
+      case smt.BitVectorType(_) => Constants.SetBVCmd
+      case _ => Constants.SetLIACmd
+    }
 
     sygusLog.debug("initFun: {}", initState.toString())
     sygusLog.debug("transFun: {}", nextState.toString())
@@ -187,23 +202,24 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
 
     val instanceLines = if (sygusFormat) {
       // General sygus format
-      val synthFunDecl = getSynthFunDecl(variables)
-      val varDecls = getGeneralDeclarations(variables)
+      val synthFunDecl = getSynthFunDecl(variables, Constants.SyGuSSynthesizeFunCmd)
+      val varDecls = getDeclarations(variables, Constants.SyGuSDeclareVarCmd)
       val initConstraint = getInitConstraint(variables)
       val transConstraint = getTransConstraint(variables)
       val postConstraint = getPostConstraint(variables)
-      val postamble = "(check-synth)"
+      val postamble = Constants.CheckSynthCmd
       List(preamble, synthFunDecl, varDecls, initFun, transFun, postFun, initConstraint, transConstraint, postConstraint, postamble)
     } else {
       // Loop invariant format
-      val synthInvDecl = getSynthInvDecl(variables)
-      val varDecls = getPrimedDeclarations(variables)
-      val postamble = "(inv-constraint inv-fn init-fn trans-fn post-fn)\n\n(check-synth)"
-      List(preamble, synthInvDecl, varDecls, initFun, transFun, postFun, postamble)
+      val synthInvDecl = getSynthFunDecl(variables, Constants.LIGSynthesizeInvCmd)
+      val varDecls = getDeclarations(variables, Constants.LIGDeclareVarCmd)
+      val invConstraint = Constants.LIGInvConstraintsCmd
+      val postamble = Constants.CheckSynthCmd
+      List(preamble, synthInvDecl, varDecls, initFun, transFun, postFun, invConstraint, postamble)
     }
     val instance = "\n" + Utils.join(instanceLines, "\n")
     sygusLog.debug(instance)
-    val tmpFile = File.createTempFile("uclid-sygus-instance", ".sl")
+    val tmpFile = File.createTempFile(Constants.SyGuSInstanceFileName, ".sl")
     // tmpFile.deleteOnExit()
     new PrintWriter(tmpFile) {
       write(instance)
@@ -236,18 +252,12 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
         }
       })
       sygusLog.debug(string)
-      // Format the output string of the synthizer
-      val invString = if (sygusFormat) {
-        // Find the invariant function
-        val outputLines = string.split("\n").filter(s => s contains "inv-f")
-        // If there are no lines with inv-f, we've failed to find an invariant function
-        if (outputLines.isEmpty) return None
-        // Return the first and only invariant
-        Utils.assert(outputLines.size == 1, "The SyGuS solver should only return one invariant function.")
-        outputLines(0)
-      } else {
-        string
-      }
+      // Find the invariant function
+      val invFuncPattern = Constants.SyGuSOutputInvFnRegex.r
+      val invString = (invFuncPattern findFirstIn string).mkString("")
+      // No invariant matches the regular expression invFuncPattern
+      if (invString.length() == 0) return None
+      // Found an invariant
       val fun = SExprParser.parseFunction(invString)
       sygusLog.debug(fun.toString())
       return Some(fun)
