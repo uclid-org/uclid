@@ -16,7 +16,11 @@ module main
   }
   
   next {
-    call do_something();
+    var z : integer;
+    z = x + y;
+    x' = y + z;
+    y' = x' + z;
+    z = x - y;
   }
   
   invariant x_ge_0: x >= 0;
@@ -24,7 +28,7 @@ module main
   invariant x_le_y: x <= y;
   
   control {
-    v = unroll(4);
+    v = induction;
     check;
     print_results;
     v.print_cex(x, y);
