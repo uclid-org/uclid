@@ -7,22 +7,28 @@ module main
   }
 
   next {
-    if (x < 500) {
+    if (x < 2) {
       x' = x + 1;
       if (*) {
-        y' = z;
-        z' = y;
+        y' = z';
+        havoc z;
+        assume (z' <= y);
       } else {
         y' = y;
-        z' = y;
+        havoc z;
+        assume (z' > y);
       }
     }
   }
 
-  invariant post_f : !(x >= 500 && (z < y));
+  property post_f : !(x >= 2 && (z < y));
 
   control {
     jprint_module;
     synthesize_invariant;
+    // v = unroll(10);
+    // check;
+    // print_results;
+    // v.print_cex(x, y, z);
   }
 }

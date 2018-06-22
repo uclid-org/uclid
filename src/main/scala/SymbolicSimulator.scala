@@ -675,8 +675,9 @@ class SymbolicSimulator (module : Module) {
         frameLog.debug("local symbol table  : " + localSymbolTable.toString())
         frameLog.debug("overwritten symbols : " + overwrittenSymbols.toString())
 
-        val simTable = simulate(frameNumber, pathConditions, stmts, localSymbolTable, scope + vars, label)
-        overwrittenSymbols.foldLeft(simTable)((acc, p) => acc + (p._1 -> p._2))
+        val simTable1 = simulate(frameNumber, pathConditions, stmts, localSymbolTable, scope + vars, label)
+        val simTable2 = declaredVars.foldLeft(simTable1)((tbl, p) => tbl - p._1)
+        overwrittenSymbols.foldLeft(simTable2)((acc, p) => acc + (p._1 -> p._2))
       case IfElseStmt(e,then_branch,else_branch) =>
         var then_modifies : Set[Identifier] = writeSet(then_branch)
         var else_modifies : Set[Identifier] = writeSet(else_branch)
