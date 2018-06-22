@@ -114,7 +114,7 @@ case class BitVectorType(width: Int) extends Type
 {
   override val hashId = mix(103, width)
   override val hashCode = computeHash
-  override def toString = "BitVec %s" + (width.toString)
+  override def toString = "(BitVec " + (width.toString) + ")"
   override def isBitVector = true
   override val typeNamePrefix = "bv" + width.toString()
 }

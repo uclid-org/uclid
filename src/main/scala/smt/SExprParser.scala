@@ -215,7 +215,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
 
   lexical.delimiters += ("(", ")")
   lexical.reserved += ("false", "true", 
-      KwDefineFun, KwInt, KwBool, OpAnd, OpOr, OpNot, OpImpl, 
+      KwDefineFun, KwInt, KwBool, KwBV, OpAnd, OpOr, OpNot, OpImpl, 
       OpEq, OpIntGE, OpIntGT, OpIntLT, OpIntLE, OpIntAdd, OpIntSub, OpIntMul,
       OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, OpBVAnd, OpBVOr, OpBVXor, OpBVNot)
 
@@ -248,14 +248,17 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val IntegerLit : PackratParser[smt.IntLit] =
     integerLit ^^ { iLit => smt.IntLit(iLit.value) }
 
+  lazy val BitVectorLit : PackratParser[smt.BitVectorLit] =
+    bitvectorLit ^^ { bvLit => smt.BitVectorLit(bvLit.value, 0) }
+
   lazy val Expr : PackratParser[smt.Expr] =
-    Symbol | IntegerLit |
+    Symbol | IntegerLit | BitVectorLit |
     "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)}
 
   lazy val Type : PackratParser[smt.Type] =
     KwInt ^^ { _ => smt.IntType } |
     KwBool ^^ { _ => smt.BoolType } |
-    KwBV ~> integerLit ^^ { case i => smt.BitVectorType(i.value.toInt) }
+    "(" ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) }
 
   lazy val FunArg : PackratParser[smt.Symbol] =
     "(" ~> symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.name, typ) }
