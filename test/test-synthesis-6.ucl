@@ -1,0 +1,30 @@
+module main
+{
+  var y, z, p : integer;
+
+  init {
+    assume (z >= y);
+  }
+
+  next {
+    havoc p;
+    if (*) {
+      y' = z';
+      z' = p;
+      assume (z' <= y);
+    } else {
+      y' = y;
+      z' = p;
+      assume (z' > y);
+    }
+  }
+  
+  invariant not_p : z >= y;
+  
+  
+  control {
+    v = unroll(5);
+    check;
+    print_results;
+  }
+}

@@ -70,9 +70,13 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
     } else { in }
   }
   def checkIdRedeclarations(ids : List[Identifier], in : List[ModuleError], parentContext : Scope) : List[ModuleError] = {
-    val redeclaredIds = ids.filter(id => parentContext.map.contains(id))
-    val errors = redeclaredIds.map(id => ModuleError("Redeclaration of identifier: " + id.toString(), id.position))
-    in ++ errors
+    if (true) {
+      val redeclaredIds = ids.filter(id => parentContext.map.contains(id))
+      val errors = redeclaredIds.map(id => ModuleError("Redeclaration of identifier: " + id.toString(), id.position))
+      in ++ errors
+    } else {
+      in
+    }
   }
   override def applyOnModule(d : TraversalDirection.T, module : Module, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {

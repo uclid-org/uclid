@@ -174,6 +174,7 @@ object UclidMain {
     val passManager = new PassManager("compile")
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new ModuleCanonicalizer())
+    passManager.addPass(new BlockVariableRenamer())
     passManager.addPass(new LTLOperatorIntroducer())
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
