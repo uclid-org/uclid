@@ -49,27 +49,26 @@ import java.io.{File, PrintWriter}
 
 object Constants {
   // Naming
-  val initFnName = "init-fn"
-  val transFnName = "trans-fn"
-  val postFnName = "post-fn"
-  val invFnName = "inv-fn"
+  val InitFnName = "init-fn"
+  val TransFnName = "trans-fn"
+  val PostFnName = "post-fn"
+  val InvFnName = "inv-fn"
   val SyGuSInstanceFileName = "uclid-sygus-instance"
   // Regex
-  val SyGuSOutputInvFnRegex = "(?s)\\(define-fun " + invFnName + " \\(.*\\).*Bool.*\\(.*\\)\\)"
+  val SyGuSOutputInvFnRegex = "(?s)\\(define-fun " + InvFnName + " \\(.*\\).*Bool.*\\(.*\\)\\)"
   // Commands
-  val SetLIACmd = "(set-logic LIA)"
-  val SetBVCmd = "(set-logic BV)"
+  val SetLogicCmd = "(set-logic %s)"
   val CheckSynthCmd = "(check-synth)"
   // General SyGuS format commands
   val SyGuSDeclareVarCmd = "(declare-var %1$s %2$s)\n(declare-var %1$s! %2$s)"
-  val SyGuSSynthesizeFunCmd = "(synth-fun " + invFnName + " %s Bool)"
-  val initConstraintCmd = "(constraint (=> (" + initFnName + " %1$s) (" + invFnName + " %1$s)))"
-  val transConstraintCmd = "(constraint (=> (and (" + invFnName + " %1$s) (" + transFnName + " %1$s %2$s)) (" + invFnName + " %2$s)))"
-  val postConstraintCmd = "(constraint (=> (" + invFnName + " %1$s) (" + postFnName + " %1$s)))"
+  val SyGuSSynthesizeFunCmd = "(synth-fun " + InvFnName + " %s Bool)"
+  val InitConstraintCmd = "(constraint (=> (" + InitFnName + " %1$s) (" + InvFnName + " %1$s)))"
+  val TransConstraintCmd = "(constraint (=> (and (" + InvFnName + " %1$s) (" + TransFnName + " %1$s %2$s)) (" + InvFnName + " %2$s)))"
+  val PostConstraintCmd = "(constraint (=> (" + InvFnName + " %1$s) (" + PostFnName + " %1$s)))"
   // LoopInvGen format commands
   val LIGDeclareVarCmd = "(declare-primed-var %s %s)"
-  val LIGSynthesizeInvCmd = "(synth-inv " + invFnName + " %s)"
-  val LIGInvConstraintsCmd = "(inv-constraint %s %s %s %s)".format(invFnName, initFnName, transFnName, postFnName)
+  val LIGSynthesizeInvCmd = "(synth-inv " + InvFnName + " %s)"
+  val LIGInvConstraintsCmd = "(inv-constraint %s %s %s %s)".format(InvFnName, InitFnName, TransFnName, PostFnName)
 }
 
 class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) extends SMTLIB2Base with SynthesisContext {
@@ -149,7 +148,7 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
   def getInitFun(initState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
     val initExprs = initState.map(p => getEqExpr(p._1, p._2, ctx, false)).toList
     val funcBody = "(and " + Utils.join(initExprs, " ") + ")"
-    val func = "(define-fun " + Constants.initFnName + " " + getStatePredicateTypeDecl(variables) + " " + funcBody + ")"
+    val func = "(define-fun " + Constants.InitFnName + " " + getStatePredicateTypeDecl(variables) + " " + funcBody + ")"
     func
   }
 
@@ -157,41 +156,36 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     // FIXME: some variables are not primed. Why?
     val nextExprs = nextState.map(p => getEqExpr(p._1, p._2, ctx, true)).toList
     val funcBody = "(and " + Utils.join(nextExprs, " ") + ")"
-    val func = "(define-fun " + Constants.transFnName + " " + getTransRelationTypeDecl(variables) + " " + funcBody + ")"
+    val func = "(define-fun " + Constants.TransFnName + " " + getTransRelationTypeDecl(variables) + " " + funcBody + ")"
     func
   }
 
   def getPostFun(properties : List[Expr], variables : List[(String, Type)], ctx : Scope) : String = {
     val exprs = properties.map(p => translateExpr(p, false))
     val funBody = if (exprs.size == 1) exprs(0) else "(and %s)".format(Utils.join(exprs, " "))
-    "(define-fun %s %s %s)".format(Constants.postFnName, getStatePredicateTypeDecl(variables), funBody)
+    "(define-fun %s %s %s)".format(Constants.PostFnName, getStatePredicateTypeDecl(variables), funBody)
   }
 
   def getInitConstraint(variables : List[(String, Type)]) : String = {
     val args = Utils.join(variables.map(p => p._1), " ")
-    Constants.initConstraintCmd.format(args)
+    Constants.InitConstraintCmd.format(args)
   }
 
   def getTransConstraint(variables : List[(String, Type)]) : String = {
     val args = Utils.join(variables.map(p => p._1), " ")
     val argsPrimed = Utils.join(variables.map(p => p._1 + "!"), " ")
-    Constants.transConstraintCmd.format(args, argsPrimed)
+    Constants.TransConstraintCmd.format(args, argsPrimed)
   }
 
   def getPostConstraint(variables : List[(String, Type)]) : String = {
     val args = Utils.join(variables.map(p => p._1), " ")
-    Constants.postConstraintCmd.format(args)
+    Constants.PostConstraintCmd.format(args)
   }
   
-  override def synthesizeInvariant(initState : Map[Identifier, smt.Expr], nextState: Map[Identifier, smt.Expr], properties : List[smt.Expr], ctx : Scope) : Option[smt.Expr] = {
+  override def synthesizeInvariant(initState : Map[Identifier, smt.Expr], nextState: Map[Identifier, smt.Expr], properties : List[smt.Expr], ctx : Scope, logic : String) : Option[smt.Expr] = {
     val variables = getVariables(ctx)
     Utils.assert(variables.size > 0, "There are no variables in the given model.")
-
-    // FIXME: need to identify logics
-    val preamble = variables(0)._2 match {
-      case smt.BitVectorType(_) => Constants.SetBVCmd
-      case _ => Constants.SetLIACmd
-    }
+    val preamble = Constants.SetLogicCmd.format(logic)
 
     sygusLog.debug("initFun: {}", initState.toString())
     sygusLog.debug("transFun: {}", nextState.toString())

@@ -100,6 +100,17 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     }
     Utils.checkParsingError(badParams.size == 0, errorMsg, cmd.pos, filename)
   }
+  def checkParamIsALogic(cmd : GenericProofCommand, context : Scope, filename : Option[String]) {
+    Utils.checkParsingError(cmd.params.size == 1, "'%s' command expects one parameter specifying the logic".format(cmd.name.toString), cmd.pos, filename)
+    def logicIsSupported(logic : String) : Boolean = {
+      logic match {
+        case "LIA" | "BV" => true
+        case _ => false
+      }
+    }
+    val logic = cmd.params(0).toString
+    Utils.checkParsingError(logicIsSupported(logic), "'%s' command expects a supported logic as a parameter".format(cmd.name.toString), cmd.pos, filename)
+  }
   override def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : Unit, context : Scope) : Unit = {
     val filename = context.module.flatMap(_.filename)
     cmd.name.toString match {
@@ -130,7 +141,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         Utils.checkParsingError(module.procedures.find(p => p.id == arg).isDefined, errorMsg, arg.pos, filename)
       case "synthesize_invariant" =>
         checkNoArgs(cmd, filename)
-        checkNoParams(cmd, filename)
+        checkParamIsALogic(cmd, context, filename)
         checkNoArgObj(cmd, filename)
         checkNoResultVar(cmd, filename)
       case "check" | "print_module" =>

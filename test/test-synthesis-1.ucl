@@ -19,6 +19,6 @@ module main
   
   control {
     // print_module;
-    synthesize_invariant;
+    synthesize_invariant[LIA];
   }
 }
