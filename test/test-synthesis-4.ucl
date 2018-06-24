@@ -25,6 +25,6 @@ module main
     // print_results;
     // v.print_cex();
     // print_module;
-    synthesize_invariant;
+    synthesize_invariant[BV];
   }
 }

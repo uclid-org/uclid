@@ -75,8 +75,9 @@ trait SExprTokens extends Tokens {
     override def toString = value.toString()
   }
   /** Bitvector types. */
-  case class BitVectorLit(chars: String, base: Int) extends SExprToken {
+  case class BitVectorLit(chars: String, base: Int, width: Int) extends SExprToken {
     val value = BigInt(chars, base)
+    val numBits = width
     override def toString = "#x" + value.toString(16)
   }
   /** Boolean type. */
@@ -90,8 +91,8 @@ trait SExprTokens extends Tokens {
 class SExprLexical extends Lexical with SExprTokens {
   val log = Logger(classOf[SExprLexical])
   override def token: Parser[Token] =
-    ( { '#' ~ 'x' ~> hexDigit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 16) } }
-    | { '#' ~ 'b' ~> bit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 2) } }
+    ( { '#' ~ 'x' ~> hexDigit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 16, 4*chars.length) } }
+    | { '#' ~ 'b' ~> bit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 2, chars.length) } }
     | { digit.+ ^^ { case ds => IntegerLit(ds.mkString(""), 10) } }
     | { '-' ~> digit.+ ^^ { case ds => IntegerLit("-" + ds.mkString(""), 10) } }
     | { symbolStartChar ~ rep(symbolChar) ^^ { case s ~ ss => processIdent((s :: ss).mkString("")) } }
@@ -249,7 +250,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     integerLit ^^ { iLit => smt.IntLit(iLit.value) }
 
   lazy val BitVectorLit : PackratParser[smt.BitVectorLit] =
-    bitvectorLit ^^ { bvLit => smt.BitVectorLit(bvLit.value, 0) }
+    bitvectorLit ^^ { bvLit => smt.BitVectorLit(bvLit.value, bvLit.numBits) }
 
   lazy val Expr : PackratParser[smt.Expr] =
     Symbol | IntegerLit | BitVectorLit |
