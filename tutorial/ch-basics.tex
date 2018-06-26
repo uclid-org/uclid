@@ -116,7 +116,7 @@ value.
 
 \uclid{} also supports the definition of macro expressions using
 the \keyword{define} statement. 
-Line~26 of Example~\ref{ex:alu} illustrates this construct.
+Line~24 of Example~\ref{ex:alu} illustrates this construct.
 Macro definitions are useful, as in C, to define expressions
 over arguments that are instantiated in multiple places, or
 which help make the code more readable.
@@ -126,6 +126,18 @@ which help make the code more readable.
 The procedure \codelike{set\_init\_state} uses a \keyword{for} loop to initialize each value in the array \codelike{regs} to the bit-vector value 1.\footnote{\codelike{1bv8} here refers to the bit-vector value 1 of width 8.} The loop iterates over the values between 0 and 7 (both-inclusive).
 
 The range over which a \keyword{for} loop iterates must be defined by two numeric literals.
+
+Alternatively, the loop iterates may be defined by two macro definitions whose expressions are numeric literals. However, this requires the for statement to be declared with a typed iterator.
+
+For example, if the following macro definitions are at the module level,
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  define begin() : bv3 = 0bv3;
+  define end()   : bv3 = 7bv3;
+\end{lstlisting}
+we may alternatively write the for loop in \codelike{set\_init\_state} in the following way:
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  for (i : bv3) in (begin(), end()) { regs[i] = 1bv8; }
+\end{lstlisting}
 
 \subsection{If and Case Statements}
 Also worth pointing out are the \keyword{if} statement that appears on line~30, and the \keyword{case} statement that appears on line~33. Syntax for \keyword{if} statements should be familiar.
