@@ -40,7 +40,9 @@
 package uclid
 
 import lang._
+import vcd.VCD
 
+import scala.util.Try
 import scala.collection.mutable.ArrayBuffer
 import com.typesafe.scalalogging.Logger
 
@@ -202,6 +204,8 @@ class SymbolicSimulator (module : Module) {
             printResults(proofResults, cmd.argObj, config)
           case "print_cex" =>
             printCEX(proofResults, cmd.args, cmd.argObj)
+          case "dump_cex_vcds" =>
+            dumpCEXVCDFiles(proofResults)
           case "print_smt2" =>
             printSMT2(assertionTree, cmd.argObj, solver)
           case "print_module" =>
@@ -439,6 +443,63 @@ class SymbolicSimulator (module : Module) {
         UclidMain.println (k.toString + " : " + symbolTable.get(k).get.toString)
       }
     }
+  }
+
+  def dumpCEXVCDFiles(results : List[CheckResult]) {
+    results.filter(_.result.isModelDefined).foreach(dumpCEXVCD(_))
+  }
+
+  def dumpCEXVCD(res : CheckResult) {
+    val filename = "%s_step_%d.vcd".format(res.assert.name.map{ case ' ' | ':' => '_' case c => c } , res.assert.iter)
+    // Integers are represented as 64b values
+    val defaultIntWidth = 64
+    val scope = res.assert.context
+    lazy val instVarMap = module.getAnnotation[InstanceVarMapAnnotation]().get
+    val vars = ((scope.inputs ++ scope.vars ++ scope.outputs).map {
+      p => {
+        instVarMap.rMap.get(p.id) match {
+          case Some(str) => (p, str)
+          case None => (p, p.id.toString)
+        }
+      }
+    })
+
+    def getTypeWidth(t: Type): Int = t match {
+      case BooleanType() => 1
+      case BitVectorType(w: Int) => w
+      case IntegerType() => defaultIntWidth
+      case _ => throw new Utils.UnimplementedException("VCD dumping supports only bitvector, boolean, and integral types.")
+    }
+
+    val vcdWriter = VCD("Top")
+    vcdWriter.addWire("Step", defaultIntWidth)
+    val activeSortedVars =  vars.toList.sortWith((l, r) => l._2 < r._2).filter(v => Try(getTypeWidth(v._1.typ)).isSuccess)
+    activeSortedVars.foreach(v => vcdWriter.addWire(v._2, getTypeWidth(v._1.typ)))
+    val model = res.result.model.get
+    val ft = res.assert.frameTable
+    val indices = 0 to (ft.size - 1)
+    (indices zip ft).foreach{ case (i, frame) => {
+      vcdWriter.wireChanged("Step", i)
+      val pastFrames = (0 to (i-1)).map(j => (j + 1) -> ft(i - 1 - j)).toMap
+      updateFrameVCD(vcdWriter, frame, pastFrames, model, activeSortedVars, scope)
+      vcdWriter.incrementTime()
+    }}
+    vcdWriter.wireChanged("Step", ft.size)
+    vcdWriter.incrementTime()
+    vcdWriter.write(filename)
+  }
+
+  def updateFrameVCD(vcd : VCD, f : SymbolTable, pastFrames : Map[Int, SymbolTable], m : smt.Model, exprs : List[(Scope.NamedExpression, String)], scope : Scope) {
+    exprs.foreach { (e) => {
+      try {
+        val result = m.evalAsString(evaluate(e._1.id, f, pastFrames, scope))
+        val value = (Try(if (result.toBoolean) 1 else 0).toOption ++ Try(result.toInt).toOption).head
+        vcd.wireChanged(e._2, value)
+      } catch {
+        case excp : Utils.UnknownIdentifierException =>
+          UclidMain.println("  " + e.toString + " : <UNDEF> ")
+      }
+    }}
   }
 
   /** Add assertion. */
