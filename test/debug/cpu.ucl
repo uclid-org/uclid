@@ -1,0 +1,53 @@
+module decode_stage {
+    input flush : boolean;
+
+    procedure flush_rob()
+    {
+        var end_buffer : boolean;
+        end_buffer = false;
+    }
+
+    procedure decode_rename_dispatch()
+    {
+        if (flush) {
+            call flush_rob();
+        }
+    }
+
+    next {
+        call decode_rename_dispatch();
+    }
+}
+
+module execute_stage {
+    procedure prep_exe_inst()
+    {
+        var found_inst : boolean;
+        var end_buffer : boolean;
+
+        found_inst = false;
+        end_buffer = false;
+    }
+
+    procedure execute_and_resolve()
+    {
+        call prep_exe_inst();
+    }
+
+    next {
+        call execute_and_resolve();
+    }
+}
+
+module main {
+    instance decode : decode_stage();
+    instance execute : execute_stage();
+    
+    next {
+        
+        // Decide stage
+        next(decode);
+        // Execute Stage
+        next(execute);
+    }
+}
