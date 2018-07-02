@@ -444,13 +444,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwInstance ~> Id ~ ":" ~ Id ~ ArgMapList <~ ";" ^^ { case instId ~ ":" ~ moduleId ~ args => lang.InstanceDecl(instId, moduleId, args, None, None) }
     }
     lazy val RequiresExprs : PackratParser[List[lang.ProcedureRequiresExpr]] = {
-      rep(KwRequires ~> Expr <~ ";") ^^ {
-        case es => es.map(e => lang.ProcedureRequiresExpr(e))
+      KwRequires ~> Expr <~ ";" ^^ {
+        case e => List(lang.ProcedureRequiresExpr(e))
       }
     }
     lazy val EnsuresExprs : PackratParser[List[lang.ProcedureEnsuresExpr]] = {
-      rep(KwEnsures ~> Expr <~ ";") ^^ {
-        case es => es.map(e => lang.ProcedureEnsuresExpr(e))
+      KwEnsures ~> Expr <~ ";" ^^ {
+        case e => List(lang.ProcedureEnsuresExpr(e))
       }
     }
     lazy val ModifiesExprs : PackratParser[List[lang.ProcedureModifiesExpr]] = {
@@ -460,6 +460,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         }
       }
     }
+    lazy val ProcedureVerifExpr = RequiresExprs | EnsuresExprs | ModifiesExprs
+
     def collectRequires(vs : List[lang.ProcedureVerificationExpr]) : List[Expr] = {
       vs.collect { case e : lang.ProcedureRequiresExpr => e.expr }
     }
@@ -471,7 +473,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     lazy val ProcedureDecl : PackratParser[lang.ProcedureDecl] = positioned {
       KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
-      rep(RequiresExprs | EnsuresExprs | ModifiesExprs) ~ BlkStmt ^^
+      rep(ProcedureVerifExpr) ~ BlkStmt ^^
         { case id ~ args ~ outs ~ verifExprs ~ body =>
           val verifExprList = verifExprs.flatMap(v => v)
           val requiresList = collectRequires(verifExprList)
@@ -481,7 +483,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
                              List.empty, body,
                              requiresList, ensuresList, modifiesList.toSet) } |
       // procedure with no return value
-      KwProcedure ~> Id ~ IdTypeList ~ rep(RequiresExprs | EnsuresExprs | ModifiesExprs) ~ BlkStmt ^^
+      KwProcedure ~> Id ~ IdTypeList ~ rep(ProcedureVerifExpr) ~ BlkStmt ^^
         { case id ~ args ~ verifExprs ~ body =>
           val verifExprList = verifExprs.flatMap(v => v)
           val requiresList = collectRequires(verifExprList)
