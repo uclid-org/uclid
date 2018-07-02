@@ -179,6 +179,18 @@ class ProcedureVerifSpec extends FlatSpec {
   "test-procedure-checker-4.ucl" should "verify all invariants successfully." in {
     VerifierSpec.expectedFails("./test/test-procedure-checker-4.ucl", 0)
   }
+  "test-procedure-checker-5.ucl" should "verify all invariants successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-checker-5.ucl", 0)
+  }
+  "test-procedure-checker-6.ucl" should "verify all invariants successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-checker-6.ucl", 0)
+  }
+  "test-procedure-checker-7.ucl" should "verify all invariants successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-checker-7.ucl", 4)
+  }
+  "test-procedure-checker-8.ucl" should "verify all invariants successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-checker-8.ucl", 4)
+  }
   "test-procedure-postcondition-3.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-procedure-postcondition-3.ucl", 0)
   }

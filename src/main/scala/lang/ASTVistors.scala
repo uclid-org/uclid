@@ -159,6 +159,7 @@ trait ReadOnlyPass[T] {
   def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : Scope) : T = { in }
   def applyOnLambda(d : TraversalDirection.T, lambda : Lambda, in : T, context : Scope) : T = { in }
   def applyOnExprDecorator(d : TraversalDirection.T, dec : ExprDecorator, in : T, context : Scope) : T = { in }
+  def applyOnProcedureAnnotations(d : TraversalDirection.T, annot : ProcedureAnnotations, in : T, context : Scope) : T = { in }
 }
 
 /* AST Visitor that rewrites and generates a new AST. */
@@ -241,8 +242,9 @@ trait RewritePass {
   def rewriteArraySelect(arrSel : ArraySelectOperation, ctx : Scope) : Option[Expr] = { Some(arrSel) }
   def rewriteArrayStore(arrStore : ArrayStoreOperation, ctx : Scope) : Option[Expr] = { Some(arrStore) }
   def rewriteFuncApp(fapp : FuncApplication, ctx : Scope) : Option[Expr] = { Some(fapp) }
-  def rewriteExprDecorator(dec : ExprDecorator, ctx : Scope) : Option[ExprDecorator] = { Some(dec) }
   def rewriteLambda(lambda : Lambda, ctx : Scope) : Option[Lambda] = { Some(lambda) }
+  def rewriteExprDecorator(dec : ExprDecorator, ctx : Scope) : Option[ExprDecorator] = { Some(dec) }
+  def rewriteProcedureAnnotations(proc : ProcedureAnnotations, ctx : Scope) : Option[ProcedureAnnotations] = { Some(proc) }
 }
 
 class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAnalysis {
@@ -341,6 +343,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     val context = contextIn + proc
     result = pass.applyOnProcedure(TraversalDirection.Down, proc, result, contextIn)
+    result = pass.applyOnProcedureAnnotations(TraversalDirection.Down, proc.annotations, result, context)
     result = visitIdentifier(proc.id, result, context)
     result = visitProcedureSig(proc.sig, result, context)
     result = proc.decls.foldLeft(result)((acc, i) => visitLocalVar(i, acc, context))
@@ -348,6 +351,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = proc.requires.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(RequiresEnvironment)))
     result = proc.ensures.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(EnsuresEnvironment)))
     result = proc.modifies.foldLeft(result)((acc, r) => visitIdentifier(r, acc, context))
+    result = pass.applyOnProcedureAnnotations(TraversalDirection.Up, proc.annotations, result, context)
     result = pass.applyOnProcedure(TraversalDirection.Up, proc, result, contextIn)
     return result
   }
@@ -1131,9 +1135,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val reqs = proc.requires.map(r => visitExpr(r, context.withEnvironment(RequiresEnvironment))).flatten
     val enss = proc.ensures.map(e => visitExpr(e, context.withEnvironment(EnsuresEnvironment))).flatten
     val mods = proc.modifies.map(v => visitIdentifier(v, context)).flatten
+    val annotations = pass.rewriteProcedureAnnotations(proc.annotations, context) match {
+      case Some(annot) => annot
+      case None => ProcedureAnnotations(Set.empty[Identifier])
+    }
     val procP = (id, sig, bodyP) match {
-      case (Some(i), Some(s), Some(body)) => pass.rewriteProcedure(ProcedureDecl(i, s, decls, body, reqs, enss, mods), contextIn)
-      case _ => None
+      case (Some(i), Some(s), Some(body)) =>
+        pass.rewriteProcedure(ProcedureDecl(i, s, decls, body, reqs, enss, mods, annotations), contextIn)
+      case _ =>
+        None
     }
     return ASTNode.introducePos(setPosition, setFilename, procP, proc.position)
   }

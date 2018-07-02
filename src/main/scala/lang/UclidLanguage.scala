@@ -941,15 +941,27 @@ case class ProcedureModifiesExpr(id : Identifier) extends ProcedureVerificationE
   override val toString = "modifies " + id.toString
 }
 
+case class ProcedureAnnotations(ids : Set[Identifier]) extends ASTNode {
+  override val toString = {
+    if (ids.size > 0) {
+      "[" + Utils.join(ids.map(id => id.toString()).toList, ", ") + "] "
+    } else {
+      ""
+    }
+  }
+}
+
 case class ProcedureDecl(
     id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: Statement,
-    requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier]) extends Decl {
+    requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier],
+    annotations : ProcedureAnnotations) extends Decl
+{
   override val hashId = 902
   override def toString = {
     val modifiesString = if (modifies.size > 0) {
       PrettyPrinter.indent(2) + "modifies " + Utils.join(modifies.map(_.toString).toList, ", ") + ";\n"
     } else { "" }
-    "procedure " + id + sig + "\n" +
+    "procedure " + annotations.toString + id + sig + "\n" +
     Utils.join(requires.map(PrettyPrinter.indent(2) + "requires " + _.toString + ";\n"), "") +
     Utils.join(ensures.map(PrettyPrinter.indent(2) + "ensures " + _.toString + "; \n"), "") +
     modifiesString +
@@ -960,7 +972,9 @@ case class ProcedureDecl(
   }
   override def declNames = List(id)
   def hasPrePost = requires.size > 0 || ensures.size > 0
-  def shouldInline = ensures.size == 0
+  val shouldInline =
+    (annotations.ids.contains(Identifier("inline")) && !annotations.ids.contains(Identifier("noinline"))) ||
+    (ensures.size == 0)
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override val hashId = 903
