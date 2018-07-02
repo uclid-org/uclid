@@ -1,15 +1,22 @@
 package uclid
 package lang
 
-class ModuleCleanerPass extends RewritePass {
+class ModuleCleanerPass(mainModuleName : Identifier) extends RewritePass {
+  override def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
+    if (ctx.module.get.id != mainModuleName) {
+      None
+    } else {
+      Some(proc)
+    }
+  }
   override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = {
     val declsP = module.decls.sortWith((d1, d2) => d1.hashId < d2.hashId)
     Some(Module(module.id, declsP, module.cmds, module.notes))
   }
 }
 
-class ModuleCleaner extends ASTRewriter(
-    "ModuleCleaner", new ModuleCleanerPass())
+class ModuleCleaner(mainModuleName : Identifier) extends ASTRewriter(
+    "ModuleCleaner", new ModuleCleanerPass(mainModuleName))
 
 class ModuleEliminatorPass(moduleName : Identifier) extends RewritePass {
   override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = {

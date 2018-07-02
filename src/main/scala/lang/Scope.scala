@@ -93,7 +93,7 @@ object Scope {
                       eTyp.pos, module.flatMap(_.filename))
                   m
                 case _ =>
-                  Utils.raiseParsingError("Redeclaration of identifier " + id.name, id.pos, module.flatMap(_.filename))
+                  Utils.raiseParsingError("Redeclaration of enum identifier " + id.name, id.pos, module.flatMap(_.filename))
                   m
               }
             case None =>
