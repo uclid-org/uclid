@@ -925,6 +925,22 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
   }
 }
 
+sealed abstract class ProcedureVerificationExpr extends ASTNode {
+  val expr : Expr
+}
+case class ProcedureRequiresExpr(e : Expr) extends ProcedureVerificationExpr {
+  override val expr = e
+  override val toString = "requires " + e.toString()
+}
+case class ProcedureEnsuresExpr(e : Expr) extends ProcedureVerificationExpr {
+  override val expr = e
+  override val toString = "ensures " + e.toString()
+}
+case class ProcedureModifiesExpr(id : Identifier) extends ProcedureVerificationExpr {
+  override val expr = id
+  override val toString = "modifies " + id.toString
+}
+
 case class ProcedureDecl(
     id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: Statement,
     requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier]) extends Decl {

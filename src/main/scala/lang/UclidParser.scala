@@ -443,14 +443,17 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val InstanceDecl : PackratParser[lang.InstanceDecl] = positioned {
       KwInstance ~> Id ~ ":" ~ Id ~ ArgMapList <~ ";" ^^ { case instId ~ ":" ~ moduleId ~ args => lang.InstanceDecl(instId, moduleId, args, None, None) }
     }
-    lazy val RequireExpr : PackratParser[lang.Expr] = positioned {
-      KwRequires ~> Expr <~ ";"
+    lazy val RequireExpr : PackratParser[lang.ProcedureRequiresExpr] = positioned {
+      KwRequires ~> Expr <~ ";" ^^ { case e => lang.ProcedureRequiresExpr(e) }
     }
-    lazy val EnsureExpr : PackratParser[lang.Expr] = positioned {
-      KwEnsures ~> Expr <~ ";"
+    lazy val EnsureExpr : PackratParser[lang.ProcedureEnsuresExpr] = positioned {
+      KwEnsures ~> Expr <~ ";" ^^ { case e => lang.ProcedureEnsuresExpr(e) }
     }
-    lazy val ModifiesExprs : PackratParser[List[lang.Identifier]] = {
-      KwModifies ~> Id ~ rep("," ~> Id) <~ ";" ^^ { case id ~ ids => id :: ids }
+    lazy val ModifiesExprs : PackratParser[List[lang.ProcedureModifiesExpr]] = {
+      KwModifies ~> Id ~ rep("," ~> Id) <~ ";" ^^ {
+        case id ~ ids =>
+          (id :: ids).map(i => lang.ProcedureModifiesExpr(i))
+      }
     }
     lazy val ProcedureDecl : PackratParser[lang.ProcedureDecl] = positioned {
       KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
