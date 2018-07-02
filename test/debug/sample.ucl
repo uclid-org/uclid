@@ -16,7 +16,7 @@ module main {
 	next {
 		capacity' = capacity - 1;
 		s' = s * 2bv8;
-		mem' = mem[ a -> s ];		
+		mem' = (mem[ a -> s ])[(a + 1bv3) -> (s + 1bv8)];		
 	}
 
 	invariant cap: capacity >= 0;
