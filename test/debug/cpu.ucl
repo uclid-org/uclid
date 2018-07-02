@@ -1903,7 +1903,7 @@ assume(PC == 9bv16);
 		P3' = P3;
 		P0' = P0;
 		P1' = P1;
-		// IRAM' = IRAM[(SP + 1bv8)->extract((PC + 3bv16))][((SP + 1bv8) + 1bv8)->extract((PC + 3bv16))];
+		IRAM' = IRAM[(SP + 1bv8)->extract((PC + 3bv16))][((SP + 1bv8) + 1bv8)->extract((PC + 3bv16))];
 		IP' = IP;
 		XRAM_DATA_OUT' = 0bv8;
 		IE' = IE;
