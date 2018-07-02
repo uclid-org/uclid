@@ -230,6 +230,10 @@ case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "-"
 }
+case class BVSignExtOp(override val w : Int) extends BVArgOperator(w) {
+  override def fixity = Operator.PREFIX
+  override def toString = "bv_sign_extend"
+}
 // Boolean operators.
 sealed abstract class BooleanOperator extends Operator {
   override def fixity = Operator.INFIX
@@ -350,7 +354,10 @@ case class GetNextValueOp() extends Operator {
   override def toString = "'"
   override def fixity = Operator.POSTFIX
 }
-
+case class DistinctOp() extends Operator {
+  override def toString = "distinct"
+  override def fixity = Operator.INFIX
+}
 sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
   def isConstant = false

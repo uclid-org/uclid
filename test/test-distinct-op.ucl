@@ -1,0 +1,39 @@
+module led
+{
+  type color_t = enum { red, blue, green };
+  output light : color_t;
+  next {
+    case
+      (light == red)   : { light' = blue; }
+      (light == blue)  : { light' = green; }
+      (light == green) : { light' = red; }
+    esac
+  }
+}
+
+module main
+{
+  var l1, l2, l3 : led.color_t;
+
+  instance led1 : led(light : (l1));
+  instance led2 : led(light : (l2));
+  instance led3 : led(light : (l3));
+
+  init {
+    assume distinct(l1, l2, l3);
+  }
+
+  next {
+    next (led1);
+    next (led2);
+    next (led3);
+  }
+
+  invariant neq : distinct(l1, l2, l3);
+
+  control {
+    v = unroll(10);
+    check;
+    print_results;
+  }
+}

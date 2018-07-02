@@ -107,6 +107,7 @@ object Converter {
       // Comparison operators.
       case lang.EqualityOp() => return smt.EqualityOp
       case lang.InequalityOp() => return smt.InequalityOp
+      case lang.DistinctOp() => return smt.InequalityOp
       // Record select.
       case lang.RecordSelect(r) => return smt.RecordSelectOp(r.name)
       // Quantifiers

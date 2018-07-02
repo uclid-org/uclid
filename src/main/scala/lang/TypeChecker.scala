@@ -363,8 +363,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes.size == numArgs(bvOp), "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
           checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
           bvOp match {
-            case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) => new BooleanType()
-            case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVUnaryMinusOp(_) => new BitVectorType(bvOp.w)
+            case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) =>
+              new BooleanType()
+            case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVUnaryMinusOp(_) | BVSignExtOp(_) =>
+              new BitVectorType(bvOp.w)
             case BVAndOp(_) | BVOrOp(_) | BVXorOp(_) | BVNotOp(_) =>
               val t = new BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width)
               bvOpMap.put(bvOp.astNodeId, t.width)
@@ -487,6 +489,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes(0).isBool, "Condition in if-then-else must be boolean", opapp.pos, c.filename)
           checkTypeError(argTypes(1) == argTypes(2), "Then- and else- expressions in an if-then-else must be of the same type", opapp.pos, c.filename)
           argTypes(1)
+        case DistinctOp() =>
+          checkTypeError(argTypes.size >= 2, "Expect 2 or more arguments to the distinct operator", opapp.pos, c.filename)
+          checkTypeError(argTypes.forall(t => t == argTypes(0)), "All arguments to distinct operator must be the same", opapp.pos, c.filename)
+          BooleanType()
       }
     }
 

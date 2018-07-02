@@ -197,6 +197,9 @@ trait Operator extends Hashable {
   def checkNumArgs(args: List[Expr], expectedNumOperands : Int) : Unit = {
     Utils.assert(args.size == expectedNumOperands, "Operator '" + toString + "' requires " + expectedNumOperands + " operand(s).")
   }
+  def checkNumArgsGt(args: List[Expr], expectedNumOperands : Int) : Unit = {
+    Utils.assert(args.size >= expectedNumOperands, "Operator '" + toString + "' requires " + expectedNumOperands + " operand(s).")
+  }
   def checkAllArgTypes(args: List[Expr], expectedType : Type) : Unit = {
     Utils.assert(args.forall(op => op.typ == expectedType), "Operator '" + toString + "' requires operand(s) of type: " + expectedType)
   }
@@ -388,7 +391,7 @@ case object InequalityOp extends BoolResultOp {
   override val hashId = 223
   override val hashCode = computeHash
   override def toString = "distinct"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgsGt(args, 2); checkAllArgsSameType(args) }
 }
 // Integer comparison.
 case object IntLTOp extends BoolResultOp {

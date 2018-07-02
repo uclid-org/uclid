@@ -50,6 +50,10 @@ class FuncExprRewriterPass extends RewritePass {
           OperatorApplication(HistoryOperator(), fapp.args)
         } else if (fnName == "past") {
           OperatorApplication(PastOperator(), fapp.args)
+        } else if (fnName == "distinct") {
+          OperatorApplication(DistinctOp(), fapp.args)
+        } else if (fnName == "bv_sign_extend") {
+          OperatorApplication(BVSignExtOp(fapp.args(1).asInstanceOf[IntLit].value.toInt), fapp.args)
         } else {
           fapp
         }
