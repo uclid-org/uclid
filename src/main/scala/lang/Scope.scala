@@ -49,7 +49,7 @@ object Scope {
   sealed abstract class ReadOnlyNamedExpression(id : Identifier, typ: Type) extends NamedExpression(id, typ) {
     override val isReadOnly = true
   }
-  case class ModuleDefinition(mod : lang.Module) extends ReadOnlyNamedExpression(mod.id, mod.moduleType)
+  case class ModuleDefinition(mod : Module) extends ReadOnlyNamedExpression(mod.id, mod.moduleType)
   case class Instance(instD: InstanceDecl) extends ReadOnlyNamedExpression(instD.instanceId, instD.moduleType)
   case class TypeSynonym(typId : Identifier, sTyp: Type) extends ReadOnlyNamedExpression(typId, sTyp)
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
@@ -251,7 +251,7 @@ case class Scope (
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr))
           case None => mapAcc
         }
-        case InitDecl(_) | NextDecl(_) => mapAcc
+        case ModuleTypesImportDecl(_) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
     val m2 = m.decls.foldLeft(m1){(mapAcc, decl) =>
@@ -283,7 +283,8 @@ case class Scope (
         case SharedVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ConstantLitDecl(id, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
         case ConstantsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
-        case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
+        case ModuleTypesImportDecl(_) | InstanceDecl(_, _, _, _, _) |
+             SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
     Scope(m2, Some(m), None, None, environment, false, parent)

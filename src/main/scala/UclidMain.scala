@@ -176,6 +176,7 @@ object UclidMain {
     passManager.addPass(new ModuleCanonicalizer())
     passManager.addPass(new BlockVariableRenamer())
     passManager.addPass(new LTLOperatorIntroducer())
+    passManager.addPass(new ModuleTypeImportCollector())
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new FuncExprRewriter())

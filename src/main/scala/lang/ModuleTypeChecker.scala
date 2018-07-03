@@ -234,6 +234,20 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       in
     }
   }
+  override def applyOnModuleTypesImport(d : TraversalDirection.T, modTypImport : ModuleTypesImportDecl, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down) {
+      val id = modTypImport.id
+      context.map.get(id) match {
+        case Some(Scope.ModuleDefinition(mod)) =>
+          in
+        case _ =>
+          val error = ModuleError("Unknown module in module types import declaration", modTypImport.id.position)
+          in + error
+      }
+    } else {
+      in
+    }
+  }
 }
 
 class ModuleTypeChecker extends ASTAnalyzer("ModuleTypeChecker", new ModuleTypeCheckerPass())  {
