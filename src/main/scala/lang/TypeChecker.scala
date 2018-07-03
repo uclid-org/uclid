@@ -355,7 +355,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         }
         case bvOp : BVArgOperator => {
           checkTypeError(argTypes.size == bvOp.arity, "Operator '%s' must have exactly %d argument(s)".format(opapp.op.toString, bvOp.arity), opapp.pos, c.filename)
-          checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
+          checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Argument(s) to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
           bvOp match {
             case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) =>
               new BooleanType()
