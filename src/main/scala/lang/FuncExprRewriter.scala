@@ -53,7 +53,27 @@ class FuncExprRewriterPass extends RewritePass {
         } else if (fnName == "distinct") {
           OperatorApplication(DistinctOp(), fapp.args)
         } else if (fnName == "bv_sign_extend") {
-          OperatorApplication(BVSignExtOp(fapp.args(1).asInstanceOf[IntLit].value.toInt), fapp.args)
+          if (fapp.args.size == 2) {
+            fapp.args(1) match {
+              case IntLit(v) =>
+                OperatorApplication(BVSignExtOp(0, v.toInt), List(fapp.args(0)))
+              case _ =>
+                OperatorApplication(BVSignExtOp(0, 0), List(fapp.args(0)))
+            }
+          } else {
+            OperatorApplication(BVSignExtOp(0, 0), List.empty)
+          }
+        } else if (fnName == "bv_zero_extend") {
+          if (fapp.args.size == 2) {
+            fapp.args(1) match {
+              case IntLit(v) =>
+                OperatorApplication(BVZeroExtOp(0, v.toInt), List(fapp.args(0)))
+              case _ =>
+                OperatorApplication(BVZeroExtOp(0, 0), List(fapp.args(0)))
+            }
+          } else {
+            OperatorApplication(BVZeroExtOp(0, 0), List.empty)
+          }
         } else {
           fapp
         }

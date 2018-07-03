@@ -13,7 +13,7 @@ module main
     c = a + b;
   }
 
-  procedure[noinline] sum(n : integer) returns (numbers : [integer]integer)
+  procedure [noinline] sum(n : integer) returns (numbers : [integer]integer)
     requires (n > 0);
     requires (n < 5);
     ensures (forall (i : integer) :: (i > 0 && i < n) ==> numbers[i] == i+1);

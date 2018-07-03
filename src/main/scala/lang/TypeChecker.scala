@@ -354,24 +354,28 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           }
         }
         case bvOp : BVArgOperator => {
-          def numArgs(op : BVArgOperator) : Int = {
-            op match {
-              case BVNotOp(_) | BVUnaryMinusOp(_) => 1
-              case _ => 2
-            }
-          }
-          checkTypeError(argTypes.size == numArgs(bvOp), "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
+          checkTypeError(argTypes.size == bvOp.arity, "Operator '%s' must have exactly %d argument(s)".format(opapp.op.toString, bvOp.arity), opapp.pos, c.filename)
           checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
           bvOp match {
             case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) =>
               new BooleanType()
-            case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVUnaryMinusOp(_) | BVSignExtOp(_) =>
+            case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVUnaryMinusOp(_) =>
+              checkTypeError(bvOp.w != 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
               new BitVectorType(bvOp.w)
             case BVAndOp(_) | BVOrOp(_) | BVXorOp(_) | BVNotOp(_) =>
-              val t = new BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width)
+              val t = BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width)
               bvOpMap.put(bvOp.astNodeId, t.width)
               t
-          }
+            case BVSignExtOp(w, e) =>
+              checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
+              val w = e + argTypes(0).asInstanceOf[BitVectorType].width
+              bvOpMap.put(bvOp.astNodeId, w)
+              BitVectorType(w)
+            case BVZeroExtOp(w, e) =>
+              checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
+              val w = e + argTypes(0).asInstanceOf[BitVectorType].width
+              bvOpMap.put(bvOp.astNodeId, w)
+              BitVectorType(w)          }
         }
         case qOp : QuantifiedBooleanOperator => {
           checkTypeError(argTypes(0).isInstanceOf[BooleanType], "Operand to the quantifier '" + qOp.toString + "' must be boolean", opapp.pos, c.filename)
@@ -608,6 +612,8 @@ class PolymorphicTypeRewriterPass extends RewritePass {
             case BVOrOp(_) => width.flatMap((w) => Some(BVOrOp(w)))
             case BVXorOp(_) => width.flatMap((w) => Some(BVXorOp(w)))
             case BVNotOp(_) => width.flatMap((w) => Some(BVNotOp(w)))
+            case BVSignExtOp(_, e) => width.flatMap((w) => Some(BVSignExtOp(w, e)))
+            case BVZeroExtOp(_, e) => width.flatMap((w) => Some(BVZeroExtOp(w, e)))
             case _ => Some(bv)
           }
           newOp match {

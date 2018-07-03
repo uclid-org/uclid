@@ -192,6 +192,7 @@ case class IntUnaryMinusOp() extends IntArgOperator {
 // These operators take bitvector operands.
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
   override def fixity = Operator.INFIX
+  val arity = 2
 }
 case class BVLTOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "<"
@@ -225,14 +226,22 @@ case class BVXorOp(override val w : Int) extends BVArgOperator(w) {
 }
 case class BVNotOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "~"
+  override val arity = 1
 }
 case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "-"
+  override val arity = 1
 }
-case class BVSignExtOp(override val w : Int) extends BVArgOperator(w) {
+case class BVSignExtOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "bv_sign_extend"
+  override val arity = 1
+}
+case class BVZeroExtOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
+  override def fixity = Operator.PREFIX
+  override def toString = "bv_zero_extend"
+  override val arity = 1
 }
 // Boolean operators.
 sealed abstract class BooleanOperator extends Operator {

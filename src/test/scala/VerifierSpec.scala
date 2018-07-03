@@ -130,6 +130,12 @@ class BasicVerifierSpec extends FlatSpec {
   "test-bit-concat.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-bit-concat.ucl", 0)
   }
+  "test-bv-sign-ext-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bv-sign-ext-1.ucl", 0)
+  }
+  "test-bv-zero-ext-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bv-zero-ext-1.ucl", 0)
+  }
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
   }

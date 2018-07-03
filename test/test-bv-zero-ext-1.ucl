@@ -5,16 +5,17 @@ module main
 
   init {
     a = 255bv8;
-    b = 1bv16;
+    b = -255bv16;
   }
   next {
     a' = a - 1bv8;
     b' = b + 1bv16;
   }
-  invariant z: (bv_sign_extend(a, 8) + b) == 0bv16;
+  invariant z: (bv_zero_extend(a, 8) + b) == 0bv16;
   control {
     v = unroll(8);
     check;
     print_results;
+    v.print_cex(a, b);
   }
 }
