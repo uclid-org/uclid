@@ -125,7 +125,6 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.ParserErrorList =>
         assert (p.errors.size == 3)
-        // XXX: continue testing here
     }
   }
   "test-recursion.ucl" should "not parse successfully." in {
@@ -138,7 +137,6 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.ParserErrorList =>
         assert (p.errors.size == 1)
-        // XXX: continue testing here
     }
   }
   "test-procedure-types-errors.ucl" should "not parse successfully." in {
@@ -190,7 +188,6 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.TypeError =>
         assert (p.getMessage().contains("Recursively defined synonym type"))
-        // XXX: continue testing here
     }
   }
   "test-modules-2.ucl" should "not parse successfully." in {
@@ -203,7 +200,6 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.TypeErrorList =>
         assert (p.errors.size == 4)
-        // XXX: continue testing here
     }
   }
   "test-procedure-checker-1.ucl" should "not parse successfully." in {
