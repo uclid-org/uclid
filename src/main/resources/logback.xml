@@ -19,7 +19,7 @@
   <logger name="uclid.lang.ModuleFlattenerPass" level="OFF"/>
   <logger name="uclid.lang.ModuleInstanceCheckerPass" level="OFF"/>
   <logger name="uclid.lang.ModuleInstantiatorPass" level="OFF"/>
-  <logger name="uclid.lang.ModuleTypeImportCollector" level="OFF"/>
+  <logger name="uclid.lang.ModuleTypesImportCollector" level="OFF"/>
   <logger name="uclid.lang.PassManager" level="OFF"/>
   <logger name="uclid.lang.PrimedVariableEliminatorPass" level="OFF"/>
   <logger name="uclid.lang.ProcedureCheckerPass" level="OFF"/>

@@ -64,7 +64,6 @@ object Scope {
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class ProcedureOutputArg(argId : Identifier, argTyp: Type) extends NamedExpression(argId, argTyp)
-  case class ProcedureLocalVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
   case class BlockVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
   case class FunctionArg(argId : Identifier, argTyp : Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
@@ -234,7 +233,7 @@ case class Scope (
       decl match {
         case instD : InstanceDecl =>
           Scope.addToMap(mapAcc, Scope.Instance(instD))
-        case ProcedureDecl(id, sig, _, _, _, _, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
+        case ProcedureDecl(id, sig, _, _, _, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
         case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
         case StateVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.StateVar(id, typ)))
         case InputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.InputVar(id, typ)))
@@ -256,7 +255,7 @@ case class Scope (
     }
     val m2 = m.decls.foldLeft(m1){(mapAcc, decl) =>
       decl match {
-        case ProcedureDecl(id, sig, _, _, _, _, _, _) =>
+        case ProcedureDecl(id, sig, _, _, _, _, _) =>
           val m1 = sig.inParams.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = sig.outParams.foldLeft(m1)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           m2
@@ -298,10 +297,7 @@ case class Scope (
     val map2 = proc.sig.outParams.foldLeft(map1){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureOutputArg(arg._1, arg._2))
     }
-    val map3 = proc.decls.foldLeft(map2){
-      (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureLocalVar(arg.id, arg.typ))
-    }
-    return Scope(map3, module, Some(proc), None, ProceduralEnvironment, false, Some(this))
+    return Scope(map2, module, Some(proc), None, ProceduralEnvironment, false, Some(this))
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
   def +(lambda: Lambda) : Scope = {

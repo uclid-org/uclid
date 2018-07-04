@@ -487,9 +487,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
           val ensuresList = collectEnsures(verifExprList)
           val modifiesList = collectModifies(verifExprList)
           lang.ProcedureDecl(id, lang.ProcedureSig(args,outs),
-                             List.empty, body,
-                             requiresList, ensuresList, modifiesList.toSet,
-                             annotations) } |
+                             body, requiresList, ensuresList, modifiesList.toSet, annotations) } |
       // procedure with no return value
       KwProcedure ~> ProcedureAnnotationList.? ~ Id ~ IdTypeList ~ rep(ProcedureVerifExpr) ~ BlkStmt ^^
         { case annotOpt ~ id ~ args ~ verifExprs ~ body =>
@@ -502,9 +500,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
           val ensuresList = collectEnsures(verifExprList)
           val modifiesList = collectModifies(verifExprList)
           lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty),
-                             List.empty, body,
-                             requiresList, ensuresList, modifiesList.toSet,
-                             annotations) }
+                             body, requiresList, ensuresList, modifiesList.toSet, annotations) }
     }
 
     lazy val TypeDecl : PackratParser[lang.TypeDecl] = positioned {

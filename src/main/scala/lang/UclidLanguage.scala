@@ -848,9 +848,6 @@ case class BlockVarsDecl(ids : List[Identifier], typ : Type) extends ASTNode {
   override def toString = "var " + Utils.join(ids.map(id => id.toString()), ", ") +
                           " : " + typ.toString() + "; // " + typ.position.toString()
 }
-case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
-  override def toString = "var " + id + ": " + typ + "; // " + id.position.toString
-}
 
 /**
  * Base class for module and procedure signatures.
@@ -967,7 +964,7 @@ case class ProcedureAnnotations(ids : Set[Identifier]) extends ASTNode {
 }
 
 case class ProcedureDecl(
-    id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: Statement,
+    id: Identifier, sig: ProcedureSig, body: Statement,
     requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier],
     annotations : ProcedureAnnotations) extends Decl
 {
@@ -977,13 +974,10 @@ case class ProcedureDecl(
       PrettyPrinter.indent(2) + "modifies " + Utils.join(modifies.map(_.toString).toList, ", ") + ";\n"
     } else { "" }
     "procedure " + annotations.toString + id + sig + "\n" +
+    modifiesString +
     Utils.join(requires.map(PrettyPrinter.indent(2) + "requires " + _.toString + ";\n"), "") +
     Utils.join(ensures.map(PrettyPrinter.indent(2) + "ensures " + _.toString + "; \n"), "") +
-    modifiesString +
-    PrettyPrinter.indent(1) + "{ // " + id.position.toString + "\n" +
-    Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" +
-    Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n") +
-    "\n" + PrettyPrinter.indent(1) + "}"
+    Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
   }
   override def declNames = List(id)
   def hasPrePost = requires.size > 0 || ensures.size > 0

@@ -42,8 +42,8 @@ package lang
 
 import com.typesafe.scalalogging.Logger
 
-class ModuleTypeImportCollectorPass extends ReadOnlyPass[List[ExternalIdentifier]] {
-  lazy val logger = Logger(classOf[ModuleTypeImportCollector])
+class ModuleTypesImportCollectorPass extends ReadOnlyPass[List[ExternalIdentifier]] {
+  lazy val logger = Logger(classOf[ModuleTypesImportCollector])
   type T = List[ExternalIdentifier]
   override def applyOnModuleTypesImport(d : TraversalDirection.T, modTypImport : ModuleTypesImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
@@ -60,8 +60,8 @@ class ModuleTypeImportCollectorPass extends ReadOnlyPass[List[ExternalIdentifier
   }
 }
 
-class ModuleTypeImportCollector extends ASTAnalyzer("ModuleTypeImportCollector", new ModuleTypeImportCollectorPass()) {
-  lazy val logger = Logger(classOf[ModuleTypeImportCollector])
+class ModuleTypesImportCollector extends ASTAnalyzer("ModuleTypeImportCollector", new ModuleTypesImportCollectorPass()) {
+  lazy val logger = Logger(classOf[ModuleTypesImportCollector])
   override def reset() {
     in = Some(List.empty)
   }

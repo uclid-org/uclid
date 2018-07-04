@@ -463,10 +463,7 @@ class SymbolicSimulator (module : Module) {
     val initProcState1 = proc.sig.inParams.foldLeft(initProcState0)((acc, arg) => {
       acc + (arg._1 -> newInputSymbol(arg._1.name, 1, smt.Converter.typeToSMT(arg._2)))
     })
-    val initProcState2 = proc.decls.foldLeft(initProcState1)((acc, arg) => {
-      acc + (arg.id -> newVarSymbol(arg.id.name, smt.Converter.typeToSMT(arg.typ)))
-    })
-    val initProcState = proc.sig.outParams.foldLeft(initProcState2)((acc, arg) => {
+    val initProcState = proc.sig.outParams.foldLeft(initProcState1)((acc, arg) => {
       acc + (arg._1 -> newHavocSymbol(arg._1.name, smt.Converter.typeToSMT(arg._2)))
     })
     frameTable.clear()

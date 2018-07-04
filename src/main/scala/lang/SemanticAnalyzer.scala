@@ -95,8 +95,7 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
     if (d == TraversalDirection.Down) {
       val inParams = proc.sig.inParams.map((arg) => (arg._1, arg._1.position))
       val outParams = proc.sig.outParams.map((arg) => (arg._1, arg._1.position))
-      val localVars = proc.decls.map((v) => (v.id, v.position))
-      SemanticAnalyzerPass.checkIdRedeclaration(inParams ++ outParams ++ localVars, in)
+      SemanticAnalyzerPass.checkIdRedeclaration(inParams ++ outParams, in)
     } else {
       val newIds = proc.sig.inParams.map(p => p._1) ++ proc.sig.outParams.map(p => p._1)
       checkIdRedeclarations(newIds, in, context)
