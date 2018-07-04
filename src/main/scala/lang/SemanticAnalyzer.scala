@@ -47,7 +47,7 @@ object SemanticAnalyzerPass {
       (acc, id) => {
         acc._1.get(id._1) match {
           case Some(pos) =>
-            val msg = "Redeclaration of identifier '" + id._1.name + "'. Previous declaration at " + pos.toString
+            val msg = "Redeclaration of identifier '" + id._1.name + "'. See also declaration at " + pos.toString
             (acc._1, ModuleError(msg, id._2) :: acc._2)
           case None =>
             ((acc._1 + (id._1 -> id._2)), acc._2)

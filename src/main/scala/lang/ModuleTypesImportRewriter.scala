@@ -42,16 +42,20 @@ package lang
 
 import com.typesafe.scalalogging.Logger
 
-class ModuleTypesImportCollectorPass extends ReadOnlyPass[List[ExternalIdentifier]] {
+class ModuleTypesImportCollectorPass extends ReadOnlyPass[List[ExternalType]] {
   lazy val logger = Logger(classOf[ModuleTypesImportCollector])
-  type T = List[ExternalIdentifier]
+  type T = List[ExternalType]
   override def applyOnModuleTypesImport(d : TraversalDirection.T, modTypImport : ModuleTypesImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       logger.debug("statement: {}", modTypImport.toString())
       val id = modTypImport.id
       context.map.get(id) match {
         case Some(Scope.ModuleDefinition(mod)) =>
-          mod.typeDeclarationMap.map(p => ExternalIdentifier(id, p._1)).toList ++ in
+          mod.typeDeclarationMap.map {
+            p => {
+              ASTNode.introducePos(true, true, ExternalType(id, p._1), modTypImport.position)
+            }
+          }.toList ++ in
         case _ => in
       }
     } else {
@@ -67,7 +71,11 @@ class ModuleTypesImportCollector extends ASTAnalyzer("ModuleTypeImportCollector"
   }
   override def visit(module : Module, context : Scope) : Option[Module] = {
     val externalIds = visitModule(module, List.empty, context)
-    val newImports = externalIds.map(p => TypeDecl(p.id, ExternalType(p.moduleId, p.id)))
+    val newImports = externalIds.map {
+      p => {
+        ASTNode.introducePos(true, true, TypeDecl(p.typeId, p), p.position)
+      }
+    }
     logger.debug("newImports: " + newImports.toString())
     val modP = Module(module.id, newImports ++ module.decls, module.cmds, module.notes)
     return Some(modP)

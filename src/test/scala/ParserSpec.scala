@@ -272,6 +272,20 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.exists(p => p._1.contains("Return type and expression type do not match")))
     }
   }
+  "test-types-import-redecl.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-types-import-redecl.ucl")), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.exists(p => p._1.contains("Redeclaration of identifier 'pc_t'")))
+        assert (p.errors.exists(p => p._2.filename == Some("test/test-types-import-redecl.ucl") && p._2.pos.line == 32))
+    }
+  }
   "test-define-expand.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-define-expand.ucl")), lang.Identifier("main"))
     val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
