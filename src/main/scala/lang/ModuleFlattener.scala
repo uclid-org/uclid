@@ -128,8 +128,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   type VarMap = MIP.VarMap
   type InstVarMap = MIP.InstVarMap
   type RewriteMap = MIP.RewriteMap
-  val nameProvider = new ContextualNameProvider(Scope.empty + module, "_inst_" + inst.instanceId.toString)
-
+  val ctx = Scope.empty + module
   def createVarMap() : (VarMap, ExternalSymbolMap) = {
     // sanity check
     Utils.assert(targetModule.instances.size == 0, "All instances in target module must have been flattened by now. Module: %s. Instance: %s.\n%s".format(module.id.toString, inst.toString, targetModule.toString))
@@ -139,8 +138,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val idMap1 = targetModule.inputs.foldLeft(idMap0) {
       (mapAcc, inp) => {
         inst.argMap.get(inp._1) match {
-          case Some(expr) =>  mapAcc + (inp._1 -> MIP.BoundInput(nameProvider(inp._1, "bound_input"), inp._2, expr))
-          case None => mapAcc + (inp._1 -> MIP.UnboundInput(nameProvider(inp._1, "unbound_input"), inp._2))
+          case Some(expr) =>  mapAcc + (inp._1 -> MIP.BoundInput(NameProvider.get(inp._1.toString + "_bound_input"), inp._2, expr))
+          case None => mapAcc + (inp._1 -> MIP.UnboundInput(NameProvider.get(inp._1.toString + "_unbound_input"), inp._2))
         }
       }
     }
@@ -149,7 +148,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       (mapAcc, out) => {
         inst.argMap.get(out._1) match {
           case Some(expr) => mapAcc + (out._1 -> MIP.BoundOutput(MIP.extractLhs(expr).get, out._2))
-          case None => mapAcc + (out._1 -> MIP.UnboundOutput(nameProvider(out._1, "unbound_output"), out._2))
+          case None => mapAcc + (out._1 -> MIP.UnboundOutput(NameProvider.get(out._1.toString() + "_unbound_output"), out._2))
         }
       }
     }
@@ -164,16 +163,16 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
     // map each state variable.
     val idMap4 = targetModule.vars.foldLeft(idMap3) {
-      (mapAcc, v) => mapAcc + (v._1 -> MIP.StateVariable(nameProvider(v._1, "var"), v._2))
+      (mapAcc, v) => mapAcc + (v._1 -> MIP.StateVariable(NameProvider.get(v._1.toString() + "_var"), v._2))
     }
     // map each constant.
     val map5 = targetModule.constants.foldLeft((idMap4)) {
-      (acc, c) => acc + (c._1 -> MIP.Constant(nameProvider(c._1, "const"), c._2))
+      (acc, c) => acc + (c._1 -> MIP.Constant(NameProvider.get(c._1.toString() + "_const"), c._2))
     }
     // map each function.
     val map6 = targetModule.functions.foldLeft(map5, initExternalSymbolMap) {
       (acc, f) => {
-        val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, f.id), f)
+        val (extSymMapP, newName) = acc._2.getOrAdd(ExternalIdentifier(targetModuleName, f.id), f, ctx)
         (acc._1 + (f.id -> MIP.Function(newName, f.sig)), extSymMapP)
       }
     }
@@ -247,7 +246,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }.toList.flatten
   }
 
-  def createInputAssignments(varMap : VarMap) : List[Statement] = {
+  def createNextInputAssignments(varMap : VarMap) : List[Statement] = {
     varMap.map {
       v => {
         v._2 match {
@@ -266,15 +265,15 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   val newVariables = createNewVariables(varMap)
   val newInputs = createNewInputs(varMap)
-  val newInputAssignments = createInputAssignments(varMap)
+  val newInputAssignments = createNextInputAssignments(varMap)
   val newAxioms = newModule.axioms.map {
     ax => {
-      val idP = ax.id.flatMap(axId => Some(nameProvider(axId, "axiom")))
+      val idP = ax.id.flatMap(axId => Some(NameProvider.get(axId.toString() + "_axiom")))
       AxiomDecl(idP, ax.expr)
     }
   }
   val newNextStatements = newModule.next match {
-    case Some(nextD) => nextD.body
+    case Some(nextD) => List(nextD.body)
     case _ => List.empty[Statement]
   }
 
@@ -312,7 +311,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // add initialization for the instance.
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
     newModule.init match {
-      case Some(initD) => Some(InitDecl(initD.body ++ init.body))
+      case Some(initD) => Some(InitDecl(BlockStmt(List.empty, newInputAssignments ++ List(initD.body) ++ List(init.body))))
       case None => Some(init)
     }
   }
@@ -335,11 +334,11 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   // rewrite module.
-  override def rewriteModuleCall(modCall : ModuleCallStmt, context : Scope) : List[Statement] = {
+  override def rewriteModuleCall(modCall : ModuleCallStmt, context : Scope) : Option[Statement] = {
     if (modCall.id == inst.instanceId) {
-      newInputAssignments ++ newNextStatements
+      Some(BlockStmt(List.empty, newInputAssignments ++ newNextStatements))
     } else {
-      List(modCall)
+      Some(modCall)
     }
   }
 }

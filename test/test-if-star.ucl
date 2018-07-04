@@ -27,5 +27,6 @@ module main {
   control {
     unroll(3);
     check;
+    print_results;
   }
 }

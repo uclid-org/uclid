@@ -25,3 +25,11 @@ setuid.ucl
 setuid_fixed.ucl
  - This is a "fixed" version of the setuid model.
 
+two-safety.ucl
+ - This is an example of verifying a simple hyperproperty (a 2-safety property)
+   by self-composition. It is based on an example in Chapter 17 of Lee & Seshia.
+
+simple-datapath.ucl
+  - This is an example from the original UCLID work on processor verification (Bryant, Lahiri, Seshia, CAV'02),
+    showing Burch-Dill style correspondence (refinement) checking.
+

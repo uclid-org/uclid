@@ -48,7 +48,7 @@ import scala.util.parsing.combinator.PackratParsers
 import scala.language.implicitConversions
 import scala.collection.mutable
 
-  /** This is a re-implementation of the Scala libraries StdTokenParsers with StdToken replaced by UclidToken. */
+/** This is a re-implementation of the Scala libraries StdTokenParsers with StdToken replaced by UclidToken. */
 trait UclidTokenParsers extends TokenParsers {
   type Tokens <: UclidTokens
   import lexical.{Keyword, IntegerLit, BitVectorTypeLit, BitVectorLit, StringLit, Identifier}
@@ -145,6 +145,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwFor = "for"
     lazy val KwIn = "in"
     lazy val KwRange = "range"
+    lazy val KwWhile = "while"
     lazy val KwInstance = "instance"
     lazy val KwType = "type"
     lazy val KwInput = "input"
@@ -177,7 +178,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     // lazy val TemporalOpRelease = "R"
 
     lexical.delimiters ++= List("(", ")", ",", "[", "]",
-      "bv", "{", "}", ";", "=", ":", "::", ".", "*", "::=",
+      "bv", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat,
       OpNot, OpMinus, OpPrime)
@@ -186,7 +187,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall,
-      KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange,
+      KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
       KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
       KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit,
       KwNext, KwLambda, KwModifies, KwDefineProp, KwDefineAxiom,
@@ -220,7 +221,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^
       {case e ~ es => (e :: es) }
     lazy val ArrayStoreOp: Parser[(List[Expr],Expr)] =
-      ("[" ~> (Expr ~ rep("," ~> Expr) ~ ("=" ~> Expr)) <~ "]") ^^
+      ("[" ~> (Expr ~ rep("," ~> Expr) ~ ("->" ~> Expr)) <~ "]") ^^
       {case e ~ es ~ r => (e :: es, r)}
     lazy val ConstBitVectorSlice: Parser[lang.ConstBitVectorSlice] =
       positioned { ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt) } }
@@ -239,6 +240,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val BitVector: PackratParser[lang.BitVectorLit] =
       positioned { bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) } }
     lazy val Number : PackratParser[lang.NumericLit] = positioned (Integer | BitVector)
+    lazy val String  : PackratParser[lang.StringLit] = positioned {
+      stringLit ^^ { case stringLit => lang.StringLit(stringLit) }
+    }
     lazy val E1: PackratParser[Expr] =
       KwForall ~> IdTypeList ~ ("::" ~> E1) ^^ { case ids ~ expr => OperatorApplication(ForallOp(ids), List(expr)) } |
       KwExists ~> IdTypeList ~ ("::" ~> E1) ^^ { case ids ~ expr => OperatorApplication(ExistsOp(ids), List(expr)) } |
@@ -297,8 +301,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     /** E15 = false | true | Number | Id FuncApplication | (Expr) **/
     lazy val E15: PackratParser[Expr] = positioned {
-        Bool |
-        Number |
+        Bool | Number | String |
         "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
         KwIf ~> ("(" ~> Expr <~ ")") ~ (KwThen ~> Expr) ~ (KwElse ~> Expr) ^^ {
           case expr ~ thenExpr ~ elseExpr => lang.OperatorApplication(lang.ITEOp(), List(expr, thenExpr, elseExpr))
@@ -348,8 +351,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val IdType : PackratParser[(Identifier,Type)] =
       Id ~ (":" ~> Type) ^^ { case id ~ typ => (id,typ)}
 
+    lazy val IdsType : PackratParser[List[(Identifier, Type)]] =
+      IdList ~ (":" ~> Type) ^^ { case ids ~ typ => (ids.map((_, typ))) }
+
     lazy val IdTypeList : PackratParser[List[(Identifier,Type)]] =
-      "(" ~> IdType ~ (rep ("," ~> IdType) <~ ")") ^^ { case t ~ ts =>  t :: ts} |
+      "(" ~> IdsType ~ (rep ("," ~> IdsType) <~ ")") ^^ { case t ~ ts =>  t ++ ts.flatMap(v => v) } |
       "(" ~ ")" ^^ { case _~_ => List.empty[(Identifier,Type)] }
 
     lazy val Lhs : PackratParser[lang.Lhs] = positioned {
@@ -373,11 +379,14 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val IdList : PackratParser[List[lang.Identifier]] =
       Id ~ rep("," ~> Id) ^^ { case id ~ ids => id :: ids }
 
-    lazy val LocalVarDecl : PackratParser[List[lang.LocalVarDecl]] = {
-      KwVar ~> IdType <~ ";" ^^ { case (id,typ) => List(lang.LocalVarDecl(id,typ)) } |
-      KwVar ~> (Id ~ rep("," ~> Id)) ~ (":" ~> Type) <~ ";" ^^ { 
-        case id ~ ids ~ typ => (id :: ids).map(lang.LocalVarDecl(_, typ))
+    lazy val BlockVarsDecl : PackratParser[lang.BlockVarsDecl] = positioned {
+      KwVar ~> IdList ~ (":" ~> Type) <~ ";" ^^ {
+        case ids ~ typ => lang.BlockVarsDecl(ids, typ)
       }
+    }
+
+    lazy val Invariant : PackratParser[lang.Expr] = positioned {
+      KwInvariant ~> Expr <~ ";"
     }
 
     lazy val Statement: PackratParser[Statement] = positioned {
@@ -393,29 +402,34 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case lhss ~ id ~ args => ProcedureCallStmt(id, lhss, args) } |
       KwNext ~ "(" ~> Id <~ ")" ~ ";" ^^
         { case id => lang.ModuleCallStmt(id) } |
-      KwIf ~ "(" ~ "*" ~ ")" ~> (BlockStatement <~ KwElse) ~ BlockStatement ^^
+      KwIf ~ "(" ~ "*" ~ ")" ~> (BlkStmt <~ KwElse) ~ BlkStmt ^^
         { case tblk ~ fblk => lang.IfElseStmt(lang.FreshLit(lang.BooleanType()), tblk, fblk) } |
-      KwIf ~ "(" ~ "*" ~ ")" ~> BlockStatement ^^
-        { case blk => IfElseStmt(lang.FreshLit(lang.BooleanType()), blk, List.empty) } |
-      KwIf ~ "(" ~> (Expr <~ ")") ~ BlockStatement ~ (KwElse ~> BlockStatement) ^^
+      KwIf ~ "(" ~ "*" ~ ")" ~> BlkStmt ^^
+        { case blk => IfElseStmt(lang.FreshLit(lang.BooleanType()), blk, BlockStmt(List.empty, List.empty)) } |
+      KwIf ~ "(" ~> (Expr <~ ")") ~ BlkStmt ~ (KwElse ~> BlkStmt) ^^
         { case e ~ f ~ g => IfElseStmt(e,f,g)} |
-      KwIf ~> (Expr ~ BlockStatement) ^^
-        { case e ~ f => IfElseStmt(e, f, List.empty[Statement]) } |
+      KwIf ~> (Expr ~ BlkStmt) ^^
+        { case e ~ f => IfElseStmt(e, f, BlockStmt(List.empty, List.empty)) } |
       KwCase ~> rep(CaseBlockStmt) <~ KwEsac ^^
         { case i => CaseStmt(i) } |
-      KwFor ~> (Id ~ (KwIn ~> RangeLit) ~ BlockStatement) ^^
+      KwFor ~> (Id ~ (KwIn ~> RangeLit) ~ BlkStmt) ^^
         { case id ~ r ~ body => ForStmt(id, r._1.typeOf, r, body) } |
-      KwFor ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> RangeExpr) ~ BlockStatement ^^
+      KwFor ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> RangeExpr) ~ BlkStmt ^^
         { case idtyp ~ range ~ body => ForStmt(idtyp._1, idtyp._2, range, body) } |
+      KwWhile ~> ("(" ~> Expr <~ ")") ~ rep(Invariant) ~ BlkStmt ^^
+        { case expr ~ invs ~ body => WhileStmt(expr, body, invs) } |
+      BlkStmt |
       ";" ^^ { case _ => SkipStmt() }
     }
 
-    lazy val CaseBlockStmt: PackratParser[(Expr, List[Statement])] =
-      (Expr ~ ":" ~ BlockStatement) ^^ { case e ~ ":" ~ ss => (e,ss) } |
-      (KwDefault ~ ":" ~> BlockStatement) ^^ { case ss => (BoolLit(true), ss) }
+    lazy val CaseBlockStmt: PackratParser[(Expr, Statement)] =
+      (Expr ~ ":" ~ BlkStmt) ^^ { case e ~ ":" ~ ss => (e,ss) } |
+      (KwDefault ~ ":" ~> BlkStmt) ^^ { case ss => (BoolLit(true), ss) }
 
-    lazy val BlockStatement: PackratParser[List[Statement]] =
-      "{" ~> rep (Statement) <~ "}"
+    lazy val BlkStmt: PackratParser[lang.BlockStmt] =
+      "{" ~> rep (BlockVarsDecl) ~ rep (Statement) <~ "}" ^^ {
+        case vars ~ stmts => lang.BlockStmt(vars, stmts)
+      }
 
     lazy val OptionalExpr : PackratParser[Option[lang.Expr]] =
       "(" ~ ")" ^^ { case _ => None } |
@@ -429,35 +443,73 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val InstanceDecl : PackratParser[lang.InstanceDecl] = positioned {
       KwInstance ~> Id ~ ":" ~ Id ~ ArgMapList <~ ";" ^^ { case instId ~ ":" ~ moduleId ~ args => lang.InstanceDecl(instId, moduleId, args, None, None) }
     }
-    lazy val RequireExpr : PackratParser[lang.Expr] = positioned {
-      KwRequires ~> Expr <~ ";"
+    lazy val RequiresExprs : PackratParser[List[lang.ProcedureRequiresExpr]] = {
+      KwRequires ~> Expr <~ ";" ^^ {
+        case e => List(lang.ProcedureRequiresExpr(e))
+      }
     }
-    lazy val EnsureExpr : PackratParser[lang.Expr] = positioned {
-      KwEnsures ~> Expr <~ ";"
+    lazy val EnsuresExprs : PackratParser[List[lang.ProcedureEnsuresExpr]] = {
+      KwEnsures ~> Expr <~ ";" ^^ {
+        case e => List(lang.ProcedureEnsuresExpr(e))
+      }
     }
-    lazy val ModifiesExprs : PackratParser[List[lang.Identifier]] = {
-      KwModifies ~> Id ~ rep("," ~> Id) <~ ";" ^^ { case id ~ ids => id :: ids }
+    lazy val ModifiesExprs : PackratParser[List[lang.ProcedureModifiesExpr]] = {
+      KwModifies ~> Id ~ rep("," ~> Id) <~ ";" ^^ {
+        case id ~ ids => {
+          (id :: ids).map(i => lang.ProcedureModifiesExpr(i))
+        }
+      }
+    }
+    lazy val ProcedureAnnotationList : PackratParser[List[Identifier]] = {
+      "[" ~> IdList <~ "]"
+    }
+    lazy val ProcedureVerifExpr = RequiresExprs | EnsuresExprs | ModifiesExprs
+
+    def collectRequires(vs : List[lang.ProcedureVerificationExpr]) : List[Expr] = {
+      vs.collect { case e : lang.ProcedureRequiresExpr => e.expr }
+    }
+    def collectEnsures(vs : List[lang.ProcedureVerificationExpr]) : List[Expr] = {
+      vs.collect { case e : lang.ProcedureEnsuresExpr => e.expr }
+    }
+    def collectModifies(vs : List[lang.ProcedureVerificationExpr]) : List[Identifier] = {
+      vs.collect { case e : lang.ProcedureModifiesExpr => e.id }
     }
     lazy val ProcedureDecl : PackratParser[lang.ProcedureDecl] = positioned {
-      KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
-      rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~
-        ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
-        { case id ~ args ~ outs ~ requires ~ ensures ~ modifies ~ decls ~ body =>
-          lang.ProcedureDecl(id, lang.ProcedureSig(args,outs), 
-                             decls.flatMap(d => d), body,
-                             requires, ensures, (modifies.flatMap(m => m)).toSet) } |
+      KwProcedure ~> ProcedureAnnotationList.? ~ Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
+      rep(ProcedureVerifExpr) ~ BlkStmt ^^
+        { case annotOpt ~ id ~ args ~ outs ~ verifExprs ~ body =>
+          val annotations = annotOpt match {
+            case Some(ids) => ProcedureAnnotations(ids.toSet)
+            case None => ProcedureAnnotations(Set.empty)
+          }
+          val verifExprList = verifExprs.flatMap(v => v)
+          val requiresList = collectRequires(verifExprList)
+          val ensuresList = collectEnsures(verifExprList)
+          val modifiesList = collectModifies(verifExprList)
+          lang.ProcedureDecl(id, lang.ProcedureSig(args,outs),
+                             body, requiresList, ensuresList, modifiesList.toSet, annotations) } |
       // procedure with no return value
-      KwProcedure ~> Id ~ IdTypeList ~ rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~
-      ("{" ~> rep(LocalVarDecl)) ~ (rep(Statement) <~ "}") ^^
-        { case id ~ args ~ requires ~ ensures ~ modifies ~ decls ~ body =>
-          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty[(Identifier,Type)]), 
-                             decls.flatMap(d => d), body,
-                             requires, ensures, (modifies.flatMap(m => m)).toSet) }
+      KwProcedure ~> ProcedureAnnotationList.? ~ Id ~ IdTypeList ~ rep(ProcedureVerifExpr) ~ BlkStmt ^^
+        { case annotOpt ~ id ~ args ~ verifExprs ~ body =>
+          val annotations = annotOpt match {
+            case Some(ids) => ProcedureAnnotations(ids.toSet)
+            case None => ProcedureAnnotations(Set.empty)
+          }
+          val verifExprList = verifExprs.flatMap(v => v)
+          val requiresList = collectRequires(verifExprList)
+          val ensuresList = collectEnsures(verifExprList)
+          val modifiesList = collectModifies(verifExprList)
+          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty),
+                             body, requiresList, ensuresList, modifiesList.toSet, annotations) }
     }
 
     lazy val TypeDecl : PackratParser[lang.TypeDecl] = positioned {
       KwType ~> Id ~ ("=" ~> Type) <~ ";" ^^ { case id ~ t => lang.TypeDecl(id,t) } |
       KwType ~> Id <~ ";" ^^ { case id => lang.TypeDecl(id, lang.UninterpretedType(id)) }
+    }
+
+    lazy val ModuleTypesImportDecl : PackratParser[lang.ModuleTypesImportDecl] = positioned {
+      KwType ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleTypesImportDecl(id) }
     }
 
     lazy val VarsDecl : PackratParser[lang.StateVarsDecl] = positioned {
@@ -473,7 +525,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwSharedVar ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.SharedVarsDecl(ids, typ) }
     }
     lazy val ConstLitDecl : PackratParser[lang.ConstantLitDecl] = positioned {
-      KwConst ~> Id ~ ("=" ~> Number) <~ ";" ^^ { case id ~ lit => lang.ConstantLitDecl(id, lit) }
+      KwConst ~> Id ~ (":" ~ Type ~ "=" ~> Number) <~ ";" ^^ { case id ~ lit => lang.ConstantLitDecl(id, lit) }
     }
     lazy val ConstDecl : PackratParser[lang.ConstantsDecl] = positioned {
       KwConst ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.ConstantsDecl(ids,typ)}
@@ -564,8 +616,14 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~
         (KwGrammar ~> Id ) ~ ("(" ~> IdList <~ ")") ~
         rep(KwEnsures ~> Expr) <~ ";" ^^
-      { case id ~ idtyps ~ rt ~ gId ~ gArgs ~ eArgs =>
-          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), gId, gArgs, eArgs)
+      { case id ~ idtyps ~ rt ~ gId ~ gArgs ~ ensures =>
+          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), Some(gId), gArgs, ensures)
+      } |
+      KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~
+        rep(KwEnsures ~> Expr) <~ ";" ^^
+      {
+        case id ~ idtyps ~ rt ~ ensures =>
+          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), None, List.empty, ensures)
       }
     }
     lazy val DefineDecl : PackratParser[lang.DefineDecl] = positioned {
@@ -577,12 +635,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       }
     }
     lazy val InitDecl : PackratParser[lang.InitDecl] = positioned {
-      KwInit ~> BlockStatement ^^
+      KwInit ~> BlkStmt ^^
         { case b => lang.InitDecl(b) }
     }
 
     lazy val NextDecl : PackratParser[lang.NextDecl] = positioned {
-      KwNext ~> BlockStatement ^^
+      KwNext ~> BlkStmt ^^
         { case b => lang.NextDecl(b) }
     }
 
@@ -601,7 +659,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Decl: PackratParser[Decl] =
       positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl |
-                  SynthFuncDecl | DefineDecl | GrammarDecl |
+                  ModuleTypesImportDecl | SynthFuncDecl | DefineDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstLitDecl | ConstDecl | ProcedureDecl |
                   InitDecl | NextDecl | SpecDecl | AxiomDecl)

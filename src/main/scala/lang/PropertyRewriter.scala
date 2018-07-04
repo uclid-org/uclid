@@ -39,6 +39,8 @@
 package uclid
 package lang
 
+import com.typesafe.scalalogging.Logger
+
 class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
   type T = Set[ModuleError]
   lazy val manager : PassManager = analysis.manager
@@ -186,6 +188,7 @@ class LTLPropertyRewriterPass extends RewritePass {
 
   lazy val manager : PassManager = analysis.manager
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
+  val logger = Logger(classOf[LTLPropertyRewriterPass])
 
   def Y(x : Expr) = Operator.Y(x)
   def and(x : Expr, y : Expr) = Operator.and(x, y)
@@ -211,6 +214,13 @@ class LTLPropertyRewriterPass extends RewritePass {
       // !(x R y) -> !x U !y
       case OperatorApplication(NegationOp(), List(OperatorApplication(ReleaseTemporalOp(), args))) =>
         OperatorApplication(UntilTemporalOp(), args.map(a => recurse(not(a))))
+      // !(x W y) -> !y U (!x /\ !y)
+      case OperatorApplication(NegationOp(), List(OperatorApplication(WUntilTemporalOp(), args))) =>
+        val notA = recurse(not(args(0)))
+        val notB = recurse(not(args(1)))
+        val wOp = OperatorApplication(WUntilTemporalOp(), List(notB, and(notA, notB)))
+        val fOp = OperatorApplication(FinallyTemporalOp(), List(notB))
+        and(wOp, fOp)
       // !X a -> X !a
       case OperatorApplication(NegationOp(), List(OperatorApplication(NextTemporalOp(), args))) =>
         OperatorApplication(NextTemporalOp(), args.map(a => recurse(not(a))))
@@ -291,20 +301,20 @@ class LTLPropertyRewriterPass extends RewritePass {
    *
    *  The conversion to the negated normal form must have been done before calling this method.
    */
-  def createMonitorExpressions(specName : Identifier, expr : Expr, nameProvider : ContextualNameProvider) : MonitorInfo = {
+  def createMonitorExpressions(specName : Identifier, expr : Expr, context : Scope) : MonitorInfo = {
     val isExprTemporal = expr match {
       case tExpr : PossiblyTemporalExpr => tExpr.isTemporal
       case ntExpr : Expr => false
     }
     if (!isExprTemporal) {
-      val newVar = nameProvider(specName, "z")
+      val newVar = NameProvider.get(specName.toString() + "_z")
       val newImpl = (newVar, Some(expr))
       // FIXME: Revisit this for expressions that don't involve any temporal operators.
       MonitorInfo(newVar, List(newImpl), List.empty, List.empty, List.empty, List.empty)
     } else {
       // Recurse on operator applications and create "Tseitin" variables for the inner AST nodes.
       def createMonitorsForOpApp(opapp : OperatorApplication) : MonitorInfo = {
-        val argResults = opapp.operands.map(arg => createMonitorExpressions(specName, arg, nameProvider))
+        val argResults = opapp.operands.map(arg => createMonitorExpressions(specName, arg, context))
         val args = argResults.map(a => a.z)
         val argImpls = argResults.flatMap(a => a.biImplications)
         val argNexts = argResults.flatMap(a => a.assignments)
@@ -312,7 +322,7 @@ class LTLPropertyRewriterPass extends RewritePass {
         val argAccepts = argResults.flatMap(a => a.acceptVars)
         val argPendings = argResults.flatMap(a => a.pendingVars)
 
-        val z = nameProvider(specName, "z")
+        val z = NameProvider.get(specName.toString() + "_z")
         val innerExpr = OperatorApplication(opapp.op, args)
         if (opapp.op.isInstanceOf[TemporalOperator]) {
           val tOp = opapp.op.asInstanceOf[TemporalOperator]
@@ -321,42 +331,45 @@ class LTLPropertyRewriterPass extends RewritePass {
             case NextTemporalOp() =>
               val zImpl = (z, None)
               // pending = z
-              val pendingVar = nameProvider(specName, "pending")
+              val pendingVar = NameProvider.get(specName.toString() + "_" + "pending")
               val pendingNext = (pendingVar, z)
               // failed = Ypending /\ !args(0)
-              val failedVar = nameProvider(specName, "failed")
+              val failedVar = NameProvider.get(specName.toString() + "_" + "failed")
               val failedNext = (failedVar, and(Y(pendingVar), not(args(0))))
               MonitorInfo(z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
             case GloballyTemporalOp() =>
               val zImpl = (z, None)
               // pending = Ypending) \/ z
-              val pendingVar = nameProvider(specName, "pending")
+              val pendingVar = NameProvider.get(specName.toString() + "_" + "pending")
               val pendingNext = (pendingVar, or(Y(pendingVar), z))
               // failed = pending /\ !args(0)
-              val failedVar = nameProvider(specName, "failed")
+              val failedVar = NameProvider.get(specName.toString() + "_" + "failed")
               val failedNext = (failedVar, and(pendingVar, not(args(0))))
               MonitorInfo(z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
             case FinallyTemporalOp() =>
               val zImpl = (z, None)
               // pending = (z \/ Ypending) /\ !args(0)
-              val pendingVar = nameProvider(specName, "pending")
+              val pendingVar = NameProvider.get(specName.toString() + "_" + "pending")
               val pendingExpr = and(or(z, Y(pendingVar)), not(args(0)))
               val pendingNext = (pendingVar, pendingExpr)
               // accept = !pending
-              val acceptVar = nameProvider(specName, "accept")
+              val acceptVar = NameProvider.get(specName.toString() + "_" + "accept")
               val acceptNext = (acceptVar, not(pendingVar))
               MonitorInfo(z, zImpl :: argImpls, pendingNext :: acceptNext :: argNexts, argFaileds, acceptVar :: argAccepts, pendingVar :: argPendings)
             case WUntilTemporalOp() =>
               val zImpl = (z, None)
               // pending = (z \/ Y pending) /\ !args(1)
-              val pendingVar = nameProvider(specName, "pending")
+              val pendingVar = NameProvider.get(specName.toString() + "_" + "pending")
               val pendingExpr = and(or(z, Y(pendingVar)), not(args(1)))
               val pendingNext = (pendingVar, pendingExpr)
               // failed = pending /\ !args(0)
-              val failedVar = nameProvider(specName, "failed")
+              val failedVar = NameProvider.get(specName.toString() + "_" + "failed")
               val failedExpr = and(pendingExpr, not(args(0)))
               val failedNext = (failedVar, failedExpr)
-              MonitorInfo(z, zImpl :: argImpls, pendingNext :: failedNext :: argNexts, failedVar :: argFaileds, argAccepts, pendingVar :: argPendings)
+              // accept = true
+              val acceptVar = NameProvider.get(specName.toString() + "_" + "accept")
+              val acceptNext = (acceptVar, BoolLit(false))
+              MonitorInfo(z, zImpl :: argImpls, pendingNext :: failedNext :: acceptNext  :: argNexts, failedVar :: argFaileds, acceptVar :: argAccepts, pendingVar :: argPendings)
             case _ =>
               throw new Utils.AssertionError("Unexpected temporal operator here: " + tOp.toString)
           }
@@ -396,8 +409,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
-  def newVars(vars : List[(Identifier, Type)], nameProvider : ContextualNameProvider) : List[(Identifier, Identifier, Type)] = {
-    vars.map((p) => (p._1, nameProvider(p._1, "copy2"), p._2))
+  def newVars(vars : List[(Identifier, Type)], context : Scope) : List[(Identifier, Identifier, Type)] = {
+    vars.map((p) => (p._1, NameProvider.get(p._1.toString() + "_copy2"), p._2))
   }
 
   def orExpr(a : Expr, b : Expr) : Expr = OperatorApplication(DisjunctionOp(), List(a, b))
@@ -414,8 +427,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
   def guardedAssignment(guardVar : Identifier, copyVar : Identifier, origVars : List[(Identifier, Type)], newVars : List[(Identifier, Type)]) : Statement = {
-    val thenBlock = AssignStmt(List(LhsId(copyVar)), List(BoolLit(true))) :: assignToVars(newVars, origVars)
-    val ifStmt = IfElseStmt(andExpr(guardVar, notExpr(copyVar)), thenBlock, List.empty)
+    val thenBlock = BlockStmt(List.empty, AssignStmt(List(LhsId(copyVar)), List(BoolLit(true))) :: assignToVars(newVars, origVars))
+    val ifStmt = IfElseStmt(andExpr(guardVar, notExpr(copyVar)), thenBlock, BlockStmt(List.empty, List.empty))
     ifStmt
   }
 
@@ -447,25 +460,24 @@ class LTLPropertyRewriterPass extends RewritePass {
   }
 
   def rewriteSpecs(module : Module, ctx : Scope, ltlSpecs : List[SpecDecl], otherSpecs : List[SpecDecl]) : Module = {
-    val nameProvider = new ContextualNameProvider(ctx, "ltl")
 
     val monitors = ltlSpecs.map {
       (s) => {
         val nnf = convertToNNF(not(s.expr))
-        // println("exp: " + s.expr.toString)
-        // println("nnf: " + nnf.toString)
-        createMonitorExpressions(s.id, nnf, nameProvider)
+        logger.debug("EXP: {}", s.expr.toString())
+        logger.debug("NNF: {}", nnf.toString()) 
+        createMonitorExpressions(s.id, nnf, ctx)
       }
     }
 
     // create a copy of the state variables and non-deterministically assign the current state to it.
     val allPendingVars = monitors.flatMap(s => s.pendingVars.map(s => (s, BooleanType())))
     val varsToCopy = module.vars ++ allPendingVars
-    val varCopyPairs = newVars(varsToCopy, nameProvider)
+    val varCopyPairs = newVars(varsToCopy, ctx)
     val varsToCopyP = varCopyPairs.map(p => (p._2, p._3))
     val varsToCopyPDecl = varsToCopyP.map(v => StateVarsDecl(List(v._1), v._2))
-    val copyStateInput = nameProvider(module.id, "copy_state_in")
-    val stateCopiedVar = nameProvider(module.id, "state_copied")
+    val copyStateInput = NameProvider.get(module.id.toString() + "_copy_state_in")
+    val stateCopiedVar = NameProvider.get(module.id.toString() + "_state_copied")
     val copyStateInputDecl = InputVarsDecl(List(copyStateInput), BooleanType())
     val stateCopiedVarDecl = StateVarsDecl(List(stateCopiedVar), BooleanType())
     val stateCopyStmt = guardedAssignment(copyStateInput, stateCopiedVar, varsToCopy, varsToCopyP)
@@ -474,7 +486,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     // create the "FAILED" variables.
     val hasFaileds = (ltlSpecs zip monitors).map {
       case (spec, monitor) => {
-        val hasFailedVar = nameProvider(spec.id, "FAILED")
+        val hasFailedVar = NameProvider.get(spec.id.toString() + "_FAILED")
         val hasFailedExpr : Expr = monitor.failedVars.foldLeft(hasFailedVar.asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
         (hasFailedVar, hasFailedExpr)
       }
@@ -482,7 +494,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     // create the "PENDING" variables.
     val pendings = (ltlSpecs zip monitors).map {
       case (spec, monitor) => {
-        val pendingVar = nameProvider(spec.id, "PENDING")
+        val pendingVar = NameProvider.get(spec.id.toString() + "_PENDING")
         val pendingExpr : Expr = monitor.pendingVars.foldLeft(BoolLit(false).asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
         (pendingVar, pendingExpr)
       }
@@ -491,14 +503,14 @@ class LTLPropertyRewriterPass extends RewritePass {
     val hasAccepteds = (ltlSpecs zip monitors).map {
       case (spec, monitor) => {
         // has accepted is true if this trace has been accepted at least once in the cycle
-        val hasAcceptedVars = monitor.acceptVars.map(aVar => nameProvider(aVar, "HAS_ACCEPTED"))
+        val hasAcceptedVars = monitor.acceptVars.map(aVar => NameProvider.get(aVar.toString() + "_" + "HAS_ACCEPTED"))
         val hasAcceptedExprs = (monitor.acceptVars zip hasAcceptedVars).map {
           case (aVar, haVar) => orExpr(haVar, andExpr(aVar, stateCopiedVar))
         }
         // has accepted trace is true if all of the accept vars of this trace have been accepted at least
         // once in this cycle.
         val foldInit : Expr = BoolLit(true)
-        val hasAcceptedTrace = nameProvider(spec.id, "HAS_ACCEPTED_TRACE")
+        val hasAcceptedTrace = NameProvider.get(spec.id.toString() + "_HAS_ACCEPTED_TRACE")
         val hasAcceptedTraceExpr = if (hasAcceptedVars.size == 0) {
           stateCopiedVar
         } else {
@@ -518,7 +530,7 @@ class LTLPropertyRewriterPass extends RewritePass {
         andExpr(stateVarsEqExpr, andExpr(notExpr(hasFailedVar), hasAcceptedTrace))
     }
     // This is the assignment to is_init in next.
-    val isInitStateVar = nameProvider(module.id, "is_init")
+    val isInitStateVar = NameProvider.get(module.id + "_is_init")
     val isInitStateVarDecl = StateVarsDecl(List(isInitStateVar), BooleanType())
     val isInitAssignNext = AssignStmt(List(LhsId(isInitStateVar)), List(BoolLit(false)))
 
@@ -578,8 +590,8 @@ class LTLPropertyRewriterPass extends RewritePass {
                         hasFailedAssignments ++ pendingAssignments ++
                         hasAcceptedAssignments ++ hasAcceptedTraceAssignments
     // new init/next.
-    val newInitDecl = InitDecl(module.init.get.body ++ postInitStmts ++ postNextStmts)
-    val newNextDecl = NextDecl(preNextStmts ++ module.next.get.body ++ postNextStmts)
+    val newInitDecl = InitDecl(BlockStmt(List.empty, List(module.init.get.body) ++ postInitStmts ++ postNextStmts))
+    val newNextDecl = NextDecl(BlockStmt(List.empty, preNextStmts ++ List(module.next.get.body) ++ postNextStmts))
     // new safety properties.
     val newSafetyProperties = (ltlSpecs zip safetyExprs).map {
       p => {

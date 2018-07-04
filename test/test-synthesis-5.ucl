@@ -1,0 +1,34 @@
+module main
+{
+  var x, y, z : integer;
+
+  init {
+    x = 0;
+  }
+
+  next {
+    if (x < 2) {
+      x' = x + 1;
+      if (*) {
+        y' = z';
+        havoc z;
+        assume (z' <= y);
+      } else {
+        y' = y;
+        havoc z;
+        assume (z' > y);
+      }
+    }
+  }
+
+  property post_f : !(x >= 2 && (z < y));
+
+  control {
+    jprint_module;
+    synthesize_invariant;
+    // v = unroll(10);
+    // check;
+    // print_results;
+    // v.print_cex(x, y, z);
+  }
+}

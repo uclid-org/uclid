@@ -125,13 +125,6 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
       }
     } while (simplified)
   }
-
-  def printTypeDeclMap() {
-    typeDeclMap.foreach {
-      case (name, decl) => println (name.toString + " --> " + decl.toString)
-    }
-    println("synonyms: " + typeSynonyms)
-  }
 }
 
 class TypeSynonymFinder extends ASTAnalyzer("TypeSynonymFinder", new TypeSynonymFinderPass())  {
@@ -235,8 +228,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
   override def applyOnExpr(d : TraversalDirection.T, e : Expr, in : ErrorList, ctx : Scope) : ErrorList = {
     if (d == TraversalDirection.Up) {
       try {
-        logger.debug("expression: {}", e.toString())
-        logger.debug("ctx.map: {}", ctx.map.toString())
         typeOf(e, ctx)
       } catch {
         case p : Utils.TypeError => {
@@ -310,6 +301,8 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     return resultType
   }
   def typeOf(e : Expr, c : Scope) : Type = {
+    logger.debug("e: {}", e.toString())
+    logger.debug("c: {}", c.map.keys.toString())
     def polyResultType(op : PolymorphicOperator, argType : Type) : Type = {
       op match {
         case LTOp() | LEOp() | GTOp() | GEOp() => new BooleanType()
@@ -361,22 +354,28 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           }
         }
         case bvOp : BVArgOperator => {
-          def numArgs(op : BVArgOperator) : Int = {
-            op match {
-              case BVNotOp(_) | BVUnaryMinusOp(_) => 1
-              case _ => 2
-            }
-          }
-          checkTypeError(argTypes.size == numArgs(bvOp), "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
-          checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
+          checkTypeError(argTypes.size == bvOp.arity, "Operator '%s' must have exactly %d argument(s)".format(opapp.op.toString, bvOp.arity), opapp.pos, c.filename)
+          checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Argument(s) to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
           bvOp match {
-            case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) => new BooleanType()
-            case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVUnaryMinusOp(_) => new BitVectorType(bvOp.w)
+            case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) =>
+              new BooleanType()
+            case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVUnaryMinusOp(_) =>
+              checkTypeError(bvOp.w != 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
+              new BitVectorType(bvOp.w)
             case BVAndOp(_) | BVOrOp(_) | BVXorOp(_) | BVNotOp(_) =>
-              val t = new BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width)
+              val t = BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width)
               bvOpMap.put(bvOp.astNodeId, t.width)
               t
-          }
+            case BVSignExtOp(w, e) =>
+              checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
+              val w = e + argTypes(0).asInstanceOf[BitVectorType].width
+              bvOpMap.put(bvOp.astNodeId, w)
+              BitVectorType(w)
+            case BVZeroExtOp(w, e) =>
+              checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
+              val w = e + argTypes(0).asInstanceOf[BitVectorType].width
+              bvOpMap.put(bvOp.astNodeId, w)
+              BitVectorType(w)          }
         }
         case qOp : QuantifiedBooleanOperator => {
           checkTypeError(argTypes(0).isInstanceOf[BooleanType], "Operand to the quantifier '" + qOp.toString + "' must be boolean", opapp.pos, c.filename)
@@ -394,11 +393,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           BooleanType()
         }
         case cmpOp : ComparisonOperator => {
-          // println("typeOf: " + e.toString)
-          // println("cmpOp : " + cmpOp.toString)
-          // println("args: " + opapp.operands.toString)
-          // println("argTypes: " + argTypes.toString)
-          // Utils.assert(argTypes.size == 2, "Trouble!")
           checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
           checkTypeError(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type", opapp.pos, c.filename)
           BooleanType()
@@ -480,7 +474,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           argTypes(0)
         case OldOperator() =>
           checkTypeError(argTypes.size == 1, "Expect exactly one argument to 'old'", opapp.pos, c.filename)
-          checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "First argument to old operator must be an identifier", opapp.pos, c.filename)
+          checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "Argument to old operator must be an identifier", opapp.pos, c.filename)
+          argTypes(0)
+        case PastOperator() =>
+          checkTypeError(argTypes.size == 1, "Expect exactly on argument to 'past'", opapp.pos, c.filename)
+          checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "Argument to past operator must be an identifier", opapp.pos, c.filename)
           argTypes(0)
         case HistoryOperator() =>
           checkTypeError(argTypes.size == 2, "Expect exactly two arguments to 'history'", opapp.pos, c.filename)
@@ -495,6 +493,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes(0).isBool, "Condition in if-then-else must be boolean", opapp.pos, c.filename)
           checkTypeError(argTypes(1) == argTypes(2), "Then- and else- expressions in an if-then-else must be of the same type", opapp.pos, c.filename)
           argTypes(1)
+        case DistinctOp() =>
+          checkTypeError(argTypes.size >= 2, "Expect 2 or more arguments to the distinct operator", opapp.pos, c.filename)
+          checkTypeError(argTypes.forall(t => t == argTypes(0)), "All arguments to distinct operator must be the same", opapp.pos, c.filename)
+          BooleanType()
       }
     }
 
@@ -537,7 +539,8 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     if (cachedType.isEmpty) {
       val typ = e match {
         case i : Identifier =>
-          checkTypeError(c.typeOf(i).isDefined, "Unknown identifier: %s".format(i.name), i.pos, c.filename)
+          val knownId = c.typeOf(i).isDefined
+          checkTypeError(knownId, "Unknown identifier: %s".format(i.name), i.pos, c.filename)
           (c.typeOf(i).get)
         case eId : ExternalIdentifier =>
           val mId = eId.moduleId
@@ -556,6 +559,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case f : FreshLit => f.typ
         case b : BoolLit => new BooleanType()
         case i : IntLit => new IntegerType()
+        case s : StringLit => new StringType()
         case bv : BitVectorLit => new BitVectorType(bv.width)
         case r : Tuple => new TupleType(r.values.map(typeOf(_, c)))
         case opapp : OperatorApplication => opAppType(opapp)
@@ -608,6 +612,8 @@ class PolymorphicTypeRewriterPass extends RewritePass {
             case BVOrOp(_) => width.flatMap((w) => Some(BVOrOp(w)))
             case BVXorOp(_) => width.flatMap((w) => Some(BVXorOp(w)))
             case BVNotOp(_) => width.flatMap((w) => Some(BVNotOp(w)))
+            case BVSignExtOp(_, e) => width.flatMap((w) => Some(BVSignExtOp(w, e)))
+            case BVZeroExtOp(_, e) => width.flatMap((w) => Some(BVZeroExtOp(w, e)))
             case _ => Some(bv)
           }
           newOp match {

@@ -1,0 +1,30 @@
+module main {
+	
+	define start() : bv4 = 0bv4;
+	define end() : bv4 = 2bv4;
+	var k : bv4;
+
+	procedure proc()
+		modifies k;
+	{
+		for (i : bv4) in range(start(), end()) {
+			k = i;	
+		} 
+	}
+
+	init {
+		k = 0bv4;
+	}
+	
+	next {
+		call proc();
+	}
+
+	invariant test : (k != 3bv4);
+
+	control {
+		v = unroll(1);
+		check;
+		print_results;
+	}	
+}

@@ -1,0 +1,51 @@
+module main
+{
+  type light_t = enum { red, yellow, green };
+  var step1, step2   : integer;
+  var light1, light2 : light_t;
+
+  init {
+    light1, step1 = red,   2;
+    light2, step2 = green, 1;
+  }
+
+  next {
+    call (light1', step1') = next_light(light1, step1);
+    call (light2', step2') = next_light(light2, step2);
+  }
+
+  procedure next_light(light : light_t, step : integer)
+   returns (lightP : light_t, stepP: integer)
+  {
+    if (step == 0) {
+      case
+      (light == green) : {
+        lightP = yellow;
+        stepP = step;
+      }
+      (light == yellow) : {
+        lightP = red;
+        stepP = 2;
+      }
+      (light == red) : {
+        lightP = green;
+        stepP = 1;
+      }
+      esac
+    } else {
+      lightP = light;
+      stepP = step - 1;
+    }
+  }
+
+  property[LTL] always_one_red: G(light1 == red || light2 == red);
+  property[LTL] eventually_green: 
+    G(F(light1 == green)) && G(F(light2 == green));
+
+  control {
+    v = bmc[always_one_red, eventually_green](10);
+    check;
+    print_results;
+    v.print_cex(light1, step1, light2, step2);
+  }
+}

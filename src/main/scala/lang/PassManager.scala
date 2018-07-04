@@ -90,9 +90,9 @@ class PassManager(name : => String) {
           (m, acc) => {
             val ctx = acc._1
             val modules = acc._2
+            logger.debug("{} => running pass: {} on module: {}", name, pass.passName, m.id.toString())
             val mP = pass.visit(m, ctx)
             pass.rewind()
-            logger.debug("{} => running pass: {} on module: {}", name, pass.passName, m.id.toString())
             mP match {
               case None => (ctx, modules)
               case Some(modP) => (ctx +& modP, modP::modules)

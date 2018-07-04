@@ -48,7 +48,35 @@ class FuncExprRewriterPass extends RewritePass {
           OperatorApplication(OldOperator(), fapp.args)
         } else if (fnName == "history") {
           OperatorApplication(HistoryOperator(), fapp.args)
-        } else { fapp }
+        } else if (fnName == "past") {
+          OperatorApplication(PastOperator(), fapp.args)
+        } else if (fnName == "distinct") {
+          OperatorApplication(DistinctOp(), fapp.args)
+        } else if (fnName == "bv_sign_extend") {
+          if (fapp.args.size == 2) {
+            fapp.args(0) match {
+              case IntLit(v) =>
+                OperatorApplication(BVSignExtOp(0, v.toInt), List(fapp.args(1)))
+              case _ =>
+                OperatorApplication(BVSignExtOp(0, 0), List(fapp.args(1)))
+            }
+          } else {
+            OperatorApplication(BVSignExtOp(0, 0), List.empty)
+          }
+        } else if (fnName == "bv_zero_extend") {
+          if (fapp.args.size == 2) {
+            fapp.args(0) match {
+              case IntLit(v) =>
+                OperatorApplication(BVZeroExtOp(0, v.toInt), List(fapp.args(1)))
+              case _ =>
+                OperatorApplication(BVZeroExtOp(0, 0), List(fapp.args(1)))
+            }
+          } else {
+            OperatorApplication(BVZeroExtOp(0, 0), List.empty)
+          }
+        } else {
+          fapp
+        }
       case _ => fapp
     }
     Some(exprP)

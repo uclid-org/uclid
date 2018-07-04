@@ -49,7 +49,7 @@ object Scope {
   sealed abstract class ReadOnlyNamedExpression(id : Identifier, typ: Type) extends NamedExpression(id, typ) {
     override val isReadOnly = true
   }
-  case class ModuleDefinition(mod : lang.Module) extends ReadOnlyNamedExpression(mod.id, mod.moduleType)
+  case class ModuleDefinition(mod : Module) extends ReadOnlyNamedExpression(mod.id, mod.moduleType)
   case class Instance(instD: InstanceDecl) extends ReadOnlyNamedExpression(instD.instanceId, instD.moduleType)
   case class TypeSynonym(typId : Identifier, sTyp: Type) extends ReadOnlyNamedExpression(typId, sTyp)
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
@@ -64,7 +64,7 @@ object Scope {
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class ProcedureOutputArg(argId : Identifier, argTyp: Type) extends NamedExpression(argId, argTyp)
-  case class ProcedureLocalVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
+  case class BlockVar(vId : Identifier, vTyp : Type) extends NamedExpression(vId, vTyp)
   case class FunctionArg(argId : Identifier, argTyp : Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ForIndexVar(iId : Identifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
@@ -92,7 +92,7 @@ object Scope {
                       eTyp.pos, module.flatMap(_.filename))
                   m
                 case _ =>
-                  Utils.raiseParsingError("Redeclaration of identifier " + id.name, id.pos, module.flatMap(_.filename))
+                  Utils.raiseParsingError("Redeclaration of enum identifier " + id.name, id.pos, module.flatMap(_.filename))
                   m
               }
             case None =>
@@ -111,7 +111,7 @@ object Scope {
     }
   }
   /** Create an empty context. */
-  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None, ModuleEnvironment, false)
+  def empty : Scope = Scope(Map.empty[Identifier, Scope.NamedExpression], None, None, None, ModuleEnvironment, false, None)
 }
 
 sealed abstract class ExpressionEnvironment {
@@ -157,8 +157,11 @@ case object AxiomEnvironment extends ExpressionEnvironment {
 }
 
 case class Scope (
-    map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], cmd : Option[GenericProofCommand],
-    environment : ExpressionEnvironment, inLTLSpec : Boolean)
+    map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], 
+    cmd : Option[GenericProofCommand],
+    environment : ExpressionEnvironment, 
+    inLTLSpec : Boolean,
+    parent : Option[Scope])
 {
   /** Check if a variable name exists in this context. */
   def doesNameExist(name: Identifier) = map.contains(name)
@@ -200,27 +203,27 @@ case class Scope (
 
   /** Return a new context with the inLTLSpec flag set. */
   def withLTLSpec : Scope = {
-    Scope(map, module, procedure, cmd, environment, true)
+    Scope(map, module, procedure, cmd, environment, true, parent)
   }
   /** Return new context with the inLTLSpec flag reset. */
   def withoutLTLSpec : Scope = {
-    Scope(map, module, procedure, cmd, environment, false)
+    Scope(map, module, procedure, cmd, environment, false, parent)
   }
   /** Return a new context with the inVerificationContext set. */
   def withEnvironment (vctx : ExpressionEnvironment) : Scope = {
-    Scope(map, module, procedure, cmd, vctx, inLTLSpec)
+    Scope(map, module, procedure, cmd, vctx, inLTLSpec, parent)
   }
   /** Return a new context with this identifier added to the current context. */
   def +(expr: Scope.NamedExpression) : Scope = {
-    Scope(map + (expr.id -> expr), module, procedure, cmd, environment, inLTLSpec)
+    Scope(map + (expr.id -> expr), module, procedure, cmd, environment, inLTLSpec, parent)
   }
   def +(typ : Type) : Scope = {
-    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, environment, inLTLSpec)
+    Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, environment, inLTLSpec, parent)
   }
 
   /** Add a reference to this module (don't expand the module's declarations). */
   def +&(m : Module) : Scope = {
-    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, environment, inLTLSpec)
+    Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, environment, inLTLSpec, parent)
   }
 
   /** Return a new context with the declarations in this module added to it. */
@@ -247,7 +250,7 @@ case class Scope (
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr))
           case None => mapAcc
         }
-        case InitDecl(_) | NextDecl(_) => mapAcc
+        case ModuleTypesImportDecl(_) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
     val m2 = m.decls.foldLeft(m1){(mapAcc, decl) =>
@@ -279,10 +282,11 @@ case class Scope (
         case SharedVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ConstantLitDecl(id, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
         case ConstantsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
-        case InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
+        case ModuleTypesImportDecl(_) | InstanceDecl(_, _, _, _, _) |
+             SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
-    Scope(m2, Some(m), None, None, environment, false)
+    Scope(m2, Some(m), None, None, environment, false, parent)
   }
   /** Return a new context with the declarations in this procedure added to it. */
   def +(proc: ProcedureDecl) : Scope = {
@@ -293,24 +297,21 @@ case class Scope (
     val map2 = proc.sig.outParams.foldLeft(map1){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureOutputArg(arg._1, arg._2))
     }
-    val map3 = proc.decls.foldLeft(map2){
-      (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureLocalVar(arg.id, arg.typ))
-    }
-    return Scope(map3, module, Some(proc), None, ProceduralEnvironment, false)
+    return Scope(map2, module, Some(proc), None, ProceduralEnvironment, false, Some(this))
   }
   /** Return a new context with the declarations in this lambda expression added to it. */
   def +(lambda: Lambda) : Scope = {
     val newMap = lambda.ids.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.LambdaVar(id._1, id._2))
     }
-    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec)
+    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec, Some(this))
   }
   /** Return a new context with the function's arguments included. */
   def +(sig : FunctionSig) : Scope = {
     val newMap = sig.args.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.FunctionArg(id._1, id._2))
     }
-    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec)
+    return Scope(newMap, module, procedure, cmd, environment, inLTLSpec, Some(this))
   }
   /** Return a new context with quantifier variables added. */
   def +(opapp : OperatorApplication) : Scope = {
@@ -322,13 +323,19 @@ case class Scope (
       case ForallOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd, environment, inLTLSpec)
+          module, procedure, cmd, environment, inLTLSpec, Some(this))
       case ExistsOp(vs) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
-          module, procedure, cmd, environment, inLTLSpec)
+          module, procedure, cmd, environment, inLTLSpec, Some(this))
       case _ => this
     }
+  }
+  /** Return a new context for this block. */
+  def +(vars : List[BlockVarsDecl]) : Scope = {
+    val declaredVars = vars.flatMap(vs => vs.ids.map(v => (v, vs.typ)))
+    val mapP = declaredVars.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.BlockVar(arg._1, arg._2)))
+    Scope(mapP, module, procedure, cmd, environment, inLTLSpec, Some(this))
   }
 
   /** Return a new context for this command. */
@@ -337,7 +344,7 @@ case class Scope (
       case Some(id) => map + (id -> Scope.VerifResultVar(id, command))
       case None => map
     }
-    Scope(mapP, module, procedure, Some(command), environment, inLTLSpec)
+    Scope(mapP, module, procedure, Some(command), environment, inLTLSpec, parent)
   }
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {
@@ -357,15 +364,10 @@ case class Scope (
   }
 }
 
-class ContextualNameProvider(ctx : Scope, prefix : String) {
-  var index = 1
-  def apply(name: Identifier, tag : String) : Identifier = {
-    var newId = Identifier(prefix + "_" + tag + "_" + name + "_" + index.toString)
-    index = index + 1
-    while (ctx.doesNameExist(newId)) {
-      newId = Identifier(prefix + "_" + tag + "_" + name + "_" + index.toString)
-      index = index + 1
-    }
-    return newId
+object NameProvider {
+  var index = 0
+  def get(tag : String) : Identifier = {
+    index += 1
+    Identifier("__ucld_%d_%s".format(index, tag))
   }
 }

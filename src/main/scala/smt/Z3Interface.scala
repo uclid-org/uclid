@@ -54,10 +54,110 @@ import com.typesafe.scalalogging.Logger
 class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
   override def evalAsString(e : Expr) : String = {
     interface.exprToZ3(e) match {
+      case z3ArrayExpr : z3.ArrayExpr => convertZ3ArrayString(model.eval(z3ArrayExpr, true).toString)
       case z3Expr : z3.Expr => model.eval(z3Expr, true).toString
       case _ => throw new Utils.EvaluationError("Unable to evaluate expression: " + e.toString)
     }
   }
+
+  def convertZ3ArrayString(initString : String) : String = {
+
+    val let_count       = "\\(let \\(\\(a!\\d+ ".r().findAllIn(initString).length
+    val tempString      = initString.replaceAll("(\\(let \\(\\(a!\\d+ )?(\\(store )+(a!\\d+)?", "").replaceAll("(\\n.*)\\)\\)\\)(?=\\n)", "$1\\) ").replaceAll("\\n?\\s+", " ")
+    val cleanString     = tempString.substring(0, tempString.length() - let_count)
+
+    val prefixArray     = "((as const (Array " //)))
+    val prefixArrayLen  = prefixArray.length()
+
+    val totalLen        = cleanString.length()
+
+    var index           = 0;
+    var startIndex      = 0;
+
+    if (!cleanString.startsWith(prefixArray, index)) {
+      return "ERROR"
+    }
+    index += prefixArrayLen
+
+    // Skip the array type information
+    index = findNextIndexRightParen(cleanString, index, 2)
+
+    // Capture bottom value
+    startIndex = index
+
+    index = findNextIndexRightParen(cleanString, index, 1)
+
+    var bottom = cleanString.substring(startIndex, index - 2)
+
+
+    // Parse all stores operations
+    var Array : Map[String, String] = Map.empty[String, String]
+    while (index < totalLen) {
+      val arrayIndexStartIndex = index
+      index = findNextIndexSpace(cleanString, index)
+      val arrayIndex = cleanString.substring(arrayIndexStartIndex, index)
+
+      index += 1
+      val arrayValueStartIndex = index
+      index = findNextIndexRightParen(cleanString, index, 1)
+      val arrayValue = cleanString.substring(arrayValueStartIndex, index - 2)
+
+      Array += (arrayIndex -> arrayValue)
+    }
+
+
+    var output : String = ""
+    Array.foreach{ case (k,v) => {
+      if (!v.contentEquals(bottom)) {
+        output = output.concat(s"\n\t$k : $v")
+      }
+    }}
+
+    return output.concat(s"\n\tbottom : $bottom")
+
+  }
+
+  def findNextIndexRightParen(str : String, idx : Int, target : Int) : Int = {
+    var paren = 0;
+    var index = idx;
+
+    while (paren < target) {
+      val c = str.charAt(index)
+      val inc = c match {
+        case '(' => -1
+        case ')' => 1
+        case _   => 0
+      }
+      paren += inc
+      index += 1
+    }
+    return index + 1
+  }
+
+  // Find the index of the next space without open parentheses in str starting at idx
+  def findNextIndexSpace(str : String, idx : Int) : Int = {
+    var paren = 0;
+    var index = idx;
+
+    var c = str.charAt(index)
+
+    val len = str.length()
+
+    while (c != ' ' || paren != 0) {
+      val inc = c match {
+        case '(' => -1
+        case ')' => 1
+        case _   => 0
+      }
+      paren += inc
+      index += 1
+      c = str.charAt(index)
+    }
+    return index
+  }
+
+ 
+
   override def evaluate(e : Expr) : Expr = {
     interface.exprToZ3(e) match {
       case z3Expr : z3.Expr =>
@@ -172,8 +272,7 @@ class Z3Interface() extends Context {
       case RecordType(rs)       => getRecordSort(rs)
       case ArrayType(rs, d)     => getArraySort(rs, d)
       case EnumType(ids)        => getEnumSort(ids)
-      case SynonymType(_, _) |
-           MapType(_, _)       =>
+      case SynonymType(_, _) | MapType(_, _) | UndefinedType =>
         throw new Utils.RuntimeError("Must not use getZ3Sort to convert type: " + typ.toString() + ".")
     }
   }
@@ -214,7 +313,7 @@ class Z3Interface() extends Context {
       case MapType(ins, out) => MapSort(ins, out)
       case ArrayType(ins, out) => VarSort(getArraySort(ins, out))
       case EnumType(ids) => VarSort(getEnumSort(ids))
-      case SynonymType(_, _) =>
+      case SynonymType(_, _) | UndefinedType =>
         throw new Utils.RuntimeError("Must not use symbolToZ3 on: " + sym.typ.toString() + ".")
     }
 
@@ -262,9 +361,13 @@ class Z3Interface() extends Context {
       case IntGTOp                => ctx.mkGt (arithArgs(0), arithArgs(1))
       case IntGEOp                => ctx.mkGe (arithArgs(0), arithArgs(1))
       case IntAddOp               => ctx.mkAdd (arithArgs : _*)
-      case IntSubOp               => ctx.mkSub (arithArgs: _*)
+      case IntSubOp               =>
+        if (args.size == 1) {
+          ctx.mkUnaryMinus(arithArgs(0))
+        } else {
+          ctx.mkSub (arithArgs: _*)
+        }
       case IntMulOp               => ctx.mkMul (arithArgs : _*)
-      case IntMinusOp             => ctx.mkUnaryMinus(arithArgs(0))
       case BVLTOp(_)              => ctx.mkBVSLT(bvArgs(0), bvArgs(1))
       case BVLEOp(_)              => ctx.mkBVSLE(bvArgs(0), bvArgs(1))
       case BVGTOp(_)              => ctx.mkBVSGT(bvArgs(0), bvArgs(1))
@@ -280,6 +383,8 @@ class Z3Interface() extends Context {
       case BVExtractOp(hi, lo)    => ctx.mkExtract(hi, lo, bvArgs(0))
       case BVConcatOp(w)          => ctx.mkConcat(bvArgs(0), bvArgs(1))
       case BVReplaceOp(w, hi, lo) => mkReplace(w, hi, lo, bvArgs(0), bvArgs(1))
+      case BVSignExtOp(w, e)      => ctx.mkSignExt(e, bvArgs(0))
+      case BVZeroExtOp(w, e)      => ctx.mkZeroExt(e, bvArgs(0))
       case NegationOp             => ctx.mkNot (boolArgs(0))
       case IffOp                  => ctx.mkIff (boolArgs(0), boolArgs(1))
       case ImplicationOp          => ctx.mkImplies (boolArgs(0), boolArgs(1))
@@ -371,6 +476,7 @@ class Z3Interface() extends Context {
     assertLogger.debug(z3Expr.toString())
     solver.add(z3Expr)
   }
+  override def preassert(e: Expr) {}
 
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
@@ -381,11 +487,14 @@ class Z3Interface() extends Context {
     val checkResult : SolverResult = z3Result match {
       case z3.Status.SATISFIABLE =>
         val z3Model = solver.getModel()
-        // println("model: " + z3Model.toString)
+        checkLogger.debug("SAT")
+        checkLogger.debug("Model: {}", z3Model.toString())
         SolverResult(Some(true), Some(new Z3Model(this, z3Model)))
       case z3.Status.UNSATISFIABLE =>
+        checkLogger.debug("UNSAT")
         SolverResult(Some(false), None)
       case _ =>
+        checkLogger.debug("UNDET")
         SolverResult(None, None)
     }
     return checkResult

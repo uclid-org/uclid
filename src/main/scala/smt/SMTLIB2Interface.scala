@@ -40,120 +40,204 @@
 package uclid
 package smt
 
-import uclid.Utils
-
 import scala.collection.mutable.{Map => MutableMap}
-
+import scala.collection.mutable.{Set => MutableSet}
+import scala.collection.mutable.ListBuffer
+import com.typesafe.scalalogging.Logger
 import scala.language.postfixOps
 
-class SMTLIB2Interface(args: List[String]) extends Context {
+trait SMTLIB2Base {
+  val smtlib2BaseLogger = Logger(classOf[SMTLIB2Base])
+  
+  type VarMap = MutableMap[String, (String, Type)]
+  type LetMap = MutableMap[Expr, String]
+  var variables : VarMap = MutableMap.empty
+  var letVariables : LetMap = MutableMap.empty
+  var enumLiterals : MutableSet[EnumLit] = MutableSet.empty
+  var stack : List[(VarMap, LetMap, MutableSet[EnumLit])] = List.empty
   var typeMap : SynonymMap = SynonymMap.empty
-  var sorts : MutableMap[String, Type] = MutableMap.empty
-  var variables : MutableMap[String, Type] = MutableMap.empty
+
+  var counterId = 0
+  def getTypeName(suffix: String) : String = {
+    counterId += 1
+    "_type_" + suffix + "_" + counterId.toString() + "_"
+  }
+  def getVariableName(v: String) : String = {
+    counterId += 1
+    "_var_" + v + counterId.toString() + "_"
+  }
+  def getLetVariableName() : String = {
+    counterId += 1
+    "_let_" + counterId.toString() + "_"
+  }
+  def generateDatatype(t : Type) : (String, List[String]) = {
+    smtlib2BaseLogger.debug("generateDatatype: {}", t.toString())
+    val (resultName, newTypes) = typeMap.get(t) match {
+      case Some(synTyp) =>
+        (synTyp.name, List.empty)
+      case None =>
+        t match {
+          case EnumType(members) =>
+            val typeName = getTypeName(t.typeNamePrefix)
+            val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
+            val declDatatype = "(declare-datatype %s (%s))".format(typeName, memStr)
+            typeMap = typeMap.addSynonym(typeName, t)
+            (typeName, List(declDatatype))
+          case ArrayType(indexTypes, elementType) =>
+            val (indexTypeName, newTypes1) = if (indexTypes.size == 1) {
+              generateDatatype(indexTypes(0))
+            } else {
+              val indexTuple = TupleType(indexTypes)
+              generateDatatype(indexTuple)
+            }
+            val (elementTypeName, newTypes2) = generateDatatype(elementType)
+            val arrayTypeName = "(Array %s %s)".format(indexTypeName, elementTypeName)
+            typeMap = typeMap.addSynonym(arrayTypeName, t)
+            (arrayTypeName, newTypes1 ++ newTypes2)
+          case productType : ProductType =>
+            val typeName = getTypeName(t.typeNamePrefix)
+            val mkTupleFn = Context.getMkTupleFunction(typeName)
+            val fieldNames = productType.fieldNames.map(f => Context.getFieldName(f))
+            val (fieldTypes, newTypes1) = productType.fieldTypes.foldRight(List.empty[String], List.empty[String]) {
+              (fld, acc) => {
+                val (fldNameI, newTypesI) = generateDatatype(fld)
+                (fldNameI :: acc._1, newTypesI ++ acc._2)
+              }
+            }
+            val fieldString = (fieldNames zip fieldTypes).map(p => "(%s %s)".format(p._1.toString(), p._2.toString()))
+            val nameString = "((%s 0))".format(typeName)
+            val argString = "(" + Utils.join(mkTupleFn :: fieldString, " ") + ")"
+            val newType = "(declare-datatypes %s ((%s %s)))".format(nameString, typeName, argString)
+            typeMap = typeMap.addSynonym(typeName, t)
+            (typeName, newType :: newTypes1)
+          case BoolType => 
+            typeMap = typeMap.addSynonym("Bool", t)
+            ("Bool", List.empty)
+          case IntType =>
+            typeMap = typeMap.addSynonym("Int", t)
+            ("Int", List.empty)
+          case BitVectorType(n) => 
+            val typeStr = "(_ BitVec %d)".format(n)
+            typeMap = typeMap.addSynonym(typeStr, t)
+            (typeStr, List.empty)
+          case _ => 
+            throw new Utils.UnimplementedException("TODO: Implement more types in Z3FileInterface.generateDatatype")
+        }
+    }
+    smtlib2BaseLogger.debug("RESULT:generateDatatype: {}; {}", resultName.toString(), newTypes.toString())
+    (resultName, newTypes)
+  }
+
+  case class TranslatedExpr(order : Int, expr : String, name : Option[String]) {
+    def exprString() : String = {
+      name match {
+        case Some(str) => str
+        case None => expr
+      }
+    }
+  }
+  type ExprMap = Map[Expr, TranslatedExpr]
+
+  def exprString(trExprs : List[TranslatedExpr]) = {
+    Utils.join(trExprs.map(tr => tr.exprString()), " ")
+  }
+  def translateOptionalTuple(index: List[Expr], memoIn : ExprMap, shouldLetify : Boolean) : (TranslatedExpr, ExprMap) = {
+    if (index.size > 1) { translateExpr(MakeTuple(index), memoIn, shouldLetify) }
+    else { translateExpr(index(0), memoIn, shouldLetify) }
+  }
+  def translateExprs(es : List[Expr], memoIn : ExprMap, shouldLetify : Boolean) : (List[TranslatedExpr], ExprMap) = {
+    es.foldRight((List.empty[TranslatedExpr], memoIn)){ 
+      (arg, acc) => {
+        val (tExpr, accP) = translateExpr(arg, acc._2, shouldLetify)
+        (tExpr :: acc._1, accP)
+      }
+    }
+  }
+  def translateExpr(eIn: Expr, memo : ExprMap, shouldLetify : Boolean) : (TranslatedExpr, ExprMap) = {
+    smtlib2BaseLogger.debug("expr: {}", eIn.toString())
+    smtlib2BaseLogger.debug("memo: {}", memo.toString())
+    val (resultExpr, resultMemo) = memo.get(eIn) match {
+      case Some(resultExpr) => (resultExpr, memo)
+      case None =>
+        val (exprStr, memoP, letify) : (String, ExprMap, Boolean) = Context.rewriteBVReplace(eIn) match {
+          case Symbol(id,_) => (variables.get(id).get._1, memo, false)
+          case EnumLit(id, _) => (id, memo, false)
+          case OperatorApplication(op,operands) =>
+            val (ops, memoP) = translateExprs(operands, memo, shouldLetify)
+            ("(" + op.toString() + " " + exprString(ops) + ")", memoP, true)
+          case ArraySelectOperation(e, index) =>
+            val (trArray, memoP1) = translateExpr(e, memo, shouldLetify)
+            val (trIndex, memoP2) = translateOptionalTuple(index, memoP1, shouldLetify)
+            ("(select " + trArray.exprString() + " " + trIndex.exprString() + ")", memoP2, true)
+          case ArrayStoreOperation(e, index, value) =>
+            val (trArray, memoP1) = translateExpr(e, memo, shouldLetify)
+            val (trIndex, memoP2) = translateOptionalTuple(index, memoP1, shouldLetify)
+            val (trValue, memoP3) = translateExpr(value, memoP2, shouldLetify)
+            ("(store " + trArray.exprString() + " " + trIndex.exprString() + " " + trValue.exprString() +")", memoP3, true)
+          case FunctionApplication(e, args) =>
+            Utils.assert(e.isInstanceOf[Symbol], "Beta substitution has not happened.")
+            val (trFunc, memoP1) = translateExpr(e, memo, shouldLetify)
+            val (trArgs, memoP2) = translateExprs(args, memoP1, shouldLetify)
+            ("(" + trFunc.exprString() + exprString(trArgs) + ")", memoP2, true)
+          case MakeTuple(args) =>
+            val tupleType = TupleType(args.map(_.typ))
+            val (tupleTypeName, newTypes) = generateDatatype(tupleType)
+            val (trArgs, memoP1) = translateExprs(args, memo, shouldLetify)
+            ("(" + Context.getMkTupleFunction(tupleTypeName) + " " + exprString(trArgs) + ")", memoP1, true)
+          case Lambda(_,_) =>
+            throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
+          case IntLit(value) =>
+            (value.toString(), memo, false)
+          case BitVectorLit(value, width) =>
+            ("(_ bv" + value.toString() + " " + width.toString() + ")", memo, false)
+          case BooleanLit(value) =>
+            (value match { case true => "true"; case false => "false" }, memo, false)
+        }
+        val translatedExpr = if (letify && shouldLetify) {
+          TranslatedExpr(memoP.size, exprStr, Some(getLetVariableName()))
+        } else {
+          TranslatedExpr(memoP.size, exprStr, None)
+        }
+        (translatedExpr, memoP + (eIn -> translatedExpr))
+    }
+    smtlib2BaseLogger.debug("result : {}", resultExpr.toString())
+    smtlib2BaseLogger.debug("memoP  : {}", resultMemo.toString())
+    (resultExpr, resultMemo)
+  }
+  def translateExpr(e : Expr, shouldLetify : Boolean) : String = {
+    val (trExpr, memoP) = translateExpr(e, Map.empty, shouldLetify)
+    if (shouldLetify) {
+      if (memoP.size == 0) {
+        trExpr.exprString()
+      } else {
+        val letExprsIn = memoP.filter(p => p._2.name.isDefined).map(p => (p._2.order, p._2.name.get, p._2.expr)).toList
+        val letExprsSorted = letExprsIn.sortWith((p1, p2) => p1._1 < p2._1).map(p => (p._2, p._3))
+        def recurse(lets : List[(String, String)], expr : String) : String = {
+          lets match {
+            case Nil => expr
+            case hd :: tl => "(let ((" + hd._1 + " " + hd._2 + ")) " + recurse(tl, expr) + ")"
+          }
+        }
+        recurse(letExprsSorted, trExpr.exprString())
+      }
+    } else {
+      trExpr.expr
+    }
+  }
+}
+
+class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
+  val smtlibInterfaceLogger = Logger(classOf[SMTLIB2Interface])
 
   type NameProviderFn = (String, Option[String]) => String
   var expressions : List[Expr] = List.empty
   val solverProcess = new InteractiveProcess(args)
 
-  def generateDeclaration(x: Symbol) : String = {
-    def printType(t: Type) : String = {
-      t match {
-        case BoolType => "Bool"
-        case IntType => "Int"
-        case MapType(ins,out) =>
-          "(" + ins.foldLeft(""){(acc,i) =>
-            acc + " " + printType(i)} + ") " + printType(out)
-        case ArrayType(ins,out) =>
-          if (ins.size > 1) {
-            "(Array " + ins.foldLeft("(MyTuple" + ins.size){(acc,i) =>
-              acc + " " + printType(i)} + ") " + printType(out) + ")"
-          } else {
-            "(Array " + printType(ins(0)) + " " + printType(out) + ")"
-          }
-        case _ =>
-          // FIXME: add more types here.
-          throw new Utils.UnimplementedException("Add support for more types: " + x.toString())
-      }
-    }
-
-    return x.typ match {
-      case BoolType => "(declare-const %s Bool)".format(x.id)
-      case IntType => "(declare-const %s Int)".format(x.id)
-      case BitVectorType(n) => "(declare-const %s (_ BitVec %d))".format(x.id, n)
-      case SynonymType(s, typ) => "(declare-const %s %s)".format(x.id, s)
-      case _ =>
-        // FIXME: add more types here.
-        throw new Utils.UnimplementedException("Add support for more types: " + x.typ.toString())
-    }
-  }
-
-  def generateDatatype(p : (String, Type)) : Option[String] = {
-    p._2 match {
-      case BoolType | IntType => None
-      case EnumType(members) =>
-        val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
-        val declDatatype = "(declare-datatypes ((%s 0)) ((%s %s)))".format(p._1, p._1, memStr)
-        //val declMembers = members.map(m => "(declare-fun %s () %s)".format(m, p._1))
-        //val str = Utils.join(declDatatype :: declMembers, "\n")
-        Some(declDatatype)
-      case _ => throw new Utils.UnimplementedException("TODO: Implement more types in Z3FileInterface.generateDatatype")
-    }
-  }
-
-  def generateDatatypes(symbols: Set[Symbol]) : String = {
-    var arrayArities : Set[Int] = Set.empty;
-    symbols.foreach { x =>
-      x.typ match {
-        case MapType(ins,out) =>
-          arrayArities = arrayArities ++ Set(ins.size)
-        case ArrayType(ins,out) =>
-          arrayArities = arrayArities ++ Set(ins.size)
-        case _ => ()
-      }
-    }
-
-    return arrayArities.foldLeft(""){ (acc,x) =>
-      acc + "(declare-datatypes " +
-        "(" + ((1 to x).toList).foldLeft("") {
-          (acc,i) => acc + " " + "T"+i } + ")" +
-        "((MyTuple" + x + " (mk-tuple" + x +
-        ((1 to x).toList).foldLeft("") {
-            (acc,i) => acc + " (elem"+i+" T"+i+")" } +
-        "))))\n"
-    }
-  }
-
-  def translateExpr(e: Expr) : String = {
-    def mkTuple(index: List[Expr]) : String = {
-      if (index.size > 1) {
-        "(mk-tuple" + index.size + index.foldLeft("")((acc,i) =>
-          acc + " " + translateExpr(i)) + ")"
-      }
-      else {
-        translateExpr(index(0))
-      }
-    }
-
-    e match {
-      case Symbol(id,_) => id
-      case OperatorApplication(op,operands) => e.toString
-      case ArraySelectOperation(e, index) =>
-        "(select " + translateExpr(e) + " " + mkTuple(index) + ")"
-      case ArrayStoreOperation(e, index, value) =>
-        "(store " + translateExpr(e) + " " + mkTuple(index) + " " + translateExpr(value) + ")"
-      case FunctionApplication(e, args) =>
-        Utils.assert(e.isInstanceOf[Symbol], "Did beta substitution happen?")
-        "(" + translateExpr(e) +
-          args.foldLeft(""){(acc,i) =>
-            acc + " " + translateExpr(i)} + ")"
-      case Lambda(_,_) =>
-        throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
-      case IntLit(value) => value.toString()
-      case BitVectorLit(_,_) =>
-        throw new Utils.UnimplementedException("Bitvectors unimplemented")
-      case BooleanLit(value) =>
-        value match { case true => "true"; case false => "false" }
-    }
+  def generateDeclaration(name: String, t: Type) = {
+    val (typeName, newTypes) = generateDatatype(t)
+    Utils.assert(newTypes.size == 0, "No new types are expected here.")
+    val cmd = "(declare-fun %s () %s)".format(name, typeName)
+    writeCommand(cmd)
   }
 
   def writeCommand(str : String) {
@@ -166,31 +250,34 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   }
 
   override def assert (e: Expr) {
-    val (eP, typeMapP) = flattenTypes(e, typeMap)
-    val newTypes = typeMapP.fwdMap.filter(p => !sorts.contains(p._1))
-    newTypes.foreach {
-      (n) => {
-        sorts += (n._1 -> n._2)
-        generateDatatype(n) match {
-          case Some(s) => writeCommand(s)
-          case None =>
-        }
-      }
-    }
-    typeMap = typeMapP
-    val symbolsP = Context.findSymbols(eP)
-    val newSymbols = symbolsP.filter(s => !variables.contains(s.id))
-    newSymbols.foreach {
+    val symbols = Context.findSymbols(e)
+    val symbolsP = symbols.filter(s => !variables.contains(s.id))
+    symbolsP.foreach {
       (s) => {
-        variables += (s.id -> s.symbolTyp)
-        val decl = generateDeclaration(s)
-        writeCommand(decl)
+        val sIdP = getVariableName(s.id)
+        variables += (s.id -> (sIdP, s.symbolTyp))
+        generateDeclaration(sIdP, s.symbolTyp)
       }
     }
-    writeCommand("(assert " + translateExpr(eP) +")")
+    writeCommand("(assert " + translateExpr(e, true) +")")
+  }
+
+  override def preassert(e: Expr) {
+    smtlibInterfaceLogger.debug("preassert")
+    val types  = Context.findTypes(e)
+    types.filter(typ => !typeMap.contains(typ)).foreach {
+      newType => {
+        smtlib2BaseLogger.debug("type: {}", newType.toString())
+        val (typeName, newTypes) = generateDatatype(newType)
+        smtlibInterfaceLogger.debug("newTypes: {}", newTypes.toString())
+        newTypes.foreach(typ => writeCommand(typ))
+      }
+    }
   }
 
   override def check() : SolverResult = {
+    smtlibInterfaceLogger.debug("check")
+    Utils.assert(solverProcess.isAlive(), "Solver process is not alive!")
     writeCommand("(check-sat)")
     readResponse() match {
       case Some(strP) =>
@@ -213,22 +300,23 @@ class SMTLIB2Interface(args: List[String]) extends Context {
   }
 
   override def push() {
+    smtlibInterfaceLogger.debug("push")
+    val e : (VarMap, LetMap, MutableSet[EnumLit]) = (variables.clone(), letVariables.clone(), enumLiterals.clone())
+    stack = e :: stack
     writeCommand("(push 1)")
   }
 
   override def pop() {
+    smtlibInterfaceLogger.debug("pop")
+    val e = stack.head
+    variables = e._1
+    letVariables = e._2
+    enumLiterals = e._3
+    stack = stack.tail
     writeCommand("(pop 1)")
   }
 
   def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
-    def assertionToString(e : Expr) : String = "(assert " + translateExpr(e) + ")\n"
-
-    val symbols_e = Context.findSymbols(e)
-    val symbols = expressions.foldRight(symbols_e)((ex, s) => s ++ Context.findSymbols(ex))
-    val decl = symbols.foldLeft(""){(acc,x) => acc + generateDeclaration(x)}
-    val datatypes = generateDatatypes(symbols)
-    val assertions = (e :: expressions).foldRight("")((e, str) => assertionToString(e) + str)
-    val formula = datatypes + decl + assertions + "\n(check-sat)\n"
-    return formula
+    throw new Utils.UnimplementedException("toSMT2 is not yet implemented.")
   }
 }

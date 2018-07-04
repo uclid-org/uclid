@@ -39,23 +39,35 @@
  *    - only state variables should be declared modifiable
  *
  */
+
 package uclid
 package lang
 
+import com.typesafe.scalalogging.Logger
+
 class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
 {
+  val logger = Logger(classOf[ProcedureCheckerPass])
+
   type T = Set[ModuleError]
   lazy val manager : PassManager = analysis.manager
   lazy val exprTypeChecker = manager.pass("ExpressionTypeChecker").asInstanceOf[ExpressionTypeChecker].pass
 
   def checkIdent(proc : ProcedureDecl, id : Identifier, pos : ASTPosition, context : Scope, in : T) : T = {
-    context.get(id).get match {
-      case Scope.StateVar(_, _) | Scope.OutputVar(_, _) =>
-        if (!proc.modifies.contains(id)) {
-          val error = ModuleError("Identifier was not declared modifiable: %s".format(id.toString), pos)
-          in + error
-        } else { in }
-      case _ => in
+    logger.debug("Checking identifier: {}", id.toString())
+    context.get(id) match {
+      case Some(namedExpr) =>
+        namedExpr match {
+          case Scope.StateVar(_, _) | Scope.OutputVar(_, _) =>
+            if (!proc.modifies.contains(id)) {
+              val error = ModuleError("Identifier was not declared modifiable: %s".format(id.toString), pos)
+              in + error
+            } else { in }
+          case _ => in
+        }
+      case None =>
+        val error = ModuleError("Unknown identifier was declared modifiable: %s".format(id.toString()), pos)
+        in + error
     }
   }
 
@@ -89,6 +101,8 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           havocStmt.havocable match {
             case HavocableId(id) =>
               checkIdent(proc, id, id.position, context, in)
+            case HavocableNextId(id) =>
+              throw new Utils.AssertionError("Should not have havocable next ids inside procedures.")
             case HavocableFreshLit(f) =>
               in
           }

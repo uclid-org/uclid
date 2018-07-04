@@ -1,0 +1,27 @@
+module main
+{
+  var x, y, i : integer;
+
+  init {
+    i = 0;
+    assume (x >= 0);
+    assume (y >= 0);
+    assume (x >= y);
+  }
+
+  next {
+    if (i < y) {
+      i' = i + 1;
+    }
+  }
+
+  invariant psi_f  : x >= y;
+  invariant post_f : i <= x;
+
+  control {
+    v = induction;
+    check;
+    print_results;
+    v.print_cex(x, y, i);
+  }
+}

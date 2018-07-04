@@ -4,7 +4,7 @@ module foo
   output b : integer;
   
   next {
-    b = a + 1;
+    b' = a + 1;
   }
 }
 
@@ -22,20 +22,30 @@ module bar
   next {
     next(foox);
     next(fooy);
-    z = xp + yp;
+    z' = xp + yp;
   }
 }
 
 module main
 {
-  input x  : integer;
-  output y : integer;
+  input x   : integer;
+  output y  : integer;
+  var initd : boolean;
   
   instance bar1 : bar(x: (x), y: (x), z: (y));
   
+  init { initd = false; } 
+
   next {
+    initd' = true;
     next(bar1);
   }
   
-  property b1: bar1.foox.a + 1 + bar1.fooy.a + 1 == y;
+  property b1: initd ==> (bar1.foox.a + 1 + bar1.fooy.a + 1 == y);
+
+  control {
+      v = unroll(5);
+      check;
+      print_results;
+  }
 }

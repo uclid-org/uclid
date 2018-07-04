@@ -1,8 +1,8 @@
 module main {
   var cnt, cntp, cntq : integer;
-  const one = 1;
-  const three = 3;
-  const four = 4;
+  const one   : integer = 1;
+  const three : integer = 3;
+  const four  : integer = 4;
 
   procedure add10(x : integer) returns (y : integer) {
     y = x;
@@ -41,6 +41,6 @@ module main {
     // print_module;
     unroll (5);
     check;
-    // print_results;
+    print_results;
   }
 }

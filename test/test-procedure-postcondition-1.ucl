@@ -13,7 +13,7 @@ module main
     c = a + b;
   }
 
-  procedure sum(n : integer) returns (numbers : [integer]integer)
+  procedure [noinline] sum(n : integer) returns (numbers : [integer]integer)
     requires (n > 0);
     requires (n < 5);
     ensures (forall (i : integer) :: (i > 0 && i < n) ==> numbers[i] == i+1);
@@ -33,11 +33,11 @@ module main
   }
 
   control {
-    // print_module;
+    print_module;
     add_verif = verify(add);
     sum_verif = verify(sum);
     check;
-    // print_results;
+    print_results;
     // add_verif.print_cex(a, b, c);
     // sum_verif->print_cex(n, x, numbers[1], numbers[2], numbers[3], numbers[4], numbers[5]);
   }

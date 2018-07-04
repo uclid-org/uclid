@@ -39,26 +39,34 @@
 package uclid
 package lang
 
+import uclid.lang.Scope.BlockVar
+
 class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
 {
   type T = Set[ModuleError]
   def checkLhs(lhss : List[Lhs], in : T, context : Scope) : T = {
-    val seqLhs = lhss.find(p => p.isProceduralLhs)
-    val primedLhs = lhss.find(p => !p.isProceduralLhs)
+    val seqLhsOpt = lhss.find(p => p.isProceduralLhs)
+    val primeLhsOpt = lhss.find(p => !p.isProceduralLhs)
     if (context.environment == ProceduralEnvironment) {
-      if (primedLhs.isDefined) {
-        in + ModuleError("Primed assignments are not allowed in procedural code", primedLhs.get.position)
+      if (primeLhsOpt.isDefined) {
+        in + ModuleError("Primed assignments are not allowed in procedural code", primeLhsOpt.get.position)
       } else {
         in
       }
     } else {
-      if (seqLhs.isDefined) {
-        in + ModuleError("Sequential assignment not allowed outside procedures", seqLhs.get.position)
-      } else {
-        in
+      seqLhsOpt match {
+        case Some(seqLhs) =>
+          context.get(seqLhs.ident) match {
+            case Some(BlockVar(_, _)) => in
+            case _ =>
+              in + ModuleError("Sequential assignment not allowed outside procedures", seqLhsOpt.get.position)
+          }
+        case None =>
+          in
       }
     }
   }
+
   override def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
       in
@@ -94,7 +102,7 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       st match {
         case IfElseStmt(_, _, _) | ForStmt(_, _, _, _) | WhileStmt(_, _, _) |
              CaseStmt(_) | ProcedureCallStmt(_, _, _) | SkipStmt() |
-             AssertStmt(_, _) | AssumeStmt(_, _) | HavocStmt(_) => 
+             AssertStmt(_, _) | AssumeStmt(_, _) | HavocStmt(_) | BlockStmt(_, _) => 
           in
         case ModuleCallStmt(_) =>
           checkParallelConstruct("next")
@@ -103,6 +111,7 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       }
     }
   }
+
   override def applyOnProcedureCall(d : TraversalDirection.T, callStmt : ProcedureCallStmt, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
       in

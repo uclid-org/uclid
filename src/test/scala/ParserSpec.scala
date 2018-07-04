@@ -125,7 +125,6 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.ParserErrorList =>
         assert (p.errors.size == 3)
-        // XXX: continue testing here
     }
   }
   "test-recursion.ucl" should "not parse successfully." in {
@@ -138,7 +137,6 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.ParserErrorList =>
         assert (p.errors.size == 1)
-        // XXX: continue testing here
     }
   }
   "test-procedure-types-errors.ucl" should "not parse successfully." in {
@@ -190,7 +188,6 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.TypeError =>
         assert (p.getMessage().contains("Recursively defined synonym type"))
-        // XXX: continue testing here
     }
   }
   "test-modules-2.ucl" should "not parse successfully." in {
@@ -203,7 +200,6 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.TypeErrorList =>
         assert (p.errors.size == 4)
-        // XXX: continue testing here
     }
   }
   "test-procedure-checker-1.ucl" should "not parse successfully." in {
@@ -272,6 +268,20 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.exists(p => p._1.contains("Return type and expression type do not match")))
     }
   }
+  "test-types-import-redecl.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-types-import-redecl.ucl")), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.exists(p => p._1.contains("Redeclaration of identifier 'pc_t'")))
+        assert (p.errors.exists(p => p._2.filename == Some("test/test-types-import-redecl.ucl") && p._2.pos.line == 32))
+    }
+  }
   "test-define-expand.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-define-expand.ucl")), lang.Identifier("main"))
     val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
@@ -305,6 +315,31 @@ class ParserSpec extends FlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
+  "test-nested-modules-1.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-nested-modules-1.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-nested-modules-2.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-nested-modules-2.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-block-var-0.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-block-var-0.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-modules-7.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-modules-7.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-block-var-renaming-1.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-block-var-renaming-1.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
   "test-multiple-writes.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(List(new File("test/test-multiple-writes.ucl")), lang.Identifier("main"))
@@ -323,6 +358,16 @@ class ParserSpec extends FlatSpec {
       case p : Utils.ParserErrorList =>
         assert (p.errors.size == 2)
         assert (p.errors.forall(p => p._1.contains("Cyclical dependency involving variable(s)")))
+    }
+  }
+  "test-procedure-next.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-procedure-next.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.forall(p => p._1.contains("Multiple updates to identifier(s): v")))
     }
   }
   "test-modules-3.ucl" should "not parse successfully." in {
@@ -365,5 +410,43 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.size == 1)
         assert (p.errors.exists(p => p._1.contains("Invalid for loop range")))
     }
+  }
+  "test-string-0.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-string-0.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.exists(p => p._1.contains("expected type 'integer' but received type 'string'")))
+    }
+  }
+  "test-string-1.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-string-1.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserError =>
+        assert (p.msg.contains("'print' command expects a string literal as an argument"))
+    }
+  }
+  "test-parser-nested-next-block.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-parser-nested-next-block.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors(0)._1.contains("Nested block statements are not allowed in a sequential environment"))
+    }
+  }
+  "test-string-2.ucl" should "parse successfully." in {
+    UclidMain.enableStringOutput()
+    UclidMain.clearStringOutput()
+    val fileModules = UclidMain.compile(List(new File("test/test-string-2.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val results = UclidMain.execute(instantiatedModules(0), UclidMain.Config())
+    val stringOutput = UclidMain.stringOutput.toString().trim()
+    assert (instantiatedModules.size == 1)
+    assert (stringOutput == "hello, world!")
   }
 }

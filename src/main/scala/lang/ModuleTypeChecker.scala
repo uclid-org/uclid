@@ -72,6 +72,12 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
               } else {
                 in
               }
+            case HavocableNextId(id) =>
+              if (!context.doesNameExist(id)) {
+                in + ModuleError("Unknown identifier in havoc statement", st.position)
+              } else {
+                in
+              }
             case HavocableFreshLit(f) =>
               in
           }
@@ -103,6 +109,8 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
 
           ret
 
+        case BlockStmt(_, _) =>
+          in
         case IfElseStmt(cond, _, _) =>
           val cType = exprTypeChecker.typeOf(cond, context)
           if (!cType.isBool) {
@@ -221,6 +229,20 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         in + error
       } else {
         in
+      }
+    } else {
+      in
+    }
+  }
+  override def applyOnModuleTypesImport(d : TraversalDirection.T, modTypImport : ModuleTypesImportDecl, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down) {
+      val id = modTypImport.id
+      context.map.get(id) match {
+        case Some(Scope.ModuleDefinition(mod)) =>
+          in
+        case _ =>
+          val error = ModuleError("Unknown module in module types import declaration", modTypImport.id.position)
+          in + error
       }
     } else {
       in

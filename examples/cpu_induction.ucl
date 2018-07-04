@@ -26,11 +26,12 @@ module common {
 }
 
 module cpu {
-  type addr_t = common.addr_t;
-  type mem_t  = common.mem_t;
-  type word_t = common.word_t;
-  type op_t   = common.op_t;
-  type mode_t = common.mode_t;
+  // type addr_t = common.addr_t;
+  // type mem_t  = common.mem_t;
+  // type word_t = common.word_t;
+  // type op_t   = common.op_t;
+  // type mode_t = common.mode_t;
+  type * = common.*;
 
   type regindex_t;
   type regs_t = [regindex_t]word_t;
@@ -168,7 +169,7 @@ module main {
   type mode_t     = common.mode_t;
   type regindex_t = cpu.regindex_t;
 
-  // Instruction memory is the same for both CPUs.
+  // Instruction memory for the CPUs.
   var imem1, imem2 : mem_t;
 
   // Create two instances of the CPU module.

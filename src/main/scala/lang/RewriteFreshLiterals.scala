@@ -22,7 +22,7 @@ class RewriteFreshLiteralsPass extends RewritePass {
     freshLit match {
       case Some(f) => Some(f)
       case None =>
-        val newId = new ContextualNameProvider(context, "fresh").apply(Identifier("if_star"), "")
+        val newId = NameProvider.get("if_star")
         freshLit = Some(newId)
         Some(newId)
     }
@@ -32,13 +32,13 @@ class RewriteFreshLiteralsPass extends RewritePass {
 class RewriteFreshLiterals extends ASTRewriter("RewriteFreshLiterals", new RewriteFreshLiteralsPass())
 
 class IntroduceFreshHavocsPass extends RewritePass {
-  override def rewriteIfElse(st : IfElseStmt, ctx : Scope) : List[Statement] = {
+  override def rewriteIfElse(st : IfElseStmt, ctx : Scope) : Option[Statement] = {
     st.cond match {
       case f : FreshLit =>
         val havoc = HavocStmt(HavocableFreshLit(f))
-        List(havoc, st)
+        Some(BlockStmt(List.empty, List(havoc, st)))
       case _ =>
-        List(st)
+        Some(st)
     }
   }
 }

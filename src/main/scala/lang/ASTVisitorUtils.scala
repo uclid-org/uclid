@@ -44,12 +44,21 @@ package lang
 class ASTPrinterPass extends ReadOnlyPass[Unit] {
   override def applyOnModule(d : TraversalDirection.T, module : Module, in : Unit, context : Scope) : Unit = {
     if (d == TraversalDirection.Down) {
-      println(module)
+      UclidMain.println(" ==> " + analysis.passName + " <== ")
+      UclidMain.println(module.toString())
     }
   }
 }
+object ASTPrinter {
+  var count = 0
+  def getName() : String  = {
+    count += 1
+    "ASTPrinter:" + count.toString()
+  }
+}
+
 /** Simple analysis that instantiates ASTPrinterPass to print module. */
-class ASTPrinter(name: String) extends ASTAnalyzer(name, new ASTPrinterPass()) {
+class ASTPrinter() extends ASTAnalyzer(ASTPrinter.getName(), new ASTPrinterPass()) {
   override def pass = super.pass.asInstanceOf[ASTPrinterPass]
   in = Some(Unit)
 }
@@ -78,7 +87,13 @@ object ExprRewriter
 {
   def rewriteExpr(e : Expr, rewrites : Map[Expr, Expr], context : Scope) : Expr = {
     val rewriter = new ASTRewriter("", new ExprRewriterPass(rewrites))
-    rewriter.visitExpr(e, context).get
+    var e1 = e
+    var e2 = rewriter.visitExpr(e1, context).get
+    do {
+      e1 = e2
+      e2 = rewriter.visitExpr(e1, context).get
+    } while (e2 != e1)
+    e2
   }
   def rewriteLHS(lhs : Lhs, rewrites: Map[Expr, Expr], context : Scope) : Lhs = {
     val rewriter = new ASTRewriter("", new ExprRewriterPass(rewrites))
@@ -89,8 +104,70 @@ object ExprRewriter
 class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   extends ASTRewriter(name, new ExprRewriterPass(rewrites))
 {
-  def rewriteStatements(stmts : List[Statement]) : List[Statement] = {
-    val emptyContext = Scope.empty
-    return stmts.flatMap(visitStatement(_, emptyContext))
+  def rewriteExprFixpoint( e : Expr, context : Scope) : Expr = {
+    var e1 = e
+    var e2 = visitExpr(e1, context).get
+    do {
+      e1 = e2
+      e2 = visitExpr(e1, context).get
+    } while (e2 != e1)
+    e2
+  }
+
+  def rewriteExpr(e : Expr, context : Scope) : Expr = {
+    visitExpr(e, context).get
+  }
+
+  def rewriteStatements(stmts : List[Statement], context : Scope) : List[Statement] = {
+    return stmts.flatMap(visitStatement(_, context))
+  }
+
+  def rewriteStatement(stmt : Statement, context : Scope) : Option[Statement] = {
+    visitStatement(stmt, context)
   }
 }
+
+class OldExprRewriterPass(rewrites : Map[Identifier, Identifier]) extends RewritePass
+{
+  override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
+    opapp.op match {
+      case OldOperator() =>
+        val arg = opapp.operands(0).asInstanceOf[Identifier]
+        rewrites.get(arg) match {
+          case Some(v) => Some(Operator.old(v))
+          case None => Some(Operator.old(arg))
+        }
+      case HistoryOperator() =>
+        val arg = opapp.operands(0).asInstanceOf[Identifier]
+        val past = opapp.operands(1)
+        rewrites.get(arg) match {
+          case Some(v) => Some(Operator.history(v, past))
+          case None => Some(Operator.history(arg, past))
+        }
+      case _ => Some(opapp)
+    }
+  }
+}
+
+object OldExprRewriter {
+  var i = 0
+  def getName() : String = {
+    i += 1
+    "OldExprRewriter:" + i.toString()
+  }
+}
+
+class OldExprRewriter(rewrites : Map[Identifier, Identifier])
+  extends ASTRewriter(OldExprRewriter.getName(), new OldExprRewriterPass(rewrites))
+{
+  def rewriteExpr(e : Expr, context : Scope) : Expr = {
+    visitExpr(e, context).get
+  }
+  def rewriteStatements(stmts : List[Statement], context : Scope) : List[Statement] = {
+    return stmts.flatMap(visitStatement(_, context))
+  }
+  def rewriteStatement(stmt : Statement, context : Scope) : Option[Statement] = {
+    visitStatement(stmt, context)
+  }
+}
+

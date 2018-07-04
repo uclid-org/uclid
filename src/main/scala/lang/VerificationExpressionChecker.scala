@@ -64,7 +64,7 @@ class VerificationExpressionPass extends ReadOnlyPass[List[ModuleError]]
         }
       } else if (!context.environment.isVerificationContext) {
         opapp.op match {
-          case OldOperator() | HistoryOperator() =>
+          case OldOperator() | HistoryOperator() | PastOperator() =>
             ModuleError("Operator can only be used in a verification expression", opapp.position) :: in
           case _ =>
             in

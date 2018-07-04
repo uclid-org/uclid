@@ -43,11 +43,11 @@ package lang
 class ModuleCanonicalizerPass extends RewritePass {
   override def rewriteModule(moduleIn : Module, ctx : Scope) : Option[Module] = {
     val initP = moduleIn.init match {
-      case None => Some(InitDecl(List.empty))
+      case None => Some(InitDecl(SkipStmt()))
       case Some(init) => None
     }
     val nextP = moduleIn.next match {
-      case None => Some(NextDecl(List.empty))
+      case None => Some(NextDecl(SkipStmt()))
       case Some(next) => None
     }
     val newDecls = moduleIn.decls ++ List(initP, nextP).flatten

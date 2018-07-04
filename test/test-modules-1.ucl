@@ -5,9 +5,7 @@ module common {
 }
 
 module cpu {
-  type addr_t = common.addr_t;
-  type mem_t = common.mem_t;
-  type word_t = common.word_t;
+  type * = common.*;
   
   input mem : mem_t;
   var pc : addr_t;
@@ -24,9 +22,7 @@ module cpu {
 }
   
 module main {
-  type addr_t = common.addr_t;
-  type mem_t = common.mem_t;
-  type word_t = common.word_t;
+  type * = common.*;
 
   var mem : mem_t;
 
@@ -41,6 +37,6 @@ module main {
   control {
     unroll(3);
     check;
-    // print_results;
+    print_results;
   }
 }

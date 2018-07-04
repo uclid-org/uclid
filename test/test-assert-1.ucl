@@ -24,8 +24,9 @@ module main
     }
 
     control {
-        x = unroll(1);
-        check;
-        // print_results;
+      // print_module;
+      x = unroll(1);
+      check;
+      print_results;
     }
 }

@@ -47,7 +47,7 @@ object SemanticAnalyzerPass {
       (acc, id) => {
         acc._1.get(id._1) match {
           case Some(pos) =>
-            val msg = "Redeclaration of identifier '" + id._1.name + "'. Previous declaration at " + pos.toString
+            val msg = "Redeclaration of identifier '" + id._1.name + "'. See also declaration at " + pos.toString
             (acc._1, ModuleError(msg, id._2) :: acc._2)
           case None =>
             ((acc._1 + (id._1 -> id._2)), acc._2)
@@ -58,6 +58,32 @@ object SemanticAnalyzerPass {
 }
 
 class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
+  def checkBlockNesting(blk : BlockStmt, in : List[ModuleError], context : Scope) : List[ModuleError] = {
+    if (!context.environment.isProcedural) {
+      val blkOption = blk.stmts.find(st => st.isInstanceOf[BlockStmt])
+      blkOption match {
+        case Some(blk) =>
+          val msg = "Nested block statements are not allowed in a sequential environment"
+          ModuleError(msg, blk.position) :: in
+        case None => in
+      }
+    } else { in }
+  }
+  def checkIdRedeclarations(ids : List[Identifier], in : List[ModuleError], parentContext : Scope) : List[ModuleError] = {
+    if (true) {
+      val redeclaredIds = ids.filter(id => parentContext.map.contains(id))
+      val errors = redeclaredIds.map { 
+        id => {
+          val prevId = parentContext.map.get(id).get
+          val msg = "Redeclaration of identifier: '%s'. Previous declaration at: %s".format(id.toString(), prevId.id.pos.toString())
+          ModuleError(msg, id.position)
+        }
+      }
+      in ++ errors
+    } else {
+      in
+    }
+  }
   override def applyOnModule(d : TraversalDirection.T, module : Module, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       // val moduleIds = module.decls.filter((d) => d.declNames.isDefined).map((d) => (d.declName.get, d.position))
@@ -69,15 +95,20 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
     if (d == TraversalDirection.Down) {
       val inParams = proc.sig.inParams.map((arg) => (arg._1, arg._1.position))
       val outParams = proc.sig.outParams.map((arg) => (arg._1, arg._1.position))
-      val localVars = proc.decls.map((v) => (v.id, v.position))
-      SemanticAnalyzerPass.checkIdRedeclaration(inParams ++ outParams ++ localVars, in)
-    } else { in }
+      SemanticAnalyzerPass.checkIdRedeclaration(inParams ++ outParams, in)
+    } else {
+      val newIds = proc.sig.inParams.map(p => p._1) ++ proc.sig.outParams.map(p => p._1)
+      checkIdRedeclarations(newIds, in, context)
+    }
   }
   override def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       val params = func.sig.args.map((arg) => (arg._1, arg._1.position))
       SemanticAnalyzerPass.checkIdRedeclaration(params, in)
-    } else { in }
+    } else {
+      val newIds = func.sig.args.map(p => p._1)
+      checkIdRedeclarations(newIds, in, context)
+    }
   }
   override def applyOnRecordType(d : TraversalDirection.T, recordT : RecordType, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
@@ -93,6 +124,14 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
       in
     } else {
       in
+    }
+  }
+  override def applyOnBlock(d : TraversalDirection.T, blk : BlockStmt, in : List[ModuleError], context : Scope) : List[ModuleError] = {
+    if (d == TraversalDirection.Down) {
+      checkBlockNesting(blk, in, context)
+    } else {
+      val newIds = blk.vars.map(d => d.ids).flatMap(v => v)
+      checkIdRedeclarations(newIds, in, context)
     }
   }
 }

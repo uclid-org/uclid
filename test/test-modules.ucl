@@ -37,9 +37,9 @@ module main {
   var index  : regindex_t;
 
   init {
-	assume (forall (r : regindex_t) :: regs[r] == 1bv4);
-	assume (forall (a : addr_t) :: mem[a] == 0bv6);
-	cnt = 1bv4;
+    assume (forall (r : regindex_t) :: regs[r] == 1bv4);
+    assume (forall (a : addr_t) :: mem[a] == 0bv6);
+    cnt = 1bv4;
     pc = 0bv8;
   }
 
@@ -84,16 +84,16 @@ module main {
     // will fail after detecting a cyclical assignment.
 
     call (index') = next_inst();
-	next (alu_i);
-	call set_regs(index', res');
-	cnt' = cnt + cnt;
-	pc' = pc + 1bv8;
+    next (alu_i);
+    call set_regs(index', res');
+    cnt' = cnt + cnt;
+    pc' = pc + 1bv8;
   }
   
   control {
     v = unroll(3);
     check;
-    // print_results;
+    print_results;
     // v.print_cex(cnt, res);
     
   }

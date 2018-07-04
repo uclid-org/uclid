@@ -95,10 +95,24 @@ class AssertionTree {
     currentNode = initialRoot
   }
 
-  def _verify(node : TreeNode, solver : smt.Context) : List[CheckResult] = {
-    solver.push()
-    node.assumptions.foreach(a => solver.assert(a))
-    node.results = (node.assertions.map {
+  sealed abstract class VerifyMode {
+    val isAssert : Boolean
+  }
+  case object VerifyModeAssert extends VerifyMode {
+    override val isAssert = true
+  }
+  case object VerifyModePreprocess extends VerifyMode {
+    override val isAssert = false
+  }
+
+  def _verify(node : TreeNode, solver : smt.Context, mode : VerifyMode) : List[CheckResult] = {
+    if (mode.isAssert) {
+      solver.push()
+      node.assumptions.foreach(a => solver.assert(a))
+    } else {
+      node.assumptions.foreach(a => solver.preassert(a))
+    }
+    val results = (node.assertions.map {
       e => {
         val pcExpr = e.pathCond
         // If assertExpr has a CoverDecorator then we should not negate the expression here.
@@ -112,24 +126,40 @@ class AssertionTree {
         } else {
           smt.OperatorApplication(smt.ConjunctionOp, List(pcExpr, assertExpr))
         }
-        solver.push()
-        solver.assert(checkExpr)
-        val sat = solver.check()
-        val result = sat.result match {
-          case Some(true)  => smt.SolverResult(Some(false), sat.model)
-          case Some(false) => smt.SolverResult(Some(true), sat.model)
-          case None        => smt.SolverResult(None, None)
+        if (mode.isAssert) {
+          solver.push()
+          solver.assert(checkExpr)
+          val sat = solver.check()
+          val result = sat.result match {
+            case Some(true)  => smt.SolverResult(Some(false), sat.model)
+            case Some(false) => smt.SolverResult(Some(true), sat.model)
+            case None        => smt.SolverResult(None, None)
+          }
+          solver.pop()
+          Some(CheckResult(e, result))
+        } else {
+          solver.preassert(checkExpr)
+          None
         }
-        solver.pop()
-        CheckResult(e, result)
       }
     }).toList
+    if (mode.isAssert) {
+      node.results = results.flatten
+    }
     // now recurse into children
-    val childResults = node.children.flatMap(c => _verify(c, solver))
-    solver.pop()
-    node.results ++ childResults
+    if (mode.isAssert) {
+        val childResults = node.children.flatMap(c => _verify(c, solver, mode))
+        solver.pop()
+        node.results ++ childResults
+    } else {
+        node.children.foreach(c => _verify(c, solver, mode))
+        List.empty
+    }
   }
-  def verify(solver : smt.Context) : List[CheckResult] = _verify(root, solver)
+  def verify(solver : smt.Context) : List[CheckResult] = {
+    _verify(root, solver, VerifyModePreprocess)
+    _verify(root, solver, VerifyModeAssert)
+  }
 
   def _printSMT(node : TreeNode, parentAssumptions : List[smt.Expr], label : Option[Identifier], solver : smt.SolverInterface) : List[String] = {
     val allAssumptions = parentAssumptions ++ node.assumptions.toList

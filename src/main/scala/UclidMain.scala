@@ -48,11 +48,15 @@ import uclid.lang._
 import lang.Module
 import lang.Identifier
 import uclid.Utils.ParserErrorList
+import com.typesafe.scalalogging.Logger
+import uclid.smt.SyGuSInterface
 
 /** This is the main class for Uclid.
  *
  */
 object UclidMain {
+  val logger = Logger("uclid.UclidMain")
+
   def main(args: Array[String]) {
     parseOptions(args) match {
       case None =>
@@ -69,6 +73,11 @@ object UclidMain {
   case class Config(
       mainModuleName : String = "main",
       smtSolver: List[String] = List.empty,
+      synthesizer: List[String] = List.empty,
+      synthesisRunDir: String = "",
+      sygusFormat: Boolean = false,
+      printStackTrace: Boolean = false,
+      verbose : Int = 0,
       files : Seq[java.io.File] = Seq()
   )
 
@@ -80,9 +89,25 @@ object UclidMain {
         (x, c) => c.copy(mainModuleName = x) 
       }.text("Name of the main module.")
 
-      opt[String]('s', "solver").valueName("<Binary>").action{ 
+      opt[String]('s', "solver").valueName("<Cmd>").action{ 
         (exec, c) => c.copy(smtSolver = exec.split(" ").toList) 
       }.text("External SMT solver binary.")
+
+      opt[String]('y', "synthesizer").valueName("<Cmd>").action{
+        (exec, c) => c.copy(synthesizer = exec.split(" ").toList)
+      }.text("Command line to invoke SyGuS synthesizer.")
+
+      opt[String]('Y', "synthesizer-run-directory").valueName("<Dir>").action{
+        (dir, c) => c.copy(synthesisRunDir = dir)
+      }.text("Run directory for synthesizer.")
+
+      opt[Unit]('X', "exception-stack-trace").action{
+        (_, c) => c.copy(printStackTrace = true)
+      }.text("Print exception stack trace.")
+
+      opt[Unit]('f', "sygus-format").action{
+        (_, c) => c.copy(sygusFormat = true)
+      }.text("Generate the standard SyGuS format.")
 
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
@@ -105,32 +130,38 @@ object UclidMain {
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
       }
-      println("Finished execution for module: %s.".format(mainModuleName.toString))
+      UclidMain.println("Finished execution for module: %s.".format(mainModuleName.toString))
     }
     catch  {
       case (e : java.io.FileNotFoundException) =>
-        println("Error: " + e.getMessage() + ".")
+        UclidMain.println("Error: " + e.getMessage() + ".")
+        if(config.printStackTrace) { e.printStackTrace() }
         System.exit(1)
       case (p : Utils.ParserError) =>
-        println("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        UclidMain.println("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        if(config.printStackTrace) { p.printStackTrace() }
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
           (p) => {
-            println("Type error at %s: %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
+            UclidMain.println("Type error at %s: %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
           }
         }
-        println("Parsing failed. %d errors found.".format(typeErrors.errors.size))
+        UclidMain.println("Parsing failed. %d errors found.".format(typeErrors.errors.size))
+        if(config.printStackTrace) { typeErrors.printStackTrace() }
+        System.exit(1)
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
-            println("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString)
+            UclidMain.println("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString)
           }
         }
-        println("Parsing failed. " + ps.errors.size.toString + " errors found.")
+        UclidMain.println("Parsing failed. " + ps.errors.size.toString + " errors found.")
+        if(config.printStackTrace) { ps.printStackTrace() }
+        System.exit(1)
       case(a : Utils.AssertionError) =>
-        println("[Assertion Failure]: " + a.getMessage)
-        a.printStackTrace()
+        UclidMain.println("[Assertion Failure]: " + a.getMessage)
+        if(config.printStackTrace) { a.printStackTrace() }
         System.exit(2)
     }
   }
@@ -143,7 +174,9 @@ object UclidMain {
     val passManager = new PassManager("compile")
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new ModuleCanonicalizer())
+    passManager.addPass(new BlockVariableRenamer())
     passManager.addPass(new LTLOperatorIntroducer())
+    passManager.addPass(new ModuleTypesImportCollector())
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new FuncExprRewriter())
@@ -157,6 +190,9 @@ object UclidMain {
     passManager.addPass(new ExpressionTypeChecker())
     if (!test) passManager.addPass(new VerificationExpressionChecker())
     passManager.addPass(new PolymorphicTypeRewriter())
+    passManager.addPass(new FindProcedureDependency())
+    passManager.addPass(new DefDepGraphChecker())
+    passManager.addPass(new RewriteDefines())
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new PrimedAssignmentChecker())
     passManager.addPass(new SemanticAnalyzer())
@@ -164,21 +200,23 @@ object UclidMain {
     passManager.addPass(new ControlCommandChecker())
     passManager.addPass(new ComputeInstanceTypes())
     passManager.addPass(new ModuleInstanceChecker())
-    passManager.addPass(new FindProcedureDependency())
-    passManager.addPass(new DefDepGraphChecker())
-    passManager.addPass(new RewriteDefines())
+    passManager.addPass(new WhileLoopRewriter())
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
+    passManager.addPass(new CaseEliminator())
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
-    passManager.addPass(new ProcedureInliner(ProcedureInliner.RewriteInit))
+    passManager.addPass(new BlockFlattener())
+    passManager.addPass(new NewProcedureInliner())
     passManager.addPass(new PrimedVariableCollector())
     passManager.addPass(new PrimedVariableEliminator())
-    passManager.addPass(new ProcedureInliner(ProcedureInliner.RewriteNext))
-    passManager.addPass(new CaseEliminator())
+    passManager.addPass(new PrimedHistoryRewriter())
     passManager.addPass(new IntroduceFreshHavocs())
     passManager.addPass(new RewriteFreshLiterals())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$2"))
+    passManager.addPass(new BlockFlattener())
+    passManager.addPass(new ModuleCleaner(mainModuleName))
+    passManager.addPass(new BlockVariableRenamer())
+    // passManager.addPass(new ASTPrinter())
 
     val filenameAdderPass = new AddFilenameRewriter(None)
     // Helper function to parse a single file.
@@ -223,11 +261,13 @@ object UclidMain {
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
-    passManager.addPass(new ModuleCleaner())
+    passManager.addPass(new Optimizer())
+    passManager.addPass(new ModuleCleaner(mainModuleName))
+    passManager.addPass(new Optimizer())
+    passManager.addPass(new BlockVariableRenamer())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())
-    // passManager.addPass(new ASTPrinter("ASTPrinter$4"))
 
     // run passes.
     passManager.run(moduleList)
@@ -245,7 +285,7 @@ object UclidMain {
     }
     val moduleListP = instantiateModules(moduleList, mainModuleName)
     if (verbose) {
-      println("Successfully parsed %d and instantiated %d module(s).".format(moduleList.size, moduleListP.size))
+      UclidMain.println("Successfully parsed %d and instantiated %d module(s).".format(moduleList.size, moduleListP.size))
     }
     // return main module.
     moduleListP.find((m) => m.id == mainModuleName)
@@ -257,13 +297,34 @@ object UclidMain {
   def execute(module : Module, config : Config) : List[CheckResult] = {
     var symbolicSimulator = new SymbolicSimulator(module)
     var z3Interface = if (config.smtSolver.size > 0) {
-      println("args: " + config.smtSolver)
+      logger.debug("args: {}", config.smtSolver)
       new smt.SMTLIB2Interface(config.smtSolver)
     } else {
       new smt.Z3Interface()
     }
-    val result = symbolicSimulator.execute(z3Interface)
+    val sygusInterface : Option[smt.SynthesisContext] = config.synthesizer match {
+      case Nil => None
+      case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir, config.sygusFormat))
+    }
+    val result = symbolicSimulator.execute(z3Interface, sygusInterface, config)
     z3Interface.finish()
     return result
+  }
+
+  var stringOutput : StringBuilder = new StringBuilder()
+  var stringOutputEnabled = false
+  def enableStringOutput() {
+    stringOutputEnabled = true
+  }
+  def clearStringOutput() {
+    stringOutput.clear()
+  }
+  def println(str : String) {
+    if (stringOutputEnabled) {
+      stringOutput ++= str
+      stringOutput ++ "\n"
+    } else {
+      Console.println(str)
+    }
   }
 }

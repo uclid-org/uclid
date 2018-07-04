@@ -1,0 +1,37 @@
+module main
+{
+  var x, y, i, j : integer;
+
+  init {
+    i = 0;
+    j = 1;
+    assume (x >= 0);
+    assume (y >= 0);
+    assume (x >= y);
+  }
+
+  procedure next_i()
+    requires (i >= 0);
+    ensures  (old(i) < y) ==> (i == old(i) + 1);
+    modifies i;
+  {
+    if (i < y) {
+      i = i + 1;
+    }
+  }
+  next {
+    j' = i' + 1;
+    call next_i();
+  }
+
+  // invariant psi_f  : (x >= y);
+  invariant post_f : (i <= x) && (j > i);
+
+  control {
+    // print_module;
+    v = unroll(5);
+    check;
+    print_results;
+    v.print_cex(x, y, i);
+  }
+}

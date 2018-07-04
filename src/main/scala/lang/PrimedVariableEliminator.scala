@@ -39,45 +39,49 @@
 package uclid
 package lang
 
-class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifier], Option[ContextualNameProvider])]
+import com.typesafe.scalalogging.Logger
+
+class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifier])]
 {
-  type T = (Map[Identifier, Identifier], Option[ContextualNameProvider])
-  override def applyOnModule(d : TraversalDirection.T, module : Module , in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Down) {
-      val nameProvider = new ContextualNameProvider(context, "_prime_")
-      (in._1, Some(nameProvider))
-    } else {
-      (in._1, None)
+  type T = Map[Identifier, Identifier]
+  def addToMap(id : Identifier, in : T, tag : String, ctx : Scope) : T = {
+    in.get(id) match {
+      case Some(idP) => in
+      case None =>
+        val newId = NameProvider.get(id.toString + "_" + tag)
+        val mapP = (in + (id -> newId))
+        mapP
     }
   }
   override def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       lhs match {
-        case LhsNextId(id) =>
-          in._1.get(id) match {
-            case Some(idP) => in
-            case None =>
-              val newId = in._2.get(id, "lhs")
-              val mapP = (in._1 + (id -> newId))
-              (mapP, in._2)
-          }
+        case LhsNextId(id) => addToMap(id, in, "lhs", context)
         case _ => in
       }
     } else {
       in
     }
   }
-  override def applyOnProcedureCall(d : TraversalDirection.T, callStmt : ProcedureCallStmt, in : T, context : Scope) : T = {
+  override def applyOnHavoc(d : TraversalDirection.T, havocStmt : HavocStmt, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Up) {
+      havocStmt.havocable match {
+        case HavocableNextId(id) => addToMap(id, in, "havoc", context)
+        case _ => in
+      }
+    } else {
+      in
+    }
+  }
+  override def applyOnProcedureCall(d : TraversalDirection.T, callStmt : ProcedureCallStmt, mapIn : T, context : Scope) : T = {
     if (d == TraversalDirection.Up && context.environment == SequentialEnvironment) {
       val procId = callStmt.id
       val module = context.module.get
       val proc = module.procedures.find(p => p.id == procId).get
-      val mapIn = in._1
-      val nameProvider = in._2.get
-      val mapOut = proc.modifies.foldLeft(mapIn)((acc, m) => (acc + (m -> nameProvider(m, "modifies"))))
-      (mapOut, in._2)
+      val mapOut = proc.modifies.foldLeft(mapIn)((acc, m) => (acc + (m -> NameProvider.get(m.toString() + "_modifies"))))
+      mapOut
     } else {
-      in
+      mapIn
     }
   }
 }
@@ -85,28 +89,23 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
 class PrimedVariableCollector() extends ASTAnalyzer("PrimedVariableCollector", new PrimedVariableCollectorPass())
 {
   var primeVarMap : Option[Map[Identifier, Identifier]] = None
+  var reverseMap : Option[Map[Identifier, Identifier]] = None
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    primeVarMap = Some(visitModule(module, (Map.empty, None), context)._1)
+    val fwdMap = visitModule(module, Map.empty, context)
+    val revMap = fwdMap.foldLeft(Map.empty[Identifier, Identifier]) {
+      (acc, p) => acc + (p._2 -> p._1)
+    }
+    primeVarMap = Some(fwdMap)
+    reverseMap = Some(revMap)
     Some(module)
   }
 }
 
 class PrimedVariableEliminatorPass extends RewritePass {
+  val logger = Logger(classOf[PrimedVariableEliminatorPass])
   lazy val manager : PassManager = analysis.manager
   lazy val primedVariableCollector = manager.pass("PrimedVariableCollector").asInstanceOf[PrimedVariableCollector]
 
-  override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
-    val primeVarMap = primedVariableCollector.primeVarMap.get
-    val ctxP = context + module
-    val primeDecls = primeVarMap.map {
-      p => {
-        val typ = ctxP.typeOf(p._1).get
-        StateVarsDecl(List(p._2), typ)
-      }
-    }
-    val moduleP = Module(module.id, module.decls ++ primeDecls, module.cmds, module.notes)
-    Some(moduleP)
-  }
   def getInitialAssigns() : List[AssignStmt] = {
     val primeVarMap = primedVariableCollector.primeVarMap.get
     primeVarMap.map(p => (AssignStmt(List(LhsId(p._2)), List(p._1)))).toList
@@ -115,13 +114,34 @@ class PrimedVariableEliminatorPass extends RewritePass {
     val primeVarMap = primedVariableCollector.primeVarMap.get
     primeVarMap.map(p => (AssignStmt(List(LhsId(p._1)), List(p._2)))).toList
   }
+  def getPrimeVarDecls(context : Scope) : List[BlockVarsDecl] = {
+    val primeVarMap = primedVariableCollector.primeVarMap.get
+    (primeVarMap.map {
+      p => {
+        val typ = context.typeOf(p._1).get
+        BlockVarsDecl(List(p._2), typ)
+      }
+    }).toList
+  }
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
-    val initP = InitDecl(init.body ++ getInitialAssigns())
+    val primeDecls = getPrimeVarDecls(context)
+    val initP = InitDecl(BlockStmt(primeDecls, getInitialAssigns() ++ List(init.body)))
     Some(initP)
   }
   override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
-    val nextP = NextDecl(getInitialAssigns() ++ next.body ++ getFinalAssigns())
+    val primeDecls = getPrimeVarDecls(context)
+    val nextP = NextDecl(BlockStmt(primeDecls, getInitialAssigns() ++ List(next.body) ++ getFinalAssigns()))
     Some(nextP)
+  }
+  override def rewriteHavoc(havocStmt : HavocStmt, context : Scope) : Option[Statement] = {
+    havocStmt.havocable match {
+      case HavocableNextId(id) => 
+        val primeVarMap = primedVariableCollector.primeVarMap.get
+        logger.debug("primeVarMap: {}", primeVarMap.toString())
+        Some(HavocStmt(HavocableId(primeVarMap.get(id).get)))
+      case _ =>
+        Some(havocStmt)
+    }
   }
   override def rewriteLHS(lhs : Lhs, context : Scope) : Option[Lhs] = {
     lazy val primeVarMap = primedVariableCollector.primeVarMap.get

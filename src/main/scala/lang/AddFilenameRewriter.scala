@@ -59,13 +59,9 @@ class AddFilenamePass(var filename : Option[String]) extends RewritePass {
     sig.filename = filename
     Some(sig)
   }
-  override def rewriteLocalVar(lvar : LocalVarDecl, ctx : Scope) : Option[LocalVarDecl] = {
-    lvar.filename = filename
-    Some(lvar)
-  }
-  override def rewriteStatement(st : Statement, ctx : Scope) : List[Statement] = {
+  override def rewriteStatement(st : Statement, ctx : Scope) : Option[Statement] = {
     st.filename = filename
-    List(st)
+    Some(st)
   }
   override def rewriteLHS(lhs : Lhs, ctx : Scope) : Option[Lhs] = {
     lhs.filename = filename

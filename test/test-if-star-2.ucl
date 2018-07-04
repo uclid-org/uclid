@@ -30,7 +30,9 @@ module main {
   property eq_nxy : (n == (x + y));
 
   control {
+    // print_module;
     v = unroll(3);
     check;
+    print_results;
   }
 }
