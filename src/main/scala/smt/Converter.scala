@@ -275,6 +275,8 @@ object Converter {
         val op = opapp.op
         val args = opapp.operands
         op match {
+          case smt.BVConcatOp(width) =>
+            lang.ConcatOp()
           case _ =>
             lang.OperatorApplication(smtToOp(op, args), toExprs(args))
         }
