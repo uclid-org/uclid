@@ -39,6 +39,7 @@
 package uclid
 package smt
 
+import lang.{Expr => langExpr}
 import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.mutable.{Map => MutableMap}
 
@@ -376,5 +377,5 @@ object Context
 }
 
 abstract trait SynthesisContext {
-  def synthesizeInvariant(initState : Map[lang.Identifier, Expr], nextState: Map[lang.Identifier, Expr], properties : List[smt.Expr], ctx : lang.Scope, logic : String) : Option[smt.Expr]
+  def synthesizeInvariant(initState : Map[lang.Identifier, Expr], nextState: Map[lang.Identifier, Expr], properties : List[smt.Expr], ctx : lang.Scope, logic : String) : Option[langExpr]
 }

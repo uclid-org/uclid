@@ -16,7 +16,10 @@ module main
     y' = x;
   }
   
-  // invariant x_always_zero : (x == 0bv4);
+  // Induction fails without the synthesized invariant below
+  // invariant synthesized_invariant : ((x == y) && (x == 0bv4));
+
+  // Invariant to prove
   invariant y_always_zero : (y == 0bv4);
   
   control {
