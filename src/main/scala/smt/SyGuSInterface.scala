@@ -40,7 +40,7 @@
 package uclid
 package smt
 
-import lang.{Identifier, Scope}
+import lang.{Identifier, Scope, Expr => langExpr}
 import com.typesafe.scalalogging.Logger
 import scala.collection.JavaConverters._
 import scala.util.matching.Regex
@@ -182,7 +182,7 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     Constants.PostConstraintCmd.format(args)
   }
   
-  override def synthesizeInvariant(initState : Map[Identifier, smt.Expr], nextState: Map[Identifier, smt.Expr], properties : List[smt.Expr], ctx : Scope, logic : String) : Option[smt.Expr] = {
+  override def synthesizeInvariant(initState : Map[Identifier, smt.Expr], nextState: Map[Identifier, smt.Expr], properties : List[smt.Expr], ctx : Scope, logic : String) : Option[langExpr] = {
     val variables = getVariables(ctx)
     Utils.assert(variables.size > 0, "There are no variables in the given model.")
     val preamble = Constants.SetLogicCmd.format(logic)
@@ -248,13 +248,20 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
       sygusLog.debug(string)
       // Find the invariant function
       val invFuncPattern = Constants.SyGuSOutputInvFnRegex.r
-      val invString = (invFuncPattern findFirstIn string).mkString("")
+      val invString = (invFuncPattern findFirstIn string).mkString("").replaceAll("var_", "")
       // No invariant matches the regular expression invFuncPattern
       if (invString.length() == 0) return None
       // Found an invariant
       val fun = SExprParser.parseFunction(invString)
+      // Convert to Uclid AST
+      val funAST = fun match {
+        case smt.DefineFun(id, args, body) =>
+          smt.Converter.smtToExpr(body)
+        case _ => { UclidMain.println("WTH is this"); lang.IntLit(0); }
+      }
       sygusLog.debug(fun.toString())
-      return Some(fun)
+      sygusLog.debug(funAST.toString())
+      return Some(funAST)
     }
   }
 }

@@ -73,6 +73,31 @@ object Converter {
     }
   }
 
+  def smtToType(typ : smt.Type) : lang.Type = {
+    typ match {
+      case smt.UninterpretedType(name) =>
+        lang.UninterpretedType(lang.Identifier(name))
+      case smt.IntType =>
+        lang.IntegerType()
+      case smt.BoolType =>
+        lang.BooleanType()
+      case smt.BitVectorType(w) =>
+        lang.BitVectorType(w)
+      case smt.MapType(inTypes, outType) =>
+        lang.MapType(inTypes.map(smtToType(_)), smtToType(outType))
+      case smt.ArrayType(inTypes,outType) =>
+        lang.ArrayType(inTypes.map(smtToType(_)), smtToType(outType))
+      case smt.TupleType(argTypes) =>
+        lang.TupleType(argTypes.map(smtToType(_)))
+      case smt.RecordType(fields) =>
+        lang.RecordType(fields.map((f) => (lang.Identifier(f._1), smtToType(f._2))))
+      case smt.EnumType(ids) =>
+        lang.EnumType(ids.map(lang.Identifier(_)))
+      case _ =>
+        throw new AssertionError("Type '" + typ.toString + "' not expected here.")
+    }
+  }
+
   def opToSMT(op : lang.Operator) : smt.Operator = {
     op match {
       // Integer operators.
@@ -119,6 +144,51 @@ object Converter {
       // Polymorphic operators are not allowed.
       case p : lang.PolymorphicOperator =>
         throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")
+      case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
+    }
+  }
+
+  def smtToOp(op : smt.Operator, args : List[smt.Expr]) : lang.Operator = {
+    op match {
+      // Integer operators.
+      case smt.IntLTOp => return lang.IntLTOp()
+      case smt.IntLEOp => return lang.IntLEOp()
+      case smt.IntGTOp => return lang.IntGTOp()
+      case smt.IntGEOp => return lang.IntGEOp()
+      case smt.IntAddOp => return lang.IntAddOp()
+      case smt.IntSubOp => 
+        if (args.size == 1) lang.IntUnaryMinusOp()
+        else                lang.IntSubOp()
+      case smt.IntMulOp => return lang.IntMulOp()
+      // Bitvector operators.
+      case smt.BVLTOp(w) => return lang.BVLTOp(w)
+      case smt.BVLEOp(w) => return lang.BVLEOp(w)
+      case smt.BVGTOp(w) => return lang.BVGTOp(w)
+      case smt.BVGEOp(w) => return lang.BVGEOp(w)
+      case smt.BVAddOp(w) => return lang.BVAddOp(w)
+      case smt.BVSubOp(w) => return lang.BVSubOp(w)
+      case smt.BVMulOp(w) => return lang.BVMulOp(w)
+      case smt.BVMinusOp(w) => lang.BVUnaryMinusOp(w)
+      case smt.BVAndOp(w) => return lang.BVAndOp(w)
+      case smt.BVOrOp(w) => return lang.BVOrOp(w)
+      case smt.BVXorOp(w) => return lang.BVXorOp(w)
+      case smt.BVNotOp(w) => return lang.BVNotOp(w)
+      case smt.BVExtractOp(hi, lo) => return lang.ConstExtractOp(lang.ConstBitVectorSlice(hi, lo))
+      // Boolean operators.
+      case smt.ConjunctionOp => return lang.ConjunctionOp()
+      case smt.DisjunctionOp => return lang.DisjunctionOp()
+      case smt.IffOp => return lang.IffOp()
+      case smt.ImplicationOp => return lang.ImplicationOp()
+      case smt.NegationOp => return lang.NegationOp()
+      // Comparison operators.
+      case smt.EqualityOp => return lang.EqualityOp()
+      case smt.InequalityOp => return lang.InequalityOp()
+      // Record select.
+      case smt.RecordSelectOp(name) => return lang.RecordSelect(lang.Identifier(name))  
+      // Quantifiers
+      case smt.ForallOp(vs) => return lang.ForallOp(vs.map(v => (lang.Identifier(v.id), smt.Converter.smtToType(v.symbolTyp))))
+      case smt.ExistsOp(vs) => return lang.ExistsOp(vs.map(v => (lang.Identifier(v.id), smt.Converter.smtToType(v.symbolTyp))))
+      case smt.ITEOp => return lang.ITEOp()
       case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
     }
   }
@@ -190,6 +260,39 @@ object Converter {
 
   def exprToSMT(expr : lang.Expr, idToSMT : (lang.Identifier, lang.Scope, Int) => smt.Expr, scope : lang.Scope) : smt.Expr = {
     _exprToSMT(expr, scope, 0, idToSMT)
+  }
+
+  def smtToExpr(expr : smt.Expr) : lang.Expr = {
+    def toExpr(expr : smt.Expr) : lang.Expr = smtToExpr(expr)
+    def toExprs(es : List[smt.Expr]) : List[lang.Expr] = es.map((e : smt.Expr) => toExpr(e))
+
+    expr match {
+      case smt.Symbol(id, symbolTyp) => lang.Identifier(id)
+      case smt.IntLit(n) => lang.IntLit(n)
+      case smt.BooleanLit(b) => lang.BoolLit(b)
+      case smt.BitVectorLit(bv, w) => lang.BitVectorLit(bv, w)
+      case opapp : smt.OperatorApplication =>
+        val op = opapp.op
+        val args = opapp.operands
+        op match {
+          case _ =>
+            lang.OperatorApplication(smtToOp(op, args), toExprs(args))
+        }
+      case smt.ArraySelectOperation(a,index) =>
+        lang.ArraySelectOperation(toExpr(a), toExprs(index))
+      case smt.ArrayStoreOperation(a,index,value) =>
+        lang.ArrayStoreOperation(toExpr(a), toExprs(index), toExpr(value))
+      case smt.FunctionApplication(f, args) =>
+        f match {
+          case smt.Symbol(id, symbolTyp) =>
+            UclidMain.println("Function application of f == " + f.toString)
+            lang.FuncApplication(lang.Identifier(id), toExprs(args))
+          case _ =>
+            throw new Utils.RuntimeError("Should never get here.")
+        }
+      case _ =>
+        throw new Utils.UnimplementedException("'" + expr + "' is not yet supported.")
+    }
   }
 
   def renameSymbols(expr : smt.Expr, renamerFn : ((String, smt.Type) => String)) : smt.Expr = {
