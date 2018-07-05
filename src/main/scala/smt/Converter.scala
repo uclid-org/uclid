@@ -174,6 +174,7 @@ object Converter {
       case smt.BVXorOp(w) => return lang.BVXorOp(w)
       case smt.BVNotOp(w) => return lang.BVNotOp(w)
       case smt.BVExtractOp(hi, lo) => return lang.ConstExtractOp(lang.ConstBitVectorSlice(hi, lo))
+      case smt.BVConcatOp(_) => return lang.ConcatOp()
       // Boolean operators.
       case smt.ConjunctionOp => return lang.ConjunctionOp()
       case smt.DisjunctionOp => return lang.DisjunctionOp()
@@ -274,12 +275,7 @@ object Converter {
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
         val args = opapp.operands
-        op match {
-          case smt.BVConcatOp(width) =>
-            lang.ConcatOp()
-          case _ =>
-            lang.OperatorApplication(smtToOp(op, args), toExprs(args))
-        }
+        lang.OperatorApplication(smtToOp(op, args), toExprs(args))
       case smt.ArraySelectOperation(a,index) =>
         lang.ArraySelectOperation(toExpr(a), toExprs(index))
       case smt.ArrayStoreOperation(a,index,value) =>
