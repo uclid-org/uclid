@@ -123,6 +123,8 @@ object Converter {
       case lang.BVXorOp(w) => return smt.BVXorOp(w)
       case lang.BVNotOp(w) => return smt.BVNotOp(w)
       case lang.ConstExtractOp(slice) => return smt.BVExtractOp(slice.hi, slice.lo)
+      case lang.BVSignExtOp(w, e) => return smt.BVSignExtOp(w, e)
+      case lang.BVZeroExtOp(w, e) => return smt.BVZeroExtOp(w, e)
       // Boolean operators.
       case lang.ConjunctionOp() => return smt.ConjunctionOp
       case lang.DisjunctionOp() => return smt.DisjunctionOp
@@ -132,6 +134,7 @@ object Converter {
       // Comparison operators.
       case lang.EqualityOp() => return smt.EqualityOp
       case lang.InequalityOp() => return smt.InequalityOp
+      case lang.DistinctOp() => return smt.InequalityOp
       // Record select.
       case lang.RecordSelect(r) => return smt.RecordSelectOp(r.name)
       // Quantifiers

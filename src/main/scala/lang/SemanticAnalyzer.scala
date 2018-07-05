@@ -47,7 +47,7 @@ object SemanticAnalyzerPass {
       (acc, id) => {
         acc._1.get(id._1) match {
           case Some(pos) =>
-            val msg = "Redeclaration of identifier '" + id._1.name + "'. Previous declaration at " + pos.toString
+            val msg = "Redeclaration of identifier '" + id._1.name + "'. See also declaration at " + pos.toString
             (acc._1, ModuleError(msg, id._2) :: acc._2)
           case None =>
             ((acc._1 + (id._1 -> id._2)), acc._2)
@@ -72,7 +72,13 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
   def checkIdRedeclarations(ids : List[Identifier], in : List[ModuleError], parentContext : Scope) : List[ModuleError] = {
     if (true) {
       val redeclaredIds = ids.filter(id => parentContext.map.contains(id))
-      val errors = redeclaredIds.map(id => ModuleError("Redeclaration of identifier: " + id.toString(), id.position))
+      val errors = redeclaredIds.map { 
+        id => {
+          val prevId = parentContext.map.get(id).get
+          val msg = "Redeclaration of identifier: '%s'. Previous declaration at: %s".format(id.toString(), prevId.id.pos.toString())
+          ModuleError(msg, id.position)
+        }
+      }
       in ++ errors
     } else {
       in
@@ -89,8 +95,7 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
     if (d == TraversalDirection.Down) {
       val inParams = proc.sig.inParams.map((arg) => (arg._1, arg._1.position))
       val outParams = proc.sig.outParams.map((arg) => (arg._1, arg._1.position))
-      val localVars = proc.decls.map((v) => (v.id, v.position))
-      SemanticAnalyzerPass.checkIdRedeclaration(inParams ++ outParams ++ localVars, in)
+      SemanticAnalyzerPass.checkIdRedeclaration(inParams ++ outParams, in)
     } else {
       val newIds = proc.sig.inParams.map(p => p._1) ++ proc.sig.outParams.map(p => p._1)
       checkIdRedeclarations(newIds, in, context)

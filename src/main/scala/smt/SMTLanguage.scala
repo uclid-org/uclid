@@ -197,6 +197,9 @@ trait Operator extends Hashable {
   def checkNumArgs(args: List[Expr], expectedNumOperands : Int) : Unit = {
     Utils.assert(args.size == expectedNumOperands, "Operator '" + toString + "' requires " + expectedNumOperands + " operand(s).")
   }
+  def checkNumArgsGt(args: List[Expr], expectedNumOperands : Int) : Unit = {
+    Utils.assert(args.size >= expectedNumOperands, "Operator '" + toString + "' requires " + expectedNumOperands + " operand(s).")
+  }
   def checkAllArgTypes(args: List[Expr], expectedType : Type) : Unit = {
     Utils.assert(args.forall(op => op.typ == expectedType), "Operator '" + toString + "' requires operand(s) of type: " + expectedType)
   }
@@ -312,6 +315,30 @@ case class BVReplaceOp(w : Int, hi : Int, lo : Int) extends BVResultOp(w) {
     Utils.assert(args(1).typ.asInstanceOf[BitVectorType].width == (hi-lo+1), "Incorrect width of second operand to BVReplaceOp.")
   }
 }
+case class BVSignExtOp(w : Int, e : Int) extends BVResultOp(w) {
+  override val hashId = mix(w, 215)
+  override val hashCode = computeHash
+  override def toString = "(_ sign_extend %d)".format(e)
+  override def typeCheck(args: List[Expr]) : Unit = {
+    checkNumArgs(args, 1)
+    Utils.assert(args.forall(_.typ.isBitVector), "Argument to sign_extend must be a bitvector.")
+    val argW = args(0).typ.asInstanceOf[BitVectorType].width
+    Utils.assert(e > 0, "Extension for sign_extend must be greater than zero.")
+    Utils.assert((argW + e) == w, "Incorrect width for first operand to BVSignExtOp.")
+  }
+}
+case class BVZeroExtOp(w : Int, e : Int) extends BVResultOp(w) {
+  override val hashId = mix(w, 216)
+  override val hashCode = computeHash
+  override def toString = "(_ zero_extend %d)".format(e)
+  override def typeCheck(args: List[Expr]) : Unit = {
+    checkNumArgs(args, 1)
+    Utils.assert(args.forall(_.typ.isBitVector), "Argument to sign_extend must be a bitvector.")
+    val argW = args(0).typ.asInstanceOf[BitVectorType].width
+    Utils.assert(e > 0, "Extension for zero_extend must be greater than zero.")
+    Utils.assert((argW + e) == w, "Incorrect width for first operand to BVZeroExtOp.")
+  }
+}
 // Operators that return Booleans.
 abstract class BoolResultOp extends Operator {
   override def resultType(args: List[Expr]) : Type = { BoolType }
@@ -388,7 +415,7 @@ case object InequalityOp extends BoolResultOp {
   override val hashId = 223
   override val hashCode = computeHash
   override def toString = "distinct"
-  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgsGt(args, 2); checkAllArgsSameType(args) }
 }
 // Integer comparison.
 case object IntLTOp extends BoolResultOp {

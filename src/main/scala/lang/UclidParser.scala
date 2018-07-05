@@ -443,33 +443,73 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val InstanceDecl : PackratParser[lang.InstanceDecl] = positioned {
       KwInstance ~> Id ~ ":" ~ Id ~ ArgMapList <~ ";" ^^ { case instId ~ ":" ~ moduleId ~ args => lang.InstanceDecl(instId, moduleId, args, None, None) }
     }
-    lazy val RequireExpr : PackratParser[lang.Expr] = positioned {
-      KwRequires ~> Expr <~ ";"
+    lazy val RequiresExprs : PackratParser[List[lang.ProcedureRequiresExpr]] = {
+      KwRequires ~> Expr <~ ";" ^^ {
+        case e => List(lang.ProcedureRequiresExpr(e))
+      }
     }
-    lazy val EnsureExpr : PackratParser[lang.Expr] = positioned {
-      KwEnsures ~> Expr <~ ";"
+    lazy val EnsuresExprs : PackratParser[List[lang.ProcedureEnsuresExpr]] = {
+      KwEnsures ~> Expr <~ ";" ^^ {
+        case e => List(lang.ProcedureEnsuresExpr(e))
+      }
     }
-    lazy val ModifiesExprs : PackratParser[List[lang.Identifier]] = {
-      KwModifies ~> Id ~ rep("," ~> Id) <~ ";" ^^ { case id ~ ids => id :: ids }
+    lazy val ModifiesExprs : PackratParser[List[lang.ProcedureModifiesExpr]] = {
+      KwModifies ~> Id ~ rep("," ~> Id) <~ ";" ^^ {
+        case id ~ ids => {
+          (id :: ids).map(i => lang.ProcedureModifiesExpr(i))
+        }
+      }
+    }
+    lazy val ProcedureAnnotationList : PackratParser[List[Identifier]] = {
+      "[" ~> IdList <~ "]"
+    }
+    lazy val ProcedureVerifExpr = RequiresExprs | EnsuresExprs | ModifiesExprs
+
+    def collectRequires(vs : List[lang.ProcedureVerificationExpr]) : List[Expr] = {
+      vs.collect { case e : lang.ProcedureRequiresExpr => e.expr }
+    }
+    def collectEnsures(vs : List[lang.ProcedureVerificationExpr]) : List[Expr] = {
+      vs.collect { case e : lang.ProcedureEnsuresExpr => e.expr }
+    }
+    def collectModifies(vs : List[lang.ProcedureVerificationExpr]) : List[Identifier] = {
+      vs.collect { case e : lang.ProcedureModifiesExpr => e.id }
     }
     lazy val ProcedureDecl : PackratParser[lang.ProcedureDecl] = positioned {
-      KwProcedure ~> Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
-      rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~ BlkStmt ^^
-        { case id ~ args ~ outs ~ requires ~ ensures ~ modifies ~ body =>
-          lang.ProcedureDecl(id, lang.ProcedureSig(args,outs), 
-                             List.empty, body,
-                             requires, ensures, (modifies.flatMap(m => m)).toSet) } |
+      KwProcedure ~> ProcedureAnnotationList.? ~ Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
+      rep(ProcedureVerifExpr) ~ BlkStmt ^^
+        { case annotOpt ~ id ~ args ~ outs ~ verifExprs ~ body =>
+          val annotations = annotOpt match {
+            case Some(ids) => ProcedureAnnotations(ids.toSet)
+            case None => ProcedureAnnotations(Set.empty)
+          }
+          val verifExprList = verifExprs.flatMap(v => v)
+          val requiresList = collectRequires(verifExprList)
+          val ensuresList = collectEnsures(verifExprList)
+          val modifiesList = collectModifies(verifExprList)
+          lang.ProcedureDecl(id, lang.ProcedureSig(args,outs),
+                             body, requiresList, ensuresList, modifiesList.toSet, annotations) } |
       // procedure with no return value
-      KwProcedure ~> Id ~ IdTypeList ~ rep(RequireExpr) ~ rep(EnsureExpr) ~ rep(ModifiesExprs) ~ BlkStmt ^^
-        { case id ~ args ~ requires ~ ensures ~ modifies ~ body =>
-          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty), 
-                             List.empty, body,
-                             requires, ensures, (modifies.flatMap(m => m)).toSet) }
+      KwProcedure ~> ProcedureAnnotationList.? ~ Id ~ IdTypeList ~ rep(ProcedureVerifExpr) ~ BlkStmt ^^
+        { case annotOpt ~ id ~ args ~ verifExprs ~ body =>
+          val annotations = annotOpt match {
+            case Some(ids) => ProcedureAnnotations(ids.toSet)
+            case None => ProcedureAnnotations(Set.empty)
+          }
+          val verifExprList = verifExprs.flatMap(v => v)
+          val requiresList = collectRequires(verifExprList)
+          val ensuresList = collectEnsures(verifExprList)
+          val modifiesList = collectModifies(verifExprList)
+          lang.ProcedureDecl(id, lang.ProcedureSig(args, List.empty),
+                             body, requiresList, ensuresList, modifiesList.toSet, annotations) }
     }
 
     lazy val TypeDecl : PackratParser[lang.TypeDecl] = positioned {
       KwType ~> Id ~ ("=" ~> Type) <~ ";" ^^ { case id ~ t => lang.TypeDecl(id,t) } |
       KwType ~> Id <~ ";" ^^ { case id => lang.TypeDecl(id, lang.UninterpretedType(id)) }
+    }
+
+    lazy val ModuleTypesImportDecl : PackratParser[lang.ModuleTypesImportDecl] = positioned {
+      KwType ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleTypesImportDecl(id) }
     }
 
     lazy val VarsDecl : PackratParser[lang.StateVarsDecl] = positioned {
@@ -619,7 +659,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Decl: PackratParser[Decl] =
       positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl |
-                  SynthFuncDecl | DefineDecl | GrammarDecl |
+                  ModuleTypesImportDecl | SynthFuncDecl | DefineDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstLitDecl | ConstDecl | ProcedureDecl |
                   InitDecl | NextDecl | SpecDecl | AxiomDecl)

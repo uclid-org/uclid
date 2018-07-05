@@ -32,55 +32,52 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Pramod Subramanyan
- *
- * Rewrite old(x) and history(x, i) into the old and history operators.
+
+ * Rewrite type * = moduleId.*; declarations.
  *
  */
 
 package uclid
 package lang
 
-class FuncExprRewriterPass extends RewritePass {
-  override def rewriteFuncApp(fapp : FuncApplication, ctx : Scope) : Option[Expr] = {
-    val exprP = fapp.e match {
-      case Identifier(fnName) =>
-        if (fnName == "old") {
-          OperatorApplication(OldOperator(), fapp.args)
-        } else if (fnName == "history") {
-          OperatorApplication(HistoryOperator(), fapp.args)
-        } else if (fnName == "past") {
-          OperatorApplication(PastOperator(), fapp.args)
-        } else if (fnName == "distinct") {
-          OperatorApplication(DistinctOp(), fapp.args)
-        } else if (fnName == "bv_sign_extend") {
-          if (fapp.args.size == 2) {
-            fapp.args(0) match {
-              case IntLit(v) =>
-                OperatorApplication(BVSignExtOp(0, v.toInt), List(fapp.args(1)))
-              case _ =>
-                OperatorApplication(BVSignExtOp(0, 0), List(fapp.args(1)))
+import com.typesafe.scalalogging.Logger
+
+class ModuleTypesImportCollectorPass extends ReadOnlyPass[List[ExternalType]] {
+  lazy val logger = Logger(classOf[ModuleTypesImportCollector])
+  type T = List[ExternalType]
+  override def applyOnModuleTypesImport(d : TraversalDirection.T, modTypImport : ModuleTypesImportDecl, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Up) {
+      logger.debug("statement: {}", modTypImport.toString())
+      val id = modTypImport.id
+      context.map.get(id) match {
+        case Some(Scope.ModuleDefinition(mod)) =>
+          mod.typeDeclarationMap.map {
+            p => {
+              ASTNode.introducePos(true, true, ExternalType(id, p._1), modTypImport.position)
             }
-          } else {
-            OperatorApplication(BVSignExtOp(0, 0), List.empty)
-          }
-        } else if (fnName == "bv_zero_extend") {
-          if (fapp.args.size == 2) {
-            fapp.args(0) match {
-              case IntLit(v) =>
-                OperatorApplication(BVZeroExtOp(0, v.toInt), List(fapp.args(1)))
-              case _ =>
-                OperatorApplication(BVZeroExtOp(0, 0), List(fapp.args(1)))
-            }
-          } else {
-            OperatorApplication(BVZeroExtOp(0, 0), List.empty)
-          }
-        } else {
-          fapp
-        }
-      case _ => fapp
+          }.toList ++ in
+        case _ => in
+      }
+    } else {
+      in
     }
-    Some(exprP)
   }
 }
 
-class FuncExprRewriter extends ASTRewriter("OldExprRewriter", new FuncExprRewriterPass())
+class ModuleTypesImportCollector extends ASTAnalyzer("ModuleTypeImportCollector", new ModuleTypesImportCollectorPass()) {
+  lazy val logger = Logger(classOf[ModuleTypesImportCollector])
+  override def reset() {
+    in = Some(List.empty)
+  }
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val externalIds = visitModule(module, List.empty, context)
+    val newImports = externalIds.map {
+      p => {
+        ASTNode.introducePos(true, true, TypeDecl(p.typeId, p), p.position)
+      }
+    }
+    logger.debug("newImports: " + newImports.toString())
+    val modP = Module(module.id, newImports ++ module.decls, module.cmds, module.notes)
+    return Some(modP)
+  }
+}

@@ -192,6 +192,7 @@ case class IntUnaryMinusOp() extends IntArgOperator {
 // These operators take bitvector operands.
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
   override def fixity = Operator.INFIX
+  val arity = 2
 }
 case class BVLTOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "<"
@@ -225,10 +226,22 @@ case class BVXorOp(override val w : Int) extends BVArgOperator(w) {
 }
 case class BVNotOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "~"
+  override val arity = 1
 }
 case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "-"
+  override val arity = 1
+}
+case class BVSignExtOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
+  override def fixity = Operator.PREFIX
+  override def toString = "bv_sign_extend"
+  override val arity = 1
+}
+case class BVZeroExtOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
+  override def fixity = Operator.PREFIX
+  override def toString = "bv_zero_extend"
+  override val arity = 1
 }
 // Boolean operators.
 sealed abstract class BooleanOperator extends Operator {
@@ -282,7 +295,6 @@ case class NextTemporalOp() extends TemporalOperator { override def toString = "
 case class UntilTemporalOp() extends TemporalOperator { override def toString = "U" }
 case class FinallyTemporalOp() extends TemporalOperator { override def toString = "F" }
 case class ReleaseTemporalOp() extends TemporalOperator { override def toString = "R" }
-// For internal use only:
 case class WUntilTemporalOp() extends TemporalOperator { override def toString = "W" }
 
 // "Old" operator.
@@ -350,7 +362,10 @@ case class GetNextValueOp() extends Operator {
   override def toString = "'"
   override def fixity = Operator.POSTFIX
 }
-
+case class DistinctOp() extends Operator {
+  override def toString = "distinct"
+  override def fixity = Operator.INFIX
+}
 sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
   def isConstant = false
@@ -678,7 +693,7 @@ case class SynonymType(id: Identifier) extends Type {
   }
 }
 case class ExternalType(moduleId : Identifier, typeId : Identifier) extends Type {
-  override def toString = moduleId.toString + "::" + typeId.toString
+  override def toString = moduleId.toString + "." + typeId.toString
 }
 
 case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends Type {
@@ -833,9 +848,6 @@ case class BlockVarsDecl(ids : List[Identifier], typ : Type) extends ASTNode {
   override def toString = "var " + Utils.join(ids.map(id => id.toString()), ", ") +
                           " : " + typ.toString() + "; // " + typ.position.toString()
 }
-case class LocalVarDecl(id: Identifier, typ: Type) extends ASTNode {
-  override def toString = "var " + id + ": " + typ + "; // " + id.position.toString
-}
 
 /**
  * Base class for module and procedure signatures.
@@ -925,49 +937,81 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
   }
 }
 
+sealed abstract class ProcedureVerificationExpr extends ASTNode {
+  val expr : Expr
+}
+case class ProcedureRequiresExpr(e : Expr) extends ProcedureVerificationExpr {
+  override val expr = e
+  override val toString = "requires " + e.toString()
+}
+case class ProcedureEnsuresExpr(e : Expr) extends ProcedureVerificationExpr {
+  override val expr = e
+  override val toString = "ensures " + e.toString()
+}
+case class ProcedureModifiesExpr(id : Identifier) extends ProcedureVerificationExpr {
+  override val expr = id
+  override val toString = "modifies " + id.toString
+}
+
+case class ProcedureAnnotations(ids : Set[Identifier]) extends ASTNode {
+  override val toString = {
+    if (ids.size > 0) {
+      "[" + Utils.join(ids.map(id => id.toString()).toList, ", ") + "] "
+    } else {
+      ""
+    }
+  }
+}
+
 case class ProcedureDecl(
-    id: Identifier, sig: ProcedureSig, decls: List[LocalVarDecl], body: Statement,
-    requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier]) extends Decl {
+    id: Identifier, sig: ProcedureSig, body: Statement,
+    requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier],
+    annotations : ProcedureAnnotations) extends Decl
+{
   override val hashId = 902
   override def toString = {
     val modifiesString = if (modifies.size > 0) {
       PrettyPrinter.indent(2) + "modifies " + Utils.join(modifies.map(_.toString).toList, ", ") + ";\n"
     } else { "" }
-    "procedure " + id + sig + "\n" +
+    "procedure " + annotations.toString + id + sig + "\n" +
+    modifiesString +
     Utils.join(requires.map(PrettyPrinter.indent(2) + "requires " + _.toString + ";\n"), "") +
     Utils.join(ensures.map(PrettyPrinter.indent(2) + "ensures " + _.toString + "; \n"), "") +
-    modifiesString +
-    PrettyPrinter.indent(1) + "{ // " + id.position.toString + "\n" +
-    Utils.join(decls.map(PrettyPrinter.indent(2) + _.toString), "\n") + "\n" +
-    Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n") +
-    "\n" + PrettyPrinter.indent(1) + "}"
+    Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
   }
   override def declNames = List(id)
   def hasPrePost = requires.size > 0 || ensures.size > 0
-  def shouldInline = ensures.size == 0
+  val shouldInline =
+    (annotations.ids.contains(Identifier("inline")) && !annotations.ids.contains(Identifier("noinline"))) ||
+    (ensures.size == 0)
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override val hashId = 903
   override def toString = "type " + id + " = " + typ + "; // " + position.toString
   override def declNames = List(id)
 }
-case class StateVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
+case class ModuleTypesImportDecl(id : Identifier) extends Decl {
   override val hashId = 904
+  override def toString = "type * = %s.*; // %s".format(id.toString(), position.toString())
+  override def declNames = List.empty
+}
+case class StateVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
+  override val hashId = 905
   override def toString = "var " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
   override def declNames = ids
 }
 case class InputVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
-  override val hashId = 905
+  override val hashId = 906
   override def toString = "input " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
   override def declNames = ids
 }
 case class OutputVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
-  override val hashId = 906
+  override val hashId = 907
   override def toString = "output " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
   override def declNames = ids
 }
 case class SharedVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
-  override val hashId = 907
+  override val hashId = 908
   override def toString = "sharedvar " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString()
   override def declNames = ids
 }
@@ -977,26 +1021,26 @@ sealed abstract trait ModuleExternal {
   def extType : Type
 }
 case class ConstantLitDecl(id : Identifier, lit : NumericLit) extends Decl {
-  override val hashId = 908
+  override val hashId = 909
   override def toString = "const %s = %s; // %s".format(id.toString(), lit.toString(), position.toString())
   override def declNames = List(id)
 }
 case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with ModuleExternal {
-  override val hashId = 909
+  override val hashId = 910
   override def toString = "const " + Utils.join(ids.map(_.toString), ", ") + ": " + typ + "; // " + position.toString
   override def declNames = ids
   override def extNames = ids
   override def extType = typ
 }
 case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with ModuleExternal {
-  override val hashId = 910
+  override val hashId = 911
   override def toString = "function " + id + sig + ";  // " + position.toString
   override def declNames = List(id)
   override def extNames = List(id)
   override def extType = sig.typ
 }
 case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl {
-  override val hashId = 911
+  override val hashId = 912
   override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
   override def declNames = List(id)
 }
@@ -1057,7 +1101,7 @@ case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) exte
 }
 
 case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonTerminal]) extends Decl {
-  override val hashId = 912
+  override val hashId = 913
   override def toString = {
     val argTypes = Utils.join(sig.args.map(a => a._1.toString + ": " + a._2.toString), ", ")
     val header :String = "grammar %s %s = { // %s".format(id.toString, sig.toString(), position.toString)
@@ -1068,27 +1112,27 @@ case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonT
 }
 
 case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : Option[Identifier], grammarArgs: List[Identifier], conditions: List[Expr]) extends Decl {
-  override val hashId = 913
+  override val hashId = 914
   override def toString = "synthesis function " + id + sig + "; //" + position.toString()
   override def declNames = List(id)
 }
 
 case class InitDecl(body: Statement) extends Decl {
-  override val hashId = 914
+  override val hashId = 915
   override def toString =
     "init // " + position.toString + "\n" +
     Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
   override def declNames = List.empty
 }
 case class NextDecl(body: Statement) extends Decl {
-  override val hashId = 915
+  override val hashId = 916
   override def toString =
     "next // " + position.toString + "\n" +
     Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
   override def declNames = List.empty
 }
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
-  override val hashId = 916
+  override val hashId = 917
   override def toString = {
     val declString = if (params.size > 0) {
       "[" + Utils.join(params.map(_.toString), ", ") + "]"
@@ -1101,7 +1145,7 @@ case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) ext
   def name = "property " + id.toString()
 }
 case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
-  override val hashId = 917
+  override val hashId = 918
   override def toString = {
     id match {
       case Some(id) => "axiom " + id.toString + " : " + expr.toString()

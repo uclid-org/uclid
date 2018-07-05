@@ -63,7 +63,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
   def convertZ3ArrayString(initString : String) : String = {
 
     val let_count       = "\\(let \\(\\(a!\\d+ ".r().findAllIn(initString).length
-    val tempString      = initString.replaceAll("(\\(let \\(\\(a!\\d+ )?(\\(store )+(a!\\d+)?", "").replaceAll("\\)\\)\\)(?=\\n)", ") ").replaceAll("\\n?\\s+", " ")
+    val tempString      = initString.replaceAll("(\\(let \\(\\(a!\\d+ )?(\\(store )+(a!\\d+)?", "").replaceAll("(\\n.*)\\)\\)\\)(?=\\n)", "$1\\) ").replaceAll("\\n?\\s+", " ")
     val cleanString     = tempString.substring(0, tempString.length() - let_count)
 
     val prefixArray     = "((as const (Array " //)))
@@ -383,6 +383,8 @@ class Z3Interface() extends Context {
       case BVExtractOp(hi, lo)    => ctx.mkExtract(hi, lo, bvArgs(0))
       case BVConcatOp(w)          => ctx.mkConcat(bvArgs(0), bvArgs(1))
       case BVReplaceOp(w, hi, lo) => mkReplace(w, hi, lo, bvArgs(0), bvArgs(1))
+      case BVSignExtOp(w, e)      => ctx.mkSignExt(e, bvArgs(0))
+      case BVZeroExtOp(w, e)      => ctx.mkZeroExt(e, bvArgs(0))
       case NegationOp             => ctx.mkNot (boolArgs(0))
       case IffOp                  => ctx.mkIff (boolArgs(0), boolArgs(1))
       case ImplicationOp          => ctx.mkImplies (boolArgs(0), boolArgs(1))

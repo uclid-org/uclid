@@ -7,10 +7,7 @@ module common {
 }
 
 module cpu {
-  type addr_t = common.addr_t;
-  type mem_t = common.mem_t;
-  type word_t = common.word_t;
-  type op_t = common.op_t;
+  type * = common.*;
   
   type regindex_t;
   type regs_t = [regindex_t]word_t;

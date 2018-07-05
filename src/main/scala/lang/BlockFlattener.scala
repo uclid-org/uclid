@@ -79,7 +79,7 @@ class BlockVariableRenamerPass extends RewritePass {
     val requiresP = proc.requires.map(req => rewriter.rewriteExpr(req, context))
     val ensuresP = proc.ensures.map(ens => rewriter.rewriteExpr(ens, context))
     val bodyP = rewriter.rewriteStatement(proc.body, contextP).get
-    val procP = ProcedureDecl(proc.id, sigP, proc.decls, bodyP, requiresP, ensuresP, proc.modifies)
+    val procP = ProcedureDecl(proc.id, sigP, bodyP, requiresP, ensuresP, proc.modifies, proc.annotations)
     Some(procP)
   }
   override def rewriteFunction(func : FunctionDecl, context : Scope) : Option[FunctionDecl] = {
@@ -94,17 +94,25 @@ class BlockVariableRenamerPass extends RewritePass {
   }
 }
 
+object BlockVariableRenamer {
+  var count = 0
+  def getName() : String = {
+    count += 1
+    "BlockVariableRenamer:" + count.toString()
+  }
+}
+
 class BlockVariableRenamer extends ASTRewriter(
-    "BlockVariableRenamer", new BlockVariableRenamerPass())
+    BlockVariableRenamer.getName(), new BlockVariableRenamerPass())
 
 class BlockFlattenerPass extends RewritePass {
   lazy val logger = Logger(classOf[BlockFlattenerPass])
   
-  def renameBlock(blk : BlockStmt, context : Scope) : (List[Statement], List[(Identifier, Type)]) = {
+  def renameBlock(blk : BlockStmt, context : Scope, mapIn : Map[Identifier, Type]) : (List[Statement], Map[Identifier, Type]) = {
     val blkVars = blk.vars.flatMap(vs => vs.ids.map(v => (v, vs.typ)))
     val renaming = blkVars.foldLeft(Map.empty[Identifier, (Identifier, Type)]) {
       (map, vDec) => {
-        if (context.map.get(vDec._1).isEmpty) {
+        if (context.map.get(vDec._1).isEmpty && !mapIn.contains(vDec._1)) {
           map + (vDec._1 -> (vDec._1, vDec._2))
         } else {
           val newId = NameProvider.get("blk")
@@ -113,24 +121,25 @@ class BlockFlattenerPass extends RewritePass {
       }
     }
     val rewriteMap = renaming.filter(p => p._1 != p._2._1).map(p => p._1.asInstanceOf[Expr] -> p._2._1)
-    val varDecls = renaming.map(p => p._2).toList
+    val varDecls = mapIn ++ renaming.map(p => p._2._1 -> p._2._2).toMap
     val rewriter = new ExprRewriter("BlockFlattener:Rewrite", rewriteMap)
     val stmtsP = rewriter.rewriteStatements(blk.stmts, context + blk.vars)
     (stmtsP, varDecls)
   }
   override def rewriteBlock(blkStmt : BlockStmt, context : Scope) : Option[Statement] = {
     logger.debug("==> [%s] Input:\n%s".format(analysis.passName, blkStmt.toString()))
-    val stmtM1 = blkStmt.stmts.map {
-      (st) => {
-        st match {
-          case blk : BlockStmt => renameBlock(blk, context)
-          case _ => (List(st), List.empty)
+    val init = (List.empty[Statement], Map.empty[Identifier, Type])
+    val (stmtsP, mapOut) = blkStmt.stmts.foldLeft(init) {
+      (acc, st) => {
+        val (stP, mapOut) = st match {
+          case blk : BlockStmt => renameBlock(blk, context, acc._2)
+          case _ => (List(st), acc._2)
         }
+        (acc._1 ++ stP, mapOut)
       }
     }
-    val stmts = stmtM1.map(p => p._1).flatMap(st => st)
-    val vars = stmtM1.map(p => p._2).flatMap(vs => vs.map(p => BlockVarsDecl(List(p._1), p._2)))
-    val result = BlockStmt(blkStmt.vars ++ vars, stmts)
+    val vars = mapOut.map(p => BlockVarsDecl(List(p._1), p._2))
+    val result = BlockStmt(blkStmt.vars ++ vars, stmtsP)
     logger.debug("<== Result:\n" + result.toString())
     Some(result)
   }

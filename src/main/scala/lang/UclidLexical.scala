@@ -87,7 +87,7 @@ trait UclidTokens extends Tokens {
  */
 class UclidLexical extends Lexical with UclidTokens with Positional {
   override def token: Parser[Token] =
-    ( positioned { 'b' ~ 'v' ~> rep(digit)                             ^^ { case chars => BitVectorTypeLit(chars.mkString("")) } }
+    ( positioned { 'b' ~ 'v' ~> digit.+                                ^^ { case chars => BitVectorTypeLit(chars.mkString("")) } }
     | positioned { (letter | '_') ~ rep( letter | '_' | digit )        ^^ { case first ~ rest => processIdent(first :: rest mkString "") } }
     | positioned { digit ~ rep(digit) ~ 'b' ~ 'v' ~ digit ~ rep(digit) ^^ { case (f1 ~ r1 ~ 'b' ~ 'v' ~ f2 ~ r2) => BitVectorLit(f1 :: r1 mkString "", 10, (f2 :: r2 mkString "").toInt) } }
     | positioned { '0' ~ 'x' ~> hexDigit ~ rep( hexDigit )             ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 16) } }

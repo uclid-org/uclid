@@ -6,10 +6,7 @@ module common {
 }
 
 module alu  {
-  type word_t = common.word_t;
-  type regindex_t = common.regindex_t;
-  type regs_t = common.regs_t;
-  type cmd_t = common.cmd_t;
+  type * = common.*;
 
   sharedvar regs : regs_t;
   input r0ind, r1ind : regindex_t;

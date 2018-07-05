@@ -530,7 +530,7 @@ class LTLPropertyRewriterPass extends RewritePass {
         andExpr(stateVarsEqExpr, andExpr(notExpr(hasFailedVar), hasAcceptedTrace))
     }
     // This is the assignment to is_init in next.
-    val isInitStateVar = NameProvider.get(module.toString() + "_is_init")
+    val isInitStateVar = NameProvider.get(module.id + "_is_init")
     val isInitStateVarDecl = StateVarsDecl(List(isInitStateVar), BooleanType())
     val isInitAssignNext = AssignStmt(List(LhsId(isInitStateVar)), List(BoolLit(false)))
 
