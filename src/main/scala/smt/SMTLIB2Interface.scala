@@ -160,7 +160,9 @@ trait SMTLIB2Base {
       case Some(resultExpr) => (resultExpr, memo)
       case None =>
         val (exprStr, memoP, letify) : (String, ExprMap, Boolean) = Context.rewriteBVReplace(eIn) match {
-          case Symbol(id,_) => (variables.get(id).get._1, memo, false)
+          case Symbol(id,_) =>
+            Utils.assert(variables.contains(id), "Not found in map: " + id)
+            (variables.get(id).get._1, memo, false)
           case EnumLit(id, _) => (id, memo, false)
           case OperatorApplication(op,operands) =>
             val (ops, memoP) = translateExprs(operands, memo, shouldLetify)

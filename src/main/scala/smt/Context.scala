@@ -377,5 +377,5 @@ object Context
 }
 
 abstract trait SynthesisContext {
-  def synthesizeInvariant(initState : Map[lang.Identifier, Expr], nextState: Map[lang.Identifier, Expr], properties : List[smt.Expr], ctx : lang.Scope, logic : String) : Option[langExpr]
+  def synthesizeInvariant(initExpr : Expr, nextExpr: Expr, properties : List[smt.Expr], ctx : lang.Scope, logic : String) : Option[langExpr]
 }

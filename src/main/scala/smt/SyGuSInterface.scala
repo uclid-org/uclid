@@ -145,18 +145,29 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     synthesizeFunCmd.format(types)
   }
 
-  def getInitFun(initState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
-    val initExprs = initState.map(p => getEqExpr(p._1, p._2, ctx, false)).toList
-    val funcBody = "(and " + Utils.join(initExprs, " ") + ")"
-    val func = "(define-fun " + Constants.InitFnName + " " + getStatePredicateTypeDecl(variables) + " " + funcBody + ")"
+  def getInitFun(initExpr : Expr, vars : List[(String, Type)], ctx : Scope) : String = {
+    val symbols = Context.findSymbols(initExpr)
+    symbols.filter(p => !variables.contains(p.id)).foreach {
+      (s) => {
+        val idP = getVariableName(s.id)
+        variables += (s.id -> (idP -> s.symbolTyp))
+      }
+    }
+    val funcBody = translateExpr(initExpr, false)
+    val func = "(define-fun " + Constants.InitFnName + " " + getStatePredicateTypeDecl(vars) + " " + funcBody + ")"
     func
   }
 
-  def getNextFun(nextState : Map[Identifier, Expr], variables : List[(String, Type)], ctx : Scope) : String = {
-    // FIXME: some variables are not primed. Why?
-    val nextExprs = nextState.map(p => getEqExpr(p._1, p._2, ctx, true)).toList
-    val funcBody = "(and " + Utils.join(nextExprs, " ") + ")"
-    val func = "(define-fun " + Constants.TransFnName + " " + getTransRelationTypeDecl(variables) + " " + funcBody + ")"
+  def getNextFun(nextExpr : Expr, vars : List[(String, Type)], ctx : Scope) : String = {
+    val symbols = Context.findSymbols(nextExpr)
+    symbols.filter(p => !variables.contains(p.id)).foreach {
+      (s) => {
+        val idP = getVariableName(s.id)
+        variables += (s.id -> (idP -> s.symbolTyp))
+      }
+    }
+    val funcBody = translateExpr(nextExpr, false)
+    val func = "(define-fun " + Constants.TransFnName + " " + getTransRelationTypeDecl(vars) + " " + funcBody + ")"
     func
   }
 
@@ -182,16 +193,16 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     Constants.PostConstraintCmd.format(args)
   }
   
-  override def synthesizeInvariant(initState : Map[Identifier, smt.Expr], nextState: Map[Identifier, smt.Expr], properties : List[smt.Expr], ctx : Scope, logic : String) : Option[langExpr] = {
+  override def synthesizeInvariant(initExpr : smt.Expr, nextExpr : smt.Expr, properties : List[smt.Expr], ctx : Scope, logic : String) : Option[langExpr] = {
     val variables = getVariables(ctx)
     Utils.assert(variables.size > 0, "There are no variables in the given model.")
     val preamble = Constants.SetLogicCmd.format(logic)
 
-    sygusLog.debug("initFun: {}", initState.toString())
-    sygusLog.debug("transFun: {}", nextState.toString())
+    sygusLog.debug("initExpr: {}", initExpr.toString())
+    sygusLog.debug("transFun: {}", nextExpr.toString())
 
-    val initFun = getInitFun(initState, variables, ctx)
-    val transFun = getNextFun(nextState, variables, ctx)
+    val initFun = getInitFun(initExpr, variables, ctx)
+    val transFun = getNextFun(nextExpr, variables, ctx)
     val postFun = getPostFun(properties, variables, ctx)
 
     val instanceLines = if (sygusFormat) {

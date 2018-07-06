@@ -1,0 +1,26 @@
+/** This is an example to test UCLID5's invariant synthesis.
+  */
+
+module main
+{
+  var x, y, z : integer;
+  
+  init {
+    assume (x == 0);
+    assume (y == 1);
+    assume (z == 2);
+  }
+  
+  next {
+    x' = x + 1;
+    y' = x + y;
+    z' = y + z;
+  }
+  
+  invariant always_positive: (z >= 0);
+  
+  control {
+    // print_module;
+    synthesize_invariant[LIA];
+  }
+}
