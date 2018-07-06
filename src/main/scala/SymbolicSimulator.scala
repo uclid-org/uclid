@@ -531,9 +531,7 @@ class SymbolicSimulator (module : Module) {
   /** Add module specifications (properties) to the list of proof obligations */
   def addAsserts(frameNumber : Int, symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable],
                 label : String, scope : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean)) {
-
     val table = frameTable.clone()
-
     scope.specs.foreach(specVar => {
       val prop = module.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {

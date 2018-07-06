@@ -1,5 +1,5 @@
 name := "uclid"
-version := "0.9.1"
+version := "0.9.5"
 scalaVersion := "2.12.0"
  
 scalacOptions += "-feature"

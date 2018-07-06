@@ -504,3 +504,34 @@ class Z3Interface() extends Context {
     ctx.close()
   }
 }
+
+
+object InterpolationTest
+{
+  def test() : Unit = {
+    val cfg = new HashMap[String, String]()
+    cfg.put("model", "true")
+    cfg.put("proof", "true")
+    val ctx = z3.InterpolationContext.mkContext(cfg)
+    val solver = ctx.mkSolver()
+
+    val x = ctx.mkIntConst("x")
+    val y = ctx.mkIntConst("y")
+    val z = ctx.mkIntConst("z")
+
+    val x_eq_y = ctx.mkEq(x, y)
+    val x_eq_5 = ctx.mkEq(x, ctx.mkInt(5))
+    val A = ctx.mkAnd(x_eq_y, x_eq_5)
+    val iA = ctx.MkInterpolant(A)
+    val B = ctx.mkDistinct(y, ctx.mkInt(5))
+    val pat = ctx.mkAnd(iA, B)
+    val params = ctx.mkParams()
+    solver.add(A)
+    solver.add(B)
+    val r = solver.check()
+    println("result: " + r.toString())
+    val proof = solver.getProof()
+    val interp = ctx.ComputeInterpolant(pat, params)
+    println("Interpolant: " + interp.interp(0).toString())
+  }
+}
