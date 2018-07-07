@@ -547,6 +547,15 @@ class SymbolicSimulator (module : Module) {
     // FIXME: Need to account for assumptions and assertions. 
     val initState = simulate(0, List.empty, module.init.get.body, defaultSymbolTable, ctx, "synthesize", initAddAssumption _, initAddAssertion _)
     val nextState = simulate(0, List.empty, module.next.get.body, defaultSymbolTable, ctx, "synthesize", nextAddAssumption _, nextAddAssertion _)
+    val assertions = nextAssertions.map {
+      assert => {
+        if (assert.pathCond == smt.BooleanLit(true)) {
+          assert.expr
+        } else {
+          smt.OperatorApplication(smt.ImplicationOp, List(assert.pathCond, assert.expr))
+        }
+      }
+    }.toList
     val invariants = ctx.specs.map(specVar => {
       val prop = module.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {
@@ -582,8 +591,10 @@ class SymbolicSimulator (module : Module) {
       case 1 => nextExprs(0)
       case _ => smt.OperatorApplication(smt.ConjunctionOp, nextExprs)
     }
-    // TODO: raise an error if we there are assertions in init.
-    return synthesizer.synthesizeInvariant(initExpr, nextExpr, invariants, ctx, logic)
+    val verificationConditions = assertions ++ invariants
+    Utils.assert(verificationConditions.size > 0, "Must have at least one assertion/invariant.")
+    Utils.assert(initAssertions.size == 0, "Must not have assertions in the init block for SyGuS.") 
+    return synthesizer.synthesizeInvariant(initExpr, nextExpr, verificationConditions, ctx, logic)
   }
 
   /** Add module specifications (properties) to the list of proof obligations */

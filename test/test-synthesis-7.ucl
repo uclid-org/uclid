@@ -23,9 +23,10 @@ module main
     assume (x' == x + 1);
     assume (y' == x + y);
     assume (z' == y + z);
+    assert (z >= 0);
   }
   
-  invariant always_positive: (z >= 0);
+  // invariant always_positive: (z >= 0);
   
   control {
     //print_module;
