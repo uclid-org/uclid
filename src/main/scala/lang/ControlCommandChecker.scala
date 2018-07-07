@@ -161,6 +161,11 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkNoParams(cmd, filename)
         checkNoResultVar(cmd, filename)
         checkHasArgObj(cmd, filename)
+      case "dump_cex_vcds" =>
+        checkNoArgs(cmd, filename)
+        checkNoParams(cmd, filename)
+        checkHasArgObj(cmd, filename)
+        checkNoResultVar(cmd, filename)
       case _ =>
         Utils.raiseParsingError("Unknown control command: " + cmd.name.toString, cmd.pos, filename)
     }
