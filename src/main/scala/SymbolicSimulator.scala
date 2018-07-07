@@ -704,7 +704,11 @@ class SymbolicSimulator (module : Module) {
         return symbolTable
       case AssumeStmt(e, id) =>
         val assumpExpr = evaluate(e,symbolTable, pastTables, scope)
-        val effectiveExpr = smt.OperatorApplication(smt.ImplicationOp, List(pathCondExpr, assumpExpr))
+        val effectiveExpr = if (pathCondExpr == smt.BooleanLit(true)) {
+          assumpExpr
+        } else {
+          smt.OperatorApplication(smt.ImplicationOp, List(pathCondExpr, assumpExpr))
+        }
         addAssumption(effectiveExpr)
         return symbolTable
       case HavocStmt(h) =>

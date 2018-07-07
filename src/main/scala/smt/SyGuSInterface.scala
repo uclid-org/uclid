@@ -118,15 +118,16 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     trExpr
   }
 
-  def getDeclarations(variables : List[(String, Type)], declarationCmd : String) : String = {
-    val decls = variables.map{ v =>
+  def getDeclarations(stateVars : List[(String, Type)], declarationCmd : String) : String = {
+    val unprimedVars = variables.filter(p => !p._1.endsWith("!"))
+    val decls = unprimedVars.map{ v =>
       {
-        val (typeName, otherDecls) = generateDatatype(v._2)
+        val (typeName, otherDecls) = generateDatatype(v._2._2)
         Utils.assert(otherDecls.size == 0, "Datatype declarations are not supported yet.")
         // FIXME: to handle otherDecls
-        declarationCmd.format(v._1, typeName)
+        declarationCmd.format(v._2._1, typeName)
       }
-    }
+    }.toList
     Utils.join(decls, "\n")
   }
   
@@ -194,30 +195,30 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
   }
   
   override def synthesizeInvariant(initExpr : smt.Expr, nextExpr : smt.Expr, properties : List[smt.Expr], ctx : Scope, logic : String) : Option[langExpr] = {
-    val variables = getVariables(ctx)
-    Utils.assert(variables.size > 0, "There are no variables in the given model.")
+    val stateVars = getVariables(ctx)
+    Utils.assert(stateVars.size > 0, "There are no variables in the given model.")
     val preamble = Constants.SetLogicCmd.format(logic)
 
     sygusLog.debug("initExpr: {}", initExpr.toString())
     sygusLog.debug("transFun: {}", nextExpr.toString())
 
-    val initFun = getInitFun(initExpr, variables, ctx)
-    val transFun = getNextFun(nextExpr, variables, ctx)
-    val postFun = getPostFun(properties, variables, ctx)
+    val initFun = getInitFun(initExpr, stateVars, ctx)
+    val transFun = getNextFun(nextExpr, stateVars, ctx)
+    val postFun = getPostFun(properties, stateVars, ctx)
 
     val instanceLines = if (sygusFormat) {
       // General sygus format
-      val synthFunDecl = getSynthFunDecl(variables, Constants.SyGuSSynthesizeFunCmd)
-      val varDecls = getDeclarations(variables, Constants.SyGuSDeclareVarCmd)
-      val initConstraint = getInitConstraint(variables)
-      val transConstraint = getTransConstraint(variables)
-      val postConstraint = getPostConstraint(variables)
+      val synthFunDecl = getSynthFunDecl(stateVars, Constants.SyGuSSynthesizeFunCmd)
+      val varDecls = getDeclarations(stateVars, Constants.SyGuSDeclareVarCmd)
+      val initConstraint = getInitConstraint(stateVars)
+      val transConstraint = getTransConstraint(stateVars)
+      val postConstraint = getPostConstraint(stateVars)
       val postamble = Constants.CheckSynthCmd
       List(preamble, synthFunDecl, varDecls, initFun, transFun, postFun, initConstraint, transConstraint, postConstraint, postamble)
     } else {
       // Loop invariant format
-      val synthInvDecl = getSynthFunDecl(variables, Constants.LIGSynthesizeInvCmd)
-      val varDecls = getDeclarations(variables, Constants.LIGDeclareVarCmd)
+      val synthInvDecl = getSynthFunDecl(stateVars, Constants.LIGSynthesizeInvCmd)
+      val varDecls = getDeclarations(stateVars, Constants.LIGDeclareVarCmd)
       val invConstraint = Constants.LIGInvConstraintsCmd
       val postamble = Constants.CheckSynthCmd
       List(preamble, synthInvDecl, varDecls, initFun, transFun, postFun, invConstraint, postamble)

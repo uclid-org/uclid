@@ -12,15 +12,23 @@ module main
   }
   
   next {
+    /*
     x' = x + 1;
     y' = x + y;
     z' = y + z;
+    */
+    havoc x;
+    havoc y;
+    havoc z;
+    assume (x' == x + 1);
+    assume (y' == x + y);
+    assume (z' == y + z);
   }
   
   invariant always_positive: (z >= 0);
   
   control {
-    // print_module;
+    //print_module;
     synthesize_invariant[LIA];
   }
 }
