@@ -37,8 +37,8 @@ CPU model given later in this tutorial as Example~\ref{ex:cpu-cpu}.
 \begin{lstlisting}[language=uclid,style=uclidstyle]
   function inst2op   (i : word_t) : op_t;
 \end{lstlisting}
-Uninterpreted functions of zero arity, also called 
-{\em symbolic constants}, can be declared using a special
+ 
+{\em Symbolic constants} can be declared using a 
 \codelike{const} declaration, as follows:
 \begin{lstlisting}[language=uclid,style=uclidstyle]
   const w0 : word_t;
@@ -95,12 +95,8 @@ next {
 
     %\lstinputlisting
 \subsection{Procedures}
-Example~\ref{ex:alu} demonstrates how sequential computation is used in concert with parallel computation. The \codelike{procedure} \codelike{set\_init\_state} (lines~13--18) is used to initialize the values of the registers (state variable \codelike{regs}), the variables \codelike{cnt} and \codelike{result}. Since this procedure updates the module's state variables, a \codelike{modifies} clause (line~14) is required to explicitly specify that these updates are intended. The procedure is called on line~21 in the \codelike{init} block. Updates to a state variable not mentioned in a modifies clause will result in a compilation error.
-
-Procedures can also be used inside \codelike{next} blocks to perform
-next-state assignments to state/output variables, in addition to 
-making procedural assignments.
-In Example~\ref{ex:alu}, consider \codelike{procedure} \codelike{exec\_cmd} which executes a single ALU command and returns (line 27) a single value of type \codelike{result\_t}. The procedure is invoked on line~43 in the \codelike{next} block, and its return value is assigned to the output variable \codelike{result}. Note we are again using the notation \codelike{result'} to refer to parallel assignment.
+Example~\ref{ex:alu} demonstrates how sequential computation is used in concert with parallel computation. %The \codelike{procedure} \codelike{set\_init\_state} (lines~13--18) is used to initialize the values of the registers (state variable \codelike{regs}), the variables \codelike{cnt} and \codelike{result}. Since this procedure updates the module's state variables, a \codelike{modifies} clause (line~14) is required to explicitly specify that these updates are intended. The procedure is called on line~21 in the \codelike{init} block. Updates to a state variable not mentioned in a modifies clause will result in a compilation error.
+In Example~\ref{ex:alu}, consider \codelike{procedure} \codelike{exec\_cmd} which executes a single ALU command and returns (line 27) a single value of type \codelike{result\_t}. The procedure is invoked on line~39 in the \codelike{next} block, and its return value is assigned to the output variable \codelike{result}. Note we are again using the notation \codelike{result'} to refer to parallel assignment. Since this procedure updates the \codelike{reg} state variable, a \keyword{modifies} clause must be used to declare this fact.
 
 We emphasize that assignments inside procedures do not assign primed
 variables. However, if a state variable is defined to be modified by
