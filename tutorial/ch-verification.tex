@@ -19,7 +19,7 @@ This chapter will describe these features of \uclid{}. Further features are bein
 Let us revisit the model from Example~\ref{ex:fib-model}. This is now shown again in Example~\ref{ex:fib-induction}, but with a different proof script. Instead of using the \codelike{unroll} command for bounded model checking, we are using the \codelike{induction} command to attempt an inductive proof.
 
 \begin{uclidlisting}[htbp]
-    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.1-fib-induction.ucl}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex4.1-fib-induction.ucl}
     \label{ex:fib-induction}
     \caption{\uclid{} Fibonacci model using induction in the proof script}
 \end{uclidlisting}
@@ -28,20 +28,20 @@ Let us revisit the model from Example~\ref{ex:fib-model}. This is now shown agai
 
 Let us try running \uclid{} on Example~\ref{ex:fib-induction} with the new proof script.
 \begin{Verbatim}[frame=single, samepage=true]
-$ uclid examples/tutorial/ex3.1-fib-induction.ucl 
+$ uclid examples/tutorial/ex4.1-fib-induction.ucl 
 Successfully parsed 1 and instantiated 1 module(s).
 1 assertions passed.
 1 assertions failed.
 0 assertions indeterminate.
   FAILED -> induction (step) [Step #1] 
-  property a_le_b @ ex3.1-fib-induction.ucl, line 14
+  property a_le_b @ ex4.1-fib-induction.ucl, line 14
 Finished execution for module: main.
 \end{Verbatim}
 
 Uh oh, we seem to have a problem! \uclid{} is telling us that the inductive proof failed. We can try to examine why the proof failed by using the \codelike{print_cex} command to examine the counterexample to the proof.
 
 \begin{uclidlisting}[htbp]
-    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.2-fib-induction-cex.ucl}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex4.2-fib-induction-cex.ucl}
     \caption{\uclid{} Fibonacci model with \codelike{induction} and \codelike{print_cex}}
     \label{ex:fib-induction-cex}
 \end{uclidlisting}
@@ -56,9 +56,9 @@ Successfully parsed 1 and instantiated 1 module(s).
 1 assertions failed.
 0 assertions indeterminate.
   FAILED -> vobj: induction (step) [Step #1] 
-  property a_le_b @ ex3.2-fib-induction-cex.ucl, line 14
+  property a_le_b @ ex4.2-fib-induction-cex.ucl, line 14
 CEX for vobj: induction (step) [Step #1] 
-property a_le_b @ ex3.2-fib-induction-cex.ucl, line 14
+property a_le_b @ ex4.2-fib-induction-cex.ucl, line 14
 =================================
 Step #0
   a : -1
@@ -81,7 +81,7 @@ What is the real problem here? Taking a closer look at Example~\ref{ex:fib-induc
 \subsection{Inductive Proof for the Fibonacci Model}
 
 \begin{uclidlisting}[htbp]
-    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.3-fib-induction-proof.ucl}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex4.3-fib-induction-proof.ucl}
     \caption{Inductive proof for the Fibonacci model}
     \label{ex:fib-induction-proof}
 \end{uclidlisting}
@@ -92,7 +92,7 @@ Let us now run \uclid{} on this new model.
 
 \begin{Verbatim}[frame=single, samepage=true]
 Successfully parsed 1 and instantiated 1 module(s).
-$ uclid examples/tutorial/ex3.3-fib-induction-proof.ucl 
+$ uclid examples/tutorial/ex4.3-fib-induction-proof.ucl 
 4 assertions passed.
 0 assertions failed.
 0 assertions indeterminate.
@@ -110,7 +110,7 @@ checking. You will need to add strengthening inductive invariants relating the t
 \section{Bounded Model Checking}
 
 \begin{uclidlisting}[htbp]
-    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.4-fib-model-revisited.ucl}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex4.4-fib-model-revisited.ucl}
     \caption{Revisiting the Fibonacci model from Example~\ref{ex:fib-model}.}
     \label{ex:fib-model-v2}
 \end{uclidlisting}
@@ -128,7 +128,7 @@ Similarly the assertions on lines 23 and 25 are evaluated at that specific locat
 Running \uclid{} on Example~\ref{ex:fib-model-v2} shows that the embedded assertions do indeed hold for all states reachable within 3 steps of the initial state.
 
 \begin{Verbatim}[frame=single, samepage=true]
-$ uclid examples/tutorial/ex3.4-fib-model-revisted.ucl 
+$ uclid examples/tutorial/ex4.4-fib-model-revisted.ucl 
 Successfully parsed 1 and instantiated 1 module(s).
 6 assertions passed.
 0 assertions failed.
@@ -138,7 +138,7 @@ Finished execution for module: main.
 
 \section{Specifications in Linear Temporal Logic}
 \begin{uclidlisting}[htbp]
-    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.5-traffic-light-ltl.ucl}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex4.5-traffic-light-ltl.ucl}
     \caption{Example of using LTL specifications in \uclid{}.}
     \label{ex:traffic-light-ltl}
 \end{uclidlisting}

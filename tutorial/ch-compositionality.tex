@@ -12,20 +12,20 @@ Example~\ref{ex:cpu-common} shows a module that defines only type synonyms. Such
 \label{sec:cpu-model}
 \begin{uclidlisting}[htbp]
 %\begin{lstlisting}[language=uclid,style=uclidstyle]
-    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex4.1-cpu.ucl}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.1-cpu.ucl}
     \caption{Module \codelike{common} of the CPU model}
     \label{ex:cpu-common}
 \end{uclidlisting}
 
 \begin{uclidlisting}[htbp]
-    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex4.2-cpu.ucl}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.2-cpu.ucl}
     \caption{The \codelike{cpu} module in the CPU model}
     \label{ex:cpu-cpu}
 \end{uclidlisting}
 
 
 \begin{uclidlisting}[htbp]
-    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex4.3-cpu.ucl}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.3-cpu.ucl}
     \caption{Module \codelike{main} in the CPU model}
     \label{ex:cpu-main}
 \end{uclidlisting}
@@ -68,7 +68,7 @@ The state variables, types, etc. of an instantiated module are accessed using th
 Executing \uclid{} on the complete CPU model shows that CPU is in fact deterministic. 
 
 \begin{Verbatim}[frame=single, samepage=true]
-$ uclid ex4.1-cpu.ucl ex4.2-cpu.ucl ex4.3-cpu.ucl 
+$ uclid ex3.1-cpu.ucl ex3.2-cpu.ucl ex3.3-cpu.ucl 
 Successfully parsed 3 and instantiated 1 module(s).
 16 assertions passed.
 0 assertions failed.
@@ -76,7 +76,7 @@ Successfully parsed 3 and instantiated 1 module(s).
 Finished execution for module: main.
 \end{Verbatim}
 
-Note the file \codelike{ex4.1-cpu.ucl} contains three modules. Each of these modules could potentially have \keyword{control} blocks. Which \uclid{} is invoked on this model, it executes only the \keyword{control} block of the \codelike{main} module.  If we had included a \keyword{control} block for the \codelike{alu} module and wished to verify properties of this module, we would have to invoke \uclid{} on this specific module using the \codelike{--main} command-line option.
+Note the files \codelike{ex3.1-cpu.ucl}, \codelike{ex3.2-cpu.ucl} and \codelike{ex3.3-cpu.ucl} contains three modules. Each of these modules could potentially have \keyword{control} blocks. Which \uclid{} is invoked on this model, it executes only the \keyword{control} block of the \codelike{main} module.  If we had included a \keyword{control} block for the \codelike{alu} module and wished to verify properties of this module, we would have to invoke \uclid{} on this specific module using the \codelike{--main} command-line option.
 
 % Moved to next chapter
 %\subsection{Exercise: Inductive Proof of CPU model}
