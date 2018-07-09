@@ -50,6 +50,7 @@ import lang.Identifier
 import uclid.Utils.ParserErrorList
 import com.typesafe.scalalogging.Logger
 import uclid.smt.SyGuSInterface
+import uclid.smt.InterpolationTest
 
 /** This is the main class for Uclid.
  *

@@ -9,16 +9,12 @@ module main {
   output result : result_t;
   var    regs   : [bv3]bv8;
   var    cnt    : bv8; 
-
-  procedure set_init_state()
-    modifies regs, cnt, result;
-  {
-    for i in range(0bv3, 7bv3) { regs[i] = 1bv8; }
-    cnt, result.value = 1bv8, 1bv8;
-  }
   
   init { 
-    call set_init_state(); 
+    for i in range(0bv3, 7bv3) { 
+      regs[i] = 1bv8; 
+    }
+    cnt, result.value = 1bv8, 1bv8;
   }
 
   define double(arg : bv8) : bv8 = (arg + arg);
@@ -27,7 +23,7 @@ module main {
     returns (r : result_t)
     modifies regs;
   {
-    var r1val, r2val  : bv8;
+    var r1val, r2val : bv8;
     if (valid) {
       r1val, r2val = regs[r1], regs[r2];
       case
