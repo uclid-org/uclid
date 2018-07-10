@@ -555,6 +555,7 @@ sealed abstract class Type extends PositionedNode {
   def isMap = false
   def isArray = false
   def isUninterpreted = false
+  def ids = List.empty[Identifier]
   def matches (t2 : Type) = (this == t2)
   def defaultValue : Option[Expr] = None
 }
@@ -609,7 +610,8 @@ case class StringType() extends PrimitiveType {
   override def toString = "string"
   override def defaultValue = Some(StringLit(""))
 }
-case class EnumType(ids: List[Identifier]) extends Type {
+case class EnumType(ids_ : List[Identifier]) extends Type {
+  override def ids = ids_
   override def toString = "enum {" +
     ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i} + "}"
   override def defaultValue = {
