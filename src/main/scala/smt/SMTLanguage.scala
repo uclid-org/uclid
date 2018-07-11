@@ -213,7 +213,24 @@ trait Operator extends Hashable {
     }
   }
 }
-
+object Operator {
+  def conjunction(args: List[Expr]) = {
+    val argsP = args.filter(a => (a != BooleanLit(true)))
+    argsP.size match {
+      case 0 => BooleanLit(true)
+      case 1 => argsP(0)
+      case _ => OperatorApplication(ConjunctionOp, argsP)
+    }
+  }
+  def disjunction(args: List[Expr]) = {
+    val argsP = args.filter(a => (a != BooleanLit(false)))
+    argsP.size match {
+      case 0 => BooleanLit(false)
+      case 1 => argsP(0)
+      case _ => OperatorApplication(DisjunctionOp, argsP)
+    }
+  }
+}
 // Operators that return integers.
 abstract class IntResultOp extends Operator {
   override def resultType(args: List[Expr]) : Type = { IntType }
