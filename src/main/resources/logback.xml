@@ -31,7 +31,7 @@
   <logger name="uclid.smt.SExprLexical" level="OFF"/>
   <logger name="uclid.smt.SMTLIB2Base" level="OFF"/>
   <logger name="uclid.smt.SMTLIB2Interface" level="OFF"/>
-  <logger name="uclid.smt.SyGuSInterface" level="DEBUG"/>
+  <logger name="uclid.smt.SyGuSInterface" level="OFF"/>
   <logger name="uclid.smt.Z3Interface.assert" level="OFF"/>
   <logger name="uclid.smt.Z3Interface.check" level="OFF"/>
   <logger name="uclid.SymbolicSimulator.assert" level="OFF"/>
