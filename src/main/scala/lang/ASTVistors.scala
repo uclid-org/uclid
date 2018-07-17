@@ -1029,7 +1029,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
 
 
 class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean = true, setPosition : Boolean = true) extends ASTAnalysis {
-  // Set a backpo inter to here from the pass.
+  // Set a backpointer to here from the pass.
   _pass._analysis = Some(this)
 
   def pass = _pass

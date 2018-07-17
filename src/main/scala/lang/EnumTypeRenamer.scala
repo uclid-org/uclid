@@ -43,53 +43,66 @@ package lang
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.immutable.Map
 
-class EnumTypeRenamerPass extends RewritePass {
-  var enumNumericMap : MutableMap[Identifier, BigInt] = MutableMap.empty
-  var enumType : MutableMap[Identifier, Type] = MutableMap.empty
+class EnumTypeAnalysisPass() extends ReadOnlyPass[MutableMap[Expr, BigInt]] {
+  type T = MutableMap[Expr, BigInt]
 
-  def enumBVWidth(typ : Type) : Int = {
-  	math.ceil(math.log(typ.ids.size.toDouble)/math.log(2.0)).toInt
+  var enumRename : BigInt = BigInt(-1)
+
+  override def applyOnEnumType(d : TraversalDirection.T, enumT : EnumType, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down && !in.exists(_._1 == enumT.ids(0))) {
+      enumT.ids.foldLeft(in) {
+        (accMap, member) => {
+          enumRename = enumRename + 1
+          accMap + (member -> enumRename)
+        }
+      }
+    } else {
+      in
+    }
+  }
+}
+
+class EnumTypeAnalysis() extends ASTAnalyzer("EnumTypeAnalysis", new EnumTypeAnalysisPass()) {
+  override def reset() {
+    in = Some(MutableMap.empty)
+  }
+  
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val renameMap = visitModule(module, MutableMap.empty, context)
+    val renameMapAnnotation = ExprRenameMapAnnotation(renameMap)
+    _out = Some(renameMap)
+    return Some(Module(module.id, module.decls, module.cmds, module.notes :+ renameMapAnnotation))
+  }
+}
+
+class EnumTypeRenamerPass() extends RewritePass {
+  lazy val manager : PassManager = analysis.manager
+  lazy val enumTypeAnalysis = manager.pass("EnumTypeAnalysis").asInstanceOf[EnumTypeAnalysis]
+
+  def enumBVWidth() : Int = {
+    val enumMap : MutableMap[Expr, BigInt] = enumTypeAnalysis.out.get
+    math.ceil(math.log(enumMap.size)/math.log(2.0)).toInt
   }
 
   def replaceEnumMembers(e : Expr, ctx : Scope) : Option[Expr] = {
     if (!e.isInstanceOf[Identifier]) return Some(e)
-
     val eId = e.asInstanceOf[Identifier]
-    val typ = ctx.typeOf(eId).get
-    typ match {
-      case EnumType(_) => {
-        // Store original type
-        enumType = enumType + (eId -> typ)
-        // Add enum type with new mapping
-        var enumRename : BigInt = BigInt(-1)
-        if (!enumNumericMap.exists(_._1 == typ.ids(0))) {
-          enumNumericMap = typ.ids.foldLeft(enumNumericMap) {
-            (accMap, member) => {
-              enumRename = enumRename + 1
-              accMap + (member -> enumRename)
-            }
-          }
-        }
-        if (!enumNumericMap.exists(_._1 == eId)) return Some(e)
-        Some(BitVectorLit(enumNumericMap(eId), enumBVWidth(typ)))
-      }
-      case _ => Some(e)
-    }
+    if (!ctx.map.get(eId).get.isInstanceOf[Scope.EnumIdentifier]) return Some(e)
+    val enumMap : MutableMap[Expr, BigInt] = enumTypeAnalysis.out.get
+    Some(BitVectorLit(enumMap(eId), enumBVWidth()))
+  }
+
+  override def rewriteExpr(e : Expr, ctx : Scope) : Option[Expr] = {
+    replaceEnumMembers(e, ctx)
   }
 
   def enumTypeToNumericType(typ : Type) : Option[Type] = {
     typ match {
       case EnumType(_) =>
-        val width = enumBVWidth(typ)
-        val retTyp = lang.BitVectorType(width)
-        Some(retTyp)
+        Some(BitVectorType(enumBVWidth()))
       case _ =>
         Some(typ)
     }
-  }
-
-  override def rewriteExpr(e : Expr, ctx : Scope) : Option[Expr] = {
-  	replaceEnumMembers(e, ctx)
   }
 
   override def rewriteType(typ: Type, ctx : Scope) : Option[Type] = {
@@ -97,4 +110,4 @@ class EnumTypeRenamerPass extends RewritePass {
   }
 }
 
-class EnumTypeRenamer extends ASTRewriter("EnumTypeRenamer", new EnumTypeRenamerPass())
+class EnumTypeRenamer() extends ASTRewriter("EnumTypeRenamer", new EnumTypeRenamerPass())

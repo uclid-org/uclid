@@ -633,7 +633,6 @@ class SymbolicSimulator (module : Module) {
 
   def synthesizeInvariants(ctx : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean), synthesizer : smt.SynthesisContext, logic : String) : Option[lang.Expr] = {
     resetState()
-
     // assumptions.
     var initAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
     var nextAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
@@ -645,17 +644,21 @@ class SymbolicSimulator (module : Module) {
     var nextAssertions : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
     def nextAddAssertion(e : AssertInfo) : Unit = { nextAssertions += e }
 
-    // Convert types
+    // Convert enum type
     val passManager = new PassManager("sygusTypeConverter")
+    passManager.addPass(new EnumTypeAnalysis())
     passManager.addPass(new EnumTypeRenamer())
-    val renamedModule = passManager.run(List(module))(0)
-    val renamedCtx = Scope.empty + renamedModule
+    val renamedModule = passManager.run(module, Scope.empty).get
 
-    val defaultSymbolTable = getDefaultSymbolTable(renamedCtx)
-    val primeSymbolTable = getPrimeSymbolTable(renamedCtx)
+    // Module to synthesize
+    val synthesisModule = renamedModule
+    val synthesisCtx = Scope.empty + synthesisModule
+
+    val defaultSymbolTable = getDefaultSymbolTable(synthesisCtx)
+    val primeSymbolTable = getPrimeSymbolTable(synthesisCtx)
     // FIXME: Need to account for assumptions and assertions. 
-    val initState = simulate(0, List.empty, renamedModule.init.get.body, defaultSymbolTable, renamedCtx, "synthesize", initAddAssumption _, initAddAssertion _)
-    val nextState = simulate(0, List.empty, renamedModule.next.get.body, defaultSymbolTable, renamedCtx, "synthesize", nextAddAssumption _, nextAddAssertion _)
+    val initState = simulate(0, List.empty, synthesisModule.init.get.body, defaultSymbolTable, synthesisCtx, "synthesize", initAddAssumption _, initAddAssertion _)
+    val nextState = simulate(0, List.empty, synthesisModule.next.get.body, defaultSymbolTable, synthesisCtx, "synthesize", nextAddAssumption _, nextAddAssertion _)
     val assertions = nextAssertions.map {
       assert => {
         if (assert.pathCond == smt.BooleanLit(true)) {
@@ -665,10 +668,10 @@ class SymbolicSimulator (module : Module) {
         }
       }
     }.toList
-    val invariants = renamedCtx.specs.map(specVar => {
-      val prop = renamedModule.properties.find(p => p.id == specVar.varId).get
+    val invariants = synthesisCtx.specs.map(specVar => {
+      val prop = synthesisModule.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {
-        Some(evaluate(prop.expr, defaultSymbolTable, Map.empty, renamedCtx))
+        Some(evaluate(prop.expr, defaultSymbolTable, Map.empty, synthesisCtx))
       } else {
         None
       }
@@ -703,7 +706,7 @@ class SymbolicSimulator (module : Module) {
     val verificationConditions = assertions ++ invariants
     Utils.assert(verificationConditions.size > 0, "Must have at least one assertion/invariant.")
     Utils.assert(initAssertions.size == 0, "Must not have assertions in the init block for SyGuS.") 
-    return synthesizer.synthesizeInvariant(initExpr, nextExpr, verificationConditions, renamedCtx, logic)
+    return synthesizer.synthesizeInvariant(initExpr, nextExpr, verificationConditions, synthesisCtx, logic)
   }
 
   /** Add module specifications (properties) to the list of proof obligations */
