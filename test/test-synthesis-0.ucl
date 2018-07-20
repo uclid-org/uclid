@@ -23,8 +23,8 @@ module main
   }
   
   next {
-    prev_sum = sum;
-    sum = sum + max2(max2(a, b), 0);
+    prev_sum' = sum;
+    sum' = sum + max2(max2(a, b), 0);
   }
   
   property sum_monotonically_incr : (sum >= prev_sum);
