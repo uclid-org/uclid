@@ -414,13 +414,16 @@ case class IntLit(value: BigInt) extends NumericLit {
 
 case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
   override def toString = value.toString + "bv" + width.toString
-  override def  typeOf : NumericType = BitVectorType(width)
+  override def typeOf : NumericType = BitVectorType(width)
   override def to (n : NumericLit) : Seq[NumericLit] = {
     n match {
       case bv : BitVectorLit => (value to bv.value).map(BitVectorLit(_, width))
       case _ => throw new Utils.RuntimeError("Cannot create range for differening types of numeric literals.")
     }
   }
+}
+case class ConstArrayLit(value: Literal, typ: Type) extends Literal {
+  override def toString  = "const_array(%s, %s)".format(value.toString(), typ.toString())
 }
 
 case class StringLit(value: String) extends Literal {
