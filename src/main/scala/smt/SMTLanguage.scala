@@ -365,7 +365,7 @@ case class BVLeftShiftOp(w : Int, e : Int) extends BVResultOp(w) {
     Utils.assert(args.forall(_.typ.isBitVector), "Argument to left_shift must be a bitvector.")
     val argW = args(0).typ.asInstanceOf[BitVectorType].width
     Utils.assert(e > 0, "Shift amount for left_shift must be greater than zero.")
-    Utils.assert((argW + e) == w, "Incorrect width for first operand to BVLeftShiftOp.")
+    Utils.assert((argW) == w, "Incorrect width for first operand to BVLeftShiftOp.")
   }
 }
 // Operators that return Booleans.

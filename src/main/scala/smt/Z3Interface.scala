@@ -386,7 +386,7 @@ class Z3Interface() extends Context {
       case BVReplaceOp(w, hi, lo) => mkReplace(w, hi, lo, bvArgs(0), bvArgs(1))
       case BVSignExtOp(w, e)      => ctx.mkSignExt(e, bvArgs(0))
       case BVZeroExtOp(w, e)      => ctx.mkZeroExt(e, bvArgs(0))
-      case BVLeftShiftOp(w, e)     => ctx.mkBVSHL(bvArgs(0), ctx.mkBV(e, 32))
+      case BVLeftShiftOp(w, e)    => ctx.mkBVSHL(bvArgs(0), ctx.mkBV(e, w))
       case NegationOp             => ctx.mkNot (boolArgs(0))
       case IffOp                  => ctx.mkIff (boolArgs(0), boolArgs(1))
       case ImplicationOp          => ctx.mkImplies (boolArgs(0), boolArgs(1))

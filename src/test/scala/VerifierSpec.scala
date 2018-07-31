@@ -136,6 +136,9 @@ class BasicVerifierSpec extends FlatSpec {
   "test-bv-zero-ext-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-bv-zero-ext-1.ucl", 0)
   }
+  "test-bv-left-shift-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bv-left-shift-1.ucl", 0)
+  }
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
   }

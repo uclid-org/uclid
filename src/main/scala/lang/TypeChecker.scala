@@ -378,7 +378,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               BitVectorType(w)
             case BVLeftShiftOp(w, e) =>
               checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
-              val w = e + argTypes(0).asInstanceOf[BitVectorType].width
+              val w = argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
               BitVectorType(w)
           }
