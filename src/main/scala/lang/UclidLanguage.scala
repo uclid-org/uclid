@@ -243,6 +243,11 @@ case class BVZeroExtOp(override val w : Int, val e : Int) extends BVArgOperator(
   override def toString = "bv_zero_extend"
   override val arity = 1
 }
+case class BVLeftShiftOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
+  override def fixity = Operator.PREFIX
+  override def toString = "bv_left_shift"
+  override val arity = 1
+}
 // Boolean operators.
 sealed abstract class BooleanOperator extends Operator {
   override def fixity = Operator.INFIX

@@ -1,0 +1,18 @@
+module main {
+	var a: bv8;
+
+	init {
+		a = 1bv8;		
+	}
+
+	next {
+		a' = a * 2bv8;
+	}
+
+	invariant z: (bv_left_shift(1, a) == (2bv8 * a));
+	control {
+	   unroll(9);
+	   check;
+	   print_results;
+	}
+}			
