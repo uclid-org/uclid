@@ -125,6 +125,7 @@ object Converter {
       case lang.ConstExtractOp(slice) => return smt.BVExtractOp(slice.hi, slice.lo)
       case lang.BVSignExtOp(w, e) => return smt.BVSignExtOp(w, e)
       case lang.BVZeroExtOp(w, e) => return smt.BVZeroExtOp(w, e)
+      case lang.BVLeftShiftOp(w, e) => return smt.BVLeftShiftOp(w, e)
       // Boolean operators.
       case lang.ConjunctionOp() => return smt.ConjunctionOp
       case lang.DisjunctionOp() => return smt.DisjunctionOp

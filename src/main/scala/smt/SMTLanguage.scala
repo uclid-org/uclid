@@ -356,6 +356,18 @@ case class BVZeroExtOp(w : Int, e : Int) extends BVResultOp(w) {
     Utils.assert((argW + e) == w, "Incorrect width for first operand to BVZeroExtOp.")
   }
 }
+case class BVLeftShiftOp(w : Int, e : Int) extends BVResultOp(w) {
+  override val hashId = mix(w, 217)
+  override val hashCode = computeHash
+  override def toString = "(_ left_shift %d)".format(e)
+  override def typeCheck(args: List[Expr]) : Unit = {
+    checkNumArgs(args, 1)
+    Utils.assert(args.forall(_.typ.isBitVector), "Argument to left_shift must be a bitvector.")
+    val argW = args(0).typ.asInstanceOf[BitVectorType].width
+    Utils.assert(e > 0, "Shift amount for left_shift must be greater than zero.")
+    Utils.assert((argW + e) == w, "Incorrect width for first operand to BVLeftShiftOp.")
+  }
+}
 // Operators that return Booleans.
 abstract class BoolResultOp extends Operator {
   override def resultType(args: List[Expr]) : Type = { BoolType }
