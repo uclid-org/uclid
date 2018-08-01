@@ -31,10 +31,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author : Pramod Subramanyan
+ * Author : Pramod Subramanyan, Kevin Cheang
  *
- * The EnumTypeRenamerPass eliminate case statements from the AST and replaces
- * them with ifs.
+ * The EnumTypeRenamerPass rewrites all enum types into bitvector types.
  *
  */
 package uclid
