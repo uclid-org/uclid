@@ -139,6 +139,12 @@ class BasicVerifierSpec extends FlatSpec {
   "test-bv-left-shift-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-bv-left-shift-1.ucl", 0)
   }
+  "test-bv-a-right-shift-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bv-a-right-shift-1.ucl", 0)
+  }
+  "test-bv-l-right-shift-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bv-l-right-shift-1.ucl", 0)
+  }
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
   }
