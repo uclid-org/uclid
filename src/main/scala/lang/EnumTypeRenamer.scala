@@ -42,6 +42,11 @@ package lang
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.immutable.Map
 
+object Logic {
+  val LIA = "LIA"
+  val BV = "BV"
+}
+
 class EnumTypeAnalysisPass() extends ReadOnlyPass[MutableMap[Expr, BigInt]] {
   type T = MutableMap[Expr, BigInt]
 
@@ -74,7 +79,7 @@ class EnumTypeAnalysis() extends ASTAnalyzer("EnumTypeAnalysis", new EnumTypeAna
   }
 }
 
-class EnumTypeRenamerPass() extends RewritePass {
+class EnumTypeRenamerPass(logic : String) extends RewritePass {
   lazy val manager : PassManager = analysis.manager
   lazy val enumTypeAnalysis = manager.pass("EnumTypeAnalysis").asInstanceOf[EnumTypeAnalysis]
 
@@ -88,7 +93,14 @@ class EnumTypeRenamerPass() extends RewritePass {
     val eId = e.asInstanceOf[Identifier]
     if (!ctx.map.get(eId).get.isInstanceOf[Scope.EnumIdentifier]) return Some(e)
     val enumMap : MutableMap[Expr, BigInt] = enumTypeAnalysis.out.get
-    Some(BitVectorLit(enumMap(eId), enumBVWidth()))
+    logic match {
+      case Logic.BV => 
+        Some(BitVectorLit(enumMap(eId), enumBVWidth()))
+      case Logic.LIA =>
+        Some(IntLit(enumMap(eId)))
+      case _ =>
+        throw new Utils.UnimplementedException("Logic type %s not supported.".format(logic))
+    }
   }
 
   override def rewriteExpr(e : Expr, ctx : Scope) : Option[Expr] = {
@@ -98,7 +110,14 @@ class EnumTypeRenamerPass() extends RewritePass {
   def enumTypeToNumericType(typ : Type) : Option[Type] = {
     typ match {
       case EnumType(_) =>
-        Some(BitVectorType(enumBVWidth()))
+        logic match {
+          case Logic.BV =>
+            Some(BitVectorType(enumBVWidth()))
+          case Logic.LIA =>
+            Some(IntegerType())
+          case _ =>
+            throw new Utils.UnimplementedException("Logic type %s not supported.".format(logic))
+        }
       case _ =>
         Some(typ)
     }
@@ -109,4 +128,4 @@ class EnumTypeRenamerPass() extends RewritePass {
   }
 }
 
-class EnumTypeRenamer() extends ASTRewriter("EnumTypeRenamer", new EnumTypeRenamerPass())
+class EnumTypeRenamer(logic : String) extends ASTRewriter("EnumTypeRenamer", new EnumTypeRenamerPass(logic))

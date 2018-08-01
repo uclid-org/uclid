@@ -647,7 +647,7 @@ class SymbolicSimulator (module : Module) {
     // Convert enum type
     val passManager = new PassManager("sygusTypeConverter")
     passManager.addPass(new EnumTypeAnalysis())
-    passManager.addPass(new EnumTypeRenamer())
+    passManager.addPass(new EnumTypeRenamer(logic))
     val renamedModule = passManager.run(module, Scope.empty).get
 
     // Module to synthesize

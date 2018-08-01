@@ -22,6 +22,6 @@ module main {
 		// check;
 		// print_results;
 		// v.print_cex();
-		synthesize_invariant[BV];
+		synthesize_invariant[LIA];
 	}
 }
