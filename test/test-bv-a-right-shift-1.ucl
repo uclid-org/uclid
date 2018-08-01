@@ -1,0 +1,15 @@
+module main {
+	var a: bv8;
+
+	init {
+		a = 255bv8;
+	}
+
+	invariant z: (bv_a_right_shift(1, a) != bv_l_right_shift(1, a));
+
+	control {
+		unroll(8);
+		check;
+		print_results;
+	}
+}

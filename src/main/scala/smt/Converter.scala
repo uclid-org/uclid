@@ -126,6 +126,8 @@ object Converter {
       case lang.BVSignExtOp(w, e) => return smt.BVSignExtOp(w, e)
       case lang.BVZeroExtOp(w, e) => return smt.BVZeroExtOp(w, e)
       case lang.BVLeftShiftOp(w, e) => return smt.BVLeftShiftOp(w, e)
+      case lang.BVLRightShiftOp(w, e) => return smt.BVLRightShiftOp(w, e)
+      case lang.BVARightShiftOp(w, e) => return smt.BVARightShiftOp(w, e)
       // Boolean operators.
       case lang.ConjunctionOp() => return smt.ConjunctionOp
       case lang.DisjunctionOp() => return smt.DisjunctionOp
