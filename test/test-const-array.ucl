@@ -53,8 +53,7 @@ module main {
         IP	= 0bv8;
         XRAM_DATA_OUT	= 0bv8;
         XRAM_ADDR	= 0bv16;
-        // assume (forall (a : bv16) :: ROM[a] == 0bv8);
-        //ROM = const(0bv8, [bv16]bv8);
+        ROM = const(0bv8, [bv16]bv8);
         ROM[0bv16]	= 2bv8;
         ROM[1bv16]	= 0bv8;
         ROM[2bv16]	= 6bv8;
@@ -210,6 +209,7 @@ module main {
     }
     next {
         steps' = steps + 1;
+        assert (ROM[0bv16] != 0bv8);
     }
 
     //property p0_not_zero: (P0 == 0bv8);

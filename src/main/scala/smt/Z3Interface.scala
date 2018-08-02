@@ -249,13 +249,18 @@ class Z3Interface() extends Context {
       case recType : RecordType => getRecordSort(recType.fields_)
     }
   }
+  val getArrayIndexSort = new Memo[List[Type], z3.Sort]({
+    p => {
+      if (p.size == 1) {
+        getZ3Sort(p(0))
+      } else {
+        getTupleSort(p)
+      }
+    }
+  })
   val getArraySort = new Memo[(List[Type], Type), z3.ArraySort]((arrayType : (List[Type], Type)) => {
     val indexTypeIn = arrayType._1
-    val z3IndexType = if (indexTypeIn.size == 1) {
-      getZ3Sort(indexTypeIn(0))
-    } else {
-      getTupleSort(indexTypeIn)
-    }
+    val z3IndexType = getArrayIndexSort(indexTypeIn)
     ctx.mkArraySort(z3IndexType, getZ3Sort(arrayType._2))
   })
   val getEnumSort = new Memo[List[String], z3.EnumSort]((enumConstants : List[String]) => {
@@ -302,8 +307,9 @@ class Z3Interface() extends Context {
   val getConstArrayLit = new Memo[(Literal, ArrayType), z3.Expr]({
     (p) => {
       val value = exprToZ3(p._1).asInstanceOf[z3.Expr]
-      val sort = getArraySort(p._2.inTypes, p._2.outType)
-      ctx.mkConstArray(sort, value)
+      val sort = getArrayIndexSort(p._2.inTypes)
+      val arr = ctx.mkConstArray(sort, value)
+      arr
     }
   })
   /** Convert a smt.Symbol object into a Z3 AST. */
