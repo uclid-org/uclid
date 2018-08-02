@@ -233,6 +233,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       positioned { ("[" ~> Expr ~ ":" ~ Expr <~ "]") ^^ { case x ~ ":" ~ y => lang.VarExtractOp(lang.VarBitVectorSlice(x, y)) } }
     lazy val ExtractOp : Parser[lang.ExtractOp] = positioned { ConstExtractOp | VarExtractOp }
     lazy val Id: PackratParser[Identifier] = positioned { ident ^^ {case i => Identifier(i)} }
+    /* BEGIN Literals. */
     lazy val Bool: PackratParser[BoolLit] =
       positioned { "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) } }
     lazy val Integer: PackratParser[lang.IntLit] =
@@ -243,6 +244,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val String  : PackratParser[lang.StringLit] = positioned {
       stringLit ^^ { case stringLit => lang.StringLit(stringLit) }
     }
+    lazy val ConstArrayLit : PackratParser[lang.ConstArrayLit] = positioned {
+      KwConst ~ "(" ~> Literal ~ ("," ~> Type) <~ ")" ^^ {
+        case (lit ~ typ) => lang.ConstArrayLit(lit, typ)
+      }
+    }
+    lazy val Literal : PackratParser[lang.Literal] = positioned (Bool | Number | ConstArrayLit | String)
+    /* END of Literals. */
     lazy val E1: PackratParser[Expr] =
       KwForall ~> IdTypeList ~ ("::" ~> E1) ^^ { case ids ~ expr => OperatorApplication(ForallOp(ids), List(expr)) } |
       KwExists ~> IdTypeList ~ ("::" ~> E1) ^^ { case ids ~ expr => OperatorApplication(ExistsOp(ids), List(expr)) } |
@@ -301,7 +309,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     /** E15 = false | true | Number | Id FuncApplication | (Expr) **/
     lazy val E15: PackratParser[Expr] = positioned {
-        Bool | Number | String |
+        Literal |
         "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
         KwIf ~> ("(" ~> Expr <~ ")") ~ (KwThen ~> Expr) ~ (KwElse ~> Expr) ^^ {
           case expr ~ thenExpr ~ elseExpr => lang.OperatorApplication(lang.ITEOp(), List(expr, thenExpr, elseExpr))

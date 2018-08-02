@@ -298,6 +298,14 @@ class Z3Interface() extends Context {
   /** Create an enum literal. */
   val getEnumLit = new Memo[(String, EnumType), z3.Expr]((p) => getEnumSort(p._2.members).getConst(p._2.fieldIndex(p._1)))
 
+  /** Create a constant array literal. */
+  val getConstArrayLit = new Memo[(Literal, ArrayType), z3.Expr]({
+    (p) => {
+      val value = exprToZ3(p._1).asInstanceOf[z3.Expr]
+      val sort = getArraySort(p._2.inTypes, p._2.outType)
+      ctx.mkConstArray(sort, value)
+    }
+  })
   /** Convert a smt.Symbol object into a Z3 AST. */
   def symbolToZ3 (sym : Symbol) : z3.AST = {
     abstract class ExprSort
@@ -457,6 +465,7 @@ class Z3Interface() extends Context {
       case BitVectorLit(bv,w) => getBitVectorLit(bv, w)
       case BooleanLit(b) => getBoolLit(b)
       case EnumLit(e, typ) => getEnumLit(e, typ)
+      case ConstArrayLit(value, typ) => getConstArrayLit(value, typ)
       case MakeTuple(args) =>
         val tupleSort = getTupleSort(args.map(_.typ))
         tupleSort.mkDecl().apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)

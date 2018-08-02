@@ -591,14 +591,19 @@ case class EnumLit(id : String, eTyp : EnumType) extends Literal (eTyp) {
   override def toString  = id.toString
 }
 
+case class ConstArrayLit(value : Literal, arrTyp: ArrayType) extends Literal (arrTyp) {
+  override val hashId = mix(value.hashCode(), mix(arrTyp.hashCode, 304))
+  override val hashCode = computeHash
+  override def toString = "(const %s %s)".format(value.toString, arrTyp.toString)
+}
 case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {
-  override val hashId = mix(id.hashCode(), mix(symbolTyp.hashCode(), 304))
+  override val hashId = mix(id.hashCode(), mix(symbolTyp.hashCode(), 305))
   override val hashCode = computeHash
   override def toString = id.toString
 }
 // Tuple creation.
 case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ))) {
-  override val hashId = 305
+  override val hashId = 306
   override val hashCode = computeHash(args)
   override def toString = "(mk-tuple " + Utils.join(args.map(_.toString), " ") + ")"
   override val isConstant = args.forall(p => p.isConstant)
@@ -606,7 +611,7 @@ case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ)))
 
 
 case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr (op.resultType(operands)) {
-  override val hashId = 306
+  override val hashId = 307
   override val hashCode = computeHashList(operands, op)
   if (operands.forall(!_.typ.isUndefined)) {
     op.typeCheck(operands)
@@ -620,7 +625,7 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Expr 
 case class ArraySelectOperation(e: Expr, index: List[Expr])
   extends Expr (e.typ.asInstanceOf[ArrayType].outType)
 {
-  override val hashId = 307
+  override val hashId = 308
   override val hashCode = computeHashList(index, e)
   override def toString = "(" + e.toString + ")" + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + "]"
@@ -628,7 +633,7 @@ case class ArraySelectOperation(e: Expr, index: List[Expr])
 }
 case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr(e.typ)
 {
-  override val hashId = 308
+  override val hashId = 309
   override val hashCode = computeHash(index, e, value)
   override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
     { (acc,i) => acc + "," + i.toString } + " := " + value.toString + "]"
@@ -636,7 +641,7 @@ case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends 
 }
 case class LetExpression(letBindings : List[(Symbol, Expr)], expr : Expr) extends Expr(expr.typ)
 {
-  override val hashId = 309
+  override val hashId = 310
   override val hashCode = computeHashList2(letBindings, expr)
   override def toString = {
     val bindings = Utils.join(letBindings.map(p => "(%s %s)".format(p._1.toString(), p._2.toString())), " ")
@@ -649,7 +654,7 @@ case class LetExpression(letBindings : List[(Symbol, Expr)], expr : Expr) extend
 case class FunctionApplication(e: Expr, args: List[Expr])
   extends Expr (e.typ.asInstanceOf[MapType].outType)
 {
-  override val hashId = 310
+  override val hashId = 311
   override val hashCode = computeHashList(args, e)
   override def toString = e.toString + "(" + args.tail.fold(args.head.toString)
     { (acc,i) => acc + "," + i.toString } + ")"
@@ -657,14 +662,14 @@ case class FunctionApplication(e: Expr, args: List[Expr])
 }
 
 case class Lambda(ids: List[Symbol], e: Expr) extends Expr(MapType(ids.map(id => id.typ), e.typ)) {
-  override val hashId = 311
+  override val hashId = 312
   override val hashCode = computeHashList(ids, e)
   override def toString = "Lambda(" + ids + "). " + e.toString
   override val isConstant = e.isConstant
 }
 
 case class DefineFun(id : Symbol, args : List[(Symbol)], e : Expr) extends Expr(MapType(args.map(a => a.typ), e.typ)) {
-  override val hashId = 312
+  override val hashId = 313
   override val hashCode = finalize(mix(mix(hashId, id.hashCode), args), e.hashCode)
   override def toString = {
     val argString = Utils.join(args.map(arg => "(%s %s)".format(arg.id.toString(), arg.symbolTyp.toString())), " ")

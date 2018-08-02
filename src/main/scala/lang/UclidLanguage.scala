@@ -552,7 +552,6 @@ object ExprDecorator {
   }
 }
 
-
 sealed abstract class Type extends PositionedNode {
   def isBool = false
   def isNumeric = false

@@ -283,15 +283,22 @@ class SymbolicSimulator (module : Module) {
    * @param step The current frame number.
    * @param scope The current scope.
    */
-  def renameStates(st : SymbolTable, frameNumber : Int, scope : Scope, addAssumption : (smt.Expr => Unit)) : SymbolTable = {
-    val renamedExprs = scope.map.map(_._2).collect {
+  def renameStates(st : SymbolTable, eqStates : Set[Identifier], frameNumber : Int, scope : Scope, addAssumption : (smt.Expr => Unit)) : SymbolTable = {
+    val renamedExprs : Iterable[(Identifier, smt.Symbol, smt.Expr)] = scope.map.map(_._2).map {
       case Scope.StateVar(id, typ) =>
-        val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
-        val stateExpr = st.get(id).get
-        val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
-        (id, newVariable, smtExpr)
+        if (!eqStates.contains(id)) {
+          val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
+          val stateExpr = st.get(id).get
+          val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
+          Some(id, newVariable, smtExpr)
+        } else {
+          None
+        }
+      case _ => None
+    }.flatten
+    renamedExprs.foreach{ 
+      (p) => addAssumption(p._3)
     }
-    renamedExprs.foreach(p => addAssumption(p._3))
     renamedExprs.foldLeft(st)((acc, p) => st + (p._1 -> p._2))
   }
 
@@ -317,7 +324,12 @@ class SymbolicSimulator (module : Module) {
       val stWInputs = newInputSymbols(currentState, step + startStep, scope)
       states += stWInputs
       val symTableP = simulate(step + startStep, stWInputs, scope, label, addAssumptionToTree _, addAssertToTree _)
-      currentState = renameStates(symTableP, step + startStep, scope, addAssumptionToTree _)
+      val eqStates = symTableP.filter(p => stWInputs.get(p._1) match {
+        case Some(st) => (st == p._2)
+        case None => false
+      }).map(_._1).toSet
+      defaultLog.debug("eqStates: {}", eqStates.toString())
+      currentState = renameStates(symTableP, eqStates, step + startStep, scope, addAssumptionToTree _)
       val numPastFrames = frameTable.size
       val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
       frameTable += currentState
@@ -579,10 +591,10 @@ class SymbolicSimulator (module : Module) {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
-          case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!" + index.toString(), smt.Converter.typeToSMT(typ)))
-          case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!" + index.toString(), smt.Converter.typeToSMT(typ)))
-          case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!" + index.toString(), smt.Converter.typeToSMT(typ)))
-          case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!" + index.toString(), smt.Converter.typeToSMT(typ)))
+          case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
+          case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
+          case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
+          case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
           case _ => mapAcc
         }
       }
