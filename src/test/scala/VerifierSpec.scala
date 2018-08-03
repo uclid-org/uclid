@@ -110,6 +110,9 @@ class VerifierSanitySpec extends FlatSpec {
   "test-primed-variables-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-primed-variables-1.ucl", 0)
   }
+  "test-assume-primed-var.ucl" should "verify all but 6 assertions." in {
+    VerifierSpec.expectedFails("./test/test-assume-primed-var.ucl", 6)
+  }
 }
 class BasicVerifierSpec extends FlatSpec {
   "test-bv-assign.ucl" should "verify successfully." in {
