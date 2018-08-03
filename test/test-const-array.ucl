@@ -213,9 +213,9 @@ module main {
     }
 
     //property p0_not_zero: (P0 == 0bv8);
-    property steps_3: steps != 1;
+    property steps_3: steps != 3;
     control {
-        v = unroll(1);
+        v = unroll(3);
         check;
         print_results;
         v.print_cex(PC, steps);
