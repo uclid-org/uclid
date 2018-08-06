@@ -182,7 +182,7 @@ class SymbolicSimulator (module : Module) {
               case None =>
                 UclidMain.println("Error: Can't execute synthesize_invariant as synthesizer was not provided. ")
               case Some(synth) => {
-                synthesizeInvariants(context, noLTLFilter, synth, cmd.params(0).toString) match {
+                synthesizeInvariants(context, noLTLFilter, synth, cmd.params(0).toString, config.sygusTypeConvert) match {
                   // Failed to synthesize invariant
                   case None => UclidMain.println("Failed to synthesize invariant.")
                   // Successfully synthesized an invariant
@@ -631,8 +631,19 @@ class SymbolicSimulator (module : Module) {
     smt.Operator.conjunction(symbolicExpressions)
   }
 
-  def synthesizeInvariants(ctx : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean), synthesizer : smt.SynthesisContext, logic : String) : Option[lang.Expr] = {
+  def synthesizeInvariants(ctx : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean), synthesizer : smt.SynthesisContext, logic : String, sygusTypeConvert : Boolean) : Option[lang.Expr] = {
     resetState()
+
+    val passManager = new PassManager("sygusTypeConverter")
+    // Convert enum type
+    if (sygusTypeConvert) {
+      passManager.addPass(new EnumTypeAnalysis())
+      passManager.addPass(new EnumTypeRenamer(logic))
+    }
+    // Synthesis module
+    val synthesisModule = passManager.run(module, Scope.empty).get
+    val synthesisCtx = Scope.empty + synthesisModule
+
     // assumptions.
     var initAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
     var nextAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
@@ -643,16 +654,6 @@ class SymbolicSimulator (module : Module) {
     def initAddAssertion(e : AssertInfo) : Unit = { initAssertions += e }
     var nextAssertions : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
     def nextAddAssertion(e : AssertInfo) : Unit = { nextAssertions += e }
-
-    // Convert enum type
-    val passManager = new PassManager("sygusTypeConverter")
-    passManager.addPass(new EnumTypeAnalysis())
-    passManager.addPass(new EnumTypeRenamer(logic))
-    val renamedModule = passManager.run(module, Scope.empty).get
-
-    // Module to synthesize
-    val synthesisModule = renamedModule
-    val synthesisCtx = Scope.empty + synthesisModule
 
     val defaultSymbolTable = getDefaultSymbolTable(synthesisCtx)
     val primeSymbolTable = getPrimeSymbolTable(synthesisCtx)
