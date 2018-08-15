@@ -381,6 +381,16 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               val w = argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
               BitVectorType(w)
+            case BVLRightShiftOp(w, e) =>
+              checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
+              val w = argTypes(0).asInstanceOf[BitVectorType].width
+              bvOpMap.put(bvOp.astNodeId, w)
+              BitVectorType(w)
+            case BVARightShiftOp(w, e) =>
+              checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
+              val w = argTypes(0).asInstanceOf[BitVectorType].width
+              bvOpMap.put(bvOp.astNodeId, w)
+              BitVectorType(w)
           }
         }
         case qOp : QuantifiedBooleanOperator => {
@@ -563,10 +573,20 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case Some(typ) => typ
           }
         case f : FreshLit => f.typ
-        case b : BoolLit => new BooleanType()
-        case i : IntLit => new IntegerType()
-        case s : StringLit => new StringType()
-        case bv : BitVectorLit => new BitVectorType(bv.width)
+        case b : BoolLit => BooleanType()
+        case i : IntLit => IntegerType()
+        case s : StringLit => StringType()
+        case bv : BitVectorLit => BitVectorType(bv.width)
+        case a : ConstArrayLit =>
+          val valTyp = typeOf(a.value, c)
+          a.typ match {
+            case ArrayType(inTyps, outTyp) =>
+              checkTypeError(outTyp == valTyp, "Array type does not match literal type", a.value.pos, c.filename)
+              a.typ
+            case _ =>
+              raiseTypeError("Expected an array type", a.typ.pos, c.filename)
+              UndefinedType()
+          }
         case r : Tuple => new TupleType(r.values.map(typeOf(_, c)))
         case opapp : OperatorApplication => opAppType(opapp)
         case arrSel : ArraySelectOperation => arraySelectType(arrSel)
@@ -621,6 +641,8 @@ class PolymorphicTypeRewriterPass extends RewritePass {
             case BVSignExtOp(_, e) => width.flatMap((w) => Some(BVSignExtOp(w, e)))
             case BVZeroExtOp(_, e) => width.flatMap((w) => Some(BVZeroExtOp(w, e)))
             case BVLeftShiftOp(_, e) => width.flatMap((w) => Some(BVLeftShiftOp(w, e)))
+            case BVLRightShiftOp(_, e) => width.flatMap((w) => Some(BVLRightShiftOp(w, e)))
+            case BVARightShiftOp(_, e) => width.flatMap((w) => Some(BVARightShiftOp(w, e)))
             case _ => Some(bv)
           }
           newOp match {

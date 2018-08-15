@@ -1,0 +1,25 @@
+module main
+{
+  var a : integer;
+  var b : integer;
+
+  init {
+    a = 0;
+    b = 1;
+  }
+
+  next {
+    a' = a + 1;
+    havoc b;
+    assume (b' == b + 1);
+  }
+
+  invariant a_plus_1_eq_b: a + 1 == b;
+  invariant a_eq_b: a == b;
+
+  control {
+    v = unroll(5);
+    check;
+    print_results;
+  }
+}

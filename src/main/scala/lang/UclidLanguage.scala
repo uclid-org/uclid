@@ -249,6 +249,16 @@ case class BVLeftShiftOp(override val w : Int, val e : Int) extends BVArgOperato
   override def toString = "bv_left_shift"
   override val arity = 1
 }
+case class BVLRightShiftOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
+  override def fixity = Operator.PREFIX
+  override def toString = "bv_l_right_shift"
+  override val arity = 1
+}
+case class BVARightShiftOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
+  override def fixity = Operator.PREFIX
+  override def toString = "bv_a_right_shift"
+  override val arity = 1
+}
 // Boolean operators.
 sealed abstract class BooleanOperator extends Operator {
   override def fixity = Operator.INFIX
@@ -542,7 +552,6 @@ object ExprDecorator {
     decs.exists(p => p == LTLSafetyFragmentDecorator || p == LTLLivenessFragmentDecorator)
   }
 }
-
 
 sealed abstract class Type extends PositionedNode {
   def isBool = false

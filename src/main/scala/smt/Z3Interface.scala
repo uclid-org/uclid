@@ -249,13 +249,18 @@ class Z3Interface() extends Context {
       case recType : RecordType => getRecordSort(recType.fields_)
     }
   }
+  val getArrayIndexSort = new Memo[List[Type], z3.Sort]({
+    p => {
+      if (p.size == 1) {
+        getZ3Sort(p(0))
+      } else {
+        getTupleSort(p)
+      }
+    }
+  })
   val getArraySort = new Memo[(List[Type], Type), z3.ArraySort]((arrayType : (List[Type], Type)) => {
     val indexTypeIn = arrayType._1
-    val z3IndexType = if (indexTypeIn.size == 1) {
-      getZ3Sort(indexTypeIn(0))
-    } else {
-      getTupleSort(indexTypeIn)
-    }
+    val z3IndexType = getArrayIndexSort(indexTypeIn)
     ctx.mkArraySort(z3IndexType, getZ3Sort(arrayType._2))
   })
   val getEnumSort = new Memo[List[String], z3.EnumSort]((enumConstants : List[String]) => {
@@ -298,6 +303,15 @@ class Z3Interface() extends Context {
   /** Create an enum literal. */
   val getEnumLit = new Memo[(String, EnumType), z3.Expr]((p) => getEnumSort(p._2.members).getConst(p._2.fieldIndex(p._1)))
 
+  /** Create a constant array literal. */
+  val getConstArrayLit = new Memo[(Literal, ArrayType), z3.Expr]({
+    (p) => {
+      val value = exprToZ3(p._1).asInstanceOf[z3.Expr]
+      val sort = getArrayIndexSort(p._2.inTypes)
+      val arr = ctx.mkConstArray(sort, value)
+      arr
+    }
+  })
   /** Convert a smt.Symbol object into a Z3 AST. */
   def symbolToZ3 (sym : Symbol) : z3.AST = {
     abstract class ExprSort
@@ -387,6 +401,8 @@ class Z3Interface() extends Context {
       case BVSignExtOp(w, e)      => ctx.mkSignExt(e, bvArgs(0))
       case BVZeroExtOp(w, e)      => ctx.mkZeroExt(e, bvArgs(0))
       case BVLeftShiftOp(w, e)    => ctx.mkBVSHL(bvArgs(0), ctx.mkBV(e, w))
+      case BVLRightShiftOp(w, e)  => ctx.mkBVLSHR(bvArgs(0), ctx.mkBV(e, w))
+      case BVARightShiftOp(w, e)  => ctx.mkBVASHR(bvArgs(0), ctx.mkBV(e, w))
       case NegationOp             => ctx.mkNot (boolArgs(0))
       case IffOp                  => ctx.mkIff (boolArgs(0), boolArgs(1))
       case ImplicationOp          => ctx.mkImplies (boolArgs(0), boolArgs(1))
@@ -455,6 +471,7 @@ class Z3Interface() extends Context {
       case BitVectorLit(bv,w) => getBitVectorLit(bv, w)
       case BooleanLit(b) => getBoolLit(b)
       case EnumLit(e, typ) => getEnumLit(e, typ)
+      case ConstArrayLit(value, typ) => getConstArrayLit(value, typ)
       case MakeTuple(args) =>
         val tupleSort = getTupleSort(args.map(_.typ))
         tupleSort.mkDecl().apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
