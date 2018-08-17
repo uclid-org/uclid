@@ -41,6 +41,7 @@ package uclid
 package lang
 
 import scala.collection.immutable.Map
+import scala.collection.mutable.{Map => MutableMap}
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
 import scala.reflect.ClassTag
@@ -564,6 +565,7 @@ sealed abstract class Type extends PositionedNode {
   def isMap = false
   def isArray = false
   def isUninterpreted = false
+  def ids = List.empty[Identifier]
   def matches (t2 : Type) = (this == t2)
   def defaultValue : Option[Expr] = None
 }
@@ -618,7 +620,8 @@ case class StringType() extends PrimitiveType {
   override def toString = "string"
   override def defaultValue = Some(StringLit(""))
 }
-case class EnumType(ids: List[Identifier]) extends Type {
+case class EnumType(ids_ : List[Identifier]) extends Type {
+  override def ids = ids_
   override def toString = "enum {" +
     ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i} + "}"
   override def defaultValue = {
@@ -1222,6 +1225,17 @@ case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) ext
     val start = PrettyPrinter.indent(1) + "// instance_var_map { "
     val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), ".") + " ::==> " + p._2.toString)
     val end = PrettyPrinter.indent(1) + "// } end_instance_var_map"
+    Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
+  }
+}
+
+case class ExprRenameMapAnnotation(renameMap_ : MutableMap[Expr, BigInt]) extends Annotation {
+  lazy val renameMap : MutableMap[Expr, BigInt] = renameMap_
+
+  override def toString : String = {
+    val start = PrettyPrinter.indent(1) + "// expr_rename_map { "
+    val lines = renameMap_.map(p => PrettyPrinter.indent(1) + "//   " + (p._1.toString + " => " + p._2.toString))
+    val end = PrettyPrinter.indent(1) + "// } end_expr_rename_map"
     Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
   }
 }

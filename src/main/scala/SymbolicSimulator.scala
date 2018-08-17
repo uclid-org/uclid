@@ -182,7 +182,7 @@ class SymbolicSimulator (module : Module) {
               case None =>
                 UclidMain.println("Error: Can't execute synthesize_invariant as synthesizer was not provided. ")
               case Some(synth) => {
-                synthesizeInvariants(context, noLTLFilter, synth, cmd.params(0).toString) match {
+                synthesizeInvariants(context, noLTLFilter, synth, cmd.params(0).toString, config.sygusTypeConvert) match {
                   // Failed to synthesize invariant
                   case None => UclidMain.println("Failed to synthesize invariant.")
                   // Successfully synthesized an invariant
@@ -643,8 +643,19 @@ class SymbolicSimulator (module : Module) {
     smt.Operator.conjunction(symbolicExpressions)
   }
 
-  def synthesizeInvariants(ctx : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean), synthesizer : smt.SynthesisContext, logic : String) : Option[lang.Expr] = {
+  def synthesizeInvariants(ctx : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean), synthesizer : smt.SynthesisContext, logic : String, sygusTypeConvert : Boolean) : Option[lang.Expr] = {
     resetState()
+
+    val passManager = new PassManager("sygusTypeConverter")
+    // Convert enum type
+    if (sygusTypeConvert) {
+      passManager.addPass(new EnumTypeAnalysis())
+      passManager.addPass(new EnumTypeRenamer(logic))
+    }
+    // Synthesis module
+    val synthesisModule = passManager.run(module, Scope.empty).get
+    val synthesisCtx = Scope.empty + synthesisModule
+
     // assumptions.
     var initAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
     var nextAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
@@ -656,11 +667,11 @@ class SymbolicSimulator (module : Module) {
     var nextAssertions : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
     def nextAddAssertion(e : AssertInfo) : Unit = { nextAssertions += e }
 
-    val defaultSymbolTable = getDefaultSymbolTable(ctx)
-    val primeSymbolTable = getPrimeSymbolTable(ctx)
+    val defaultSymbolTable = getDefaultSymbolTable(synthesisCtx)
+    val primeSymbolTable = getPrimeSymbolTable(synthesisCtx)
     // FIXME: Need to account for assumptions and assertions. 
-    val initState = simulate(0, List.empty, module.init.get.body, defaultSymbolTable, ctx, "synthesize", initAddAssumption _, initAddAssertion _)
-    val nextState = simulate(0, List.empty, module.next.get.body, defaultSymbolTable, ctx, "synthesize", nextAddAssumption _, nextAddAssertion _)
+    val initState = simulate(0, List.empty, synthesisModule.init.get.body, defaultSymbolTable, synthesisCtx, "synthesize", initAddAssumption _, initAddAssertion _)
+    val nextState = simulate(0, List.empty, synthesisModule.next.get.body, defaultSymbolTable, synthesisCtx, "synthesize", nextAddAssumption _, nextAddAssertion _)
     val assertions = nextAssertions.map {
       assert => {
         if (assert.pathCond == smt.BooleanLit(true)) {
@@ -670,10 +681,10 @@ class SymbolicSimulator (module : Module) {
         }
       }
     }.toList
-    val invariants = ctx.specs.map(specVar => {
-      val prop = module.properties.find(p => p.id == specVar.varId).get
+    val invariants = synthesisCtx.specs.map(specVar => {
+      val prop = synthesisModule.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {
-        Some(evaluate(prop.expr, defaultSymbolTable, Map.empty, ctx))
+        Some(evaluate(prop.expr, defaultSymbolTable, Map.empty, synthesisCtx))
       } else {
         None
       }
@@ -708,7 +719,7 @@ class SymbolicSimulator (module : Module) {
     val verificationConditions = assertions ++ invariants
     Utils.assert(verificationConditions.size > 0, "Must have at least one assertion/invariant.")
     Utils.assert(initAssertions.size == 0, "Must not have assertions in the init block for SyGuS.") 
-    return synthesizer.synthesizeInvariant(initExpr, nextExpr, verificationConditions, ctx, logic)
+    return synthesizer.synthesizeInvariant(initExpr, nextExpr, verificationConditions, synthesisCtx, logic)
   }
 
   /** Add module specifications (properties) to the list of proof obligations */

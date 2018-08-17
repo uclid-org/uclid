@@ -77,6 +77,7 @@ object UclidMain {
       synthesizer: List[String] = List.empty,
       synthesisRunDir: String = "",
       sygusFormat: Boolean = false,
+      sygusTypeConvert: Boolean = false,
       printStackTrace: Boolean = false,
       verbose : Int = 0,
       files : Seq[java.io.File] = Seq()
@@ -109,6 +110,10 @@ object UclidMain {
       opt[Unit]('f', "sygus-format").action{
         (_, c) => c.copy(sygusFormat = true)
       }.text("Generate the standard SyGuS format.")
+
+      opt[Unit]('c', "sygus-type-convert").action{
+        (_, c) => c.copy(sygusTypeConvert = true)
+      }.text("Enable EnumType conversion in synthesis.")
 
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
