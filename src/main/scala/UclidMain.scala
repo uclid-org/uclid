@@ -44,9 +44,7 @@ package uclid
 
 import scala.util.parsing.combinator._
 import scala.collection.immutable._
-import uclid.lang._
-import lang.Module
-import lang.Identifier
+import lang.{Identifier, Module,  _}
 import uclid.Utils.ParserErrorList
 import com.typesafe.scalalogging.Logger
 import uclid.smt.SyGuSInterface
@@ -222,7 +220,8 @@ object UclidMain {
     passManager.addPass(new BlockFlattener())
     passManager.addPass(new ModuleCleaner(mainModuleName))
     passManager.addPass(new BlockVariableRenamer())
-    // passManager.addPass(new ASTPrinter())
+    passManager.addPass(new TaintVarPass())
+    passManager.addPass(new ASTPrinter())
 
     val filenameAdderPass = new AddFilenameRewriter(None)
     // Helper function to parse a single file.
