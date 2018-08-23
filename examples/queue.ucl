@@ -1,11 +1,3 @@
-module common {
- type op_t = enum {push, pop, nop};
- type index_t = bv3;
-
- const c0 : [integer]integer;
-}
-
-
 module queue
 {
   type op_t = enum { push, pop, nop };
@@ -16,9 +8,10 @@ module queue
 
   const SIZE : integer = 4;
 
-  var contents      : [index_t]data_t;
+  var contents      : queue_t;
   var head, tail    : index_t;
   var count         : count_t;
+  var inited        : boolean;
 
   input op          : op_t;
   input data        : integer;
@@ -26,106 +19,108 @@ module queue
   output first      : data_t;
   output valid      : boolean;
   output full       : boolean;
+  output empty      : boolean;
 
   define is_empty() : boolean = (count == 0);
-  define in_queue(v : integer) : boolean = 
-  	(exists (i : index_t) :: 
-        (head <= tail && i >= head && i < tail && contents[i] == v) ||
-        (head > tail && (i >= head || i < tail) && contents[i] == v));
+  define in_queue(v : integer) : boolean =
+    (exists (i : index_t) :: (i >= 0 && i < SIZE) &&
+        (head < tail && i >= head && i < tail && contents[i] == v) ||
+        (head >= tail && (i >= head || i < tail) && contents[i] == v));
 
   init {
-    head  = 0;
-    tail  = 0; 
-    count = 0;
-    valid = false;
-    full  = false;
+    head   = 0;
+    tail   = 0;
+    count  = 0;
+    valid  = false;
+    full   = false;
+    empty  = true;
+    inited = false;
   }
 
-  procedure _push_q() returns (contentsP : [integer]integer, tailP : integer)
+  procedure pushQ()
+    returns (
+        contentsP : queue_t,
+        tailP : index_t,
+        countP : integer)
+
+    requires !full;
+    requires (tail >= 0 && tail < SIZE);
+    ensures (contentsP == contents[tail -> data]);
+    ensures (tailP == if (tail == SIZE-1) then 0 else (tail + 1));
+    ensures (countP == count + 1);
   {
-    contentsP = contents;
-    contentsP[tail] = data;
+    contentsP = contents[tail -> data];
     tailP = tail + 1;
+    if (tailP >= SIZE) { tailP = 0; }
+    countP = count + 1;
   }
 
-  procedure _pop_q() returns (headP : integer)
+  procedure popQ()
+    returns (
+        headP : integer,
+        countP : integer)
+
+    requires !empty;
+    requires (head >= 0 && head < SIZE);
+    ensures (headP == if (head == SIZE-1) then 0 else (head + 1));
+    ensures (countP == count - 1);
   {
-    headP = head+1;
+    headP = head + 1;
+    if (headP >= SIZE) { headP = 0; }
+    countP = count - 1;
   }
 
   next {
     inited' = true;
-    first' = contents[head];
+    first'  = contents[head];
+    full'   = (count' == SIZE);
+    empty'  = (count' == 0);
+
     case
-	(op == push) : {
-	  call (contents', tail') = _push_q();
-    }
-	(op == pop) : {
-      if (!is_empty()) {
-	    call(head') = _pop_q();
+      (op == push && !full) : {
+        call (contents', tail', count') = pushQ();
       }
-	}
-	(op == nop) : { } /* no change */
+      (op == pop && !empty) : {
+        if (!is_empty()) {
+          call (head', count') = popQ();
+        }
+      }
     esac;
   }
 
-  const pushed_data : integer;
-  invariant[LTL] head_le_tail : G(head <= tail);
-  invariant[LTL] queue_inserts : G((inited && op == push && data == pushed_data && X(op != pop)) 
-  									  ==> X(in_queue(pushed_data)));
+  const pushed_data : data_t;
+
+  invariant[LTL] count_valid:
+    G(count >= 0 && count <= SIZE);
+
+  invariant[LTL] queue_inserts :
+    G((inited && op == push && X(op != pop) &&
+       data == pushed_data && !full)
+    ==> X(in_queue(pushed_data)));
+
   invariant[LTL] push_eventually_pops :
-  	G(F(op == pop)) ==> // assume a pop will always happen.
-  	G((inited && op == push && data == pushed_data) ==>
-  	  F(op == pop && first == pushed_data));
+    // no NOPs
+    G(op != nop)                ==>
+    // no push when full
+    G(op == push ==> !full)     ==>
+    // no pop when empty
+    G(op == pop  ==> !empty)    ==>
+    // everything that is pushed will eventually be popped.
+    G((inited && op == push && data == pushed_data) ==>
+      F(op == pop && first == pushed_data));
+
   control {
-    // print_module;
-    v = bmc(5);
+    vQ = bmc(5);
+    vPush = verify(pushQ);
+    vPop  = verify(popQ);
     check;
     print_results;
-    v.print_cex(op, data, pushed_data, head, tail, contents);
+    vPush.print_cex(tail, tailP);
+    vQ.print_cex(
+        op, data, pushed_data,
+        head, tail, first, count,
+        contents[0], contents[1],
+        contents[2], contents[3]);
   }
 }
 
-module main
-{
-  type op_t = common.op_t;
-
-  var op : op_t;
-  var data : integer;
-
-  var step : integer;
-  var head : integer;
-
-  instance queue_i : queue(op : (op'), data : (data), first : (head));
-
-  init {
-    op' = nop;
-    data' = 0; 
-    step' = 0;
-  }
-
-  next {
-    assert false;
-    case
-	  (step == 0) || (step == 1) : { op' = push; }
-	  (step == 2) || (step == 3) : { op' = pop; }
-    esac
-
-    step' = step+1;
-    data' = data+2;
-    next(queue_i);
-
-    if (step' == 2) {
-      assert (head' == 1);
-    }
-    if (step' == 3) {
-      assert (head' == 2);
-    } 
-  }
-
-  control {
-    unroll (5);
-    check;
-    print_results;
-  }
-}
