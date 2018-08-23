@@ -22,10 +22,13 @@ module queue
   output empty      : boolean;
 
   define is_empty() : boolean = (count == 0);
+  define itemIndex(i : index_t) : index_t =
+    if ((i + head) >= SIZE)
+        then (i + head) - SIZE
+        else (i + head);
   define in_queue(v : integer) : boolean =
-    (exists (i : index_t) :: (i >= 0 && i < SIZE) &&
-        (head < tail && i >= head && i < tail && contents[i] == v) ||
-        (head >= tail && (i >= head || i < tail) && contents[i] == v));
+    (exists (i : index_t) :: 
+        (i >= 0 && i < count) && contents[itemIndex(i)] == v);
 
   init {
     head   = 0;
@@ -70,6 +73,26 @@ module queue
     countP = count - 1;
   }
 
+  procedure searchQ(v : data_t)
+    returns (found : boolean)
+    requires (count >= 0 && count <= SIZE);
+    ensures (in_queue(v) <==> found);
+  {
+    var i : integer;
+
+    i = 0;
+    found = false;
+    while (i < count)
+      invariant (i >= 0 && i <= count); // This could be a target for SyGuS??
+      invariant (exists (j : integer) :: j >= 0 && j < i && contents[itemIndex(j)] == v) <==> found;
+    {
+      if (contents[itemIndex(i)] == v) {
+        found = true;
+      }
+      i = i + 1;
+    }
+  }
+
   next {
     inited' = true;
     first'  = contents[head];
@@ -110,9 +133,10 @@ module queue
       F(op == pop && first == pushed_data));
 
   control {
-    vQ = bmc(5);
-    vPush = verify(pushQ);
-    vPop  = verify(popQ);
+    vQ      = bmc(5);
+    vPush   = verify(pushQ);
+    vPop    = verify(popQ);
+    vSearch = verify(searchQ);
     check;
     print_results;
     vPush.print_cex(tail, tailP);
