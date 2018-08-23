@@ -113,12 +113,15 @@ module queue
 
   const pushed_data : data_t;
 
+  // count is always between 0 and SIZE.
   invariant[LTL] count_valid:
     G(count >= 0 && count <= SIZE);
 
   invariant[LTL] queue_inserts :
+    // if we push something
     G((inited && op == push && X(op != pop) &&
        data == pushed_data && !full)
+    // it enters the queue
     ==> X(in_queue(pushed_data)));
 
   invariant[LTL] push_eventually_pops :
@@ -147,4 +150,3 @@ module queue
         contents[2], contents[3]);
   }
 }
-
