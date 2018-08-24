@@ -1,6 +1,6 @@
 module queue
 {
-  type op_t = enum { push, pop, nop };
+  type op_t = enum { push, pop, search };
   type index_t = integer;
   type count_t = integer;
   type data_t = integer;
@@ -20,8 +20,8 @@ module queue
   output valid      : boolean;
   output full       : boolean;
   output empty      : boolean;
+  output found      : boolean;
 
-  define is_empty() : boolean = (count == 0);
   define itemIndex(i : index_t) : index_t =
     if ((i + head) >= SIZE)
         then (i + head) - SIZE
@@ -38,6 +38,7 @@ module queue
     full   = false;
     empty  = true;
     inited = false;
+    found  = false;
   }
 
   procedure pushQ()
@@ -73,10 +74,10 @@ module queue
     countP = count - 1;
   }
 
-  procedure searchQ(v : data_t)
+  procedure searchQ()
     returns (found : boolean)
     requires (count >= 0 && count <= SIZE);
-    ensures (in_queue(v) <==> found);
+    ensures (in_queue(data) <==> found);
   {
     var i : integer;
 
@@ -84,9 +85,12 @@ module queue
     found = false;
     while (i < count)
       invariant (i >= 0 && i <= count); // This could be a target for SyGuS??
-      invariant (exists (j : integer) :: j >= 0 && j < i && contents[itemIndex(j)] == v) <==> found;
+      invariant 
+        (exists (j : integer) :: 
+            j >= 0 && j < i && contents[itemIndex(j)] == data)
+        <==> found;
     {
-      if (contents[itemIndex(i)] == v) {
+      if (contents[itemIndex(i)] == data) {
         found = true;
       }
       i = i + 1;
@@ -104,9 +108,10 @@ module queue
         call (contents', tail', count') = pushQ();
       }
       (op == pop && !empty) : {
-        if (!is_empty()) {
-          call (head', count') = popQ();
-        }
+        call (head', count') = popQ();
+      }
+      (op == search) : {
+        call (found') = searchQ();
       }
     esac;
   }
@@ -126,7 +131,7 @@ module queue
 
   invariant[LTL] push_eventually_pops :
     // no NOPs
-    G(op != nop)                ==>
+    G(op != search)             ==>
     // no push when full
     G(op == push ==> !full)     ==>
     // no pop when empty
@@ -135,6 +140,14 @@ module queue
     G((inited && op == push && data == pushed_data) ==>
       F(op == pop && first == pushed_data));
 
+  invariant[LTL] pushed_value_becomes_head :
+    // there is always eventually a push
+    G(F(op == pop)) ==>
+    // every value that is pushed
+    G((inited && op == push && data == pushed_data && !full) ==>
+      // eventually becomes the head of the queue
+      F(first == pushed_data));
+
   control {
     vQ      = bmc(5);
     vPush   = verify(pushQ);
@@ -142,7 +155,6 @@ module queue
     vSearch = verify(searchQ);
     check;
     print_results;
-    vPush.print_cex(tail, tailP);
     vQ.print_cex(
         op, data, pushed_data,
         head, tail, first, count,
