@@ -9,7 +9,7 @@ module common {
       op_syscall, op_sysret
   };
   // CPU mode.
-  type mode_t = enum { usr_mode, sup_mode };
+  type mode_t = enum { normal_mode, isolated_mode };
   // CPU memory type.
   type mem_t = [addr_t]word_t;
 
@@ -26,11 +26,6 @@ module common {
 }
 
 module cpu {
-  // type addr_t = common.addr_t;
-  // type mem_t  = common.mem_t;
-  // type word_t = common.word_t;
-  // type op_t   = common.op_t;
-  // type mode_t = common.mode_t;
   type * = common.*;
 
   type regindex_t;
@@ -43,7 +38,7 @@ module cpu {
   var inst, result   : word_t; // inst reg, result value
   var mode           : mode_t; // usr/sup mode?
 
-  // range of privileged memory.
+  // range of isolated memory.
   const sup_range_lo   : addr_t;
   const sup_range_hi   : addr_t;
   // predicate for the above.
@@ -57,13 +52,13 @@ module cpu {
   function aluOp     (i : word_t, r0 : word_t, r1 : word_t) : word_t;
   function nextPC    (i : word_t, pc : addr_t, r0 : word_t) : addr_t;
 
-  define in_privileged_memory (a : addr_t) : boolean =
+  define in_isolated_memory (a : addr_t) : boolean =
     in_range(a, sup_range_lo, sup_range_hi);
 
   axiom (forall (a : addr_t) ::
-            (a == common.syscall_enter_addr()) ==> in_privileged_memory(a));
+            (a == common.syscall_enter_addr()) ==> in_isolated_memory(a));
   axiom (forall (a : addr_t) ::
-            (a == common.sysret_exit_addr()) ==> !in_privileged_memory(a));
+            (a == common.sysret_exit_addr()) ==> !in_isolated_memory(a));
 
   procedure exec_inst(instr : word_t, pc : addr_t)
     returns (pc_next : addr_t)
@@ -86,12 +81,12 @@ module cpu {
     // get memory address 
     addr = inst2addr(instr, r0, r1);
 
-    // If we are in supervisor mode, we only set pc_next to supervisor address.
-    assume (mode == sup_mode) ==> (in_privileged_memory(pc_next));
-    // If we are in supervisor mode, we only read from supervisor memory.
-    assume (mode == sup_mode && op == op_load) ==> in_privileged_memory(addr);
-    // If we are already in supervisor mode, we don't execute syscalls.
-    assume (mode == sup_mode) ==> (op != op_syscall);
+    // If we are in isolated mode, we only set pc_next to isolated address.
+    assume (mode == isolated_mode) ==> (in_isolated_memory(pc_next));
+    // If we are in isolated mode, we only read from isolated memory.
+    assume (mode == isolated_mode && op == op_load) ==> in_isolated_memory(addr);
+    // If we are already in isolated mode, we don't execute syscalls.
+    assume (mode == isolated_mode) ==> (op != op_syscall);
 
     case
       (op == op_alu)     : {
@@ -99,7 +94,7 @@ module cpu {
           regs[r0ind] = result;
       }
       (op == op_load)    : {
-        if (mode == sup_mode || !in_privileged_memory(addr)) {
+        if (mode == isolated_mode || !in_isolated_memory(addr)) {
           // read memory.
           result = dmem[addr];
         } else {
@@ -111,13 +106,13 @@ module cpu {
       (op == op_store)   : {
         result = common.k0_word_t();
         // is writing legal?
-        if (mode == sup_mode || !in_privileged_memory(addr)) {
+        if (mode == isolated_mode || !in_isolated_memory(addr)) {
           // write to memory.
           dmem[addr] = r0;
         }
       }
       (op == op_syscall) : {
-        assert (mode == usr_mode);
+        assert (mode == normal_mode);
 
         // zero out result.
         result = common.k0_word_t();
@@ -127,7 +122,7 @@ module cpu {
         // set PC.
         pc_next = common.syscall_enter_addr();
         // set mode.
-        mode = sup_mode;
+        mode = isolated_mode;
       }
       (op == op_sysret) : {
         // zero out result.
@@ -138,7 +133,7 @@ module cpu {
         // set PC.
         pc_next = common.sysret_exit_addr();
         // set mode.
-        mode = usr_mode;
+        mode = normal_mode;
       }
     esac
   }
@@ -150,8 +145,8 @@ module cpu {
     inst = common.k0_word_t();
     // start off-execution at a deterministic address.
     pc   = common.syscall_enter_addr();
-    // in supervisor mode.
-    mode = sup_mode;
+    // in isolated mode.
+    mode = isolated_mode;
   }
 
   next {
@@ -177,10 +172,10 @@ module main {
   instance cpu2 : cpu(imem : (imem2));
 
   init {
-    // Assume same supervisor ranges.
+    // Assume same isolated ranges.
     assume (cpu1.sup_range_lo == cpu2.sup_range_lo);
     assume (cpu1.sup_range_hi == cpu2.sup_range_hi);
-    // Assume supervisor memory starts off identical.
+    // Assume isolated memory starts off identical.
     assume (forall (a : addr_t) ::
                 (cpu.in_range(a, cpu1.sup_range_lo, cpu2.sup_range_hi))
                     ==> (cpu1.dmem[a] == cpu2.dmem[a]));
@@ -199,22 +194,22 @@ module main {
 
   // The two CPUs change mode in sync.
   invariant eq_mode      : (cpu1.mode == cpu2.mode);
-  // The two CPUs have the same PC when in supervisor mode.
-  invariant eq_pc        : (cpu1.mode == sup_mode) ==> (cpu1.pc == cpu2.pc);
-  // In supervisor mode, the two CPUs execute the same code.
-  invariant eq_inst      : (cpu1.mode == sup_mode) ==> (cpu1.inst == cpu2.inst);
-  // In supervisor mode, the two CPUs have the same register values.
+  // The two CPUs have the same PC when in isolated mode.
+  invariant eq_pc        : (cpu1.mode == isolated_mode) ==> (cpu1.pc == cpu2.pc);
+  // In isolated mode, the two CPUs execute the same code.
+  invariant eq_inst      : (cpu1.mode == isolated_mode) ==> (cpu1.inst == cpu2.inst);
+  // In isolated mode, the two CPUs have the same register values.
   invariant eq_regs      : (forall (ri : regindex_t) ::
-                                (cpu1.mode == sup_mode) ==> (cpu1.regs[ri] == cpu2.regs[ri]));
-  // The supervisor range of memory is the same in both CPUs.
+                                (cpu1.mode == isolated_mode) ==> (cpu1.regs[ri] == cpu2.regs[ri]));
+  // The isolated range of memory is the same in both CPUs.
   invariant eq_sup_range : (cpu1.sup_range_lo == cpu2.sup_range_lo) &&
                            (cpu1.sup_range_hi == cpu2.sup_range_hi);
-  // When in supervisor mode, the PC is also in the supervisor mode range.
-  invariant in_pc_range1 : (cpu1.mode == sup_mode)
+  // When in isolated mode, the PC is also in the isolated mode range.
+  invariant in_pc_range1 : (cpu1.mode == isolated_mode)
                                 ==> cpu.in_range(cpu1.pc, cpu1.sup_range_lo, cpu1.sup_range_hi);
-  invariant in_pc_range2 : (cpu2.mode == sup_mode)
+  invariant in_pc_range2 : (cpu2.mode == isolated_mode)
                                 ==> cpu.in_range(cpu2.pc, cpu2.sup_range_lo, cpu2.sup_range_hi);
-  // The CPU memory that is private to supervisor mode is identical.
+  // The CPU memory that is private to isolated mode is identical.
   invariant eq_dmem      : (forall (a : addr_t) ::
                                 (cpu.in_range(a, cpu1.sup_range_lo, cpu2.sup_range_hi))
                                     ==> (cpu1.dmem[a] == cpu2.dmem[a]));
