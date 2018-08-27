@@ -5,11 +5,11 @@ object TaintVarMap {
   var map  = scala.collection.mutable.Map[Identifier, Identifier]()
   def insert(v: Identifier, v_taint: Identifier) = {
     map += (v -> v_taint)
-    UclidMain.println("MAP ins: " + map.toString())
+    //UclidMain.println("MAP ins: " + map.toString())
   }
 
   def get(v: Identifier) = {
-      UclidMain.println("MAP get: " + map.toString())
+      //UclidMain.println("MAP get: " + map.toString())
       map.get(v)
   }
 }
@@ -60,8 +60,8 @@ class TaintNextPass extends RewritePass {
       // External identifiers/Fresh Literals not handled at the moment
 
       case Identifier(name) => {
-        UclidMain.println("HERE " + name)
-        UclidMain.println(TaintVarMap.get(Identifier(name)).toString())
+        //UclidMain.println("HERE " + name)
+        //UclidMain.println(TaintVarMap.get(Identifier(name)).toString())
         TaintVarMap.get(Identifier(name))
       }
       case FreshLit(typ) => None
@@ -108,9 +108,9 @@ class TaintNextPass extends RewritePass {
     }
 
     var taint_exprs = (List(assgn._2) ++ precondition).map(expr => generateTaintExpr(expr)).flatten
-    UclidMain.println("LHS: " + assgn._1.asInstanceOf[LhsId].id.toString())
-    UclidMain.println("Rhs: " + assgn._2.toString())
-    UclidMain.println("Taint exprs" + taint_exprs.toString())
+    //UclidMain.println("LHS: " + assgn._1.asInstanceOf[LhsId].id.toString())
+    //UclidMain.println("Rhs: " + assgn._2.toString())
+    //UclidMain.println("Taint exprs" + taint_exprs.toString())
     if (taint_exprs.length == 0 || taint_var == None)
       None
     else
