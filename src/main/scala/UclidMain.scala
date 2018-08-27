@@ -220,7 +220,8 @@ object UclidMain {
     passManager.addPass(new BlockFlattener())
     passManager.addPass(new ModuleCleaner(mainModuleName))
     passManager.addPass(new BlockVariableRenamer())
-    passManager.addPass(new TaintVarPass())
+    passManager.addPass(new TaintModPass())
+    passManager.addPass(new TaintNPass())
     passManager.addPass(new ASTPrinter())
 
     val filenameAdderPass = new AddFilenameRewriter(None)
