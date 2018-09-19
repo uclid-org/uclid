@@ -76,6 +76,7 @@ object UclidMain {
       smtSolver: List[String] = List.empty,
       synthesizer: List[String] = List.empty,
       synthesisRunDir: String = "",
+      smtFileGeneration: String = "",
       sygusFormat: Boolean = false,
       sygusTypeConvert: Boolean = false,
       printStackTrace: Boolean = false,
@@ -102,6 +103,10 @@ object UclidMain {
       opt[String]('Y', "synthesizer-run-directory").valueName("<Dir>").action{
         (dir, c) => c.copy(synthesisRunDir = dir)
       }.text("Run directory for synthesizer.")
+
+      opt[String]('g', "smt-file-generation").action{
+        (prefix, c) => c.copy(smtFileGeneration = prefix)
+      }.text("File prefix to generate smt files for each assertion.")
 
       opt[Unit]('X', "exception-stack-trace").action{
         (_, c) => c.copy(printStackTrace = true)
@@ -312,6 +317,7 @@ object UclidMain {
       case Nil => None
       case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir, config.sygusFormat))
     }
+    z3Interface.filePrefix = config.smtFileGeneration
     val result = symbolicSimulator.execute(z3Interface, sygusInterface, config)
     z3Interface.finish()
     return result

@@ -113,6 +113,10 @@ abstract trait Context {
     return name
   }
 
+  var counten = 1
+  var filePrefix = ""
+  var curAssertName = ""
+  var curAssertLabel = ""
 
   /** Flatten a type and add it to the type synonym map. */
   def flatten(typ: Type, synMap: SynonymMap) : (Type, SynonymMap) = {

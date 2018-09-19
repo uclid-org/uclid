@@ -47,6 +47,8 @@ import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
 import com.microsoft.z3.enumerations.Z3_lbool
 import com.typesafe.scalalogging.Logger
+import java.io.File
+import java.io.PrintWriter
 
 
 /**
@@ -497,26 +499,39 @@ class Z3Interface() extends Context {
   }
   override def preassert(e: Expr) {}
 
+  def writeToFile(p: String, s: String): Unit = {
+    val pw = new PrintWriter(new File(p))
+    try pw.write(s) finally pw.close()
+  } 
+
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
   override def check() : SolverResult = {
-    checkLogger.debug(solver.toString())
-    val z3Result = solver.check()
+    val smtOutput = solver.toString()
+    checkLogger.debug(smtOutput)
 
-    val checkResult : SolverResult = z3Result match {
-      case z3.Status.SATISFIABLE =>
-        val z3Model = solver.getModel()
-        checkLogger.debug("SAT")
-        checkLogger.debug("Model: {}", z3Model.toString())
-        SolverResult(Some(true), Some(new Z3Model(this, z3Model)))
-      case z3.Status.UNSATISFIABLE =>
-        checkLogger.debug("UNSAT")
-        SolverResult(Some(false), None)
-      case _ =>
-        checkLogger.debug("UNDET")
-        SolverResult(None, None)
+    if (filePrefix == "") {
+      val z3Result = solver.check()
+
+      val checkResult : SolverResult = z3Result match {
+        case z3.Status.SATISFIABLE =>
+          val z3Model = solver.getModel()
+          checkLogger.debug("SAT")
+          checkLogger.debug("Model: {}", z3Model.toString())
+          SolverResult(Some(true), Some(new Z3Model(this, z3Model)))
+        case z3.Status.UNSATISFIABLE =>
+          checkLogger.debug("UNSAT")
+          SolverResult(Some(false), None)
+        case _ =>
+          checkLogger.debug("UNDET")
+          SolverResult(None, None)
+      }
+      return checkResult
+    } else {
+      writeToFile(f"$filePrefix%s-$curAssertName%s-$curAssertLabel%s-$counten%04d.smt", smtOutput + "\n\n(check-sat)\n(get-info :all-statistics)\n")
+      counten += 1
+      return SolverResult(None, None)
     }
-    return checkResult
   }
 
   override def finish() {
