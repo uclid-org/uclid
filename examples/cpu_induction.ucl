@@ -146,7 +146,7 @@ module cpu {
     // start off-execution at a deterministic address.
     pc   = common.syscall_enter_addr();
     // in isolated mode.
-    mode = isolated_mode;
+    mode = normal_mode;
   }
 
   next {
