@@ -22,5 +22,6 @@ module main {
   	unroll (3);
   	check;
   	print_results;
+    print_module;
   }
 }
