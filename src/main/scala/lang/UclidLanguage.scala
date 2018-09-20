@@ -921,7 +921,7 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
       }
     }
   }
-  lazy val inputMap = modType.get.inputs.map({ 
+  lazy val inputMap = modType.get.inputs.map({
     p => argMap.get(p._1) match {
       case Some(expr) => Some(p._1, p._2, expr)
       case None => None
