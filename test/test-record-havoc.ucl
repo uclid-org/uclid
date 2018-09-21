@@ -3,31 +3,26 @@ module cpu {
         cache       : [bv4]bv4
     };
 
-    //var cache       : [bv4]bv4;
     var cache       : [bv4]bv4;
     var obs         : obs_t;
 
     next {
         havoc obs;
-        assume (obs'.cache[0bv4] == 1bv4);
     }
 }
 
 module main {
-
     instance cpu1 : cpu();
 
     next {
         next(cpu1);
     }
 
-    invariant trivial : cpu1.obs.cache[0bv4] == 1bv4;
+    invariant trivial : true;
 
     control {
-        print_module;
         v = induction();
         check;
         print_results;
     }
-
 }

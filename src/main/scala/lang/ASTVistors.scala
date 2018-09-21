@@ -602,8 +602,9 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitRecordType(recordT : RecordType, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnRecordType(TraversalDirection.Down, recordT, result, context)
+    val ctxP = context.addProductType(recordT)
     result = recordT.fields.foldLeft(result)((acc, fld) => {
-      visitType(fld._2, visitIdentifier(fld._1, acc, context), context)
+      visitType(fld._2, acc, context)
     })
     result = pass.applyOnRecordType(TraversalDirection.Up, recordT, result, context)
     return result
@@ -1416,9 +1417,10 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitRecordType(recT : RecordType, context : Scope) : Option[RecordType] = {
+    val ctxP = context.addProductType(recT)
     val fieldsP = recT.fields.map((f) => {
-      (visitIdentifier(f._1, context), visitType(f._2, context)) match {
-        case (Some(i), Some(t)) => Some((i,t))
+      (visitType(f._2, ctxP)) match {
+        case (Some(t)) => Some((f._1, t))
         case _ => None
       }
     }).flatten

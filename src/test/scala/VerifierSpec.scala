@@ -184,6 +184,9 @@ class BasicVerifierSpec extends FlatSpec {
   "test-const-array.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-const-array.ucl", 1)
   }
+  "test-record-havoc.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-record-havoc.ucl", 0)
+  }
 }
 class ProcedureVerifSpec extends FlatSpec {
   "test-inliner.ucl" should "verify successfully." in {
