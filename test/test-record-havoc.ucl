@@ -4,7 +4,7 @@ module cpu {
     };
 
     //var cache       : [bv4]bv4;
-    var cache1       : [bv4]bv4;
+    var cache       : [bv4]bv4;
     var obs         : obs_t;
 
     next {
@@ -24,6 +24,7 @@ module main {
     invariant trivial : cpu1.obs.cache[0bv4] == 1bv4;
 
     control {
+        print_module;
         v = induction();
         check;
         print_results;
