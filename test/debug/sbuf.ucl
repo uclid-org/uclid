@@ -1,0 +1,43 @@
+// Demonstration of UCLID5's handling of next-state computation
+
+module common {
+  type data_t;
+  const d0 : data_t;
+
+  function f(v : data_t) : data_t;
+}
+
+module main {
+  
+  var step : integer;
+  var state : common.data_t;
+  var C_s0 : common.data_t;
+  var C_fs0 : common.data_t;
+
+  init {
+    step = 0;
+    state = common.d0;
+    C_s0 = common.d0;
+    C_fs0 = common.f(common.d0);
+  }
+  
+  next {
+    step' = step + 1;
+    state' = common.f(state);
+    case
+      (step == 0) : {
+         assert(state == C_s0);
+      }
+      (step == 1) : {
+         assert(state == C_fs0);
+      }
+    esac;
+  }
+
+  control {
+    vobj = unroll(2);
+    check;
+    print_results;
+    vobj.print_cex(step, state, C_s0, C_fs0);
+  }
+}
