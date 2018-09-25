@@ -74,7 +74,9 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
 
     while (e.isStore()) {
       val args : Array[z3.Expr] = e.getArgs()
-      array += (args(1).toString -> args(2).toString)
+      if (!array.contains(args(1).toString)) {
+        array += (args(1).toString -> args(2).toString)
+      }
       if (args(1).toString.length > longest) {
         longest = args(1).toString.length
       }
