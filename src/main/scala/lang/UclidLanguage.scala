@@ -523,6 +523,9 @@ case class UnknownDecorator(value: String) extends ExprDecorator {
 case object LTLExprDecorator extends ExprDecorator {
   override def toString = "LTL"
 }
+case class HyperpropertyDecorator(k: Int) extends ExprDecorator {
+  override def toString = "hyperproperty(%d)".format(k)
+}
 case object LTLSafetyFragmentDecorator extends ExprDecorator {
   override def toString = "LTLSafetyFragment"
 }

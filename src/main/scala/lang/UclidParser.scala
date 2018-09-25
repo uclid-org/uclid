@@ -165,7 +165,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwDefine = "define"
     lazy val KwEnsures = "ensures"
     lazy val KwInvariant = "invariant"
-    lazy val KwDefineProp = "property"
+    lazy val KwProperty = "property"
     lazy val KwDefineAxiom = "axiom"
     lazy val KwModifies = "modifies"
     lazy val KwParameter = "parameter"
@@ -190,7 +190,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
       KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
       KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit,
-      KwNext, KwLambda, KwModifies, KwDefineProp, KwDefineAxiom,
+      KwNext, KwLambda, KwModifies, KwProperty, KwDefineAxiom,
       KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires,
       KwEnsures, KwInvariant, KwParameter)
 
@@ -653,7 +653,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val SpecDecl: PackratParser[lang.SpecDecl] = positioned {
-      (KwInvariant | KwDefineProp) ~> ("[" ~> rep(Expr) <~ "]").? ~ Id ~  (":" ~> Expr) <~ ";" ^^
+      (KwInvariant | KwProperty) ~> ("[" ~> rep(Expr) <~ "]").? ~ Id ~  (":" ~> Expr) <~ ";" ^^
          { case decOption ~ id ~ expr => decOption match {
            case None => lang.SpecDecl(id, expr, List.empty)
            case Some(dec) => lang.SpecDecl(id, expr, dec.map(ExprDecorator.parse(_))) }
