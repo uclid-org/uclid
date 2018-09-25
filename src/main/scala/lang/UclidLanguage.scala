@@ -523,7 +523,7 @@ case class UnknownDecorator(value: String) extends ExprDecorator {
 case object LTLExprDecorator extends ExprDecorator {
   override def toString = "LTL"
 }
-case class HyperpropertyDecorator(k: Int) extends ExprDecorator {
+case class HyperpropertyDecorator(k: BigInt) extends ExprDecorator {
   override def toString = "hyperproperty(%d)".format(k)
 }
 case object LTLSafetyFragmentDecorator extends ExprDecorator {
@@ -545,6 +545,13 @@ object ExprDecorator {
           LTLExprDecorator
         } else {
           UnknownDecorator(e.toString)
+        }
+      case IntLit(v) =>
+        if (v > 0) {
+          HyperpropertyDecorator(v)
+        }
+        else {
+          UnknownDecorator(v.toString)
         }
       case _ => UnknownDecorator(e.toString)
     }
@@ -1167,6 +1174,8 @@ case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) ext
   override def declNames = List(id)
   def name = "property " + id.toString()
 }
+
+
 case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
   override val hashId = 918
   override def toString = {
@@ -1180,6 +1189,21 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
     case _ => List.empty
   }
 }
+
+case class HyperDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
+  override val hashId = 919
+  override def toString = {
+    val declString = if (params.size > 0) {
+      "[" + Utils.join(params.map(_.toString), ", ") + "]"
+    } else {
+      ""
+    }
+    "hyperproperty %s%s : %s; // %s".format(id.toString, declString, expr.toString, position.toString)
+  }
+  override def declNames = List(id)
+  def name = "hyperproperty " + id.toString()
+}
+
 sealed abstract class ProofCommand extends ASTNode
 
 case class GenericProofCommand(name : Identifier, params: List[Identifier], args : List[(Expr, String)], resultVar: Option[Identifier], argObj: Option[Identifier]) extends ProofCommand {

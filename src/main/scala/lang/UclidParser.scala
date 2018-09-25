@@ -169,7 +169,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwDefineAxiom = "axiom"
     lazy val KwModifies = "modifies"
     lazy val KwParameter = "parameter"
-
+    lazy val KwHyperProperty = "hyperproperty"
+    lazy val KwHyperInvariant = "hyperinvariant"
     // lazy val TemporalOpGlobally = "G"
     // lazy val TemporalOpFinally = "F"
     // lazy val TemporalOpNext = "Next"
@@ -192,7 +193,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit,
       KwNext, KwLambda, KwModifies, KwProperty, KwDefineAxiom,
       KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires,
-      KwEnsures, KwInvariant, KwParameter)
+      KwEnsures, KwInvariant, KwParameter, KwHyperProperty, KwHyperInvariant)
 
     lazy val ast_binary: Expr ~ String ~ Expr => Expr = {
       case x ~ OpBiImpl ~ y => OperatorApplication(IffOp(), List(x, y))
@@ -658,6 +659,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
            case None => lang.SpecDecl(id, expr, List.empty)
            case Some(dec) => lang.SpecDecl(id, expr, dec.map(ExprDecorator.parse(_))) }
          }
+    }
+
+    lazy val HyperDecl: PackratParser[lang.HyperDecl] = positioned {
+      (KwHyperProperty | KwHyperInvariant) ~> ("[" ~> Expr <~ "]") ~ Id ~ (":" ~> Expr) <~ ";" ^^
+        {
+          case int_expr ~ id ~ expr => lang.HyperDecl(id, expr, List(int_expr).map(ExprDecorator.parse(_)))
+        }
     }
 
     lazy val AxiomDecl: PackratParser[lang.AxiomDecl] = positioned {
