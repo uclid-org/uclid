@@ -42,6 +42,7 @@ package smt
 
 import com.microsoft.z3
 import java.util.HashMap
+import scala.collection.immutable.ListMap
 
 import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
@@ -57,109 +58,52 @@ import java.io.PrintWriter
 class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
   override def evalAsString(e : Expr) : String = {
     interface.exprToZ3(e) match {
-      case z3ArrayExpr : z3.ArrayExpr => convertZ3ArrayString(model.eval(z3ArrayExpr, true).toString)
+      case z3ArrayExpr : z3.ArrayExpr => convertZ3ArrayString(z3ArrayExpr)
       case z3Expr : z3.Expr => model.eval(z3Expr, true).toString
       case _ => throw new Utils.EvaluationError("Unable to evaluate expression: " + e.toString)
     }
   }
 
-  def convertZ3ArrayString(initString : String) : String = {
+  def convertZ3ArrayString(initExpr : z3.Expr) : String = {
 
-    val let_count       = "\\(let \\(\\(a!\\d+ ".r().findAllIn(initString).length
-    val tempString      = initString.replaceAll("(\\(let \\(\\(a!\\d+ )?(\\(store )+(a!\\d+)?", "").replaceAll("(\\n.*)\\)\\)\\)(?=\\n)", "$1\\) ").replaceAll("\\n?\\s+", " ")
-    val cleanString     = tempString.substring(0, tempString.length() - let_count)
-
-    val prefixArray     = "((as const (Array " //)))
-    val prefixArrayLen  = prefixArray.length()
-
-    val totalLen        = cleanString.length()
-
-    var index           = 0;
-    var startIndex      = 0;
-
-    if (!cleanString.startsWith(prefixArray, index)) {
-      return "ERROR"
-    }
-    index += prefixArrayLen
-
-    // Skip the array type information
-    index = findNextIndexRightParen(cleanString, index, 2)
-
-    // Capture bottom value
-    startIndex = index
-
-    index = findNextIndexRightParen(cleanString, index, 1)
-
-    var bottom = cleanString.substring(startIndex, index - 2)
+    var array : Map[String, String] = Map.empty[String, String]
+    var e    : z3.Expr = model.eval(initExpr, true)
+    var bottom : String = ""
+    var longest : Integer = 1
 
 
-    // Parse all stores operations
-    var Array : Map[String, String] = Map.empty[String, String]
-    while (index < totalLen) {
-      val arrayIndexStartIndex = index
-      index = findNextIndexSpace(cleanString, index)
-      val arrayIndex = cleanString.substring(arrayIndexStartIndex, index)
+    while (e.isStore()) {
+      val args : Array[z3.Expr] = e.getArgs()
+      array += (args(1).toString -> args(2).toString)
+      if (args(1).toString.length > longest) {
+        longest = args(1).toString.length
+      }
 
-      index += 1
-      val arrayValueStartIndex = index
-      index = findNextIndexRightParen(cleanString, index, 1)
-      val arrayValue = cleanString.substring(arrayValueStartIndex, index - 2)
-
-      Array += (arrayIndex -> arrayValue)
+      e = model.eval(args(0), true)
     }
 
-
+    if (e.isConstantArray()) {
+      bottom = e.getArgs()(0).toString
+    } else if (e.isAsArray) {
+      bottom = findBottomArray(e, array)
+    } else {
+      return "ERROR " + e.toString + "\n"
+    }
+ 
     var output : String = ""
-    Array.foreach{ case (k,v) => {
+    ListMap(array.toSeq.sortBy(_._1):_*).foreach{ case (k,v) => {
       if (!v.contentEquals(bottom)) {
-        output = output.concat(s"\n\t$k : $v")
+        output += k.formatted(s"\n\t%${longest}s : $v")
       }
     }}
 
-    return output.concat(s"\n\tbottom : $bottom")
-
+    return output + "-".formatted(s"\n\t%${longest}s : $bottom")
   }
 
-  def findNextIndexRightParen(str : String, idx : Int, target : Int) : Int = {
-    var paren = 0;
-    var index = idx;
-
-    while (paren < target) {
-      val c = str.charAt(index)
-      val inc = c match {
-        case '(' => -1
-        case ')' => 1
-        case _   => 0
-      }
-      paren += inc
-      index += 1
-    }
-    return index + 1
+  // TODO
+  def findBottomArray(e : z3.Expr, array : Map[String, String]) : String = {
+    return e.toString
   }
-
-  // Find the index of the next space without open parentheses in str starting at idx
-  def findNextIndexSpace(str : String, idx : Int) : Int = {
-    var paren = 0;
-    var index = idx;
-
-    var c = str.charAt(index)
-
-    val len = str.length()
-
-    while (c != ' ' || paren != 0) {
-      val inc = c match {
-        case '(' => -1
-        case ')' => 1
-        case _   => 0
-      }
-      paren += inc
-      index += 1
-      c = str.charAt(index)
-    }
-    return index
-  }
-
- 
 
   override def evaluate(e : Expr) : Expr = {
     interface.exprToZ3(e) match {
