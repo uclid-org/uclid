@@ -477,6 +477,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               checkTypeError(false, "Argument to select operator must be of type record", opapp.pos, c.filename)
               new UndefinedType()
           }
+
         case SelectFromInstance(field) =>
           Utils.assert(argTypes.size == 1, "Select operator must have exactly one operand.")
           val inst= argTypes(0)

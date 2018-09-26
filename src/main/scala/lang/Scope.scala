@@ -69,6 +69,7 @@ object Scope {
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ForIndexVar(iId : Identifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
   case class SpecVar(varId : Identifier, expr: Expr) extends ReadOnlyNamedExpression(varId, BooleanType())
+  case class HyperVar(varId : Identifier, expr: Expr) extends ReadOnlyNamedExpression(varId, BooleanType())
   case class AxiomVar(varId : Identifier, expr : Expr) extends ReadOnlyNamedExpression(varId, BooleanType())
   case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends ReadOnlyNamedExpression(enumId, enumTyp)
   case class ProductField(fId : Identifier, fTyp: Type, recordType : ProductType) extends ReadOnlyNamedExpression(fId, fTyp)
@@ -254,6 +255,7 @@ case class Scope (
         case SynthesisFunctionDecl(id, sig, _, _, _) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ)) // FIXME
         case DefineDecl(id, sig, expr) => Scope.addToMap(mapAcc, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr)))
         case SpecDecl(id, expr, _) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))
+        case HyperDecl(id, expr, params) => Scope.addToMap(mapAcc, Scope.HyperVar(id, expr))
         case AxiomDecl(sId, expr) => sId match {
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr))
           case None => mapAcc
@@ -291,7 +293,7 @@ case class Scope (
         case ConstantLitDecl(id, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
         case ConstantsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ModuleTypesImportDecl(_) | InstanceDecl(_, _, _, _, _) |
-             SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) => mapAcc
+             SpecDecl(_, _, _) | AxiomDecl(_, _) | InitDecl(_) | NextDecl(_) | HyperDecl(_, _, _) => mapAcc
       }
     }
     Scope(m2, Some(m), None, None, environment, false, parent)

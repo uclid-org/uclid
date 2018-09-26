@@ -101,6 +101,7 @@ trait ReadOnlyPass[T] {
   def applyOnConstant(d : TraversalDirection.T, cnst : ConstantsDecl, in : T, context : Scope) : T = { in }
   def applyOnConstantLit(d : TraversalDirection.T, cnst : ConstantLitDecl, in : T, context : Scope) : T = { in }
   def applyOnSpec(d : TraversalDirection.T, spec : SpecDecl, in : T, context : Scope) : T = { in }
+  def applyOnHyperDecl(d : TraversalDirection.T, spec : HyperDecl, in : T, context : Scope) : T = { in }
   def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : Scope) : T = { in }
   def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : T, context : Scope) : T = { in }
   def applyOnModuleTypesImport(d : TraversalDirection.T, modTypeImport : ModuleTypesImportDecl, in : T, context : Scope) : T = { in }
@@ -315,6 +316,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case init : InitDecl => visitInit(init, result, context.withEnvironment(ProceduralEnvironment))
       case next : NextDecl => visitNext(next, result, context.withEnvironment(SequentialEnvironment))
       case spec : SpecDecl => visitSpec(spec, result, context)
+      case hyperdecl: HyperDecl => visitHyperDecl(hyperdecl, result, context)
       case axiom : AxiomDecl => visitAxiom(axiom, result, context)
     }
     result = pass.applyOnDecl(TraversalDirection.Up, decl, result, context)
@@ -461,6 +463,16 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitExpr(spec.expr, result, contextP.withEnvironment(SpecEnvironment))
     result = spec.params.foldLeft(result)((acc, d) => visitExprDecorator(d, acc, context))
     result = pass.applyOnSpec(TraversalDirection.Up, spec, result, context)
+    return result
+  }
+  def visitHyperDecl(spec : HyperDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    val contextP = context
+    result = pass.applyOnHyperDecl(TraversalDirection.Down, spec, result, context)
+    result = visitIdentifier(spec.id, result, context)
+    result = visitExpr(spec.expr, result, contextP.withEnvironment(SpecEnvironment))
+    result = spec.params.foldLeft(result)((acc, d) => visitExprDecorator(d, acc, context))
+    result = pass.applyOnHyperDecl(TraversalDirection.Up, spec, result, context)
     return result
   }
   def visitAxiom(axiom : AxiomDecl, in : T, context : Scope) : T = {
@@ -1103,6 +1115,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case initDecl : InitDecl => visitInit(initDecl, context.withEnvironment(ProceduralEnvironment))
       case nextDecl : NextDecl => visitNext(nextDecl, context.withEnvironment(SequentialEnvironment))
       case specDecl : SpecDecl => visitSpec(specDecl, context)
+      case hyperDecl : HyperDecl => visitHyperDecl(hyperDecl, context)
       case axiomDecl : AxiomDecl => visitAxiom(axiomDecl, context)
     }).flatMap(pass.rewriteDecl(_, context))
     return ASTNode.introducePos(setPosition, setFilename, declP, decl.position)
@@ -1294,6 +1307,18 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     } else {
       context
     }
+    val idP = visitIdentifier(spec.id, context)
+    val exprP = visitExpr(spec.expr, contextP.withEnvironment(SpecEnvironment))
+    val decsP = spec.params.map(visitExprDecorator(_, context)).flatten
+    val specP = (idP, exprP) match {
+      case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr, decsP), context)
+      case _ => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, specP, spec.position)
+  }
+
+  def visitHyperDecl(spec : HyperDecl, context : Scope) : Option[SpecDecl] = {
+    val contextP = context
     val idP = visitIdentifier(spec.id, context)
     val exprP = visitExpr(spec.expr, contextP.withEnvironment(SpecEnvironment))
     val decsP = spec.params.map(visitExprDecorator(_, context)).flatten
