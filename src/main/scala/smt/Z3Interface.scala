@@ -47,6 +47,7 @@ import scala.collection.immutable.ListMap
 import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
 import com.microsoft.z3.enumerations.Z3_lbool
+import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.typesafe.scalalogging.Logger
 import java.io.File
 import java.io.PrintWriter
@@ -70,6 +71,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
     var e    : z3.Expr = model.eval(initExpr, true)
     var bottom : String = ""
     var longest : Integer = 1
+    var isNumeral : Boolean = false
 
 
     while (e.isStore()) {
@@ -77,34 +79,53 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
       if (!array.contains(args(1).toString)) {
         array += (args(1).toString -> args(2).toString)
       }
-      if (args(1).toString.length > longest) {
-        longest = args(1).toString.length
-      }
 
       e = model.eval(args(0), true)
     }
 
     if (e.isConstantArray()) {
+      isNumeral = e.getArgs()(0).isNumeral()
       bottom = e.getArgs()(0).toString
     } else if (e.isAsArray) {
-      bottom = findBottomArray(e, array)
+      var fd : z3.FuncDecl = e.getFuncDecl().getParameters()(0).getFuncDecl()
+      var fint : z3.FuncInterp = null
+    
+      do {
+        fint = model.getFuncInterp(fd)
+
+        for (entry <- fint.getEntries()) {
+          val args : Array[z3.Expr] = entry.getArgs()
+          if (!array.contains(args(0).toString)) {
+            array += (args(0).toString -> entry.getValue().toString)
+          }
+        }
+
+        fd = fint.getElse().getFuncDecl()
+      } while (fint.getElse().getFuncDecl().getDeclKind() == Z3_decl_kind.Z3_OP_UNINTERPRETED)
+
+      isNumeral = fint.getElse().isNumeral()
+      bottom = fint.getElse().toString
     } else {
       return "ERROR " + e.toString + "\n"
     }
+
+    array.foreach{ case (k, v) => {
+        if (!v.contentEquals(bottom) && k.length > longest) {
+            longest = k.length
+        }
+    }}
  
     var output : String = ""
-    ListMap(array.toSeq.sortBy(_._1):_*).foreach{ case (k,v) => {
+    val sortedArray : ListMap[String,String] = if (isNumeral) 
+        ListMap(array.toSeq.sortWith(_._1.toInt < _._1.toInt):_*) 
+        else ListMap(array.toSeq.sortBy(_._1):_*) 
+    sortedArray.foreach{ case (k,v) => {
       if (!v.contentEquals(bottom)) {
         output += k.formatted(s"\n\t%${longest}s : $v")
       }
     }}
 
     return output + "-".formatted(s"\n\t%${longest}s : $bottom")
-  }
-
-  // TODO
-  def findBottomArray(e : z3.Expr, array : Map[String, String]) : String = {
-    return e.toString
   }
 
   override def evaluate(e : Expr) : Expr = {
