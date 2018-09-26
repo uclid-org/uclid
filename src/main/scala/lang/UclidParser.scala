@@ -218,6 +218,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val RelOp: Parser[String] = OpGT | OpLT | OpEQ | OpNE | OpGE | OpLE
     lazy val UnOp: Parser[String] = OpNot | OpMinus
     lazy val RecordSelectOp: Parser[Identifier] = positioned { ("." ~> Id) }
+    lazy val HyperSelectOp: Parser[IntLit] = positioned { "." ~> Integer }
     lazy val ArraySelectOp: Parser[List[Expr]] =
       ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^
       {case e ~ es => (e :: es) }
@@ -305,6 +306,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
             (r :: rs).foldLeft(e){
               (acc, f) => OperatorApplication(PolymorphicSelect(f), List(acc))
             }
+        } |
+        E15 ~ HyperSelectOp ^^ {
+          case e ~ i =>
+            OperatorApplication(HyperSelect(i.value.toInt), List(e))
         } |
         E15
     }
@@ -662,9 +667,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val HyperDecl: PackratParser[lang.HyperDecl] = positioned {
-      (KwHyperProperty | KwHyperInvariant) ~> ("[" ~> Expr <~ "]") ~ Id ~ (":" ~> Expr) <~ ";" ^^
+      (KwHyperProperty | KwHyperInvariant) ~> ("[" ~> Integer <~ "]") ~ Id ~ (":" ~> Expr) <~ ";" ^^
         {
-          case int_expr ~ id ~ expr => lang.HyperDecl(id, expr, List(int_expr).map(ExprDecorator.parse(_)))
+          case k ~ id ~ expr => lang.HyperDecl(id, expr, List(lang.HyperpropertyDecorator(k.value.toInt)))
         }
     }
 

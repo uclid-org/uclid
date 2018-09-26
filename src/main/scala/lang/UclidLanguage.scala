@@ -370,7 +370,7 @@ case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
   override def fixity = Operator.INFIX
 }
-case class HyperSelect(i: BigInt) extends Operator {
+case class HyperSelect(i: Int) extends Operator {
   override def toString: String = "." + i.toString
   override def fixity = Operator.INFIX
 }
@@ -529,7 +529,7 @@ case class UnknownDecorator(value: String) extends ExprDecorator {
 case object LTLExprDecorator extends ExprDecorator {
   override def toString = "LTL"
 }
-case class HyperpropertyDecorator(k: BigInt) extends ExprDecorator {
+case class HyperpropertyDecorator(k: Int) extends ExprDecorator {
   override def toString = "hyperproperty(%d)".format(k)
 }
 case object LTLSafetyFragmentDecorator extends ExprDecorator {
@@ -552,20 +552,15 @@ object ExprDecorator {
         } else {
           UnknownDecorator(e.toString)
         }
-      case IntLit(v) =>
-        if (v > 0) {
-          HyperpropertyDecorator(v)
-        }
-        else {
-          UnknownDecorator(v.toString)
-        }
       case _ => UnknownDecorator(e.toString)
     }
     dec.pos = e.pos
     return dec
   }
   def isLTLProperty(decs : List[ExprDecorator]) : Boolean = {
-    decs.exists(p => p == LTLSafetyFragmentDecorator || p == LTLLivenessFragmentDecorator)
+    decs.exists(p => p == LTLSafetyFragmentDecorator ||
+                     p == LTLLivenessFragmentDecorator ||
+                     p == LTLExprDecorator)
   }
 }
 
