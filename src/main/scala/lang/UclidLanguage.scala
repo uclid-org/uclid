@@ -370,6 +370,10 @@ case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
   override def fixity = Operator.INFIX
 }
+case class HyperSelect(i: BigInt) extends Operator {
+  override def toString: String = "." + i.toString
+  override def fixity = Operator.INFIX
+}
 case class SelectFromInstance(varId : Identifier) extends Operator {
   override def toString = "." + varId
   override def fixity = Operator.INFIX
@@ -455,6 +459,8 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
         operands(0).toString + "." + r.toString()
       case RecordSelect(r) =>
         operands(0).toString + "." + r.toString
+      case HyperSelect(i) =>
+        operands(0).toString + "." + i.toString
       case SelectFromInstance(f) =>
         operands(0).toString + "." + f.toString
       case ForallOp(_) | ExistsOp(_) =>

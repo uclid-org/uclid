@@ -678,7 +678,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
                   ModuleTypesImportDecl | SynthFuncDecl | DefineDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstLitDecl | ConstDecl | ProcedureDecl |
-                  InitDecl | NextDecl | SpecDecl | AxiomDecl)
+                  InitDecl | NextDecl | SpecDecl | AxiomDecl | HyperDecl)
 
     // control commands.
     lazy val IdParamList : PackratParser[List[Identifier]] =
