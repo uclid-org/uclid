@@ -56,7 +56,7 @@ class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
     ret
   }
   override def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up || !context.inLTLSpec) {
+    if (d == TraversalDirection.Up || !context.environment.inLTLSpec) {
       in
     } else {
       var ret = in
@@ -113,7 +113,7 @@ class LTLOperatorArgumentChecker extends ASTAnalyzer(
 
 class LTLOperatorIntroducerPass extends RewritePass {
   override def rewriteFuncApp(fapp: FuncApplication, context: Scope): Option[Expr] = {
-    if (context.inLTLSpec) {
+    if (context.environment.inLTLSpec) {
       fapp.e match {
         case Identifier(name : String) => name match {
           case "G" =>

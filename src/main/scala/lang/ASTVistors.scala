@@ -453,14 +453,10 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   }
   def visitSpec(spec : SpecDecl, in : T, context : Scope) : T = {
     var result : T = in
-    val contextP = if (spec.params.contains(LTLExprDecorator)) {
-      context.withLTLSpec
-    } else {
-      context
-    }
+    val contextP = context
     result = pass.applyOnSpec(TraversalDirection.Down, spec, result, context)
     result = visitIdentifier(spec.id, result, context)
-    result = visitExpr(spec.expr, result, contextP.withEnvironment(SpecEnvironment))
+    result = visitExpr(spec.expr, result, contextP.withEnvironment(SpecEnvironment(spec)))
     result = spec.params.foldLeft(result)((acc, d) => visitExprDecorator(d, acc, context))
     result = pass.applyOnSpec(TraversalDirection.Up, spec, result, context)
     return result
@@ -470,7 +466,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     val contextP = context
     result = pass.applyOnHyperDecl(TraversalDirection.Down, spec, result, context)
     result = visitIdentifier(spec.id, result, context)
-    result = visitExpr(spec.expr, result, contextP.withEnvironment(SpecEnvironment))
+    result = visitExpr(spec.expr, result, contextP.withEnvironment(SpecEnvironment(spec)))
     result = spec.params.foldLeft(result)((acc, d) => visitExprDecorator(d, acc, context))
     result = pass.applyOnHyperDecl(TraversalDirection.Up, spec, result, context)
     return result
@@ -1302,13 +1298,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitSpec(spec : SpecDecl, context : Scope) : Option[SpecDecl] = {
-    val contextP = if (spec.params.contains(LTLExprDecorator)) {
-      context.withLTLSpec
-    } else {
-      context
-    }
+    val contextP = context
     val idP = visitIdentifier(spec.id, context)
-    val exprP = visitExpr(spec.expr, contextP.withEnvironment(SpecEnvironment))
+    val exprP = visitExpr(spec.expr, contextP.withEnvironment(SpecEnvironment(spec)))
     val decsP = spec.params.map(visitExprDecorator(_, context)).flatten
     val specP = (idP, exprP) match {
       case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr, decsP), context)
@@ -1320,7 +1312,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitHyperDecl(spec : HyperDecl, context : Scope) : Option[SpecDecl] = {
     val contextP = context
     val idP = visitIdentifier(spec.id, context)
-    val exprP = visitExpr(spec.expr, contextP.withEnvironment(SpecEnvironment))
+    val exprP = visitExpr(spec.expr, contextP.withEnvironment(SpecEnvironment(spec)))
     val decsP = spec.params.map(visitExprDecorator(_, context)).flatten
     val specP = (idP, exprP) match {
       case (Some(id), Some(expr)) => pass.rewriteSpec(SpecDecl(id, expr, decsP), context)
