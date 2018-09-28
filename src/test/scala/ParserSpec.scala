@@ -451,4 +451,20 @@ class ParserSpec extends FlatSpec {
     assert (instantiatedModules.size == 1)
     assert (stringOutput == "hello, world!")
   }
+
+  "test-hyperproperty-0.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-hyperproperty-0.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+
+  "test-hyperproperty-1.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-hyperproperty-1.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors(0)._1.contains("HyperSelect can only be used in a module-level expression"))
+    }
+  }
 }

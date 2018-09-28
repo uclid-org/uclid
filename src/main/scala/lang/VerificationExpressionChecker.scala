@@ -66,6 +66,15 @@ class VerificationExpressionPass extends ReadOnlyPass[List[ModuleError]]
         opapp.op match {
           case OldOperator() | HistoryOperator() | PastOperator() =>
             ModuleError("Operator can only be used in a verification expression", opapp.position) :: in
+          case HyperSelect(i) =>
+            ModuleError("HyperSelect can only be used in a verification expression", opapp.position) :: in
+          case _ =>
+            in
+        }
+      } else if (!context.environment.isModuleLevel) {
+        opapp.op match {
+          case HyperSelect(i) =>
+            ModuleError("HyperSelect can only be used in a module-level expression", opapp.position) :: in
           case _ =>
             in
         }
