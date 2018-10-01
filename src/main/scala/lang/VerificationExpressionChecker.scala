@@ -53,6 +53,12 @@ class VerificationExpressionPass extends ReadOnlyPass[List[ModuleError]]
         opapp.op match {
           case GetNextValueOp() =>
             ModuleError("Primed variables are not allowed in module-level assertions/assumptions", opapp.position) :: in
+          case HyperSelect(i) =>
+            if (!context.environment.inHyperproperty) {
+              ModuleError("Trace select can only be used in a verification expression", opapp.position) :: in
+            } else {
+              in
+            }
           case _ =>
           in
         }

@@ -530,7 +530,7 @@ case object LTLExprDecorator extends ExprDecorator {
   override def toString = "LTL"
 }
 case class HyperpropertyDecorator(k: Int) extends ExprDecorator {
-  override def toString = "hyperproperty(%d)".format(k)
+  override def toString = k.toString()
 }
 case object LTLSafetyFragmentDecorator extends ExprDecorator {
   override def toString = "LTLSafetyFragment"
@@ -561,6 +561,9 @@ object ExprDecorator {
     decs.exists(p => p == LTLSafetyFragmentDecorator ||
                      p == LTLLivenessFragmentDecorator ||
                      p == LTLExprDecorator)
+  }
+  def isHyperproperty(decs : List[ExprDecorator]) : Boolean = {
+    decs.exists(p => p.isInstanceOf[HyperpropertyDecorator])
   }
 }
 
@@ -1164,16 +1167,21 @@ case class NextDecl(body: Statement) extends Decl {
 }
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
   override val hashId = 917
+  val propertyKeyword = if (ExprDecorator.isHyperproperty(params)) {
+    "hyperproperty"
+  } else {
+    "property"
+  }
   override def toString = {
     val declString = if (params.size > 0) {
       "[" + Utils.join(params.map(_.toString), ", ") + "]"
     } else {
       ""
     }
-    "property %s%s : %s; // %s".format(id.toString, declString, expr.toString, position.toString)
+    "%s %s%s : %s; // %s".format(propertyKeyword, id.toString, declString, expr.toString, position.toString)
   }
   override def declNames = List(id)
-  def name = "property " + id.toString()
+  def name = "%s %s".format(propertyKeyword, id.toString())
 }
 
 
@@ -1189,20 +1197,6 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
     case Some(i) => List(i)
     case _ => List.empty
   }
-}
-
-case class HyperDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
-  override val hashId = 919
-  override def toString = {
-    val declString = if (params.size > 0) {
-      "[" + Utils.join(params.map(_.toString), ", ") + "]"
-    } else {
-      ""
-    }
-    "hyperproperty %s%s : %s; // %s".format(id.toString, declString, expr.toString, position.toString)
-  }
-  override def declNames = List(id)
-  def name = "hyperproperty " + id.toString()
 }
 
 sealed abstract class ProofCommand extends ASTNode
