@@ -4,7 +4,7 @@ module main
 
     init {
         y = x + 1;
-	assume(y.1 == y.2);
+        assume (y.1 == y.2);
     }
 
     next {
