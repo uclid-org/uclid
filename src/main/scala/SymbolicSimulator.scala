@@ -53,7 +53,7 @@ object UniqueIdGenerator {
 
 object SymbolicSimulator {
   type SymbolTable = Map[Identifier, smt.Expr];
-  type FrameTable = ArrayBuffer[SymbolTable]
+  type FrameTable = ArrayBuffer[SymbolTable];
 }
 
 class SymbolicSimulator (module : Module) {
@@ -272,6 +272,41 @@ class SymbolicSimulator (module : Module) {
       }
     })
   }
+
+
+  def get_init_lambda(havocInit: Boolean, scope: Scope, label: String) = {
+    val initSymbolTable = getInitSymbolTable(scope)
+    symbolTable = if (!havocInit && module.init.isDefined) {
+      simulate(0, List.empty, module.init.get.body, initSymbolTable, scope, label, addAssumptionToTree _, addAssertToTree _)
+    } else {
+      initSymbolTable
+    }
+
+    val conjuction = smt.OperatorApplication(smt.ConjunctionOp(),
+      symbolTable.map(p => smt.OperatorApplication(smt.EqualityOp(), List(initSymbolTable.get(p._1).get, p._2))).toList)
+    // TODO:
+    // Do beta substitution and replacement of variables in the assumptions/assertions
+    
+
+
+
+
+  }
+  /*
+  def renameExpr(expr: smt.Expr, renamed: List[Symbol], appears: List[Symbol]): smt.Expr = {
+    expr match {
+      case OperatorApplication(op, operands) => {
+        op match {
+          case ForallOp(v) | ExistsOp(v) =>
+
+        }
+      }
+
+      case _ => expr
+
+    }
+  }
+  */
 
   /**
    * Create new SMT symbolic variables for each state.
