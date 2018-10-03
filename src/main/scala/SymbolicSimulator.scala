@@ -43,7 +43,7 @@ import lang._
 import vcd.VCD
 
 import scala.util.Try
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import com.typesafe.scalalogging.Logger
 
 object UniqueIdGenerator {
@@ -66,6 +66,8 @@ class SymbolicSimulator (module : Module) {
   val frameLog = Logger("uclid.SymbolicSimulator.frame")
   val assertLog = Logger("uclid.SymbolicSimulator.assert")
   val verifyProcedureLog = Logger("uclid.SymbolicSimulator.verifyProc")
+  var assumes = new ListBuffer[smt.Expr]()
+  var asserts = new ListBuffer[AssertInfo]()
 
   var symbolTable : SymbolTable = Map.empty
   var frameTable : FrameTable = ArrayBuffer.empty
@@ -116,6 +118,7 @@ class SymbolicSimulator (module : Module) {
               case Some(l) => l.toString
               case None    => "unroll"
             }
+            get_init_lambda(false, context, "some")
             initialize(false, true, false, context, label, noLTLFilter)
             symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
           case "bmc" =>
@@ -273,23 +276,33 @@ class SymbolicSimulator (module : Module) {
     })
   }
 
+  def addAssumesToList(e: smt.Expr) : Unit= {
+    assumes += e
+  }
 
+  def addAssertsToList(assert: AssertInfo) : Unit  = {
+    asserts += assert
+  }
   def get_init_lambda(havocInit: Boolean, scope: Scope, label: String) = {
     val initSymbolTable = getInitSymbolTable(scope)
     symbolTable = if (!havocInit && module.init.isDefined) {
-      simulate(0, List.empty, module.init.get.body, initSymbolTable, scope, label, addAssumptionToTree _, addAssertToTree _)
+      simulate(0, List.empty, module.init.get.body, initSymbolTable, scope, label, addAssumesToList _, addAssertsToList _)
     } else {
       initSymbolTable
     }
 
-    val conjuction = smt.OperatorApplication(smt.ConjunctionOp(),
-      symbolTable.map(p => smt.OperatorApplication(smt.EqualityOp(), List(initSymbolTable.get(p._1).get, p._2))).toList)
-    // TODO:
-    // Do beta substitution and replacement of variables in the assumptions/assertions
-    
+   // val conjuction = smt.OperatorApplication(smt.ConjunctionOp(),
+   //   symbolTable.map(p => smt.OperatorApplication(smt.EqualityOp(), List(initSymbolTable.get(p._1).get, p._2))).toList)
 
 
+    val reverse_map = getInitSymbolTable(scope).map(_.swap) // Map new smt Vars back to IDs
 
+    val conjunction = smt.OperatorApplication(smt.ConjunctionOp,
+      reverse_map.map(p => smt.OperatorApplication(smt.EqualityOp,
+        List(p._1, initSymbolTable.get(reverse_map.get(p._1).get).get))).toList ++ assumes.toList)
+
+    UclidMain.println("The conjunction:")
+    UclidMain.println(conjunction.toString)
 
   }
   /*
@@ -349,7 +362,7 @@ class SymbolicSimulator (module : Module) {
    * @param filter A function which identifies which assertions are to be considered.
    */
   def symbolicSimulate(
-      startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean, 
+      startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
       scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean))
   {
     var currentState = symbolTable
