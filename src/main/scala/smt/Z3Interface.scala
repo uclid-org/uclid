@@ -515,3 +515,66 @@ object InterpolationTest
     println("Interpolant: " + interp.interp(0).toString())
   }
 }
+
+object FixedpointTest
+{
+  def test() : Unit = {
+    // Transition system
+    //
+    // Init(x, y) = x >= 0 && y >= 0
+    // Transition(x', y', x, y) = (x' = x + 1) && (y' = y + x)
+    // Phi(x, y) = y >= 0
+    //
+    val ctx = new z3.Context()
+    val intSort = ctx.mkIntSort()
+    val boolSort = ctx.mkBoolSort()
+    val fp = ctx.mkFixedpoint()
+    val params = ctx.mkParams()
+
+    params.add("engine", "spacer")
+    fp.setParameters(params)
+
+    val x = ctx.mkIntConst("x")
+    val y = ctx.mkIntConst("y")
+    val intSorts = Array[z3.Sort](intSort, intSort)
+    val invDecl = ctx.mkFuncDecl("inv", intSorts, boolSort)
+    val initDecl = ctx.mkFuncDecl("init", intSorts, boolSort)
+    val trDecl = ctx.mkFuncDecl("tr", intSorts, boolSort)
+
+    def applyDecl(f : z3.FuncDecl, x : z3.ArithExpr, y : z3.ArithExpr) : z3.BoolExpr = {
+      f.apply(x, y).asInstanceOf[z3.BoolExpr]
+    }
+
+    fp.registerRelation(invDecl)
+    fp.registerRelation(initDecl)
+    fp.registerRelation(trDecl)
+
+    // x >= 0 && y >= 0 ==> init(x, y)
+    val xGe0 = ctx.mkGe(x, ctx.mkInt(0))
+    val yGe0 = ctx.mkGe(y, ctx.mkInt(0))
+    val initCond = ctx.mkAnd(xGe0, yGe0)
+    val initRule = ctx.mkImplies(initCond, applyDecl(initDecl, x, y))
+
+    // tr(x, y) ==> tr(x+1, y+x)
+    val xPlus1 = ctx.mkAdd(x, ctx.mkInt(1))
+    val yPlusx = ctx.mkAdd(y, x)
+    val trRule = ctx.mkImplies(applyDecl(trDecl, x, y), applyDecl(trDecl, xPlus1, yPlusx))
+
+    // init(x, y) ==> tr(x, y)
+    val initTrRule = ctx.mkImplies(applyDecl(initDecl, x, y), applyDecl(trDecl, x, y))
+    // init(x, y) ==> inv(x, y)
+    val initInvRule = ctx.mkImplies(applyDecl(initDecl, x, y), applyDecl(invDecl, x, y))
+    // tr(x, y) ==> inv(x, y)
+    val trInvRule = ctx.mkImplies(applyDecl(trDecl, x, y), applyDecl(invDecl, x, y))
+
+    fp.addRule(initRule, ctx.mkSymbol("initRule"))
+    fp.addRule(trRule, ctx.mkSymbol("trRule"))
+    fp.addRule(initTrRule, ctx.mkSymbol("initTrRule"))
+    fp.addRule(initInvRule, ctx.mkSymbol("initInvRule"))
+    fp.addRule(trInvRule, ctx.mkSymbol("trInvRule"))
+
+    // property.
+    println (fp.query(yGe0))
+    println("blah blah blah!")
+  }
+}

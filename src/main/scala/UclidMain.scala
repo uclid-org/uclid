@@ -79,7 +79,8 @@ object UclidMain {
       sygusTypeConvert: Boolean = false,
       printStackTrace: Boolean = false,
       verbose : Int = 0,
-      files : Seq[java.io.File] = Seq()
+      files : Seq[java.io.File] = Seq(),
+      testFixedpoint: Boolean = false
   )
 
   def parseOptions(args: Array[String]) : Option[Config] = {
@@ -118,6 +119,10 @@ object UclidMain {
         (_, c) => c.copy(sygusTypeConvert = true)
       }.text("Enable EnumType conversion in synthesis.")
 
+      opt[Unit]('t', "test-fixedpoint").action {
+        (_, c) => c.copy(testFixedpoint = true)
+      }.text("Test fixed point")
+
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
       }.text("List of files to analyze.")
@@ -131,6 +136,10 @@ object UclidMain {
    */
   def main(config : Config) {
     try {
+      if (config.testFixedpoint) {
+        smt.FixedpointTest.test()
+        return
+      }
       val mainModuleName = Identifier(config.mainModuleName)
       val modules = compile(config.files, mainModuleName)
       val mainModule = instantiate(modules, mainModuleName, true)
