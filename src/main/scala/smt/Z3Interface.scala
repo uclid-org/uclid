@@ -531,50 +531,59 @@ object FixedpointTest
     val fp = ctx.mkFixedpoint()
     val params = ctx.mkParams()
 
-    params.add("engine", "spacer")
+    params.add("fixedpoint.engine", "pdr")
     fp.setParameters(params)
 
-    val x = ctx.mkIntConst("x")
-    val y = ctx.mkIntConst("y")
-    val intSorts = Array[z3.Sort](intSort, intSort)
-    val invDecl = ctx.mkFuncDecl("inv", intSorts, boolSort)
-    val initDecl = ctx.mkFuncDecl("init", intSorts, boolSort)
-    val trDecl = ctx.mkFuncDecl("tr", intSorts, boolSort)
+    val sorts = Array[z3.Sort](intSort, intSort)
+    val invDecl = ctx.mkFuncDecl("inv", sorts, boolSort)
+    val propDecl = ctx.mkFuncDecl("prop", sorts, boolSort)
+
+    val symbolx = ctx.mkSymbol(0)
+    val symboly = ctx.mkSymbol(1)
+    val symbols = Array[z3.Symbol](symbolx, symboly)
+    val x = ctx.mkBound(0, sorts(0)).asInstanceOf[z3.ArithExpr]
+    val y = ctx.mkBound(1, sorts(1)).asInstanceOf[z3.ArithExpr]
 
     def applyDecl(f : z3.FuncDecl, x : z3.ArithExpr, y : z3.ArithExpr) : z3.BoolExpr = {
       f.apply(x, y).asInstanceOf[z3.BoolExpr]
     }
-
+    var qId = 0
+    var skId = 0
+    def createForall(e : z3.Expr) = {
+      qId += 1
+      skId += 1
+      ctx.mkForall(sorts, symbols, e,
+        0, Array[z3.Pattern](), Array[z3.Expr](), ctx.mkSymbol(qId), ctx.mkSymbol(skId))
+    }
     fp.registerRelation(invDecl)
-    fp.registerRelation(initDecl)
-    fp.registerRelation(trDecl)
+    fp.registerRelation(propDecl)
 
-    // x >= 0 && y >= 0 ==> init(x, y)
+    // x >= 0 && y >= 0 ==> inv(x, y)
     val xGe0 = ctx.mkGe(x, ctx.mkInt(0))
     val yGe0 = ctx.mkGe(y, ctx.mkInt(0))
     val initCond = ctx.mkAnd(xGe0, yGe0)
-    val initRule = ctx.mkImplies(initCond, applyDecl(initDecl, x, y))
+    val initRule = createForall(ctx.mkImplies(initCond, applyDecl(invDecl, x, y)))
 
-    // tr(x, y) ==> tr(x+1, y+x)
+    // inv(x, y) ==> inv(x+1, y+x)
     val xPlus1 = ctx.mkAdd(x, ctx.mkInt(1))
     val yPlusx = ctx.mkAdd(y, x)
-    val trRule = ctx.mkImplies(applyDecl(trDecl, x, y), applyDecl(trDecl, xPlus1, yPlusx))
+    val trRule = createForall(ctx.mkImplies(applyDecl(invDecl, x, y), applyDecl(invDecl, xPlus1, yPlusx)))
 
-    // init(x, y) ==> tr(x, y)
-    val initTrRule = ctx.mkImplies(applyDecl(initDecl, x, y), applyDecl(trDecl, x, y))
-    // init(x, y) ==> inv(x, y)
-    val initInvRule = ctx.mkImplies(applyDecl(initDecl, x, y), applyDecl(invDecl, x, y))
-    // tr(x, y) ==> inv(x, y)
-    val trInvRule = ctx.mkImplies(applyDecl(trDecl, x, y), applyDecl(invDecl, x, y))
+    val yProp = ctx.mkLt(y, ctx.mkInt(0))
+    // inv(x, y) && (y >= 0) ==> prop(x, y)
+    val propRule = createForall(
+        ctx.mkImplies(
+            ctx.mkAnd(applyDecl(invDecl, x, y), yProp),
+            applyDecl(propDecl, x, y)))
 
     fp.addRule(initRule, ctx.mkSymbol("initRule"))
     fp.addRule(trRule, ctx.mkSymbol("trRule"))
-    fp.addRule(initTrRule, ctx.mkSymbol("initTrRule"))
-    fp.addRule(initInvRule, ctx.mkSymbol("initInvRule"))
-    fp.addRule(trInvRule, ctx.mkSymbol("trInvRule"))
+    fp.addRule(propRule, ctx.mkSymbol("propRule"))
+
+    println(fp.toString())
 
     // property.
-    println (fp.query(yGe0))
-    println("blah blah blah!")
+    println (fp.query(applyDecl(propDecl, x, y)))
+    println (fp.getAnswer())
   }
 }
