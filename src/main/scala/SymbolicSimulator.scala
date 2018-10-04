@@ -118,7 +118,7 @@ class SymbolicSimulator (module : Module) {
               case Some(l) => l.toString
               case None    => "unroll"
             }
-            get_init_lambda(false, context, "some")
+            // get_init_lambda(false, context, "some")
             initialize(false, true, false, context, label, noLTLFilter)
             symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
           case "bmc" =>
