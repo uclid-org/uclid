@@ -474,7 +474,7 @@ class Z3Interface() extends Context {
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
   override def check() : SolverResult = {
-    val smtOutput = solver.toString()
+    lazy val smtOutput = solver.toString()
     checkLogger.debug(smtOutput)
 
     if (filePrefix == "") {
