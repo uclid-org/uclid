@@ -521,61 +521,58 @@ object FixedpointTest
   def test() : Unit = {
     // Transition system
     //
-    // Init(x, y) = x >= 0 && y >= 0
-    // Transition(x', y', x, y) = (x' = x + 1) && (y' = y + x)
-    // Phi(x, y) = y >= 0
+    // Init(x, y) = x == 0 && y > 1
+    // Transition(x, y, x', y') = (x' = x + 1) && (y' = y + x)
+    // Bad(x, y) = x >= y
     //
+    z3.Global.setParameter("fixedpoint.engine", "pdr")
+
     val ctx = new z3.Context()
     val intSort = ctx.mkIntSort()
     val boolSort = ctx.mkBoolSort()
     val fp = ctx.mkFixedpoint()
-    val params = ctx.mkParams()
 
-    params.add("fixedpoint.engine", "pdr")
-    fp.setParameters(params)
-
-    val sorts = Array[z3.Sort](intSort, intSort)
-    val invDecl = ctx.mkFuncDecl("inv", sorts, boolSort)
-    val propDecl = ctx.mkFuncDecl("prop", sorts, boolSort)
+    val sorts2 = Array[z3.Sort](intSort, intSort)
+    val invDecl = ctx.mkFuncDecl("inv", sorts2, boolSort)
+    val errorDecl = ctx.mkFuncDecl("error", Array[z3.Sort](), boolSort)
 
     val symbolx = ctx.mkSymbol(0)
     val symboly = ctx.mkSymbol(1)
-    val symbols = Array[z3.Symbol](symbolx, symboly)
-    val x = ctx.mkBound(0, sorts(0)).asInstanceOf[z3.ArithExpr]
-    val y = ctx.mkBound(1, sorts(1)).asInstanceOf[z3.ArithExpr]
-
+    val symbols2 = Array[z3.Symbol](symbolx, symboly)
+    val x = ctx.mkBound(0, sorts2(0)).asInstanceOf[z3.ArithExpr]
+    val y = ctx.mkBound(1, sorts2(1)).asInstanceOf[z3.ArithExpr]
+    
     def applyDecl(f : z3.FuncDecl, x : z3.ArithExpr, y : z3.ArithExpr) : z3.BoolExpr = {
       f.apply(x, y).asInstanceOf[z3.BoolExpr]
     }
     var qId = 0
     var skId = 0
-    def createForall(e : z3.Expr) = {
+    def createForall(sorts : Array[z3.Sort], symbols : Array[z3.Symbol], e : z3.Expr) = {
       qId += 1
       skId += 1
       ctx.mkForall(sorts, symbols, e,
         0, Array[z3.Pattern](), Array[z3.Expr](), ctx.mkSymbol(qId), ctx.mkSymbol(skId))
     }
+    
     fp.registerRelation(invDecl)
-    fp.registerRelation(propDecl)
+    fp.registerRelation(errorDecl)
 
     // x >= 0 && y >= 0 ==> inv(x, y)
-    val xGe0 = ctx.mkGe(x, ctx.mkInt(0))
-    val yGe0 = ctx.mkGe(y, ctx.mkInt(0))
-    val initCond = ctx.mkAnd(xGe0, yGe0)
-    val initRule = createForall(ctx.mkImplies(initCond, applyDecl(invDecl, x, y)))
+    val xEq0 = ctx.mkEq(x, ctx.mkInt(0))
+    val yGt1 = ctx.mkGt(y, ctx.mkInt(1))
+    val initCond = ctx.mkAnd(xEq0, yGt1)
+    val initRule = createForall(sorts2, symbols2, ctx.mkImplies(initCond, applyDecl(invDecl, x, y)))
 
     // inv(x, y) ==> inv(x+1, y+x)
     val xPlus1 = ctx.mkAdd(x, ctx.mkInt(1))
     val yPlusx = ctx.mkAdd(y, x)
-    val trRule = createForall(ctx.mkImplies(applyDecl(invDecl, x, y), applyDecl(invDecl, xPlus1, yPlusx)))
+    val guard = applyDecl(invDecl, x, y)
+    val trRule = createForall(sorts2, symbols2, ctx.mkImplies(guard, applyDecl(invDecl, xPlus1, yPlusx)))
 
-    val yProp = ctx.mkLt(y, ctx.mkInt(0))
-    // inv(x, y) && (y >= 0) ==> prop(x, y)
-    val propRule = createForall(
-        ctx.mkImplies(
-            ctx.mkAnd(applyDecl(invDecl, x, y), yProp),
-            applyDecl(propDecl, x, y)))
-
+    val yProp1 = ctx.mkGe(x, y)
+    val propGuard = ctx.mkAnd(applyDecl(invDecl, x, y), yProp1)
+    val propRule = createForall(sorts2, symbols2, ctx.mkImplies(propGuard, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
+    
     fp.addRule(initRule, ctx.mkSymbol("initRule"))
     fp.addRule(trRule, ctx.mkSymbol("trRule"))
     fp.addRule(propRule, ctx.mkSymbol("propRule"))
@@ -583,7 +580,6 @@ object FixedpointTest
     println(fp.toString())
 
     // property.
-    println (fp.query(applyDecl(propDecl, x, y)))
-    println (fp.getAnswer())
+    println (fp.query(Array(errorDecl)))
   }
 }
