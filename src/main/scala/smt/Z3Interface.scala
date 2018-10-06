@@ -469,7 +469,7 @@ class Z3Interface() extends Context {
   def writeToFile(p: String, s: String): Unit = {
     val pw = new PrintWriter(new File(p))
     try pw.write(s) finally pw.close()
-  } 
+  }
 
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
