@@ -79,12 +79,11 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
       if (!array.contains(args(1).toString)) {
         array += (args(1).toString -> args(2).toString)
       }
-
+      isNumeral = args(1).isNumeral()
       e = model.eval(args(0), true)
     }
 
     if (e.isConstantArray()) {
-      isNumeral = e.getArgs()(0).isNumeral()
       bottom = e.getArgs()(0).toString
     } else if (e.isAsArray) {
       var fd : z3.FuncDecl = e.getFuncDecl().getParameters()(0).getFuncDecl()
@@ -103,7 +102,6 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
         fd = fint.getElse().getFuncDecl()
       } while (fint.getElse().getFuncDecl().getDeclKind() == Z3_decl_kind.Z3_OP_UNINTERPRETED)
 
-      isNumeral = fint.getElse().isNumeral()
       bottom = fint.getElse().toString
     } else {
       return "ERROR " + e.toString + "\n"
