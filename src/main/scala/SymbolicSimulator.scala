@@ -66,6 +66,7 @@ class SymbolicSimulator (module : Module) {
   val frameLog = Logger("uclid.SymbolicSimulator.frame")
   val assertLog = Logger("uclid.SymbolicSimulator.assert")
   val verifyProcedureLog = Logger("uclid.SymbolicSimulator.verifyProc")
+
   var assumes = new ListBuffer[smt.Expr]()
   var asserts = new ListBuffer[AssertInfo]()
 
@@ -238,6 +239,41 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
+  def getVarsInOrder(map: Map[smt.Expr, Identifier], scope: Scope) : List[List[smt.Expr]] = {
+    val ids = map.map(p => p._2).toList
+    val reverse_map = map.map(_.swap)
+    val const_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.ConstantVar(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get)
+    val func_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.Function(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get)
+    val enum_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.EnumIdentifier(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get)
+    val input_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.InputVar(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get)
+    val output_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.OutputVar(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get)
+    val state_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.StateVar(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get)
+    val shared_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.SharedVar(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get)
+
+    List(const_vars, func_vars, enum_vars, input_vars, output_vars, state_vars, shared_vars)
+
+  }
   /**
    * Create symbolic expressions for the init block.
    *
@@ -276,11 +312,11 @@ class SymbolicSimulator (module : Module) {
     })
   }
 
-  def addAssumesToList(e: smt.Expr) : Unit= {
+  def addAssumesToList(e: smt.Expr) : Unit = {
     assumes += e
   }
 
-  def addAssertsToList(assert: AssertInfo) : Unit  = {
+  def addAssertsToList(assert: AssertInfo) : Unit = {
     asserts += assert
   }
   def get_init_lambda(havocInit: Boolean, scope: Scope, label: String) = {
@@ -296,15 +332,23 @@ class SymbolicSimulator (module : Module) {
 
 
     val reverse_map = getInitSymbolTable(scope).map(_.swap) // Map new smt Vars back to IDs
+    val conjunct = reverse_map.map(p => smt.OperatorApplication(smt.EqualityOp,
+      List(p._1, initSymbolTable.get(reverse_map.get(p._1).get).get))).toList ++ assumes.toList
 
-    val conjunction = smt.OperatorApplication(smt.ConjunctionOp,
-      reverse_map.map(p => smt.OperatorApplication(smt.EqualityOp,
-        List(p._1, initSymbolTable.get(reverse_map.get(p._1).get).get))).toList ++ assumes.toList)
+    val conjunction = if (conjunct.length > 1) { smt.OperatorApplication(smt.ConjunctionOp, conjunct)} else conjunct(0)
 
-    UclidMain.println("The conjunction:")
+    val lambda = smt.Lambda(getVarsInOrder(reverse_map, scope).flatten.map(p => p.asInstanceOf[smt.Symbol]), conjunction)
+    UclidMain.println("The variable lists: ")
+    UclidMain.println(getVarsInOrder(reverse_map, scope).toString)
+    UclidMain.println("The conjunction: ")
     UclidMain.println(conjunction.toString)
+    UclidMain.println("The lambda: ")
+    UclidMain.println(lambda.toString)
 
   }
+
+  //def get_next_lambda(): Unit = {}
+
   /*
   def renameExpr(expr: smt.Expr, renamed: List[Symbol], appears: List[Symbol]): smt.Expr = {
     expr match {
