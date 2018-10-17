@@ -441,6 +441,15 @@ class ParserSpec extends FlatSpec {
         assert (p.errors(0)._1.contains("Nested block statements are not allowed in a sequential environment"))
     }
   }
+  "array-update-2.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/array-update-2.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors(0)._1.contains("'rom' is a readonly entity and cannot be assigned to"))
+    }
+  }
   "test-string-2.ucl" should "parse successfully." in {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
