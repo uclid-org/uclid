@@ -26,7 +26,7 @@ Download the latest stable pre-built package from [releases tab](https://github.
 
 Or, you could clone this repository and build from source. If you run into problems here, don't forget you can always fall back on the pre-built binaries linked above.
 
-### Step 1: Compiling uclid5
+### Compiling uclid5
 
 Ensure you have Z3 and sbt v1.0 or greater installed. Install instructions for sbt are available at http://www.scala-sbt.org/1.0/docs/Setup.html.
 
@@ -34,17 +34,16 @@ If all goes well, running update, clean, compile and test in sbt from the uclid5
 
     $ sbt update clean compile test
 
-### Step 2: Installing uclid5
-
 If compilation and tests pass, you can build a universal package.
 
     $ sbt universal:packageBin
 
 This will create uclid/target/universal/uclid-0.8.zip, which contains the uclid binary in the bin/ subdirectory. Unzip this file, and add it to your path.
 
-    $ cd target/universal/
-    $ unzip uclid-0.8.zip
-    $ cd uclid-0.8
+## Installing uclid5
+
+    $ unzip uclid-0.9.5.zip
+    $ cd uclid-0.9.5
     $ export PATH=$PATH:$PWD/bin
 
 Now you can run uclid using the 'uclid' command. For example:
