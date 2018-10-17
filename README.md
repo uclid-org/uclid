@@ -4,7 +4,7 @@
 
 The [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf) has a gentle introduction to using uclid5.
 
-If you use uclid5 in your own research, it is suggested that you cite following MEMOCODE 2018 paper.
+If you use uclid5 in your own research, it is suggested that you cite the following MEMOCODE 2018 paper.
 
 Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating Modeling, Verification, Synthesis and Learning.</font>
  [\[PDF\]](https://cse.iitk.ac.in/users/spramod/papers/memocode18.pdf)    
@@ -18,7 +18,7 @@ You will need the [Z3 SMT solver](https://github.com/Z3Prover/z3) to be installe
 
 uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix-like platforms; just `PATH` on Windows).
 
-## Download
+## Download Pre-Built Binaries
 
 Download the latest stable pre-built package from [releases tab](https://github.com/uclid-org/uclid/releases).
 
@@ -26,7 +26,7 @@ Download the latest stable pre-built package from [releases tab](https://github.
 
 Or, you could clone this repository and build from source. If you run into problems here, don't forget you can always fall back on the pre-built binaries linked above.
 
-### Compiling uclid5
+### Step 1: Compiling uclid5
 
 Ensure you have Z3 and sbt v1.0 or greater installed. Install instructions for sbt are available at http://www.scala-sbt.org/1.0/docs/Setup.html.
 
@@ -34,7 +34,7 @@ If all goes well, running update, clean, compile and test in sbt from the uclid5
 
     $ sbt update clean compile test
 
-### Installing uclid5
+### Step 2: Installing uclid5
 
 If compilation and tests pass, you can build a universal package.
 
