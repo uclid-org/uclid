@@ -279,7 +279,9 @@ class ParserSpec extends FlatSpec {
       case p : Utils.ParserErrorList =>
         assert (p.errors.size == 1)
         assert (p.errors.exists(p => p._1.contains("Redeclaration of identifier 'pc_t'")))
-        assert (p.errors.exists(p => p._2.filename == Some("test/test-types-import-redecl.ucl") && p._2.pos.line == 32))
+        assert (p.errors.exists(p => 
+          (p._2.filename == Some("test/test-types-import-redecl.ucl") ||
+           p._2.filename == Some("test\\test-types-import-redecl.ucl")) && p._2.pos.line == 32))
     }
   }
   "test-define-expand.ucl" should "parse successfully." in {

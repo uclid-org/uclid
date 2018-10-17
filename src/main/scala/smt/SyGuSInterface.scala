@@ -269,7 +269,7 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
       val funAST = fun match {
         case smt.DefineFun(id, args, body) =>
           smt.Converter.smtToExpr(body)
-        case _ => { UclidMain.println("WTH is this"); lang.IntLit(0); }
+        case _ => throw new Utils.SyGuSParserError("Should not get here. Invariant function is not of DefineFun smt type.")
       }
       sygusLog.debug(fun.toString())
       sygusLog.debug(funAST.toString())

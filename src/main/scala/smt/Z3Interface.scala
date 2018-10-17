@@ -40,13 +40,18 @@
 package uclid
 package smt
 
-import com.microsoft.{z3 => z3}
-import java.util.HashMap;
+import com.microsoft.z3
+import java.util.HashMap
+import scala.collection.immutable.ListMap
+
 import scala.collection.mutable.Map
 import scala.collection.JavaConverters._
 import com.microsoft.z3.enumerations.Z3_lbool
-
+import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.typesafe.scalalogging.Logger
+import java.io.File
+import java.io.PrintWriter
+
 
 /**
  * Result of solving a Z3 instance.
@@ -54,109 +59,72 @@ import com.typesafe.scalalogging.Logger
 class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
   override def evalAsString(e : Expr) : String = {
     interface.exprToZ3(e) match {
-      case z3ArrayExpr : z3.ArrayExpr => convertZ3ArrayString(model.eval(z3ArrayExpr, true).toString)
+      case z3ArrayExpr : z3.ArrayExpr => convertZ3ArrayString(z3ArrayExpr)
       case z3Expr : z3.Expr => model.eval(z3Expr, true).toString
       case _ => throw new Utils.EvaluationError("Unable to evaluate expression: " + e.toString)
     }
   }
 
-  def convertZ3ArrayString(initString : String) : String = {
+  def convertZ3ArrayString(initExpr : z3.Expr) : String = {
 
-    val let_count       = "\\(let \\(\\(a!\\d+ ".r().findAllIn(initString).length
-    val tempString      = initString.replaceAll("(\\(let \\(\\(a!\\d+ )?(\\(store )+(a!\\d+)?", "").replaceAll("(\\n.*)\\)\\)\\)(?=\\n)", "$1\\) ").replaceAll("\\n?\\s+", " ")
-    val cleanString     = tempString.substring(0, tempString.length() - let_count)
-
-    val prefixArray     = "((as const (Array " //)))
-    val prefixArrayLen  = prefixArray.length()
-
-    val totalLen        = cleanString.length()
-
-    var index           = 0;
-    var startIndex      = 0;
-
-    if (!cleanString.startsWith(prefixArray, index)) {
-      return "ERROR"
-    }
-    index += prefixArrayLen
-
-    // Skip the array type information
-    index = findNextIndexRightParen(cleanString, index, 2)
-
-    // Capture bottom value
-    startIndex = index
-
-    index = findNextIndexRightParen(cleanString, index, 1)
-
-    var bottom = cleanString.substring(startIndex, index - 2)
+    var array : Map[String, String] = Map.empty[String, String]
+    var e    : z3.Expr = model.eval(initExpr, true)
+    var bottom : String = ""
+    var longest : Integer = 1
+    var isNumeral : Boolean = false
 
 
-    // Parse all stores operations
-    var Array : Map[String, String] = Map.empty[String, String]
-    while (index < totalLen) {
-      val arrayIndexStartIndex = index
-      index = findNextIndexSpace(cleanString, index)
-      val arrayIndex = cleanString.substring(arrayIndexStartIndex, index)
-
-      index += 1
-      val arrayValueStartIndex = index
-      index = findNextIndexRightParen(cleanString, index, 1)
-      val arrayValue = cleanString.substring(arrayValueStartIndex, index - 2)
-
-      Array += (arrayIndex -> arrayValue)
+    while (e.isStore()) {
+      val args : Array[z3.Expr] = e.getArgs()
+      if (!array.contains(args(1).toString)) {
+        array += (args(1).toString -> args(2).toString)
+      }
+      isNumeral = args(1).isNumeral()
+      e = model.eval(args(0), true)
     }
 
+    if (e.isConstantArray()) {
+      bottom = e.getArgs()(0).toString
+    } else if (e.isAsArray) {
+      var fd : z3.FuncDecl = e.getFuncDecl().getParameters()(0).getFuncDecl()
+      var fint : z3.FuncInterp = null
+    
+      do {
+        fint = model.getFuncInterp(fd)
 
+        for (entry <- fint.getEntries()) {
+          val args : Array[z3.Expr] = entry.getArgs()
+          if (!array.contains(args(0).toString)) {
+            array += (args(0).toString -> entry.getValue().toString)
+          }
+        }
+
+        fd = fint.getElse().getFuncDecl()
+      } while (fint.getElse().getFuncDecl().getDeclKind() == Z3_decl_kind.Z3_OP_UNINTERPRETED)
+
+      bottom = fint.getElse().toString
+    } else {
+      return "ERROR " + e.toString + "\n"
+    }
+
+    array.foreach{ case (k, v) => {
+        if (!v.contentEquals(bottom) && k.length > longest) {
+            longest = k.length
+        }
+    }}
+ 
     var output : String = ""
-    Array.foreach{ case (k,v) => {
+    val sortedArray : ListMap[String,String] = if (isNumeral) 
+        ListMap(array.toSeq.sortWith(_._1.toInt < _._1.toInt):_*) 
+        else ListMap(array.toSeq.sortBy(_._1):_*) 
+    sortedArray.foreach{ case (k,v) => {
       if (!v.contentEquals(bottom)) {
-        output = output.concat(s"\n\t$k : $v")
+        output += k.formatted(s"\n\t%${longest}s : $v")
       }
     }}
 
-    return output.concat(s"\n\tbottom : $bottom")
-
+    return output + "-".formatted(s"\n\t%${longest}s : $bottom")
   }
-
-  def findNextIndexRightParen(str : String, idx : Int, target : Int) : Int = {
-    var paren = 0;
-    var index = idx;
-
-    while (paren < target) {
-      val c = str.charAt(index)
-      val inc = c match {
-        case '(' => -1
-        case ')' => 1
-        case _   => 0
-      }
-      paren += inc
-      index += 1
-    }
-    return index + 1
-  }
-
-  // Find the index of the next space without open parentheses in str starting at idx
-  def findNextIndexSpace(str : String, idx : Int) : Int = {
-    var paren = 0;
-    var index = idx;
-
-    var c = str.charAt(index)
-
-    val len = str.length()
-
-    while (c != ' ' || paren != 0) {
-      val inc = c match {
-        case '(' => -1
-        case ')' => 1
-        case _   => 0
-      }
-      paren += inc
-      index += 1
-      c = str.charAt(index)
-    }
-    return index
-  }
-
- 
 
   override def evaluate(e : Expr) : Expr = {
     interface.exprToZ3(e) match {
@@ -248,13 +216,18 @@ class Z3Interface() extends Context {
       case recType : RecordType => getRecordSort(recType.fields_)
     }
   }
+  val getArrayIndexSort = new Memo[List[Type], z3.Sort]({
+    p => {
+      if (p.size == 1) {
+        getZ3Sort(p(0))
+      } else {
+        getTupleSort(p)
+      }
+    }
+  })
   val getArraySort = new Memo[(List[Type], Type), z3.ArraySort]((arrayType : (List[Type], Type)) => {
     val indexTypeIn = arrayType._1
-    val z3IndexType = if (indexTypeIn.size == 1) {
-      getZ3Sort(indexTypeIn(0))
-    } else {
-      getTupleSort(indexTypeIn)
-    }
+    val z3IndexType = getArrayIndexSort(indexTypeIn)
     ctx.mkArraySort(z3IndexType, getZ3Sort(arrayType._2))
   })
   val getEnumSort = new Memo[List[String], z3.EnumSort]((enumConstants : List[String]) => {
@@ -297,6 +270,15 @@ class Z3Interface() extends Context {
   /** Create an enum literal. */
   val getEnumLit = new Memo[(String, EnumType), z3.Expr]((p) => getEnumSort(p._2.members).getConst(p._2.fieldIndex(p._1)))
 
+  /** Create a constant array literal. */
+  val getConstArrayLit = new Memo[(Literal, ArrayType), z3.Expr]({
+    (p) => {
+      val value = exprToZ3(p._1).asInstanceOf[z3.Expr]
+      val sort = getArrayIndexSort(p._2.inTypes)
+      val arr = ctx.mkConstArray(sort, value)
+      arr
+    }
+  })
   /** Convert a smt.Symbol object into a Z3 AST. */
   def symbolToZ3 (sym : Symbol) : z3.AST = {
     abstract class ExprSort
@@ -385,6 +367,9 @@ class Z3Interface() extends Context {
       case BVReplaceOp(w, hi, lo) => mkReplace(w, hi, lo, bvArgs(0), bvArgs(1))
       case BVSignExtOp(w, e)      => ctx.mkSignExt(e, bvArgs(0))
       case BVZeroExtOp(w, e)      => ctx.mkZeroExt(e, bvArgs(0))
+      case BVLeftShiftOp(w, e)    => ctx.mkBVSHL(bvArgs(0), ctx.mkBV(e, w))
+      case BVLRightShiftOp(w, e)  => ctx.mkBVLSHR(bvArgs(0), ctx.mkBV(e, w))
+      case BVARightShiftOp(w, e)  => ctx.mkBVASHR(bvArgs(0), ctx.mkBV(e, w))
       case NegationOp             => ctx.mkNot (boolArgs(0))
       case IffOp                  => ctx.mkIff (boolArgs(0), boolArgs(1))
       case ImplicationOp          => ctx.mkImplies (boolArgs(0), boolArgs(1))
@@ -453,6 +438,7 @@ class Z3Interface() extends Context {
       case BitVectorLit(bv,w) => getBitVectorLit(bv, w)
       case BooleanLit(b) => getBoolLit(b)
       case EnumLit(e, typ) => getEnumLit(e, typ)
+      case ConstArrayLit(value, typ) => getConstArrayLit(value, typ)
       case MakeTuple(args) =>
         val tupleSort = getTupleSort(args.map(_.typ))
         tupleSort.mkDecl().apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
@@ -478,26 +464,39 @@ class Z3Interface() extends Context {
   }
   override def preassert(e: Expr) {}
 
+  def writeToFile(p: String, s: String): Unit = {
+    val pw = new PrintWriter(new File(p))
+    try pw.write(s) finally pw.close()
+  } 
+
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
   override def check() : SolverResult = {
-    checkLogger.debug(solver.toString())
-    val z3Result = solver.check()
+    lazy val smtOutput = solver.toString()
+    checkLogger.debug(smtOutput)
 
-    val checkResult : SolverResult = z3Result match {
-      case z3.Status.SATISFIABLE =>
-        val z3Model = solver.getModel()
-        checkLogger.debug("SAT")
-        checkLogger.debug("Model: {}", z3Model.toString())
-        SolverResult(Some(true), Some(new Z3Model(this, z3Model)))
-      case z3.Status.UNSATISFIABLE =>
-        checkLogger.debug("UNSAT")
-        SolverResult(Some(false), None)
-      case _ =>
-        checkLogger.debug("UNDET")
-        SolverResult(None, None)
+    if (filePrefix == "") {
+      val z3Result = solver.check()
+
+      val checkResult : SolverResult = z3Result match {
+        case z3.Status.SATISFIABLE =>
+          val z3Model = solver.getModel()
+          checkLogger.debug("SAT")
+          checkLogger.debug("Model: {}", z3Model.toString())
+          SolverResult(Some(true), Some(new Z3Model(this, z3Model)))
+        case z3.Status.UNSATISFIABLE =>
+          checkLogger.debug("UNSAT")
+          SolverResult(Some(false), None)
+        case _ =>
+          checkLogger.debug("UNDET")
+          SolverResult(None, None)
+      }
+      return checkResult
+    } else {
+      writeToFile(f"$filePrefix%s-$curAssertName%s-$curAssertLabel%s-$counten%04d.smt", smtOutput + "\n\n(check-sat)\n(get-info :all-statistics)\n")
+      counten += 1
+      return SolverResult(None, None)
     }
-    return checkResult
   }
 
   override def finish() {

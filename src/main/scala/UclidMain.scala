@@ -44,9 +44,7 @@ package uclid
 
 import scala.util.parsing.combinator._
 import scala.collection.immutable._
-import uclid.lang._
-import lang.Module
-import lang.Identifier
+import lang.{Identifier, Module,  _}
 import uclid.Utils.ParserErrorList
 import com.typesafe.scalalogging.Logger
 import uclid.smt.SyGuSInterface
@@ -76,7 +74,9 @@ object UclidMain {
       smtSolver: List[String] = List.empty,
       synthesizer: List[String] = List.empty,
       synthesisRunDir: String = "",
+      smtFileGeneration: String = "",
       sygusFormat: Boolean = false,
+      sygusTypeConvert: Boolean = false,
       printStackTrace: Boolean = false,
       verbose : Int = 0,
       files : Seq[java.io.File] = Seq()
@@ -84,7 +84,7 @@ object UclidMain {
 
   def parseOptions(args: Array[String]) : Option[Config] = {
     val parser = new scopt.OptionParser[Config]("uclid") {
-      head("uclid", "0.9.1")
+      head("uclid", "0.9.5")
 
       opt[String]('m', "main").valueName("<Module>").action{ 
         (x, c) => c.copy(mainModuleName = x) 
@@ -102,6 +102,10 @@ object UclidMain {
         (dir, c) => c.copy(synthesisRunDir = dir)
       }.text("Run directory for synthesizer.")
 
+      opt[String]('g', "smt-file-generation").action{
+        (prefix, c) => c.copy(smtFileGeneration = prefix)
+      }.text("File prefix to generate smt files for each assertion.")
+
       opt[Unit]('X', "exception-stack-trace").action{
         (_, c) => c.copy(printStackTrace = true)
       }.text("Print exception stack trace.")
@@ -109,6 +113,10 @@ object UclidMain {
       opt[Unit]('f', "sygus-format").action{
         (_, c) => c.copy(sygusFormat = true)
       }.text("Generate the standard SyGuS format.")
+
+      opt[Unit]('c', "sygus-type-convert").action{
+        (_, c) => c.copy(sygusTypeConvert = true)
+      }.text("Enable EnumType conversion in synthesis.")
 
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
@@ -217,6 +225,8 @@ object UclidMain {
     passManager.addPass(new BlockFlattener())
     passManager.addPass(new ModuleCleaner(mainModuleName))
     passManager.addPass(new BlockVariableRenamer())
+    // passManager.addPass(new TaintModPass())
+    // passManager.addPass(new TaintNPass())
     // passManager.addPass(new ASTPrinter())
 
     val filenameAdderPass = new AddFilenameRewriter(None)
@@ -259,6 +269,7 @@ object UclidMain {
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ModuleFlattener(mainModuleName))
+    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
@@ -307,6 +318,7 @@ object UclidMain {
       case Nil => None
       case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir, config.sygusFormat))
     }
+    z3Interface.filePrefix = config.smtFileGeneration
     val result = symbolicSimulator.execute(z3Interface, sygusInterface, config)
     z3Interface.finish()
     return result

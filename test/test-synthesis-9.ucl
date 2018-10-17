@@ -1,0 +1,27 @@
+module main {
+	type enumT1 = enum {t1, t2};
+        type enumT2 = enum {t4, t5};
+	var et1 : enumT1;
+	var et2 : enumT1;
+
+	init {
+		et1 = t1;
+		et2 = et1;
+	}
+
+	next {
+		et2' = et1;
+	}
+
+	//invariant strength : (et1 == t1);
+	invariant test : (et2 == t1); 
+
+	control {
+		// print_module;
+		// v = induction(1);
+		// check;
+		// print_results;
+		// v.print_cex();
+		synthesize_invariant[LIA];
+	}
+}

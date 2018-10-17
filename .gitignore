@@ -1,0 +1,8 @@
+project/project/*
+project/target/*
+target/*
+test/debug/*
+test/pipelines/*
+test/target/*
+test/tmp/*
+

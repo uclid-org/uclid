@@ -1,6 +1,6 @@
 name := "uclid"
 version := "0.9.5"
-scalaVersion := "2.12.0"
+scalaVersion := "2.12.6"
  
 scalacOptions += "-feature"
 scalacOptions += "-unchecked"

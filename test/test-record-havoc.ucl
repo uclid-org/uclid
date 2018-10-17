@@ -1,0 +1,28 @@
+module cpu {
+    type obs_t = record {
+        cache       : [bv4]bv4
+    };
+
+    var cache       : [bv4]bv4;
+    var obs         : obs_t;
+
+    next {
+        havoc obs;
+    }
+}
+
+module main {
+    instance cpu1 : cpu();
+
+    next {
+        next(cpu1);
+    }
+
+    invariant trivial : true;
+
+    control {
+        v = induction();
+        check;
+        print_results;
+    }
+}

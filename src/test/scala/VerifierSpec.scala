@@ -110,6 +110,9 @@ class VerifierSanitySpec extends FlatSpec {
   "test-primed-variables-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-primed-variables-1.ucl", 0)
   }
+  "test-assume-primed-var.ucl" should "verify all but 6 assertions." in {
+    VerifierSpec.expectedFails("./test/test-assume-primed-var.ucl", 6)
+  }
 }
 class BasicVerifierSpec extends FlatSpec {
   "test-bv-assign.ucl" should "verify successfully." in {
@@ -135,6 +138,15 @@ class BasicVerifierSpec extends FlatSpec {
   }
   "test-bv-zero-ext-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-bv-zero-ext-1.ucl", 0)
+  }
+  "test-bv-left-shift-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bv-left-shift-1.ucl", 0)
+  }
+  "test-bv-a-right-shift-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bv-a-right-shift-1.ucl", 0)
+  }
+  "test-bv-l-right-shift-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-bv-l-right-shift-1.ucl", 0)
   }
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
@@ -168,6 +180,12 @@ class BasicVerifierSpec extends FlatSpec {
   }
   "test-subst-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-subst-1.ucl", 2)
+  }
+  "test-const-array.ucl" should "verify all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-const-array.ucl", 1)
+  }
+  "test-record-havoc.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-record-havoc.ucl", 0)
   }
 }
 class ProcedureVerifSpec extends FlatSpec {

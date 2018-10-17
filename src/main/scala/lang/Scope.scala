@@ -71,6 +71,7 @@ object Scope {
   case class SpecVar(varId : Identifier, expr: Expr) extends ReadOnlyNamedExpression(varId, BooleanType())
   case class AxiomVar(varId : Identifier, expr : Expr) extends ReadOnlyNamedExpression(varId, BooleanType())
   case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends ReadOnlyNamedExpression(enumId, enumTyp)
+  case class ProductField(fId : Identifier, fTyp: Type, recordType : ProductType) extends ReadOnlyNamedExpression(fId, fTyp)
   case class ForallVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ExistsVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class VerifResultVar(vId : Identifier, cmd : GenericProofCommand) extends ReadOnlyNamedExpression(vId, UndefinedType())
@@ -220,7 +221,14 @@ case class Scope (
   def +(typ : Type) : Scope = {
     Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, environment, inLTLSpec, parent)
   }
-
+  def addProductType(productType: ProductType) : Scope = {
+    productType.fields.foldLeft(this) {
+      (acc, fld) => {
+        Scope(Scope.addToMap(acc.map, Scope.ProductField(fld._1, fld._2, productType)), 
+            module, procedure, cmd, environment, inLTLSpec, parent)
+      }
+    }
+  }
   /** Add a reference to this module (don't expand the module's declarations). */
   def +&(m : Module) : Scope = {
     Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, environment, inLTLSpec, parent)

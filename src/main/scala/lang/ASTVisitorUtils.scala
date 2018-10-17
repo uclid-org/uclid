@@ -66,18 +66,29 @@ class ASTPrinter() extends ASTAnalyzer(ASTPrinter.getName(), new ASTPrinterPass(
 class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
 {
   override def rewriteExpr(e: Expr, context: Scope) : Option[Expr] = {
-    rewrites.get(e) match {
+    if (e.isInstanceOf[Identifier]) {
+      val id = e.asInstanceOf[Identifier]
+      val g = context.map.get(id)
+      if (g.isDefined && g.get.isInstanceOf[Scope.ProductField]) {
+        return Some(e)
+      }
+    }
+    return rewrites.get(e) match {
       case Some(eprime) => Some(eprime)
       case None => Some(e)
     }
   }
   override def rewriteIdentifier(i: Identifier, context: Scope) : Option[Identifier] = {
-    rewrites.get(i) match {
-      case None => Some(Identifier(i.name))
-      case Some(eprime) =>
-        eprime match {
-          case id : Identifier => Some(id)
-          case _ => Some(Identifier(i.name))
+    context.map.get(i) match {
+      case Some(Scope.ProductField(_, _, _)) => Some(i)
+      case _ =>
+        rewrites.get(i) match {
+          case None => Some(Identifier(i.name))
+          case Some(eprime) =>
+            eprime match {
+              case id : Identifier => Some(id)
+              case _ => Some(Identifier(i.name))
+            }
         }
     }
   }

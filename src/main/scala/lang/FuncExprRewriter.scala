@@ -74,6 +74,45 @@ class FuncExprRewriterPass extends RewritePass {
           } else {
             OperatorApplication(BVZeroExtOp(0, 0), List.empty)
           }
+        } else if (fnName == "bv_left_shift") {
+          if (fapp.args.size == 2) {
+            fapp.args(0) match {
+              case IntLit(v) =>
+                OperatorApplication(BVLeftShiftOp(0, v.toInt), List(fapp.args(1)))
+              case _ =>
+                OperatorApplication(BVLeftShiftOp(0 ,0), List(fapp.args(1)))
+            }
+          } else {
+            OperatorApplication(BVLeftShiftOp(0, 0), List.empty)
+          }
+
+
+        } else if (fnName == "bv_l_right_shift") {
+          if (fapp.args.size == 2) {
+            fapp.args(0) match {
+              case IntLit(v) =>
+                OperatorApplication(BVLRightShiftOp(0, v.toInt), List(fapp.args(1)))
+              case _ =>
+                OperatorApplication(BVLRightShiftOp(0 ,0), List(fapp.args(1)))
+            }
+          } else {
+            OperatorApplication(BVLRightShiftOp(0, 0), List.empty)
+          }
+
+
+        } else if (fnName == "bv_a_right_shift") {
+          if (fapp.args.size == 2) {
+            fapp.args(0) match {
+              case IntLit(v) =>
+                OperatorApplication(BVARightShiftOp(0, v.toInt), List(fapp.args(1)))
+              case _ =>
+                OperatorApplication(BVARightShiftOp(0 ,0), List(fapp.args(1)))
+            }
+          } else {
+            OperatorApplication(BVARightShiftOp(0, 0), List.empty)
+          }
+
+
         } else {
           fapp
         }

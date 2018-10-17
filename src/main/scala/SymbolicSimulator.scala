@@ -182,7 +182,7 @@ class SymbolicSimulator (module : Module) {
               case None =>
                 UclidMain.println("Error: Can't execute synthesize_invariant as synthesizer was not provided. ")
               case Some(synth) => {
-                synthesizeInvariants(context, noLTLFilter, synth, cmd.params(0).toString) match {
+                synthesizeInvariants(context, noLTLFilter, synth, cmd.params(0).toString, config.sygusTypeConvert) match {
                   // Failed to synthesize invariant
                   case None => UclidMain.println("Failed to synthesize invariant.")
                   // Successfully synthesized an invariant
@@ -283,15 +283,22 @@ class SymbolicSimulator (module : Module) {
    * @param step The current frame number.
    * @param scope The current scope.
    */
-  def renameStates(st : SymbolTable, frameNumber : Int, scope : Scope, addAssumption : (smt.Expr => Unit)) : SymbolTable = {
-    val renamedExprs = scope.map.map(_._2).collect {
+  def renameStates(st : SymbolTable, eqStates : Set[Identifier], frameNumber : Int, scope : Scope, addAssumption : (smt.Expr => Unit)) : SymbolTable = {
+    val renamedExprs : Iterable[(Identifier, smt.Symbol, smt.Expr)] = scope.map.map(_._2).map {
       case Scope.StateVar(id, typ) =>
-        val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
-        val stateExpr = st.get(id).get
-        val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
-        (id, newVariable, smtExpr)
+        if (!eqStates.contains(id)) {
+          val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
+          val stateExpr = st.get(id).get
+          val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
+          Some(id, newVariable, smtExpr)
+        } else {
+          None
+        }
+      case _ => None
+    }.flatten
+    renamedExprs.foreach{ 
+      (p) => addAssumption(p._3)
     }
-    renamedExprs.foreach(p => addAssumption(p._3))
     renamedExprs.foldLeft(st)((acc, p) => st + (p._1 -> p._2))
   }
 
@@ -317,7 +324,12 @@ class SymbolicSimulator (module : Module) {
       val stWInputs = newInputSymbols(currentState, step + startStep, scope)
       states += stWInputs
       val symTableP = simulate(step + startStep, stWInputs, scope, label, addAssumptionToTree _, addAssertToTree _)
-      currentState = renameStates(symTableP, step + startStep, scope, addAssumptionToTree _)
+      val eqStates = symTableP.filter(p => stWInputs.get(p._1) match {
+        case Some(st) => (st == p._2)
+        case None => false
+      }).map(_._1).toSet
+      defaultLog.debug("eqStates: {}", eqStates.toString())
+      currentState = renameStates(symTableP, eqStates, step + startStep, scope, addAssumptionToTree _)
       val numPastFrames = frameTable.size
       val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
       frameTable += currentState
@@ -572,6 +584,22 @@ class SymbolicSimulator (module : Module) {
       }
     }
   }
+  def getIndexedSymbolTable(scope : Scope, index : Integer) : SymbolTable = {
+    scope.map.foldLeft(Map.empty[Identifier, smt.Expr]){
+      (mapAcc, decl) => {
+        decl._2 match {
+          case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.Function(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
+          case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
+          case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
+          case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
+          case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
+          case _ => mapAcc
+        }
+      }
+    }
+  }
   def getPrimeSymbolTable(scope : Scope) : SymbolTable = {
     scope.map.foldLeft(Map.empty[Identifier, smt.Expr]){
       (mapAcc, decl) => {
@@ -589,8 +617,45 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def synthesizeInvariants(ctx : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean), synthesizer : smt.SynthesisContext, logic : String) : Option[lang.Expr] = {
+  def createTransitionRelation(ctx : Scope, st : lang.Statement, x0 : SymbolTable, x1 : SymbolTable, label : String) : smt.Expr = {
+    var assumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
+    def addAssumption(e : smt.Expr) : Unit = { assumptions += e }
+    var assertions  : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
+    def addAssertion(e : AssertInfo) : Unit = { assertions += e }
+
+    // Symbolically simulate statement.
+    val symbolicState = simulate(0, List.empty, st, x0, ctx, label, addAssumption _, addAssertion _)
+    // Compute init expression from the result of symbolic simulation.
+    val symbolicExpressions = (symbolicState.map {
+      p => {
+        val id = p._1
+        ctx.get(id).get match {
+          case Scope.StateVar(_, _) | Scope.OutputVar(_, _) | Scope.SharedVar(_, _) =>
+            val lhs = x1.get(id).get
+            val rhs = p._2
+            smt.OperatorApplication(smt.EqualityOp, List(lhs, rhs))
+          case _ =>
+            smt.BooleanLit(true)
+        }
+      }
+    }.toList ++ assumptions.toList).filter(p => p != smt.BooleanLit(true))
+    // Return a conjunction of these expressions.
+    smt.Operator.conjunction(symbolicExpressions)
+  }
+
+  def synthesizeInvariants(ctx : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean), synthesizer : smt.SynthesisContext, logic : String, sygusTypeConvert : Boolean) : Option[lang.Expr] = {
     resetState()
+
+    val passManager = new PassManager("sygusTypeConverter")
+    // Convert enum type
+    if (sygusTypeConvert) {
+      passManager.addPass(new EnumTypeAnalysis())
+      passManager.addPass(new EnumTypeRenamer(logic))
+    }
+    // Synthesis module
+    val synthesisModule = passManager.run(module, Scope.empty).get
+    val synthesisCtx = Scope.empty + synthesisModule
+
     // assumptions.
     var initAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
     var nextAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
@@ -602,12 +667,11 @@ class SymbolicSimulator (module : Module) {
     var nextAssertions : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
     def nextAddAssertion(e : AssertInfo) : Unit = { nextAssertions += e }
 
-    // FIXME: need to account for getInitSymbolTable in the constraints generated by synthesizer.synthesizeInvariant.
-    val defaultSymbolTable = getDefaultSymbolTable(ctx)
-    val primeSymbolTable = getPrimeSymbolTable(ctx)
+    val defaultSymbolTable = getDefaultSymbolTable(synthesisCtx)
+    val primeSymbolTable = getPrimeSymbolTable(synthesisCtx)
     // FIXME: Need to account for assumptions and assertions. 
-    val initState = simulate(0, List.empty, module.init.get.body, defaultSymbolTable, ctx, "synthesize", initAddAssumption _, initAddAssertion _)
-    val nextState = simulate(0, List.empty, module.next.get.body, defaultSymbolTable, ctx, "synthesize", nextAddAssumption _, nextAddAssertion _)
+    val initState = simulate(0, List.empty, synthesisModule.init.get.body, defaultSymbolTable, synthesisCtx, "synthesize", initAddAssumption _, initAddAssertion _)
+    val nextState = simulate(0, List.empty, synthesisModule.next.get.body, defaultSymbolTable, synthesisCtx, "synthesize", nextAddAssumption _, nextAddAssertion _)
     val assertions = nextAssertions.map {
       assert => {
         if (assert.pathCond == smt.BooleanLit(true)) {
@@ -617,10 +681,10 @@ class SymbolicSimulator (module : Module) {
         }
       }
     }.toList
-    val invariants = ctx.specs.map(specVar => {
-      val prop = module.properties.find(p => p.id == specVar.varId).get
+    val invariants = synthesisCtx.specs.map(specVar => {
+      val prop = synthesisModule.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {
-        Some(evaluate(prop.expr, defaultSymbolTable, Map.empty, ctx))
+        Some(evaluate(prop.expr, defaultSymbolTable, Map.empty, synthesisCtx))
       } else {
         None
       }
@@ -655,7 +719,7 @@ class SymbolicSimulator (module : Module) {
     val verificationConditions = assertions ++ invariants
     Utils.assert(verificationConditions.size > 0, "Must have at least one assertion/invariant.")
     Utils.assert(initAssertions.size == 0, "Must not have assertions in the init block for SyGuS.") 
-    return synthesizer.synthesizeInvariant(initExpr, nextExpr, verificationConditions, ctx, logic)
+    return synthesizer.synthesizeInvariant(initExpr, nextExpr, verificationConditions, synthesisCtx, logic)
   }
 
   /** Add module specifications (properties) to the list of proof obligations */

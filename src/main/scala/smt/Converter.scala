@@ -125,6 +125,9 @@ object Converter {
       case lang.ConstExtractOp(slice) => return smt.BVExtractOp(slice.hi, slice.lo)
       case lang.BVSignExtOp(w, e) => return smt.BVSignExtOp(w, e)
       case lang.BVZeroExtOp(w, e) => return smt.BVZeroExtOp(w, e)
+      case lang.BVLeftShiftOp(w, e) => return smt.BVLeftShiftOp(w, e)
+      case lang.BVLRightShiftOp(w, e) => return smt.BVLRightShiftOp(w, e)
+      case lang.BVARightShiftOp(w, e) => return smt.BVARightShiftOp(w, e)
       // Boolean operators.
       case lang.ConjunctionOp() => return smt.ConjunctionOp
       case lang.DisjunctionOp() => return smt.DisjunctionOp
@@ -203,6 +206,8 @@ object Converter {
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
+       case lang.ConstArrayLit(value, arrTyp) =>
+         smt.ConstArrayLit(toSMT(value, scope, past).asInstanceOf[smt.Literal], typeToSMT(arrTyp).asInstanceOf[ArrayType])
        case lang.StringLit(_) => throw new Utils.RuntimeError("Strings are not supported in smt.Converter")
        case lang.Tuple(args) => smt.MakeTuple(toSMTs(args, scope, past))
        case opapp : lang.OperatorApplication =>

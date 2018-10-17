@@ -129,6 +129,8 @@ class AssertionTree {
         if (mode.isAssert) {
           solver.push()
           solver.assert(checkExpr)
+          solver.curAssertName = e.name
+          solver.curAssertLabel = e.label
           val sat = solver.check()
           val result = sat.result match {
             case Some(true)  => smt.SolverResult(Some(false), sat.model)
