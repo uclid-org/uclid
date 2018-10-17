@@ -333,6 +333,18 @@ object Context
     es.foldLeft(empty)((acc, e) => acc ++ accumulateOverExpr(e, apply, memo))
   }
 
+  def findFreeSymbols(e : smt.Expr, memo : MutableMap[Expr, Set[Symbol]]) : Set[Symbol] = {
+    memo.get(e) match {
+      case Some(result) => result
+      case None =>
+        val s : Set[Symbol] = e match {
+          case s : Symbol => Set(s)
+          case _ => Set.empty
+        }
+        memo.put(e, s)
+        s
+    }
+  }
 
   /**
    * Helper function that finds all the types that appear in an expression.
