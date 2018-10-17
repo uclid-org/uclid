@@ -370,7 +370,7 @@ class SymbolicSimulator (module : Module) {
 
     val stWInputs = newInputSymbols(currentState, 1, scope)
     states += stWInputs
-    val symTableP = simulate(1, stWInputs, scope, label, addAssumesToList _, addAssertsToList _)
+    val symTableP = simulate(1, stWInputs, scope, label, addAssumptionToTree _, addAssertToTree _)
     val eqStates = symTableP.filter(p => stWInputs.get(p._1) match {
       case Some(st) => (st == p._2)
       case None => false
@@ -382,9 +382,9 @@ class SymbolicSimulator (module : Module) {
     val numPastFrames = frameTable.size
     val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
     frameTable += currentState
-    addModuleAssumptions(currentState, pastTables, scope, addAssumesToList _)
-    if (addAssertions) { addAsserts(1, currentState, pastTables, label, scope, filter, addAssertsToList _)  }
-    if (addAssertionsAsAssumes) { assumeAssertions(currentState, pastTables, scope, addAssumesToList _) }
+    addModuleAssumptions(currentState, pastTables, scope, addAssumptionToTree _)
+    if (addAssertions) { addAsserts(1, currentState, pastTables, label, scope, filter, addAssertToTree _)  }
+    if (addAssertionsAsAssumes) { assumeAssertions(currentState, pastTables, scope, addAssumptionToTree _) }
 
     val reverse_end_map = currentState.map(_.swap)
     val final_vars = getVarsInOrder(reverse_end_map, scope)
