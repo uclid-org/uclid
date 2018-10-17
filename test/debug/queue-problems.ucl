@@ -1,0 +1,124 @@
+module queue {
+  // types and constants.
+  type op_t = enum { push, pop, search };
+  type queue_t = [integer]integer;
+  const SIZE : integer = 4;
+  // inputs, outputs and state variables
+  input op                         : op_t;
+  input data                       : integer;
+  output top                       : integer;
+  output valid, full, empty, found : boolean;
+  var contents                     : queue_t;
+  var head, tail, count            : integer;
+  var inited                       : boolean;
+  // macros
+  define itemIndex(i : integer) : integer =
+    if ((i + head) >= SIZE)
+      then (i + head) - SIZE
+      else (i + head);
+  define inQueue(v : integer) : boolean =
+    (exists (i : integer) :: 
+      (i >= 0 && i < count) && 
+       contents[itemIndex(i)] == v);
+
+  procedure pushQ()
+    returns (
+        contentsP : queue_t,
+        tailP  : integer,
+        countP : integer)
+
+    requires !full;
+    requires (tail >= 0 && tail < SIZE);
+    ensures (contentsP == contents[tail -> data]);
+    ensures (tailP == if (tail == SIZE-1) then 0 else (tail + 1));
+    ensures (countP == count + 1);
+  {
+    contentsP = contents[tail -> data];
+    tailP = tail + 1;
+    if (tailP >= SIZE) { tailP = 0; }
+    countP = count + 1;
+  }
+
+  procedure popQ()
+    returns (
+        headP  : integer,
+        countP : integer)
+
+    requires !empty;
+    requires (head >= 0 && head < SIZE);
+    ensures (headP == if (head == SIZE-1) then 0 else (head + 1));
+    ensures (countP == count - 1);
+  {
+    headP = head + 1;
+    if (headP >= SIZE) { headP = 0; }
+    countP = count - 1;
+  }
+
+  procedure searchQ()
+    returns (found : boolean)
+    requires (count >= 0 && count <= SIZE);
+    ensures (inQueue(data) <==> found);
+  {
+    var i : integer;
+
+    i = 0;
+    found = false;
+    while (i < count)
+      invariant (i >= 0 && i <= count);
+      invariant 
+        (exists (j : integer) :: 
+          j >= 0 && j < i &&
+          contents[itemIndex(j)] == data)
+        <==> found;
+    {
+      if (contents[itemIndex(i)] == data) {
+        found = true;
+      }
+      i = i + 1;
+    }
+  }
+  init {
+    top, head, tail, count = 0, 0, 0, 0;
+    valid, full, empty = false, false, false;
+    inited, found = false, false;
+  }
+  next {
+    inited' = true;
+    top'    = contents[head];
+    full'   = (count' == SIZE);
+    empty'  = (count' == 0);
+
+    case
+      (op == push && !full) : {
+        call (contents', tail', count') = pushQ();
+      }
+      (op == pop && !empty) : {
+        call (head', count') = popQ();
+      }
+      (op == search) : {
+        call (found') = searchQ();
+      }
+    esac;
+  }
+  // Symbolic constant to "capture" pushed value
+  const pushed_data : integer;
+  property[LTL] pushed_value_becomes_head :
+    // pops occur infinitely often
+    G(F(op == pop)) ==>
+    // every value that is pushed
+    G((inited && op == push && 
+       data == pushed_data && !full) ==>
+      // eventually becomes the head of the queue
+      F(head == pushed_data));
+  control {
+    vQ      = bmc(5);
+    vPush   = verify(pushQ);
+    vPop    = verify(popQ);
+    vSearch = verify(searchQ);
+    check;
+    print_results;
+    vQ.print_cex(op, data, pushed_data, 
+      head, tail, head, count, contents[0], 
+      contents[1], contents[2], contents[3]);
+  }
+}
