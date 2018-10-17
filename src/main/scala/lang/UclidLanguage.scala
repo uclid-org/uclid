@@ -370,6 +370,10 @@ case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
   override def fixity = Operator.INFIX
 }
+case class HyperSelect(i: Int) extends Operator {
+  override def toString: String = "." + i.toString
+  override def fixity = Operator.INFIX
+}
 case class SelectFromInstance(varId : Identifier) extends Operator {
   override def toString = "." + varId
   override def fixity = Operator.INFIX
@@ -455,6 +459,8 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
         operands(0).toString + "." + r.toString()
       case RecordSelect(r) =>
         operands(0).toString + "." + r.toString
+      case HyperSelect(i) =>
+        operands(0).toString + "." + i.toString
       case SelectFromInstance(f) =>
         operands(0).toString + "." + f.toString
       case ForallOp(_) | ExistsOp(_) =>
@@ -524,7 +530,7 @@ case object LTLExprDecorator extends ExprDecorator {
   override def toString = "LTL"
 }
 case class HyperpropertyDecorator(k: Int) extends ExprDecorator {
-  override def toString = "hyperproperty(%d)".format(k)
+  override def toString = k.toString()
 }
 case object LTLSafetyFragmentDecorator extends ExprDecorator {
   override def toString = "LTLSafetyFragment"
@@ -552,7 +558,12 @@ object ExprDecorator {
     return dec
   }
   def isLTLProperty(decs : List[ExprDecorator]) : Boolean = {
-    decs.exists(p => p == LTLSafetyFragmentDecorator || p == LTLLivenessFragmentDecorator)
+    decs.exists(p => p == LTLSafetyFragmentDecorator ||
+                     p == LTLLivenessFragmentDecorator ||
+                     p == LTLExprDecorator)
+  }
+  def isHyperproperty(decs : List[ExprDecorator]) : Boolean = {
+    decs.exists(p => p.isInstanceOf[HyperpropertyDecorator])
   }
 }
 
@@ -1156,17 +1167,24 @@ case class NextDecl(body: Statement) extends Decl {
 }
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
   override val hashId = 917
+  val propertyKeyword = if (ExprDecorator.isHyperproperty(params)) {
+    "hyperproperty"
+  } else {
+    "property"
+  }
   override def toString = {
     val declString = if (params.size > 0) {
       "[" + Utils.join(params.map(_.toString), ", ") + "]"
     } else {
       ""
     }
-    "property %s%s : %s; // %s".format(id.toString, declString, expr.toString, position.toString)
+    "%s %s%s : %s; // %s".format(propertyKeyword, id.toString, declString, expr.toString, position.toString)
   }
   override def declNames = List(id)
-  def name = "property " + id.toString()
+  def name = "%s %s".format(propertyKeyword, id.toString())
 }
+
+
 case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
   override val hashId = 918
   override def toString = {
@@ -1180,6 +1198,7 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
     case _ => List.empty
   }
 }
+
 sealed abstract class ProofCommand extends ASTNode
 
 case class GenericProofCommand(name : Identifier, params: List[Identifier], args : List[(Expr, String)], resultVar: Option[Identifier], argObj: Option[Identifier]) extends ProofCommand {
