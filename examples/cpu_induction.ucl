@@ -1,31 +1,32 @@
 module common {
-  // address type.
+  // address type: an uninterpreted type.
   type addr_t;
-  // word type.
-  type word_t = bv8;
-  // list of operations supported by the CPU.
-  type op_t   = enum {
-      op_alu, op_load, op_store,
-      op_syscall, op_sysret
+  // word type: a bitvector type.
+  type word_t = bv32;
+  // type of operations supported by the CPU.
+  type op_t = enum {
+    op_alu, op_load, op_store,
+    op_imode_enter, op_nmode_exit
   };
   // CPU mode.
   type mode_t = enum { normal_mode, isolated_mode };
-  // CPU memory type.
+  // CPU memory type: an array type.
   type mem_t = [addr_t]word_t;
 
-  // define a constant that evaluates to zero.
-  function k0_word_t() : word_t;
-  axiom k0_word_t() == 0bv8;
+  // define zero constant of the word_t type.
+  const k0_word_t : word_t;
+  axiom k0_word_t == 0bv32;
 
-  // the enter address for syscall.
-  function syscall_enter_addr() : addr_t;
-  // the exit address for syscalls.
-  function sysret_exit_addr() : addr_t;
-  // The above two must be different.
-  axiom syscall_enter_addr() != sysret_exit_addr();
+  // the entry address for isolated mode.
+  const imode_enter_addr : addr_t;
+  // the exit address for isolated mode.
+  const nmode_exit_addr : addr_t;
+  // the above two constants MUST be different.
+  axiom imode_enter_addr != nmode_exit_addr;
 }
 
 module cpu {
+  // import all types from module common
   type * = common.*;
 
   type regindex_t;
@@ -35,117 +36,134 @@ module cpu {
   var dmem           : mem_t;  // data memory.
   var regs           : regs_t; // registers.
   var pc             : addr_t; // program counter.
-  var inst, result   : word_t; // inst reg, result value
-  var mode           : mode_t; // usr/sup mode?
+  var inst, result   : word_t; // inst reg, result
+  var mode           : mode_t; // normal/isolated mode?
 
-  // range of isolated memory.
-  const sup_range_lo   : addr_t;
-  const sup_range_hi   : addr_t;
-  // predicate for the above.
-  function in_range  (a : addr_t, b1 : addr_t, b2 : addr_t) : boolean;
+  // rng of isolated memory.
+  const isolated_rng_lo, isolated_rng_hi : addr_t;
+  // uninterpreted func. (predicate) for the above.
+  function in_rng  (a : addr_t, b1 : addr_t, b2 : addr_t) : boolean;
+  // uninterpreted functions for decoding insns.
+  function inst2op 
+    (i : word_t) : op_t;
+  function inst2reg0 
+    (i : word_t) : regindex_t;
+  function inst2reg1 
+    (i : word_t) : regindex_t;
+  function inst2addr 
+    (i : word_t, r0 : word_t, r1 : word_t) : addr_t;
+  // uninterpreted functions for insn. execution
+  function aluOp 
+    (i : word_t, r0 : word_t, r1 : word_t) : word_t;
+  function nextPC 
+    (i : word_t, pc : addr_t, r0 : word_t) : addr_t;
 
-  // uninterpreted functions for decoding instructions.
-  function inst2op   (i : word_t) : op_t;
-  function inst2reg0 (i : word_t) : regindex_t;
-  function inst2reg1 (i : word_t) : regindex_t;
-  function inst2addr (i : word_t, r0 : word_t, r1 : word_t) : addr_t;
-  function aluOp     (i : word_t, r0 : word_t, r1 : word_t) : word_t;
-  function nextPC    (i : word_t, pc : addr_t, r0 : word_t) : addr_t;
+  // macro: is an addr in isolated memory?
+  define in_isolated_memory (a : addr_t) : boolean 
+          = in_rng(a, isolated_rng_lo, isolated_rng_hi);
 
-  define in_isolated_memory (a : addr_t) : boolean =
-    in_range(a, sup_range_lo, sup_range_hi);
+  // assumptions on imode entry and exit addresses
+  axiom (forall (a : addr_t) :: 
+          (a == common.imode_enter_addr) 
+              ==> in_isolated_memory(a));
+  axiom (forall (a : addr_t) :: 
+          (a == common.nmode_exit_addr) 
+              ==> !in_isolated_memory(a));
 
-  axiom (forall (a : addr_t) ::
-            (a == common.syscall_enter_addr()) ==> in_isolated_memory(a));
-  axiom (forall (a : addr_t) ::
-            (a == common.sysret_exit_addr()) ==> !in_isolated_memory(a));
-
+  // code removed for formatting reasons:
+  // 1. code for procedure exec_inst (see Example 3)
+  // 2. init and next blocks (see Example 4)
   procedure exec_inst(instr : word_t, pc : addr_t)
     returns (pc_next : addr_t)
     modifies regs, result, dmem, mode;
   {
     var op    : op_t;
-    var r0ind : regindex_t;
-    var r1ind : regindex_t;
-    var r0    : word_t;
-    var r1    : word_t;
+    var r0ind, r1ind : regindex_t;
+    var r0, r1    : word_t;
     var addr  : addr_t;
-
     // get opcode.
     op = inst2op(instr);
     // get operands.
     r0ind, r1ind = inst2reg0(instr), inst2reg1(instr);
     r0, r1 = regs[r0ind], regs[r1ind];
-    // get next pc (might be overwritten by syscall/sysret).
+    // get next pc (overwritten by imode/nmode).
     pc_next = nextPC(instr, pc, r0);
     // get memory address 
     addr = inst2addr(instr, r0, r1);
-
-    // If we are in isolated mode, we only set pc_next to isolated address.
+    // If we are in isolated mode, we only 
+    // set pc_next to isolated address.
     assume (mode == isolated_mode) ==> (in_isolated_memory(pc_next));
-    // If we are in isolated mode, we only read from isolated memory.
+    // If we are in isolated mode, we only 
+    // read from isolated memory.
     assume (mode == isolated_mode && op == op_load) ==> in_isolated_memory(addr);
-    // If we are already in isolated mode, we don't execute syscalls.
-    assume (mode == isolated_mode) ==> (op != op_syscall);
-
+    // If we are already in isolated mode, 
+    // we don't execute imodes.
+    assume (mode == isolated_mode) ==> (op != op_imode_enter);
     case
-      (op == op_alu)     : {
-          result = aluOp(instr, r0, r1);
-          regs[r0ind] = result;
+      // alu operation.
+      (op == op_alu) : {
+        result = aluOp(instr, r0, r1);
+        regs[r0ind] = result;
       }
-      (op == op_load)    : {
-        if (mode == isolated_mode || !in_isolated_memory(addr)) {
-          // read memory.
-          result = dmem[addr];
+      // load instruction.
+      (op == op_load) : {
+        // check permissions.
+        if (mode == isolated_mode || 
+            !in_isolated_memory(addr)) 
+        {
+          // perform load
+          result = dmem[addr]; 
         } else {
-          // operation failed. return 0.
-          result = common.k0_word_t();
+          // load failed, return 0.
+          result = common.k0_word_t; 
         }
         regs[r0ind] = result;
       }
-      (op == op_store)   : {
-        result = common.k0_word_t();
-        // is writing legal?
-        if (mode == isolated_mode || !in_isolated_memory(addr)) {
-          // write to memory.
+      // store instruction.
+      (op == op_store) : {
+        result = common.k0_word_t;
+        // check permissions.
+        if (mode == isolated_mode || 
+            !in_isolated_memory(addr)) 
+        {
+          // perform store.
           dmem[addr] = r0;
         }
       }
-      (op == op_syscall) : {
+      // enter isolated mode.
+      (op == op_imode_enter) : {
         assert (mode == normal_mode);
-
-        // zero out result.
-        result = common.k0_word_t();
+        result = common.k0_word_t;
         // zero out registers.
         havoc regs;
-        assume (forall (r : regindex_t) :: regs[r] == common.k0_word_t());
-        // set PC.
-        pc_next = common.syscall_enter_addr();
-        // set mode.
+        assume (forall (r : regindex_t) 
+                  :: regs[r] == common.k0_word_t);
+        // set pc.
+        pc_next = common.imode_enter_addr;
         mode = isolated_mode;
       }
-      (op == op_sysret) : {
-        // zero out result.
-        result = common.k0_word_t();
+      // exit to normal mode.
+      (op == op_nmode_exit) : {
+        result = common.k0_word_t;
         // zero out registers.
         havoc regs;
-        assume (forall (r : regindex_t) :: regs[r] == common.k0_word_t());
-        // set PC.
-        pc_next = common.sysret_exit_addr();
-        // set mode.
+        assume (forall (r : regindex_t) 
+                  :: regs[r] == common.k0_word_t);
+        // set pc.
+        pc_next = common.nmode_exit_addr;
         mode = normal_mode;
       }
     esac
   }
-
   init {
     // reset registers.
-    assume (forall (r : regindex_t) :: regs[r] == common.k0_word_t());
+    assume (forall (r : regindex_t) 
+                :: regs[r] == common.k0_word_t);
     // set instruction to some deterministic value.
-    inst = common.k0_word_t();
-    // start off-execution at a deterministic address.
-    pc   = common.syscall_enter_addr();
-    // in isolated mode.
+    inst = common.k0_word_t;
+    // start off execution at a deterministic address.
+    pc   = common.nmode_exit_addr;
+    // in normal mode.
     mode = normal_mode;
   }
 
@@ -157,11 +175,7 @@ module cpu {
 
 module main {
   // Import types.
-  type addr_t     = common.addr_t;
-  type mem_t      = common.mem_t;
-  type word_t     = common.word_t;
-  type op_t       = common.op_t;
-  type mode_t     = common.mode_t;
+  type * = common.*;
   type regindex_t = cpu.regindex_t;
 
   // Instruction memory for the CPUs.
@@ -172,63 +186,43 @@ module main {
   instance cpu2 : cpu(imem : (imem2));
 
   init {
-    // Assume same isolated ranges.
-    assume (cpu1.sup_range_lo == cpu2.sup_range_lo);
-    assume (cpu1.sup_range_hi == cpu2.sup_range_hi);
-    // Assume isolated memory starts off identical.
-    assume (forall (a : addr_t) ::
-                (cpu.in_range(a, cpu1.sup_range_lo, cpu2.sup_range_hi))
-                    ==> (cpu1.dmem[a] == cpu2.dmem[a]));
-    assume (forall (a : addr_t) ::
-                (cpu.in_range(a, cpu1.sup_range_lo, cpu1.sup_range_hi))
-                    ==> (imem1[a] == imem2[a]));
+    // Assume same isolated rngs.
+    assume (cpu1.isolated_rng_lo == cpu2.isolated_rng_lo);
+    assume (cpu1.isolated_rng_hi == cpu2.isolated_rng_hi);
+    // Supervisor memory starts off identical.
+    assume (forall (a : addr_t) :: (cpu.in_rng(a, cpu1.isolated_rng_lo, cpu2.isolated_rng_hi)) ==> (cpu1.dmem[a] == cpu2.dmem[a]));
+    assume (forall (a : addr_t) :: (cpu.in_rng(a, cpu1.isolated_rng_lo, cpu1.isolated_rng_hi)) ==> (imem1[a] == imem2[a]));
   }
 
   next {
-    next (cpu1);
-    next (cpu2);
-    // If one CPU takes a syscall, the other does too!
-    assume (cpu.inst2op(cpu1.inst) == op_syscall || cpu.inst2op(cpu2.inst) == op_syscall)
-                ==> (cpu1.inst == cpu2.inst);
+    next (cpu1);  next (cpu2);
+    // imodes are taken in sync
+    assume (cpu.inst2op(cpu1.inst) == op_imode_enter || cpu.inst2op(cpu2.inst) == op_imode_enter) ==> (cpu1.inst == cpu2.inst);
   }
 
+  // PROPERTY: isolated mode memory is identical.
+  property eq_dmem : (forall (a : addr_t) :: (cpu.in_rng(a, cpu1.isolated_rng_lo, cpu2.isolated_rng_hi)) ==> (cpu1.dmem[a] == cpu2.dmem[a]));
   // The two CPUs change mode in sync.
-  invariant eq_mode      : (cpu1.mode == cpu2.mode);
-  // The two CPUs have the same PC when in isolated mode.
-  invariant eq_pc        : (cpu1.mode == isolated_mode) ==> (cpu1.pc == cpu2.pc);
-  // In isolated mode, the two CPUs execute the same code.
-  invariant eq_inst      : (cpu1.mode == isolated_mode) ==> (cpu1.inst == cpu2.inst);
-  // In isolated mode, the two CPUs have the same register values.
-  invariant eq_regs      : (forall (ri : regindex_t) ::
-                                (cpu1.mode == isolated_mode) ==> (cpu1.regs[ri] == cpu2.regs[ri]));
-  // The isolated range of memory is the same in both CPUs.
-  invariant eq_sup_range : (cpu1.sup_range_lo == cpu2.sup_range_lo) &&
-                           (cpu1.sup_range_hi == cpu2.sup_range_hi);
-  // When in isolated mode, the PC is also in the isolated mode range.
-  invariant in_pc_range1 : (cpu1.mode == isolated_mode)
-                                ==> cpu.in_range(cpu1.pc, cpu1.sup_range_lo, cpu1.sup_range_hi);
-  invariant in_pc_range2 : (cpu2.mode == isolated_mode)
-                                ==> cpu.in_range(cpu2.pc, cpu2.sup_range_lo, cpu2.sup_range_hi);
-  // The CPU memory that is private to isolated mode is identical.
-  invariant eq_dmem      : (forall (a : addr_t) ::
-                                (cpu.in_range(a, cpu1.sup_range_lo, cpu2.sup_range_hi))
-                                    ==> (cpu1.dmem[a] == cpu2.dmem[a]));
+  invariant eq_mode : (cpu1.mode == cpu2.mode);
+  // CPUs have the same PC when in isolated mode.
+  invariant eq_pc   : (cpu1.mode == isolated_mode) ==> (cpu1.pc == cpu2.pc);
+  // In isolated mode, CPUs execute the same code.
+  invariant eq_inst : (cpu1.mode == isolated_mode) ==> (cpu1.inst == cpu2.inst);
+  // In isolated mode, CPUs have same reg values.
+  invariant eq_regs : (forall (ri : regindex_t) :: (cpu1.mode == isolated_mode) ==> (cpu1.regs[ri] == cpu2.regs[ri]));
+  // Supervisor rng of memory is the same.
+  invariant eq_sup_rng : (cpu1.isolated_rng_lo == cpu2.isolated_rng_lo) && (cpu1.isolated_rng_hi == cpu2.isolated_rng_hi);
+  // In isolated mode, PC is in isolated rng.
+  invariant in_pc_rng1 : (cpu1.mode == isolated_mode) ==> cpu.in_rng(cpu1.pc, cpu1.isolated_rng_lo, cpu1.isolated_rng_hi);
+  invariant in_pc_rng2 : (cpu2.mode == isolated_mode) ==> cpu.in_rng(cpu2.pc, cpu2.isolated_rng_lo, cpu2.isolated_rng_hi);
   // Same for instruction memory.
-  invariant eq_imem      : (forall (a : addr_t) ::
-                                (cpu.in_range(a, cpu1.sup_range_lo, cpu1.sup_range_hi))
-                                    ==> (imem1[a] == imem2[a]));
+  invariant eq_imem : (forall (a : addr_t) :: (cpu.in_rng(a, cpu1.isolated_rng_lo, cpu1.isolated_rng_hi)) ==> (imem1[a] == imem2[a]));
 
   control {
     v = induction;
     check;
     print_results;
     v.print_cex(
-        cpu.inst2op(cpu1.inst), cpu.inst2op(cpu2.inst),
-        cpu1.result, cpu2.result, cpu1.mode, cpu2.mode,
-        cpu1.pc, cpu2.pc,
-        cpu1.sup_range_lo, cpu2.sup_range_lo,
-        cpu1.sup_range_hi, cpu2.sup_range_hi,
-        cpu.in_range(cpu1.pc, cpu1.sup_range_lo, cpu1.sup_range_hi),
-        cpu.in_range(cpu2.pc, cpu2.sup_range_lo, cpu2.sup_range_hi));
+        cpu.inst2op(cpu1.inst), cpu.inst2op(cpu2.inst), cpu1.result, cpu2.result, cpu1.mode, cpu2.mode, cpu1.pc, cpu2.pc, cpu1.isolated_rng_lo, cpu2.isolated_rng_lo, cpu1.isolated_rng_hi, cpu2.isolated_rng_hi, cpu.in_rng(cpu1.pc, cpu1.isolated_rng_lo, cpu1.isolated_rng_hi), cpu.in_rng(cpu2.pc, cpu2.isolated_rng_lo, cpu2.isolated_rng_hi));
   }
 }
