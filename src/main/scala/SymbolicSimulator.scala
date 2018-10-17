@@ -69,6 +69,8 @@ class SymbolicSimulator (module : Module) {
 
   var assumes = new ListBuffer[smt.Expr]()
   var asserts = new ListBuffer[AssertInfo]()
+  var rename_assumes = new ListBuffer[smt.Expr]()
+
 
   var symbolTable : SymbolTable = Map.empty
   var frameTable : FrameTable = ArrayBuffer.empty
@@ -120,6 +122,7 @@ class SymbolicSimulator (module : Module) {
               case None    => "unroll"
             }
             get_init_lambda(false, context, "some")
+            get_next_lambda(0, 1, true, false, context, label, noLTLFilter)
             initialize(false, true, false, context, label, noLTLFilter)
             symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
           case "bmc" =>
@@ -250,10 +253,7 @@ class SymbolicSimulator (module : Module) {
       case Scope.Function(id, typ) => true
       case _ => false
     }).map(id => reverse_map.get(id).get)
-    val enum_vars = ids.filter(id => scope.get(id).get match {
-      case Scope.EnumIdentifier(id, typ) => true
-      case _ => false
-    }).map(id => reverse_map.get(id).get)
+
     val input_vars = ids.filter(id => scope.get(id).get match {
       case Scope.InputVar(id, typ) => true
       case _ => false
@@ -271,7 +271,7 @@ class SymbolicSimulator (module : Module) {
       case _ => false
     }).map(id => reverse_map.get(id).get)
 
-    List(const_vars, func_vars, enum_vars, input_vars, output_vars, state_vars, shared_vars)
+    List(const_vars, func_vars, input_vars, output_vars, state_vars, shared_vars)
 
   }
   /**
@@ -316,28 +316,39 @@ class SymbolicSimulator (module : Module) {
     assumes += e
   }
 
+  def addRenameAssumesToList(e: smt.Expr) : Unit = {
+    rename_assumes += e
+  }
   def addAssertsToList(assert: AssertInfo) : Unit = {
     asserts += assert
   }
+
+  def clearAssumes() = {
+    assumes.clear()
+    asserts.clear()
+  }
   def get_init_lambda(havocInit: Boolean, scope: Scope, label: String) = {
     val initSymbolTable = getInitSymbolTable(scope)
-    symbolTable = if (!havocInit && module.init.isDefined) {
+    val symTab = if (!havocInit && module.init.isDefined) {
       simulate(0, List.empty, module.init.get.body, initSymbolTable, scope, label, addAssumesToList _, addAssertsToList _)
     } else {
       initSymbolTable
     }
-
+    symbolTable = initSymbolTable
    // val conjuction = smt.OperatorApplication(smt.ConjunctionOp(),
    //   symbolTable.map(p => smt.OperatorApplication(smt.EqualityOp(), List(initSymbolTable.get(p._1).get, p._2))).toList)
+    frameTable += symbolTable
 
-
-    val reverse_map = getInitSymbolTable(scope).map(_.swap) // Map new smt Vars back to IDs
+    val reverse_map = initSymbolTable.map(_.swap) // Map new smt Vars back to IDs
     val conjunct = reverse_map.map(p => smt.OperatorApplication(smt.EqualityOp,
-      List(p._1, initSymbolTable.get(reverse_map.get(p._1).get).get))).toList ++ assumes.toList
+      List(p._1, symTab.get(reverse_map.get(p._1).get).get))).toList ++ assumes.toList
 
     val conjunction = if (conjunct.length > 1) { smt.OperatorApplication(smt.ConjunctionOp, conjunct)} else conjunct(0)
 
     val lambda = smt.Lambda(getVarsInOrder(reverse_map, scope).flatten.map(p => p.asInstanceOf[smt.Symbol]), conjunction)
+    UclidMain.println("The initial SymTab")
+    UclidMain.println(symbolTable.toString)
+    clearAssumes()
     UclidMain.println("The variable lists: ")
     UclidMain.println(getVarsInOrder(reverse_map, scope).toString)
     UclidMain.println("The conjunction: ")
@@ -347,6 +358,47 @@ class SymbolicSimulator (module : Module) {
 
   }
 
+  def get_next_lambda(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
+                      scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean))
+  {
+
+    var currentState = symbolTable
+    val reverse_init_map = currentState.map(_.swap)
+    val init_vars = getVarsInOrder(reverse_init_map, scope)
+
+    var states = new ArrayBuffer[SymbolTable]()
+    // add initial state.
+
+    val stWInputs = newInputSymbols(currentState, 1, scope)
+    states += stWInputs
+    val symTableP = simulate(1, stWInputs, scope, label, addAssumesToList _, addAssertsToList _)
+    val eqStates = symTableP.filter(p => stWInputs.get(p._1) match {
+      case Some(st) => (st == p._2)
+      case None => false
+    }).map(_._1).toSet
+    UclidMain.println("EqStates: ")
+    UclidMain.println(eqStates.toString)
+    defaultLog.debug("eqStates: {}", eqStates.toString())
+    currentState = renameStates(symTableP, eqStates, 1, scope, addRenameAssumesToList _)
+    val numPastFrames = frameTable.size
+    val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
+    frameTable += currentState
+    addModuleAssumptions(currentState, pastTables, scope, addAssumesToList _)
+    if (addAssertions) { addAsserts(1, currentState, pastTables, label, scope, filter, addAssertsToList _)  }
+    if (addAssertionsAsAssumes) { assumeAssertions(currentState, pastTables, scope, addAssumesToList _) }
+
+    val reverse_end_map = currentState.map(_.swap)
+    val final_vars = getVarsInOrder(reverse_end_map, scope)
+    val lambda = smt.Lambda((init_vars.flatten ++ final_vars.flatten).map(p => p.asInstanceOf[smt.Symbol]), smt.OperatorApplication(smt.ConjunctionOp, rename_assumes.toList))
+    UclidMain.println("The symbol table after step #1")
+    UclidMain.println(currentState.toString)
+    UclidMain.println("The assumptions")
+    UclidMain.println(assumes.toString)
+    UclidMain.println("The lambda: " + lambda.toString)
+
+
+
+  }
   //def get_next_lambda(): Unit = {}
 
   /*
@@ -391,7 +443,7 @@ class SymbolicSimulator (module : Module) {
     renamedExprs.foreach{ 
       (p) => addAssumption(p._3)
     }
-    renamedExprs.foldLeft(st)((acc, p) => st + (p._1 -> p._2))
+    renamedExprs.foldLeft(st)((acc, p) => acc + (p._1 -> p._2))
   }
 
   /**
