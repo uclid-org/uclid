@@ -667,7 +667,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val HyperDecl: PackratParser[lang.SpecDecl] = positioned {
-      (KwHyperProperty | KwHyperInvariant) ~> ("[" ~> Integer <~ "]") ~ Id ~ (":" ~> Expr) <~ ";" ^^
+      (KwHyperInvariant) ~> ("[" ~> Integer <~ "]") ~ Id ~ (":" ~> Expr) <~ ";" ^^
         {
           case k ~ id ~ expr => lang.SpecDecl(id, expr, List(lang.HyperpropertyDecorator(k.value.toInt)))
         }
