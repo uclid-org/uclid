@@ -10,7 +10,7 @@ module main
         y' = y + 1;
     }
 
-    hyperproperty[2] det_xy: (x.1 == x.2) ==> (y.1 == y.2);
+    hyperinvariant[2] det_xy: (x.1 == x.2) ==> (y.1 == y.2);
 
     control {
         print_module;
