@@ -112,11 +112,14 @@ class UclidLexical extends Lexical with UclidTokens with Positional {
     | '/' ~ '*' ~ failure("unclosed comment")
     )
 
+  // protected def comment: Parser[Any] = (
+  //    '*' ~ '/'  ^^ { case _ => ' '  }
+  //   | chrExcept(EofCh) ~ comment
+  //   )
   protected def comment: Parser[Any] = (
-      '*' ~ '/'  ^^ { case _ => ' '  }
-    | chrExcept(EofCh) ~ comment
+    rep(chrExcept(EofCh, '*') | '*' ~ not('/')) ~ '*' ~ '/' 
+    ^^^ ' '
     )
-
   /** The set of reserved identifiers: these will be returned as `Keyword`s. */
   val reserved = new mutable.HashSet[String]
 

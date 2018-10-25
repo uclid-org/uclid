@@ -467,6 +467,12 @@ class ParserSpec extends FlatSpec {
     assert (instantiatedModules.size == 1)
   }
 
+  "longcomment.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/longcomment.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+
   "test-hyperproperty-1.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(List(new File("test/test-hyperproperty-1.ucl")), lang.Identifier("main"))
