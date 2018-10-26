@@ -248,7 +248,7 @@ class SymbolicSimulator (module : Module) {
     val const_vars = ids.filter(id => scope.get(id).get match {
       case Scope.ConstantVar(id, typ) => true
       case _ => false
-    }).map(id => reverse_map.get(id).get)
+    }).map(id => reverse_map.get(id).get).sortBy(v => v.toString.split("_").last)
     /*val func_vars = ids.filter(id => scope.get(id).get match {
       case Scope.Function(id, typ) => true
       case _ => false
@@ -257,19 +257,19 @@ class SymbolicSimulator (module : Module) {
     val input_vars = ids.filter(id => scope.get(id).get match {
       case Scope.InputVar(id, typ) => true
       case _ => false
-    }).map(id => reverse_map.get(id).get)
+    }).map(id => reverse_map.get(id).get).sortBy(v => v.toString.split("_").last)
     val output_vars = ids.filter(id => scope.get(id).get match {
       case Scope.OutputVar(id, typ) => true
       case _ => false
-    }).map(id => reverse_map.get(id).get)
+    }).map(id => reverse_map.get(id).get).sortBy(v => v.toString.split("_").last)
     val state_vars = ids.filter(id => scope.get(id).get match {
       case Scope.StateVar(id, typ) => true
       case _ => false
-    }).map(id => reverse_map.get(id).get)
+    }).map(id => reverse_map.get(id).get).sortBy(v => v.toString.split("_").last)
     val shared_vars = ids.filter(id => scope.get(id).get match {
       case Scope.SharedVar(id, typ) => true
       case _ => false
-    }).map(id => reverse_map.get(id).get)
+    }).map(id => reverse_map.get(id).get).sortBy(v => v.toString.split("_").last)
 
     List(const_vars, input_vars, output_vars, state_vars, shared_vars)
 
@@ -399,7 +399,7 @@ class SymbolicSimulator (module : Module) {
     UclidMain.println("EqStates: ")
     UclidMain.println(eqStates.toString)
     defaultLog.debug("eqStates: {}", eqStates.toString())
-    currentState = renameStates(symTableP, eqStates, 1, scope, addAssumesToList _)
+    currentState = renameStatesLambda(symTableP, eqStates, 1, scope, addAssumesToList _)
     val numPastFrames = frames.size
     val pastTables = ((0 to (numPastFrames - 1)) zip frames).map(p => ((numPastFrames - p._1) -> p._2)).toMap
     frameTable += currentState
@@ -412,12 +412,15 @@ class SymbolicSimulator (module : Module) {
     UclidMain.println("Final Vars " + currentState.toString)
     // OutputVars are not replaced ?
     //FIXME: Handle case when assumes are empty
-    val lambda = smt.Lambda((init_vars.flatten ++ final_vars.flatten).map(p => p.asInstanceOf[smt.Symbol]), if (assumes.length > 1) smt.OperatorApplication(smt.ConjunctionOp, assumes.toList) else assumes.toList(0))
+    val conjunct = if (assumes.length > 1) smt.OperatorApplication(smt.ConjunctionOp, assumes.toList)
+                    else if (assumes.length == 0) new smt.BooleanLit(true)
+                    else assumes(0)
+    val lambda = smt.Lambda((init_vars.flatten ++ final_vars.flatten).map(p => p.asInstanceOf[smt.Symbol]), conjunct)
     UclidMain.println("The symbol table after step #1")
     UclidMain.println(currentState.toString)
     UclidMain.println("The assumptions")
-    UclidMain.println(assumes.toString)
-    UclidMain.println("The lambda: " + lambda.toString)
+    //UclidMain.println(assumes.toString)
+    //UclidMain.println("The lambda: " + lambda.toString)
     (lambda, asserts.toList, currentState)
 
 
@@ -429,9 +432,10 @@ class SymbolicSimulator (module : Module) {
       resetState()
       val init_lambda = get_init_lambda(false, true, false, scope, "init_lambda", filter)
       val next_lambda = get_next_lambda(init_lambda._3, true, false, scope, "next_lambda", filter)
-      UclidMain.println("Next Lambda : " + next_lambda.toString)
+      UclidMain.println("Next Lambda : " + next_lambda._1.ids.toString)
       val initSymTab = getInitSymbolTable(scope)
       var prevVars = getVarsInOrder(initSymTab.map(_.swap), scope)
+      UclidMain.println("PrevVars : " + prevVars.flatten.toString)
       val init_conjunct = beta_substitution(init_lambda._1, prevVars)
       val state_conjuncts = new ListBuffer[smt.Expr]()
       state_conjuncts += init_conjunct
@@ -482,13 +486,25 @@ class SymbolicSimulator (module : Module) {
 
   }
 
-
+  /*def match_args(formal_params: List[smt.Symbol], actual_params: List[smt.Symbol]): List[(smt.Symbol, smt.Symbol)] = {
+    formal_params.map { param =>
+        actual_params.find(act => act.id.split("_"))
+    }
+  }*/
   def rewriteAsserts(lambda: smt.Lambda, asserts: List[AssertInfo], actual_vars: List[smt.Symbol]): List[AssertInfo] = {
       assert(lambda.ids.length == actual_vars.length)
       val matches = lambda.ids.zip(actual_vars)
-      UclidMain.println("Matches " + matches.toString)
+      matches.foreach {
+        p =>
+        if (p._1.typ != p._2.typ) {
+          UclidMain.println("Warning! Type MisMatch in Asserts " + p._1.toString + " " + p._2.toString)
+          UclidMain.println("Type1 " + p._1.typ.toString + " Type2 " + p._2.typ.toString)
+        }
+      }
+      //UclidMain.println("Matches " + matches.toString)
       asserts.map(assert => rewriteAssert(assert, matches, assert.frameTable))
   }
+
   def rewriteAssert(assert: AssertInfo, matches: List[(smt.Symbol, smt.Symbol)], frameTable: FrameTable): AssertInfo = {
     AssertInfo(assert.name, assert.label, frameTable, assert.context, assert.iter, substitute(assert.pathCond, matches),
         substitute(assert.expr, matches), assert.decorators, assert.pos)
@@ -501,7 +517,13 @@ class SymbolicSimulator (module : Module) {
 
       assert(formal_params.length == actual_params.length)
       val matches = formal_params.zip(actual_params)
-
+      matches.foreach {
+        p =>
+          if (p._1.typ != p._2.typ) {
+            UclidMain.println("Warning! Type MisMatch in beta_subst " + p._1. toString + " " + p._2.toString)
+            UclidMain.println("Type1 " + p._1.typ.toString + " Type2 " + p._2.typ.toString)
+          }
+      }
 
       substitute(lambda.e, matches)
   }
@@ -522,6 +544,7 @@ class SymbolicSimulator (module : Module) {
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
         val args = opapp.operands.map(exp => _substitute(exp, sym))
+        //UclidMain.println("Crashing Here" + op.toString)
         smt.OperatorApplication(op, args)
 
       case smt.ArraySelectOperation(a,index) =>
@@ -583,6 +606,51 @@ class SymbolicSimulator (module : Module) {
       case _ => None
     }.flatten
     renamedExprs.foreach{ 
+      (p) => addAssumption(p._3)
+    }
+    renamedExprs.foldLeft(st)((acc, p) => acc + (p._1 -> p._2))
+  }
+
+  def renameStatesLambda(st : SymbolTable, eqStates : Set[Identifier], frameNumber : Int, scope : Scope, addAssumption : (smt.Expr => Unit)) : SymbolTable = {
+    val renamedExprs : Iterable[(Identifier, smt.Symbol, smt.Expr)] = scope.map.map(_._2).map {
+      case Scope.StateVar(id, typ) =>
+        //if (!eqStates.contains(id)) {
+          val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
+          val stateExpr = st.get(id).get
+          val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
+          Some(id, newVariable, smtExpr)
+        //} else {
+        //  None
+        //}
+
+      case Scope.OutputVar(id, typ) => {
+        //if (!eqStates.contains(id)) {
+          val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
+          val stateExpr = st.get(id).get
+          val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
+          Some(id, newVariable, smtExpr)
+        //}
+       // else {
+        //  None
+      //  }
+      }
+      case Scope.InputVar(id, typ) => {
+          val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
+          val stateExpr = st.get(id).get
+          val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
+          Some(id, newVariable, smtExpr)
+
+      }
+      case Scope.SharedVar(id, typ) => {
+        val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
+        val stateExpr = st.get(id).get
+        val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
+        Some(id, newVariable, smtExpr)
+
+      }
+      case _ => None
+    }.flatten
+    renamedExprs.foreach{
       (p) => addAssumption(p._3)
     }
     renamedExprs.foldLeft(st)((acc, p) => acc + (p._1 -> p._2))
