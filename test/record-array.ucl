@@ -1,0 +1,12 @@
+module main
+{
+  type rec_t = record {
+    a : integer,
+    b : integer
+  };
+  var arr : [integer]rec_t;
+
+  init {
+    arr[0].a = 10;
+  }
+}
