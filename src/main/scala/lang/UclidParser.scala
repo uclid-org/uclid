@@ -290,14 +290,14 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     /** E12 = E13 MapOp | E13 **/
     lazy val E12: PackratParser[Expr] = positioned {
-        E13 ~ ArraySelectOp ^^ { case e ~ m => ArraySelectOperation(e, m) } |
-        E13 ~ ArrayStoreOp ^^ { case e ~ m => ArrayStoreOperation(e, m._1, m._2) } |
-        E13 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |
+        E13 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
         E13
     }
     /** E13 = E14 (ExprList) | E14 */
     lazy val E13: PackratParser[Expr] = positioned {
-        E14 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
+        E14 ~ ArraySelectOp ^^ { case e ~ m => ArraySelectOperation(e, m) } |
+        E14 ~ ArrayStoreOp ^^ { case e ~ m => ArrayStoreOperation(e, m._1, m._2) } |
+        E14 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |
         E14
     }
     lazy val E14: PackratParser[Expr] = positioned {
