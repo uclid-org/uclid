@@ -144,6 +144,7 @@ object Converter {
       case lang.ForallOp(vs) => return smt.ForallOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
       case lang.ExistsOp(vs) => return smt.ExistsOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
       case lang.ITEOp() => return smt.ITEOp
+      case lang.HyperSelect(i) => return smt.HyperSelectOp(i)
       // Polymorphic operators are not allowed.
       case p : lang.PolymorphicOperator =>
         throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")

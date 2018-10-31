@@ -545,6 +545,17 @@ case class RecordUpdateOp(name: String) extends Operator {
   }
   def resultType(args: List[Expr]) : Type = args(0).typ
 }
+
+case class HyperSelectOp(i : Int) extends Operator {
+  override val hashId = mix(i.hashCode(), 232)
+  override val hashCode = computeHash
+  override def toString = "hyper-select " + i.toString
+  override def typeCheck(args: List[Expr]) : Unit = {
+    //FIXME: Implement TypeCheck for HyperSelect
+  }
+  def resultType(args: List[Expr]) : Type = args(0).typ
+
+}
 case object ITEOp extends Operator {
   override val hashId = 234
   override val hashCode = computeHash
