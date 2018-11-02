@@ -465,7 +465,7 @@ class Z3Interface() extends Context {
   override def preassert(e: Expr) {}
 
   def writeToFile(p: String, s: String): Unit = {
-    val pw = new PrintWriter(new File(p))
+    val pw = new PrintWriter(new File(p.replace(" ", "_")))
     try pw.write(s) finally pw.close()
   }
 
