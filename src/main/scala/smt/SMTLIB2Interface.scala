@@ -70,6 +70,18 @@ trait SMTLIB2Base {
     counterId += 1
     "_let_" + counterId.toString() + "_"
   }
+  def generateInputDataTypes(t : Type) : (List[String]) = {
+    t match {
+      case MapType(inputTyp, outputType) =>
+        inputTyp.foldRight(List.empty[String]) {
+          (typ, acc) => {
+            acc :+ generateDatatype(typ)._1;
+          }
+        }
+      case _ =>
+        List.empty[String]
+    }
+  }
   def generateDatatype(t : Type) : (String, List[String]) = {
     smtlib2BaseLogger.debug("generateDatatype: {}", t.toString())
     val (resultName, newTypes) = typeMap.get(t) match {
@@ -119,6 +131,14 @@ trait SMTLIB2Base {
           case BitVectorType(n) => 
             val typeStr = "(_ BitVec %d)".format(n)
             typeMap = typeMap.addSynonym(typeStr, t)
+            (typeStr, List.empty)
+          case MapType(inTypes, outType) =>
+            val typeStr = generateDatatype(outType)._1
+            val inputTypeStrs = inTypes.foldRight(List.empty[String]) {
+              (typ, acc) => {
+                acc :+ generateDatatype(typ)._1;
+              }
+            }
             (typeStr, List.empty)
           case _ => 
             throw new Utils.UnimplementedException("TODO: Implement more types in Z3FileInterface.generateDatatype")
@@ -180,7 +200,7 @@ trait SMTLIB2Base {
             Utils.assert(e.isInstanceOf[Symbol], "Beta substitution has not happened.")
             val (trFunc, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trArgs, memoP2) = translateExprs(args, memoP1, shouldLetify)
-            ("(" + trFunc.exprString() + exprString(trArgs) + ")", memoP2, true)
+            ("(" + trFunc.exprString() + " " + exprString(trArgs) + ")", memoP2, true)
           case MakeTuple(args) =>
             val tupleType = TupleType(args.map(_.typ))
             val (tupleTypeName, newTypes) = generateDatatype(tupleType)
@@ -238,7 +258,8 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
   def generateDeclaration(name: String, t: Type) = {
     val (typeName, newTypes) = generateDatatype(t)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
-    val cmd = "(declare-fun %s () %s)".format(name, typeName)
+    val inputTypes = generateInputDataTypes(t).mkString(" ")
+    val cmd = "(declare-fun %s (%s) %s)".format(name, inputTypes, typeName)
     writeCommand(cmd)
   }
 

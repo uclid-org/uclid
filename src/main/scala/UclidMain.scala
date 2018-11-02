@@ -77,6 +77,7 @@ object UclidMain {
       smtFileGeneration: String = "",
       sygusFormat: Boolean = false,
       sygusTypeConvert: Boolean = false,
+      enumToNumeric: Boolean = false,
       printStackTrace: Boolean = false,
       verbose : Int = 0,
       files : Seq[java.io.File] = Seq(),
@@ -119,6 +120,10 @@ object UclidMain {
         (_, c) => c.copy(sygusTypeConvert = true)
       }.text("Enable EnumType conversion in synthesis.")
 
+      opt[Unit]('e', "enum-to-numeric").action{
+        (_, c) => c.copy(enumToNumeric = true)
+      }.text("Enable conversion from EnumType to NumericType.")
+
       opt[Unit]('t', "test-fixedpoint").action {
         (_, c) => c.copy(testFixedpoint = true)
       }.text("Test fixed point")
@@ -142,7 +147,7 @@ object UclidMain {
       }
       val mainModuleName = Identifier(config.mainModuleName)
       val modules = compile(config.files, mainModuleName)
-      val mainModule = instantiate(modules, mainModuleName, true)
+      val mainModule = instantiate(config, modules, mainModuleName, true)
       mainModule match {
         case Some(m) => execute(m, config)
         case None    =>
@@ -271,7 +276,7 @@ object UclidMain {
   }
 
   /** Instantiate module helper. */
-  def instantiateModules(moduleList: List[Module], mainModuleName : Identifier) : List[Module] = {
+  def instantiateModules(config : Config, moduleList: List[Module], mainModuleName : Identifier) : List[Module] = {
     val passManager = new PassManager("instantiate")
     passManager.addPass(new ModuleDependencyFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomFinder())
@@ -289,6 +294,8 @@ object UclidMain {
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())
+    if (config.enumToNumeric) passManager.addPass(new EnumTypeAnalysis())
+    if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamer("BV"))
 
     // run passes.
     passManager.run(moduleList)
@@ -300,11 +307,11 @@ object UclidMain {
    * @param mainModuleName Name of main module.
    * @param verbose If this is true, we print the message describing the number of modules parsed and instantiated.
    */
-  def instantiate(moduleList : List[Module], mainModuleName : Identifier, verbose : Boolean) : Option[Module] = {
+  def instantiate(config : Config, moduleList : List[Module], mainModuleName : Identifier, verbose : Boolean) : Option[Module] = {
     if (moduleList.find(m => m.id == mainModuleName).isEmpty) {
       return None
     }
-    val moduleListP = instantiateModules(moduleList, mainModuleName)
+    val moduleListP = instantiateModules(config, moduleList, mainModuleName)
     if (verbose) {
       UclidMain.println("Successfully parsed %d and instantiated %d module(s).".format(moduleList.size, moduleListP.size))
     }
