@@ -1,0 +1,51 @@
+module main {
+	type D = bv4;
+	type E = enum {et1, et2, et3};
+
+    function uftest (d1 : D, d2 : D) : D;
+
+	define const0(): D = 0bv4;
+	define const1(): D = 1bv4;
+	define const2(): D = 2bv4;
+
+	var move : boolean;
+	var x : D;
+	var y : D;
+	var e1 : E;
+
+	assume (uftest(x, y) == x);
+
+	init {
+		havoc move;
+		havoc e1;
+		// e1 = et2;
+		x = const0();
+		y = const2();
+	}
+
+	next {
+		case
+			(move && e1 == et1 && uftest(x, y) == x) : {
+			// (move && e1 == et1) : {
+				x' = const1();
+				y' = const1();
+			}
+			(true) : {
+				x' = x + const2();
+				y' = y + const2();
+			}
+		esac
+	}
+
+	invariant evens : (y - x == const2());
+	// invariant e1val : (e1 == et2);
+
+	control {
+		f = unroll (3);
+		// f = induction (1);
+		check;
+		print_results;
+		f.print_cex();
+	}
+
+}
