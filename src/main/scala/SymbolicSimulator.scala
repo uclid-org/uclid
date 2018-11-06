@@ -415,6 +415,77 @@ class SymbolicSimulator (module : Module) {
 
   }
 
+  def get_supports(lambda: smt.Lambda) = {
+    assert(lambda.ids.length % 2 == 0)
+    val primed_vars = lambda.ids.takeRight(lambda.ids.length / 2) // Assuming prevs are followed by nexts
+    val non_primed_vars = lambda.ids.take(lambda.ids.length / 2)
+    UclidMain.println("The primed_vars " + primed_vars.toString)
+    UclidMain.println("The non-primed vars " + non_primed_vars.toString)
+
+    val matches = non_primed_vars.zip(primed_vars)
+    val opapp = lambda.e.asInstanceOf[smt.OperatorApplication]
+    val operator_apps = opapp.operands.filter(exp => exp.isInstanceOf[smt.OperatorApplication])
+    val equalities = operator_apps.map(p => p.asInstanceOf[smt.OperatorApplication]).
+      filter(exp =>
+        exp.op match {
+          case smt.EqualityOp => true
+          case _ => false
+        })
+    val var_map = equalities.map {
+      eq =>
+        eq.operands(0).asInstanceOf[smt.Symbol] -> eq.operands(1)
+    }.toMap
+    UclidMain.println("The var map " + var_map.toString)
+    // Map from primed variables to their dependencies
+    var dependency_map: Map[smt.Symbol, List[smt.Symbol]] = Map.empty
+    var_map.foreach(p => get_dependencies(p._1))
+
+    def get_dependencies(v: smt.Symbol): List[smt.Symbol] = {
+      val eq_exp = var_map(v)
+      val vars = get_vars(eq_exp)
+      val dps = vars.map {
+        sym =>
+          if (non_primed_vars.contains(sym)) {
+            List(sym)
+          }
+          else {
+            val dep = dependency_map.get(sym) match {
+              case Some(deps) => deps
+              case None => get_dependencies(sym)
+            }
+            dep
+          }
+      }.flatten
+      dependency_map = dependency_map + (v -> dps)
+      dps
+    }
+    dependency_map
+
+  }
+
+  def get_vars(e: smt.Expr): List[smt.Symbol] = {
+    e match {
+      case smt.Symbol(id, symbolTyp) => List(e.asInstanceOf[smt.Symbol])
+      case smt.IntLit(n) => List()
+      case smt.BooleanLit(b) => List()
+      case smt.BitVectorLit(bv, w) => List()
+      case smt.EnumLit(id, eTyp) => List()
+      case smt.ConstArrayLit(v, arrTyp) => List()
+      case smt.MakeTuple(args) => args.flatMap(e => get_vars(e))
+      case opapp : smt.OperatorApplication =>
+        val op = opapp.op
+        val args = opapp.operands.flatMap(exp => get_vars(exp))
+        args
+      //UclidMain.println("Crashing Here" + op.toString)
+      case smt.ArraySelectOperation(a,index) =>  get_vars(a) ++ index.flatMap(e => get_vars(e))
+      case smt.ArrayStoreOperation(a,index,value) =>
+        get_vars(a) ++ index.flatMap(e => get_vars(e)) ++ get_vars(value)
+      case smt.FunctionApplication(f, args) =>
+        args.flatMap(arg => get_vars(arg))
+      case _ =>
+        throw new Utils.UnimplementedException("'" + e + "' is not yet supported.")
+    }
+  }
   def get_next_lambda(init_symTab: Map[Identifier, smt.Expr], addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
                       scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) =
   {
@@ -472,7 +543,8 @@ class SymbolicSimulator (module : Module) {
     //UclidMain.println(currentState.toString)
     //UclidMain.println("The assumptions")
     //UclidMain.println(assumes.toString)
-    //UclidMain.println("The lambda: " + lambda.toString)
+    UclidMain.println("The lambda: " + lambda.toString)
+    UclidMain.println("The supports: " + get_supports(lambda).toString)
     (lambda, asserts.toList, currentState,
       hyper_asserts.toList)
 
@@ -513,8 +585,8 @@ class SymbolicSimulator (module : Module) {
         havocTable += havoc_subs
         val init_conjunct = substitute(beta_substitution(init_lambda._1, prevVars), havoc_subs)
         // Get symbolTable from init_conjunct
-        //val state_conjuncts = new ListBuffer[smt.Expr]()
-        //state_conjuncts += init_conjunct
+        // val state_conjuncts = new ListBuffer[smt.Expr]()
+        // state_conjuncts += init_conjunct
         addAssumptionToTree(init_conjunct)
         //UclidMain.println("Init Conjunct " + init_conjunct)
         //init_lambda._2.foreach {
