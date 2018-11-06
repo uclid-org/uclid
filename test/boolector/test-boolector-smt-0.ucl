@@ -13,7 +13,16 @@ module main {
 	var y : D;
 	var e1 : E;
 
-	assume (uftest(x, y) == x);
+	var arr : [bv4]bv4;
+
+	assume (uftest(x, y) != x);
+
+	procedure test_proc()
+		modifies arr;
+	{
+		arr[0bv4] = const2();
+		arr[1bv4] = const2();
+	}
 
 	init {
 		havoc move;
@@ -21,16 +30,18 @@ module main {
 		// e1 = et2;
 		x = const0();
 		y = const2();
+		arr[0bv4] = const2();
+		arr[1bv4] = const2();
 	}
 
 	next {
 		case
 			(move && e1 == et1 && uftest(x, y) == x) : {
-			// (move && e1 == et1) : {
 				x' = const1();
 				y' = const1();
 			}
 			(true) : {
+				call test_proc();
 				x' = x + const2();
 				y' = y + const2();
 			}
@@ -38,6 +49,7 @@ module main {
 	}
 
 	invariant evens : (y - x == const2());
+	invariant arr_even : (arr[0bv4] != const2());
 	// invariant e1val : (e1 == et2);
 
 	control {

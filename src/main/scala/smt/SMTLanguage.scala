@@ -676,6 +676,12 @@ case class DefineFun(id : Symbol, args : List[(Symbol)], e : Expr) extends Expr(
     "(define-fun %s (%s) %s %s)".format(id.toString(), argString, e.typ.toString(), e.toString())
   }
 }
+case class AssignmentModel(functions : List[Expr]) extends Hashable {
+  override val hashBaseId = 22923
+  override val hashId = 314
+  override val hashCode = computeHash(functions.map(fun => fun.toString()))
+  override def toString = Utils.join(functions.map(fun => fun.toString()), " ")
+}
 class Bindings(val freeVars : List[Symbol], val letVars : List[Symbol], val lambdaVars : List[Symbol], val quantifierVars: List[Symbol]) {
   def addFreeVar(v : Symbol) = {
     new Bindings(v :: freeVars, letVars, lambdaVars, quantifierVars)

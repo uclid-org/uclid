@@ -248,6 +248,31 @@ trait SMTLIB2Base {
   }
 }
 
+class SMTLIB2Model(stringModel : String) extends Model {
+  val model =  SExprParser.parseModel(stringModel)
+
+  override def evaluate(e : Expr) : Expr = {
+    throw new Utils.UnimplementedException("evaluate not implemented yet.")
+  }
+
+  override def evalAsString(e : Expr)  : String = {
+    var definitions = model.functions.filter(fun => fun.asInstanceOf[DefineFun].id.toString() contains e.toString())
+    definitions.size match {
+      case 0 =>
+        e.toString()
+      case 1 =>
+        definitions(0).asInstanceOf[DefineFun].e.toString()
+      case _ =>
+        throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
+    }
+
+  }
+
+  override def toString() : String = {
+    model.toString()
+  }
+}
+
 class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
   val smtlibInterfaceLogger = Logger(classOf[SMTLIB2Interface])
 
@@ -306,10 +331,28 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
       case Some(strP) =>
         val str = strP.stripLineEnd
         str match {
-          case "sat" => SolverResult(Some(true), None)
+          case "sat" => SolverResult(Some(true), getModel())
           case "unsat" => SolverResult(Some(false), None)
           case _ =>
             throw new Utils.AssertionError("Unexpected result from SMT solver: " + str.toString())
+        }
+      case None =>
+        throw new Utils.AssertionError("Unexpected EOF result from SMT solver.")
+    }
+  }
+
+  def getModel() : Option[Model] = {
+    Utils.assert(solverProcess.isAlive(), "Solver process is not alive! Cannot retrieve model.")
+    writeCommand("(get-model)")
+    readResponse() match {
+      case Some(strModel) =>
+        val str = strModel.stripLineEnd
+        val Pattern = "(?s)(.*model.*)".r
+        str match {
+          case Pattern(_) =>
+            Some(new SMTLIB2Model(str))
+          case _ =>
+            None
         }
       case None =>
         throw new Utils.AssertionError("Unexpected EOF result from SMT solver.")
