@@ -246,12 +246,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val String  : PackratParser[lang.StringLit] = positioned {
       stringLit ^^ { case stringLit => lang.StringLit(stringLit) }
     }
-    lazy val ConstArrayLit : PackratParser[lang.ConstArrayLit] = positioned {
-      KwConst ~ "(" ~> Literal ~ ("," ~> Type) <~ ")" ^^ {
-        case (lit ~ typ) => lang.ConstArrayLit(lit, typ)
-      }
-    }
-    lazy val Literal : PackratParser[lang.Literal] = positioned (Bool | Number | ConstArrayLit | String)
+    lazy val Literal : PackratParser[lang.Literal] = positioned (Bool | Number | String)
     /* END of Literals. */
     lazy val E1: PackratParser[Expr] =
       KwForall ~> IdTypeList ~ ("::" ~> E1) ^^ { case ids ~ expr => OperatorApplication(ForallOp(ids), List(expr)) } |
@@ -313,13 +308,19 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         } |
         E15
     }
-    /** E15 = false | true | Number | Id FuncApplication | (Expr) **/
+    lazy val ConstArray : PackratParser[lang.ConstArray] = positioned {
+      KwConst ~ "(" ~> Expr ~ ("," ~> Type) <~ ")" ^^ {
+        case (exp ~ typ) => lang.ConstArray(exp, typ)
+      }
+    }
+    /** E15 = false | true | Number | ConstArray | Id FuncApplication | (Expr) **/
     lazy val E15: PackratParser[Expr] = positioned {
         Literal |
         "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
         KwIf ~> ("(" ~> Expr <~ ")") ~ (KwThen ~> Expr) ~ (KwElse ~> Expr) ^^ {
           case expr ~ thenExpr ~ elseExpr => lang.OperatorApplication(lang.ITEOp(), List(expr, thenExpr, elseExpr))
         } |
+        ConstArray |
         KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => Lambda(idtyps, expr) } |
         "(" ~> Expr <~ ")" |
         Id <~ OpPrime ^^ { case id => lang.OperatorApplication(GetNextValueOp(), List(id)) } |

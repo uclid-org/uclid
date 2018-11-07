@@ -437,12 +437,13 @@ case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
     }
   }
 }
-case class ConstArrayLit(value: Literal, typ: Type) extends Literal {
-  override def toString  = "const_array(%s, %s)".format(value.toString(), typ.toString())
-}
 
 case class StringLit(value: String) extends Literal {
   override def toString = "\"" + value + "\""
+}
+
+case class ConstArray(exp: Expr, typ: Type) extends Expr {
+  override def toString  = "const(%s, %s)".format(exp.toString(), typ.toString())
 }
 
 case class Tuple(values: List[Expr]) extends Expr {

@@ -85,6 +85,8 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
         isStatelessExpr(arrUpd.e, context) &&
         arrUpd.index.forall(i => isStatelessExpr(i, context)) &&
         isStatelessExpr(arrUpd.value, context)
+      case a : ConstArray =>
+        isStatelessExpr(a.exp, context)
       case fapp : FuncApplication =>
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
       case lambda : Lambda =>
@@ -139,6 +141,9 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
         val indicesP = arrUpd.index.map(i => rewrite(i, context))
         val valueP = rewrite(arrUpd.value, context)
         ArrayStoreOperation(eP, indicesP, valueP)
+      case a : ConstArray =>
+        val eP = rewrite(a.exp, context)
+        ConstArray(eP, a.typ)
       case fapp : FuncApplication =>
         val eP = rewrite(fapp.e, context)
         val argsP = fapp.args.map(rewrite(_, context))
