@@ -207,7 +207,7 @@ object Converter {
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
        case lang.ConstArray(value, arrTyp) =>
-         smt.ConstArrayLit(toSMT(value, scope, past).asInstanceOf[smt.Literal], typeToSMT(arrTyp).asInstanceOf[ArrayType])
+         smt.ConstArray(toSMT(value, scope, past), typeToSMT(arrTyp).asInstanceOf[ArrayType])
        case lang.StringLit(_) => throw new Utils.RuntimeError("Strings are not supported in smt.Converter")
        case lang.Tuple(args) => smt.MakeTuple(toSMTs(args, scope, past))
        case opapp : lang.OperatorApplication =>

@@ -591,15 +591,16 @@ case class EnumLit(id : String, eTyp : EnumType) extends Literal (eTyp) {
   override def toString  = id.toString
 }
 
-case class ConstArrayLit(value : Literal, arrTyp: ArrayType) extends Literal (arrTyp) {
-  override val hashId = mix(value.hashCode(), mix(arrTyp.hashCode, 304))
-  override val hashCode = computeHash
-  override def toString = "(const %s %s)".format(value.toString, arrTyp.toString)
-}
 case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {
-  override val hashId = mix(id.hashCode(), mix(symbolTyp.hashCode(), 305))
+  override val hashId = mix(id.hashCode(), mix(symbolTyp.hashCode(), 304))
   override val hashCode = computeHash
   override def toString = id.toString
+}
+// const array.
+case class ConstArray(expr : Expr, arrTyp: ArrayType) extends Expr (arrTyp) {
+  override val hashId = mix(expr.hashCode(), mix(arrTyp.hashCode, 305))
+  override val hashCode = computeHash
+  override def toString = "(const %s %s)".format(expr.toString, arrTyp.toString)
 }
 // Tuple creation.
 case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ))) {
