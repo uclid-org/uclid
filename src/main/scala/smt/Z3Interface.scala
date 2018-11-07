@@ -115,7 +115,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
  
     var output : String = ""
     val sortedArray : ListMap[String,String] = if (isNumeral) 
-        ListMap(array.toSeq.sortWith(_._1.toInt < _._1.toInt):_*) 
+        ListMap(array.toSeq.sortWith((x, y) => BigInt(x._1) < BigInt(y._1)):_*) 
         else ListMap(array.toSeq.sortBy(_._1):_*) 
     sortedArray.foreach{ case (k,v) => {
       if (!v.contentEquals(bottom)) {
@@ -465,7 +465,7 @@ class Z3Interface() extends Context {
   override def preassert(e: Expr) {}
 
   def writeToFile(p: String, s: String): Unit = {
-    val pw = new PrintWriter(new File(p))
+    val pw = new PrintWriter(new File(p.replace(" ", "_")))
     try pw.write(s) finally pw.close()
   }
 
