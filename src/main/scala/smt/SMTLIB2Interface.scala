@@ -257,6 +257,7 @@ class SMTLIB2Model(stringModel : String) extends Model {
 
   override def evalAsString(e : Expr)  : String = {
     var definitions = model.functions.filter(fun => fun.asInstanceOf[DefineFun].id.toString() contains e.toString())
+    Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
       case 0 =>
         e.toString()

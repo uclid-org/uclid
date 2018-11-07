@@ -18,14 +18,17 @@ module main {
 	assume (uftest(x, y) != x);
 
 	procedure test_proc()
-		modifies arr;
+		modifies x, y, arr;
 	{
+		x = x + const2();
+		y = y + const2();
 		arr[0bv4] = const2();
 		arr[1bv4] = const2();
 	}
 
 	init {
 		havoc move;
+		havoc e1;
 		havoc e1;
 		// e1 = et2;
 		x = const0();
@@ -42,15 +45,14 @@ module main {
 			}
 			(true) : {
 				call test_proc();
-				x' = x + const2();
-				y' = y + const2();
 			}
 		esac
 	}
 
 	invariant evens : (y - x == const2());
-	invariant arr_even : (arr[0bv4] != const2());
-	// invariant e1val : (e1 == et2);
+	invariant never1 : (y != const1() && x != const1());
+	// invariant arr_even : (arr[0bv4] != const2());
+	invariant e1val : (e1 == et1 || e1 == et2 || e1 == et3);
 
 	control {
 		f = unroll (3);

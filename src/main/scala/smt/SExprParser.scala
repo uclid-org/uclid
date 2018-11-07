@@ -215,12 +215,16 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val KwInt = "Int"
   lazy val KwBool = "Bool"
   lazy val KwBV = "BitVec"
+  lazy val KwArray = "Array"
+  lazy val KwLambda = "lambda"
 
   lazy val KwUS = "_"
+  lazy val KwTrue = "true"
+  lazy val KwFalse = "false"
 
   lexical.delimiters += ("(", ")")
-  lexical.reserved += ("false", "true",
-      KwDefineFun, KwModel, KwInt, KwBool, KwBV, KwUS, OpAnd, OpOr, OpNot, OpITE, OpImpl, 
+  lexical.reserved += (KwFalse, KwFalse, KwUS,
+      KwDefineFun, KwModel, KwInt, KwBool, KwBV, KwArray, KwLambda, OpAnd, OpOr, OpNot, OpITE, OpImpl, 
       OpEq, OpIntGE, OpIntGT, OpIntLT, OpIntLE, OpIntAdd, OpIntSub, OpIntMul,
       OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, OpBVAnd, OpBVOr, OpBVXor, OpBVNot)
 
@@ -257,15 +261,21 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val BitVectorLit : PackratParser[smt.BitVectorLit] =
     bitvectorLit ^^ { bvLit => smt.BitVectorLit(bvLit.value, bvLit.numBits) }
 
+  lazy val BoolLit : PackratParser[smt.BooleanLit] =
+    KwTrue ^^ { _ => smt.BooleanLit(true) } |
+    KwFalse ^^ { _ => smt.BooleanLit(false) }
+
   lazy val Expr : PackratParser[smt.Expr] =
-    Symbol | IntegerLit | BitVectorLit |
-    "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)}
+    Symbol | IntegerLit | BitVectorLit | BoolLit |
+    "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)} |
+    "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) }
 
   lazy val Type : PackratParser[smt.Type] =
     KwInt ^^ { _ => smt.IntType } |
     KwBool ^^ { _ => smt.BoolType } |
     "(" ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
-    "(" ~ KwUS ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) }
+    "(" ~ KwUS ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
+    "(" ~ KwArray ~> Type ~ Type <~ ")" ^^ { case inType ~ outType => smt.ArrayType(List(inType), outType) }
 
   lazy val FunArg : PackratParser[smt.Symbol] =
     "(" ~> symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.name, typ) }
@@ -301,7 +311,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       case Success(model, _) =>
         model
       case NoSuccess(msg, next) =>
-        throw new Utils.SyGuSParserError("Parser Error: %s.".format(msg))
+        throw new Utils.RuntimeError("Parser Error: %s.".format(msg))
     }
   }
 }
