@@ -201,6 +201,8 @@ object ReplacePolymorphicOperators {
         ArraySelectOperation(r(expr), rs(indices))
       case ArrayStoreOperation(expr, indices, value) =>
         ArrayStoreOperation(r(expr), rs(indices), r(value))
+      case ConstArray(exp, typ) =>
+        ConstArray(r(exp), typ)
       case FuncApplication(expr, args) =>
         FuncApplication(r(expr), rs(args))
       case Lambda(args, expr) =>
@@ -580,11 +582,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case i : IntLit => IntegerType()
         case s : StringLit => StringType()
         case bv : BitVectorLit => BitVectorType(bv.width)
-        case a : ConstArrayLit =>
-          val valTyp = typeOf(a.value, c)
+        case a : ConstArray =>
+          val valTyp = typeOf(a.exp, c)
           a.typ match {
             case ArrayType(inTyps, outTyp) =>
-              checkTypeError(outTyp == valTyp, "Array type does not match literal type", a.value.pos, c.filename)
+              checkTypeError(outTyp == valTyp, "Array type does not match literal type", a.exp.pos, c.filename)
               a.typ
             case _ =>
               raiseTypeError("Expected an array type", a.typ.pos, c.filename)
