@@ -422,8 +422,8 @@ class SymbolicSimulator (module : Module) {
     else {
       val primed_vars = lambda.ids.takeRight(lambda.ids.length / 2) // Assuming prevs are followed by nexts
       val non_primed_vars = lambda.ids.take(lambda.ids.length / 2)
-      UclidMain.println("The primed_vars " + primed_vars.toString)
-      UclidMain.println("The non-primed vars " + non_primed_vars.toString)
+      //UclidMain.println("The primed_vars " + primed_vars.toString)
+      //UclidMain.println("The non-primed vars " + non_primed_vars.toString)
 
       val matches = non_primed_vars.zip(primed_vars)
       val opapp = lambda.e.asInstanceOf[smt.OperatorApplication]
@@ -442,7 +442,7 @@ class SymbolicSimulator (module : Module) {
             eq.operands(0).asInstanceOf[smt.OperatorApplication].operands(0).asInstanceOf[smt.Symbol] -> eq.operands(1)
 
       }.toMap
-      UclidMain.println("The var map " + var_map.toString)
+      //UclidMain.println("The var map " + var_map.toString)
       // Map from primed variables to their dependencies
       var dependency_map: Map[smt.Symbol, List[smt.Symbol]] = Map.empty
       var_map.foreach(p => get_dependencies(p._1))
@@ -554,7 +554,7 @@ class SymbolicSimulator (module : Module) {
     //UclidMain.println(currentState.toString)
     //UclidMain.println("The assumptions")
     //UclidMain.println(assumes.toString)
-    UclidMain.println("The lambda: " + lambda.toString)
+    //UclidMain.println("The lambda: " + lambda.toString)
     UclidMain.println("The supports: " + get_supports(lambda).toString)
     (lambda, asserts.toList, currentState,
       hyper_asserts.toList)
