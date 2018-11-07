@@ -417,50 +417,61 @@ class SymbolicSimulator (module : Module) {
 
   def get_supports(lambda: smt.Lambda) = {
     assert(lambda.ids.length % 2 == 0)
-    val primed_vars = lambda.ids.takeRight(lambda.ids.length / 2) // Assuming prevs are followed by nexts
-    val non_primed_vars = lambda.ids.take(lambda.ids.length / 2)
-    UclidMain.println("The primed_vars " + primed_vars.toString)
-    UclidMain.println("The non-primed vars " + non_primed_vars.toString)
+    if (lambda.e.isInstanceOf[smt.BooleanLit])
+      Map.empty
+    else {
+      val primed_vars = lambda.ids.takeRight(lambda.ids.length / 2) // Assuming prevs are followed by nexts
+      val non_primed_vars = lambda.ids.take(lambda.ids.length / 2)
+      UclidMain.println("The primed_vars " + primed_vars.toString)
+      UclidMain.println("The non-primed vars " + non_primed_vars.toString)
 
-    val matches = non_primed_vars.zip(primed_vars)
-    val opapp = lambda.e.asInstanceOf[smt.OperatorApplication]
-    val operator_apps = opapp.operands.filter(exp => exp.isInstanceOf[smt.OperatorApplication])
-    val equalities = operator_apps.map(p => p.asInstanceOf[smt.OperatorApplication]).
-      filter(exp =>
-        exp.op match {
-          case smt.EqualityOp => true
-          case _ => false
-        })
-    val var_map = equalities.map {
-      eq =>
-        eq.operands(0).asInstanceOf[smt.Symbol] -> eq.operands(1)
-    }.toMap
-    UclidMain.println("The var map " + var_map.toString)
-    // Map from primed variables to their dependencies
-    var dependency_map: Map[smt.Symbol, List[smt.Symbol]] = Map.empty
-    var_map.foreach(p => get_dependencies(p._1))
+      val matches = non_primed_vars.zip(primed_vars)
+      val opapp = lambda.e.asInstanceOf[smt.OperatorApplication]
+      val operator_apps = opapp.operands.filter(exp => exp.isInstanceOf[smt.OperatorApplication])
+      val equalities = operator_apps.map(p => p.asInstanceOf[smt.OperatorApplication]).
+        filter(exp =>
+          exp.op match {
+            case smt.EqualityOp => true
+            case _ => false
+          })
+      val var_map = equalities.map {
+        eq =>
+          if (eq.operands(0).isInstanceOf[smt.Symbol])
+            eq.operands(0).asInstanceOf[smt.Symbol] -> eq.operands(1)
+          else //if (eq.operands(0).isInstanceOf[smt.OperatorApplication])
+            eq.operands(0).asInstanceOf[smt.OperatorApplication].operands(0).asInstanceOf[smt.Symbol] -> eq.operands(1)
 
-    def get_dependencies(v: smt.Symbol): List[smt.Symbol] = {
-      val eq_exp = var_map(v)
-      val vars = get_vars(eq_exp)
-      val dps = vars.map {
-        sym =>
-          if (non_primed_vars.contains(sym)) {
-            List(sym)
-          }
-          else {
-            val dep = dependency_map.get(sym) match {
-              case Some(deps) => deps
-              case None => get_dependencies(sym)
+      }.toMap
+      UclidMain.println("The var map " + var_map.toString)
+      // Map from primed variables to their dependencies
+      var dependency_map: Map[smt.Symbol, List[smt.Symbol]] = Map.empty
+      var_map.foreach(p => get_dependencies(p._1))
+
+      def get_dependencies(v: smt.Symbol): List[smt.Symbol] = {
+        val eq_exp = var_map.get(v) match {
+          case Some(exp) => exp
+          case None => return List()
+        }
+        val vars = get_vars(eq_exp)
+        val dps = vars.map {
+          sym =>
+            if (non_primed_vars.contains(sym)) {
+              List(sym)
             }
-            dep
-          }
-      }.flatten
-      dependency_map = dependency_map + (v -> dps)
-      dps
-    }
-    dependency_map
+            else {
+              val dep = dependency_map.get(sym) match {
+                case Some(deps) => deps
+                case None => get_dependencies(sym)
+              }
+              dep
+            }
+        }.flatten
+        dependency_map = dependency_map + (v -> dps)
+        dps
+      }
 
+      dependency_map
+    }
   }
 
   def get_vars(e: smt.Expr): List[smt.Symbol] = {
