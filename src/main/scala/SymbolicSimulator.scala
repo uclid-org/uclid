@@ -362,7 +362,7 @@ class SymbolicSimulator (module : Module) {
   def HyperInvariantFilter(filter : ((Identifier, List[ExprDecorator]) => Boolean)) =  (n : Identifier, d : List[ExprDecorator]) => {
     filter(n, d) && ExprDecorator.isHyperproperty(d)
   }
-  def get_init_lambda(havocInit: Boolean, addAssertions: Boolean, addAssumptions: Boolean, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
+  def getInitLambda(havocInit: Boolean, addAssertions: Boolean, addAssumptions: Boolean, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
 
     clearAssumes()
     val initSymbolTable = getInitSymbolTable(scope)
@@ -415,7 +415,7 @@ class SymbolicSimulator (module : Module) {
 
   }
 
-  def get_supports(lambda: smt.Lambda) = {
+  def getSupports(lambda: smt.Lambda) = {
     assert(lambda.ids.length % 2 == 0)
     if (lambda.e.isInstanceOf[smt.BooleanLit])
       Map.empty
@@ -452,7 +452,7 @@ class SymbolicSimulator (module : Module) {
           case Some(exp) => exp
           case None => return List()
         }
-        val vars = get_vars(eq_exp)
+        val vars = getVars(eq_exp)
         val dps = vars.map {
           sym =>
             if (non_primed_vars.contains(sym)) {
@@ -474,30 +474,30 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def get_vars(e: smt.Expr): List[smt.Symbol] = {
+  def getVars(e: smt.Expr): List[smt.Symbol] = {
     e match {
       case smt.Symbol(id, symbolTyp) => List(e.asInstanceOf[smt.Symbol])
       case smt.IntLit(n) => List()
       case smt.BooleanLit(b) => List()
       case smt.BitVectorLit(bv, w) => List()
       case smt.EnumLit(id, eTyp) => List()
-      case smt.ConstArrayLit(v, arrTyp) => List()
-      case smt.MakeTuple(args) => args.flatMap(e => get_vars(e))
+      case smt.ConstArray(v, arrTyp) => List()
+      case smt.MakeTuple(args) => args.flatMap(e => getVars(e))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
-        val args = opapp.operands.flatMap(exp => get_vars(exp))
+        val args = opapp.operands.flatMap(exp => getVars(exp))
         args
       //UclidMain.println("Crashing Here" + op.toString)
-      case smt.ArraySelectOperation(a,index) =>  get_vars(a) ++ index.flatMap(e => get_vars(e))
+      case smt.ArraySelectOperation(a,index) =>  getVars(a) ++ index.flatMap(e => getVars(e))
       case smt.ArrayStoreOperation(a,index,value) =>
-        get_vars(a) ++ index.flatMap(e => get_vars(e)) ++ get_vars(value)
+        getVars(a) ++ index.flatMap(e => getVars(e)) ++ getVars(value)
       case smt.FunctionApplication(f, args) =>
-        args.flatMap(arg => get_vars(arg))
+        args.flatMap(arg => getVars(arg))
       case _ =>
         throw new Utils.UnimplementedException("'" + e + "' is not yet supported.")
     }
   }
-  def get_next_lambda(init_symTab: Map[Identifier, smt.Expr], addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
+  def getNextLambda(init_symTab: Map[Identifier, smt.Expr], addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
                       scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) =
   {
 
@@ -555,7 +555,7 @@ class SymbolicSimulator (module : Module) {
     //UclidMain.println("The assumptions")
     //UclidMain.println(assumes.toString)
     //UclidMain.println("The lambda: " + lambda.toString)
-    UclidMain.println("The supports: " + get_supports(lambda).toString)
+    defaultLog.debug("The supports: " + getSupports(lambda).toString)
     (lambda, asserts.toList, currentState,
       hyper_asserts.toList)
 
@@ -566,8 +566,8 @@ class SymbolicSimulator (module : Module) {
                               scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
       // At this point symbolTable must have the initial symbols.
       resetState()
-      val init_lambda = get_init_lambda(false, true, false, scope, "init_lambda", filter)
-      val next_lambda = get_next_lambda(init_lambda._3, true, false, scope, "next_lambda", filter)
+      val init_lambda = getInitLambda(false, true, false, scope, label, filter)
+      val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
       /*next_lambda._4.foreach {
         assert =>
           UclidMain.println("Next HyperAssert " + assert.expr.toString)
@@ -742,7 +742,7 @@ class SymbolicSimulator (module : Module) {
       case smt.BooleanLit(b) => List()
       case smt.BitVectorLit(bv, w) => List()
       case smt.EnumLit(id, eTyp) => List()
-      case smt.ConstArrayLit(v, arrTyp) => List()
+      case smt.ConstArray(v, arrTyp) => List()
       case smt.MakeTuple(args) => args.flatMap(e => getHyperSelects(e))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
@@ -790,7 +790,7 @@ class SymbolicSimulator (module : Module) {
       case smt.BooleanLit(b) => List()
       case smt.BitVectorLit(bv, w) => List()
       case smt.EnumLit(id, eTyp) => List()
-      case smt.ConstArrayLit(v, arrTyp) => List()
+      case smt.ConstArray(v, arrTyp) => List()
       case smt.MakeTuple(args) => args.flatMap(e => get_havocs(e))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
@@ -876,7 +876,7 @@ class SymbolicSimulator (module : Module) {
       case smt.BooleanLit(b) => e
       case smt.BitVectorLit(bv, w) => e
       case smt.EnumLit(id, eTyp) => e
-      case smt.ConstArrayLit(v, arrTyp) => e
+      case smt.ConstArray(exp, arrTyp) => smt.ConstArray(_substitute(exp, sym), arrTyp)
       case smt.MakeTuple(args) => smt.MakeTuple(args.map(e => _substitute(e, sym)))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
@@ -1059,7 +1059,7 @@ class SymbolicSimulator (module : Module) {
       assertionResults.foreach{ (p) =>
         if (p.result.isFalse) {
           UclidMain.println("  FAILED -> " + p.assert.toString)
-          UclidMain.println(" FAILED EXPR -> " + p.assert.expr.toString())
+          defaultLog.debug("FAILED EXPR -> " + p.assert.expr.toString())
         }
       }
     }
