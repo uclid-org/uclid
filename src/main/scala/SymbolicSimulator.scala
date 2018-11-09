@@ -763,14 +763,6 @@ class SymbolicSimulator (module : Module) {
 
       assert(formal_params.length == actual_params.length)
       val matches = formal_params.zip(actual_params)
-      matches.foreach {
-        p =>
-          /*if (p._1.typ != p._2.typ) {
-            UclidMain.println("Warning! Type MisMatch in beta_subst " + p._1. toString + " " + p._2.toString)
-            UclidMain.println("Type1 " + p._1.typ.toString + " Type2 " + p._2.typ.toString)
-          }*/
-      }
-
       substitute(lambda.e, matches)
   }
 
