@@ -1251,8 +1251,11 @@ case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) ext
   }
 }
 
-case class ExprRenameMapAnnotation(renameMap_ : MutableMap[Expr, BigInt]) extends Annotation {
+case class ExprRenameMapAnnotation(renameMap_ : MutableMap[Expr, BigInt], enumVarTypeMap_ : MutableMap[Identifier, Type], enumTypeRangeMap_ : MutableMap[Type, (BigInt, BigInt)]) extends Annotation {
+  lazy val enumVarTypeMap : MutableMap[Identifier, Type] = enumVarTypeMap_
+  lazy val enumTypeRangeMap : MutableMap[Type, (BigInt, BigInt)] = enumTypeRangeMap_
   lazy val renameMap : MutableMap[Expr, BigInt] = renameMap_
+  lazy val bvSize : Int = math.ceil(math.log(renameMap_.size)/math.log(2.0)).toInt + 1
 
   override def toString : String = {
     val start = PrettyPrinter.indent(1) + "// expr_rename_map { "

@@ -1,6 +1,8 @@
 module main {
 	type D = bv4;
 	type E = enum {et1, et2, et3};
+	type E2 = enum {et4, et5, et6};
+	// type UT;
 
     function uftest (d1 : D, d2 : D) : D;
 
@@ -11,30 +13,35 @@ module main {
 	var move : boolean;
 	var x : D;
 	var y : D;
-	var e1 : E;
+	var e1, e2 : E;
+	// var ut1 : UT;
+	// var ut2 : UT;
 
 	var arr : [bv4]bv4;
 
-	assume (uftest(x, y) != x);
+	axiom (uftest(x, y) != x);
 
 	procedure test_proc()
 		modifies x, y, arr;
 	{
 		x = x + const2();
 		y = y + const2();
-		arr[0bv4] = const2();
-		arr[1bv4] = const2();
+		for i in range(0bv4, 15bv4) {
+			arr[i] = const2();
+		}
 	}
 
 	init {
 		havoc move;
+		havoc move;
 		havoc e1;
-		havoc e1;
-		// e1 = et2;
+		// e1 = et1;
+		// assume (ut1 != ut2);
 		x = const0();
 		y = const2();
-		arr[0bv4] = const2();
-		arr[1bv4] = const2();
+		for i in range(0bv4, 15bv4) {
+			arr[i] = const2();
+		}
 	}
 
 	next {
@@ -47,12 +54,14 @@ module main {
 				call test_proc();
 			}
 		esac
+		// assume (ut1 != ut2);
 	}
 
 	invariant evens : (y - x == const2());
 	invariant never1 : (y != const1() && x != const1());
-	// invariant arr_even : (arr[0bv4] != const2());
+	invariant arr2 : (arr[0bv4] == const2());
 	invariant e1val : (e1 == et1 || e1 == et2 || e1 == et3);
+	// invariant neq_ut : (ut1 != ut2);
 
 	control {
 		f = unroll (3);

@@ -296,6 +296,7 @@ object UclidMain {
     passManager.addPass(new SemanticAnalyzer())
     if (config.enumToNumeric) passManager.addPass(new EnumTypeAnalysis())
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamer("BV"))
+    if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamerCons("BV"))
 
     // run passes.
     passManager.run(moduleList)
