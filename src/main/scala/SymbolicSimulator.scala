@@ -520,17 +520,8 @@ class SymbolicSimulator (module : Module) {
       case None => false
     }).map(_._1).toSet
     val num_state_asserts = asserts.length
-    //UclidMain.println("EqStates: ")
-    //UclidMain.println(eqStates.toString)
-    //UclidMain.println(" -----Next Asserts------ : " + asserts.toString)
-    /*asserts.foreach {
-      assert =>
-        UclidMain.println("Next Level : " + assert.expr)
-    }*/
     defaultLog.debug("eqStates: {}", eqStates.toString())
     currentState = renameStatesLambda(symTableP, eqStates, 1, scope, addAssumesToList _)
-    //UclidMain.println("--Current Table-- " + currentState.toString)
-    //UclidMain.println("--Lambda Assumes-- " + assumes.toString)
     val numPastFrames = frameTable.size
     val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
     frameTable += currentState
@@ -542,24 +533,14 @@ class SymbolicSimulator (module : Module) {
     if (addAssertionsAsAssumes) { assumeAssertions(currentState, pastTables, scope, addAssumesToList _) }
 
     val num_module_asserts = asserts.length - num_state_asserts
-    //val reverse_end_map = currentState.map(_.swap)
     val final_vars = getVarsInOrder(currentState.map(_.swap), scope)
-    //UclidMain.println("Final Vars " + currentState.toString)
-    // OutputVars are not replaced ?
     val conjunct = if (assumes.length > 1) smt.OperatorApplication(smt.ConjunctionOp, assumes.toList)
                     else if (assumes.length == 0) new smt.BooleanLit(true)
                     else assumes(0)
     val lambda = smt.Lambda((init_vars.flatten ++ final_vars.flatten).map(p => p.asInstanceOf[smt.Symbol]), conjunct)
-    //UclidMain.println("The symbol table after step #1")
-    //UclidMain.println(currentState.toString)
-    //UclidMain.println("The assumptions")
-    //UclidMain.println(assumes.toString)
-    //UclidMain.println("The lambda: " + lambda.toString)
     defaultLog.debug("The supports: " + getSupports(lambda).toString)
     (lambda, asserts.toList, currentState,
       hyper_asserts.toList)
-
-
   }
 
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
@@ -568,12 +549,6 @@ class SymbolicSimulator (module : Module) {
       resetState()
       val init_lambda = getInitLambda(false, true, false, scope, label, filter)
       val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
-      /*next_lambda._4.foreach {
-        assert =>
-          UclidMain.println("Next HyperAssert " + assert.expr.toString)
-          UclidMain.println("Next HyperAssert PathCond " + assert.pathCond)
-      }*/
-      //UclidMain.println("Next Lambda : " + next_lambda._1.toString)
       val num_copies = getMaxHyperInvariant(scope)
       val sim_record = new SimulationTable
       var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
@@ -585,7 +560,6 @@ class SymbolicSimulator (module : Module) {
         frames += initSymTab
         var prevVars = getVarsInOrder(initSymTab.map(_.swap), scope)
         prevVarTable += prevVars
-        //UclidMain.println("PrevVars : " + prevVars.flatten.toString)
         val init_havocs = getHavocs(init_lambda._1.e)
         val havoc_subs = init_havocs.map {
           havoc =>
@@ -594,33 +568,21 @@ class SymbolicSimulator (module : Module) {
             (havoc, newHavocSymbol(name, havoc.typ))
         }
         havocTable += havoc_subs
-        val init_conjunct = substitute(beta_substitution(init_lambda._1, prevVars), havoc_subs)
-        // Get symbolTable from init_conjunct
-        // val state_conjuncts = new ListBuffer[smt.Expr]()
-        // state_conjuncts += init_conjunct
+        val init_conjunct = substitute(betaSubstitution(init_lambda._1, prevVars), havoc_subs)
         addAssumptionToTree(init_conjunct)
-        //UclidMain.println("Init Conjunct " + init_conjunct)
-        //init_lambda._2.foreach {
-        //  assert => UclidMain.println("Assert before rewrite " + assert.expr.toString)
-        //}
-
         sim_record += frames
       }
 
-      val asserts_init = rewriteAsserts(init_lambda._1, init_lambda._2, prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), sim_record(0), havocTable(0))
+      val asserts_init = rewriteAsserts(init_lambda._1, init_lambda._2, 0, prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), sim_record(0), havocTable(0))
 
       asserts_init.foreach {
         assert =>
           addAssertToTree(assert)
-          //UclidMain.println("Assert Expr " + assert.expr.toString)
-          //UclidMain.println("Assert PathCond " + assert.pathCond.toString)
       }
 
-      val asserts_init_hyper = rewriteHyperAsserts(init_lambda._1, false, init_lambda._4, sim_record, 1, scope, prevVarTable.toList)
+      val asserts_init_hyper = rewriteHyperAsserts(init_lambda._1, 0, init_lambda._4, sim_record, 1, scope, prevVarTable.toList)
       asserts_init_hyper.foreach {
         assert =>
-          //UclidMain.println("HyperAssert Init Next Expr " + assert.expr)
-          //UclidMain.println("HyperAssert Init Next PathCond " + assert.pathCond.toString)
           addAssertToTree(assert)
       }
 
@@ -637,68 +599,35 @@ class SymbolicSimulator (module : Module) {
                 val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
                 (havoc, newHavocSymbol(name, havoc.typ))
             }
-            val next_conjunct = substitute(beta_substitution(next_lambda._1, prevVarTable(j - 1) ++ new_vars), havoc_subs)
-             // val asserts_next = rewriteAsserts(next_lambda._1, next_lambda._2, prevVarTable(j - 1).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
-             // new_vars.flatten.map(p => p.asInstanceOf[smt.Symbol]), sim_record(j - 1), havoc_subs)
-
+            val next_conjunct = substitute(betaSubstitution(next_lambda._1, prevVarTable(j - 1) ++ new_vars), havoc_subs)
             addAssumptionToTree(next_conjunct)
-            /*asserts_next.foreach {
-              assert =>
-                addAssertToTree(assert)
-                UclidMain.println("Assert Next Expr " + assert.expr)
-                UclidMain.println("Assert Next PathCond " + assert.pathCond.toString)
-            }*/
-
-            //state_conjuncts += next_conjunct
             havocTable(j - 1) = havoc_subs
             prevVarTable(j - 1) = new_vars
           }
-          // Asserting Non-HyperInvariant assertions
-          val asserts_next = rewriteAsserts(next_lambda._1, next_lambda._2, getVarsInOrder(sim_record(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
+          // Asserting on-HyperInvariant assertions
+          val asserts_next = rewriteAsserts(
+              next_lambda._1, next_lambda._2, numberOfSteps,
+              getVarsInOrder(sim_record(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
           prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), sim_record(0), havocTable(0))
           asserts_next.foreach {
             assert =>
               addAssertToTree(assert)
-              //UclidMain.println("Assert Next Expr " + assert.expr)
-              //UclidMain.println("Assert Next PathCond " + assert.pathCond.toString)
           }
-
-
-          val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, true, next_lambda._4, sim_record, i, scope, prevVarTable.toList)
+          val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, numberOfSteps, next_lambda._4, sim_record, i, scope, prevVarTable.toList)
           asserts_next_hyper.foreach {
             assert =>
-              //UclidMain.println("HyperAssert Next Expr " + assert.expr)
-              //UclidMain.println("HyperAssert Next PathCond " + assert.pathCond.toString)
               addAssertToTree(assert)
           }
       }
-      //UclidMain.println("StateConjuncts " + state_conjuncts)
       symbolTable = symTabStep
-    // init lambda on a set of vars
-      // next lambda on initial vars and new_vars
-      // new_vars become initial vars in each step
+  }
 
-
-
-
-      // How does the step variable get used? Just a naming thing, used in assertions and state var naming
-      // Assertions and assumptions? Not handled
-
-
+  def rewriteHyperAsserts(lambda: smt.Lambda, stepIndex : Integer, hyperAsserts: List[AssertInfo], sim_record: SimulationTable, step: Int, scope: Scope, prevVarTable: List[List[List[smt.Expr]]]) = {
+    hyperAsserts.map(assert => rewriteHyperAssert(lambda, stepIndex, assert, sim_record, step, scope, prevVarTable))
 
   }
 
-  /*def match_args(formal_params: List[smt.Symbol], actual_params: List[smt.Symbol]): List[(smt.Symbol, smt.Symbol)] = {
-    formal_params.map { param =>
-        actual_params.find(act => act.id.split("_"))
-    }
-  }*/
-  def rewriteHyperAsserts(lambda: smt.Lambda, isNext:  Boolean, hyperAsserts: List[AssertInfo], sim_record: SimulationTable, step: Int, scope: Scope, prevVarTable: List[List[List[smt.Expr]]]) = {
-    hyperAsserts.map(assert => rewriteHyperAssert(lambda, isNext, assert, sim_record, step, scope, prevVarTable))
-
-  }
-
-  def rewriteHyperAssert(lambda: smt.Lambda, isNext: Boolean, at: AssertInfo, simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
+  def rewriteHyperAssert(lambda: smt.Lambda, stepIndex : Integer, at: AssertInfo, simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
       val hyper_selects = getHyperSelects(at.expr)
       val subs = hyper_selects.map {
         expr =>
@@ -707,7 +636,7 @@ class SymbolicSimulator (module : Module) {
           op match {
             case smt.HyperSelectOp(i) =>
 
-              if (isNext) {
+              if (stepIndex > 0) {
                 val actual_params = getVarsInOrder(simRecord(i - 1)(step - 1).map(_.swap), scope).flatten ++ prevVars(i - 1).flatten
                 val formal_params = lambda.ids
                 assert(actual_params.length == formal_params.length)
@@ -816,28 +745,19 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def rewriteAsserts(lambda: smt.Lambda, asserts: List[AssertInfo], actual_vars: List[smt.Symbol], frameTable: FrameTable, havocsubs: List[(smt.Symbol, smt.Symbol)]): List[AssertInfo] = {
-      assert(lambda.ids.length == actual_vars.length)
-      val matches = lambda.ids.zip(actual_vars)
-      matches.foreach {
-        p =>
-        /*if (p._1.typ != p._2.typ) {
-          UclidMain.println("Warning! Type MisMatch in Asserts " + p._1.toString + " " + p._2.toString)
-          UclidMain.println("Type1 " + p._1.typ.toString + " Type2 " + p._2.typ.toString)
-        }*/
-      }
-      //UclidMain.println("Matches " + matches.toString)
-      asserts.map(assert => rewriteAssert(assert, matches, frameTable, havocsubs))
+  def rewriteAsserts(lambda: smt.Lambda, asserts: List[AssertInfo], stepIndex : Integer, actual_vars: List[smt.Symbol], frameTable: FrameTable, havocsubs: List[(smt.Symbol, smt.Symbol)]): List[AssertInfo] = {
+    Utils.assert(lambda.ids.length == actual_vars.length, "Invalid arguments to rewriteAsserts")
+    val matches = lambda.ids.zip(actual_vars)
+    asserts.map(assert => rewriteAssert(assert, matches, stepIndex, frameTable, havocsubs))
   }
 
-  def rewriteAssert(assert: AssertInfo, matches: List[(smt.Symbol, smt.Symbol)], frameTable: FrameTable, havocsubs: List[(smt.Symbol, smt.Symbol)]): AssertInfo = {
-
-    AssertInfo(assert.name, assert.label, frameTable, assert.context, assert.iter, substitute(substitute(assert.pathCond, matches), havocsubs),
+  def rewriteAssert(assert: AssertInfo, matches: List[(smt.Symbol, smt.Symbol)], stepIndex : Integer, frameTable: FrameTable, havocsubs: List[(smt.Symbol, smt.Symbol)]): AssertInfo = {
+    AssertInfo(assert.name, assert.label, frameTable.take(stepIndex+1), assert.context, assert.iter, substitute(substitute(assert.pathCond, matches), havocsubs),
         substitute(substitute(assert.expr, matches), havocsubs), assert.decorators, assert.pos)
 
   }
 
-  def beta_substitution(lambda: smt.Lambda, args: List[List[smt.Expr]]): smt.Expr = {
+  def betaSubstitution(lambda: smt.Lambda, args: List[List[smt.Expr]]): smt.Expr = {
       val formal_params = lambda.ids
       val actual_params = args.flatten.map(p => p.asInstanceOf[smt.Symbol])
 
