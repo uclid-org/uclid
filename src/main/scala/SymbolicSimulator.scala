@@ -586,7 +586,7 @@ class SymbolicSimulator (module : Module) {
         var prevVars = getVarsInOrder(initSymTab.map(_.swap), scope)
         prevVarTable += prevVars
         //UclidMain.println("PrevVars : " + prevVars.flatten.toString)
-        val init_havocs = get_havocs(init_lambda._1.e)
+        val init_havocs = getHavocs(init_lambda._1.e)
         val havoc_subs = init_havocs.map {
           havoc =>
             val s = havoc.id.split("_")
@@ -630,7 +630,7 @@ class SymbolicSimulator (module : Module) {
             symTabStep = newInputSymbols(getInitSymbolTable(scope), i + 1, scope)
             sim_record(j - 1) += symTabStep
             val new_vars = getVarsInOrder(symTabStep.map(_.swap), scope)
-            val next_havocs = get_havocs(next_lambda._1.e)
+            val next_havocs = getHavocs(next_lambda._1.e)
             val havoc_subs = next_havocs.map {
               havoc =>
                 val s = havoc.id.split("_")
@@ -781,7 +781,7 @@ class SymbolicSimulator (module : Module) {
     max_k
   }
 
-  def get_havocs(e: smt.Expr): List[smt.Symbol] = {
+  def getHavocs(e: smt.Expr): List[smt.Symbol] = {
     e match {
       case smt.Symbol(id, symbolTyp) =>
         if (id.startsWith("havoc_")) List(e.asInstanceOf[smt.Symbol]) else List()
@@ -791,16 +791,16 @@ class SymbolicSimulator (module : Module) {
       case smt.BitVectorLit(bv, w) => List()
       case smt.EnumLit(id, eTyp) => List()
       case smt.ConstArray(v, arrTyp) => List()
-      case smt.MakeTuple(args) => args.flatMap(e => get_havocs(e))
+      case smt.MakeTuple(args) => args.flatMap(e => getHavocs(e))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
-        val args = opapp.operands.flatMap(exp => get_havocs(exp))
+        val args = opapp.operands.flatMap(exp => getHavocs(exp))
         //UclidMain.println("Crashing Here" + op.toString)
         args
 
-      case smt.ArraySelectOperation(a,index) =>  get_havocs(a) ++ index.flatMap(e => get_havocs(e))
+      case smt.ArraySelectOperation(a,index) =>  getHavocs(a) ++ index.flatMap(e => getHavocs(e))
       case smt.ArrayStoreOperation(a,index,value) =>
-        get_havocs(a) ++  index.flatMap(e => get_havocs(e)) ++ get_havocs(value)
+        getHavocs(a) ++  index.flatMap(e => getHavocs(e)) ++ getHavocs(value)
       case smt.FunctionApplication(f, args) =>
         val f1 = f match {
           case smt.Symbol(id, symbolTyp) =>
@@ -810,7 +810,7 @@ class SymbolicSimulator (module : Module) {
           case _ =>
             throw new Utils.RuntimeError("Should never get here.")
         }
-        f1 ++ args.flatMap(arg => get_havocs(arg))
+        f1 ++ args.flatMap(arg => getHavocs(arg))
       case _ =>
         throw new Utils.UnimplementedException("'" + e + "' is not yet supported.")
     }

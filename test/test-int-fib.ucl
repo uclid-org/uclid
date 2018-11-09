@@ -19,8 +19,9 @@ module main {
   }
 
   control {
-  	unroll (3);
+  	v = unroll (3);
   	check;
   	print_results;
+    v.print_cex(a, b);
   }
 }
