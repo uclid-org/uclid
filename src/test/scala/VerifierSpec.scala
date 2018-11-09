@@ -378,9 +378,12 @@ object PrintCexSpec {
     (tail2 zip (1 to 2*n)).foreach {
       p => {
         val s = p._1
-        val i = p._2 / 2
+        val i = (p._2 - 1)/ 2
         if (p._2 % 2 == 1) {
           val sP = "Step #%d".format(i)
+          assert (s == sP)
+        } else {
+          val sP = "  n : %d".format(i)
           assert (s == sP)
         }
       }
