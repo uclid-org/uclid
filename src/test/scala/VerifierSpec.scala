@@ -378,6 +378,8 @@ object PrintCexSpec {
     val results = UclidMain.execute(mainModule.get, config)
     val outputString = UclidMain.stringOutput.toString()
     val lines1 = outputString.split('\n')
+    val check = "FAILED -> v [Step #%d]".format(n-1)
+    assert (lines1.exists(l => l.contains(check)))
     val lines2 = lines1.filter(l => !l.contains("===="))
     val tail2 = lines2.takeRight(2*n)
     assert(lines2.size >= 2*n)
