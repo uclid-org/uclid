@@ -367,23 +367,22 @@ class SymbolicSimulator (module : Module) {
 
     clearAssumes()
     val initSymbolTable = getInitSymbolTable(scope)
-    val frameTbl = ArrayBuffer(initSymbolTable)
-
+    val initFrameTbl = ArrayBuffer(initSymbolTable)
     val symTab = if (!havocInit && module.init.isDefined) {
-      simulate(0, List.empty, module.init.get.body, initSymbolTable, frameTbl, scope, label, addAssumesToList _, addAssertsToList _)
+      simulate(0, List.empty, module.init.get.body, initSymbolTable, initFrameTbl, scope, label, addAssumesToList _, addAssertsToList _)
     } else {
       initSymbolTable
     }
 
-    addModuleAssumptions(symTab, frameTbl, 1, scope, addAssumesToList _)
+    addModuleAssumptions(symTab, initFrameTbl, 1, scope, addAssumesToList _)
     frameList.clear()
     frameList += initSymbolTable
 
     if (addAssertions) {
-      addAsserts(0, symTab, frameTbl, label, scope, noHyperInvariantFilter(filter), addAssertsToList _)
-      addAsserts(0, symTab, frameTbl, label, scope, HyperInvariantFilter(filter), addHyperAssertsToList _)
+      addAsserts(1, symTab, frameList, label, scope, noHyperInvariantFilter(filter), addAssertsToList _)
+      addAsserts(1, symTab, frameList, label, scope, HyperInvariantFilter(filter), addHyperAssertsToList _)
     }
-    if (addAssumptions) { assumeAssertions(symTab, frameTbl, 1, scope, addAssumesToList _) }
+    if (addAssumptions) { assumeAssertions(symTab, frameList, 1, scope, addAssumesToList _) }
 
     val reverse_map = initSymbolTable.map(_.swap) // Map new smt Vars back to IDs
     val conjunct = reverse_map.map(p => if (p._1 != symTab.get(reverse_map.get(p._1).get).get) Some(smt.OperatorApplication(smt.EqualityOp,
