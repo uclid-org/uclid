@@ -316,7 +316,7 @@ class SymbolicSimulator (module : Module) {
     val frameTbl = ArrayBuffer(initSymbolTable)
 
     symbolTable = if (!havocInit && module.init.isDefined) {
-      simulateStmt(1, List.empty, module.init.get.body, initSymbolTable, frameTbl, scope, label, addAssumptionToTree _, addAssertToTree _)
+      simulateStmt(0, List.empty, module.init.get.body, initSymbolTable, frameTbl, scope, label, addAssumptionToTree _, addAssertToTree _)
     } else {
       initSymbolTable
     }
@@ -588,7 +588,7 @@ class SymbolicSimulator (module : Module) {
           }
           // Asserting on-HyperInvariant assertions
           val asserts_next = rewriteAsserts(
-              next_lambda._1, next_lambda._2, numberOfSteps,
+              next_lambda._1, next_lambda._2, i,
               getVarsInOrder(sim_record(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
           prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), sim_record(0), havocTable(0))
           asserts_next.foreach {
@@ -636,7 +636,7 @@ class SymbolicSimulator (module : Module) {
               throw new Utils.RuntimeError("Should never get here.")
           }
       }
-      val st = AssertInfo(at.name, at.label, at.frameTable, at.context, at.iter,
+      val st = AssertInfo(at.name, at.label, at.frameTable, at.context, stepIndex,
                   at.pathCond, substitute(at.expr, subs), at.decorators, at.pos)
       st
   }
@@ -726,7 +726,7 @@ class SymbolicSimulator (module : Module) {
   }
 
   def rewriteAssert(assert: AssertInfo, matches: List[(smt.Symbol, smt.Symbol)], stepIndex : Integer, frameTable: FrameTable, havocsubs: List[(smt.Symbol, smt.Symbol)]): AssertInfo = {
-    AssertInfo(assert.name, assert.label, frameTable.take(stepIndex+1), assert.context, assert.iter, substitute(substitute(assert.pathCond, matches), havocsubs),
+    AssertInfo(assert.name, assert.label, frameTable.take(stepIndex+1), assert.context, stepIndex, substitute(substitute(assert.pathCond, matches), havocsubs),
         substitute(substitute(assert.expr, matches), havocsubs), assert.decorators, assert.pos)
 
   }
@@ -1083,7 +1083,7 @@ class SymbolicSimulator (module : Module) {
     // add assumption.
     proc.requires.foreach(r => assertionTree.addAssumption(evaluate(r, initProcState, ArrayBuffer.empty, 0, procScope)))
     // simulate procedure execution.
-    val finalState = simulateStmt(1, List.empty, proc.body, initProcState, frameList, procScope, label, addAssumptionToTree _, addAssertToTree _)
+    val finalState = simulateStmt(0, List.empty, proc.body, initProcState, frameList, procScope, label, addAssumptionToTree _, addAssertToTree _)
     // create frame table.
     frameList += finalState
     logState(verifyProcedureLog, "finalState", finalState)
@@ -1529,11 +1529,15 @@ class SymbolicSimulator (module : Module) {
         past match {
           case 0 => symbolTable(id)
           case _ =>
-            frameTable(frameNumber - past).get(id) match {
-              case Some(expr) => expr
-              case None => //UclidMain.println("--------New Havoc Symbol!------ Past = " + past.toString)
-                newHavocSymbol(id.name, smtType)
-
+            if (frameNumber - past < 0) {
+              newHavocSymbol(id.name, smtType)
+            } else {
+              frameTable(frameNumber - past).get(id) match {
+                case Some(expr) => expr
+                case None => //UclidMain.println("--------New Havoc Symbol!------ Past = " + past.toString)
+                  newHavocSymbol(id.name, smtType)
+  
+              }
             }
         }
       }
