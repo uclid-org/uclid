@@ -75,7 +75,7 @@ class SymbolicSimulator (module : Module) {
 
 
   var symbolTable : SymbolTable = Map.empty
-  var frameTable : FrameTable = ArrayBuffer.empty
+  var frameList : FrameTable = ArrayBuffer.empty
   
   var synthesizedInvariants : ArrayBuffer[lang.Expr] = ArrayBuffer.empty
 
@@ -101,7 +101,7 @@ class SymbolicSimulator (module : Module) {
   def resetState() {
     assertionTree.resetToInitial()
     symbolTable = Map.empty
-    frameTable.clear()
+    frameList.clear()
   }
   var proofResults : List[CheckResult] = List.empty
   def dumpResults(label: String, log : Logger) {
@@ -313,19 +313,20 @@ class SymbolicSimulator (module : Module) {
    */
   def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean, scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) {
     val initSymbolTable = getInitSymbolTable(scope)
+    val frameTbl = ArrayBuffer(initSymbolTable)
+
     symbolTable = if (!havocInit && module.init.isDefined) {
-      simulate(0, List.empty, module.init.get.body, initSymbolTable, scope, label, addAssumptionToTree _, addAssertToTree _)
+      simulate(1, List.empty, module.init.get.body, initSymbolTable, frameTbl, scope, label, addAssumptionToTree _, addAssertToTree _)
     } else {
       initSymbolTable
     }
 
-    val frameTbl = ArrayBuffer(initSymbolTable)
     addModuleAssumptions(symbolTable, frameTbl, 1, scope, addAssumptionToTree _)
 
-    frameTable.clear()
-    frameTable += symbolTable
+    frameList.clear()
+    frameList += symbolTable
 
-    if (addAssertions) { addAsserts(0, symbolTable, frameTable, label, scope, filter, addAssertToTree _) }
+    if (addAssertions) { addAsserts(0, symbolTable, frameList, label, scope, filter, addAssertToTree _) }
     if (addAssumptions) { assumeAssertions(symbolTable, frameTbl, 1, scope, addAssumptionToTree _) }
   }
 
@@ -366,17 +367,17 @@ class SymbolicSimulator (module : Module) {
 
     clearAssumes()
     val initSymbolTable = getInitSymbolTable(scope)
+    val frameTbl = ArrayBuffer(initSymbolTable)
 
     val symTab = if (!havocInit && module.init.isDefined) {
-      simulate(0, List.empty, module.init.get.body, initSymbolTable, scope, label, addAssumesToList _, addAssertsToList _)
+      simulate(0, List.empty, module.init.get.body, initSymbolTable, frameTbl, scope, label, addAssumesToList _, addAssertsToList _)
     } else {
       initSymbolTable
     }
 
-    val frameTbl = ArrayBuffer(initSymbolTable)
     addModuleAssumptions(symTab, frameTbl, 1, scope, addAssumesToList _)
-    frameTable.clear()
-    frameTable += initSymbolTable
+    frameList.clear()
+    frameList += initSymbolTable
 
     if (addAssertions) {
       addAsserts(0, symTab, frameTbl, label, scope, noHyperInvariantFilter(filter), addAssertsToList _)
@@ -497,7 +498,7 @@ class SymbolicSimulator (module : Module) {
 
     val stWInputs = currentState//newInputSymbols(currentState, 1, scope)
     states += stWInputs
-    val symTableP = simulate(1, stWInputs, scope, label, addAssumesToList _, addAssertsToList _)
+    val symTableP = simulate(1, stWInputs, states, scope, label, addAssumesToList _, addAssertsToList _)
     val eqStates = symTableP.filter(p => stWInputs.get(p._1) match {
       case Some(st) => (st == p._2)
       case None => false
@@ -505,14 +506,14 @@ class SymbolicSimulator (module : Module) {
     val num_state_asserts = asserts.length
     defaultLog.debug("eqStates: {}", eqStates.toString())
     currentState = renameStatesLambda(symTableP, eqStates, 1, scope, addAssumesToList _)
-    val numPastFrames = frameTable.size
-    frameTable += currentState
-    addModuleAssumptions(currentState, frameTable, numPastFrames, scope, addAssumesToList _)
+    val numPastFrames = frameList.size
+    frameList += currentState
+    addModuleAssumptions(currentState, frameList, numPastFrames, scope, addAssumesToList _)
     if (addAssertions) {
-      addAsserts(1, currentState, frameTable, label, scope, noHyperInvariantFilter(filter), addAssertsToList _)
-      addAsserts(1, currentState, frameTable, label, scope, HyperInvariantFilter(filter), addHyperAssertsToList _)
+      addAsserts(1, currentState, frameList, label, scope, noHyperInvariantFilter(filter), addAssertsToList _)
+      addAsserts(1, currentState, frameList, label, scope, HyperInvariantFilter(filter), addHyperAssertsToList _)
     }
-    if (addAssertionsAsAssumes) { assumeAssertions(currentState, frameTable, numPastFrames, scope, addAssumesToList _) }
+    if (addAssertionsAsAssumes) { assumeAssertions(currentState, frameList, numPastFrames, scope, addAssumesToList _) }
 
     val num_module_asserts = asserts.length - num_state_asserts
     val final_vars = getVarsInOrder(currentState.map(_.swap), scope)
@@ -859,19 +860,19 @@ class SymbolicSimulator (module : Module) {
     for (step <- 1 to numberOfSteps) {
       val stWInputs = newInputSymbols(currentState, step + startStep, scope)
       states += stWInputs
-      val symTableP = simulate(step + startStep, stWInputs, scope, label, addAssumptionToTree _, addAssertToTree _)
+      val symTableP = simulate(step + startStep, stWInputs, frameList, scope, label, addAssumptionToTree _, addAssertToTree _)
       val eqStates = symTableP.filter(p => stWInputs.get(p._1) match {
         case Some(st) => (st == p._2)
         case None => false
       }).map(_._1).toSet
       defaultLog.debug("eqStates: {}", eqStates.toString())
       currentState = renameStates(symTableP, eqStates, step + startStep, scope, addAssumptionToTree _)
-      val numPastFrames = frameTable.size
-      val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
-      frameTable += currentState
-      addModuleAssumptions(currentState, frameTable, numPastFrames, scope, addAssumptionToTree _)
-      if (addAssertions) { addAsserts(step, currentState, frameTable, label, scope, filter, addAssertToTree _)  }
-      if (addAssertionsAsAssumes) { assumeAssertions(currentState, frameTable, numPastFrames, scope, addAssumptionToTree _) }
+      val numPastFrames = frameList.size
+      val pastTables = ((0 to (numPastFrames - 1)) zip frameList).map(p => ((numPastFrames - p._1) -> p._2)).toMap
+      frameList += currentState
+      addModuleAssumptions(currentState, frameList, numPastFrames, scope, addAssumptionToTree _)
+      if (addAssertions) { addAsserts(step, currentState, frameList, label, scope, filter, addAssertToTree _)  }
+      if (addAssertionsAsAssumes) { assumeAssertions(currentState, frameList, numPastFrames, scope, addAssumptionToTree _) }
     }
     symbolTable = currentState
   }
@@ -1077,18 +1078,18 @@ class SymbolicSimulator (module : Module) {
     val initProcState = proc.sig.outParams.foldLeft(initProcState1)((acc, arg) => {
       acc + (arg._1 -> newHavocSymbol(arg._1.name, smt.Converter.typeToSMT(arg._2)))
     })
-    frameTable.clear()
-    frameTable += initProcState
+    frameList.clear()
+    frameList += initProcState
     logState(verifyProcedureLog, "initProcState", initProcState)
     // add assumption.
     proc.requires.foreach(r => assertionTree.addAssumption(evaluate(r, initProcState, ArrayBuffer.empty, 0, procScope)))
     // simulate procedure execution.
-    val finalState = simulate(1, List.empty, proc.body, initProcState, procScope, label, addAssumptionToTree _, addAssertToTree _)
+    val finalState = simulate(1, List.empty, proc.body, initProcState, frameList, procScope, label, addAssumptionToTree _, addAssertToTree _)
     // create frame table.
-    frameTable += finalState
+    frameList += finalState
     logState(verifyProcedureLog, "finalState", finalState)
 
-    val frameTableP = frameTable.clone()
+    val frameTableP = frameList.clone()
     // add assertions.
     proc.ensures.foreach {
       e => {
@@ -1159,7 +1160,8 @@ class SymbolicSimulator (module : Module) {
     def addAssertion(e : AssertInfo) : Unit = { assertions += e }
 
     // Symbolically simulate statement.
-    val symbolicState = simulate(0, List.empty, st, x0, ctx, label, addAssumption _, addAssertion _)
+    val frameTbl : FrameTable = ArrayBuffer.empty
+    val symbolicState = simulate(0, List.empty, st, x0, frameTbl, ctx, label, addAssumption _, addAssertion _)
     // Compute init expression from the result of symbolic simulation.
     val symbolicExpressions = (symbolicState.map {
       p => {
@@ -1204,9 +1206,11 @@ class SymbolicSimulator (module : Module) {
 
     val defaultSymbolTable = getDefaultSymbolTable(synthesisCtx)
     val primeSymbolTable = getPrimeSymbolTable(synthesisCtx)
-    // FIXME: Need to account for assumptions and assertions. 
-    val initState = simulate(0, List.empty, synthesisModule.init.get.body, defaultSymbolTable, synthesisCtx, "synthesize", initAddAssumption _, initAddAssertion _)
-    val nextState = simulate(0, List.empty, synthesisModule.next.get.body, defaultSymbolTable, synthesisCtx, "synthesize", nextAddAssumption _, nextAddAssertion _)
+    // FIXME: Need to account for assumptions and assertions.
+    val initFrameTbl : FrameTable = ArrayBuffer.empty
+    val initState = simulate(0, List.empty, synthesisModule.init.get.body, defaultSymbolTable, initFrameTbl, synthesisCtx, "synthesize", initAddAssumption _, initAddAssertion _)
+    val nextFrameTbl : FrameTable = ArrayBuffer(initState)
+    val nextState = simulate(0, List.empty, synthesisModule.next.get.body, defaultSymbolTable, nextFrameTbl, synthesisCtx, "synthesize", nextAddAssumption _, nextAddAssertion _)
     val assertions = nextAssertions.map {
       assert => {
         if (assert.pathCond == smt.BooleanLit(true)) {
@@ -1262,7 +1266,7 @@ class SymbolicSimulator (module : Module) {
                 label : String, scope : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean),
                 addAssert : (AssertInfo => Unit)) {
 
-    val table = frameTable.clone()
+    val table = frameTbl.clone()
     scope.specs.foreach(specVar => {
       val prop = module.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {
@@ -1284,21 +1288,22 @@ class SymbolicSimulator (module : Module) {
     scope.specs.foreach(sp => addAssumption(evaluate(sp.expr, symbolTable, frameTbl, frameNumber, scope)))
   }
 
-  def simulate(frameNumber : Int, symbolTable: SymbolTable, scope : Scope, label : String,
+  def simulate(frameNumber : Int, symbolTable: SymbolTable, frameTable : FrameTable, scope : Scope, label : String,
                addAssume : (smt.Expr => Unit), addAssert : (AssertInfo => Unit)) : SymbolTable = {
-    simulate(frameNumber, List.empty, module.next.get.body, symbolTable, scope, label, addAssume, addAssert)
+    simulate(frameNumber, List.empty, module.next.get.body, symbolTable, frameTable, scope, label, addAssume, addAssert)
   }
 
   def simulate(frameNumber : Int, pathConditions: List[smt.Expr], stmts: List[Statement],
-               symbolTable: SymbolTable, scope : Scope, label : String,
+               symbolTable: SymbolTable, frameTable : FrameTable, scope : Scope, label : String,
                addAssume : (smt.Expr => Unit), addAssert : (AssertInfo => Unit)) : SymbolTable = {
 
     return stmts.foldLeft(symbolTable){
-      (acc,i) => simulate(frameNumber, pathConditions, i, acc, scope, label, addAssume, addAssert);
+      (acc,i) => simulate(frameNumber, pathConditions, i, acc, frameTable, scope, label, addAssume, addAssert);
     }
   }
 
-  def simulate(frameNumber : Int, pathConditions: List[smt.Expr], s: Statement, symbolTable: SymbolTable, scope : Scope, label : String,
+  def simulate(frameNumber : Int, pathConditions: List[smt.Expr], s: Statement,
+               symbolTable: SymbolTable, frameTable : FrameTable, scope : Scope, label : String,
                addAssumption : (smt.Expr => Unit), addAssert : (AssertInfo => Unit)) : SymbolTable = {
     def recordSelect(field : String, rec : smt.Expr) = {
       smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
@@ -1415,7 +1420,7 @@ class SymbolicSimulator (module : Module) {
         frameLog.debug("local symbol table  : " + localSymbolTable.toString())
         frameLog.debug("overwritten symbols : " + overwrittenSymbols.toString())
 
-        val simTable1 = simulate(frameNumber, pathConditions, stmts, localSymbolTable, scope + vars, label, addAssumption, addAssert)
+        val simTable1 = simulate(frameNumber, pathConditions, stmts, localSymbolTable, frameTable, scope + vars, label, addAssumption, addAssert)
         val simTable2 = declaredVars.foldLeft(simTable1)((tbl, p) => tbl - p._1)
         overwrittenSymbols.foldLeft(simTable2)((acc, p) => acc + (p._1 -> p._2))
       case IfElseStmt(e,then_branch,else_branch) =>
@@ -1424,8 +1429,8 @@ class SymbolicSimulator (module : Module) {
         // compute in parallel.
         val condExpr = evaluate(e, symbolTable, frameTable, frameNumber, scope)
         val negCondExpr = smt.OperatorApplication(smt.NegationOp, List(condExpr))
-        var then_st : SymbolTable = simulate(frameNumber, condExpr :: pathConditions, then_branch, symbolTable, scope, label, addAssumption, addAssert)
-        var else_st : SymbolTable = simulate(frameNumber, negCondExpr :: pathConditions, else_branch, symbolTable, scope, label, addAssumption, addAssert)
+        var then_st : SymbolTable = simulate(frameNumber, condExpr :: pathConditions, then_branch, symbolTable, frameTable, scope, label, addAssumption, addAssert)
+        var else_st : SymbolTable = simulate(frameNumber, negCondExpr :: pathConditions, else_branch, symbolTable, frameTable, scope, label, addAssumption, addAssert)
         return symbolTable.keys.filter { id => then_modifies.contains(id) || else_modifies.contains(id) }.
           foldLeft(symbolTable){ (acc,id) =>
             acc.updated(id, smt.OperatorApplication(smt.ITEOp, List(condExpr, then_st(id), else_st(id))))

@@ -360,6 +360,12 @@ class LTLVerifSpec extends FlatSpec {
   "ltl-eventually-1.ucl" should "fail to verify 3 assertions." in {
     VerifierSpec.expectedFails("./test/ltl-eventually-1.ucl", 3)
   }
+  "ltl-toy-0.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/ltl-toy-0.ucl", 0)
+  }
+  "ltl-toy-1.ucl" should "fail to verify 11 assertions." in {
+    VerifierSpec.expectedFails("./test/ltl-toy-1.ucl", 11)
+  }
 }
 object PrintCexSpec {
   def checkPrintCex(filename: String, n : Int) {
