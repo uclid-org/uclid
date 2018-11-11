@@ -45,13 +45,16 @@ import scala.collection.mutable.ListBuffer
 
 case class AssertInfo(
     name : String, label : String,
-    frameTable : SymbolicSimulator.FrameTable,
+    frameTable : SymbolicSimulator.SimulationTable,
     context : Scope,
     iter : Int,
     pathCond : smt.Expr,
     expr : smt.Expr,
     decorators : List[ExprDecorator],
     pos : ASTPosition) {
+  def withNewFrameTable() : AssertInfo = {
+    AssertInfo(name, label, frameTable.clone(), context, iter, pathCond, expr, decorators, pos)
+  }
   override def toString = {
     label + " [Step #" + iter.toString + "] " + name + " @ " + pos.toString
   }
