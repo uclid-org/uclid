@@ -405,6 +405,9 @@ class PrintCexSpec extends FlatSpec {
   "test-bmc-1.ucl" should "print a one-step CEX" in {
     PrintCexSpec.checkPrintCex("test/test-bmc-1.ucl", 2)
   }
+  "test-bmc-3.ucl" should "print a one-step CEX" in {
+    PrintCexSpec.checkPrintCex("test/test-bmc-3.ucl", 4)
+  }
   "test-bmc-5.ucl" should "print a one-step CEX" in {
     PrintCexSpec.checkPrintCex("test/test-bmc-5.ucl", 6)
   }

@@ -52,14 +52,18 @@ object UniqueIdGenerator {
 }
 
 object SymbolicSimulator {
-  type SymbolTable = Map[Identifier, smt.Expr];
-  type FrameTable = ArrayBuffer[SymbolTable];
+  type SymbolTable = Map[Identifier, smt.Expr]
+  type FrameTable = ArrayBuffer[SymbolTable]
+  type SymbolHyperTable = Map[Identifier, Array[smt.Expr]]
+  type FrameHyperTable = Array[SymbolHyperTable]
   type SimulationTable = ArrayBuffer[FrameTable]
 }
 
 class SymbolicSimulator (module : Module) {
   type SymbolTable = SymbolicSimulator.SymbolTable
   type FrameTable = SymbolicSimulator.FrameTable
+  type SymbolHyperTable = SymbolicSimulator.SymbolHyperTable
+  type FrameHyperTable = SymbolicSimulator.FrameHyperTable
   type SimulationTable = SymbolicSimulator.SimulationTable
 
   val context = Scope.empty + module
@@ -72,7 +76,6 @@ class SymbolicSimulator (module : Module) {
   var assumes = new ListBuffer[smt.Expr]()
   var asserts = new ListBuffer[AssertInfo]()
   var hyper_asserts = new ListBuffer[AssertInfo]()
-
 
   var symbolTable : SymbolTable = Map.empty
   var frameList : FrameTable = ArrayBuffer.empty
@@ -97,7 +100,6 @@ class SymbolicSimulator (module : Module) {
   def newConstantSymbol(name: String, t: smt.Type) = {
     new smt.Symbol("const_" + name, t)
   }
-
   def resetState() {
     assertionTree.resetToInitial()
     symbolTable = Map.empty
@@ -106,6 +108,27 @@ class SymbolicSimulator (module : Module) {
   var proofResults : List[CheckResult] = List.empty
   def dumpResults(label: String, log : Logger) {
     log.debug("{} --> proofResults.size = {}", label, proofResults.size.toString)
+  }
+  def frameTableToHyperTable(frameTbl : FrameTable) : FrameHyperTable = {
+    frameTbl.map {
+      (symTbl) => { symTbl.map((sym) => (sym._1 -> Array(sym._2))) }
+    }.toArray
+  }
+  def simTableToHyperTable(simTbl : SimulationTable) : FrameHyperTable = {
+    Utils.assert(simTbl.size > 0, "Must have at least one array of frames")
+    val numFrames = simTbl(0).size
+    Utils.assert(simTbl.forall(frameTbl => frameTbl.size == numFrames), "Must have the same number of frames in each trace")
+    val numTraces = simTbl.size
+    (1 to numFrames).toArray.map {
+      (frameIndex) => {
+        val symTbl0 : SymbolTable = simTbl(0)(frameIndex)
+        val ids0 = symTbl0.map(id => id._1)
+        val ids = ids0.filter(id => simTbl.forall(frameTbl => frameTbl(frameIndex).contains(id)))
+        ids.map(
+            id => (id -> simTbl.map(frameTbl => frameTbl(frameIndex).get(id).get).toArray)
+        ).toMap[Identifier, Array[smt.Expr]]
+      }
+    }
   }
   def execute(solver : smt.Context, synthesizer : Option[smt.SynthesisContext], config : UclidMain.Config) : List[CheckResult] = {
     proofResults = List.empty
@@ -555,16 +578,21 @@ class SymbolicSimulator (module : Module) {
         sim_record += frames
       }
 
-      val asserts_init = rewriteAsserts(init_lambda._1, init_lambda._2, 0, prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), sim_record(0), havocTable(0))
+      val asserts_init = rewriteAsserts(
+          init_lambda._1, init_lambda._2, 0,
+          prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
+          sim_record(0), havocTable(0))
 
       asserts_init.foreach {
         assert =>
+          // FIXME: simTable
           addAssertToTree(assert)
       }
 
       val asserts_init_hyper = rewriteHyperAsserts(init_lambda._1, 0, init_lambda._4, sim_record, 1, scope, prevVarTable.toList)
       asserts_init_hyper.foreach {
         assert =>
+          // FIXME: simTable
           addAssertToTree(assert)
       }
 
@@ -587,6 +615,7 @@ class SymbolicSimulator (module : Module) {
             prevVarTable(j - 1) = new_vars
           }
           // Asserting on-HyperInvariant assertions
+          // FIXME: simTable
           val asserts_next = rewriteAsserts(
               next_lambda._1, next_lambda._2, i,
               getVarsInOrder(sim_record(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
@@ -595,6 +624,7 @@ class SymbolicSimulator (module : Module) {
             assert =>
               addAssertToTree(assert)
           }
+          // FIXME: simTable
           val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, numberOfSteps, next_lambda._4, sim_record, i, scope, prevVarTable.toList)
           asserts_next_hyper.foreach {
             assert =>
@@ -604,11 +634,16 @@ class SymbolicSimulator (module : Module) {
       symbolTable = symTabStep
   }
 
-  def rewriteHyperAsserts(lambda: smt.Lambda, stepIndex : Integer, hyperAsserts: List[AssertInfo], sim_record: SimulationTable, step: Int, scope: Scope, prevVarTable: List[List[List[smt.Expr]]]) = {
-    hyperAsserts.map(assert => rewriteHyperAssert(lambda, stepIndex, assert, sim_record, step, scope, prevVarTable))
+  def rewriteHyperAsserts(
+      lambda: smt.Lambda, stepIndex : Integer, hyperAsserts: List[AssertInfo], 
+      simTable: SimulationTable, step: Int, scope: Scope, prevVarTable: List[List[List[smt.Expr]]]) = {
+    hyperAsserts.map(assert => rewriteHyperAssert(lambda, stepIndex, assert, simTable, step, scope, prevVarTable))
   }
 
-  def rewriteHyperAssert(lambda: smt.Lambda, stepIndex : Integer, at: AssertInfo, simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
+  def rewriteHyperAssert(
+      lambda: smt.Lambda, stepIndex : Integer, at: AssertInfo, 
+      simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
+
       val hyper_selects = getHyperSelects(at.expr)
       val subs = hyper_selects.map {
         expr =>
@@ -636,6 +671,7 @@ class SymbolicSimulator (module : Module) {
               throw new Utils.RuntimeError("Should never get here.")
           }
       }
+      // FIXME: simTable
       val st = AssertInfo(at.name, at.label, at.frameTable, at.context, stepIndex,
                   at.pathCond, substitute(at.expr, subs), at.decorators, at.pos)
       st
@@ -719,16 +755,20 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def rewriteAsserts(lambda: smt.Lambda, asserts: List[AssertInfo], stepIndex : Integer, actual_vars: List[smt.Symbol], frameTable: FrameTable, havocsubs: List[(smt.Symbol, smt.Symbol)]): List[AssertInfo] = {
-    Utils.assert(lambda.ids.length == actual_vars.length, "Invalid arguments to rewriteAsserts")
-    val matches = lambda.ids.zip(actual_vars)
-    asserts.map(assert => rewriteAssert(assert, matches, stepIndex, frameTable, havocsubs))
+  def rewriteAsserts(
+      lambda: smt.Lambda, asserts: List[AssertInfo], stepIndex : Integer, 
+      actualVars: List[smt.Symbol], frameTable: FrameTable, 
+      havocSubs: List[(smt.Symbol, smt.Symbol)]): List[AssertInfo] = {
+
+    Utils.assert(lambda.ids.length == actualVars.length, "Invalid arguments to rewriteAsserts")
+    val matches = lambda.ids.zip(actualVars)
+    asserts.map(assert => rewriteAssert(assert, matches, stepIndex, frameTable, havocSubs))
   }
 
   def rewriteAssert(assert: AssertInfo, matches: List[(smt.Symbol, smt.Symbol)], stepIndex : Integer, frameTable: FrameTable, havocsubs: List[(smt.Symbol, smt.Symbol)]): AssertInfo = {
-    AssertInfo(assert.name, assert.label, frameTable.take(stepIndex+1), assert.context, stepIndex, substitute(substitute(assert.pathCond, matches), havocsubs),
+    Utils.assert(frameTable.size == stepIndex + 1, "Unexpected size of frameTable")
+    AssertInfo(assert.name, assert.label, frameTable.clone(), assert.context, stepIndex, substitute(substitute(assert.pathCond, matches), havocsubs),
         substitute(substitute(assert.expr, matches), havocsubs), assert.decorators, assert.pos)
-
   }
 
   def betaSubstitution(lambda: smt.Lambda, args: List[List[smt.Expr]]): smt.Expr = {
@@ -869,6 +909,7 @@ class SymbolicSimulator (module : Module) {
       val numPastFrames = frameList.size
       val pastTables = ((0 to (numPastFrames - 1)) zip frameList).map(p => ((numPastFrames - p._1) -> p._2)).toMap
       frameList += currentState
+      // FIXME: simTable
       addModuleAssumptions(currentState, frameList, numPastFrames, scope, addAssumptionToTree _)
       if (addAssertions) { addAsserts(step, currentState, frameList, label, scope, filter, addAssertToTree _)  }
       if (addAssertionsAsAssumes) { assumeAssertions(currentState, frameList, numPastFrames, scope, addAssumptionToTree _) }
@@ -1096,6 +1137,7 @@ class SymbolicSimulator (module : Module) {
         val expr = evaluate(e, finalState, ArrayBuffer(initProcState), 1, procScope)
         val assert = AssertInfo(name, label, frameTableP, procScope, 1, smt.BooleanLit(true), expr, List.empty, e.position)
         frameLog.debug("FrameTable: {}", assert.frameTable.toString())
+        // FIXME: need to store simtable here.
         assertionTree.addAssert(assert)
       }
     }
