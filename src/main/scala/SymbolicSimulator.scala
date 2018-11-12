@@ -675,7 +675,7 @@ class SymbolicSimulator (module : Module) {
           }
       }
       // FIXME: simTable
-      val st = AssertInfo(at.name, at.label, at.frameTable, at.context, stepIndex,
+      val st = AssertInfo(at.name, at.label, at.frameTable.clone(), at.context, stepIndex,
                   at.pathCond, substitute(at.expr, subs), at.decorators, at.pos)
       st
   }
@@ -771,7 +771,8 @@ class SymbolicSimulator (module : Module) {
   def rewriteAssert(
       assert: AssertInfo, matches: List[(smt.Symbol, smt.Symbol)], stepIndex : Integer, 
       simTable: SimulationTable, havocsubs: List[(smt.Symbol, smt.Symbol)]): AssertInfo = {
-    AssertInfo(assert.name, assert.label, simTable, assert.context, stepIndex, substitute(substitute(assert.pathCond, matches), havocsubs),
+    AssertInfo(assert.name, assert.label, simTable.clone(), 
+        assert.context, stepIndex, substitute(substitute(assert.pathCond, matches), havocsubs),
         substitute(substitute(assert.expr, matches), havocsubs), assert.decorators, assert.pos)
   }
 
@@ -1132,15 +1133,15 @@ class SymbolicSimulator (module : Module) {
     frameList += finalState
     logState(verifyProcedureLog, "finalState", finalState)
 
-    val simTable = ArrayBuffer(frameList)
+    val simTable = ArrayBuffer(frameList.clone())
     // add assertions.
     proc.ensures.foreach {
       e => {
         val name = "postcondition"
         val expr = evaluate(e, finalState, ArrayBuffer(initProcState), 1, procScope)
-        val assert = AssertInfo(name, label, simTable, procScope, 1, smt.BooleanLit(true), expr, List.empty, e.position)
+        val assert = AssertInfo(name, label, simTable.clone(), procScope, 1, smt.BooleanLit(true), expr, List.empty, e.position)
         frameLog.debug("FrameTable: {}", assert.frameTable.toString())
-        // FIXME: need to store simtable here.
+        // FIXME: need to store simTable here.
         assertionTree.addAssert(assert)
       }
     }
@@ -1413,7 +1414,7 @@ class SymbolicSimulator (module : Module) {
         }
         val assertExpr = evaluate(e,symbolTable, frameTable, frameNumber, scope)
         val assert = AssertInfo(
-                assertionName, label, simTable,
+                assertionName, label, simTable.clone(),
                 scope, frameNumber, pathCondExpr,
                 assertExpr, List.empty, s.position)
         assertLog.debug("Assertion: {}", e.toString)

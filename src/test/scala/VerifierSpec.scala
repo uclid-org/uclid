@@ -222,6 +222,9 @@ class ProcedureVerifSpec extends FlatSpec {
   "test-procedure-checker-8.ucl" should "verify all invariants successfully." in {
     VerifierSpec.expectedFails("./test/test-procedure-checker-8.ucl", 4)
   }
+  "test-procedure-postcondition-0.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-procedure-postcondition-0.ucl", 1)
+  }
   "test-procedure-postcondition-3.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-procedure-postcondition-3.ucl", 0)
   }
