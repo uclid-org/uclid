@@ -558,7 +558,7 @@ class SymbolicSimulator (module : Module) {
       val init_lambda = getInitLambda(false, true, false, scope, label, filter)
       val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
       val num_copies = getMaxHyperInvariant(scope)
-      val sim_record = new SimulationTable
+      val simRecord = new SimulationTable
       var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
       var havocTable = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
 
@@ -578,13 +578,13 @@ class SymbolicSimulator (module : Module) {
         havocTable += havoc_subs
         val init_conjunct = substitute(betaSubstitution(init_lambda._1, prevVars), havoc_subs)
         addAssumptionToTree(init_conjunct)
-        sim_record += frames
+        simRecord += frames
       }
 
       val asserts_init = rewriteAsserts(
           init_lambda._1, init_lambda._2, 0,
           prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
-          sim_record, havocTable(0))
+          simRecord, havocTable(0))
 
       asserts_init.foreach {
         assert =>
@@ -592,7 +592,7 @@ class SymbolicSimulator (module : Module) {
           addAssertToTree(assert)
       }
 
-      val asserts_init_hyper = rewriteHyperAsserts(init_lambda._1, 0, init_lambda._4, sim_record, 1, scope, prevVarTable.toList)
+      val asserts_init_hyper = rewriteHyperAsserts(init_lambda._1, 0, init_lambda._4, simRecord, 1, scope, prevVarTable.toList)
       asserts_init_hyper.foreach {
         assert =>
           // FIXME: simTable
@@ -603,7 +603,7 @@ class SymbolicSimulator (module : Module) {
       for (i <- 1 to numberOfSteps) {
           for (j <- 1 to num_copies) {
             symTabStep = newInputSymbols(getInitSymbolTable(scope), i + 1, scope)
-            sim_record(j - 1) += symTabStep
+            simRecord(j - 1) += symTabStep
             val new_vars = getVarsInOrder(symTabStep.map(_.swap), scope)
             val next_havocs = getHavocs(next_lambda._1.e)
             val havoc_subs = next_havocs.map {
@@ -621,14 +621,14 @@ class SymbolicSimulator (module : Module) {
           // FIXME: simTable
           val asserts_next = rewriteAsserts(
               next_lambda._1, next_lambda._2, i,
-              getVarsInOrder(sim_record(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
-              prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), sim_record, havocTable(0))
+              getVarsInOrder(simRecord(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
+              prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord, havocTable(0))
           asserts_next.foreach {
             assert =>
               addAssertToTree(assert)
           }
           // FIXME: simTable
-          val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, numberOfSteps, next_lambda._4, sim_record, i, scope, prevVarTable.toList)
+          val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, numberOfSteps, next_lambda._4, simRecord, i, scope, prevVarTable.toList)
           asserts_next_hyper.foreach {
             assert =>
               addAssertToTree(assert)
@@ -640,9 +640,17 @@ class SymbolicSimulator (module : Module) {
   def rewriteHyperAsserts(
       lambda: smt.Lambda, stepIndex : Integer, hyperAsserts: List[AssertInfo], 
       simTable: SimulationTable, step: Int, scope: Scope, prevVarTable: List[List[List[smt.Expr]]]) = {
-    hyperAsserts.map(assert => rewriteHyperAssert(lambda, stepIndex, assert, simTable, step, scope, prevVarTable))
+    hyperAsserts.map {
+      assert => {
+        rewriteHyperAssert(lambda, stepIndex, assert, simTable, step, scope, prevVarTable)
+      }
+    }
   }
 
+  def cloneSimRecord(simRecord : SimulationTable) : SimulationTable = {
+    simRecord.map(ft => ft.clone())
+  }
+  
   def rewriteHyperAssert(
       lambda: smt.Lambda, stepIndex : Integer, at: AssertInfo, 
       simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
@@ -675,7 +683,7 @@ class SymbolicSimulator (module : Module) {
           }
       }
       // FIXME: simTable
-      val st = AssertInfo(at.name, at.label, at.frameTable.clone(), at.context, stepIndex,
+      val st = AssertInfo(at.name, at.label, cloneSimRecord(simRecord), at.context, stepIndex,
                   at.pathCond, substitute(at.expr, subs), at.decorators, at.pos)
       st
   }
@@ -1013,6 +1021,20 @@ class SymbolicSimulator (module : Module) {
 
   def printSMT2(aTree : AssertionTree, label : Option[Identifier], solver : smt.Context) {
     throw new Utils.UnimplementedException("Implement print_smt2.")
+  }
+
+  def dumpSimTable(simTable : SimulationTable) {
+    simTable.foreach {
+      println("======================")
+      ft => ft.foreach {
+        println("----------------")
+        st => {
+          st.map {
+            v => println("%s -> %s".format(v._1.toString(), v._2.toString()))
+          }
+        }
+      }
+    }
   }
 
   def printFrame(simTable : SimulationTable, frameNumber : Int, m : smt.Model, exprs : List[(Expr, String)], scope : Scope) {
