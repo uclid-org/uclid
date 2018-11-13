@@ -67,7 +67,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
   }
 
   def getNextTaintLambda(nextLambda: smt.Lambda) = {
-    val supports = get_supports(nextLambda)
+    val supports = getSupports(nextLambda)
     UclidMain.println("The lambda " + nextLambda.toString)
     UclidMain.println("The support set " + supports)
     val nextVars = nextLambda.ids.takeRight(nextLambda.ids.length / 2)
@@ -103,7 +103,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     lambda
   }
 
-  def get_supports(lambda: smt.Lambda): Map[smt.Symbol, Set[smt.Symbol]] = {
+  def getSupports(lambda: smt.Lambda): Map[smt.Symbol, Set[smt.Symbol]] = {
     assert(lambda.ids.length % 2 == 0)
     if (lambda.e.isInstanceOf[smt.BooleanLit]) {
       val primed_vars = lambda.ids.takeRight(lambda.ids.length / 2) // Assuming prevs are followed by nexts
@@ -111,12 +111,12 @@ class LazySCSolver(simulator: SymbolicSimulator) {
       primed_vars.zip(non_primed_vars).map(p => p._1 -> Set(p._2)).toMap
     }
     else {
-      val primed_vars = lambda.ids.takeRight(lambda.ids.length / 2) // Assuming prevs are followed by nexts
-      val non_primed_vars = lambda.ids.take(lambda.ids.length / 2)
-      UclidMain.println("The primed_vars " + primed_vars.toString)
-      UclidMain.println("The non-primed vars " + non_primed_vars.toString)
+      val primedVars = lambda.ids.takeRight(lambda.ids.length / 2) // Assuming prevs are followed by nexts
+      val nonPrimedVars = lambda.ids.take(lambda.ids.length / 2)
+      UclidMain.println("The primed_vars " + primedVars.toString)
+      UclidMain.println("The non-primed vars " + nonPrimedVars.toString)
 
-      val matches = primed_vars.zip(non_primed_vars).map(p => p._1 -> p._2).toMap
+      val matches = primedVars.zip(nonPrimedVars).map(p => p._1 -> p._2).toMap
       val opapp = lambda.e.asInstanceOf[smt.OperatorApplication]
       val operator_apps = opapp.operands.filter(exp => exp.isInstanceOf[smt.OperatorApplication])
       val equalities = operator_apps.map(p => p.asInstanceOf[smt.OperatorApplication]).
@@ -136,9 +136,9 @@ class LazySCSolver(simulator: SymbolicSimulator) {
       //UclidMain.println("The var map " + var_map.toString)
       // Map from primed variables to their dependencies
       var dependency_map: Map[smt.Symbol, Set[smt.Symbol]] = Map.empty
-      primed_vars.foreach(p => get_dependencies(p))
+      primedVars.foreach(p => getDependencies(p))
 
-      def get_dependencies(v: smt.Symbol): Set[smt.Symbol] = {
+      def getDependencies(v: smt.Symbol): Set[smt.Symbol] = {
         val eq_exp = var_map.get(v) match {
           case Some(exp) => exp
           case None => {
@@ -146,16 +146,16 @@ class LazySCSolver(simulator: SymbolicSimulator) {
             return Set()
           }
         }
-        val vars = get_vars(eq_exp)
+        val vars = getVars(eq_exp)
         val dps = vars.map {
           sym =>
-            if (non_primed_vars.contains(sym)) {
+            if (nonPrimedVars.contains(sym)) {
               Set(sym)
             }
             else {
               val dep = dependency_map.get(sym) match {
                 case Some(deps) => deps
-                case None => get_dependencies(sym)
+                case None => getDependencies(sym)
               }
               dep
             }
@@ -168,7 +168,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     }
   }
 
-  def get_vars(e: smt.Expr): List[smt.Symbol] = {
+  def getVars(e: smt.Expr): List[smt.Symbol] = {
     e match {
       case smt.Symbol(id, symbolTyp) => List(e.asInstanceOf[smt.Symbol])
       case smt.IntLit(n) => List()
@@ -176,17 +176,17 @@ class LazySCSolver(simulator: SymbolicSimulator) {
       case smt.BitVectorLit(bv, w) => List()
       case smt.EnumLit(id, eTyp) => List()
       case smt.ConstArray(v, arrTyp) => List()
-      case smt.MakeTuple(args) => args.flatMap(e => get_vars(e))
+      case smt.MakeTuple(args) => args.flatMap(e => getVars(e))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
-        val args = opapp.operands.flatMap(exp => get_vars(exp))
+        val args = opapp.operands.flatMap(exp => getVars(exp))
         args
       //UclidMain.println("Crashing Here" + op.toString)
-      case smt.ArraySelectOperation(a,index) =>  get_vars(a) ++ index.flatMap(e => get_vars(e))
+      case smt.ArraySelectOperation(a,index) =>  getVars(a) ++ index.flatMap(e => getVars(e))
       case smt.ArrayStoreOperation(a,index,value) =>
-        get_vars(a) ++ index.flatMap(e => get_vars(e)) ++ get_vars(value)
+        getVars(a) ++ index.flatMap(e => getVars(e)) ++ getVars(value)
       case smt.FunctionApplication(f, args) =>
-        args.flatMap(arg => get_vars(arg))
+        args.flatMap(arg => getVars(arg))
       case _ =>
         throw new Utils.UnimplementedException("'" + e + "' is not yet supported.")
     }
