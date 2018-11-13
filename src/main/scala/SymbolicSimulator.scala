@@ -97,6 +97,9 @@ class SymbolicSimulator (module : Module) {
   def newConstantSymbol(name: String, t: smt.Type) = {
     new smt.Symbol("const_" + name, t)
   }
+  def newTaintSymbol(name: String, t: smt.Type) = {
+    new smt.Symbol("taint_" + UniqueIdGenerator.unique() + "_" + name, t)
+  }
 
   def resetState() {
     assertionTree.resetToInitial()
@@ -124,7 +127,7 @@ class SymbolicSimulator (module : Module) {
               case None    => "unroll"
             }
             // get_init_lambda(false, context, "some")
-            symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+            symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter, solver)
             //initialize(false, true, false, context, label, noLTLFilter)
             //symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
           case "bmc" =>
@@ -497,6 +500,7 @@ class SymbolicSimulator (module : Module) {
         throw new Utils.UnimplementedException("'" + e + "' is not yet supported.")
     }
   }
+
   def get_next_lambda(init_symTab: Map[Identifier, smt.Expr], addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
                       scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) =
   {
@@ -543,7 +547,7 @@ class SymbolicSimulator (module : Module) {
 
     val num_module_asserts = asserts.length - num_state_asserts
     //val reverse_end_map = currentState.map(_.swap)
-    val final_vars = getVarsInOrder(currentState.map(_.swap), scope)
+    val final_vars = getVarsInOrder(newInputSymbols(currentState, 0, scope).map(_.swap), scope)
     //UclidMain.println("Final Vars " + currentState.toString)
     // OutputVars are not replaced ?
     val conjunct = if (assumes.length > 1) smt.OperatorApplication(smt.ConjunctionOp, assumes.toList)
@@ -555,19 +559,25 @@ class SymbolicSimulator (module : Module) {
     //UclidMain.println("The assumptions")
     //UclidMain.println(assumes.toString)
     //UclidMain.println("The lambda: " + lambda.toString)
-    UclidMain.println("The supports: " + get_supports(lambda).toString)
+    //UclidMain.println("The supports: " + get_supports(lambda).toString)
     (lambda, asserts.toList, currentState,
       hyper_asserts.toList)
 
 
   }
 
+
+
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
-                              scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
+                              scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean),
+                              solver: smt.Context) = {
       // At this point symbolTable must have the initial symbols.
       resetState()
       val init_lambda = get_init_lambda(false, true, false, scope, "init_lambda", filter)
       val next_lambda = get_next_lambda(init_lambda._3, true, false, scope, "next_lambda", filter)
+      val s = new LazySCSolver(this)
+      s.getTaintInitLambda(init_lambda._1, scope, solver)
+      s.getNextTaintLambda(next_lambda._1)
       /*next_lambda._4.foreach {
         assert =>
           UclidMain.println("Next HyperAssert " + assert.expr.toString)
