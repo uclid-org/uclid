@@ -115,7 +115,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
  
     var output : String = ""
     val sortedArray : ListMap[String,String] = if (isNumeral) 
-        ListMap(array.toSeq.sortWith(_._1.toInt < _._1.toInt):_*) 
+        ListMap(array.toSeq.sortWith((x, y) => BigInt(x._1) < BigInt(y._1)):_*) 
         else ListMap(array.toSeq.sortBy(_._1):_*) 
     sortedArray.foreach{ case (k,v) => {
       if (!v.contentEquals(bottom)) {
@@ -271,7 +271,7 @@ class Z3Interface() extends Context {
   val getEnumLit = new Memo[(String, EnumType), z3.Expr]((p) => getEnumSort(p._2.members).getConst(p._2.fieldIndex(p._1)))
 
   /** Create a constant array literal. */
-  val getConstArrayLit = new Memo[(Literal, ArrayType), z3.Expr]({
+  val getConstArray = new Memo[(Expr, ArrayType), z3.Expr]({
     (p) => {
       val value = exprToZ3(p._1).asInstanceOf[z3.Expr]
       val sort = getArrayIndexSort(p._2.inTypes)
@@ -438,7 +438,7 @@ class Z3Interface() extends Context {
       case BitVectorLit(bv,w) => getBitVectorLit(bv, w)
       case BooleanLit(b) => getBoolLit(b)
       case EnumLit(e, typ) => getEnumLit(e, typ)
-      case ConstArrayLit(value, typ) => getConstArrayLit(value, typ)
+      case ConstArray(expr, typ) => getConstArray(expr, typ)
       case MakeTuple(args) =>
         val tupleSort = getTupleSort(args.map(_.typ))
         tupleSort.mkDecl().apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
@@ -465,7 +465,7 @@ class Z3Interface() extends Context {
   override def preassert(e: Expr) {}
 
   def writeToFile(p: String, s: String): Unit = {
-    val pw = new PrintWriter(new File(p))
+    val pw = new PrintWriter(new File(p.replace(" ", "_")))
     try pw.write(s) finally pw.close()
   }
 

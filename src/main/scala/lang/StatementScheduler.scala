@@ -153,6 +153,7 @@ object StatementScheduler {
       case OperatorApplication(_, es) => readSets(es)
       case ArraySelectOperation(e, index) => readSet(e) ++ readSets(index)
       case ArrayStoreOperation(e, index, value) => readSet(e) ++ readSets(index) ++ readSet(value)
+      case ConstArray(e, t) => readSet(e)
       case FuncApplication(e, args) => readSet(e) ++ readSets(args)
       case Lambda(ids, expr) => readSet(expr)
     }

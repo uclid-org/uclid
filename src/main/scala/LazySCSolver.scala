@@ -23,7 +23,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     val initSymTab2 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
     val prevVars1 = simulator.getVarsInOrder(initSymTab1.map(_.swap), scope)
     val prevVars2 = simulator.getVarsInOrder(initSymTab2.map(_.swap), scope)
-    val init_havocs = simulator.get_havocs(init_lambda.e)
+    val init_havocs = simulator.getHavocs(init_lambda.e)
     // Relies on the fact that getVarsInOrder returns variables in a particular order
     val taint_set = taint_vars.zip(prevVars1.flatten.zip(prevVars2.flatten))
 
@@ -41,8 +41,8 @@ class LazySCSolver(simulator: SymbolicSimulator) {
         (havoc, simulator.newHavocSymbol(name, havoc.typ))
     }
 
-    val init_conjunct1 = simulator.substitute(simulator.beta_substitution(init_lambda, prevVars1), havoc_subs1)
-    val init_conjunct2 = simulator.substitute(simulator.beta_substitution(init_lambda, prevVars2), havoc_subs2)
+    val init_conjunct1 = simulator.substitute(simulator.betaSubstitution(init_lambda, prevVars1), havoc_subs1)
+    val init_conjunct2 = simulator.substitute(simulator.betaSubstitution(init_lambda, prevVars2), havoc_subs2)
 
     val setTaints = taint_set.map {
       taint_var =>
@@ -175,7 +175,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
       case smt.BooleanLit(b) => List()
       case smt.BitVectorLit(bv, w) => List()
       case smt.EnumLit(id, eTyp) => List()
-      case smt.ConstArrayLit(v, arrTyp) => List()
+      case smt.ConstArray(v, arrTyp) => List()
       case smt.MakeTuple(args) => args.flatMap(e => get_vars(e))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op

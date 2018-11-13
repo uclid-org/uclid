@@ -1,0 +1,26 @@
+module main
+{
+  const n : integer;
+  var cnt : integer;
+  var arr : [integer]integer;
+
+  init {
+    assume (n > 0);
+    arr = const(n, [integer]integer);
+    cnt = n;
+  }
+
+  next {
+    arr' = arr[n -> arr[n] + 1];
+    cnt' = cnt + 1;
+  }
+
+  invariant eq: cnt == arr[n];
+  invariant ne: arr[n-1] != arr[n+1];
+
+  control {
+    unroll(5);
+    check;
+    print_results;
+  }
+}
