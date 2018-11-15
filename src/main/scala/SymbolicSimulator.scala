@@ -488,9 +488,9 @@ class SymbolicSimulator (module : Module) {
 
       val init_lambda = getInitLambda(false, true, false, scope, label, filter)
       val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
-      val s = new LazySCSolver(this)
-      s.getTaintInitLambda(init_lambda._1, scope, solver)
-      s.getNextTaintLambda(next_lambda._1)
+      // val s = new LazySCSolver(this)
+      // s.getTaintInitLambda(init_lambda._1, scope, solver)
+      // s.getNextTaintLambda(next_lambda._1)
 
       val num_copies = getMaxHyperInvariant(scope)
       val simRecord = new SimulationTable
@@ -1487,20 +1487,25 @@ class SymbolicSimulator (module : Module) {
 
   def substitute(e: Expr, id: Identifier, arg: Expr) : Expr = {
      e match {
+       case OperatorApplication(ArraySelect(inds), es) =>
+         val indsP = inds.map(ind => substitute(ind, id, arg))
+         val esP = es.map(e => substitute(e, id, arg))
+         OperatorApplication(ArraySelect(indsP), esP)
+       case OperatorApplication(ArrayUpdate(inds, value), es) =>
+         val indsP = inds.map(ind => substitute(ind, id, arg))
+         val esP = es.map(e => substitute(e, id, arg))
+         val valueP = substitute(value, id, arg)
+         OperatorApplication(ArrayUpdate(indsP, valueP), esP)
        case OperatorApplication(op,args) =>
-         return OperatorApplication(op, args.map(x => substitute(x, id, arg)))
-       case ArraySelectOperation(a,index) =>
-         return ArraySelectOperation(a, index.map(x => substitute(x, id, arg)))
-       case ArrayStoreOperation(a,index,value) =>
-         return ArrayStoreOperation(a, index.map(x => substitute(x, id, arg)), substitute(value, id, arg))
+         OperatorApplication(op, args.map(x => substitute(x, id, arg)))
        case FuncApplication(f,args) =>
-         return FuncApplication(substitute(f,id,arg), args.map(x => substitute(x,id,arg)))
+         FuncApplication(substitute(f,id,arg), args.map(x => substitute(x,id,arg)))
        case Lambda(idtypes, le) =>
          Utils.assert(idtypes.exists(x => x._1.name == id.name), "Lambda arguments of the same name")
-         return Lambda(idtypes, substitute(le, id, arg))
-       case IntLit(n) => return e
-       case BoolLit(b) => return e
-       case Identifier(i) => return (if (id.name == i) arg else e)
+         Lambda(idtypes, substitute(le, id, arg))
+       case IntLit(n) => e
+       case BoolLit(b) => e
+       case Identifier(i) => (if (id.name == i) arg else e)
        case _ => throw new Utils.UnimplementedException("Should not get here")
      }
   }

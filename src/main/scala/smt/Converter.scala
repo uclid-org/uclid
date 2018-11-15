@@ -228,15 +228,18 @@ object Converter {
              Utils.assert(argsInSMT.forall(_.typ.isBitVector), "Argument to bitvector concat must be a bitvector.")
              val width = argsInSMT.foldLeft(0)((acc, ai) => ai.typ.asInstanceOf[BitVectorType].width + acc)
              smt.OperatorApplication(smt.BVConcatOp(width), argsInSMT)
+           case lang.ArraySelect(index) =>
+             val arr = toSMT(args(0), scope, past)
+             smt.ArraySelectOperation(arr, toSMTs(index, scope, past))
+           case lang.ArrayUpdate(index, value) =>
+             val arr = toSMT(args(0), scope, past)
+             val data = toSMT(value, scope, past)
+             smt.ArrayStoreOperation(arr, toSMTs(index, scope, past), data)
            case _ =>
              val scopeWOpApp = scope + opapp
              val argsInSMT = toSMTs(args, scopeWOpApp, past)
              smt.OperatorApplication(opToSMT(op), argsInSMT)
          }
-       case lang.ArraySelectOperation(a,index) =>
-         smt.ArraySelectOperation(toSMT(a, scope, past), toSMTs(index, scope, past))
-       case lang.ArrayStoreOperation(a,index,value) =>
-         smt.ArrayStoreOperation(toSMT(a, scope, past), toSMTs(index, scope, past), toSMT(value, scope, past))
        case lang.FuncApplication(f,args) => f match {
          case lang.Identifier(id) =>
            smt.FunctionApplication(toSMT(f, scope, past), toSMTs(args, scope, past))
@@ -283,9 +286,9 @@ object Converter {
         val args = opapp.operands
         lang.OperatorApplication(smtToOp(op, args), toExprs(args))
       case smt.ArraySelectOperation(a,index) =>
-        lang.ArraySelectOperation(toExpr(a), toExprs(index))
+        lang.OperatorApplication(lang.ArraySelect(toExprs(index)), List(toExpr(a)))
       case smt.ArrayStoreOperation(a,index,value) =>
-        lang.ArrayStoreOperation(toExpr(a), toExprs(index), toExpr(value))
+        lang.OperatorApplication(lang.ArrayUpdate(toExprs(index), toExpr(value)), List(toExpr(a)))
       case smt.FunctionApplication(f, args) =>
         f match {
           case smt.Symbol(id, symbolTyp) =>

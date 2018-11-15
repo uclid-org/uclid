@@ -368,11 +368,25 @@ case class PolymorphicSelect(id : Identifier) extends Operator {
 }
 case class RecordSelect(id: Identifier) extends Operator {
   override def toString = "." + id
-  override def fixity = Operator.INFIX
+  override def fixity = Operator.POSTFIX
 }
 case class HyperSelect(i: Int) extends Operator {
   override def toString: String = "." + i.toString
-  override def fixity = Operator.INFIX
+  override def fixity = Operator.POSTFIX
+}
+case class ArraySelect(indices: List[Expr]) extends Operator {
+  override def toString = {
+    val indexStr = Utils.join(indices.map(_.toString()), ", ")
+    "[" + indexStr + "]"
+  }
+  override def fixity = Operator.POSTFIX
+}
+case class ArrayUpdate(indices: List[Expr], value: Expr) extends Operator {
+  override def toString: String = {
+    val indexStr = Utils.join(indices.map(_.toString()), ", ")
+    "[" + indexStr + " -> " + value.toString() + "]"
+  }
+  override def fixity = Operator.POSTFIX
 }
 case class SelectFromInstance(varId : Identifier) extends Operator {
   override def toString = "." + varId
@@ -477,14 +491,6 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
     }
   }
   override def isTemporal = op.isTemporal || operands.exists(_.isTemporal)
-}
-case class ArraySelectOperation(e: Expr, index: List[Expr]) extends Expr {
-  override def toString = e + "[" + index.tail.fold(index.head.toString)
-    { (acc,i) => acc + "," + i } + "]"
-}
-case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr {
-  override def toString = e + "[" + index.tail.fold(index.head.toString)
-    { (acc,i) => acc + "," + i } + "]" + " = " + value
 }
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class FuncApplication(e: Expr, args: List[Expr]) extends Expr {

@@ -77,14 +77,15 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
         true
       case rec : Tuple =>
         rec.values.forall(e => isStatelessExpr(e, context))
+      case OperatorApplication(ArraySelect(inds), args) =>
+        inds.forall(ind => isStatelessExpr(ind, context)) &&
+        args.forall(arg => isStatelessExpr(arg, context))
+      case OperatorApplication(ArrayUpdate(inds, value), args) =>
+        inds.forall(ind => isStatelessExpr(ind, context)) &&
+        args.forall(arg => isStatelessExpr(arg, context)) &&
+        isStatelessExpr(value, context)
       case opapp : OperatorApplication =>
         opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
-      case arrSel : ArraySelectOperation =>
-        isStatelessExpr(arrSel.e, context) && arrSel.index.forall(i => isStatelessExpr(i, context))
-      case arrUpd : ArrayStoreOperation =>
-        isStatelessExpr(arrUpd.e, context) &&
-        arrUpd.index.forall(i => isStatelessExpr(i, context)) &&
-        isStatelessExpr(arrUpd.value, context)
       case a : ConstArray =>
         isStatelessExpr(a.exp, context)
       case fapp : FuncApplication =>
@@ -129,18 +130,18 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
       case rec : Tuple =>
         val valuesP = rec.values.map(rewrite(_, context))
         Tuple(valuesP)
+      case OperatorApplication(ArraySelect(inds), es) =>
+        val indsP = inds.map(ind => rewrite(ind, context))
+        val esP = es.map(e => rewrite(e, context))
+        OperatorApplication(ArraySelect(indsP), esP)
+      case OperatorApplication(ArrayUpdate(inds, value), es) =>
+        val indsP = inds.map(ind => rewrite(ind, context))
+        val esP = es.map(e => rewrite(e, context))
+        val valueP = rewrite(value, context)
+        OperatorApplication(ArrayUpdate(indsP, valueP), esP)
       case opapp : OperatorApplication =>
         val operandsP = opapp.operands.map(arg => rewrite(arg, context + opapp.op))
         OperatorApplication(opapp.op, operandsP)
-      case arrSel : ArraySelectOperation =>
-        val eP = rewrite(arrSel.e, context)
-        val indicesP = arrSel.index.map(i => rewrite(i, context))
-        ArraySelectOperation(eP, indicesP)
-      case arrUpd : ArrayStoreOperation =>
-        val eP = rewrite(arrUpd.e, context)
-        val indicesP = arrUpd.index.map(i => rewrite(i, context))
-        val valueP = rewrite(arrUpd.value, context)
-        ArrayStoreOperation(eP, indicesP, valueP)
       case a : ConstArray =>
         val eP = rewrite(a.exp, context)
         ConstArray(eP, a.typ)

@@ -69,26 +69,15 @@ class TaintNextPass extends RewritePass {
       case ConstArray(l, typ) => None
       case StringLit(v) => None
       case Tuple(values) => None // Not handled
+      case OperatorApplication(ArraySelect(_), _) |
+           OperatorApplication(ArrayUpdate(_, _), _) =>
+             throw new Utils.UnimplementedException("TODO: Implement tainting for arrays.")
       case OperatorApplication(op, operands) => {
         var opers = operands.map(expr => generateTaintExpr(expr)).flatten
         if (opers.length > 1)
           Some(OperatorApplication(DisjunctionOp(), opers))
         else
           Some(opers(0))
-      }
-      case ArraySelectOperation(e, index) => {
-        var taint_exprs = (List(generateTaintExpr(e)) ++ index.map(expr => generateTaintExpr(expr))).flatten
-        if (taint_exprs.length > 1)
-          Some(OperatorApplication(DisjunctionOp(), taint_exprs))
-        else
-          Some(taint_exprs(0))
-      }
-      case ArrayStoreOperation(e, index, value) => {
-        var taint_exprs = (List(generateTaintExpr(e)) ++ index.map(expr => generateTaintExpr(expr))).flatten
-        if (taint_exprs.length > 1)
-          Some(OperatorApplication(DisjunctionOp(), taint_exprs))
-        else
-          Some(taint_exprs(0))
       }
       case FuncApplication(e, args) => None
       case Lambda(ids, e) => None

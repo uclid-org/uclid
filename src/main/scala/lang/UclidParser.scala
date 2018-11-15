@@ -219,12 +219,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val UnOp: Parser[String] = OpNot | OpMinus
     lazy val RecordSelectOp: Parser[Identifier] = positioned { ("." ~> Id) }
     lazy val HyperSelectOp: Parser[IntLit] = positioned { "." ~> Integer }
-    lazy val ArraySelectOp: Parser[List[Expr]] =
-      ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^
-      {case e ~ es => (e :: es) }
-    lazy val ArrayStoreOp: Parser[(List[Expr],Expr)] =
+    lazy val ArraySelectOp: Parser[ArraySelect] =
+      ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ {case e ~ es => ArraySelect(e :: es) }
+    lazy val ArrayStoreOp: Parser[ArrayUpdate] =
       ("[" ~> (Expr ~ rep("," ~> Expr) ~ ("->" ~> Expr)) <~ "]") ^^
-      {case e ~ es ~ r => (e :: es, r)}
+      {case e ~ es ~ r => ArrayUpdate(e :: es, r)}
     lazy val ConstBitVectorSlice: Parser[lang.ConstBitVectorSlice] =
       positioned { ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt) } }
     lazy val VarBitVectorSlice: Parser[lang.VarBitVectorSlice] =
@@ -290,8 +289,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     /** E13 = E14 (ExprList) | E14 */
     lazy val E13: PackratParser[Expr] = positioned {
-        E14 ~ ArraySelectOp ^^ { case e ~ m => ArraySelectOperation(e, m) } |
-        E14 ~ ArrayStoreOp ^^ { case e ~ m => ArrayStoreOperation(e, m._1, m._2) } |
+        E14 ~ ArraySelectOp ^^ { case e ~ op => OperatorApplication(op, List(e)) } |
+        E14 ~ ArrayStoreOp ^^ { case e ~ op => OperatorApplication(op, List(e)) } |
         E14 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |
         E14
     }
@@ -375,7 +374,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Lhs : PackratParser[lang.Lhs] = positioned {
       Id ~ VarBitVectorSlice ^^ { case id ~ slice => lang.LhsVarSliceSelect(id, slice) } |
-      Id ~ ArraySelectOp ^^ { case id ~ mapOp => lang.LhsArraySelect(id, mapOp) } |
+      Id ~ ArraySelectOp ^^ { case id ~ mapOp => lang.LhsArraySelect(id, mapOp.indices) } |
       Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { case id ~ rOp ~ rOps => lang.LhsRecordSelect(id, rOp::rOps) }  |
       Id <~ OpPrime ^^ { case id => LhsNextId(id) } |
       Id ^^ { case id => lang.LhsId(id) }
