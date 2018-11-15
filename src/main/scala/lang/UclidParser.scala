@@ -217,8 +217,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val RelOp: Parser[String] = OpGT | OpLT | OpEQ | OpNE | OpGE | OpLE
     lazy val UnOp: Parser[String] = OpNot | OpMinus
-    lazy val RecordSelectOp: Parser[Identifier] = positioned { ("." ~> Id) }
-    lazy val HyperSelectOp: Parser[IntLit] = positioned { "." ~> Integer }
+    lazy val RecordSelectOp: Parser[PolymorphicSelect] = positioned {
+      ("." ~> Id) ^^ { case id => PolymorphicSelect(id) }
+    }
+    lazy val HyperSelectOp: Parser[lang.HyperSelect] = positioned {
+      "." ~> Integer ^^ { case i => lang.HyperSelect(i.value.toInt) }
+    }
     lazy val ArraySelectOp: Parser[ArraySelect] =
       ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ {case e ~ es => ArraySelect(e :: es) }
     lazy val ArrayStoreOp: Parser[ArrayUpdate] =
@@ -287,25 +291,15 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         E13 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
         E13
     }
+    /** ExpressionSuffixes. */
+    lazy val ExprSuffix: PackratParser[Operator] = positioned {
+      ArraySelectOp | ArrayStoreOp | ExtractOp | RecordSelectOp | HyperSelectOp
+    }
     /** E13 = E14 (ExprList) | E14 */
     lazy val E13: PackratParser[Expr] = positioned {
-        E14 ~ ArraySelectOp ^^ { case e ~ op => OperatorApplication(op, List(e)) } |
-        E14 ~ ArrayStoreOp ^^ { case e ~ op => OperatorApplication(op, List(e)) } |
-        E14 ~ ExtractOp ^^ { case e ~ m => OperatorApplication(m, List(e)) } |
-        E14
-    }
-    lazy val E14: PackratParser[Expr] = positioned {
-        E15 ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ {
-          case e ~ r ~ rs =>
-            (r :: rs).foldLeft(e){
-              (acc, f) => OperatorApplication(PolymorphicSelect(f), List(acc))
-            }
-        } |
-        E15 ~ HyperSelectOp ^^ {
-          case e ~ i =>
-            OperatorApplication(HyperSelect(i.value.toInt), List(e))
-        } |
-        E15
+        E15 ~ rep(ExprSuffix) ^^ {
+          case e ~ es => es.foldLeft(e)((acc, op) => OperatorApplication(op, List(acc)))
+        }
     }
     lazy val ConstArray : PackratParser[lang.ConstArray] = positioned {
       KwConst ~ "(" ~> Expr ~ ("," ~> Type) <~ ")" ^^ {
@@ -375,7 +369,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Lhs : PackratParser[lang.Lhs] = positioned {
       Id ~ VarBitVectorSlice ^^ { case id ~ slice => lang.LhsVarSliceSelect(id, slice) } |
       Id ~ ArraySelectOp ^^ { case id ~ mapOp => lang.LhsArraySelect(id, mapOp.indices) } |
-      Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { case id ~ rOp ~ rOps => lang.LhsRecordSelect(id, rOp::rOps) }  |
+      Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ {
+        case id ~ rOp ~ rOps => lang.LhsRecordSelect(id, (rOp.id)::(rOps.map(_.id))) 
+      }  |
       Id <~ OpPrime ^^ { case id => LhsNextId(id) } |
       Id ^^ { case id => lang.LhsId(id) }
     }

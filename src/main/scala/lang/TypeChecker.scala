@@ -442,19 +442,25 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case recType : RecordType =>
               val typOption = recType.fieldType(field)
               checkTypeError(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in " + recType.toString(), opapp.pos, c.filename)
-              polyOpMap.put(opapp.op.astNodeId, RecordSelect(field))
+              val recordSelect = RecordSelect(field)
+              recordSelect.pos = opapp.op.pos
+              polyOpMap.put(opapp.op.astNodeId, recordSelect)
               typOption.get
             case tupType : TupleType =>
               val indexS = field.name.substring(1)
               checkTypeError(indexS.forall(Character.isDigit), "Tuple fields must be integers preceded by an underscore", opapp.pos, c.filename)
               val indexI = indexS.toInt
               checkTypeError(indexI >= 1 && indexI <= tupType.numFields, "Invalid tuple index: " + indexS, opapp.pos, c.filename)
-              polyOpMap.put(opapp.op.astNodeId, RecordSelect(field))
+              val recordSelect = RecordSelect(field)
+              recordSelect.pos = opapp.op.pos
+              polyOpMap.put(opapp.op.astNodeId, recordSelect)
               tupType.fieldTypes(indexI-1)
             case modT : ModuleType =>
               val fldT = modT.typeMap.get(field)
               checkTypeError(fldT.isDefined, "Unknown type for selection: %s".format(field.toString), field.pos, c.filename)
-              polyOpMap.put(opapp.op.astNodeId, SelectFromInstance(field))
+              val selectFromInstance = SelectFromInstance(field)
+              selectFromInstance.pos = opapp.op.pos
+              polyOpMap.put(opapp.op.astNodeId, selectFromInstance)
               fldT.get
             case _ =>
               checkTypeError(false, "Argument to select operator must be of type record or instance", opapp.pos, c.filename)
@@ -624,7 +630,6 @@ class PolymorphicTypeRewriterPass extends RewritePass {
     lazy val mappedOp = {
       val reifiedOp = typeCheckerPass.polyOpMap.get(op.astNodeId)
       Utils.assert(reifiedOp.isDefined, "No reified operator available for: " + op.toString)
-      assert (reifiedOp.get.pos == op.pos)
       reifiedOp
     }
     op match {

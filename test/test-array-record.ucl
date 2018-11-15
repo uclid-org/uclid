@@ -1,0 +1,21 @@
+module main
+{
+  type rec_0 = record {
+    a : integer
+  };
+  type rec_1 = record {
+    b : [integer]integer
+  };
+  type rec_2 = record {
+    c : [integer]rec_1
+  };
+
+  var d : [integer]rec_2;
+  var e : [integer]rec_0;
+
+  init {
+    assume ((((d[0]).c[0]).b[0]) == 1);
+    assume e[0].a == 10;
+  }
+}
+

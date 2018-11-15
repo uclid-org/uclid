@@ -1,0 +1,28 @@
+module main {
+
+    type rec_t = record {
+        b : boolean,
+        a : bv2
+    };
+
+    type arr_t = record {
+        a : [bv3]rec_t,
+        b : boolean
+    };
+
+    var one : [bv3]rec_t;
+    var two : boolean;
+    var three : arr_t;
+
+    next {
+        two' = (one[1bv3]).b || ((three.a)[2bv3]).b ||
+                one[1bv3].b  ||  three.a[2bv3].b;
+    }
+
+    control {
+        v = unroll(1);
+        check;
+        print_results;
+    }
+
+}
