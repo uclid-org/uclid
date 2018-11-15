@@ -1,8 +1,12 @@
 package uclid
 package lang
 
+import com.typesafe.scalalogging.Logger
+
 case class LazySCResult(e: smt.Expr, result: smt.SolverResult)
 class LazySCSolver(simulator: SymbolicSimulator) {
+  val log = Logger(classOf[LazySCSolver])
+  
   def checkExpr(solver: smt.Context, e: smt.Expr) = {
     solver.push()
     solver.assert(e)
@@ -46,33 +50,38 @@ class LazySCSolver(simulator: SymbolicSimulator) {
 
     val setTaints = taint_set.map {
       taint_var =>
-        UclidMain.println("taint_var = " + taint_var._1.toString)
-        UclidMain.println("The tuple = " + taint_var._2.toString)
+        log.debug("taint_var = " + taint_var._1.toString)
+        log.debug("The tuple = " + taint_var._2.toString)
         val equality = smt.OperatorApplication(smt.EqualityOp, List(taint_var._2._1, taint_var._2._2))
         val not_expr = smt.OperatorApplication(smt.NegationOp, List(equality))
         val query_expr = smt.OperatorApplication(smt.ConjunctionOp, List(init_conjunct1, init_conjunct2, not_expr))
-        UclidMain.println("The query expr " + query_expr.toString)
+        log.debug("The query expr " + query_expr.toString)
         checkExpr(solver, query_expr).result.result match {
-          case Some(true) => taint_var._1
-          case _ => smt.OperatorApplication(smt.NegationOp, List(taint_var._1))
+          case Some(true) =>
+            log.debug("equal")
+            taint_var._1
+          case _ =>
+            log.debug("unequal")
+            smt.OperatorApplication(smt.NegationOp, List(taint_var._1))
         }
     }
 
     val taint_conjunct = if (setTaints.length > 1) smt.OperatorApplication(smt.ConjunctionOp, setTaints)
     else if (setTaints.length == 0) smt.BooleanLit(true)
     else setTaints(0)
-    UclidMain.println(" --- Taint Conjunct --- " + taint_conjunct.toString)
-    smt.Lambda(taint_vars, taint_conjunct)
-
+    log.debug(" --- Taint Conjunct --- " + taint_conjunct.toString)
+    val lambda = smt.Lambda(taint_vars, taint_conjunct)
+    log.debug("Taint init lambda: " + lambda.toString())
+    lambda
   }
 
   def getNextTaintLambda(nextLambda: smt.Lambda) = {
     val supports = getSupports(nextLambda)
-    UclidMain.println("The lambda " + nextLambda.toString)
-    UclidMain.println("The support set " + supports)
+    log.debug("The lambda " + nextLambda.toString)
+    log.debug("The support set " + supports)
     val nextVars = nextLambda.ids.takeRight(nextLambda.ids.length / 2)
     val prevVars = nextLambda.ids.take(nextLambda.ids.length / 2)
-    UclidMain.println("The next vars " + nextVars.toString)
+    log.debug("The next vars " + nextVars.toString)
     //FIXME: Handle Arrays
     val m : Map[smt.Symbol, smt.Symbol] = Map.empty
     val nextVarMap = nextVars.foldLeft(m) {
@@ -98,7 +107,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     else lambdaConjuncts(0)
     val lambda = smt.Lambda(prevVars.map(p => prevVarMap(p)) ++ nextVars.map(p => nextVarMap(p)),
       conjunct)
-    UclidMain.println("Taint Next Lambda " + lambda.toString)
+    log.debug("Taint Next Lambda " + lambda.toString)
 
     lambda
   }
@@ -113,8 +122,8 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     else {
       val primedVars = lambda.ids.takeRight(lambda.ids.length / 2) // Assuming prevs are followed by nexts
       val nonPrimedVars = lambda.ids.take(lambda.ids.length / 2)
-      UclidMain.println("The primed_vars " + primedVars.toString)
-      UclidMain.println("The non-primed vars " + nonPrimedVars.toString)
+      log.debug("The primed_vars " + primedVars.toString)
+      log.debug("The non-primed vars " + nonPrimedVars.toString)
 
       val matches = primedVars.zip(nonPrimedVars).map(p => p._1 -> p._2).toMap
       val opapp = lambda.e.asInstanceOf[smt.OperatorApplication]

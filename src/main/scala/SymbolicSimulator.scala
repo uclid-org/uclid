@@ -488,9 +488,9 @@ class SymbolicSimulator (module : Module) {
 
       val init_lambda = getInitLambda(false, true, false, scope, label, filter)
       val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
-      // val s = new LazySCSolver(this)
-      // s.getTaintInitLambda(init_lambda._1, scope, solver)
-      // s.getNextTaintLambda(next_lambda._1)
+      val s = new LazySCSolver(this)
+      s.getTaintInitLambda(init_lambda._1, scope, solver)
+      s.getNextTaintLambda(next_lambda._1)
 
       val num_copies = getMaxHyperInvariant(scope)
       val simRecord = new SimulationTable
