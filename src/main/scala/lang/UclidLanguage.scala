@@ -1192,7 +1192,7 @@ case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) ext
 }
 
 
-case class AxiomDecl(id : Option[Identifier], expr: Expr) extends Decl {
+case class AxiomDecl(id : Option[Identifier], expr: Expr, params: List[ExprDecorator]) extends Decl {
   override val hashId = 918
   override def toString = {
     id match {

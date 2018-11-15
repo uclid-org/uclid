@@ -68,8 +68,8 @@ object Scope {
   case class FunctionArg(argId : Identifier, argTyp : Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class LambdaVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ForIndexVar(iId : Identifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
-  case class SpecVar(varId : Identifier, expr: Expr) extends ReadOnlyNamedExpression(varId, BooleanType())
-  case class AxiomVar(varId : Identifier, expr : Expr) extends ReadOnlyNamedExpression(varId, BooleanType())
+  case class SpecVar(varId : Identifier, expr: Expr, params: List[ExprDecorator]) extends ReadOnlyNamedExpression(varId, BooleanType())
+  case class AxiomVar(varId : Identifier, expr : Expr, params: List[ExprDecorator]) extends ReadOnlyNamedExpression(varId, BooleanType())
   case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends ReadOnlyNamedExpression(enumId, enumTyp)
   case class ProductField(fId : Identifier, fTyp: Type, recordType : ProductType) extends ReadOnlyNamedExpression(fId, fTyp)
   case class ForallVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
@@ -160,9 +160,12 @@ case class SpecEnvironment(decl: lang.SpecDecl) extends ExpressionEnvironment {
     ExprDecorator.isHyperproperty(decl.params)
   }
 }
-case object AxiomEnvironment extends ExpressionEnvironment {
+case class AxiomEnvironment(axiom: lang.AxiomDecl) extends ExpressionEnvironment {
   override def isModuleLevel = true
   override def isVerificationContext = true
+  override def inHyperproperty: Boolean = {
+    ExprDecorator.isHyperproperty(axiom.params)
+  }
 }
 
 case class Scope (
@@ -260,9 +263,9 @@ case class Scope (
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SynthesisFunctionDecl(id, sig, _, _, _) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ)) // FIXME
         case DefineDecl(id, sig, expr) => Scope.addToMap(mapAcc, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr)))
-        case SpecDecl(id, expr, _) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr))
-        case AxiomDecl(sId, expr) => sId match {
-          case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr))
+        case SpecDecl(id, expr, params) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr, params))
+        case AxiomDecl(sId, expr, params) => sId match {
+          case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr, params))
           case None => mapAcc
         }
         case ModuleTypesImportDecl(_) | InitDecl(_) | NextDecl(_) => mapAcc
@@ -298,7 +301,7 @@ case class Scope (
         case ConstantLitDecl(id, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
         case ConstantsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ModuleTypesImportDecl(_) | InstanceDecl(_, _, _, _, _) |
-             SpecDecl(_, _, _) | AxiomDecl(_, _) | 
+             SpecDecl(_, _, _) | AxiomDecl(_, _, _) | 
              InitDecl(_) | NextDecl(_) => mapAcc
       }
     }

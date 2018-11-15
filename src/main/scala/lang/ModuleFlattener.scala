@@ -269,7 +269,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   val newAxioms = newModule.axioms.map {
     ax => {
       val idP = ax.id.flatMap(axId => Some(NameProvider.get(axId.toString() + "_axiom")))
-      AxiomDecl(idP, ax.expr)
+      AxiomDecl(idP, ax.expr, ax.params)
     }
   }
   val newNextStatements = newModule.next match {

@@ -462,7 +462,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case Some(id) => visitIdentifier(id, result, context)
       case None => result
     }
-    result = visitExpr(axiom.expr, result, context.withEnvironment(AxiomEnvironment))
+    result = visitExpr(axiom.expr, result, context.withEnvironment(AxiomEnvironment(axiom)))
     result = pass.applyOnAxiom(TraversalDirection.Up, axiom, result, context)
     return result
   }
@@ -1279,8 +1279,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitAxiom(axiom : AxiomDecl, context : Scope) : Option[AxiomDecl] = {
     val idP = axiom.id.flatMap((id) => visitIdentifier(id, context))
-    val exprP = visitExpr(axiom.expr, context.withEnvironment(AxiomEnvironment))
-    val axiomP = exprP.flatMap((e) => pass.rewriteAxiom(AxiomDecl(idP, e), context))
+    val exprP = visitExpr(axiom.expr, context.withEnvironment(AxiomEnvironment(axiom)))
+    val decsP = axiom.params.map(visitExprDecorator(_, context)).flatten
+    val axiomP = exprP.flatMap((e) => pass.rewriteAxiom(AxiomDecl(idP, e, decsP), context))
     return ASTNode.introducePos(setPosition, setFilename, axiomP, axiom.position)
   }
   def visitTypeDecl(typDec : TypeDecl, context : Scope) : Option[TypeDecl] = {

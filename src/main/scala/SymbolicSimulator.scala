@@ -74,8 +74,9 @@ class SymbolicSimulator (module : Module) {
   val verifyProcedureLog = Logger("uclid.SymbolicSimulator.verifyProc")
 
   var assumes = new ListBuffer[smt.Expr]()
+  var hyperAssumes = new ListBuffer[smt.Expr]()
   var asserts = new ListBuffer[AssertInfo]()
-  var hyper_asserts = new ListBuffer[AssertInfo]()
+  var hyperAsserts = new ListBuffer[AssertInfo]()
 
   var symbolTable : SymbolTable = Map.empty
   var frameList : FrameTable = ArrayBuffer.empty
@@ -368,12 +369,16 @@ class SymbolicSimulator (module : Module) {
     })
   }
 
-  def addAssumesToList(e: smt.Expr) : Unit = {
-    assumes += e
+  def addAssumesToList(e: smt.Expr, params: List[ExprDecorator]) : Unit = {
+    if (ExprDecorator.isHyperproperty(params)) {
+      hyperAssumes += e
+    } else {
+      assumes += e
+    }
   }
 
   def addHyperAssertsToList(assert: AssertInfo) : Unit = {
-    hyper_asserts += assert
+    hyperAsserts += assert
   }
   def addAssertsToList(assert: AssertInfo) : Unit = {
     asserts += assert
@@ -382,7 +387,7 @@ class SymbolicSimulator (module : Module) {
   def clearAssumes() = {
     assumes.clear()
     asserts.clear()
-    hyper_asserts.clear()
+    hyperAsserts.clear()
   }
 
   def noHyperInvariantFilter(filter : ((Identifier, List[ExprDecorator]) => Boolean)) =  (n : Identifier, d : List[ExprDecorator]) => {
@@ -425,7 +430,7 @@ class SymbolicSimulator (module : Module) {
                       else new smt.BooleanLit(true)
 
     val lambda = smt.Lambda(getVarsInOrder(reverse_map, scope).flatten.map(p => p.asInstanceOf[smt.Symbol]), conjunction)
-    (lambda, asserts.toList, initSymbolTable, hyper_asserts.toList)
+    (lambda, asserts.toList, initSymbolTable, hyperAsserts.toList)
   }
 
   def getNextLambda(init_symTab: Map[Identifier, smt.Expr], addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
@@ -475,7 +480,7 @@ class SymbolicSimulator (module : Module) {
 
 
     (lambda, asserts.toList, currentState,
-      hyper_asserts.toList)
+      hyperAsserts.toList)
   }
 
 
@@ -512,7 +517,7 @@ class SymbolicSimulator (module : Module) {
         }
         havocTable += havoc_subs
         val init_conjunct = substitute(betaSubstitution(init_lambda._1, prevVars), havoc_subs)
-        addAssumptionToTree(init_conjunct)
+        addAssumptionToTree(init_conjunct, List.empty)
         simRecord += frames
       }
 
@@ -548,7 +553,7 @@ class SymbolicSimulator (module : Module) {
                 (havoc, newHavocSymbol(name, havoc.typ))
             }
             val next_conjunct = substitute(betaSubstitution(next_lambda._1, prevVarTable(j - 1) ++ new_vars), havoc_subs)
-            addAssumptionToTree(next_conjunct)
+            addAssumptionToTree(next_conjunct, List.empty)
             havocTable(j - 1) = havoc_subs
             prevVarTable(j - 1) = new_vars
           }
@@ -779,7 +784,7 @@ class SymbolicSimulator (module : Module) {
    * @param step The current frame number.
    * @param scope The current scope.
    */
-  def renameStates(st : SymbolTable, eqStates : Set[Identifier], frameNumber : Int, scope : Scope, addAssumption : (smt.Expr => Unit)) : SymbolTable = {
+  def renameStates(st : SymbolTable, eqStates : Set[Identifier], frameNumber : Int, scope : Scope, addAssumption : (smt.Expr, List[ExprDecorator]) => Unit) : SymbolTable = {
     val renamedExprs : Iterable[(Identifier, smt.Symbol, smt.Expr)] = scope.map.map(_._2).map {
       case Scope.StateVar(id, typ) =>
         if (!eqStates.contains(id)) {
@@ -793,12 +798,12 @@ class SymbolicSimulator (module : Module) {
       case _ => None
     }.flatten
     renamedExprs.foreach{ 
-      (p) => addAssumption(p._3)
+      (p) => addAssumption(p._3, List.empty)
     }
     renamedExprs.foldLeft(st)((acc, p) => acc + (p._1 -> p._2))
   }
 
-  def renameStatesLambda(st : SymbolTable, eqStates : Set[Identifier], frameNumber : Int, scope : Scope, addAssumption : (smt.Expr => Unit)) : SymbolTable = {
+  def renameStatesLambda(st : SymbolTable, eqStates : Set[Identifier], frameNumber : Int, scope : Scope, addAssumption : (smt.Expr, List[ExprDecorator])  => Unit) : SymbolTable = {
     val renamedExprs : Iterable[(Identifier, smt.Symbol, smt.Expr)] = scope.map.map(_._2).map {
       case Scope.StateVar(id, typ) =>
           val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
@@ -828,7 +833,8 @@ class SymbolicSimulator (module : Module) {
       case _ => None
     }.flatten
     renamedExprs.foreach{
-      (p) => addAssumption(p._3)
+      // FIXME: revisit(AssumptionDecorator)
+      (p) => addAssumption(p._3, List.empty)
     }
     renamedExprs.foldLeft(st)((acc, p) => acc + (p._1 -> p._2))
   }
@@ -1063,7 +1069,7 @@ class SymbolicSimulator (module : Module) {
     assertionTree.addAssert(prop)
   }
   /** Add assumption. */
-  def addAssumptionToTree(e : smt.Expr) {
+  def addAssumptionToTree(e : smt.Expr, params : List[ExprDecorator]) {
     assertionTree.addAssumption(e)
   }
 
@@ -1164,7 +1170,7 @@ class SymbolicSimulator (module : Module) {
 
   def createTransitionRelation(ctx : Scope, st : lang.Statement, x0 : SymbolTable, x1 : SymbolTable, label : String) : smt.Expr = {
     var assumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
-    def addAssumption(e : smt.Expr) : Unit = { assumptions += e }
+    def addAssumption(e : smt.Expr, params : List[ExprDecorator]) : Unit = { assumptions += e }
     var assertions  : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
     def addAssertion(e : AssertInfo) : Unit = { assertions += e }
 
@@ -1205,8 +1211,8 @@ class SymbolicSimulator (module : Module) {
     // assumptions.
     var initAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
     var nextAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
-    def initAddAssumption(e : smt.Expr) : Unit = { initAssumptions += e }
-    def nextAddAssumption(e : smt.Expr) : Unit = { nextAssumptions += e }
+    def initAddAssumption(e : smt.Expr, params : List[ExprDecorator]) : Unit = { initAssumptions += e }
+    def nextAddAssumption(e : smt.Expr, params : List[ExprDecorator]) : Unit = { nextAssumptions += e }
     // assertions.
     var initAssertions : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
     def initAddAssertion(e : AssertInfo) : Unit = { initAssertions += e }
@@ -1287,23 +1293,23 @@ class SymbolicSimulator (module : Module) {
   }
 
   /** Add module-level axioms/assumptions. */
-  def addModuleAssumptions(symbolTable : SymbolTable, frameTbl : FrameTable, frameNumber : Int, scope : Scope, addAssumption : (smt.Expr => Unit)) {
-    module.axioms.foreach(ax => addAssumption(evaluate(ax.expr, symbolTable, frameTbl, frameNumber, scope)))
+  def addModuleAssumptions(symbolTable : SymbolTable, frameTbl : FrameTable, frameNumber : Int, scope : Scope, addAssumption : (smt.Expr, List[ExprDecorator]) => Unit) {
+    module.axioms.foreach(ax => addAssumption(evaluate(ax.expr, symbolTable, frameTbl, frameNumber, scope), ax.params))
   }
 
   /** Assume assertions (for inductive proofs). */
-  def assumeAssertions(symbolTable : SymbolTable, frameTbl : FrameTable, frameNumber : Int, scope : Scope, addAssumption : (smt.Expr => Unit)) {
-    scope.specs.foreach(sp => addAssumption(evaluate(sp.expr, symbolTable, frameTbl, frameNumber, scope)))
+  def assumeAssertions(symbolTable : SymbolTable, frameTbl : FrameTable, frameNumber : Int, scope : Scope, addAssumption : (smt.Expr, List[ExprDecorator]) => Unit) {
+    scope.specs.foreach(sp => addAssumption(evaluate(sp.expr, symbolTable, frameTbl, frameNumber, scope), sp.params))
   }
 
   def simulateModuleNext(frameNumber : Int, symbolTable: SymbolTable, frameTable : FrameTable, scope : Scope, label : String,
-               addAssume : (smt.Expr => Unit), addAssert : (AssertInfo => Unit)) : SymbolTable = {
+               addAssume : (smt.Expr, List[ExprDecorator]) => Unit, addAssert : (AssertInfo => Unit)) : SymbolTable = {
     simulateStmt(frameNumber, List.empty, module.next.get.body, symbolTable, frameTable, scope, label, addAssume, addAssert)
   }
 
   def simulateStmt(frameNumber : Int, pathConditions: List[smt.Expr], s: Statement,
                symbolTable: SymbolTable, frameTable : FrameTable, scope : Scope, label : String,
-               addAssumption : (smt.Expr => Unit), addAssert : (AssertInfo => Unit)) : SymbolTable = {
+               addAssumption : (smt.Expr, List[ExprDecorator]) => Unit, addAssert : (AssertInfo => Unit)) : SymbolTable = {
 
     // Accumulate over a list of statements.
     def simulateStmtList(stmts: List[Statement], symbolTable: SymbolTable, scope : Scope) : SymbolTable = {
@@ -1394,7 +1400,7 @@ class SymbolicSimulator (module : Module) {
         } else {
           smt.OperatorApplication(smt.ImplicationOp, List(pathCondExpr, assumpExpr))
         }
-        addAssumption(effectiveExpr)
+        addAssumption(effectiveExpr, List.empty)
         return symbolTable
       case HavocStmt(h) =>
         h match {

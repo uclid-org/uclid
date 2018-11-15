@@ -87,7 +87,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
   def checkParamsAreProperties(cmd : GenericProofCommand, context : Scope, filename : Option[String]) {
     def idIsProperty(id : Identifier) : Boolean = {
       context.get(id) match {
-        case Some(Scope.SpecVar(_, _)) => true
+        case Some(Scope.SpecVar(_, _, _)) => true
         case _ => false
       }
     }

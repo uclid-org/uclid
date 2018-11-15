@@ -15,7 +15,7 @@
   <logger name="uclid.lang.ConstantLitRewriterPass" level="OFF"/>
   <logger name="uclid.lang.ExpressionTypeCheckerPass" level="OFF"/>
   <logger name="uclid.lang.InlineProcedurePass" level="OFF"/>
-  <logger name="uclid.lang.LazySCSolver" level="DEBUG"/>
+  <logger name="uclid.lang.LazySCSolver" level="OFF"/>
   <logger name="uclid.lang.LTLPropertyRewriterPass" level="OFF"/>
   <logger name="uclid.lang.ModuleFlattenerPass" level="OFF"/>
   <logger name="uclid.lang.ModuleInstanceCheckerPass" level="OFF"/>

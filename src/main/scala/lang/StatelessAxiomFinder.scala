@@ -58,8 +58,8 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
           case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _)             |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
                Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
-               Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _)            |
-               Scope.AxiomVar(_ , _)          | Scope.VerifResultVar(_, _)      |
+               Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
+               Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
                Scope.BlockVar(_, _)           | Scope.ProductField(_, _, _)     =>
              throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
         }
@@ -103,7 +103,7 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
                Scope.ModuleDefinition(_)      | Scope.Instance(_)               |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
                Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
-               Scope.SpecVar(_ , _)           | Scope.AxiomVar(_ , _)           |
+               Scope.SpecVar(_ , _, _)        | Scope.AxiomVar(_ , _, _)        |
                Scope.LambdaVar(_ , _)         | Scope.ForallVar(_, _)           |
                Scope.ExistsVar(_, _)          | Scope.EnumIdentifier(_, _)      |
                Scope.VerifResultVar(_, _)     | Scope.FunctionArg(_, _)         |
@@ -163,7 +163,7 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
         case None => ""
       }
       val nameP = Identifier("$axiom_" + moduleName.toString + name + "_" + in.size.toString)
-      val axiomP = AxiomDecl(Some(nameP), exprP)
+      val axiomP = AxiomDecl(Some(nameP), exprP, axiom.params)
       (moduleName, axiomP) :: in
     } else {
       in
