@@ -1279,7 +1279,7 @@ class SymbolicSimulator (module : Module) {
       val prop = module.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {
         val property = AssertInfo(
-            prop.name, label, simTbl, scope, frameNumber, smt.BooleanLit(true),
+            prop.name, label, simTbl.map(ft => ft.clone()), scope, frameNumber, smt.BooleanLit(true),
             evaluate(prop.expr, symbolTable, frameTbl, frameNumber, scope), prop.params, prop.expr.position)
         addAssert(property)
       }
