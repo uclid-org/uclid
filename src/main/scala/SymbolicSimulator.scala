@@ -159,9 +159,9 @@ class SymbolicSimulator (module : Module) {
               case None    => "unroll"
             }
             // get_init_lambda(false, context, "some")
-            symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter, solver)
-            //initialize(false, true, false, context, label, noLTLFilter)
-            //symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+            //symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter, solver)
+            initialize(false, true, false, context, label, noLTLFilter)
+            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
           case "bmc" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString()
