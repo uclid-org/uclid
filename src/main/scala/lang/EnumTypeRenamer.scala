@@ -160,7 +160,7 @@ class EnumTypeRenamerConsPass(logic : String) extends RewritePass {
       val lowerBound = OperatorApplication(BVLEOp(bvSize), List(BitVectorLit(minEnumVal, bvSize), vt._1))
       val upperBound = OperatorApplication(BVLEOp(bvSize), List(vt._1, BitVectorLit(maxEnumVal, bvSize)))
       val cons = OperatorApplication(ConjunctionOp(), List(lowerBound, upperBound))
-      AxiomDecl(Some(Identifier(vt._1.toString() + "_enum_cons")), cons)
+      AxiomDecl(Some(Identifier(vt._1.toString() + "_enum_cons")), cons, List.empty)
     }).toList
     val declsP : List[Decl] = module.decls ++ newAxioms
     val moduleP = Module(module.id, declsP, module.cmds, module.notes)
