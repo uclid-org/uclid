@@ -10,7 +10,7 @@ module main
       y' = y + 1;
     }
 
-    //hyperaxiom[2] x_eq: x.1 == x.2;
+    hyperaxiom[2] x_eq: x.1 == x.2;
     hyperinvariant[2] det_xy: y.1 == y.2;
 
     control {
