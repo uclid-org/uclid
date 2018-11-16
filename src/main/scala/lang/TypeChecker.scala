@@ -194,13 +194,13 @@ object ReplacePolymorphicOperators {
       case OperatorApplication(op, operands) =>
         val opP = op match {
           case p : PolymorphicOperator => toType(p, typ)
+          case ArraySelect(es) => ArraySelect(rs(es))
+          case ArrayUpdate(es, e) => ArrayUpdate(rs(es), r(e))
           case _ => op
         }
         OperatorApplication(opP, rs(operands))
-      case ArraySelectOperation(expr, indices) =>
-        ArraySelectOperation(r(expr), rs(indices))
-      case ArrayStoreOperation(expr, indices, value) =>
-        ArrayStoreOperation(r(expr), rs(indices), r(value))
+      case ConstArray(exp, typ) =>
+        ConstArray(r(exp), typ)
       case FuncApplication(expr, args) =>
         FuncApplication(r(expr), rs(args))
       case Lambda(args, expr) =>
@@ -442,19 +442,25 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case recType : RecordType =>
               val typOption = recType.fieldType(field)
               checkTypeError(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in " + recType.toString(), opapp.pos, c.filename)
-              polyOpMap.put(opapp.op.astNodeId, RecordSelect(field))
+              val recordSelect = RecordSelect(field)
+              recordSelect.pos = opapp.op.pos
+              polyOpMap.put(opapp.op.astNodeId, recordSelect)
               typOption.get
             case tupType : TupleType =>
               val indexS = field.name.substring(1)
               checkTypeError(indexS.forall(Character.isDigit), "Tuple fields must be integers preceded by an underscore", opapp.pos, c.filename)
               val indexI = indexS.toInt
               checkTypeError(indexI >= 1 && indexI <= tupType.numFields, "Invalid tuple index: " + indexS, opapp.pos, c.filename)
-              polyOpMap.put(opapp.op.astNodeId, RecordSelect(field))
+              val recordSelect = RecordSelect(field)
+              recordSelect.pos = opapp.op.pos
+              polyOpMap.put(opapp.op.astNodeId, recordSelect)
               tupType.fieldTypes(indexI-1)
             case modT : ModuleType =>
               val fldT = modT.typeMap.get(field)
               checkTypeError(fldT.isDefined, "Unknown type for selection: %s".format(field.toString), field.pos, c.filename)
-              polyOpMap.put(opapp.op.astNodeId, SelectFromInstance(field))
+              val selectFromInstance = SelectFromInstance(field)
+              selectFromInstance.pos = opapp.op.pos
+              polyOpMap.put(opapp.op.astNodeId, selectFromInstance)
               fldT.get
             case _ =>
               checkTypeError(false, "Argument to select operator must be of type record or instance", opapp.pos, c.filename)
@@ -480,6 +486,29 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case HyperSelect(k) =>
           Utils.assert(argTypes.size == 1, "Trace select operator must have one operand.")
           argTypes(0)
+        case ArraySelect(es) =>
+          Utils.assert(argTypes.size == 1, "Expected only one argument to array select operator")
+          checkTypeError(argTypes(0).isArray, "Expected an array here", opapp.operands(0).pos, c.filename)
+          val arrayType = argTypes(0).asInstanceOf[lang.ArrayType]
+          val arrayIndexTypes = arrayType.inTypes
+          checkTypeError(es.size == arrayIndexTypes.size, "Invalid number of indices", opapp.pos, c.filename)
+          (arrayIndexTypes zip es).find(p => p._1 != typeOf(p._2, c)) match {
+            case Some(p) => raiseTypeError("Invalid index type", p._2.pos, c.filename)
+            case None =>
+          }
+          arrayType.outType
+        case ArrayUpdate(es, e) =>
+          Utils.assert(argTypes.size == 1, "Expected only one argument to array update operator")
+          checkTypeError(argTypes(0).isArray, "Expected an array here", opapp.operands(0).pos, c.filename)
+          val arrayType = argTypes(0).asInstanceOf[lang.ArrayType]
+          val arrayIndexTypes = arrayType.inTypes
+          checkTypeError(es.size == arrayIndexTypes.size, "Invalid number of indices", opapp.pos, c.filename)
+          (arrayIndexTypes zip es).find(p => p._1 != typeOf(p._2, c)) match {
+            case Some(p) => raiseTypeError("Invalid index type", p._2.pos, c.filename)
+            case None =>
+          }
+          checkTypeError(typeOf(e, c) == arrayType.outType, "Invalid type of update value", e.pos, c.filename)
+          arrayType
         case SelectFromInstance(field) =>
           Utils.assert(argTypes.size == 1, "Select operator must have exactly one operand.")
           val inst= argTypes(0)
@@ -517,27 +546,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes.forall(t => t == argTypes(0)), "All arguments to distinct operator must be the same", opapp.pos, c.filename)
           BooleanType()
       }
-    }
-
-    def arraySelectType(arrSel : ArraySelectOperation) : Type = {
-      checkTypeError(typeOf(arrSel.e, c).isInstanceOf[ArrayType], "Type error in the array operand of select operation", arrSel.pos, c.filename)
-      val indTypes = arrSel.index.map(typeOf(_, c))
-      val arrayType = typeOf(arrSel.e, c).asInstanceOf[ArrayType]
-      lazy val message = "Array index type error. Expected: (" +
-                          Utils.join(arrayType.inTypes.map((t) => t.toString), ", ") + "). Got: (" +
-                          Utils.join(indTypes.map((t) => t.toString), ", ") + ")"
-      checkTypeError(arrayType.inTypes == indTypes, message, arrSel.pos, c.filename)
-      return arrayType.outType
-    }
-
-    def arrayStoreType(arrStore : ArrayStoreOperation) : Type = {
-      checkTypeError(typeOf(arrStore.e, c).isInstanceOf[ArrayType], "Type error in the array operand of store operation", arrStore.pos, c.filename)
-      val indTypes = arrStore.index.map(typeOf(_, c))
-      val valueType = typeOf(arrStore.value, c)
-      val arrayType = typeOf(arrStore.e, c).asInstanceOf[ArrayType]
-      checkTypeError(arrayType.inTypes == indTypes, "Array index type error", arrStore.pos, c.filename)
-      checkTypeError(arrayType.outType == valueType, "Array update value type error", arrStore.pos, c.filename)
-      return arrayType
     }
 
     def funcAppType(fapp : FuncApplication) : Type = {
@@ -580,11 +588,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case i : IntLit => IntegerType()
         case s : StringLit => StringType()
         case bv : BitVectorLit => BitVectorType(bv.width)
-        case a : ConstArrayLit =>
-          val valTyp = typeOf(a.value, c)
+        case a : ConstArray =>
+          val valTyp = typeOf(a.exp, c)
           a.typ match {
             case ArrayType(inTyps, outTyp) =>
-              checkTypeError(outTyp == valTyp, "Array type does not match literal type", a.value.pos, c.filename)
+              checkTypeError(outTyp == valTyp, "Array type does not match literal type", a.exp.pos, c.filename)
               a.typ
             case _ =>
               raiseTypeError("Expected an array type", a.typ.pos, c.filename)
@@ -592,8 +600,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           }
         case r : Tuple => new TupleType(r.values.map(typeOf(_, c)))
         case opapp : OperatorApplication => opAppType(opapp)
-        case arrSel : ArraySelectOperation => arraySelectType(arrSel)
-        case arrStore : ArrayStoreOperation => arrayStoreType(arrStore)
         case fapp : FuncApplication => funcAppType(fapp)
         case lambda : Lambda => lambdaType(lambda)
       }
@@ -624,7 +630,6 @@ class PolymorphicTypeRewriterPass extends RewritePass {
     lazy val mappedOp = {
       val reifiedOp = typeCheckerPass.polyOpMap.get(op.astNodeId)
       Utils.assert(reifiedOp.isDefined, "No reified operator available for: " + op.toString)
-      assert (reifiedOp.get.pos == op.pos)
       reifiedOp
     }
     op match {

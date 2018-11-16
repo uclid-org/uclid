@@ -150,13 +150,11 @@ trait ReadOnlyPass[T] {
   def applyOnNumericLit(d : TraversalDirection.T, b : NumericLit, in : T, context : Scope) : T = { in }
   def applyOnIntLit(d : TraversalDirection.T, i : IntLit, in : T, context : Scope) : T = { in }
   def applyOnBitVectorLit(d : TraversalDirection.T, bv : BitVectorLit, in : T, context : Scope) : T = { in }
-  def applyOnConstArrayLit(d : TraversalDirection.T, a : ConstArrayLit, in : T, context : Scope) : T = { in }
+  def applyOnConstArrayLit(d : TraversalDirection.T, a : ConstArray, in : T, context : Scope) : T = { in }
   def applyOnStringLit(d : TraversalDirection.T, string: StringLit, in : T, context : Scope) : T = { in }
   def applyOnTuple(d : TraversalDirection.T, rec : Tuple, in : T, context : Scope) : T = { in }
   def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = { in }
   def applyOnOperator(d : TraversalDirection.T, op : Operator, in : T, context : Scope) : T = { in }
-  def applyOnArraySelect(d : TraversalDirection.T, arrSel : ArraySelectOperation, in : T, context : Scope) : T = { in }
-  def applyOnArrayStore(d : TraversalDirection.T, arrStore : ArrayStoreOperation, in : T, context : Scope) : T = { in }
   def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : Scope) : T = { in }
   def applyOnLambda(d : TraversalDirection.T, lambda : Lambda, in : T, context : Scope) : T = { in }
   def applyOnExprDecorator(d : TraversalDirection.T, dec : ExprDecorator, in : T, context : Scope) : T = { in }
@@ -235,14 +233,12 @@ trait RewritePass {
   def rewriteBoolLit(b : BoolLit, ctx : Scope) : Option[BoolLit] = { Some(b) }
   def rewriteIntLit(i : IntLit, ctx : Scope) : Option[IntLit] = { Some(i) }
   def rewriteBitVectorLit(bv : BitVectorLit, ctx : Scope) : Option[BitVectorLit] = { Some(bv) }
-  def rewriteConstArrayLit(a : ConstArrayLit, ctx : Scope) : Option[ConstArrayLit] = { Some(a) }
+  def rewriteConstArrayLit(a : ConstArray, ctx : Scope) : Option[ConstArray] = { Some(a) }
   def rewriteNumericLit(n : NumericLit, ctx : Scope) : Option[NumericLit] = { Some(n) }
   def rewriteStringLit(s : StringLit, ctx : Scope) : Option[StringLit] = { Some(s) }
   def rewriteTuple(rec : Tuple, ctx : Scope) : Option[Tuple] = { Some(rec) }
   def rewriteOperatorApp(opapp : OperatorApplication, ctx : Scope) : Option[Expr] = { Some(opapp) }
   def rewriteOperator(op : Operator, ctx : Scope) : Option[Operator] = { Some(op) }
-  def rewriteArraySelect(arrSel : ArraySelectOperation, ctx : Scope) : Option[Expr] = { Some(arrSel) }
-  def rewriteArrayStore(arrStore : ArrayStoreOperation, ctx : Scope) : Option[Expr] = { Some(arrStore) }
   def rewriteFuncApp(fapp : FuncApplication, ctx : Scope) : Option[Expr] = { Some(fapp) }
   def rewriteLambda(lambda : Lambda, ctx : Scope) : Option[Lambda] = { Some(lambda) }
   def rewriteExprDecorator(dec : ExprDecorator, ctx : Scope) : Option[ExprDecorator] = { Some(dec) }
@@ -466,7 +462,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case Some(id) => visitIdentifier(id, result, context)
       case None => result
     }
-    result = visitExpr(axiom.expr, result, context.withEnvironment(AxiomEnvironment))
+    result = visitExpr(axiom.expr, result, context.withEnvironment(AxiomEnvironment(axiom)))
     result = pass.applyOnAxiom(TraversalDirection.Up, axiom, result, context)
     return result
   }
@@ -854,8 +850,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case lit : Literal => visitLiteral(lit, result, context)
       case rec : Tuple => visitTuple(rec, result, context)
       case opapp : OperatorApplication => visitOperatorApp(opapp, result, context)
-      case arrSel : ArraySelectOperation => visitArraySelectOp(arrSel, result, context)
-      case arrUpd : ArrayStoreOperation => visitArrayStoreOp(arrUpd, result, context)
+      case a : ConstArray => visitConstArray(a, result, context)
       case fapp : FuncApplication => visitFuncApp(fapp, result, context)
       case lambda : Lambda => visitLambda(lambda, result, context)
     }
@@ -882,7 +877,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case b : BoolLit => visitBoolLiteral(b, result, context)
       case s : StringLit => visitStringLiteral(s, result, context)
       case n : NumericLit => visitNumericLit(n, result, context)
-      case a : ConstArrayLit => visitConstArrayLit(a, result, context)
     }
     result = pass.applyOnLit(TraversalDirection.Up, lit, result, context)
     return result
@@ -931,10 +925,10 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnBitVectorLit(TraversalDirection.Up, bv, result, context)
     return result
   }
-  def visitConstArrayLit(a : ConstArrayLit, in : T, context : Scope) : T = {
+  def visitConstArray(a : ConstArray, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnConstArrayLit(TraversalDirection.Down, a, result, context)
-    result = visitLiteral(a.value, result, context)
+    result = visitExpr(a.exp, result, context)
     result = visitType(a.typ, result, context)
     result = pass.applyOnConstArrayLit(TraversalDirection.Up, a, result, context)
     return result
@@ -967,6 +961,10 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
         result = visitQuantifierArgs(args, result, quantifierCtx)
       case ExistsOp(args) =>
         result = visitQuantifierArgs(args, result, quantifierCtx)
+      case ArraySelect(inds) =>
+        result = inds.foldLeft(result)((acc, ind) => visitExpr(ind, acc, context))
+      case ArrayUpdate(inds, value) =>
+        result = inds.foldLeft(visitExpr(value, result, context))((acc, ind) => visitExpr(ind, acc, context))
       case _ =>
     }
     result = pass.applyOnOperator(TraversalDirection.Up, op, result, context)
@@ -980,23 +978,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
         accP2
       }
     }
-  }
-  def visitArraySelectOp(arrSel : ArraySelectOperation, in : T, context : Scope) : T = {
-    var result : T = in
-    result = pass.applyOnArraySelect(TraversalDirection.Down, arrSel, result, context)
-    result = visitExpr(arrSel.e, result, context)
-    result = arrSel.index.foldLeft(result)((acc, arg) => visitExpr(arg, acc, context))
-    result = pass.applyOnArraySelect(TraversalDirection.Up, arrSel, result, context)
-    return result
-  }
-  def visitArrayStoreOp(arrStore : ArrayStoreOperation, in : T, context : Scope) : T = {
-    var result : T = in
-    result = pass.applyOnArrayStore(TraversalDirection.Down, arrStore, result, context)
-    result = visitExpr(arrStore.e, result, context)
-    result = arrStore.index.foldLeft(result)((acc, arg) => visitExpr(arg, acc, context))
-    result = visitExpr(arrStore.value, result, context)
-    result = pass.applyOnArrayStore(TraversalDirection.Up, arrStore, result, context)
-    return result
   }
   def visitFuncApp(fapp : FuncApplication, in : T, context : Scope) : T = {
     var result : T = in
@@ -1298,8 +1279,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitAxiom(axiom : AxiomDecl, context : Scope) : Option[AxiomDecl] = {
     val idP = axiom.id.flatMap((id) => visitIdentifier(id, context))
-    val exprP = visitExpr(axiom.expr, context.withEnvironment(AxiomEnvironment))
-    val axiomP = exprP.flatMap((e) => pass.rewriteAxiom(AxiomDecl(idP, e), context))
+    val exprP = visitExpr(axiom.expr, context.withEnvironment(AxiomEnvironment(axiom)))
+    val decsP = axiom.params.map(visitExprDecorator(_, context)).flatten
+    val axiomP = exprP.flatMap((e) => pass.rewriteAxiom(AxiomDecl(idP, e, decsP), context))
     return ASTNode.introducePos(setPosition, setFilename, axiomP, axiom.position)
   }
   def visitTypeDecl(typDec : TypeDecl, context : Scope) : Option[TypeDecl] = {
@@ -1723,8 +1705,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case lit : Literal => visitLiteral(lit, context)
       case rec : Tuple => visitTuple(rec, context)
       case opapp : OperatorApplication => visitOperatorApp(opapp, context)
-      case arrSel : ArraySelectOperation => visitArraySelectOp(arrSel, context)
-      case arrUpd : ArrayStoreOperation => visitArrayStoreOp(arrUpd, context)
+      case a : ConstArray => visitConstArray(a, context)
       case fapp : FuncApplication => visitFuncApp(fapp, context)
       case lambda : Lambda => visitLambda(lambda, context)
     }).flatMap(pass.rewriteExpr(_, context))
@@ -1747,7 +1728,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case b : BoolLit => visitBoolLiteral(b, context)
       case s : StringLit => visitStringLiteral(s, context)
       case n : NumericLit => visitNumericLiteral(n, context)
-      case a : ConstArrayLit => visitConstArrayLiteral(a, context)
     }).flatMap{
       case l : Literal => pass.rewriteLit(l, context)
       case e : Expr => pass.rewriteExpr(e, context)
@@ -1768,14 +1748,14 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val sP = pass.rewriteStringLit(s, context)
     return ASTNode.introducePos(setPosition, setFilename, sP, s.position)
   }
-  def visitConstArrayLiteral(a : ConstArrayLit, context : Scope) : Option[ConstArrayLit] = {
-    val valueP = visitLiteral(a.value, context)
+  def visitConstArray(a : ConstArray, context : Scope) : Option[ConstArray] = {
+    val expP = visitExpr(a.exp, context)
     val typP = visitType(a.typ, context)
-    val aP2 = (valueP, typP) match {
+    val aP2 = (expP, typP) match {
       case (Some(vP), Some(tP)) =>
         vP match {
-          case lP : Literal =>
-            val aP1 = ConstArrayLit(lP, tP)
+          case eP : Expr =>
+            val aP1 = ConstArray(eP, tP)
             pass.rewriteConstArrayLit(aP1, context)
           case _ =>
             None
@@ -1850,29 +1830,19 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         Some(ForallOp(rewriteQuantifiedVars(args)))
       case ExistsOp(args) =>
         Some(ExistsOp(rewriteQuantifiedVars(args)))
+      case ArraySelect(inds) =>
+        val indsP = inds.map(ind => visitExpr(ind, context)).flatten
+        Some(ArraySelect(indsP))
+      case ArrayUpdate(inds, value) =>
+        val indsP = inds.map(ind => visitExpr(ind, context)).flatten
+        visitExpr(value, context) match {
+          case Some(vP) => Some(ArrayUpdate(indsP, vP))
+          case None => None
+        }
       case _ =>
         pass.rewriteOperator(op, context)
     }
     return ASTNode.introducePos(setPosition, setFilename, opP, op.position)
-  }
-
-  def visitArraySelectOp(arrSel : ArraySelectOperation, context : Scope) : Option[Expr] = {
-    val arrSelP = visitExpr(arrSel.e, context) match {
-      case Some(e) => pass.rewriteArraySelect(ArraySelectOperation(e, arrSel.index.map(visitExpr(_, context)).flatten), context)
-      case _ => None
-    }
-    return ASTNode.introducePos(setPosition, setFilename, arrSelP, arrSel.position)
-  }
-
-  def visitArrayStoreOp(arrStore : ArrayStoreOperation, context : Scope) : Option[Expr] = {
-    val eP = visitExpr(arrStore.e, context)
-    val ind = arrStore.index.map(visitExpr(_, context)).flatten
-    val valP = visitExpr(arrStore.value, context)
-    val arrStoreP = (eP, valP) match {
-      case (Some(e), Some(value)) => pass.rewriteArrayStore(ArrayStoreOperation(e, ind, value), context)
-      case _ => None
-    }
-    return ASTNode.introducePos(setPosition, setFilename, arrStoreP, arrStore.position)
   }
 
   def visitFuncApp(fapp : FuncApplication, context : Scope) : Option[Expr] = {

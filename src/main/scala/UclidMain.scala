@@ -189,11 +189,7 @@ object UclidMain {
     }
   }
 
-  /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
-  def compile(srcFiles : Seq[java.io.File], mainModuleName : Identifier, test : Boolean = false) : List[Module] = {
-    type NameCountMap = Map[Identifier, Int]
-    var nameCnt : NameCountMap = Map().withDefaultValue(0)
-
+  def createCompilePassManager(test: Boolean, mainModuleName: lang.Identifier) = {
     val passManager = new PassManager("compile")
     // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
     passManager.addPass(new ModuleCanonicalizer())
@@ -239,9 +235,13 @@ object UclidMain {
     passManager.addPass(new BlockFlattener())
     passManager.addPass(new ModuleCleaner(mainModuleName))
     passManager.addPass(new BlockVariableRenamer())
-    // passManager.addPass(new TaintModPass())
-    // passManager.addPass(new TaintNPass())
-    // passManager.addPass(new ASTPrinter())
+    passManager
+  }  
+  /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
+  def compile(srcFiles : Seq[java.io.File], mainModuleName : Identifier, test : Boolean = false): List[Module] = {
+    type NameCountMap = Map[Identifier, Int]
+    var nameCnt : NameCountMap = Map().withDefaultValue(0)
+    val passManager = createCompilePassManager(test, mainModuleName)
 
     val filenameAdderPass = new AddFilenameRewriter(None)
     // Helper function to parse a single file.
@@ -352,7 +352,7 @@ object UclidMain {
   def println(str : String) {
     if (stringOutputEnabled) {
       stringOutput ++= str
-      stringOutput ++ "\n"
+      stringOutput ++= "\n"
     } else {
       Console.println(str)
     }

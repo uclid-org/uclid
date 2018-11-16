@@ -150,9 +150,10 @@ object StatementScheduler {
       case lit : Literal => Set.empty
       case Tuple(values) => readSets(values)
       case OperatorApplication(GetNextValueOp(), List(id : Identifier)) => Set(id)
+      case OperatorApplication(ArraySelect(inds), exps) => readSets(inds) ++ readSets(exps)
+      case OperatorApplication(ArrayUpdate(inds, exp), exps) => readSets(inds) ++ readSet(exp) ++ readSets(exps)
       case OperatorApplication(_, es) => readSets(es)
-      case ArraySelectOperation(e, index) => readSet(e) ++ readSets(index)
-      case ArrayStoreOperation(e, index, value) => readSet(e) ++ readSets(index) ++ readSet(value)
+      case ConstArray(e, t) => readSet(e)
       case FuncApplication(e, args) => readSet(e) ++ readSets(args)
       case Lambda(ids, expr) => readSet(expr)
     }
@@ -205,9 +206,9 @@ object StatementScheduler {
       case lit : Literal => Set.empty
       case Tuple(values) => primeReadSets(values)
       case OperatorApplication(GetNextValueOp(), List(id : Identifier)) => Set(id)
+      case OperatorApplication(ArraySelect(inds), exps) => primeReadSets(inds) ++ primeReadSets(exps)
+      case OperatorApplication(ArrayUpdate(inds, exp), exps) => primeReadSets(inds) ++ primeReadSet(exp) ++ primeReadSets(exps)
       case OperatorApplication(_, es) => primeReadSets(es)
-      case ArraySelectOperation(e, index) => primeReadSet(e) ++ primeReadSets(index)
-      case ArrayStoreOperation(e, index, value) => primeReadSet(e) ++ primeReadSets(index) ++ primeReadSet(value)
       case FuncApplication(e, args) => primeReadSet(e) ++ primeReadSets(args)
       case Lambda(ids, expr) => primeReadSet(expr)
     }

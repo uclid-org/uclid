@@ -1,0 +1,20 @@
+module main
+{
+  var a : [integer]integer;
+  var i : integer;
+
+  init {
+    i = 0;
+  }
+  next {
+    a' = a[i -> i];
+    i' = i + 1;
+  }
+  invariant eq_i: forall (j : integer) :: (j >= 0 && j < i) ==> a[j] == j;
+  control {
+    v = induction(1);
+    check;
+    print_results;
+    v.print_cex(a, i);
+  }
+}

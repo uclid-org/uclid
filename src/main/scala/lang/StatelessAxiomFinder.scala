@@ -58,8 +58,8 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
           case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _)             |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
                Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
-               Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _)            |
-               Scope.AxiomVar(_ , _)          | Scope.VerifResultVar(_, _)      |
+               Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
+               Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
                Scope.BlockVar(_, _)           | Scope.ProductField(_, _, _)     =>
              throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
         }
@@ -77,14 +77,17 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
         true
       case rec : Tuple =>
         rec.values.forall(e => isStatelessExpr(e, context))
+      case OperatorApplication(ArraySelect(inds), args) =>
+        inds.forall(ind => isStatelessExpr(ind, context)) &&
+        args.forall(arg => isStatelessExpr(arg, context))
+      case OperatorApplication(ArrayUpdate(inds, value), args) =>
+        inds.forall(ind => isStatelessExpr(ind, context)) &&
+        args.forall(arg => isStatelessExpr(arg, context)) &&
+        isStatelessExpr(value, context)
       case opapp : OperatorApplication =>
         opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
-      case arrSel : ArraySelectOperation =>
-        isStatelessExpr(arrSel.e, context) && arrSel.index.forall(i => isStatelessExpr(i, context))
-      case arrUpd : ArrayStoreOperation =>
-        isStatelessExpr(arrUpd.e, context) &&
-        arrUpd.index.forall(i => isStatelessExpr(i, context)) &&
-        isStatelessExpr(arrUpd.value, context)
+      case a : ConstArray =>
+        isStatelessExpr(a.exp, context)
       case fapp : FuncApplication =>
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
       case lambda : Lambda =>
@@ -100,7 +103,7 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
                Scope.ModuleDefinition(_)      | Scope.Instance(_)               |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
                Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
-               Scope.SpecVar(_ , _)           | Scope.AxiomVar(_ , _)           |
+               Scope.SpecVar(_ , _, _)        | Scope.AxiomVar(_ , _, _)        |
                Scope.LambdaVar(_ , _)         | Scope.ForallVar(_, _)           |
                Scope.ExistsVar(_, _)          | Scope.EnumIdentifier(_, _)      |
                Scope.VerifResultVar(_, _)     | Scope.FunctionArg(_, _)         |
@@ -127,18 +130,21 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
       case rec : Tuple =>
         val valuesP = rec.values.map(rewrite(_, context))
         Tuple(valuesP)
+      case OperatorApplication(ArraySelect(inds), es) =>
+        val indsP = inds.map(ind => rewrite(ind, context))
+        val esP = es.map(e => rewrite(e, context))
+        OperatorApplication(ArraySelect(indsP), esP)
+      case OperatorApplication(ArrayUpdate(inds, value), es) =>
+        val indsP = inds.map(ind => rewrite(ind, context))
+        val esP = es.map(e => rewrite(e, context))
+        val valueP = rewrite(value, context)
+        OperatorApplication(ArrayUpdate(indsP, valueP), esP)
       case opapp : OperatorApplication =>
         val operandsP = opapp.operands.map(arg => rewrite(arg, context + opapp.op))
         OperatorApplication(opapp.op, operandsP)
-      case arrSel : ArraySelectOperation =>
-        val eP = rewrite(arrSel.e, context)
-        val indicesP = arrSel.index.map(i => rewrite(i, context))
-        ArraySelectOperation(eP, indicesP)
-      case arrUpd : ArrayStoreOperation =>
-        val eP = rewrite(arrUpd.e, context)
-        val indicesP = arrUpd.index.map(i => rewrite(i, context))
-        val valueP = rewrite(arrUpd.value, context)
-        ArrayStoreOperation(eP, indicesP, valueP)
+      case a : ConstArray =>
+        val eP = rewrite(a.exp, context)
+        ConstArray(eP, a.typ)
       case fapp : FuncApplication =>
         val eP = rewrite(fapp.e, context)
         val argsP = fapp.args.map(rewrite(_, context))
@@ -157,7 +163,7 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
         case None => ""
       }
       val nameP = Identifier("$axiom_" + moduleName.toString + name + "_" + in.size.toString)
-      val axiomP = AxiomDecl(Some(nameP), exprP)
+      val axiomP = AxiomDecl(Some(nameP), exprP, axiom.params)
       (moduleName, axiomP) :: in
     } else {
       in

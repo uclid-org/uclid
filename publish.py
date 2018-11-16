@@ -15,6 +15,7 @@ FILES = [
 
 DIRECTORIES = [
     "examples",
+    "emacs",
     "lib",
     "project",
     "src",

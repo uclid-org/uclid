@@ -144,6 +144,7 @@ object Converter {
       case lang.ForallOp(vs) => return smt.ForallOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
       case lang.ExistsOp(vs) => return smt.ExistsOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
       case lang.ITEOp() => return smt.ITEOp
+      case lang.HyperSelect(i) => return smt.HyperSelectOp(i)
       // Polymorphic operators are not allowed.
       case p : lang.PolymorphicOperator =>
         throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")
@@ -206,8 +207,8 @@ object Converter {
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
-       case lang.ConstArrayLit(value, arrTyp) =>
-         smt.ConstArrayLit(toSMT(value, scope, past).asInstanceOf[smt.Literal], typeToSMT(arrTyp).asInstanceOf[ArrayType])
+       case lang.ConstArray(value, arrTyp) =>
+         smt.ConstArray(toSMT(value, scope, past), typeToSMT(arrTyp).asInstanceOf[ArrayType])
        case lang.StringLit(_) => throw new Utils.RuntimeError("Strings are not supported in smt.Converter")
        case lang.Tuple(args) => smt.MakeTuple(toSMTs(args, scope, past))
        case opapp : lang.OperatorApplication =>
@@ -227,15 +228,18 @@ object Converter {
              Utils.assert(argsInSMT.forall(_.typ.isBitVector), "Argument to bitvector concat must be a bitvector.")
              val width = argsInSMT.foldLeft(0)((acc, ai) => ai.typ.asInstanceOf[BitVectorType].width + acc)
              smt.OperatorApplication(smt.BVConcatOp(width), argsInSMT)
+           case lang.ArraySelect(index) =>
+             val arr = toSMT(args(0), scope, past)
+             smt.ArraySelectOperation(arr, toSMTs(index, scope, past))
+           case lang.ArrayUpdate(index, value) =>
+             val arr = toSMT(args(0), scope, past)
+             val data = toSMT(value, scope, past)
+             smt.ArrayStoreOperation(arr, toSMTs(index, scope, past), data)
            case _ =>
              val scopeWOpApp = scope + opapp
              val argsInSMT = toSMTs(args, scopeWOpApp, past)
              smt.OperatorApplication(opToSMT(op), argsInSMT)
          }
-       case lang.ArraySelectOperation(a,index) =>
-         smt.ArraySelectOperation(toSMT(a, scope, past), toSMTs(index, scope, past))
-       case lang.ArrayStoreOperation(a,index,value) =>
-         smt.ArrayStoreOperation(toSMT(a, scope, past), toSMTs(index, scope, past), toSMT(value, scope, past))
        case lang.FuncApplication(f,args) => f match {
          case lang.Identifier(id) =>
            smt.FunctionApplication(toSMT(f, scope, past), toSMTs(args, scope, past))
@@ -282,9 +286,9 @@ object Converter {
         val args = opapp.operands
         lang.OperatorApplication(smtToOp(op, args), toExprs(args))
       case smt.ArraySelectOperation(a,index) =>
-        lang.ArraySelectOperation(toExpr(a), toExprs(index))
+        lang.OperatorApplication(lang.ArraySelect(toExprs(index)), List(toExpr(a)))
       case smt.ArrayStoreOperation(a,index,value) =>
-        lang.ArrayStoreOperation(toExpr(a), toExprs(index), toExpr(value))
+        lang.OperatorApplication(lang.ArrayUpdate(toExprs(index), toExpr(value)), List(toExpr(a)))
       case smt.FunctionApplication(f, args) =>
         f match {
           case smt.Symbol(id, symbolTyp) =>
