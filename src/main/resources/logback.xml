@@ -8,6 +8,7 @@
     </encoder>
   </appender>
 
+  <logger name="uclid.AssertionTree" level="OFF"/>
   <logger name="uclid.UclidMain" level="OFF"/>
   <logger name="uclid.InteractiveProcess" level="OFF"/>
   <logger name="uclid.lang.ASTRewriter" level="OFF"/>
