@@ -40,7 +40,7 @@
 package uclid
 
 import uclid.lang._
-
+import com.typesafe.scalalogging.Logger
 import scala.collection.mutable.ListBuffer
 
 case class AssertInfo(
@@ -63,6 +63,7 @@ case class AssertInfo(
 case class CheckResult(assert : AssertInfo, result : smt.SolverResult)
 
 class AssertionTree {
+  val log = Logger(classOf[AssertionTree])
   class TreeNode(p : Option[TreeNode], assumps : List[smt.Expr]) {
     var parent : Option[TreeNode] = p // Root does not have a parent, so parent = None for root and Some(p) for all other nodes.
     var children : ListBuffer[TreeNode] = ListBuffer.empty
@@ -91,6 +92,12 @@ class AssertionTree {
   }
 
   def addAssert(assert: AssertInfo) {
+    log.debug("assert: {}; iter: {}; size: {}",
+        assert.expr.toString(), assert.iter, SymbolicSimulator.simRecordLength(assert.frameTable))
+    log.debug("frameTable: {}", assert.frameTable.toString())
+    Utils.assert(
+        assert.iter + 1 <= SymbolicSimulator.simRecordLength(assert.frameTable),
+        "Invalid length/step combination")
     currentNode += assert
   }
 

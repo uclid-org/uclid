@@ -57,6 +57,12 @@ object SymbolicSimulator {
   type SymbolHyperTable = Map[Identifier, Array[smt.Expr]]
   type FrameHyperTable = Array[SymbolHyperTable]
   type SimulationTable = ArrayBuffer[FrameTable]
+  def simRecordLength(simRecord : SimulationTable) : Int = {
+    Utils.assert(simRecord.size > 0, "Invalid length")
+    val sz = simRecord(0).size
+    Utils.assert(simRecord.forall(ft => ft.size == sz), "Invalid lengths")
+    sz
+  }
 }
 
 class SymbolicSimulator (module : Module) {
@@ -534,7 +540,7 @@ class SymbolicSimulator (module : Module) {
       val asserts_init = rewriteAsserts(
           init_lambda._1, init_lambda._2, 0,
           prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
-          simRecord, havocTable(0))
+          simRecord.clone(), havocTable(0))
 
       asserts_init.foreach {
         assert =>
@@ -542,7 +548,8 @@ class SymbolicSimulator (module : Module) {
           addAssertToTree(assert)
       }
 
-      val asserts_init_hyper = rewriteHyperAsserts(init_lambda._1, 0, init_lambda._4, simRecord, 1, scope, prevVarTable.toList)
+      val asserts_init_hyper = rewriteHyperAsserts(
+          init_lambda._1, 0, init_lambda._4, simRecord, 0, scope, prevVarTable.toList)
       asserts_init_hyper.foreach {
         assert =>
           // FIXME: simTable
@@ -572,16 +579,18 @@ class SymbolicSimulator (module : Module) {
           val asserts_next = rewriteAsserts(
               next_lambda._1, next_lambda._2, i,
               getVarsInOrder(simRecord(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
-              prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord, havocTable(0))
+              prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord.clone(), havocTable(0))
           asserts_next.foreach {
             assert =>
               addAssertToTree(assert)
           }
           // FIXME: simTable
+          defaultLog.debug("i: {}", i)
           val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, numberOfSteps, next_lambda._4, simRecord, i, scope, prevVarTable.toList)
           asserts_next_hyper.foreach {
-            assert =>
+            assert => {
               addAssertToTree(assert)
+            }
           }
       }
       symbolTable = symTabStep
@@ -592,15 +601,17 @@ class SymbolicSimulator (module : Module) {
       simTable: SimulationTable, step: Int, scope: Scope, prevVarTable: List[List[List[smt.Expr]]]) = {
     hyperAsserts.map {
       assert => {
+        defaultLog.debug("step: {}", step)
         rewriteHyperAssert(lambda, stepIndex, assert, simTable, step, scope, prevVarTable)
       }
     }
   }
 
   def cloneSimRecord(simRecord : SimulationTable) : SimulationTable = {
-    simRecord.map(ft => ft.clone())
+    simRecord.map(ft => ft.clone()).clone()
   }
-  
+  def simRecordLength(simRecord : SimulationTable) : Int = SymbolicSimulator.simRecordLength(simRecord)
+
   def rewriteHyperAssert(
       lambda: smt.Lambda, stepIndex : Integer, at: AssertInfo, 
       simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
@@ -613,7 +624,7 @@ class SymbolicSimulator (module : Module) {
           op match {
             case smt.HyperSelectOp(i) =>
               if (stepIndex > 0) {
-                val actual_params = getVarsInOrder(simRecord(i - 1)(step - 1).map(_.swap), scope).flatten ++ prevVars(i - 1).flatten
+                val actual_params = getVarsInOrder(simRecord(i - 1)(step).map(_.swap), scope).flatten ++ prevVars(i - 1).flatten
                 val formal_params = lambda.ids
                 assert(actual_params.length == formal_params.length)
                 val matches = formal_params.zip(actual_params)
@@ -621,7 +632,7 @@ class SymbolicSimulator (module : Module) {
                 (expr, final_expr)
               }
               else {
-                val actual_params = getVarsInOrder(simRecord(i - 1)(step - 1).map(_.swap), scope).flatten
+                val actual_params = getVarsInOrder(simRecord(i - 1)(step).map(_.swap), scope).flatten
                 val formal_params = lambda.ids
                 assert(actual_params.length == formal_params.length)
                 val matches = formal_params.zip(actual_params)
@@ -633,8 +644,11 @@ class SymbolicSimulator (module : Module) {
           }
       }
       // FIXME: simTable
-      val st = AssertInfo(at.name, at.label, cloneSimRecord(simRecord), at.context, stepIndex,
+      val st = AssertInfo(at.name, at.label, cloneSimRecord(simRecord), at.context, step,
                   at.pathCond, substitute(at.expr, subs), at.decorators, at.pos)
+      Utils.assert(st.iter + 1 == simRecordLength(st.frameTable), "Invalid length/step combination")
+      defaultLog.debug("insi: {}", step)
+      defaultLog.debug("[rewrite] iter: {} length: {}", st.iter, SymbolicSimulator.simRecordLength(st.frameTable))
       st
   }
 
@@ -729,7 +743,8 @@ class SymbolicSimulator (module : Module) {
   def rewriteAssert(
       assert: AssertInfo, matches: List[(smt.Symbol, smt.Symbol)], stepIndex : Integer, 
       simTable: SimulationTable, havocsubs: List[(smt.Symbol, smt.Symbol)]): AssertInfo = {
-    AssertInfo(assert.name, assert.label, simTable.clone(), 
+    defaultLog.debug("rewriteAssert/step: {}", stepIndex)
+    AssertInfo(assert.name, assert.label, cloneSimRecord(simTable), 
         assert.context, stepIndex, substitute(substitute(assert.pathCond, matches), havocsubs),
         substitute(substitute(assert.expr, matches), havocsubs), assert.decorators, assert.pos)
   }
@@ -968,8 +983,8 @@ class SymbolicSimulator (module : Module) {
     val model = res.result.model.get
     val simTable = res.assert.frameTable
     Utils.assert(simTable.size >= 1, "Must have at least one trace")
-    val numFrames = res.assert.iter
-    (0 to numFrames).foreach{ case (i) => {
+    val lastFrame = res.assert.iter
+    (0 to lastFrame).foreach{ case (i) => {
       UclidMain.println("=================================")
       UclidMain.println("Step #" + i.toString)
       printFrame(simTable, i, model, exprsToPrint, scope)
