@@ -7,8 +7,9 @@ case class LazySCResult(e: smt.Expr, result: smt.SolverResult)
 class LazySCSolver(simulator: SymbolicSimulator) {
   val log = Logger(classOf[LazySCSolver])
   
-  def checkExpr(solver: smt.Context, e: smt.Expr) = {
+  def checkExpr(solver: smt.Context, e: smt.Expr, assumes: List[smt.Expr]) = {
     solver.push()
+    assumes.foreach(assume => solver.assert(assume))
     solver.assert(e)
     val sat = solver.check()
     val result = sat.result match {
@@ -20,8 +21,9 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     LazySCResult(e, result)
   }
 
-  def getTaintInitLambda(init_lambda: smt.Lambda, scope: Scope, solver: smt.Context) = {
+  def getTaintInitLambda(init_lambda: smt.Lambda, scope: Scope, solver: smt.Context, hyperAssumes: List[smt.Expr]) = {
     //FIXME: Handle Arrays
+    log.debug("The init hyperAssumes " + hyperAssumes.toString)
     val taint_vars = init_lambda.ids.map(sym => simulator.newTaintSymbol(sym.id, smt.BoolType))
     val initSymTab1 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
     val initSymTab2 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
@@ -30,7 +32,31 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     val init_havocs = simulator.getHavocs(init_lambda.e)
     // Relies on the fact that getVarsInOrder returns variables in a particular order
     val taint_set = taint_vars.zip(prevVars1.flatten.zip(prevVars2.flatten))
+    val hyperSelects = hyperAssumes.map(hypAssume => simulator.getHyperSelects(hypAssume)).flatten
 
+    val subs = hyperSelects.map {
+      expr =>
+        val op = expr.op
+        val exp = expr.operands
+        op match {
+          case smt.HyperSelectOp(i) =>
+
+              val actual_params = if (i == 1) simulator.getVarsInOrder(initSymTab1.map(_.swap), scope).flatten
+              else if (i == 2) simulator.getVarsInOrder(initSymTab2.map(_.swap), scope).flatten
+              else throw new Utils.RuntimeError("HyperAssumes for more than 2 copies unsupported")
+
+              val formal_params = init_lambda.ids
+              assert(actual_params.length == formal_params.length)
+              val matches = formal_params.zip(actual_params)
+              val final_expr = simulator.substitute(exp(0), matches)
+              (expr, final_expr)
+
+          case _ =>
+            throw new Utils.RuntimeError("Should never get here.")
+        }
+    }
+
+    val substitutedHyperAssumes = hyperAssumes.map(assume => simulator.substitute(assume, subs))
     val havoc_subs1 = init_havocs.map {
       havoc =>
         val s = havoc.id.split("_")
@@ -54,9 +80,10 @@ class LazySCSolver(simulator: SymbolicSimulator) {
         log.debug("The tuple = " + taint_var._2.toString)
         val equality = smt.OperatorApplication(smt.EqualityOp, List(taint_var._2._1, taint_var._2._2))
         val not_expr = smt.OperatorApplication(smt.NegationOp, List(equality))
-        val query_expr = smt.OperatorApplication(smt.ConjunctionOp, List(init_conjunct1, init_conjunct2, not_expr))
-        log.debug("The query expr " + query_expr.toString)
-        checkExpr(solver, query_expr).result.result match {
+        val assumes = List(init_conjunct1, init_conjunct2) ++ substitutedHyperAssumes
+        log.debug("The assumes " + assumes.toString)
+        log.debug("The query expr " + not_expr.toString)
+        checkExpr(solver, not_expr, assumes).result.result match {
           case Some(true) =>
             log.debug("equal")
             taint_var._1
@@ -75,8 +102,10 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     lambda
   }
 
-  def getNextTaintLambda(nextLambda: smt.Lambda) = {
+  def getNextTaintLambda(nextLambda: smt.Lambda, hyperAssumes: List[smt.Expr]) = {
+    //FIXME: HyperAssumes should be rewritten on every unroll of nextTaintLambda
     val supports = getSupports(nextLambda)
+    log.debug("The next hyperAssumes " + hyperAssumes.toString)
     log.debug("The lambda " + nextLambda.toString)
     log.debug("The support set " + supports)
     val nextVars = nextLambda.ids.takeRight(nextLambda.ids.length / 2)

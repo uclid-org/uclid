@@ -430,7 +430,7 @@ class SymbolicSimulator (module : Module) {
                       else new smt.BooleanLit(true)
 
     val lambda = smt.Lambda(getVarsInOrder(reverse_map, scope).flatten.map(p => p.asInstanceOf[smt.Symbol]), conjunction)
-    (lambda, asserts.toList, initSymbolTable, hyperAsserts.toList)
+    (lambda, asserts.toList, initSymbolTable, hyperAsserts.toList, hyperAssumes.toList)
   }
 
   def getNextLambda(init_symTab: Map[Identifier, smt.Expr], addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
@@ -480,7 +480,7 @@ class SymbolicSimulator (module : Module) {
 
 
     (lambda, asserts.toList, currentState,
-      hyperAsserts.toList)
+      hyperAsserts.toList, hyperAssumes.toList)
   }
 
 
@@ -494,8 +494,18 @@ class SymbolicSimulator (module : Module) {
       val init_lambda = getInitLambda(false, true, false, scope, label, filter)
       val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
       val s = new LazySCSolver(this)
-      s.getTaintInitLambda(init_lambda._1, scope, solver)
-      s.getNextTaintLambda(next_lambda._1)
+
+      val hyperSelect1 = smt.OperatorApplication(smt.HyperSelectOp(1), List(init_lambda._1.ids(0)))
+      val hyperSelect2 = smt.OperatorApplication(smt.HyperSelectOp(2), List(init_lambda._1.ids(0)))
+      val equalityInit = smt.OperatorApplication(smt.EqualityOp, List(hyperSelect1, hyperSelect2))
+
+      val hyperSelect3 = smt.OperatorApplication(smt.HyperSelectOp(1), List(next_lambda._1.ids(0)))
+      val hyperSelect4 = smt.OperatorApplication(smt.HyperSelectOp(2), List(next_lambda._1.ids(0)))
+      val equalityNext = smt.OperatorApplication(smt.EqualityOp, List(hyperSelect3, hyperSelect4))
+
+
+      s.getTaintInitLambda(init_lambda._1, scope, solver, List(equalityInit))
+      s.getNextTaintLambda(next_lambda._1, List(equalityNext))
 
       val num_copies = getMaxHyperInvariant(scope)
       val simRecord = new SimulationTable
