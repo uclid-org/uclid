@@ -527,6 +527,14 @@ class SymbolicSimulator (module : Module) {
         simRecord += frames
       }
 
+      val hyperAssumesInit = rewriteHyperAssumes(
+          init_lambda._1, 0, init_lambda._5, simRecord, 0, scope, prevVarTable.toList)
+      hyperAssumesInit.foreach {
+        hypAssume =>
+          addAssumptionToTree(hypAssume, List.empty)
+      }
+
+
       val asserts_init = rewriteAsserts(
           init_lambda._1, init_lambda._2, 0,
           prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
@@ -564,6 +572,12 @@ class SymbolicSimulator (module : Module) {
             havocTable(j - 1) = havoc_subs
             prevVarTable(j - 1) = new_vars
           }
+
+          val hyperAssumesNext = rewriteHyperAssumes(next_lambda._1, numberOfSteps, next_lambda._5, simRecord, i, scope, prevVarTable.toList)
+          hyperAssumesNext.foreach {
+            hypAssume =>
+              addAssumptionToTree(hypAssume, List.empty)
+          }
           // Asserting on-HyperInvariant assertions
           // FIXME: simTable
           val asserts_next = rewriteAsserts(
@@ -586,6 +600,48 @@ class SymbolicSimulator (module : Module) {
       symbolTable = symTabStep
   }
 
+  def rewriteHyperAssumes(
+      lambda: smt.Lambda, stepIndex : Integer, hyperAssumes: List[smt.Expr],
+      simTable: SimulationTable, step: Int, scope: Scope, prevVarTable: List[List[List[smt.Expr]]]) = {
+      hyperAssumes.map {
+        hypAssume =>
+          rewriteHyperAssume(lambda, stepIndex, hypAssume, simTable, step, scope, prevVarTable)
+      }
+  }
+
+  def rewriteHyperAssume(
+      lambda: smt.Lambda, stepIndex : Integer, hypAssume: smt.Expr,
+      simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
+
+      val hyperSelects = getHyperSelects(hypAssume)
+      val subs = hyperSelects.map {
+      expr =>
+        val op = expr.op
+        val exp = expr.operands
+        op match {
+          case smt.HyperSelectOp(i) =>
+            if (stepIndex > 0) {
+              val actual_params = getVarsInOrder(simRecord(i - 1)(step).map(_.swap), scope).flatten ++ prevVars(i - 1).flatten
+              val formal_params = lambda.ids
+              assert(actual_params.length == formal_params.length)
+              val matches = formal_params.zip(actual_params)
+              val final_expr = substitute(exp(0), matches)
+              (expr, final_expr)
+            }
+            else {
+              val actual_params = getVarsInOrder(simRecord(i - 1)(step).map(_.swap), scope).flatten
+              val formal_params = lambda.ids
+              assert(actual_params.length == formal_params.length)
+              val matches = formal_params.zip(actual_params)
+              val final_expr = substitute(exp(0), matches)
+              (expr, final_expr)
+            }
+          case _ =>
+            throw new Utils.RuntimeError("Should never get here.")
+        }
+    }
+    substitute(hypAssume, subs)
+  }
   def rewriteHyperAsserts(
       lambda: smt.Lambda, stepIndex : Integer, hyperAsserts: List[AssertInfo], 
       simTable: SimulationTable, step: Int, scope: Scope, prevVarTable: List[List[List[smt.Expr]]]) = {

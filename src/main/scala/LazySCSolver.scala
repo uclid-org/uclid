@@ -229,4 +229,11 @@ class LazySCSolver(simulator: SymbolicSimulator) {
         throw new Utils.UnimplementedException("'" + e + "' is not yet supported.")
     }
   }
+
+
+  def simulateLazySC(bound: Int) = {
+
+
+
+  }
 }
