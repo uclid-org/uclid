@@ -159,9 +159,10 @@ class SymbolicSimulator (module : Module) {
               case None    => "unroll"
             }
             // get_init_lambda(false, context, "some")
-            symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter, solver)
+            //symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter, solver)
             //initialize(false, true, false, context, label, noLTLFilter)
             //symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+            runLazySC(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, "lazy_SC", noLTLFilter, solver)
           case "bmc" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString()
@@ -488,7 +489,10 @@ class SymbolicSimulator (module : Module) {
       hyperAsserts.toList, hyperAssumes.toList)
   }
 
-
+  def runLazySC(bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
+      val s = new LazySCSolver(this, solver)
+      s.simulateLazySC(bound, scope, label, filter)
+  }
 
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
                               scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean),
@@ -498,7 +502,7 @@ class SymbolicSimulator (module : Module) {
 
       val init_lambda = getInitLambda(false, true, false, scope, label, filter)
       val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
-      val s = new LazySCSolver(this)
+      val s = new LazySCSolver(this, solver)
 
       s.getTaintInitLambda(init_lambda._1, scope, solver, init_lambda._5)
       s.getNextTaintLambda(next_lambda._1, next_lambda._5)
@@ -522,7 +526,7 @@ class SymbolicSimulator (module : Module) {
             (havoc, newHavocSymbol(name, havoc.typ))
         }
         havocTable += havoc_subs
-        val init_conjunct = substitute(betaSubstitution(init_lambda._1, prevVars), havoc_subs)
+        val init_conjunct = substitute(betaSubstitution(init_lambda._1, prevVars.flatten), havoc_subs)
         addAssumptionToTree(init_conjunct, List.empty)
         simRecord += frames
       }
@@ -567,7 +571,7 @@ class SymbolicSimulator (module : Module) {
                 val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
                 (havoc, newHavocSymbol(name, havoc.typ))
             }
-            val next_conjunct = substitute(betaSubstitution(next_lambda._1, prevVarTable(j - 1) ++ new_vars), havoc_subs)
+            val next_conjunct = substitute(betaSubstitution(next_lambda._1, (prevVarTable(j - 1) ++ new_vars).flatten), havoc_subs)
             addAssumptionToTree(next_conjunct, List.empty)
             havocTable(j - 1) = havoc_subs
             prevVarTable(j - 1) = new_vars
@@ -795,9 +799,9 @@ class SymbolicSimulator (module : Module) {
         substitute(substitute(assert.expr, matches), havocsubs), assert.decorators, assert.pos)
   }
 
-  def betaSubstitution(lambda: smt.Lambda, args: List[List[smt.Expr]]): smt.Expr = {
+  def betaSubstitution(lambda: smt.Lambda, args: List[smt.Expr]): smt.Expr = {
       val formal_params = lambda.ids
-      val actual_params = args.flatten.map(p => p.asInstanceOf[smt.Symbol])
+      val actual_params = args.map(p => p.asInstanceOf[smt.Symbol])
 
       assert(formal_params.length == actual_params.length)
       val matches = formal_params.zip(actual_params)
