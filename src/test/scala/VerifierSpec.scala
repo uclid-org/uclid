@@ -373,6 +373,13 @@ class LTLVerifSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/ltl-toy-1.ucl", 11)
   }
 }
+
+class HyperPropertySpec extends FlatSpec {
+  "test-hyperproperty-4.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-hyperproperty-4.ucl", 0)
+  }
+}
+
 object PrintCexSpec {
   def checkPrintCex(filename: String, n : Int) {
     UclidMain.enableStringOutput()
