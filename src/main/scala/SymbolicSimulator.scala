@@ -463,24 +463,31 @@ class SymbolicSimulator (module : Module) {
     val stWInputs = currentState//newInputSymbols(currentState, 1, scope)
     states += stWInputs
     val symTableP = simulateModuleNext(1, stWInputs, states, scope, label, addAssumesToList _, addAssertsToList _)
+    var assumesLambda = assumes.clone()
+
     val eqStates = symTableP.filter(p => stWInputs.get(p._1) match {
       case Some(st) => (st == p._2)
       case None => false
     }).map(_._1).toSet
-    val num_state_asserts = asserts.length
+
     defaultLog.debug("eqStates: {}", eqStates.toString())
     currentState = renameStatesLambda(symTableP, eqStates, 1, scope, addAssumesToList _)
+    var assumesLength = assumes.length
     val numPastFrames = frameList.size
     frameList += currentState
     val simTbl = ArrayBuffer(frameList)
     addModuleAssumptions(currentState, frameList, numPastFrames, scope, addAssumesToList _)
+
+    assumes.takeRight(assumes.length - assumesLength).foreach(expr => assumesLambda += expr)
+    assumesLength = assumes.length
+
     if (addAssertions) {
       addAsserts(1, currentState, frameList, simTbl, label, scope, noHyperInvariantFilter(filter), addAssertsToList _)
       addAsserts(1, currentState, frameList, simTbl, label, scope, HyperInvariantFilter(filter), addHyperAssertsToList _)
     }
     if (addAssertionsAsAssumes) { assumeAssertions(currentState, frameList, numPastFrames, scope, addAssumesToList _) }
+    assumes.takeRight(assumes.length - assumesLength).foreach(expr => assumesLambda += expr)
 
-    val num_module_asserts = asserts.length - num_state_asserts
 
     // Output/Input vars are renamed in renameStatesLambda
     val final_vars = getVarsInOrder(currentState.map(_.swap), scope)
@@ -492,7 +499,7 @@ class SymbolicSimulator (module : Module) {
 
 
     (lambda, asserts.toList, currentState,
-      hyperAsserts.toList, hyperAssumes.toList)
+      hyperAsserts.toList, hyperAssumes.toList, assumesLambda.toList)
   }
 
   def runLazySC(bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
@@ -511,7 +518,7 @@ class SymbolicSimulator (module : Module) {
       val s = new LazySCSolver(this, solver)
 
       s.getTaintInitLambda(init_lambda._1, scope, solver, init_lambda._5)
-      s.getNextTaintLambda(next_lambda._1, next_lambda._5)
+      s.getNextTaintLambda(next_lambda._1, next_lambda._5, next_lambda._6, scope)
 
       val num_copies = getMaxHyperInvariant(scope)
       val simRecord = new SimulationTable
