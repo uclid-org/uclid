@@ -28,7 +28,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
     log.debug("The init hyperAssumes " + hyperAssumes.toString)
     log.debug("The init lambda " + init_lambda.toString)
     val taint_vars = init_lambda.ids.map(sym => simulator.newTaintSymbol(sym.id, smt.BoolType))
-    val initSymTab1 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
+    val initSymTab1 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 0, scope)
     val initSymTab2 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
     val prevVars1 = simulator.getVarsInOrder(initSymTab1.map(_.swap), scope)
     val prevVars2 = simulator.getVarsInOrder(initSymTab2.map(_.swap), scope)
@@ -108,9 +108,9 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
   def computeAConjunct(nextLambda: smt.Lambda, hyperAssumes: List[smt.Expr], assumes: List[smt.Expr], scope: Scope, taintMap: Map[smt.Symbol, smt.Symbol]) = {
 
     val initSymTab1 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
-    val initSymTab2 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
-    val nextSymTab1 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
-    val nextSymTab2 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
+    val initSymTab2 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 2, scope)
+    val nextSymTab1 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 3, scope)
+    val nextSymTab2 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 4, scope)
 
     val prevVars1 = simulator.getVarsInOrder(initSymTab1.map(_.swap), scope)
     val prevVars2 = simulator.getVarsInOrder(initSymTab2.map(_.swap), scope)
@@ -314,7 +314,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
 
   // Partitions a substituted smt conjunct into equalities having a symbol on the LHS and other assumes
   def partitionConjunct(e: smt.Expr) = {
-    log.debug("-- The lambda Conjunct -- " + e.toString)
+    //log.debug("-- The lambda Conjunct -- " + e.toString)
     val operands = e match {
       case smt.OperatorApplication(op, operands) =>
         if (op == smt.EqualityOp) List(e)
@@ -322,7 +322,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
       case smt.BooleanLit(true) => List()
       case _ => throw new Utils.RuntimeError("Not a lambda Expr.")
     }
-    log.debug("--- The operands --- " + operands.toString)
+    //log.debug("--- The operands --- " + operands.toString)
     val equalities = operands.filter {
       operand =>
         operand match {
@@ -331,7 +331,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
           case _ => false
         }
     }
-    log.debug("--- The equalities --- " + equalities.toString)
+    //log.debug("--- The equalities --- " + equalities.toString)
     val stateUpdates = equalities.filter {
       operand =>
         operand match {
@@ -341,7 +341,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
         }
     }
 
-    log.debug("--- The state updates --- " + stateUpdates.toString)
+    //log.debug("--- The state updates --- " + stateUpdates.toString)
     val stateUpdateMap = stateUpdates.map {
       update =>
         update.asInstanceOf[smt.OperatorApplication].operands(0) -> update
@@ -372,9 +372,10 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
     var prevTaintVarTable = new ArrayBuffer[List[smt.Expr]]()
     var taintAssumes = new ArrayBuffer[smt.Expr]()
 
-
+    var stepOffset = 0
     //FIXME: Remove newInputSymbols
-    val taintSymTab = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
+    val taintSymTab = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), stepOffset, scope)
+    stepOffset += 1
     val initTaintVars = getNewTaintVars(taintSymTab, scope)
     prevTaintVarTable += initTaintVars
     val initTaintConjunct = simulator.betaSubstitution(taintInitLambda, initTaintVars)
@@ -383,7 +384,8 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
     for (i <- 1 to num_copies) {
 
         var frames = new simulator.FrameTable
-        val initSymTab = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
+        val initSymTab = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), stepOffset, scope)
+        stepOffset += 1
         frames += initSymTab
         var prevVars = simulator.getVarsInOrder(initSymTab.map(_.swap), scope)
         prevVarTable += prevVars
@@ -412,8 +414,10 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
           taintMatches.foreach {
             v =>
               checkExpr(solver, smt.OperatorApplication(smt.NegationOp, List(v._2._2)), taintAssumes.toList).result.result match {
+
                 case Some(true) =>  //Unsat and tainted, hence equal
                   val equality = smt.OperatorApplication(smt.EqualityOp, List(v._1, v._2._1))
+                  log.debug("%% Taint Assumes %% " + taintAssumes.toList.toString)
                   log.debug("++ Added Equality ++ " + equality.toString)
                   simulator.addAssumptionToTree(equality, List.empty)
                 case _ => // Sat, possibility of being unequal. Duplicate Expression
@@ -475,7 +479,8 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
       taintAssumes += nextTaintConjunct
 
       for (j <- 1 to num_copies) {
-        symTabStep = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), i + 1, scope)
+        symTabStep = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), stepOffset, scope)
+        stepOffset += 1
         simRecord(j - 1) += symTabStep
         val new_vars = simulator.getVarsInOrder(symTabStep.map(_.swap), scope)
         val next_havocs = simulator.getHavocs(next_lambda._1.e)
@@ -497,7 +502,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
 
           assert(secondNextVars.length == prevTaintVarTable(0).length)
           assert(secondNextVars.length == firstNextVars.length)
-          val taintMatches = secondNextVars.zip(firstNextVars zip prevTaintVarTable(0))
+          val taintMatches = secondNextVars.zip(firstNextVars zip prevTaintVarTable(i - 1))
           log.debug(" ----- Next Partition Map ----- " + partition._1)
           log.debug(" ----- Next taint Matches ---- " + taintMatches.toString)
           taintMatches.foreach {
@@ -505,6 +510,8 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
               checkExpr(solver, smt.OperatorApplication(smt.NegationOp, List(v._2._2)), taintAssumes.toList).result.result match {
                 case Some(true) =>  //Unsat and tainted, hence equal
                   val equality = smt.OperatorApplication(smt.EqualityOp, List(v._1, v._2._1))
+                  //log.debug("%% Taint Assumes %% " + taintAssumes.toList.toString)
+                  //log.debug("@@ Query Expr @@ " + smt.OperatorApplication(smt.NegationOp, List(v._2._2)).toString)
                   log.debug("++ Added Equality ++ " + equality.toString)
                   simulator.addAssumptionToTree(equality, List.empty)
                 case _ => // Sat, possibility of being unequal. Duplicate Expression

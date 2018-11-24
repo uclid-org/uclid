@@ -44,7 +44,7 @@ module main
     (i >= head_ptr.1 && i < tail_ptr.1 && user_array.1[i] == u1) ==> (data_array.1[i] == data_array.1[i]);  
 
   control {
-	v = unroll(10);
+	v = lazysc(10);
 	check;
 	print_results;
 	v.print_cex(head_ptr, tail_ptr, op, user, data_array, user_array, data_out);

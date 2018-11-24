@@ -525,9 +525,11 @@ class SymbolicSimulator (module : Module) {
       var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
       var havocTable = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
 
+      var inputStep = 0
       for (i <- 1 to num_copies) {
         var frames = new FrameTable
-        val initSymTab = newInputSymbols(getInitSymbolTable(scope), 1, scope)
+        val initSymTab = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
+        inputStep += 1
         frames += initSymTab
         var prevVars = getVarsInOrder(initSymTab.map(_.swap), scope)
         prevVarTable += prevVars
@@ -574,7 +576,8 @@ class SymbolicSimulator (module : Module) {
       var symTabStep = symbolTable
       for (i <- 1 to numberOfSteps) {
           for (j <- 1 to num_copies) {
-            symTabStep = newInputSymbols(getInitSymbolTable(scope), i + 1, scope)
+            symTabStep = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
+            inputStep += 1
             simRecord(j - 1) += symTabStep
             val new_vars = getVarsInOrder(symTabStep.map(_.swap), scope)
             val next_havocs = getHavocs(next_lambda._1.e)
