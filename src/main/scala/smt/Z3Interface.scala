@@ -544,6 +544,9 @@ object FixedpointTest
     // Transition(x, y, x', y') = (x' = x + 1) && (y' = y + x)
     // Bad(x, y) = x >= y
     //
+    // Init(x, y) => Inv(x, y)
+    // Inv(x, y) & (x' = x + 1) & (y' = y + 1) => Inv(x', y')
+    // Inv(x, y) & (x >= y) => error() 
     z3.Global.setParameter("fixedpoint.engine", "pdr")
 
     val ctx = new z3.Context()
