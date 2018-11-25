@@ -1,4 +1,4 @@
-(set-option :fp.engine pdr)
+(set-option :fp.engine spacer)
 
 (declare-rel inv (Int Bool Bool (Array Int Bool) (Array Int  Bool)))
 (declare-rel err ())
@@ -10,7 +10,7 @@
 (declare-var mt2 (Array Int Bool))
 
 
-(rule (=> (and dt mt1) (inv a dt mt1 ((as const (Array Int Bool)) true) rng)))
+(rule (=> (and dt mt1 (forall ((i Int)) (=> (select rng i) (select mt2 i)))) (inv a dt mt1 mt2 rng)))
 (rule (=> (and (inv a dt mt1 mt2 rng))
           (inv a (and mt1 (select mt2 a)) mt1 (store mt2 a (select rng a)) rng)))
 (rule (=> (and (inv a dt mt1 mt2 rng) (not dt) (select rng a)) err))
