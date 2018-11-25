@@ -1,0 +1,49 @@
+module arr
+{
+  input a, b : integer;
+  var mem    : [integer]integer;
+  output d   : integer;
+
+  init {
+    mem = const(0, [integer]integer);
+    d = 0;
+  }
+
+  next {
+    mem' = mem[a -> b];
+    d' = mem[a];
+  }
+
+  control {
+    unroll(5);
+    check;
+    print_results;
+  }
+}
+
+module main
+{
+  input a, b    : integer;
+  output d1, d2 : integer;
+
+  instance arr1 : arr(a : (a), b : (b), d : (d1));
+  instance arr2 : arr(a : (a), b : (b), d : (d2));
+
+  next {
+    next (arr1);
+    next (arr2);
+  }
+
+  invariant eq_d: (d1 == d2);
+  invariant eq_mem: (arr1.mem == arr2.mem);
+
+  control {
+    v = induction;
+    check;
+    print_results;
+    v.print_cex(
+      a, b, d1, d2,
+      arr1.mem[a], arr2.mem[a]
+    );
+  }
+}

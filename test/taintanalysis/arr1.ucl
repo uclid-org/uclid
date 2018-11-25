@@ -1,0 +1,90 @@
+module arr
+{
+  input a, b : integer;
+  var mem    : [integer]integer;
+  output d   : integer;
+
+  init {
+    // d_t = true
+    d = 0;
+  }
+
+  next {
+    // [ note: simplifications are due to definitions in the next block ]
+
+    // [ note : mem_t1 is the taint for the whole array.    ]
+    // [        mem_t2 is the taint for individual indices. ]
+
+    // [ simple taints ]
+    // mem_t1' = a_t && b_t
+    //         = true && false
+    //         = false
+    //
+    // [ dependent taints ]
+    // mem_t1' = a_t && b_t
+    //         = true && rng(a) 
+    //         = rng(a) 
+
+    // [ simple taints ]
+    // mem_t2' = mem_t2[a -> b_t]
+    // [ dependent taints ]
+    // mem_t2' = (lambda i: (if (i == a) then b_t else mem_t2(i)))
+    //         = (lambda i: (if (i == a) then rng(a) else mem_t2(i)))
+    //         > the above means
+    //              - whole array must be equal
+    //              - index must be equal
+    //              - value being written must be equal
+    mem' = mem[a -> b];
+    // d_t' = mem_t1 && mem_t2[a]
+    d' = mem[a];
+  }
+}
+
+module main
+{
+  input a, b1, b2 : integer;
+  output d1, d2        : integer;
+
+  instance arr1 : arr(a : (a), b : (b1), d : (d1));
+  instance arr2 : arr(a : (a), b : (b2), d : (d2));
+
+  function rng(i : integer) : boolean;
+
+  init {
+    assume (forall (i : integer) :: rng(i) ==> (arr1.mem[i] == arr2.mem[i]));
+    // translate into taint:
+    // [ simple taint v1 ]
+    // mem_t1 = false
+    // mem_t2 is unconstrainted, but doesn't matter as mem_t1 is false.
+    // [ simple taint v2 ]
+    //    > let's try to be a little smarter here.
+    // mem_t1 = true
+    // assume (forall (i : integer) :: rng(i) => mem_t2[i])
+    // [ note: v2 is still not good enough to prove the property as b_t is false in the next block. ]
+
+    // [ dependent taint ]
+    // mem_t = lambda i: rng(i)
+  }
+  next {
+    next (arr1);
+    next (arr2);
+
+    // a_t = true
+    // b_t = false        (simple)
+    // b_t = rng(a)       (dependent)
+    assume (rng(a) ==> (b1 == b2));
+  }
+
+  invariant eq_rng_d: rng(a) ==> (d1 == d2);
+  invariant eq_rng_mem: (forall (i : integer) :: rng(i) ==> (arr1.mem[i] == arr2.mem[i]));
+
+  control {
+    v = induction;
+    check;
+    print_results;
+    v.print_cex(
+      a, rng(a), b1, b2, d1, d2,
+      arr1.mem[a], arr2.mem[a]
+    );
+  }
+}
