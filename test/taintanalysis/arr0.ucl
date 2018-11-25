@@ -15,8 +15,8 @@ module arr
   }
 
   next {
-    // mem_t1' = at && bt
-    // mem_t2' = mem_t2[a -> bt]
+    // mem_t1' = a_t && mem_t1
+    // mem_t2' = mem_t2[a -> b_t]
     mem' = mem[a -> b];
     // d_t = mem_t1 && mem_t2[a]
     d' = mem[a];

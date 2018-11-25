@@ -16,24 +16,18 @@ module arr
     // [        mem_t2 is the taint for individual indices. ]
 
     // [ simple taints ]
-    // mem_t1' = a_t && b_t
-    //         = true && false
-    //         = false
+    // mem_t1' = a_t && mem_t1
+    //         = mem_t1
     //
     // [ dependent taints ]
-    // mem_t1' = a_t && b_t
-    //         = true && rng(a) 
-    //         = rng(a) 
+    // mem_t1' = a_t && mem_t1
+    //         = true
 
     // [ simple taints ]
     // mem_t2' = mem_t2[a -> b_t]
     // [ dependent taints ]
     // mem_t2' = (lambda i: (if (i == a) then b_t else mem_t2(i)))
     //         = (lambda i: (if (i == a) then rng(a) else mem_t2(i)))
-    //         > the above means
-    //              - whole array must be equal
-    //              - index must be equal
-    //              - value being written must be equal
     mem' = mem[a -> b];
     // d_t' = mem_t1 && mem_t2[a]
     d' = mem[a];
