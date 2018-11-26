@@ -40,6 +40,8 @@
 package uclid
 package lang
 
+import com.typesafe.scalalogging.Logger
+
 /** Very simple pass too print module. */
 class ASTPrinterPass extends ReadOnlyPass[Unit] {
   override def applyOnModule(d : TraversalDirection.T, module : Module, in : Unit, context : Scope) : Unit = {
@@ -65,6 +67,8 @@ class ASTPrinter() extends ASTAnalyzer(ASTPrinter.getName(), new ASTPrinterPass(
 
 class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
 {
+  val log = Logger(classOf[ExprRewriterPass])
+
   override def rewriteExpr(e: Expr, context: Scope) : Option[Expr] = {
     if (e.isInstanceOf[Identifier]) {
       val id = e.asInstanceOf[Identifier]
@@ -79,15 +83,24 @@ class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
     }
   }
   override def rewriteIdentifier(i: Identifier, context: Scope) : Option[Identifier] = {
+    log.debug("scope: {}", context.map.toString())
     context.map.get(i) match {
-      case Some(Scope.ProductField(_, _, _)) => Some(i)
+      case Some(Scope.ProductField(_, _, _)) =>
+        log.debug("product: {}", i.toString())
+        Some(i)
       case _ =>
         rewrites.get(i) match {
-          case None => Some(Identifier(i.name))
+          case None =>
+            log.debug("unchanged: {}", i.toString())
+            Some(Identifier(i.name))
           case Some(eprime) =>
             eprime match {
-              case id : Identifier => Some(id)
-              case _ => Some(Identifier(i.name))
+              case id : Identifier =>
+                log.debug("rewrite: {} -> {}", i.toString(), id.toString())
+                Some(id)
+              case _ =>
+                log.debug("rewrite: {} -> {}", i.toString(), i.toString())
+                Some(Identifier(i.name))
             }
         }
     }

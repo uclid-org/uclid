@@ -1,81 +1,15 @@
-module array
+module main
 {
-  type op_t = enum { push, pop };
-  type user_t = enum { u1, u2 };
-  type node_t = record { data : integer, user : user_t };
+  type node_t = record { user : integer };
 
-  var data_array    : [integer]node_t;
-  var tail_ptr      : integer;
-  var head_ptr      : integer;
+  init { }
 
-  input op        : op_t;
-  input user      : user_t;
-  input data_in   : integer;
-  output data_out : integer;
-
-  init {
-    head_ptr    = 0;
-    tail_ptr    = 0;
-  }
-
-  procedure create_node(data_in : integer, user : user_t)
+  procedure create_node(user : integer)
     returns (node: node_t)
   {
-      node.data = data_in;
       node.user = user;
   }
 
   next {
-    if (op == push) {
-      var node : node_t;
-      call (node) = create_node(data_in, user);
-      data_array' = data_array[tail_ptr -> node];
-      tail_ptr' = tail_ptr + 1;
-    } else {
-      if ((data_array[head_ptr]).user == user) {
-        data_out' = (data_array[head_ptr]).data;
-        head_ptr' = head_ptr + 1;
-      } else {
-        data_out' = 0;
-      }
-    }
   }
 }
-
-
-module main
-{
-  type op_t = array.op_t;
-  type user_t = array.user_t;
-
-  input op : op_t;
-  input user : user_t;
-  input data_in_1   : integer;
-  input data_in_2   : integer;
-  input data_out_1  : integer;
-  input data_out_2  : integer;
-
-  instance arr1 : array(op : (op), user : (user), 
-                        data_in : (data_in_1), data_out : (data_out_1));
-  instance arr2 : array(op : (op), user : (user), 
-                        data_in : (data_in_2), data_out : (data_out_2));
-
-  init {
-  }
-
-  next {
-    assume (user == u1) ==> (data_in_1 == data_in_2);
-
-    next (arr1);
-    next (arr2);
-  }
-
-  invariant eq_data_out : (user == u1) ==> (data_out_1 == data_out_2);
-
-  control {
-    v = unroll(5);
-    check;
-    print_results;
-  }
-}
-
