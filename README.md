@@ -4,7 +4,7 @@
 
 The [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf) has a gentle introduction to using uclid5.
 
-If you use uclid5 in your own research, it is suggested that you cite the following MEMOCODE 2018 paper.
+If you use uclid5 in your work, please cite the following MEMOCODE 2018 paper:
 
 Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating Modeling, Verification, Synthesis and Learning.</font>
  [\[PDF\]](https://cse.iitk.ac.in/users/spramod/papers/memocode18.pdf)    
