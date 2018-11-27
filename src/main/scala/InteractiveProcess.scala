@@ -75,7 +75,6 @@ class InteractiveProcess(args: List[String]) {
   def writeInput(str: String) {
     logger.debug("-> {}", str)
     in.write(stringToBytes(str))
-    in.flush()
   }
   // Close stdin, this may cause the process to exit.
   def finishInput() {
@@ -84,6 +83,7 @@ class InteractiveProcess(args: List[String]) {
   }
   // Read from the process's output stream.
   def readOutput() : Option[String] = {
+    in.flush()
     var done = false
     while (!done) {
       if (!isAlive()) {
@@ -105,6 +105,7 @@ class InteractiveProcess(args: List[String]) {
             }
           })
           logger.debug("<- {}", string)
+
           return Some(string)
         }
       }
