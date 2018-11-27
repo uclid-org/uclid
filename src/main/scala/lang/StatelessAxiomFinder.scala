@@ -60,7 +60,7 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
                Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
                Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
-               Scope.BlockVar(_, _)           | Scope.ProductField(_, _, _)     =>
+               Scope.BlockVar(_, _)           | Scope.SelectorField(_)          =>
              throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
         }
       case None =>
@@ -109,7 +109,7 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
                Scope.VerifResultVar(_, _)     | Scope.FunctionArg(_, _)         |
                Scope.Define(_, _, _)          | Scope.Grammar(_, _)             |
                Scope.ConstantLit(_, _)        | Scope.BlockVar(_, _)            |
-               Scope.ForIndexVar(_ , _)       | Scope.ProductField(_,_, _)      =>
+               Scope.ForIndexVar(_ , _)       | Scope.SelectorField(_)          =>
               id
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _) =>
              ExternalIdentifier(moduleName, id)

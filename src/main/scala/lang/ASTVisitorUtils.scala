@@ -73,7 +73,7 @@ class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
     if (e.isInstanceOf[Identifier]) {
       val id = e.asInstanceOf[Identifier]
       val g = context.map.get(id)
-      if (g.isDefined && g.get.isInstanceOf[Scope.ProductField]) {
+      if (g.isDefined && g.get.isInstanceOf[Scope.SelectorField]) {
         return Some(e)
       }
     }
@@ -85,7 +85,7 @@ class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
   override def rewriteIdentifier(i: Identifier, context: Scope) : Option[Identifier] = {
     log.debug("scope: {}", context.map.toString())
     context.map.get(i) match {
-      case Some(Scope.ProductField(_, _, _)) =>
+      case Some(Scope.SelectorField(_)) =>
         log.debug("product: {}", i.toString())
         Some(i)
       case _ =>

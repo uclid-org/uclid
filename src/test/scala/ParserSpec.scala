@@ -490,6 +490,11 @@ class ParserSpec extends FlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
+  "inputerror.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/inputerror.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
 
   "test-hyperproperty-1.ucl" should "not parse successfully." in {
     try {

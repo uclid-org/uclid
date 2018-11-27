@@ -594,7 +594,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   def visitRecordType(recordT : RecordType, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnRecordType(TraversalDirection.Down, recordT, result, context)
-    val ctxP = context.addProductType(recordT)
     result = recordT.fields.foldLeft(result)((acc, fld) => {
       visitType(fld._2, acc, context)
     })
@@ -821,7 +820,12 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = lhs match {
       case LhsId(_) | LhsNextId(_) => result
       case LhsArraySelect(id, indices) => indices.foldLeft(result)((acc, ind) => visitExpr(ind, acc, context))
-      case LhsRecordSelect(id, fields) => fields.foldLeft(result)((acc, fld) => visitIdentifier(fld, acc, context))
+      case LhsRecordSelect(id, fields) => (fields.foldLeft((result, context))(
+          (acc, fld) => {
+            val ctxP = acc._2.addSelectorField(fld)
+            (visitIdentifier(fld, acc._1, ctxP), ctxP)
+          }
+      ))._1
       case LhsSliceSelect(id, slice) => visitBitVectorSlice(slice, result, context)
       case LhsVarSliceSelect(id, slice) => visitBitVectorSlice(slice, result, context)
     }
@@ -1391,9 +1395,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitRecordType(recT : RecordType, context : Scope) : Option[RecordType] = {
-    val ctxP = context.addProductType(recT)
     val fieldsP = recT.fields.map((f) => {
-      (visitType(f._2, ctxP)) match {
+      (visitType(f._2, context)) match {
         case (Some(t)) => Some((f._1, t))
         case _ => None
       }
@@ -1667,7 +1670,17 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
           case LhsArraySelect(_, indices) =>
             Some(LhsArraySelect(id, indices.map(visitExpr(_, context)).flatten))
           case LhsRecordSelect(_, fields) =>
-            Some(LhsRecordSelect(id, fields.map(visitIdentifier(_, context)).flatten))
+            val fieldsP = (fields.foldLeft((List.empty[Identifier], context)) {
+              (acc, fld) => {
+                val ctxP = acc._2.addSelectorField(fld)
+                val idP = visitIdentifier(fld, ctxP)
+                idP match {
+                  case Some(id) => (acc._1 ++ List(id), ctxP)
+                  case None => (acc._1, ctxP)
+                }
+              }
+            })._1
+            Some(LhsRecordSelect(id, fieldsP))
           case LhsSliceSelect(_, slice) =>
             val sliceP = visitBitVectorSlice(slice, context)
             sliceP.flatMap((s) => Some(newLhsSliceSelect(id, s)))

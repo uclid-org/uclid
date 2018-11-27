@@ -362,13 +362,23 @@ case class ConcatOp() extends Operator {
   override def toString = "++"
   override def fixity = Operator.INFIX
 }
-case class PolymorphicSelect(id : Identifier) extends Operator {
+sealed abstract class SelectorOperator extends Operator {
+  val ident : Identifier
+}
+case class PolymorphicSelect(id : Identifier) extends SelectorOperator {
+  override val ident = id
   override def toString = "." + id
   override def fixity = Operator.POSTFIX
 }
-case class RecordSelect(id: Identifier) extends Operator {
+case class RecordSelect(id: Identifier) extends SelectorOperator {
+  override val ident = id
   override def toString = "." + id
   override def fixity = Operator.POSTFIX
+}
+case class SelectFromInstance(varId : Identifier) extends SelectorOperator {
+  override val ident = varId
+  override def toString = "." + varId
+  override def fixity = Operator.INFIX
 }
 case class HyperSelect(i: Int) extends Operator {
   override def toString: String = "." + i.toString
@@ -387,10 +397,6 @@ case class ArrayUpdate(indices: List[Expr], value: Expr) extends Operator {
     "[" + indexStr + " -> " + value.toString() + "]"
   }
   override def fixity = Operator.POSTFIX
-}
-case class SelectFromInstance(varId : Identifier) extends Operator {
-  override def toString = "." + varId
-  override def fixity = Operator.INFIX
 }
 case class GetNextValueOp() extends Operator {
   override def toString = "'"
