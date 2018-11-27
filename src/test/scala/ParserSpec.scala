@@ -487,12 +487,12 @@ class ParserSpec extends FlatSpec {
 
   "recorderror.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/recorderror.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
   "inputerror.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/inputerror.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
 
