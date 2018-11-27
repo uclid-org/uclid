@@ -166,53 +166,73 @@ trait SMTLIB2Base {
     else { translateExpr(index(0), memoIn, shouldLetify) }
   }
   def translateExprs(es : List[Expr], memoIn : ExprMap, shouldLetify : Boolean) : (List[TranslatedExpr], ExprMap) = {
-    es.foldRight((List.empty[TranslatedExpr], memoIn)){ 
+    smtlib2BaseLogger.info("-> start translateExprs <-")
+    val s = es.foldRight((List.empty[TranslatedExpr], memoIn)){ 
       (arg, acc) => {
         val (tExpr, accP) = translateExpr(arg, acc._2, shouldLetify)
         (tExpr :: acc._1, accP)
       }
     }
+    smtlib2BaseLogger.info("-> end translateExprs <-")
+    s
   }
   def translateExpr(eIn: Expr, memo : ExprMap, shouldLetify : Boolean) : (TranslatedExpr, ExprMap) = {
     smtlib2BaseLogger.debug("expr: {}", eIn.toString())
     smtlib2BaseLogger.debug("memo: {}", memo.toString())
-    val (resultExpr, resultMemo) = memo.get(eIn) match {
+    smtlib2BaseLogger.info("-> start translateExpr <-")
+    val t1 = System.nanoTime().toDouble
+    val memoLookup = memo.get(eIn)
+    val t2 = System.nanoTime().toDouble
+    smtlib2BaseLogger.info("-->> finish LOOKUP: {}", (t2 - t1) / 1e9)
+    val (resultExpr, resultMemo) = memoLookup match {
       case Some(resultExpr) => (resultExpr, memo)
       case None =>
         val (exprStr, memoP, letify) : (String, ExprMap, Boolean) = Context.rewriteBVReplace(eIn) match {
           case Symbol(id,_) =>
+            smtlib2BaseLogger.info("-->> symbol <<--")
             Utils.assert(variables.contains(id), "Not found in map: " + id)
             (variables.get(id).get._1, memo, false)
-          case EnumLit(id, _) => (id, memo, false)
+          case EnumLit(id, _) =>
+            smtlib2BaseLogger.info("-->> enum <<--")
+            (id, memo, false)
           case OperatorApplication(op,operands) =>
+            smtlib2BaseLogger.info("-->> opapp <<--")
             val (ops, memoP) = translateExprs(operands, memo, shouldLetify)
             ("(" + op.toString() + " " + exprString(ops) + ")", memoP, true)
           case ArraySelectOperation(e, index) =>
+            smtlib2BaseLogger.info("-->> arraysel <<--")
             val (trArray, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trIndex, memoP2) = translateOptionalTuple(index, memoP1, shouldLetify)
             ("(select " + trArray.exprString() + " " + trIndex.exprString() + ")", memoP2, true)
           case ArrayStoreOperation(e, index, value) =>
+            smtlib2BaseLogger.info("-->> arraystore <<--")
             val (trArray, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trIndex, memoP2) = translateOptionalTuple(index, memoP1, shouldLetify)
             val (trValue, memoP3) = translateExpr(value, memoP2, shouldLetify)
             ("(store " + trArray.exprString() + " " + trIndex.exprString() + " " + trValue.exprString() +")", memoP3, true)
           case FunctionApplication(e, args) =>
+            smtlib2BaseLogger.info("-->> fapp <<--")
             Utils.assert(e.isInstanceOf[Symbol], "Beta substitution has not happened.")
             val (trFunc, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trArgs, memoP2) = translateExprs(args, memoP1, shouldLetify)
             ("(" + trFunc.exprString() + " " + exprString(trArgs) + ")", memoP2, true)
           case MakeTuple(args) =>
+            smtlib2BaseLogger.info("-->> tup <<--")
             val tupleType = TupleType(args.map(_.typ))
             val (tupleTypeName, newTypes) = generateDatatype(tupleType)
             val (trArgs, memoP1) = translateExprs(args, memo, shouldLetify)
             ("(" + Context.getMkTupleFunction(tupleTypeName) + " " + exprString(trArgs) + ")", memoP1, true)
           case Lambda(_,_) =>
+            smtlib2BaseLogger.info("-->> lambda <<--")
             throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
           case IntLit(value) =>
+            smtlib2BaseLogger.info("-->> intlit <<--")
             (value.toString(), memo, false)
           case BitVectorLit(value, width) =>
+            smtlib2BaseLogger.info("-->> bvlit <<--")
             ("(_ bv" + value.toString() + " " + width.toString() + ")", memo, false)
           case BooleanLit(value) =>
+            smtlib2BaseLogger.info("-->> boollit <<--")
             (value match { case true => "true"; case false => "false" }, memo, false)
         }
         val translatedExpr = if (letify && shouldLetify) {
@@ -222,29 +242,39 @@ trait SMTLIB2Base {
         }
         (translatedExpr, memoP + (eIn -> translatedExpr))
     }
+    smtlib2BaseLogger.info("-> end translateExpr <-")
+    smtlib2BaseLogger.info("RESULT size [1]: {}", resultExpr.expr.size)
     smtlib2BaseLogger.debug("result : {}", resultExpr.toString())
     smtlib2BaseLogger.debug("memoP  : {}", resultMemo.toString())
     (resultExpr, resultMemo)
   }
   def translateExpr(e : Expr, shouldLetify : Boolean) : String = {
     val (trExpr, memoP) = translateExpr(e, Map.empty, shouldLetify)
-    if (shouldLetify) {
+    val resultString = if (shouldLetify) {
       if (memoP.size == 0) {
         trExpr.exprString()
       } else {
         val letExprsIn = memoP.filter(p => p._2.name.isDefined).map(p => (p._2.order, p._2.name.get, p._2.expr)).toList
         val letExprsSorted = letExprsIn.sortWith((p1, p2) => p1._1 < p2._1).map(p => (p._2, p._3))
-        def recurse(lets : List[(String, String)], expr : String) : String = {
+        def recurse(lets : List[(String, String)], expr : String) : List[String] = {
           lets match {
-            case Nil => expr
-            case hd :: tl => "(let ((" + hd._1 + " " + hd._2 + ")) " + recurse(tl, expr) + ")"
+            case Nil => List(expr)
+            case hd :: tl =>
+              val aString : String = "(let ((" + hd._1 + " " + hd._2 + ")) "
+              val bString : List[String] = recurse(tl, expr)
+              val cString : List[String] = List(")")
+              (aString :: bString) ++ cString
           }
         }
-        recurse(letExprsSorted, trExpr.exprString())
+        val strings : List[String] = recurse(letExprsSorted, trExpr.exprString())
+        val rString = (strings.foldLeft(new StringBuilder())((acc, s) => acc ++= s)).toString()
+        rString
       }
     } else {
       trExpr.expr
     }
+    smtlib2BaseLogger.info("RESULT size [2]: {}", resultString.size)
+    resultString
   }
 }
 
@@ -308,7 +338,10 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
         generateDeclaration(sIdP, s.symbolTyp)
       }
     }
-    writeCommand("(assert " + translateExpr(e, true) +")")
+    smtlibInterfaceLogger.debug("[begin translate]")
+    val smtlib2 = translateExpr(e, true)
+    smtlibInterfaceLogger.debug("assert: {}", smtlib2)
+    writeCommand("(assert " + smtlib2 +")")
   }
 
   override def preassert(e: Expr) {

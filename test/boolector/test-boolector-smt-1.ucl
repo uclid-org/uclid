@@ -1,18 +1,18 @@
 module main {
     
+    /*
     type bv_t = bv3;
     define const0() : bv_t = 0bv3;
     define const1() : bv_t = 1bv3;
     define const_mid() : bv_t = 4bv3;
     define const_end() : bv_t = 7bv3;
+    */
     
-    /*
     type bv_t = bv4;
     define const0() : bv_t = 0bv4;
     define const1() : bv_t = 1bv4;
     define const_mid() : bv_t = 8bv4;
     define const_end() : bv_t = 15bv4;
-    */
 
     const const_array : [bv_t]bv_t;
     var array : [bv_t]bv_t;

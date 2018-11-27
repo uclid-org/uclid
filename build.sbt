@@ -1,5 +1,6 @@
 name := "uclid"
 version := "0.9.5"
+maintainer := "spramod@cse.iitk.ac.in"
 scalaVersion := "2.12.7"
  
 scalacOptions += "-feature"
