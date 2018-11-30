@@ -375,7 +375,7 @@ class LTLVerifSpec extends FlatSpec {
 }
 
 class HyperPropertySpec extends FlatSpec {
-  "test-hyperproperty-4.ucl" should "verify all assertions." in {
+  ignore /*"test-hyperproperty-4.ucl"*/ should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-hyperproperty-4.ucl", 0)
   }
 }
