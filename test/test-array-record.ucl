@@ -4,7 +4,7 @@ module main
     a : integer
   };
   type rec_1 = record {
-    b : [integer]integer
+    b : [integer]rec_0
   };
   type rec_2 = record {
     c : [integer]rec_1
@@ -14,7 +14,7 @@ module main
   var e : [integer]rec_0;
 
   init {
-    assume ((((d[0]).c[0]).b[0]) == 1);
+    assume d[0].c[0].b[0].a == 1;
     assume e[0].a == 10;
   }
 }

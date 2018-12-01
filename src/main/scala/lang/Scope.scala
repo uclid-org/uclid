@@ -71,7 +71,7 @@ object Scope {
   case class SpecVar(varId : Identifier, expr: Expr, params: List[ExprDecorator]) extends ReadOnlyNamedExpression(varId, BooleanType())
   case class AxiomVar(varId : Identifier, expr : Expr, params: List[ExprDecorator]) extends ReadOnlyNamedExpression(varId, BooleanType())
   case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends ReadOnlyNamedExpression(enumId, enumTyp)
-  case class ProductField(fId : Identifier, fTyp: Type, recordType : ProductType) extends ReadOnlyNamedExpression(fId, fTyp)
+  case class SelectorField(fId : Identifier) extends ReadOnlyNamedExpression(fId, UndefinedType())
   case class ForallVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ExistsVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class VerifResultVar(vId : Identifier, cmd : GenericProofCommand) extends ReadOnlyNamedExpression(vId, UndefinedType())
@@ -231,14 +231,6 @@ case class Scope (
   def +(typ : Type) : Scope = {
     Scope(Scope.addTypeToMap(map, typ, module), module, procedure, cmd, environment, parent)
   }
-  def addProductType(productType: ProductType) : Scope = {
-    productType.fields.foldLeft(this) {
-      (acc, fld) => {
-        Scope(Scope.addToMap(acc.map, Scope.ProductField(fld._1, fld._2, productType)), 
-            module, procedure, cmd, environment, parent)
-      }
-    }
-  }
   /** Add a reference to this module (don't expand the module's declarations). */
   def +&(m : Module) : Scope = {
     Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, environment, parent)
@@ -332,11 +324,11 @@ case class Scope (
     }
     return Scope(newMap, module, procedure, cmd, environment, Some(this))
   }
-  /** Return a new context with quantifier variables added. */
+  /** Return a new context with effect of operator added. */
   def +(opapp : OperatorApplication) : Scope = {
     this + (opapp.op)
   }
-  /** Return a new context with the quantifier variables adder. */
+  /** Return a new context with operator added. */
   def +(op : Operator) : Scope = {
     op match {
       case ForallOp(vs) =>
@@ -347,8 +339,14 @@ case class Scope (
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
           module, procedure, cmd, environment, Some(this))
+      case sel : SelectorOperator =>
+        addSelectorField(sel.ident)
       case _ => this
     }
+  }
+  /** Add this field to a context. */
+  def addSelectorField(id : Identifier) : Scope = {
+    Scope(map + (id -> Scope.SelectorField(id)), module, procedure, cmd, environment, Some(this))
   }
   /** Return a new context for this block. */
   def +(vars : List[BlockVarsDecl]) : Scope = {

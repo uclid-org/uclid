@@ -105,7 +105,7 @@ class SExprLexical extends Lexical with SExprTokens {
 
   def hexDigit : Parser[Char] = elem("hexDigit", ((ch) => ch.isDigit || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')))
   def bit : Parser[Char] = elem("bit", ((ch) => ch == '0' || ch == '1'))
-  val specialChars = "_+-*&|!~<>=/%?.$^"
+  val specialChars = "_+-*&|!~<>=/%?.$^@"
   def specialChar : Parser[Char] = elem("specialChar", ((ch) => specialChars.contains(ch)))
   def symbolStartChar: Parser[Char] = letter | specialChar
   def symbolChar: Parser[Char] = letter | specialChar | digit
@@ -191,6 +191,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val OpAnd = "and"
   lazy val OpOr = "or"
   lazy val OpNot = "not"
+  lazy val OpITE = "ite"
   lazy val OpImpl = "=>"
   lazy val OpEq = "="
   lazy val OpIntGT = ">"
@@ -210,13 +211,20 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val OpBVNot = "bvnot"
 
   lazy val KwDefineFun = "define-fun"
+  lazy val KwModel = "model"  // The "model" keyword is specific to Boolector 
   lazy val KwInt = "Int"
   lazy val KwBool = "Bool"
   lazy val KwBV = "BitVec"
+  lazy val KwArray = "Array"
+  lazy val KwLambda = "lambda"
+
+  lazy val KwUS = "_"
+  lazy val KwTrue = "true"
+  lazy val KwFalse = "false"
 
   lexical.delimiters += ("(", ")")
-  lexical.reserved += ("false", "true", 
-      KwDefineFun, KwInt, KwBool, KwBV, OpAnd, OpOr, OpNot, OpImpl, 
+  lexical.reserved += (KwFalse, KwFalse, KwUS,
+      KwDefineFun, KwModel, KwInt, KwBool, KwBV, KwArray, KwLambda, OpAnd, OpOr, OpNot, OpITE, OpImpl, 
       OpEq, OpIntGE, OpIntGT, OpIntLT, OpIntLE, OpIntAdd, OpIntSub, OpIntMul,
       OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, OpBVAnd, OpBVOr, OpBVXor, OpBVNot)
 
@@ -224,6 +232,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     OpAnd ^^ { _ => smt.ConjunctionOp } |
     OpOr ^^ { _ => smt.DisjunctionOp } |
     OpNot ^^ { _ => smt.NegationOp } |
+    OpITE ^^ {_ => smt.ITEOp } |
     OpImpl ^^ { _ => smt.ImplicationOp } |
     OpEq ^^ { _ => smt.EqualityOp } |
     OpIntGE ^^ { _ => smt.IntGEOp } |
@@ -252,14 +261,21 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val BitVectorLit : PackratParser[smt.BitVectorLit] =
     bitvectorLit ^^ { bvLit => smt.BitVectorLit(bvLit.value, bvLit.numBits) }
 
+  lazy val BoolLit : PackratParser[smt.BooleanLit] =
+    KwTrue ^^ { _ => smt.BooleanLit(true) } |
+    KwFalse ^^ { _ => smt.BooleanLit(false) }
+
   lazy val Expr : PackratParser[smt.Expr] =
-    Symbol | IntegerLit | BitVectorLit |
-    "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)}
+    Symbol | IntegerLit | BitVectorLit | BoolLit |
+    "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)} |
+    "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) }
 
   lazy val Type : PackratParser[smt.Type] =
     KwInt ^^ { _ => smt.IntType } |
     KwBool ^^ { _ => smt.BoolType } |
-    "(" ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) }
+    "(" ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
+    "(" ~ KwUS ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
+    "(" ~ KwArray ~> Type ~ Type <~ ")" ^^ { case inType ~ outType => smt.ArrayType(List(inType), outType) }
 
   lazy val FunArg : PackratParser[smt.Symbol] =
     "(" ~> symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.name, typ) }
@@ -275,6 +291,10 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       }
     }
 
+  lazy val AssignmentModel : PackratParser[smt.AssignmentModel] =
+    "(" ~ KwModel ~> rep(DefineFun) <~ ")" ^^ { case functions => smt.AssignmentModel(functions) } |
+    "(" ~> rep(DefineFun) <~ ")" ^^ { case functions => smt.AssignmentModel(functions) }
+
   def parseFunction(text: String): DefineFun = {
     val tokens = new PackratReader(new lexical.Scanner(text))
     phrase(DefineFun)(tokens) match {
@@ -282,6 +302,16 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
         function
       case NoSuccess(msg, next) =>
         throw new Utils.SyGuSParserError("Parser Error: %s.".format(msg))
+    }
+  }
+
+  def parseModel(text : String) : AssignmentModel = {
+    val tokens = new PackratReader(new lexical.Scanner(text))
+    phrase(AssignmentModel)(tokens) match {
+      case Success(model, _) =>
+        model
+      case NoSuccess(msg, next) =>
+        throw new Utils.RuntimeError("Parser Error: %s.".format(msg))
     }
   }
 }

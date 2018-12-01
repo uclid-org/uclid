@@ -286,17 +286,17 @@ class ParserSpec extends FlatSpec {
   }
   "test-define-expand.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-define-expand.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
   "test-procedure-inline-bv.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-procedure-inline-bv.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
   "test-procedure-postcondition-2.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-procedure-postcondition-2.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
   "test-define-recursive.ucl" should "not parse successfully." in {
@@ -314,32 +314,32 @@ class ParserSpec extends FlatSpec {
   }
   "nested_instances.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/nested_instances.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
   "test-nested-modules-1.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-nested-modules-1.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
   "test-nested-modules-2.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-nested-modules-2.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
   "test-block-var-0.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-block-var-0.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
   "test-modules-7.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-modules-7.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
   "test-block-var-renaming-1.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-block-var-renaming-1.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
   "test-multiple-writes.ucl" should "not parse successfully." in {
@@ -454,7 +454,7 @@ class ParserSpec extends FlatSpec {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
     val fileModules = UclidMain.compile(List(new File("test/test-string-2.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     val results = UclidMain.execute(instantiatedModules(0), UclidMain.Config())
     val stringOutput = UclidMain.stringOutput.toString().trim()
     assert (instantiatedModules.size == 1)
@@ -463,25 +463,36 @@ class ParserSpec extends FlatSpec {
 
   "test-hyperproperty-0.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-hyperproperty-0.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
 
   "longcomment.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/longcomment.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
 
   "test-array-record.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-array-record.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
 
   "test-array-record-1.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(List(new File("test/test-array-record-1.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(fileModules, lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+
+  "recorderror.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/recorderror.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "inputerror.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/inputerror.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
 
@@ -494,7 +505,6 @@ class ParserSpec extends FlatSpec {
         assert (p.errors(0)._1.contains("Trace select can only be used in a module-level expression"))
     }
   }
-
   "test-hyperproperty-2.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(List(new File("test/test-hyperproperty-2.ucl")), lang.Identifier("main"))
