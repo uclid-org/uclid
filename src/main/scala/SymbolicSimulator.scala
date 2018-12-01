@@ -286,6 +286,7 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
+
   def getVarsInOrder(map: Map[smt.Expr, Identifier], scope: Scope) : List[List[smt.Expr]] = {
     val ids = map.map(p => p._2).toList
     val reverse_map = map.map(_.swap)
