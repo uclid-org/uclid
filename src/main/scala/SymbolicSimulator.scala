@@ -507,7 +507,7 @@ class SymbolicSimulator (module : Module) {
 
   def runLazySC(bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
       val s = new LazySCSolver(this, solver)
-      s.simulateLazySC(bound, scope, label, filter)
+      s.simulateLazySCV2(bound, scope, label, filter)
   }
 
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
