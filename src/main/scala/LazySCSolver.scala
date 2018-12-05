@@ -115,7 +115,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
               val taint2 = smt.ConstArray(smt.BooleanLit(false), arrTyp)
               val exp = smt.OperatorApplication(smt.EqualityOp, List(taint_var._1(1), taint2))
               additionalConstraints += exp
-              List(taint_var._1(0))
+              List(smt.OperatorApplication(smt.NegationOp, List(taint_var._1(0))))
             }
             else {
               List(smt.OperatorApplication(smt.NegationOp, List(taint_var._1(0))))
