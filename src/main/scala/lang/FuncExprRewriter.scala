@@ -78,12 +78,12 @@ class FuncExprRewriterPass extends RewritePass {
           if (fapp.args.size == 2) {
             fapp.args(0) match {
               case IntLit(v) =>
-                OperatorApplication(BVLeftShiftOp(0, v.toInt), List(fapp.args(1)))
+                OperatorApplication(BVLeftShiftIntOp(0, v.toInt), List(fapp.args(1)))
               case _ =>
-                OperatorApplication(BVLeftShiftOp(0 ,0), List(fapp.args(1)))
+                OperatorApplication(BVLeftShiftBVOp(0), List(fapp.args(1), fapp.args(0)))
             }
           } else {
-            OperatorApplication(BVLeftShiftOp(0, 0), List.empty)
+            OperatorApplication(BVLeftShiftIntOp(0, 0), List.empty)
           }
 
 
@@ -91,12 +91,12 @@ class FuncExprRewriterPass extends RewritePass {
           if (fapp.args.size == 2) {
             fapp.args(0) match {
               case IntLit(v) =>
-                OperatorApplication(BVLRightShiftOp(0, v.toInt), List(fapp.args(1)))
+                OperatorApplication(BVLRightShiftIntOp(0, v.toInt), List(fapp.args(1)))
               case _ =>
-                OperatorApplication(BVLRightShiftOp(0 ,0), List(fapp.args(1)))
+                OperatorApplication(BVLRightShiftBVOp(0), List(fapp.args(1), fapp.args(0)))
             }
           } else {
-            OperatorApplication(BVLRightShiftOp(0, 0), List.empty)
+            OperatorApplication(BVLRightShiftIntOp(0, 0), List.empty)
           }
 
 
@@ -104,12 +104,12 @@ class FuncExprRewriterPass extends RewritePass {
           if (fapp.args.size == 2) {
             fapp.args(0) match {
               case IntLit(v) =>
-                OperatorApplication(BVARightShiftOp(0, v.toInt), List(fapp.args(1)))
+                OperatorApplication(BVARightShiftIntOp(0, v.toInt), List(fapp.args(1)))
               case _ =>
-                OperatorApplication(BVARightShiftOp(0 ,0), List(fapp.args(1)))
+                OperatorApplication(BVARightShiftBVOp(0), List(fapp.args(1), fapp.args(0)))
             }
           } else {
-            OperatorApplication(BVARightShiftOp(0, 0), List.empty)
+            OperatorApplication(BVARightShiftIntOp(0, 0), List.empty)
           }
 
 

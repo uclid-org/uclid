@@ -376,18 +376,30 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               val w = e + argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
               BitVectorType(w)
-            case BVLeftShiftOp(w, e) =>
+            case BVLeftShiftIntOp(w, e) =>
               checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
               val w = argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
               BitVectorType(w)
-            case BVLRightShiftOp(w, e) =>
+            case BVLRightShiftIntOp(w, e) =>
               checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
               val w = argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
               BitVectorType(w)
-            case BVARightShiftOp(w, e) =>
+            case BVARightShiftIntOp(w, e) =>
               checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
+              val w = argTypes(0).asInstanceOf[BitVectorType].width
+              bvOpMap.put(bvOp.astNodeId, w)
+              BitVectorType(w)
+            case BVLeftShiftBVOp(w) =>
+              val w = argTypes(0).asInstanceOf[BitVectorType].width
+              bvOpMap.put(bvOp.astNodeId, w)
+              BitVectorType(w)
+            case BVLRightShiftBVOp(w) =>
+              val w = argTypes(0).asInstanceOf[BitVectorType].width
+              bvOpMap.put(bvOp.astNodeId, w)
+              BitVectorType(w)
+            case BVARightShiftBVOp(w) =>
               val w = argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
               BitVectorType(w)
@@ -648,9 +660,12 @@ class PolymorphicTypeRewriterPass extends RewritePass {
             case BVNotOp(_) => width.flatMap((w) => Some(BVNotOp(w)))
             case BVSignExtOp(_, e) => width.flatMap((w) => Some(BVSignExtOp(w, e)))
             case BVZeroExtOp(_, e) => width.flatMap((w) => Some(BVZeroExtOp(w, e)))
-            case BVLeftShiftOp(_, e) => width.flatMap((w) => Some(BVLeftShiftOp(w, e)))
-            case BVLRightShiftOp(_, e) => width.flatMap((w) => Some(BVLRightShiftOp(w, e)))
-            case BVARightShiftOp(_, e) => width.flatMap((w) => Some(BVARightShiftOp(w, e)))
+            case BVLeftShiftIntOp(_, e) => width.flatMap((w) => Some(BVLeftShiftIntOp(w, e)))
+            case BVLRightShiftIntOp(_, e) => width.flatMap((w) => Some(BVLRightShiftIntOp(w, e)))
+            case BVARightShiftIntOp(_, e) => width.flatMap((w) => Some(BVARightShiftIntOp(w, e)))
+            case BVLeftShiftBVOp(_) => width.flatMap((w) => Some(BVLeftShiftBVOp(w)))
+            case BVLRightShiftBVOp(_) => width.flatMap((w) => Some(BVLRightShiftBVOp(w)))
+            case BVARightShiftBVOp(_) => width.flatMap((w) => Some(BVARightShiftBVOp(w)))
             case _ => Some(bv)
           }
           newOp match {
