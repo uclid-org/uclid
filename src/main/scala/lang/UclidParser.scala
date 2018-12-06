@@ -298,15 +298,25 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     /** E12 = E13 (ExprList) | E13 */
     lazy val E12: PackratParser[Expr] = positioned {
-        E13 ~ rep(ExprSuffix) ^^ {
-          case e ~ es => es.foldLeft(e)((acc, op) => OperatorApplication(op, List(acc)))
+/*        E15 ~ rep(ExprSuffix) ^^ {
+          case e ~ es => es.foldLeft(e)((acc, op) => 
+            op match {
+              case Operator(op) => { OperatorApplication(op, List(acc)) }
+              case Expr(op) => { FuncApplication(op, List(acc)) }
+            })
         }
+*/
+        E12 ~ ExprSuffix ^^ { case e ~ es => OperatorApplication(es, List(e)) } |
+        E12 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
+        E15
     }
     /** E13 = E15 MapOp | E15 **/
+/*
     lazy val E13: PackratParser[Expr] = positioned {
         E15 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
         E15
     }
+*/
     lazy val ConstArray : PackratParser[lang.ConstArray] = positioned {
       KwConst ~ "(" ~> Expr ~ ("," ~> Type) <~ ")" ^^ {
         case (exp ~ typ) => lang.ConstArray(exp, typ)
