@@ -50,7 +50,7 @@ module main
   invariant eq_mem: (arr1.mem == arr2.mem);
 
   control {
-    v = induction;
+    v = unroll(200);
     check;
     print_results;
     v.print_cex(

@@ -86,7 +86,8 @@ class SymbolicSimulator (module : Module) {
 
   var symbolTable : SymbolTable = Map.empty
   var frameList : FrameTable = ArrayBuffer.empty
-  
+
+  var lazySC : Option[LazySCSolver] = None
   var synthesizedInvariants : ArrayBuffer[lang.Expr] = ArrayBuffer.empty
 
   def newHavocSymbol(name: String, t: smt.Type) = {
@@ -170,7 +171,9 @@ class SymbolicSimulator (module : Module) {
               case Some(l) => l.toString
               case None    => "unroll"
             }
-            runLazySC(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, noLTLFilter, solver)
+            val lz = new LazySCSolver(this)
+            lazySC = Some(lz)
+            runLazySC(lz, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, noLTLFilter, solver)
           case "bmc" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString()
@@ -229,7 +232,10 @@ class SymbolicSimulator (module : Module) {
             }
             verifyProcedure(proc, label)
           case "check" =>
-            proofResults = assertionTree.verify(solver)
+            lazySC match {
+              case None => proofResults = assertionTree.verify(solver)
+              case Some(lz) => proofResults = lz.assertionTree.verify(solver)
+            }
           case "synthesize_invariant" =>
             synthesizer match {
               case None =>
@@ -505,9 +511,9 @@ class SymbolicSimulator (module : Module) {
       hyperAsserts.toList, hyperAssumes.toList, assumesLambda.toList)
   }
 
-  def runLazySC(bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
-      val s = new LazySCSolver(this, solver)
-      s.simulateLazySCV2(bound, scope, label, filter)
+  def runLazySC(lazySC: LazySCSolver, bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
+
+      lazySC.simulateLazySCV2(bound, scope, label, filter)
   }
 
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,

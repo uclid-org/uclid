@@ -1,0 +1,24 @@
+module main {
+	var a: bv8;
+	var b: bv3;
+	var c: bv8;
+	var d: bv8;
+	var arr: [integer]boolean;
+
+	init {
+		a = 10bv8;
+		b = a[4:2];
+		c[2:0] = a[4:2];
+		assume(d == 0bv8);	
+		assume(forall(x: integer) :: (x > 0) ==> (arr[x] == true));
+	}
+	//assume(d == 0bv8);
+	next {
+	//	var e: integer = 10;
+		a' = a + 1bv8;
+		b' = b + 1bv3;
+	}
+	control {
+		unroll(2);
+	}
+}

@@ -6,15 +6,33 @@ import com.typesafe.scalalogging.Logger
 import scala.collection.mutable.ArrayBuffer
 
 case class LazySCResult(e: smt.Expr, result: smt.SolverResult)
-class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
+class LazySCSolver(simulator: SymbolicSimulator) {
   val log = Logger(classOf[LazySCSolver])
+  val assertionTree = new AssertionTree
+  //val taintAssertionTree = new AssertionTree
+  val taintSolver = new smt.Z3Interface()
+
   type TaintSymbolTable = Map[Identifier, List[smt.Expr]]
   type TaintFrameTable = ArrayBuffer[TaintSymbolTable]
   type TaintSymbolHyperTable = Map[Identifier, Array[smt.Expr]]
   type TaintSimulationTable = ArrayBuffer[TaintFrameTable]
+
   def checkExpr(solver: smt.Context, e: smt.Expr, assumes: List[smt.Expr]) = {
     solver.push()
     assumes.foreach(assume => solver.assert(assume))
+    solver.assert(e)
+    val sat = solver.check()
+    val result = sat.result match {
+      case Some(true) => smt.SolverResult(Some(false), sat.model)
+      case Some(false) => smt.SolverResult(Some(true), sat.model)
+      case None => smt.SolverResult(None, None)
+    }
+    solver.pop()
+    LazySCResult(e, result)
+  }
+
+  def checkAssertion(solver: smt.Context, e: smt.Expr): LazySCResult = {
+    solver.push()
     solver.assert(e)
     val sat = solver.check()
     val result = sat.result match {
@@ -188,7 +206,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
         val isArray = nextVar._1.typ.isInstanceOf[smt.ArrayType]
         log.debug("-- The assumes in A Func -- " + assumes.toString)
         log.debug("-- The query_expr in A Func -- " + not_expr.toString)
-        checkExpr(solver, not_expr, assumes).result.result match {
+        checkExpr(taintSolver, not_expr, assumes).result.result match {
           case Some(true) =>
             log.debug("equal in A Function")
             if (isArray) {
@@ -703,12 +721,25 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
 
   }
 
+  /** Add assertion. */
+  def addAssertToTree(prop : AssertInfo) {
+    assertionTree.addAssert(prop)
+  }
+  /** Add assumption. */
+  def addAssumptionToTree(e : smt.Expr, params : List[ExprDecorator]) {
+    assertionTree.addAssumption(e)
+  }
+
+  def addAssumptionToTaintSolver(e: smt.Expr) = {
+    taintSolver.assert(e)
+  }
+
   // Applicable for only two copies
   def simulateLazySCV2(bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
 
     val init_lambda = simulator.getInitLambda(false, true, false, scope, label, filter)
     val next_lambda = simulator.getNextLambda(init_lambda._3, true, false, scope, label, filter)
-    val taintInitLambda = getTaintInitLambda(init_lambda._1, scope, solver, init_lambda._5)
+    val taintInitLambda = getTaintInitLambda(init_lambda._1, scope, taintSolver, init_lambda._5)
     val taintNextLambda = getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, scope)
     val combinedInitLambda = getCombinedInitLambda(init_lambda._1, taintInitLambda)
     val combinedNextLambda = getCombinedNextLambda(next_lambda._1, taintNextLambda)
@@ -750,7 +781,8 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
       havocTable += havoc_subs
       if (i == 1) {
         val init_conjunct = simulator.substitute(simulator.betaSubstitution(combinedInitLambda, prevVarTable(0).flatten ++ initTaintVars.flatten), havoc_subs)
-        simulator.addAssumptionToTree(init_conjunct, List.empty)
+        addAssumptionToTree(init_conjunct, List.empty)
+        addAssumptionToTaintSolver(init_conjunct)
         taintAssumes += init_conjunct
       }
       else {
@@ -775,18 +807,18 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
 
         taintMatches.foreach {
           v =>
-            checkExpr(solver, smt.OperatorApplication(smt.NegationOp, List(v._2._2)), taintAssumes.toList).result.result match {
+            checkAssertion(taintSolver, smt.OperatorApplication(smt.NegationOp, List(v._2._2))).result.result match {
 
               case Some(true) =>  //Unsat and tainted, hence equal
                 val equality = smt.OperatorApplication(smt.EqualityOp, List(v._1, v._2._1))
                 log.debug("%% Taint Assumes %% " + taintAssumes.toList.toString)
                 log.debug("++ Added Equality ++ " + equality.toString)
-                simulator.addAssumptionToTree(equality, List.empty)
+                addAssumptionToTree(equality, List.empty)
               case _ => // Sat, possibility of being unequal. Duplicate Expression
                 partition._1.get(v._1) match {
                   case Some(expr) =>
                     log.debug("## Added Duplicate ## " + (v._1, expr).toString)
-                    simulator.addAssumptionToTree(expr, List.empty)
+                    addAssumptionToTree(expr, List.empty)
                   case None =>
                     log.debug("## Not Duplicated as variable not in lambda ##")
                 }
@@ -796,7 +828,8 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
         partition._2.foreach {
           expr =>
             log.debug("Added INIT assumption to tree " + expr.toString)
-            simulator.addAssumptionToTree(expr, List.empty)
+            addAssumptionToTree(expr, List.empty)
+
         }
         // Get non array taint vars and match with the vars
         /*val firstInitVars = prevVarTable(0).flatten ++ prevTaintVarTable(0)
@@ -846,7 +879,8 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
       init_lambda._1, 0, init_lambda._5, simRecord, 0, scope, prevVarTable.toList)
     hyperAssumesInit.foreach {
       hypAssume =>
-        simulator.addAssumptionToTree(hypAssume, List.empty)
+        addAssumptionToTree(hypAssume, List.empty)
+        //addAssumptionToTaintSolver(hypAssume)
     }
 
 
@@ -858,7 +892,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
     asserts_init.foreach {
       assert =>
         // FIXME: simTable
-        simulator.addAssertToTree(assert)
+        addAssertToTree(assert)
     }
 
     val asserts_init_hyper = simulator.rewriteHyperAsserts(
@@ -866,7 +900,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
     asserts_init_hyper.foreach {
       assert =>
         // FIXME: simTable
-        simulator.addAssertToTree(assert)
+        addAssertToTree(assert)
     }
 
 
@@ -896,7 +930,8 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
         //simulator.addAssumptionToTree(next_conjunct, List.empty)
         if (j == 1) {
           val next_conjunct = simulator.substitute(simulator.betaSubstitution(combinedNextLambda, (prevVarTable(j - 1).flatten ++ prevTaintVarTable(i - 1) ++ new_vars.flatten ++ nextTaintVars.flatten)), havoc_subs)
-          simulator.addAssumptionToTree(next_conjunct, List.empty)
+          addAssumptionToTree(next_conjunct, List.empty)
+          addAssumptionToTaintSolver(next_conjunct)
           taintAssumes += next_conjunct
         }
         else {
@@ -918,18 +953,18 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
           log.debug(" ----- Next taint Matches ---- " + taintMatches.toString)
           taintMatches.foreach {
             v =>
-              checkExpr(solver, smt.OperatorApplication(smt.NegationOp, List(v._2._2)), taintAssumes.toList).result.result match {
+              checkAssertion(taintSolver, smt.OperatorApplication(smt.NegationOp, List(v._2._2))).result.result match {
                 case Some(true) =>  //Unsat and tainted, hence equal
                   val equality = smt.OperatorApplication(smt.EqualityOp, List(v._1, v._2._1))
                   //log.debug("%% Taint Assumes %% " + taintAssumes.toList.toString)
                   //log.debug("@@ Query Expr @@ " + smt.OperatorApplication(smt.NegationOp, List(v._2._2)).toString)
                   log.debug("++ Added Equality ++ " + equality.toString)
-                  simulator.addAssumptionToTree(equality, List.empty)
+                  addAssumptionToTree(equality, List.empty)
                 case _ => // Sat, possibility of being unequal. Duplicate Expression
                   partition._1.get(v._1) match {
                     case Some(expr) =>
                       log.debug("## Added Duplicate ## " + (v._1, expr).toString)
-                      simulator.addAssumptionToTree(expr, List.empty)
+                      addAssumptionToTree(expr, List.empty)
                     case None =>
                   }
 
@@ -938,7 +973,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
           partition._2.foreach {
             expr =>
               log.debug("Added NEXT assumption to tree " + expr.toString)
-              simulator.addAssumptionToTree(expr, List.empty)
+              addAssumptionToTree(expr, List.empty)
           }
         }
         havocTable(j - 1) = havoc_subs
@@ -948,7 +983,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
       val hyperAssumesNext = simulator.rewriteHyperAssumes(next_lambda._1, numberOfSteps, next_lambda._5, simRecord, i, scope, prevVarTable.toList)
       hyperAssumesNext.foreach {
         hypAssume =>
-          simulator.addAssumptionToTree(hypAssume, List.empty)
+          addAssumptionToTree(hypAssume, List.empty)
       }
       // Asserting on-HyperInvariant assertions
       // FIXME: simTable
@@ -958,14 +993,14 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
           prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord.clone(), havocTable(0))
       asserts_next.foreach {
         assert =>
-          simulator.addAssertToTree(assert)
+          addAssertToTree(assert)
       }
       // FIXME: simTable
       simulator.defaultLog.debug("i: {}", i)
       val asserts_next_hyper = simulator.rewriteHyperAsserts(next_lambda._1, numberOfSteps, next_lambda._4, simRecord, i, scope, prevVarTable.toList)
       asserts_next_hyper.foreach {
         assert => {
-          simulator.addAssertToTree(assert)
+          addAssertToTree(assert)
         }
       }
     }
@@ -973,6 +1008,7 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
 
 
   }
+  /*
   // Applicable for only two copies
   def simulateLazySC(bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
 
@@ -1183,5 +1219,5 @@ class LazySCSolver(simulator: SymbolicSimulator, solver: smt.Context) {
     simulator.symbolTable = symTabStep
 
 
-  }
+  } */
 }

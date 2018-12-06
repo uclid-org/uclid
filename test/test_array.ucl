@@ -1,0 +1,24 @@
+module main {
+	var arr: [integer]integer;
+	var v: integer;
+	var b: integer;
+
+	init {
+		v = 1;
+		b = 10;
+		arr[1] = 10;
+		arr[2] = 100;
+	}
+
+	next {
+		arr' = arr[v -> b];
+		v' = v + 1;
+		b' = b + 2;
+	}
+
+	control {
+		v = lazysc(5);
+		check;
+		print_results;
+	}
+}

@@ -1,0 +1,42 @@
+module main {
+  type num = integer;
+  type bit = boolean;
+  type rec1 = record {a : num, b : num, c : bit };
+
+  var p, q1, q2 : rec1;
+  var a: integer;
+  procedure foo(p : rec1) returns (pn : rec1) {
+    pn.a = p.a + 1;
+    pn.b = p.a + p.b;
+    pn.c = !(p.c);
+  }
+
+  procedure bar(p : rec1) returns (pn : rec1) {
+    pn.b = p.a + p.b + 1;
+    pn.a = pn.b - p.b;
+    pn.c = !p.c;
+  }
+
+  init {
+    p.a = 0;
+    p.b = 1;
+    p.c = false;
+  }
+
+  next {
+    call (q1') = foo(p);
+    call (q2') = foo(p);
+    p' = q1;
+
+    assert (q1'.a == q2'.a);
+    assert (q1'.b == q2'.b);
+    assert (q1'.c == q2'.c);
+  }
+
+
+  control {
+   unroll (3);
+   check;
+   print_results;
+  }
+}
