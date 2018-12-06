@@ -207,6 +207,18 @@ case class BVGTOp(override val w : Int) extends BVArgOperator(w) {
 case class BVGEOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = ">="
 }
+case class BVLTUOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "<_u"
+}
+case class BVLEUOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "<=_u"
+}
+case class BVGTUOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = ">_u"
+}
+case class BVGEUOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = ">=_u"
+}
 case class BVAddOp(override val w : Int) extends BVArgOperator(w) {
   override def toString ="+"
 }

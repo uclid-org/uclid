@@ -359,6 +359,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           bvOp match {
             case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) =>
               new BooleanType()
+            case BVLTUOp(_) | BVLEUOp(_) | BVGTUOp(_) | BVGEUOp(_) =>
+              val w = argTypes(0).asInstanceOf[BitVectorType].width
+              bvOpMap.put(bvOp.astNodeId, w)
+              new BooleanType()
             case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVUnaryMinusOp(_) =>
               checkTypeError(bvOp.w != 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
               new BitVectorType(bvOp.w)
@@ -654,6 +658,10 @@ class PolymorphicTypeRewriterPass extends RewritePass {
           val width = typeCheckerPass.bvOpMap.get(bv.astNodeId)
           Utils.assert(width.isDefined, "No width available for: " + bv.toString)
           val newOp = bv match {
+            case BVLTUOp(_) => width.flatMap((w) => Some(BVLTUOp(w)))
+            case BVLEUOp(_) => width.flatMap((w) => Some(BVLEUOp(w)))
+            case BVGTUOp(_) => width.flatMap((w) => Some(BVGTUOp(w)))
+            case BVGEUOp(_) => width.flatMap((w) => Some(BVGEUOp(w)))
             case BVAndOp(_) => width.flatMap((w) => Some(BVAndOp(w)))
             case BVOrOp(_) => width.flatMap((w) => Some(BVOrOp(w)))
             case BVXorOp(_) => width.flatMap((w) => Some(BVXorOp(w)))

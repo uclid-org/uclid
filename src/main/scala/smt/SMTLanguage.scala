@@ -545,11 +545,35 @@ case class BVLEOp(w : Int) extends BoolResultOp {
 case class BVGTOp(w : Int) extends BoolResultOp {
   override val hashId = mix(w, 230)
   override val hashCode = computeHash
-  override def toString = "bvugt"
+  override def toString = "bvsgt"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
 }
 case class BVGEOp(w : Int) extends BoolResultOp {
   override val hashId = mix(w, 231)
+  override val hashCode = computeHash
+  override def toString = "bvsge"
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
+}
+case class BVLTUOp(w : Int) extends BoolResultOp {
+  override val hashId = mix(w, 235)
+  override val hashCode = computeHash
+  override def toString = "bvult"
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
+}
+case class BVLEUOp(w : Int) extends BoolResultOp {
+  override val hashId = mix(w, 236)
+  override val hashCode = computeHash
+  override def toString = "bvule"
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
+}
+case class BVGTUOp(w : Int) extends BoolResultOp {
+  override val hashId = mix(w, 237)
+  override val hashCode = computeHash
+  override def toString = "bvugt"
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
+}
+case class BVGEUOp(w : Int) extends BoolResultOp {
+  override val hashId = mix(w, 238)
   override val hashCode = computeHash
   override def toString = "bvuge"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
