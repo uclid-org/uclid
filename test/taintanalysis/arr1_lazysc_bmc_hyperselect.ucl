@@ -1,8 +1,8 @@
 module main
 {
-  input a, b : integer;
+  var a, b : integer;
   var mem    : [integer]integer;
-  output d   : integer;
+  var d   : integer;
   var initAssume: boolean;
   function rng(i : integer) : boolean;
 
@@ -37,15 +37,16 @@ module main
     initAssume' = false;
   }
 
+  hyperaxiom[2] eq_b: (!initAssume) ==> (rng(a.1) ==> (b.1 == b.2));
   hyperaxiom[2] eq_a: a.1 == a.2;
   hyperinvariant[2] eq_d: rng(a.1) ==> d.1 == d.2;
-  hyperinvariant[2] eq_rng_mem: (forall(i : integer) :: rng(i) ==> (mem.1[i] == mem.2[2])); 
+  hyperinvariant[2] eq_rng_mem: (forall(i : integer) :: rng(i) ==> (mem.1[i] == mem.2[i])); 
   hyperaxiom[2] eq_mem_init: initAssume ==> (forall(i : integer) :: rng(i) ==> mem.1[i] == mem.2[i]);
-  hyperaxiom[2] eq_b: (!initAssume) ==> (rng(a.1) ==> (b.1 == b.2));
   control {
-	v = lazysc(5);
+	v = lazysc(100);
 	check;
 	print_results;
+	v.print_cex(d, initAssume, rng(a), a, b, mem[a], mem);
   }
 }
 
