@@ -523,4 +523,16 @@ class ParserSpec extends FlatSpec {
         assert (p.errors(0)._1.contains("Trace select can only be used in a verification expression"))
     }
   }
+
+  "test-expression-suffix-function.ucl" should "parse successfully" in {
+    val fileModules = UclidMain.compile(List(new File("test/test-expression-suffix-function.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1);
+  }
+
+  "test-unsigned-comparators-0.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-unsigned-comparators-0.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1);
+  }
 }
