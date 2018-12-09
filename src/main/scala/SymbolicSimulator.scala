@@ -46,6 +46,9 @@ import scala.util.Try
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import com.typesafe.scalalogging.Logger
 
+
+import scala.collection.mutable.{Map => MutableMap}
+
 object UniqueIdGenerator {
   var i : Int = 0;
   def unique() : Int = {i = i + 1; return i}
@@ -161,10 +164,10 @@ class SymbolicSimulator (module : Module) {
             }
             // get_init_lambda(false, context, "some")
             symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter, solver)
-            // initialize(false, true, false, context, label, noLTLFilter)
-            // symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
             //initialize(false, true, false, context, label, noLTLFilter)
             //symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+            // initialize(false, true, false, context, label, noLTLFilter)
+            // symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
             //runLazySC(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, noLTLFilter, solver)
           case "lazysc" =>
             val label : String = cmd.resultVar match {
@@ -833,13 +836,24 @@ class SymbolicSimulator (module : Module) {
       substitute(lambda.e, matches)
   }
 
+
   def substitute(e: smt.Expr, s: List[(smt.Expr, smt.Expr)]): smt.Expr = {
+    val m = s.map(p => p._1 -> p._2).toMap
+    def rewrite(ex: smt.Expr) : smt.Expr = {
+      m.get(ex) match {
+        case Some(eX) => eX
+        case None => ex
+      }
+    }
     s.foldLeft(e)((acc, p) => _substitute(acc, p))
+    //var memo: MutableMap[smt.Expr, smt.Expr] = MutableMap.empty
+    //smt.Context.rewriteExpr(e, rewrite, memo)
   }
 
   def _substitute(e: smt.Expr, sym: (smt.Expr, smt.Expr)): smt.Expr = {
-    if (e == sym._1)
-      return sym._2
+    //Causes a possible slowdown
+    //if (e == sym._1)
+    //  return sym._2
 
     e match {
       case smt.Symbol(id, symbolTyp) => {
@@ -854,6 +868,13 @@ class SymbolicSimulator (module : Module) {
       case smt.MakeTuple(args) => smt.MakeTuple(args.map(e => _substitute(e, sym)))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
+        op match {
+          case smt.HyperSelectOp(i) =>
+            if (e == sym._1)
+              return sym._2
+          case _ =>
+        }
+
         val args = opapp.operands.map(exp => _substitute(exp, sym))
         smt.OperatorApplication(op, args)
 

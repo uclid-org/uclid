@@ -374,7 +374,10 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     e match {
 
       case smt.Symbol(id, symbolTyp) => symbolTyp match {
-        case smt.ArrayType(inTypes, outType) => Set(prevVarTaints(e)(1))
+        case smt.ArrayType(inTypes, outType) => prevVarTaints.get(e) match {
+          case Some(value) => Set(value(1))
+          case None => Set(smt.ConstArray(smt.BooleanLit(false), smt.ArrayType(inTypes, smt.BoolType)))
+        }
         case _ => throw new Utils.UnimplementedException("T2 taint of non-array type.")
       }
       //case smt.MakeTuple(args) => args.flatMap(e => getT2Taint(e, prevVarTaints)).toSet
@@ -407,7 +410,14 @@ class LazySCSolver(simulator: SymbolicSimulator) {
   def getT1Taint(e: smt.Expr, prevVarTaints: Map[smt.Expr, List[smt.Expr]]): Set[smt.Expr] = {
     e match {
       //T1 taint of arrays and non arrays
-      case smt.Symbol(id, symbolTyp) => Set(prevVarTaints(e)(0))
+      case smt.Symbol(id, symbolTyp) => {
+        prevVarTaints.get(e) match {
+          case Some(v) => Set(v(0))
+          case None =>
+            log.debug("*** Taint Var not found for " + e.toString)
+            Set(smt.BooleanLit(false))
+        }
+      }
       case smt.IntLit(n) => Set()
       case smt.BooleanLit(b) => Set()
       case smt.BitVectorLit(bv, w) => Set()
@@ -781,6 +791,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
       havocTable += havoc_subs
       if (i == 1) {
         val init_conjunct = simulator.substitute(simulator.betaSubstitution(combinedInitLambda, prevVarTable(0).flatten ++ initTaintVars.flatten), havoc_subs)
+        log.debug("!!!!!!!!!!!!!!!! --- --- Copy 1 Init Conjunct ----- !!!!!!!!" + init_conjunct.toString)
         addAssumptionToTree(init_conjunct, List.empty)
         addAssumptionToTaintSolver(init_conjunct)
         taintAssumes += init_conjunct
@@ -797,6 +808,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
           }
         }
         prevTaintVarTable(0).foreach(sym => log.debug("sym and typ " + sym.toString + " " + sym.typ.toString))
+        log.debug("!!!!!!!!!!!!!!! -- --- - Copy 2 Init Conjunct ----- !!!!!!!!!!" + initConjunct.toString)
         log.debug("$$ nonArrayTaintVars $$ " + nonArrayTaintVars.toString)
         assert(nonArrayTaintVars.length == prevVarTable(1).flatten.length)
         //val taintMatches = nonArrayTaintVars zip (prevVarTable(0).flatten zip prevVarTable(1).flatten)
