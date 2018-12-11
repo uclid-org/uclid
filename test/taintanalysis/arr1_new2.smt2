@@ -27,11 +27,13 @@
 ;a1 b1 d1 initAssume1 mem1 rng, a2 b2 d2 initAssume2 mem2 rng 
 (declare-rel inv (Int Int Int Bool (Array Int Int) (Array Int Bool) Int Int Int Bool (Array Int Int) (Array Int Bool)))
 
+; Init 
 (rule (=> (and (= d1 0) initAssume1 (= d2 0) initAssume2 (= a1 a2) 
       (=> (not initAssume1) (=> (select rng a1) (= b1 b2)))
       (=> initAssume1 (forall ((i Int)) (=> (select rng i) (= (select mem1 i) (select mem2 i))))))
       (inv a1 b1 d1 initAssume1 mem1 rng a2 b2 d2 initAssume2 mem2 rng)))
- 
+
+; Transition 
 (rule (=> (and (= a1 a2) (=> (not initAssume1) (=> (select rng a1) (= b1 b2))) 
 	       (=> initAssume1 (forall ((i Int)) (=> (select rng i) (= (select mem1 i) (select mem2 i)))))
           (inv a1 b1 d1 initAssume1 mem1 rng a2 b2 d2 initAssume2 mem2 rng)) 
