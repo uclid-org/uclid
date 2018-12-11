@@ -207,6 +207,18 @@ case class BVGTOp(override val w : Int) extends BVArgOperator(w) {
 case class BVGEOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = ">="
 }
+case class BVLTUOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "<_u"
+}
+case class BVLEUOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "<=_u"
+}
+case class BVGTUOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = ">_u"
+}
+case class BVGEUOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = ">=_u"
+}
 case class BVAddOp(override val w : Int) extends BVArgOperator(w) {
   override def toString ="+"
 }
@@ -244,20 +256,32 @@ case class BVZeroExtOp(override val w : Int, val e : Int) extends BVArgOperator(
   override def toString = "bv_zero_extend"
   override val arity = 1
 }
-case class BVLeftShiftOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
+case class BVLeftShiftIntOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "bv_left_shift"
   override val arity = 1
 }
-case class BVLRightShiftOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
+case class BVLRightShiftIntOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "bv_l_right_shift"
   override val arity = 1
 }
-case class BVARightShiftOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
+case class BVARightShiftIntOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "bv_a_right_shift"
   override val arity = 1
+}
+case class BVLeftShiftBVOp(override val w : Int) extends BVArgOperator(w) {
+  override def fixity = Operator.PREFIX
+  override def toString = "bv_left_shift"
+}
+case class BVLRightShiftBVOp(override val w : Int) extends BVArgOperator(w) {
+  override def fixity = Operator.PREFIX
+  override def toString = "bv_l_right_shift"
+}
+case class BVARightShiftBVOp(override val w : Int) extends BVArgOperator(w) {
+  override def fixity = Operator.PREFIX
+  override def toString = "bv_a_right_shift"
 }
 // Boolean operators.
 sealed abstract class BooleanOperator extends Operator {

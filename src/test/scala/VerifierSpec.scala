@@ -196,6 +196,9 @@ class BasicVerifierSpec extends FlatSpec {
   "test-array-update.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-array-update.ucl", 0)
   }
+  "test-unsigned-comparators-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-unsigned-comparators-1.ucl", 0)
+  }
 }
 class ProcedureVerifSpec extends FlatSpec {
   "test-inliner.ucl" should "verify successfully." in {
