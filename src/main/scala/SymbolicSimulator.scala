@@ -45,7 +45,7 @@ import vcd.VCD
 import scala.util.Try
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import com.typesafe.scalalogging.Logger
-
+import uclid.smt.Z3HornSolver
 
 import scala.collection.mutable.{Map => MutableMap}
 
@@ -516,6 +516,7 @@ class SymbolicSimulator (module : Module) {
 
   def runLazySC(lazySC: LazySCSolver, bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
 
+      Z3HornSolver.test()
       lazySC.simulateLazySCV2(bound, scope, label, filter)
   }
 
@@ -641,6 +642,8 @@ class SymbolicSimulator (module : Module) {
       }
   }
 
+  //FIXME: Only hyperSelects are rewritten, other variables remain as is.
+  //FIXME: Variables without hyperSelects are the unconstrained lambda variables
   def rewriteHyperAssume(
       lambda: smt.Lambda, stepIndex : Integer, hypAssume: smt.Expr,
       simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
@@ -690,6 +693,8 @@ class SymbolicSimulator (module : Module) {
   }
   def simRecordLength(simRecord : SimulationTable) : Int = SymbolicSimulator.simRecordLength(simRecord)
 
+  //FIXME: Only hyperSelects are rewritten, other variables remain as is.
+  //FIXME: Variables without hyperSelects are the unconstrained lambda variables
   def rewriteHyperAssert(
       lambda: smt.Lambda, stepIndex : Integer, at: AssertInfo, 
       simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {

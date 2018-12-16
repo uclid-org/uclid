@@ -41,6 +41,11 @@ package uclid
 package smt
 
 import com.microsoft.z3
+import uclid.lang.{Scope}
+
+import scala.collection.mutable.ArrayBuffer
+
+
 
 case class TransitionSystem(
     init : smt.Expr,
@@ -49,10 +54,108 @@ case class TransitionSystem(
     bads : Seq[smt.Expr]
 )
 
-class Z3HornSolver extends Z3Interface {
+class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
   z3.Global.setParameter("fixedpoint.engine", "pdr")
+  var id = 0
+  def getUniqueId() = {
+    id = id + 1
+    id - 1
+  }
+
   def hornSolve(M : TransitionSystem) : List[Option[Boolean]] = {
     List.empty
+  }
+
+
+  def solveLambdas(initLambda: smt.Lambda, nextLambda: smt.Lambda,
+                   initHyperAssumes: List[smt.Expr], initAsserts: List[AssertInfo],
+                   initHyperAsserts: List[AssertInfo], nextHyperAsserts: List[AssertInfo],
+                   nextAssumes: List[smt.Expr], nextHyperAssumes: List[smt.Expr], nextAsserts: List[AssertInfo],
+                   scope: Scope) = {
+
+    z3.Global.setParameter("fixedpoint.engine", "pdr")
+    val sorts = initLambda.ids.map(id => getZ3Sort(id.typ))
+    var finalSorts = sorts
+    val numCopies = sim.getMaxHyperInvariant(scope)
+    for (i <- 1 to numCopies - 1) {
+      finalSorts = finalSorts ++ sorts
+    }
+
+    val simRecord = new sim.SimulationTable
+    var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
+    var havocTable = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
+
+
+    val boolSort = ctx.mkBoolSort()
+    val invDecl = ctx.mkFuncDecl("inv", finalSorts.toArray, boolSort)
+    val fp = ctx.mkFixedpoint()
+
+    var inputStep = 0
+    var initConjuncts = new ArrayBuffer[smt.Expr]()
+
+    for (i <- 1 to numCopies) {
+      var frames = new sim.FrameTable
+      val initSymTab = sim.newInputSymbols(sim.getInitSymbolTable(scope), inputStep, scope)
+      inputStep += 1
+      frames += initSymTab
+      var prevVars = sim.getVarsInOrder(initSymTab.map(_.swap), scope)
+      prevVarTable += prevVars
+      val init_havocs = sim.getHavocs(initLambda.e)
+      val havoc_subs = init_havocs.map {
+        havoc =>
+          val s = havoc.id.split("_")
+
+          val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+          (havoc, sim.newHavocSymbol(name, havoc.typ))
+      }
+      havocTable += havoc_subs
+      val init_conjunct = sim.substitute(sim.betaSubstitution(initLambda, prevVars.flatten), havoc_subs)
+      //addAssumptionToTree(init_conjunct, List.empty)
+      initConjuncts += init_conjunct
+      simRecord += frames
+    }
+
+    val initConjunctsZ3 = initConjuncts.map(exp => exprToZ3(exp).asInstanceOf[z3.BoolExpr])
+    val rewrittenInitHyperAssumes = sim.rewriteHyperAssumes(
+      initLambda, 0, initHyperAssumes, simRecord, 0, scope, prevVarTable.toList)
+
+    val asserts_init = sim.rewriteAsserts(
+      initLambda, initAsserts, 0,
+      prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
+      simRecord.clone(), havocTable(0))
+
+    val initAssertsMap: Map[AssertInfo, z3.FuncDecl] = asserts_init.map {
+      assert =>
+        val errorDecl = ctx.mkFuncDecl("error_init_assert_" + getUniqueId().toString, Array[z3.Sort](), boolSort)
+        fp.registerRelation(errorDecl)
+        val not = ctx.mkNot(exprToZ3(assert.expr).asInstanceOf[z3.BoolExpr])
+        val and = ctx.mkAnd(initConjunctsZ3(0), not)
+        val implies = ctx.mkImplies(and, errorDecl.apply().asInstanceOf[z3.BoolExpr])
+        fp.addRule(implies, ctx.mkSymbol("init_assert_" + getUniqueId().toString))
+        assert -> errorDecl
+    }.toMap
+
+    val asserts_init_hyper = sim.rewriteHyperAsserts(
+      initLambda, 0, initHyperAsserts, simRecord, 0, scope, prevVarTable.toList)
+
+    val initHyperAssertsMap: Map[AssertInfo, z3.FuncDecl] = asserts_init_hyper.map {
+      assert =>
+        val errorDecl = ctx.mkFuncDecl("error_init_hyp_assert_" + getUniqueId().toString(), Array[z3.Sort](), boolSort)
+        fp.registerRelation(errorDecl)
+        val not = ctx.mkNot(exprToZ3(assert.expr).asInstanceOf[z3.BoolExpr])
+        val and = ctx.mkAnd(initConjunctsZ3 : _*)
+        val implies = ctx.mkImplies(ctx.mkAnd(and, not), errorDecl.apply().asInstanceOf[z3.BoolExpr])
+        fp.addRule(implies, ctx.mkSymbol("init_hyp_assert_" + getUniqueId().toString))
+        assert -> errorDecl
+    }.toMap
+
+    
+    // 1) Make copies of all the variables
+    // 2) Make error decls for each of the asserts and hyperAsserts
+    // 3) Encode everything like the example
+    // 4) For each error relation query the fixed point
+
+
   }
 }
 
@@ -101,25 +204,30 @@ object Z3HornSolver
     val xEq0 = ctx.mkEq(x, ctx.mkInt(0))
     val yGt1 = ctx.mkGt(y, ctx.mkInt(1))
     val initCond = ctx.mkAnd(xEq0, yGt1)
-    val initRule = createForall(sorts2, symbols2, ctx.mkImplies(initCond, applyDecl(invDecl, x, y)))
+    //val initRule = createForall(sorts2, symbols2, ctx.mkImplies(initCond, applyDecl(invDecl, x, y)))
+    val initRule = ctx.mkImplies(initCond, applyDecl(invDecl, x, y))
 
     // inv(x, y) ==> inv(x+1, y+x)
     val xPlus1 = ctx.mkAdd(x, ctx.mkInt(1))
     val yPlusx = ctx.mkAdd(y, x)
     val guard = applyDecl(invDecl, x, y)
-    val trRule = createForall(sorts2, symbols2, ctx.mkImplies(guard, applyDecl(invDecl, xPlus1, yPlusx)))
+    //val trRule = createForall(sorts2, symbols2, ctx.mkImplies(guard, applyDecl(invDecl, xPlus1, yPlusx)))
+    val trRule = ctx.mkImplies(guard, applyDecl(invDecl, xPlus1, yPlusx))
 
     val yProp1 = ctx.mkGe(x, y)
     val propGuard = ctx.mkAnd(applyDecl(invDecl, x, y), yProp1)
-    val propRule = createForall(sorts2, symbols2, ctx.mkImplies(propGuard, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
+    //val propRule = createForall(sorts2, symbols2, ctx.mkImplies(propGuard, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
+    val propRule = ctx.mkImplies(propGuard, errorDecl.apply().asInstanceOf[z3.BoolExpr])
     
     fp.addRule(initRule, ctx.mkSymbol("initRule"))
     fp.addRule(trRule, ctx.mkSymbol("trRule"))
     fp.addRule(propRule, ctx.mkSymbol("propRule"))
 
-    println(fp.toString())
+    UclidMain.println(fp.toString())
 
     // property.
-    println (fp.query(Array(errorDecl)))
+    UclidMain.println (fp.query(Array(errorDecl)).toString)
   }
+
+
 }
