@@ -40,11 +40,10 @@
 (rule (=> (and (inv a1 b1 d1 initAssume1 mem1 rng a2 b2 d2 initAssume2 mem2 rng) (select rng a1) (not (= d1 d2))) err1))
 (query err1 :print-certificate true)
 
-; (rule (=> (and (= a1 a2) (=> (not initAssume1) (=> (select rng a1) (= b1 b2)))
-;                (=> initAssume1 (forall ((i Int)) (=> (select rng i) (= (select mem1 i) (select mem2 i)))))
-;                (inv a1 b1 d1 initAssume1 mem1 rng a2 b2 d2 initAssume2 mem2 rng)
-;                (not (forall ((i Int)) (=> (select rng i) (= (select mem1 i) (select mem2 i)))))) err2_2))
-; 
+(rule (=> (and 
+                (inv a1 b1 d1 initAssume1 mem1 rng a2 b2 d2 initAssume2 mem2 rng)
+                (not (forall ((i Int)) (=> (select rng i) (= (select mem1 i) (select mem2 i)))))) err2_2))
+(query err2_2 :print-certificate true) 
 ; (rule (=> (and (= a1 a2) (=> (not initAssume1) (=> (select rng a1) (= b1 b2)))
 ;                (=> initAssume1 (forall ((i Int)) (=> (select rng i) (= (select mem1 i) (select mem2 i)))))
 ;                (inv a1 b1 d1 initAssume1 mem1 rng a2 b2 d2 initAssume2 mem2 rng)

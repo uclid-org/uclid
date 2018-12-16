@@ -37,7 +37,7 @@ module main
     initAssume' = false;
   }
 
-  hyperaxiom[2] eq_b: (!initAssume) ==> (rng(a.1) ==> (b.1 == b.2));
+  hyperaxiom[2] eq_b: (!initAssume.1) ==> (rng(a.1) ==> (b.1 == b.2));
   hyperaxiom[2] eq_a: a.1 == a.2;
   hyperinvariant[2] eq_d: rng(a.1) ==> d.1 == d.2;
   hyperinvariant[2] eq_rng_mem: (forall(i : integer) :: rng(i) ==> (mem.1[i] == mem.2[i])); 

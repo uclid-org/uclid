@@ -39,6 +39,7 @@ module main {
   var inst, result   : word_t; // inst reg, result
   var mode           : mode_t; // normal/isolated mode?
   var initFlag	     : boolean; // initFlag
+  var step           : integer; // stepVar
 
   // rng of isolated memory.
   const isolated_rng_lo, isolated_rng_hi : addr_t;
@@ -82,6 +83,7 @@ module main {
     var r0ind, r1ind : regindex_t;
     var r0, r1    : word_t;
     var addr  : addr_t;
+    var step  : integer;
     // get opcode.
     op = inst2op(instr);
     // get operands.
@@ -167,24 +169,27 @@ module main {
     // in normal mode.
     mode = normal_mode;
     initFlag = true;
+    step = 0;
   }
 
   next {
     initFlag' = false;
     inst' = imem[pc];
     call (pc') = exec_inst(inst', pc);
+    step' = step + 1;
   }
 
   //hyperaxiom[2] regs1: initFlag ==> (forall (r : regindex_t)
   //              :: regs.1[r] == common.k0_word_t);
   //hyperaxiom[2] regs2: initFlag ==> (forall (r : regindex_t)
   //              :: regs.2[r] == common.k0_word_t);
-  hyperaxiom[2] lo: initFlag ==> (isolated_rng_lo.1 == isolated_rng_lo.1); 
-  hyperaxiom[2] hi: initFlag ==> (isolated_rng_hi.1 == isolated_rng_hi.2); 
-  hyperaxiom[2] supervisor: initFlag ==> (forall(a : addr_t) :: in_rng(a, isolated_rng_lo.1, isolated_rng_hi.2) ==> (dmem.1[a] == dmem.2[a]));
-  hyperaxiom[2] imem_eq: initFlag ==> (forall(a : addr_t) :: (in_rng(a, isolated_rng_lo.1, isolated_rng_hi.1)) ==> (imem.1[a] == imem.2[a]));
-  hyperaxiom[2] imode: ((inst2op(inst.1) == op_imode_enter || inst2op(inst.2) == op_imode_enter) ==> (inst.1 == inst.2)); 
-  
+  hyperaxiom[2] lo: initFlag.1 ==> (isolated_rng_lo.1 == isolated_rng_lo.1); 
+  hyperaxiom[2] hi: initFlag.1 ==> (isolated_rng_hi.1 == isolated_rng_hi.2); 
+  hyperaxiom[2] supervisor: initFlag.1 ==> (forall(a : addr_t) :: in_rng(a, isolated_rng_lo.1, isolated_rng_hi.2) ==> (dmem.1[a] == dmem.2[a]));
+  hyperaxiom[2] imem_eq: initFlag.1 ==> (forall(a : addr_t) :: (in_rng(a, isolated_rng_lo.1, isolated_rng_hi.1)) ==> (imem.1[a] == imem.2[a]));
+  hyperaxiom[2] imode: (!initFlag.1) ==> ((inst2op(inst.1) == op_imode_enter || inst2op(inst.2) == op_imode_enter) ==> (inst.1 == inst.2)); 
+  hyperaxiom[2] fault: (step.1 == 3) ==> (mode.1 != mode.2);
+ 
   hyperinvariant[2] eq_dmem: (forall (a : addr_t) :: (in_rng(a, isolated_rng_lo.1, isolated_rng_hi.2) ==> (dmem.1[a] == dmem.2[a])));
   hyperinvariant[2] eq_mode: (mode.1 == mode.2);
   hyperinvariant[2] eq_pc: (mode.1 == isolated_mode) ==> (pc.1 == pc.2);
@@ -196,7 +201,7 @@ module main {
   hyperinvariant[2] eq_imem: (forall (a : addr_t) :: (in_rng(a, isolated_rng_lo.1, isolated_rng_hi.1)) ==> (imem.1[a] == imem.2[a])); 
 
   control {
-    v = lazysc(5);
+    v = lazysc(2);
     check;
     print_results;
     v.print_cex(pc); 

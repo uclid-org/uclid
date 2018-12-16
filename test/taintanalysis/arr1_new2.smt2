@@ -17,7 +17,6 @@
 (declare-rel err2_2 ()) ; For hyperinvariant 2
 
 (declare-rel err1 ()) ; For hyperinvariant 1
-(declare-var j Int)
 
 ; HyperAxioms
 ; (rule (= a1 a2)) encoded
@@ -39,20 +38,14 @@
           (inv a1 b1 d1 initAssume1 mem1 rng a2 b2 d2 initAssume2 mem2 rng)) 
       (inv a1 b1 (select mem1 a1) false (store mem1 a1 b1) rng a2 b2 (select mem2 a2) false (store mem2 a2 b2) rng)))
 
-(rule (=> (and (= a1 a2) (=> (not initAssume1) (=> (select rng a1) (= b1 b2)))
-               (=> initAssume1 (forall ((i Int)) (=> (select rng i) (= (select mem1 i) (select mem2 i)))))
+(rule (=> (and  
                (inv a1 b1 d1 initAssume1 mem1 rng a2 b2 d2 initAssume2 mem2 rng) (and (select rng a1) (not (= d1 d2)))) err1))
 (query err1 :print-certificate true)
 
-(rule (=> (and (= a1 a2) (=> (not initAssume1) (=> (select rng a1) (= b1 b2)))
-               (=> initAssume1 (forall ((i Int)) (=> (select rng i) (= (select mem1 i) (select mem2 i)))))
+(rule (=> (and 
                (inv a1 b1 d1 initAssume1 mem1 rng a2 b2 d2 initAssume2 mem2 rng)
                (not (forall ((i Int)) (=> (select rng i) (= (select mem1 i) (select mem2 i)))))) err2_2))
 
-(rule (=> (and (= a1 a2) (=> (not initAssume1) (=> (select rng a1) (= b1 b2)))
-               (=> initAssume1 (forall ((i Int)) (=> (select rng i) (= (select mem1 i) (select mem2 i)))))
-               (inv a1 b1 d1 initAssume1 mem1 rng a2 b2 d2 initAssume2 mem2 rng)
-               (and (select rng j) (not (= (select mem1 j) (select mem2 j))))) err2_1))
 (query err2_2 :print-answer true)
 (query err2_1 :print-answer true)  
 (query inv :print-certificate true)
