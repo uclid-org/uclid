@@ -516,7 +516,11 @@ class SymbolicSimulator (module : Module) {
 
   def runLazySC(lazySC: LazySCSolver, bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
 
-      Z3HornSolver.test()
+      //Z3HornSolver.test()
+      val init_lambda = getInitLambda(false, true, false, scope, label, filter)
+      val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
+      val h = new Z3HornSolver(this)
+      h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
       lazySC.simulateLazySCV2(bound, scope, label, filter)
   }
 
@@ -656,7 +660,7 @@ class SymbolicSimulator (module : Module) {
         op match {
           case smt.HyperSelectOp(i) =>
             if (stepIndex > 0) {
-              val actual_params = getVarsInOrder(simRecord(i - 1)(step).map(_.swap), scope).flatten ++ prevVars(i - 1).flatten
+              val actual_params = getVarsInOrder(simRecord(i - 1)(step - 1).map(_.swap), scope).flatten ++ prevVars(i - 1).flatten
               val formal_params = lambda.ids
               assert(actual_params.length == formal_params.length)
               val matches = formal_params.zip(actual_params)
