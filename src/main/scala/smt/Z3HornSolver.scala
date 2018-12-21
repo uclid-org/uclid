@@ -694,7 +694,7 @@ object Z3HornSolver
     // Transition(x, y, x', y') = (x' = x + 1) && (y' = y + x)
     // Bad(x, y) = x >= y
     //
-    z3.Global.setParameter("fixedpoint.engine", "pdr")
+    z3.Global.setParameter("fp.engine", "spacer")
 
     val ctx = new z3.Context()
     val intSort = ctx.mkIntSort()
@@ -705,21 +705,19 @@ object Z3HornSolver
     val invDecl = ctx.mkFuncDecl("inv", sorts2, boolSort)
     val errorDecl = ctx.mkFuncDecl("error", Array[z3.Sort](), boolSort)
 
-    val symbolx = ctx.mkSymbol(0)
-    val symboly = ctx.mkSymbol(1)
-    val symbols2 = Array[z3.Symbol](symbolx, symboly)
-    val x = ctx.mkBound(0, sorts2(0)).asInstanceOf[z3.ArithExpr]
-    val y = ctx.mkBound(1, sorts2(1)).asInstanceOf[z3.BoolExpr]
+    val x = ctx.mkConst("x", sorts2(0)).asInstanceOf[z3.ArithExpr]
+    val y = ctx.mkConst("y", sorts2(1)).asInstanceOf[z3.BoolExpr]
+    val bindings = Array[z3.Expr](x, y)
 
     def applyDecl(f : z3.FuncDecl, x : z3.ArithExpr, y : z3.BoolExpr) : z3.BoolExpr = {
       f.apply(x, y).asInstanceOf[z3.BoolExpr]
     }
     var qId = 0
     var skId = 0
-    def createForall(sorts : Array[z3.Sort], symbols : Array[z3.Symbol], e : z3.Expr) = {
+    def createForall(bindings: Array[z3.Expr], e : z3.Expr) = {
       qId += 1
       skId += 1
-      ctx.mkForall(sorts, symbols, e,
+      ctx.mkForall(bindings, e,
         0, Array[z3.Pattern](), Array[z3.Expr](), ctx.mkSymbol(qId), ctx.mkSymbol(skId))
     }
 
@@ -730,19 +728,19 @@ object Z3HornSolver
     val xEq0 = ctx.mkEq(x, ctx.mkInt(0))
     val yGt1 = ctx.mkEq(y, ctx.mkBool(true))
     val initCond = ctx.mkAnd(xEq0, yGt1)
-    val initRule = createForall(sorts2, symbols2, ctx.mkImplies(initCond, applyDecl(invDecl, x, y)))
+    val initRule = createForall(bindings, ctx.mkImplies(initCond, applyDecl(invDecl, x, y)))
     //val initRule = ctx.mkImplies(initCond, applyDecl(invDecl, x, y))
 
     // inv(x, y) ==> inv(x+1, y+x)
     val xPlus1 = ctx.mkAdd(x, ctx.mkInt(1))
     val yPlusx = ctx.mkEq(y, ctx.mkBool(false))
     val guard = applyDecl(invDecl, x, y)
-    val trRule = createForall(sorts2, symbols2, ctx.mkImplies(guard, applyDecl(invDecl, xPlus1, yPlusx)))
+    val trRule = createForall(bindings, ctx.mkImplies(guard, applyDecl(invDecl, xPlus1, yPlusx)))
     //val trRule = ctx.mkImplies(guard, applyDecl(invDecl, xPlus1, yPlusx))
 
     val yProp1 = ctx.mkGe(x, ctx.mkInt(2))
     val propGuard = ctx.mkAnd(applyDecl(invDecl, x, y), yProp1)
-    val propRule = createForall(sorts2, symbols2, ctx.mkImplies(propGuard, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
+    val propRule = createForall(bindings, ctx.mkImplies(propGuard, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
     //val propRule = ctx.mkImplies(propGuard, errorDecl.apply().asInstanceOf[z3.BoolExpr])
 
     fp.addRule(initRule, ctx.mkSymbol("initRule"))

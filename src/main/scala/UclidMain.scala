@@ -142,7 +142,7 @@ object UclidMain {
   def main(config : Config) {
     try {
       if (config.testFixedpoint) {
-        smt.FixedpointTest.test()
+        smt.Z3HornSolver.test1()
         return
       }
       val mainModuleName = Identifier(config.mainModuleName)
