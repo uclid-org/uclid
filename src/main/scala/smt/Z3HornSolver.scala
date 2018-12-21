@@ -60,7 +60,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
   var boundIdx = 0
   var boundHyperIdx = 0
   var symbolIdx = 0
-  var isHyp = false
+
   /*val exprToZ3Horn : Memo[Expr, z3.AST] = new Memo[Expr, z3.AST](
     e =>
         exprToZ3(e)
@@ -217,9 +217,9 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     }
   }
 
-  val getConstArrayHorn = new Memo[(Expr, ArrayType), z3.Expr]({
+  val getConstArrayHorn = new Memo[(Expr, ArrayType), z3.ArrayExpr]({
     (p) => {
-      val value = exprToZ3(p._1).asInstanceOf[z3.Expr]
+      val value = exprToZ3Horn(p._1).asInstanceOf[z3.Expr]
       val sort = getArrayIndexSort(p._2.inTypes)
       val arr = ctx.mkConstArray(sort, value)
       arr
@@ -254,6 +254,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
         val data = exprToZ3Horn(value).asInstanceOf[z3.Expr]
         ctx.mkStore(exprToZ3Horn(e).asInstanceOf[z3.ArrayExpr], arrayIndex, data)
       case FunctionApplication(e, args) =>
+        UclidMain.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
         val func = exprToZ3Horn(e).asInstanceOf[z3.FuncDecl]
         func.apply(typecastAST[z3.Expr](args.map(exprToZ3Horn(_))).toSeq : _*)
       case Lambda(_,_) =>
@@ -298,6 +299,11 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
     def applyDecl(f : z3.FuncDecl, args: List[z3.Expr]) : z3.BoolExpr = {
       Predef.assert(f.getDomainSize() == args.length)
+      /*f.getDomain.zip(args).foreach {
+        d =>
+          UclidMain.println("domain typ and arg typ" + (d._1, d._2.getSort))
+      }
+      UclidMain.println("The args to applyDecl " + args.toString)*/
       f.apply(args : _*).asInstanceOf[z3.BoolExpr]
     }
 
@@ -374,6 +380,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
       map(smtVar => exprToZ3Horn(smtVar).asInstanceOf[z3.Expr])
 
     UclidMain.println("--- initHyperSymbolsbound -- " + initHyperSymbolsBound.toString)
+    UclidMain.println("The Expr Map " + exprToZ3Horn.memoHashMap.toString)
     val initConjunctsZ3 = initConjuncts.map(exp => exprToZ3Horn(exp).asInstanceOf[z3.BoolExpr])
     val rewrittenInitHyperAssumes = sim.rewriteHyperAssumes(
       initLambda, 0, initHyperAssumes, simRecord, 0, scope, prevVarTable.toList)
@@ -382,13 +389,20 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
     UclidMain.println(initSymbolsZ3.toString)
     UclidMain.println(initSymbolsBound.toString)
+    sorts.foreach {
+      sort =>
+        UclidMain.println("Some sort = " + sort.toString)
+    }
     val initRule = createForall(sorts.toArray, initSymbolsZ3.toArray, ctx.mkImplies(initConjunctsZ3(0),
       applyDecl(invSingle, initSymbolsBound)))
+
     val initHyperRule = createForall(finalSorts.toArray, initHyperSymbolsZ3.toArray, ctx.mkImplies(ctx.mkAnd(initConjunctsZ3 ++ hypAssumesInitZ3 : _*),
       applyDecl(invHyperDecl, initHyperSymbolsBound)))
-
+    UclidMain.println("The Init Conjunct " + initConjunctsZ3(0))
     fp.addRule(initRule, ctx.mkSymbol("initRule"))
+    UclidMain.println("---FPFPFPFPFPFPF--- The Fixed point " + fp.toString())
     fp.addRule(initHyperRule, ctx.mkSymbol("initHyperRule"))
+
     val asserts_init = sim.rewriteAsserts(
       initLambda, initAsserts, 0,
       prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
@@ -487,6 +501,42 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
     // This needs to be computed using the previous bounds
     val nextConjunctInitZ3 = exprToZ3Horn(nextConjuncts(0)).asInstanceOf[z3.BoolExpr]
+    val nextRule = createForall((sorts ++ sorts).toArray, (initSymbolsZ3 ++ nextSymbolsZ3).toArray,
+      ctx.mkImplies(ctx.mkAnd(nextConjunctInitZ3, applyDecl(invSingle, initSymbolsBound)), applyDecl(invSingle, nextSymbolsBound))
+    )
+    fp.addRule(nextRule, ctx.mkSymbol("nextRule"))
+
+    val asserts_next = sim.rewriteAsserts(
+      nextLambda, nextAsserts, 1,
+      sim.getVarsInOrder(simRecord(0)(1 - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
+        prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord.clone(), havocTable(0))
+    UclidMain.println("Expr Map before Assertions " + exprToZ3Horn.memoHashMap.toString)
+
+
+    val nextAssertsMap: Map[AssertInfo, z3.FuncDecl] = asserts_next.map {
+      assert =>
+        val errorDecl = ctx.mkFuncDecl("error_next_assert_" + getUniqueId().toString(), Array[z3.Sort](), boolSort)
+        fp.registerRelation(errorDecl)
+        UclidMain.println("Error Next: " + assert.expr.toString)
+        val pcExpr = assert.pathCond
+        // If assertExpr has a CoverDecorator then we should not negate the expression here.
+        val assertExpr = if (assert.decorators.contains(CoverDecorator)) {
+          assert.expr
+        } else {
+          smt.OperatorApplication(smt.NegationOp, List(assert.expr))
+        }
+        val checkExpr = if (pcExpr == smt.BooleanLit(true)) {
+          assertExpr
+        } else {
+          smt.OperatorApplication(smt.ConjunctionOp, List(pcExpr, assertExpr))
+        }
+
+        val not = exprToZ3Horn(checkExpr).asInstanceOf[z3.BoolExpr]
+        val and = ctx.mkAnd(nextConjunctInitZ3, applyDecl(invSingle, initSymbolsBound), applyDecl(invSingle, nextSymbolsBound))//ctx.mkAnd(nextConjunctsZ3(0), initConjunctsZ3(0))
+      val implies = ctx.mkImplies(ctx.mkAnd(and, not), errorDecl.apply().asInstanceOf[z3.BoolExpr])
+        fp.addRule(implies, ctx.mkSymbol("next_assert_" + getUniqueId().toString))
+        assert -> errorDecl
+    }.toMap
 
 
     addZ3Symbols(nextHyperSymbolsSmt)
@@ -519,30 +569,27 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     UclidMain.println("The next HyperAssumes " + nextHyperAssumes.toString)
     UclidMain.println("The next HyperAssumesZ3 " + hyperAssumesNextZ3.toString)
 
-    val nextRule = createForall((sorts ++ sorts).toArray, (initSymbolsZ3 ++ nextSymbolsZ3).toArray,
-      ctx.mkImplies(ctx.mkAnd(nextConjunctInitZ3, applyDecl(invSingle, initSymbolsBound)), applyDecl(invSingle, nextSymbolsBound))
-    )
+
     val nextHyperRule = createForall((finalSorts ++ finalSorts).toArray, (initHyperSymbolsZ3 ++ nextHyperSymbolsZ3).toArray,
       ctx.mkImplies(ctx.mkAnd(applyDecl(invHyperDecl, initHyperSymbolsBound), ctx.mkAnd(nextConjunctsZ3 ++ hyperAssumesNextZ3 : _*)),
         applyDecl(invHyperDecl, nextHyperSymbolsBound)
       )
     )
-    fp.addRule(nextRule, ctx.mkSymbol("nextRule"))
     fp.addRule(nextHyperRule, ctx.mkSymbol("nextHyperRule"))
 
-    val asserts_next = sim.rewriteAsserts(
-      nextLambda, nextAsserts, 1,
-      sim.getVarsInOrder(simRecord(0)(1 - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
-        prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord.clone(), havocTable(0))
-
-    /*
-    val nextAssertsMap: Map[AssertInfo, z3.FuncDecl] = asserts_next.map {
+    val asserts_next_hyper = sim.rewriteHyperAsserts(nextLambda, 1, nextHyperAsserts, simRecord, 1, scope, prevVarTable.toList)
+    val nextHyperAssertsMap: Map[AssertInfo, z3.FuncDecl] = asserts_next_hyper.map {
       assert =>
-        val errorDecl = ctx.mkFuncDecl("error_next_assert_" + getUniqueId().toString(), Array[z3.Sort](), boolSort)
+        val errorDecl = ctx.mkFuncDecl("error_next_hyp_assert_" + getUniqueId().toString(), Array[z3.Sort](), boolSort)
         fp.registerRelation(errorDecl)
+
         val pcExpr = assert.pathCond
         // If assertExpr has a CoverDecorator then we should not negate the expression here.
-        val assertExpr = assert.expr
+        val assertExpr = if (assert.decorators.contains(CoverDecorator)) {
+          assert.expr
+        } else {
+          smt.OperatorApplication(smt.NegationOp, List(assert.expr))
+        }
         val checkExpr = if (pcExpr == smt.BooleanLit(true)) {
           assertExpr
         } else {
@@ -550,13 +597,16 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
         }
 
         val not = exprToZ3Horn(checkExpr).asInstanceOf[z3.BoolExpr]
-        val and = ctx.mkAnd(nextConjunctsZ3(0), initConjunctsZ3(0))
+        //UclidMain.println("Not in hyperAssert " + not.toString)
+        //val not = ctx.mkNot(exprToZ3(assert.expr).asInstanceOf[z3.BoolExpr])
+        val and = applyDecl(invHyperDecl, nextHyperSymbolsBound)
         val implies = ctx.mkImplies(ctx.mkAnd(and, not), errorDecl.apply().asInstanceOf[z3.BoolExpr])
-        fp.addRule(implies, ctx.mkSymbol("next_assert_" + getUniqueId().toString))
+        fp.addRule(implies, ctx.mkSymbol("next_hyp_assert_" + getUniqueId().toString))
         assert -> errorDecl
-    }.toMap*/
+    }.toMap
 
-    UclidMain.println(fp.toString())
+
+    //UclidMain.println(fp.toString())
 
     // 1) Make copies of all the variables
     // 2) Make error decls for each of the asserts and hyperAsserts
@@ -637,5 +687,72 @@ object Z3HornSolver
     UclidMain.println (fp.query(Array(errorDecl)).toString)
   }
 
+  def test1() : Unit = {
+    // Transition system
+    //
+    // Init(x, y) = x == 0 && y > 1
+    // Transition(x, y, x', y') = (x' = x + 1) && (y' = y + x)
+    // Bad(x, y) = x >= y
+    //
+    z3.Global.setParameter("fixedpoint.engine", "pdr")
+
+    val ctx = new z3.Context()
+    val intSort = ctx.mkIntSort()
+    val boolSort = ctx.mkBoolSort()
+    val fp = ctx.mkFixedpoint()
+
+    val sorts2 = Array[z3.Sort](intSort, boolSort)
+    val invDecl = ctx.mkFuncDecl("inv", sorts2, boolSort)
+    val errorDecl = ctx.mkFuncDecl("error", Array[z3.Sort](), boolSort)
+
+    val symbolx = ctx.mkSymbol(0)
+    val symboly = ctx.mkSymbol(1)
+    val symbols2 = Array[z3.Symbol](symbolx, symboly)
+    val x = ctx.mkBound(0, sorts2(0)).asInstanceOf[z3.ArithExpr]
+    val y = ctx.mkBound(1, sorts2(1)).asInstanceOf[z3.BoolExpr]
+
+    def applyDecl(f : z3.FuncDecl, x : z3.ArithExpr, y : z3.BoolExpr) : z3.BoolExpr = {
+      f.apply(x, y).asInstanceOf[z3.BoolExpr]
+    }
+    var qId = 0
+    var skId = 0
+    def createForall(sorts : Array[z3.Sort], symbols : Array[z3.Symbol], e : z3.Expr) = {
+      qId += 1
+      skId += 1
+      ctx.mkForall(sorts, symbols, e,
+        0, Array[z3.Pattern](), Array[z3.Expr](), ctx.mkSymbol(qId), ctx.mkSymbol(skId))
+    }
+
+    fp.registerRelation(invDecl)
+    fp.registerRelation(errorDecl)
+
+    // x >= 0 && y >= 0 ==> inv(x, y)
+    val xEq0 = ctx.mkEq(x, ctx.mkInt(0))
+    val yGt1 = ctx.mkEq(y, ctx.mkBool(true))
+    val initCond = ctx.mkAnd(xEq0, yGt1)
+    val initRule = createForall(sorts2, symbols2, ctx.mkImplies(initCond, applyDecl(invDecl, x, y)))
+    //val initRule = ctx.mkImplies(initCond, applyDecl(invDecl, x, y))
+
+    // inv(x, y) ==> inv(x+1, y+x)
+    val xPlus1 = ctx.mkAdd(x, ctx.mkInt(1))
+    val yPlusx = ctx.mkEq(y, ctx.mkBool(false))
+    val guard = applyDecl(invDecl, x, y)
+    val trRule = createForall(sorts2, symbols2, ctx.mkImplies(guard, applyDecl(invDecl, xPlus1, yPlusx)))
+    //val trRule = ctx.mkImplies(guard, applyDecl(invDecl, xPlus1, yPlusx))
+
+    val yProp1 = ctx.mkGe(x, ctx.mkInt(2))
+    val propGuard = ctx.mkAnd(applyDecl(invDecl, x, y), yProp1)
+    val propRule = createForall(sorts2, symbols2, ctx.mkImplies(propGuard, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
+    //val propRule = ctx.mkImplies(propGuard, errorDecl.apply().asInstanceOf[z3.BoolExpr])
+
+    fp.addRule(initRule, ctx.mkSymbol("initRule"))
+    fp.addRule(trRule, ctx.mkSymbol("trRule"))
+    fp.addRule(propRule, ctx.mkSymbol("propRule"))
+
+    UclidMain.println(fp.toString())
+
+    // property.
+    UclidMain.println (fp.query(Array(errorDecl)).toString)
+  }
 
 }
