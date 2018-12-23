@@ -380,7 +380,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
         sim.getVarsInOrder(frameTable(0).map(_.swap), scope).flatten.map(smtVar => smtVar.asInstanceOf[smt.Symbol])
     }.toList
 
-    UclidMain.println("xxx initHyperSymbolsSmt xx " + initHyperSymbolsSmt.toString)
+    //UclidMain.println("xxx initHyperSymbolsSmt xx " + initHyperSymbolsSmt.toString)
     //addZ3Symbols(initHyperSymbolsSmt)
     //addBoundVariables(initHyperSymbolsSmt, Some(0), true)
 
@@ -389,8 +389,8 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     val initHyperSymbolsBound = initHyperSymbolsSmt.
       map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
 
-    UclidMain.println("--- initHyperSymbolsbound -- " + initHyperSymbolsBound.toString)
-    UclidMain.println("The Expr Map " + exprToZ3.memoHashMap.toString)
+    //UclidMain.println("--- initHyperSymbolsbound -- " + initHyperSymbolsBound.toString)
+    //UclidMain.println("The Expr Map " + exprToZ3.memoHashMap.toString)
     val initConjunctsZ3 = initConjuncts.map(exp => exprToZ3(exp).asInstanceOf[z3.BoolExpr])
     val rewrittenInitHyperAssumes = sim.rewriteHyperAssumes(
       initLambda, 0, initHyperAssumes, simRecord, 0, scope, prevVarTable.toList)
@@ -398,17 +398,17 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
 
     //UclidMain.println(initSymbolsZ3.toString)
-    UclidMain.println(initSymbolsBound.toString)
-    sorts.foreach {
+    //UclidMain.println(initSymbolsBound.toString)
+    /*sorts.foreach {
       sort =>
         UclidMain.println("Some sort = " + sort.toString)
-    }
+    }*/
     val initRule = createForall(initSymbolsBound.toArray, ctx.mkImplies(initConjunctsZ3(0),
       applyDecl(invSingle, initSymbolsBound)))
 
     val initHyperRule = createForall(initHyperSymbolsBound.toArray, ctx.mkImplies(ctx.mkAnd(initConjunctsZ3 ++ hypAssumesInitZ3 : _*),
       applyDecl(invHyperDecl, initHyperSymbolsBound)))
-    UclidMain.println("The Init Conjunct " + initConjunctsZ3(0))
+    //UclidMain.println("The Init Conjunct " + initConjunctsZ3(0))
     fp.addRule(initRule, ctx.mkSymbol("initRule"))
     //UclidMain.println("---FPFPFPFPFPFPF--- The Fixed point " + fp.toString())
     fp.addRule(initHyperRule, ctx.mkSymbol("initHyperRule"))
@@ -563,24 +563,24 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     //val nextHyperSymbolsZ3 = nextHyperSymbolsSmt.map(sym => hornSymbolMap(sym))
     val nextHyperSymbolsBound = nextHyperSymbolsSmt.
       map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
-    UclidMain.println("" + nextHyperSymbolsBound.toString)
-    UclidMain.println(initHyperSymbolsBound.toString)
-    UclidMain.println(nextConjunctsZ3.toString)
+    //UclidMain.println("" + nextHyperSymbolsBound.toString)
+    //UclidMain.println(initHyperSymbolsBound.toString)
+    //UclidMain.println(nextConjunctsZ3.toString)
     //UclidMain.println("initHyperSymbolsZ3 " + initHyperSymbolsZ3.toString)
     //UclidMain.println("nextHyperSymbolsZ3 " + nextHyperSymbolsZ3.toString)
 
     //Gotta debug hyperAssumes
     val hyperAssumesRewritten = sim.rewriteHyperAssumes(nextLambda, 1,
       nextHyperAssumes, simRecord, 1, scope, prevVarTable.toList)
-    UclidMain.println("The hyperAssumes rewritten " + hyperAssumesRewritten.toString)
+    //UclidMain.println("The hyperAssumes rewritten " + hyperAssumesRewritten.toString)
 
     val hyperAssumesNextZ3 = sim.rewriteHyperAssumes(nextLambda, 1,
       nextHyperAssumes, simRecord, 1, scope, prevVarTable.toList).map {
       exp => exprToZ3(exp).asInstanceOf[z3.BoolExpr]
     }
 
-    UclidMain.println("The next HyperAssumes " + nextHyperAssumes.toString)
-    UclidMain.println("The next HyperAssumesZ3 " + hyperAssumesNextZ3.toString)
+    //UclidMain.println("The next HyperAssumes " + nextHyperAssumes.toString)
+    //UclidMain.println("The next HyperAssumesZ3 " + hyperAssumesNextZ3.toString)
 
 
     val nextHyperRule = createForall((initHyperSymbolsBound ++ nextHyperSymbolsBound).toArray,
