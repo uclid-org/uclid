@@ -44,10 +44,10 @@ module main
   //hyperinvariant[2] eq_rng_mem: (forall(i : integer) :: rng.1[i] ==> (mem.1[i] == mem.2[i])); 
   hyperaxiom[2] eq_mem_init: initAssume.1 ==> (forall(i : integer) :: rng.1[i] ==> mem.1[i] == mem.2[i]);
   control {
-	v = lazysc(100);
-	check;
-	print_results;
-	v.print_cex(d, initAssume, a, b, mem[a], mem);
+	v = horn;
+	//check;
+	//print_results;
+	//v.print_cex(d, initAssume, a, b, mem[a], mem);
   }
 }
 

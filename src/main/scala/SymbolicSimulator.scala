@@ -169,6 +169,13 @@ class SymbolicSimulator (module : Module) {
             // initialize(false, true, false, context, label, noLTLFilter)
             // symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
             //runLazySC(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, noLTLFilter, solver)
+
+          case "horn" =>
+            val label : String = cmd.resultVar match {
+              case Some(l) => l.toString
+              case None    => "horn"
+            }
+            runHornSolver(context, label, noLTLFilter)
           case "lazysc" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString
@@ -514,14 +521,18 @@ class SymbolicSimulator (module : Module) {
       hyperAsserts.toList, hyperAssumes.toList, assumesLambda.toList)
   }
 
+  def runHornSolver(scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
+    val init_lambda = getInitLambda(false, true, false, scope, label, filter)
+    val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
+    val h = new Z3HornSolver(this)
+    h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
+  }
+
   def runLazySC(lazySC: LazySCSolver, bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
 
       //Z3HornSolver.test1()
-      val init_lambda = getInitLambda(false, true, false, scope, label, filter)
-      val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
-      val h = new Z3HornSolver(this)
-      h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
-      //lazySC.simulateLazySCV2(bound, scope, label, filter)
+
+      lazySC.simulateLazySCV2(bound, scope, label, filter)
   }
 
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
