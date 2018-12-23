@@ -516,12 +516,12 @@ class SymbolicSimulator (module : Module) {
 
   def runLazySC(lazySC: LazySCSolver, bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
 
-      Z3HornSolver.test1()
-      //val init_lambda = getInitLambda(false, true, false, scope, label, filter)
-      //val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
-      //val h = new Z3HornSolver(this)
-      //h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
-      lazySC.simulateLazySCV2(bound, scope, label, filter)
+      //Z3HornSolver.test1()
+      val init_lambda = getInitLambda(false, true, false, scope, label, filter)
+      val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
+      val h = new Z3HornSolver(this)
+      h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
+      //lazySC.simulateLazySCV2(bound, scope, label, filter)
   }
 
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
