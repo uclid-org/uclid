@@ -41,6 +41,7 @@ package uclid
 package smt
 
 import com.microsoft.z3
+import com.typesafe.scalalogging.Logger
 import uclid.lang.{CoverDecorator, Scope}
 
 import scala.collection.mutable.ArrayBuffer
@@ -56,7 +57,7 @@ case class TransitionSystem(
 
 class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
   z3.Global.setParameter("fixedpoint.engine", "pdr")
-
+  val log = Logger(classOf[Z3HornSolver])
   var id = 0
   /*
   var boundIdx = 0
@@ -620,7 +621,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     }.toMap
 
 
-    UclidMain.println(fp.toString())
+    log.debug(fp.toString())
 
     UclidMain.println("Querying Init Asserts")
     initAssertsMap.foreach {
