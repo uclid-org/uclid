@@ -365,7 +365,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
       simRecord += frames
     }
 
-    val initSymbolsSmt = sim.getVarsInOrder(simRecord(0)(0).map(_.swap), scope).flatten.map(smtVar => smtVar.asInstanceOf[smt.Symbol])
+    //val initSymbolsSmt = sim.getVarsInOrder(simRecord(0)(0).map(_.swap), scope).flatten.map(smtVar => smtVar.asInstanceOf[smt.Symbol])
 
     //addZ3Symbols(initSymbolsSmt)
     //addBoundVariables(initSymbolsSmt, Some(0), false)
@@ -373,8 +373,8 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     //val initSymbolsZ3 = initSymbolsSmt.map(sym => hornSymbolMap(sym))
 
 
-    val initSymbolsBound = initSymbolsSmt.
-      map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
+    //val initSymbolsBound = initSymbolsSmt.
+    //  map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
 
     val initHyperSymbolsSmt = simRecord.flatMap {
       frameTable =>
@@ -409,7 +409,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
     val initHyperRule = createForall(initHyperSymbolsBound.toArray, ctx.mkImplies(ctx.mkAnd(initConjunctsZ3 ++ hypAssumesInitZ3 : _*),
       applyDecl(invHyperDecl, initHyperSymbolsBound)))
-    //UclidMain.println("The Init Conjunct " + initConjunctsZ3(0))
+    log.debug("The Init Conjunct " + initConjunctsZ3(0))
     //fp.addRule(initRule, ctx.mkSymbol("initRule"))
     //UclidMain.println("---FPFPFPFPFPFPF--- The Fixed point " + fp.toString())
     fp.addRule(initHyperRule, ctx.mkSymbol("initHyperRule"))
@@ -422,7 +422,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
     val initAssertsMap: Map[AssertInfo, z3.FuncDecl] = asserts_init.map {
       assert =>
-        UclidMain.println("The assert " + assert.expr.toString)
+        log.debug("The assert " + assert.expr.toString)
         val errorDecl = ctx.mkFuncDecl("error_init_assert_" + getUniqueId().toString, Array[z3.Sort](), boolSort)
         fp.registerRelation(errorDecl)
         val pcExpr = assert.pathCond
@@ -536,7 +536,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
       assert =>
         val errorDecl = ctx.mkFuncDecl("error_next_assert_" + getUniqueId().toString(), Array[z3.Sort](), boolSort)
         fp.registerRelation(errorDecl)
-        //UclidMain.println("Error Next: " + assert.expr.toString)
+        log.debug("Error Next: " + assert.expr.toString)
         val pcExpr = assert.pathCond
         // If assertExpr has a CoverDecorator then we should not negate the expression here.
         val assertExpr = if (assert.decorators.contains(CoverDecorator)) {
@@ -566,24 +566,19 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
     //UclidMain.println("Expr Map Updated " + exprToZ3Horn.memoHashMap.toString)
 
-    //UclidMain.println("" + nextHyperSymbolsBound.toString)
-    //UclidMain.println(initHyperSymbolsBound.toString)
-    //UclidMain.println(nextConjunctsZ3.toString)
-    //UclidMain.println("initHyperSymbolsZ3 " + initHyperSymbolsZ3.toString)
-    //UclidMain.println("nextHyperSymbolsZ3 " + nextHyperSymbolsZ3.toString)
+    log.debug("" + nextHyperSymbolsBound.toString)
+    log.debug("Init bound HyperSymbols " + initHyperSymbolsBound.toString)
+    log.debug("Next Conjuncts " + nextConjunctsZ3.toString)
 
-    //Gotta debug hyperAssumes
-    val hyperAssumesRewritten = sim.rewriteHyperAssumes(nextLambda, 1,
-      nextHyperAssumes, simRecord, 1, scope, prevVarTable.toList)
-    //UclidMain.println("The hyperAssumes rewritten " + hyperAssumesRewritten.toString)
+
 
     val hyperAssumesNextZ3 = sim.rewriteHyperAssumes(nextLambda, 1,
       nextHyperAssumes, simRecord, 1, scope, prevVarTable.toList).map {
       exp => exprToZ3(exp).asInstanceOf[z3.BoolExpr]
     }
 
-    //UclidMain.println("The next HyperAssumes " + nextHyperAssumes.toString)
-    //UclidMain.println("The next HyperAssumesZ3 " + hyperAssumesNextZ3.toString)
+    log.debug("The next HyperAssumes " + nextHyperAssumes.toString)
+    log.debug("The next HyperAssumesZ3 " + hyperAssumesNextZ3.toString)
 
 
     val nextHyperRule = createForall((initHyperSymbolsBound ++ nextHyperSymbolsBound).toArray,
