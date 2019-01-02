@@ -45,7 +45,7 @@ import vcd.VCD
 import scala.util.Try
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import com.typesafe.scalalogging.Logger
-import uclid.smt.Z3HornSolver
+import uclid.smt.{Z3HornSolver, Z3Interface}
 
 import scala.collection.mutable.{Map => MutableMap}
 
@@ -525,6 +525,11 @@ class SymbolicSimulator (module : Module) {
     val init_lambda = getInitLambda(false, true, false, scope, label, filter)
     val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
     val h = new Z3HornSolver(this)
+    val context = new Z3Interface()
+    val lazySc = new LazySCSolver(this)
+    val initTaintLambda = lazySc.getTaintInitLambda(init_lambda._1, scope, context, init_lambda._5)
+    val nextTaintLambda = lazySc.getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, scope)
+    h.solveTaintLambdas(initTaintLambda, nextTaintLambda, scope)
     h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
   }
 
