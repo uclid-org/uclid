@@ -817,8 +817,20 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     )
     fp.addRule(nextTaintRule, ctx.mkSymbol("nextTaintRule"))
 
-    log.debug("**** The Taint FixedPoint **** " + fp.toString)
 
+    val taintErrorMap = initTaintSymbolsBound.map {
+      sym =>
+        val errorDecl = ctx.mkFuncDecl("error_taint_" + getUniqueId().toString() + "_" + sym.toString, Array[z3.Sort](), boolSort)
+        fp.registerRelation(errorDecl)
+
+        val and = ctx.mkAnd(ctx.mkNot(sym.asInstanceOf[z3.BoolExpr]), applyDecl(invTaintDecl, initTaintSymbolsBound))
+        val rule = createForall(initTaintSymbolsBound.toArray, ctx.mkImplies(and, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
+        fp.addRule(rule, ctx.mkSymbol("error_rule_taint_" + getUniqueId().toString() + "_" + sym.toString))
+        sym -> errorDecl
+
+    }.toMap
+
+    log.debug("**** The Taint FixedPoint **** " + fp.toString)
   }
 }
 
