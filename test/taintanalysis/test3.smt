@@ -1,3 +1,4 @@
+(set-option :fixedpoint.engine spacer)
 (declare-rel invTaint (Int Bool Bool))
 (declare-rel error_taint_0_taint_24_initial_23_x ())
 (declare-rel error_taint_2_taint_26_initial_25_y ())

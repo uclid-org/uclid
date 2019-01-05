@@ -2,11 +2,12 @@ package uclid
 package lang
 
 import com.typesafe.scalalogging.Logger
+import uclid.smt.Z3Interface
 
 import scala.collection.mutable.ArrayBuffer
 
 case class LazySCResult(e: smt.Expr, result: smt.SolverResult)
-class LazySCSolver(simulator: SymbolicSimulator) {
+class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
   val log = Logger(classOf[LazySCSolver])
   val assertionTree = new AssertionTree
   //val taintAssertionTree = new AssertionTree
@@ -44,7 +45,89 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     LazySCResult(e, result)
   }
 
-  def getTaintInitLambda(init_lambda: smt.Lambda, scope: Scope, solver: smt.Context, hyperAssumes: List[smt.Expr]) = {
+  def getTaintInitLambdaV1(init_lambda: smt.Lambda, scope: Scope, solver: smt.Context, hyperAssumes: List[smt.Expr]) = {
+    //FIXME: Handle Arrays
+    log.debug("The init hyperAssumes " + hyperAssumes.toString)
+    log.debug("The init lambda " + init_lambda.toString)
+    val taint_vars = init_lambda.ids.map(sym => simulator.newTaintSymbol(sym.id, smt.BoolType))
+    val initSymTab1 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 0, scope)
+    val initSymTab2 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
+    val prevVars1 = simulator.getVarsInOrder(initSymTab1.map(_.swap), scope)
+    val prevVars2 = simulator.getVarsInOrder(initSymTab2.map(_.swap), scope)
+    val init_havocs = simulator.getHavocs(init_lambda.e)
+    // Relies on the fact that getVarsInOrder returns variables in a particular order
+    val taint_set = taint_vars.zip(prevVars1.flatten.zip(prevVars2.flatten))
+    val hyperSelects = hyperAssumes.map(hypAssume => simulator.getHyperSelects(hypAssume)).flatten
+
+    val subs = hyperSelects.map {
+      expr =>
+        val op = expr.op
+        val exp = expr.operands
+        op match {
+          case smt.HyperSelectOp(i) =>
+
+            val actual_params = if (i == 1) prevVars1.flatten
+            else if (i == 2) prevVars2.flatten
+            else throw new Utils.RuntimeError("HyperAssumes for more than 2 copies unsupported")
+
+            val formal_params = init_lambda.ids
+            Predef.assert(actual_params.length == formal_params.length)
+            val matches = formal_params.zip(actual_params)
+            val final_expr = simulator.substitute(exp(0), matches)
+            (expr, final_expr)
+
+          case _ =>
+            throw new Utils.RuntimeError("Should never get here.")
+        }
+    }
+
+    val substitutedHyperAssumes = hyperAssumes.map(assume => simulator.substitute(assume, subs))
+    val havoc_subs1 = init_havocs.map {
+      havoc =>
+        val s = havoc.id.split("_")
+        val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+        (havoc, simulator.newHavocSymbol(name, havoc.typ))
+    }
+
+    val havoc_subs2 = init_havocs.map {
+      havoc =>
+        val s = havoc.id.split("_")
+        val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+        (havoc, simulator.newHavocSymbol(name, havoc.typ))
+    }
+
+    val init_conjunct1 = simulator.substitute(simulator.betaSubstitution(init_lambda, prevVars1.flatten), havoc_subs1)
+    val init_conjunct2 = simulator.substitute(simulator.betaSubstitution(init_lambda, prevVars2.flatten), havoc_subs2)
+
+    val setTaints = taint_set.map {
+      taint_var =>
+        log.debug("taint_var = " + taint_var._1.toString)
+        log.debug("The tuple = " + taint_var._2.toString)
+        val equality = smt.OperatorApplication(smt.EqualityOp, List(taint_var._2._1, taint_var._2._2))
+        val not_expr = smt.OperatorApplication(smt.NegationOp, List(equality))
+        val assumes = List(init_conjunct1, init_conjunct2) ++ substitutedHyperAssumes
+        log.debug("The assumes " + assumes.toString)
+        log.debug("The query expr " + not_expr.toString)
+        checkExpr(solver, not_expr, assumes).result.result match {
+          case Some(true) =>
+            log.debug("equal")
+            taint_var._1
+          case _ =>
+            log.debug("unequal")
+            smt.OperatorApplication(smt.NegationOp, List(taint_var._1))
+        }
+    }
+
+    val taint_conjunct = if (setTaints.length > 1) smt.OperatorApplication(smt.ConjunctionOp, setTaints)
+    else if (setTaints.length == 0) smt.BooleanLit(true)
+    else setTaints(0)
+    log.debug(" --- Taint Conjunct --- " + taint_conjunct.toString)
+    val lambda = smt.Lambda(taint_vars, taint_conjunct)
+    log.debug("Taint init lambda: " + lambda.toString())
+    lambda
+  }
+
+  def getTaintInitLambdaV2(init_lambda: smt.Lambda, scope: Scope, solver: smt.Context, hyperAssumes: List[smt.Expr]) = {
     //FIXME: Handle Arrays
     log.debug("The init hyperAssumes " + hyperAssumes.toString)
     log.debug("The init lambda " + init_lambda.toString)
@@ -72,7 +155,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
               else throw new Utils.RuntimeError("HyperAssumes for more than 2 copies unsupported")
 
               val formal_params = init_lambda.ids
-              assert(actual_params.length == formal_params.length)
+              Predef.assert(actual_params.length == formal_params.length)
               val matches = formal_params.zip(actual_params)
               val final_expr = simulator.substitute(exp(0), matches)
               (expr, final_expr)
@@ -154,7 +237,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     lambda
   }
 
-  def computeAConjunct(nextLambda: smt.Lambda, hyperAssumes: List[smt.Expr], assumes: List[smt.Expr], scope: Scope, taintMap: Map[smt.Expr, List[smt.Expr]]) = {
+  def computeAConjunctV2(nextLambda: smt.Lambda, hyperAssumes: List[smt.Expr], assumes: List[smt.Expr], scope: Scope, taintMap: Map[smt.Expr, List[smt.Expr]]) = {
 
     val initSymTab1 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
     val initSymTab2 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 2, scope)
@@ -185,7 +268,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
             else throw new Utils.RuntimeError("HyperAssumes for more than 2 copies unsupported")
 
             val formal_params = nextLambda.ids
-            assert(actual_params.length == formal_params.length)
+            Predef.assert(actual_params.length == formal_params.length)
             val matches = formal_params.zip(actual_params)
             val final_expr = simulator.substitute(exp(0), matches)
             (expr, final_expr)
@@ -350,7 +433,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
 
     val taintExprs = getTaintExprs(nextLambda, prevTaintVars, nextTaintVars)
     val inputs = prevVars.flatMap(v => prevTaintVars(v)) ++ nextVars.flatMap(v => nextTaintVars(v))
-    val additionalConjunct = computeAConjunct(nextLambda, hyperAssumes, assumes,scope, nextTaintVars)
+    val additionalConjunct = computeAConjunctV2(nextLambda, hyperAssumes, assumes,scope, nextTaintVars)
     val conjuncts = List(taintExprs) ++ List(additionalConjunct)
     val finalConjunct = if (conjuncts.length > 1) smt.OperatorApplication(smt.ConjunctionOp, conjuncts)
                         else if (conjuncts.length == 1) conjuncts(0)
@@ -398,7 +481,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
       case smt.ArrayStoreOperation(a,index,value) =>
           val t2_a = getT2Taint(a, prevVarTaints)
           val t1_val = setToConjunct(getT1Taint(value, prevVarTaints))
-          assert(t2_a.toList.length == 1)
+          Predef.assert(t2_a.toList.length == 1)
           Set(smt.ArrayStoreOperation(t2_a.toList(0), index, t1_val))
       case smt.FunctionApplication(f, args) =>
         throw new Utils.UnimplementedException("T2 taint not defined for func app.")
@@ -450,7 +533,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     }
   }
 
-
+  /*
   def getNextTaintLambda(nextLambda: smt.Lambda, hyperAssumes: List[smt.Expr], assumes: List[smt.Expr], scope: Scope) = {
     //FIXME: HyperAssumes should be rewritten on every unroll of nextTaintLambda
     val supports = getSupports(nextLambda)
@@ -502,10 +585,120 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     log.debug("Taint Next Lambda " + lambda.toString)
 
     lambda
+  }*/
+
+  def computeAConjunct(nextLambda: smt.Lambda, hyperAssumes: List[smt.Expr], assumes: List[smt.Expr], scope: Scope, taintMap: Map[smt.Symbol, smt.Symbol]) = {
+
+    val initSymTab1 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 1, scope)
+    val initSymTab2 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 2, scope)
+    val nextSymTab1 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 3, scope)
+    val nextSymTab2 = simulator.newInputSymbols(simulator.getInitSymbolTable(scope), 4, scope)
+
+    val prevVars1 = simulator.getVarsInOrder(initSymTab1.map(_.swap), scope)
+    val prevVars2 = simulator.getVarsInOrder(initSymTab2.map(_.swap), scope)
+    val nextVars1 = simulator.getVarsInOrder(nextSymTab1.map(_.swap), scope)
+    val nextVars2 = simulator.getVarsInOrder(nextSymTab2.map(_.swap), scope)
+
+    val prevLambdaVars = nextLambda.ids.take(nextLambda.ids.length / 2)
+    val nextLambdaVars = nextLambda.ids.takeRight(nextLambda.ids.length / 2)
+
+    val matches1 = nextLambda.ids.zip(prevVars1.flatten ++ nextVars1.flatten)
+    val matches2 = nextLambda.ids.zip(prevVars2.flatten ++ nextVars2.flatten)
+
+    val hyperSelects = hyperAssumes.map(hypAssume => simulator.getHyperSelects(hypAssume)).flatten
+    val subs = hyperSelects.map {
+      expr =>
+        val op = expr.op
+        val exp = expr.operands
+        op match {
+          case smt.HyperSelectOp(i) =>
+
+            val actual_params = if (i == 1) prevVars1.flatten ++ nextVars1.flatten
+            else if (i == 2) prevVars2.flatten ++ nextVars2.flatten
+            else throw new Utils.RuntimeError("HyperAssumes for more than 2 copies unsupported")
+
+            val formal_params = nextLambda.ids
+            Predef.assert(actual_params.length == formal_params.length)
+            val matches = formal_params.zip(actual_params)
+            val final_expr = simulator.substitute(exp(0), matches)
+            (expr, final_expr)
+
+          case _ =>
+            throw new Utils.RuntimeError("Should never get here.")
+        }
+    }
+    val substitutedHyperAssumes = hyperAssumes.map(assume => simulator.substitute(assume, subs))
+    val substitutedAssumes1 = assumes.map(assume => simulator.substitute(assume, matches1))
+    val substitutedAssumes2 = assumes.map(assume => simulator.substitute(assume, matches2))
+    val matchNexts = nextLambdaVars.zip(nextVars1.flatten.zip(nextVars2.flatten))
+    val setTaints = matchNexts.map {
+      nextVar =>
+        val equality = smt.OperatorApplication(smt.EqualityOp, List(nextVar._2._1, nextVar._2._2))
+        val not_expr = smt.OperatorApplication(smt.NegationOp, List(equality))
+        val assumes = substitutedAssumes1 ++ substitutedAssumes2 ++ substitutedHyperAssumes
+        log.debug("-- The assumes in A Func -- " + assumes.toString)
+        log.debug("-- The query_expr in A Func -- " + not_expr.toString)
+        checkExpr(taintSolver, not_expr, assumes).result.result match {
+          case Some(true) =>
+            log.debug("equal in A Function")
+            Some(taintMap(nextVar._1))
+          case _ =>
+            log.debug("unequal in A Function")
+            None
+        }
+    }.flatten
+    val conjunct = if (setTaints.length == 1) setTaints(0)
+    else if (setTaints.length == 0) smt.BooleanLit(true)
+    else smt.OperatorApplication(smt.ConjunctionOp, setTaints)
+
+    log.debug("--- The A Conjunct --- " + conjunct)
+    conjunct
+
+
+  }
+
+  def getNextTaintLambdaV1(nextLambda: smt.Lambda, hyperAssumes: List[smt.Expr], assumes: List[smt.Expr], scope: Scope) = {
+    //FIXME: HyperAssumes should be rewritten on every unroll of nextTaintLambda
+    val supports = getSupports(nextLambda)
+    log.debug("The next hyperAssumes " + hyperAssumes.toString)
+    log.debug("The lambda " + nextLambda.toString)
+    log.debug("The support set " + supports)
+    val nextVars = nextLambda.ids.takeRight(nextLambda.ids.length / 2)
+    val prevVars = nextLambda.ids.take(nextLambda.ids.length / 2)
+    log.debug("The next vars " + nextVars.toString)
+    //FIXME: Handle Arrays
+    val m : Map[smt.Symbol, smt.Symbol] = Map.empty
+    val nextVarMap = nextVars.foldLeft(m) {
+      (acc, sym) =>
+        acc + (sym -> simulator.newTaintSymbol(sym.id, smt.BoolType))
+    }
+    val prevVarMap = prevVars.foldLeft(m) {
+      (acc, sym) =>
+        acc + (sym -> simulator.newTaintSymbol(sym.id, smt.BoolType))
+    }
+
+    val lambdaConjuncts = nextVarMap.map {
+      p =>
+        val support_set = supports(p._1).toList.map(sym => prevVarMap(sym))
+        val conjunct = if ( support_set.length > 1) smt.OperatorApplication(smt.ConjunctionOp, support_set)
+        else if (support_set.length == 0) smt.BooleanLit(false)
+        else support_set(0)
+        smt.OperatorApplication(smt.ImplicationOp, List(conjunct, p._2))
+    }.toList
+
+    val addlConjunct = computeAConjunct(nextLambda, hyperAssumes, assumes, scope, nextVarMap)
+    val conjunct = if (lambdaConjuncts.length > 1) smt.OperatorApplication(smt.ConjunctionOp, lambdaConjuncts)
+    else if (lambdaConjuncts.length == 0) smt.BooleanLit(true)
+    else lambdaConjuncts(0)
+    val lambda = smt.Lambda(prevVars.map(p => prevVarMap(p)) ++ nextVars.map(p => nextVarMap(p)),
+      smt.OperatorApplication(smt.ConjunctionOp, List(addlConjunct, conjunct)))
+    log.debug("Taint Next Lambda V1" + lambda.toString)
+
+    lambda
   }
 
   def getSupports(lambda: smt.Lambda): Map[smt.Symbol, Set[smt.Symbol]] = {
-    assert(lambda.ids.length % 2 == 0)
+    Predef.assert(lambda.ids.length % 2 == 0)
     if (lambda.e.isInstanceOf[smt.BooleanLit]) {
       val primed_vars = lambda.ids.takeRight(lambda.ids.length / 2) // Assuming prevs are followed by nexts
       val non_primed_vars = lambda.ids.take(lambda.ids.length / 2)
@@ -749,7 +942,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
 
     val init_lambda = simulator.getInitLambda(false, true, false, scope, label, filter)
     val next_lambda = simulator.getNextLambda(init_lambda._3, true, false, scope, label, filter)
-    val taintInitLambda = getTaintInitLambda(init_lambda._1, scope, taintSolver, init_lambda._5)
+    val taintInitLambda = getTaintInitLambdaV2(init_lambda._1, scope, taintSolver, init_lambda._5)
     val taintNextLambda = getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, scope)
     val combinedInitLambda = getCombinedInitLambda(init_lambda._1, taintInitLambda)
     val combinedNextLambda = getCombinedNextLambda(next_lambda._1, taintNextLambda)
@@ -810,7 +1003,7 @@ class LazySCSolver(simulator: SymbolicSimulator) {
         prevTaintVarTable(0).foreach(sym => log.debug("sym and typ " + sym.toString + " " + sym.typ.toString))
         log.debug("!!!!!!!!!!!!!!! -- --- - Copy 2 Init Conjunct ----- !!!!!!!!!!" + initConjunct.toString)
         log.debug("$$ nonArrayTaintVars $$ " + nonArrayTaintVars.toString)
-        assert(nonArrayTaintVars.length == prevVarTable(1).flatten.length)
+        Predef.assert(nonArrayTaintVars.length == prevVarTable(1).flatten.length)
         //val taintMatches = nonArrayTaintVars zip (prevVarTable(0).flatten zip prevVarTable(1).flatten)
         val taintMatches = secondInitVars.zip(firstInitVars zip nonArrayTaintVars)
         val partition = partitionConjunct(initConjunct)
@@ -958,8 +1151,8 @@ class LazySCSolver(simulator: SymbolicSimulator) {
             }
           }
 
-          assert(secondNextVars.length == nonArrayTaintVars.length)
-          assert(secondNextVars.length == firstNextVars.length)
+          Predef.assert(secondNextVars.length == nonArrayTaintVars.length)
+          Predef.assert(secondNextVars.length == firstNextVars.length)
           val taintMatches = secondNextVars.zip(firstNextVars zip nonArrayTaintVars)
           log.debug(" ----- Next Partition Map ----- " + partition._1)
           log.debug(" ----- Next taint Matches ---- " + taintMatches.toString)
@@ -1020,14 +1213,14 @@ class LazySCSolver(simulator: SymbolicSimulator) {
 
 
   }
-  /*
+
   // Applicable for only two copies
-  def simulateLazySC(bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
+  def simulateLazySCV1(bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
 
     val init_lambda = simulator.getInitLambda(false, true, false, scope, label, filter)
     val next_lambda = simulator.getNextLambda(init_lambda._3, true, false, scope, label, filter)
-    val taintInitLambda = getTaintInitLambda(init_lambda._1, scope, solver, init_lambda._5)
-    val taintNextLambda = getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, scope)
+    val taintInitLambda = getTaintInitLambdaV1(init_lambda._1, scope, taintSolver, init_lambda._5)
+    val taintNextLambda = getNextTaintLambdaV1(next_lambda._1, next_lambda._5, next_lambda._6, scope)
 
     val num_copies = 2
     val numberOfSteps = bound
@@ -1073,14 +1266,14 @@ class LazySCSolver(simulator: SymbolicSimulator) {
           val secondInitVars = prevVarTable(1).flatten
           val partition = partitionConjunct(init_conjunct)
 
-          assert(secondInitVars.length == prevTaintVarTable(0).length)
-          assert(secondInitVars.length == firstInitVars.length)
+          Predef.assert(secondInitVars.length == prevTaintVarTable(0).length)
+          Predef.assert(secondInitVars.length == firstInitVars.length)
           val taintMatches = secondInitVars.zip(firstInitVars zip prevTaintVarTable(0))
           log.debug(" ----- Partition Map ----- " + partition._1)
           log.debug(" ----- Init taint Matches ---- " + taintMatches.toString)
           taintMatches.foreach {
             v =>
-              checkExpr(solver, smt.OperatorApplication(smt.NegationOp, List(v._2._2)), taintAssumes.toList).result.result match {
+              checkExpr(taintSolver, smt.OperatorApplication(smt.NegationOp, List(v._2._2)), taintAssumes.toList).result.result match {
 
                 case Some(true) =>  //Unsat and tainted, hence equal
                   val equality = smt.OperatorApplication(smt.EqualityOp, List(v._1, v._2._1))
@@ -1170,18 +1363,18 @@ class LazySCSolver(simulator: SymbolicSimulator) {
           val secondNextVars = new_vars.flatten
           val partition = partitionConjunct(next_conjunct)
 
-          assert(secondNextVars.length == prevTaintVarTable(0).length)
-          assert(secondNextVars.length == firstNextVars.length)
+          Predef.assert(secondNextVars.length == prevTaintVarTable(0).length)
+          Predef.assert(secondNextVars.length == firstNextVars.length)
           val taintMatches = secondNextVars.zip(firstNextVars zip prevTaintVarTable(i - 1))
           log.debug(" ----- Next Partition Map ----- " + partition._1)
           log.debug(" ----- Next taint Matches ---- " + taintMatches.toString)
           taintMatches.foreach {
             v =>
-              checkExpr(solver, smt.OperatorApplication(smt.NegationOp, List(v._2._2)), taintAssumes.toList).result.result match {
+              checkExpr(taintSolver, smt.OperatorApplication(smt.NegationOp, List(v._2._2)), taintAssumes.toList).result.result match {
                 case Some(true) =>  //Unsat and tainted, hence equal
                   val equality = smt.OperatorApplication(smt.EqualityOp, List(v._1, v._2._1))
                   //log.debug("%% Taint Assumes %% " + taintAssumes.toList.toString)
-                  //log.debug("@@ Query Expr @@ " + smt.OperatorApplication(smt.NegationOp, List(v._2._2)).toString)
+                  //log.debug("@@ Query Expr @@getVars " + smt.OperatorApplication(smt.NegationOp, List(v._2._2)).toString)
                   log.debug("++ Added Equality ++ " + equality.toString)
                   simulator.addAssumptionToTree(equality, List.empty)
                 case _ => // Sat, possibility of being unequal. Duplicate Expression
@@ -1231,5 +1424,5 @@ class LazySCSolver(simulator: SymbolicSimulator) {
     simulator.symbolTable = symTabStep
 
 
-  } */
+  }
 }
