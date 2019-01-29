@@ -41,7 +41,8 @@ package uclid
 package smt
 
 import com.microsoft.z3
-import uclid.lang.{CoverDecorator, Scope}
+import com.typesafe.scalalogging.Logger
+import uclid.lang.{CoverDecorator, Identifier, Scope}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
@@ -56,7 +57,9 @@ case class TransitionSystem(
 
 class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
   z3.Global.setParameter("fixedpoint.engine", "pdr")
-
+  type TaintSymbolTable = Map[Identifier, List[smt.Expr]]
+  type TaintFrameTable = ArrayBuffer[TaintSymbolTable]
+  val log = Logger(classOf[Z3HornSolver])
   var id = 0
   /*
   var boundIdx = 0
@@ -332,12 +335,12 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
     var havocTable = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
 
-    val boolSort = ctx.mkBoolSort()
-    val invSingle = ctx.mkFuncDecl("invSingle", sorts.toArray, boolSort)
+    //val boolSort = ctx.mkBoolSort()
+    //val invSingle = ctx.mkFuncDecl("invSingle", sorts.toArray, boolSort)
     val invHyperDecl = ctx.mkFuncDecl("invHyper", finalSorts.toArray, boolSort)
     val fp = ctx.mkFixedpoint()
     fp.registerRelation(invHyperDecl)
-    fp.registerRelation(invSingle)
+    //fp.registerRelation(invSingle)
 
     var inputStep = 0
     var initConjuncts = new ArrayBuffer[smt.Expr]()
@@ -364,7 +367,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
       simRecord += frames
     }
 
-    val initSymbolsSmt = sim.getVarsInOrder(simRecord(0)(0).map(_.swap), scope).flatten.map(smtVar => smtVar.asInstanceOf[smt.Symbol])
+    //val initSymbolsSmt = sim.getVarsInOrder(simRecord(0)(0).map(_.swap), scope).flatten.map(smtVar => smtVar.asInstanceOf[smt.Symbol])
 
     //addZ3Symbols(initSymbolsSmt)
     //addBoundVariables(initSymbolsSmt, Some(0), false)
@@ -372,8 +375,8 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     //val initSymbolsZ3 = initSymbolsSmt.map(sym => hornSymbolMap(sym))
 
 
-    val initSymbolsBound = initSymbolsSmt.
-      map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
+    //val initSymbolsBound = initSymbolsSmt.
+    //  map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
 
     val initHyperSymbolsSmt = simRecord.flatMap {
       frameTable =>
@@ -403,13 +406,13 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
       sort =>
         UclidMain.println("Some sort = " + sort.toString)
     }*/
-    val initRule = createForall(initSymbolsBound.toArray, ctx.mkImplies(initConjunctsZ3(0),
-      applyDecl(invSingle, initSymbolsBound)))
+    //val initRule = createForall(initSymbolsBound.toArray, ctx.mkImplies(initConjunctsZ3(0),
+    //  applyDecl(invSingle, initSymbolsBound)))
 
     val initHyperRule = createForall(initHyperSymbolsBound.toArray, ctx.mkImplies(ctx.mkAnd(initConjunctsZ3 ++ hypAssumesInitZ3 : _*),
       applyDecl(invHyperDecl, initHyperSymbolsBound)))
-    //UclidMain.println("The Init Conjunct " + initConjunctsZ3(0))
-    fp.addRule(initRule, ctx.mkSymbol("initRule"))
+    log.debug("The Init Conjunct " + initConjunctsZ3(0))
+    //fp.addRule(initRule, ctx.mkSymbol("initRule"))
     //UclidMain.println("---FPFPFPFPFPFPF--- The Fixed point " + fp.toString())
     fp.addRule(initHyperRule, ctx.mkSymbol("initHyperRule"))
 
@@ -421,7 +424,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
     val initAssertsMap: Map[AssertInfo, z3.FuncDecl] = asserts_init.map {
       assert =>
-        UclidMain.println("The assert " + assert.expr.toString)
+        log.debug("The assert " + assert.expr.toString)
         val errorDecl = ctx.mkFuncDecl("error_init_assert_" + getUniqueId().toString, Array[z3.Sort](), boolSort)
         fp.registerRelation(errorDecl)
         val pcExpr = assert.pathCond
@@ -439,8 +442,8 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
         }
 
         val not = exprToZ3(checkExpr).asInstanceOf[z3.BoolExpr]
-        val and = ctx.mkAnd(initConjunctsZ3(0), not, applyDecl(invSingle, initSymbolsBound))
-        val rule = createForall(initSymbolsBound.toArray, ctx.mkImplies(and, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
+        val and = ctx.mkAnd(initConjunctsZ3(0), not, applyDecl(invHyperDecl, initHyperSymbolsBound))
+        val rule = createForall(initHyperSymbolsBound.toArray, ctx.mkImplies(and, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
         fp.addRule(rule, ctx.mkSymbol("init_assert_" + getUniqueId().toString))
         assert -> errorDecl
     }.toMap
@@ -449,6 +452,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     val asserts_init_hyper = sim.rewriteHyperAsserts(
       initLambda, 0, initHyperAsserts, simRecord, 0, scope, prevVarTable.toList)
 
+    /*
     val initHyperAssertsMap: Map[AssertInfo, z3.FuncDecl] = asserts_init_hyper.map {
       assert =>
         val errorDecl = ctx.mkFuncDecl("error_init_hyp_assert_" + getUniqueId().toString(), Array[z3.Sort](), boolSort)
@@ -474,7 +478,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
         val rule = createForall(initHyperSymbolsBound.toArray, implies)
         fp.addRule(rule, ctx.mkSymbol("init_hyp_assert_" + getUniqueId().toString))
         assert -> errorDecl
-    }.toMap
+    }.toMap */
 
 
     var symTabStep = sim.symbolTable
@@ -513,10 +517,10 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
     // This needs to be computed using the previous bounds
     val nextConjunctInitZ3 = exprToZ3(nextConjuncts(0)).asInstanceOf[z3.BoolExpr]
-    val nextRule = createForall((initSymbolsBound ++ nextSymbolsBound).toArray,
-      ctx.mkImplies(ctx.mkAnd(nextConjunctInitZ3, applyDecl(invSingle, initSymbolsBound)), applyDecl(invSingle, nextSymbolsBound))
-    )
-    fp.addRule(nextRule, ctx.mkSymbol("nextRule"))
+    //val nextRule = createForall((initSymbolsBound ++ nextSymbolsBound).toArray,
+    //  ctx.mkImplies(ctx.mkAnd(nextConjunctInitZ3, applyDecl(invSingle, initSymbolsBound)), applyDecl(invSingle, nextSymbolsBound))
+    //)
+    //fp.addRule(nextRule, ctx.mkSymbol("nextRule"))
 
     val asserts_next = sim.rewriteAsserts(
       nextLambda, nextAsserts, 1,
@@ -524,12 +528,17 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
         prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord.clone(), havocTable(0))
     //UclidMain.println("Expr Map before Assertions " + exprToZ3.memoHashMap.toString)
 
+    val nextConjunctsZ3 = nextConjuncts.map(expr =>
+      exprToZ3(expr).asInstanceOf[z3.BoolExpr])
+    //val nextHyperSymbolsZ3 = nextHyperSymbolsSmt.map(sym => hornSymbolMap(sym))
+    val nextHyperSymbolsBound = nextHyperSymbolsSmt.
+      map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
 
     val nextAssertsMap: Map[AssertInfo, z3.FuncDecl] = asserts_next.map {
       assert =>
         val errorDecl = ctx.mkFuncDecl("error_next_assert_" + getUniqueId().toString(), Array[z3.Sort](), boolSort)
         fp.registerRelation(errorDecl)
-        UclidMain.println("Error Next: " + assert.expr.toString)
+        log.debug("Error Next: " + assert.expr.toString)
         val pcExpr = assert.pathCond
         // If assertExpr has a CoverDecorator then we should not negate the expression here.
         val assertExpr = if (assert.decorators.contains(CoverDecorator)) {
@@ -544,9 +553,9 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
         }
 
         val not = exprToZ3(checkExpr).asInstanceOf[z3.BoolExpr]
-        val and = ctx.mkAnd(nextConjunctInitZ3, applyDecl(invSingle, initSymbolsBound), applyDecl(invSingle, nextSymbolsBound))//ctx.mkAnd(nextConjunctsZ3(0), initConjunctsZ3(0))
+        val and = ctx.mkAnd(nextConjunctInitZ3, applyDecl(invHyperDecl, initHyperSymbolsBound), applyDecl(invHyperDecl, nextHyperSymbolsBound))//ctx.mkAnd(nextConjunctsZ3(0), initConjunctsZ3(0))
         val implies = ctx.mkImplies(ctx.mkAnd(and, not), errorDecl.apply().asInstanceOf[z3.BoolExpr])
-        val rule = createForall((initSymbolsBound ++ nextSymbolsBound).toArray, implies)
+        val rule = createForall((initHyperSymbolsBound ++ nextHyperSymbolsBound).toArray, implies)
         fp.addRule(rule, ctx.mkSymbol("next_assert_" + getUniqueId().toString))
         assert -> errorDecl
     }.toMap
@@ -558,29 +567,20 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     //addBoundVariables(nextHyperSymbolsSmt, None, true)
 
     //UclidMain.println("Expr Map Updated " + exprToZ3Horn.memoHashMap.toString)
-    val nextConjunctsZ3 = nextConjuncts.map(expr =>
-      exprToZ3(expr).asInstanceOf[z3.BoolExpr])
-    //val nextHyperSymbolsZ3 = nextHyperSymbolsSmt.map(sym => hornSymbolMap(sym))
-    val nextHyperSymbolsBound = nextHyperSymbolsSmt.
-      map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
-    //UclidMain.println("" + nextHyperSymbolsBound.toString)
-    //UclidMain.println(initHyperSymbolsBound.toString)
-    //UclidMain.println(nextConjunctsZ3.toString)
-    //UclidMain.println("initHyperSymbolsZ3 " + initHyperSymbolsZ3.toString)
-    //UclidMain.println("nextHyperSymbolsZ3 " + nextHyperSymbolsZ3.toString)
 
-    //Gotta debug hyperAssumes
-    val hyperAssumesRewritten = sim.rewriteHyperAssumes(nextLambda, 1,
-      nextHyperAssumes, simRecord, 1, scope, prevVarTable.toList)
-    //UclidMain.println("The hyperAssumes rewritten " + hyperAssumesRewritten.toString)
+    log.debug("" + nextHyperSymbolsBound.toString)
+    log.debug("Init bound HyperSymbols " + initHyperSymbolsBound.toString)
+    log.debug("Next Conjuncts " + nextConjunctsZ3.toString)
+
+
 
     val hyperAssumesNextZ3 = sim.rewriteHyperAssumes(nextLambda, 1,
       nextHyperAssumes, simRecord, 1, scope, prevVarTable.toList).map {
       exp => exprToZ3(exp).asInstanceOf[z3.BoolExpr]
     }
 
-    //UclidMain.println("The next HyperAssumes " + nextHyperAssumes.toString)
-    //UclidMain.println("The next HyperAssumesZ3 " + hyperAssumesNextZ3.toString)
+    log.debug("The next HyperAssumes " + nextHyperAssumes.toString)
+    log.debug("The next HyperAssumesZ3 " + hyperAssumesNextZ3.toString)
 
 
     val nextHyperRule = createForall((initHyperSymbolsBound ++ nextHyperSymbolsBound).toArray,
@@ -620,7 +620,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     }.toMap
 
 
-    UclidMain.println(fp.toString())
+    log.debug(fp.toString())
 
     UclidMain.println("Querying Init Asserts")
     initAssertsMap.foreach {
@@ -630,13 +630,13 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
     }
 
-    UclidMain.println("Querying Init Hyper Asserts")
+    /*UclidMain.println("Querying Init Hyper Asserts")
     initHyperAssertsMap.foreach {
       p =>
         UclidMain.println("Querying " + p._1.toString)
         UclidMain.println(fp.query(Array(p._2)).toString)
 
-    }
+    }*/
 
     UclidMain.println("Querying Next Asserts")
     nextAssertsMap.foreach {
@@ -659,6 +659,212 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     // 4) For each error relation query the fixed point
 
 
+  }
+
+  def getNewTaintSymbol(sym: smt.Symbol) = {
+    sym.typ match {
+      case smt.ArrayType(inTypes, _) =>
+        val taint1 = sim.newTaintSymbol(sym.id, smt.BoolType)
+        val taint2 = sim.newTaintSymbol(sym.id, smt.ArrayType(inTypes, smt.BoolType))
+        List(taint1, taint2)
+      case _ => List(sim.newTaintSymbol(sym.id, smt.BoolType))
+    }
+  }
+
+  def getTaintSymbolTable(scope : Scope, isSimple: Boolean) : TaintSymbolTable = {
+    scope.map.foldLeft(Map.empty[Identifier, List[smt.Expr]]){
+      (mapAcc, decl) => {
+        decl._2 match {
+          case Scope.ConstantVar(id, typ) =>
+            val value = if (!isSimple) getNewTaintSymbol(sim.newConstantSymbol(id.name, smt.Converter.typeToSMT(typ))) else List(sim.newTaintSymbol("taint_var_" + id.name, BoolType))
+            mapAcc + (id -> value)
+          case Scope.Function(id, typ) =>
+            val value = if (!isSimple) getNewTaintSymbol(sim.newConstantSymbol(id.name, smt.Converter.typeToSMT(typ))) else List(sim.newTaintSymbol("taint_var_" + id.name, BoolType))
+            mapAcc + (id -> value)
+          case Scope.EnumIdentifier(id, typ) =>
+            val value = if (!isSimple) List(smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString)))) else List(sim.newTaintSymbol("taint_var_" + id.name, BoolType))
+            mapAcc + (id -> value)
+          case Scope.InputVar(id, typ) =>
+            val value = if (!isSimple) getNewTaintSymbol(sim.newInitSymbol(id.name, smt.Converter.typeToSMT(typ))) else List(sim.newTaintSymbol("taint_var_" + id.name, BoolType))
+            mapAcc + (id -> value)
+          case Scope.OutputVar(id, typ) =>
+            val value = if (!isSimple) getNewTaintSymbol(sim.newInitSymbol(id.name, smt.Converter.typeToSMT(typ))) else List(sim.newTaintSymbol("taint_var_" + id.name, BoolType))
+            mapAcc + (id -> value)
+          case Scope.StateVar(id, typ) =>
+            val value = if (!isSimple) getNewTaintSymbol(sim.newInitSymbol(id.name, smt.Converter.typeToSMT(typ))) else List(sim.newTaintSymbol("taint_var_" + id.name, BoolType))
+            mapAcc + (id -> value)
+          case Scope.SharedVar(id, typ) =>
+            val value = if (!isSimple) getNewTaintSymbol(sim.newInitSymbol(id.name, smt.Converter.typeToSMT(typ))) else List(sim.newTaintSymbol("taint_var_" + id.name, BoolType))
+            mapAcc + (id -> value)
+          case _ => mapAcc
+        }
+      }
+    }
+  }
+
+  def newTaintInputSymbols(st : TaintSymbolTable, step : Int, isSimple: Boolean, scope : Scope) : TaintSymbolTable = {
+    scope.map.foldLeft(st)((acc, decl) => {
+      decl._2 match {
+        case Scope.InputVar(id, typ) =>
+          val value = if (!isSimple) sim.newInputSymbol(id.name, step, smt.Converter.typeToSMT(typ)) else List(sim.newTaintSymbol(id.name, BoolType))
+          acc + (id -> getNewTaintSymbol(sim.newInputSymbol(id.name, step, smt.Converter.typeToSMT(typ))))
+        case _ => acc
+      }
+    })
+  }
+
+  def getTaintVarsInOrder(map: Map[List[smt.Expr], Identifier], scope: Scope) : List[List[smt.Expr]] = {
+    val ids = map.map(p => p._2).toList
+    val reverse_map = map.map(_.swap)
+    val const_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.ConstantVar(id, typ) => true
+      case _ => false
+    }).flatMap(id => reverse_map(id)).sortBy{
+      v =>
+        val s = v.toString.split("_")
+
+        val name = s.takeRight(s.length - 5).foldLeft(s(4))((acc, p) => acc + "_" + p)
+        name
+    }
+    /*val func_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.Function(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get)
+    */
+    val input_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.InputVar(id, typ) => true
+      case _ => false
+    }).flatMap(id => reverse_map(id)).sortBy{
+      v =>
+        val s = v.toString.split("_")
+        val name = s.takeRight(s.length - 5).foldLeft(s(4))((acc, p) => acc + "_" + p)
+        name
+    }
+    val output_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.OutputVar(id, typ) => true
+      case _ => false
+    }).flatMap(id => reverse_map(id)).sortBy{
+      v =>
+        val s = v.toString.split("_")
+        val name = s.takeRight(s.length - 5).foldLeft(s(4))((acc, p) => acc + "_" + p)
+        name
+    }
+    val state_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.StateVar(id, typ) => true
+      case _ => false
+    }).flatMap(id => reverse_map(id)).sortBy{
+      v =>
+        val s = v.toString.split("_")
+        val name = s.takeRight(s.length - 5).foldLeft(s(4))((acc, p) => acc + "_" + p)
+        name
+    }
+    val shared_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.SharedVar(id, typ) => true
+      case _ => false
+    }).flatMap(id => reverse_map(id)).sortBy{
+      v =>
+        val s = v.toString.split("_")
+        val name = s.takeRight(s.length - 5).foldLeft(s(4))((acc, p) => acc + "_" + p)
+        name
+    }
+    List(const_vars, input_vars, output_vars, state_vars, shared_vars)
+
+  }
+
+  def solveTaintLambdas(initTaintLambda: smt.Lambda, nextTaintLambda: smt.Lambda, isSimple: Boolean, scope: Scope) = {
+    z3.Global.setParameter("fixedpoint.engine", "pdr")
+    val sorts = initTaintLambda.ids.map(id => getZ3Sort(id.typ))
+
+    def applyDecl(f : z3.FuncDecl, args: List[z3.Expr]) : z3.BoolExpr = {
+      Predef.assert(f.getDomainSize() == args.length)
+      /*f.getDomain.zip(args).foreach {
+        d =>
+          UclidMain.println("domain typ and arg typ" + (d._1, d._2.getSort))
+      }
+      UclidMain.println("The args to applyDecl " + args.toString)*/
+      f.apply(args : _*).asInstanceOf[z3.BoolExpr]
+    }
+
+    var qId = 0
+    var skId = 0
+
+
+    def createForall(bindings: Array[z3.Expr], e : z3.Expr) = {
+      qId += 1
+      skId += 1
+      ctx.mkForall(bindings, e,
+        0, Array[z3.Pattern](), Array[z3.Expr](), ctx.mkSymbol(qId), ctx.mkSymbol(skId))
+    }
+
+    val fp = ctx.mkFixedpoint()
+    var stepOffset = 0
+    val taintFrameTable = new TaintFrameTable
+    var prevTaintVarTable = new ArrayBuffer[List[smt.Expr]]()
+    val taintInitSymTab = newTaintInputSymbols(getTaintSymbolTable(scope, isSimple), stepOffset, isSimple, scope)
+    stepOffset += 1
+    taintFrameTable += taintInitSymTab
+    val initTaintVars = getTaintVarsInOrder(taintInitSymTab.map(_.swap), scope)
+    prevTaintVarTable += initTaintVars.flatten
+    log.debug("Init Taint Lambda " + initTaintLambda)
+    log.debug("Init Taint Vars " + initTaintVars.flatten)
+    val initTaintConjunct = sim.betaSubstitution(initTaintLambda, initTaintVars.flatten)
+
+
+    val taintNextSymTab = newTaintInputSymbols(getTaintSymbolTable(scope, isSimple), stepOffset, isSimple, scope)
+    stepOffset += 1
+    taintFrameTable += taintNextSymTab
+    val nextTaintVars = getTaintVarsInOrder(taintNextSymTab.map(_.swap), scope)
+
+
+    prevTaintVarTable += nextTaintVars.flatten
+    log.debug("Next Taint Lambda" + nextTaintLambda)
+    val nextTaintConjunct = sim.betaSubstitution(nextTaintLambda, prevTaintVarTable(1 - 1) ++ nextTaintVars.flatten)
+    val invTaintDecl = ctx.mkFuncDecl("invTaint", sorts.toArray, boolSort)
+    fp.registerRelation(invTaintDecl)
+
+    val initTaintSymbolsSmt = getTaintVarsInOrder(taintFrameTable(0).map(_.swap), scope).flatten.map(smtVar => smtVar.asInstanceOf[smt.Symbol])
+    val initTaintSymbolsBound = initTaintSymbolsSmt.map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
+    val nextTaintSymbolsBound = getTaintVarsInOrder(taintFrameTable(1).map(_.swap), scope).flatten.map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
+
+    val initTaintConjunctZ3 = exprToZ3(initTaintConjunct).asInstanceOf[z3.BoolExpr]
+    val nextTaintConjunctZ3 = exprToZ3(nextTaintConjunct).asInstanceOf[z3.BoolExpr]
+
+    log.debug("Next Taint Conjunct Z3 \n" + nextTaintConjunctZ3.toString)
+    val initTaintRule = createForall(initTaintSymbolsBound.toArray, ctx.mkImplies(initTaintConjunctZ3, applyDecl(invTaintDecl, initTaintSymbolsBound)))
+    fp.addRule(initTaintRule, ctx.mkSymbol("initTaintRule"))
+
+    val nextTaintRule = createForall((initTaintSymbolsBound ++ nextTaintSymbolsBound).toArray,
+      ctx.mkImplies(ctx.mkAnd(nextTaintConjunctZ3, applyDecl(invTaintDecl, initTaintSymbolsBound)), applyDecl(invTaintDecl, nextTaintSymbolsBound))
+    )
+    fp.addRule(nextTaintRule, ctx.mkSymbol("nextTaintRule"))
+
+
+    val taintErrorMap = initTaintSymbolsBound.map {
+      sym =>
+        val errorDecl = ctx.mkFuncDecl("error_taint_" + getUniqueId().toString() + "_" + sym.toString, Array[z3.Sort](), boolSort)
+        fp.registerRelation(errorDecl)
+
+        if (sym.isInstanceOf[z3.ArrayExpr]) {
+          sym -> None
+        } else {
+          val and = ctx.mkAnd(ctx.mkNot(sym.asInstanceOf[z3.BoolExpr]), applyDecl(invTaintDecl, initTaintSymbolsBound))
+          val rule = createForall(initTaintSymbolsBound.toArray, ctx.mkImplies(and, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
+          fp.addRule(rule, ctx.mkSymbol("error_rule_taint_" + getUniqueId().toString() + "_" + sym.toString))
+          sym -> Some(errorDecl)
+        }
+
+    }.toMap
+
+    log.debug("**** The Taint FixedPoint **** \n" + fp.toString)
+    log.debug("Querying Taint Vars")
+    taintErrorMap.foreach {
+      p =>
+        log.debug("Querying " + p._1.toString)
+        p._2 match {
+          case Some(err) => log.debug(fp.query(Array[z3.FuncDecl](err)).toString)
+          case None => log.debug("Array variable not queried.")
+        }
+    }
   }
 }
 
