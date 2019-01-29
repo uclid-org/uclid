@@ -1,0 +1,21 @@
+module common {
+    type new_t = record {
+        x : boolean,
+        arr : [integer]bv5
+    };
+
+    function random() : new_t;
+}
+
+module main {
+
+    var flag : boolean;
+    var num : bv5;
+    var idx : integer;
+
+    next {
+        num' = bv_left_shift(1, bv_zero_extend(1, common.random().arr[idx]))[4:0];
+        flag' = common.random().x;
+    }
+
+}

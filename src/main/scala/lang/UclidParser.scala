@@ -182,10 +182,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lexical.delimiters ++= List("(", ")", ",", "[", "]",
       "bv", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
-      OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE, OpConcat,
-      OpNot, OpMinus, OpPrime)
+      OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, 
+      OpEQ, OpNE, OpConcat, OpNot, OpMinus, OpPrime)
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul,
-      OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpEQ, OpNE,
+      OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall,
@@ -209,6 +209,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       case x ~ OpGT ~ y => OperatorApplication(GTOp(), List(x,y))
       case x ~ OpLE ~ y => OperatorApplication(LEOp(), List(x,y))
       case x ~ OpGE ~ y => OperatorApplication(GEOp(), List(x,y))
+      case x ~ OpULT ~ y => OperatorApplication(BVLTUOp(0), List(x,y))
+      case x ~ OpUGT ~ y => OperatorApplication(BVGTUOp(0), List(x,y))
+      case x ~ OpULE ~ y => OperatorApplication(BVLEUOp(0), List(x,y))
+      case x ~ OpUGE ~ y => OperatorApplication(BVGEUOp(0), List(x,y))
       case x ~ OpEQ ~ y => OperatorApplication(EqualityOp(), List(x, y))
       case x ~ OpNE ~ y => OperatorApplication(InequalityOp(), List(x, y))
       case x ~ OpConcat ~ y => OperatorApplication(ConcatOp(), List(x,y))
@@ -217,7 +221,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       case x ~ OpMul ~ y => OperatorApplication(MulOp(), List(x,y))
     }
 
-    lazy val RelOp: Parser[String] = OpGT | OpLT | OpEQ | OpNE | OpGE | OpLE
+    lazy val RelOp: Parser[String] = OpGT | OpUGT | OpLT | OpULT | OpEQ | OpNE | OpGE | OpUGE | OpLE | OpULE
     lazy val UnOp: Parser[String] = OpNot | OpMinus
     lazy val RecordSelectOp: Parser[PolymorphicSelect] = positioned {
       ("." ~> Id) ^^ { case id => PolymorphicSelect(id) }
@@ -288,20 +292,15 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         OpBvNot ~> E12 ^^ { case e => OperatorApplication(BVNotOp(0), List(e)) } |
         E12
     }
-    /** E12 = E13 MapOp | E13 **/
-    lazy val E12: PackratParser[Expr] = positioned {
-        E13 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
-        E13
-    }
     /** ExpressionSuffixes. */
     lazy val ExprSuffix: PackratParser[Operator] = positioned {
       ArraySelectOp | ArrayStoreOp | ExtractOp | RecordSelectOp | HyperSelectOp
     }
-    /** E13 = E14 (ExprList) | E14 */
-    lazy val E13: PackratParser[Expr] = positioned {
-        E15 ~ rep(ExprSuffix) ^^ {
-          case e ~ es => es.foldLeft(e)((acc, op) => OperatorApplication(op, List(acc)))
-        }
+    /** E12 = E12 (ExprList) | E12 ExprSuffix | E15 */
+    lazy val E12: PackratParser[Expr] = positioned {
+        E12 ~ ExprSuffix ^^ { case e ~ es => OperatorApplication(es, List(e)) } |
+        E12 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
+        E15
     }
     lazy val ConstArray : PackratParser[lang.ConstArray] = positioned {
       KwConst ~ "(" ~> Expr ~ ("," ~> Type) <~ ")" ^^ {
@@ -570,6 +569,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       OpGT ^^ { case _ => GTOp() } |
       OpLE ^^ { case _ => LEOp() } |
       OpGE ^^ { case _ => GEOp() } |
+      OpULT ^^ { case _ => BVLTUOp(0) } |
+      OpUGT ^^ { case _ => BVGTUOp(0) } |
+      OpULE ^^ { case _ => BVLEUOp(0) } |
+      OpUGE ^^ { case _ => BVGEUOp(0) } |
       OpEQ ^^ { case _ => EqualityOp() } |
       OpNE ^^ { case _ => InequalityOp() } |
       OpConcat ^^ { case _ => ConcatOp() } |
