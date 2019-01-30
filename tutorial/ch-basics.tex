@@ -20,9 +20,9 @@ Types supported by \uclid{} are of the following kinds:
     \item Uninterpreted types.
 \end{enumerate}
 
-An enumerated type is used in line~2 of Example~\ref{ex:alu}. This declares a \textit{type synonym}: \codelike{cmd_t} is an alias for the enumerated type consisting of three values: \codelike{add}, \codelike{sub} and \codelike{mov_imm}. The input \codelike{cmd} is then declared to be of type \codelike{cmd_t} on line~8.
+An enumerated type is used in line~2 of Example~\ref{ex:alu}. This declares a \textit{type synonym}: \codelike{cmd_t} is an alias for the enumerated type consisting of three values: \codelike{add}, \codelike{sub} and \codelike{mov_imm}. The input \codelike{cmd} is then declared to be of type \codelike{cmd_t} on line~6.
 
-The input \codelike{valid} is of type \keyword{boolean}. Register indices \codelike{r1} and \codelike{r2} are bit-vectors of width 3 (\keyword{bv3}), while \codelike{immed}, \codelike{result}, \codelike{r1val} and \codelike{r2val} are bit-vectors of width 8 (\keyword{bv8}).
+The input \codelike{valid} is of type \keyword{boolean}. Register indices \codelike{r1} and \codelike{r2} are bit-vectors of width 3 (\keyword{bv3}), while \codelike{immed}, \codelike{r1val} and \codelike{r2val} are bit-vectors of width 8 (\keyword{bv8}).
 
 Line~3 declares a type synonym for a \keyword{record}. It declares \codelike{result_t} as consisting of two fields: a Boolean field \codelike{valid} and a bit-vector field \codelike{value}. The output \codelike{result} is declared to be of type \codelike{result_t} on Line~9.
 
@@ -96,7 +96,7 @@ next {
     %\lstinputlisting
 \subsection{Procedures}
 Example~\ref{ex:alu} demonstrates how sequential computation is used in concert with parallel computation. %The \codelike{procedure} \codelike{set\_init\_state} (lines~13--18) is used to initialize the values of the registers (state variable \codelike{regs}), the variables \codelike{cnt} and \codelike{result}. Since this procedure updates the module's state variables, a \codelike{modifies} clause (line~14) is required to explicitly specify that these updates are intended. The procedure is called on line~21 in the \codelike{init} block. Updates to a state variable not mentioned in a modifies clause will result in a compilation error.
-In Example~\ref{ex:alu}, consider \codelike{procedure} \codelike{exec\_cmd} which executes a single ALU command and returns (line 27) a single value of type \codelike{result\_t}. The procedure is invoked on line~39 in the \codelike{next} block, and its return value is assigned to the output variable \codelike{result}. Note we are again using the notation \codelike{result'} to refer to parallel assignment. Since this procedure updates the \codelike{reg} state variable, a \keyword{modifies} clause must be used to declare this fact.
+In Example~\ref{ex:alu}, consider \codelike{procedure} \codelike{exec\_cmd} which executes a single ALU command and returns (line 23) a single value of type \codelike{result\_t}. The procedure is invoked on line~39 in the \codelike{next} block, and its return value is assigned to the output variable \codelike{result}. Note we are again using the notation \codelike{result'} to refer to parallel assignment. Since this procedure updates the \codelike{reg} state variable, a \keyword{modifies} clause must be used to declare this fact (line 24).
 
 We emphasize that assignments inside procedures do not assign primed
 variables. However, if a state variable is defined to be modified by
@@ -112,7 +112,7 @@ value.
 
 \uclid{} also supports the definition of macro expressions using
 the \keyword{define} statement. 
-Line~24 of Example~\ref{ex:alu} illustrates this construct.
+Line~20 of Example~\ref{ex:alu} illustrates this construct.
 Macro definitions are useful, as in C, to define expressions
 over arguments that are instantiated in multiple places, or
 which help make the code more readable.
@@ -136,7 +136,7 @@ we may alternatively write the for loop in \codelike{set\_init\_state} in the fo
 \end{lstlisting}
 
 \subsection{If and Case Statements}
-Also worth pointing out are the \keyword{if} statement that appears on line~30, and the \keyword{case} statement that appears on line~33. Syntax for \keyword{if} statements should be familiar.
+Also worth pointing out are the \keyword{if} statement that appears on line~27, and the \keyword{case} statement that appears on line~29. Syntax for \keyword{if} statements should be familiar.
 
 \keyword{case} statements are delimited by \keyword{case} and \keyword{esac} and contain within them a list of boolean expressions and associated statement blocks. These expressions are evaluated in the order in which appear, and if any of them evaluate to \codelike{true}, the corresponding block is executed. If none of the case-expressions evaluate to \codelike{true}, nothing is executed. The keyword \keyword{default} can be used as a ``catch-all'' case like in C/C++.
 
@@ -155,10 +155,10 @@ Execution of the model in Example~\ref{ex:alu} starts with the \keyword{init} bl
 \subsection{Next State Computation}
 The next state of each state variable in the model is computed according to the \keyword{next} block. Any variables not assigned to in the \keyword{next} block retain their ``old'' values.
 
-The \keyword{input} variables of the model are assigned (possibly different) non-deterministic values for each step of the transition system. These values can be controlled by using assumptions. Indeed, the model uses the three assumptions on lines 47--48 to constrain the input to the ALU to always be an \codelike{add} operation, where both operands refer to register index 0.
+The \keyword{input} variables of the model are assigned (possibly different) non-deterministic values for each step of the transition system. These values can be controlled by using assumptions. Indeed, the model uses the two assumptions on lines 43--44 to constrain the input to the ALU to always be an \codelike{add} operation, where both operands refer to register index 0.
 
 \subsection{Verification}
-As in Example~\ref{ex:fib-model}, the verification script in Example~\ref{ex:alu} unrolls the transition system for 5 steps and checks if the \keyword{invariant} on line~49 is violated in any of these steps.
+As in Example~\ref{ex:fib-model}, the verification script in Example~\ref{ex:alu} unrolls the transition system for 5 steps and checks if the \keyword{invariant} on line~45 is violated in any of these steps.
 
 \subsection{Running \uclid{}}
 
@@ -173,4 +173,4 @@ Successfully parsed 1 and instantiated 1 module(s).
 Finished execution for module: main.
 \end{Verbatim}
 
-\uclid{} is able to prove that the \keyword{invariant} on line~49 holds for all states reachable within 5 steps of the initial state, under the assumptions specified in lines~47--48.
+\uclid{} is able to prove that the \keyword{invariant} on line~45 holds for all states reachable within 5 steps of the initial state, under the assumptions specified in lines~43--44.

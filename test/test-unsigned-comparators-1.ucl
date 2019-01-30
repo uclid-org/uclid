@@ -1,0 +1,24 @@
+module main {
+    var x, y, z : bv4;
+
+    init {
+        x = 15bv4;
+        y = 0bv4;
+        z = y;
+    }
+
+    next {
+        assert (y >    x && y >=   x);  // Signed less than
+        assert (x <    y && x <=   y);  // Signed greater than
+        assert (y >=   z && y <=   z);  // Signed equal to case for LE & GE
+        assert (y <_u  x && y <=_u x);  // Unsigned less than
+        assert (x >_u  y && x >=_u y);  // Unsigned greater than
+        assert (y >=_u z && y <=_u z);  // Unsigned equal to case
+    }
+
+    control {
+        v = unroll(1);
+        check;
+        print_results;
+    }
+}
