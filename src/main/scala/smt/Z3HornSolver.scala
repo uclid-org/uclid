@@ -397,6 +397,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     val initConjunctsZ3 = initConjuncts.map(exp => exprToZ3(exp).asInstanceOf[z3.BoolExpr])
     val rewrittenInitHyperAssumes = sim.rewriteHyperAssumes(
       initLambda, 0, initHyperAssumes, simRecord, 0, scope, prevVarTable.toList)
+    log.debug("The rewritten hyperAssumes " + rewrittenInitHyperAssumes.toString())
     val hypAssumesInitZ3 = rewrittenInitHyperAssumes.map(exp => exprToZ3(exp).asInstanceOf[z3.BoolExpr])
 
 
@@ -459,6 +460,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
         fp.registerRelation(errorDecl)
 
         val pcExpr = assert.pathCond
+
         // If assertExpr has a CoverDecorator then we should not negate the expression here.
         val assertExpr = if (assert.decorators.contains(CoverDecorator)) {
           assert.expr
@@ -772,8 +774,13 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
   }
 
   def solveTaintLambdas(initTaintLambda: smt.Lambda, nextTaintLambda: smt.Lambda, isSimple: Boolean, scope: Scope) = {
+    //FIXME: Add step variable to get CEX length
     z3.Global.setParameter("fixedpoint.engine", "pdr")
     val sorts = initTaintLambda.ids.map(id => getZ3Sort(id.typ))
+    val stepVar0 = sim.newStateSymbol("stepVar0", 0, smt.IntType)
+    val stepVar1 = sim.newStateSymbol("stepVar1", 1, smt.IntType)
+
+
 
     def applyDecl(f : z3.FuncDecl, args: List[z3.Expr]) : z3.BoolExpr = {
       Predef.assert(f.getDomainSize() == args.length)
@@ -808,7 +815,8 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     log.debug("Init Taint Lambda " + initTaintLambda)
     log.debug("Init Taint Vars " + initTaintVars.flatten)
     val initTaintConjunct = sim.betaSubstitution(initTaintLambda, initTaintVars.flatten)
-
+    val stepVar0Eq = smt.OperatorApplication(smt.EqualityOp, List(stepVar0, smt.IntLit(0)))
+    val initTaintConjunctFinal = smt.OperatorApplication(smt.ConjunctionOp, List(initTaintConjunct, stepVar0Eq))
 
     val taintNextSymTab = newTaintInputSymbols(getTaintSymbolTable(scope, isSimple), stepOffset, isSimple, scope)
     stepOffset += 1
@@ -819,15 +827,18 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     prevTaintVarTable += nextTaintVars.flatten
     log.debug("Next Taint Lambda" + nextTaintLambda)
     val nextTaintConjunct = sim.betaSubstitution(nextTaintLambda, prevTaintVarTable(1 - 1) ++ nextTaintVars.flatten)
-    val invTaintDecl = ctx.mkFuncDecl("invTaint", sorts.toArray, boolSort)
+    val stepVar1Eq = smt.OperatorApplication(smt.EqualityOp, List(stepVar1,
+                        smt.OperatorApplication(smt.IntAddOp, List(stepVar0, smt.IntLit(1)))))
+    val nextTaintConjunctFinal = smt.OperatorApplication(smt.ConjunctionOp, List(nextTaintConjunct, stepVar1Eq))
+    val invTaintDecl = ctx.mkFuncDecl("invTaint", sorts.toArray ++ Array[z3.Sort](ctx.mkIntSort()), boolSort)
     fp.registerRelation(invTaintDecl)
 
-    val initTaintSymbolsSmt = getTaintVarsInOrder(taintFrameTable(0).map(_.swap), scope).flatten.map(smtVar => smtVar.asInstanceOf[smt.Symbol])
+    val initTaintSymbolsSmt = getTaintVarsInOrder(taintFrameTable(0).map(_.swap), scope).flatten.map(smtVar => smtVar.asInstanceOf[smt.Symbol]) ++ List(stepVar0)
     val initTaintSymbolsBound = initTaintSymbolsSmt.map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
-    val nextTaintSymbolsBound = getTaintVarsInOrder(taintFrameTable(1).map(_.swap), scope).flatten.map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr])
+    val nextTaintSymbolsBound = getTaintVarsInOrder(taintFrameTable(1).map(_.swap), scope).flatten.map(smtVar => exprToZ3(smtVar).asInstanceOf[z3.Expr]) ++ List(exprToZ3(stepVar1).asInstanceOf[z3.Expr])
 
-    val initTaintConjunctZ3 = exprToZ3(initTaintConjunct).asInstanceOf[z3.BoolExpr]
-    val nextTaintConjunctZ3 = exprToZ3(nextTaintConjunct).asInstanceOf[z3.BoolExpr]
+    val initTaintConjunctZ3 = exprToZ3(initTaintConjunctFinal).asInstanceOf[z3.BoolExpr]
+    val nextTaintConjunctZ3 = exprToZ3(nextTaintConjunctFinal).asInstanceOf[z3.BoolExpr]
 
     log.debug("Next Taint Conjunct Z3 \n" + nextTaintConjunctZ3.toString)
     val initTaintRule = createForall(initTaintSymbolsBound.toArray, ctx.mkImplies(initTaintConjunctZ3, applyDecl(invTaintDecl, initTaintSymbolsBound)))
@@ -844,13 +855,15 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
         val errorDecl = ctx.mkFuncDecl("error_taint_" + getUniqueId().toString() + "_" + sym.toString, Array[z3.Sort](), boolSort)
         fp.registerRelation(errorDecl)
 
-        if (sym.isInstanceOf[z3.ArrayExpr]) {
-          sym -> None
-        } else {
-          val and = ctx.mkAnd(ctx.mkNot(sym.asInstanceOf[z3.BoolExpr]), applyDecl(invTaintDecl, initTaintSymbolsBound))
+        if (sym.isInstanceOf[z3.BoolExpr]) {
+          val stepGt = exprToZ3(smt.OperatorApplication(smt.IntGTOp, List(stepVar0, smt.IntLit(0)))).asInstanceOf[z3.BoolExpr]
+          val and = ctx.mkAnd(ctx.mkNot(sym.asInstanceOf[z3.BoolExpr]), applyDecl(invTaintDecl, initTaintSymbolsBound), stepGt)
           val rule = createForall(initTaintSymbolsBound.toArray, ctx.mkImplies(and, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
           fp.addRule(rule, ctx.mkSymbol("error_rule_taint_" + getUniqueId().toString() + "_" + sym.toString))
           sym -> Some(errorDecl)
+        }
+        else {
+          sym -> None
         }
 
     }.toMap
@@ -861,12 +874,31 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
       p =>
         log.debug("Querying " + p._1.toString)
         p._2 match {
-          case Some(err) => log.debug(fp.query(Array[z3.FuncDecl](err)).toString)
-          case None => log.debug("Array variable not queried.")
+          case Some(err) => {
+            val rfp = fp.query(Array[z3.FuncDecl](err))
+            log.debug(rfp.toString())
+            if (rfp == z3.Status.SATISFIABLE) {
+              val cex = fp.getAnswer()
+              log.debug("CEX : " + cex.toString())
+              //log.debug("Args: " + fp.getAnswer().getArgs())
+
+            }
+          }
+          case None => log.debug("Array/Non Boolean variable not queried.")
         }
     }
   }
+
+  def parseCEX(cex: z3.Expr) = {
+    Predef.assert(cex.isInstanceOf[z3.BoolExpr])
+    Predef.assert(cex.isAnd() || cex.getNumArgs() == 1)
+    val args = cex.getArgs()
+
+
+
+  }
 }
+
 
 object Z3HornSolver
 {

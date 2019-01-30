@@ -143,7 +143,10 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
     val taint_set = taint_vars.zip(prevVars1.flatten.zip(prevVars2.flatten))
     val hyperSelects = hyperAssumes.map(hypAssume => simulator.getHyperSelects(hypAssume)).flatten
 
+    
+
     val subs = hyperSelects.map {
+            
       expr =>
         val op = expr.op
         val exp = expr.operands
