@@ -528,9 +528,11 @@ class SymbolicSimulator (module : Module) {
     val h = new Z3HornSolver(this)
     val context = new Z3Interface()
     val lazySc = new LazySCSolver(this)
-    val initTaintLambda = lazySc.getTaintInitLambdaV1(init_lambda._1, scope, context, init_lambda._5)
-    val nextTaintLambda = lazySc.getNextTaintLambdaV1(next_lambda._1, next_lambda._5, next_lambda._6, scope)
-    h.solveTaintLambdas(initTaintLambda, nextTaintLambda, true, scope)
+    val initTaintLambda = lazySc.getTaintInitLambdaV2(init_lambda._1, scope, context, init_lambda._5)
+    val nextTaintLambda = lazySc.getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, scope)
+    val combinedInitLambda = lazySc.getCombinedInitLambda(init_lambda._1, initTaintLambda)
+    val combinedNextLambda = lazySc.getCombinedNextLambda(next_lambda._1, nextTaintLambda)
+    h.solveTaintLambdasV2(combinedInitLambda, combinedNextLambda, scope)
     h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
   }
 
