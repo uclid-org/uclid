@@ -1191,7 +1191,7 @@ class SymbolicSimulator (module : Module) {
     // add assumption.
     proc.requires.foreach(r => assertionTree.addAssumption(evaluate(r, initProcState, ArrayBuffer.empty, 0, procScope)))
     // simulate procedure execution.
-    val finalState = simulateStmt(0, List.empty, proc.body, initProcState, frameList, procScope, label, addAssumptionToTree _, addAssertToTree _)
+    val finalState = simulateStmt(1, List.empty, proc.body, initProcState, frameList, procScope, label, addAssumptionToTree _, addAssertToTree _)
     // create frame table.
     frameList += finalState
     logState(verifyProcedureLog, "finalState", finalState)
