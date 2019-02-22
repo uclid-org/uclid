@@ -381,7 +381,7 @@ class Z3Interface() extends Context {
       case IffOp                  => ctx.mkIff (boolArgs(0), boolArgs(1))
       case ImplicationOp          => ctx.mkImplies (boolArgs(0), boolArgs(1))
       case EqualityOp             => ctx.mkEq(exprArgs(0), exprArgs(1))
-      case InequalityOp           => ctx.mkDistinct(exprArgs(0), exprArgs(1))
+      case InequalityOp           => ctx.mkDistinct(exprArgs: _*)
       case ConjunctionOp          => ctx.mkAnd (boolArgs : _*)
       case DisjunctionOp          => ctx.mkOr (boolArgs : _*)
       case ITEOp                  => ctx.mkITE(exprArgs(0).asInstanceOf[z3.BoolExpr], exprArgs(1), exprArgs(2))
