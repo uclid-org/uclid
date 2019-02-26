@@ -259,6 +259,7 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
     val matches2 = nextLambda.ids.zip(prevVars2.flatten ++ nextVars2.flatten)
 
     val hyperSelects = hyperAssumes.map(hypAssume => simulator.getHyperSelects(hypAssume)).flatten
+
     val subs = hyperSelects.map {
       expr =>
         val op = expr.op
@@ -280,13 +281,16 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
             throw new Utils.RuntimeError("Should never get here.")
         }
     }
+
     val substitutedHyperAssumes = hyperAssumes.map(assume => simulator.substitute(assume, subs))
     val substitutedAssumes1 = assumes.map(assume => simulator.substitute(assume, matches1))
     val substitutedAssumes2 = assumes.map(assume => simulator.substitute(assume, matches2))
     val matchNexts = nextLambdaVars.zip(nextVars1.flatten.zip(nextVars2.flatten))
     val setTaints = matchNexts.flatMap {
       nextVar =>
+
         val equality = smt.OperatorApplication(smt.EqualityOp, List(nextVar._2._1, nextVar._2._2))
+
         val not_expr = smt.OperatorApplication(smt.NegationOp, List(equality))
         val assumes = substitutedAssumes1 ++ substitutedAssumes2 ++ substitutedHyperAssumes
         val isArray = nextVar._1.typ.isInstanceOf[smt.ArrayType]
@@ -296,8 +300,8 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
           case Some(true) =>
             log.debug("equal in A Function")
             if (isArray) {
-              val arrTyp = nextVar._1.typ.asInstanceOf[smt.ArrayType]
-              val constArray = smt.ConstArray(smt.BooleanLit(true), arrTyp)
+              val taintArrTyp = taintMap(nextVar._1)(1).typ.asInstanceOf[smt.ArrayType]
+              val constArray = smt.ConstArray(smt.BooleanLit(true), taintArrTyp)
               val exp = smt.OperatorApplication(smt.EqualityOp, List(taintMap(nextVar._1)(1), constArray))
               Some(exp)
             }
@@ -309,6 +313,7 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
             None
         }
     }
+
     val conjunct = if (setTaints.length == 1) setTaints(0)
     else if (setTaints.length == 0) smt.BooleanLit(true)
     else smt.OperatorApplication(smt.ConjunctionOp, setTaints)
@@ -436,6 +441,7 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
 
     val taintExprs = getTaintExprs(nextLambda, prevTaintVars, nextTaintVars)
     val inputs = prevVars.flatMap(v => prevTaintVars(v)) ++ nextVars.flatMap(v => nextTaintVars(v))
+
     val additionalConjunct = computeAConjunctV2(nextLambda, hyperAssumes, assumes,scope, nextTaintVars)
     val conjuncts = List(taintExprs) ++ List(additionalConjunct)
     val finalConjunct = if (conjuncts.length > 1) smt.OperatorApplication(smt.ConjunctionOp, conjuncts)
@@ -488,8 +494,11 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
           Set(smt.ArrayStoreOperation(t2_a.toList(0), index, t1_val))
       case smt.FunctionApplication(f, args) =>
         throw new Utils.UnimplementedException("T2 taint not defined for func app.")
+      case smt.ConstArray(e, typ) =>
+        //throw new Utils.UnimplementedException("T2 taint for '" + e + "' is not yet supported.")
+        Set(smt.ConstArray(smt.BooleanLit(true), smt.ArrayType(typ.inTypes, smt.BoolType)))
       case _ =>
-        throw new Utils.UnimplementedException("T2 taint for '" + e + "' is not yet supported.")
+          throw new Utils.UnimplementedException("T2 taint for '" + e + "' is not yet supported.")
     }
   }
 

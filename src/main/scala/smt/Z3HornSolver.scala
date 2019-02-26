@@ -56,7 +56,7 @@ case class TransitionSystem(
 )
 
 class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
-  z3.Global.setParameter("fixedpoint.engine", "pdr")
+  z3.Global.setParameter("fp.engine", "pdr")
   type TaintSymbolTable = Map[Identifier, List[smt.Expr]]
   type TaintFrameTable = ArrayBuffer[TaintSymbolTable]
   val log = Logger(classOf[Z3HornSolver])
@@ -294,7 +294,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
                    nextHyperAssumes: List[smt.Expr], nextAsserts: List[AssertInfo],
                    scope: Scope) = {
 
-    z3.Global.setParameter("fixedpoint.engine", "spacer")
+    z3.Global.setParameter("fp.engine", "spacer")
     val sorts = initLambda.ids.map(id => getZ3Sort(id.typ))
     var finalSorts = sorts
     val numCopies = sim.getMaxHyperInvariant(scope)
@@ -776,7 +776,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
   def solveTaintLambdasV2(combinedInitLambda: smt.Lambda, combinedNextLambda: smt.Lambda, scope: Scope) = {
     // Solves T2 taints
     // The taint lambda and the transition system is unioned to resolve all dependencies
-    z3.Global.setParameter("fixedpoint.engine", "spacer")
+    z3.Global.setParameter("fp.engine", "spacer")
     val sorts = combinedInitLambda.ids.map(id => getZ3Sort(id.typ)) ++ List(ctx.mkIntSort())
     val stepVar0 = sim.newStateSymbol("stepVar0", 0, smt.IntType)
     val stepVar1 = sim.newStateSymbol("stepVar1", 1, smt.IntType)
@@ -896,13 +896,14 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     log.debug("+++++++ The V2 Fixed Point +++++++\n" + fp.toString)
     //addAssumptionToTree(next_conjunct, List.empty)
     //nextConjuncts += next_conjunct
+    
 
 
 
   }
   def solveTaintLambdas(initTaintLambda: smt.Lambda, nextTaintLambda: smt.Lambda, isSimple: Boolean, scope: Scope) = {
 
-    z3.Global.setParameter("fixedpoint.engine", "spacer")
+    z3.Global.setParameter("fp.engine", "spacer")
     val sorts = initTaintLambda.ids.map(id => getZ3Sort(id.typ)) ++ List(ctx.mkIntSort())
     val stepVar0 = sim.newStateSymbol("stepVar0", 0, smt.IntType)
     val stepVar1 = sim.newStateSymbol("stepVar1", 1, smt.IntType)
@@ -1024,6 +1025,12 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
 
   }
+
+  def taintRefinement(combinedInitLambda: smt.Lambda, combinedNextLambda: smt.Lambda, hyperAssumes: List[smt.Expr], hyperAsserts: List[smt.Expr]) = {
+    // HyperAsserts are assumed to be of the form: hyperselect(v, 1) == hyperselect(v, 2)
+
+
+  }
 }
 
 
@@ -1036,7 +1043,7 @@ object Z3HornSolver
     // Transition(x, y, x', y') = (x' = x + 1) && (y' = y + x)
     // Bad(x, y) = x >= y
     //
-    z3.Global.setParameter("fixedpoint.engine", "pdr")
+    z3.Global.setParameter("fp.engine", "pdr")
 
     val ctx = new z3.Context()
     val intSort = ctx.mkIntSort()
