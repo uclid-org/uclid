@@ -14,15 +14,15 @@ module common {
   type mem_t = [addr_t]word_t;
 
   // define zero constant of the word_t type.
-  const k0_word_t : word_t;
-  axiom k0_word_t == 0bv32;
+  //const k0_word_t : word_t;
+  //axiom k0_word_t == 0bv32;
 
   // the entry address for isolated mode.
-  const imode_enter_addr : addr_t;
+  //const imode_enter_addr : addr_t;
   // the exit address for isolated mode.
-  const nmode_exit_addr : addr_t;
+  //const nmode_exit_addr : addr_t;
   // the above two constants MUST be different.
-  axiom imode_enter_addr != nmode_exit_addr;
+  //axiom imode_enter_addr != nmode_exit_addr;
 }
 
 module main {
@@ -42,7 +42,7 @@ module main {
   var step           : integer; // stepVar
   input regs_h       : regs_t; // havoc'ed registers 
   // rng of isolated memory.
-  const isolated_rng_lo, isolated_rng_hi : addr_t;
+  var isolated_rng_lo, isolated_rng_hi : addr_t;
   // uninterpreted func. (predicate) for the above.
   var in_rng  		: [addr_t, addr_t, addr_t]boolean;
   // uninterpreted functions for decoding insns.
@@ -54,7 +54,10 @@ module main {
   var aluOp 	: [word_t, word_t, word_t]word_t;
   var nextPC 	: [word_t, addr_t, word_t]addr_t;
   
-
+  // Imode enter and exit addresses need to be defined here
+  var imode_enter_addr, nmode_exit_addr : addr_t; 
+  var k0_word_t 	: word_t;
+  
   // macro: is an addr in isolated memory?
   define in_isolated_memory (a : addr_t) : boolean 
           = in_rng[a, isolated_rng_lo, isolated_rng_hi];
@@ -68,8 +71,10 @@ module main {
           (b == common.nmode_exit_addr) 
               ==> !in_isolated_memory(b));
   */
-  axiom (in_isolated_memory(common.imode_enter_addr));
-  axiom (!in_isolated_memory(common.nmode_exit_addr));
+  axiom (imode_enter_addr != nmode_exit_addr);
+  axiom (k0_word_t == 0bv32);
+  axiom (in_isolated_memory(imode_enter_addr));
+  axiom (!in_isolated_memory(nmode_exit_addr));
   // code removed for formatting reasons:
   // 1. code for procedure exec_inst (see Example 3)
   // 2. init and next blocks (see Example 4)
@@ -81,7 +86,7 @@ module main {
     var r0ind, r1ind : regindex_t;
     var r0, r1    : word_t;
     var addr  : addr_t;
-    var step  : integer;
+    //var step  : integer;
     // get opcode.
     op = inst2op[instr];
     // get operands.
@@ -116,13 +121,13 @@ module main {
           result = dmem[addr]; 
         } else {
           // load failed, return 0.
-          result = common.k0_word_t; 
+          result = k0_word_t; 
         }
         regs[r0ind] = result;
       }
       // store instruction.
       (op == op_store) : {
-        result = common.k0_word_t;
+        result = k0_word_t;
         // check permissions.
         if (mode == isolated_mode || 
             !in_isolated_memory(addr)) 
@@ -134,29 +139,36 @@ module main {
       // enter isolated mode.
       (op == op_imode_enter) : {
         assert (mode == normal_mode);
-        result = common.k0_word_t;
+        result = k0_word_t;
+		
         // zero out registers.
         //havoc regs;
-	regs = regs_h;
+	//regs = regs_h;
         //assume (forall (r : regindex_t) 
         //          :: regs[r] == common.k0_word_t);
-	regs = const(common.k0_word_t, regs_t);
+	regs = regs_h;
+	regs = const(k0_word_t, regs_t);
         // set pc.
-        pc_next = common.imode_enter_addr;
+        pc_next = imode_enter_addr;
         mode = isolated_mode;
+		
       }
       // exit to normal mode.
       (op == op_nmode_exit) : {
-        result = common.k0_word_t;
+	assert (mode == isolated_mode);
+        result = k0_word_t;
         // zero out registers.
         //havoc regs;
-	regs = regs_h;
+		
+	//regs = regs_h;
         //assume (forall (r : regindex_t) 
         //          :: regs[r] == common.k0_word_t);
-	regs = const(common.k0_word_t, regs_t);
+	regs = regs_h;
+	regs = const(k0_word_t, regs_t);
         // set pc.
-        pc_next = common.nmode_exit_addr;
+        pc_next = nmode_exit_addr;
         mode = normal_mode;
+		
       }
     esac
   }
@@ -164,12 +176,13 @@ module main {
 	//step = 0;
 	//mode = normal_mode;
     // reset registers.
-    assume (forall (r : regindex_t) 
-                :: regs[r] == common.k0_word_t);
+    //assume (forall (r : regindex_t) 
+    //            :: regs[r] == common.k0_word_t);
     // set instruction to some deterministic value.
-    inst = common.k0_word_t;
+    k0_word_t = 0bv32;
+    inst = k0_word_t;
     // start off execution at a deterministic address.
-    pc = common.nmode_exit_addr;
+    pc = nmode_exit_addr;
     // in normal mode.
     mode = normal_mode;
     initFlag = true;
@@ -179,6 +192,7 @@ module main {
 
   next {
    // step' = step + 1;
+    k0_word_t' = 0bv32;
     initFlag' = false;
     inst' = imem[pc];
     call (pc') = exec_inst(inst', pc);
@@ -193,25 +207,32 @@ module main {
   hyperaxiom[2] instAddr: inst2addr.1 == inst2addr.2;
   hyperaxiom[2] alu: aluOp.1 == aluOp.2;
   hyperaxiom[2] n: (nextPC.1) == (nextPC.2); 
+  hyperaxiom[2] eq_enter: imode_enter_addr.1 == imode_enter_addr.2;
+  hyperaxiom[2] eq_exit: nmode_exit_addr.1 == nmode_exit_addr.2; 
 
   hyperaxiom[2] regs1: initFlag.1 ==> (forall (r : regindex_t)
-                :: regs.1[r] == common.k0_word_t);
+                :: regs.1[r] == 0bv32);
   hyperaxiom[2] regs2: initFlag.1 ==> (forall (r : regindex_t)
-                :: regs.2[r] == common.k0_word_t);
-  hyperaxiom[2] lo: initFlag.1 ==> (isolated_rng_lo.1 == isolated_rng_lo.1); 
-  hyperaxiom[2] hi: initFlag.1 ==> (isolated_rng_hi.1 == isolated_rng_hi.2); 
+                :: regs.2[r] == 0bv32);
+  hyperaxiom[2] lo: (isolated_rng_lo.1 == isolated_rng_lo.2); 
+  hyperaxiom[2] hi: (isolated_rng_hi.1 == isolated_rng_hi.2); 
   hyperaxiom[2] supervisor: initFlag.1 ==> (forall(a : addr_t) :: in_rng.1[a, isolated_rng_lo.1, isolated_rng_hi.2] ==> (dmem.1[a] == dmem.2[a]));
   hyperaxiom[2] imem_eq: initFlag.1 ==> (forall(a : addr_t) :: (in_rng.1[a, isolated_rng_lo.1, isolated_rng_hi.1]) ==> (imem.1[a] == imem.2[a]));
+  // Both the CPUs enter isolated mode at the same time
   hyperaxiom[2] imode: (!initFlag.1) ==> ((inst2op.1[inst.1] == op_imode_enter || inst2op.1[inst.2] == op_imode_enter) ==> (inst.1 == inst.2)); 
   //hyperaxiom[2] fault: (step.1 == 3) ==> (mode.1 != mode.2);
-  //axiom (forall (ass : addr_t) :: 
-  //        (ass == common.imode_enter_addr) 
-  //            ==> in_isolated_memory(ass) || 
-  //        (ass == common.nmode_exit_addr) 
-  //            ==> !in_isolated_memory(ass)); 
-  hyperinvariant[2] eq_dmem: (forall (a : addr_t) :: (in_rng.1[a, isolated_rng_lo.1, isolated_rng_hi.2] ==> (dmem.1[a] == dmem.2[a])));
-  //hyperinvariant[2] eq_mode: (mode.1 == mode.2);
+  axiom (forall (a : addr_t) :: 
+          (a == imode_enter_addr) 
+              ==> in_isolated_memory(a));
+
+  axiom (forall (a : addr_t) :: 
+	     (a == nmode_exit_addr) 
+              ==> !in_isolated_memory(a));	
+  //hyperinvariant[2] eq_dmem: (forall (a : addr_t) :: (in_rng.1[a, isolated_rng_lo.1, isolated_rng_hi.2] ==> (dmem.1[a] == dmem.2[a])));
+  //hyperinvariant[2] eq_reg_init: initFlag.1 ==> (forall(a : addr_t) :: (in_rng.1[a, isolated_rng_lo.1, isolated_rng_hi.1]) ==> (imem.1[a] == imem.2[a]));
+  hyperinvariant[2] eq_mode: (mode.1 == mode.2);
   //hyperinvariant[2] eq_pc: (mode.1 == isolated_mode) ==> (pc.1 == pc.2);
+  //hyperinvariant[2] eq_step: step.1 == step.2;
   //hyperinvariant[2] eq_inst: (mode.1 == isolated_mode) ==> (inst.1 == inst.2);
   //hyperinvariant[2] eq_regs : (forall (ri : regindex_t) :: (mode.1 == isolated_mode) ==> (regs.1[ri] == regs.2[ri]));  
   //hyperinvariant[2] eq_sup_rng : (isolated_rng_lo.1 == isolated_rng_lo.2) && (isolated_rng_hi.1 == isolated_rng_hi.2); 
@@ -220,7 +241,7 @@ module main {
   //hyperinvariant[2] eq_imem: (forall (a : addr_t) :: (in_rng(a, isolated_rng_lo.1, isolated_rng_hi.1)) ==> (imem.1[a] == imem.2[a])); 
 
   control {
-    v = horn;//lazysc(2);
+    v = horn;//lazysc(4);
     //check;
     //print_results;
     //v.print_cex(pc); 
