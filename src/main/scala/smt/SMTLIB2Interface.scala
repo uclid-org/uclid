@@ -182,6 +182,7 @@ trait SMTLIB2Base {
     smtlib2BaseLogger.info("-> start translateExpr <-")
     val t1 = System.nanoTime().toDouble
     val memoLookup = memo.get(eIn)
+    // UclidMain.println(eIn.toString().slice(0,5))
     val t2 = System.nanoTime().toDouble
     smtlib2BaseLogger.info("-->> finish LOOKUP: {}", (t2 - t1) / 1e9)
     val (resultExpr, resultMemo) = memoLookup match {
