@@ -1,0 +1,149 @@
+module common {
+  // address type: an uninterpreted type.
+  type addr_t;
+  // word type: a bitvector type.
+  type word_t = bv32;
+  // type of operations supported by the CPU.
+  type op_t = enum {
+    op_nop,
+    op_imode_enter, op_nmode_exit
+  };
+  // CPU mode.
+  type mode_t = enum { normal_mode, isolated_mode };
+  // CPU memory type: an array type.
+  type mem_t = [addr_t]word_t;
+
+  // define zero constant of the word_t type.
+  //const k0_word_t : word_t;
+  //axiom k0_word_t == 0bv32;
+
+  // the entry address for isolated mode.
+  //const imode_enter_addr : addr_t;
+  // the exit address for isolated mode.
+  //const nmode_exit_addr : addr_t;
+  // the above two constants MUST be different.
+  //axiom imode_enter_addr != nmode_exit_addr;
+}
+module main {
+  // import all types from module common
+  type * = common.*;
+
+  type regindex_t;
+  type regs_t = [regindex_t]word_t;
+
+  var imem           : mem_t;  // program memory.
+  var pc             : addr_t; // program counter.
+  var inst           : word_t; // inst reg
+  var mode           : mode_t; // normal/isolated mode?
+  var initFlag	     : boolean; // initFlag
+  var step           : integer; // stepVar
+  // rng of isolated memory.
+  var isolated_rng_lo, isolated_rng_hi : addr_t;
+  var in_rng  	     : [addr_t, addr_t, addr_t]boolean;
+  var inst2op 		: [word_t]op_t;
+  var nextPC 	: [word_t, addr_t]addr_t;
+  
+  // Imode enter and exit addresses need to be defined here
+  var imode_enter_addr, nmode_exit_addr : addr_t; 
+  var k0_word_t 	: word_t;
+  
+  // macro: is an addr in isolated memory?
+  define in_isolated_memory (a : addr_t) : boolean 
+          = in_rng[a, isolated_rng_lo, isolated_rng_hi];
+
+  // assumptions on imode entry and exit addresses
+  /*
+  axiom (forall (a : addr_t) :: 
+          (a == common.imode_enter_addr) 
+              ==> in_isolated_memory(a));
+  axiom (forall (b : addr_t) :: 
+          (b == common.nmode_exit_addr) 
+              ==> !in_isolated_memory(b));
+  */
+  axiom (imode_enter_addr != nmode_exit_addr);
+  axiom (k0_word_t == 0bv32);
+  axiom (in_isolated_memory(imode_enter_addr));
+  axiom (!in_isolated_memory(nmode_exit_addr));
+  // code removed for formatting reasons:
+  // 1. code for procedure exec_inst (see Example 3)
+  // 2. init and next blocks (see Example 4)
+  procedure exec_inst(instr : word_t, pc : addr_t)
+    returns (pc_next : addr_t)
+    modifies mode;
+  {
+    var op    : op_t;
+    //var step  : integer;
+    // get opcode.
+    op = inst2op[instr];
+    // get next pc (overwritten by imode/nmode).
+    pc_next = nextPC[instr, pc];
+    // If we are in isolated mode, we only 
+    // set pc_next to isolated address.
+    assume (mode == isolated_mode) ==> (in_isolated_memory(pc_next));
+    // If we are in isolated mode, we only 
+    assume (mode == isolated_mode) ==> (op != op_imode_enter);
+    case
+      // enter isolated mode.
+      (op == op_imode_enter) : {
+        // set pc.
+        pc_next = imode_enter_addr;
+        mode = isolated_mode;
+		
+      }
+      // exit to normal mode.
+      (op == op_nmode_exit) : {
+        // set pc.
+        pc_next = nmode_exit_addr;
+        mode = normal_mode;
+		
+      }
+    esac
+  }
+  init {
+	//step = 0;
+	//mode = normal_mode;
+    // reset registers.
+    //assume (forall (r : regindex_t) 
+    //            :: regs[r] == common.k0_word_t);
+    // set instruction to some deterministic value.
+    k0_word_t = 0bv32;
+    inst = k0_word_t;
+    // start off execution at a deterministic address.
+    pc = nmode_exit_addr;
+    // in normal mode.
+    mode = normal_mode;
+    initFlag = true;
+    step = 0;
+	
+  }
+
+  next {
+   // step' = step + 1;
+    k0_word_t' = 0bv32;
+    initFlag' = false;
+    inst' = imem[pc];
+    call (pc') = exec_inst(inst', pc);
+    step' = step + 1;
+	
+  }
+
+  hyperaxiom[2] rng: in_rng.1 == in_rng.2;
+  hyperaxiom[2] instOp: inst2op.1 == inst2op.2;
+  hyperaxiom[2] n: (nextPC.1) == (nextPC.2); 
+  hyperaxiom[2] eq_enter: imode_enter_addr.1 == imode_enter_addr.2;
+  hyperaxiom[2] eq_exit: nmode_exit_addr.1 == nmode_exit_addr.2; 
+
+  hyperaxiom[2] lo: (isolated_rng_lo.1 == isolated_rng_lo.2); 
+  hyperaxiom[2] hi: (isolated_rng_hi.1 == isolated_rng_hi.2); 
+  hyperaxiom[2] imem_eq: initFlag.1 ==> (forall(a : addr_t) :: (in_rng.1[a, isolated_rng_lo.1, isolated_rng_hi.1]) ==> (imem.1[a] == imem.2[a]));
+  // Both the CPUs enter isolated mode at the same time
+  hyperaxiom[2] imode: (!initFlag.1) ==> ((inst2op.1[inst.1] == op_imode_enter || inst2op.1[inst.2] == op_imode_enter) ==> (inst.1 == inst.2)); 
+  hyperinvariant[2] eq_mode: (mode.1 == mode.2);
+
+  control {
+    v = horn;//lazysc(4);
+    //check;
+    //print_results;
+    //v.print_cex(pc); 
+  }
+}
