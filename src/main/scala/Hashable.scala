@@ -12,7 +12,7 @@ trait Hashable {
   val hashId : Int
   val md5hashCode : Array[Byte]
 
-  def md5 : MD = MD.getInstance("MD5")
+  val md5 : MD = MD.getInstance("MD5")
 
   def intToBytes(i : Int) : Array[Byte] = {
     ByteBuffer.allocate(4).putInt(i).array()
@@ -49,7 +49,6 @@ trait Hashable {
   def computeHash = finalize(hashBaseValue, 1)
   def computeHash(args : Any*) : Int = {
     val start = hashBaseValue
-
     def computeHashR(acc : Int, a : Any) : Int = {
       a match {
         case integer : Int => mix(acc, integer)
@@ -63,10 +62,9 @@ trait Hashable {
         case any : Any => { UclidMain.println("test" + any.toString()); mix(acc, any.hashCode()) }
       }
     }
-
     val endHash = args.foldLeft(start)((acc, a) => computeHashR(acc, a))
     finalize(endHash, args.size)
   }
 
-  override def equals(that : Any) : Boolean = { hashCode == that.hashCode && md5hashCode.sameElements(that.asInstanceOf[Hashable].md5hashCode) }
+  override def equals(that : Any) : Boolean = { hashCode == that.hashCode && MD.isEqual(md5hashCode, that.asInstanceOf[Hashable].md5hashCode) }
 }
