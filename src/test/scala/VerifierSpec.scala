@@ -241,7 +241,8 @@ class ProcedureVerifSpec extends FlatSpec {
   }
   "proc_precond_1.ucl" should "fail to verify." in {
     val output = VerifierSpec.expectedFails("./test/proc_precond_1.ucl", 4)
-    assert (output.contains("precondition @ ./test/proc_precond_1.ucl, line 8"))
+    assert (output.contains("precondition @ "))
+    assert (output.contains("proc_precond_1.ucl, line 8"))
   }
   "module_assump_1.ucl" should "fail to verify." in {
     VerifierSpec.expectedFails("./test/module_assump_1.ucl", 0)
