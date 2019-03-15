@@ -359,6 +359,8 @@ class SymbolicSimulator (module : Module) {
     val initSymbolTable = getInitSymbolTable(scope)
     val frameTbl = ArrayBuffer(initSymbolTable)
 
+    addModuleAssumptions(initSymbolTable, frameTbl, 0, scope, addAssumptionToTree _)
+
     symbolTable = if (!havocInit && module.init.isDefined) {
       simulateStmt(0, List.empty, module.init.get.body, initSymbolTable, frameTbl, scope, label, addAssumptionToTree _, addAssertToTree _)
     } else {
@@ -953,6 +955,7 @@ class SymbolicSimulator (module : Module) {
     for (step <- 1 to numberOfSteps) {
       val stWInputs = newInputSymbols(currentState, step + startStep, scope)
       states += stWInputs
+      addModuleAssumptions(stWInputs, frameList, frameList.size, scope, addAssumptionToTree _)
       val symTableP = simulateModuleNext(step + startStep, stWInputs, frameList, scope, label, addAssumptionToTree _, addAssertToTree _)
       val eqStates = symTableP.filter(p => stWInputs.get(p._1) match {
         case Some(st) => (st == p._2)

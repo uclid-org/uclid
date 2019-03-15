@@ -131,7 +131,8 @@ class NewProcedureInlinerPass() extends RewritePass {
     val preconditionAsserts : List[Statement] = proc.requires.map {
       (req) => {
         val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(req, context), context)
-        AssertStmt(exprP, None)
+        val node = AssertStmt(exprP, Some(Identifier("precondition")))
+        ASTNode.introducePos(true, true, node, req.position)
       }
     }
     // create postcondition asserts
@@ -139,7 +140,8 @@ class NewProcedureInlinerPass() extends RewritePass {
       proc.ensures.map {
         (ens) => {
           val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
-          AssertStmt(exprP, None)
+          val node = AssertStmt(exprP, Some(Identifier("postcondition")))
+        ASTNode.introducePos(true, true, node, ens.position)
         }
       }
     } else {

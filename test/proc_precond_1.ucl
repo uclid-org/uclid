@@ -1,0 +1,29 @@
+module main
+{
+    /*********************************  TYPES  ******************************************/
+
+    var STASH_SIZE        : integer;              // size of stash
+   
+    procedure initialize_stash()
+        requires (STASH_SIZE > 0);
+    {
+    }
+
+    init {
+        call initialize_stash();
+    }
+    next {
+        call initialize_stash();
+    }
+    
+    
+    control{ 
+        // print_module;
+        f = unroll(3);
+        check;
+        print_results;
+    }
+}
+
+
+

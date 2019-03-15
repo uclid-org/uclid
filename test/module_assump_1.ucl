@@ -1,0 +1,32 @@
+module main
+{
+    /*********************************  TYPES  ******************************************/
+
+    const STASH_SIZE        : integer;              // size of stash
+   
+    procedure initialize_stash()
+        requires (STASH_SIZE > 0);
+    {
+    }
+
+    init {
+        call initialize_stash();
+    }
+    next {
+        assert (STASH_SIZE > 0);
+    }
+    
+    assume (STASH_SIZE  > 0               && STASH_SIZE  < 50);
+
+    
+    control{ 
+        // print_module;
+        f = unroll(3);
+        check;
+        print_results;
+        f.print_cex();
+    }
+}
+
+
+

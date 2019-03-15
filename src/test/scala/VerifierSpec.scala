@@ -45,7 +45,7 @@ import java.io.File
 import uclid.{lang => l}
 
 object VerifierSpec {
-  def expectedFails(filename: String, nFail : Int) {
+  def expectedFails(filename: String, nFail : Int) : String = {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
     val config = UclidMain.Config() 
@@ -54,8 +54,10 @@ object VerifierSpec {
     assert (mainModule.isDefined)
     // val config = UclidMain.Config("main", List("/usr/bin/z3", "-in", "-smt2"), List.empty)
     val results = UclidMain.execute(mainModule.get, config)
+    val outputString = UclidMain.stringOutput.toString()
     assert (results.count((e) => e.result.isFalse) == nFail)
     assert (results.count((e) => e.result.isUndefined) == 0)
+    outputString
   }
 }
 class VerifierSanitySpec extends FlatSpec {
@@ -236,6 +238,13 @@ class ProcedureVerifSpec extends FlatSpec {
   }
   "test-procedure-postcondition-4.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-procedure-postcondition-4.ucl", 4)
+  }
+  "proc_precond_1.ucl" should "fail to verify." in {
+    val output = VerifierSpec.expectedFails("./test/proc_precond_1.ucl", 4)
+    assert (output.contains("precondition @ ./test/proc_precond_1.ucl, line 8"))
+  }
+  "module_assump_1.ucl" should "fail to verify." in {
+    VerifierSpec.expectedFails("./test/module_assump_1.ucl", 0)
   }
   "test-while-0.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-while-0.ucl", 0)
