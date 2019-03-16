@@ -181,3 +181,38 @@ class NewProcedureInlinerPass() extends RewritePass {
 class NewProcedureInliner() extends ASTRewriter("ProcedureInliner", new NewProcedureInlinerPass()) {
   override val repeatUntilNoChange = true
 }
+
+// The following cleans up procedure pre-conditions to ensure they always
+// use the "old" version of state variables.
+class ProcedureRequiresRewriterPass extends RewritePass {
+  override def rewriteProcedure(proc: ProcedureDecl, context : Scope) : Option[ProcedureDecl] = {
+    val rewriteMap : Map[Expr, Expr] = proc.modifies.map {
+      v => v -> OperatorApplication(OldOperator(), List(v))
+    }.toMap
+    val requiresP = proc.requires.map(e => ExprRewriter.rewriteExprOnce(e, rewriteMap, context))
+    val procP = ProcedureDecl(proc.id, proc.sig, proc.body, requiresP, proc.ensures, proc.modifies, proc.annotations)
+    Some(procP)
+  }
+}
+
+class ProcedureRequiresRewriter extends ASTRewriter(
+  "ProcedureRequiresRewriter", new ProcedureRequiresRewriterPass()
+)
+
+class DoubleOldOperatorRemovePass extends RewritePass {
+  override def rewriteOperatorApp(opapp:  OperatorApplication, ctx:  Scope): Option[Expr] = {
+    opapp match {
+      case OperatorApplication(
+            OldOperator(), List(OperatorApplication(OldOperator(), args))) =>
+        Some(OperatorApplication(OldOperator(), args))
+      case _ =>
+        Some(opapp)
+    }
+  }
+}
+
+class DoubleOldOperatorRemove extends ASTRewriter(
+  "DoubleOldOperatorRemove", new DoubleOldOperatorRemovePass())
+{
+  override val repeatUntilNoChange = true
+}

@@ -450,6 +450,8 @@ class Z3Interface() extends Context {
         val tupleSort = getTupleSort(args.map(_.typ))
         tupleSort.mkDecl().apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
     }
+    assertLogger.debug("expr: " + e.toString())
+    assertLogger.debug("z3  : " + z3AST.toString())
     // z3AST
     if (z3AST.isInstanceOf[z3.Expr]) z3AST.asInstanceOf[z3.Expr].simplify()
     else z3AST

@@ -244,7 +244,10 @@ class ProcedureVerifSpec extends FlatSpec {
     assert (output.contains("precondition @ "))
     assert (output.contains("proc_precond_1.ucl, line 8"))
   }
-  "module_assump_1.ucl" should "fail to verify." in {
+  "proc_requires_1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/proc_requires_1.ucl", 0)
+  }
+  "module_assump_1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/module_assump_1.ucl", 0)
   }
   "test-while-0.ucl" should "verify successfully." in {

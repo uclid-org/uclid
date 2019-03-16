@@ -119,6 +119,10 @@ object ExprRewriter
     } while (e2 != e1)
     e2
   }
+  def rewriteExprOnce(e : Expr, rewrites : Map[Expr, Expr], context : Scope) : Expr = {
+    val rewriter = new ASTRewriter(_passName = "", new ExprRewriterPass(rewrites))
+    rewriter.visitExpr(e, context).get
+  }
   def rewriteLHS(lhs : Lhs, rewrites: Map[Expr, Expr], context : Scope) : Lhs = {
     val rewriter = new ASTRewriter("", new ExprRewriterPass(rewrites))
     rewriter.visitLhs(lhs, context).get

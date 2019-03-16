@@ -1,22 +1,23 @@
 module main {
-	var a: bv8;
+    var a: bv8;
     var b: bv8;
 
-	init {
-		a = 1bv8;		
+    init {
+        a = 1bv8;
         b = 1bv8;
-	}
+    }
 
-	next {
-		a' = a * 16bv8;
+    next {
+        a' = a * 16bv8;
         b' = bv_left_shift(2, bv_left_shift(2, b));
-	}
+    }
 
-	invariant z: (bv_left_shift(3, a) == (8bv8 * a));
-	invariant ab: (a == b);
-	control {
-	   unroll(9);
-	   check;
-	   print_results;
-	}
-}			
+    invariant z: (bv_left_shift(3, a) == (8bv8 * a));
+    invariant ab: (a == b);
+    control {
+       v = unroll(1);
+       check;
+       print_results;
+       v.print_cex(a, b);
+    }
+}

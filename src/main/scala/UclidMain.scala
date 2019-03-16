@@ -223,6 +223,8 @@ object UclidMain {
     passManager.addPass(new ForLoopUnroller())
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new CaseEliminator())
+    passManager.addPass(new ProcedureRequiresRewriter())
+    passManager.addPass(new DoubleOldOperatorRemove())
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
     passManager.addPass(new BlockFlattener())
