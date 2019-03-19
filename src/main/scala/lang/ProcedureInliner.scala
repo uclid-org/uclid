@@ -120,11 +120,7 @@ class NewProcedureInlinerPass() extends RewritePass {
     val varsToDeclare = retVars ++ modifyVars
 
     // statements assigning state variables to modify vars.
-    val modifyInitAssigns : List[AssignStmt] = if (proc.shouldInline) {
-      modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
-    } else {
-      List.empty
-    }
+    val modifyInitAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
     // statements updating the state variables at the end.
     val modifyFinalAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(getModifyLhs(p._1)), List(p._2)))
     // create precondition asserts
@@ -182,37 +178,3 @@ class NewProcedureInliner() extends ASTRewriter("ProcedureInliner", new NewProce
   override val repeatUntilNoChange = true
 }
 
-// The following cleans up procedure pre-conditions to ensure they always
-// use the "old" version of state variables.
-class ProcedureRequiresRewriterPass extends RewritePass {
-  override def rewriteProcedure(proc: ProcedureDecl, context : Scope) : Option[ProcedureDecl] = {
-    val rewriteMap : Map[Expr, Expr] = proc.modifies.map {
-      v => v -> OperatorApplication(OldOperator(), List(v))
-    }.toMap
-    val requiresP = proc.requires.map(e => ExprRewriter.rewriteExprOnce(e, rewriteMap, context))
-    val procP = ProcedureDecl(proc.id, proc.sig, proc.body, requiresP, proc.ensures, proc.modifies, proc.annotations)
-    Some(procP)
-  }
-}
-
-class ProcedureRequiresRewriter extends ASTRewriter(
-  "ProcedureRequiresRewriter", new ProcedureRequiresRewriterPass()
-)
-
-class DoubleOldOperatorRemovePass extends RewritePass {
-  override def rewriteOperatorApp(opapp:  OperatorApplication, ctx:  Scope): Option[Expr] = {
-    opapp match {
-      case OperatorApplication(
-            OldOperator(), List(OperatorApplication(OldOperator(), args))) =>
-        Some(OperatorApplication(OldOperator(), args))
-      case _ =>
-        Some(opapp)
-    }
-  }
-}
-
-class DoubleOldOperatorRemove extends ASTRewriter(
-  "DoubleOldOperatorRemove", new DoubleOldOperatorRemovePass())
-{
-  override val repeatUntilNoChange = true
-}

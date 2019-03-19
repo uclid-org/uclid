@@ -524,6 +524,16 @@ class ParserSpec extends FlatSpec {
     }
   }
 
+  "proc_requires_3.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/proc_requires_3.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 2)
+        assert (p.errors.forall(e => e._1.contains("Old operator can't be used in a requires expression")))
+    }
+  }
   "test-expression-suffix-function.ucl" should "parse successfully" in {
     val fileModules = UclidMain.compile(List(new File("test/test-expression-suffix-function.ucl")), lang.Identifier("main"))
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))

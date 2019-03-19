@@ -14,7 +14,6 @@ module main
     }
 
     control {
-        print_module;
         f = verify(pmap_remap);
         check;
         print_results;

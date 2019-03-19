@@ -4,7 +4,7 @@ module main {
 
     procedure works()
         modifies a,b;
-        requires a > b;
+        requires old(a) > old(b);
         ensures b > a && old(a) > old(b);
     {
         var temp : integer;
