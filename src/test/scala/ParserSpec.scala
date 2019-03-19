@@ -535,4 +535,10 @@ class ParserSpec extends FlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1);
   }
+
+  "test-extid-axiom.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-extid-axiom.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1);
+  }
 }

@@ -27,6 +27,7 @@
   <logger name="uclid.lang.PrimedVariableEliminatorPass" level="OFF"/>
   <logger name="uclid.lang.ProcedureCheckerPass" level="OFF"/>
   <logger name="uclid.lang.RedundantAssignmentEliminatorPass" level="OFF"/>
+  <logger name="uclid.lang.StatelessAxiomFinderPass" level="OFF"/>
   <logger name="uclid.lang.StatementScheduler" level="OFF"/>
   <logger name="uclid.lang.StatementSchedulerPass" level="OFF"/>
   <logger name="uclid.lang.VariableDependencyFinder" level="OFF"/>

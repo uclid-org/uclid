@@ -33,14 +33,33 @@
  *
  * Authors: Pramod Subramanyan
 
- * All sorts of type inference and type checking functionality is in here.
+ * Finds Stateless axioms and imports them.
  *
  */
 
 package uclid
 package lang
 
-class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)]] {
+import com.typesafe.scalalogging.Logger
+
+/**
+  * StatelessAxiomFinder: finds all axioms that do not refer to state variables,
+  * inputs or outputs and collects them for instantiation in the main module.
+  *
+  * The List[(Identifier, AxiomDecl)] accumulates the axioms and the
+  * names of the modules the axioms come from.
+  *
+  * The Boolean is used to turn off the instantiation for modules that appear
+  * after the main module. See test-extid-axiom.ucl for more details.
+  *
+  * @param mainModuleName is the name of the main module.
+  */
+class StatelessAxiomFinderPass(mainModuleName: Identifier)
+  extends ReadOnlyPass[(Boolean, List[(Identifier, AxiomDecl)])]
+{
+  lazy val logger = Logger(classOf[StatelessAxiomFinderPass])
+
+  type T = (Boolean, List[(Identifier, AxiomDecl)])
   def isStatelessExpression(id : Identifier, context : Scope) : Boolean = {
     context.get(id) match {
       case Some(namedExpr) =>
@@ -154,26 +173,36 @@ class StatelessAxiomFinderPass extends ReadOnlyPass[List[(Identifier, AxiomDecl)
         Lambda(lambda.ids, expP)
     }
   }
-  override def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : List[(Identifier, AxiomDecl)], context : Scope) : List[(Identifier, AxiomDecl)] = {
-    if (d == TraversalDirection.Down && isStatelessExpr(axiom.expr, context)) {
+  override def applyOnModule(d : TraversalDirection.T, module: Module, in : T, context : Scope) : T = {
+    logger.debug("visiting: %s".format(module.id.toString()))
+    if (d == TraversalDirection.Up && module.id == mainModuleName) {
+      (false, in._2)
+    } else {
+      in
+    }
+  }
+  override def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : Scope) : T = {
+    if (in._1 && d == TraversalDirection.Down && isStatelessExpr(axiom.expr, context)) {
       val moduleName = context.module.get.id
       val exprP = rewriteToExternalIds(moduleName, axiom.expr, context)
       val name = axiom.id match {
         case Some(id) => "_" + id.toString()
         case None => ""
       }
-      val nameP = Identifier("$axiom_" + moduleName.toString + name + "_" + in.size.toString)
+      val nameP = Identifier("$axiom_" + moduleName.toString + name + "_" + in._2.size.toString)
       val axiomP = AxiomDecl(Some(nameP), exprP, axiom.params)
-      (moduleName, axiomP) :: in
+      (in._1, (moduleName, axiomP) :: in._2)
     } else {
       in
     }
   }
 }
 
-class StatelessAxiomFinder extends ASTAnalyzer("StatelessAxiomFinder", new StatelessAxiomFinderPass()) {
+class StatelessAxiomFinder(mainModuleName: Identifier) extends ASTAnalyzer(
+    "StatelessAxiomFinder", new StatelessAxiomFinderPass(mainModuleName))
+{
   override def reset() {
-    in = Some(List.empty)
+    in = Some((true, List.empty))
   }
 }
 
@@ -183,7 +212,7 @@ class StatelessAxiomImporterPass(mainModuleName : Identifier) extends RewritePas
   lazy val statelessAxiomFinder = manager.pass("StatelessAxiomFinder").asInstanceOf[StatelessAxiomFinder]
   override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
     if (module.id == mainModuleName) {
-      val axioms = statelessAxiomFinder.out.get
+    val axioms = statelessAxiomFinder.out.get._2
       val otherModuleAxioms = axioms.filter(p => p._1 != mainModuleName).map(p => p._2)
       val declsP = otherModuleAxioms ++ module.decls
       val moduleP = Module(module.id, declsP, module.cmds, module.notes)

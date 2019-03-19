@@ -281,11 +281,11 @@ object UclidMain {
   def instantiateModules(config : Config, moduleList: List[Module], mainModuleName : Identifier) : List[Module] = {
     val passManager = new PassManager("instantiate")
     passManager.addPass(new ModuleDependencyFinder(mainModuleName))
-    passManager.addPass(new StatelessAxiomFinder())
+    passManager.addPass(new StatelessAxiomFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
+    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ModuleFlattener(mainModuleName))
-    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())

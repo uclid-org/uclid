@@ -50,6 +50,7 @@ class PassManager(name : => String) {
   type PassList = ListBuffer[ASTAnalysis]
   var passes : PassList = new PassList()
   var passNames : Set[String] = Set.empty
+  var moduleList : List[Module] = List.empty
 
   def addPass(pass : ASTAnalysis) {
     Utils.assert(!passNames.contains(pass.passName), "Pass with the same name already exists.")
@@ -80,6 +81,8 @@ class PassManager(name : => String) {
 
   // run on a list of modules.
   def run(modules : List[Module]) : List[Module] = {
+    logger.debug("moduleList: " + (Utils.join(modules.map(m => m.id.toString()), ",")))
+    moduleList = modules
     val modulesP = passes.foldLeft(modules) {
       (mods, pass) => {
         pass.reset()
