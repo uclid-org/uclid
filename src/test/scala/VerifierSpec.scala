@@ -250,6 +250,9 @@ class ProcedureVerifSpec extends FlatSpec {
   "proc_ensures_1.ucl" should "fail to verify 2 assertions." in {
     VerifierSpec.expectedFails("./test/proc_ensures_1.ucl", 2)
   }
+  "proc_ensures_2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/proc_ensures_2.ucl", 0)
+  }
   "module_assump_1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/module_assump_1.ucl", 0)
   }
