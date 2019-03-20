@@ -121,6 +121,8 @@ class NewProcedureInlinerPass() extends RewritePass {
 
     // statements assigning state variables to modify vars.
     val modifyInitAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
+    // havoc'ing of the modified variables.
+    val modifyHavocs : List[HavocStmt] = modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
     // statements updating the state variables at the end.
     val modifyFinalAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(getModifyLhs(p._1)), List(p._2)))
     // create precondition asserts
@@ -153,7 +155,7 @@ class NewProcedureInlinerPass() extends RewritePass {
           AssumeStmt(exprP, None)
         }
       }
-      BlockStmt(List.empty, postconditionAssumes)
+      BlockStmt(List.empty, modifyHavocs ++ postconditionAssumes)
     }
     val stmtsP = if (callStmt.callLhss.size > 0) {
       val returnAssign = AssignStmt(callStmt.callLhss, retIds)
