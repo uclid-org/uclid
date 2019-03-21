@@ -258,8 +258,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Literal : PackratParser[lang.Literal] = positioned (Bool | Number | String)
     /* END of Literals. */
     lazy val E1: PackratParser[Expr] =
-      KwForall ~> IdTypeList ~ ("::" ~> E1) ^^ { case ids ~ expr => OperatorApplication(ForallOp(ids), List(expr)) } |
-      KwExists ~> IdTypeList ~ ("::" ~> E1) ^^ { case ids ~ expr => OperatorApplication(ExistsOp(ids), List(expr)) } |
+      KwForall ~> IdTypeList ~ ("::" ~> E1) ^^ {
+        case ids ~ expr => OperatorApplication(ForallOp(ids, List.empty), List(expr))
+      } |
+      KwExists ~> IdTypeList ~ ("::" ~> E1) ^^ {
+        case ids ~ expr => OperatorApplication(ExistsOp(ids, List.empty), List(expr))
+      } |
       E3
 
     /** E3 = E4 OpEquiv E3 | E4  **/

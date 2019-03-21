@@ -385,13 +385,15 @@ class Z3Interface() extends Context {
       case ConjunctionOp          => ctx.mkAnd (boolArgs : _*)
       case DisjunctionOp          => ctx.mkOr (boolArgs : _*)
       case ITEOp                  => ctx.mkITE(exprArgs(0).asInstanceOf[z3.BoolExpr], exprArgs(1), exprArgs(2))
-      case ForallOp(vs)           =>
+      case ForallOp(vs, patterns)           =>
         // val qTyps = vs.map((v) => getZ3Sort(v.typ)).toArray
         val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
-        ctx.mkForall(qVars, boolArgs(0), 1, null, null, getForallName(), getSkolemName())
-      case ExistsOp(vs)           =>
+        val qPatterns = patterns.map(p => ctx.mkPattern(exprToZ3(p).asInstanceOf[z3.Expr])).toArray
+        ctx.mkForall(qVars, boolArgs(0), 1, qPatterns, null, getForallName(), getSkolemName())
+      case ExistsOp(vs, patterns)           =>
         val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
-        ctx.mkExists(qVars, boolArgs(0), 1, null, null, getExistsName(), getSkolemName())
+        val qPatterns = patterns.map(p => ctx.mkPattern(exprToZ3(p).asInstanceOf[z3.Expr])).toArray
+        ctx.mkExists(qVars, boolArgs(0), 1, qPatterns, null, getExistsName(), getSkolemName())
       case RecordSelectOp(fld)    =>
         val prodType = operands(0).typ.asInstanceOf[ProductType]
         val fieldIndex = prodType.fieldIndex(fld)

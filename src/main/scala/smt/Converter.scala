@@ -101,57 +101,63 @@ object Converter {
   def opToSMT(op : lang.Operator) : smt.Operator = {
     op match {
       // Integer operators.
-      case lang.IntLTOp() => return smt.IntLTOp
-      case lang.IntLEOp() => return smt.IntLEOp
-      case lang.IntGTOp() => return smt.IntGTOp
-      case lang.IntGEOp() => return smt.IntGEOp
-      case lang.IntAddOp() => return smt.IntAddOp
-      case lang.IntSubOp() => return smt.IntSubOp
-      case lang.IntMulOp() => return smt.IntMulOp
-      case lang.IntUnaryMinusOp() => return smt.IntSubOp
+      case lang.IntLTOp() => smt.IntLTOp
+      case lang.IntLEOp() => smt.IntLEOp
+      case lang.IntGTOp() => smt.IntGTOp
+      case lang.IntGEOp() => smt.IntGEOp
+      case lang.IntAddOp() => smt.IntAddOp
+      case lang.IntSubOp() => smt.IntSubOp
+      case lang.IntMulOp() => smt.IntMulOp
+      case lang.IntUnaryMinusOp() => smt.IntSubOp
       // Bitvector operators.
-      case lang.BVLTOp(w) => return smt.BVLTOp(w)
-      case lang.BVLEOp(w) => return smt.BVLEOp(w)
-      case lang.BVGTOp(w) => return smt.BVGTOp(w)
-      case lang.BVGEOp(w) => return smt.BVGEOp(w)
-      case lang.BVLTUOp(w) => return smt.BVLTUOp(w)
-      case lang.BVLEUOp(w) => return smt.BVLEUOp(w)
-      case lang.BVGTUOp(w) => return smt.BVGTUOp(w)
-      case lang.BVGEUOp(w) => return smt.BVGEUOp(w)
-      case lang.BVAddOp(w) => return smt.BVAddOp(w)
-      case lang.BVSubOp(w) => return smt.BVSubOp(w)
-      case lang.BVMulOp(w) => return smt.BVMulOp(w)
+      case lang.BVLTOp(w) => smt.BVLTOp(w)
+      case lang.BVLEOp(w) => smt.BVLEOp(w)
+      case lang.BVGTOp(w) => smt.BVGTOp(w)
+      case lang.BVGEOp(w) => smt.BVGEOp(w)
+      case lang.BVLTUOp(w) => smt.BVLTUOp(w)
+      case lang.BVLEUOp(w) => smt.BVLEUOp(w)
+      case lang.BVGTUOp(w) => smt.BVGTUOp(w)
+      case lang.BVGEUOp(w) => smt.BVGEUOp(w)
+      case lang.BVAddOp(w) => smt.BVAddOp(w)
+      case lang.BVSubOp(w) => smt.BVSubOp(w)
+      case lang.BVMulOp(w) => smt.BVMulOp(w)
       case lang.BVUnaryMinusOp(w) => smt.BVMinusOp(w)
-      case lang.BVAndOp(w) => return smt.BVAndOp(w)
-      case lang.BVOrOp(w) => return smt.BVOrOp(w)
-      case lang.BVXorOp(w) => return smt.BVXorOp(w)
-      case lang.BVNotOp(w) => return smt.BVNotOp(w)
-      case lang.ConstExtractOp(slice) => return smt.BVExtractOp(slice.hi, slice.lo)
-      case lang.BVSignExtOp(w, e) => return smt.BVSignExtOp(w, e)
-      case lang.BVZeroExtOp(w, e) => return smt.BVZeroExtOp(w, e)
-      case lang.BVLeftShiftIntOp(w, e) => return smt.BVLeftShiftIntOp(w, e)
-      case lang.BVLRightShiftIntOp(w, e) => return smt.BVLRightShiftIntOp(w, e)
-      case lang.BVARightShiftIntOp(w, e) => return smt.BVARightShiftIntOp(w, e)
-      case lang.BVLeftShiftBVOp(w) => return smt.BVLeftShiftBVOp(w)
-      case lang.BVLRightShiftBVOp(w) => return smt.BVLRightShiftBVOp(w)
-      case lang.BVARightShiftBVOp(w) => return smt.BVARightShiftBVOp(w)
+      case lang.BVAndOp(w) => smt.BVAndOp(w)
+      case lang.BVOrOp(w) => smt.BVOrOp(w)
+      case lang.BVXorOp(w) => smt.BVXorOp(w)
+      case lang.BVNotOp(w) => smt.BVNotOp(w)
+      case lang.ConstExtractOp(slice) => smt.BVExtractOp(slice.hi, slice.lo)
+      case lang.BVSignExtOp(w, e) => smt.BVSignExtOp(w, e)
+      case lang.BVZeroExtOp(w, e) => smt.BVZeroExtOp(w, e)
+      case lang.BVLeftShiftIntOp(w, e) => smt.BVLeftShiftIntOp(w, e)
+      case lang.BVLRightShiftIntOp(w, e) => smt.BVLRightShiftIntOp(w, e)
+      case lang.BVARightShiftIntOp(w, e) => smt.BVARightShiftIntOp(w, e)
+      case lang.BVLeftShiftBVOp(w) => smt.BVLeftShiftBVOp(w)
+      case lang.BVLRightShiftBVOp(w) => smt.BVLRightShiftBVOp(w)
+      case lang.BVARightShiftBVOp(w) => smt.BVARightShiftBVOp(w)
       // Boolean operators.
-      case lang.ConjunctionOp() => return smt.ConjunctionOp
-      case lang.DisjunctionOp() => return smt.DisjunctionOp
-      case lang.IffOp() => return smt.IffOp
-      case lang.ImplicationOp() => return smt.ImplicationOp
-      case lang.NegationOp() => return smt.NegationOp
+      case lang.ConjunctionOp() => smt.ConjunctionOp
+      case lang.DisjunctionOp() => smt.DisjunctionOp
+      case lang.IffOp() => smt.IffOp
+      case lang.ImplicationOp() => smt.ImplicationOp
+      case lang.NegationOp() => smt.NegationOp
       // Comparison operators.
-      case lang.EqualityOp() => return smt.EqualityOp
-      case lang.InequalityOp() => return smt.InequalityOp
-      case lang.DistinctOp() => return smt.InequalityOp
+      case lang.EqualityOp() => smt.EqualityOp
+      case lang.InequalityOp() => smt.InequalityOp
+      case lang.DistinctOp() => smt.InequalityOp
       // Record select.
-      case lang.RecordSelect(r) => return smt.RecordSelectOp(r.name)
+      case lang.RecordSelect(r) => smt.RecordSelectOp(r.name)
       // Quantifiers
-      case lang.ForallOp(vs) => return smt.ForallOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
-      case lang.ExistsOp(vs) => return smt.ExistsOp(vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2))))
-      case lang.ITEOp() => return smt.ITEOp
-      case lang.HyperSelect(i) => return smt.HyperSelectOp(i)
+      case lang.ForallOp(vs, ps) =>
+        val args = vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2)))
+        val pats = ps.map(p => smt.Converter.exprToSMT(p, lang.Scope.empty + op))
+        smt.ForallOp(args, pats)
+      case lang.ExistsOp(vs, ps) =>
+        val args = vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2)))
+        val pats = ps.map(p => smt.Converter.exprToSMT(p, lang.Scope.empty + op))
+        smt.ExistsOp(args, pats)
+      case lang.ITEOp() => smt.ITEOp
+      case lang.HyperSelect(i) => smt.HyperSelectOp(i)
       // Polymorphic operators are not allowed.
       case p : lang.PolymorphicOperator =>
         throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")
@@ -162,49 +168,56 @@ object Converter {
   def smtToOp(op : smt.Operator, args : List[smt.Expr]) : lang.Operator = {
     op match {
       // Integer operators.
-      case smt.IntLTOp => return lang.IntLTOp()
-      case smt.IntLEOp => return lang.IntLEOp()
-      case smt.IntGTOp => return lang.IntGTOp()
-      case smt.IntGEOp => return lang.IntGEOp()
-      case smt.IntAddOp => return lang.IntAddOp()
+      case smt.IntLTOp => lang.IntLTOp()
+      case smt.IntLEOp => lang.IntLEOp()
+      case smt.IntGTOp => lang.IntGTOp()
+      case smt.IntGEOp => lang.IntGEOp()
+      case smt.IntAddOp => lang.IntAddOp()
       case smt.IntSubOp => 
         if (args.size == 1) lang.IntUnaryMinusOp()
         else                lang.IntSubOp()
-      case smt.IntMulOp => return lang.IntMulOp()
+      case smt.IntMulOp => lang.IntMulOp()
       // Bitvector operators.
-      case smt.BVLTOp(w) => return lang.BVLTOp(w)
-      case smt.BVLEOp(w) => return lang.BVLEOp(w)
-      case smt.BVGTOp(w) => return lang.BVGTOp(w)
-      case smt.BVGEOp(w) => return lang.BVGEOp(w)
-      case smt.BVLTUOp(w) => return lang.BVLTUOp(w)
-      case smt.BVLEUOp(w) => return lang.BVLEUOp(w)
-      case smt.BVGTUOp(w) => return lang.BVGTUOp(w)
-      case smt.BVGEUOp(w) => return lang.BVGEUOp(w)
-      case smt.BVAddOp(w) => return lang.BVAddOp(w)
-      case smt.BVSubOp(w) => return lang.BVSubOp(w)
-      case smt.BVMulOp(w) => return lang.BVMulOp(w)
+      case smt.BVLTOp(w) => lang.BVLTOp(w)
+      case smt.BVLEOp(w) => lang.BVLEOp(w)
+      case smt.BVGTOp(w) => lang.BVGTOp(w)
+      case smt.BVGEOp(w) => lang.BVGEOp(w)
+      case smt.BVLTUOp(w) => lang.BVLTUOp(w)
+      case smt.BVLEUOp(w) => lang.BVLEUOp(w)
+      case smt.BVGTUOp(w) => lang.BVGTUOp(w)
+      case smt.BVGEUOp(w) => lang.BVGEUOp(w)
+      case smt.BVAddOp(w) => lang.BVAddOp(w)
+      case smt.BVSubOp(w) => lang.BVSubOp(w)
+      case smt.BVMulOp(w) => lang.BVMulOp(w)
       case smt.BVMinusOp(w) => lang.BVUnaryMinusOp(w)
-      case smt.BVAndOp(w) => return lang.BVAndOp(w)
-      case smt.BVOrOp(w) => return lang.BVOrOp(w)
-      case smt.BVXorOp(w) => return lang.BVXorOp(w)
-      case smt.BVNotOp(w) => return lang.BVNotOp(w)
-      case smt.BVExtractOp(hi, lo) => return lang.ConstExtractOp(lang.ConstBitVectorSlice(hi, lo))
-      case smt.BVConcatOp(_) => return lang.ConcatOp()
+      case smt.BVAndOp(w) => lang.BVAndOp(w)
+      case smt.BVOrOp(w) => lang.BVOrOp(w)
+      case smt.BVXorOp(w) => lang.BVXorOp(w)
+      case smt.BVNotOp(w) => lang.BVNotOp(w)
+      case smt.BVExtractOp(hi, lo) => lang.ConstExtractOp(lang.ConstBitVectorSlice(hi, lo))
+      case smt.BVConcatOp(_) => lang.ConcatOp()
       // Boolean operators.
-      case smt.ConjunctionOp => return lang.ConjunctionOp()
-      case smt.DisjunctionOp => return lang.DisjunctionOp()
-      case smt.IffOp => return lang.IffOp()
-      case smt.ImplicationOp => return lang.ImplicationOp()
-      case smt.NegationOp => return lang.NegationOp()
+      case smt.ConjunctionOp => lang.ConjunctionOp()
+      case smt.DisjunctionOp => lang.DisjunctionOp()
+      case smt.IffOp => lang.IffOp()
+      case smt.ImplicationOp => lang.ImplicationOp()
+      case smt.NegationOp => lang.NegationOp()
       // Comparison operators.
-      case smt.EqualityOp => return lang.EqualityOp()
-      case smt.InequalityOp => return lang.InequalityOp()
+      case smt.EqualityOp => lang.EqualityOp()
+      case smt.InequalityOp => lang.InequalityOp()
       // Record select.
-      case smt.RecordSelectOp(name) => return lang.RecordSelect(lang.Identifier(name))  
+      case smt.RecordSelectOp(name) => lang.RecordSelect(lang.Identifier(name))
+      // if then else
+      case smt.ITEOp => lang.ITEOp()
       // Quantifiers
-      case smt.ForallOp(vs) => return lang.ForallOp(vs.map(v => (lang.Identifier(v.id), smt.Converter.smtToType(v.symbolTyp))))
-      case smt.ExistsOp(vs) => return lang.ExistsOp(vs.map(v => (lang.Identifier(v.id), smt.Converter.smtToType(v.symbolTyp))))
-      case smt.ITEOp => return lang.ITEOp()
+      case smt.ForallOp(vs, ps) =>
+        val varsP = vs.map(v => (lang.Identifier(v.id), smt.Converter.smtToType(v.symbolTyp)))
+        val patternsP = ps.map(p => smt.Converter.smtToExpr(p))
+        lang.ForallOp(varsP, patternsP)
+      case smt.ExistsOp(vs, ps) =>
+        val varsP = vs.map(v => (lang.Identifier(v.id), smt.Converter.smtToType(v.symbolTyp)))
+        val patternsP = ps.map(p => smt.Converter.smtToExpr(p))
+        lang.ExistsOp(varsP, patternsP)
       case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
     }
   }

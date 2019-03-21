@@ -331,11 +331,11 @@ case class Scope (
   /** Return a new context with operator added. */
   def +(op : Operator) : Scope = {
     op match {
-      case ForallOp(vs) =>
+      case ForallOp(vs, _) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
           module, procedure, cmd, environment, Some(this))
-      case ExistsOp(vs) =>
+      case ExistsOp(vs, _) =>
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
           module, procedure, cmd, environment, Some(this))

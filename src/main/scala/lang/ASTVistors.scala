@@ -961,10 +961,10 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
         result = visitBitVectorSlice(slice, result, context)
       case VarExtractOp(slice) =>
         result = visitBitVectorSlice(slice, result, context)
-      case ForallOp(args) =>
-        result = visitQuantifierArgs(args, result, quantifierCtx)
-      case ExistsOp(args) =>
-        result = visitQuantifierArgs(args, result, quantifierCtx)
+      case ForallOp(args, patterns) =>
+        result = visitQuantifierArgs(args, patterns, result, quantifierCtx)
+      case ExistsOp(args, patterns) =>
+        result = visitQuantifierArgs(args, patterns, result, quantifierCtx)
       case ArraySelect(inds) =>
         result = inds.foldLeft(result)((acc, ind) => visitExpr(ind, acc, context))
       case ArrayUpdate(inds, value) =>
@@ -974,12 +974,17 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnOperator(TraversalDirection.Up, op, result, context)
     return result
   }
-  def visitQuantifierArgs(args : List[(Identifier, Type)], in : T, context : Scope) : T = {
-    args.foldLeft(in) {
+  def visitQuantifierArgs(args : List[(Identifier, Type)], patterns: List[Expr], in : T, context : Scope) : T = {
+    val r1 = args.foldLeft(in) {
       (acc, arg) => {
         val accP1 = visitIdentifier(arg._1, acc, context)
         val accP2 = visitType(arg._2, accP1, context)
         accP2
+      }
+    }
+    patterns.foldLeft(r1) {
+      (acc, expr) => {
+        visitExpr(expr, acc, context)
       }
     }
   }
@@ -1816,9 +1821,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         case varBvSlice : VarBitVectorSlice => VarExtractOp(varBvSlice)
       }
     }
-    def rewriteQuantifiedVars(args : List[(Identifier, Type)]) = {
+    def rewriteQuantifiedVars(args : List[(Identifier, Type)], patterns : List[Expr]) = {
       val ctxP = context + op
-      args.map {
+      val argsP = args.map {
         (a) => {
           val idP = visitIdentifier(a._1, ctxP)
           val typeP = visitType(a._2, ctxP)
@@ -1828,6 +1833,10 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
           }
         }
       }.flatten
+      val patternsP = patterns.map {
+        (p) => visitExpr(p, ctxP)
+      }.flatten
+      (argsP, patternsP)
     }
 
     val opP : Option[Operator] = op match {
@@ -1839,10 +1848,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         val sliceP = visitBitVectorSlice(slice, context)
         val extractOp = sliceP.flatMap((slice) => Some(newExtractOp(slice)))
         extractOp.flatMap((eOp) => pass.rewriteOperator(eOp, context))
-      case ForallOp(args) =>
-        Some(ForallOp(rewriteQuantifiedVars(args)))
-      case ExistsOp(args) =>
-        Some(ExistsOp(rewriteQuantifiedVars(args)))
+      case ForallOp(args, pats) =>
+        val (argsP, patsP) = rewriteQuantifiedVars(args, pats)
+        Some(ForallOp(argsP, patsP))
+      case ExistsOp(args, pats) =>
+        val (argsP, patsP) = rewriteQuantifiedVars(args, pats)
+        Some(ExistsOp(argsP, patsP))
       case ArraySelect(inds) =>
         val indsP = inds.map(ind => visitExpr(ind, context)).flatten
         Some(ArraySelect(indsP))
