@@ -257,10 +257,43 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     lazy val Literal : PackratParser[lang.Literal] = positioned (Bool | Number | String)
     /* END of Literals. */
-    lazy val E1: PackratParser[Expr] =
-      KwForall ~> IdTypeList ~ ("::" ~> E1) ^^ {
-        case ids ~ expr => OperatorApplication(ForallOp(ids, List.empty), List(expr))
+    // Match quantifier patterns; but we don't want to make pattern a keyword.
+    lazy val decoratedExprList : PackratParser[(lang.Identifier, List[lang.Expr])] =
+      Id ~ ( "[" ~> E1 ) ~ rep("," ~> E1) <~ "]" ^^ {
+        case id ~ e ~ es => { (id, e::es) }
       } |
+      Id <~ "[" ~ "]" ^^ {
+        case id => { (id, List.empty) }
+      }
+    lazy val E1: PackratParser[Expr] =
+      KwForall ~> IdTypeList ~ decoratedExprList.? ~ ("::" ~> E1) ^^ {
+        case ids ~ pat ~ expr => {
+          pat match {
+            case None =>
+              OperatorApplication(ForallOp(ids, List.empty), List(expr))
+            case Some(p) =>
+              if (p._1.name != "pattern") {
+                throw new Utils.ParserError("Unknown decorator: " + p._1.toString(), Some(p._1.pos), None)
+              } else {
+                OperatorApplication(ForallOp(ids, p._2), List(expr))
+              }
+          }
+        }
+      } |
+      KwForall ~> IdTypeList ~ decoratedExprList.? ~ ("::" ~> E1) ^^ {
+          case ids ~ pat ~ expr => {
+            pat match {
+              case None =>
+                OperatorApplication(ExistsOp(ids, List.empty), List(expr))
+              case Some(p) =>
+                if (p._1.name != "pattern") {
+                  throw new Utils.ParserError("Unknown decorator: " + p._1.toString(), Some(p._1.pos), None)
+                } else {
+                  OperatorApplication(ExistsOp(ids, p._2), List(expr))
+                }
+            }
+          }
+        } |
       KwExists ~> IdTypeList ~ ("::" ~> E1) ^^ {
         case ids ~ expr => OperatorApplication(ExistsOp(ids, List.empty), List(expr))
       } |

@@ -314,7 +314,7 @@ object QuantifiedBooleanOperator {
   def toString(quantifier: String, vs: List[(Identifier, Type)], patterns: List[Expr]) = {
     val args = Utils.join(vs.map((v) => v._1.toString + " : " + v._2.toString), ", ")
     val pats = if (patterns.size == 0) { "" } else {
-      "{:pattern " + Utils.join(patterns.map(p => p.toString()), ", ") + "} "
+      "pattern[" + Utils.join(patterns.map(p => p.toString()), ", ") + "] "
     }
     quantifier + " (" + args + ") " + pats + ":: "
   }

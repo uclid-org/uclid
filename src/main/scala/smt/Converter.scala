@@ -98,7 +98,7 @@ object Converter {
     }
   }
 
-  def opToSMT(op : lang.Operator) : smt.Operator = {
+  def opToSMT(op : lang.Operator, ctx : lang.Scope) : smt.Operator = {
     op match {
       // Integer operators.
       case lang.IntLTOp() => smt.IntLTOp
@@ -150,11 +150,11 @@ object Converter {
       // Quantifiers
       case lang.ForallOp(vs, ps) =>
         val args = vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2)))
-        val pats = ps.map(p => smt.Converter.exprToSMT(p, lang.Scope.empty + op))
+        val pats = ps.map(p => smt.Converter.exprToSMT(p, ctx))
         smt.ForallOp(args, pats)
       case lang.ExistsOp(vs, ps) =>
         val args = vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2)))
-        val pats = ps.map(p => smt.Converter.exprToSMT(p, lang.Scope.empty + op))
+        val pats = ps.map(p => smt.Converter.exprToSMT(p, ctx))
         smt.ExistsOp(args, pats)
       case lang.ITEOp() => smt.ITEOp
       case lang.HyperSelect(i) => smt.HyperSelectOp(i)
@@ -262,7 +262,7 @@ object Converter {
            case _ =>
              val scopeWOpApp = scope + opapp
              val argsInSMT = toSMTs(args, scopeWOpApp, past)
-             smt.OperatorApplication(opToSMT(op), argsInSMT)
+             smt.OperatorApplication(opToSMT(op, scope + opapp), argsInSMT)
          }
        case lang.FuncApplication(f,args) => f match {
          case lang.Identifier(id) =>
