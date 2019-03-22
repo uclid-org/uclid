@@ -325,7 +325,7 @@ object UclidMain {
    */
   def execute(module : Module, config : Config) : List[CheckResult] = {
     var symbolicSimulator = new SymbolicSimulator(module)
-    var z3Interface = if (config.smtSolver.size > 0) {
+    var solverInterface = if (config.smtSolver.size > 0) {
       logger.debug("args: {}", config.smtSolver)
       new smt.SMTLIB2Interface(config.smtSolver)
     } else {
@@ -335,9 +335,9 @@ object UclidMain {
       case Nil => None
       case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir, config.sygusFormat))
     }
-    z3Interface.filePrefix = config.smtFileGeneration
-    val result = symbolicSimulator.execute(z3Interface, sygusInterface, config)
-    z3Interface.finish()
+    solverInterface.filePrefix = config.smtFileGeneration
+    val result = symbolicSimulator.execute(solverInterface, sygusInterface, config)
+    solverInterface.finish()
     return result
   }
 

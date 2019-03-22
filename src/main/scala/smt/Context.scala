@@ -209,10 +209,26 @@ abstract trait Context {
   def preassert(e: Expr)
   def check() : SolverResult
   def finish()
+
+  def addOption(option: String, value: Context.SolverOption)
 }
 
 object Context
 {
+  sealed abstract class SolverOption {}
+  case class BoolOption(b : Boolean) extends SolverOption {
+    override def toString() : String = b.toString()
+  }
+  case class IntOption(i : Int) extends SolverOption {
+    override def toString() : String = i.toString()
+  }
+  case class DoubleOption(d : Double) extends SolverOption {
+    override def toString() : String = d.toString()
+  }
+  case class StringOption(s : String) extends SolverOption {
+    override def toString() : String = s
+  }
+
   def convertReplace(w : Int, hi : Int, lo : Int, arg0 : Expr, arg1 : Expr) : Expr = {
     val slice0 = (w-1, hi+1)
     val slice2 = (lo-1, 0)

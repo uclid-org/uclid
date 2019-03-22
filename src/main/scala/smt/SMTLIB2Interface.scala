@@ -420,4 +420,8 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
   def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
     throw new Utils.UnimplementedException("toSMT2 is not yet implemented.")
   }
+
+  override def addOption(opt : String, value : Context.SolverOption) = {
+    // TODO: add the implementation here.
+  }
 }

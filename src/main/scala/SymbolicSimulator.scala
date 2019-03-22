@@ -263,6 +263,16 @@ class SymbolicSimulator (module : Module) {
             printSMT2(assertionTree, cmd.argObj, solver)
           case "print_module" =>
             UclidMain.println(module.toString)
+          case "set_solver_option" =>
+            val option = cmd.args(0)._1.asInstanceOf[lang.StringLit].value
+            val value : smt.Context.SolverOption = cmd.args(1)._1 match {
+              case BoolLit(b) => smt.Context.BoolOption(b)
+              case IntLit(i) => smt.Context.IntOption(i.toInt)
+              case StringLit(s) => smt.Context.StringOption(s)
+              case _ => throw new Utils.AssertionError(
+                "Unexpected option value: " + cmd.args(1)._1.toString)
+            }
+            solver.addOption(option, value)
           case _ =>
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }

@@ -3,7 +3,7 @@ module main
   function hash(d1 : integer, h1 : integer) : integer;
 
   axiom forall (d1 : integer, d2 : integer, h1 : integer, h2 : integer) 
-    // pattern[hash(d1, h1) == hash(d2, h2)] ::
+    // pattern[hash(d1, h1), hash(d2, h2); hash(h1, d1), hash(h2, d2)]
     :: (d1 == d2 && h1 == h2) <==> hash(d1, h1) == hash(d2, h2);
 
   var dcopy : [integer]integer;
@@ -13,40 +13,36 @@ module main
   procedure compute_hash(d : [integer]integer)
     returns (h : integer)
   {
-    var h1, h2 : integer;
-    h1 = hash(d[0], d[1]);
-    h2 = hash(d[2], d[3]);
-    h  = hash(h1, h2);
+    h  = hash(d[1], d[2]);
   }
 
   init {
     dcopy = data;
     call (dhash) = compute_hash(data);
-    data[4] = dhash;
+    data[0] = dhash;
   }
 
   next {
-    if (*) {
-      var idx  : integer;
-      var arr1 : [integer]integer;
-      var arrh : integer;
+    var idx  : integer;
+    var dat  : integer;
+    var arr1 : [integer]integer;
+    var arrh : integer;
 
-      arr1 = data[idx -> data[idx] + 1];
-      call (arrh) = compute_hash(arr1);
-      data' = arr1[4 -> arrh];
-    }
+    // havoc the index idx with dat.
+    arr1 = data[idx -> dat];
+    // update the hash
+    call (arrh) = compute_hash(arr1);
+    // store the hash.
+    data' = arr1[0 -> arrh];
   }
 
   invariant eq_data :
-    (data[4] == dhash) ==>
-        (data[0] == dcopy[0] && data[1] == dcopy[1] &&
-         data[2] == dcopy[2] && data[3] == dcopy[3]);
-
-
+    (data[0] == dhash) ==> (data[1] == dcopy[1] && data[2] == dcopy[2]);
 
   control {
     print_module;
-    v = unroll(5);
+    set_solver_option(":mbqi", false);
+    v = induction(1);
     check;
     print_results;
   }

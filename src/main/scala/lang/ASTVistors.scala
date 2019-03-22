@@ -974,7 +974,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnOperator(TraversalDirection.Up, op, result, context)
     return result
   }
-  def visitQuantifierArgs(args : List[(Identifier, Type)], patterns: List[Expr], in : T, context : Scope) : T = {
+  def visitQuantifierArgs(args : List[(Identifier, Type)], patterns: List[List[Expr]], in : T, context : Scope) : T = {
     val r1 = args.foldLeft(in) {
       (acc, arg) => {
         val accP1 = visitIdentifier(arg._1, acc, context)
@@ -983,8 +983,11 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       }
     }
     patterns.foldLeft(r1) {
-      (acc, expr) => {
-        visitExpr(expr, acc, context)
+      (acc, exprs) => {
+        exprs.foldLeft(acc) {
+          (bacc, expr) =>
+            visitExpr(expr, bacc, context)
+        }
       }
     }
   }
@@ -1821,7 +1824,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         case varBvSlice : VarBitVectorSlice => VarExtractOp(varBvSlice)
       }
     }
-    def rewriteQuantifiedVars(args : List[(Identifier, Type)], patterns : List[Expr]) = {
+    def rewriteQuantifiedVars(args : List[(Identifier, Type)], patterns : List[List[Expr]]) = {
       val ctxP = context + op
       val argsP = args.map {
         (a) => {
@@ -1834,7 +1837,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         }
       }.flatten
       val patternsP = patterns.map {
-        (p) => visitExpr(p, ctxP)
+        (ps) => ps.map(p => visitExpr(p, ctxP).toList)
       }.flatten
       (argsP, patternsP)
     }

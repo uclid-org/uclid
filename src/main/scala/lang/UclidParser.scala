@@ -258,15 +258,17 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Literal : PackratParser[lang.Literal] = positioned (Bool | Number | String)
     /* END of Literals. */
     // Match quantifier patterns; but we don't want to make pattern a keyword.
-    lazy val decoratedExprList : PackratParser[(lang.Identifier, List[lang.Expr])] =
-      Id ~ ( "[" ~> E1 ) ~ rep("," ~> E1) <~ "]" ^^ {
-        case id ~ e ~ es => { (id, e::es) }
-      } |
-      Id <~ "[" ~ "]" ^^ {
-        case id => { (id, List.empty) }
+    lazy val CommaSeparatedExprList : PackratParser[List[lang.Expr]] =
+      E1 ~ rep("," ~> E1) ^^ { case e ~ es => e::es }
+    lazy val PatternList : PackratParser[List[List[lang.Expr]]] =
+      CommaSeparatedExprList ~ rep(";" ~> CommaSeparatedExprList) ^^ {
+        case l ~ ls => l :: ls
       }
+  lazy val Pattern : PackratParser[(lang.Identifier, List[List[lang.Expr]])] =
+    Id ~ ("[" ~> PatternList <~ "]") ^^ { case id ~ pats => (id, pats) }
+
     lazy val E1: PackratParser[Expr] =
-      KwForall ~> IdTypeList ~ decoratedExprList.? ~ ("::" ~> E1) ^^ {
+      KwForall ~> IdTypeList ~ Pattern.? ~ ("::" ~> E1) ^^ {
         case ids ~ pat ~ expr => {
           pat match {
             case None =>
@@ -280,7 +282,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
           }
         }
       } |
-      KwForall ~> IdTypeList ~ decoratedExprList.? ~ ("::" ~> E1) ^^ {
+      KwForall ~> IdTypeList ~ Pattern.? ~ ("::" ~> E1) ^^ {
           case ids ~ pat ~ expr => {
             pat match {
               case None =>

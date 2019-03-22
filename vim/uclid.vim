@@ -18,7 +18,7 @@ syn keyword ucl4Type            boolean integer enum record
 syn keyword ucl4Expr            forall for exists Lambda in range bv_zero_extend bv_sign_extend bv_left_shift bv_l_right_shift bv_a_right_shift 
 syn keyword ucl4Stmt            if then else assert assume havoc for skip case esac default
 syn keyword ucl4Decl            module init next control function procedure returns call type var input output const property invariant hyperproperty hyperinvariant hyperaxiom synthesis grammar requires ensures modifies sharedvar instance axiom define
-syn keyword ucl4Cmd             unroll lazysc check print_module print_cex print_results k_induction_base k_induction_step induction clear_context synthesize_invariant
+syn keyword ucl4Cmd             unroll lazysc check print_module print_cex print_results k_induction_base k_induction_step induction clear_context synthesize_invariant set_solver_option
 " user labels
 syn keyword ucl4Constant        false true
 

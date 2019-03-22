@@ -150,11 +150,11 @@ object Converter {
       // Quantifiers
       case lang.ForallOp(vs, ps) =>
         val args = vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2)))
-        val pats = ps.map(p => smt.Converter.exprToSMT(p, ctx))
+        val pats = ps.map(qs => qs.map(q => smt.Converter.exprToSMT(q, ctx)))
         smt.ForallOp(args, pats)
       case lang.ExistsOp(vs, ps) =>
         val args = vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2)))
-        val pats = ps.map(p => smt.Converter.exprToSMT(p, ctx))
+        val pats = ps.map(qs => qs.map(q => smt.Converter.exprToSMT(q, ctx)))
         smt.ExistsOp(args, pats)
       case lang.ITEOp() => smt.ITEOp
       case lang.HyperSelect(i) => smt.HyperSelectOp(i)
@@ -212,11 +212,11 @@ object Converter {
       // Quantifiers
       case smt.ForallOp(vs, ps) =>
         val varsP = vs.map(v => (lang.Identifier(v.id), smt.Converter.smtToType(v.symbolTyp)))
-        val patternsP = ps.map(p => smt.Converter.smtToExpr(p))
+        val patternsP = ps.map(qs => qs.map(q => smt.Converter.smtToExpr(q)))
         lang.ForallOp(varsP, patternsP)
       case smt.ExistsOp(vs, ps) =>
         val varsP = vs.map(v => (lang.Identifier(v.id), smt.Converter.smtToType(v.symbolTyp)))
-        val patternsP = ps.map(p => smt.Converter.smtToExpr(p))
+        val patternsP = ps.map(qs => qs.map(q => smt.Converter.smtToExpr(q)))
         lang.ExistsOp(varsP, patternsP)
       case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
     }

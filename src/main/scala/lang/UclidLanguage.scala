@@ -311,19 +311,21 @@ sealed abstract class QuantifiedBooleanOperator extends BooleanOperator {
   def variables : List[(Identifier, Type)]
 }
 object QuantifiedBooleanOperator {
-  def toString(quantifier: String, vs: List[(Identifier, Type)], patterns: List[Expr]) = {
+  def toString(quantifier: String, vs: List[(Identifier, Type)], patterns: List[List[Expr]]) = {
     val args = Utils.join(vs.map((v) => v._1.toString + " : " + v._2.toString), ", ")
     val pats = if (patterns.size == 0) { "" } else {
-      "pattern[" + Utils.join(patterns.map(p => p.toString()), ", ") + "] "
+      "pattern[" +
+        Utils.join(patterns.map(p => Utils.join(p.map(_.toString()), ", ")), "; ") +
+      "] "
     }
     quantifier + " (" + args + ") " + pats + ":: "
   }
 }
-case class ForallOp(vs : List[(Identifier, Type)], patterns: List[Expr]) extends QuantifiedBooleanOperator {
+case class ForallOp(vs : List[(Identifier, Type)], patterns: List[List[Expr]]) extends QuantifiedBooleanOperator {
   override def variables = vs
   override def toString = QuantifiedBooleanOperator.toString("forall", vs, patterns)
 }
-case class ExistsOp(vs: List[(Identifier, Type)], patterns: List[Expr]) extends QuantifiedBooleanOperator {
+case class ExistsOp(vs: List[(Identifier, Type)], patterns: List[List[Expr]]) extends QuantifiedBooleanOperator {
   override def toString = QuantifiedBooleanOperator.toString("exists", vs, patterns)
   override def variables = vs
 }
