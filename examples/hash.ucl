@@ -3,7 +3,7 @@ module main
   function hash(d1 : integer, h1 : integer) : integer;
 
   axiom forall (d1 : integer, d2 : integer, h1 : integer, h2 : integer) 
-    // pattern[hash(d1, h1), hash(d2, h2); hash(h1, d1), hash(h2, d2)]
+    pattern[hash(d1, h1), hash(d2, h2)]
     :: (d1 == d2 && h1 == h2) <==> hash(d1, h1) == hash(d2, h2);
 
   var dcopy : [integer]integer;
@@ -13,7 +13,10 @@ module main
   procedure compute_hash(d : [integer]integer)
     returns (h : integer)
   {
-    h  = hash(d[1], d[2]);
+    var h1, h2 : integer;
+    h1 = hash(d[1], d[2]);
+    h2 = hash(d[3], d[4]);
+    h  = hash(h1, h2);
   }
 
   init {
@@ -36,11 +39,13 @@ module main
     data' = arr1[0 -> arrh];
   }
 
+  invariant init_hash:
+    dhash == hash(hash(dcopy[1], dcopy[2]), hash(dcopy[3], dcopy[4]));
   invariant eq_data :
-    (data[0] == dhash) ==> (data[1] == dcopy[1] && data[2] == dcopy[2]);
+    (data[0] == dhash) ==> (data[1] == dcopy[1] && data[2] == dcopy[2] && 
+                            data[3] == dcopy[3] && data[4] == dcopy[4]);
 
   control {
-    print_module;
     set_solver_option(":mbqi", false);
     v = induction(1);
     check;

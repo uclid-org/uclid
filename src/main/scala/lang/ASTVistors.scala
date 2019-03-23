@@ -1837,8 +1837,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         }
       }.flatten
       val patternsP = patterns.map {
-        (ps) => ps.map(p => visitExpr(p, ctxP).toList)
-      }.flatten
+        (ps) => ps.map(p => visitExpr(p, ctxP)).flatten
+      }
       (argsP, patternsP)
     }
 
