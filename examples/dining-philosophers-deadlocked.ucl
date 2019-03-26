@@ -54,14 +54,18 @@ module main {
                 
                 if (tryLeft && !got_forks_left[i]) {
                    call (got_fork) = acquire_left(i);
-                   num_forks[i] = num_forks[i] + 1bv2;
-                   got_forks_left[i] = true;
+                   if (got_fork) {
+                      num_forks[i] = num_forks[i] + 1bv2;
+                      got_forks_left[i] = true;
+                   }
                 }
 
                 if (tryRight && got_forks_left[i] && !got_forks_right[i]) {
                    call (got_fork) = acquire_right(i);
-                   num_forks[i] = num_forks[i] + 1bv2;
-                   got_forks_right[i] = true;
+                   if (got_fork) {
+                      num_forks[i] = num_forks[i] + 1bv2;
+                      got_forks_right[i] = true;
+                   }
                 }
         }
 
