@@ -50,11 +50,17 @@ module main {
         {
                 var got_fork : boolean;
 
-                // Philosophers either gets both forks or none
-
-                if (tryLeft && tryRight && !fork_taken[i-1bv2] && !fork_taken[i]) {
-                   num_forks[i] = num_forks[i] + 2bv2;
+                // each philosopher tries to acquire left fork first and then right fork
+                
+                if (tryLeft && !got_forks_left[i]) {
+                   call (got_fork) = acquire_left(i);
+                   num_forks[i] = num_forks[i] + 1bv2;
                    got_forks_left[i] = true;
+                }
+
+                if (tryRight && got_forks_left[i] && !got_forks_right[i]) {
+                   call (got_fork) = acquire_right(i);
+                   num_forks[i] = num_forks[i] + 1bv2;
                    got_forks_right[i] = true;
                 }
         }
@@ -97,9 +103,9 @@ module main {
 
 
         control {
-                v = bmc(12);
+                v = bmc(8);
                 check;
                 print_results;
-                v.print_cex(i, tryLeft, tryRight, fork_taken, num_forks, eaten);
+                v.print_cex(i, tryLeft, tryRight, got_forks_left, got_forks_right, fork_taken, num_forks, eaten);
         }
 }
