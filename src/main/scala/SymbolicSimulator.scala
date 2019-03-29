@@ -1161,7 +1161,7 @@ class SymbolicSimulator (module : Module) {
     exprs.foreach { (e) => {
       try {
         val result = m.evalAsString(evaluate(e._1.id, f, frameTbl, frameNumber, scope))
-        val value = (Try(if (result.toBoolean) 1 else 0).toOption ++ Try(result.toInt).toOption).head
+        val value = (Try(if (result.toBoolean) BigInt(1) else BigInt(0)).toOption ++ Try(BigInt(result)).toOption).head
         vcd.wireChanged(e._2, value)
       } catch {
         case excp : Utils.UnknownIdentifierException =>
