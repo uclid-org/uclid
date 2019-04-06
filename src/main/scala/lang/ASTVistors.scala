@@ -90,6 +90,7 @@ trait ReadOnlyPass[T] {
   def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : Scope) : T = { in }
   def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : Scope) : T = { in }
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : Scope) : T = { in }
+  def applyOnModuleFunctionsImport(d : TraversalDirection.T, modFuncImport : ModuleFunctionsImportDecl, in : T, context : Scope) : T { in }
   def applyOnNonterminal(d : TraversalDirection.T, nonterm : NonTerminal, in : T, context : Scope) : T = { in }
   def applyOnGrammar(d : TraversalDirection.T, grammar: GrammarDecl, in : T, context : Scope) : T = { in }
   def applyOnSynthesisFunction(d : TraversalDirection.T, synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = { in }
@@ -100,6 +101,7 @@ trait ReadOnlyPass[T] {
   def applyOnSharedVars(d : TraversalDirection.T, sharedVars : SharedVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnConstant(d : TraversalDirection.T, cnst : ConstantsDecl, in : T, context : Scope) : T = { in }
   def applyOnConstantLit(d : TraversalDirection.T, cnst : ConstantLitDecl, in : T, context : Scope) : T = { in }
+  def applyOnModuleConstantsImport(d : TraversalDirection.T, modConstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T { in }
   def applyOnSpec(d : TraversalDirection.T, spec : SpecDecl, in : T, context : Scope) : T = { in }
   def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : Scope) : T = { in }
   def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : T, context : Scope) : T = { in }
@@ -174,6 +176,7 @@ trait RewritePass {
   def rewriteInstance(inst : InstanceDecl, ctx : Scope) : Option[InstanceDecl] = { Some(inst) }
   def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : Scope) : Option[FunctionDecl] = { Some(func) }
+  def rewriteModuleFunctionsImport(modFuncImport : ModuleFunctionsImportDecl, ctx : Scope) : Option[ModuleFunctionsImportDecl] = { Some(modFuncImport) }
   def rewriteNonterminal(nonterm : NonTerminal, ctx : Scope) : Option[NonTerminal] = { Some(nonterm) }
   def rewriteGrammar(grammar : GrammarDecl, ctx : Scope) : Option[GrammarDecl] = { Some(grammar) }
   def rewriteSynthesisFunction(synFunc : SynthesisFunctionDecl, ctx : Scope) : Option[SynthesisFunctionDecl] = { Some(synFunc) }
@@ -184,6 +187,7 @@ trait RewritePass {
   def rewriteSharedVars(sharedVars : SharedVarsDecl, ctx : Scope) : Option[SharedVarsDecl] = { Some(sharedVars) }
   def rewriteConstant(cnst : ConstantsDecl, ctx : Scope) : Option[ConstantsDecl] = { Some(cnst) }
   def rewriteConstantLit(cnst : ConstantLitDecl, ctx : Scope) : Option[ConstantLitDecl] = { Some(cnst) }
+  def rewriteModuleConstantsImport(modConstImport : ModuleConstantsImportDecl, ctx : Scope) : Option[ModuleConstantsImportDecl] = { Some(modConstImport) }
   def rewriteSpec(spec : SpecDecl, ctx : Scope) : Option[SpecDecl] = { Some(spec) }
   def rewriteAxiom(axiom : AxiomDecl, ctx : Scope) : Option[AxiomDecl] = { Some(axiom) }
   def rewriteTypeDecl(typDec : TypeDecl, ctx : Scope) : Option[TypeDecl] = { Some(typDec) }
@@ -304,7 +308,9 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case sharedVars : SharedVarsDecl => visitSharedVars(sharedVars, result, context)
       case cnstLit : ConstantLitDecl => visitConstantLit(cnstLit, result, context)
       case const : ConstantsDecl => visitConstants(const, result, context)
+      case modConstsImport : ModuleConstantsImportDecl => visitModuleConstantsImport(modConstsImport, result, context)
       case func : FunctionDecl => visitFunction(func, result, context)
+      case modFuncsImport : ModuleFunctionsImportDecl => visitModuleFunctionsImport(modFuncsImport,result, context)
       case grammar : GrammarDecl => visitGrammar(grammar, result, context)
       case synFunc : SynthesisFunctionDecl => visitSynthesisFunction(synFunc, result, context)
       case defDecl : DefineDecl => visitDefine(defDecl, in, context)
@@ -359,6 +365,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitIdentifier(func.id, result, context)
     result = visitFunctionSig(func.sig, result, context)
     result = pass.applyOnFunction(TraversalDirection.Up, func, result, context)
+    return result
+  }
+  def visitModuleFunctionsImport(moduleFunctionsImport : ModuleFunctionImportDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnModuleFunctionsImport(TraversalDirection.Down, moduleFunctionsImport, result, context)
+    result = visitIdentifier(moduleFunctionsImport.id, result, context)
+    result = pass.applyOnModuleFunctionsImport(TraversalDirection.Up, moduleFunctionsImport, result, context)
     return result
   }
   def visitNonterminals(nonterminals : List[NonTerminal], in : T, context : Scope) : T = {
@@ -443,6 +456,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = cnst.ids.foldLeft(result)((acc, id) => visitIdentifier(id, result, context))
     result = visitType(cnst.typ, result, context)
     result = pass.applyOnConstant(TraversalDirection.Up, cnst, result, context)
+    return result
+  }
+  def visitModuleConstantsImport(moduleConstantsImport : ModuleConstantsImportDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnModuleConstantsImport(TraversalDirection.Down, moduleConstantsImport, result, context)
+    result = visitIdentifier(moduleConstantsImport.id, result, context)
+    result = pass.applyOnModuleConstantsImport(TraversalDirection.Up, moduleConstantsImport, result, context)
     return result
   }
   def visitSpec(spec : SpecDecl, in : T, context : Scope) : T = {
@@ -1085,7 +1105,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case sharedVars : SharedVarsDecl => visitSharedVars(sharedVars, context)
       case constLitDecl : ConstantLitDecl => visitConstantLit(constLitDecl, context)
       case constDecl : ConstantsDecl => visitConstants(constDecl, context)
+      case modConstImport : ModuleConstantsImportDecl => visitModuleConstantsImport(modConstImport, context)
       case funcDecl : FunctionDecl => visitFunction(funcDecl, context)
+      case modFuncImport : ModuleFunctionsImportDecl => visitModuleFunctionsImport(modFuncImport, context)
       case grammarDecl : GrammarDecl => visitGrammar(grammarDecl, context)
       case synFuncDecl : SynthesisFunctionDecl => visitSynthesisFunction(synFuncDecl, context)
       case defDecl : DefineDecl => visitDefine(defDecl, context)
@@ -1158,6 +1180,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setPosition, setFilename, funcP, func.position)
   }
 
+  def visitModuleFunctionsImport(modFuncImp : ModuleFunctionsImportDecl, context : Scope) : Option[ModuleFunctionsImportDecl] = {
+    val idOpt = visitIdentifier(modFuncImp.id, context)
+    val modFuncImpP = idOpt match {
+      case Some(id) => pass.rewriteModuleFunctionsImport(ModuleFunctionsImportDecl(id), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, modFuncImpP, modFuncImp.position)
+  }
+    
   def visitNonterminals(nonterms : List[NonTerminal], context : Scope) : List[NonTerminal] = {
     nonterms.map(nt => ASTNode.introducePos(setPosition, setFilename, pass.rewriteNonterminal(nt, context), nt.position)).flatten
   }
@@ -1275,6 +1306,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, cnstP, cnst.position)
+  }
+
+  def visitModuleConstantsImport(modCnstImp : ModuleConstantsImportDecl, context : Scope) : Option[ModuleConstantsImportDecl] = {
+    val idOpt = visitIdentifier(modConstImp.id, context)
+    val modCnstImpP = idOpt match {
+      case Some(id) => pass.rewriteModuleConstantsImport(ModuleConstantsImportDecl(id), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, modCnstImpP, modCnstImp.position)
   }
 
   def visitSpec(spec : SpecDecl, context : Scope) : Option[SpecDecl] = {
