@@ -580,7 +580,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val ConstDecl : PackratParser[lang.ConstantsDecl] = positioned {
       KwConst ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.ConstantsDecl(ids,typ)}
     }
-    lazy val ModuleConstImportDecl : PackratParser[lang.ModuleConstantsImportDecl] = positioned {
+    lazy val ModuleConstsImportDecl : PackratParser[lang.ModuleConstantsImportDecl] = positioned {
       KwConst ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleConstantsImportDecl(id) }
     }
     lazy val FuncDecl : PackratParser[lang.FunctionDecl] = positioned {
