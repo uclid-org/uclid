@@ -1114,15 +1114,25 @@ case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with Mod
   override def extNames = ids
   override def extType = typ
 }
-case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with ModuleExternal {
+case class ConstantsImportDecl(id: Identifier) extends Decl {
   override val hashId = 911
+  override def toString "const * = %s.*; // %s".format(id.toString, position.toString)
+  override def declNames = List.empty
+}
+case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with ModuleExternal {
+  override val hashId = 912
   override def toString = "function " + id + sig + ";  // " + position.toString
   override def declNames = List(id)
   override def extNames = List(id)
   override def extType = sig.typ
 }
+case class FunctionImportDecl(id: Identifier) extends Decl {
+  override val hashId = 913 //FIXME
+  override def toString "function * = %s.*; // %s".format(id.toString, position.toString)
+  override def declNames = List.empty
+}
 case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl {
-  override val hashId = 912
+  override val hashId = 914
   override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
   override def declNames = List(id)
 }
@@ -1183,7 +1193,7 @@ case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) exte
 }
 
 case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonTerminal]) extends Decl {
-  override val hashId = 913
+  override val hashId = 915
   override def toString = {
     val argTypes = Utils.join(sig.args.map(a => a._1.toString + ": " + a._2.toString), ", ")
     val header :String = "grammar %s %s = { // %s".format(id.toString, sig.toString(), position.toString)
@@ -1194,27 +1204,27 @@ case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonT
 }
 
 case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : Option[Identifier], grammarArgs: List[Identifier], conditions: List[Expr]) extends Decl {
-  override val hashId = 914
+  override val hashId = 916
   override def toString = "synthesis function " + id + sig + "; //" + position.toString()
   override def declNames = List(id)
 }
 
 case class InitDecl(body: Statement) extends Decl {
-  override val hashId = 915
+  override val hashId = 917
   override def toString =
     "init // " + position.toString + "\n" +
     Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
   override def declNames = List.empty
 }
 case class NextDecl(body: Statement) extends Decl {
-  override val hashId = 916
+  override val hashId = 918
   override def toString =
     "next // " + position.toString + "\n" +
     Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
   override def declNames = List.empty
 }
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
-  override val hashId = 917
+  override val hashId = 919
   val propertyKeyword = if (ExprDecorator.isHyperproperty(params)) {
     "hyperproperty"
   } else {
@@ -1234,7 +1244,7 @@ case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) ext
 
 
 case class AxiomDecl(id : Option[Identifier], expr: Expr, params: List[ExprDecorator]) extends Decl {
-  override val hashId = 918
+  override val hashId = 920
   override def toString = {
     id match {
       case Some(id) => "axiom " + id.toString + " : " + expr.toString()
