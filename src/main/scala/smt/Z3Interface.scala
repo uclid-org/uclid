@@ -395,7 +395,6 @@ class Z3Interface() extends Context {
             ctx.mkPattern(qs : _*)
           }
         }.toArray
-        println(Utils.join(qPatterns.map(q => q.toString()), "; "))
         ctx.mkForall(qVars, boolArgs(0), 1, qPatterns, null, getForallName(), getSkolemName())
       case ExistsOp(vs, patterns)           =>
         val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
