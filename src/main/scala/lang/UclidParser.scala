@@ -590,6 +590,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val ModuleFuncsImportDecl : PackratParser[lang.ModuleFunctionsImportDecl] = positioned {
       KwFunction ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleFunctionsImportDecl(id) }
     }
+
     // Grammar parsing begins here. //
     lazy val LiteralTerm : PackratParser[lang.LiteralTerm] = positioned {
       Bool ^^ { case b => lang.LiteralTerm(b) } |
