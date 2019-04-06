@@ -1114,7 +1114,7 @@ case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with Mod
   override def extNames = ids
   override def extType = typ
 }
-case class ConstantsImportDecl(id: Identifier) extends Decl {
+case class ModuleConstantsImportDecl(id: Identifier) extends Decl {
   override val hashId = 911
   override def toString "const * = %s.*; // %s".format(id.toString, position.toString)
   override def declNames = List.empty
@@ -1126,7 +1126,7 @@ case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with Modu
   override def extNames = List(id)
   override def extType = sig.typ
 }
-case class FunctionImportDecl(id: Identifier) extends Decl {
+case class ModuleFunctionsImportDecl(id: Identifier) extends Decl {
   override val hashId = 913 //FIXME
   override def toString "function * = %s.*; // %s".format(id.toString, position.toString)
   override def declNames = List.empty
