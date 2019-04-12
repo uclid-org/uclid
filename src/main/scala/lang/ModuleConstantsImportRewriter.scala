@@ -45,10 +45,38 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[List[ExternalType]
   lazy val logger = Logger(classOf[ModuleConstantsImportCollector])
   type T = List[ExternalType]
   override def applyOnModuleConstantsImport(d : TraversalDirection.T, modCnstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T = {
-  if (d == TraversalDirection.Up) {
-    logger.debug("statement: {}", modCnstImport.toString())
-    val id = modCnstImport.id
-    context.map.get(id) match {
-      case Some(Scope.ModuleDefinition(mod)) =>
-        mod.externalMap.map {
-          p 
+    if (d == TraversalDirection.Up) {
+      logger.debug("statement: {}", modCnstImport.toString())
+      val id = modCnstImport.id
+      context.map.get(id) match {
+        case Some(Scope.ModuleDefinition(mod)) =>
+          mod.constantDecls.map {
+            p => {
+              ASTNode.introducePos(true, true, ModuleExternal(id, p._1), modCnstImport.postion)
+            }
+          }.toList ++ in
+        case _ => in
+      }
+    } else {
+      in
+    }
+  }
+}
+
+class ModuleConstantsImportCollector extends ASTAnalyzer("ModuleConstantsImportCollector", new ModuleConstantsImportCollecatorPass()) {
+  lazy val logger = Logger(classOf[ModuleConstantsImportCollecter])
+  override def reset() {
+    in = Some(List.empty)
+  }
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val externalIds = visitModule(module, List.empty, context)
+    val newImports = externalIds.map {
+      p => {
+        ASTNode.introduce(true, true, ConstantsDecl(p.typeId, p), p.position)
+      }
+    }
+    logger.debug("newImports: " + newImports.toString())
+    val modP = Module(module.id, newImports ++ module.decls, module.cmds, module.notes)
+    return Some(modP)
+  }
+}
