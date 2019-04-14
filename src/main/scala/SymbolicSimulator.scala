@@ -45,6 +45,9 @@ import vcd.VCD
 import scala.util.Try
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import com.typesafe.scalalogging.Logger
+import uclid.smt.{Z3HornSolver, Z3Interface}
+
+import scala.collection.mutable.{Map => MutableMap}
 
 object UniqueIdGenerator {
   var i : Int = 0;
@@ -86,7 +89,8 @@ class SymbolicSimulator (module : Module) {
 
   var symbolTable : SymbolTable = Map.empty
   var frameList : FrameTable = ArrayBuffer.empty
-  
+
+  var lazySC : Option[LazySCSolver] = None
   var synthesizedInvariants : ArrayBuffer[lang.Expr] = ArrayBuffer.empty
 
   def newHavocSymbol(name: String, t: smt.Type) = {
@@ -159,18 +163,27 @@ class SymbolicSimulator (module : Module) {
               case None    => "unroll"
             }
             // get_init_lambda(false, context, "some")
-            // symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter, solver)
-            initialize(false, true, false, context, label, noLTLFilter)
-            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+            symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter, solver)
             //initialize(false, true, false, context, label, noLTLFilter)
             //symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+            // initialize(false, true, false, context, label, noLTLFilter)
+            // symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
             //runLazySC(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, noLTLFilter, solver)
+
+          case "horn" =>
+            val label : String = cmd.resultVar match {
+              case Some(l) => l.toString
+              case None    => "horn"
+            }
+            runHornSolver(context, label, noLTLFilter)
           case "lazysc" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString
               case None    => "unroll"
             }
-            runLazySC(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, noLTLFilter, solver)
+            val lz = new LazySCSolver(this)
+            lazySC = Some(lz)
+            runLazySC(lz, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, noLTLFilter, solver)
           case "bmc" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString()
@@ -229,7 +242,10 @@ class SymbolicSimulator (module : Module) {
             }
             verifyProcedure(proc, label)
           case "check" =>
-            proofResults = assertionTree.verify(solver)
+            lazySC match {
+              case None => proofResults = assertionTree.verify(solver)
+              case Some(lz) => proofResults = lz.assertionTree.verify(solver)
+            }
           case "synthesize_invariant" =>
             synthesizer match {
               case None =>
@@ -297,6 +313,7 @@ class SymbolicSimulator (module : Module) {
       }
     }
   }
+
 
   def getVarsInOrder(map: Map[smt.Expr, Identifier], scope: Scope) : List[List[smt.Expr]] = {
     val ids = map.map(p => p._2).toList
@@ -415,6 +432,7 @@ class SymbolicSimulator (module : Module) {
     assumes.clear()
     asserts.clear()
     hyperAsserts.clear()
+    hyperAssumes.clear()
   }
 
   def noHyperInvariantFilter(filter : ((Identifier, List[ExprDecorator]) => Boolean)) =  (n : Identifier, d : List[ExprDecorator]) => {
@@ -491,7 +509,7 @@ class SymbolicSimulator (module : Module) {
     frameList += currentState
     val simTbl = ArrayBuffer(frameList)
     addModuleAssumptions(currentState, frameList, numPastFrames, scope, addAssumesToList _)
-
+    
     assumes.takeRight(assumes.length - assumesLength).foreach(expr => assumesLambda += expr)
     assumesLength = assumes.length
 
@@ -516,9 +534,142 @@ class SymbolicSimulator (module : Module) {
       hyperAsserts.toList, hyperAssumes.toList, assumesLambda.toList)
   }
 
-  def runLazySC(bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
-      val s = new LazySCSolver(this, solver)
-      s.simulateLazySC(bound, scope, label, filter)
+  def runHornSolver(scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
+    val init_lambda = getInitLambda(false, true, false, scope, label, filter)
+    val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
+    val h = new Z3HornSolver(this)
+    val context = new Z3Interface()
+    val lazySc = new LazySCSolver(this)
+    val initTaintLambda = lazySc.getTaintInitLambdaV2(init_lambda._1, scope, context, init_lambda._5)
+    val nextTaintLambda = lazySc.getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, next_lambda._4, scope)
+    val combinedInitLambda = lazySc.getCombinedInitLambda(init_lambda._1, initTaintLambda)
+    val combinedNextLambda = lazySc.getCombinedNextLambda(next_lambda._1, nextTaintLambda._1)
+    //h.convertHyperInvToTaint(next_lambda._1, next_lambda._4)
+    //h.solveTaintLambdasV2(combinedInitLambda, combinedNextLambda, scope)
+    h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
+  }
+
+  def runLazySC(lazySC: LazySCSolver, bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
+
+      //Z3HornSolver.test1()
+
+      lazySC.simulateLazySCV2(bound, scope, label, filter)
+  }
+
+  def symbolicSimulateLambdasHyperAssert(startStep: Int, numberOfSteps: Int, hypPropIdx: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
+                              scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean),
+                              solver: smt.Context) = {
+    // At this point symbolTable must have the initial symbols.
+    resetState()
+
+    val init_lambda = getInitLambda(false, true, false, scope, label, filter)
+    val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
+    //val s = new LazySCSolver(this, solver)
+
+    val num_copies = getMaxHyperInvariant(scope)
+    val simRecord = new SimulationTable
+    var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
+    var havocTable = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
+
+    var inputStep = 0
+    for (i <- 1 to num_copies) {
+      var frames = new FrameTable
+      val initSymTab = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
+      inputStep += 1
+      frames += initSymTab
+      var prevVars = getVarsInOrder(initSymTab.map(_.swap), scope)
+      prevVarTable += prevVars
+      val init_havocs = getHavocs(init_lambda._1.e)
+      val havoc_subs = init_havocs.map {
+        havoc =>
+          val s = havoc.id.split("_")
+          val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+          (havoc, newHavocSymbol(name, havoc.typ))
+      }
+      havocTable += havoc_subs
+      val init_conjunct = substitute(betaSubstitution(init_lambda._1, prevVars.flatten), havoc_subs)
+      addAssumptionToTree(init_conjunct, List.empty)
+      simRecord += frames
+    }
+
+    val hyperAssumesInit = rewriteHyperAssumes(
+      init_lambda._1, 0, init_lambda._5, simRecord, 0, scope, prevVarTable.toList)
+    hyperAssumesInit.foreach {
+      hypAssume =>
+        addAssumptionToTree(hypAssume, List.empty)
+    }
+
+    /*
+    val asserts_init = rewriteAsserts(
+      init_lambda._1, init_lambda._2, 0,
+      prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
+      simRecord.clone(), havocTable(0))
+
+    asserts_init.foreach {
+      assert =>
+        // FIXME: simTable
+        addAssertToTree(assert)
+    }
+    */
+    val filteredInitHyperAssert = List(init_lambda._4(hypPropIdx))
+    val asserts_init_hyper = rewriteHyperAsserts(
+      init_lambda._1, 0, filteredInitHyperAssert, simRecord, 0, scope, prevVarTable.toList)
+    asserts_init_hyper.foreach {
+      assert =>
+        // FIXME: simTable
+        addAssertToTree(assert)
+    }
+
+    var symTabStep = symbolTable
+    for (i <- 1 to numberOfSteps) {
+      for (j <- 1 to num_copies) {
+        symTabStep = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
+        inputStep += 1
+        simRecord(j - 1) += symTabStep
+        val new_vars = getVarsInOrder(symTabStep.map(_.swap), scope)
+        val next_havocs = getHavocs(next_lambda._1.e)
+        val havoc_subs = next_havocs.map {
+          havoc =>
+            val s = havoc.id.split("_")
+            val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+            (havoc, newHavocSymbol(name, havoc.typ))
+        }
+        val next_conjunct = substitute(betaSubstitution(next_lambda._1, (prevVarTable(j - 1) ++ new_vars).flatten), havoc_subs)
+        addAssumptionToTree(next_conjunct, List.empty)
+        havocTable(j - 1) = havoc_subs
+        prevVarTable(j - 1) = new_vars
+      }
+
+      val hyperAssumesNext = rewriteHyperAssumes(next_lambda._1, numberOfSteps, next_lambda._5, simRecord, i, scope, prevVarTable.toList)
+      hyperAssumesNext.foreach {
+        hypAssume =>
+          addAssumptionToTree(hypAssume, List.empty)
+      }
+      /*
+      // Asserting on-HyperInvariant assertions
+      // FIXME: simTable
+      val asserts_next = rewriteAsserts(
+        next_lambda._1, next_lambda._2, i,
+        getVarsInOrder(simRecord(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
+          prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord.clone(), havocTable(0))
+      asserts_next.foreach {
+        assert =>
+          addAssertToTree(assert)
+      }*/
+
+      // FIXME: simTable
+      defaultLog.debug("i: {}", i)
+      val filteredNextHyperAssert = List(next_lambda._4(hypPropIdx))
+      val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, numberOfSteps, filteredNextHyperAssert, simRecord, i, scope, prevVarTable.toList)
+      asserts_next_hyper.foreach {
+        assert => {
+          addAssertToTree(assert)
+        }
+      }
+    }
+    symbolTable = symTabStep
+    val results = assertionTree.verify(solver)
+    UclidMain.println("The results are: " + results)
   }
 
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
@@ -529,10 +680,7 @@ class SymbolicSimulator (module : Module) {
 
       val init_lambda = getInitLambda(false, true, false, scope, label, filter)
       val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
-      val s = new LazySCSolver(this, solver)
-
-      // s.getTaintInitLambda(init_lambda._1, scope, solver, init_lambda._5)
-      // s.getNextTaintLambda(next_lambda._1, next_lambda._5, next_lambda._6, scope)
+      //val s = new LazySCSolver(this, solver)
 
       val num_copies = getMaxHyperInvariant(scope)
       val simRecord = new SimulationTable
@@ -643,6 +791,8 @@ class SymbolicSimulator (module : Module) {
       }
   }
 
+  //FIXME: Only hyperSelects are rewritten, other variables remain as is.
+  //FIXME: Variables without hyperSelects are the unconstrained lambda variables
   def rewriteHyperAssume(
       lambda: smt.Lambda, stepIndex : Integer, hypAssume: smt.Expr,
       simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
@@ -655,7 +805,7 @@ class SymbolicSimulator (module : Module) {
         op match {
           case smt.HyperSelectOp(i) =>
             if (stepIndex > 0) {
-              val actual_params = getVarsInOrder(simRecord(i - 1)(step).map(_.swap), scope).flatten ++ prevVars(i - 1).flatten
+              val actual_params = getVarsInOrder(simRecord(i - 1)(step - 1).map(_.swap), scope).flatten ++ prevVars(i - 1).flatten
               val formal_params = lambda.ids
               assert(actual_params.length == formal_params.length)
               val matches = formal_params.zip(actual_params)
@@ -692,6 +842,8 @@ class SymbolicSimulator (module : Module) {
   }
   def simRecordLength(simRecord : SimulationTable) : Int = SymbolicSimulator.simRecordLength(simRecord)
 
+  //FIXME: Only hyperSelects are rewritten, other variables remain as is.
+  //FIXME: Variables without hyperSelects are the unconstrained lambda variables
   def rewriteHyperAssert(
       lambda: smt.Lambda, stepIndex : Integer, at: AssertInfo, 
       simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
@@ -838,13 +990,24 @@ class SymbolicSimulator (module : Module) {
       substitute(lambda.e, matches)
   }
 
+
   def substitute(e: smt.Expr, s: List[(smt.Expr, smt.Expr)]): smt.Expr = {
+    val m = s.map(p => p._1 -> p._2).toMap
+    def rewrite(ex: smt.Expr) : smt.Expr = {
+      m.get(ex) match {
+        case Some(eX) => eX
+        case None => ex
+      }
+    }
     s.foldLeft(e)((acc, p) => _substitute(acc, p))
+    //var memo: MutableMap[smt.Expr, smt.Expr] = MutableMap.empty
+    //smt.Context.rewriteExpr(e, rewrite, memo)
   }
 
   def _substitute(e: smt.Expr, sym: (smt.Expr, smt.Expr)): smt.Expr = {
-    if (e == sym._1)
-      return sym._2
+    //Causes a possible slowdown
+    //if (e == sym._1)
+    //  return sym._2
 
     e match {
       case smt.Symbol(id, symbolTyp) => {
@@ -859,6 +1022,13 @@ class SymbolicSimulator (module : Module) {
       case smt.MakeTuple(args) => smt.MakeTuple(args.map(e => _substitute(e, sym)))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
+        op match {
+          case smt.HyperSelectOp(i) =>
+            if (e == sym._1)
+              return sym._2
+          case _ =>
+        }
+
         val args = opapp.operands.map(exp => _substitute(exp, sym))
         smt.OperatorApplication(op, args)
 

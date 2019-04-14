@@ -1,0 +1,26 @@
+module main
+{
+    var step   : integer;
+    var val    : integer;
+    var isInit : boolean;
+
+    function blah(x : integer) : integer;
+
+    init {
+        isInit = true;
+        step   = 0;
+    }
+    next {
+        isInit' = false;
+        step'   = step + 1;
+        val'    = blah(step);
+    }
+
+    hyperinvariant[2] val_eq: (!isInit.1) ==> (val.1 == val.2);
+
+    control {
+        v = lazysc(1);
+        check;
+        print_results;
+    }
+}
