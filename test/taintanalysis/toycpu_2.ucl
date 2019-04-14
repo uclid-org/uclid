@@ -62,6 +62,7 @@ module main {
         hyperaxiom[2] i4: (mode.2 == isolated) ==> (in_rng.2[pc.2, in_isolated_lo.2, in_isolated_hi.2]);
 
 	hyperinvariant[2] eq_mode: mode.1 == mode.2;
+	hyperinvariant[2] eq_arr: in_rng.1 == in_rng.2;
 	hyperinvariant[2] weird: (forall(a : addr_t) :: (in_rng.1[a, in_isolated_lo.1, in_isolated_hi.1]) ==> (imem.1[a] == imem.2[a]));
 	control {
 		v = horn;

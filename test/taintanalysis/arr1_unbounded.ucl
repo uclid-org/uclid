@@ -5,6 +5,8 @@ module main
   var d   : integer;
   var initAssume: boolean;
   var rng : [integer]boolean;
+  var h : integer;
+  var i : integer;
 
   init {
     // d_t = true
@@ -34,15 +36,18 @@ module main
     mem' = mem[a -> b];
     // d_t' = mem_t1 && mem_t2[a]
     d' = mem[a];
+    a' = h;
+    b' = i;
     initAssume' = false;
   }
 
-  hyperaxiom[2] eq_b: (!initAssume.1) ==> (rng.1[a.1] ==> (b.1 == b.2));
+  hyperaxiom[2] eq_b: (rng.1[a.1] ==> (b.1 == b.2));
   hyperaxiom[2] eq_a: a.1 == a.2;
+  hyperaxiom[2] eq_h: h.1 == h.2;
   hyperaxiom[2] eq_rng: rng.1 == rng.2;
   hyperinvariant[2] eq_d: rng.1[a.1] ==> d.1 == d.2;
   //hyperinvariant[2] eq_rng_mem: (forall(i : integer) :: rng.1[i] ==> (mem.1[i] == mem.2[i])); 
-  hyperaxiom[2] eq_mem_init: initAssume.1 ==> (forall(i : integer) :: rng.1[i] ==> mem.1[i] == mem.2[i]);
+  hyperaxiom[2] eq_mem_init: /*initAssume.1 ==> */(forall(i : integer) :: rng.1[i] ==> mem.1[i] == mem.2[i]);
   control {
 	v = horn;
 	//check;

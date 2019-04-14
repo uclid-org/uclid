@@ -38,7 +38,6 @@ module main {
   var pc             : addr_t; // program counter.
   var inst, result   : word_t; // inst reg, result
   var mode           : mode_t; // normal/isolated mode?
-  var initFlag	     : boolean; // initFlag
   var step           : integer; // stepVar
   input regs_h       : regs_t; // havoc'ed registers 
   // rng of isolated memory.
@@ -53,7 +52,7 @@ module main {
   // uninterpreted functions for insn. execution
   var aluOp 	: [word_t, word_t, word_t]word_t;
   var nextPC 	: [word_t, addr_t, word_t]addr_t;
-  
+  var initFlag : boolean; 
   // Imode enter and exit addresses need to be defined here
   var imode_enter_addr, nmode_exit_addr : addr_t; 
   var k0_word_t 	: word_t;
@@ -146,7 +145,6 @@ module main {
 	//regs = regs_h;
         //assume (forall (r : regindex_t) 
         //          :: regs[r] == common.k0_word_t);
-	regs = regs_h;
 	regs = const(k0_word_t, regs_t);
         // set pc.
         pc_next = imode_enter_addr;
@@ -163,7 +161,6 @@ module main {
 	//regs = regs_h;
         //assume (forall (r : regindex_t) 
         //          :: regs[r] == common.k0_word_t);
-	regs = regs_h;
 	regs = const(k0_word_t, regs_t);
         // set pc.
         pc_next = nmode_exit_addr;
@@ -209,6 +206,7 @@ module main {
   hyperaxiom[2] n: (nextPC.1) == (nextPC.2); 
   hyperaxiom[2] eq_enter: imode_enter_addr.1 == imode_enter_addr.2;
   hyperaxiom[2] eq_exit: nmode_exit_addr.1 == nmode_exit_addr.2; 
+  //hyperaxiom[2] eq_inst1: imem.1 == imem.2;
 
   hyperaxiom[2] regs1: initFlag.1 ==> (forall (r : regindex_t)
                 :: regs.1[r] == 0bv32);
@@ -217,17 +215,19 @@ module main {
   hyperaxiom[2] lo: (isolated_rng_lo.1 == isolated_rng_lo.2); 
   hyperaxiom[2] hi: (isolated_rng_hi.1 == isolated_rng_hi.2); 
   hyperaxiom[2] supervisor: initFlag.1 ==> (forall(a : addr_t) :: in_rng.1[a, isolated_rng_lo.1, isolated_rng_hi.2] ==> (dmem.1[a] == dmem.2[a]));
-  hyperaxiom[2] imem_eq: initFlag.1 ==> (forall(a : addr_t) :: (in_rng.1[a, isolated_rng_lo.1, isolated_rng_hi.1]) ==> (imem.1[a] == imem.2[a]));
+  // Removed init_flag
+  hyperaxiom[2] imem_eq: (forall(a : addr_t) :: (in_rng.1[a, isolated_rng_lo.1, isolated_rng_hi.1]) ==> (imem.1[a] == imem.2[a]));
   // Both the CPUs enter isolated mode at the same time
-  hyperaxiom[2] imode: (!initFlag.1) ==> ((inst2op.1[inst.1] == op_imode_enter || inst2op.1[inst.2] == op_imode_enter) ==> (inst.1 == inst.2)); 
+  // Removed init_flag
+  hyperaxiom[2] imode: ((inst2op.1[inst.1] == op_imode_enter || inst2op.1[inst.2] == op_imode_enter) ==> (inst.1 == inst.2)); 
   //hyperaxiom[2] fault: (step.1 == 3) ==> (mode.1 != mode.2);
-  axiom (forall (a : addr_t) :: 
+  /*axiom (forall (a : addr_t) :: 
           (a == imode_enter_addr) 
               ==> in_isolated_memory(a));
 
   axiom (forall (a : addr_t) :: 
 	     (a == nmode_exit_addr) 
-              ==> !in_isolated_memory(a));	
+              ==> !in_isolated_memory(a));*/	
   //hyperinvariant[2] eq_dmem: (forall (a : addr_t) :: (in_rng.1[a, isolated_rng_lo.1, isolated_rng_hi.2] ==> (dmem.1[a] == dmem.2[a])));
   //hyperinvariant[2] eq_reg_init: initFlag.1 ==> (forall(a : addr_t) :: (in_rng.1[a, isolated_rng_lo.1, isolated_rng_hi.1]) ==> (imem.1[a] == imem.2[a]));
   hyperinvariant[2] eq_mode: (mode.1 == mode.2);
