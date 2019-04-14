@@ -402,7 +402,8 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
       eq =>
         val nextTaintVar = nextTaintVars(eq.operands(0))
         val t1 = getT1Taint(eq.operands(1), prevTaintVars)
-        val t1Conjunct = smt.OperatorApplication(smt.EqualityOp, List(nextTaintVar(0), setToConjunct(t1)))
+        //val t1Conjunct = smt.OperatorApplication(smt.EqualityOp, List(nextTaintVar(0), setToConjunct(t1)))
+        val t1Conjunct = smt.OperatorApplication(smt.ImplicationOp, List(setToConjunct(t1), nextTaintVar(0)))
         t1Conjunct
     }
 
@@ -412,8 +413,10 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
         val nextTaintVar = nextTaintVars(eq.operands(0))
         val t1 = getT1Taint(eq.operands(1), prevTaintVars)
         val t2 = getT2Taint(eq.operands(1), prevTaintVars)
-        val t1Conjunct = smt.OperatorApplication(smt.EqualityOp, List(nextTaintVar(0), setToConjunct(t1)))
+        //val t1Conjunct = smt.OperatorApplication(smt.EqualityOp, List(nextTaintVar(0), setToConjunct(t1)))
         val t2Conjunct = smt.OperatorApplication(smt.EqualityOp, List(nextTaintVar(1), setToConjunct(t2)))
+        val t1Conjunct = smt.OperatorApplication(smt.ImplicationOp, List(setToConjunct(t1), nextTaintVar(0)))
+        //val t2Conjunct = smt.OperatorApplication(smt.ImplicationOp, List(setToConjunct(t2), nextTaintVar(1)))
         List(t1Conjunct, t2Conjunct)
     } ++ taints1
 
@@ -424,7 +427,7 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
 
   }
 
-  def getNextTaintLambdaV2(nextLambda: smt.Lambda, hyperAssumes: List[smt.Expr], assumes: List[smt.Expr], scope: Scope) = {
+  def getNextTaintLambdaV2(nextLambda: smt.Lambda, hyperAssumes: List[smt.Expr], assumes: List[smt.Expr], hyperAsserts: List[AssertInfo], scope: Scope) = {
     val m: Map[smt.Expr, List[smt.Symbol]] = Map.empty
     val nextVars = nextLambda.ids.takeRight(nextLambda.ids.length / 2)
     val prevVars = nextLambda.ids.take(nextLambda.ids.length / 2)
@@ -441,7 +444,7 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
 
     val taintExprs = getTaintExprs(nextLambda, prevTaintVars, nextTaintVars)
     val inputs = prevVars.flatMap(v => prevTaintVars(v)) ++ nextVars.flatMap(v => nextTaintVars(v))
-
+    convertHyperInvToTaint(nextLambda, hyperAsserts, nextTaintVars)
     val additionalConjunct = computeAConjunctV2(nextLambda, hyperAssumes, assumes,scope, nextTaintVars)
     val conjuncts = List(taintExprs) ++ List(additionalConjunct)
     val finalConjunct = if (conjuncts.length > 1) smt.OperatorApplication(smt.ConjunctionOp, conjuncts)
@@ -450,7 +453,33 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
 
     val lambda = smt.Lambda(inputs, finalConjunct)
     log.debug("Taint next lambda " + lambda.toString)
-    lambda
+    (lambda, prevTaintVars, nextTaintVars)
+
+  }
+
+  def convertHyperInvToTaint(nextLambda: smt.Lambda, hyperAsserts: List[AssertInfo], nextTaintVars: Map[smt.Expr, List[smt.Symbol]]) = {
+    UclidMain.println("$$$$$ The nextHyperAsserts: $$$$$ " + hyperAsserts.toString)
+    hyperAsserts.foreach(assert => log.debug("The assert exp: " + assert.expr))
+    // UclidMain.println("nextLambda Ids: " + nextLambda.ids.toString)
+    // Assuming the hyperAsserts to be equalities
+    val equalities = hyperAsserts.filter(
+      assert => assert.expr match {
+        case smt.OperatorApplication(op, operands) => op == smt.EqualityOp
+        case _ => false
+      })
+
+    val taintVars = equalities.map {
+      eql =>
+        val oper1 = eql.expr.asInstanceOf[smt.OperatorApplication].operands(0)
+        Predef.assert(oper1.asInstanceOf[smt.OperatorApplication].op.isInstanceOf[smt.HyperSelectOp])
+        //Check if it is an array expression or an ordinary variable
+        val oper = oper1.asInstanceOf[smt.OperatorApplication].operands(0)
+        nextTaintVars(oper)
+    }
+
+
+    UclidMain.println("The Taint Vars: " + taintVars.toString())
+    taintVars
 
   }
 
@@ -486,7 +515,7 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
         args*/
       //UclidMain.println("Crashing Here" + op.toString)
       case smt.ArraySelectOperation(a,index) =>
-        throw new Utils.UnimplementedException("T2 taint not defined for array store.")
+        throw new Utils.UnimplementedException("T2 taint not defined for array select.")
       case smt.ArrayStoreOperation(a,index,value) =>
           val t2_a = getT2Taint(a, prevVarTaints)
           val t1_val = setToConjunct(getT1Taint(value, prevVarTaints))
@@ -521,9 +550,11 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
       case smt.MakeTuple(args) => args.flatMap(e => getT1Taint(e, prevVarTaints)).toSet
       case opapp : smt.OperatorApplication =>
         if (opapp.op == smt.ITEOp) {
-          val t1_if = setToConjunct(getT1Taint(opapp.operands(1), prevVarTaints))
-          val t1_else = setToConjunct(getT1Taint(opapp.operands(2), prevVarTaints))
-          Set(smt.OperatorApplication(smt.ITEOp, List(opapp.operands(0), t1_if, t1_else)))
+          val t1_cond = setToConjunct(getT1Taint(opapp.operands(0), prevVarTaints))
+          val t1_if = smt.OperatorApplication(smt.ConjunctionOp, List(setToConjunct(getT1Taint(opapp.operands(1), prevVarTaints)), t1_cond))
+          val t1_else = smt.OperatorApplication(smt.ConjunctionOp, List(setToConjunct(getT1Taint(opapp.operands(2), prevVarTaints)), t1_cond))
+
+          Set(smt.OperatorApplication(smt.ITEOp, List(smt.OperatorApplication(smt.ConjunctionOp, List(t1_cond, opapp.operands(0))), t1_if, t1_else)))
         }
         else {
           val op = opapp.op
@@ -955,18 +986,18 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
     val init_lambda = simulator.getInitLambda(false, true, false, scope, label, filter)
     val next_lambda = simulator.getNextLambda(init_lambda._3, true, false, scope, label, filter)
     val taintInitLambda = getTaintInitLambdaV2(init_lambda._1, scope, taintSolver, init_lambda._5)
-    val taintNextLambda = getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, scope)
+    val taintNextLambda = getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, next_lambda._4, scope)
     val combinedInitLambda = getCombinedInitLambda(init_lambda._1, taintInitLambda)
-    val combinedNextLambda = getCombinedNextLambda(next_lambda._1, taintNextLambda)
+    val combinedNextLambda = getCombinedNextLambda(next_lambda._1, taintNextLambda._1)
 
-    val num_copies = 2
-    val numberOfSteps = bound
-    val simRecord = new simulator.SimulationTable
-    val taintFrameTable = new TaintFrameTable
-    var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
-    var havocTable = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
-    var prevTaintVarTable = new ArrayBuffer[List[smt.Expr]]()
-    var taintAssumes = new ArrayBuffer[smt.Expr]()
+    val num_copies          = 2
+    val numberOfSteps       = bound
+    val simRecord           = new simulator.SimulationTable
+    val taintFrameTable     = new TaintFrameTable
+    var prevVarTable        = new ArrayBuffer[List[List[smt.Expr]]]()
+    var havocTable          = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
+    var prevTaintVarTable   = new ArrayBuffer[List[smt.Expr]]()
+    var taintAssumes        = new ArrayBuffer[smt.Expr]()
 
     var stepOffset = 0
     //FIXME: Remove newInputSymbols

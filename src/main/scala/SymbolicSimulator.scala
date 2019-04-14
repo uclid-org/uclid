@@ -529,10 +529,10 @@ class SymbolicSimulator (module : Module) {
     val context = new Z3Interface()
     val lazySc = new LazySCSolver(this)
     val initTaintLambda = lazySc.getTaintInitLambdaV2(init_lambda._1, scope, context, init_lambda._5)
-    val nextTaintLambda = lazySc.getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, scope)
+    val nextTaintLambda = lazySc.getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, next_lambda._4, scope)
     val combinedInitLambda = lazySc.getCombinedInitLambda(init_lambda._1, initTaintLambda)
-    val combinedNextLambda = lazySc.getCombinedNextLambda(next_lambda._1, nextTaintLambda)
-
+    val combinedNextLambda = lazySc.getCombinedNextLambda(next_lambda._1, nextTaintLambda._1)
+    //h.convertHyperInvToTaint(next_lambda._1, next_lambda._4)
     //h.solveTaintLambdasV2(combinedInitLambda, combinedNextLambda, scope)
     h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
   }
@@ -542,6 +542,122 @@ class SymbolicSimulator (module : Module) {
       //Z3HornSolver.test1()
 
       lazySC.simulateLazySCV2(bound, scope, label, filter)
+  }
+
+  def symbolicSimulateLambdasHyperAssert(startStep: Int, numberOfSteps: Int, hypPropIdx: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
+                              scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean),
+                              solver: smt.Context) = {
+    // At this point symbolTable must have the initial symbols.
+    resetState()
+
+    val init_lambda = getInitLambda(false, true, false, scope, label, filter)
+    val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
+    //val s = new LazySCSolver(this, solver)
+
+    val num_copies = getMaxHyperInvariant(scope)
+    val simRecord = new SimulationTable
+    var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
+    var havocTable = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
+
+    var inputStep = 0
+    for (i <- 1 to num_copies) {
+      var frames = new FrameTable
+      val initSymTab = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
+      inputStep += 1
+      frames += initSymTab
+      var prevVars = getVarsInOrder(initSymTab.map(_.swap), scope)
+      prevVarTable += prevVars
+      val init_havocs = getHavocs(init_lambda._1.e)
+      val havoc_subs = init_havocs.map {
+        havoc =>
+          val s = havoc.id.split("_")
+          val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+          (havoc, newHavocSymbol(name, havoc.typ))
+      }
+      havocTable += havoc_subs
+      val init_conjunct = substitute(betaSubstitution(init_lambda._1, prevVars.flatten), havoc_subs)
+      addAssumptionToTree(init_conjunct, List.empty)
+      simRecord += frames
+    }
+
+    val hyperAssumesInit = rewriteHyperAssumes(
+      init_lambda._1, 0, init_lambda._5, simRecord, 0, scope, prevVarTable.toList)
+    hyperAssumesInit.foreach {
+      hypAssume =>
+        addAssumptionToTree(hypAssume, List.empty)
+    }
+
+    /*
+    val asserts_init = rewriteAsserts(
+      init_lambda._1, init_lambda._2, 0,
+      prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
+      simRecord.clone(), havocTable(0))
+
+    asserts_init.foreach {
+      assert =>
+        // FIXME: simTable
+        addAssertToTree(assert)
+    }
+    */
+    val filteredInitHyperAssert = List(init_lambda._4(hypPropIdx))
+    val asserts_init_hyper = rewriteHyperAsserts(
+      init_lambda._1, 0, filteredInitHyperAssert, simRecord, 0, scope, prevVarTable.toList)
+    asserts_init_hyper.foreach {
+      assert =>
+        // FIXME: simTable
+        addAssertToTree(assert)
+    }
+
+    var symTabStep = symbolTable
+    for (i <- 1 to numberOfSteps) {
+      for (j <- 1 to num_copies) {
+        symTabStep = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
+        inputStep += 1
+        simRecord(j - 1) += symTabStep
+        val new_vars = getVarsInOrder(symTabStep.map(_.swap), scope)
+        val next_havocs = getHavocs(next_lambda._1.e)
+        val havoc_subs = next_havocs.map {
+          havoc =>
+            val s = havoc.id.split("_")
+            val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+            (havoc, newHavocSymbol(name, havoc.typ))
+        }
+        val next_conjunct = substitute(betaSubstitution(next_lambda._1, (prevVarTable(j - 1) ++ new_vars).flatten), havoc_subs)
+        addAssumptionToTree(next_conjunct, List.empty)
+        havocTable(j - 1) = havoc_subs
+        prevVarTable(j - 1) = new_vars
+      }
+
+      val hyperAssumesNext = rewriteHyperAssumes(next_lambda._1, numberOfSteps, next_lambda._5, simRecord, i, scope, prevVarTable.toList)
+      hyperAssumesNext.foreach {
+        hypAssume =>
+          addAssumptionToTree(hypAssume, List.empty)
+      }
+      /*
+      // Asserting on-HyperInvariant assertions
+      // FIXME: simTable
+      val asserts_next = rewriteAsserts(
+        next_lambda._1, next_lambda._2, i,
+        getVarsInOrder(simRecord(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
+          prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord.clone(), havocTable(0))
+      asserts_next.foreach {
+        assert =>
+          addAssertToTree(assert)
+      }*/
+
+      // FIXME: simTable
+      defaultLog.debug("i: {}", i)
+      val filteredNextHyperAssert = List(next_lambda._4(hypPropIdx))
+      val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, numberOfSteps, filteredNextHyperAssert, simRecord, i, scope, prevVarTable.toList)
+      asserts_next_hyper.foreach {
+        assert => {
+          addAssertToTree(assert)
+        }
+      }
+    }
+    symbolTable = symTabStep
+    val results = assertionTree.verify(solver)
+    UclidMain.println("The results are: " + results)
   }
 
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
