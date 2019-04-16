@@ -41,21 +41,20 @@ package lang
 
 import com.typesafe.scalalogging.Logger
 
-class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[List[ExternalType]] {
+class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[List[FunctionDecl]] {
   lazy val logger = Logger(classOf[ModuleFunctionsImportCollector])
-  type T = List[ExternalType]
+  type T = List[FunctionDecl]
   override def applyOnModuleFunctionsImport(d : TraversalDirection.T, modFuncImport : ModuleFunctionsImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       logger.debug("statement: {}", modFuncImport.toString())
       val id = modFuncImport.id
       context.map.get(id) match{
         case Some(Scope.ModuleDefinition(mod)) =>
-          mod.function.map(f => (f.id -> f)) {
-            p => {
-              //TODO: Verify that ModuleExternal is correct here
-              ASTNode.introducePos(true, true, ModuleExternal(id, p._1), modFuncImport.position)
+          mod.functions.map {
+            f => {
+              ASTNode.introducePos(true, true, f, modFuncImport.position)
             }
-          }.toList ++ in
+          } ++ in
         case _ => in
       }
     } else {
@@ -64,7 +63,7 @@ class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[List[ExternalType]
   }
 }
 
-class ModuleFunctionsImportCollector extends ASTAnalyzer("ModuleFunctionsImportCollector" new ModuleFunctionsImportCollectorPass()) {
+class ModuleFunctionsImportCollector extends ASTAnalyzer("ModuleFunctionsImportCollector", new ModuleFunctionsImportCollectorPass()) {
   lazy val logger = Logger(classOf[ModuleFunctionsImportCollector])
   override def reset() {
     in = Some(List.empty)
@@ -73,11 +72,11 @@ class ModuleFunctionsImportCollector extends ASTAnalyzer("ModuleFunctionsImportC
     val externalIds = visitModule(module, List.empty, context)
     val newImports = externalIds.map {
       p => {
-        ASTNode.introducePos(true, true, FunctionDecl(p.typeId, p), p.position)
+        ASTNode.introducePos(true, true, p, p.position)
       }
     }
     logger.debug("newImports: " + newImports.toString())
-    val modP = Module(module.id, newIMports ++ module.decls, module.cmds, module.notes)
+    val modP = Module(module.id, newImports ++ module.decls, module.cmds, module.notes)
     return Some(modP)
   }
 }

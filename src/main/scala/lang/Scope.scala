@@ -261,7 +261,7 @@ case class Scope (
           case None => mapAcc
         }
         case ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) | 
-             ModuleFunctionsImportDecl(_) | InitDecl(_) | NextDecl(_) | => mapAcc
+             ModuleFunctionsImportDecl(_) | InitDecl(_) | NextDecl(_)  => mapAcc
       }
     }
     val m2 = m.decls.foldLeft(m1){(mapAcc, decl) =>

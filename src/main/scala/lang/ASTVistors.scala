@@ -90,7 +90,7 @@ trait ReadOnlyPass[T] {
   def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : Scope) : T = { in }
   def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : Scope) : T = { in }
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : Scope) : T = { in }
-  def applyOnModuleFunctionsImport(d : TraversalDirection.T, modFuncImport : ModuleFunctionsImportDecl, in : T, context : Scope) : T { in }
+  def applyOnModuleFunctionsImport(d : TraversalDirection.T, modFuncImport : ModuleFunctionsImportDecl, in : T, context : Scope) : T = { in }
   def applyOnNonterminal(d : TraversalDirection.T, nonterm : NonTerminal, in : T, context : Scope) : T = { in }
   def applyOnGrammar(d : TraversalDirection.T, grammar: GrammarDecl, in : T, context : Scope) : T = { in }
   def applyOnSynthesisFunction(d : TraversalDirection.T, synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = { in }
@@ -101,7 +101,7 @@ trait ReadOnlyPass[T] {
   def applyOnSharedVars(d : TraversalDirection.T, sharedVars : SharedVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnConstant(d : TraversalDirection.T, cnst : ConstantsDecl, in : T, context : Scope) : T = { in }
   def applyOnConstantLit(d : TraversalDirection.T, cnst : ConstantLitDecl, in : T, context : Scope) : T = { in }
-  def applyOnModuleConstantsImport(d : TraversalDirection.T, modConstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T { in }
+  def applyOnModuleConstantsImport(d : TraversalDirection.T, modConstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T = { in }
   def applyOnSpec(d : TraversalDirection.T, spec : SpecDecl, in : T, context : Scope) : T = { in }
   def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : Scope) : T = { in }
   def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : T, context : Scope) : T = { in }
@@ -367,7 +367,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnFunction(TraversalDirection.Up, func, result, context)
     return result
   }
-  def visitModuleFunctionsImport(moduleFunctionsImport : ModuleFunctionImportDecl, in : T, context : Scope) : T = {
+  def visitModuleFunctionsImport(moduleFunctionsImport : ModuleFunctionsImportDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnModuleFunctionsImport(TraversalDirection.Down, moduleFunctionsImport, result, context)
     result = visitIdentifier(moduleFunctionsImport.id, result, context)
@@ -1309,7 +1309,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitModuleConstantsImport(modCnstImp : ModuleConstantsImportDecl, context : Scope) : Option[ModuleConstantsImportDecl] = {
-    val idOpt = visitIdentifier(modConstImp.id, context)
+    val idOpt = visitIdentifier(modCnstImp.id, context)
     val modCnstImpP = idOpt match {
       case Some(id) => pass.rewriteModuleConstantsImport(ModuleConstantsImportDecl(id), context)
       case None => None

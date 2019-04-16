@@ -5,6 +5,13 @@ class ModuleCleanerPass(mainModuleName : Identifier) extends RewritePass {
   override def rewriteModuleTypesImport(modTypImport : ModuleTypesImportDecl, ctx : Scope) : Option[ModuleTypesImportDecl] = {
     None
   }
+  override def rewriteModuleFunctionsImport(modFuncImport : ModuleFunctionsImportDecl, ctx : Scope) : Option[ModuleFunctionsImportDecl] = {
+    None
+  }
+  override def rewriteModuleConstantsImport(modCnstImport : ModuleConstantsImportDecl, ctx : Scope) :
+  Option[ModuleConstantsImportDecl] = {
+    None
+  }
   override def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
     if (ctx.module.get.id != mainModuleName) {
       None

@@ -41,9 +41,9 @@ package lang
 
 import com.typesafe.scalalogging.Logger
 
-class ModuleConstantsImportCollectorPass extends ReadOnlyPass[List[ExternalType]] {
+class ModuleConstantsImportCollectorPass extends ReadOnlyPass[List[ConstantsDecl]] {
   lazy val logger = Logger(classOf[ModuleConstantsImportCollector])
-  type T = List[ExternalType]
+  type T = List[ConstantsDecl]
   override def applyOnModuleConstantsImport(d : TraversalDirection.T, modCnstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       logger.debug("statement: {}", modCnstImport.toString())
@@ -52,9 +52,9 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[List[ExternalType]
         case Some(Scope.ModuleDefinition(mod)) =>
           mod.constantDecls.map {
             p => {
-              ASTNode.introducePos(true, true, ModuleExternal(id, p._1), modCnstImport.postion)
+              ASTNode.introducePos(true, true, p, modCnstImport.position)
             }
-          }.toList ++ in
+          } ++ in
         case _ => in
       }
     } else {
@@ -63,8 +63,8 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[List[ExternalType]
   }
 }
 
-class ModuleConstantsImportCollector extends ASTAnalyzer("ModuleConstantsImportCollector", new ModuleConstantsImportCollecatorPass()) {
-  lazy val logger = Logger(classOf[ModuleConstantsImportCollecter])
+class ModuleConstantsImportCollector extends ASTAnalyzer("ModuleConstantsImportCollector", new ModuleConstantsImportCollectorPass()) {
+  lazy val logger = Logger(classOf[ModuleConstantsImportCollector])
   override def reset() {
     in = Some(List.empty)
   }
@@ -72,7 +72,7 @@ class ModuleConstantsImportCollector extends ASTAnalyzer("ModuleConstantsImportC
     val externalIds = visitModule(module, List.empty, context)
     val newImports = externalIds.map {
       p => {
-        ASTNode.introduce(true, true, ConstantsDecl(p.typeId, p), p.position)
+        ASTNode.introducePos(true, true, ConstantsDecl(p.ids, p.typ), p.position)
       }
     }
     logger.debug("newImports: " + newImports.toString())

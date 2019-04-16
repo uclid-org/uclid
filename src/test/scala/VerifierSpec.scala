@@ -55,11 +55,16 @@ object VerifierSpec {
     // val config = UclidMain.Config("main", List("/usr/bin/z3", "-in", "-smt2"), List.empty)
     val results = UclidMain.execute(mainModule.get, config)
     val outputString = UclidMain.stringOutput.toString()
+    println(results.count((e) => e.result.isFalse))
+    println(results)
     assert (results.count((e) => e.result.isFalse) == nFail)
+
     assert (results.count((e) => e.result.isUndefined) == 0)
     outputString
   }
 }
+
+/* 
 class VerifierSanitySpec extends FlatSpec {
   "test-assert-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-assert-1.ucl", 0)
@@ -116,6 +121,7 @@ class VerifierSanitySpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/test-assume-primed-var.ucl", 6)
   }
 }
+*/
 class BasicVerifierSpec extends FlatSpec {
   "test-bv-assign.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-bv-assign.ucl", 0)
@@ -186,6 +192,7 @@ class BasicVerifierSpec extends FlatSpec {
   ignore /*"test-const-array.ucl"*/ should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-const-array.ucl", 1)
   }
+  
   "test-record-havoc.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-record-havoc.ucl", 0)
   }
@@ -202,6 +209,7 @@ class BasicVerifierSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/test-unsigned-comparators-1.ucl", 0)
   }
 }
+/*
 class ProcedureVerifSpec extends FlatSpec {
   "test-inliner.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-inliner.ucl", 0)
@@ -286,6 +294,7 @@ class QuantifierVerifSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/test-exists-0.ucl", 0)
   }
 }
+*/
 class ModuleVerifSpec extends FlatSpec {
   "test-modules.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-modules.ucl", 0)
@@ -314,6 +323,9 @@ class ModuleVerifSpec extends FlatSpec {
   "test-func-import-2.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-func-import-2.ucl", 0)
   }
+  "test-func-import-3.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-func-import-3.ucl", 4)
+  }
   "test-procedure-postcondition-1.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-procedure-postcondition-1.ucl", 1)
   }
@@ -330,6 +342,7 @@ class ModuleVerifSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/sp-basic.ucl", 0)
   }
 }
+/*
 class LTLVerifSpec extends FlatSpec {
   "test-history-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-history-1.ucl", 0)
@@ -395,6 +408,7 @@ class LTLVerifSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/ltl-toy-1.ucl", 11)
   }
 }
+*/
 
 class HyperPropertySpec extends FlatSpec {
   ignore /*"test-hyperproperty-4.ucl"*/ should "verify all assertions." in {
