@@ -1,4 +1,4 @@
-(set-option :fp.engine spacer)
+(set-option :fixedpoint.engine spacer)
 
 (declare-rel inv (Int Bool Bool (Array Int Bool) (Array Int  Bool)))
 (declare-rel err ())

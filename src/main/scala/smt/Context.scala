@@ -263,7 +263,7 @@ object Context
       case Some(eP) => eP
       case None =>
         val eP = e match {
-          case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) =>
+          case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) | ConstArray(_, _) =>
             rewrite(e)
           case OperatorApplication(op, operands) =>
             val operandsP = operands.map(arg => rewriteExpr(arg, rewrite, memo))

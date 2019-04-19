@@ -18,13 +18,16 @@ trait Hashable {
     ByteBuffer.allocate(4).putInt(i).array()
   }
 
-  def computeMD5Hash() : Array[Byte] = computeMD5Hash(List.empty[Any])
+  def computeMD5Hash() : Array[Byte] = computeMD5Hash(List.empty[Any])  // Empty argument call on computeMD5Hash
   def computeMD5Hash(args : Any*) : Array[Byte] = {
     md5.reset()
     md5.update(intToBytes(hashBaseId))
     md5.update(intToBytes(hashId))
+    // Recursively compute the md5 hash
     def computeMD5HashR(a : Any) : Unit = {
       a match {
+        case None => computeMD5HashR(0)
+        case Some(opt) => computeMD5HashR(opt)
         case integer : Int => md5.update(intToBytes(integer))
         case str     : String => md5.update(str.getBytes("UTF-8"))
         case bigint  : BigInt => md5.update(bigint.toByteArray)
@@ -33,7 +36,10 @@ trait Hashable {
         case tuple3  : (Any, Any, Any) => { computeMD5HashR(tuple3._1); computeMD5HashR(tuple3._2); computeMD5HashR(tuple3._3) }
         case lista   : List[Any] => lista.foreach(e => computeMD5HashR(e))
         case hash    : Hashable => md5.update(hash.md5hashCode)
-        case _ => throw new Utils.RuntimeError("Should not get here; Missing case!")
+        case _ => {
+          UclidMain.println("Can't convert: " + a.getClass().toString())
+          throw new Utils.RuntimeError("Should not get here; Missing case!" +  a.getClass().toString())
+        }
       }
     }
     args.foreach(arg => computeMD5HashR(arg))
@@ -46,9 +52,10 @@ trait Hashable {
   def finalize(h : Int, l : Int) : Int = MH.finalizeHash(h, l)
   def hashBaseValue = mix(hashBaseId, hashId)
 
-  def computeHash = finalize(hashBaseValue, 1)
+  def computeHash = finalize(hashBaseValue, 1)  // Empty argument call on computeHash
   def computeHash(args : Any*) : Int = {
     val start = hashBaseValue
+    // Recursively compute the murmur3 hash
     def computeHashR(acc : Int, a : Any) : Int = {
       a match {
         case integer : Int => mix(acc, integer)

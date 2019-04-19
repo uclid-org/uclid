@@ -1,4 +1,4 @@
-module arr
+module main 
 {
   input a, b : integer;
   var mem    : [integer]integer;
@@ -25,14 +25,19 @@ module arr
     // a_t = true (as we are passing in same a to both instances below)
     // b_t = true (as we are passing in same b to both instances below)
   }
-
+  hyperaxiom[2] eq_a: a.1 == a.2;
+  hyperaxiom[2] eq_b: b.1 == b.2;
+  hyperinvariant[2] eq_d: d.1 == d.2;
+  hyperinvariant[2] eq_mem: mem.1 == mem.2;
   control {
-    unroll(5);
+    v = lazysc(200);
+    //unroll(200);
     check;
     print_results;
   }
 }
 
+/*
 module main
 {
   input a, b    : integer;
@@ -50,7 +55,7 @@ module main
   invariant eq_mem: (arr1.mem == arr2.mem);
 
   control {
-    v = unroll(200);
+    v = induction;
     check;
     print_results;
     v.print_cex(
@@ -59,3 +64,4 @@ module main
     );
   }
 }
+*/
