@@ -41,6 +41,22 @@ package lang
 
 import com.typesafe.scalalogging.Logger
 
+//TODO: Rewrite method that calls `applyOnModuleFunctionsImport` to collect external mappings (just
+//        functions) and aggregate the function declarations; if any identifiers clash, throw a 
+//        redeclaration error. 
+//
+//        NOTE: We could also enhance UCLID's type inference system by using the function signature 
+//        ( paramater and return types ) to identify a function.
+
+//TODO: Pass the aggregated list to a following step, where all of the functions in the module are
+//        checked for declaration in the module or checked in the aggregated list and written as 
+//        an external type.
+//
+//        NOTE: If the identifier is double declared in the current environment and the imported
+//          environment, then throw a DoubleDecl error. If not declared in either, then throw 
+//          a NotDefined error.
+//        
+
 class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[List[FunctionDecl]] {
   lazy val logger = Logger(classOf[ModuleFunctionsImportCollector])
   type T = List[FunctionDecl]

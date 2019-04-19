@@ -7,6 +7,7 @@ module beezee {
   
   function * = common.*;
 
+
   type number_t = common.number_t;
 
   input z_prime : number_t;
@@ -29,14 +30,16 @@ module beezee {
 }
 
 module main {
-  //function * = beezee.*;
+
+  function * = beezee.*;
 
   type number_t = common.number_t;
 
-  input z_p : number_t;
+  input z_p : beezee.number_t;
 
   instance bz1 : beezee(z_prime : (z_p));
   instance bz2 : beezee(z_prime : (z_p));
+
 
   init {
     assume (bz1.b == bz2.b);
@@ -49,8 +52,8 @@ module main {
 
   invariant z_eq : (bz1.z == bz2.z);
   invariant b_eq : (bz1.b == bz2.b);
-  invariant z_le_b1 : (bz1.z == common.zero()) ==> beezee.le(bz1.z, bz1.b);
-  invariant z_le_b2 : (bz2.z == common.zero()) ==> beezee.le(bz2.z, bz2.b);
+  invariant z_le_b1 : (bz1.z == zero()) ==> le(bz1.z, bz1.b);
+  invariant z_le_b2 : (bz2.z == zero()) ==> le(bz2.z, bz2.b);
 
   control {
     // print_module;

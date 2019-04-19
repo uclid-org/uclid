@@ -191,7 +191,7 @@ object UclidMain {
 
   def createCompilePassManager(test: Boolean, mainModuleName: lang.Identifier) = {
     val passManager = new PassManager("compile")
-    // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
+    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ModuleCanonicalizer())
     passManager.addPass(new LTLOperatorIntroducer())
     passManager.addPass(new ModuleTypesImportCollector())
