@@ -17,7 +17,9 @@ module beezee {
   function le(x : number_t, y : number_t) : boolean;
   define le_b(a : number_t) : boolean = le(a, b);
 
-  axiom (forall (z : number_t) :: (z == zero()) ==> le_b(z));
+  //axiom (forall (z : number_t) :: (z == zero()) ==> le_b(z));
+  // Redefined the above axiom as a stateless axiom
+  axiom (forall (x : number_t, y : number_t) :: (x == zero()) ==> le(x, y));
 
   init {
     z = zero();
@@ -56,7 +58,7 @@ module main {
   invariant z_le_b2 : (bz2.z == zero()) ==> le(bz2.z, bz2.b);
 
   control {
-    // print_module;
+    print_module;
     v = induction;
     check;
     print_results;

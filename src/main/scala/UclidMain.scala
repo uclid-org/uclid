@@ -197,6 +197,9 @@ object UclidMain {
     passManager.addPass(new ModuleTypesImportCollector())
     passManager.addPass(new ModuleConstantsImportCollector())
     passManager.addPass(new ModuleFunctionsImportCollector())
+    //passManager.addPass(new ModuleFunctionsStatelessAxiomFinder(mainModuleName))
+    //passManager.addPass(new ModuleFunctionsStatelessAxiomImporter(mainModuleName))
+
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new FuncExprRewriter())
