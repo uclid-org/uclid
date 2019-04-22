@@ -7,7 +7,7 @@ module common {
 module main {
   type * = common.*;
   const * = common.*;
-  
+
   var sum : word_t;
   var num : word_t;
 

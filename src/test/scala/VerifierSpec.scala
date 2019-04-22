@@ -55,8 +55,6 @@ object VerifierSpec {
     // val config = UclidMain.Config("main", List("/usr/bin/z3", "-in", "-smt2"), List.empty)
     val results = UclidMain.execute(mainModule.get, config)
     val outputString = UclidMain.stringOutput.toString()
-    println(results.count((e) => e.result.isFalse))
-    println(results)
     assert (results.count((e) => e.result.isFalse) == nFail)
 
     assert (results.count((e) => e.result.isUndefined) == 0)
@@ -310,6 +308,9 @@ class ModuleVerifSpec extends FlatSpec {
   }
   "test-const-import-2.ucl" should "fail to verify 4 assertions." in {
     VerifierSpec.expectedFails("./test/test-const-import-2.ucl", 4)
+  }
+  "test-const-import-3.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-const-import-3.ucl", 0)
   }
   "test-func-import-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-func-import-1.ucl", 0)
