@@ -56,6 +56,7 @@ object VerifierSpec {
     val results = UclidMain.execute(mainModule.get, config)
     val outputString = UclidMain.stringOutput.toString()
     assert (results.count((e) => e.result.isFalse) == nFail)
+
     assert (results.count((e) => e.result.isUndefined) == 0)
     outputString
   }
@@ -308,11 +309,20 @@ class ModuleVerifSpec extends FlatSpec {
   "test-const-import-2.ucl" should "fail to verify 4 assertions." in {
     VerifierSpec.expectedFails("./test/test-const-import-2.ucl", 4)
   }
+  "test-const-import-3.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-const-import-3.ucl", 0)
+  }
   "test-func-import-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-func-import-1.ucl", 0)
   }
   "test-func-import-2.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-func-import-2.ucl", 0)
+  }
+  "test-func-import-3.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-func-import-3.ucl", 0)
+  }
+  "test-func-import-4.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-func-import-4.ucl", 0)
   }
   "test-procedure-postcondition-1.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-procedure-postcondition-1.ucl", 1)
@@ -395,7 +405,6 @@ class LTLVerifSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/ltl-toy-1.ucl", 11)
   }
 }
-
 class HyperPropertySpec extends FlatSpec {
   ignore /*"test-hyperproperty-4.ucl"*/ should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-hyperproperty-4.ucl", 0)

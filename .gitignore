@@ -20,3 +20,4 @@ tutorial/tutorial.log
 tutorial/tutorial.out
 tutorial/tutorial.toc
 *.swp
+Makefile
