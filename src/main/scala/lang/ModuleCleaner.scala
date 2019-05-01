@@ -5,13 +5,6 @@ class ModuleCleanerPass(mainModuleName : Identifier) extends RewritePass {
   override def rewriteModuleTypesImport(modTypImport : ModuleTypesImportDecl, ctx : Scope) : Option[ModuleTypesImportDecl] = {
     None
   }
-  override def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
-    if (ctx.module.get.id != mainModuleName) {
-      None
-    } else {
-      Some(proc)
-    }
-  }
   override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = {
     val declsP = module.decls.sortWith((d1, d2) => d1.hashId < d2.hashId)
     Some(Module(module.id, declsP, module.cmds, module.notes))

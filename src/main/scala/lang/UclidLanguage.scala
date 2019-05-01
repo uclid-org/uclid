@@ -1114,29 +1114,34 @@ sealed abstract class Statement extends ASTNode {
   val isLoop = false
   val hasLoop = false
   val hasCall : Boolean
+  val hasInternalCall : Boolean
   def toLines : List[String]
 }
 case class SkipStmt() extends Statement {
   override def toLines = List("skip; // " + position.toString)
   override val hasCall = false
+  override val hasInternalCall = false
   override val hashId = 3000
   override val md5hashCode = computeMD5Hash
 }
 case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assert " + e + "; // " + position.toString)
   override val hasCall = false
+  override val hasInternalCall = false
   override val hashId = 3001
   override val md5hashCode = computeMD5Hash(e, id)
 }
 case class AssumeStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assume " + e + "; // " + position.toString)
   override val hasCall = false
+  override val hasInternalCall = false
   override val hashId = 3002
   override val md5hashCode = computeMD5Hash(e, id)
 }
 case class HavocStmt(havocable : HavocableEntity) extends Statement {
   override def toLines = List("havoc " + havocable.toString() + "; // " + position.toString)
   override val hasCall = false
+  override val hasInternalCall = false;
   override val hashId = 3003
   override val md5hashCode = computeMD5Hash(havocable)
 }
@@ -1144,6 +1149,7 @@ case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines =
     List(Utils.join(lhss.map (_.toString), ", ") + " = " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
   override val hasCall = false
+  override val hasInternalCall = false
   override val hashId = 3004
   override val md5hashCode = computeMD5Hash(lhss, rhss)
 }
@@ -1157,6 +1163,7 @@ case class BlockStmt(vars: List[BlockVarsDecl], stmts: List[Statement]) extends 
     List("}")
   }
   override val hasCall = stmts.exists(st => st.hasCall)
+  override val hasInternalCall = stmts.exists(st => st.hasInternalCall)
   override val hashId = 3005
   override val md5hashCode = computeMD5Hash(vars, stmts)
 }
@@ -1171,6 +1178,7 @@ case class IfElseStmt(cond: Expr, ifblock: Statement, elseblock: Statement) exte
   }
   override def toLines = lines
   override val hasCall = ifblock.hasCall || elseblock.hasCall
+  override val hasInternalCall = ifblock.hasInternalCall || elseblock.hasInternalCall
   override val hashId = 3006
   override val md5hashCode = computeMD5Hash(cond, ifblock, elseblock)
 }
@@ -1185,6 +1193,7 @@ case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: Stateme
     List(forLine) ++ body.toLines.map(PrettyPrinter.indent(1) + _) ++ List("}")
   }
   override val hasCall = body.hasCall
+  override val hasInternalCall = body.hasInternalCall
   override val hashId = 3007
   override val md5hashCode = computeMD5Hash(id, typ, range, body)
 }
@@ -1200,6 +1209,7 @@ case class WhileStmt(cond: Expr, body: Statement, invariants: List[Expr])
     List(headLine) ++ invLines ++ body.toLines.map(PrettyPrinter.indent(1) + _)
   }
   override val hasCall = body.hasCall
+  override val hasInternalCall = body.hasInternalCall
   override val hashId = 3008
   override val md5hashCode = computeMD5Hash(cond, body, invariants)
 }
@@ -1209,20 +1219,23 @@ case class CaseStmt(body: List[(Expr,Statement)]) extends Statement {
     body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.toLines } ++
     List("esac")
   override val hasCall = body.exists(b => b._2.hasCall)
+  override val hasInternalCall = body.exists(b => b._2.hasInternalCall)
   override val hashId = 3009
   override val md5hashCode = computeMD5Hash(body)
 }
-case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr])  extends Statement {
+case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr], instanceId : Option[Identifier], moduleId : Option[Identifier]=None)  extends Statement {
   override def toLines = List("call (" +
-    Utils.join(callLhss.map(_.toString), ", ") + ") = " + id + "(" +
+    Utils.join(callLhss.map(_.toString), ", ") + ") = " + (if (instanceId.isEmpty) "" else (instanceId.get.name + ".")) +  id + "(" +
     Utils.join(args.map(_.toString), ", ") + ") // " + id.position.toString)
   override val hasCall = true
+  override val hasInternalCall = instanceId.isEmpty
   override val hashId = 3010
-  override val md5hashCode = computeMD5Hash(id, callLhss, args)
+  override val md5hashCode = computeMD5Hash(id, callLhss, args, instanceId)
 }
 case class ModuleCallStmt(id: Identifier) extends Statement {
   override def toLines = List("next (" + id.toString +")")
   override val hasCall = false
+  override val hasInternalCall = false
   override val hashId = 3011
   override val md5hashCode = computeMD5Hash(id)
 }
@@ -1657,6 +1670,17 @@ case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) ext
   override val md5hashCode = computeMD5Hash(iMap.toList)
 }
 
+case class InstanceProcMapAnnotation(iMap: Map[List[Identifier], ProcedureDecl]) extends Annotation {
+  override def toString : String = {
+    val start = PrettyPrinter.indent(1) + "// instance_proc_map { "
+    val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), ".") + " ::==> " + p._2.toString)
+    val end = PrettyPrinter.indent(1) + "// } end_instance_proc_map"
+    Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
+  }
+  override val hashId = 4302
+  override val md5hashCode = computeMD5Hash(iMap.toList)
+}
+
 case class ExprRenameMapAnnotation(renameMap_ : MutableMap[Expr, BigInt], enumVarTypeMap_ : MutableMap[Identifier, Type], enumTypeRangeMap_ : MutableMap[Type, (BigInt, BigInt)]) extends Annotation {
   lazy val enumVarTypeMap : MutableMap[Identifier, Type] = enumVarTypeMap_
   lazy val enumTypeRangeMap : MutableMap[Type, (BigInt, BigInt)] = enumTypeRangeMap_
@@ -1768,11 +1792,15 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
 
   // replace the first occurrence of a specific annotation.
   def withReplacedAnnotation[T <: Annotation](note : T)(implicit tag: ClassTag[T]) : Module = {
-    val newNotes : List[Annotation] = notes.map {
-      n => {
-        n match {
-          case nt : T => note
-          case _ => n
+    val oldNoteOption = getAnnotation[T]
+    val newNotes : List[Annotation] = oldNoteOption match {
+      case None => notes :+ note
+      case Some(oldNote) => notes.map {
+        n => {
+          n match {
+            case nt : T => note
+            case _ => n
+          }
         }
       }
     }

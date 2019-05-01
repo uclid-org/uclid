@@ -1648,7 +1648,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val idP = visitIdentifier(st.id, context)
     val lhssP = st.callLhss.map(visitLhs(_, context)).flatten
     val argsP = st.args.map(visitExpr(_, context)).flatten
-    val stP = idP.flatMap((id) => pass.rewriteProcedureCall(ProcedureCallStmt(id, lhssP, argsP), context))
+    val instanceIdP = st.instanceId match { // TODO: Do we need this?
+      case Some(instanceId) => visitIdentifier(instanceId, context)
+      case _ => None
+    }
+    val moduleIdP = st.moduleId match {
+      case Some(moduleId) => visitIdentifier(moduleId, context)
+      case _ => None
+    }
+    val stP = idP.flatMap((id) => pass.rewriteProcedureCall(ProcedureCallStmt(id, lhssP, argsP, instanceIdP, moduleIdP), context))
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
 

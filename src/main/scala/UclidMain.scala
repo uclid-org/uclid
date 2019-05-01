@@ -226,7 +226,7 @@ object UclidMain {
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
     passManager.addPass(new BlockFlattener())
-    passManager.addPass(new NewProcedureInliner())
+    passManager.addPass(new NewInternalProcedureInliner())
     passManager.addPass(new PrimedVariableCollector())
     passManager.addPass(new PrimedVariableEliminator())
     passManager.addPass(new PrimedHistoryRewriter())
@@ -235,6 +235,7 @@ object UclidMain {
     passManager.addPass(new BlockFlattener())
     passManager.addPass(new ModuleCleaner(mainModuleName))
     passManager.addPass(new BlockVariableRenamer())
+    // passManager.addPass(new ASTPrinter())
     passManager
   }  
   /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
@@ -281,9 +282,9 @@ object UclidMain {
     passManager.addPass(new ModuleDependencyFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
-    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ModuleFlattener(mainModuleName))
+    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())

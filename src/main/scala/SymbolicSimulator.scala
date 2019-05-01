@@ -1729,7 +1729,7 @@ class SymbolicSimulator (module : Module) {
       case ForStmt(_, _, _, _) => throw new Utils.AssertionError("Cannot symbolically execute for loops.")
       case WhileStmt(_, _, _) => throw new Utils.AssertionError("Cannot symbolically execute while loops.")
       case CaseStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute case statement.")
-      case ProcedureCallStmt(id,lhss,args) => throw new Utils.AssertionError("Cannot symbolically execute procedure calls.")
+      case ProcedureCallStmt(id,lhss,args,instanceId,moduleId) => throw new Utils.AssertionError("Cannot symbolically execute procedure calls.")
       case ModuleCallStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute module calls.")
     }
   }
@@ -1758,7 +1758,7 @@ class SymbolicSimulator (module : Module) {
     case WhileStmt(_, body, invs) => return writeSet(body)
     case CaseStmt(body) =>
       return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2) }
-    case ProcedureCallStmt(id,lhss,args) =>
+    case ProcedureCallStmt(id,lhss,args,instanceId,moduleId) =>
       throw new Utils.RuntimeError("ProcedureCallStmt must have been inlined by now.")
     case ModuleCallStmt(id) =>
       throw new Utils.RuntimeError("ModuleCallStmt must have been inlined by now.")

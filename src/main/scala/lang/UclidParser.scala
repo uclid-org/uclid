@@ -447,9 +447,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       Lhs ~ rep("," ~> Lhs) ~ "=" ~ Expr ~ rep("," ~> Expr) <~ ";" ^^
         { case l ~ ls ~ "=" ~ r ~ rs => AssignStmt(l::ls, r::rs) } |
       KwCall ~> Id ~ ExprList <~ ";" ^^
-        { case id ~ args => ProcedureCallStmt(id, List.empty, args) } |
+        { case id ~ args => ProcedureCallStmt(id, List.empty, args, None) } |
       KwCall ~> LhsList ~ ("=" ~> Id) ~ ExprList <~ ";" ^^
-        { case lhss ~ id ~ args => ProcedureCallStmt(id, lhss, args) } |
+        { case lhss ~ id ~ args => ProcedureCallStmt(id, lhss, args, None) } |
+      KwCall ~> Id ~ "." ~ Id ~ ExprList <~ ";" ^^
+        { case instanceId ~ "." ~ procId ~ args => ProcedureCallStmt(procId, List.empty, args, Some(instanceId)) } |
+      KwCall ~> LhsList ~ ("=" ~> Id) ~ "." ~ Id ~ ExprList <~ ";" ^^
+        { case lhss ~ instanceId ~ "." ~ procId ~ args => ProcedureCallStmt(procId, lhss, args, Some(instanceId)) } |
       KwNext ~ "(" ~> Id <~ ")" ~ ";" ^^
         { case id => lang.ModuleCallStmt(id) } |
       KwIf ~ "(" ~ "*" ~ ")" ~> (BlkStmt <~ KwElse) ~ BlkStmt ^^

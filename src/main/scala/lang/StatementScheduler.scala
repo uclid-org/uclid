@@ -77,10 +77,18 @@ object StatementScheduler {
         val writeSets = bodies.map(b => writeSet(b._2, context).toSet)
         val allVars = writeSets.foldLeft(Set.empty[Identifier])((acc, set) => acc.union(set))
         writeSets.foldLeft(allVars)((acc, set) => acc.intersect(set))
-      case ProcedureCallStmt(id, callLhss, args) => 
+      case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) =>
         val module = context.module.get
-        val procedure = module.procedures.find(p => p.id == id).get
-        val modifies = procedure.modifies
+        val modifies = instanceId match {
+          case Some(iid) => {
+            List.empty
+          }
+          case None => {
+            val procedure = module.procedures.find(p => p.id == id).get
+            // val modifies = procedure.modifies
+            procedure.modifies
+          }
+        } 
         val modifiedIdents = callLhss.map(lhs => lhs match {
           case LhsId(_) | LhsNextId(_) => Some(lhs.ident)
           case _ => None 
@@ -124,9 +132,16 @@ object StatementScheduler {
         writeSetIds(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => writeSetIds(b._2, context)).toSet
-      case ProcedureCallStmt(id, callLhss, args) => 
+      case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => 
         val module = context.module.get
-        val procedure = module.procedures.find(p => p.id == id).get
+        val procedure = instanceId match {
+          case Some(iid) => {
+            val instanceOption = context.module.get.instances.find(inst => inst.instanceId == iid)
+            val instProcMod = context.get(instanceOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
+            instProcMod.procedures.find((p) => p.id == id).get
+          }
+          case _ => module.procedures.find(p => p.id == id).get
+        }
         val modifies = procedure.modifies
         callLhss.map(_.ident).toSet ++ modifies.toSet
       case ModuleCallStmt(id) =>
@@ -179,7 +194,7 @@ object StatementScheduler {
         readSet(cond) ++ readSet(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => readSet(b._1) ++ readSet(b._2, context)).toSet
-      case ProcedureCallStmt(_, lhss, args) =>
+      case ProcedureCallStmt(_, lhss, args, instanceId, moduleId) =>
         readSets(args)
       case ModuleCallStmt(id) =>
         val namedExprOpt = context.map.get(id)
@@ -234,7 +249,7 @@ object StatementScheduler {
         primeReadSet(cond) ++ primeReadSet(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => primeReadSet(b._1) ++ primeReadSet(b._2, context)).toSet
-      case ProcedureCallStmt(_, lhss, args) =>
+      case ProcedureCallStmt(_, lhss, args, instanceId, moduleId) =>
         primeReadSets(args)
       case ModuleCallStmt(id) =>
         val namedExprOpt = context.map.get(id)
