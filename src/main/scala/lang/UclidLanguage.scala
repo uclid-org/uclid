@@ -1453,6 +1453,12 @@ case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with Mod
   override def extNames = ids
   override def extType = typ
 }
+case class ModuleConstantsImportDecl(id: Identifier) extends Decl {
+  override val hashId = 3919 
+  override val md5hashCode = computeMD5Hash(id)
+  override def toString = "const * = %s.*; // %s".format(id.toString, position.toString)
+  override def declNames = List.empty
+}
 case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with ModuleExternal {
   override val hashId = 3911
   override val md5hashCode = computeMD5Hash(id, sig)
@@ -1460,6 +1466,12 @@ case class FunctionDecl(id: Identifier, sig: FunctionSig) extends Decl with Modu
   override def declNames = List(id)
   override def extNames = List(id)
   override def extType = sig.typ
+}
+case class ModuleFunctionsImportDecl(id: Identifier) extends Decl {
+  override val hashId = 3920
+  override val md5hashCode = computeMD5Hash(id)
+  override def toString = "function * = %s.*; // %s".format(id.toString, position.toString)
+  override def declNames = List.empty
 }
 case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl {
   override val hashId = 3912

@@ -584,10 +584,15 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val ConstDecl : PackratParser[lang.ConstantsDecl] = positioned {
       KwConst ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.ConstantsDecl(ids,typ)}
     }
-
+    lazy val ModuleConstsImportDecl : PackratParser[lang.ModuleConstantsImportDecl] = positioned {
+      KwConst ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleConstantsImportDecl(id) }
+    }
     lazy val FuncDecl : PackratParser[lang.FunctionDecl] = positioned {
       KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) <~ ";" ^^
       { case id ~ idtyps ~ rt => lang.FunctionDecl(id, lang.FunctionSig(idtyps, rt)) }
+    }
+    lazy val ModuleFuncsImportDecl : PackratParser[lang.ModuleFunctionsImportDecl] = positioned {
+      KwFunction ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleFunctionsImportDecl(id) }
     }
 
     // Grammar parsing begins here. //
@@ -728,7 +733,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Decl: PackratParser[Decl] =
       positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl |
-                  ModuleTypesImportDecl | SynthFuncDecl | DefineDecl | GrammarDecl |
+                  ModuleTypesImportDecl | ModuleFuncsImportDecl | ModuleConstsImportDecl |
+                  SynthFuncDecl | DefineDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstLitDecl | ConstDecl | ProcedureDecl |
                   InitDecl | NextDecl | SpecDecl | AxiomDecl)
