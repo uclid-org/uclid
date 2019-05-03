@@ -241,11 +241,12 @@ class SymbolicSimulator (module : Module) {
               case None    => "verify(%s)".format(procName.toString)
             }
             verifyProcedure(proc, label)
-          case "check" =>
+          case "check" => {
             lazySC match {
               case None => proofResults = assertionTree.verify(solver)
               case Some(lz) => proofResults = lz.assertionTree.verify(solver)
             }
+          }
           case "synthesize_invariant" =>
             synthesizer match {
               case None =>
@@ -1358,6 +1359,65 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
+  // Helper functions to verify a procedure
+  // NOTE: The following helper functions are writting in a lot of separate places, we
+  //          might want to figure out a way to place it somewhere so that we don't 
+  //          have to write it in all the classes we use it in (code cleanliness)
+  
+  def isStatelessExpression(id : Identifier, context : Scope) : Boolean = {
+    context.get(id) match {
+      case Some(namedExpr) =>
+        namedExpr match {
+          case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
+               Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
+               Scope.FunctionArg(_, _) | Scope.Define(_, _, _) |
+               Scope.Instance(_)       =>
+             false
+          case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
+               Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
+               Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
+               Scope.ConstantLit(_, _)    =>
+             true
+          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _)             |
+               Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
+               Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
+               Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
+               Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
+               Scope.BlockVar(_, _)           | Scope.SelectorField(_)          =>
+             throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
+        }
+      case None =>
+        throw new Utils.RuntimeError("Unknown identifiers should have been detected by now.")
+    }
+  }
+  def isStatelessExpr(e: Expr, context : Scope) : Boolean = {
+    e match {
+      case id : Identifier =>
+        isStatelessExpression(id, context)
+      case ei : ExternalIdentifier =>
+        true
+      case lit : Literal =>
+        true
+      case rec : Tuple =>
+        rec.values.forall(e => isStatelessExpr(e, context))
+      case OperatorApplication(ArraySelect(inds), args) =>
+        inds.forall(ind => isStatelessExpr(ind, context)) &&
+        args.forall(arg => isStatelessExpr(arg, context))
+      case OperatorApplication(ArrayUpdate(inds, value), args) =>
+        inds.forall(ind => isStatelessExpr(ind, context)) &&
+        args.forall(arg => isStatelessExpr(arg, context)) &&
+        isStatelessExpr(value, context)
+      case opapp : OperatorApplication =>
+        opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
+      case a : ConstArray =>
+        isStatelessExpr(a.exp, context)
+      case fapp : FuncApplication =>
+        isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
+      case lambda : Lambda =>
+        isStatelessExpr(lambda.e, context + lambda)
+    }
+  }
+
   def verifyProcedure(proc : ProcedureDecl, label : String) = {
     val procScope = context + proc
     val initSymbolTable = getInitSymbolTable(context)
@@ -1371,6 +1431,25 @@ class SymbolicSimulator (module : Module) {
     frameList.clear()
     frameList += initProcState
     logState(verifyProcedureLog, "initProcState", initProcState)
+
+    // add all axioms in procedure scope, independent of state variable references
+    (Scope.empty + proc).map.foreach {
+      case (id, e : Scope.AxiomVar) => {
+        assertionTree.addAssumption(evaluate(e.expr, initProcState, ArrayBuffer.empty, 0, procScope))
+      }
+      case _ => // Do nothing
+    }
+
+    // add all stateless module level axioms
+    context.map.foreach {
+      case (id, e : Scope.AxiomVar) => {
+        if (isStatelessExpr(e.expr, procScope)) {
+          assertionTree.addAssumption(evaluate(e.expr, initProcState, ArrayBuffer.empty, 0, procScope))
+        }
+      }
+      case _ => // Do nothing
+    }
+
     // add assumption.
     proc.requires.foreach(r => assertionTree.addAssumption(evaluate(r, initProcState, ArrayBuffer.empty, 0, procScope)))
     // simulate procedure execution.
