@@ -88,12 +88,12 @@ module cpu {
 module main {
 	type * = common.*;
 
-	var instm : inst_t;
+	var inst : inst_t;
 	var step : integer;
 	// var cacheline1value_main : word_t;
 	// var cacheline1valid_main : boolean;
 
-	instance prog : cpu(inst : (instm));
+	instance prog : cpu(inst : (inst));
 	
 	// procedure eq_var()
 		// modifies cacheline1valid_main, cacheline1value_main;
@@ -106,7 +106,7 @@ module main {
 		modifies prog;
 	{
 		call prog.exec_inst();
-		// call prog.exec_inst();
+		call prog.exec_inst();
 	}
 
 
@@ -114,7 +114,7 @@ module main {
 		// cacheline1valid_main = prog.L1C.cacheline1valid;
 		// cacheline1value_main = prog.L1C.cacheline1value;
 		step = 0;
-		instm = no_op_call;
+		inst = no_op_call;
 	}
 
 	next {
@@ -125,9 +125,9 @@ module main {
 		if (step' == 3) {
 			assert(false);
 		}
-		instm' = read_call;
 		// call prog.exec_inst();
 		// call do_fun();
+		inst' = read_call;
 		next(prog);
 	}
 

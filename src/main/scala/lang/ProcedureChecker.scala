@@ -85,13 +85,12 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
     if (d == TraversalDirection.Up) {
       context.procedure match {
         case Some(proc) =>
-          // TODO KEVIN: clean up
           call.instanceId match {
             case Some(iid) => {
-              val instanceOption = context.module.get.instances.find(inst => inst.instanceId == iid)
-              val instProcMod = context.get(instanceOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
-              val calledProc = instProcMod.procedures.find((p) => p.id == call.id).get
-              checkIdent(proc, instanceOption.get.instanceId, call.position, context, in)
+              val instOption = context.module.get.instances.find(inst => inst.instanceId == iid)
+              val instMod = context.get(instOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
+              val calledProc = instMod.procedures.find((p) => p.id == call.id).get
+              checkIdent(proc, instOption.get.instanceId, call.position, context, in)
             }
             case _ => {
               val calledProc = context.module.get.procedures.find(p => p.id == call.id).get
@@ -134,13 +133,12 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
                      Scope.SharedVar(_, _) => false
                 case Scope.Instance(_) => {
                   val hasInstProcCall = proc.body.asInstanceOf[BlockStmt].stmts.find(stmt => stmt match {
-                    // KEVIN TODO: Clean up
                     case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => (instanceId == v)
                     case _ => false
                   })
                   !hasInstProcCall.isEmpty
                 }
-                case _                     => true
+                case _ => true
               }
             case None => {
               true

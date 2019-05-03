@@ -171,10 +171,9 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           Utils.assert(context.module.isDefined, "Module must be defined!")
           val procOption = instanceId match {
             case Some(iid) => {
-              // KEVIN TODO: Clean up
-              val instProcOption = context.module.get.instances.find(inst => inst.instanceId == iid)
-              val instProcMod = context.get(instProcOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
-              instProcMod.procedures.find((p) => p.id == id)
+              val instOption = context.module.get.instances.find(inst => inst.instanceId == iid)
+              val instMod = context.get(instOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
+              instMod.procedures.find((p) => p.id == id)
             }
             case _ => context.module.get.decls.find((p) => p.isInstanceOf[ProcedureDecl] && p.asInstanceOf[ProcedureDecl].id == id)
           }

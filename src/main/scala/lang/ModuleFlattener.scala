@@ -118,7 +118,12 @@ object ModuleInstantiatorPass {
       (acc, mapping) => acc + (mapping._1 -> mapping._2.ident)
     }
     val rewriteMap2 = instVarMap.foldLeft(rewriteMap1) {
-      (acc, mapping) => acc + (mapping._1(1) -> mapping._2)
+      (acc, mapping) => {
+        rewriteMap1.exists(_._1 == mapping._1(1)) match {
+          case true => acc                                    // don't replace any shared var mappings or shadowed variables from instances
+          case false => acc + (mapping._1(1) -> mapping._2)
+        } 
+      }
     }
     rewriteMap2
   }
@@ -335,18 +340,15 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // add new variables and inputs.
   override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
     logger.debug("axioms:\n{}", newAxioms.map("  " + _.toString()))
-    val declsP1 : List[Decl] = newVariables ++ newInputs ++ newAxioms ++ module.decls
-    val declsP2 : List[Decl] = declsP1.map(decl => rewriter.visitDecl(decl, context).get)
-    val moduleP = Module(module.id, declsP2, module.cmds, module.notes)
+    val declsP : List[Decl] = newVariables ++ newInputs ++ newAxioms ++ module.decls
+    val moduleP = Module(module.id, declsP, module.cmds, module.notes)
     Some(moduleP)
   }
 
   // rewrite module.
   override def rewriteModuleCall(modCall : ModuleCallStmt, context : Scope) : Option[Statement] = {
     if (modCall.id == inst.instanceId) {
-      // Some(BlockStmt(List.empty, newInputAssignments ++ newNextStatements))
-      val blkStmt = BlockStmt(List.empty, newInputAssignments ++ newNextStatements)
-      rewriter.visitStatement(blkStmt, context)
+      Some(BlockStmt(List.empty, newInputAssignments ++ newNextStatements))
     } else {
       Some(modCall)
     }
@@ -438,15 +440,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
     if (callStmt.instanceId.get.name == inst.instanceId.name) {
-      // Replace sub procedure call if we're flattening that instance    
-      val procId = callStmt.id
+      // Replace the instance procedure call if we're flattening that particular instance    
       val procInst = context.module.get.instances.find(inst => inst.instanceId.name == callStmt.instanceId.get.name).get
       val procModule = context.get(procInst.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
       val procOption = procModule.procedures.find(p => p.id.name == callStmt.id.name)
-      procOption match {
-        case Some(proc) => Some(inlineProcedureCall(callStmt, procOption.get, context))
-        case None => throw new Utils.AssertionError("All internal procedures should have been inlined by now.")
-      }
+      val blkStmt = inlineProcedureCall(callStmt, procOption.get, context)
+      rewriter.visitStatement(blkStmt, context)
     } else {
       Some(callStmt)
     }

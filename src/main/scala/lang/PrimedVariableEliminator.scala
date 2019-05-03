@@ -56,12 +56,7 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
   override def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       lhs match {
-        case LhsNextId(id) => {
-          context.get(id) match {
-            case Some(Scope.StateVar(_,_)) => addToMap(id, in, "lhs", context)
-            case _ => in
-          }
-        }
+        case LhsNextId(id) => addToMap(id, in, "lhs", context)
         case _ => in
       }
     } else {
@@ -76,50 +71,6 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
       }
     } else {
       in
-    }
-  }
-  override def applyOnProcedureCall(d : TraversalDirection.T, callStmt : ProcedureCallStmt, mapIn : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up && context.environment == SequentialEnvironment && callStmt.instanceId.isEmpty) {
-      // KEVIN TODO: Clean up
-      val procId = callStmt.id
-      val module = context.module.get
-      val proc = callStmt.instanceId match {
-        case Some(iid) => {
-          val instanceOption = module.instances.find(inst => inst.instanceId == iid)
-          val instProcMod = context.get(instanceOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
-          instProcMod.procedures.find((p) => p.id == callStmt.id).get
-        }
-        case None => {
-          module.procedures.find(p => p.id == procId).get
-        }
-      }
-      // convert modified declarations to modified variables without instances
-      def baseModifies(proc : ProcedureDecl) : Set[Identifier] = {
-        proc.modifies.foldLeft(Set.empty[Identifier])((acc, modId) => context.get(modId) match {
-          case Some(Scope.Instance(_)) => acc ++ {
-            val instanceOption = module.instances.find(inst => inst.instanceId == modId)
-            proc.body.asInstanceOf[BlockStmt].stmts.foldLeft(Set.empty[Identifier])((acc2, stmt) => stmt match {
-              case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => {
-                val instProcMod = context.get(instanceOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
-                val instProc = instProcMod.procedures.find(p => p.id == id).get
-                acc2 ++ baseModifies(instProc)
-              }
-              case _ => {
-                // KEVIN TODO: Clean up
-                System.exit(0); acc2
-              }
-            })
-          }
-          case _ => {
-            // KEVIN TODO: Never got here
-            acc + modId
-          }
-        })
-      }
-      val mapOut = baseModifies(proc).foldLeft(mapIn)((acc, m) => (acc + (m -> NameProvider.get(m.toString() + "_modifies"))))
-      mapOut
-    } else {
-      mapIn
     }
   }
 }
@@ -147,14 +98,6 @@ class PrimedVariableEliminatorPass extends RewritePass {
   def getInitialAssigns(context : Scope) : List[AssignStmt] = {
     val primeVarMap = primedVariableCollector.primeVarMap.get
     primeVarMap.map(p => {
-      val renamed_rhs = context.get(p._1) match {
-        case None => {
-          // KEVIN TODO: messy; clean up
-          val instVarMod = context.map.find(namedExpr => namedExpr._2.isInstanceOf[Scope.ModuleDefinition] && namedExpr._2.asInstanceOf[Scope.ModuleDefinition].mod.vars.find(v => v._1.name == p._1.name) != None).get._2
-          instVarMod.asInstanceOf[Scope.ModuleDefinition].mod.getAnnotation[InstanceVarMapAnnotation].get.iMap
-        }
-        case _ => None
-      }
       (AssignStmt(List(LhsId(p._2)), List(p._1)))
     }).toList
   }
@@ -170,13 +113,14 @@ class PrimedVariableEliminatorPass extends RewritePass {
       case _ => true
     }).map {
       p => {
-        // KEVIN TODO: clean up
-        // val typ = context.typeOf(p._1).get
         val typ = context.get(p._1) match {
           case None => {
-            // KEVIN TODO: messy; clean up
-            val instVarMod = context.map.find(namedExpr => namedExpr._2.isInstanceOf[Scope.ModuleDefinition] && namedExpr._2.asInstanceOf[Scope.ModuleDefinition].mod.vars.find(v => v._1.name == p._1.name) != None).get._2
-            instVarMod.asInstanceOf[Scope.ModuleDefinition].mod.vars.find(v => v._1 == p._1).get._2
+            val namedExpr = context.map.find(namedExpr => {
+              namedExpr._2.isInstanceOf[Scope.ModuleDefinition] &&
+              namedExpr._2.asInstanceOf[Scope.ModuleDefinition].mod.vars.find(v => v._1.name == p._1.name) != None
+            }).get._2
+            val instVarMod = namedExpr.asInstanceOf[Scope.ModuleDefinition].mod
+            instVarMod.vars.find(v => v._1 == p._1).get._2
           }
           case _ => context.typeOf(p._1).get
         }
@@ -207,13 +151,7 @@ class PrimedVariableEliminatorPass extends RewritePass {
   override def rewriteLHS(lhs : Lhs, context : Scope) : Option[Lhs] = {
     lazy val primeVarMap = primedVariableCollector.primeVarMap.get
     lhs match {
-      case LhsNextId(id) => {
-        primeVarMap.get(id) match {
-          // KEVIN TODO: clean up
-          case Some(pvmId) => Some(LhsId(pvmId))
-          case None => None
-        }
-      }
+      case LhsNextId(id) => Some(LhsId(primeVarMap.get(id).get))
       case _ => Some(lhs)
     }
   }
