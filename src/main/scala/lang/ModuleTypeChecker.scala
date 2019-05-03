@@ -166,11 +166,17 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
               }
             }
           }
-        case ProcedureCallStmt(id, callLhss, args) =>
+        case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) =>
           var ret = in
           Utils.assert(context.module.isDefined, "Module must be defined!")
-          val procOption = context.module.get.decls.find((p) => p.isInstanceOf[ProcedureDecl] && p.asInstanceOf[ProcedureDecl].id == id)
-
+          val procOption = instanceId match {
+            case Some(iid) => {
+              val instOption = context.module.get.instances.find(inst => inst.instanceId == iid)
+              val instMod = context.get(instOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
+              instMod.procedures.find((p) => p.id == id)
+            }
+            case _ => context.module.get.decls.find((p) => p.isInstanceOf[ProcedureDecl] && p.asInstanceOf[ProcedureDecl].id == id)
+          }
           if (procOption.isEmpty) {
             ret = ret + ModuleError("Procedure does not exist", id.position)
             return ret

@@ -81,7 +81,7 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
   }
 }
 
-class NewProcedureInlinerPass() extends RewritePass {
+trait NewProcedureInlinerPass extends RewritePass {
   def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope) : Statement = {
     val procSig = proc.sig
     def getModifyLhs(id : Identifier) = {
@@ -99,8 +99,11 @@ class NewProcedureInlinerPass() extends RewritePass {
     val argMap : Map[Expr, Expr] = argPairs.map(p => p._1.asInstanceOf[Expr] -> p._2).toMap
     // map from formal to the fake variables created for return values.
     val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
-    // map from modified state variables to new variables created for them.
-    val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
+    // map from modified state variables to new variables created for them. ignore modified "instances"
+    val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.filter(m => context.get(m) match {
+      case Some(Scope.Instance(_)) => false
+      case _ => true
+    }).map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
     // map from st_var -> modify_var.
     val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1 -> p._2)).toMap
     // full rewrite map.
@@ -115,7 +118,10 @@ class NewProcedureInlinerPass() extends RewritePass {
     // variable declarations for return values.
     val retVars = retPairs.map(r => BlockVarsDecl(List(r._2._1), r._2._2))
     // variable declarations for the modify variables.
-    val modifyVars : List[BlockVarsDecl] = modifyPairs.map(p => BlockVarsDecl(List(p._2), context.get(p._1).get.typ))
+    val modifyVars : List[BlockVarsDecl] = modifyPairs.map(p => BlockVarsDecl(List(p._2), context.get(p._1) match {
+      case Some(v) => v.typ
+      case _ => lang.UndefinedType()
+    }))
     // list of all variable declarations.
     val varsToDeclare = retVars ++ modifyVars
 
@@ -165,18 +171,34 @@ class NewProcedureInlinerPass() extends RewritePass {
     }
     BlockStmt(varsToDeclare, stmtsP)
   }
+
+  override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = {
+    val instProcMap = module.procedures.foldLeft(Map.empty[List[Identifier], ProcedureDecl])((acc, proc) => acc + (List(module.id, proc.id) -> proc))
+    val moduleP = module.withReplacedAnnotation[InstanceProcMapAnnotation](InstanceProcMapAnnotation(instProcMap))
+    Some(moduleP)
+  }
+}
+
+class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
     val procId = callStmt.id
-    val proc = context.module.get.procedures.find(p => p.id == procId).get
-    if (!proc.body.hasCall) {
-      Some(inlineProcedureCall(callStmt, proc, context))
+    val procOption = context.module.get.procedures.find(p => p.id == procId)
+    if (!procOption.isEmpty && !procOption.get.body.hasInternalCall) {
+      Some(inlineProcedureCall(callStmt, procOption.get, context))
     } else {
-      Some(callStmt)
+      // Update the ProcedureCallStmt moduleId for external procedure inliner in module flattener
+      callStmt.instanceId match {
+        case Some(iid) => {
+          val procInstOption = context.module.get.instances.find(inst => inst.instanceId.name == callStmt.instanceId.get.name)
+          val modId = procInstOption.get.moduleId
+          Some(ProcedureCallStmt(callStmt.id, callStmt.callLhss, callStmt.args, callStmt.instanceId, Some(modId)))
+        }
+        case None => Some(ProcedureCallStmt(callStmt.id, callStmt.callLhss, callStmt.args, callStmt.instanceId, None))
+      }
     }
   }
 }
 
-class NewProcedureInliner() extends ASTRewriter("ProcedureInliner", new NewProcedureInlinerPass()) {
+class NewInternalProcedureInliner() extends ASTRewriter("InternalProcedureInliner", new NewInternalProcedureInlinerPass()) {
   override val repeatUntilNoChange = true
 }
-
