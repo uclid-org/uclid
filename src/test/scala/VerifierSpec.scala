@@ -339,6 +339,9 @@ class ModuleVerifSpec extends FlatSpec {
   "test-nested-instance-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-nested-instance-1.ucl", 0)
   }
+  "test-instance-procedure-call-0.ucl" should "verify all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-0.ucl", 1)
+  }
   "sp-basic.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/sp-basic.ucl", 0)
   }

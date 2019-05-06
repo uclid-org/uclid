@@ -134,16 +134,21 @@ object StatementScheduler {
         bodies.flatMap(b => writeSetIds(b._2, context)).toSet
       case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => 
         val module = context.module.get
-        val procedure = instanceId match {
+        val modifies = instanceId match {
           case Some(iid) => {
-            val instanceOption = context.module.get.instances.find(inst => inst.instanceId == iid)
-            val instProcMod = context.get(instanceOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
-            instProcMod.procedures.find((p) => p.id == id).get
+            //val instanceOption = context.module.get.instances.find(inst => inst.instanceId == iid)
+            //val instProcMod = context.get(instanceOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
+            //instProcMod.procedures.find((p) => p.id == id).get
+            //Do nothing
+            List.empty
           }
-          case _ => module.procedures.find(p => p.id == id).get
+          case _ => {
+            val procedure = module.procedures.find(p => p.id == id).get
+            procedure.modifies
+          }
         }
-        val modifies = procedure.modifies
         callLhss.map(_.ident).toSet ++ modifies.toSet
+
       case ModuleCallStmt(id) =>
         val namedExprOpt = context.map.get(id)
         Utils.assert(namedExprOpt.isDefined, "Must not haven an unknown instance here: " + id.toString())
