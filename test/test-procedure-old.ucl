@@ -1,0 +1,46 @@
+module main {
+  
+  var a : integer;
+
+  // Remove [inline] to see varying teest behavior
+  procedure [inline] two(flag : boolean) 
+    ensures (flag == false ==> a == old(a));
+    modifies a;
+  {
+    if (flag != false) {
+      a = 2;
+    }
+  }
+
+  procedure three(flag : boolean) 
+    modifies a;
+  {
+    if (a == 1) {
+      a = -1;
+    } else {
+      if (a == 0) {
+        a = 1;
+      } else {
+        a = 0;
+      }
+    }
+  }
+
+  procedure one() 
+    modifies a;
+  {
+    a = 1;
+    call two(false);
+    call three(false);
+    assert(false);
+  }
+
+  control {
+    verif_one = verify(one);
+    print_module;
+    check;
+    print_results;
+    verif_one.print_cex;
+  }
+
+}

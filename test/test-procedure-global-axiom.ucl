@@ -7,10 +7,6 @@ module main {
   axiom collision_resistance : (forall (x1, x2 : integer, t1, t2 : measurement_t) :: 
           (x1 == x2 && t1 == t2) <==> (hash(x1, t1) == hash(x2, t2)));
 
-  //axiom (forall (x1, x2 : integer, t1, t2 : measurement_t) :: 
-  //        (x1 == x2 && t1 == t2) <==> (hash(x1, t1) == hash(x2, t2)));
-
-  
   procedure test_hash(
     x1, x2 : integer,
     t1, t2 : measurement_t

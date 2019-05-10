@@ -1419,6 +1419,7 @@ class SymbolicSimulator (module : Module) {
   }
 
   def verifyProcedure(proc : ProcedureDecl, label : String) = {
+    println(proc.id)
     val procScope = context + proc
     val initSymbolTable = getInitSymbolTable(context)
     val initProcState0 = newInputSymbols(initSymbolTable, 1, context)
