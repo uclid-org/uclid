@@ -15,7 +15,7 @@ module main {
   invariant pending_is_true: (p);
   
   control {
-    //print_module;
+    print_module;
     v = unroll(5);
     check;
     print_results;

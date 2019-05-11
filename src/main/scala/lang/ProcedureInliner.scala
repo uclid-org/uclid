@@ -112,8 +112,12 @@ trait NewProcedureInlinerPass extends RewritePass {
     val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
     // map from old(var) -> var.
     val oldMap : Map[Identifier, Identifier] = modifyPairs.map(p => p._2 -> p._1).toMap
-    // rewriter object.
-    val oldRewriter = new OldExprRewriter(oldMap)
+    val oldRenameMap : Map[Identifier, (Identifier, Identifier)] = modifyPairs.map(p => p._2 -> (p._1, NameProvider.get("old_" + p._2.toString()))).toMap
+    // rewriter object
+    val oldRewriter = new OldExprRewriter(oldRenameMap)
+    
+    //oldPairs
+    val oldPairs : List[(Identifier, Identifier)] = oldRenameMap.toList.map(p => (p._1, p._2._2))
 
     // variable declarations for return values.
     val retVars = retPairs.map(r => BlockVarsDecl(List(r._2._1), r._2._2))
@@ -122,11 +126,23 @@ trait NewProcedureInlinerPass extends RewritePass {
       case Some(v) => v.typ
       case _ => lang.UndefinedType()
     }))
+    // variable declarations for old values
+    val oldVars : List[BlockVarsDecl] = oldPairs.map(p => BlockVarsDecl(List(p._2), (context + modifyVars).get(p._1) match {
+      case Some(v) => v.typ
+      case _ => lang.UndefinedType()
+    }))
+
     // list of all variable declarations.
-    val varsToDeclare = retVars ++ modifyVars
+    val varsToDeclare = retVars ++ modifyVars ++ oldVars
 
     // statements assigning state variables to modify vars.
     val modifyInitAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
+
+    // create assign statements to keep track of old values
+    val oldAssigns : List[AssignStmt] = oldPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
+
+    println(oldAssigns)
+
     // havoc'ing of the modified variables.
     val modifyHavocs : List[HavocStmt] = modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
     // statements updating the state variables at the end.
@@ -165,9 +181,9 @@ trait NewProcedureInlinerPass extends RewritePass {
     }
     val stmtsP = if (callStmt.callLhss.size > 0) {
       val returnAssign = AssignStmt(callStmt.callLhss, retIds)
-      modifyInitAssigns ++ preconditionAsserts ++ List(bodyP, returnAssign) ++ postconditionAsserts ++ modifyFinalAssigns
+      modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP, returnAssign) ++ postconditionAsserts ++ modifyFinalAssigns
     } else {
-      modifyInitAssigns ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
+      modifyInitAssigns ++ oldAssigns  ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
     }
     BlockStmt(varsToDeclare, stmtsP)
   }

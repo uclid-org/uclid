@@ -155,21 +155,24 @@ class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   }
 }
 
-class OldExprRewriterPass(rewrites : Map[Identifier, Identifier]) extends RewritePass
+class OldExprRewriterPass(rewrites : Map[Identifier, (Identifier, Identifier)]) extends RewritePass
 {
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
+    //println(opapp)
     opapp.op match {
       case OldOperator() =>
         val arg = opapp.operands(0).asInstanceOf[Identifier]
+        //println("OldRewritePass, getting arg")
+        //println(arg)
         rewrites.get(arg) match {
-          case Some(v) => Some(Operator.old(v))
+          case Some(v) => Some(v._2)
           case None => Some(Operator.old(arg))
         }
       case HistoryOperator() =>
         val arg = opapp.operands(0).asInstanceOf[Identifier]
         val past = opapp.operands(1)
         rewrites.get(arg) match {
-          case Some(v) => Some(Operator.history(v, past))
+          case Some(v) => Some(Operator.history(v._1, past))
           case None => Some(Operator.history(arg, past))
         }
       case _ => Some(opapp)
@@ -185,7 +188,7 @@ object OldExprRewriter {
   }
 }
 
-class OldExprRewriter(rewrites : Map[Identifier, Identifier])
+class OldExprRewriter(rewrites : Map[Identifier, (Identifier, Identifier)])
   extends ASTRewriter(OldExprRewriter.getName(), new OldExprRewriterPass(rewrites))
 {
   def rewriteExpr(e : Expr, context : Scope) : Expr = {

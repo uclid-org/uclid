@@ -369,7 +369,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     // map from formal to the fake variables created for return values.
     val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
     // map from modified state variables to new variables created for them. ignore modified "instances"
-    val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.filter(m => m.name == inst.instanceId.name).map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
+    //val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.filter(m => m.name == inst.instanceId.name).map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
+    val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.filter(m => context.get(m) match {
+      case Some(Scope.Instance(_)) => false
+      case None => false // instance has been flattened
+      case _ => true
+    }).map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
+
     // map from st_var -> modify_var.
     val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1 -> p._2)).toMap
     // full rewrite map.
@@ -378,8 +384,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
     // map from old(var) -> var.
     val oldMap : Map[Identifier, Identifier] = modifyPairs.map(p => p._2 -> p._1).toMap
+    val oldRenameMap : Map[Identifier, (Identifier, Identifier)] = modifyPairs.map(p => p._2 -> (p._1, NameProvider.get("old_" + p._2.toString()))).toMap
     // rewriter object.
-    val oldRewriter = new OldExprRewriter(oldMap)
+    val oldRewriter = new OldExprRewriter(oldRenameMap)
+
+    //oldPaurs
+    val oldPairs : List[(Identifier, Identifier)] = oldRenameMap.toList.map(p => (p._1, p._2._2))
 
     // variable declarations for return values.
     val retVars = retPairs.map(r => BlockVarsDecl(List(r._2._1), r._2._2))
@@ -388,11 +398,18 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       case Some(v) => v.typ
       case _ => context.get(callStmt.moduleId.get).get.asInstanceOf[Scope.ModuleDefinition].mod.vars.find(v => v._1.name == p._1.name).get._2
     }))
+    // variable declarations for old values
+    val oldVars : List[BlockVarsDecl] = oldPairs.map(p => BlockVarsDecl(List(p._2), (context + modifyVars).get(p._1) match {
+      case Some(v) => v.typ
+      case _ => lang.UndefinedType()
+    }))
     // list of all variable declarations.
-    val varsToDeclare = retVars ++ modifyVars
+    val varsToDeclare = retVars ++ modifyVars ++ oldVars
 
     // statements assigning state variables to modify vars.
     val modifyInitAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
+    // statements tracking variables before procedure call
+    val oldAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
     // havoc'ing of the modified variables.
     val modifyHavocs : List[HavocStmt] = modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
     // statements updating the state variables at the end.
@@ -423,6 +440,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     } else {
       val postconditionAssumes : List[Statement] = proc.ensures.map {
         (ens) => {
+        
           val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
           AssumeStmt(exprP, None)
         }
@@ -431,9 +449,9 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
     val stmtsP = if (callStmt.callLhss.size > 0) {
       val returnAssign = AssignStmt(callStmt.callLhss, retIds)
-      modifyInitAssigns ++ preconditionAsserts ++ List(bodyP, returnAssign) ++ postconditionAsserts ++ modifyFinalAssigns
+      modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP, returnAssign) ++ postconditionAsserts ++ modifyFinalAssigns
     } else {
-      modifyInitAssigns ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
+      modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
     }
     BlockStmt(varsToDeclare, stmtsP)
   }
@@ -444,7 +462,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       val procInst = context.module.get.instances.find(inst => inst.instanceId.name == callStmt.instanceId.get.name).get
       val procModule = context.get(procInst.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
       val procOption = procModule.procedures.find(p => p.id.name == callStmt.id.name)
-      val blkStmt = inlineProcedureCall(callStmt, procOption.get, context)
+      val blkStmt = inlineProcedureCall(callStmt, procOption.get, Scope.empty + procModule)
       rewriter.visitStatement(blkStmt, context)
     } else {
       Some(callStmt)
