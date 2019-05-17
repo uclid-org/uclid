@@ -74,6 +74,22 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     val cntLit = cmd.args(0)
     Utils.checkParsingError(cntLit._1.isInstanceOf[Identifier], "'%s' command expects a identifier as argument".format(cmd.name.toString), cmd.pos, filename)
   }
+  def checkSetOptionCmd(cmd : GenericProofCommand, filename: Option[String]): Unit = {
+    Utils.checkParsingError(cmd.args.size == 2, "'%s' command expects exactly two arguments".format(cmd.name.toString()), cmd.pos, filename)
+    val optionName = cmd.args(0)._1
+    Utils.checkParsingError(
+      optionName.isInstanceOf[StringLit], "First argument to '%s' must be a string".format(cmd.name.toString()),
+      cmd.pos, filename)
+    val optionValue = cmd.args(0)
+    Utils.checkParsingError(
+      optionValue._1 match {
+        case StringLit(_) | IntLit(_) | BoolLit(_) => true
+        case _ => false
+      },
+      "Second argument to '%s' must be a string, integer or Boolean literal".format(cmd.name.toString),
+      cmd.pos, filename
+    )
+  }
   def checkHasZeroOrOneIntLitArg(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size <= 1, "'%s' command expects no more than one argument".format(cmd.name.toString), cmd.pos, filename)
     if (cmd.args.size > 0) {
@@ -119,6 +135,8 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkNoParams(cmd, filename)
         checkNoResultVar(cmd, filename)
         checkNoArgObj(cmd, filename)
+      case "set_solver_option" =>
+        checkSetOptionCmd(cmd, filename)
       case "unroll" =>
         checkNoParams(cmd, filename)
         checkHasOneIntLitArg(cmd, filename)
@@ -127,7 +145,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkNoParams(cmd, filename)
         checkHasOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
-      case "induction" =>
+      case "induction" | "horn" =>
         checkNoParams(cmd, filename)
         checkHasZeroOrOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)

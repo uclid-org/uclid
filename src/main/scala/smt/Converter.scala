@@ -98,7 +98,7 @@ object Converter {
     }
   }
 
-  def opToSMT(op : lang.Operator, ctx : lang.Scope) : smt.Operator = {
+  def opToSMT(op : lang.Operator, ctx : lang.Scope, past : Int, idToSMT : ((lang.Identifier, lang.Scope, Int) => smt.Expr)) : smt.Operator = {
     op match {
       // Integer operators.
       case lang.IntLTOp() => smt.IntLTOp
@@ -150,11 +150,11 @@ object Converter {
       // Quantifiers
       case lang.ForallOp(vs, ps) =>
         val args = vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2)))
-        val pats = ps.map(p => smt.Converter.exprToSMT(p, ctx))
+        val pats = ps.map(qs => qs.map(q => smt.Converter._exprToSMT(q, ctx, past, idToSMT)))
         smt.ForallOp(args, pats)
       case lang.ExistsOp(vs, ps) =>
         val args = vs.map(v => smt.Symbol(v._1.toString, smt.Converter.typeToSMT(v._2)))
-        val pats = ps.map(p => smt.Converter.exprToSMT(p, ctx))
+        val pats = ps.map(qs => qs.map(q => smt.Converter._exprToSMT(q, ctx, past, idToSMT)))
         smt.ExistsOp(args, pats)
       case lang.ITEOp() => smt.ITEOp
       case lang.HyperSelect(i) => smt.HyperSelectOp(i)
@@ -212,11 +212,11 @@ object Converter {
       // Quantifiers
       case smt.ForallOp(vs, ps) =>
         val varsP = vs.map(v => (lang.Identifier(v.id), smt.Converter.smtToType(v.symbolTyp)))
-        val patternsP = ps.map(p => smt.Converter.smtToExpr(p))
+        val patternsP = ps.map(qs => qs.map(q => smt.Converter.smtToExpr(q)))
         lang.ForallOp(varsP, patternsP)
       case smt.ExistsOp(vs, ps) =>
         val varsP = vs.map(v => (lang.Identifier(v.id), smt.Converter.smtToType(v.symbolTyp)))
-        val patternsP = ps.map(p => smt.Converter.smtToExpr(p))
+        val patternsP = ps.map(qs => qs.map(q => smt.Converter.smtToExpr(q)))
         lang.ExistsOp(varsP, patternsP)
       case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
     }
@@ -262,7 +262,7 @@ object Converter {
            case _ =>
              val scopeWOpApp = scope + opapp
              val argsInSMT = toSMTs(args, scopeWOpApp, past)
-             smt.OperatorApplication(opToSMT(op, scope + opapp), argsInSMT)
+             smt.OperatorApplication(opToSMT(op, scope + opapp, past, idToSMT), argsInSMT)
          }
        case lang.FuncApplication(f,args) => f match {
          case lang.Identifier(id) =>

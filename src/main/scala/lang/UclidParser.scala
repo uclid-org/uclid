@@ -258,15 +258,17 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Literal : PackratParser[lang.Literal] = positioned (Bool | Number | String)
     /* END of Literals. */
     // Match quantifier patterns; but we don't want to make pattern a keyword.
-    lazy val decoratedExprList : PackratParser[(lang.Identifier, List[lang.Expr])] =
-      Id ~ ( "[" ~> E1 ) ~ rep("," ~> E1) <~ "]" ^^ {
-        case id ~ e ~ es => { (id, e::es) }
-      } |
-      Id <~ "[" ~ "]" ^^ {
-        case id => { (id, List.empty) }
+    lazy val CommaSeparatedExprList : PackratParser[List[lang.Expr]] =
+      E1 ~ rep("," ~> E1) ^^ { case e ~ es => e::es }
+    lazy val PatternList : PackratParser[List[List[lang.Expr]]] =
+      CommaSeparatedExprList ~ rep(";" ~> CommaSeparatedExprList) ^^ {
+        case l ~ ls => l :: ls
       }
+  lazy val Pattern : PackratParser[(lang.Identifier, List[List[lang.Expr]])] =
+    Id ~ ("[" ~> PatternList <~ "]") ^^ { case id ~ pats => (id, pats) }
+
     lazy val E1: PackratParser[Expr] =
-      KwForall ~> IdTypeList ~ decoratedExprList.? ~ ("::" ~> E1) ^^ {
+      KwForall ~> IdTypeList ~ Pattern.? ~ ("::" ~> E1) ^^ {
         case ids ~ pat ~ expr => {
           pat match {
             case None =>
@@ -280,7 +282,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
           }
         }
       } |
-      KwForall ~> IdTypeList ~ decoratedExprList.? ~ ("::" ~> E1) ^^ {
+      KwForall ~> IdTypeList ~ Pattern.? ~ ("::" ~> E1) ^^ {
           case ids ~ pat ~ expr => {
             pat match {
               case None =>
@@ -578,10 +580,15 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val ConstDecl : PackratParser[lang.ConstantsDecl] = positioned {
       KwConst ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.ConstantsDecl(ids,typ)}
     }
-
+    lazy val ModuleConstsImportDecl : PackratParser[lang.ModuleConstantsImportDecl] = positioned {
+      KwConst ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleConstantsImportDecl(id) }
+    }
     lazy val FuncDecl : PackratParser[lang.FunctionDecl] = positioned {
       KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) <~ ";" ^^
       { case id ~ idtyps ~ rt => lang.FunctionDecl(id, lang.FunctionSig(idtyps, rt)) }
+    }
+    lazy val ModuleFuncsImportDecl : PackratParser[lang.ModuleFunctionsImportDecl] = positioned {
+      KwFunction ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleFunctionsImportDecl(id) }
     }
 
     // Grammar parsing begins here. //
@@ -722,7 +729,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Decl: PackratParser[Decl] =
       positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl |
-                  ModuleTypesImportDecl | SynthFuncDecl | DefineDecl | GrammarDecl |
+                  ModuleTypesImportDecl | ModuleFuncsImportDecl | ModuleConstsImportDecl |
+                  SynthFuncDecl | DefineDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstLitDecl | ConstDecl | ProcedureDecl |
                   InitDecl | NextDecl | SpecDecl | AxiomDecl)

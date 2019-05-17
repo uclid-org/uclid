@@ -443,14 +443,14 @@ abstract class QuantifierOp extends BoolResultOp {
   }
 }
 
-case class ForallOp(vs : List[Symbol], patterns: List[Expr]) extends QuantifierOp {
+case class ForallOp(vs : List[Symbol], patterns: List[List[Expr]]) extends QuantifierOp {
   override val hashId = 215
   override val hashCode = computeHash(vs, patterns)
   override val md5hashCode = computeMD5Hash(vs, patterns)
   override def variables = vs
   override def toString = "forall (" + Utils.join(vs.map(i => i.toString + ": " + i.typ.toString), ", ") + "): "
 }
-case class ExistsOp(vs : List[Symbol], patterns: List[Expr]) extends QuantifierOp {
+case class ExistsOp(vs : List[Symbol], patterns: List[List[Expr]]) extends QuantifierOp {
   override val hashId = 216
   override val hashCode = computeHash(vs, patterns)
   override val md5hashCode = computeMD5Hash(vs, patterns)

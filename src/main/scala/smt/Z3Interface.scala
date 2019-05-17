@@ -160,6 +160,8 @@ class Z3Interface() extends Context {
   /** The Z3 context. */
   val ctx = new z3.Context(cfg)
   ctx.setPrintMode(z3.enumerations.Z3_ast_print_mode.Z3_PRINT_SMTLIB2_COMPLIANT)
+  /** The parameters we will use. */
+  val params = ctx.mkParams()
   /** The Z3 solver. */
   val solver = ctx.mkSolver()
 
@@ -388,11 +390,19 @@ class Z3Interface() extends Context {
       case ForallOp(vs, patterns)           =>
         // val qTyps = vs.map((v) => getZ3Sort(v.typ)).toArray
         val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
-        val qPatterns = patterns.map(p => ctx.mkPattern(exprToZ3(p).asInstanceOf[z3.Expr])).toArray
+        val qPatterns = patterns.map { ps => {
+            val qs = ps.map(p => exprToZ3(p).asInstanceOf[z3.Expr])
+            ctx.mkPattern(qs : _*)
+          }
+        }.toArray
         ctx.mkForall(qVars, boolArgs(0), 1, qPatterns, null, getForallName(), getSkolemName())
       case ExistsOp(vs, patterns)           =>
         val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
-        val qPatterns = patterns.map(p => ctx.mkPattern(exprToZ3(p).asInstanceOf[z3.Expr])).toArray
+        val qPatterns = patterns.map { ps => {
+            val qs = ps.map(p => exprToZ3(p).asInstanceOf[z3.Expr])
+            ctx.mkPattern(qs : _*)
+          }
+        }.toArray
         ctx.mkExists(qVars, boolArgs(0), 1, qPatterns, null, getExistsName(), getSkolemName())
       case RecordSelectOp(fld)    =>
         val prodType = operands(0).typ.asInstanceOf[ProductType]
@@ -512,6 +522,16 @@ class Z3Interface() extends Context {
 
   override def finish() {
     ctx.close()
+  }
+
+  override def addOption(opt: String, value: Context.SolverOption): Unit = {
+    value match {
+      case Context.BoolOption(b) => params.add(opt, b)
+      case Context.IntOption(i) => params.add(opt, i)
+      case Context.DoubleOption(d) => params.add(opt, d)
+      case Context.StringOption(s) => params.add(opt, s)
+    }
+    solver.setParameters(params)
   }
 }
 

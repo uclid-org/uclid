@@ -142,7 +142,7 @@ object UclidMain {
   def main(config : Config) {
     try {
       if (config.testFixedpoint) {
-        smt.FixedpointTest.test()
+        smt.Z3HornSolver.test1()
         return
       }
       val mainModuleName = Identifier(config.mainModuleName)
@@ -191,10 +191,13 @@ object UclidMain {
 
   def createCompilePassManager(test: Boolean, mainModuleName: lang.Identifier) = {
     val passManager = new PassManager("compile")
-    // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
+    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ModuleCanonicalizer())
     passManager.addPass(new LTLOperatorIntroducer())
     passManager.addPass(new ModuleTypesImportCollector())
+    passManager.addPass(new ModuleConstantsImportCollector())
+    passManager.addPass(new ModuleFunctionsImportCollector())
+
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new FuncExprRewriter())
@@ -325,7 +328,7 @@ object UclidMain {
    */
   def execute(module : Module, config : Config) : List[CheckResult] = {
     var symbolicSimulator = new SymbolicSimulator(module)
-    var z3Interface = if (config.smtSolver.size > 0) {
+    var solverInterface = if (config.smtSolver.size > 0) {
       logger.debug("args: {}", config.smtSolver)
       new smt.SMTLIB2Interface(config.smtSolver)
     } else {
@@ -335,9 +338,9 @@ object UclidMain {
       case Nil => None
       case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir, config.sygusFormat))
     }
-    z3Interface.filePrefix = config.smtFileGeneration
-    val result = symbolicSimulator.execute(z3Interface, sygusInterface, config)
-    z3Interface.finish()
+    solverInterface.filePrefix = config.smtFileGeneration
+    val result = symbolicSimulator.execute(solverInterface, sygusInterface, config)
+    solverInterface.finish()
     return result
   }
 

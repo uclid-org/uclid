@@ -1,0 +1,29 @@
+module main
+{
+    var x, y : integer;
+
+    //function f(n : integer) : boolean;
+    var f : [integer]boolean;
+
+
+    init {
+        y = x + 1;
+    }
+
+    next {
+        if (f[x]) {
+          y' = y + 1;
+        } else {
+          y' = y + 2;
+        }
+    }
+
+    hyperinvariant[2] det_xy: (x.1 == x.2) ==> (y.1 == y.2);
+    hyperaxiom[2] eq_f : f.1 == f.2;
+    control {
+        v = horn;
+        //check;
+        //print_results;
+        //v.print_cex(x, y);
+    }
+}
