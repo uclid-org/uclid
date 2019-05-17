@@ -369,7 +369,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     // map from formal to the fake variables created for return values.
     val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
     // map from modified state variables to new variables created for them. ignore modified "instances"
-    //val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.filter(m => m.name == inst.instanceId.name).map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
     val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.filter(m => context.get(m) match {
       case Some(Scope.Instance(_)) => false
       case None => false // instance has been flattened
@@ -409,7 +408,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     // statements assigning state variables to modify vars.
     val modifyInitAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
     // statements tracking variables before procedure call
-    val oldAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
+    val oldAssigns : List[AssignStmt] = oldPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
     // havoc'ing of the modified variables.
     val modifyHavocs : List[HavocStmt] = modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
     // statements updating the state variables at the end.
@@ -453,6 +452,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     } else {
       modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
     }
+    println(callStmt)
+    println(oldAssigns)
     BlockStmt(varsToDeclare, stmtsP)
   }
 

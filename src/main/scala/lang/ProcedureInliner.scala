@@ -141,7 +141,6 @@ trait NewProcedureInlinerPass extends RewritePass {
     // create assign statements to keep track of old values
     val oldAssigns : List[AssignStmt] = oldPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
 
-    println(oldAssigns)
 
     // havoc'ing of the modified variables.
     val modifyHavocs : List[HavocStmt] = modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
