@@ -281,6 +281,9 @@ class ProcedureVerifSpec extends FlatSpec {
   "test-distinct-op.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-distinct-op.ucl", 0)
   }
+  "test-procedure-old-1.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-procedure-old-1.ucl", 1)
+  }
 }
 class QuantifierVerifSpec extends FlatSpec {
   "test-forall-0.ucl" should "verify all assertions." in {
@@ -341,6 +344,9 @@ class ModuleVerifSpec extends FlatSpec {
   }
   "test-instance-procedure-call-0.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-instance-procedure-call-0.ucl", 1)
+  }
+  "test-instance-procedure-call-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-1.ucl", 0)
   }
   "sp-basic.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/sp-basic.ucl", 0)

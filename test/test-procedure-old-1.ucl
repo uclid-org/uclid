@@ -3,7 +3,7 @@ module main {
   var a : integer;
 
   // Remove [inline] to see varying teest behavior
-  procedure  two(flag : boolean) 
+  procedure two(flag : boolean) 
     ensures (flag == false ==> a == old(a));
     modifies a;
   {

@@ -2,7 +2,7 @@ module sub {
 
   var a : integer;
 
-  procedure mod(flag : boolean) 
+  procedure [inline] mod(flag : boolean) 
     ensures(flag == false ==> a == old(a));
     modifies a;
   {

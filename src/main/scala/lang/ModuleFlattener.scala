@@ -383,11 +383,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
     // map from old(var) -> var.
     val oldMap : Map[Identifier, Identifier] = modifyPairs.map(p => p._2 -> p._1).toMap
+    
+    // Note that oldRenameMap contains the 'modifies' name and the 'old' name
+    // example entry ['a', ('a_modifies', 'old_a')]
     val oldRenameMap : Map[Identifier, (Identifier, Identifier)] = modifyPairs.map(p => p._2 -> (p._1, NameProvider.get("old_" + p._2.toString()))).toMap
     // rewriter object.
     val oldRewriter = new OldExprRewriter(oldRenameMap)
 
-    //oldPaurs
     val oldPairs : List[(Identifier, Identifier)] = oldRenameMap.toList.map(p => (p._1, p._2._2))
 
     // variable declarations for return values.
@@ -452,8 +454,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     } else {
       modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
     }
-    println(callStmt)
-    println(oldAssigns)
     BlockStmt(varsToDeclare, stmtsP)
   }
 
