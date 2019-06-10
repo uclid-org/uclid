@@ -95,6 +95,7 @@ trait ReadOnlyPass[T] {
   def applyOnGrammar(d : TraversalDirection.T, grammar: GrammarDecl, in : T, context : Scope) : T = { in }
   def applyOnSynthesisFunction(d : TraversalDirection.T, synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = { in }
   def applyOnDefine(d : TraversalDirection.T, defDecl : DefineDecl, in : T, context : Scope) : T = { in }
+  def applyOnModuleDefinesImport(d : TraversalDirection.T, modDefImport : ModuleDefinesImportDecl, in : T, context : Scope) : T = { in }
   def applyOnStateVars(d : TraversalDirection.T, stVars : StateVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnInputVars(d : TraversalDirection.T, inpVars : InputVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnOutputVars(d : TraversalDirection.T, outvars : OutputVarsDecl, in : T, context : Scope) : T = { in }
@@ -181,6 +182,7 @@ trait RewritePass {
   def rewriteGrammar(grammar : GrammarDecl, ctx : Scope) : Option[GrammarDecl] = { Some(grammar) }
   def rewriteSynthesisFunction(synFunc : SynthesisFunctionDecl, ctx : Scope) : Option[SynthesisFunctionDecl] = { Some(synFunc) }
   def rewriteDefine(defDecl : DefineDecl, ctx : Scope) : Option[DefineDecl] = { Some(defDecl) }
+  def rewriteModuleDefinesImport(modDefImport : ModuleDefinesImportDecl, ctx : Scope) : Option[ModuleDefinesImportDecl] = { Some(modDefImport) }
   def rewriteStateVars(stVars : StateVarsDecl, ctx : Scope) : Option[StateVarsDecl] = { Some(stVars) }
   def rewriteInputVars(inpVars : InputVarsDecl, ctx : Scope) : Option[InputVarsDecl] = { Some(inpVars) }
   def rewriteOutputVars(outvars : OutputVarsDecl, ctx : Scope) : Option[OutputVarsDecl] = { Some(outvars) }
@@ -310,10 +312,11 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case const : ConstantsDecl => visitConstants(const, result, context)
       case modConstsImport : ModuleConstantsImportDecl => visitModuleConstantsImport(modConstsImport, result, context)
       case func : FunctionDecl => visitFunction(func, result, context)
-      case modFuncsImport : ModuleFunctionsImportDecl => visitModuleFunctionsImport(modFuncsImport,result, context)
+      case modFuncsImport : ModuleFunctionsImportDecl => visitModuleFunctionsImport(modFuncsImport, result, context)
       case grammar : GrammarDecl => visitGrammar(grammar, result, context)
       case synFunc : SynthesisFunctionDecl => visitSynthesisFunction(synFunc, result, context)
       case defDecl : DefineDecl => visitDefine(defDecl, in, context)
+      case modDefImport : ModuleDefinesImportDecl => visitModuleDefinesImport(modDefImport, result, context)
       case init : InitDecl => visitInit(init, result, context.withEnvironment(ProceduralEnvironment))
       case next : NextDecl => visitNext(next, result, context.withEnvironment(SequentialEnvironment))
       case spec : SpecDecl => visitSpec(spec, result, context)
@@ -409,7 +412,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnDefine(TraversalDirection.Up, defDecl, result, context)
     return result
   }
-
+  def visitModuleDefinesImport(moduleDefinesImport : ModuleDefinesImportDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnModuleDefinesImport(TraversalDirection.Down, moduleDefinesImport, result, context)
+    result = visitIdentifier(moduleDefinesImport.id, result, context)
+    result = pass.applyOnModuleDefinesImport(TraversalDirection.Up, moduleDefinesImport, result, context)
+    return result
+  }
   def visitStateVars(stVars : StateVarsDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnStateVars(TraversalDirection.Down, stVars, result, context)
@@ -1111,6 +1120,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case grammarDecl : GrammarDecl => visitGrammar(grammarDecl, context)
       case synFuncDecl : SynthesisFunctionDecl => visitSynthesisFunction(synFuncDecl, context)
       case defDecl : DefineDecl => visitDefine(defDecl, context)
+      case modDefImport : ModuleDefinesImportDecl => visitModuleDefinesImport(modDefImport, context)
       case initDecl : InitDecl => visitInit(initDecl, context.withEnvironment(ProceduralEnvironment))
       case nextDecl : NextDecl => visitNext(nextDecl, context.withEnvironment(SequentialEnvironment))
       case specDecl : SpecDecl => visitSpec(specDecl, context)
@@ -1241,6 +1251,14 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case _ =>
         None
     }
+  }
+  def visitModuleDefinesImport(modDefImp : ModuleDefinesImportDecl, context : Scope) : Option[ModuleDefinesImportDecl] = {
+    val idOpt = visitIdentifier(modDefImp.id, context)
+    val modDefImpP = idOpt match {
+      case Some(id) => pass.rewriteModuleDefinesImport(ModuleDefinesImportDecl(id), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, modDefImpP, modDefImp.position)
   }
   def visitStateVars(stVars : StateVarsDecl, context : Scope) : Option[StateVarsDecl] = {
     val idsP = (stVars.ids.map((id) => visitIdentifier(id, context))).flatten

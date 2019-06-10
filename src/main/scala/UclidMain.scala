@@ -197,6 +197,7 @@ object UclidMain {
     passManager.addPass(new ModuleTypesImportCollector())
     passManager.addPass(new ModuleConstantsImportCollector())
     passManager.addPass(new ModuleFunctionsImportCollector())
+    passManager.addPass(new ModuleDefinesImportCollector())
 
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
