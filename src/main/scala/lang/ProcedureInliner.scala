@@ -110,9 +110,9 @@ trait NewProcedureInlinerPass extends RewritePass {
     val rewriteMap = argMap ++ retMap ++ modifiesMap
     // rewriter object.
     val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
+
     // map from old(var) -> var.
     val oldMap : Map[Identifier, Identifier] = modifyPairs.map(p => p._2 -> p._1).toMap
-    
     // Note that the map contains the 'modifies' name and the 'old' name
     val oldRenameMap : Map[Identifier, (Identifier, Identifier)] = modifyPairs.map(p => p._2 -> (p._1, NameProvider.get("old_" + p._2.toString()))).toMap
     // rewriter object
