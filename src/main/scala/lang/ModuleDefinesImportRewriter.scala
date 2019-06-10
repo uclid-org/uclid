@@ -51,12 +51,12 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
         namedExpr match {
           case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
                Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
-               Scope.FunctionArg(_, _) | Scope.Define(_, _, _) |
                Scope.Instance(_)       =>
              false
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
                Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
+               Scope.FunctionArg(_, _)    | Scope.Define(_, _, _) |
                Scope.ConstantLit(_, _)    =>
              true
           case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _)             |
@@ -105,7 +105,8 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
       val id = modDefImport.id
       context.map.get(id) match {
         case Some(Scope.ModuleDefinition(mod)) => {
-          val newDefs : List[Decl]  = mod.defines.filter(d => isStatelessExpr(d.expr, Scope.empty + mod)) ++ in
+    
+          val newDefs : List[Decl]  = mod.defines.filter(d => isStatelessExpr(d.expr, (Scope.empty + mod) + d.sig)) ++ in
           newDefs
         } 
         case _ => in
