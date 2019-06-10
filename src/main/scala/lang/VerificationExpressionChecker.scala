@@ -55,7 +55,7 @@ class VerificationExpressionCheckerPass extends ReadOnlyPass[List[ModuleError]]
             ModuleError("Primed variables are not allowed in module-level assertions/assumptions", opapp.position) :: in
           case HyperSelect(i) =>
             if(!opapp.operands(0).isInstanceOf[Identifier]) {
-              ModuleError("Trace select can only be used with an identifier", opapp.position) :: in
+              ModuleError("Trace select can only be applied on an identifier", opapp.position) :: in
             } else if (!context.environment.inHyperproperty) {
               ModuleError("Trace select can only be used in a verification expression", opapp.position) :: in
             } else {
