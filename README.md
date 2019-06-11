@@ -22,8 +22,8 @@ uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platform
 System Integrity Protection is a feature introduced by Apple in OS X El Capitan; it prevents the modifications of system-owned files and directories by any process without a specific ‘entitlement’, even when executed by a root user or a user with root privileges. Since Java is a SIP protected executable, it ignores the user set DYLD_LIBRARY_PATH, which prevents the system from recognizing the Z3 Dynamic Library. 
 
 To fix this issue, put:
-JNI dynamic link libraries (e.g libz3java.dylib) in:       /Library/Java/Extensions
-non-JNI dynamic link libraries (e.g libz3.dylib) in:      /usr/local/lib
+- JNI dynamic link libraries (e.g libz3java.dylib) in:       /Library/Java/Extensions
+- non-JNI dynamic link libraries (e.g libz3.dylib) in:      /usr/local/lib
 
 For more information on the resolution of this issue, please refer to:
 https://github.com/Z3Prover/z3/issues/294
