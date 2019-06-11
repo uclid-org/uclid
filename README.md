@@ -27,7 +27,6 @@ non-JNI dynamic link libraries (e.g libz3.dylib) in:      /usr/local/lib
 
 For more information on the resolution of this issue, please refer to:
 https://github.com/Z3Prover/z3/issues/294
-https://en.wikipedia.org/wiki/System_Integrity_Protection
 
 
 ## Download Pre-Built Binaries
