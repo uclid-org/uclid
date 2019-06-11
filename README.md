@@ -18,6 +18,18 @@ You will need the [Z3 SMT solver](https://github.com/Z3Prover/z3) to be installe
 
 uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix-like platforms; just `PATH` on Windows).
 
+### Mac OS X El Capitan or up
+System Integrity Protection is a feature introduced by Apple in OS X El Capitan; it prevents the modifications of system-owned files and directories by any process without a specific ‘entitlement’, even when executed by a root user or a user with root privileges. Since Java is a SIP protected executable, it ignores the user set DYLD_LIBRARY_PATH, which prevents the system from recognizing the Z3 Dynamic Library. 
+
+To fix this issue, put:
+JNI dynamic link libraries (e.g libz3java.dylib) in:       /Library/Java/Extensions
+non-JNI dynamic link libraries (e.g libz3.dylib) in:      /usr/local/lib
+
+For more information on the resolution of this issue, please refer to:
+https://github.com/Z3Prover/z3/issues/294
+https://en.wikipedia.org/wiki/System_Integrity_Protection
+
+
 ## Download Pre-Built Binaries
 
 Download the latest stable pre-built package from [releases tab](https://github.com/uclid-org/uclid/releases).
