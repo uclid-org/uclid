@@ -1,0 +1,34 @@
+module common {
+  type word_t = bv32;
+  const k1_word_t : word_t = 1bv32;
+  
+  define word_add(w1 : word_t, w2 : word_t) : word_t
+    = w1 + w2;
+  
+  define word_sub(w1 : word_t, w2 : word_t) : word_t
+    = w1 - w2;
+}
+
+
+module main {
+  type * = common.*;
+  const * = common.*;
+  define * = common.*;
+  
+  procedure add_one(w : word_t) 
+    returns (result : word_t)
+  {
+    result = word_add(w, k1_word_t);
+  }
+
+  procedure sub_one(w : word_t)
+    returns (result : word_t)
+  {
+    result = word_sub(w, k1_word_t);
+  }
+
+  control {
+    print_module;
+  }
+
+}

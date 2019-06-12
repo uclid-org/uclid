@@ -1479,6 +1479,12 @@ case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl
   override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
   override def declNames = List(id)
 }
+case class ModuleDefinesImportDecl(id: Identifier) extends Decl {
+  override val hashId = 3921
+  override val md5hashCode = computeMD5Hash(id)
+  override def toString = "define * = $s.*; // %s".format(id.toString)
+  override def declNames = List.empty
+}
 
 sealed abstract class GrammarTerm extends ASTNode
 case class FuncAppTerm(id: Identifier, args: List[GrammarTerm]) extends GrammarTerm {
@@ -1750,6 +1756,8 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   // module functions.
   lazy val functions : List[FunctionDecl] =
     decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
+  // module macros
+  lazy val defines : List[DefineDecl] = decls.collect{ case d : DefineDecl => d }
   // module properties.
   lazy val properties : List[SpecDecl] = decls.collect{ case spec : SpecDecl => spec }
 
