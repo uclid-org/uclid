@@ -1,6 +1,6 @@
 module main
 {
-  var rom : [bv4]bv8;
+  const rom : [bv4]bv8;
 
 
   init {

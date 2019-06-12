@@ -42,9 +42,9 @@ package lang
 import com.typesafe.scalalogging.Logger
 
 
-class VerificationExpressionPass extends ReadOnlyPass[List[ModuleError]]
+class VerificationExpressionCheckerPass extends ReadOnlyPass[List[ModuleError]]
 {
-  lazy val logger = Logger(classOf[VerificationExpressionPass])
+  lazy val logger = Logger(classOf[VerificationExpressionCheckerPass])
   type T = List[ModuleError]
   override def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = {
     logger.debug("Visiting: {}; Env: {}", opapp.toString, context.environment.toString())
@@ -53,21 +53,51 @@ class VerificationExpressionPass extends ReadOnlyPass[List[ModuleError]]
         opapp.op match {
           case GetNextValueOp() =>
             ModuleError("Primed variables are not allowed in module-level assertions/assumptions", opapp.position) :: in
+          case HyperSelect(i) =>
+            if(!opapp.operands(0).isInstanceOf[Identifier]) {
+              ModuleError("Trace select can only be applied on an identifier", opapp.position) :: in
+            } else if (!context.environment.inHyperproperty) {
+              ModuleError("Trace select can only be used in a verification expression", opapp.position) :: in
+            } else {
+              in
+            }
           case _ =>
-          in
+            in
         }
       } else if (context.environment.isProcedural) {
         opapp.op match {
           case GetNextValueOp() =>
             ModuleError("Primed variables can't be referenced inside procedures", opapp.position) :: in
+          case HyperSelect(i) =>
+            ModuleError("Trace select can only be used in a verification expression", opapp.position) :: in
           case _ => in
         }
       } else if (!context.environment.isVerificationContext) {
         opapp.op match {
           case OldOperator() | HistoryOperator() | PastOperator() =>
             ModuleError("Operator can only be used in a verification expression", opapp.position) :: in
+          case HyperSelect(i) =>
+            ModuleError("Trace select can only be used in a verification expression", opapp.position) :: in
           case _ =>
             in
+        }
+      } else if (!context.environment.isModuleLevel) {
+        // deal with old operators.
+        val errs1 = context.environment match {
+          case RequiresEnvironment =>
+            opapp.op match {
+              case OldOperator() =>
+                ModuleError("Old operator can't be used in a requires expression", opapp.position) :: in
+              case _ => in
+            }
+          case _ => in
+        }
+        // deal with hyperselect
+        opapp.op match {
+          case HyperSelect(i) =>
+            ModuleError("Trace select can only be used in a module-level expression", opapp.position) :: errs1
+          case _ =>
+            errs1
         }
       } else {
         in
@@ -78,7 +108,7 @@ class VerificationExpressionPass extends ReadOnlyPass[List[ModuleError]]
   }
 }
 
-class VerificationExpressionChecker extends ASTAnalyzer("VerificationExpressionChecker", new VerificationExpressionPass())  {
+class VerificationExpressionChecker extends ASTAnalyzer("VerificationExpressionChecker", new VerificationExpressionCheckerPass())  {
   override def visit(module : Module, context : Scope) : Option[Module] = {
     val out = visitModule(module, List.empty[ModuleError], context)
     if (out.size > 0) {

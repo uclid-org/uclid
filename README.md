@@ -4,7 +4,7 @@
 
 The [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf) has a gentle introduction to using uclid5.
 
-If you use uclid5 in your own research, it is suggested that you cite the following MEMOCODE 2018 paper.
+If you use uclid5 in your work, please cite the following MEMOCODE 2018 paper:
 
 Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating Modeling, Verification, Synthesis and Learning.</font>
  [\[PDF\]](https://cse.iitk.ac.in/users/spramod/papers/memocode18.pdf)    
@@ -17,6 +17,17 @@ Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating 
 You will need the [Z3 SMT solver](https://github.com/Z3Prover/z3) to be installed on your system. If you are building Z3 from source, make sure the Z3/Java interface is enabled in your build (typically by passing `--java` to the `mk_make.py` script). 
 
 uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix-like platforms; just `PATH` on Windows).
+
+### Mac OS X El Capitan or up
+System Integrity Protection is a feature introduced by Apple in OS X El Capitan; it prevents the modifications of system-owned files and directories by any process without a specific ‘entitlement’, even when executed by a root user or a user with root privileges. Since Java is a SIP protected executable, it ignores the user set DYLD_LIBRARY_PATH, which prevents the system from recognizing the Z3 Dynamic Library. 
+
+To fix this issue, put:
+- JNI dynamic link libraries (e.g libz3java.dylib) in:       /Library/Java/Extensions
+- non-JNI dynamic link libraries (e.g libz3.dylib) in:      /usr/local/lib
+
+For more information on the resolution of this issue, please refer to:
+https://github.com/Z3Prover/z3/issues/294
+
 
 ## Download Pre-Built Binaries
 
@@ -40,7 +51,7 @@ If compilation and tests pass, you can build a universal package.
 
 This will create uclid/target/universal/uclid-0.8.zip, which contains the uclid binary in the bin/ subdirectory. Unzip this file, and add it to your path.
 
-## Installing uclid5
+## Installing and Running uclid5
 
     $ unzip uclid-0.9.5.zip
     $ cd uclid-0.9.5

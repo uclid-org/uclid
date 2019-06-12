@@ -1,0 +1,12 @@
+module main {
+    var x, y : bv4;
+
+    next {
+        assume (
+            x >_u  y ||
+            x >=_u y ||
+            x <_u  y ||
+            x <=_u y
+        );
+    }
+}

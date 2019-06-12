@@ -11,6 +11,7 @@ module main {
   init {
     sum = 1bv8;
     num = common.k1_word_t;
+    assert (num == sum);
   }
 
   next {

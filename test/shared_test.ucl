@@ -1,0 +1,86 @@
+module array
+{
+  type op_t = enum { push, pop };
+  type user_t = enum { u1, u2 };
+
+  var data_array    : [integer]integer;
+  var user_array    : [integer]user_t;
+  var tail_ptr      : integer;
+  var head_ptr      : integer;
+
+  input op        : op_t;
+  input user      : user_t;
+  input data_in   : integer;
+  output data_out : integer;
+
+  init {
+    head_ptr    = 0;
+    tail_ptr    = 0;
+  }
+
+  next {
+    if (op == push) {
+      data_array' = data_array[tail_ptr -> data_in];
+      user_array' = user_array[tail_ptr -> user];
+      tail_ptr' = tail_ptr + 1;
+      data_out' = 0;
+    } else {
+      if (head_ptr < tail_ptr && user_array[head_ptr] == user) {
+        data_out' = data_array[head_ptr];
+        head_ptr' = head_ptr + 1;
+      } else {
+        data_out' = 0;
+      }
+    }
+  }
+}
+
+
+module main
+{
+  type op_t = array.op_t;
+  type user_t = array.user_t;
+
+  input op : op_t;
+  input user : user_t;
+  input data_in   : integer;
+//  input data_in_2   : integer;
+
+  var data_out  : integer;
+//  var data_out_2  : integer;
+
+  instance arr : array(op : (op), user : (user), 
+                        data_in : (data_in), data_out : (data_out));
+//  instance arr2 : array(op : (op), user : (user), 
+//                        data_in : (data_in_2), data_out : (data_out_2));
+
+  init {
+    data_out = 0;
+    //data_out_2 = 0;
+  }
+
+  next {
+    next (arr);
+  }
+
+  hyperinvariant[2] eq_data_out : ((arr.1.user == u1) && (arr.2.user == u1)) ==> (arr.1.data_out == arr.2.data_out);
+  hyperinvariant[2] eq_ptrs : (arr.1.head_ptr == arr.2.head_ptr) &&
+                      (arr.1.tail_ptr == arr.2.tail_ptr);
+  hyperinvariant[2] eq_users : forall (i : integer) ::
+    (i >= arr.1.head_ptr && i < arr.1.tail_ptr) ==> (arr.1.user_array[i] == arr.2.user_array[i]);  
+  hyperinvariant[2] eq_u1_data : forall (i : integer) ::
+    (i >= arr.1.head_ptr && i < arr.1.tail_ptr && arr.1.user_array[i] == u1) ==> (arr.1.data_array[i] == arr.2.data_array[i]);  
+
+
+  control {
+    v = lazysc(100);
+    check;
+    print_results;
+    /*v.print_cex(
+      op, user, data_in_1, data_in_2, data_out_1, data_out_2,
+      arr1.data_array, arr2.data_array,
+      arr1.user_array, arr2.user_array,
+      arr1.head_ptr, arr2.head_ptr,
+      arr1.tail_ptr, arr2.tail_ptr);*/
+  }
+}

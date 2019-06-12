@@ -105,10 +105,10 @@ object Utils {
 
   def allUnique(a: List[lang.Identifier]) : Boolean = a.distinct.size == a.size
 
-  def join(things: List[String], sep: String) = {
-    things match {
-      case Nil => ""
-      case head :: tail => head + tail.foldLeft(""){(acc,i) => acc + sep + i}
+  def join(things: Seq[String], sep: String) = {
+    things.size match {
+      case 0 => ""
+      case _ => things.head + things.tail.foldLeft(""){(acc,i) => acc + sep + i}
     }
   }
 

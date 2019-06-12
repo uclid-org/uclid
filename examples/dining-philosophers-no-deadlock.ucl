@@ -1,0 +1,105 @@
+module main {
+
+       var fork_taken : [bv2]boolean;
+       var num_forks  : [bv2]bv2;
+       var eaten      : [bv2]boolean;
+
+
+       var got_forks_left : [bv2]boolean;
+       var got_forks_right : [bv2]boolean;
+
+
+       init {
+            fork_taken = const(false, [bv2]boolean);
+            num_forks = const(0bv2, [bv2]bv2);
+            eaten = const(false, [bv2]boolean);
+            got_forks_left = const(false, [bv2]boolean);
+            got_forks_right = const(false, [bv2]boolean);
+       }
+       
+
+       procedure acquire_left(i: bv2)
+        returns (success: boolean)
+        modifies fork_taken;
+       {
+            success = false;
+            if (fork_taken[i - 1bv2] == false) {
+               fork_taken[i - 1bv2] = true;
+               success = true;
+            }
+       }
+
+
+       procedure acquire_right(i: bv2)
+        returns (success: boolean)
+        modifies fork_taken;
+        {
+            success = false;
+            if (fork_taken[i] == false) {
+               fork_taken[i] = true;
+               success = true;
+            }
+        }
+
+       input i: bv2;
+       input tryLeft : boolean;
+       input tryRight: boolean;
+
+       procedure get_forks(i: bv2)
+        modifies fork_taken, num_forks, got_forks_left, got_forks_right;
+        {
+                var got_fork : boolean;
+
+                // Philosophers either gets both forks or none
+
+                if (tryLeft && tryRight && !fork_taken[i-1bv2] && !fork_taken[i]) {
+                   num_forks[i] = num_forks[i] + 2bv2;
+                   got_forks_left[i] = true;
+                   got_forks_right[i] = true;
+                }
+        }
+
+       procedure release_forks(i: bv2)
+        modifies num_forks, fork_taken, got_forks_left, got_forks_right;
+        {
+                // releases the forks after philosopher has eaten once
+                // and again competes to acquire the forks
+                num_forks[i] = 0bv2;
+                fork_taken[i] = false;
+                fork_taken[i - 1bv2] = false;
+                got_forks_right[i] = false;
+                got_forks_left[i] = false;
+        }
+
+        next {
+
+             if (eaten[i] == false) {
+               // try acquiring two forks
+               call get_forks(i);
+
+               if (num_forks[i] == 2bv2) { eaten' = eaten[i -> true]; }
+             } else {
+                            call release_forks(i);
+                            eaten' = eaten[i -> false];
+             }
+        }
+
+        // Given all resource has been consumed and all users have tried,
+        // then atleast one philosopher has succeed
+        // (i.e. no deadlock, however starvation is possible)
+        property[LTL] someone_eats:
+                      
+                G ( F(i == 0bv2) && F ((i == 1bv2)) && F(i == 2bv2) && F(i == 3bv2) &&
+                    F(fork_taken[0bv2] == true) &&   F(fork_taken[1bv2] == true) &&
+                    F(fork_taken[2bv2] == true) &&  F(fork_taken[3bv2] == true))
+                        ==>  F(eaten[0bv2] || eaten[1bv2] || eaten[2bv2] || eaten[3bv2]);
+
+
+
+        control {
+                v = bmc(12);
+                check;
+                print_results;
+                v.print_cex(i, tryLeft, tryRight, fork_taken, num_forks, eaten);
+        }
+}

@@ -120,18 +120,17 @@ class NewProcedureInlinerPass() extends RewritePass {
     val varsToDeclare = retVars ++ modifyVars
 
     // statements assigning state variables to modify vars.
-    val modifyInitAssigns : List[AssignStmt] = if (proc.shouldInline) {
-      modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
-    } else {
-      List.empty
-    }
+    val modifyInitAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
+    // havoc'ing of the modified variables.
+    val modifyHavocs : List[HavocStmt] = modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
     // statements updating the state variables at the end.
     val modifyFinalAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(getModifyLhs(p._1)), List(p._2)))
     // create precondition asserts
     val preconditionAsserts : List[Statement] = proc.requires.map {
       (req) => {
         val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(req, context), context)
-        AssertStmt(exprP, None)
+        val node = AssertStmt(exprP, Some(Identifier("precondition")))
+        ASTNode.introducePos(true, true, node, req.position)
       }
     }
     // create postcondition asserts
@@ -139,7 +138,8 @@ class NewProcedureInlinerPass() extends RewritePass {
       proc.ensures.map {
         (ens) => {
           val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
-          AssertStmt(exprP, None)
+          val node = AssertStmt(exprP, Some(Identifier("postcondition")))
+        ASTNode.introducePos(true, true, node, ens.position)
         }
       }
     } else {
@@ -155,7 +155,7 @@ class NewProcedureInlinerPass() extends RewritePass {
           AssumeStmt(exprP, None)
         }
       }
-      BlockStmt(List.empty, postconditionAssumes)
+      BlockStmt(List.empty, modifyHavocs ++ postconditionAssumes)
     }
     val stmtsP = if (callStmt.callLhss.size > 0) {
       val returnAssign = AssignStmt(callStmt.callLhss, retIds)
@@ -179,3 +179,4 @@ class NewProcedureInlinerPass() extends RewritePass {
 class NewProcedureInliner() extends ASTRewriter("ProcedureInliner", new NewProcedureInlinerPass()) {
   override val repeatUntilNoChange = true
 }
+

@@ -115,7 +115,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
  
     var output : String = ""
     val sortedArray : ListMap[String,String] = if (isNumeral) 
-        ListMap(array.toSeq.sortWith(_._1.toInt < _._1.toInt):_*) 
+        ListMap(array.toSeq.sortWith((x, y) => BigInt(x._1) < BigInt(y._1)):_*) 
         else ListMap(array.toSeq.sortBy(_._1):_*) 
     sortedArray.foreach{ case (k,v) => {
       if (!v.contentEquals(bottom)) {
@@ -160,6 +160,8 @@ class Z3Interface() extends Context {
   /** The Z3 context. */
   val ctx = new z3.Context(cfg)
   ctx.setPrintMode(z3.enumerations.Z3_ast_print_mode.Z3_PRINT_SMTLIB2_COMPLIANT)
+  /** The parameters we will use. */
+  val params = ctx.mkParams()
   /** The Z3 solver. */
   val solver = ctx.mkSolver()
 
@@ -271,7 +273,7 @@ class Z3Interface() extends Context {
   val getEnumLit = new Memo[(String, EnumType), z3.Expr]((p) => getEnumSort(p._2.members).getConst(p._2.fieldIndex(p._1)))
 
   /** Create a constant array literal. */
-  val getConstArrayLit = new Memo[(Literal, ArrayType), z3.Expr]({
+  val getConstArray = new Memo[(Expr, ArrayType), z3.Expr]({
     (p) => {
       val value = exprToZ3(p._1).asInstanceOf[z3.Expr]
       val sort = getArrayIndexSort(p._2.inTypes)
@@ -354,6 +356,10 @@ class Z3Interface() extends Context {
       case BVLEOp(_)              => ctx.mkBVSLE(bvArgs(0), bvArgs(1))
       case BVGTOp(_)              => ctx.mkBVSGT(bvArgs(0), bvArgs(1))
       case BVGEOp(_)              => ctx.mkBVSGE(bvArgs(0), bvArgs(1))
+      case BVLTUOp(_)             => ctx.mkBVULT(bvArgs(0), bvArgs(1))
+      case BVLEUOp(_)             => ctx.mkBVULE(bvArgs(0), bvArgs(1))
+      case BVGTUOp(_)             => ctx.mkBVUGT(bvArgs(0), bvArgs(1))
+      case BVGEUOp(_)             => ctx.mkBVUGE(bvArgs(0), bvArgs(1))
       case BVAddOp(_)             => ctx.mkBVAdd(bvArgs(0), bvArgs(1))
       case BVSubOp(_)             => ctx.mkBVSub(bvArgs(0), bvArgs(1))
       case BVMulOp(_)             => ctx.mkBVMul(bvArgs(0), bvArgs(1))
@@ -367,24 +373,37 @@ class Z3Interface() extends Context {
       case BVReplaceOp(w, hi, lo) => mkReplace(w, hi, lo, bvArgs(0), bvArgs(1))
       case BVSignExtOp(w, e)      => ctx.mkSignExt(e, bvArgs(0))
       case BVZeroExtOp(w, e)      => ctx.mkZeroExt(e, bvArgs(0))
-      case BVLeftShiftOp(w, e)    => ctx.mkBVSHL(bvArgs(0), ctx.mkBV(e, w))
-      case BVLRightShiftOp(w, e)  => ctx.mkBVLSHR(bvArgs(0), ctx.mkBV(e, w))
-      case BVARightShiftOp(w, e)  => ctx.mkBVASHR(bvArgs(0), ctx.mkBV(e, w))
+      case BVLeftShiftIntOp(w, e)    => ctx.mkBVSHL(bvArgs(0), ctx.mkBV(e, w))
+      case BVLRightShiftIntOp(w, e)  => ctx.mkBVLSHR(bvArgs(0), ctx.mkBV(e, w))
+      case BVARightShiftIntOp(w, e)  => ctx.mkBVASHR(bvArgs(0), ctx.mkBV(e, w))
+      case BVLeftShiftBVOp(w)     => ctx.mkBVSHL(bvArgs(0), bvArgs(1))
+      case BVLRightShiftBVOp(w)   => ctx.mkBVLSHR(bvArgs(0), bvArgs(1))
+      case BVARightShiftBVOp(w)   => ctx.mkBVASHR(bvArgs(0), bvArgs(1))
       case NegationOp             => ctx.mkNot (boolArgs(0))
       case IffOp                  => ctx.mkIff (boolArgs(0), boolArgs(1))
       case ImplicationOp          => ctx.mkImplies (boolArgs(0), boolArgs(1))
       case EqualityOp             => ctx.mkEq(exprArgs(0), exprArgs(1))
-      case InequalityOp           => ctx.mkDistinct(exprArgs(0), exprArgs(1))
+      case InequalityOp           => ctx.mkDistinct(exprArgs: _*)
       case ConjunctionOp          => ctx.mkAnd (boolArgs : _*)
       case DisjunctionOp          => ctx.mkOr (boolArgs : _*)
       case ITEOp                  => ctx.mkITE(exprArgs(0).asInstanceOf[z3.BoolExpr], exprArgs(1), exprArgs(2))
-      case ForallOp(vs)           =>
+      case ForallOp(vs, patterns)           =>
         // val qTyps = vs.map((v) => getZ3Sort(v.typ)).toArray
         val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
-        ctx.mkForall(qVars, boolArgs(0), 1, null, null, getForallName(), getSkolemName())
-      case ExistsOp(vs)           =>
+        val qPatterns = patterns.map { ps => {
+            val qs = ps.map(p => exprToZ3(p).asInstanceOf[z3.Expr])
+            ctx.mkPattern(qs : _*)
+          }
+        }.toArray
+        ctx.mkForall(qVars, boolArgs(0), 1, qPatterns, null, getForallName(), getSkolemName())
+      case ExistsOp(vs, patterns)           =>
         val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
-        ctx.mkExists(qVars, boolArgs(0), 1, null, null, getExistsName(), getSkolemName())
+        val qPatterns = patterns.map { ps => {
+            val qs = ps.map(p => exprToZ3(p).asInstanceOf[z3.Expr])
+            ctx.mkPattern(qs : _*)
+          }
+        }.toArray
+        ctx.mkExists(qVars, boolArgs(0), 1, qPatterns, null, getExistsName(), getSkolemName())
       case RecordSelectOp(fld)    =>
         val prodType = operands(0).typ.asInstanceOf[ProductType]
         val fieldIndex = prodType.fieldIndex(fld)
@@ -438,11 +457,13 @@ class Z3Interface() extends Context {
       case BitVectorLit(bv,w) => getBitVectorLit(bv, w)
       case BooleanLit(b) => getBoolLit(b)
       case EnumLit(e, typ) => getEnumLit(e, typ)
-      case ConstArrayLit(value, typ) => getConstArrayLit(value, typ)
+      case ConstArray(expr, typ) => getConstArray(expr, typ)
       case MakeTuple(args) =>
         val tupleSort = getTupleSort(args.map(_.typ))
         tupleSort.mkDecl().apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
     }
+    assertLogger.debug("expr: " + e.toString())
+    assertLogger.debug("z3  : " + z3AST.toString())
     // z3AST
     if (z3AST.isInstanceOf[z3.Expr]) z3AST.asInstanceOf[z3.Expr].simplify()
     else z3AST
@@ -465,9 +486,9 @@ class Z3Interface() extends Context {
   override def preassert(e: Expr) {}
 
   def writeToFile(p: String, s: String): Unit = {
-    val pw = new PrintWriter(new File(p))
+    val pw = new PrintWriter(new File(p.replace(" ", "_")))
     try pw.write(s) finally pw.close()
-  } 
+  }
 
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
@@ -502,6 +523,16 @@ class Z3Interface() extends Context {
   override def finish() {
     ctx.close()
   }
+
+  override def addOption(opt: String, value: Context.SolverOption): Unit = {
+    value match {
+      case Context.BoolOption(b) => params.add(opt, b)
+      case Context.IntOption(i) => params.add(opt, i)
+      case Context.DoubleOption(d) => params.add(opt, d)
+      case Context.StringOption(s) => params.add(opt, s)
+    }
+    solver.setParameters(params)
+  }
 }
 
 
@@ -532,5 +563,76 @@ object InterpolationTest
     val proof = solver.getProof()
     val interp = ctx.ComputeInterpolant(pat, params)
     println("Interpolant: " + interp.interp(0).toString())
+  }
+}
+
+object FixedpointTest
+{
+  def test() : Unit = {
+    // Transition system
+    //
+    // Init(x, y) = x == 0 && y > 1
+    // Transition(x, y, x', y') = (x' = x + 1) && (y' = y + x)
+    // Bad(x, y) = x >= y
+    //
+    // Init(x, y) => Inv(x, y)
+    // Inv(x, y) & (x' = x + 1) & (y' = y + 1) => Inv(x', y')
+    // Inv(x, y) & (x >= y) => error() 
+    z3.Global.setParameter("fixedpoint.engine", "pdr")
+
+    val ctx = new z3.Context()
+    val intSort = ctx.mkIntSort()
+    val boolSort = ctx.mkBoolSort()
+    val fp = ctx.mkFixedpoint()
+
+    val sorts2 = Array[z3.Sort](intSort, intSort)
+    val invDecl = ctx.mkFuncDecl("inv", sorts2, boolSort)
+    val errorDecl = ctx.mkFuncDecl("error", Array[z3.Sort](), boolSort)
+
+    val symbolx = ctx.mkSymbol(0)
+    val symboly = ctx.mkSymbol(1)
+    val symbols2 = Array[z3.Symbol](symbolx, symboly)
+    val x = ctx.mkBound(0, sorts2(0)).asInstanceOf[z3.ArithExpr]
+    val y = ctx.mkBound(1, sorts2(1)).asInstanceOf[z3.ArithExpr]
+    
+    def applyDecl(f : z3.FuncDecl, x : z3.ArithExpr, y : z3.ArithExpr) : z3.BoolExpr = {
+      f.apply(x, y).asInstanceOf[z3.BoolExpr]
+    }
+    var qId = 0
+    var skId = 0
+    def createForall(sorts : Array[z3.Sort], symbols : Array[z3.Symbol], e : z3.Expr) = {
+      qId += 1
+      skId += 1
+      ctx.mkForall(sorts, symbols, e,
+        0, Array[z3.Pattern](), Array[z3.Expr](), ctx.mkSymbol(qId), ctx.mkSymbol(skId))
+    }
+    
+    fp.registerRelation(invDecl)
+    fp.registerRelation(errorDecl)
+
+    // x >= 0 && y >= 0 ==> inv(x, y)
+    val xEq0 = ctx.mkEq(x, ctx.mkInt(0))
+    val yGt1 = ctx.mkGt(y, ctx.mkInt(1))
+    val initCond = ctx.mkAnd(xEq0, yGt1)
+    val initRule = createForall(sorts2, symbols2, ctx.mkImplies(initCond, applyDecl(invDecl, x, y)))
+
+    // inv(x, y) ==> inv(x+1, y+x)
+    val xPlus1 = ctx.mkAdd(x, ctx.mkInt(1))
+    val yPlusx = ctx.mkAdd(y, x)
+    val guard = applyDecl(invDecl, x, y)
+    val trRule = createForall(sorts2, symbols2, ctx.mkImplies(guard, applyDecl(invDecl, xPlus1, yPlusx)))
+
+    val yProp1 = ctx.mkGe(x, y)
+    val propGuard = ctx.mkAnd(applyDecl(invDecl, x, y), yProp1)
+    val propRule = createForall(sorts2, symbols2, ctx.mkImplies(propGuard, errorDecl.apply().asInstanceOf[z3.BoolExpr]))
+    
+    fp.addRule(initRule, ctx.mkSymbol("initRule"))
+    fp.addRule(trRule, ctx.mkSymbol("trRule"))
+    fp.addRule(propRule, ctx.mkSymbol("propRule"))
+
+    println(fp.toString())
+
+    // property.
+    println (fp.query(Array(errorDecl)))
   }
 }

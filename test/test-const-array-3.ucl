@@ -1,0 +1,34 @@
+module main
+{
+  type color_t = enum { red, blue, green };
+  const p : color_t;
+  var col : color_t;
+  var arr : [integer]color_t;
+
+  define next_color(c : color_t) : color_t =
+    if (c == red)
+      then blue
+      else (if (c == blue)
+               then green
+               else red);
+
+  init {
+    arr = const(p, [integer]color_t);
+    col = p;
+  }
+
+  next {
+    arr' = arr[0 -> next_color(arr[0])];
+    col' = next_color(col);
+  }
+
+  invariant eq: col == arr[0];
+  invariant ne: arr[1] != arr[2];
+
+  control {
+    unroll(3);
+    check;
+    print_results;
+  }
+}
+

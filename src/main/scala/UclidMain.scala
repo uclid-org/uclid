@@ -77,9 +77,11 @@ object UclidMain {
       smtFileGeneration: String = "",
       sygusFormat: Boolean = false,
       sygusTypeConvert: Boolean = false,
+      enumToNumeric: Boolean = false,
       printStackTrace: Boolean = false,
       verbose : Int = 0,
-      files : Seq[java.io.File] = Seq()
+      files : Seq[java.io.File] = Seq(),
+      testFixedpoint: Boolean = false
   )
 
   def parseOptions(args: Array[String]) : Option[Config] = {
@@ -118,6 +120,14 @@ object UclidMain {
         (_, c) => c.copy(sygusTypeConvert = true)
       }.text("Enable EnumType conversion in synthesis.")
 
+      opt[Unit]('e', "enum-to-numeric").action{
+        (_, c) => c.copy(enumToNumeric = true)
+      }.text("Enable conversion from EnumType to NumericType.")
+
+      opt[Unit]('t', "test-fixedpoint").action {
+        (_, c) => c.copy(testFixedpoint = true)
+      }.text("Test fixed point")
+
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
       }.text("List of files to analyze.")
@@ -131,9 +141,13 @@ object UclidMain {
    */
   def main(config : Config) {
     try {
+      if (config.testFixedpoint) {
+        smt.Z3HornSolver.test1()
+        return
+      }
       val mainModuleName = Identifier(config.mainModuleName)
       val modules = compile(config.files, mainModuleName)
-      val mainModule = instantiate(modules, mainModuleName, true)
+      val mainModule = instantiate(config, modules, mainModuleName, true)
       mainModule match {
         case Some(m) => execute(m, config)
         case None    =>
@@ -175,17 +189,15 @@ object UclidMain {
     }
   }
 
-  /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
-  def compile(srcFiles : Seq[java.io.File], mainModuleName : Identifier, test : Boolean = false) : List[Module] = {
-    type NameCountMap = Map[Identifier, Int]
-    var nameCnt : NameCountMap = Map().withDefaultValue(0)
-
+  def createCompilePassManager(test: Boolean, mainModuleName: lang.Identifier) = {
     val passManager = new PassManager("compile")
-    // passManager.addPass(new ASTPrinter("ASTPrinter$1"))
+    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ModuleCanonicalizer())
-    passManager.addPass(new BlockVariableRenamer())
     passManager.addPass(new LTLOperatorIntroducer())
     passManager.addPass(new ModuleTypesImportCollector())
+    passManager.addPass(new ModuleConstantsImportCollector())
+    passManager.addPass(new ModuleFunctionsImportCollector())
+
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new FuncExprRewriter())
@@ -195,6 +207,7 @@ object UclidMain {
     passManager.addPass(new ConstantLitRewriter())
     passManager.addPass(new TypeSynonymFinder())
     passManager.addPass(new TypeSynonymRewriter())
+    passManager.addPass(new BlockVariableRenamer())
     passManager.addPass(new BitVectorSliceFindWidth())
     passManager.addPass(new ExpressionTypeChecker())
     if (!test) passManager.addPass(new VerificationExpressionChecker())
@@ -225,9 +238,13 @@ object UclidMain {
     passManager.addPass(new BlockFlattener())
     passManager.addPass(new ModuleCleaner(mainModuleName))
     passManager.addPass(new BlockVariableRenamer())
-    // passManager.addPass(new TaintModPass())
-    // passManager.addPass(new TaintNPass())
-    // passManager.addPass(new ASTPrinter())
+    passManager
+  }  
+  /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
+  def compile(srcFiles : Seq[java.io.File], mainModuleName : Identifier, test : Boolean = false): List[Module] = {
+    type NameCountMap = Map[Identifier, Int]
+    var nameCnt : NameCountMap = Map().withDefaultValue(0)
+    val passManager = createCompilePassManager(test, mainModuleName)
 
     val filenameAdderPass = new AddFilenameRewriter(None)
     // Helper function to parse a single file.
@@ -262,14 +279,14 @@ object UclidMain {
   }
 
   /** Instantiate module helper. */
-  def instantiateModules(moduleList: List[Module], mainModuleName : Identifier) : List[Module] = {
+  def instantiateModules(config : Config, moduleList: List[Module], mainModuleName : Identifier) : List[Module] = {
     val passManager = new PassManager("instantiate")
     passManager.addPass(new ModuleDependencyFinder(mainModuleName))
-    passManager.addPass(new StatelessAxiomFinder())
+    passManager.addPass(new StatelessAxiomFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
+    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ModuleFlattener(mainModuleName))
-    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
@@ -280,6 +297,9 @@ object UclidMain {
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())
+    if (config.enumToNumeric) passManager.addPass(new EnumTypeAnalysis())
+    if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamer("BV"))
+    if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamerCons("BV"))
 
     // run passes.
     passManager.run(moduleList)
@@ -291,11 +311,11 @@ object UclidMain {
    * @param mainModuleName Name of main module.
    * @param verbose If this is true, we print the message describing the number of modules parsed and instantiated.
    */
-  def instantiate(moduleList : List[Module], mainModuleName : Identifier, verbose : Boolean) : Option[Module] = {
+  def instantiate(config : Config, moduleList : List[Module], mainModuleName : Identifier, verbose : Boolean) : Option[Module] = {
     if (moduleList.find(m => m.id == mainModuleName).isEmpty) {
       return None
     }
-    val moduleListP = instantiateModules(moduleList, mainModuleName)
+    val moduleListP = instantiateModules(config, moduleList, mainModuleName)
     if (verbose) {
       UclidMain.println("Successfully parsed %d and instantiated %d module(s).".format(moduleList.size, moduleListP.size))
     }
@@ -308,7 +328,7 @@ object UclidMain {
    */
   def execute(module : Module, config : Config) : List[CheckResult] = {
     var symbolicSimulator = new SymbolicSimulator(module)
-    var z3Interface = if (config.smtSolver.size > 0) {
+    var solverInterface = if (config.smtSolver.size > 0) {
       logger.debug("args: {}", config.smtSolver)
       new smt.SMTLIB2Interface(config.smtSolver)
     } else {
@@ -318,9 +338,9 @@ object UclidMain {
       case Nil => None
       case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir, config.sygusFormat))
     }
-    z3Interface.filePrefix = config.smtFileGeneration
-    val result = symbolicSimulator.execute(z3Interface, sygusInterface, config)
-    z3Interface.finish()
+    solverInterface.filePrefix = config.smtFileGeneration
+    val result = symbolicSimulator.execute(solverInterface, sygusInterface, config)
+    solverInterface.finish()
     return result
   }
 
@@ -335,7 +355,7 @@ object UclidMain {
   def println(str : String) {
     if (stringOutputEnabled) {
       stringOutput ++= str
-      stringOutput ++ "\n"
+      stringOutput ++= "\n"
     } else {
       Console.println(str)
     }

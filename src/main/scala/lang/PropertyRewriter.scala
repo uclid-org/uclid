@@ -56,7 +56,7 @@ class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
     ret
   }
   override def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up || !context.inLTLSpec) {
+    if (d == TraversalDirection.Up || !context.environment.inLTLSpec) {
       in
     } else {
       var ret = in
@@ -113,7 +113,7 @@ class LTLOperatorArgumentChecker extends ASTAnalyzer(
 
 class LTLOperatorIntroducerPass extends RewritePass {
   override def rewriteFuncApp(fapp: FuncApplication, context: Scope): Option[Expr] = {
-    if (context.inLTLSpec) {
+    if (context.environment.inLTLSpec) {
       fapp.e match {
         case Identifier(name : String) => name match {
           case "G" =>
@@ -250,11 +250,16 @@ class LTLPropertyRewriterPass extends RewritePass {
         OperatorApplication(ITEOp(), List(recurse(args(0)), recurse(not(args(1))), recurse(not(args(2)))))
       // any other operator, just recurse.
       case OperatorApplication(op, args) =>
-        OperatorApplication(op, args.map(a => recurse(a)))
-      case arrSel : ArraySelectOperation =>
-        ArraySelectOperation(recurse(arrSel.e), arrSel.index.map(recurse(_)))
-      case arrUpd : ArrayStoreOperation =>
-        ArrayStoreOperation(recurse(arrUpd.e), arrUpd.index.map(recurse(_)), recurse(arrUpd.value))
+        op match {
+          case ArraySelect(es) =>
+            val esP = es.map(recurse(_))
+            OperatorApplication(ArraySelect(esP), args.map(recurse(_)))
+          case ArrayUpdate(es, m) =>
+            val esP = es.map(recurse(_))
+            OperatorApplication(ArrayUpdate(esP, recurse(m)), args.map(recurse(_)))
+          case _ =>
+            OperatorApplication(op, args.map(a => recurse(a)))
+        }
       case funcApp : FuncApplication =>
         FuncApplication(recurse(funcApp.e), funcApp.args.map(recurse(_)))
       case lambda : Lambda =>

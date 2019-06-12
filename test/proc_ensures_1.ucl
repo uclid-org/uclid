@@ -1,0 +1,34 @@
+module main
+{
+  var tail          : integer;
+  var initialized   : boolean;
+  input push_cmd    : boolean;
+
+  init {
+    tail = 0;
+    initialized = false;
+  }
+
+  next {
+    initialized' = true;
+    if (push_cmd) {
+      call push();
+    }
+  }
+
+  invariant push_affects_tail: initialized ==> (push_cmd ==> (tail == past(tail) + 1));
+
+  procedure push()
+    requires push_cmd;
+    ensures tail == old(tail) + 2;
+    modifies tail;
+  {
+    tail = tail + 1;
+  }
+
+  control {
+    v2 = unroll(2);
+    check;
+    print_results;
+  }
+}

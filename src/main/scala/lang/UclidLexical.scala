@@ -90,8 +90,10 @@ class UclidLexical extends Lexical with UclidTokens with Positional {
     ( positioned { 'b' ~ 'v' ~> digit.+                                ^^ { case chars => BitVectorTypeLit(chars.mkString("")) } }
     | positioned { (letter | '_') ~ rep( letter | '_' | digit )        ^^ { case first ~ rest => processIdent(first :: rest mkString "") } }
     | positioned { digit ~ rep(digit) ~ 'b' ~ 'v' ~ digit ~ rep(digit) ^^ { case (f1 ~ r1 ~ 'b' ~ 'v' ~ f2 ~ r2) => BitVectorLit(f1 :: r1 mkString "", 10, (f2 :: r2 mkString "").toInt) } }
-    | positioned { '0' ~ 'x' ~> hexDigit ~ rep( hexDigit )             ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 16) } }
-    | positioned { '0' ~ 'b' ~> bit ~ rep( bit )                       ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 2) } }
+    | positioned { '0' ~ 'x' ~ hexDigit ~ rep( hexDigit ) ~ 'b' ~ 'v' ~ digit ~ rep(digit) ^^ { case ('0' ~ 'x' ~ f1 ~ r1 ~ 'b' ~ 'v' ~ f2 ~ r2) => BitVectorLit(f1 :: r1 mkString "", 16, (f2 :: r2 mkString "").toInt) } }
+    | positioned { '0' ~ 'b' ~ bit ~ rep( bit ) ~ 'b' ~ 'v' ~ digit ~ rep(digit) ^^ { case ('0' ~ 'b' ~ b ~ rb ~ 'b' ~ 'v' ~ d ~ rd) => BitVectorLit(b :: rb mkString "", 2, (d :: rd mkString "").toInt) } }
+    | positioned { '0' ~ 'x' ~> rep1( hexDigit )                       ^^ { case hits => IntegerLit(hits.mkString, 16) } }
+    | positioned { '0' ~ 'b' ~> rep1( bit )                            ^^ { case bits => IntegerLit(bits.mkString, 2) } }
     | positioned { digit ~ rep( digit )                                ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 10) } }
     | positioned { '\"' ~> rep( chrExcept('\"', '\n', EofCh) ) <~ '\"' ^^ { case chars => StringLit(chars mkString "") } }
     | EofCh                                               ^^^ EOF
@@ -101,7 +103,7 @@ class UclidLexical extends Lexical with UclidTokens with Positional {
     )
 
 
-  def hexDigit : Parser[Char] = elem("hexDigit", ((ch) => ch.isDigit || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')))
+  def hexDigit : Parser[Char] = elem("hexDigit", ((ch) => ch.isDigit || (ch >= 'A' && ch <= 'F')))
   def bit : Parser[Char] = elem("bit", ((ch) => ch == '0' || ch == '1'))
 
   // see `whitespace in `Scanners`
@@ -112,11 +114,14 @@ class UclidLexical extends Lexical with UclidTokens with Positional {
     | '/' ~ '*' ~ failure("unclosed comment")
     )
 
+  // protected def comment: Parser[Any] = (
+  //    '*' ~ '/'  ^^ { case _ => ' '  }
+  //   | chrExcept(EofCh) ~ comment
+  //   )
   protected def comment: Parser[Any] = (
-      '*' ~ '/'  ^^ { case _ => ' '  }
-    | chrExcept(EofCh) ~ comment
+    rep(chrExcept(EofCh, '*') | '*' ~ not('/')) ~ '*' ~ '/' 
+    ^^^ ' '
     )
-
   /** The set of reserved identifiers: these will be returned as `Keyword`s. */
   val reserved = new mutable.HashSet[String]
 

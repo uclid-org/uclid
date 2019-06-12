@@ -209,10 +209,26 @@ abstract trait Context {
   def preassert(e: Expr)
   def check() : SolverResult
   def finish()
+
+  def addOption(option: String, value: Context.SolverOption)
 }
 
 object Context
 {
+  sealed abstract class SolverOption {}
+  case class BoolOption(b : Boolean) extends SolverOption {
+    override def toString() : String = b.toString()
+  }
+  case class IntOption(i : Int) extends SolverOption {
+    override def toString() : String = i.toString()
+  }
+  case class DoubleOption(d : Double) extends SolverOption {
+    override def toString() : String = d.toString()
+  }
+  case class StringOption(s : String) extends SolverOption {
+    override def toString() : String = s
+  }
+
   def convertReplace(w : Int, hi : Int, lo : Int, arg0 : Expr, arg1 : Expr) : Expr = {
     val slice0 = (w-1, hi+1)
     val slice2 = (lo-1, 0)
@@ -247,7 +263,7 @@ object Context
       case Some(eP) => eP
       case None =>
         val eP = e match {
-          case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) =>
+          case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) | ConstArray(_, _) =>
             rewrite(e)
           case OperatorApplication(op, operands) =>
             val operandsP = operands.map(arg => rewriteExpr(arg, rewrite, memo))
@@ -333,6 +349,18 @@ object Context
     es.foldLeft(empty)((acc, e) => acc ++ accumulateOverExpr(e, apply, memo))
   }
 
+  def findFreeSymbols(e : smt.Expr, memo : MutableMap[Expr, Set[Symbol]]) : Set[Symbol] = {
+    memo.get(e) match {
+      case Some(result) => result
+      case None =>
+        val s : Set[Symbol] = e match {
+          case s : Symbol => Set(s)
+          case _ => Set.empty
+        }
+        memo.put(e, s)
+        s
+    }
+  }
 
   /**
    * Helper function that finds all the types that appear in an expression.

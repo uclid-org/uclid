@@ -1,0 +1,20 @@
+module main
+{
+  procedure add(a : integer, b : integer) returns (c : integer)
+    requires (a >= 0 && a < 10);
+    requires (b >= 0 && b < 10);
+    ensures c == a + b;
+    ensures (c >= 0 && c < 18);
+  {
+    c = a + b;
+  }
+
+  control {
+    add_verif = verify(add);
+    //sum_verif = verify(sum);
+    check;
+    print_results;
+    add_verif.print_cex(a, b, c);
+    // sum_verif->print_cex(n, x, numbers[1], numbers[2], numbers[3], numbers[4], numbers[5]);
+  }
+}

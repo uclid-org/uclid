@@ -43,8 +43,11 @@ import lang._
 import vcd.VCD
 
 import scala.util.Try
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import com.typesafe.scalalogging.Logger
+import uclid.smt.{Z3HornSolver, Z3Interface}
+
+import scala.collection.mutable.{Map => MutableMap}
 
 object UniqueIdGenerator {
   var i : Int = 0;
@@ -52,13 +55,25 @@ object UniqueIdGenerator {
 }
 
 object SymbolicSimulator {
-  type SymbolTable = Map[Identifier, smt.Expr];
+  type SymbolTable = Map[Identifier, smt.Expr]
   type FrameTable = ArrayBuffer[SymbolTable]
+  type SymbolHyperTable = Map[Identifier, Array[smt.Expr]]
+  type FrameHyperTable = Array[SymbolHyperTable]
+  type SimulationTable = ArrayBuffer[FrameTable]
+  def simRecordLength(simRecord : SimulationTable) : Int = {
+    Utils.assert(simRecord.size > 0, "Invalid length")
+    val sz = simRecord(0).size
+    Utils.assert(simRecord.forall(ft => ft.size == sz), "Invalid lengths")
+    sz
+  }
 }
 
 class SymbolicSimulator (module : Module) {
   type SymbolTable = SymbolicSimulator.SymbolTable
   type FrameTable = SymbolicSimulator.FrameTable
+  type SymbolHyperTable = SymbolicSimulator.SymbolHyperTable
+  type FrameHyperTable = SymbolicSimulator.FrameHyperTable
+  type SimulationTable = SymbolicSimulator.SimulationTable
 
   val context = Scope.empty + module
   var assertionTree = new AssertionTree()
@@ -67,9 +82,15 @@ class SymbolicSimulator (module : Module) {
   val assertLog = Logger("uclid.SymbolicSimulator.assert")
   val verifyProcedureLog = Logger("uclid.SymbolicSimulator.verifyProc")
 
+  var assumes = new ListBuffer[smt.Expr]()
+  var hyperAssumes = new ListBuffer[smt.Expr]()
+  var asserts = new ListBuffer[AssertInfo]()
+  var hyperAsserts = new ListBuffer[AssertInfo]()
+
   var symbolTable : SymbolTable = Map.empty
-  var frameTable : FrameTable = ArrayBuffer.empty
-  
+  var frameList : FrameTable = ArrayBuffer.empty
+
+  var lazySC : Option[LazySCSolver] = None
   var synthesizedInvariants : ArrayBuffer[lang.Expr] = ArrayBuffer.empty
 
   def newHavocSymbol(name: String, t: smt.Type) = {
@@ -91,14 +112,39 @@ class SymbolicSimulator (module : Module) {
     new smt.Symbol("const_" + name, t)
   }
 
+  def newTaintSymbol(name: String, t: smt.Type) = {
+    new smt.Symbol("taint_" + UniqueIdGenerator.unique() + "_" + name, t)
+  }
+
   def resetState() {
     assertionTree.resetToInitial()
     symbolTable = Map.empty
-    frameTable.clear()
+    frameList.clear()
   }
   var proofResults : List[CheckResult] = List.empty
   def dumpResults(label: String, log : Logger) {
     log.debug("{} --> proofResults.size = {}", label, proofResults.size.toString)
+  }
+  def frameTableToHyperTable(frameTbl : FrameTable) : FrameHyperTable = {
+    frameTbl.map {
+      (symTbl) => { symTbl.map((sym) => (sym._1 -> Array(sym._2))) }
+    }.toArray
+  }
+  def simTableToHyperTable(simTbl : SimulationTable) : FrameHyperTable = {
+    Utils.assert(simTbl.size > 0, "Must have at least one array of frames")
+    val numFrames = simTbl(0).size
+    Utils.assert(simTbl.forall(frameTbl => frameTbl.size == numFrames), "Must have the same number of frames in each trace")
+    val numTraces = simTbl.size
+    (1 to numFrames).toArray.map {
+      (frameIndex) => {
+        val symTbl0 : SymbolTable = simTbl(0)(frameIndex)
+        val ids0 = symTbl0.map(id => id._1)
+        val ids = ids0.filter(id => simTbl.forall(frameTbl => frameTbl(frameIndex).contains(id)))
+        ids.map(
+            id => (id -> simTbl.map(frameTbl => frameTbl(frameIndex).get(id).get).toArray)
+        ).toMap[Identifier, Array[smt.Expr]]
+      }
+    }
   }
   def execute(solver : smt.Context, synthesizer : Option[smt.SynthesisContext], config : UclidMain.Config) : List[CheckResult] = {
     proofResults = List.empty
@@ -116,8 +162,28 @@ class SymbolicSimulator (module : Module) {
               case Some(l) => l.toString
               case None    => "unroll"
             }
-            initialize(false, true, false, context, label, noLTLFilter)
-            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+            // get_init_lambda(false, context, "some")
+            symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter, solver)
+            //initialize(false, true, false, context, label, noLTLFilter)
+            //symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+            // initialize(false, true, false, context, label, noLTLFilter)
+            // symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
+            //runLazySC(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, noLTLFilter, solver)
+
+          case "horn" =>
+            val label : String = cmd.resultVar match {
+              case Some(l) => l.toString
+              case None    => "horn"
+            }
+            runHornSolver(context, label, noLTLFilter)
+          case "lazysc" =>
+            val label : String = cmd.resultVar match {
+              case Some(l) => l.toString
+              case None    => "unroll"
+            }
+            val lz = new LazySCSolver(this)
+            lazySC = Some(lz)
+            runLazySC(lz, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, noLTLFilter, solver)
           case "bmc" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString()
@@ -175,8 +241,12 @@ class SymbolicSimulator (module : Module) {
               case None    => "verify(%s)".format(procName.toString)
             }
             verifyProcedure(proc, label)
-          case "check" =>
-            proofResults = assertionTree.verify(solver)
+          case "check" => {
+            lazySC match {
+              case None => proofResults = assertionTree.verify(solver)
+              case Some(lz) => proofResults = lz.assertionTree.verify(solver)
+            }
+          }
           case "synthesize_invariant" =>
             synthesizer match {
               case None =>
@@ -210,6 +280,16 @@ class SymbolicSimulator (module : Module) {
             printSMT2(assertionTree, cmd.argObj, solver)
           case "print_module" =>
             UclidMain.println(module.toString)
+          case "set_solver_option" =>
+            val option = cmd.args(0)._1.asInstanceOf[lang.StringLit].value
+            val value : smt.Context.SolverOption = cmd.args(1)._1 match {
+              case BoolLit(b) => smt.Context.BoolOption(b)
+              case IntLit(i) => smt.Context.IntOption(i.toInt)
+              case StringLit(s) => smt.Context.StringOption(s)
+              case _ => throw new Utils.AssertionError(
+                "Unexpected option value: " + cmd.args(1)._1.toString)
+            }
+            solver.addOption(option, value)
           case _ =>
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }
@@ -235,6 +315,63 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
+
+  def getVarsInOrder(map: Map[smt.Expr, Identifier], scope: Scope) : List[List[smt.Expr]] = {
+    val ids = map.map(p => p._2).toList
+    val reverse_map = map.map(_.swap)
+    val const_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.ConstantVar(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get).sortBy{
+        v =>
+          val s = v.toString.split("_")
+          val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+           name
+    }
+    /*val func_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.Function(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get)
+    */
+    val input_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.InputVar(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get).sortBy{
+      v =>
+        val s = v.toString.split("_")
+        val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+        name
+    }
+    val output_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.OutputVar(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get).sortBy{
+      v =>
+        val s = v.toString.split("_")
+        val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+        name
+    }
+    val state_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.StateVar(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get).sortBy{
+      v =>
+        val s = v.toString.split("_")
+        val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+        name
+    }
+    val shared_vars = ids.filter(id => scope.get(id).get match {
+      case Scope.SharedVar(id, typ) => true
+      case _ => false
+    }).map(id => reverse_map.get(id).get).sortBy{
+      v =>
+        val s = v.toString.split("_")
+        val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+        name
+    }
+    List(const_vars, input_vars, output_vars, state_vars, shared_vars)
+
+  }
   /**
    * Create symbolic expressions for the init block.
    *
@@ -248,20 +385,24 @@ class SymbolicSimulator (module : Module) {
    */
   def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean, scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) {
     val initSymbolTable = getInitSymbolTable(scope)
+    val frameTbl = ArrayBuffer(initSymbolTable)
+
+    addModuleAssumptions(initSymbolTable, frameTbl, 0, scope, addAssumptionToTree _)
+
     symbolTable = if (!havocInit && module.init.isDefined) {
-      simulate(0, List.empty, module.init.get.body, initSymbolTable, scope, label, addAssumptionToTree _, addAssertToTree _)
+      simulateStmt(0, List.empty, module.init.get.body, initSymbolTable, frameTbl, scope, label, addAssumptionToTree _, addAssertToTree _)
     } else {
       initSymbolTable
     }
 
-    val pastTable = Map(1 -> initSymbolTable)
-    addModuleAssumptions(symbolTable, pastTable, scope, addAssumptionToTree _)
+    addModuleAssumptions(symbolTable, frameTbl, 1, scope, addAssumptionToTree _)
 
-    frameTable.clear()
-    frameTable += symbolTable
+    frameList.clear()
+    frameList += symbolTable
+    val simTbl : SimulationTable = ArrayBuffer(frameList)
 
-    if (addAssertions) { addAsserts(0, symbolTable, pastTable, label, scope, filter, addAssertToTree _) }
-    if (addAssumptions) { assumeAssertions(symbolTable, pastTable, scope, addAssumptionToTree _) }
+    if (addAssertions) { addAsserts(0, symbolTable, frameList, simTbl, label, scope, filter, addAssertToTree _) }
+    if (addAssumptions) { assumeAssertions(symbolTable, frameTbl, 1, scope, addAssumptionToTree _) }
   }
 
   def newInputSymbols(st : SymbolTable, step : Int, scope : Scope) : SymbolTable = {
@@ -271,6 +412,642 @@ class SymbolicSimulator (module : Module) {
         case _ => acc
       }
     })
+  }
+
+  def addAssumesToList(e: smt.Expr, params: List[ExprDecorator]) : Unit = {
+    if (ExprDecorator.isHyperproperty(params)) {
+      hyperAssumes += e
+    } else {
+      assumes += e
+    }
+  }
+
+  def addHyperAssertsToList(assert: AssertInfo) : Unit = {
+    hyperAsserts += assert
+  }
+  def addAssertsToList(assert: AssertInfo) : Unit = {
+    asserts += assert
+  }
+
+  def clearAssumes() = {
+    assumes.clear()
+    asserts.clear()
+    hyperAsserts.clear()
+    hyperAssumes.clear()
+  }
+
+  def noHyperInvariantFilter(filter : ((Identifier, List[ExprDecorator]) => Boolean)) =  (n : Identifier, d : List[ExprDecorator]) => {
+    filter(n, d) && !ExprDecorator.isHyperproperty(d)
+  }
+
+  def HyperInvariantFilter(filter : ((Identifier, List[ExprDecorator]) => Boolean)) =  (n : Identifier, d : List[ExprDecorator]) => {
+    filter(n, d) && ExprDecorator.isHyperproperty(d)
+  }
+  def getInitLambda(havocInit: Boolean, addAssertions: Boolean, addAssumptions: Boolean, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
+    clearAssumes()
+    val initSymbolTable = getInitSymbolTable(scope)
+    val initFrameTbl = ArrayBuffer(initSymbolTable)
+    val symTab = if (!havocInit && module.init.isDefined) {
+      simulateStmt(0, List.empty, module.init.get.body, initSymbolTable, initFrameTbl, scope, label, addAssumesToList _, addAssertsToList _)
+    } else {
+      initSymbolTable
+    }
+
+    addModuleAssumptions(symTab, initFrameTbl, 1, scope, addAssumesToList _)
+    frameList.clear()
+    frameList += initSymbolTable
+    val simTbl : SimulationTable = ArrayBuffer(frameList)
+
+    if (addAssertions) {
+      addAsserts(1, symTab, frameList, simTbl, label, scope, noHyperInvariantFilter(filter), addAssertsToList _)
+      addAsserts(1, symTab, frameList, simTbl, label, scope, HyperInvariantFilter(filter), addHyperAssertsToList _)
+    }
+    if (addAssumptions) { assumeAssertions(symTab, frameList, 1, scope, addAssumesToList _) }
+
+    val reverse_map = initSymbolTable.map(_.swap) // Map new smt Vars back to IDs
+    val conjunct = reverse_map.map(p => if (p._1 != symTab.get(reverse_map.get(p._1).get).get) Some(smt.OperatorApplication(smt.EqualityOp,
+
+      List(p._1, symTab.get(reverse_map.get(p._1).get).get))) else None).toList.flatten ++ assumes.toList
+
+
+    val conjunction = if (conjunct.length > 1) { smt.OperatorApplication(smt.ConjunctionOp, conjunct)}
+                      else if (conjunct.length == 1) conjunct(0)
+                      else new smt.BooleanLit(true)
+
+    val lambda = smt.Lambda(getVarsInOrder(reverse_map, scope).flatten.map(p => p.asInstanceOf[smt.Symbol]), conjunction)
+    (lambda, asserts.toList, initSymbolTable, hyperAsserts.toList, hyperAssumes.toList)
+  }
+
+  def getNextLambda(init_symTab: Map[Identifier, smt.Expr], addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
+                      scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) =
+  {
+
+    clearAssumes()
+
+    var currentState = init_symTab
+    val reverse_init_map = currentState.map(_.swap)
+    val init_vars = getVarsInOrder(reverse_init_map, scope)
+
+    var states = new ArrayBuffer[SymbolTable]()
+
+    //frameTable += init_symTab
+    // add initial state.
+
+    val stWInputs = currentState//newInputSymbols(currentState, 1, scope)
+    states += stWInputs
+    val symTableP = simulateModuleNext(1, stWInputs, states, scope, label, addAssumesToList _, addAssertsToList _)
+    var assumesLambda = assumes.clone()
+
+    val eqStates = symTableP.filter(p => stWInputs.get(p._1) match {
+      case Some(st) => (st == p._2)
+      case None => false
+    }).map(_._1).toSet
+
+    defaultLog.debug("eqStates: {}", eqStates.toString())
+    currentState = renameStatesLambda(symTableP, eqStates, 1, scope, addAssumesToList _)
+    var assumesLength = assumes.length
+    val numPastFrames = frameList.size
+    frameList += currentState
+    val simTbl = ArrayBuffer(frameList)
+    addModuleAssumptions(currentState, frameList, numPastFrames, scope, addAssumesToList _)
+    
+    assumes.takeRight(assumes.length - assumesLength).foreach(expr => assumesLambda += expr)
+    assumesLength = assumes.length
+
+    if (addAssertions) {
+      addAsserts(1, currentState, frameList, simTbl, label, scope, noHyperInvariantFilter(filter), addAssertsToList _)
+      addAsserts(1, currentState, frameList, simTbl, label, scope, HyperInvariantFilter(filter), addHyperAssertsToList _)
+    }
+    if (addAssertionsAsAssumes) { assumeAssertions(currentState, frameList, numPastFrames, scope, addAssumesToList _) }
+    assumes.takeRight(assumes.length - assumesLength).foreach(expr => assumesLambda += expr)
+
+
+    // Output/Input vars are renamed in renameStatesLambda
+    val final_vars = getVarsInOrder(currentState.map(_.swap), scope)
+
+    val conjunct = if (assumes.length > 1) smt.OperatorApplication(smt.ConjunctionOp, assumes.toList)
+                    else if (assumes.length == 0) new smt.BooleanLit(true)
+                    else assumes(0)
+    val lambda = smt.Lambda((init_vars.flatten ++ final_vars.flatten).map(p => p.asInstanceOf[smt.Symbol]), conjunct)
+
+
+    (lambda, asserts.toList, currentState,
+      hyperAsserts.toList, hyperAssumes.toList, assumesLambda.toList)
+  }
+
+  def runHornSolver(scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
+    val init_lambda = getInitLambda(false, true, false, scope, label, filter)
+    val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
+    val h = new Z3HornSolver(this)
+    val context = new Z3Interface()
+    val lazySc = new LazySCSolver(this)
+    val initTaintLambda = lazySc.getTaintInitLambdaV2(init_lambda._1, scope, context, init_lambda._5)
+    val nextTaintLambda = lazySc.getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, next_lambda._4, scope)
+    val combinedInitLambda = lazySc.getCombinedInitLambda(init_lambda._1, initTaintLambda)
+    val combinedNextLambda = lazySc.getCombinedNextLambda(next_lambda._1, nextTaintLambda._1)
+    //h.convertHyperInvToTaint(next_lambda._1, next_lambda._4)
+    //h.solveTaintLambdasV2(combinedInitLambda, combinedNextLambda, scope)
+    h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
+  }
+
+  def runLazySC(lazySC: LazySCSolver, bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean), solver: smt.Context) = {
+
+      //Z3HornSolver.test1()
+
+      lazySC.simulateLazySCV2(bound, scope, label, filter)
+  }
+
+  def symbolicSimulateLambdasHyperAssert(startStep: Int, numberOfSteps: Int, hypPropIdx: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
+                              scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean),
+                              solver: smt.Context) = {
+    // At this point symbolTable must have the initial symbols.
+    resetState()
+
+    val init_lambda = getInitLambda(false, true, false, scope, label, filter)
+    val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
+    //val s = new LazySCSolver(this, solver)
+
+    val num_copies = getMaxHyperInvariant(scope)
+    val simRecord = new SimulationTable
+    var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
+    var havocTable = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
+
+    var inputStep = 0
+    for (i <- 1 to num_copies) {
+      var frames = new FrameTable
+      val initSymTab = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
+      inputStep += 1
+      frames += initSymTab
+      var prevVars = getVarsInOrder(initSymTab.map(_.swap), scope)
+      prevVarTable += prevVars
+      val init_havocs = getHavocs(init_lambda._1.e)
+      val havoc_subs = init_havocs.map {
+        havoc =>
+          val s = havoc.id.split("_")
+          val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+          (havoc, newHavocSymbol(name, havoc.typ))
+      }
+      havocTable += havoc_subs
+      val init_conjunct = substitute(betaSubstitution(init_lambda._1, prevVars.flatten), havoc_subs)
+      addAssumptionToTree(init_conjunct, List.empty)
+      simRecord += frames
+    }
+
+    val hyperAssumesInit = rewriteHyperAssumes(
+      init_lambda._1, 0, init_lambda._5, simRecord, 0, scope, prevVarTable.toList)
+    hyperAssumesInit.foreach {
+      hypAssume =>
+        addAssumptionToTree(hypAssume, List.empty)
+    }
+
+    /*
+    val asserts_init = rewriteAsserts(
+      init_lambda._1, init_lambda._2, 0,
+      prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
+      simRecord.clone(), havocTable(0))
+
+    asserts_init.foreach {
+      assert =>
+        // FIXME: simTable
+        addAssertToTree(assert)
+    }
+    */
+    val filteredInitHyperAssert = List(init_lambda._4(hypPropIdx))
+    val asserts_init_hyper = rewriteHyperAsserts(
+      init_lambda._1, 0, filteredInitHyperAssert, simRecord, 0, scope, prevVarTable.toList)
+    asserts_init_hyper.foreach {
+      assert =>
+        // FIXME: simTable
+        addAssertToTree(assert)
+    }
+
+    var symTabStep = symbolTable
+    for (i <- 1 to numberOfSteps) {
+      for (j <- 1 to num_copies) {
+        symTabStep = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
+        inputStep += 1
+        simRecord(j - 1) += symTabStep
+        val new_vars = getVarsInOrder(symTabStep.map(_.swap), scope)
+        val next_havocs = getHavocs(next_lambda._1.e)
+        val havoc_subs = next_havocs.map {
+          havoc =>
+            val s = havoc.id.split("_")
+            val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+            (havoc, newHavocSymbol(name, havoc.typ))
+        }
+        val next_conjunct = substitute(betaSubstitution(next_lambda._1, (prevVarTable(j - 1) ++ new_vars).flatten), havoc_subs)
+        addAssumptionToTree(next_conjunct, List.empty)
+        havocTable(j - 1) = havoc_subs
+        prevVarTable(j - 1) = new_vars
+      }
+
+      val hyperAssumesNext = rewriteHyperAssumes(next_lambda._1, numberOfSteps, next_lambda._5, simRecord, i, scope, prevVarTable.toList)
+      hyperAssumesNext.foreach {
+        hypAssume =>
+          addAssumptionToTree(hypAssume, List.empty)
+      }
+      /*
+      // Asserting on-HyperInvariant assertions
+      // FIXME: simTable
+      val asserts_next = rewriteAsserts(
+        next_lambda._1, next_lambda._2, i,
+        getVarsInOrder(simRecord(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
+          prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord.clone(), havocTable(0))
+      asserts_next.foreach {
+        assert =>
+          addAssertToTree(assert)
+      }*/
+
+      // FIXME: simTable
+      defaultLog.debug("i: {}", i)
+      val filteredNextHyperAssert = List(next_lambda._4(hypPropIdx))
+      val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, numberOfSteps, filteredNextHyperAssert, simRecord, i, scope, prevVarTable.toList)
+      asserts_next_hyper.foreach {
+        assert => {
+          addAssertToTree(assert)
+        }
+      }
+    }
+    symbolTable = symTabStep
+    val results = assertionTree.verify(solver)
+    UclidMain.println("The results are: " + results)
+  }
+
+  def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
+                              scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean),
+                              solver: smt.Context) = {
+      // At this point symbolTable must have the initial symbols.
+      resetState()
+
+      val init_lambda = getInitLambda(false, true, false, scope, label, filter)
+      val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, filter)
+      //val s = new LazySCSolver(this, solver)
+
+      val num_copies = getMaxHyperInvariant(scope)
+      val simRecord = new SimulationTable
+      var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
+      var havocTable = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
+
+      var inputStep = 0
+      for (i <- 1 to num_copies) {
+        var frames = new FrameTable
+        val initSymTab = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
+        inputStep += 1
+        frames += initSymTab
+        var prevVars = getVarsInOrder(initSymTab.map(_.swap), scope)
+        prevVarTable += prevVars
+        val init_havocs = getHavocs(init_lambda._1.e)
+        val havoc_subs = init_havocs.map {
+          havoc =>
+            val s = havoc.id.split("_")
+            val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+            (havoc, newHavocSymbol(name, havoc.typ))
+        }
+        havocTable += havoc_subs
+        val init_conjunct = substitute(betaSubstitution(init_lambda._1, prevVars.flatten), havoc_subs)
+        addAssumptionToTree(init_conjunct, List.empty)
+        simRecord += frames
+      }
+
+      val hyperAssumesInit = rewriteHyperAssumes(
+          init_lambda._1, 0, init_lambda._5, simRecord, 0, scope, prevVarTable.toList)
+      hyperAssumesInit.foreach {
+        hypAssume =>
+          addAssumptionToTree(hypAssume, List.empty)
+      }
+
+
+      val asserts_init = rewriteAsserts(
+          init_lambda._1, init_lambda._2, 0,
+          prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
+          simRecord.clone(), havocTable(0))
+
+      asserts_init.foreach {
+        assert =>
+          // FIXME: simTable
+          addAssertToTree(assert)
+      }
+
+      val asserts_init_hyper = rewriteHyperAsserts(
+          init_lambda._1, 0, init_lambda._4, simRecord, 0, scope, prevVarTable.toList)
+      asserts_init_hyper.foreach {
+        assert =>
+          // FIXME: simTable
+          addAssertToTree(assert)
+      }
+
+      var symTabStep = symbolTable
+      for (i <- 1 to numberOfSteps) {
+          for (j <- 1 to num_copies) {
+            symTabStep = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
+            inputStep += 1
+            simRecord(j - 1) += symTabStep
+            val new_vars = getVarsInOrder(symTabStep.map(_.swap), scope)
+            val next_havocs = getHavocs(next_lambda._1.e)
+            val havoc_subs = next_havocs.map {
+              havoc =>
+                val s = havoc.id.split("_")
+                val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
+                (havoc, newHavocSymbol(name, havoc.typ))
+            }
+            val next_conjunct = substitute(betaSubstitution(next_lambda._1, (prevVarTable(j - 1) ++ new_vars).flatten), havoc_subs)
+            addAssumptionToTree(next_conjunct, List.empty)
+            havocTable(j - 1) = havoc_subs
+            prevVarTable(j - 1) = new_vars
+          }
+
+          val hyperAssumesNext = rewriteHyperAssumes(next_lambda._1, numberOfSteps, next_lambda._5, simRecord, i, scope, prevVarTable.toList)
+          hyperAssumesNext.foreach {
+            hypAssume =>
+              addAssumptionToTree(hypAssume, List.empty)
+          }
+          // Asserting on-HyperInvariant assertions
+          // FIXME: simTable
+          val asserts_next = rewriteAsserts(
+              next_lambda._1, next_lambda._2, i,
+              getVarsInOrder(simRecord(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
+              prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord.clone(), havocTable(0))
+          asserts_next.foreach {
+            assert =>
+              addAssertToTree(assert)
+          }
+          // FIXME: simTable
+          defaultLog.debug("i: {}", i)
+          val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, numberOfSteps, next_lambda._4, simRecord, i, scope, prevVarTable.toList)
+          asserts_next_hyper.foreach {
+            assert => {
+              addAssertToTree(assert)
+            }
+          }
+      }
+      symbolTable = symTabStep
+  }
+
+  def rewriteHyperAssumes(
+      lambda: smt.Lambda, stepIndex : Integer, hyperAssumes: List[smt.Expr],
+      simTable: SimulationTable, step: Int, scope: Scope, prevVarTable: List[List[List[smt.Expr]]]) = {
+      hyperAssumes.map {
+        hypAssume =>
+          rewriteHyperAssume(lambda, stepIndex, hypAssume, simTable, step, scope, prevVarTable)
+      }
+  }
+
+  //FIXME: Only hyperSelects are rewritten, other variables remain as is.
+  //FIXME: Variables without hyperSelects are the unconstrained lambda variables
+  def rewriteHyperAssume(
+      lambda: smt.Lambda, stepIndex : Integer, hypAssume: smt.Expr,
+      simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
+
+      val hyperSelects = getHyperSelects(hypAssume)
+      val subs = hyperSelects.map {
+      expr =>
+        val op = expr.op
+        val exp = expr.operands
+        op match {
+          case smt.HyperSelectOp(i) =>
+            if (stepIndex > 0) {
+              val actual_params = getVarsInOrder(simRecord(i - 1)(step - 1).map(_.swap), scope).flatten ++ prevVars(i - 1).flatten
+              val formal_params = lambda.ids
+              assert(actual_params.length == formal_params.length)
+              val matches = formal_params.zip(actual_params)
+              val final_expr = substitute(exp(0), matches)
+              (expr, final_expr)
+            }
+            else {
+              val actual_params = getVarsInOrder(simRecord(i - 1)(step).map(_.swap), scope).flatten
+              val formal_params = lambda.ids
+              assert(actual_params.length == formal_params.length)
+              val matches = formal_params.zip(actual_params)
+              val final_expr = substitute(exp(0), matches)
+              (expr, final_expr)
+            }
+          case _ =>
+            throw new Utils.RuntimeError("Should never get here.")
+        }
+    }
+    substitute(hypAssume, subs)
+  }
+  def rewriteHyperAsserts(
+      lambda: smt.Lambda, stepIndex : Integer, hyperAsserts: List[AssertInfo], 
+      simTable: SimulationTable, step: Int, scope: Scope, prevVarTable: List[List[List[smt.Expr]]]) = {
+    hyperAsserts.map {
+      assert => {
+        defaultLog.debug("step: {}", step)
+        rewriteHyperAssert(lambda, stepIndex, assert, simTable, step, scope, prevVarTable)
+      }
+    }
+  }
+
+  def cloneSimRecord(simRecord : SimulationTable) : SimulationTable = {
+    simRecord.map(ft => ft.clone()).clone()
+  }
+  def simRecordLength(simRecord : SimulationTable) : Int = SymbolicSimulator.simRecordLength(simRecord)
+
+  //FIXME: Only hyperSelects are rewritten, other variables remain as is.
+  //FIXME: Variables without hyperSelects are the unconstrained lambda variables
+  def rewriteHyperAssert(
+      lambda: smt.Lambda, stepIndex : Integer, at: AssertInfo, 
+      simRecord: SimulationTable, step: Int, scope: Scope, prevVars: List[List[List[smt.Expr]]]) = {
+
+      val hyper_selects = getHyperSelects(at.expr)
+      val subs = hyper_selects.map {
+        expr =>
+          val op = expr.op
+          val exp = expr.operands
+          op match {
+            case smt.HyperSelectOp(i) =>
+              if (stepIndex > 0) {
+                val actual_params = getVarsInOrder(simRecord(i - 1)(step).map(_.swap), scope).flatten ++ prevVars(i - 1).flatten
+                val formal_params = lambda.ids
+                assert(actual_params.length == formal_params.length)
+                val matches = formal_params.zip(actual_params)
+                val final_expr = substitute(exp(0), matches)
+                (expr, final_expr)
+              }
+              else {
+                val actual_params = getVarsInOrder(simRecord(i - 1)(step).map(_.swap), scope).flatten
+                val formal_params = lambda.ids
+                assert(actual_params.length == formal_params.length)
+                val matches = formal_params.zip(actual_params)
+                val final_expr = substitute(exp(0), matches)
+                (expr, final_expr)
+              }
+            case _ =>
+              throw new Utils.RuntimeError("Should never get here.")
+          }
+      }
+      // FIXME: simTable
+      val st = AssertInfo(at.name, at.label, cloneSimRecord(simRecord), at.context, step,
+                  at.pathCond, substitute(at.expr, subs), at.decorators, at.pos)
+      Utils.assert(st.iter + 1 == simRecordLength(st.frameTable), "Invalid length/step combination")
+      defaultLog.debug("insi: {}", step)
+      defaultLog.debug("[rewrite] iter: {} length: {}", st.iter, SymbolicSimulator.simRecordLength(st.frameTable))
+      st
+  }
+
+  def getHyperSelects(e: smt.Expr): List[smt.OperatorApplication]  = {
+    e match {
+      case smt.Symbol(id, symbolTyp) => List()
+      case smt.IntLit(n) => List()
+      case smt.BooleanLit(b) => List()
+      case smt.BitVectorLit(bv, w) => List()
+      case smt.EnumLit(id, eTyp) => List()
+      case smt.ConstArray(v, arrTyp) => List()
+      case smt.MakeTuple(args) => args.flatMap(e => getHyperSelects(e))
+      case opapp : smt.OperatorApplication =>
+        val op = opapp.op
+        val args = opapp.operands.flatMap(exp => getHyperSelects(exp))
+        op match {
+          case smt.HyperSelectOp(i) => List(opapp) ++ args
+          case _ => args
+        }
+      case smt.ArraySelectOperation(a,index) =>  getHyperSelects(a) ++ index.flatMap(e => getHyperSelects(e))
+      case smt.ArrayStoreOperation(a,index,value) =>
+        getHyperSelects(a) ++ index.flatMap(e => getHyperSelects(e)) ++ getHyperSelects(value)
+      case smt.FunctionApplication(f, args) =>
+        args.flatMap(arg => getHyperSelects(arg))
+      case _ =>
+        throw new Utils.UnimplementedException("'" + e + "' is not yet supported.")
+    }
+
+  }
+  def getMaxHyperInvariant(scope: Scope) = {
+    var max_k = 1
+    scope.specs.foreach(specVar => {
+      val prop = module.properties.find(p => p.id == specVar.varId).get
+      if (ExprDecorator.isHyperproperty(prop.params)) {
+         val hyperdec = prop.params.filter(param => param match {
+           case HyperpropertyDecorator(k) => true
+           case _ => false
+         })
+         if (max_k < hyperdec(0).asInstanceOf[HyperpropertyDecorator].k) {
+           max_k = hyperdec(0).asInstanceOf[HyperpropertyDecorator].k
+         }
+      }
+    })
+    max_k
+  }
+
+  def getHavocs(e: smt.Expr): List[smt.Symbol] = {
+    e match {
+      case smt.Symbol(id, symbolTyp) =>
+        if (id.startsWith("havoc_")) List(e.asInstanceOf[smt.Symbol]) else List()
+
+      case smt.IntLit(n) => List()
+      case smt.BooleanLit(b) => List()
+      case smt.BitVectorLit(bv, w) => List()
+      case smt.EnumLit(id, eTyp) => List()
+      case smt.ConstArray(v, arrTyp) => List()
+      case smt.MakeTuple(args) => args.flatMap(e => getHavocs(e))
+      case opapp : smt.OperatorApplication =>
+        val op = opapp.op
+        val args = opapp.operands.flatMap(exp => getHavocs(exp))
+        //UclidMain.println("Crashing Here" + op.toString)
+        args
+
+      case smt.ArraySelectOperation(a,index) =>  getHavocs(a) ++ index.flatMap(e => getHavocs(e))
+      case smt.ArrayStoreOperation(a,index,value) =>
+        getHavocs(a) ++  index.flatMap(e => getHavocs(e)) ++ getHavocs(value)
+      case smt.FunctionApplication(f, args) =>
+        val f1 = f match {
+          case smt.Symbol(id, symbolTyp) =>
+            if (id.startsWith("havoc_")) List(e.asInstanceOf[smt.Symbol]) else List()
+          //UclidMain.println("Function application of f == " + f.toString)
+
+          case _ =>
+            throw new Utils.RuntimeError("Should never get here.")
+        }
+        f1 ++ args.flatMap(arg => getHavocs(arg))
+      case _ =>
+        throw new Utils.UnimplementedException("'" + e + "' is not yet supported.")
+    }
+  }
+
+  def rewriteAsserts(
+      lambda: smt.Lambda, asserts: List[AssertInfo], stepIndex : Integer, 
+      actualVars: List[smt.Symbol], simTable: SimulationTable, 
+      havocSubs: List[(smt.Symbol, smt.Symbol)]): List[AssertInfo] = {
+
+    Utils.assert(lambda.ids.length == actualVars.length, "Invalid arguments to rewriteAsserts")
+    val matches = lambda.ids.zip(actualVars)
+    asserts.map(assert => rewriteAssert(assert, matches, stepIndex, simTable, havocSubs))
+  }
+
+  def rewriteAssert(
+      assert: AssertInfo, matches: List[(smt.Symbol, smt.Symbol)], stepIndex : Integer, 
+      simTable: SimulationTable, havocsubs: List[(smt.Symbol, smt.Symbol)]): AssertInfo = {
+    defaultLog.debug("rewriteAssert/step: {}", stepIndex)
+    AssertInfo(assert.name, assert.label, cloneSimRecord(simTable), 
+        assert.context, stepIndex, substitute(substitute(assert.pathCond, matches), havocsubs),
+        substitute(substitute(assert.expr, matches), havocsubs), assert.decorators, assert.pos)
+  }
+
+  def betaSubstitution(lambda: smt.Lambda, args: List[smt.Expr]): smt.Expr = {
+      val formal_params = lambda.ids
+      val actual_params = args.map(p => p.asInstanceOf[smt.Symbol])
+
+      assert(formal_params.length == actual_params.length)
+      val matches = formal_params.zip(actual_params)
+      substitute(lambda.e, matches)
+  }
+
+
+  def substitute(e: smt.Expr, s: List[(smt.Expr, smt.Expr)]): smt.Expr = {
+    val m = s.map(p => p._1 -> p._2).toMap
+    def rewrite(ex: smt.Expr) : smt.Expr = {
+      m.get(ex) match {
+        case Some(eX) => eX
+        case None => ex
+      }
+    }
+    s.foldLeft(e)((acc, p) => _substitute(acc, p))
+    //var memo: MutableMap[smt.Expr, smt.Expr] = MutableMap.empty
+    //smt.Context.rewriteExpr(e, rewrite, memo)
+  }
+
+  def _substitute(e: smt.Expr, sym: (smt.Expr, smt.Expr)): smt.Expr = {
+    //Causes a possible slowdown
+    //if (e == sym._1)
+    //  return sym._2
+
+    e match {
+      case smt.Symbol(id, symbolTyp) => {
+        if (sym._1 == e) sym._2
+        else e
+      }
+      case smt.IntLit(n) => e
+      case smt.BooleanLit(b) => e
+      case smt.BitVectorLit(bv, w) => e
+      case smt.EnumLit(id, eTyp) => e
+      case smt.ConstArray(exp, arrTyp) => smt.ConstArray(_substitute(exp, sym), arrTyp)
+      case smt.MakeTuple(args) => smt.MakeTuple(args.map(e => _substitute(e, sym)))
+      case opapp : smt.OperatorApplication =>
+        val op = opapp.op
+        op match {
+          case smt.HyperSelectOp(i) =>
+            if (e == sym._1)
+              return sym._2
+          case _ =>
+        }
+
+        val args = opapp.operands.map(exp => _substitute(exp, sym))
+        smt.OperatorApplication(op, args)
+
+      case smt.ArraySelectOperation(a,index) =>
+        smt.ArraySelectOperation(_substitute(a, sym), index.map(e => _substitute(e, sym)))
+      case smt.ArrayStoreOperation(a,index,value) =>
+        smt.ArrayStoreOperation(_substitute(a, sym), index.map(e => _substitute(e, sym)), _substitute(value, sym))
+      case smt.FunctionApplication(f, args) =>
+        val f1 = f match {
+          case smt.Symbol(id, symbolTyp) =>
+            if (sym._1 == f) sym._2 else f
+          case _ =>
+            throw new Utils.RuntimeError("Should never get here.")
+        }
+        smt.FunctionApplication(f1, args.map(e => _substitute(e, sym)))
+      case _ =>
+        throw new Utils.UnimplementedException("'" + e + "' is not yet supported.")
+    }
   }
 
   /**
@@ -283,7 +1060,7 @@ class SymbolicSimulator (module : Module) {
    * @param step The current frame number.
    * @param scope The current scope.
    */
-  def renameStates(st : SymbolTable, eqStates : Set[Identifier], frameNumber : Int, scope : Scope, addAssumption : (smt.Expr => Unit)) : SymbolTable = {
+  def renameStates(st : SymbolTable, eqStates : Set[Identifier], frameNumber : Int, scope : Scope, addAssumption : (smt.Expr, List[ExprDecorator]) => Unit) : SymbolTable = {
     val renamedExprs : Iterable[(Identifier, smt.Symbol, smt.Expr)] = scope.map.map(_._2).map {
       case Scope.StateVar(id, typ) =>
         if (!eqStates.contains(id)) {
@@ -297,9 +1074,45 @@ class SymbolicSimulator (module : Module) {
       case _ => None
     }.flatten
     renamedExprs.foreach{ 
-      (p) => addAssumption(p._3)
+      (p) => addAssumption(p._3, List.empty)
     }
-    renamedExprs.foldLeft(st)((acc, p) => st + (p._1 -> p._2))
+    renamedExprs.foldLeft(st)((acc, p) => acc + (p._1 -> p._2))
+  }
+
+  def renameStatesLambda(st : SymbolTable, eqStates : Set[Identifier], frameNumber : Int, scope : Scope, addAssumption : (smt.Expr, List[ExprDecorator])  => Unit) : SymbolTable = {
+    val renamedExprs : Iterable[(Identifier, smt.Symbol, smt.Expr)] = scope.map.map(_._2).map {
+      case Scope.StateVar(id, typ) =>
+          val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
+          val stateExpr = st.get(id).get
+          val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
+          Some(id, newVariable, smtExpr)
+      case Scope.OutputVar(id, typ) => {
+          val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
+          val stateExpr = st.get(id).get
+          val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
+          Some(id, newVariable, smtExpr)
+      }
+      case Scope.SharedVar(id, typ) => {
+        val newVariable = newStateSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
+        val stateExpr = st.get(id).get
+        val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
+        Some(id, newVariable, smtExpr)
+
+      }
+      case Scope.InputVar(id, typ) => {
+        val newVariable = newInputSymbol(id.name, frameNumber, smt.Converter.typeToSMT(typ))
+        val stateExpr = st.get(id).get
+        val smtExpr = smt.OperatorApplication(smt.EqualityOp, List(newVariable, stateExpr))
+        Some(id, newVariable, smtExpr)
+
+      }
+      case _ => None
+    }.flatten
+    renamedExprs.foreach{
+      // FIXME: revisit(AssumptionDecorator)
+      (p) => addAssumption(p._3, List.empty)
+    }
+    renamedExprs.foldLeft(st)((acc, p) => acc + (p._1 -> p._2))
   }
 
   /**
@@ -308,13 +1121,13 @@ class SymbolicSimulator (module : Module) {
    * @param startStep The step number from which start (usually 1, except for k-induction, where it is k.)
    * @param numberOfSteps The number of steps for which to execute.
    * @param addAssertions If this is true, then all module-level assertions are asserted. If this is false, then assertions are ignored unless addAssertionsAsAssume = true.
-   * @param addAssertionsAsAsume If this is true, then module-level assertion are assumed, not asserted.
+   * @param addAssertionsAsAssumes If this is true, then module-level assertion are assumed, not asserted.
    * @param scope The current scope.
    * @param label A label associated with the current verification task.
    * @param filter A function which identifies which assertions are to be considered.
    */
   def symbolicSimulate(
-      startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean, 
+      startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
       scope : Scope, label : String, filter : ((Identifier, List[ExprDecorator]) => Boolean))
   {
     var currentState = symbolTable
@@ -323,19 +1136,22 @@ class SymbolicSimulator (module : Module) {
     for (step <- 1 to numberOfSteps) {
       val stWInputs = newInputSymbols(currentState, step + startStep, scope)
       states += stWInputs
-      val symTableP = simulate(step + startStep, stWInputs, scope, label, addAssumptionToTree _, addAssertToTree _)
+      addModuleAssumptions(stWInputs, frameList, frameList.size, scope, addAssumptionToTree _)
+      val symTableP = simulateModuleNext(step + startStep, stWInputs, frameList, scope, label, addAssumptionToTree _, addAssertToTree _)
       val eqStates = symTableP.filter(p => stWInputs.get(p._1) match {
         case Some(st) => (st == p._2)
         case None => false
       }).map(_._1).toSet
       defaultLog.debug("eqStates: {}", eqStates.toString())
       currentState = renameStates(symTableP, eqStates, step + startStep, scope, addAssumptionToTree _)
-      val numPastFrames = frameTable.size
-      val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
-      frameTable += currentState
-      addModuleAssumptions(currentState, pastTables, scope, addAssumptionToTree _)
-      if (addAssertions) { addAsserts(step, currentState, pastTables, label, scope, filter, addAssertToTree _)  }
-      if (addAssertionsAsAssumes) { assumeAssertions(currentState, pastTables, scope, addAssumptionToTree _) }
+      val numPastFrames = frameList.size
+      val pastTables = ((0 to (numPastFrames - 1)) zip frameList).map(p => ((numPastFrames - p._1) -> p._2)).toMap
+      frameList += currentState
+      val simTbl = ArrayBuffer(frameList)
+      // FIXME: simTable
+      addModuleAssumptions(currentState, frameList, numPastFrames, scope, addAssumptionToTree _)
+      if (addAssertions) { addAsserts(step, currentState, frameList, simTbl, label, scope, filter, addAssertToTree _)  }
+      if (addAssertionsAsAssumes) { assumeAssertions(currentState, frameList, numPastFrames, scope, addAssumptionToTree _) }
     }
     symbolTable = currentState
   }
@@ -367,6 +1183,7 @@ class SymbolicSimulator (module : Module) {
       assertionResults.foreach{ (p) =>
         if (p.result.isFalse) {
           UclidMain.println("  FAILED -> " + p.assert.toString)
+          defaultLog.debug("FAILED EXPR -> " + p.assert.expr.toString())
         }
       }
     }
@@ -416,13 +1233,13 @@ class SymbolicSimulator (module : Module) {
     frameLog.debug("FrameTable: {}", res.assert.frameTable.toString())
 
     val model = res.result.model.get
-    val ft = res.assert.frameTable
-    val indices = 0 to (ft.size - 1)
-    (indices zip ft).foreach{ case (i, frame) => {
+    val simTable = res.assert.frameTable
+    Utils.assert(simTable.size >= 1, "Must have at least one trace")
+    val lastFrame = res.assert.iter
+    (0 to lastFrame).foreach{ case (i) => {
       UclidMain.println("=================================")
       UclidMain.println("Step #" + i.toString)
-      val pastFrames = (0 to (i-1)).map(j => (j + 1) -> ft(i - 1 - j)).toMap
-      printFrame(frame, pastFrames, model, exprsToPrint, scope)
+      printFrame(simTable, i, model, exprsToPrint, scope)
       UclidMain.println("=================================")
     }}
   }
@@ -431,16 +1248,26 @@ class SymbolicSimulator (module : Module) {
     throw new Utils.UnimplementedException("Implement print_smt2.")
   }
 
-  def printFrame(f : SymbolTable, pastFrames : Map[Int, SymbolTable], m : smt.Model, exprs : List[(Expr, String)], scope : Scope) {
-    def expr(id : lang.Identifier) : Option[smt.Expr] = {
-      if (f.contains(id)) { Some(evaluate(id, f, pastFrames, scope)) }
-      else { None }
+  def dumpSimTable(simTable : SimulationTable) {
+    simTable.foreach {
+      println("======================")
+      ft => ft.foreach {
+        println("----------------")
+        st => {
+          st.map {
+            v => println("%s -> %s".format(v._1.toString(), v._2.toString()))
+          }
+        }
+      }
     }
+  }
 
+  def printFrame(simTable : SimulationTable, frameNumber : Int, m : smt.Model, exprs : List[(Expr, String)], scope : Scope) {
     exprs.foreach { (e) => {
       try {
-        val result = m.evalAsString(evaluate(e._1, f, pastFrames, scope))
-        UclidMain.println("  " + e._2 + " : " + result)
+        val exprs = simTable.map(ft => m.evalAsString(evaluate(e._1, ft(frameNumber), ft, frameNumber, scope)))
+        val strings = Utils.join(exprs.map(_.toString()), ", ")
+        UclidMain.println("  " + e._2 + " : " + strings)
       } catch {
         case excp : Utils.UnknownIdentifierException =>
           UclidMain.println("  " + e.toString + " : <UNDEF> ")
@@ -488,12 +1315,12 @@ class SymbolicSimulator (module : Module) {
     val activeSortedVars =  vars.toList.sortWith((l, r) => l._2 < r._2).filter(v => Try(getTypeWidth(v._1.typ)).isSuccess)
     activeSortedVars.foreach(v => vcdWriter.addWire(v._2, getTypeWidth(v._1.typ)))
     val model = res.result.model.get
-    val ft = res.assert.frameTable
+    Utils.assert(res.assert.frameTable.size == 1, "Must have exactly one frame table")
+    val ft = res.assert.frameTable(0)
     val indices = 0 to (ft.size - 1)
     (indices zip ft).foreach{ case (i, frame) => {
       vcdWriter.wireChanged("Step", i)
-      val pastFrames = (0 to (i-1)).map(j => (j + 1) -> ft(i - 1 - j)).toMap
-      updateFrameVCD(vcdWriter, frame, pastFrames, model, activeSortedVars, scope)
+      updateFrameVCD(vcdWriter, frame, ft, i, model, activeSortedVars, scope)
       vcdWriter.incrementTime()
     }}
     vcdWriter.wireChanged("Step", ft.size)
@@ -501,11 +1328,11 @@ class SymbolicSimulator (module : Module) {
     vcdWriter.write(filename)
   }
 
-  def updateFrameVCD(vcd : VCD, f : SymbolTable, pastFrames : Map[Int, SymbolTable], m : smt.Model, exprs : List[(Scope.NamedExpression, String)], scope : Scope) {
+  def updateFrameVCD(vcd : VCD, f : SymbolTable, frameTbl : FrameTable, frameNumber : Int, m : smt.Model, exprs : List[(Scope.NamedExpression, String)], scope : Scope) {
     exprs.foreach { (e) => {
       try {
-        val result = m.evalAsString(evaluate(e._1.id, f, pastFrames, scope))
-        val value = (Try(if (result.toBoolean) 1 else 0).toOption ++ Try(result.toInt).toOption).head
+        val result = m.evalAsString(evaluate(e._1.id, f, frameTbl, frameNumber, scope))
+        val value = (Try(if (result.toBoolean) BigInt(1) else BigInt(0)).toOption ++ Try(BigInt(result)).toOption).head
         vcd.wireChanged(e._2, value)
       } catch {
         case excp : Utils.UnknownIdentifierException =>
@@ -515,11 +1342,11 @@ class SymbolicSimulator (module : Module) {
   }
 
   /** Add assertion. */
-  def addAssertToTree(property : AssertInfo) {
-    assertionTree.addAssert(property)
+  def addAssertToTree(prop : AssertInfo) {
+    assertionTree.addAssert(prop)
   }
   /** Add assumption. */
-  def addAssumptionToTree(e : smt.Expr) {
+  def addAssumptionToTree(e : smt.Expr, params : List[ExprDecorator]) {
     assertionTree.addAssumption(e)
   }
 
@@ -529,6 +1356,65 @@ class SymbolicSimulator (module : Module) {
     symTbl.foreach {
       case (id, expr) =>
         logger.debug("  {} -> {}", id.toString(), expr.toString())
+    }
+  }
+
+  // Helper functions to verify a procedure
+  // NOTE: The following helper functions are writting in a lot of separate places, we
+  //          might want to figure out a way to place it somewhere so that we don't 
+  //          have to write it in all the classes we use it in (code cleanliness)
+  
+  def isStatelessExpression(id : Identifier, context : Scope) : Boolean = {
+    context.get(id) match {
+      case Some(namedExpr) =>
+        namedExpr match {
+          case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
+               Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
+               Scope.FunctionArg(_, _) | Scope.Define(_, _, _) |
+               Scope.Instance(_)       =>
+             false
+          case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
+               Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
+               Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
+               Scope.ConstantLit(_, _)    =>
+             true
+          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _)             |
+               Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
+               Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
+               Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
+               Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
+               Scope.BlockVar(_, _)           | Scope.SelectorField(_)          =>
+             throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
+        }
+      case None =>
+        throw new Utils.RuntimeError("Unknown identifiers should have been detected by now.")
+    }
+  }
+  def isStatelessExpr(e: Expr, context : Scope) : Boolean = {
+    e match {
+      case id : Identifier =>
+        isStatelessExpression(id, context)
+      case ei : ExternalIdentifier =>
+        true
+      case lit : Literal =>
+        true
+      case rec : Tuple =>
+        rec.values.forall(e => isStatelessExpr(e, context))
+      case OperatorApplication(ArraySelect(inds), args) =>
+        inds.forall(ind => isStatelessExpr(ind, context)) &&
+        args.forall(arg => isStatelessExpr(arg, context))
+      case OperatorApplication(ArrayUpdate(inds, value), args) =>
+        inds.forall(ind => isStatelessExpr(ind, context)) &&
+        args.forall(arg => isStatelessExpr(arg, context)) &&
+        isStatelessExpr(value, context)
+      case opapp : OperatorApplication =>
+        opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
+      case a : ConstArray =>
+        isStatelessExpr(a.exp, context)
+      case fapp : FuncApplication =>
+        isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
+      case lambda : Lambda =>
+        isStatelessExpr(lambda.e, context + lambda)
     }
   }
 
@@ -542,25 +1428,45 @@ class SymbolicSimulator (module : Module) {
     val initProcState = proc.sig.outParams.foldLeft(initProcState1)((acc, arg) => {
       acc + (arg._1 -> newHavocSymbol(arg._1.name, smt.Converter.typeToSMT(arg._2)))
     })
-    frameTable.clear()
-    frameTable += initProcState
+    frameList.clear()
+    frameList += initProcState
     logState(verifyProcedureLog, "initProcState", initProcState)
+
+    // add all axioms in procedure scope, independent of state variable references
+    (Scope.empty + proc).map.foreach {
+      case (id, e : Scope.AxiomVar) => {
+        assertionTree.addAssumption(evaluate(e.expr, initProcState, ArrayBuffer.empty, 0, procScope))
+      }
+      case _ => // Do nothing
+    }
+
+    // add all stateless module level axioms
+    context.map.foreach {
+      case (id, e : Scope.AxiomVar) => {
+        if (isStatelessExpr(e.expr, procScope)) {
+          assertionTree.addAssumption(evaluate(e.expr, initProcState, ArrayBuffer.empty, 0, procScope))
+        }
+      }
+      case _ => // Do nothing
+    }
+
     // add assumption.
-    proc.requires.foreach(r => assertionTree.addAssumption(evaluate(r, initProcState, Map.empty, procScope)))
+    proc.requires.foreach(r => assertionTree.addAssumption(evaluate(r, initProcState, ArrayBuffer.empty, 0, procScope)))
     // simulate procedure execution.
-    val finalState = simulate(1, List.empty, proc.body, initProcState, procScope, label, addAssumptionToTree _, addAssertToTree _)
+    val finalState = simulateStmt(1, List.empty, proc.body, initProcState, frameList, procScope, label, addAssumptionToTree _, addAssertToTree _)
     // create frame table.
-    frameTable += finalState
+    frameList += finalState
     logState(verifyProcedureLog, "finalState", finalState)
 
-    val frameTableP = frameTable.clone()
+    val simTable = ArrayBuffer(frameList.clone())
     // add assertions.
     proc.ensures.foreach {
       e => {
         val name = "postcondition"
-        val expr = evaluate(e, finalState, Map(1 -> initProcState), procScope)
-        val assert = AssertInfo(name, label, frameTableP, procScope, 1, smt.BooleanLit(true), expr, List.empty, e.position)
+        val expr = evaluate(e, finalState, ArrayBuffer(initProcState), 1, procScope)
+        val assert = AssertInfo(name, label, simTable.clone(), procScope, 1, smt.BooleanLit(true), expr, List.empty, e.position)
         frameLog.debug("FrameTable: {}", assert.frameTable.toString())
+        // FIXME: need to store simTable here.
         assertionTree.addAssert(assert)
       }
     }
@@ -619,12 +1525,13 @@ class SymbolicSimulator (module : Module) {
 
   def createTransitionRelation(ctx : Scope, st : lang.Statement, x0 : SymbolTable, x1 : SymbolTable, label : String) : smt.Expr = {
     var assumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
-    def addAssumption(e : smt.Expr) : Unit = { assumptions += e }
+    def addAssumption(e : smt.Expr, params : List[ExprDecorator]) : Unit = { assumptions += e }
     var assertions  : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
     def addAssertion(e : AssertInfo) : Unit = { assertions += e }
 
     // Symbolically simulate statement.
-    val symbolicState = simulate(0, List.empty, st, x0, ctx, label, addAssumption _, addAssertion _)
+    val frameTbl : FrameTable = ArrayBuffer.empty
+    val symbolicState = simulateStmt(0, List.empty, st, x0, frameTbl, ctx, label, addAssumption _, addAssertion _)
     // Compute init expression from the result of symbolic simulation.
     val symbolicExpressions = (symbolicState.map {
       p => {
@@ -659,8 +1566,8 @@ class SymbolicSimulator (module : Module) {
     // assumptions.
     var initAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
     var nextAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
-    def initAddAssumption(e : smt.Expr) : Unit = { initAssumptions += e }
-    def nextAddAssumption(e : smt.Expr) : Unit = { nextAssumptions += e }
+    def initAddAssumption(e : smt.Expr, params : List[ExprDecorator]) : Unit = { initAssumptions += e }
+    def nextAddAssumption(e : smt.Expr, params : List[ExprDecorator]) : Unit = { nextAssumptions += e }
     // assertions.
     var initAssertions : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
     def initAddAssertion(e : AssertInfo) : Unit = { initAssertions += e }
@@ -669,9 +1576,11 @@ class SymbolicSimulator (module : Module) {
 
     val defaultSymbolTable = getDefaultSymbolTable(synthesisCtx)
     val primeSymbolTable = getPrimeSymbolTable(synthesisCtx)
-    // FIXME: Need to account for assumptions and assertions. 
-    val initState = simulate(0, List.empty, synthesisModule.init.get.body, defaultSymbolTable, synthesisCtx, "synthesize", initAddAssumption _, initAddAssertion _)
-    val nextState = simulate(0, List.empty, synthesisModule.next.get.body, defaultSymbolTable, synthesisCtx, "synthesize", nextAddAssumption _, nextAddAssertion _)
+    // FIXME: Need to account for assumptions and assertions.
+    val initFrameTbl : FrameTable = ArrayBuffer.empty
+    val initState = simulateStmt(0, List.empty, synthesisModule.init.get.body, defaultSymbolTable, initFrameTbl, synthesisCtx, "synthesize", initAddAssumption _, initAddAssertion _)
+    val nextFrameTbl : FrameTable = ArrayBuffer(initState)
+    val nextState = simulateStmt(0, List.empty, synthesisModule.next.get.body, defaultSymbolTable, nextFrameTbl, synthesisCtx, "synthesize", nextAddAssumption _, nextAddAssertion _)
     val assertions = nextAssertions.map {
       assert => {
         if (assert.pathCond == smt.BooleanLit(true)) {
@@ -684,7 +1593,7 @@ class SymbolicSimulator (module : Module) {
     val invariants = synthesisCtx.specs.map(specVar => {
       val prop = synthesisModule.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {
-        Some(evaluate(prop.expr, defaultSymbolTable, Map.empty, synthesisCtx))
+        Some(evaluate(prop.expr, defaultSymbolTable, ArrayBuffer.empty, 0, synthesisCtx))
       } else {
         None
       }
@@ -723,53 +1632,52 @@ class SymbolicSimulator (module : Module) {
   }
 
   /** Add module specifications (properties) to the list of proof obligations */
-  def addAsserts(frameNumber : Int, symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable],
+  def addAsserts(frameNumber : Int, symbolTable : SymbolTable, frameTbl : FrameTable, simTbl : SimulationTable,
                 label : String, scope : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean),
                 addAssert : (AssertInfo => Unit)) {
 
-    val table = frameTable.clone()
     scope.specs.foreach(specVar => {
       val prop = module.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {
-        val property = AssertInfo(prop.name, label, table, scope, frameNumber, smt.BooleanLit(true), evaluate(prop.expr, symbolTable, pastTables, scope), prop.params, prop.expr.position)
+        val property = AssertInfo(
+            prop.name, label, simTbl.map(ft => ft.clone()), scope, frameNumber, smt.BooleanLit(true),
+            evaluate(prop.expr, symbolTable, frameTbl, frameNumber, scope), prop.params, prop.expr.position)
         addAssert(property)
       }
     })
   }
 
   /** Add module-level axioms/assumptions. */
-  def addModuleAssumptions(symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable], scope : Scope, addAssumption : (smt.Expr => Unit)) {
-    module.axioms.foreach(ax => addAssumption(evaluate(ax.expr, symbolTable, pastTables, scope)))
+  def addModuleAssumptions(symbolTable : SymbolTable, frameTbl : FrameTable, frameNumber : Int, scope : Scope, addAssumption : (smt.Expr, List[ExprDecorator]) => Unit) {
+    module.axioms.foreach(ax => addAssumption(evaluate(ax.expr, symbolTable, frameTbl, frameNumber, scope), ax.params))
   }
 
   /** Assume assertions (for inductive proofs). */
-  def assumeAssertions(symbolTable : SymbolTable, pastTables : Map[Int, SymbolTable], scope : Scope, addAssumption : (smt.Expr => Unit)) {
-    scope.specs.foreach(sp => addAssumption(evaluate(sp.expr, symbolTable, pastTables, scope)))
+  def assumeAssertions(symbolTable : SymbolTable, frameTbl : FrameTable, frameNumber : Int, scope : Scope, addAssumption : (smt.Expr, List[ExprDecorator]) => Unit) {
+    scope.specs.foreach(sp => addAssumption(evaluate(sp.expr, symbolTable, frameTbl, frameNumber, scope), sp.params))
   }
 
-  def simulate(frameNumber : Int, symbolTable: SymbolTable, scope : Scope, label : String,
-               addAssume : (smt.Expr => Unit), addAssert : (AssertInfo => Unit)) : SymbolTable = {
-    simulate(frameNumber, List.empty, module.next.get.body, symbolTable, scope, label, addAssume, addAssert)
+  def simulateModuleNext(frameNumber : Int, symbolTable: SymbolTable, frameTable : FrameTable, scope : Scope, label : String,
+               addAssume : (smt.Expr, List[ExprDecorator]) => Unit, addAssert : (AssertInfo => Unit)) : SymbolTable = {
+    simulateStmt(frameNumber, List.empty, module.next.get.body, symbolTable, frameTable, scope, label, addAssume, addAssert)
   }
 
-  def simulate(frameNumber : Int, pathConditions: List[smt.Expr], stmts: List[Statement],
-               symbolTable: SymbolTable, scope : Scope, label : String,
-               addAssume : (smt.Expr => Unit), addAssert : (AssertInfo => Unit)) : SymbolTable = {
+  def simulateStmt(frameNumber : Int, pathConditions: List[smt.Expr], s: Statement,
+               symbolTable: SymbolTable, frameTable : FrameTable, scope : Scope, label : String,
+               addAssumption : (smt.Expr, List[ExprDecorator]) => Unit, addAssert : (AssertInfo => Unit)) : SymbolTable = {
 
-    return stmts.foldLeft(symbolTable){
-      (acc,i) => simulate(frameNumber, pathConditions, i, acc, scope, label, addAssume, addAssert);
+    // Accumulate over a list of statements.
+    def simulateStmtList(stmts: List[Statement], symbolTable: SymbolTable, scope : Scope) : SymbolTable = {
+        return stmts.foldLeft(symbolTable){
+        (acc,i) => simulateStmt(frameNumber, pathConditions, i, acc, frameTable, scope, label, addAssumption, addAssert);
+      }
     }
-  }
 
-  def simulate(frameNumber : Int, pathConditions: List[smt.Expr], s: Statement, symbolTable: SymbolTable, scope : Scope, label : String,
-               addAssumption : (smt.Expr => Unit), addAssert : (AssertInfo => Unit)) : SymbolTable = {
-    val numPastFrames = frameTable.size
-    lazy val pastTables = ((0 to (numPastFrames - 1)) zip frameTable).map(p => ((numPastFrames - p._1) -> p._2)).toMap
-
+    // Helper function to read from a record.
     def recordSelect(field : String, rec : smt.Expr) = {
       smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
     }
-
+    // Helper function to update a record.
     def recordUpdate(field : String, rec : smt.Expr, newVal : smt.Expr) = {
       smt.OperatorApplication(smt.RecordUpdateOp(field), List(rec, newVal))
     }
@@ -794,7 +1702,7 @@ class SymbolicSimulator (module : Module) {
           case LhsNextId(id) =>
             st = st + (id -> rhs(x))
           case LhsArraySelect(id, indices) =>
-            st = st + (id -> smt.ArrayStoreOperation(st(id), indices.map(i => evaluate(i, st, pastTables, scope)), rhs(x)))
+            st = st + (id -> smt.ArrayStoreOperation(st(id), indices.map(i => evaluate(i, st, frameTable, frameNumber, scope)), rhs(x)))
           case LhsRecordSelect(id, fields) =>
             st = st + (id -> simulateRecordUpdateExpr(st(id), fields.map(_.toString), rhs(x)))
           case LhsSliceSelect(id, slice) =>
@@ -824,13 +1732,14 @@ class SymbolicSimulator (module : Module) {
       case AssertStmt(e, id) =>
         val frameTableP = frameTable.clone()
         frameTableP += symbolTable
+        val simTable = ArrayBuffer(frameTableP)
         val assertionName : String = id match {
           case None => "assertion"
           case Some(i) => i.toString()
         }
-        val assertExpr = evaluate(e,symbolTable, pastTables, scope)
+        val assertExpr = evaluate(e,symbolTable, frameTable, frameNumber, scope)
         val assert = AssertInfo(
-                assertionName, label, frameTableP,
+                assertionName, label, simTable.clone(),
                 scope, frameNumber, pathCondExpr,
                 assertExpr, List.empty, s.position)
         assertLog.debug("Assertion: {}", e.toString)
@@ -839,17 +1748,19 @@ class SymbolicSimulator (module : Module) {
         addAssert(assert)
         return symbolTable
       case AssumeStmt(e, id) =>
-        val assumpExpr = evaluate(e,symbolTable, pastTables, scope)
+        val assumpExpr = evaluate(e,symbolTable, frameTable, frameNumber, scope)
+        //UclidMain.println("----Assumption Expr ---- " + e.toString)
         val effectiveExpr = if (pathCondExpr == smt.BooleanLit(true)) {
           assumpExpr
         } else {
           smt.OperatorApplication(smt.ImplicationOp, List(pathCondExpr, assumpExpr))
         }
-        addAssumption(effectiveExpr)
+        addAssumption(effectiveExpr, List.empty)
         return symbolTable
       case HavocStmt(h) =>
         h match {
           case HavocableId(id) =>
+            //UclidMain.println("------New Havoc Symbol------!")
             return symbolTable.updated(id, newHavocSymbol(id.name, smt.Converter.typeToSMT(scope.typeOf(id).get)))
           case HavocableNextId(id) =>
             throw new Utils.AssertionError("HavocableNextIds should have eliminated by now.")
@@ -857,7 +1768,7 @@ class SymbolicSimulator (module : Module) {
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
         }
       case AssignStmt(lhss,rhss) =>
-        val es = rhss.map(i => evaluate(i, symbolTable, pastTables, scope));
+        val es = rhss.map(i => evaluate(i, symbolTable, frameTable, frameNumber, scope));
         return simulateAssign(lhss, es, symbolTable, label)
       case BlockStmt(vars, stmts) =>
         val declaredVars = vars.flatMap(vs => vs.ids.map(v => (v, vs.typ)))
@@ -879,17 +1790,17 @@ class SymbolicSimulator (module : Module) {
         frameLog.debug("local symbol table  : " + localSymbolTable.toString())
         frameLog.debug("overwritten symbols : " + overwrittenSymbols.toString())
 
-        val simTable1 = simulate(frameNumber, pathConditions, stmts, localSymbolTable, scope + vars, label, addAssumption, addAssert)
+        val simTable1 = simulateStmtList(stmts, localSymbolTable, scope + vars)
         val simTable2 = declaredVars.foldLeft(simTable1)((tbl, p) => tbl - p._1)
         overwrittenSymbols.foldLeft(simTable2)((acc, p) => acc + (p._1 -> p._2))
       case IfElseStmt(e,then_branch,else_branch) =>
         var then_modifies : Set[Identifier] = writeSet(then_branch)
         var else_modifies : Set[Identifier] = writeSet(else_branch)
         // compute in parallel.
-        val condExpr = evaluate(e, symbolTable, pastTables, scope)
+        val condExpr = evaluate(e, symbolTable, frameTable, frameNumber, scope)
         val negCondExpr = smt.OperatorApplication(smt.NegationOp, List(condExpr))
-        var then_st : SymbolTable = simulate(frameNumber, condExpr :: pathConditions, then_branch, symbolTable, scope, label, addAssumption, addAssert)
-        var else_st : SymbolTable = simulate(frameNumber, negCondExpr :: pathConditions, else_branch, symbolTable, scope, label, addAssumption, addAssert)
+        var then_st : SymbolTable = simulateStmt(frameNumber, condExpr :: pathConditions, then_branch, symbolTable, frameTable, scope, label, addAssumption, addAssert)
+        var else_st : SymbolTable = simulateStmt(frameNumber, negCondExpr :: pathConditions, else_branch, symbolTable, frameTable, scope, label, addAssumption, addAssert)
         return symbolTable.keys.filter { id => then_modifies.contains(id) || else_modifies.contains(id) }.
           foldLeft(symbolTable){ (acc,id) =>
             acc.updated(id, smt.OperatorApplication(smt.ITEOp, List(condExpr, then_st(id), else_st(id))))
@@ -937,20 +1848,25 @@ class SymbolicSimulator (module : Module) {
 
   def substitute(e: Expr, id: Identifier, arg: Expr) : Expr = {
      e match {
+       case OperatorApplication(ArraySelect(inds), es) =>
+         val indsP = inds.map(ind => substitute(ind, id, arg))
+         val esP = es.map(e => substitute(e, id, arg))
+         OperatorApplication(ArraySelect(indsP), esP)
+       case OperatorApplication(ArrayUpdate(inds, value), es) =>
+         val indsP = inds.map(ind => substitute(ind, id, arg))
+         val esP = es.map(e => substitute(e, id, arg))
+         val valueP = substitute(value, id, arg)
+         OperatorApplication(ArrayUpdate(indsP, valueP), esP)
        case OperatorApplication(op,args) =>
-         return OperatorApplication(op, args.map(x => substitute(x, id, arg)))
-       case ArraySelectOperation(a,index) =>
-         return ArraySelectOperation(a, index.map(x => substitute(x, id, arg)))
-       case ArrayStoreOperation(a,index,value) =>
-         return ArrayStoreOperation(a, index.map(x => substitute(x, id, arg)), substitute(value, id, arg))
+         OperatorApplication(op, args.map(x => substitute(x, id, arg)))
        case FuncApplication(f,args) =>
-         return FuncApplication(substitute(f,id,arg), args.map(x => substitute(x,id,arg)))
+         FuncApplication(substitute(f,id,arg), args.map(x => substitute(x,id,arg)))
        case Lambda(idtypes, le) =>
          Utils.assert(idtypes.exists(x => x._1.name == id.name), "Lambda arguments of the same name")
-         return Lambda(idtypes, substitute(le, id, arg))
-       case IntLit(n) => return e
-       case BoolLit(b) => return e
-       case Identifier(i) => return (if (id.name == i) arg else e)
+         Lambda(idtypes, substitute(le, id, arg))
+       case IntLit(n) => e
+       case BoolLit(b) => e
+       case Identifier(i) => (if (id.name == i) arg else e)
        case _ => throw new Utils.UnimplementedException("Should not get here")
      }
   }
@@ -975,7 +1891,7 @@ class SymbolicSimulator (module : Module) {
      }
   }
 
-  def evaluate(e: Expr, symbolTable: SymbolTable, pastTables : Map[Int, SymbolTable], scope : Scope) : smt.Expr = {
+  def evaluate(e: Expr, symbolTable: SymbolTable, frameTable : FrameTable, frameNumber : Int, scope : Scope) : smt.Expr = {
     frameLog.debug("expr: %s".format(e.toString()))
     frameLog.debug("symbolTable: %s".format(symbolTable.toString()))
     def idToSMT(id : lang.Identifier, scope : lang.Scope, past : Int) : smt.Expr = {
@@ -989,9 +1905,15 @@ class SymbolicSimulator (module : Module) {
         past match {
           case 0 => symbolTable(id)
           case _ =>
-            pastTables.get(past) match {
-              case Some(pFrame) => pFrame(id)
-              case None => newHavocSymbol(id.name, smtType)
+            if (frameNumber - past < 0) {
+              newHavocSymbol(id.name, smtType)
+            } else {
+              frameTable(frameNumber - past).get(id) match {
+                case Some(expr) => expr
+                case None => //UclidMain.println("--------New Havoc Symbol!------ Past = " + past.toString)
+                  newHavocSymbol(id.name, smtType)
+  
+              }
             }
         }
       }
