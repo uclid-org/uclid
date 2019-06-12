@@ -32,7 +32,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Pramod Subramanyan
- * Rewrite function * = moduleId.*; declarations.
+ * Rewrite define * = moduleId.*; declarations.
  *
  */
 
@@ -65,7 +65,7 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
                Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
                Scope.BlockVar(_, _)           | Scope.SelectorField(_)          =>
-             throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
+             throw new Utils.RuntimeError("Can't have this identifier in define declaration: " + namedExpr.toString())
         }
       case None =>
         throw new Utils.UnknownIdentifierException(id)
@@ -105,7 +105,6 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
       val id = modDefImport.id
       context.map.get(id) match {
         case Some(Scope.ModuleDefinition(mod)) => {
-    
           val newDefs : List[Decl]  = mod.defines.filter(d => isStatelessExpr(d.expr, (Scope.empty + mod) + d.sig)) ++ in
           newDefs
         } 
