@@ -1614,8 +1614,16 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr, params: List[ExprDecor
 }
 
 sealed abstract class ProofCommand extends ASTNode
+case class CommandParams(name: Identifier, values: List[Expr]) extends ASTNode
+{
+  val hashId = 4201
+  override val md5hashCode = computeMD5Hash(name, values)
+  override def toString = {
+    name.toString + " = (" + Utils.join(values.map(_.toString()), ", ") + "); "
+  }
+}
 
-case class GenericProofCommand(name : Identifier, params: List[Identifier], args : List[(Expr, String)], resultVar: Option[Identifier], argObj: Option[Identifier]) extends ProofCommand {
+case class GenericProofCommand(name : Identifier, params: List[CommandParams], args : List[(Expr, String)], resultVar: Option[Identifier], argObj: Option[Identifier]) extends ProofCommand {
   def getContext(context : Scope) : Scope = {
     argObj match {
       case Some(arg) =>
