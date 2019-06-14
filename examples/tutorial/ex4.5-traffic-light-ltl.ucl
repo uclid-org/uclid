@@ -43,7 +43,7 @@ module main
     G(F(light1 == green)) && G(F(light2 == green));
 
   control {
-    v = bmc[always_one_red, eventually_green](10);
+    v = bmc[properties=[always_one_red, eventually_green]](10);
     check;
     print_results;
     v.print_cex(light1, step1, light2, step2);

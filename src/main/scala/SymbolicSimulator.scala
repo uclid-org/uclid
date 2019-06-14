@@ -189,6 +189,10 @@ class SymbolicSimulator (module : Module) {
               case Some(l) => l.toString()
               case None => "bmc"
             }
+            def extractProperties(name : Identifier, params: List[CommandParams]) : List[Identifier] = {
+              params.filter(p => p.name == name).flatMap(ps => ps.values.map(p => p.asInstanceOf[Identifier]))
+            }
+            val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
             def LTLFilter(name : Identifier, decorators: List[ExprDecorator]) : Boolean = {
               val nameStr = name.name
               val nameStrToCheck = if (nameStr.endsWith(":safety")) {
@@ -199,7 +203,8 @@ class SymbolicSimulator (module : Module) {
                 nameStr
               }
               val nameToCheck = Identifier(nameStrToCheck)
-              ExprDecorator.isLTLProperty(decorators) &&  (cmd.params.isEmpty || cmd.params.contains(nameToCheck))
+              ExprDecorator.isLTLProperty(decorators) &&  
+                (properties.isEmpty || properties.contains(nameToCheck))
             }
             initialize(false, true, false, context, label, LTLFilter)
             symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, LTLFilter)

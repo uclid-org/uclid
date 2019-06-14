@@ -22,7 +22,7 @@ module main {
   					  G((state == s2) ==> X(state == s3)) &&
   					  G((state == s3) ==> X(state == s1));
   control {
-    f = bmc[sX, sXX](6);
+    f = bmc[properties=[sX, sXX]](6);
     check;
     print_results;
   } 

@@ -1623,7 +1623,11 @@ case class CommandParams(name: Identifier, values: List[Expr]) extends ASTNode
   }
 }
 
-case class GenericProofCommand(name : Identifier, params: List[CommandParams], args : List[(Expr, String)], resultVar: Option[Identifier], argObj: Option[Identifier]) extends ProofCommand {
+case class GenericProofCommand(
+    name : Identifier, params: List[CommandParams], args : List[(Expr, String)], 
+    resultVar: Option[Identifier], argObj: Option[Identifier]) 
+  extends ProofCommand {
+
   def getContext(context : Scope) : Scope = {
     argObj match {
       case Some(arg) =>
