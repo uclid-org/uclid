@@ -19,7 +19,7 @@ module main
     invariant z_gt_0: z > 0;
 
     control {
-        v = induction[pre=x_gt_0];
+        v = induction[pre=[y_gt_0]; properties=[x_gt_0]];
         check;
         print_results;
     }

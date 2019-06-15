@@ -981,10 +981,11 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
   }
 
   // Applicable for only two copies
-  def simulateLazySCV2(bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
+  def simulateLazySCV2(bound: Int, scope: Scope, label: String, 
+      assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean), propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
 
-    val init_lambda = simulator.getInitLambda(false, true, false, scope, label, filter)
-    val next_lambda = simulator.getNextLambda(init_lambda._3, true, false, scope, label, filter)
+    val init_lambda = simulator.getInitLambda(false, true, false, scope, label, assumptionFilter, propertyFilter)
+    val next_lambda = simulator.getNextLambda(init_lambda._3, true, false, scope, label, assumptionFilter, propertyFilter)
     val taintInitLambda = getTaintInitLambdaV2(init_lambda._1, scope, taintSolver, init_lambda._5)
     val taintNextLambda = getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, next_lambda._4, scope)
     val combinedInitLambda = getCombinedInitLambda(init_lambda._1, taintInitLambda)
@@ -1258,10 +1259,12 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
   }
 
   // Applicable for only two copies
-  def simulateLazySCV1(bound: Int, scope: Scope, label: String, filter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
+  def simulateLazySCV1(bound: Int, scope: Scope, label: String, 
+      assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean),
+      propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
 
-    val init_lambda = simulator.getInitLambda(false, true, false, scope, label, filter)
-    val next_lambda = simulator.getNextLambda(init_lambda._3, true, false, scope, label, filter)
+    val init_lambda = simulator.getInitLambda(false, true, false, scope, label, assumptionFilter, propertyFilter)
+    val next_lambda = simulator.getNextLambda(init_lambda._3, true, false, scope, label, assumptionFilter, propertyFilter)
     val taintInitLambda = getTaintInitLambdaV1(init_lambda._1, scope, taintSolver, init_lambda._5)
     val taintNextLambda = getNextTaintLambdaV1(next_lambda._1, next_lambda._5, next_lambda._6, scope)
 

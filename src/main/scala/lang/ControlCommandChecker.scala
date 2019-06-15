@@ -54,7 +54,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     Utils.checkParsingError(cmd.args.size == 0, "'%s' command does not expect any arguments".format(cmd.name.toString), cmd.pos, filename)
   }
   def checkNoParams(cmd : GenericProofCommand, filename : Option[String]) {
-    Utils.checkParsingError(cmd.params.size == 0, "'%s' command does not except any parameters".format(cmd.name.toString), cmd.pos, filename)
+    Utils.checkParsingError(cmd.params.size == 0, "'%s' command does not expect any parameters".format(cmd.name.toString), cmd.pos, filename)
   }
   def checkHasOneIntLitArg(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument".format(cmd.name.toString), cmd.pos, filename)
@@ -153,7 +153,9 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkHasOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
       case "induction" | "horn" =>
-        checkNoParams(cmd, filename)
+        checkPropertiesValid(Identifier("properties"), cmd, context, filename)
+        checkPropertiesValid(Identifier("pre"), cmd, context, filename)
+        checkPropertiesValid(Identifier("post"), cmd, context, filename)
         checkHasZeroOrOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
       case "bmc" =>
