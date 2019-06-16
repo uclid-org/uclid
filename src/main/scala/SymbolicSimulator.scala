@@ -234,10 +234,17 @@ class SymbolicSimulator (module : Module) {
             } else { 1 }
 
             // extract properties to be proven.
-            val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            val preStateProperties : List[Identifier] = extractProperties(Identifier("pre"), cmd.params)
-            val assumptionFilter = createNoLTLFilter(properties ++ preStateProperties)
-            val propertyFilter = createNoLTLFilter(properties)
+            val commandProperties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
+            val commandPreProperties : List[Identifier] = extractProperties(Identifier("pre"), cmd.params)
+            val preStateProperties = if (commandPreProperties.size == 0) {
+              commandProperties
+            } else {
+              commandProperties ++ commandPreProperties
+            }
+            val assumptionFilter = createNoLTLFilter(preStateProperties)
+            val propertyFilter = createNoLTLFilter(commandProperties)
+            
+            assertLog.debug("preStateProperties: {}", preStateProperties.toString())
 
             // base case.
             resetState()
@@ -409,8 +416,8 @@ class SymbolicSimulator (module : Module) {
    */
   def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean, 
                  scope : Scope, label : String, 
-                 propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean),
-                 assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean)) 
+                 assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean),
+                 propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean))
   {
     val initSymbolTable = getInitSymbolTable(scope)
     val frameTbl = ArrayBuffer(initSymbolTable)
@@ -1704,7 +1711,10 @@ class SymbolicSimulator (module : Module) {
       {
         val prop = module.properties.find(p => p.id == sp.varId).get
         if (filter(prop.id, prop.params)) {
+          assertLog.debug("selected: {}", prop.id.toString())
           addAssumption(evaluate(sp.expr, symbolTable, frameTbl, frameNumber, scope), sp.params)
+        } else {
+          assertLog.debug("rejected: {}", prop.id.toString())
         }
       })
   }
