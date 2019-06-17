@@ -169,12 +169,6 @@ class BasicVerifierSpec extends FlatSpec {
   "test-enum-2.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-enum-2.ucl", 0)
   }
-  "test-k-induction-1.ucl" should "verify all assertions." in {
-    VerifierSpec.expectedFails("./test/test-k-induction-1.ucl", 0)
-  }
-  "test-k-induction-2.ucl" should "verify all but one assertion." in {
-    VerifierSpec.expectedFails("./test/test-k-induction-2.ucl", 1)
-  }
   "havoc_ordering.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/havoc_ordering.ucl", 0)
   }
@@ -280,6 +274,20 @@ class ProcedureVerifSpec extends FlatSpec {
   }
   "test-distinct-op.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-distinct-op.ucl", 0)
+  }
+}
+class InductionVerifSpec extends FlatSpec {
+  "test-k-induction-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-k-induction-1.ucl", 0)
+  }
+  "test-k-induction-2.ucl" should "verify all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-k-induction-2.ucl", 1)
+  }
+  "induction-pre-control-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/induction-pre-control-1.ucl", 0)
+  }
+  "induction-pre-control-2.ucl" should "verify all but one assertion." in {
+    VerifierSpec.expectedFails("./test/induction-pre-control-2.ucl", 1)
   }
 }
 class QuantifierVerifSpec extends FlatSpec {
