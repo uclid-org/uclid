@@ -67,10 +67,10 @@ class AssertionTree {
   class TreeNode(p : Option[TreeNode], assumps : List[smt.Expr]) {
     var parent : Option[TreeNode] = p // Root does not have a parent, so parent = None for root and Some(p) for all other nodes.
     var children : ListBuffer[TreeNode] = ListBuffer.empty
-    var assumptions: ListBuffer[smt.Expr] = {
+    var assumptions: Set[smt.Expr] = {
       p match {
-        case None => assumps.to[ListBuffer]
-        case Some(node) => assumps.filter(e => !node.isAssumptionInScope(e)).to[ListBuffer]
+        case None => assumps.toSet
+        case Some(node) => assumps.filter(e => !node.isAssumptionInScope(e)).toSet
       }
       
     }
