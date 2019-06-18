@@ -155,7 +155,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       case "induction" | "horn" =>
         checkPropertiesValid(Identifier("properties"), cmd, context, filename)
         checkPropertiesValid(Identifier("pre"), cmd, context, filename)
-        checkPropertiesValid(Identifier("post"), cmd, context, filename)
+        checkPropertiesValid(Identifier("assumptions"), cmd, context, filename)
         checkHasZeroOrOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
       case "bmc" =>

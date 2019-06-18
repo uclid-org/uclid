@@ -236,13 +236,17 @@ class SymbolicSimulator (module : Module) {
             // extract properties to be proven.
             val commandProperties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
             val commandPreProperties : List[Identifier] = extractProperties(Identifier("pre"), cmd.params)
+            val commandAssumeProperties: List[Identifier] = extractProperties(Identifier("assumptions"), cmd.params)
             val preStateProperties = if (commandPreProperties.size == 0) {
-              commandProperties
+              commandProperties ++ commandAssumeProperties
             } else {
-              commandProperties ++ commandPreProperties
+              commandProperties ++ commandAssumeProperties ++ commandPreProperties
             }
             val assumptionFilter = createNoLTLFilter(preStateProperties)
             val propertyFilter = createNoLTLFilter(commandProperties)
+            def postAssumptionFilter(name : Identifier, decorators : List[ExprDecorator]) : Boolean = {
+              !ExprDecorator.isLTLProperty(decorators) && (commandAssumeProperties.contains(name))
+            }
             
             assertLog.debug("preStateProperties: {}", preStateProperties.toString())
 
