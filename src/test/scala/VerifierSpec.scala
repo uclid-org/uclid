@@ -283,11 +283,26 @@ class InductionVerifSpec extends FlatSpec {
   "test-k-induction-2.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-k-induction-2.ucl", 1)
   }
+  "test-k-induction-3.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-k-induction-3.ucl", 0)
+  }
+  "test-k-induction-4.ucl" should "verify all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-k-induction-4.ucl", 1)
+  }
   "induction-pre-control-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/induction-pre-control-1.ucl", 0)
   }
   "induction-pre-control-2.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/induction-pre-control-2.ucl", 1)
+  }
+  "induction-pre-control-3.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/induction-pre-control-3.ucl", 0)
+  }
+  "induction-pre-control-4.ucl" should "verify all but one assertion." in {
+    VerifierSpec.expectedFails("./test/induction-pre-control-4.ucl", 1)
+  }
+  "induction-pre-control-5.ucl" should "verify all but one assertion." in {
+    VerifierSpec.expectedFails("./test/induction-pre-control-5.ucl", 1)
   }
 }
 class QuantifierVerifSpec extends FlatSpec {
