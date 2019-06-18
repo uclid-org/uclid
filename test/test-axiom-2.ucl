@@ -1,0 +1,12 @@
+module main
+{
+  const r1 : bv8;
+  axiom r1_assumed_zero: r1 == 0bv8;
+  property r1_is_zero: r1 == 0bv8;
+
+  control {
+    f = unroll(3);
+    check;
+    print_results;
+  }
+}

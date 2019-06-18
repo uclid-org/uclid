@@ -344,6 +344,9 @@ class ModuleVerifSpec extends FlatSpec {
   "test-axiom-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-axiom-1.ucl", 0)
   }
+  "test-axiom-2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-axiom-2.ucl", 0)
+  }
   "test-nested-instance-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-nested-instance-1.ucl", 0)
   }
