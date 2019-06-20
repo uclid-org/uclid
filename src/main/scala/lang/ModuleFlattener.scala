@@ -375,6 +375,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       case _ => true
     }).map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
 
+    println("Modifies to ModifyPairs")
+    println(proc.modifies)
+    println(modifyPairs)
+    println(varMap)
+    println(newVariables)
+
     // map from st_var -> modify_var.
     val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1 -> p._2)).toMap
     // full rewrite map.
@@ -458,7 +464,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
-    if (callStmt.instanceId.get.name == inst.instanceId.name) {
+    if (callStmt.instanceId != None && callStmt.instanceId.get.name == inst.instanceId.name) {
       // Replace the instance procedure call if we're flattening that particular instance    
       val procInst = context.module.get.instances.find(inst => inst.instanceId.name == callStmt.instanceId.get.name).get
       val procModule = context.get(procInst.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
@@ -466,6 +472,22 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       val blkStmt = inlineProcedureCall(callStmt, procOption.get, Scope.empty + procModule)
       rewriter.visitStatement(blkStmt, context)
     } else {
+      println(callStmt)
+      val option = context.module.get.procedures.find(p => p.id == callStmt.id)
+      println(option)
+      if (!option.isEmpty) {
+        println(option.get.modifies)
+        val modifySet = option.get.modifies
+        val modifiesInst = modifySet.exists(
+                            id => context.get(id) match {
+                              case Some(Scope.Instance(_)) => true
+                              case _ => false
+                            })
+        if (modifiesInst) {
+          println("Printing body")
+          println(option.get.body)
+        }
+      }
       Some(callStmt)
     }
   }
@@ -495,6 +517,8 @@ class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
         logger.debug("rewriting module:%s inst:%s targetModule:%s.".format(module.id.toString, inst.instanceId.toString, targetModule.id.toString))
         // update external symbol map.
         extSymMap = rewriter.pass.asInstanceOf[ModuleInstantiatorPass].externalSymbolMap
+        println("Ext Sym Map Here")
+        println(extSymMap)
         logger.debug("original module:\n%s".format(module.toString))
         val modP = rewriter.visit(module, ctx).get
         logger.debug("rewritten module:\n%s".format(modP.toString))

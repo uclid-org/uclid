@@ -155,7 +155,7 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[List[Decl]] {
             c => {
               ASTNode.introducePos(true, true, c, modCnstImport.position)
             }
-          } ++ in
+          } 
           val constLits = mod.constLits.map {
             c => {
               ASTNode.introducePos(true, true, ConstantLitDecl(c._1, c._2), modCnstImport.position)
@@ -166,7 +166,8 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[List[Decl]] {
             a => {
               ASTNode.introducePos(true, true, a, modCnstImport.position)
             }
-          } ++ constVars ++ constLits
+          } 
+          constVars ++ constLits ++ newAxioms ++ in
         }
         case _ => in
       }

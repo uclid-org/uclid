@@ -104,6 +104,7 @@ trait NewProcedureInlinerPass extends RewritePass {
       case Some(Scope.Instance(_)) => false
       case _ => true
     }).map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
+
     // map from st_var -> modify_var.
     val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1 -> p._2)).toMap
     // full rewrite map.
@@ -199,7 +200,16 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
     val procId = callStmt.id
     val procOption = context.module.get.procedures.find(p => p.id == procId)
-    if (!procOption.isEmpty && !procOption.get.body.hasInternalCall) {
+    var modifiesInst = false;
+    if (!procOption.isEmpty) {
+      modifiesInst = procOption.get.modifies.exists(
+                          id => context.get(id) match {
+                            case Some(Scope.Instance(_)) => true
+                            case _ => false
+                          })
+    }
+    if (!procOption.isEmpty && !procOption.get.body.hasInternalCall &&
+                        (procOption.get.shouldInline || !modifiesInst)) {
       Some(inlineProcedureCall(callStmt, procOption.get, context))
     } else {
       // Update the ProcedureCallStmt moduleId for external procedure inliner in module flattener

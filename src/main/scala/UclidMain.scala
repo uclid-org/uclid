@@ -230,7 +230,11 @@ object UclidMain {
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
     passManager.addPass(new BlockFlattener())
+    
+    //passManager.addPass(new ASTPrinter())
     passManager.addPass(new NewInternalProcedureInliner())
+    //passManager.addPass(new ASTPrinter())
+
     passManager.addPass(new PrimedVariableCollector())
     passManager.addPass(new PrimedVariableEliminator())
     passManager.addPass(new PrimedHistoryRewriter())
@@ -287,8 +291,11 @@ object UclidMain {
     passManager.addPass(new StatelessAxiomFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
     passManager.addPass(new ExternalSymbolAnalysis())
+
+    passManager.addPass(new ASTPrinter())
     passManager.addPass(new ModuleFlattener(mainModuleName))
-    // passManager.addPass(new ASTPrinter())
+    passManager.addPass(new ASTPrinter())
+
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())

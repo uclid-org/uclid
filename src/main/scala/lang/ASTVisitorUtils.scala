@@ -160,10 +160,26 @@ class OldExprRewriterPass(rewrites : Map[Identifier, (Identifier, Identifier)]) 
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     opapp.op match {
       case OldOperator() =>
-        val arg = opapp.operands(0).asInstanceOf[Identifier]
-        rewrites.get(arg) match {
-          case Some(v) => Some(v._2)
-          case None => Some(Operator.old(arg))
+        opapp.operands(0) match {
+          case arg: Identifier => {
+            rewrites.get(arg) match {
+              case Some(v) => Some(v._2)
+              case None => Some(Operator.old(arg))
+            }
+          }
+          case arg: OperatorApplication => {
+            arg.op match {
+              case SelectFromInstance(field) => Some(Operator.oldInstance(arg))
+              case _ => {
+                Utils.raiseParsingError("Unexpected argument in the 'old' operator", opapp.pos, context.filename)
+                Some(Operator.oldInstance(arg))
+              }
+            }
+          }
+          case _ => {
+            Utils.raiseParsingError("Unexpected argument in the 'old' operator", opapp.pos, context.filename)
+            Some(opapp)
+          }
         }
       case HistoryOperator() =>
         val arg = opapp.operands(0).asInstanceOf[Identifier]
