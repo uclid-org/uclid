@@ -1107,6 +1107,11 @@ case class HavocableFreshLit(f : FreshLit) extends HavocableEntity {
   override val hashId = 2902
   override val md5hashCode = computeMD5Hash(f)
 }
+case class HavocableInstanceId(opapp : OperatorApplication) extends HavocableEntity {
+  override def toString = opapp.toString()
+  override val hashId = 2903
+  override val md5hashCode = computeMD5Hash(opapp)
+}
 
 /** Statements **/
 sealed abstract class Statement extends ASTNode {

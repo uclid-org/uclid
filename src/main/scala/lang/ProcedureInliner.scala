@@ -41,7 +41,9 @@ package uclid
 package lang
 
 import scala.collection.immutable.{Set => Set}
+import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
+
 
 class FindProcedureDependencyPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
   type T = Map[Identifier, Set[Identifier]]
@@ -82,6 +84,92 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
 }
 
 trait NewProcedureInlinerPass extends RewritePass {
+  def getProcedureCallStmts(stmt : Statement, collection : ListBuffer[ProcedureCallStmt]) : ListBuffer[ProcedureCallStmt] = {
+    stmt match {
+      case s : ProcedureCallStmt => collection += s
+      case s : IfElseStmt => getProcedureCallStmts(s.elseblock, getProcedureCallStmts(s.ifblock, collection))
+      case s : ForStmt => getProcedureCallStmts(s.body, collection)
+      case s : WhileStmt => getProcedureCallStmts(s.body, collection)
+      case s : BlockStmt => s.stmts.foldLeft(collection) { (c, s) => getProcedureCallStmts(s, c) }
+      case s : CaseStmt => s.body.foldLeft(collection) { (c, tup) => getProcedureCallStmts(tup._2, c) }
+      case _ => collection
+    }
+  }
+
+  def getInstanceModifiesExprs(proc : ProcedureDecl, instId : Expr, buf : ListBuffer[Expr], context : Scope) : ListBuffer[Expr] = {
+   
+    var procCalls = getProcedureCallStmts(proc.body, new ListBuffer[ProcedureCallStmt])
+    while (!procCalls.isEmpty) {
+      println(procCalls)
+      val call = procCalls.remove(0)
+      if (call.instanceId != None) {
+        val procInstOption = context.module.get.instances.find(inst => inst.instanceId == call.instanceId.get)
+        val modId = procInstOption.get.moduleId
+        val instMod = context.get(modId).get.asInstanceOf[Scope.ModuleDefinition].mod
+        val modScope = Scope.empty + instMod 
+        val instProc = instMod.procedures.find(p => p.id == call.id)
+        val instIdMatch = instId match {
+          case id : Identifier => 
+            { call.instanceId.get == id }
+          case OperatorApplication(SelectFromInstance(f), List(es)) =>
+            { call.instanceId.get == f }
+          case _  => 
+            { 
+              throw new Utils.ParserError("Instance Identifier: %s has an unknown form".format(instId), None, None)
+              false
+            }
+        }
+        if (instIdMatch) {
+          instProc.get.modifies.filter(m => modScope.get(m) match {
+            case Some(Scope.Instance(_)) => false
+            case _ => true
+          }).foreach(m => buf += OperatorApplication(SelectFromInstance(m), List(instId)))
+        }
+        // recursively add modifies set of sub-instances 
+        instProc.get.modifies.filter(m => modScope.get(m) match {
+          case Some(Scope.Instance(_)) => true
+          case _ => false
+        }).foreach(m => buf ++ getInstanceModifiesExprs(instProc.get, OperatorApplication(SelectFromInstance(m), List(instId)), ListBuffer.empty, modScope))
+      } else if (call.instanceId == None) {
+        val procId = call.id
+        val procOption = context.module.get.procedures.find(p => p.id == procId)
+        getProcedureCallStmts(procOption.get.body, procCalls)
+      }
+    }
+    buf 
+
+  }
+
+
+
+  def getInstanceModifies(proc : ProcedureDecl, instId : Identifier, buf : ListBuffer[(Identifier, Identifier)],  context : Scope) : ListBuffer[(Identifier, Identifier)] = {
+    var procCalls = getProcedureCallStmts(proc.body, new ListBuffer[ProcedureCallStmt])
+
+    while (!procCalls.isEmpty) {
+      val call = procCalls.remove(0)
+      if (call.instanceId != None) {
+        val procInstOption = context.module.get.instances.find(inst => inst.instanceId == call.instanceId.get)
+        val modId = procInstOption.get.moduleId
+        val instMod = context.get(modId).get.asInstanceOf[Scope.ModuleDefinition].mod
+        val modScope = Scope.empty + instMod 
+        val instProc = instMod.procedures.find(p => p.id == call.id)
+        if (call.instanceId.get == instId) {
+          instProc.get.modifies.filter(m => modScope.get(m) match {
+            case Some(Scope.Instance(_)) => false
+            case _ => true
+          }).foreach(m => buf += ((instId, m)))
+        }
+
+        //TODO: add other instances here
+      } else if (call.instanceId == None) {
+        val procId = call.id
+        val procOption = context.module.get.procedures.find(p => p.id == procId)
+        getProcedureCallStmts(procOption.get.body, procCalls)
+      }
+    }
+    buf 
+  }
+  
   def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope) : Statement = {
     val procSig = proc.sig
     def getModifyLhs(id : Identifier) = {
@@ -178,7 +266,22 @@ trait NewProcedureInlinerPass extends RewritePass {
           AssumeStmt(exprP, None)
         }
       }
-      BlockStmt(List.empty, modifyHavocs ++ postconditionAssumes)
+
+      val instanceMods : Set[Identifier] = proc.modifies.filter(m => context.get(m) match {
+        case Some(Scope.Instance(_)) => true 
+        case _ => false 
+      })
+
+      var instanceIdMods : ListBuffer[(Identifier, Identifier)] = ListBuffer.empty
+      instanceMods.foldLeft(instanceIdMods) { (set, instId) => getInstanceModifies(proc, instId, set, context) }
+
+      var instIdModExprs : ListBuffer[Expr] = ListBuffer.empty
+      instanceMods.foldLeft(instIdModExprs) { (buf , instId) => getInstanceModifiesExprs(proc, instId, buf, context) }
+      println("Printing instance id modifies expressions")
+      println(instIdModExprs)
+
+      val instanceHavocs : List[Statement] = instanceIdMods.map(m => HavocStmt(HavocableInstanceId(OperatorApplication(SelectFromInstance(m._2), List(m._1))))).toList
+      BlockStmt(List.empty, modifyHavocs ++ instanceHavocs ++ postconditionAssumes)
     }
     val stmtsP = if (callStmt.callLhss.size > 0) {
       val returnAssign = AssignStmt(callStmt.callLhss, retIds)
@@ -201,15 +304,16 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
     val procId = callStmt.id
     val procOption = context.module.get.procedures.find(p => p.id == procId)
     var modifiesInst = false;
-    if (!procOption.isEmpty) {
-      modifiesInst = procOption.get.modifies.exists(
-                          id => context.get(id) match {
-                            case Some(Scope.Instance(_)) => true
-                            case _ => false
-                          })
-    }
-    if (!procOption.isEmpty && !procOption.get.body.hasInternalCall &&
-                        (procOption.get.shouldInline || !modifiesInst)) {
+    //if (!procOption.isEmpty) {
+    //  modifiesInst = procOption.get.modifies.exists(
+    //                      id => context.get(id) match {
+    //                        case Some(Scope.Instance(_)) => true
+    //                        case _ => false
+    //                      })
+    //}
+    //if (!procOption.isEmpty && !procOption.get.body.hasInternalCall &&
+    //                    (procOption.get.shouldInline || !modifiesInst)) {
+    if (!procOption.isEmpty && !procOption.get.body.hasInternalCall) {
       Some(inlineProcedureCall(callStmt, procOption.get, context))
     } else {
       // Update the ProcedureCallStmt moduleId for external procedure inliner in module flattener

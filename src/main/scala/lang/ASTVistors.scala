@@ -764,6 +764,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
         result = visitIdentifier(id, result, context)
       case HavocableFreshLit(f) =>
         result = visitFreshLiteral(f, result, context)
+      case HavocableInstanceId(opapp) =>
+        result = visitOperatorApp(opapp, result, context)
     }
     result = pass.applyOnHavoc(TraversalDirection.Up, st, result, context)
     return result
@@ -1620,13 +1622,25 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         visitIdentifier(id, context).flatMap((idP) => {
           pass.rewriteHavoc(HavocStmt(HavocableNextId(idP)), context)
         })
-      case HavocableFreshLit(f) =>
+      case HavocableFreshLit(f) => {
         visitFreshLiteral(f, context).flatMap((eP) => {
           eP match {
             case f : FreshLit =>
               pass.rewriteHavoc(HavocStmt(HavocableFreshLit(f)), context)
             case id : Identifier =>
               pass.rewriteHavoc(HavocStmt(HavocableId(id)), context)
+            case _ =>
+              None
+          }
+        })
+      }
+      case HavocableInstanceId(opapp) =>
+        visitOperatorApp(opapp, context).flatMap((ep) => {
+          ep match {
+            case o : OperatorApplication =>
+              pass.rewriteHavoc(HavocStmt(HavocableInstanceId(o)), context)
+            case o : Identifier =>
+              pass.rewriteHavoc(HavocStmt(HavocableId(o)), context)
             case _ =>
               None
           }

@@ -25,8 +25,7 @@ module abstract_cache {
 }
 
 
-
-module main {
+module abstract_cpu {
 
   instance cache : abstract_cache();
 
@@ -44,16 +43,26 @@ module main {
     call cache.update_cache_tag_map();
   }
 
-  procedure havoc_whole_cache()
+  procedure [noinline] havoc_whole_cache()
     modifies cache;
   {
     call havoc_cache_valid_map();
     call havoc_cache_tag_map();
   }
+}
 
-  control {
-    //print_module;
+
+module main {
+
+  instance cpu : abstract_cpu();
+
+  procedure cache_mod()
+    modifies cpu;
+  {
+    call cpu.havoc_cache_tag_map();
   }
 
-
 }
+
+
+

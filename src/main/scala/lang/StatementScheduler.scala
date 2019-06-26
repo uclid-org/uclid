@@ -56,6 +56,7 @@ object StatementScheduler {
           case HavocableNextId(id) => Set(id)
           case HavocableFreshLit(f) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
+          case HavocableInstanceId(opapp) => Set.empty
         }
       case AssignStmt(lhss, rhss) =>
         lhss.map(lhs => lhs match {
@@ -119,6 +120,7 @@ object StatementScheduler {
           case HavocableNextId(id) => Set(id)
           case HavocableFreshLit(f) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
+          case HavocableInstanceId(opapp) => Set.empty
         }
       case AssignStmt(lhss, rhss) => lhss.map(lhs => lhs.ident).toSet
       case BlockStmt(vars, stmts) =>

@@ -320,6 +320,25 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
     fixPosition(opappP, opapp.position)
   }
+
+  
+  // make sure that havoc instance ids are rewritten
+  override def rewriteHavoc(st : HavocStmt, ctx : Scope) : Option[Statement] = {
+    st.havocable match {
+      case HavocableInstanceId(opapp) => {
+        val newOppApp = rewriteOperatorApp(opapp, ctx).get
+        if (newOppApp.isInstanceOf[Identifier]) {
+          Some(HavocStmt(HavocableId(newOppApp.asInstanceOf[Identifier])))
+        } else if (newOppApp.isInstanceOf[OperatorApplication]) {
+          Some(HavocStmt(HavocableInstanceId(newOppApp.asInstanceOf[OperatorApplication])))
+        } else {
+          throw new Utils.AssertionError("HavocInstanceId should not be rewritten in any other form")
+        }
+      }
+      case _ => Some(st)
+    }
+  }
+
   // add initialization for the instance.
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
     newModule.init match {
@@ -375,12 +394,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       case _ => true
     }).map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
 
-    println("Modifies to ModifyPairs")
-    println(proc.modifies)
-    println(modifyPairs)
-    println(varMap)
-    println(newVariables)
-
+    
     // map from st_var -> modify_var.
     val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1 -> p._2)).toMap
     // full rewrite map.
@@ -472,11 +486,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       val blkStmt = inlineProcedureCall(callStmt, procOption.get, Scope.empty + procModule)
       rewriter.visitStatement(blkStmt, context)
     } else {
-      println(callStmt)
       val option = context.module.get.procedures.find(p => p.id == callStmt.id)
-      println(option)
       if (!option.isEmpty) {
-        println(option.get.modifies)
         val modifySet = option.get.modifies
         val modifiesInst = modifySet.exists(
                             id => context.get(id) match {
@@ -484,8 +495,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
                               case _ => false
                             })
         if (modifiesInst) {
-          println("Printing body")
-          println(option.get.body)
         }
       }
       Some(callStmt)
@@ -517,8 +526,6 @@ class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
         logger.debug("rewriting module:%s inst:%s targetModule:%s.".format(module.id.toString, inst.instanceId.toString, targetModule.id.toString))
         // update external symbol map.
         extSymMap = rewriter.pass.asInstanceOf[ModuleInstantiatorPass].externalSymbolMap
-        println("Ext Sym Map Here")
-        println(extSymMap)
         logger.debug("original module:\n%s".format(module.toString))
         val modP = rewriter.visit(module, ctx).get
         logger.debug("rewritten module:\n%s".format(modP.toString))
