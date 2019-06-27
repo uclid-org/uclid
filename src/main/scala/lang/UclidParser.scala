@@ -510,7 +510,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val ModifiesExprs : PackratParser[List[lang.ProcedureModifiesExpr]] = {
       KwModifies ~> Id ~ rep("," ~> Id) <~ ";" ^^ {
         case id ~ ids => {
-          (id :: ids).map(i => lang.ProcedureModifiesExpr(lang.ModfiableId(i)))
+          (id :: ids).map(i => lang.ProcedureModifiesExpr(lang.ModifiableId(i)))
         }
       }
     }

@@ -1349,14 +1349,19 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
 
 /* Modifiable entities. */
 /* All modifiable entities found by the parser can only be ModifiableId */
-sealed abstract class ModifiableEntity extends Expr 
-case class ModfiableId(id : Identifier) extends ModifiableEntity {
+sealed abstract class ModifiableEntity extends ASTNode {
+  val expr : Expr
+}
+  
+case class ModifiableId(id : Identifier) extends ModifiableEntity {
+  override val expr = id
   override def toString = id.toString()
   override val hashId = 3500
   override val md5hashCode = computeMD5Hash(id)
 }
 
 case class ModifiableInstanceId(opapp : OperatorApplication) extends ModifiableEntity {
+  override val expr = opapp
   override def toString = opapp.toString()
   override val hashId = 3501
   override val md5hashCode = computeMD5Hash(opapp)
@@ -1378,7 +1383,7 @@ case class ProcedureEnsuresExpr(e : Expr) extends ProcedureVerificationExpr {
   override val md5hashCode = computeMD5Hash(e)
 }
 case class ProcedureModifiesExpr(modifiable : ModifiableEntity) extends ProcedureVerificationExpr {
-  override val expr = modifiable 
+  override val expr = modifiable.expr
   override val toString = "modifies " + modifiable.toString
   override val hashId = 3402
   override val md5hashCode = computeMD5Hash(modifiable)

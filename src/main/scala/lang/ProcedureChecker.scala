@@ -55,11 +55,13 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
 
   def checkIdent(proc : ProcedureDecl, id : Identifier, pos : ASTPosition, context : Scope, in : T) : T = {
     logger.debug("Checking identifier: {}", id.toString())
+    // At this point we should not have any ModifiableInstanceIds
+    lazy val modifyIds = proc.modifies.asInstanceOf[Set[ModifiableId]].map(m => m.id)
     context.get(id) match {
       case Some(namedExpr) =>
         namedExpr match {
           case Scope.StateVar(_, _) | Scope.OutputVar(_, _) | Scope.Instance(_) =>
-            if (!proc.modifies.contains(id)) {
+            if (!modifyIds.contains(id)) {
               val error = ModuleError("Identifier was not declared modifiable: %s".format(id.toString), pos)
               in + error
             } else { in }
@@ -94,7 +96,9 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
             }
             case _ => {
               val calledProc = context.module.get.procedures.find(p => p.id == call.id).get
-              calledProc.modifies.foldLeft(in)((acc, id) => checkIdent(proc, id, call.position, context, acc))
+              // At this point we should not have any ModifiableInstanceIds
+              val modifyIds = calledProc.modifies.asInstanceOf[Set[ModifiableId]].map(m => m.id)
+              modifyIds.foldLeft(in)((acc, id) => checkIdent(proc, id, call.position, context, acc))
             }
           }
         case None =>
@@ -123,7 +127,9 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
 
   override def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
-      val badVariables = proc.modifies.filter {
+      // At this point we should not have any ModifiableInstanceId
+      val modifyIds : Set[Identifier]  = proc.modifies.asInstanceOf[Set[ModifiableId]].map(m => m.id) 
+      val badVariables = modifyIds.filter {
         (v) => {
           context.get(v) match {
             case Some(namedExpr) =>

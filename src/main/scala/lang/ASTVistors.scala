@@ -232,7 +232,7 @@ trait RewritePass {
   def rewriteModuleCall(st : ModuleCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteLHS(lhs : Lhs, ctx : Scope) : Option[Lhs] = { Some(lhs) }
   def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : Scope) : Option[BitVectorSlice] = { Some(slice) }
-  def rewriteModifiableEntity(modfiable : ModifiableEntity, ctx : Scope) : Option[ModifiableEntity] = { Some(modifiable) }
+  def rewriteModifiableEntity(modifiable : ModifiableEntity, ctx : Scope) : Option[ModifiableEntity] = { Some(modifiable) }
   def rewriteExpr(e : Expr, ctx : Scope) : Option[Expr] = { Some(e) }
   def rewriteIdentifier(id : Identifier, ctx : Scope) : Option[Identifier] = { Some(id) }
   def rewriteExternalIdentifier(eId : ExternalIdentifier, ctx : Scope) : Option[Expr] = { Some(eId) }
@@ -1812,12 +1812,30 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
   }
 
-  def visitModifiableEntity(modifiable : ModifiableEntity, context : Scope) : Option[Expr] = {
-    val modifiableP = (modifiable match {
-      case ModfiableId(id) => visitIdentifier(id, context)
-      case ModifiableInstanceId(opapp) => visitOperatorApp(opapp, context)
-    }).flatMap(pass.rewriteModifiableEntity(_, context))
-    return ASTNode.introducePos(setPostion, setFilename, modifiableP, e.position)
+  def visitModifiableEntity(modifiable : ModifiableEntity, context : Scope) : Option[ModifiableEntity] = {
+    val modifiableP = modifiable match {
+      case ModifiableId(id) => {
+        visitIdentifier(id, context).flatMap((idP) => {
+          idP match {
+            case id : Identifier => 
+              pass.rewriteModifiableEntity(ModifiableId(id), context)
+            case _ => 
+              None
+          }
+        })
+      }
+      case ModifiableInstanceId(opapp) => {
+        visitOperatorApp(opapp, context).flatMap((opAppP) => {
+          opAppP match {
+            case opapp : OperatorApplication =>
+              pass.rewriteModifiableEntity(ModifiableInstanceId(opapp), context)
+            case _ =>
+              None
+          }
+        })
+      }
+    }
+    return ASTNode.introducePos(setPosition, setFilename, modifiableP, modifiable.position)
   }
     
 

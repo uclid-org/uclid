@@ -87,7 +87,7 @@ object StatementScheduler {
           case None => {
             val procedure = module.procedures.find(p => p.id == id).get
             // val modifies = procedure.modifies
-            procedure.modifies
+            procedure.modifies.filter(m => m.isInstanceOf[lang.ModifiableId]).asInstanceOf[Set[lang.ModifiableId]].map(m => m.id)
           }
         } 
         val modifiedIdents = callLhss.map(lhs => lhs match {
@@ -146,7 +146,8 @@ object StatementScheduler {
           }
           case _ => {
             val procedure = module.procedures.find(p => p.id == id).get
-            procedure.modifies
+            procedure.modifies.filter(m => m.isInstanceOf[lang.ModifiableId]).asInstanceOf[Set[lang.ModifiableId]].map(m => m.id)
+
           }
         }
         callLhss.map(_.ident).toSet ++ modifies.toSet

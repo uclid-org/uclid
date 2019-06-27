@@ -390,12 +390,15 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     // map from formal to the fake variables created for return values.
     val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
     // map from modified state variables to new variables created for them. ignore modified "instances"
-    val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.filter(m => context.get(m) match {
-      case Some(Scope.Instance(_)) => false
-      case None => false // instance has been flattened
-      case _ => true
-    }).map(m => (m, NameProvider.get("modifies_" + m.toString()))).toList
-
+    // should only use modify exprs that contain a ModifiableId
+    val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.filter(m =>  m match {
+      case ModifiableId(id) => context.get(id) match {
+                                 case Some(Scope.Instance(_)) => false
+                                 case None => false
+                                 case _ => true
+                                }
+      case _ => false
+    }).asInstanceOf[Set[ModifiableId]].map(m => (m.id, NameProvider.get("modifies_" + m.toString()))).toList
     
     // map from st_var -> modify_var.
     val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1 -> p._2)).toMap
@@ -417,9 +420,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     // variable declarations for return values.
     val retVars = retPairs.map(r => BlockVarsDecl(List(r._2._1), r._2._2))
     // variable declarations for the modify variables.
+    
+    
     val modifyVars : List[BlockVarsDecl] = modifyPairs.map(p => BlockVarsDecl(List(p._2), context.get(p._1) match {
       case Some(v) => v.typ
-      case _ => context.get(callStmt.moduleId.get).get.asInstanceOf[Scope.ModuleDefinition].mod.vars.find(v => v._1.name == p._1.name).get._2
+      case _ => {
+        context.get(callStmt.moduleId.get).get.asInstanceOf[Scope.ModuleDefinition].mod.vars.find(v => v._1.name == p._1.name).get._2
+      }
     }))
     // variable declarations for old values
     val oldVars : List[BlockVarsDecl] = oldPairs.map(p => BlockVarsDecl(List(p._2), (context + modifyVars).get(p._1) match {
@@ -489,16 +496,16 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       rewriter.visitStatement(blkStmt, context)
     } else {
       val option = context.module.get.procedures.find(p => p.id == callStmt.id)
-      if (!option.isEmpty) {
-        val modifySet = option.get.modifies
-        val modifiesInst = modifySet.exists(
-                            id => context.get(id) match {
-                              case Some(Scope.Instance(_)) => true
-                              case _ => false
-                            })
-        if (modifiesInst) {
-        }
-      }
+      //if (!option.isEmpty) {
+      //  val modifySet = option.get.modifies
+      //  val modifiesInst = modifySet.exists(
+      //                      id => context.get(id) match {
+      //                        case Some(Scope.Instance(_)) => true
+      //                        case _ => false
+      //                      })
+      //  if (modifiesInst) {
+      //  }
+      //}
       Some(callStmt)
     }
   }
