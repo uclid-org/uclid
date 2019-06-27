@@ -297,7 +297,6 @@ object UclidMain {
     passManager.addPass(new ModuleCleaner(mainModuleName))
     passManager.addPass(new Optimizer())
     passManager.addPass(new BlockVariableRenamer())
-    passManager.addPass(new ASTPrinter())
     passManager.addPass(new ExpressionTypeChecker())
     passManager.addPass(new ModuleTypeChecker())
     passManager.addPass(new SemanticAnalyzer())

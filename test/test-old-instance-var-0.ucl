@@ -9,18 +9,24 @@ module abstract_cache {
   var cache_valid_map : cache_valid_map_t;
   var cache_tag_map   : cache_tag_map_t;
 
-  procedure update_cache_valid_map()
-    ensures (cache_tag_map == old(cache_tag_map));
+  procedure [noinline] update_cache_valid_map()
+    ensures (cache_valid_map != old(cache_valid_map));
     modifies cache_valid_map;
   {
-    havoc cache_valid_map;
+    var new_cache_valid_map : cache_valid_map_t;
+    havoc new_cache_valid_map;
+    assume (new_cache_valid_map != cache_valid_map);
+    cache_valid_map = new_cache_valid_map;
   }
 
-  procedure update_cache_tag_map()
-    ensures (cache_valid_map == old(cache_valid_map));
+  procedure [noinline] update_cache_tag_map()
+    ensures (cache_tag_map != old(cache_tag_map));
     modifies cache_tag_map;
   {
-    havoc cache_tag_map;
+    var new_cache_tag_map : cache_tag_map_t;
+    havoc new_cache_tag_map;
+    assume (new_cache_tag_map != cache_tag_map);
+    cache_tag_map = new_cache_tag_map;
   }
 }
 

@@ -41,6 +41,7 @@ package lang
 
 import scala.collection.immutable.Map
 import com.typesafe.scalalogging.Logger
+import scala.collection.mutable.ListBuffer
 
 class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
   type T = Map[Identifier, Set[Identifier]]
@@ -372,6 +373,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       Some(modCall)
     }
   }
+
 
   def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope) : Statement = {
     val procSig = proc.sig

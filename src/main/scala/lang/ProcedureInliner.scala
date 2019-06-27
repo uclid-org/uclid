@@ -99,37 +99,50 @@ trait NewProcedureInlinerPass extends RewritePass {
   def getInstanceModifiesExprs(proc : ProcedureDecl, instId : Expr, buf : ListBuffer[Expr], context : Scope) : ListBuffer[Expr] = {
    
     var procCalls = getProcedureCallStmts(proc.body, new ListBuffer[ProcedureCallStmt])
+
+    println("Printing initial procCalls")
+    println(procCalls)
     while (!procCalls.isEmpty) {
-      println(procCalls)
       val call = procCalls.remove(0)
       if (call.instanceId != None) {
+        //TODO: this needs to be nested properly if we are looking at nested instances
         val procInstOption = context.module.get.instances.find(inst => inst.instanceId == call.instanceId.get)
         val modId = procInstOption.get.moduleId
-        val instMod = context.get(modId).get.asInstanceOf[Scope.ModuleDefinition].mod
-        val modScope = Scope.empty + instMod 
-        val instProc = instMod.procedures.find(p => p.id == call.id)
-        val instIdMatch = instId match {
-          case id : Identifier => 
-            { call.instanceId.get == id }
-          case OperatorApplication(SelectFromInstance(f), List(es)) =>
-            { call.instanceId.get == f }
-          case _  => 
-            { 
-              throw new Utils.ParserError("Instance Identifier: %s has an unknown form".format(instId), None, None)
-              false
-            }
+        if (context.get(modId) == None) {
+          println("ModId is None")
+          println(call)
+          println(instId)
+          println(procInstOption)
+          println(modId)
         }
-        if (instIdMatch) {
+  
+        if (context.get(modId) != None) {
+          val instMod = context.get(modId).get.asInstanceOf[Scope.ModuleDefinition].mod
+          val modScope = Scope.empty + instMod 
+          val instProc = instMod.procedures.find(p => p.id == call.id)
+          val instIdMatch = instId match {
+            case id : Identifier => 
+              { call.instanceId.get == id }
+            case OperatorApplication(SelectFromInstance(f), List(es)) =>
+              { call.instanceId.get == f }
+            case _  => 
+              { 
+                throw new Utils.ParserError("Instance Identifier: %s has an unknown form".format(instId), None, None)
+                false
+              }
+          }
+          if (instIdMatch) {
+            instProc.get.modifies.filter(m => modScope.get(m) match {
+              case Some(Scope.Instance(_)) => false
+              case _ => true
+            }).foreach(m => buf += OperatorApplication(SelectFromInstance(m), List(instId)))
+          }
+          // recursively add modifies set of sub-instances 
           instProc.get.modifies.filter(m => modScope.get(m) match {
-            case Some(Scope.Instance(_)) => false
-            case _ => true
-          }).foreach(m => buf += OperatorApplication(SelectFromInstance(m), List(instId)))
+            case Some(Scope.Instance(_)) => true
+            case _ => false
+          }).foreach(m => buf ++ getInstanceModifiesExprs(instProc.get, OperatorApplication(SelectFromInstance(m), List(instId)), ListBuffer.empty, modScope))
         }
-        // recursively add modifies set of sub-instances 
-        instProc.get.modifies.filter(m => modScope.get(m) match {
-          case Some(Scope.Instance(_)) => true
-          case _ => false
-        }).foreach(m => buf ++ getInstanceModifiesExprs(instProc.get, OperatorApplication(SelectFromInstance(m), List(instId)), ListBuffer.empty, modScope))
       } else if (call.instanceId == None) {
         val procId = call.id
         val procOption = context.module.get.procedures.find(p => p.id == procId)
@@ -277,7 +290,7 @@ trait NewProcedureInlinerPass extends RewritePass {
 
       var instIdModExprs : ListBuffer[Expr] = ListBuffer.empty
       instanceMods.foldLeft(instIdModExprs) { (buf , instId) => getInstanceModifiesExprs(proc, instId, buf, context) }
-      println("Printing instance id modifies expressions")
+      println("InstanceIdModExprs here")
       println(instIdModExprs)
 
       val instanceHavocs : List[Statement] = instanceIdMods.map(m => HavocStmt(HavocableInstanceId(OperatorApplication(SelectFromInstance(m._2), List(m._1))))).toList
@@ -303,7 +316,7 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
     val procId = callStmt.id
     val procOption = context.module.get.procedures.find(p => p.id == procId)
-    var modifiesInst = false;
+    //var modifiesInst = false;
     //if (!procOption.isEmpty) {
     //  modifiesInst = procOption.get.modifies.exists(
     //                      id => context.get(id) match {

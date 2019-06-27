@@ -144,6 +144,7 @@ trait ReadOnlyPass[T] {
   def applyOnModuleCall(d : TraversalDirection.T, st : ModuleCallStmt, in : T, context : Scope) : T = { in }
   def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = { in }
   def applyOnBitVectorSlice(d : TraversalDirection.T, slice : BitVectorSlice, in : T, context : Scope) : T = { in }
+  def applyOnModifiableEntity(d : TraversalDirection.T, modifiable : ModifiableEntity, in : T, context : Scope) : T = { in }
   def applyOnExpr(d : TraversalDirection.T, e : Expr, in : T, context : Scope) : T = { in }
   def applyOnIdentifier(d : TraversalDirection.T, id : Identifier, in : T, context : Scope) : T = { in }
   def applyOnExternalIdentifier(d : TraversalDirection.T, eId : ExternalIdentifier, in : T, context : Scope) : T = { in }
@@ -231,6 +232,7 @@ trait RewritePass {
   def rewriteModuleCall(st : ModuleCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteLHS(lhs : Lhs, ctx : Scope) : Option[Lhs] = { Some(lhs) }
   def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : Scope) : Option[BitVectorSlice] = { Some(slice) }
+  def rewriteModifiableEntity(modfiable : ModifiableEntity, ctx : Scope) : Option[ModifiableEntity] = { Some(modifiable) }
   def rewriteExpr(e : Expr, ctx : Scope) : Option[Expr] = { Some(e) }
   def rewriteIdentifier(id : Identifier, ctx : Scope) : Option[Identifier] = { Some(id) }
   def rewriteExternalIdentifier(eId : ExternalIdentifier, ctx : Scope) : Option[Expr] = { Some(eId) }
@@ -357,7 +359,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitStatement(proc.body, result, context)
     result = proc.requires.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(RequiresEnvironment)))
     result = proc.ensures.foldLeft(result)((acc, r) => visitExpr(r, acc, context.withEnvironment(EnsuresEnvironment)))
-    result = proc.modifies.foldLeft(result)((acc, r) => visitIdentifier(r, acc, context))
+    result = proc.modifies.foldLeft(result)((acc, r) => visitModifiableEntity(r, acc, context))
     result = pass.applyOnProcedureAnnotations(TraversalDirection.Up, proc.annotations, result, context)
     result = pass.applyOnProcedure(TraversalDirection.Up, proc, result, contextIn)
     return result
@@ -876,6 +878,17 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     return result
   }
 
+  def visitModifiableEntity(modifiable : ModifiableEntity, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnModifiableEntity(TraversalDirection.Down, modifiable, result, context)
+    result = modifiable match {
+      case ModifiableId(id) => visitIdentifier(id, result, context)
+      case ModifiableInstanceId(opapp) => visitOperatorApp(opapp, result, context)
+    }
+    result = pass.applyOnModifiableEntity(TraversalDirection.Up, modifiable, result, context)
+    return result
+  }
+
   def visitExpr(e : Expr, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnExpr(TraversalDirection.Down, e, result, context)
@@ -1168,7 +1181,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val bodyP = visitStatement(proc.body, context)
     val reqs = proc.requires.map(r => visitExpr(r, context.withEnvironment(RequiresEnvironment))).flatten
     val enss = proc.ensures.map(e => visitExpr(e, context.withEnvironment(EnsuresEnvironment))).flatten
-    val mods = proc.modifies.map(v => visitIdentifier(v, context)).flatten
+    val mods = proc.modifies.map(v => visitModifiableEntity(v, context)).flatten
     val annotations = pass.rewriteProcedureAnnotations(proc.annotations, context) match {
       case Some(annot) => annot
       case None => ProcedureAnnotations(Set.empty[Identifier])
@@ -1798,6 +1811,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         pass.rewriteBitVectorSlice(constBvSlice, context)
     }
   }
+
+  def visitModifiableEntity(modifiable : ModifiableEntity, context : Scope) : Option[Expr] = {
+    val modifiableP = (modifiable match {
+      case ModfiableId(id) => visitIdentifier(id, context)
+      case ModifiableInstanceId(opapp) => visitOperatorApp(opapp, context)
+    }).flatMap(pass.rewriteModifiableEntity(_, context))
+    return ASTNode.introducePos(setPostion, setFilename, modifiableP, e.position)
+  }
+    
 
   def visitExpr(e : Expr, context : Scope) : Option[Expr] = {
     val eP = (e match {

@@ -1347,6 +1347,21 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
   }
 }
 
+/* Modifiable entities. */
+/* All modifiable entities found by the parser can only be ModifiableId */
+sealed abstract class ModifiableEntity extends Expr 
+case class ModfiableId(id : Identifier) extends ModifiableEntity {
+  override def toString = id.toString()
+  override val hashId = 3500
+  override val md5hashCode = computeMD5Hash(id)
+}
+
+case class ModifiableInstanceId(opapp : OperatorApplication) extends ModifiableEntity {
+  override def toString = opapp.toString()
+  override val hashId = 3501
+  override val md5hashCode = computeMD5Hash(opapp)
+}
+
 sealed abstract class ProcedureVerificationExpr extends ASTNode {
   val expr : Expr
 }
@@ -1362,11 +1377,11 @@ case class ProcedureEnsuresExpr(e : Expr) extends ProcedureVerificationExpr {
   override val hashId = 3401
   override val md5hashCode = computeMD5Hash(e)
 }
-case class ProcedureModifiesExpr(id : Identifier) extends ProcedureVerificationExpr {
-  override val expr = id
-  override val toString = "modifies " + id.toString
+case class ProcedureModifiesExpr(modifiable : ModifiableEntity) extends ProcedureVerificationExpr {
+  override val expr = modifiable 
+  override val toString = "modifies " + modifiable.toString
   override val hashId = 3402
-  override val md5hashCode = computeMD5Hash(id)
+  override val md5hashCode = computeMD5Hash(modifiable)
 }
 
 case class ProcedureAnnotations(ids : Set[Identifier]) extends ASTNode {
@@ -1383,7 +1398,7 @@ case class ProcedureAnnotations(ids : Set[Identifier]) extends ASTNode {
 
 case class ProcedureDecl(
     id: Identifier, sig: ProcedureSig, body: Statement,
-    requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier],
+    requires: List[Expr], ensures: List[Expr], modifies: Set[ModifiableEntity],
     annotations : ProcedureAnnotations) extends Decl
 {
   override val hashId = 3902
