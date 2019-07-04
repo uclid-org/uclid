@@ -232,7 +232,6 @@ object UclidMain {
     passManager.addPass(new BlockFlattener())
     
     passManager.addPass(new NewInternalProcedureInliner())
-
     passManager.addPass(new PrimedVariableCollector())
     passManager.addPass(new PrimedVariableEliminator())
     passManager.addPass(new PrimedHistoryRewriter())
@@ -289,6 +288,7 @@ object UclidMain {
     passManager.addPass(new StatelessAxiomFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
     passManager.addPass(new ExternalSymbolAnalysis())
+    passManager.addPass(new ProcedureModifiesRewriter())
     passManager.addPass(new ModuleFlattener(mainModuleName))
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new LTLOperatorRewriter())

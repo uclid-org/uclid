@@ -104,18 +104,26 @@ trait NewProcedureInlinerPass extends RewritePass {
     val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
     // map from modified state variables to new variables created for them. ignore modified "instances"
     // should only use modify exprs that contain a ModifiableId
-    val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.filter(m =>  m match {
+    val modifyPairs : List[(ModifiableEntity, Identifier)] = proc.modifies.filter(m =>  m match {
       case ModifiableId(id) => context.get(id) match {
                                  case Some(Scope.Instance(_)) => false
                                  case None => false
                                  case _ => true 
                                 }
+      case ModifiableInstanceId(opapp) => true
       case _ => false
-    }).asInstanceOf[Set[ModifiableId]].map(m => (m.id, NameProvider.get("modifies_" + m.toString()))).toList
+    }).map(m => m match {
+      case Modifiable(id) => (m, NameProvider.get("modifies_" + m.toString()))
+      case ModifiableInstanceId(opapp) => (m, NameProvider.get("modifies_" + m.opapp.toString()))
+    }).toList
 
 
     // map from st_var -> modify_var.
-    val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1 -> p._2)).toMap
+    // TODO: Check that we don't need to filter out ModifiableInstanceId
+    val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => p._1 match {
+      case ModifiableId(id) => (id -> p._2)
+      case ModifiableInstanceId(opapp) => (opapp -> p._2)
+    )}
     // full rewrite map.
     val rewriteMap = argMap ++ retMap ++ modifiesMap
     // rewriter object.
@@ -224,18 +232,17 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
     val procId = callStmt.id
     val procOption = context.module.get.procedures.find(p => p.id == procId)
-    var modifiesInst = false;
-    if (!procOption.isEmpty) {
-      modifiesInst = procOption.get.modifies.exists(
-                          id => context.get(id) match {
-                            case Some(Scope.Instance(_)) => true
-                            case _ => false
-                          })
-    }
+    //var modifiesInst = false;
+    //if (!procOption.isEmpty) {
+    //  modifiesInst = procOption.get.modifies.exists(
+    //                      id => context.get(id) match {
+    //                        case Some(Scope.Instance(_)) => true
+    //                        case _ => false
+    //                      })
+    //}
     //if (!procOption.isEmpty && !procOption.get.body.hasInternalCall &&
     //                    (procOption.get.shouldInline || !modifiesInst)) {
-    //if (!procOption.isEmpty && !procOption.get.body.hasInternalCall) {
-    if (!procOption.isEmpty && !procOption.get.body.hasInternalCall && (!modifiesInst || procOption.get.shouldInline)) {
+    if (!procOption.isEmpty && !procOption.get.body.hasInternalCall) {
       Some(inlineProcedureCall(callStmt, procOption.get, context))
     } else {
       // Update the ProcedureCallStmt moduleId for external procedure inliner in module flattener

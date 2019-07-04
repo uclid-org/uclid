@@ -47,7 +47,7 @@ import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
 
 
-class InstanceModifiesRewriterPass extends RewritePass {
+class ProcedureModifiesRewriterPass extends RewritePass {
   def getInstanceModifies(proc : ProcedureDecl, ctx : Scope) : Set[Identifier] = {
     // The associated scope must always contain a module
     val mod = ctx.module.get
@@ -60,6 +60,20 @@ class InstanceModifiesRewriterPass extends RewritePass {
     val instanceIds = procModIds.filter(id => mod.instances.contains(id))
     instanceIds
   }
+
+  def getStateVarModifies(proc : ProcedureDecl, ctx : Scope) : Vector[Identifier] = {
+    // The associated scope must always contain a module
+    val mod = ctx.module.get
+    
+    // If we are visiting this procedure, then 'modify instance id statements' should not have been written in yet.
+    val procModIds : Vector[Identifier] = proc.modifies.flatMap(m => m match {
+      case ModifiableId(id : Identifier) => Some(id)
+      case _ => None
+    }).toVector
+    val stateVars = procModIds.filter(id => !mod.instances.map(decl => decl.instanceId).contains(id))
+    stateVars
+  }
+    
 
   def getProcedureCallStmts(stmt : Statement) : Vector[ProcedureCallStmt] = {
     stmt match {
@@ -79,50 +93,50 @@ class InstanceModifiesRewriterPass extends RewritePass {
   // proc : ProcedureDecl
   // instId : 
   //    -> None, if we are at the top level procedure
-  //    -> Some(ModifiableEntity), if are recursing into an instance
-  def getProcedureModSet(proc : ProcedureDecl, instId : Option[ModifiableEntity]  ctx : Scope) : Vector[ModifiableInstanceId] = {
-    //NOTE: need to recursively call this procedure every time we deal with instance procedure calls
+  //    -> Some(OperatorApplication), if are recursing into an instance
+  def getProcedureModSet(proc : ProcedureDecl, instId : Option[Expr],  ctx : Scope) : Vector[ModifiableEntity] = {
     
-    var modifySet : Vector[ModifiableInstanceId] = Vector.empty
-    val procCallStmts = getProcedureCallStmts(proc.body)
+    // add in all modified state vars
+    var modifySet : Vector[ModifiableEntity] = getStateVarModifies(proc, ctx).map(id => instId match {
+      case Some(expr : Identifier) => ModifiableInstanceId(OperatorApplication(SelectFromInstance(id), List(expr)))
+      case Some(expr : OperatorApplication) => ModifiableInstanceId(OperatorApplication(SelectFromInstance(id), List(expr)))
+      case None => ModifiableId(id)
+      case _ => throw new Utils.AssertionError("instId option cannot be anything else")
+    })
+
+    var procCallStmts = getProcedureCallStmts(proc.body)
     
     while (!procCallStmts.isEmpty) {
-      val callStmt = procCallStmts.remove(0)
+      val callStmt = procCallStmts.head
+      procCallStmts = procCallStmts.tail
       if (callStmt.instanceId != None) {
-        val procInstOption = ctx.module.get.instances.find(inst => inst.id == callStmt.instanceId.get)
-        val modId = procInstOption.get.moduleId
+        val instOption = ctx.module.get.instances.find(inst => inst.instanceId == callStmt.instanceId.get)
+        val modId = instOption.get.moduleId
         // This should not fail since we have already type checked the modules
         val instMod = ctx.get(modId).get.asInstanceOf[Scope.ModuleDefinition].mod
-        val modScope = Scope.empty + instMod
+        val modScope = new Scope(ctx.map, Some(instMod), ctx.procedure, ctx.cmd, ctx.environment, ctx.parent)
+        val instProcDecl = modScope.module.get.procedures.find(p => p.id == callStmt.id)
+        val newInstId : Option[Expr] = instId match {
+          case Some(expr : Identifier) => Some(OperatorApplication(SelectFromInstance(callStmt.instanceId.get), List(expr)))
+          case Some(expr : OperatorApplication) => Some(OperatorApplication(SelectFromInstance(callStmt.instanceId.get), List(expr)))
+          case None => Some(callStmt.instanceId.get)
+          case _ => throw new Utils.AssertionError("instId option cannot be anything else")
+        }
+        modifySet = modifySet ++ getProcedureModSet(instProcDecl.get, newInstId, modScope)
       } else {
-      
-        val procOption = context.module.get.procedure.find(p => p.id == callStmt.id)
+        val procOption = ctx.module.get.procedures.find(p => p.id == callStmt.id)
         // This call should not fail since we have already done ProcedureTypeChecking
         modifySet = modifySet ++ getProcedureModSet(procOption.get, instId, ctx)
-    
-  
-        
       }
     }
+    modifySet
   }
   
-    
   
   override def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
-    val instanceIds = getInstanceModifies(proc, ctx)
-
-    // If modify set does not contain any instances, then don't do anything to the procedure
-    if (instanceIds.isEmpty) {
-      return Some(proc)
-    }
-
-    
-
-
-    // TODO: Need to find direct modify set of a procedure
-    // Append the modify set to a procedure 
-    Some(proc)
-
-
+    val newModifySet = getProcedureModSet(proc, None, ctx).toSet
+    Some(ProcedureDecl(proc.id, proc.sig, proc.body, proc.requires, proc.ensures, newModifySet, proc.annotations))
   }
 }
+
+class ProcedureModifiesRewriter extends ASTRewriter("ProcedureModifiesRewriter", new ProcedureModifiesRewriterPass())

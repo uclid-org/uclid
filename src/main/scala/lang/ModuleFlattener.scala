@@ -495,18 +495,23 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       val blkStmt = inlineProcedureCall(callStmt, procOption.get, Scope.empty + procModule)
       rewriter.visitStatement(blkStmt, context)
     } else {
-      val option = context.module.get.procedures.find(p => p.id == callStmt.id)
-      //if (!option.isEmpty) {
-      //  val modifySet = option.get.modifies
-      //  val modifiesInst = modifySet.exists(
-      //                      id => context.get(id) match {
-      //                        case Some(Scope.Instance(_)) => true
-      //                        case _ => false
-      //                      })
-      //  if (modifiesInst) {
-      //  }
-      //}
-      Some(callStmt)
+      val procId = callStmt.id
+      val procOption = context.module.get.procedures.find(p => p.id == callStmt.id)
+      var modifiesInst = false
+      if (!procOption.isEmpty) {
+        modifiesInst = procOption.get.modifies.exists(
+                          modifiable => modifiable match {
+                            case m : ModifiableId => false
+                            case m : ModifiableInstanceId => true
+                          })
+      }
+      if (!procOption.isEmpty && !procOption.get.body.hasInternalCall && (modifiesInst && !procOption.get.shouldInline)) {
+        // Noinline procedures that modify instances 
+        val blkStmt = inlineProcedureCall(callStmt, procOption.get, context)
+        rewriter.visitStatement(blkStmt, context)
+      } else {
+        Some(callStmt)
+      }
     }
   }
 }
