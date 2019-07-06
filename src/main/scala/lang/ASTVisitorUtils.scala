@@ -155,25 +155,22 @@ class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   }
 }
 
-class OldExprRewriterPass(rewrites : Map[Identifier, (Identifier, Identifier)]) extends RewritePass
+class OldExprRewriterPass(rewrites : Map[ModifiableEntity, Identifier]) extends RewritePass
 {
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     opapp.op match {
       case OldOperator() =>
         opapp.operands(0) match {
           case arg: Identifier => {
-            rewrites.get(arg) match {
-              case Some(v) => Some(v._2)
+            rewrites.get(ModifiableId(arg)) match {
+              case Some(v) => Some(Operator.old(v))
               case None => Some(Operator.old(arg))
             }
           }
-          case arg: OperatorApplication => {
-            arg.op match {
-              case SelectFromInstance(field) => Some(Operator.oldInstance(arg))
-              case _ => {
-                Utils.raiseParsingError("Unexpected argument in the 'old' operator", opapp.pos, context.filename)
-                Some(Operator.oldInstance(arg))
-              }
+          case arg : OperatorApplication(SelectFromInstance(field), list) => {
+            rewrites.get(ModifiableInstanceId(arg)) match {
+              case Some(v) => Some(Operator.old(v))
+              case None => Some(Operator.old(arg))
             }
           }
           case _ => {
@@ -184,8 +181,9 @@ class OldExprRewriterPass(rewrites : Map[Identifier, (Identifier, Identifier)]) 
       case HistoryOperator() =>
         val arg = opapp.operands(0).asInstanceOf[Identifier]
         val past = opapp.operands(1)
-        rewrites.get(arg) match {
-          case Some(v) => Some(Operator.history(v._1, past))
+        rewrites.get(ModifiableId(arg)) match {
+          // history operators should not refer to instances
+          case Some(v) => Some(Operator.history(v, past))
           case None => Some(Operator.history(arg, past))
         }
       case _ => Some(opapp)
@@ -201,7 +199,7 @@ object OldExprRewriter {
   }
 }
 
-class OldExprRewriter(rewrites : Map[Identifier, (Identifier, Identifier)])
+class OldExprRewriter(rewrites : Map[ModifiableEntity, Identifier])
   extends ASTRewriter(OldExprRewriter.getName(), new OldExprRewriterPass(rewrites))
 {
   def rewriteExpr(e : Expr, context : Scope) : Expr = {

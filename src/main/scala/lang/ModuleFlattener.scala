@@ -391,17 +391,27 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
     // map from modified state variables to new variables created for them. ignore modified "instances"
     // should only use modify exprs that contain a ModifiableId
-    val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.filter(m =>  m match {
+    val modifyPairs : List[(ModifiableEntity, Identifier)] = proc.modifies.filter(m =>  m match {
       case ModifiableId(id) => context.get(id) match {
                                  case Some(Scope.Instance(_)) => false
-                                 case None => false
+                                 case None => false // Instance already flattened
                                  case _ => true
                                 }
-      case _ => false
-    }).asInstanceOf[Set[ModifiableId]].map(m => (m.id, NameProvider.get("modifies_" + m.toString()))).toList
+      case ModifiableInstanceId(opapp)  => true
+    }).map(m => m match {
+      case ModifiableId(id) => (m, NameProvider.get("modifies_" + m.toString()))
+      case ModifiableInstanceId(opapp) => {
+        val newName = instVarMap.get(flattenSelectFromInstance(opapp)) match {
+          case Some(name) => name
+          case _ => throw new Utils.AssertionError("new name for select from instance should not be None")
+        }
+        (m, NameProvider.get("modifies_" + newName))
+      }
+    }).toList
     
     // map from st_var -> modify_var.
-    val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1 -> p._2)).toMap
+    // Does not inclide instance state variables
+    val modifiesMap : Map[Expr, Expr] = modifyPairs.filter(p => p._1.isInstanceOf[ModifiableId]).map(p => (p._1.expr -> p._2)).toMap
     // full rewrite map.
     val rewriteMap = argMap ++ retMap ++ modifiesMap
     // rewriter object.
@@ -410,8 +420,17 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val oldMap : Map[Identifier, Identifier] = modifyPairs.map(p => p._2 -> p._1).toMap
     
     // Note that oldRenameMap contains the 'modifies' name and the 'old' name
-    // example entry ['a', ('a_modifies', 'old_a')]
-    val oldRenameMap : Map[Identifier, (Identifier, Identifier)] = modifyPairs.map(p => p._2 -> (p._1, NameProvider.get("old_" + p._2.toString()))).toMap
+    // example entry ['a_modifies', ('a', 'old_a')]
+    val oldRenameMap : Map[ModifiableEntity, Identifier] = modifyPairs.map(p => p._1 match {
+      case ModifiableId(id) =>  (p._1 -> NameProvider.get("old_" + id.toString())
+      case ModifiableInstanceId(opapp) => {
+        val newName = instVarMap.get(flattenSelectFromInstance(opapp)) match {
+          case Some(name) => name
+          case _ => throw new Utils.AssertionError("new name for select from instance should not be None")
+        }
+        (p._1 -> NameProvider.get("old_" + newName)
+      }
+    }).toMap
     // rewriter object.
     val oldRewriter = new OldExprRewriter(oldRenameMap)
 
