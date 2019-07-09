@@ -104,36 +104,39 @@ trait NewProcedureInlinerPass extends RewritePass {
     val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
     // map from modified state variables to new variables created for them. ignore modified "instances"
     // should only use modify exprs that contain a ModifiableId
-    val modifyPairs : List[(Identifier, Identifier)] = proc.modifies.filter(m =>  m match {
+    val modifyPairs : List[(ModifiableId, Identifier)] = proc.modifies.filter(m =>  m match {
       case ModifiableId(id) => context.get(id) match {
                                  case Some(Scope.Instance(_)) => false
-                                 case None => false
-                                 case _ => true 
+                                 case None => throw new Utils.AssertionError("ModfiableId should not refer to a variable that does not exist")
+                                 case _ => true
                                 }
-      case _ => false
-    }).asInstanceOf[Set[ModifiableId]].map(m => (m.id, NameProvider.get("modifies_" + m.toString()))).toList
-
-
+      case ModifiableInstanceId(opapp)  => throw new Utils.AssertionError("There should be no ModifiableInstanceIds at this point")
+    }).asInstanceOf[Set[ModifiableId]].map(m => m match {
+      case ModifiableId(id) => (m, NameProvider.get("modifies_" + id.toString()))
+    }).toList
+  
     // map from st_var -> modify_var.
-    val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1 -> p._2)).toMap
+    val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1.id -> p._2)).toMap
     // full rewrite map.
     val rewriteMap = argMap ++ retMap ++ modifiesMap
     // rewriter object.
     val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
 
-    // map from old(var) -> var.
-    val oldMap : Map[Identifier, Identifier] = modifyPairs.map(p => p._2 -> p._1).toMap
     // Note that the map contains the 'modifies' name and the 'old' name
-    val oldRenameMap : Map[Identifier, (Identifier, Identifier)] = modifyPairs.map(p => p._2 -> (p._1, NameProvider.get("old_" + p._2.toString()))).toMap
+    val oldRenameMap : Map[ModifiableEntity, Identifier] = modifyPairs.map(p => p._1 match {
+      case ModifiableId(id) =>  (p._1 -> NameProvider.get("old_" + id.toString()))
+    }).toMap
+                                                                                             
     // rewriter object
     val oldRewriter = new OldExprRewriter(oldRenameMap)
+
     
-    val oldPairs : List[(Identifier, Identifier)] = oldRenameMap.toList.map(p => (p._1, p._2._2))
+    val oldPairs : List[(Identifier, Identifier)] = oldRenameMap.asInstanceOf[Map[ModifiableId, Identifier]].toList.map(p => (p._1.id, p._2))
 
     // variable declarations for return values.
     val retVars = retPairs.map(r => BlockVarsDecl(List(r._2._1), r._2._2))
     // variable declarations for the modify variables.
-    val modifyVars : List[BlockVarsDecl] = modifyPairs.map(p => BlockVarsDecl(List(p._2), context.get(p._1) match {
+    val modifyVars : List[BlockVarsDecl] = modifyPairs.map(p => BlockVarsDecl(List(p._2), context.get(p._1.id) match {
       case Some(v) => v.typ
       case _ => lang.UndefinedType()
     }))
@@ -147,7 +150,7 @@ trait NewProcedureInlinerPass extends RewritePass {
     val varsToDeclare = retVars ++ modifyVars ++ oldVars
 
     // statements assigning state variables to modify vars.
-    val modifyInitAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
+    val modifyInitAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1.id)))
 
     // create assign statements to keep track of old values
     val oldAssigns : List[AssignStmt] = oldPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
@@ -156,7 +159,7 @@ trait NewProcedureInlinerPass extends RewritePass {
     // havoc'ing of the modified variables.
     val modifyHavocs : List[HavocStmt] = modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
     // statements updating the state variables at the end.
-    val modifyFinalAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(getModifyLhs(p._1)), List(p._2)))
+    val modifyFinalAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(getModifyLhs(p._1.id)), List(p._2)))
     // create precondition asserts
     val preconditionAsserts : List[Statement] = proc.requires.map {
       (req) => {
@@ -187,21 +190,6 @@ trait NewProcedureInlinerPass extends RewritePass {
           AssumeStmt(exprP, None)
         }
       }
-
-      //val instanceMods : Set[Identifier] = proc.modifies.filter(m => context.get(m) match {
-      //  case Some(Scope.Instance(_)) => true 
-      //  case _ => false 
-      //})
-
-      //var instanceIdMods : ListBuffer[(Identifier, Identifier)] = ListBuffer.empty
-      //instanceMods.foldLeft(instanceIdMods) { (set, instId) => getInstanceModifies(proc, instId, set, context) }
-
-      //var instIdModExprs : ListBuffer[Expr] = ListBuffer.empty
-      //instanceMods.foldLeft(instIdModExprs) { (buf , instId) => getInstanceModifiesExprs(proc, instId, buf, context) }
-      //println("InstanceIdModExprs here")
-      //println(instIdModExprs)
-
-      //val instanceHavocs : List[Statement] = instanceIdMods.map(m => HavocStmt(HavocableInstanceId(OperatorApplication(SelectFromInstance(m._2), List(m._1))))).toList
       BlockStmt(List.empty, modifyHavocs ++ postconditionAssumes)
     }
     val stmtsP = if (callStmt.callLhss.size > 0) {
@@ -227,10 +215,17 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
     var modifiesInst = false;
     if (!procOption.isEmpty) {
       modifiesInst = procOption.get.modifies.exists(
-                          id => context.get(id) match {
-                            case Some(Scope.Instance(_)) => true
-                            case _ => false
-                          })
+                        modifiable => modifiable match {
+                          case m : ModifiableId => {
+                            context.get(m.id) match {
+                              case Some(Scope.Instance(_)) => true
+                              case None => throw new Utils.AssertionError("Modifiable Id should not refer to none")
+                              case _ => false
+                            }
+                          }
+                          case m : ModifiableInstanceId => throw new Utils.AssertionError("There should be no ModifiableInstanceIds at this point")
+                        })
+                
     }
     //if (!procOption.isEmpty && !procOption.get.body.hasInternalCall &&
     //                    (procOption.get.shouldInline || !modifiesInst)) {
