@@ -309,6 +309,16 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
   }
 
+  // rewrite a list of identifiers as a nested select from instance
+  def unflattenSelectFromInstance(ids : List[Identifier]) : OperatorApplication = {
+    if (ids.length == 2) {
+      return OperatorApplication(SelectFromInstance(ids.last), List(ids.head))
+    } else {
+      return OperatorApplication(SelectFromInstance(ids.last), List(unflattenSelectFromInstance(ids.init)))
+    }
+     
+  }
+
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     val opappP = opapp.op match {
       case SelectFromInstance(field) =>
@@ -419,12 +429,17 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
         (newName, p._2)
       }
     })
-    
+
+    val flattenedModifiedInstanceIds : Set[List[Identifier]] = proc.modifies.filter(p => p.isInstanceOf[ModifiableInstanceId]).map(p => flattenSelectFromInstance(p.expr))
+    val notModifiesMap : Map[Expr, Expr] = instVarMap.filterKeys(k => !flattenedModifiedInstanceIds.contains(k)).map(p => (unflattenSelectFromInstance(p._1) -> p._2))
+
+        
     // map from st_var -> modify_var.
     // Does not inclide instance state variables
     val modifiesMap : Map[Expr, Expr] = modifyRenameList.map(p => (p._1.expr -> p._2)).toMap
+
     // full rewrite map.
-    val rewriteMap = argMap ++ retMap ++ modifiesMap
+    val rewriteMap = argMap ++ retMap ++ modifiesMap ++ notModifiesMap
     // rewriter object.
     val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
     
@@ -440,8 +455,14 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
         (p._1 -> NameProvider.get("old_" + newName))
       }
     }).toMap
+
+    // We know that notModifiesMap is compatible with modifiesInstanceId
+    val notModifiesOldMap : Map[ModifiableEntity, Identifier] = notModifiesMap.flatMap(p => (p._1, p._2) match {
+      case (o : OperatorApplication, id : Identifier) => Some((ModifiableInstanceId(o) -> id))
+      case _ => None
+    })
     // rewriter object.
-    val oldRewriter = new OldExprRewriter(oldRenameMap)
+    val oldRewriter = new OldExprRewriter(oldRenameMap ++ notModifiesOldMap)
 
     val oldPairs : List[(Identifier, Identifier)] = oldRenameMap.map(p => p._1 match {
       case ModifiableId(id) => (id, p._2)
@@ -474,10 +495,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       }
     }))
     // variable declarations for old values
-    println("Printin old pairs before creating old vars")
-    println(oldPairs)
-    println("printing var map")
-    println(varMap)
     val oldVars : List[BlockVarsDecl] = oldPairs.map(p => BlockVarsDecl(List(p._2), (context + modifyVars).get(p._1) match {
       case Some(v) => v.typ
       case _ => {
@@ -493,8 +510,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
         }
       }
     }))
-    println("Printing old vars")
-    println(oldVars)
     // list of all variable declarations.
     val varsToDeclare = retVars ++ modifyVars ++ oldVars
 
@@ -544,6 +559,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     } else {
       modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
     }
+
+    println("Printing not modifies map")
+    println(notModifiesMap)
+    println("Printing final set of statements")
+    println(stmtsP)
+    println("")
     BlockStmt(varsToDeclare, stmtsP)
   }
 

@@ -10,17 +10,19 @@ module abstract_cache {
   var cache_tag_map   : cache_tag_map_t;
 
   procedure update_cache_valid_map()
-    ensures (cache_tag_map == old(cache_tag_map));
+    ensures (cache_valid_map != old(cache_valid_map));
     modifies cache_valid_map;
   {
     havoc cache_valid_map;
+    assume cache_valid_map != old(cache_valid_map);
   }
 
   procedure update_cache_tag_map()
-    ensures (cache_valid_map == old(cache_valid_map));
+    ensures (cache_tag_map != old(cache_tag_map));
     modifies cache_tag_map;
   {
     havoc cache_tag_map;
+    assume cache_tag_map != old(cache_tag_map);
   }
 }
 
@@ -30,14 +32,14 @@ module abstract_cpu {
   instance cache : abstract_cache();
 
   procedure havoc_cache_valid_map()
-    ensures (cache.cache_tag_map == old(cache.cache_tag_map));
+    ensures (cache.cache_valid_map != old(cache.cache_valid_map));
     modifies cache;
   {
     call cache.update_cache_valid_map();
   }
 
   procedure havoc_cache_tag_map()
-    ensures (cache.cache_valid_map == old(cache.cache_valid_map));
+    ensures (cache.cache_tag_map != old(cache.cache_tag_map));
     modifies cache;
   {
     call cache.update_cache_tag_map();
