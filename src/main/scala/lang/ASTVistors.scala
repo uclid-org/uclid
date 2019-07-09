@@ -1825,8 +1825,6 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         })
       }
       case ModifiableInstanceId(opapp) => {
-        println("Printing modifies instance id")
-        println(modifiable)
         visitOperatorApp(opapp, context).flatMap((opAppP) => {
           opAppP match {
             case opapp : OperatorApplication =>

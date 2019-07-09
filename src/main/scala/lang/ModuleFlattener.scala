@@ -474,10 +474,27 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       }
     }))
     // variable declarations for old values
+    println("Printin old pairs before creating old vars")
+    println(oldPairs)
+    println("printing var map")
+    println(varMap)
     val oldVars : List[BlockVarsDecl] = oldPairs.map(p => BlockVarsDecl(List(p._2), (context + modifyVars).get(p._1) match {
       case Some(v) => v.typ
-      case _ => lang.UndefinedType()
+      case _ => {
+        val stateVarTypeMap : Map[Identifier, Type] = varMap.flatMap(p => p._2 match {
+          case MIP.StateVariable(id, t) => Some(id -> t)
+          case _ => None
+        })
+        val instTyp = stateVarTypeMap.get(p._1)
+        if (instTyp != None) {
+          instTyp.get
+        } else {
+          lang.UndefinedType()
+        }
+      }
     }))
+    println("Printing old vars")
+    println(oldVars)
     // list of all variable declarations.
     val varsToDeclare = retVars ++ modifyVars ++ oldVars
 
@@ -515,8 +532,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     } else {
       val postconditionAssumes : List[Statement] = proc.ensures.map {
         (ens) => {
-          
-        
           val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
           AssumeStmt(exprP, None)
         }
@@ -602,38 +617,6 @@ extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetMod
       }
       return ASTNode.introducePos(true, true, modifiableP, modifiable.position)
     }
-
-
-    override def visitProcedure(proc : ProcedureDecl, contextIn : Scope) : Option[ProcedureDecl] = {
-      val context = contextIn + proc
-      val id = visitIdentifier(proc.id, context)
-      val sig = visitProcedureSig(proc.sig, context)
-      val bodyP = visitStatement(proc.body, context)
-      val reqs = proc.requires.map(r => visitExpr(r, context.withEnvironment(RequiresEnvironment))).flatten
-
-      val enss = proc.ensures.map(e => visitExpr(e, context.withEnvironment(EnsuresEnvironment))).flatten
-      
-      println("printing proc mods in visitProcedure")
-      println(proc.modifies)
-      val mods = proc.modifies.map(v => visitModifiableEntity(v, context)).flatten    
-      println(pass.asInstanceOf[ModuleInstantiatorPass].instVarMap)
-      println(pass.asInstanceOf[ModuleInstantiatorPass].varMap)
-      println(mods)
-      val annotations = pass.rewriteProcedureAnnotations(proc.annotations, context) match {         
-        case Some(annot) => annot
-        case None => ProcedureAnnotations(Set.empty[Identifier])
-      }
-      val procP = (id, sig, bodyP) match {
-        case (Some(i), Some(s), Some(body)) =>
-          pass.rewriteProcedure(ProcedureDecl(i, s, body, reqs, enss, mods, annotations), contextIn)      
-        case _ =>
-          None
-      }
-      println("Printing procedure after being visited by AST rewriter")
-      println(procP)    
-      return ASTNode.introducePos(true, true, procP, proc.position)
-    }
-
 }
 
 class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
