@@ -68,7 +68,6 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           h match {
             case HavocableId(id) =>
               if (!context.doesNameExist(id)) {
-                println(id)
                 in + ModuleError("Unknown identifier in havoc statement", st.position)
               } else {
                 in

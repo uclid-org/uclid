@@ -227,11 +227,9 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
                         })
                 
     }
-    //if (!procOption.isEmpty && !procOption.get.body.hasInternalCall &&
-    //                    (procOption.get.shouldInline || !modifiesInst)) {
-    //if (!procOption.isEmpty && !procOption.get.body.hasInternalCall) {
     if (!procOption.isEmpty && !procOption.get.body.hasInternalCall && (!modifiesInst || procOption.get.shouldInline)) {
-      Some(inlineProcedureCall(callStmt, procOption.get, context))
+      val blkStmt = inlineProcedureCall(callStmt, procOption.get, context)
+      Some(blkStmt)
     } else {
       // Update the ProcedureCallStmt moduleId for external procedure inliner in module flattener
       callStmt.instanceId match {

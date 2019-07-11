@@ -408,30 +408,35 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
                                  case _ => true
                                 }
       case ModifiableInstanceId(opapp)  => true
-    }).map(m => m match {
-      case ModifiableId(id) => (m, NameProvider.get("modifies_" + id.toString()))
+    }).flatMap(m => m match {
+      case ModifiableId(id) => Some((m, NameProvider.get("modifies_" + id.toString())))
       case ModifiableInstanceId(opapp) => {
-        val newName = instVarMap.get(flattenSelectFromInstance(opapp)) match {
-          case Some(name) => name
-          case _ => throw new Utils.AssertionError("new name for select from instance should not be None")
+        instVarMap.get(flattenSelectFromInstance(opapp)) match {
+          case Some(name) => Some((m, NameProvider.get("modifies_" + name)))
+          // Not in the current instance we are flattening
+          case _ => None 
         }
-        (m, NameProvider.get("modifies_" + newName))
       }
     }).toList
 
-    val modifyPairs : List[(Identifier, Identifier)] = modifyRenameList.map(p => p._1 match {
-      case ModifiableId(id) => (id, p._2)
+    val modifyPairs : List[(Identifier, Identifier)] = modifyRenameList.flatMap(p => p._1 match {
+      case ModifiableId(id) => Some((id, p._2))
       case ModifiableInstanceId(opapp) => {
-        val newName = instVarMap.get(flattenSelectFromInstance(opapp)) match {
-          case Some(name) => name
-          case _ => throw new Utils.AssertionError("new name for select from instance should not be None")
+        instVarMap.get(flattenSelectFromInstance(opapp)) match {
+          case Some(name) => Some((name, p._2))
+          case _ => None
         }
-        (newName, p._2)
       }
     })
 
-    val flattenedModifiedInstanceIds : Set[List[Identifier]] = proc.modifies.filter(p => p.isInstanceOf[ModifiableInstanceId]).map(p => flattenSelectFromInstance(p.expr))
-    val notModifiesMap : Map[Expr, Expr] = instVarMap.filterKeys(k => !flattenedModifiedInstanceIds.contains(k)).map(p => (unflattenSelectFromInstance(p._1) -> p._2))
+    val notModifiesMap : Map[Expr, Expr] = if (callStmt.instanceId == None) {
+        val flattenedModifiedInstanceIds : Set[List[Identifier]] = proc.modifies.filter(p => p.isInstanceOf[ModifiableInstanceId]).map(p => flattenSelectFromInstance(p.expr))
+        instVarMap.filterKeys(k => !flattenedModifiedInstanceIds.contains(k)).map(p => (unflattenSelectFromInstance(p._1) -> p._2))
+      } else {
+        val modifiedIds : Set[Identifier] = proc.modifies.filter(p => p.isInstanceOf[ModifiableId]).map(p => p.asInstanceOf[ModifiableId].id)
+        varMap.filter(p => !modifiedIds.contains(p._1) && p._2.isInstanceOf[MIP.StateVariable]).map(p => (p._1 -> p._2.asInstanceOf[MIP.StateVariable].id))
+      }
+    
 
         
     // map from st_var -> modify_var.
@@ -445,33 +450,34 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     
     // Note that oldRenameMap contains the 'modifies' name and the 'old' name
     // example entry ['a', 'old_a')]
-    val oldRenameMap : Map[ModifiableEntity, Identifier] = modifyRenameList.map(p => p._1 match {
-      case ModifiableId(id) =>  (p._1 -> NameProvider.get("old_" + id.toString()))
+    val oldRenameMap : Map[ModifiableEntity, Identifier] = modifyRenameList.flatMap(p => p._1 match {
+      case ModifiableId(id) =>  Some((p._1 -> NameProvider.get("old_" + id.toString())))
       case ModifiableInstanceId(opapp) => {
-        val newName = instVarMap.get(flattenSelectFromInstance(opapp)) match {
-          case Some(name) => name
-          case _ => throw new Utils.AssertionError("new name for select from instance should not be None")
+        instVarMap.get(flattenSelectFromInstance(opapp)) match {
+          case Some(name) => Some((p._1 -> NameProvider.get("old_" + name)))
+          // Shouldn't hit this case since we are taking this from modifyRenameList
+          case _ => None
         }
-        (p._1 -> NameProvider.get("old_" + newName))
       }
     }).toMap
 
-    // We know that notModifiesMap is compatible with modifiesInstanceId
+    // We know that notModifiesMap is compatible with both modifiesId and modifiesInstanceId
     val notModifiesOldMap : Map[ModifiableEntity, Identifier] = notModifiesMap.flatMap(p => (p._1, p._2) match {
       case (o : OperatorApplication, id : Identifier) => Some((ModifiableInstanceId(o) -> id))
+      case (id1 : Identifier, id2 : Identifier) => Some((ModifiableId(id1) -> id2))
       case _ => None
     })
     // rewriter object.
     val oldRewriter = new OldExprRewriter(oldRenameMap ++ notModifiesOldMap)
 
-    val oldPairs : List[(Identifier, Identifier)] = oldRenameMap.map(p => p._1 match {
-      case ModifiableId(id) => (id, p._2)
+    val oldPairs : List[(Identifier, Identifier)] = oldRenameMap.flatMap(p => p._1 match {
+      case ModifiableId(id) => Some((id, p._2))
       case ModifiableInstanceId(opapp) => {
-        val newName = instVarMap.get(flattenSelectFromInstance(opapp)) match {
-          case Some(name) => name
-          case _ => throw new Utils.AssertionError("new name for select from instance should not be None")
+        instVarMap.get(flattenSelectFromInstance(opapp)) match {
+          case Some(name) => Some((name, p._2))
+          // Shouldn't hit this case
+          case _ => None
         }
-        (newName, p._2)
       }
     }).toList
 
@@ -559,18 +565,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     } else {
       modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
     }
-
-    println("Printing not modifies map")
-    println(notModifiesMap)
-    println("Printing final set of statements")
-    println(stmtsP)
-    println("")
     BlockStmt(varsToDeclare, stmtsP)
   }
 
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
     if (callStmt.instanceId != None && callStmt.instanceId.get.name == inst.instanceId.name) {
-      // Replace the instance procedure call if we're flattening that particular instance    
+            // Replace the instance procedure call if we're flattening that particular instance    
       val procInst = context.module.get.instances.find(inst => inst.instanceId.name == callStmt.instanceId.get.name).get
       val procModule = context.get(procInst.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
       val procOption = procModule.procedures.find(p => p.id.name == callStmt.id.name)
@@ -586,8 +586,11 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
                             case m : ModifiableId => false
                             case m : ModifiableInstanceId => true
                           })
+        modifiesInst = true
       }
-      if (!procOption.isEmpty && !procOption.get.body.hasInternalCall && (modifiesInst && !procOption.get.shouldInline)) {
+
+      //if (!procOption.isEmpty && !procOption.get.body.hasInternalCall && (modifiesInst )) {
+      if (!procOption.isEmpty) {
         // Noinline procedures that modify instances 
         val blkStmt = inlineProcedureCall(callStmt, procOption.get, context)
         rewriter.visitStatement(blkStmt, context)
@@ -603,8 +606,6 @@ class ModuleInstantiator(
     targetModule : Module, externalSymbolMap : ExternalSymbolMap)
 extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false) {
 
-    //TODO: The best way to approach this would be to rewrite visitModifiableEntity so that if it is and InstanceId, it looks at the appropriate mappings.
-    
     override def visitModifiableEntity(modifiable : ModifiableEntity, context : Scope) : Option[ModifiableEntity] = {
       val instVarMap = pass.asInstanceOf[ModuleInstantiatorPass].instVarMap
       val modifiableP = modifiable match {
@@ -614,21 +615,19 @@ extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetMod
               case id : Identifier =>
                 pass.rewriteModifiableEntity(ModifiableId(id), context)
               case _ => 
-                None
+                Some(modifiable)
             }
           })
         }
         case ModifiableInstanceId(opapp) => {
-          println("Printing modifies instance id")
-          println(modifiable)
           opapp match {
             case OperatorApplication(SelectFromInstance(field), list) => {
               val flatName = pass.asInstanceOf[ModuleInstantiatorPass].flattenSelectFromInstance(opapp) 
               val newName = pass.asInstanceOf[ModuleInstantiatorPass].instVarMap.get(flatName)
-              if (newName.get != None) {
+              if (newName != None) {
                 pass.rewriteModifiableEntity(ModifiableId(newName.get), context)
               } else {
-                None
+                Some(modifiable)
               }
             }
             case _ =>

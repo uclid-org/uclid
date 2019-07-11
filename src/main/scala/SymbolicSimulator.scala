@@ -1837,8 +1837,9 @@ class SymbolicSimulator (module : Module) {
     case WhileStmt(_, body, invs) => return writeSet(body)
     case CaseStmt(body) =>
       return body.foldLeft(Set.empty[Identifier]) { (acc,i) => acc ++ writeSet(i._2) }
-    case ProcedureCallStmt(id,lhss,args,instanceId,moduleId) =>
+    case ProcedureCallStmt(id,lhss,args,instanceId,moduleId) => {
       throw new Utils.RuntimeError("ProcedureCallStmt must have been inlined by now.")
+    }
     case ModuleCallStmt(id) =>
       throw new Utils.RuntimeError("ModuleCallStmt must have been inlined by now.")
   }
