@@ -66,6 +66,8 @@ module cpu {
   
 module main {
 
+  function * = cpu.*;
+
   type addr_t = common.addr_t;
   type mem_t = common.mem_t;
   type word_t = common.word_t;
@@ -77,9 +79,9 @@ module main {
 
   instance cpu_i : cpu();
   init {
-    assume (forall (a : addr_t) :: (cpu.word2op(cpu_i.mem[a])) == add);
-    assume (forall (a : addr_t) :: (cpu.word2reg0(cpu_i.mem[a])) == r0index);
-    assume (forall (a : addr_t) :: (cpu.word2reg1(cpu_i.mem[a])) == r0index);
+    assume (forall (a : addr_t) :: (word2op(cpu_i.mem[a])) == add);
+    assume (forall (a : addr_t) :: (word2reg0(cpu_i.mem[a])) == r0index);
+    assume (forall (a : addr_t) :: (word2reg1(cpu_i.mem[a])) == r0index);
     sum = 1bv8;
   }
   next {

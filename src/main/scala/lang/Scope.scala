@@ -260,8 +260,12 @@ case class Scope (
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr, params))
           case None => mapAcc
         }
-        case ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) | 
-             ModuleFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) | 
+        //case ModuleConstantsImportDecl(id) => Scope.addToMap(mapAcc, Scope.ConstantsImport(id))
+        //case ModuleFunctionsImportDecl(id) => Scope.addToMap(mapAcc, Scope.FunctionsImport(id))
+        case ModuleConstantsImportDecl(_) => mapAcc
+        case ModuleFunctionsImportDecl(_) => mapAcc
+        case ModuleTypesImportDecl(_) | 
+             ModuleDefinesImportDecl(_) | 
              InitDecl(_) | NextDecl(_)  => mapAcc
       }
     }

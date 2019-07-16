@@ -73,6 +73,7 @@ class PassManager(name : => String) {
   }
   // run on a single module.
   def run(module : Module, context : Scope) : Option[Module] = {
+    moduleList = moduleList :+ module
     passes.foreach{ _.reset() }
     val modP = _run(module, context)
     passes.foreach(_.finish())

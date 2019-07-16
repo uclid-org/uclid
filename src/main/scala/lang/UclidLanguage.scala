@@ -1779,9 +1779,11 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   lazy val constantDecls = decls.collect { case cnsts : ConstantsDecl => cnsts }
   lazy val constants : List[(Identifier, Type)] =
     constantDecls.flatMap(cnst => cnst.ids.map(id => (id, cnst.typ)))
+  
   // module functions.
   lazy val functions : List[FunctionDecl] =
     decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
+  
   // module macros
   lazy val defines : List[DefineDecl] = decls.collect{ case d : DefineDecl => d }
   // module properties.

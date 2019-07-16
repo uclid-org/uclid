@@ -40,6 +40,96 @@ package uclid
 package lang
 
 import com.typesafe.scalalogging.Logger
+import scala.collection.mutable.HashMap
+
+//TODO: Verify that we don't actually need to pull in axioms if we just rewrite
+// all constants as 'module' + '.' + const
+class ModuleConstantsImportRewriterPass extends RewritePass {
+  
+  
+  
+}
+
+
+
+class ModuleConstantsImportRewriter extends ASTRewriter(
+  "ModuleConstantsImportRewriter", new ModuleConstantsImportRewriterPass()) {
+
+
+  // Collects all constants and constant literals into map, while checking for redeclaration errors
+  def collectConstantDecls(module : Module, map : HashMap[Identifier, Identifier]) : HashMap[Identifier, Identifier] = {
+    module.constLits.map(c => map.get(c._1) match {
+      case Some(_) => throw new Utils.AssertionError("Redeclaration error in module constant literals import")
+      case None => map += ((c._1, module.id))
+    })
+    module.constants.map(c => map.get(c._1) match {
+      case Some(_) => throw new Utils.AssertionError("Redeclaration error in module constants import")
+      case None => map += ((c._1, module.id))
+    })
+    map
+  }
+
+  // Collects the names of all modules to import constants from
+  // TODO: Add error checking for 'fullList'
+  def findModuleDependencies(module : Module, modList : List[Module]) : List[Identifier] = {
+    val importList : List[Identifier] = module.decls.collect { case importDecl : ModuleConstantsImportDecl => importDecl.id }
+    val fullList = importList ++ importList.foldLeft(List[Identifier]()) { (list, id) => {
+        val mod = modList.find(m => m.id == id)
+        if (mod == None) {
+          list
+        } else {
+          val dependencies = findModuleDependencies(mod.get, modList)
+          list ++ dependencies
+        }
+      }
+    }
+    fullList
+  }
+
+
+  def collectAllConstants(module : Module, map : HashMap[Identifier, Identifier], modList : List[Module]) : HashMap[Identifier, Identifier] = {
+    val moduleList = findModuleDependencies(module, modList)
+    moduleList.map(id => {
+      // moduleList should only use available modules
+      val mod = modList.find(m => m.id == id).get
+      collectConstantDecls(mod, map)
+    })
+    map
+  }
+
+
+  override def visitModule(module : Module, initContext : Scope) : Option[Module] = {
+
+    val constMap = collectAllConstants(module, new HashMap(), manager.moduleList)
+    val rewriterMap = constMap.map(p => (p._1 -> OperatorApplication(PolymorphicSelect(p._1), List(p._2)))).asInstanceOf[HashMap[Expr, Expr]].toMap
+    val rewriter = new ExprRewriter("ConstantRewriter", rewriterMap)
+
+
+
+    val context = initContext + module
+    val id = visitIdentifier(module.id, context)
+    val decls = module.decls.map(visitDecl(_, context)).flatten.map(rewriter.visitDecl(_, context)).flatten
+    val initR : (List[Option[GenericProofCommand]], Scope) = (List.empty, initContext)
+    val cmds = module.cmds.foldRight(initR)((cmd, acc) => (visitCommand(cmd, acc._2) :: acc._1, acc._2 + cmd))._1.flatten
+    val notes = module.notes.map(note => visitNote(note, context)).flatten
+    val moduleIn = id.flatMap((i) => Some(Module(i, decls, cmds, notes)))
+    val moduleP = moduleIn.flatMap((m) => pass.rewriteModule(m, initContext))
+
+    return (ASTNode.introducePos(true, true, moduleP, module.position) match {
+      case Some(m) =>
+        module.filename match {
+          case Some(fn) => Some(m.withFilename(fn))
+          case None     => Some(m)
+        }
+      case None =>
+        None
+    })
+  }
+
+
+
+}
+
 
 class ModuleConstantsImportCollectorPass extends ReadOnlyPass[List[Decl]] {
   lazy val logger = Logger(classOf[ModuleConstantsImportCollector])
