@@ -130,7 +130,7 @@ class ModuleConstantsImportRewriter extends ASTRewriter(
 
 }
 
-
+//TODO: Remove this once we stress test the upper implementation
 class ModuleConstantsImportCollectorPass extends ReadOnlyPass[List[Decl]] {
   lazy val logger = Logger(classOf[ModuleConstantsImportCollector])
   type T = List[Decl]
