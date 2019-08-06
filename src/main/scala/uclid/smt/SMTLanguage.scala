@@ -649,7 +649,7 @@ case object ITEOp extends Operator {
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 3)
     Utils.assert(args(0).typ.isBool, "Condition in ITE must be a boolean")
-    Utils.assert(args(1).typ == args(1).typ, "Types in then- and else- expressions must be the same")
+    Utils.assert(args(1).typ == args(2).typ, "Types in then- and else- expressions must be the same")
   }
   def resultType(args: List[Expr]) : Type = args(1).typ
 }
