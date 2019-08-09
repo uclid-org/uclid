@@ -56,7 +56,7 @@ module main {
   property[LTL] irrevocable : G(q.deq_valid ==> (deq_ready || X(q.deq_valid)));
 
   control {
-    vobj = bmc[irrevocable, queuelike](3);
+    vobj = bmc[properties=[irrevocable, queuelike]](3);
     check;
     print_results;
     vobj.print_cex(

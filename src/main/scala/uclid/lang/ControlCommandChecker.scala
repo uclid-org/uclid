@@ -54,7 +54,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     Utils.checkParsingError(cmd.args.size == 0, "'%s' command does not expect any arguments".format(cmd.name.toString), cmd.pos, filename)
   }
   def checkNoParams(cmd : GenericProofCommand, filename : Option[String]) {
-    Utils.checkParsingError(cmd.params.size == 0, "'%s' command does not except any parameters".format(cmd.name.toString), cmd.pos, filename)
+    Utils.checkParsingError(cmd.params.size == 0, "'%s' command does not expect any parameters".format(cmd.name.toString), cmd.pos, filename)
   }
   def checkHasOneIntLitArg(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument".format(cmd.name.toString), cmd.pos, filename)
@@ -100,21 +100,28 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large".format(cmd.name.toString), cmd.pos, filename)
     }
   }
-  def checkParamsAreProperties(cmd : GenericProofCommand, context : Scope, filename : Option[String]) {
+  def checkPropertiesValid(paramName: Identifier, cmd : GenericProofCommand, context : Scope, filename : Option[String]) {
     def idIsProperty(id : Identifier) : Boolean = {
       context.get(id) match {
         case Some(Scope.SpecVar(_, _, _)) => true
         case _ => false
       }
     }
-    val badParams = cmd.params.filter(p => !idIsProperty(p))
-    lazy val badParamStr = Utils.join(badParams.map(_.toString), ", ")
-    lazy val errorMsg = if (badParams.size == 1) {
+    val propertyParams = cmd.params.filter(p => p.name == paramName).flatMap(p => p.values)
+    val invalidProperties = propertyParams.filter(p => !p.isInstanceOf[Identifier])
+    if (invalidProperties.size > 0) {
+      val badPropertyStr = "Invalid properties: " + Utils.join(invalidProperties.map(_.toString()), ", ")
+      Utils.raiseParsingError(badPropertyStr, cmd.pos, filename)
+    } 
+    val properties = propertyParams.map(p => p.asInstanceOf[Identifier])
+    val badProperties = properties.filter(p => !idIsProperty(p))
+    lazy val badParamStr = Utils.join(badProperties.map(_.toString), ", ")
+    lazy val errorMsg = if (badProperties.size == 1) {
       "Unknown property in %s command: %s".format(cmd.name.toString, badParamStr)
     } else {
       "Unknown properties in %s command: %s".format(cmd.name.toString, badParamStr)
     }
-    Utils.checkParsingError(badParams.size == 0, errorMsg, cmd.pos, filename)
+    Utils.checkParsingError(badProperties.size == 0, errorMsg, cmd.pos, filename)
   }
   def checkParamIsALogic(cmd : GenericProofCommand, context : Scope, filename : Option[String]) {
     Utils.checkParsingError(cmd.params.size == 1, "'%s' command expects one parameter specifying the logic".format(cmd.name.toString), cmd.pos, filename)
@@ -146,11 +153,13 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkHasOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
       case "induction" | "horn" =>
-        checkNoParams(cmd, filename)
+        checkPropertiesValid(Identifier("properties"), cmd, context, filename)
+        checkPropertiesValid(Identifier("pre"), cmd, context, filename)
+        checkPropertiesValid(Identifier("assumptions"), cmd, context, filename)
         checkHasZeroOrOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
       case "bmc" =>
-        checkParamsAreProperties(cmd, context, filename)
+        checkPropertiesValid(Identifier("properties"), cmd, context, filename)
         checkHasOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
       case "verify" =>

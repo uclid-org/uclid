@@ -67,12 +67,32 @@ class AssertionTree {
   class TreeNode(p : Option[TreeNode], assumps : List[smt.Expr]) {
     var parent : Option[TreeNode] = p // Root does not have a parent, so parent = None for root and Some(p) for all other nodes.
     var children : ListBuffer[TreeNode] = ListBuffer.empty
-    var assumptions: ListBuffer[smt.Expr] = assumps.to[ListBuffer]
+    var assumptions: Set[smt.Expr] = {
+      p match {
+        case None => assumps.toSet
+        case Some(node) => assumps.filter(e => !node.isAssumptionInScope(e)).toSet
+      }
+      
+    }
     var assertions: ListBuffer[AssertInfo] = ListBuffer.empty
     var results : List[CheckResult] = List.empty
 
+    def isAssumptionInScope(e : smt.Expr) : Boolean = {
+      if (assumptions.contains(e)) true
+      else {
+        parent match {
+          case Some(node) => node.isAssumptionInScope(e)
+          case None => false
+        }
+      }
+    }
+
     // these two functions add assumptions.
-    def +=(e : smt.Expr) { assumptions += e }
+    def +=(e : smt.Expr) {
+      if (!isAssumptionInScope(e)) {
+        assumptions += e
+      }
+    }
     // and these two add assertions
     def +=(assert: AssertInfo) { assertions += assert }
   }

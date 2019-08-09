@@ -743,20 +743,23 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
                   InitDecl | NextDecl | SpecDecl | AxiomDecl)
 
     // control commands.
-    lazy val IdParamList : PackratParser[List[Identifier]] =
-      "[" ~> Id ~ (rep ("," ~> Id) <~ "]") ^^ { case t ~ ts =>  t :: ts} |
-      "[" <~ "]" ^^ { case _ => List.empty }
+    lazy val CmdParam : PackratParser[lang.CommandParams] = 
+      ( Id <~ "=" ) ~ ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ 
+        { case id ~ ( e ~ es ) => lang.CommandParams(id, e :: es) }
+    lazy val CmdParamList : PackratParser[List[lang.CommandParams]] = 
+      "[" ~ "]" ^^ { case _ => List.empty } |
+      "[" ~> CmdParam ~ rep(";" ~> CmdParam) <~ "]" ^^ { case p ~ ps => p :: ps }
 
 
     lazy val Cmd : PackratParser[lang.GenericProofCommand] = positioned {
       (Id <~ "=").? ~ (Id <~ ".").? ~ Id <~ ";" ^^
         { case rId ~ oId ~ id => lang.GenericProofCommand(id, List.empty, List.empty, rId, oId) } |
-      (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ IdParamList <~ ";" ^^
-        { case rId ~ oId ~ id ~ idparams => lang.GenericProofCommand(id, idparams, List.empty, rId, oId) } |
+      (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ CmdParamList <~ ";" ^^
+        { case rId ~ oId ~ id ~ cmdParams => lang.GenericProofCommand(id, cmdParams, List.empty, rId, oId) } |
       (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ ExprList <~ ";" ^^
         { case rId ~ oId ~ id ~ es => lang.GenericProofCommand(id, List.empty, es.map(e => (e, e.toString())), rId, oId) } |
-      (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ IdParamList ~ ExprList <~ ";" ^^
-        { case rId ~ oId ~ id ~ idparams ~ es => lang.GenericProofCommand(id, idparams, es.map(e => (e, e.toString())), rId, oId) }
+      (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ CmdParamList ~ ExprList <~ ";" ^^
+        { case rId ~ oId ~ id ~ cmdParams ~ es => lang.GenericProofCommand(id, cmdParams, es.map(e => (e, e.toString())), rId, oId) }
     }
 
     lazy val CmdBlock : PackratParser[List[GenericProofCommand]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"

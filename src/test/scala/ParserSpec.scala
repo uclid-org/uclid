@@ -554,4 +554,14 @@ class ParserSpec extends FlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1);
   }
+
+  "test-hyperproperty-5.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-hyperproperty-5.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors(0)._1.contains("Trace select can only be applied on an identifier"))
+    }
+  }
 }
