@@ -664,6 +664,7 @@ sealed abstract class NumericLit extends Literal {
   override def isNumeric = true
   def typeOf : NumericType
   def to (n : NumericLit) : Seq[NumericLit]
+  def negate: NumericLit
 }
 case class BoolLit(value: Boolean) extends Literal {
   override def toString = value.toString
@@ -679,6 +680,7 @@ case class IntLit(value: BigInt) extends NumericLit {
       case _ => throw new Utils.RuntimeError("Cannot create range for differing types of numeric literals.")
     }
   }
+  override def negate = IntLit(-value)
   override val hashId = 2300
   override val md5hashCode = computeMD5Hash(value)
 }
@@ -692,6 +694,7 @@ case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
       case _ => throw new Utils.RuntimeError("Cannot create range for differening types of numeric literals.")
     }
   }
+  override def negate = BitVectorLit(-value, width)
   override val hashId = 2301
   override val md5hashCode = computeMD5Hash(value, width)
 }
