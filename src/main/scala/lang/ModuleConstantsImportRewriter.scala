@@ -45,12 +45,7 @@ import scala.collection.mutable.HashMap
 //TODO: Verify that we don't actually need to pull in axioms if we just rewrite
 // all constants as 'module' + '.' + const
 class ModuleConstantsImportRewriterPass extends RewritePass {
-  
-  
-  
 }
-
-
 
 class ModuleConstantsImportRewriter extends ASTRewriter(
   "ModuleConstantsImportRewriter", new ModuleConstantsImportRewriterPass()) {
@@ -91,8 +86,11 @@ class ModuleConstantsImportRewriter extends ASTRewriter(
     val moduleList = findModuleDependencies(module, modList)
     moduleList.map(id => {
       // moduleList should only use available modules
-      val mod = modList.find(m => m.id == id).get
-      collectConstantDecls(mod, map)
+      val mod = modList.find(m => m.id == id)
+      if (mod != None) 
+        collectConstantDecls(mod.get, map)
+      else 
+        throw new Utils.TypeError("Module: " + id.toString + ", not found for importing constants", None, None)
     })
     map
   }

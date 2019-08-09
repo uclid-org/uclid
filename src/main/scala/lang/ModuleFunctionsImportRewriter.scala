@@ -85,8 +85,11 @@ class ModuleFunctionsImportRewriter extends ASTRewriter(
     val moduleList = findModuleDependencies(module, modList)
     moduleList.map(id => {
       // moduleList should only use available modules
-      val mod = modList.find(m => m.id == id).get
-      collectFunctionDecls(mod, map)
+      val mod = modList.find(m => m.id == id)
+      if (mod != None) 
+        collectFunctionDecls(mod.get, map)
+      else 
+        throw new Utils.TypeError("Module : " + id.toString + ", not found for importing functions", None, None)
     })
     map
   }
