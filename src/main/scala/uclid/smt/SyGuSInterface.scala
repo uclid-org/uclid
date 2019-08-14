@@ -224,6 +224,8 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
       List(preamble, synthInvDecl, varDecls, initFun, transFun, postFun, invConstraint, postamble)
     }
     val instance = "\n" + Utils.join(instanceLines, "\n")
+    println("Printing instance of SyGuS problem")
+    println(instance)
     sygusLog.debug(instance)
     val tmpFile = File.createTempFile(Constants.SyGuSInstanceFileName, ".sl")
     // tmpFile.deleteOnExit()

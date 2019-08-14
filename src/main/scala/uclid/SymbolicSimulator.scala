@@ -287,7 +287,8 @@ class SymbolicSimulator (module : Module) {
               case None =>
                 UclidMain.println("Error: Can't execute synthesize_invariant as synthesizer was not provided. ")
               case Some(synth) => {
-                synthesizeInvariants(context, createNoLTLFilter(properties), synth, cmd.params(0).toString, config.sygusTypeConvert) match {
+                //TODO: Note that cmd.params(0).name.toString is used b/c of temporary fix to parser
+                synthesizeInvariants(context, createNoLTLFilter(properties), synth, cmd.params(0).name.toString, config.sygusTypeConvert) match {
                   // Failed to synthesize invariant
                   case None => UclidMain.println("Failed to synthesize invariant.")
                   // Successfully synthesized an invariant
@@ -1683,6 +1684,15 @@ class SymbolicSimulator (module : Module) {
     val verificationConditions = assertions ++ invariants
     Utils.assert(verificationConditions.size > 0, "Must have at least one assertion/invariant.")
     Utils.assert(initAssertions.size == 0, "Must not have assertions in the init block for SyGuS.") 
+    println("Printing logic")
+    println(logic)
+    println("Printing init expr")
+    println(initExpr)
+    println("Printing next expr")
+    println(nextExpr)
+    println("Printing verification conditions")
+    println(verificationConditions)
+    println("Donezo")
     return synthesizer.synthesizeInvariant(initExpr, nextExpr, verificationConditions, synthesisCtx, logic)
   }
 

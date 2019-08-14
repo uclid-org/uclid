@@ -25,7 +25,7 @@ module main
 
   control {
     print_module;
-    synthesize_invariant;
+    synthesize_invariant[LIA];
     // v = unroll(10);
     // check;
     // print_results;
