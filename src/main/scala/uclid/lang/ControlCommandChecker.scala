@@ -131,7 +131,8 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         case _ => false
       }
     }
-    val logic = cmd.params(0).toString
+    // TODO: Current way of specifying logic, change later if needed
+    val logic = cmd.params(0).name.toString
     Utils.checkParsingError(logicIsSupported(logic), "'%s' command expects a supported logic as a parameter".format(cmd.name.toString), cmd.pos, filename)
   }
   override def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : Unit, context : Scope) : Unit = {
