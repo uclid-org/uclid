@@ -49,7 +49,7 @@ import scala.language.postfixOps
 trait SMTLIB2Base {
   val smtlib2BaseLogger = Logger(classOf[SMTLIB2Base])
   
-  type VarMap = MutableMap[String, (String, Type)]
+  type VarMap = MutableMap[String, Symbol]
   type LetMap = MutableMap[Expr, String]
   var variables : VarMap = MutableMap.empty
   var letVariables : LetMap = MutableMap.empty
@@ -192,7 +192,7 @@ trait SMTLIB2Base {
           case Symbol(id,_) =>
             smtlib2BaseLogger.info("-->> symbol <<--")
             Utils.assert(variables.contains(id), "Not found in map: " + id)
-            (variables.get(id).get._1, memo, false)
+            (variables.get(id).get.toString, memo, false)
           case EnumLit(id, _) =>
             smtlib2BaseLogger.info("-->> enum <<--")
             (id, memo, false)
@@ -312,11 +312,11 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
   var expressions : List[Expr] = List.empty
   val solverProcess = new InteractiveProcess(args)
 
-  def generateDeclaration(name: String, t: Type) = {
-    val (typeName, newTypes) = generateDatatype(t)
+  def generateDeclaration(sym: Symbol) = {
+    val (typeName, newTypes) = generateDatatype(sym.typ)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
-    val inputTypes = generateInputDataTypes(t).mkString(" ")
-    val cmd = "(declare-fun %s (%s) %s)".format(name, inputTypes, typeName)
+    val inputTypes = generateInputDataTypes(sym.typ).mkString(" ")
+    val cmd = "(declare-fun %s (%s) %s)".format(sym, inputTypes, typeName)
     writeCommand(cmd)
   }
 
@@ -334,9 +334,9 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     val symbolsP = symbols.filter(s => !variables.contains(s.id))
     symbolsP.foreach {
       (s) => {
-        val sIdP = getVariableName(s.id)
-        variables += (s.id -> (sIdP, s.symbolTyp))
-        generateDeclaration(sIdP, s.symbolTyp)
+        val sym = Symbol(getVariableName(s.id), s.symbolTyp)
+        variables += (s.id -> sym)
+        generateDeclaration(sym)
       }
     }
     smtlibInterfaceLogger.debug("[begin translate]")
