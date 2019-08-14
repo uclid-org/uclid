@@ -39,6 +39,7 @@
 package uclid
 package smt
 import scala.collection.mutable.Map
+import scala.util.matching.Regex
 
 sealed trait Type extends Hashable {
   override val hashBaseId = 22575 // Random number. Not super important, must just be unique for each abstract base class.
@@ -693,10 +694,19 @@ case class EnumLit(id : String, eTyp : EnumType) extends Literal (eTyp) {
 }
 
 case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {
+  // See <symbol> definition in the Concrete Syntax Appendix of the SMTLib Spec
+  assert(!id.contains("|"),  s"Invalid id $id contains escape character `|`")
+  assert(!id.contains("\\"), s"Invalid id $id contains `\\`")
   override val hashId = mix(id.hashCode(), mix(symbolTyp.hashCode(), 304))
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash(id, symbolTyp)
-  override def toString = id.toString
+  override def toString = escape(id.toString)
+  // See <simple_symbol> definition in the Concrete Syntax Appendix of the SMTLib Spec
+  private val simple: Regex = raw"[a-zA-Z\+-/\*\=%\?!\.\$$_~&\^<>@][a-zA-Z0-9\+-/\*\=%\?!\.\$$_~&\^<>@]*".r
+  private def escape(name: String): String = name match {
+    case simple() => name
+    case _ => s"|$name|"
+  }
 }
 // const array.
 case class ConstArray(expr : Expr, arrTyp: ArrayType) extends Expr (arrTyp) {
