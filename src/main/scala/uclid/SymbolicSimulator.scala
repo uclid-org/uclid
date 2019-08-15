@@ -1655,12 +1655,23 @@ class SymbolicSimulator (module : Module) {
       }
     }).flatten.toList
     // Compute init expression from the result of symbolic simulation.
+    println("Printing initState")
+    println(initState)
     val initExprs = (initState.map {
       p => {
         val lhs = defaultSymbolTable.get(p._1).get
         val rhs = p._2
         if (lhs == rhs) { smt.BooleanLit(true) }
-        else { smt.OperatorApplication(smt.EqualityOp, List(lhs, rhs)) }
+        else { 
+          println("Printing init state construction")
+          println(p._2.toString.contains("havoc"))
+          //TODO: Tmp fix for havoc statements (just don't include them)
+          if (p._2.toString.contains("havoc")) {
+            smt.OperatorApplication(smt.EqualityOp, List(lhs, lhs))
+          } else {
+            smt.OperatorApplication(smt.EqualityOp, List(lhs, rhs)) 
+          }
+        }
       }
     }.toList ++ initAssumptions.toList).filter(p => p != smt.BooleanLit(true))
     val initExpr : smt.Expr = initExprs.size match {
