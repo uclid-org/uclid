@@ -110,7 +110,7 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     symbolsP.foreach {
       (s) => {
         val sIdP = getVariableName(s.id)
-        variables += (s.id -> (sIdP, s.symbolTyp))
+        variables += (s.id -> Symbol(sIdP, s.symbolTyp))
       }
     }
 
@@ -122,10 +122,10 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     val unprimedVars = variables.filter(p => !p._1.endsWith("!"))
     val decls = unprimedVars.map{ v =>
       {
-        val (typeName, otherDecls) = generateDatatype(v._2._2)
+        val (typeName, otherDecls) = generateDatatype(v._2.typ)
         Utils.assert(otherDecls.size == 0, "Datatype declarations are not supported yet.")
         // FIXME: to handle otherDecls
-        declarationCmd.format(v._2._1, typeName)
+        declarationCmd.format(v._2.toString, typeName)
       }
     }.toList
     Utils.join(decls, "\n")
@@ -151,7 +151,7 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     symbols.filter(p => !variables.contains(p.id)).foreach {
       (s) => {
         val idP = getVariableName(s.id)
-        variables += (s.id -> (idP -> s.symbolTyp))
+        variables += (s.id -> Symbol(idP, s.symbolTyp))
       }
     }
     val funcBody = translateExpr(initExpr, false)
@@ -164,7 +164,7 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     symbols.filter(p => !variables.contains(p.id)).foreach {
       (s) => {
         val idP = getVariableName(s.id)
-        variables += (s.id -> (idP -> s.symbolTyp))
+        variables += (s.id -> Symbol(idP, s.symbolTyp))
       }
     }
     val funcBody = translateExpr(nextExpr, false)
