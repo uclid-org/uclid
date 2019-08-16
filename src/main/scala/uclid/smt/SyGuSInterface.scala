@@ -195,17 +195,27 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
   }
   
   override def synthesizeInvariant(initExpr : smt.Expr, nextExpr : smt.Expr, properties : List[smt.Expr], ctx : Scope, logic : String) : Option[langExpr] = {
-    val stateVars = getVariables(ctx)
+    var stateVars = getVariables(ctx)
     Utils.assert(stateVars.size > 0, "There are no variables in the given model.")
     val preamble = Constants.SetLogicCmd.format(logic)
 
     sygusLog.debug("initExpr: {}", initExpr.toString())
     sygusLog.debug("transFun: {}", nextExpr.toString())
 
+    
+    // TODO: Make these calls so that all variables are collected
+    getInitFun(initExpr, stateVars, ctx)
+    getNextFun(nextExpr, stateVars, ctx)
+    getPostFun(properties, stateVars, ctx)
+
+    //TODO: Change state vars to all vars, since invariant synth doesn't allow for global variables.
+    stateVars = stateVars.union(variables.filter(p => !p._1.endsWith("!")).map(p => p._2).toList)
+
     val initFun = getInitFun(initExpr, stateVars, ctx)
     val transFun = getNextFun(nextExpr, stateVars, ctx)
     val postFun = getPostFun(properties, stateVars, ctx)
 
+      
     val instanceLines = if (sygusFormat) {
       // General sygus format
       val synthFunDecl = getSynthFunDecl(stateVars, Constants.SyGuSSynthesizeFunCmd)
