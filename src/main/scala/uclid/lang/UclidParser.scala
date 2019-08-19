@@ -763,9 +763,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     // control commands.
     lazy val CmdParam : PackratParser[lang.CommandParams] = 
       // TODO: Current fix to allow for logic to be specified for synthesize invariant
-      ( Id ) ^^ { case id => lang.CommandParams(id, List.empty) } |
       ( Id <~ "=" ) ~ ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ 
-        { case id ~ ( e ~ es ) => lang.CommandParams(id, e :: es) }
+        { case id ~ ( e ~ es ) => lang.CommandParams(id, e :: es) } |
+      ( Id ) ^^ { case id => lang.CommandParams(id, List.empty) } 
+      
     lazy val CmdParamList : PackratParser[List[lang.CommandParams]] = 
       "[" ~ "]" ^^ { case _ => List.empty } |
       "[" ~> CmdParam ~ rep(";" ~> CmdParam) <~ "]" ^^ { case p ~ ps => p :: ps }
