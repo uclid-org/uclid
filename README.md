@@ -18,6 +18,7 @@ You will need the [Z3 SMT solver](https://github.com/Z3Prover/z3) to be installe
 
 uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix-like platforms; just `PATH` on Windows).
 
+
 ### Mac OS X El Capitan or up
 System Integrity Protection is a feature introduced by Apple in OS X El Capitan; it prevents the modifications of system-owned files and directories by any process without a specific ‘entitlement’, even when executed by a root user or a user with root privileges. Since Java is a SIP protected executable, it ignores the user set DYLD_LIBRARY_PATH, which prevents the system from recognizing the Z3 Dynamic Library. 
 
@@ -36,6 +37,23 @@ Download the latest stable pre-built package from [releases tab](https://github.
 ## Install From Source
 
 Or, you could clone this repository and build from source. If you run into problems here, don't forget you can always fall back on the pre-built binaries linked above.
+
+
+### Prerequisites
+
+#### OpenJDK version 8 or Oracle JDK version 8
+
+#### SBT version 1.0 or greater. 
+
+Install instructions for sbt are available at http://www.scala-sbt.org/1.0/docs/Setup.html
+
+#### Z3 version 4.6.0. 
+Make sure the Z3/Java interface is enabled in your build (typically by passing `--java` to the `mk_make.py` script). 
+
+uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix-like platforms; just `PATH` on Windows).
+
+Finally copy the jar file  `path/to/z3/build/com.microsoft.z3.jar` to the dir `path/to/uclid5/lib/com.microsoft.z3.jar`
+
 
 ### Compiling uclid5
 
