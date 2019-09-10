@@ -209,7 +209,7 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     getPostFun(properties, stateVars, ctx)
 
     //TODO: Change state vars to all vars, since invariant synth doesn't allow for global variables.
-    stateVars = stateVars.union(variables.filter(p => !p._1.endsWith("!")).map(p => p._2).toList)
+    stateVars = stateVars.union(variables.filter(p => !p._1.endsWith("!")).map(p => p._2).toList).distinct
 
     val initFun = getInitFun(initExpr, stateVars, ctx)
     val transFun = getNextFun(nextExpr, stateVars, ctx)
