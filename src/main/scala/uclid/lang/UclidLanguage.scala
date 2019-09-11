@@ -152,6 +152,10 @@ object Operator {
   def imply(x : Expr, y : Expr) = OperatorApplication(ImplicationOp(), List(x, y))
   def ite(c : Expr, x : Expr, y : Expr) = OperatorApplication(ITEOp(), List(c, x, y))
   def old(c : Identifier) = OperatorApplication(OldOperator(), List(c))
+  
+  /*
+   * Introduced to reference old state variables of an instance.
+   */
   def oldInstance(c : OperatorApplication) = OperatorApplication(OldOperator(), List(c))
   def history(c : Identifier, e : Expr) = OperatorApplication(HistoryOperator(), List(c, e))
 }
@@ -1110,6 +1114,10 @@ case class HavocableFreshLit(f : FreshLit) extends HavocableEntity {
   override val hashId = 2902
   override val md5hashCode = computeMD5Hash(f)
 }
+
+/* Introduced as an intermediate representation to denote havoc'ing 
+ * specific state variables within an instance.
+ */
 case class HavocableInstanceId(opapp : OperatorApplication) extends HavocableEntity {
   override def toString = opapp.toString()
   override val hashId = 2903
@@ -1363,6 +1371,10 @@ case class ModifiableId(id : Identifier) extends ModifiableEntity {
   override val md5hashCode = computeMD5Hash(id)
 }
 
+/* 
+ * Introduced as an intermediate node in the ASTs to track the state 
+ * variables that are modified within an instance.
+ */
 case class ModifiableInstanceId(opapp : OperatorApplication) extends ModifiableEntity {
   override val expr = opapp
   override def toString = opapp.toString()
