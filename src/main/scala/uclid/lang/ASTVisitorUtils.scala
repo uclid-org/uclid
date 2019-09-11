@@ -177,6 +177,7 @@ class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   }
 }
 
+// This class has been modified to handle the abstract class: ModifiableEntity.
 class OldExprRewriterPass(rewrites : Map[ModifiableEntity, Identifier]) extends RewritePass
 {
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {

@@ -333,7 +333,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   
-  // make sure that havoc instance ids are rewritten
+  /*
+   * Rewrites havoc statements into the appropriate form. Reduces 
+   * HavocableInstanceIds into HavocableIds by retrieving the appropriate 
+   * instance state variable.
+   *
+   * @returns Returns a HavocStmt.
+   */
   override def rewriteHavoc(st : HavocStmt, ctx : Scope) : Option[Statement] = {
     st.havocable match {
       case HavocableInstanceId(opapp) => {
@@ -384,7 +390,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
   }
 
-
+  /*
+   * Inlines procedure calls that either depend on an instance procedure call,
+   * or those that have not been inlined in ProcedureInline. This also handles
+   * procedures that are 'noinlined'.
+   *
+   * @returns Returns a new BlockStmt containing the inlined procedure.
+   */
   def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope) : Statement = {
     val procSig = proc.sig
     def getModifyLhs(id : Identifier) = LhsId(id)
@@ -419,7 +431,10 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       }
     }).toList
 
-    val modifyPairs : List[(Identifier, Identifier)] = modifyRenameList.flatMap(p => p._1 match {
+    /*  
+     * For each variable that is modified, get the appropriate renamed identifier.
+     */
+     val modifyPairs : List[(Identifier, Identifier)] = modifyRenameList.flatMap(p => p._1 match {
       case ModifiableId(id) => Some((id, p._2))
       case ModifiableInstanceId(opapp) => {
         instVarMap.get(flattenSelectFromInstance(opapp)) match {
@@ -568,7 +583,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     BlockStmt(varsToDeclare, stmtsP)
   }
 
+  /*
+   * Rewrites procedure call statements. At this point, all procedure that do not modify any instances or should be inlined have been handled.
+   *
+   * @returns Returns a BlockStmt containing the internals of the procedure call.
+   */
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
+    // Handle any instance procedure call.
     if (callStmt.instanceId != None && callStmt.instanceId.get.name == inst.instanceId.name) {
             // Replace the instance procedure call if we're flattening that particular instance    
       val procInst = context.module.get.instances.find(inst => inst.instanceId.name == callStmt.instanceId.get.name).get
@@ -588,13 +609,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
                           })
         modifiesInst = true
       }
-
-      //if (!procOption.isEmpty && !procOption.get.body.hasInternalCall && (modifiesInst )) {
+      
+      // Handle noinlined procedures that modify instances 
       if (!procOption.isEmpty) {
-        // Noinline procedures that modify instances 
         val blkStmt = inlineProcedureCall(callStmt, procOption.get, context)
         rewriter.visitStatement(blkStmt, context)
       } else {
+        //TODO: Verify that this is not a reachable state
         Some(callStmt)
       }
     }
@@ -606,6 +627,13 @@ class ModuleInstantiator(
     targetModule : Module, externalSymbolMap : ExternalSymbolMap)
 extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false) {
 
+    /*
+     * Overwrites inherited visitModifiableEntity method and flattens modify
+     * clauses that refer to an instance state variable.
+     *
+     * @returns A flattened modifiable entity.
+     *
+     */
     override def visitModifiableEntity(modifiable : ModifiableEntity, context : Scope) : Option[ModifiableEntity] = {
       val instVarMap = pass.asInstanceOf[ModuleInstantiatorPass].instVarMap
       val modifiableP = modifiable match {

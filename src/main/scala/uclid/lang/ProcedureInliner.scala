@@ -85,6 +85,11 @@ class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new
 
 trait NewProcedureInlinerPass extends RewritePass {
    
+  /* 
+   * Inlines a procedure call statement.
+   *
+   * @returns A statement representing the inlined procedure call.
+   */
   def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope) : Statement = {
     val procSig = proc.sig
     def getModifyLhs(id : Identifier) = {
@@ -209,6 +214,14 @@ trait NewProcedureInlinerPass extends RewritePass {
 }
 
 class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
+
+  /* 
+   * Rewrite specific procedure call statements as an inlined statement.
+   * Note that we only inline calls that do not modify instances or must
+   * be inlined.
+   *
+   * @returns Returns new procedure call statement.
+   */
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
     val procId = callStmt.id
     val procOption = context.module.get.procedures.find(p => p.id == procId)

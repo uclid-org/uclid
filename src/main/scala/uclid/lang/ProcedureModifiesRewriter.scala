@@ -46,8 +46,20 @@ import scala.collection.immutable.Vector
 import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
 
-
+/*
+ * Rewrites a modify clause that refer to a specific instance as modify 
+ * clause that refers to all state variables of an instance modified by 
+ * a procedure.
+ */
 class ProcedureModifiesRewriterPass extends RewritePass {
+  
+  /* 
+   * Identifies the set of instances that are modified by some
+   * procedure declaration.
+   *
+   * @returns Returns a set of identifiers for the modified instances.
+   *
+   */
   def getInstanceModifies(proc : ProcedureDecl, ctx : Scope) : Set[Identifier] = {
     // The associated scope must always contain a module
     val mod = ctx.module.get
@@ -61,6 +73,11 @@ class ProcedureModifiesRewriterPass extends RewritePass {
     instanceIds
   }
 
+  /*
+   * Identifies the set of state variables modified by a procedure.
+   *
+   * @returns Returns a vector of identifiers.
+   */
   def getStateVarModifies(proc : ProcedureDecl, ctx : Scope) : Vector[Identifier] = {
     // The associated scope must always contain a module
     val mod = ctx.module.get
@@ -74,7 +91,11 @@ class ProcedureModifiesRewriterPass extends RewritePass {
     stateVars
   }
     
-
+  /*
+   * Get all procedure call statements within some statement.
+   *
+   * @returns Returns a vector containing ProcedureCallStmts
+   */
   def getProcedureCallStmts(stmt : Statement) : Vector[ProcedureCallStmt] = {
     stmt match {
       case s : ProcedureCallStmt => Vector(s)
@@ -94,6 +115,12 @@ class ProcedureModifiesRewriterPass extends RewritePass {
   // instId : 
   //    -> None, if we are at the top level procedure
   //    -> Some(OperatorApplication), if are recursing into an instance
+  //
+
+  /*
+   * @returns Returns the modifies set of a procedure, including specific
+   *          instance state variables.
+   */
   def getProcedureModSet(proc : ProcedureDecl, instId : Option[Expr],  ctx : Scope) : Vector[ModifiableEntity] = {
     
     // add in all modified state vars
@@ -132,7 +159,9 @@ class ProcedureModifiesRewriterPass extends RewritePass {
     modifySet
   }
   
-  
+  /* 
+   * @returns Returns a new procedure declaration, with its expanded modifies set.
+   */
   override def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
     val newModifySet = getProcedureModSet(proc, None, ctx).toSet
     Some(ProcedureDecl(proc.id, proc.sig, proc.body, proc.requires, proc.ensures, newModifySet, proc.annotations))
