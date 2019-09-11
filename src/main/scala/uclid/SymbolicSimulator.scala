@@ -1832,6 +1832,8 @@ class SymbolicSimulator (module : Module) {
             throw new Utils.AssertionError("HavocableNextIds should have eliminated by now.")
           case HavocableFreshLit(f) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
+          case HavocableInstanceId(_) =>
+            throw new Utils.AssertionError("Havocable instance ids should have been eliminated by now.")
         }
       case AssignStmt(lhss,rhss) =>
         val es = rhss.map(i => evaluate(i, symbolTable, frameTable, frameNumber, scope));
@@ -1891,6 +1893,8 @@ class SymbolicSimulator (module : Module) {
           throw new Utils.AssertionError("HavocableNextIds should have been eliminated by now.")
         case HavocableFreshLit(f) =>
           throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
+        case HavocableInstanceId(_) =>
+          throw new Utils.AssertionError("Havocable instance ids should have been eliminated by now.")
       }
     case AssignStmt(lhss,rhss) =>
       return lhss.map(lhs => lhs.ident).toSet

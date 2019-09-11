@@ -119,6 +119,8 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
               throw new Utils.AssertionError("Should not have havocable next ids inside procedures.")
             case HavocableFreshLit(f) =>
               in
+            case HavocableInstanceId(_) => 
+              throw new Utils.AssertionError("No havocable instance ids should have been introduced at this point.")
           }
         case None => in
       }

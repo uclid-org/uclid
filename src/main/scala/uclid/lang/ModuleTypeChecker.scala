@@ -80,6 +80,8 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
               }
             case HavocableFreshLit(f) =>
               in
+            case HavocableInstanceId(_) =>
+              throw new Utils.AssertionError("Should be no havocable instance ids at this point")
           }
         case AssignStmt(lhss, rhss) =>
           var ret = in

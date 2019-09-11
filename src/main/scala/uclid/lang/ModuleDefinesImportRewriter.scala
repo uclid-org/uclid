@@ -34,6 +34,8 @@
  * Author: Pramod Subramanyan
  * Rewrite define * = moduleId.*; declarations.
  *
+ * Note: Only stateless define declarations are collected.
+ *
  */
 
 
@@ -43,10 +45,20 @@ package lang
 
 import com.typesafe.scalalogging.Logger
 
+/**
+ * A ReadOnlyPass that collects 'define' declarations from a target module.
+ *
+ */
 class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
   lazy val logger = Logger(classOf[ModuleDefinesImportCollector])
   type T = List[Decl]
   
+  /*
+   * Checks that an identifier, in a specific context, does not reference any 
+   * state variables.
+   *
+   * @returns Returns a boolean based on the check.
+   */
   def isStatelessExpression(id : Identifier, context : Scope) : Boolean = {
     context.get(id) match {
       case Some(namedExpr) =>
@@ -73,6 +85,12 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
         throw new Utils.UnknownIdentifierException(id)
     }
   }
+
+  /*
+   * Checks that an expression does not reference any state variables.
+   *
+   * @returns Returns a boolean based on the check.
+   */
   def isStatelessExpr(e: Expr, context : Scope) : Boolean = {
     e match {
       case id : Identifier =>
@@ -101,6 +119,11 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
     }
   }
   
+  /*
+   * Collects define declarations from a module.
+   *
+   * @returns Returns a list of declarations.
+   */
   override def applyOnModuleDefinesImport(d : TraversalDirection.T, modDefImport : ModuleDefinesImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       //logger.debug("statement: {}", modFuncImport.toString())
@@ -118,12 +141,22 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
   }
 }
 
+/*
+ * Introduces new define declarations into the module calling the import
+ *
+ */
 class ModuleDefinesImportCollector extends ASTAnalyzer("ModuleDefinesImportCollector", new ModuleDefinesImportCollectorPass()) {
   lazy val logger = Logger(classOf[ModuleDefinesImportCollector])
   
   override def reset() {
     in = Some(List.empty)
   }
+
+  /*
+   * Adds a collected list of define declarations to a module
+   *
+   * @returns Returns a new module that includes the imported define declarations
+   */
   override def visit(module : Module, context : Scope) : Option[Module] = {
     val externalDefs = visitModule(module, List.empty, context)
     val newImports = externalDefs.map {
