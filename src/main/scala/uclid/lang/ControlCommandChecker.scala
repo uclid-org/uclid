@@ -127,7 +127,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     Utils.checkParsingError(cmd.params.size == 1, "'%s' command expects one parameter specifying the logic".format(cmd.name.toString), cmd.pos, filename)
     def logicIsSupported(logic : String) : Boolean = {
       logic match {
-        case "LIA" | "BV" => true
+        case "LIA" | "BV" | "ALL" => true
         case _ => false
       }
     }
