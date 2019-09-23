@@ -1,0 +1,41 @@
+module weird_fib
+{
+  var data  : [integer]integer;
+  var count : integer;
+
+  procedure update_data() 
+    modifies data;
+  {
+      data[count] = data[count-2] + data[count-1];
+  }
+
+  init {
+    count = 2;
+  }
+
+  next {
+    count' = count + 1;
+    call update_data();
+  }
+}
+
+module main
+{
+    instance first  : weird_fib();
+    instance second : weird_fib();
+
+    init {
+        assume first.data[0] == second.data[0] && first.data[1] == second.data[1];
+    }
+
+    next {
+        next (first);
+        next (second);
+    }
+
+    property eq_data : (forall (i : integer) :: ((i >= 0 && i < first.count) ==> first.data[i] == second.data[i]));
+
+    control {
+      synthesize_invariant[LIA];
+    }
+}

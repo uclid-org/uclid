@@ -190,9 +190,15 @@ trait SMTLIB2Base {
       case None =>
         val (exprStr, memoP, letify) : (String, ExprMap, Boolean) = Context.rewriteBVReplace(eIn) match {
           case Symbol(id,_) =>
-            smtlib2BaseLogger.info("-->> symbol <<--")
-            Utils.assert(variables.contains(id), "Not found in map: " + id)
-            (variables.get(id).get.toString, memo, false)
+            smtlib2BaseLogger.info("-->> symbol <<-- {}", id)
+            // Utils.assert(variables.contains(id), "Not found in map: " + id)
+            if (variables.contains(id)) {
+              (variables.get(id).get._1, memo, false)
+            } else {
+              // Quantified variable.
+              // TODO be able to check this.
+              (id, memo, false)
+            }
           case EnumLit(id, _) =>
             smtlib2BaseLogger.info("-->> enum <<--")
             (id, memo, false)
