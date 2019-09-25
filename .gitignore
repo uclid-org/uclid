@@ -21,3 +21,11 @@ tutorial/tutorial.out
 tutorial/tutorial.toc
 *.swp
 Makefile
+
+.metals
+.bloop
+project
+tasks
+.vscode
+.z3_trace
+lib/libz3java.so
