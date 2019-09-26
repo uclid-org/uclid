@@ -60,6 +60,7 @@ object Constants {
   val SetLogicCmd = "(set-logic %s)"
   val CheckSynthCmd = "(check-synth)"
   // General SyGuS format commands
+  val SyGuSDeclareFunCmd = "(declare-fun %1$s %2$s)"
   val SyGuSDeclareVarCmd = "(declare-var %1$s %2$s)\n(declare-var %1$s! %2$s)"
   val SyGuSSynthesizeFunCmd = "(synth-fun " + InvFnName + " %s Bool)"
   val InitConstraintCmd = "(constraint (=> (" + InitFnName + " %1$s) (" + InvFnName + " %1$s)))"
@@ -71,15 +72,29 @@ object Constants {
   val LIGInvConstraintsCmd = "(inv-constraint %s %s %s %s)".format(InvFnName, InitFnName, TransFnName, PostFnName)
 }
 
-class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) extends SMTLIB2Base with SynthesisContext {
+class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with SynthesisContext {
   val sygusLog = Logger(classOf[SyGuSInterface])
 
-  def getVariables(ctx : Scope) : List[(String, Type)] = {
+  def getMutables(ctx : Scope) : List[(String, Type)] = {
     (ctx.map.map {
       p => {
         val namedExpr = p._2
         namedExpr match {
-          case Scope.StateVar(_, _) | Scope.InputVar(_, _) |Scope.OutputVar(_, _) | Scope.SharedVar(_, _) | Scope.ConstantVar(_, _) =>
+          case Scope.StateVar(_, _) | Scope.InputVar(_, _) | Scope.OutputVar(_, _) | Scope.SharedVar(_, _) =>
+            Some((getVariableName(namedExpr.id.name), Converter.typeToSMT(namedExpr.typ)))
+          case _ =>
+            None
+        }
+      }
+    }).toList.flatten
+  }
+
+  def getGlobals(ctx : Scope) : List[(String, Type)] = {
+    (ctx.map.map {
+      p => {
+        val namedExpr = p._2
+        namedExpr match {
+          case Scope.Function(_, _) | Scope.ConstantVar(_, _) =>
             Some((getVariableName(namedExpr.id.name), Converter.typeToSMT(namedExpr.typ)))
           case _ =>
             None
@@ -94,11 +109,13 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
   }
 
   override def getVariableName(v : String) : String = {
-    "var_" + v
+    // "var_" + v
+    v
   }
 
   def getPrimedVariableName(v : String) : String = {
-    "var_" + v + "!"
+    // "var_" + v + "!"
+    v + "!"
   }
 
   def getEqExpr(ident : Identifier, expr : smt.Expr, ctx : Scope, prime : Boolean) : String = {
@@ -118,16 +135,24 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
     trExpr
   }
 
-  def getDeclarations(stateVars : List[(String, Type)], declarationCmd : String) : String = {
-    val unprimedVars = variables.filter(p => !p._1.endsWith("!"))
-    val decls = unprimedVars.map{ v =>
+  def getDeclarations(stateVars : List[(String, Type)]) : String = {
+    val decls = stateVars.map{ v => 
       {
-        val (typeName, otherDecls) = generateDatatype(v._2.typ)
-        Utils.assert(otherDecls.size == 0, "Datatype declarations are not supported yet.")
-        // FIXME: to handle otherDecls
-        declarationCmd.format(v._2.toString, typeName)
-      }
-    }.toList
+        v._2 match {
+          case MapType(inTypes, outType) =>
+            Constants.SyGuSDeclareFunCmd.format(v._1, 
+            {
+              "(" +
+              inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + " " + i.toString } +
+              ") " + outType
+            })
+          // TODO Handle other globals
+          case _ => {
+            val (typeName, otherDecls) = generateDatatype(v._2)
+            Constants.SyGuSDeclareVarCmd.format(v._1, typeName)
+            }
+        }
+      }}.toList
     Utils.join(decls, "\n")
   }
   
@@ -147,26 +172,26 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
   }
 
   def getInitFun(initExpr : Expr, vars : List[(String, Type)], ctx : Scope) : String = {
-    val symbols = Context.findSymbols(initExpr)
-    symbols.filter(p => !variables.contains(p.id)).foreach {
-      (s) => {
-        val idP = getVariableName(s.id)
-        variables += (s.id -> Symbol(idP, s.symbolTyp))
-      }
-    }
+    // val symbols = Context.findSymbols(initExpr)
+    // symbols.filter(p => !variables.contains(p.id)).foreach {
+    //   (s) => {
+    //     val idP = getVariableName(s.id)
+    //     variables += (s.id -> (idP -> s.symbolTyp))
+    //   }
+    // }
     val funcBody = translateExpr(initExpr, false)
     val func = "(define-fun " + Constants.InitFnName + " " + getStatePredicateTypeDecl(vars) + " " + funcBody + ")"
     func
   }
 
   def getNextFun(nextExpr : Expr, vars : List[(String, Type)], ctx : Scope) : String = {
-    val symbols = Context.findSymbols(nextExpr)
-    symbols.filter(p => !variables.contains(p.id)).foreach {
-      (s) => {
-        val idP = getVariableName(s.id)
-        variables += (s.id -> Symbol(idP, s.symbolTyp))
-      }
-    }
+    // val symbols = Context.findSymbols(nextExpr)
+    // symbols.filter(p => !variables.contains(p.id)).foreach {
+    //   (s) => {
+    //     val idP = getVariableName(s.id)
+    //     variables += (s.id -> (idP -> s.symbolTyp))
+    //   }
+    // }
     val funcBody = translateExpr(nextExpr, false)
     val func = "(define-fun " + Constants.TransFnName + " " + getTransRelationTypeDecl(vars) + " " + funcBody + ")"
     func
@@ -195,44 +220,36 @@ class SyGuSInterface(args: List[String], dir : String, sygusFormat : Boolean) ex
   }
   
   override def synthesizeInvariant(initExpr : smt.Expr, nextExpr : smt.Expr, properties : List[smt.Expr], ctx : Scope, logic : String) : Option[langExpr] = {
-    var stateVars = getVariables(ctx)
-    Utils.assert(stateVars.size > 0, "There are no variables in the given model.")
+    var mutables = getMutables(ctx)
+    Utils.assert(mutables.size > 0, "There are no variables in the given model.")
+    sygusLog.debug("mutables: {}", mutables.toString())
+    //TODO: Change state vars to all vars, since invariant synth doesn't allow for global variables.
+    mutables = mutables.union(variables.filter(p => !p._1.endsWith("!")).map(p => p._2).toList).distinct
+    sygusLog.debug("mutables: {}", mutables.toString())
+
+    var globals = getGlobals(ctx)
+    sygusLog.debug("globals: {}", globals.toString())
+
     val preamble = Constants.SetLogicCmd.format(logic)
 
     sygusLog.debug("initExpr: {}", initExpr.toString())
+    val initFun = getInitFun(initExpr, mutables, ctx)
     sygusLog.debug("transFun: {}", nextExpr.toString())
-
-    
-    // TODO: Make these calls so that all variables are collected
-    getInitFun(initExpr, stateVars, ctx)
-    getNextFun(nextExpr, stateVars, ctx)
-    getPostFun(properties, stateVars, ctx)
-
-    //TODO: Change state vars to all vars, since invariant synth doesn't allow for global variables.
-    stateVars = stateVars.union(variables.filter(p => !p._1.endsWith("!")).map(p => p._2).toList).distinct
-
-    val initFun = getInitFun(initExpr, stateVars, ctx)
-    val transFun = getNextFun(nextExpr, stateVars, ctx)
-    val postFun = getPostFun(properties, stateVars, ctx)
-
+    val transFun = getNextFun(nextExpr, mutables, ctx)
+    sygusLog.debug("properties: {}", properties.toString())
+    val postFun = getPostFun(properties, mutables, ctx)
       
-    val instanceLines = if (sygusFormat) {
+    val instanceLines = {
       // General sygus format
-      val synthFunDecl = getSynthFunDecl(stateVars, Constants.SyGuSSynthesizeFunCmd)
-      val varDecls = getDeclarations(stateVars, Constants.SyGuSDeclareVarCmd)
-      val initConstraint = getInitConstraint(stateVars)
-      val transConstraint = getTransConstraint(stateVars)
-      val postConstraint = getPostConstraint(stateVars)
+      val synthFunDecl = getSynthFunDecl(mutables, Constants.SyGuSSynthesizeFunCmd)
+      val varDecls =  getDeclarations(globals++mutables)
+      val initConstraint = getInitConstraint(mutables)
+      val transConstraint = getTransConstraint(mutables)
+      val postConstraint = getPostConstraint(mutables)
       val postamble = Constants.CheckSynthCmd
       List(preamble, synthFunDecl, varDecls, initFun, transFun, postFun, initConstraint, transConstraint, postConstraint, postamble)
-    } else {
-      // Loop invariant format
-      val synthInvDecl = getSynthFunDecl(stateVars, Constants.LIGSynthesizeInvCmd)
-      val varDecls = getDeclarations(stateVars, Constants.LIGDeclareVarCmd)
-      val invConstraint = Constants.LIGInvConstraintsCmd
-      val postamble = Constants.CheckSynthCmd
-      List(preamble, synthInvDecl, varDecls, initFun, transFun, postFun, invConstraint, postamble)
     }
+
     val instance = "\n" + Utils.join(instanceLines, "\n")
     println("Printing instance of SyGuS problem")
     println(instance)

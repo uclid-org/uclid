@@ -1567,7 +1567,7 @@ class SymbolicSimulator (module : Module) {
       (mapAcc, decl) => {
         decl._2 match {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.Function(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.Function(id, typ) => mapAcc // functions should never be primed
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!", smt.Converter.typeToSMT(typ)))
@@ -1680,9 +1680,14 @@ class SymbolicSimulator (module : Module) {
     // Do the same for next expressions.
     val nextExprs = (nextState.map {
       p => {
-        val lhs = primeSymbolTable.get(p._1).get
-        val rhs = p._2
-        smt.OperatorApplication(smt.EqualityOp, List(lhs, rhs))
+        // Some things, like functions, will not be in primeSymbolTable. That is fine.
+        if (primeSymbolTable.contains(p._1)) {
+          val lhs = primeSymbolTable.get(p._1).get
+          val rhs = p._2
+          smt.OperatorApplication(smt.EqualityOp, List(lhs, rhs))
+        } else {
+          smt.BooleanLit(true)
+        }
       }
     }.toList ++ nextAssumptions.toList).filter(p => p != smt.BooleanLit(true))
     val nextExpr : smt.Expr = nextExprs.size match {

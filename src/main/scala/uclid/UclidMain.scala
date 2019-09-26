@@ -337,7 +337,7 @@ object UclidMain {
     }
     val sygusInterface : Option[smt.SynthesisContext] = config.synthesizer match {
       case Nil => None
-      case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir, config.sygusFormat))
+      case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir))
     }
     solverInterface.filePrefix = config.smtFileGeneration
     val result = symbolicSimulator.execute(solverInterface, sygusInterface, config)
