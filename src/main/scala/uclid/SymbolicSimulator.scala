@@ -1698,7 +1698,9 @@ class SymbolicSimulator (module : Module) {
     val verificationConditions = assertions ++ invariants
     Utils.assert(verificationConditions.size > 0, "Must have at least one assertion/invariant.")
     Utils.assert(initAssertions.size == 0, "Must not have assertions in the init block for SyGuS.") 
-    return synthesizer.synthesizeInvariant(initExpr, nextExpr, verificationConditions, synthesisCtx, logic)
+    val initHavocs = getHavocs(initExpr).map(p => (p.id, p.typ))
+    val nextHavocs = getHavocs(nextExpr).map(p => (p.id, p.typ))
+    return synthesizer.synthesizeInvariant(initExpr, initHavocs, nextExpr, nextHavocs, verificationConditions, synthesisCtx, logic)
   }
 
   /** Add module specifications (properties) to the list of proof obligations */

@@ -24,7 +24,6 @@ Makefile
 
 .metals
 .bloop
-project
 tasks
 .vscode
 .z3_trace

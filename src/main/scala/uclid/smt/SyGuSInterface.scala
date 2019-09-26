@@ -61,6 +61,7 @@ object Constants {
   val CheckSynthCmd = "(check-synth)"
   // General SyGuS format commands
   val SyGuSDeclareFunCmd = "(declare-fun %1$s %2$s)"
+  val SyGuSDeclareReadOnlyCmd = "(declare-var %1$s %2$s)"
   val SyGuSDeclareVarCmd = "(declare-var %1$s %2$s)\n(declare-var %1$s! %2$s)"
   val SyGuSSynthesizeFunCmd = "(synth-fun " + InvFnName + " %s Bool)"
   val InitConstraintCmd = "(constraint (=> (" + InitFnName + " %1$s) (" + InvFnName + " %1$s)))"
@@ -81,7 +82,7 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
         val namedExpr = p._2
         namedExpr match {
           case Scope.StateVar(_, _) | Scope.InputVar(_, _) | Scope.OutputVar(_, _) | Scope.SharedVar(_, _) =>
-            Some((getVariableName(namedExpr.id.name), Converter.typeToSMT(namedExpr.typ)))
+            Some((namedExpr.id.name, Converter.typeToSMT(namedExpr.typ)))
           case _ =>
             None
         }
@@ -95,7 +96,7 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
         val namedExpr = p._2
         namedExpr match {
           case Scope.Function(_, _) | Scope.ConstantVar(_, _) =>
-            Some((getVariableName(namedExpr.id.name), Converter.typeToSMT(namedExpr.typ)))
+            Some((namedExpr.id.name, Converter.typeToSMT(namedExpr.typ)))
           case _ =>
             None
         }
@@ -109,13 +110,13 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
   }
 
   override def getVariableName(v : String) : String = {
-    // "var_" + v
-    v
+    "var_" + v
+    // v
   }
 
   def getPrimedVariableName(v : String) : String = {
-    // "var_" + v + "!"
-    v + "!"
+    "var_" + v + "!"
+    // v + "!"
   }
 
   def getEqExpr(ident : Identifier, expr : smt.Expr, ctx : Scope, prime : Boolean) : String = {
@@ -135,8 +136,19 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     trExpr
   }
 
-  def getDeclarations(stateVars : List[(String, Type)]) : String = {
-    val decls = stateVars.map{ v => 
+  def getDeclarations(readonly : List[(String, Type)], variable : List[(String, Type)]) : String = {
+    val mutable = variable.map{ v => 
+      {
+        v._2 match {
+          case MapType(inTypes, outType) =>
+            throw new Utils.AssertionError("Can't mutate uninterpreted functions!")
+          case _ => {
+            val (typeName, otherDecls) = generateDatatype(v._2)
+            Constants.SyGuSDeclareVarCmd.format(v._1, typeName)
+            }
+        }
+      }}.toList
+    val immutable = readonly.map{ v => 
       {
         v._2 match {
           case MapType(inTypes, outType) =>
@@ -149,11 +161,12 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
           // TODO Handle other globals
           case _ => {
             val (typeName, otherDecls) = generateDatatype(v._2)
-            Constants.SyGuSDeclareVarCmd.format(v._1, typeName)
+            Constants.SyGuSDeclareReadOnlyCmd.format(v._1, typeName)
             }
         }
       }}.toList
-    Utils.join(decls, "\n")
+
+    Utils.join(mutable++immutable, "\n")
   }
   
   def getStatePredicateTypeDecl(variables: List[(String, Type)]) : String = {
@@ -219,7 +232,7 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     Constants.PostConstraintCmd.format(args)
   }
   
-  override def synthesizeInvariant(initExpr : smt.Expr, nextExpr : smt.Expr, properties : List[smt.Expr], ctx : Scope, logic : String) : Option[langExpr] = {
+  override def synthesizeInvariant(initExpr : Expr, initHavocs : List[(String, Type)], nextExpr: Expr, nextHavocs : List[(String, Type)], properties : List[smt.Expr], ctx : lang.Scope, logic : String) : Option[langExpr] = {
     var mutables = getMutables(ctx)
     Utils.assert(mutables.size > 0, "There are no variables in the given model.")
     sygusLog.debug("mutables: {}", mutables.toString())
@@ -227,7 +240,7 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     mutables = mutables.union(variables.filter(p => !p._1.endsWith("!")).map(p => p._2).toList).distinct
     sygusLog.debug("mutables: {}", mutables.toString())
 
-    var globals = getGlobals(ctx)
+    var globals = (getGlobals(ctx)++initHavocs++nextHavocs).distinct
     sygusLog.debug("globals: {}", globals.toString())
 
     val preamble = Constants.SetLogicCmd.format(logic)
@@ -241,8 +254,9 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
       
     val instanceLines = {
       // General sygus format
+      mutables = mutables.map(p => (getVariableName(p._1), p._2))
       val synthFunDecl = getSynthFunDecl(mutables, Constants.SyGuSSynthesizeFunCmd)
-      val varDecls =  getDeclarations(globals++mutables)
+      val varDecls =  getDeclarations(globals, mutables)
       val initConstraint = getInitConstraint(mutables)
       val transConstraint = getTransConstraint(mutables)
       val postConstraint = getPostConstraint(mutables)
