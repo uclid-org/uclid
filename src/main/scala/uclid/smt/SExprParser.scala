@@ -210,6 +210,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val OpBVXor = "bvxor"
   lazy val OpBVNot = "bvnot"
   lazy val OpBVUrem = "bvurem"
+  lazy val OpBVSrem = "bvsrem"
 
   lazy val KwDefineFun = "define-fun"
   lazy val KwModel = "model"  // The "model" keyword is specific to Boolector 
@@ -227,7 +228,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lexical.reserved += (KwFalse, KwFalse, KwUS,
       KwDefineFun, KwModel, KwInt, KwBool, KwBV, KwArray, KwLambda, OpAnd, OpOr, OpNot, OpITE, OpImpl, 
       OpEq, OpIntGE, OpIntGT, OpIntLT, OpIntLE, OpIntAdd, OpIntSub, OpIntMul,
-      OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, OpBVAnd, OpBVOr, OpBVXor, OpBVNot, OpBVUrem)
+      OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, OpBVAnd, OpBVOr, OpBVXor, OpBVNot, OpBVUrem, OpBVSrem)
 
   lazy val Operator : PackratParser[smt.Operator] =
     OpAnd ^^ { _ => smt.ConjunctionOp } |
@@ -251,7 +252,8 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     OpBVOr ^^ { _ => smt.BVOrOp(0) } |
     OpBVXor ^^ { _ => smt.BVXorOp(0) } |
     OpBVNot ^^ { _ => smt.BVNotOp(0) } |
-    OpBVUrem ^^ { _ => smt.BVUremOp(0) }
+    OpBVUrem ^^ { _ => smt.BVUremOp(0) } |
+    OpBVSrem ^^ { _ => smt.BVSremOp(0) }
     
 
   lazy val Symbol : PackratParser[smt.Symbol] =

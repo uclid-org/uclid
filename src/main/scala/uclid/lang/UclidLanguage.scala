@@ -399,6 +399,11 @@ case class BVUremOp(override val w : Int) extends BVArgOperator(w) {
   override val hashId = 1224
   override val md5hashCode = computeMD5Hash(w)
 }
+case class BVSremOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "%"
+  override val hashId = 1225
+  override val md5hashCode = computeMD5Hash(w)
+}
 // Boolean operators.
 sealed abstract class BooleanOperator extends Operator {
   override def fixity = Operator.INFIX

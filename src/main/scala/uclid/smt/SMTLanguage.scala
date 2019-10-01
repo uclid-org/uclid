@@ -434,6 +434,12 @@ case class BVUremOp(w : Int) extends BVResultOp(w) {
   override val md5hashCode = computeMD5Hash(w)
   override def toString = "bvurem"
 }
+case class BVSremOp(w : Int) extends BVResultOp(w) {
+  override val hashId = mix(w, 224)
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash(w)
+  override def toString = "bvsrem"
+}
 
 // Operators that return Booleans.
 abstract class BoolResultOp extends Operator {
