@@ -364,6 +364,7 @@ class Z3Interface() extends Context {
       case BVMulOp(_)             => ctx.mkBVMul(bvArgs(0), bvArgs(1))
       case BVMinusOp(_)           => ctx.mkBVNeg(bvArgs(0))
       case BVAndOp(_)             => ctx.mkBVAND(bvArgs(0), bvArgs(1))
+      case BVUremOp(_)             => ctx.mkBVURem(bvArgs(0), bvArgs(1))
       case BVOrOp(_)              => ctx.mkBVOR(bvArgs(0), bvArgs(1))
       case BVXorOp(_)             => ctx.mkBVXOR(bvArgs(0), bvArgs(1))
       case BVNotOp(_)             => ctx.mkBVNot(bvArgs(0))

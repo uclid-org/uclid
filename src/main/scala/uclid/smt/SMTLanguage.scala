@@ -428,6 +428,12 @@ case class BVARightShiftBVOp(w : Int) extends BVResultOp(w) {
     Utils.assert((argW) == w, "Incorrect width for first operand to BVARightShiftBVOp.")
   }
 }
+case class BVUremOp(w : Int) extends BVResultOp(w) {
+  override val hashId = mix(w, 223)
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash(w)
+  override def toString = "bvurem"
+}
 
 // Operators that return Booleans.
 abstract class BoolResultOp extends Operator {

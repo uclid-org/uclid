@@ -207,6 +207,7 @@ case class UnaryMinusOp() extends PolymorphicOperator {
   override val hashId = 1007
   override val md5hashCode = computeMD5Hash
 }
+
 // These are operators with integer operators.
 sealed abstract class IntArgOperator extends Operator {
   override def fixity = Operator.INFIX
@@ -391,6 +392,11 @@ case class BVARightShiftBVOp(override val w : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "bv_a_right_shift"
   override val hashId = 1223
+  override val md5hashCode = computeMD5Hash(w)
+}
+case class BVUremOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "%_u"
+  override val hashId = 1224
   override val md5hashCode = computeMD5Hash(w)
 }
 // Boolean operators.
