@@ -1629,6 +1629,8 @@ class SymbolicSimulator (module : Module) {
     def initAddAssertion(e : AssertInfo) : Unit = { initAssertions += e }
     var nextAssertions : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
     def nextAddAssertion(e : AssertInfo) : Unit = { nextAssertions += e }
+    // axioms
+    var axioms : ListBuffer[smt.Expr] = new ListBuffer[smt.Expr]()
 
     val defaultSymbolTable = getDefaultSymbolTable(synthesisCtx)
     val primeSymbolTable = getPrimeSymbolTable(synthesisCtx)
@@ -1654,6 +1656,13 @@ class SymbolicSimulator (module : Module) {
         None
       }
     }).flatten.toList
+
+    // add all axioms in procedure scope, independent of state variable references
+    module.axioms.foreach { 
+      p => axioms += evaluate(p.expr, defaultSymbolTable, ArrayBuffer.empty, 0, synthesisCtx)
+      assertLog.debug("non-axiomVar: {}", p.toString())
+    }
+
     // Compute init expression from the result of symbolic simulation.
     val initExprs = (initState.map {
       p => {
@@ -1684,7 +1693,12 @@ class SymbolicSimulator (module : Module) {
         if (primeSymbolTable.contains(p._1)) {
           val lhs = primeSymbolTable.get(p._1).get
           val rhs = p._2
-          smt.OperatorApplication(smt.EqualityOp, List(lhs, rhs))
+          if (lhs != rhs) {
+            smt.OperatorApplication(smt.EqualityOp, List(lhs, rhs))
+          }
+          else {
+            smt.BooleanLit(true)  
+          }
         } else {
           smt.BooleanLit(true)
         }
@@ -1700,7 +1714,7 @@ class SymbolicSimulator (module : Module) {
     Utils.assert(initAssertions.size == 0, "Must not have assertions in the init block for SyGuS.") 
     val initHavocs = getHavocs(initExpr).map(p => (p.id, p.typ))
     val nextHavocs = getHavocs(nextExpr).map(p => (p.id, p.typ))
-    return synthesizer.synthesizeInvariant(initExpr, initHavocs, nextExpr, nextHavocs, verificationConditions, synthesisCtx, logic)
+    return synthesizer.synthesizeInvariant(initExpr, initHavocs, nextExpr, nextHavocs, verificationConditions, axioms.toList, synthesisCtx, logic)
   }
 
   /** Add module specifications (properties) to the list of proof obligations */

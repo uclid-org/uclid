@@ -44,6 +44,7 @@ import lang.{Identifier, Scope, Expr => langExpr}
 import com.typesafe.scalalogging.Logger
 import scala.collection.JavaConverters._
 import scala.util.matching.Regex
+import scala.collection.mutable.{ListBuffer}
 
 import java.io.{File, PrintWriter}
 
@@ -67,6 +68,7 @@ object Constants {
   val InitConstraintCmd = "(constraint (=> (" + InitFnName + " %1$s) (" + InvFnName + " %1$s)))"
   val TransConstraintCmd = "(constraint (=> (and (" + InvFnName + " %1$s) (" + TransFnName + " %1$s %2$s)) (" + InvFnName + " %2$s)))"
   val PostConstraintCmd = "(constraint (=> (" + InvFnName + " %1$s) (" + PostFnName + " %1$s)))"
+  val AxiomConstraintCmd = "(constraint %s)"
   // LoopInvGen format commands
   val LIGDeclareVarCmd = "(declare-primed-var %s %s)"
   val LIGSynthesizeInvCmd = "(synth-inv " + InvFnName + " %s)"
@@ -110,13 +112,13 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
   }
 
   override def getVariableName(v : String) : String = {
-    "var_" + v
-    // v
+    // "var_" + v
+    v
   }
 
   def getPrimedVariableName(v : String) : String = {
-    "var_" + v + "!"
-    // v + "!"
+    // "var_" + v + "!"
+    v + "!"
   }
 
   def getEqExpr(ident : Identifier, expr : smt.Expr, ctx : Scope, prime : Boolean) : String = {
@@ -231,11 +233,32 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     val args = Utils.join(variables.map(p => p._1), " ")
     Constants.PostConstraintCmd.format(args)
   }
-  
-  override def synthesizeInvariant(initExpr : Expr, initHavocs : List[(String, Type)], nextExpr: Expr, nextHavocs : List[(String, Type)], properties : List[smt.Expr], ctx : lang.Scope, logic : String) : Option[langExpr] = {
+
+  def getAxiomConstraints(axioms : List[smt.Expr], mutables : List[(String, Type)]) : List[String] = {
+    var res : ListBuffer[String] = new ListBuffer[String]()
+
+    axioms.foreach(
+      p => {
+        res += Constants.AxiomConstraintCmd.format(translateExpr(p, false))
+        if (mutables.exists(q => p.toString().contains(q._1))) {
+          var pp = Converter.renameSymbols(p, 
+            (id, typ) => if (mutables.contains((id, typ))) {
+              id+"!"
+            } else {
+              id
+            }
+          )
+          res += Constants.AxiomConstraintCmd.format(translateExpr(pp, false))
+        }
+      }
+    )
+    res.toList
+  }
+
+  override def synthesizeInvariant(initExpr : Expr, initHavocs : List[(String, Type)], nextExpr: Expr, nextHavocs : List[(String, Type)], properties : List[smt.Expr], axioms : List[smt.Expr], ctx : lang.Scope, logic : String) : Option[langExpr] = {
     var mutables = getMutables(ctx)
     Utils.assert(mutables.size > 0, "There are no variables in the given model.")
-    sygusLog.debug("mutables: {}", mutables.toString())
+    // sygusLog.debug("mutables: {}", mutables.toString())
     //TODO: Change state vars to all vars, since invariant synth doesn't allow for global variables.
     mutables = mutables.union(variables.filter(p => !p._1.endsWith("!")).map(p => p._2).toList).distinct
     sygusLog.debug("mutables: {}", mutables.toString())
@@ -251,7 +274,9 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     val transFun = getNextFun(nextExpr, mutables, ctx)
     sygusLog.debug("properties: {}", properties.toString())
     val postFun = getPostFun(properties, mutables, ctx)
-      
+  
+    sygusLog.debug("axioms: {}", axioms.toString())
+
     val instanceLines = {
       // General sygus format
       mutables = mutables.map(p => (getVariableName(p._1), p._2))
@@ -261,13 +286,14 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
       val transConstraint = getTransConstraint(mutables)
       val postConstraint = getPostConstraint(mutables)
       val postamble = Constants.CheckSynthCmd
-      List(preamble, synthFunDecl, varDecls, initFun, transFun, postFun, initConstraint, transConstraint, postConstraint, postamble)
+      val ax = getAxiomConstraints(axioms, mutables)
+      List(preamble, synthFunDecl, varDecls) ++ ax ++ List(initFun, transFun, postFun, initConstraint, transConstraint, postConstraint, postamble)
     }
 
     val instance = "\n" + Utils.join(instanceLines, "\n")
     println("Printing instance of SyGuS problem")
     println(instance)
-    sygusLog.debug(instance)
+    // sygusLog.debug(instance)
     val tmpFile = File.createTempFile(Constants.SyGuSInstanceFileName, ".sl")
     // tmpFile.deleteOnExit()
     new PrintWriter(tmpFile) {
