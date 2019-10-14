@@ -1,0 +1,46 @@
+module child
+{
+    var pmap: [integer]integer;
+    const LEAVES_ORAM : integer = 1;
+    const N : integer           = 40;
+
+    procedure pmap_remap(b : integer, r : integer)
+        requires (r >= 0 && r < LEAVES_ORAM);
+        requires (forall (i : integer) :: (i >= 0 && i < N) ==> (pmap[i] >= 0 && pmap[i] <LEAVES_ORAM));
+        ensures  (forall (i : integer) :: (i >= 0 && i < N) ==> (pmap[i] >= 0 && pmap[i] <LEAVES_ORAM));
+        modifies pmap;
+    {
+        pmap[b] = r;
+    }
+
+    
+}
+
+
+module main 
+{
+  const * = child.*;
+
+  instance chld : child();
+
+  procedure child_pmap_remap(b : integer, ar : integer)
+    requires (ar >= 0 && ar < LEAVES_ORAM);
+    requires (forall (i : integer) :: (i >= 0 && i < N) ==> (chld.pmap[i] >= 0 && chld.pmap[i] <LEAVES_ORAM));
+    ensures  (forall (i : integer) :: (i >= 0 && i < N) ==> (chld.pmap[i] >= 0 && chld.pmap[i] <LEAVES_ORAM));
+
+    modifies chld;
+  {
+    call chld.pmap_remap(b, ar);
+    assert(false);
+  }
+
+  control {
+    f = verify(child_pmap_remap);
+    check;
+    print_results;
+    //TODO: Counter examples for nested instances?
+    f.print_cex(b, ar);
+  }
+
+
+}
