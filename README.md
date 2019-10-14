@@ -61,7 +61,7 @@ Ensure you have Z3 and sbt v1.0 or greater installed. Install instructions for s
 
 If all goes well, running update, clean, compile and test in sbt from the uclid5 directory should do the trick. The command to do all this is:
 
-    $ sbt update clean compile test
+    $ sbt update clean compile "set fork:=true" test
 
 If compilation and tests pass, you can build a universal package.
 
