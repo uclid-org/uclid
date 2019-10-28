@@ -1,6 +1,9 @@
-define f(n : integer) : boolean = n >= 5 && n <= 10;
-define g(n : integer) : boolean = n >= 11 && n <= 20;
-define h(n : integer) : boolean = n >= 5 && n <= 20;
+module main {
 
-assert #SAT[n](f(n) && g(n)) < 1;
+  define f(n : integer) : boolean = n >= 5 && n <= 10;
+  define g(n : integer) : boolean = n >= 11 && n <= 20;
+  define h(n : integer) : boolean = n >= 5 && n <= 20;
+
+  // assert #SAT[n](f(n) && g(n)) < 1;
+}
 

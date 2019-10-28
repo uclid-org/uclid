@@ -135,7 +135,7 @@ object ASTNode {
 /** All elements in the AST are derived from this class.
  *  The plan is to stick an ID into this later so that we can use the ID to store auxiliary information.
  */
-sealed trait ASTNode extends Positional with PositionedNode {
+trait ASTNode extends Positional with PositionedNode {
   val astNodeId = IdGenerator.newId()
 }
 

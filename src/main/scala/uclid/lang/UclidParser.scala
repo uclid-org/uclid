@@ -83,7 +83,7 @@ trait UclidTokenParsers extends TokenParsers {
     elem("identifier", _.isInstanceOf[Identifier]) ^^ (_.chars)
 }
 
-object UclidParser extends UclidTokenParsers with PackratParsers {
+class UclidParser extends UclidTokenParsers with PackratParsers {
     type Tokens = UclidTokens
     val lexical = new UclidLexical
 
@@ -804,4 +804,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case NoSuccess(msg, next) => throw new Utils.SyntaxError(msg, Some(next.pos), Some(filename))
       }
     }
+}
+
+object UclidParser {
+  val parserObj = new UclidParser()
+  def parseModel(filename: String, text: String): List[Module] = {
+    parserObj.parseModel(filename, text)
   }
+}
+ 
