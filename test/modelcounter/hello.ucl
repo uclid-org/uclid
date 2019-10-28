@@ -4,6 +4,8 @@ module main {
   define g(n : integer) : boolean = n >= 11 && n <= 20;
   define h(n : integer) : boolean = n >= 5 && n <= 20;
 
-  // assert #SAT[n](f(n) && g(n)) < 1;
+  proof {
+    assert h(n) <==> (f(n) || g(n));
+  }
 }
 
