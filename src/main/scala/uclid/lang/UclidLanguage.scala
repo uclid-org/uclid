@@ -252,7 +252,7 @@ case class IntUnaryMinusOp() extends IntArgOperator {
   override val hashId = 1107
   override val md5hashCode = computeMD5Hash
 }
-// These operators take bitvector operands.
+// These operators take bitvector operands and return bitvector results.
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
   override def fixity = Operator.INFIX
   val arity = 2
@@ -468,7 +468,27 @@ case class InequalityOp() extends ComparisonOperator {
   override val hashId = 1501
   override val md5hashCode = computeMD5Hash
 }
-
+// BV2Int and Int2BV
+case class BV2SignedIntOp() extends Operator {
+  override def toString() = "bv_to_signed_int"
+  override def fixity = Operator.PREFIX
+  override val hashId = 1502
+  override val md5hashCode = computeMD5Hash
+}
+case class BV2UnsignedIntOp() extends Operator {
+  override def toString() = "bv_to_unsigned_int"
+  override def fixity = Operator.PREFIX
+  override val hashId = 1503
+  override val md5hashCode = computeMD5Hash
+}
+// Int2BV
+case class Int2BVOp(val w: Int) extends Operator {
+  override def toString() = "int_to_bv"
+  override def fixity = Operator.PREFIX
+  override val hashId = 1504
+  override val md5hashCode = computeMD5Hash
+}
+// LTL Operators
 sealed abstract class TemporalOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def isTemporal = true

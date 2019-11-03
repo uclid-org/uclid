@@ -145,6 +145,9 @@ object Converter {
       case lang.EqualityOp() => smt.EqualityOp
       case lang.InequalityOp() => smt.InequalityOp
       case lang.DistinctOp() => smt.InequalityOp
+      case lang.BV2SignedIntOp() => smt.BV2SignedIntOp()
+      case lang.BV2UnsignedIntOp() => smt.BV2UnsignedIntOp()
+      case lang.Int2BVOp(w) => smt.Int2BVOp(w)
       // Record select.
       case lang.RecordSelect(r) => smt.RecordSelectOp(r.name)
       // Quantifiers

@@ -429,6 +429,16 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type", opapp.pos, c.filename)
           BooleanType()
         }
+        case BV2SignedIntOp() | BV2UnsignedIntOp() => {
+          checkTypeError(argTypes.size == 1, "Operator '" + opapp.op.toString() + "' must have one argument", opapp.pos, c.filename)
+          checkTypeError(argTypes(0).isInstanceOf[BitVectorType], "Argument to operator '" + opapp.op.toString() + "' must be a bitvector.", opapp.pos, c.filename)
+          IntegerType()
+        }
+        case Int2BVOp(n) => {
+          checkTypeError(argTypes.size == 1, "Operator '" + opapp.op.toString() + "' must have two arguments", opapp.pos, c.filename)
+          checkTypeError(argTypes(0).isInstanceOf[IntegerType], "Operator  '" + opapp.op.toString() + "' must have an integer literal as the first argument", opapp.pos, c.filename)
+          BitVectorType(n)
+        }
         case tOp : TemporalOperator => BooleanType()
         case extrOp : ExtractOp => {
           extrOp match {

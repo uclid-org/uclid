@@ -318,6 +318,7 @@ class Z3Interface() extends Context {
     lazy val arithArgs = typecastAST[z3.ArithExpr](args)
     lazy val boolArgs = typecastAST[z3.BoolExpr](args)
     lazy val bvArgs = typecastAST[z3.BitVecExpr](args)
+    lazy val intArgs = typecastAST[z3.IntExpr](args)
 
     def mkReplace(w : Int, hi : Int, lo : Int, arg0 : z3.BitVecExpr, arg1 : z3.BitVecExpr) : z3.BitVecExpr = {
       val slice0 = (w-1, hi+1)
@@ -419,6 +420,12 @@ class Z3Interface() extends Context {
           else prodSort.getFieldDecls()(i).apply(exprArgs(0))
         }
         prodSort.mkDecl().apply(newFields.toSeq : _*)
+      case BV2SignedIntOp() =>
+        ctx.mkBV2Int(bvArgs(0), true)
+      case BV2UnsignedIntOp() =>
+        ctx.mkBV2Int(bvArgs(0), false)
+      case Int2BVOp(w) =>
+        ctx.mkInt2BV(w, intArgs(0))
       case _             => throw new Utils.UnimplementedException("Operator not yet implemented: " + op.toString())
     }
   }

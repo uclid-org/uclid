@@ -603,7 +603,7 @@ case class BVGEUOp(w : Int) extends BoolResultOp {
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BitVectorType.t(w)) }
 }
 case class RecordSelectOp(name : String) extends Operator {
-  override val hashId = mix(name.hashCode(), 233)
+  override val hashId = mix(name.hashCode(), 239)
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash(name)
   override def toString = Context.getFieldName(name)
@@ -617,7 +617,7 @@ case class RecordSelectOp(name : String) extends Operator {
   }
 }
 case class RecordUpdateOp(name: String) extends Operator {
-  override val hashId = mix(name.hashCode(), 232)
+  override val hashId = mix(name.hashCode(), 240)
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash(name)
   override def toString = "update-field " + name
@@ -631,7 +631,7 @@ case class RecordUpdateOp(name: String) extends Operator {
 }
 
 case class HyperSelectOp(i : Int) extends Operator {
-  override val hashId = mix(i.hashCode(), 232)
+  override val hashId = mix(i.hashCode(), 241)
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash(i)
   override def toString = "hyper-select " + i.toString
@@ -642,7 +642,7 @@ case class HyperSelectOp(i : Int) extends Operator {
 
 }
 case object ITEOp extends Operator {
-  override val hashId = 234
+  override val hashId = 242
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash
   override def toString = "ite"
@@ -652,6 +652,36 @@ case object ITEOp extends Operator {
     Utils.assert(args(1).typ == args(2).typ, "Types in then- and else- expressions must be the same")
   }
   def resultType(args: List[Expr]) : Type = args(1).typ
+}
+case class BV2SignedIntOp() extends IntResultOp {
+  override val hashId = 243
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "bv2uint"
+  override def typeCheck(args: List[Expr]) : Unit = {
+    checkNumArgs(args, 1)
+    Utils.assert(args(0).typ.isBitVector, "Argument to BV2SignedIntOp must be a bitvector")
+  }
+}
+case class BV2UnsignedIntOp() extends IntResultOp {
+  override val hashId = 244
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "bv2sint"
+  override def typeCheck(args: List[Expr]) : Unit = {
+    checkNumArgs(args, 1)
+    Utils.assert(args(0).typ.isBitVector, "Argument to BV2UnsignedIntOp must be a bitvector")
+  }
+}
+case class Int2BVOp(w : Int) extends BVResultOp(w) {
+  override val hashId = 245
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "int2bv"
+  override def typeCheck(args: List[Expr]) : Unit = {
+    checkNumArgs(args, 1)
+    Utils.assert(args(0).typ.isInt, "Argument to Int2BVOp must be an integer")
+  }
 }
 // Expressions
 abstract class Expr(val typ: Type) extends Hashable {

@@ -113,6 +113,21 @@ class FuncExprRewriterPass extends RewritePass {
           }
 
 
+        } else if (fnName == "bv_to_signed_int") {
+          OperatorApplication(BV2SignedIntOp(), fapp.args)
+        } else if (fnName == "bv_to_unsigned_int") {
+          OperatorApplication(BV2UnsignedIntOp(), fapp.args)
+        } else if (fnName == "int_to_bv") {
+          if (fapp.args(0).isInstanceOf[IntLit]) {
+            val w = fapp.args(0).asInstanceOf[IntLit].value.toInt
+            if (w > 0) {
+              OperatorApplication(Int2BVOp(w), fapp.args.tail) 
+            } else {
+              fapp
+            }
+          } else {
+            fapp
+          }
         } else {
           fapp
         }
