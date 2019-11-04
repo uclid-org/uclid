@@ -199,6 +199,9 @@ class BasicVerifierSpec extends FlatSpec {
   "test-bv2int.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-bv2int.ucl", 1)
   }
+  "test-range-expr.ucl" should "verify all but two assertions." in {
+    VerifierSpec.expectedFails("./test/test-range-expr.ucl", 2)
+  }
 }
 class ProcedureVerifSpec extends FlatSpec {
   "test-inliner.ucl" should "verify successfully." in {

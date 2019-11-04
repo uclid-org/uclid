@@ -221,6 +221,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       case x ~ OpMul ~ y => OperatorApplication(MulOp(), List(x,y))
     }
 
+    lazy val LLOp : Parser[Operator] = positioned { 
+      OpLT ^^ { case _ => lang.LTOp() } | 
+      OpULT ^^ { case _ => lang.BVLTUOp(0) } | 
+      OpLE ^^ { case _ => lang.LEOp() } | 
+      OpULE ^^ { case _ => lang.BVLEUOp(0) }
+    }
     lazy val RelOp: Parser[String] = OpGT | OpUGT | OpLT | OpULT | OpEQ | OpNE | OpGE | OpUGE | OpLE | OpULE
     lazy val UnOp: Parser[String] = OpNot | OpMinus
     lazy val RecordSelectOp: Parser[PolymorphicSelect] = positioned {
@@ -315,7 +321,17 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         E6
     }
     /** E6 = E7 OpRel E7 | E7  **/
-    lazy val E6: PackratParser[Expr] = positioned ( E7 ~ RelOp ~ E7 ^^ ast_binary | E7 )
+    lazy val E6: PackratParser[Expr] = positioned { 
+        E7 ~ LLOp ~ E7 ~ LLOp ~ E7 ^^ {
+          case e1 ~ o1 ~ e2 ~ o2 ~ e3 => {
+            OperatorApplication(lang.ConjunctionOp(),
+                List(OperatorApplication(o1, List(e1, e2)),
+                     OperatorApplication(o2, List(e2, e3))))
+          }
+        } |
+        E7 ~ RelOp ~ E7 ^^ ast_binary |
+        E7
+    }
     /** E7 = E8 OpConcat E7 | E8 **/
     lazy val E7: PackratParser[Expr] = positioned ( E8 ~ OpConcat ~ E7 ^^ ast_binary | E8 )
     /** E8 = E9 OpAdd E8 | E9 **/
