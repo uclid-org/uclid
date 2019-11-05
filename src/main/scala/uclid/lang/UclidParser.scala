@@ -180,7 +180,7 @@ class UclidParser extends UclidTokenParsers with PackratParsers {
     // lazy val TemporalOpWUntil = "W"
     // lazy val TemporalOpRelease = "R"
 
-    lexical.delimiters ++= List("(", ")", ",", "[", "]",
+    lexical.delimiters ++= List("(", ")", ",", "[", "]", "#[",
       "bv", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, 
@@ -373,6 +373,11 @@ class UclidParser extends UclidTokenParsers with PackratParsers {
         } |
         ConstArray |
         KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => Lambda(idtyps, expr) } |
+        "#[" ~> IdTypeList ~ ( "]" ~ ":" ~ "(" ~> Expr <~ ")" ) ^^ {
+          case ids ~ expr => {
+            OperatorApplication(lang.CountingOp(ids), List(expr))
+          }
+        } |
         "(" ~> Expr <~ ")" |
         Id <~ OpPrime ^^ { case id => lang.OperatorApplication(GetNextValueOp(), List(id)) } |
         Id
