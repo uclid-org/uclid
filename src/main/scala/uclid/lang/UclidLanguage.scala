@@ -449,6 +449,14 @@ case class ExistsOp(vs: List[(Identifier, Type)], patterns: List[List[Expr]]) ex
   override val hashId = 1401
   override val md5hashCode = computeMD5Hash(vs, patterns)
 }
+case class CountingOp(vs: List[(Identifier, Type)]) extends QuantifiedBooleanOperator {
+  override def variables = vs
+  override def toString() = "#[" +
+    Utils.join(vs.map(_.toString()), ", ") + "]"
+  override def fixity = Operator.PREFIX
+  override val hashId = 1402
+  override val md5hashCode = computeMD5Hash(vs)
+}
 
 // (In-)equality operators.
 sealed abstract class ComparisonOperator() extends Operator {

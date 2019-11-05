@@ -5,7 +5,7 @@ module main {
   define h(n : integer) : boolean = n >= 5 && n <= 20;
 
   proof {
-    assert or: (forall (n : integer) :: h(n) <==> (f(n) || g(n)));
+    assert or: #[n]:(f(n)) == #[n]:(g(n)) + #[n]:(h(n));
   }
 }
 
