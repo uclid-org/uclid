@@ -49,8 +49,6 @@ import scala.collection.JavaConverters._
 import com.microsoft.z3.enumerations.Z3_lbool
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.typesafe.scalalogging.Logger
-import java.io.File
-import java.io.PrintWriter
 
 
 /**
@@ -492,11 +490,6 @@ class Z3Interface() extends Context {
   }
   override def preassert(e: Expr) {}
 
-  def writeToFile(p: String, s: String): Unit = {
-    val pw = new PrintWriter(new File(p.replace(" ", "_")))
-    try pw.write(s) finally pw.close()
-  }
-
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
   override def check() : SolverResult = {
@@ -521,7 +514,7 @@ class Z3Interface() extends Context {
       }
       return checkResult
     } else {
-      writeToFile(f"$filePrefix%s-$curAssertName%s-$curAssertLabel%s-$counten%04d.smt", smtOutput + "\n\n(check-sat)\n(get-info :all-statistics)\n")
+      Utils.writeToFile(f"$filePrefix%s-$curAssertName%s-$curAssertLabel%s-$counten%04d.smt", smtOutput + "\n\n(check-sat)\n(get-info :all-statistics)\n")
       counten += 1
       return SolverResult(None, None)
     }

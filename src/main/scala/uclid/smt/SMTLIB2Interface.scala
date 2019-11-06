@@ -310,7 +310,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
 
   type NameProviderFn = (String, Option[String]) => String
   var expressions : List[Expr] = List.empty
-  val solverProcess = new InteractiveProcess(args)
+  val solverProcess = new InteractiveProcess(args, true)
 
   def generateDeclaration(name: String, t: Type) = {
     val (typeName, newTypes) = generateDatatype(t)
@@ -362,17 +362,24 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     smtlibInterfaceLogger.debug("check")
     Utils.assert(solverProcess.isAlive(), "Solver process is not alive!")
     writeCommand("(check-sat)")
-    readResponse() match {
-      case Some(strP) =>
-        val str = strP.stripLineEnd
-        str match {
-          case "sat" => SolverResult(Some(true), getModel())
-          case "unsat" => SolverResult(Some(false), None)
-          case _ =>
-            throw new Utils.AssertionError("Unexpected result from SMT solver: " + str.toString())
-        }
-      case None =>
-        throw new Utils.AssertionError("Unexpected EOF result from SMT solver.")
+    if (filePrefix == "") {
+      readResponse() match {
+        case Some(strP) =>
+          val str = strP.stripLineEnd
+          str match {
+            case "sat" => SolverResult(Some(true), getModel())
+            case "unsat" => SolverResult(Some(false), None)
+            case _ =>
+              throw new Utils.AssertionError("Unexpected result from SMT solver: " + str.toString())
+          }
+        case None =>
+          throw new Utils.AssertionError("Unexpected EOF result from SMT solver.")
+      }
+    } else {
+      val smtOutput = solverProcess.toString()
+      Utils.writeToFile(f"$filePrefix%s-$curAssertName%s-$curAssertLabel%s-$counten%04d.smt", smtOutput + "\n\n(check-sat)\n(get-info :all-statistics)\n")
+      counten += 1
+      return SolverResult(None, None)
     }
   }
 
