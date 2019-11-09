@@ -127,6 +127,8 @@ object UclidMain {
         (_, c) => c.copy(testFixedpoint = true)
       }.text("Test fixed point")
 
+      help("help").text("prints this usage text")
+
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
       }.text("List of files to analyze.")
