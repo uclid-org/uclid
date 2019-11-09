@@ -43,7 +43,7 @@ import scala.concurrent.SyncChannel
 import scala.collection.JavaConverters._
 import com.typesafe.scalalogging.Logger
 
-class InteractiveProcess(args: List[String]) {
+class InteractiveProcess(args: List[String], saveInput: Boolean=false) {
   val logger = Logger(classOf[InteractiveProcess])
 
   // create the process.
@@ -54,6 +54,10 @@ class InteractiveProcess(args: List[String]) {
   val out = process.getInputStream()
   val in = process.getOutputStream()
   var exitValue : Option[Int] = None
+
+  // stores what we've written to the interactive process so far
+  var inputString = ""
+  override def toString() = inputString
 
   // channels for input and output.
   val inputChannel = new SyncChannel[Option[String]]()
@@ -75,14 +79,17 @@ class InteractiveProcess(args: List[String]) {
   def writeInput(str: String) {
     logger.debug("-> {}", str)
     in.write(stringToBytes(str))
+    if (saveInput) inputString += str + "\n"
   }
   // Close stdin, this may cause the process to exit.
   def finishInput() {
     in.flush()
+    inputString = ""
     in.close()
   }
   // Read from the process's output stream.
   def readOutput() : Option[String] = {
+    inputString = ""
     in.flush()
     var done = false
     while (!done) {

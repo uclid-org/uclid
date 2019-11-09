@@ -40,8 +40,15 @@ package uclid
 
 import scala.util.parsing.input.Position
 import com.typesafe.scalalogging.Logger
+import java.io.File
+import java.io.PrintWriter
 
 object Utils {
+  def writeToFile(p: String, s: String): Unit = {
+    val pw = new PrintWriter(new File(p.replace(" ", "_")))
+    try pw.write(s) finally pw.close()
+  }
+
   def assert(b: Boolean, err: => String /* error may be lazily computed. */) : Unit = {
     if (!b) {
       throw new AssertionError(err)
