@@ -1,0 +1,51 @@
+/*
+int main(void) {
+  unsigned int x = 1;
+  unsigned int y;
+
+  while (y > 0 && x < y) {
+    if (x > 0 && x < y / x) {
+      x *= x;
+    } else {
+      x++;
+    }
+  }
+
+  __CPROVER_assert(y == 0 || x == y, "A");
+  return 0;
+}
+*/
+
+module main{
+	var x :bv32;
+	var y: bv32;
+
+	init{
+	x=1bv32;
+	}
+
+	next{
+	if( (y>0bv32) && (x<y))
+	{
+		if( (x >0bv32) && (x < (y/x)) )
+		{
+		  x'=x*x;
+		}
+		else
+		{
+		 x'=x+1bv32;
+		}
+	}
+	}
+
+    invariant my_invariant: (y==0bv32) || x==y || (y>0bv32 && x<y));
+
+control{
+	synthesize_invariant[ALL];
+}
+
+}
+
+
+
+

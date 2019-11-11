@@ -1,0 +1,23 @@
+module main{
+	var x: bv32;
+
+	init{
+
+	}
+	next{
+	if(x < 268435455bv32)
+	 {
+	  x'=x+1bv32;
+	 }
+	}
+
+invariant my_invariant: (x < 268435455bv32) || (x >= 268435455bv32);
+control
+{
+	synthesize_invariant[ALL];
+}
+}
+
+
+
+
