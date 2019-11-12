@@ -702,11 +702,14 @@ case class IntLit(value: BigInt) extends Literal (IntType) {
 }
 
 case class BitVectorLit(value: BigInt, width: Int) extends Literal (BitVectorType.t(width)) {
-  Utils.assert(value.bitCount <= width, "Value (" + value.toString + ") too big for BitVector of width " + width + " bits.")
+  private val minWidth = value.bitLength + (if(value <= 0) 1 else 0)
+  Utils.assert(width >= minWidth, "Value (" + value.toString + ") too big for BitVector of width " + width + " bits.")
+  private val mask =  (BigInt(1) << width) - 1
+  private val twosComplement = if(value < 0) { ((~(-value)) & mask) + 1 } else value
   override val hashId = mix(value.hashCode(), mix(width, 301))
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash(value, width)
-  override def toString = "(_ bv" + value.toString + " " + width.toString +")"
+  override def toString = "(_ bv" + twosComplement.toString + " " + width.toString +")"
 }
 
 case class BooleanLit(value: Boolean) extends Literal (BoolType) {
