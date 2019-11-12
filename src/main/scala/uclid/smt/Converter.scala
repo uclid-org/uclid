@@ -124,6 +124,8 @@ object Converter {
       case lang.BVUnaryMinusOp(w) => smt.BVMinusOp(w)
       case lang.BVAndOp(w) => smt.BVAndOp(w)
       case lang.BVOrOp(w) => smt.BVOrOp(w)
+      case lang.BVUremOp(w) => smt.BVUremOp(w)
+      case lang.BVSremOp(w) => smt.BVSremOp(w)  
       case lang.BVXorOp(w) => smt.BVXorOp(w)
       case lang.BVNotOp(w) => smt.BVNotOp(w)
       case lang.ConstExtractOp(slice) => smt.BVExtractOp(slice.hi, slice.lo)
@@ -197,6 +199,8 @@ object Converter {
       case smt.BVOrOp(w) => lang.BVOrOp(w)
       case smt.BVXorOp(w) => lang.BVXorOp(w)
       case smt.BVNotOp(w) => lang.BVNotOp(w)
+      case smt.BVUremOp(w) => lang.BVUremOp(w)
+      case smt.BVSremOp(w) => lang.BVSremOp(w)  
       case smt.BVExtractOp(hi, lo) => lang.ConstExtractOp(lang.ConstBitVectorSlice(hi, lo))
       case smt.BVConcatOp(_) => lang.ConcatOp()
       // Boolean operators.

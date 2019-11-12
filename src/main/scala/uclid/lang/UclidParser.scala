@@ -106,6 +106,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val OpSub = "-"
     lazy val OpMul = "*"
     lazy val OpUMul = "*_u"
+    lazy val OpBvSrem = "%"
+    lazy val OpBvUrem = "%_u"
     lazy val OpBiImpl = "<==>"
     lazy val OpImpl = "==>"
     lazy val OpLT = "<"
@@ -183,10 +185,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "bv", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, 
-      OpEQ, OpNE, OpConcat, OpNot, OpMinus, OpPrime)
+      OpEQ, OpNE, OpConcat, OpNot, OpMinus, OpPrime, OpBvUrem, OpBvSrem)
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, OpEQ, OpNE,
-      OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
+      OpBvAnd, OpBvOr, OpBvXor, OpBvUrem, OpBvSrem, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall,
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
@@ -205,6 +207,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       case x ~ OpBvAnd ~ y => OperatorApplication(BVAndOp(0), List(x, y))
       case x ~ OpBvOr ~ y => OperatorApplication(BVOrOp(0), List(x, y))
       case x ~ OpBvXor ~ y => OperatorApplication(BVXorOp(0), List(x, y))
+      case x ~ OpBvUrem ~ y => OperatorApplication(BVUremOp(0), List(x, y))
+      case x ~ OpBvSrem ~ y => OperatorApplication(BVSremOp(0), List(x, y))  
       case x ~ OpLT ~ y => OperatorApplication(LTOp(), List(x,y))
       case x ~ OpGT ~ y => OperatorApplication(GTOp(), List(x,y))
       case x ~ OpLE ~ y => OperatorApplication(LEOp(), List(x,y))
@@ -318,6 +322,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         E6 ~ OpBvAnd ~ E5 ^^ ast_binary |
         E6 ~ OpBvOr ~ E5 ^^ ast_binary  |
         E6 ~ OpBvXor ~ E5 ^^ ast_binary |
+        E6 ~ OpBvUrem ~ E5 ^^ ast_binary |
+        E6 ~ OpBvSrem ~ E5 ^^ ast_binary |
         E6
     }
     /** E6 = E7 OpRel E7 | E7  **/
@@ -639,7 +645,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       OpConcat ^^ { case _ => ConcatOp() } |
       OpAdd ^^ { case _ => AddOp() } |
       OpSub ^^ { case _ => SubOp() } |
-      OpMul ^^ { case _ => MulOp() }
+      OpMul ^^ { case _ => MulOp() } | 
+      OpBvUrem ^^ { case _ => BVUremOp(0) } |
+      OpBvSrem ^^ { case _ => BVSremOp(0) }
     }
 
     lazy val UnaryOpAppTerm: PackratParser[lang.OpAppTerm] = positioned {

@@ -1,0 +1,16 @@
+module main
+{
+  var n : bv32;
+  init {
+  }
+  next {
+    n' = n;
+  }
+  invariant prop_eq: (n % 2bv32) == (n&1bv32);
+  control {
+    v = unroll(5);
+    check;
+    print_results;
+    v.print_cex(n);
+  }
+}
