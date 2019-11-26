@@ -193,7 +193,7 @@ trait SMTLIB2Base {
             smtlib2BaseLogger.info("-->> symbol <<-- {}", id)
             // Utils.assert(variables.contains(id), "Not found in map: " + id)
             if (variables.contains(id)) {
-              (variables.get(id).get._1, memo, false)
+              (variables.get(id).get.toString, memo, false)
             } else {
               // Quantified variable.
               // TODO be able to check this.

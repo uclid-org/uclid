@@ -283,7 +283,7 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     Utils.assert(mutables.size > 0, "There are no variables in the given model.")
     // sygusLog.debug("mutables: {}", mutables.toString())
     //TODO: Change state vars to all vars, since invariant synth doesn't allow for global variables.
-    mutables = mutables.union(variables.filter(p => !p._1.endsWith("!")).map(p => p._2).toList).distinct
+    mutables = mutables.union(variables.filter(p => !p._1.endsWith("!")).map(p => (p._2.id, p._2.symbolTyp)).toList).distinct
     sygusLog.debug("mutables: {}", mutables.toString())
 
     var globals = (getGlobals(ctx)++initHavocs++nextHavocs).distinct
