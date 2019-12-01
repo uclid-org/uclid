@@ -409,5 +409,5 @@ object Context
 }
 
 abstract trait SynthesisContext {
-  def synthesizeInvariant(initExpr : Expr, nextExpr: Expr, properties : List[smt.Expr], ctx : lang.Scope, logic : String) : Option[langExpr]
+  def synthesizeInvariant(initExpr : Expr, initHavocs : List[(String, Type)], nextExpr: Expr, nextHavocs : List[(String, Type)], properties : List[smt.Expr], axioms : List[smt.Expr], ctx : lang.Scope, logic : String) : Option[langExpr]
 }

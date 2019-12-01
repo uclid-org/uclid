@@ -1,0 +1,33 @@
+module main
+{
+  var i: bv32;
+  var x : integer;
+
+
+ init
+ {
+   i=0bv32;
+   x=0;
+ }
+
+  next
+  {
+    call update();
+  }
+
+  invariant always_positive: (x==(integer)i);
+
+procedure update()
+    modifies x, i;
+  {
+   if(i < 100bv32)
+   {
+    i=i+1bv32;
+    x=x+1;
+   }
+  }
+
+control {
+    synthesize_invariant[ALL];
+  }
+}

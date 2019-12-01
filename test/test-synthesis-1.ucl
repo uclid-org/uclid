@@ -20,5 +20,8 @@ module main
   control {
     // print_module;
     synthesize_invariant[LIA];
+    //induction;
+    //check;
+    //print_results;
   }
 }
