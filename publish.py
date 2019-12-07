@@ -10,7 +10,10 @@ FILES = [
     "DEPENDENCIES",
     "LICENSE",
     "README.md",
-    "tutorial/tutorial.pdf"
+    "tutorial/tutorial.pdf",
+    "get-z3-linux.sh",
+    "setup-z3-linux.sh",
+    ".travis.yml"
 ]
 
 DIRECTORIES = [
