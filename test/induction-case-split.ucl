@@ -1,0 +1,54 @@
+module main
+{
+  type addr_t  = bv32;
+  type data_t  = bv32;
+  
+  // constants of type addr_t;
+  const k1_addr_t : addr_t = 1bv32;
+  const k0_addr_t : addr_t = 0bv32;
+
+  type hash_t;
+  type mem_t   = [addr_t]data_t;
+
+  // hash_update related constants and functions.
+  const hash_base : hash_t;
+  function hash_update(d : data_t, h : hash_t) : hash_t;
+  function mem_digest(m : mem_t, start : addr_t, len : addr_t) : hash_t;
+
+  axiom memhash_func:
+    forall (m : mem_t, s : addr_t, l : addr_t) 
+      pattern[mem_digest(m, s, l); hash_update(m[s + l], h)] ::
+      mem_digest(m, s, l) == 
+        if (l == k0_addr_t) 
+           then hash_base
+           else hash_update(m[s + l - k1_addr_t], mem_digest(m, s, l - k1_addr_t));
+
+  const m : mem_t;
+  const s : addr_t;
+  var   l : addr_t;
+  var   h : hash_t;
+
+  invariant h_value:
+    h == mem_digest(m, s, l); 
+
+  init {
+    l = k0_addr_t;
+    h = hash_base;
+  }
+
+  next {
+    if (l + k1_addr_t != k0_addr_t) {
+      l' = l + k1_addr_t;
+      h' = hash_update(m[s + l], h);
+    }
+  }
+
+  control {
+    // set_solver_option(":mbqi", false);
+    set_solver_option(":smt.RELEVANCY", 0);
+    set_solver_option(":smt.CASE_SPLIT", 0);
+    v = induction(1);
+    check;
+    print_results;
+  }
+}

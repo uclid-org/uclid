@@ -20,7 +20,7 @@ module main
   
   control {
     // print_module;
-    vobj = bmc[p1] (3);
+    vobj = bmc[properties=[p1]] (3);
     check;
     print_results;
   }

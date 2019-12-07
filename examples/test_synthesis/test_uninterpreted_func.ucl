@@ -1,0 +1,31 @@
+/* This benchmark requires uclid to translate an uninterpreted function
+ * to SyGuS-IF */
+module main
+{
+  var i: integer;
+  var y: integer;
+
+ init
+ {
+   i=0;
+   y = uninterpreted_function(0);
+ }
+
+  next
+  {
+    if(y > 0)
+    { i' = i+1; }
+    else
+    {i' = i+2; }
+     y'=uninterpreted_function(y);
+  }
+
+  invariant always_positive: (i>=0);
+
+  function uninterpreted_function  (a : integer) : integer;
+
+
+control {
+    synthesize_invariant[ALL];
+  }
+}

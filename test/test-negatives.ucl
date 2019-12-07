@@ -1,0 +1,9 @@
+module main
+{
+    var x : integer;
+
+    init {
+        x = -5;
+    }
+}
+

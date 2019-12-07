@@ -1,0 +1,4 @@
+module test_neg_constant {
+
+  const neg_one : integer = -1;
+}

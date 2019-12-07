@@ -23,6 +23,8 @@ module main
   
   
   control {
+    print_module;
+    synthesize_invariant[LIA];
     v = unroll(5);
     check;
     print_results;

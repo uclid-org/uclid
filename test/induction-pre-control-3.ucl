@@ -1,0 +1,31 @@
+module main {
+    var x : integer;
+    var y : integer;
+    var b : boolean;
+
+    init {
+        b = true;
+        x = 0;
+        assume (y > 0);
+    }
+
+    next {
+        b' = !b;
+        if (b) {
+            x' = x + 3;
+        } else {
+            x' = x - 2;
+        }
+        y' = y + x;
+    }
+
+    invariant x_ge_0: x >= 0;
+    invariant y_gt_0: y > 0;
+
+    control {
+        v = induction[pre=[x_ge_0]; properties=[y_gt_0]](2);
+        check;
+        print_results;
+        // v.print_cex;
+    }
+}

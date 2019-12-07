@@ -1,0 +1,38 @@
+/* This benchmark requires uclid to translate the axiom into an assumption
+ * in sygus-if */
+
+module main
+{
+  var i: integer;
+  var y: integer;
+  axiom y >= 10;
+ 
+ init
+ {
+   i=0;
+ }
+
+  next
+  {
+//   axiom(y>=10);
+    call update();
+  }
+
+  invariant always_positive: (i>=0);
+
+procedure update()
+    modifies i;
+  {
+   if(y > 10)
+   { i=i+1; }
+   else
+   { i=i-1; }
+  }
+
+
+control {
+    synthesize_invariant[ALL];
+  }
+}
+
+
