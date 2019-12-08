@@ -220,6 +220,8 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val OpBVLEU = "bvule"
   lazy val OpBVLE = "bvsle"
   lazy val OpConcat= "concat"
+  lazy val OpArraySelect = "select"
+  lazy val OpArrayStore = "store"
 
   lazy val KwDefineFun = "define-fun"
   lazy val KwModel = "model"  // The "model" keyword is specific to Boolector 
@@ -238,7 +240,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       KwDefineFun, KwModel, KwInt, KwBool, KwBV, KwArray, KwLambda, OpAnd, OpOr, OpNot, OpITE, OpImpl, 
       OpEq, OpIntGE, OpIntGT, OpIntLT, OpIntLE, OpIntAdd, OpIntSub, OpIntMul,
       OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, OpBVAnd, OpBVOr, OpBVXor, OpBVNot, OpBVUrem, OpBVSrem, 
-      OpBVGT, OpBVGTU, OpBVGE, OpBVGEU, OpBVLT, OpBVLTU, OpBVLE, OpBVLEU, OpConcat)
+      OpBVGT, OpBVGTU, OpBVGE, OpBVGEU, OpBVLT, OpBVLTU, OpBVLE, OpBVLEU, OpConcat, OpArraySelect,      OpArrayStore)
 
   lazy val Operator : PackratParser[smt.Operator] =
     OpAnd ^^ { _ => smt.ConjunctionOp } |
@@ -273,7 +275,6 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     OpBVLE ^^ { _ => smt.BVLEOp(0)} | 
     OpBVLT ^^ { _ => smt.BVLTOp(0)} | 
     OpConcat ^^ { _ => smt.BVConcatOp(0) }
-
     
 
   lazy val Symbol : PackratParser[smt.Symbol] =
@@ -292,7 +293,9 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val Expr : PackratParser[smt.Expr] =
     Symbol | IntegerLit | BitVectorLit | BoolLit |
     "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)} |
-    "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) }
+    "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) } |
+    "(" ~ OpArraySelect ~> Expr ~ rep(Expr) <~ ")" ^^ { case array ~ indices => smt.ArraySelectOperation(smt.Symbol(array.toString, smt.ArrayType(Nil, array.typ)), indices) } |
+    "(" ~ OpArrayStore ~> Expr ~ rep(Expr) ~ Expr <~ ")" ^^ { case array ~ indices ~ value => smt.ArrayStoreOperation(array, indices, value) }
 
   lazy val Type : PackratParser[smt.Type] =
     KwInt ^^ { _ => smt.IntType } |
