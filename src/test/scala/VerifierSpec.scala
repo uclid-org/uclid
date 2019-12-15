@@ -310,6 +310,9 @@ class InductionVerifSpec extends FlatSpec {
   "induction-pre-control-5.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/induction-pre-control-5.ucl", 1)
   }
+  "test-tuple.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-tuple.ucl", 0)
+  }
 }
 class QuantifierVerifSpec extends FlatSpec {
   "test-forall-0.ucl" should "verify all assertions." in {
