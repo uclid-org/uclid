@@ -1,0 +1,42 @@
+module processor {
+  input pc: bv32;
+  input insts: [bv32]bv32;
+
+  procedure exec_inst(new_pc: bv32)
+    returns (pc_next: bv32)
+  {
+    pc_next = new_pc;
+  }
+
+  init {
+  }
+
+  next {
+    call (pc') = exec_inst(insts[pc]);
+  }
+}
+
+module main {
+  var pc: bv32;
+  var insts: [bv32]bv32;
+  instance thread: processor(insts: (insts), pc: (pc));
+
+  init {
+    assume (pc == 1bv32);
+    assume (thread.insts[1bv32] == 2bv32);
+    assume (thread.insts[2bv32] == 0bv32);
+  }
+
+  next {
+    next (thread);
+  }
+
+  property p: (thread.pc != 0bv32);
+
+  control {
+    v = unroll(3);
+    check;
+    print_results;
+    v.print_cex(pc, insts);
+  }
+}
