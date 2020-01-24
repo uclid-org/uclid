@@ -1,0 +1,51 @@
+/*
+int main(void) {
+  unsigned int x = 0;
+
+  while (x < 0x0fffffff) {
+    if (x < 0xfff0) {
+      x++;
+    } else {
+      x += 2;
+    }
+  }
+
+  __CPROVER_assert(!(x % 2), "A");
+  return 0;
+}*/
+
+
+
+module main{
+	var x :bv32;
+
+	init{
+	x=0bv32;
+	}
+
+	next{
+	if(x < 268435455bv32)
+	{
+		if(x < 65520bv32)
+		{
+		  x'=x+1bv32;
+		}
+		else
+		{
+		 x'=x+2bv32;
+		}
+	}
+	}
+
+    invariant my_invariant: ((x&1bv32)!=0bv32) || (x < 268435455bv32);
+
+control{
+	synthesize_invariant[ALL];
+}
+
+}
+
+
+
+
+
