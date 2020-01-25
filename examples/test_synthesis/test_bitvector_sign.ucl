@@ -1,0 +1,23 @@
+module main
+{
+  var i: bv32;
+  const k: bv32;
+
+ init
+ {
+   i=0bv32;
+ }
+
+  next
+  {
+   i' = i-1bv32;
+  }
+
+  invariant always_positive: (i>=_u 0bv32);
+
+control {
+    synthesize_invariant[ALL];
+  }
+}
+
+

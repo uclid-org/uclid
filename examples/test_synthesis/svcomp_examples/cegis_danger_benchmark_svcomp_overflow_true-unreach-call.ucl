@@ -1,0 +1,35 @@
+/*int main(void) {
+  unsigned int x;
+
+  x = 10;
+
+  while (x >= 10) {
+    x += 2;
+  }
+
+  __CPROVER_assert(!(x % 2), "A");
+  return 0;
+}*/
+
+module main{
+	
+	var x : bv32;
+
+	init{
+	x=10bv32;
+	}
+
+	next{
+	if(x >= 10bv32)
+	 {
+	    x'=x+2bv32;
+	 }
+	}
+
+	invariant my_invariant: ((x%2bv32)!=0bv32) || (x >=10bv32);
+
+	control
+	{
+	synthesize_invariant[ALL];
+	}
+}
