@@ -64,7 +64,7 @@ class SMTLIB2Spec extends FlatSpec {
   "test-int-fib.ucl" should "verify all but one assertion." in {
     SMTLIB2Spec.expectedFails("./test/test-int-fib.ucl", 1)
   }
-  "test-array-0.ucl" should "verify all but one assertion." in {
+  "test-array-0.ucl" should "verify succesfully." in {
     SMTLIB2Spec.expectedFails("./test/test-array-0.ucl", 0)
   }
   // the test below is commented out because it errors out.
