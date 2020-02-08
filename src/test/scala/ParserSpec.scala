@@ -561,4 +561,24 @@ class ParserSpec extends FlatSpec {
         assert (p.errors(0)._1.contains("Trace select can only be applied on an identifier"))
     }
   }
+
+  "syntax-error-input-assign-1.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/syntax-error-input-assign-1.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors(0)._1.contains("is a readonly entity and cannot be assigned to"))
+    }
+  }
+
+  "syntax-error-input-assign-2.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/syntax-error-input-assign-2.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors(0)._1.contains("is a readonly entity and cannot be assigned to"))
+    }
+  }
 }

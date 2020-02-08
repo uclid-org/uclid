@@ -199,6 +199,9 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
               ret = ret + ModuleError("Left hand variable %s expected return value of type %s but received type %s"
                 .format(lh.toString, lType.toString, rType.toString), st.position)
             }
+            if(context.isNameReadOnly(lh.ident)) {
+              ret = ret + ModuleError("'%s' is a readonly entity and cannot be assigned to".format(lh.ident.toString), st.position)
+            }
           }
 
           l1 = proc.sig.outParams.length
