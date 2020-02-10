@@ -141,7 +141,7 @@ trait SMTLIB2Base {
             }
             (typeStr, List.empty)
           case _ => 
-            throw new Utils.UnimplementedException("TODO: Implement more types in Z3FileInterface.generateDatatype")
+            throw new Utils.UnimplementedException("TODO: Implement more types in SMTLIB2Interface.generateDatatype: " + t.toString());
         }
     }
     smtlib2BaseLogger.debug("RESULT:generateDatatype: {}; {}", resultName.toString(), newTypes.toString())
