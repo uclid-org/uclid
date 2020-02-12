@@ -222,12 +222,12 @@ class SymbolicSimulator (module : Module) {
             symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, propertyFilter, propertyFilter)
           case "induction" =>
             val labelBase : String = cmd.resultVar match {
-              case Some(l) => l.toString + ": induction (base)"
-              case None    => "induction (base)"
+              case Some(l) => l.toString + ": induction_base"
+              case None    => "induction_base"
             }
             val labelStep : String = cmd.resultVar match {
-              case Some(l) => l.toString + ": induction (step)"
-              case None    => "induction (step)"
+              case Some(l) => l.toString + ": induction_step"
+              case None    => "induction_step"
             }
             val k = if (cmd.args.size > 0) {
               cmd.args(0)._1.asInstanceOf[IntLit].value.toInt
