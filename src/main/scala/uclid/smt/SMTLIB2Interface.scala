@@ -227,7 +227,11 @@ trait SMTLIB2Base {
             Utils.assert(e.isInstanceOf[Symbol], "Beta substitution has not happened.")
             val (trFunc, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trArgs, memoP2) = translateExprs(args, memoP1, shouldLetify)
-            ("(" + trFunc.exprString() + " " + exprString(trArgs) + ")", memoP2, true)
+            if (args.length == 0) {
+              (trFunc.exprString(), memoP2, true)
+            } else {
+              ("(" + trFunc.exprString() + " " + exprString(trArgs) + ")", memoP2, true)
+            }
           case MakeTuple(args) =>
             smtlib2BaseLogger.info("-->> tup <<--")
             val tupleType = TupleType(args.map(_.typ))
