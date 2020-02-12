@@ -5,7 +5,7 @@ module main {
 		a = 255bv8;
 	}
 
-	invariant z: (bv_a_right_shift(1, a) != bv_l_right_shift(1, a));
+	invariant z: (bv_a_right_shift(1bv8, a) != bv_l_right_shift(1bv8, a));
 
 	control {
 		unroll(8);

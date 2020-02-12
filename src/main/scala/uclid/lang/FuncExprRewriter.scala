@@ -75,44 +75,14 @@ class FuncExprRewriterPass extends RewritePass {
             OperatorApplication(BVZeroExtOp(0, 0), List.empty)
           }
         } else if (fnName == "bv_left_shift") {
-          if (fapp.args.size == 2) {
-            fapp.args(0) match {
-              case IntLit(v) =>
-                OperatorApplication(BVLeftShiftIntOp(0, v.toInt), List(fapp.args(1)))
-              case _ =>
-                OperatorApplication(BVLeftShiftBVOp(0), List(fapp.args(1), fapp.args(0)))
-            }
-          } else {
-            OperatorApplication(BVLeftShiftIntOp(0, 0), List.empty)
-          }
-
-
+            Utils.assert(fapp.args.size==2, "Expected two operands for bv_left_shift")
+            OperatorApplication(BVLeftShiftBVOp(0), List(fapp.args(1),fapp.args(0)))
         } else if (fnName == "bv_l_right_shift") {
-          if (fapp.args.size == 2) {
-            fapp.args(0) match {
-              case IntLit(v) =>
-                OperatorApplication(BVLRightShiftIntOp(0, v.toInt), List(fapp.args(1)))
-              case _ =>
-                OperatorApplication(BVLRightShiftBVOp(0), List(fapp.args(1), fapp.args(0)))
-            }
-          } else {
-            OperatorApplication(BVLRightShiftIntOp(0, 0), List.empty)
-          }
-
-
+            Utils.assert(fapp.args.size==2, "Expected two operands for bv_l_right_shift")
+            OperatorApplication(BVLRightShiftBVOp(0), List(fapp.args(1),fapp.args(0)))
         } else if (fnName == "bv_a_right_shift") {
-          if (fapp.args.size == 2) {
-            fapp.args(0) match {
-              case IntLit(v) =>
-                OperatorApplication(BVARightShiftIntOp(0, v.toInt), List(fapp.args(1)))
-              case _ =>
-                OperatorApplication(BVARightShiftBVOp(0), List(fapp.args(1), fapp.args(0)))
-            }
-          } else {
-            OperatorApplication(BVARightShiftIntOp(0, 0), List.empty)
-          }
-
-
+            Utils.assert(fapp.args.size==2, "Expected two operands for bv_a_left_shift")
+            OperatorApplication(BVARightShiftBVOp(0), List(fapp.args(1),fapp.args(0)))
         } else if (fnName == "bv_to_signed_int") {
           OperatorApplication(BV2SignedIntOp(), fapp.args)
         } else if (fnName == "bv_to_unsigned_int") {

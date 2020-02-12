@@ -355,27 +355,7 @@ case class BVZeroExtOp(override val w : Int, val e : Int) extends BVArgOperator(
   override val hashId = 1217
   override val md5hashCode = computeMD5Hash(w, e)
 }
-case class BVLeftShiftIntOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
-  override def fixity = Operator.PREFIX
-  override def toString = "bv_left_shift"
-  override val arity = 1
-  override val hashId = 1218
-  override val md5hashCode = computeMD5Hash(w, e)
-}
-case class BVLRightShiftIntOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
-  override def fixity = Operator.PREFIX
-  override def toString = "bv_l_right_shift"
-  override val arity = 1
-  override val hashId = 1219
-  override val md5hashCode = computeMD5Hash(w, e)
-}
-case class BVARightShiftIntOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
-  override def fixity = Operator.PREFIX
-  override def toString = "bv_a_right_shift"
-  override val arity = 1
-  override val hashId = 1220
-  override val md5hashCode = computeMD5Hash(w, e)
-}
+
 case class BVLeftShiftBVOp(override val w : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "bv_left_shift"

@@ -354,45 +354,8 @@ case class BVZeroExtOp(w : Int, e : Int) extends BVResultOp(w) {
     Utils.assert((argW + e) == w, "Incorrect width for first operand to BVZeroExtOp.")
   }
 }
-case class BVLeftShiftIntOp(w : Int, e : Int) extends BVResultOp(w) {
-  override val hashId = mix(w, 217)
-  override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash(w, e)
-  override def toString = "(_ left_shift %d)".format(e)
-  override def typeCheck(args: List[Expr]) : Unit = {
-    checkNumArgs(args, 1)
-    Utils.assert(args.forall(_.typ.isBitVector), "Argument to left_shift must be a bitvector.")
-    val argW = args(0).typ.asInstanceOf[BitVectorType].width
-    Utils.assert(e > 0, "Shift amount for left_shift must be greater than zero.")
-    Utils.assert((argW) == w, "Incorrect width for first operand to BVLeftShiftIntOp.")
-  }
-}
-case class BVLRightShiftIntOp(w : Int, e : Int) extends BVResultOp(w) {
-  override val hashId = mix(w, 218)
-  override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash(w, e)
-  override def toString = "(_ l_right_shift %d)".format(e)
-  override def typeCheck(args: List[Expr]) : Unit = {
-    checkNumArgs(args, 1)
-    Utils.assert(args.forall(_.typ.isBitVector), "Argument to a_right_shift must be a bitvector.")
-    val argW = args(0).typ.asInstanceOf[BitVectorType].width
-    Utils.assert(e > 0, "Shift amount for l_right_shift must be greater than zero.")
-    Utils.assert((argW) == w, "Incorrect width for first operand to BVLRightShiftIntOp.")
-  }
-}
-case class BVARightShiftIntOp(w : Int, e : Int) extends BVResultOp(w) {
-  override val hashId = mix(w, 219)
-  override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash(w, e)
-  override def toString = "(_ a_right_shift %d)".format(e)
-  override def typeCheck(args: List[Expr]) : Unit = {
-    checkNumArgs(args, 1)
-    Utils.assert(args.forall(_.typ.isBitVector), "Argument to a_right_shift must be a bitvector.")
-    val argW = args(0).typ.asInstanceOf[BitVectorType].width
-    Utils.assert(e > 0, "Shift amount for a_right_shift must be greater than zero.")
-    Utils.assert((argW) == w, "Incorrect width for first operand to BVARightShiftIntOp.")
-  }
-}
+
+
 case class BVLeftShiftBVOp(w : Int) extends BVResultOp(w) {
   override val hashId = mix(w, 220)
   override val hashCode = computeHash
