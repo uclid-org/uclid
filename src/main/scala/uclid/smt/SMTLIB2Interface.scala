@@ -392,7 +392,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
       }
     } else {
       val smtOutput = solverProcess.toString()
-      Utils.writeToFile(f"$filePrefix%s-$curAssertName%s-$curAssertLabel%s-$counten%04d.smt", smtOutput + "\n\n(check-sat)\n(get-info :all-statistics)\n")
+      Utils.writeToFile(f"$filePrefix%s-$curAssertName%s-$curAssertLabel%s-$counten%04d.smt", smtOutput + "\n(get-info :all-statistics)\n")
       counten += 1
       return SolverResult(None, None)
     }
