@@ -140,6 +140,11 @@ trait SMTLIB2Base {
               }
             }
             (typeStr, List.empty)
+          case UninterpretedType(typeName) => 
+            // TODO: sorts with arity greater than 1? Does uclid allow such a thing?
+            val declDatatype = "(declare-sort %s)".format(typeName)
+            typeMap = typeMap.addSynonym(typeName, t)
+            (typeName, List(declDatatype))
           case _ => 
             throw new Utils.UnimplementedException("TODO: Implement more types in SMTLIB2Interface.generateDatatype: " + t.toString());
         }
