@@ -228,7 +228,7 @@ trait SMTLIB2Base {
             val (trFunc, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trArgs, memoP2) = translateExprs(args, memoP1, shouldLetify)
             if (args.length == 0) {
-              (trFunc.exprString(), memoP2, true)
+              (trFunc.exprString(), memoP2, false)
             } else {
               ("(" + trFunc.exprString() + " " + exprString(trArgs) + ")", memoP2, true)
             }
