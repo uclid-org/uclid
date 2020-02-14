@@ -251,7 +251,7 @@ trait SMTLIB2Base {
             smtlib2BaseLogger.info("-->> boollit <<--")
             (value match { case true => "true"; case false => "false" }, memo, false)
         }
-        val translatedExpr = if (letify && shouldLetify) {
+        val translatedExpr = if (/*letify && shouldLetify*/false) {
           TranslatedExpr(memoP.size, exprStr, Some(getLetVariableName()))
         } else {
           TranslatedExpr(memoP.size, exprStr, None)
@@ -266,7 +266,7 @@ trait SMTLIB2Base {
   }
   def translateExpr(e : Expr, shouldLetify : Boolean) : String = {
     val (trExpr, memoP) = translateExpr(e, Map.empty, shouldLetify)
-    val resultString = if (shouldLetify) {
+    val resultString = if (/*shouldLetify*/false) {
       if (memoP.size == 0) {
         trExpr.exprString()
       } else {
