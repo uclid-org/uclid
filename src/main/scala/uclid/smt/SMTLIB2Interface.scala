@@ -63,8 +63,9 @@ trait SMTLIB2Base {
     "_type_" + suffix + "_" + counterId.toString() + "_"
   }
   def getVariableName(v: String) : String = {
-    counterId += 1
-    "_var_" + v + counterId.toString() + "_"
+//    counterId += 1
+ //   "_var_" + v + counterId.toString() + "_"
+  v
   }
   def getLetVariableName() : String = {
     counterId += 1
