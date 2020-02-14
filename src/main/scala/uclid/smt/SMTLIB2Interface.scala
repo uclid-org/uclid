@@ -362,15 +362,26 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
 
   override def preassert(e: Expr) {
     smtlibInterfaceLogger.debug("preassert")
-    val types  = Context.findTypes(e)
-    types.filter(typ => !typeMap.contains(typ)).foreach {
+    var declCommands = new ListBuffer[String]()
+    Context.findTypes(e).filter(typ => !typeMap.contains(typ)).foreach {
       newType => {
         smtlib2BaseLogger.debug("type: {}", newType.toString())
         val (typeName, newTypes) = generateDatatype(newType)
         smtlibInterfaceLogger.debug("newTypes: {}", newTypes.toString())
-        newTypes.foreach(typ => writeCommand(typ))
+        newTypes.foreach(typ => declCommands.append(typ))
       }
     }
+    
+    // This is a bit of a hack: sometimes types depend on each other and the order
+    // of declaration matters. The examples that gave us trouble are cases where a
+    // record depends on an enum, but the enum is declared after. The smt-lib
+    // declarations for these cases are "declare-datatypes" and
+    // "declare-datatype", respectively. Sorting the type declarations by
+    // alphabetical order will circumvent these problems without adding
+    // declaration dependency tracking. (Before this we were printing in a random
+    // order given by how scala's set type enumerates)
+
+    declCommands.sorted.foreach(decl => writeCommand(decl))
   }
 
   override def check() : SolverResult = {
