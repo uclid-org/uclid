@@ -37,12 +37,15 @@
 package uclid
 package smt
 
+import uclid.smt
+
 import scala.io.Source
 import scala.collection.mutable
 import scala.util.matching.Regex
 
 case class State(sym: Symbol, init: Option[Expr] = None, next: Option[Expr]= None)
-case class SymbolicTransitionSystem(inputs: Seq[Symbol], states: Seq[State], outputs: Seq[Expr] = Seq(), bad: Seq[Expr] = Seq())
+case class SymbolicTransitionSystem(inputs: Seq[Symbol], states: Seq[State], outputs: Seq[Expr] = Seq(),
+                                    constraints: Seq[Expr] = Seq(), bad: Seq[Expr] = Seq(), fair: Seq[Expr] = Seq())
 
 
 object Btor2 {
@@ -53,8 +56,122 @@ object Btor2 {
     sys
   }
   def read(lines: Iterator[String]): SymbolicTransitionSystem = Btor2Parser.read(lines)
+  def serialize(sys: SymbolicTransitionSystem, startIndex: Int = 1): Seq[String] = Btor2Serializer.serialize(sys)
 }
 
+
+object Btor2Serializer {
+  def serialize(sys: SymbolicTransitionSystem, startIndex: Int = 1): Seq[String] = {
+    val expr_cache = mutable.HashMap[Expr,Int]()
+    val sort_cache = mutable.HashMap[Type,Int]()
+    val lines = mutable.ArrayBuffer[String]()
+    var index = startIndex
+
+    def line(l: String): Int = {
+      val ii = index
+      lines += s"$ii $l"
+      index += 1
+      ii
+    }
+
+    // Type/Sort serialization
+    def t(typ: Type): Int = sort_cache.getOrElseUpdate(typ,{typ match {
+      case BoolType => line("sort bitvec 1")
+      case BitVectorType(w) => line(s"sort bitvec $w")
+      case ArrayType(List(index), value) => line(s"sort array ${t(index)} ${t(value)}")
+      case other => throw new RuntimeException(s"Unsupported type: $other")
+    }})
+
+    // Expression serialization
+    def s(expr: Expr): Int = expr_cache.getOrElseUpdate(expr, {expr match {
+      case ArraySelectOperation(array, List(index)) =>
+        line(s"read ${t(expr.typ)} ${s(array)} ${s(index)}")
+      case ArrayStoreOperation(array, List(index), value) =>
+        line(s"write ${t(expr.typ)} ${s(array)} ${s(index)} ${s(value)}")
+      case Symbol(id, typ) => throw new RuntimeException(s"Unknown symbol $id : $typ")
+      case OperatorApplication(op, List(a)) => unary(op, a, expr.typ)
+      case OperatorApplication(op, List(a, b)) => binary(op, a, b, expr.typ)
+      case OperatorApplication(ITEOp, List(cond, a, b)) =>
+        line(s"ite ${t(expr.typ)} ${s(cond)} ${s(a)} ${s(b)}")
+      case BooleanLit(value) => lit(if(value) BigInt(1) else BigInt(0), 1)
+      case BitVectorLit(value, w) => lit(value, w)
+      case other => throw new NotImplementedError(s"TODO: implement serialization for $other")
+    }})
+
+    def lit(value: BigInt, w: Int): Int = {
+      val typ = t(BitVectorType(w))
+      lazy val mask = (BigInt(1) << w) - 1
+      if(value == 0) line(s"zero $typ")
+      else if(value == 1) line(s"one $typ")
+      else if(value == mask) line(s"ones $typ")
+      else line(s"const $typ ${value.toString(2)}")
+    }
+
+    def unary(op: Operator, a: Expr, typ: Type): Int = op match {
+      case NegationOp => line(s"not ${t(typ)} ${s(a)}")
+      case BVNotOp(_) => line(s"not ${t(typ)} ${s(a)}")
+      case BVExtractOp(hi, lo) => line(s"slice ${t(typ)} ${s(a)} $hi $lo")
+      case smt.BVZeroExtOp(_, by) => line(s"uext ${t(typ)} ${s(a)} $by")
+      case smt.BVSignExtOp(_, by) => line(s"sext ${t(typ)} ${s(a)} $by")
+      case other => throw new NotImplementedError(s"TODO: implement conversion for $other")
+    }
+
+    def binary(op: Operator, a: Expr, b: Expr, typ: Type): Int = {
+      val btor_op = op match {
+        case IffOp => "iff"
+        case ImplicationOp => "implies"
+        case EqualityOp => "eq"
+        case InequalityOp => "neq"
+        case BVGTUOp(_) => "ugt"
+        case BVGEUOp(_) => "uge"
+        case BVLTUOp(_) => "ult"
+        case BVLEUOp(_) => "ule"
+        case BVGTOp(_) => "sgt"
+        case BVGEOp(_) => "sge"
+        case BVLTOp(_) => "slt"
+        case BVLEOp(_) => "sle"
+        case BVAndOp(_) => "and"
+        case ConjunctionOp => "and"
+        case BVOrOp(_) => "or"
+        case DisjunctionOp => "or"
+        case BVXorOp(_) => "xor"
+        case BVLeftShiftBVOp(_) => "sll"
+        case BVARightShiftBVOp(_) => "sra"
+        case BVLRightShiftBVOp(_) => "srl"
+        case BVAddOp(_) => "add"
+        case BVMulOp(_) => "mul"
+        case BVUremOp(_) => "urem"
+        case BVSremOp(_) => "srem"
+        case BVSubOp(_) => "sub"
+        case BVConcatOp(_) => "concat"
+        case other => throw new NotImplementedError(s"TODO: support $other")
+      }
+      line(s"$btor_op ${t(typ)} ${s(a)} ${s(b)}")
+    }
+
+    // make sure that BV<1> and Bool alias to the same type
+    sort_cache(BitVectorType(1)) = t(BoolType)
+
+    // declare states
+    sys.states.foreach { st =>
+      expr_cache(st.sym) = line(s"state ${t(st.sym.typ)} ${st.sym.id}")
+    }
+    // declare inputs
+    sys.inputs.foreach { ii =>
+      expr_cache(ii) = line(s"input ${t(ii.typ)} ${ii.id}")
+    }
+    // define state init and next
+    sys.states.foreach { st =>
+      st.init.foreach{ init => line(s"init ${t(init.typ)} ${s(st.sym)} ${s(init)}") }
+      st.next.foreach{ next => line(s"next ${t(next.typ)} ${s(st.sym)} ${s(next)}") }
+    }
+    // define outputs, bad states, constraints and fairness properties
+    val lbls = Seq("constraint" -> sys.constraints, "output" -> sys.outputs, "bad" -> sys.bad, "fair" -> sys.fair)
+    lbls.foreach { case (lbl, exprs) => exprs.foreach{ e => line(s"$lbl ${s(e)}") } }
+
+    lines.toSeq
+  }
+}
 
 object Btor2Parser {
   val unary = Set("not", "inc", "dec", "neg", "redand", "redor", "redxor")
@@ -310,7 +427,10 @@ object Btor2Parser {
     // TODO: use yosys_lables to fill in missing symbol names
 
     SymbolicTransitionSystem(inputs=inputs.toSeq, states=states.values.toSeq,
-      outputs = labels("output").toSeq, bad = labels("bad").toSeq)
+      outputs = labels("output").toSeq,
+      constraints = labels("constraint").toSeq,
+      bad = labels("bad").toSeq,
+      fair = labels("fair").toSeq)
   }
 
 }

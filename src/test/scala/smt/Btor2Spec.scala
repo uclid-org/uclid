@@ -2,8 +2,16 @@ package uclid.smt
 
 import org.scalatest.{FlatSpec, Matchers}
 
-class Btor2ParserSpec extends FlatSpec with Matchers {
-  def parse(src: Seq[String]): SymbolicTransitionSystem = Btor2.read(src.toIterator)
+class Btor2Spec extends FlatSpec with Matchers {
+
+  // this function actually parses, serializes and parses again
+  // in order to also test the serialization
+  def parse(src: Seq[String]): SymbolicTransitionSystem = {
+    val sys0 = Btor2.read(src.toIterator)
+    val src1 = Btor2.serialize(sys0)
+    val sys1 = Btor2.read(src1.toIterator)
+    sys1
+  }
 
   "single bool state" should "be parsed correctly" in {
     val sys = parse(Seq("1 sort bitvec 1", "2 state 1 test"))
@@ -104,7 +112,9 @@ class Btor2ParserSpec extends FlatSpec with Matchers {
     val ugt = OperatorApplication(BVGTUOp(4), List(i.sym, BitVectorLit(3, 4)))
     val slice = OperatorApplication(BVExtractOp(0, 0), List(factorial.sym))
     val slice_b = OperatorApplication(EqualityOp, List(slice, BitVectorLit(1, 1)))
-    b1 should be (OperatorApplication(ConjunctionOp, List(ugt, slice_b)))
+    // this is an artifact from the parse, serialize, parse
+    val slice_b_artifact = OperatorApplication(EqualityOp, List(slice_b, BooleanLit(true)))
+    b1 should be (OperatorApplication(ConjunctionOp, List(ugt, slice_b_artifact)))
   }
 
   // this example was written by Kevin Laeufer to demonstrate a bug in cosa2's parsing
