@@ -327,6 +327,8 @@ object Context
         val results = e match {
           case Symbol(_, _) | IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) =>
             eResult
+          case ConstArray(expr, typ) =>
+            eResult ++ accumulateOverExpr(expr, apply, memo)
           case OperatorApplication(op,operands) =>
             eResult ++ accumulateOverExprs(operands, apply, memo)
           case ArraySelectOperation(e, index) =>

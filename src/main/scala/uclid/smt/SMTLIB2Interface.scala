@@ -150,7 +150,6 @@ trait SMTLIB2Base {
             throw new Utils.UnimplementedException("TODO: Implement more types in SMTLIB2Interface.generateDatatype: " + t.toString());
         }
     }
-    smtlib2BaseLogger.debug("RESULT:generateDatatype: {}; {}", resultName.toString(), newTypes.toString())
     (resultName, newTypes)
   }
 
@@ -183,9 +182,6 @@ trait SMTLIB2Base {
     s
   }
   def translateExpr(eIn: Expr, memo : ExprMap, shouldLetify : Boolean) : (TranslatedExpr, ExprMap) = {
-    smtlib2BaseLogger.debug("expr: {}", eIn.toString())
-    smtlib2BaseLogger.debug("memo: {}", memo.toString())
-    smtlib2BaseLogger.info("-> start translateExpr <-")
     val t1 = System.nanoTime().toDouble
     val memoLookup = memo.get(eIn)
     // UclidMain.println(eIn.toString().slice(0,5))
@@ -208,15 +204,21 @@ trait SMTLIB2Base {
           case EnumLit(id, _) =>
             smtlib2BaseLogger.info("-->> enum <<--")
             (id, memo, false)
+          case ConstArray(expr, typ) =>
+            val (eP, memoP) = translateExpr(expr, memo, shouldLetify)
+            val (typName, newTypes) = generateDatatype(typ)
+            assert (newTypes.size == 0)
+            val str = "((as const %s) %s)".format(typName, eP.exprString())
+            (str, memoP, shouldLetify)
           case OperatorApplication(op,operands) =>
             smtlib2BaseLogger.info("-->> opapp <<--")
             val (ops, memoP) = translateExprs(operands, memo, shouldLetify)
-            ("(" + op.toString() + " " + exprString(ops) + ")", memoP, true)
+            ("(" + op.toString() + " " + exprString(ops) + ")", memoP, shouldLetify)
           case ArraySelectOperation(e, index) =>
             smtlib2BaseLogger.info("-->> arraysel <<--")
             val (trArray, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trIndex, memoP2) = translateOptionalTuple(index, memoP1, shouldLetify)
-            ("(select " + trArray.exprString() + " " + trIndex.exprString() + ")", memoP2, true)
+            ("(select " + trArray.exprString() + " " + trIndex.exprString() + ")", memoP2, shouldLetify)
           case ArrayStoreOperation(e, index, value) =>
             smtlib2BaseLogger.info("-->> arraystore <<--")
             val (trArray, memoP1) = translateExpr(e, memo, shouldLetify)
@@ -259,10 +261,6 @@ trait SMTLIB2Base {
         }
         (translatedExpr, memoP + (eIn -> translatedExpr))
     }
-    smtlib2BaseLogger.info("-> end translateExpr <-")
-    smtlib2BaseLogger.info("RESULT size [1]: {}", resultExpr.expr.size)
-    smtlib2BaseLogger.debug("result : {}", resultExpr.toString())
-    smtlib2BaseLogger.debug("memoP  : {}", resultMemo.toString())
     (resultExpr, resultMemo)
   }
   def translateExpr(e : Expr, shouldLetify : Boolean) : String = {
@@ -355,20 +353,16 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
         generateDeclaration(sym)
       }
     }
-    smtlibInterfaceLogger.debug("[begin translate]")
     val smtlib2 = translateExpr(e, true)
     smtlibInterfaceLogger.debug("assert: {}", smtlib2)
     writeCommand("(assert " + smtlib2 +")")
   }
 
   override def preassert(e: Expr) {
-    smtlibInterfaceLogger.debug("preassert")
     var declCommands = new ListBuffer[String]()
     Context.findTypes(e).filter(typ => !typeMap.contains(typ)).foreach {
       newType => {
-        smtlib2BaseLogger.debug("type: {}", newType.toString())
         val (typeName, newTypes) = generateDatatype(newType)
-        smtlibInterfaceLogger.debug("newTypes: {}", newTypes.toString())
         newTypes.foreach(typ => declCommands.append(typ))
       }
     }
@@ -415,6 +409,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     writeCommand("(get-model)")
     readResponse() match {
       case Some(strModel) =>
+        smtlibInterfaceLogger.debug("model: {}", strModel)
         val str = strModel.stripLineEnd
         val Pattern = "(?s)(.*model.*)".r
         str match {
