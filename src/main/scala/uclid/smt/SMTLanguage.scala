@@ -772,7 +772,7 @@ case class LetExpression(letBindings : List[(Symbol, Expr)], expr : Expr) extend
   override val md5hashCode = computeMD5Hash(letBindings, expr)
   override def toString = {
     val bindings = Utils.join(letBindings.map(p => "(%s %s)".format(p._1.toString(), p._2.toString())), " ")
-    "(let (%s) %s)".format(bindings)
+    "(let (%s) %s)".format(bindings, expr)
   }
   override val isConstant = expr.isConstant
 }
