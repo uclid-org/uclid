@@ -200,6 +200,8 @@ object Converter {
       case smt.BVSremOp(w) => lang.BVSremOp(w)  
       case smt.BVExtractOp(hi, lo) => lang.ConstExtractOp(lang.ConstBitVectorSlice(hi, lo))
       case smt.BVConcatOp(_) => lang.ConcatOp()
+      case smt.BVZeroExtOp(w, e) => lang.BVZeroExtOp(w, e)
+      case smt.BVLeftShiftBVOp(w) => lang.BVLeftShiftBVOp(w)
       // Boolean operators.
       case smt.ConjunctionOp => lang.ConjunctionOp()
       case smt.DisjunctionOp => lang.DisjunctionOp()
