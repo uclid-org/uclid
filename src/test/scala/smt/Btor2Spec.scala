@@ -34,7 +34,7 @@ class Btor2Spec extends FlatSpec with Matchers {
   def parse_res(src: Seq[String]): Expr = {
     val sys = parse(src)
     require(sys.outputs.length == 1)
-    sys.outputs.head
+    sys.outputs.head._2
   }
 
   "mul expressions" should "be parsed correctly" in {
@@ -61,7 +61,7 @@ class Btor2Spec extends FlatSpec with Matchers {
 
     val sys = parse(count2)
     val s0 = sys.states.head
-    s0.sym.id should be ("state_0")
+    s0.sym.id should be ("_state_0")
     s0.init should be (Some(BitVectorLit(0, 3)))
     s0.next should be (Some(OperatorApplication(BVAddOp(3), List(s0.sym, BitVectorLit(1, 3)))))
     val b0 = sys.bad.head

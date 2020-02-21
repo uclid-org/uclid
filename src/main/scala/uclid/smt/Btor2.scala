@@ -34,17 +34,17 @@
  *
  */
 
-package uclid
-package smt
+package uclid.smt
 
-import uclid.smt
+import uclid.lang._
 
 import scala.io.Source
 import scala.collection.mutable
 import scala.util.matching.Regex
 
 case class State(sym: Symbol, init: Option[Expr] = None, next: Option[Expr]= None)
-case class SymbolicTransitionSystem(inputs: Seq[Symbol], states: Seq[State], outputs: Seq[Expr] = Seq(),
+case class SymbolicTransitionSystem(name: Option[String], inputs: Seq[Symbol], states: Seq[State],
+                                    outputs: Seq[Tuple2[String,Expr]] = Seq(),
                                     constraints: Seq[Expr] = Seq(), bad: Seq[Expr] = Seq(), fair: Seq[Expr] = Seq())
 
 
@@ -111,8 +111,8 @@ object Btor2Serializer {
       case NegationOp => line(s"not ${t(typ)} ${s(a)}")
       case BVNotOp(_) => line(s"not ${t(typ)} ${s(a)}")
       case BVExtractOp(hi, lo) => line(s"slice ${t(typ)} ${s(a)} $hi $lo")
-      case smt.BVZeroExtOp(_, by) => line(s"uext ${t(typ)} ${s(a)} $by")
-      case smt.BVSignExtOp(_, by) => line(s"sext ${t(typ)} ${s(a)} $by")
+      case BVZeroExtOp(_, by) => line(s"uext ${t(typ)} ${s(a)} $by")
+      case BVSignExtOp(_, by) => line(s"sext ${t(typ)} ${s(a)} $by")
       case other => throw new NotImplementedError(s"TODO: implement conversion for $other")
     }
 
@@ -166,8 +166,9 @@ object Btor2Serializer {
       st.next.foreach{ next => line(s"next ${t(next.typ)} ${s(st.sym)} ${s(next)}") }
     }
     // define outputs, bad states, constraints and fairness properties
-    val lbls = Seq("constraint" -> sys.constraints, "output" -> sys.outputs, "bad" -> sys.bad, "fair" -> sys.fair)
+    val lbls = Seq("constraint" -> sys.constraints, "bad" -> sys.bad, "fair" -> sys.fair)
     lbls.foreach { case (lbl, exprs) => exprs.foreach{ e => line(s"$lbl ${s(e)}") } }
+    sys.outputs.foreach{ case (name, expr) => line(s"output ${s(expr)} $name")}
 
     lines.toSeq
   }
@@ -184,11 +185,16 @@ object Btor2Parser {
     val states = new mutable.HashMap[Int,State]()
     val inputs = new mutable.ArrayBuffer[Symbol]()
     val nodes = new mutable.HashMap[Int,Expr]()
-    val labels = Seq("fair", "bad", "constraint", "output").map{l => l -> new mutable.ArrayBuffer[Expr]()}.toMap
+    val labels = Seq("fair", "bad", "constraint", "output").map{l => l -> new mutable.ArrayBuffer[Tuple2[String, Expr]]()}.toMap
     val yosys_lables = new mutable.HashMap[Int,String]()
 
-    def state_names = new mutable.HashSet[String]()
-    def state_name: String = Iterator.from(0).map(i => s"state_$i").filter(!state_names.contains(_)).next
+    // unique name generator
+    val unique_names = new mutable.HashSet[String]()
+    def is_unique(name: String): Boolean = !unique_names.contains(name)
+    def unique_name(prefix: String): String = Iterator.from(0).map(i => s"_${prefix}_$i").filter(is_unique(_)).next
+
+    // while not part of the btor2 spec, yosys annotates the systems name
+    var name: Option[String] = None
 
     def to_bool(expr: Expr) = OperatorApplication(EqualityOp, List(expr, BitVectorLit(1,1)))
     def to_bv(expr: Expr) = OperatorApplication(ITEOp, List(expr, BitVectorLit(1,1),  BitVectorLit(0,1)))
@@ -274,7 +280,6 @@ object Btor2Parser {
         case "srem" => app((BVSremOp(w)))
         case "urem" => app((BVUremOp(w)))
         case "sub" => app(BVSubOp(w))
-        case "concat" => throw new NotImplementedError("TODO: implement cat and deal with bools correctly!")
         case other => throw new RuntimeException(s"Unknown binary op $other")
       }
     }
@@ -309,6 +314,12 @@ object Btor2Parser {
 
     /** yosys sometimes provides comments with human readable names for i/o/ and state signals **/
     def parse_yosys_comment(comment: String): Option[Tuple2[Int,String]] = {
+      // yosys module name annotation
+      if(comment.contains("Yosys") && comment.contains("for module ")) {
+        val start = comment.indexOf("for module ")
+        val mod_name = comment.substring(start + "for module ".length).dropRight(1)
+        name = Some(mod_name)
+      }
       val yosys_lbl: Regex = "\\s*;\\s*(\\d+) \\\\(\\w+)".r
       yosys_lbl.findFirstMatchIn(comment) match {
         case Some(m) => Some((Integer.parseInt(m.group(1)), m.group(2)))
@@ -348,15 +359,22 @@ object Btor2Parser {
       val new_expr = cmd  match {
         case "sort" => sorts.put(id, parse_sort(parts)) ; None
         case "input" =>
-          val input = Symbol(parts(3), sort)
+          val name = if(parts.length > 3) parts(3) else unique_name("input")
+          require(is_unique(name))
+          unique_names += name
+          val input = Symbol(name, sort)
           inputs.append(input)
           Some(input)
         case lbl @ ("output" | "bad" | "constraint" | "fair") =>
-          labels(lbl) += expr(-1)
+          val name = if(parts.length > 3) parts(3) else unique_name(lbl)
+          require(is_unique(name))
+          unique_names += name
+          labels(lbl) += (name -> expr(-1))
           None
         case "state" =>
-          val name = if(parts.length > 3) parts(3) else state_name
-          state_names += name
+          val name = if(parts.length > 3) parts(3) else unique_name("state")
+          require(is_unique(name))
+          unique_names += name
           val state = Symbol(name, sort)
           states.put(id, State(state))
           Some(state)
@@ -399,6 +417,8 @@ object Btor2Parser {
           Some(OperatorApplication(EqualityOp, List(expr(0), expr(1))))
         case "neq" =>
           Some(OperatorApplication(InequalityOp, List(expr(0), expr(1))))
+        case "concat" =>
+          Some(OperatorApplication(BVConcatOp(width), List(to_bv_if_needed(expr(0)), to_bv_if_needed(expr(1)))))
         case op if binary.contains(op) =>
           Some(parse_binary(op, expr(0), expr(1), width))
         case "read" =>
@@ -426,11 +446,11 @@ object Btor2Parser {
     //println(yosys_lables)
     // TODO: use yosys_lables to fill in missing symbol names
 
-    SymbolicTransitionSystem(inputs=inputs.toSeq, states=states.values.toSeq,
+    SymbolicTransitionSystem(name, inputs=inputs.toSeq, states=states.values.toSeq,
       outputs = labels("output").toSeq,
-      constraints = labels("constraint").toSeq,
-      bad = labels("bad").toSeq,
-      fair = labels("fair").toSeq)
+      constraints = labels("constraint").map(_._2).toSeq,
+      bad = labels("bad").map(_._2).toSeq,
+      fair = labels("fair").map(_._2).toSeq)
   }
 
 }
