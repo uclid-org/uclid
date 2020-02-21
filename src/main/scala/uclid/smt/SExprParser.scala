@@ -232,7 +232,18 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val KwLambda = "lambda"
   lazy val KwLet = "let" // let is also reserved
 
+  
+  // Reserved words
+  lazy val KwBINARY = "BINARY"
+  lazy val KwDECIMAL = "DECIMAL"
+  lazy val KwHEXADECIMAL = "HEXADECIMAL"
+  lazy val KwNUMERAL = "NUMERAL"
+  lazy val KwSTRING = "STRING"
   lazy val KwUS = "_"
+  lazy val KwBang = "!"
+  lazy val KwAs = "as"
+  
+
   lazy val KwTrue = "true"
   lazy val KwFalse = "false"
 
