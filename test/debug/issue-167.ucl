@@ -1,0 +1,19 @@
+module main {
+  type op_t = enum { add, sub, load, store };
+  var somearray : [bv8]bv8;
+  var somebv : bv8;
+  function word2op(w : bv8) : op_t;
+
+  init {}
+  next {}
+
+  // property P0: somearray[2bv8]==0bv8;
+  // property P1 : somearray[0bv8]==0bv8;
+  // property P2 : word2op(somebv) == add;
+  property P3 : word2op(somearray[0bv8]) == add;
+  control {
+    x = unroll (1);
+    check;
+    print_results;
+  }
+}

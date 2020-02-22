@@ -84,7 +84,7 @@ trait SMTLIB2Base {
     }
   }
   def generateDatatype(t : Type) : (String, List[String]) = {
-    smtlib2BaseLogger.debug("generateDatatype: {}", t.toString())
+    smtlib2BaseLogger.debug("generateDatatype: {}; contained = {}", t.toString(), typeMap.contains(t).toString())
     val (resultName, newTypes) = typeMap.get(t) match {
       case Some(synTyp) =>
         (synTyp.name, List.empty)
@@ -95,6 +95,7 @@ trait SMTLIB2Base {
             val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
             val declDatatype = "(declare-datatype %s (%s))".format(typeName, memStr)
             typeMap = typeMap.addSynonym(typeName, t)
+            // throw new RuntimeException("need a stack trace!")
             (typeName, List(declDatatype))
           case ArrayType(indexTypes, elementType) =>
             val (indexTypeName, newTypes1) = if (indexTypes.size == 1) {
@@ -134,13 +135,14 @@ trait SMTLIB2Base {
             typeMap = typeMap.addSynonym(typeStr, t)
             (typeStr, List.empty)
           case MapType(inTypes, outType) =>
-            val typeStr = generateDatatype(outType)._1
-            val inputTypeStrs = inTypes.foldRight(List.empty[String]) {
+            val (typeStr, newTypes1) = generateDatatype(outType)
+            val (inputTypeStrs, newTypes) = inTypes.foldRight((List.empty[String], newTypes1)) {
               (typ, acc) => {
-                acc :+ generateDatatype(typ)._1;
+                val (typeStr, newTypes2) = generateDatatype(typ)
+                (acc._1 :+ typeStr, acc._2 ++ newTypes2)
               }
             }
-            (typeStr, List.empty)
+            (typeStr, newTypes)
           case UninterpretedType(typeName) => 
             // TODO: sorts with arity greater than 1? Does uclid allow such a thing?
             val declDatatype = "(declare-sort %s)".format(typeName)
@@ -150,6 +152,7 @@ trait SMTLIB2Base {
             throw new Utils.UnimplementedException("TODO: Implement more types in SMTLIB2Interface.generateDatatype: " + t.toString());
         }
     }
+    smtlib2BaseLogger.debug("generateDatatype: {}; newTypes: {}", t.toString(), newTypes.toString())
     (resultName, newTypes)
   }
 
@@ -171,28 +174,23 @@ trait SMTLIB2Base {
     else { translateExpr(index(0), memoIn, shouldLetify) }
   }
   def translateExprs(es : List[Expr], memoIn : ExprMap, shouldLetify : Boolean) : (List[TranslatedExpr], ExprMap) = {
-    smtlib2BaseLogger.info("-> start translateExprs <-")
-    val s = es.foldRight((List.empty[TranslatedExpr], memoIn)){ 
+    es.foldRight((List.empty[TranslatedExpr], memoIn)){ 
       (arg, acc) => {
         val (tExpr, accP) = translateExpr(arg, acc._2, shouldLetify)
         (tExpr :: acc._1, accP)
       }
     }
-    smtlib2BaseLogger.info("-> end translateExprs <-")
-    s
   }
   def translateExpr(eIn: Expr, memo : ExprMap, shouldLetify : Boolean) : (TranslatedExpr, ExprMap) = {
     val t1 = System.nanoTime().toDouble
     val memoLookup = memo.get(eIn)
     // UclidMain.println(eIn.toString().slice(0,5))
     val t2 = System.nanoTime().toDouble
-    smtlib2BaseLogger.info("-->> finish LOOKUP: {}", (t2 - t1) / 1e9)
     val (resultExpr, resultMemo) = memoLookup match {
       case Some(resultExpr) => (resultExpr, memo)
       case None =>
         val (exprStr, memoP, letify) : (String, ExprMap, Boolean) = Context.rewriteBVReplace(eIn) match {
           case Symbol(id,_) =>
-            smtlib2BaseLogger.info("-->> symbol <<-- {}", id)
             // Utils.assert(variables.contains(id), "Not found in map: " + id)
             if (variables.contains(id)) {
               (variables.get(id).get.toString, memo, false)
@@ -202,7 +200,6 @@ trait SMTLIB2Base {
               (id, memo, false)
             }
           case EnumLit(id, _) =>
-            smtlib2BaseLogger.info("-->> enum <<--")
             (id, memo, false)
           case ConstArray(expr, typ) =>
             val (eP, memoP) = translateExpr(expr, memo, shouldLetify)
@@ -211,22 +208,18 @@ trait SMTLIB2Base {
             val str = "((as const %s) %s)".format(typName, eP.exprString())
             (str, memoP, shouldLetify)
           case OperatorApplication(op,operands) =>
-            smtlib2BaseLogger.info("-->> opapp <<--")
             val (ops, memoP) = translateExprs(operands, memo, shouldLetify)
             ("(" + op.toString() + " " + exprString(ops) + ")", memoP, shouldLetify)
           case ArraySelectOperation(e, index) =>
-            smtlib2BaseLogger.info("-->> arraysel <<--")
             val (trArray, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trIndex, memoP2) = translateOptionalTuple(index, memoP1, shouldLetify)
             ("(select " + trArray.exprString() + " " + trIndex.exprString() + ")", memoP2, shouldLetify)
           case ArrayStoreOperation(e, index, value) =>
-            smtlib2BaseLogger.info("-->> arraystore <<--")
             val (trArray, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trIndex, memoP2) = translateOptionalTuple(index, memoP1, shouldLetify)
             val (trValue, memoP3) = translateExpr(value, memoP2, shouldLetify)
             ("(store " + trArray.exprString() + " " + trIndex.exprString() + " " + trValue.exprString() +")", memoP3, true)
           case FunctionApplication(e, args) =>
-            smtlib2BaseLogger.info("-->> fapp <<--")
             Utils.assert(e.isInstanceOf[Symbol], "Beta substitution has not happened.")
             val (trFunc, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trArgs, memoP2) = translateExprs(args, memoP1, shouldLetify)
@@ -236,22 +229,18 @@ trait SMTLIB2Base {
               ("(" + trFunc.exprString() + " " + exprString(trArgs) + ")", memoP2, true)
             }
           case MakeTuple(args) =>
-            smtlib2BaseLogger.info("-->> tup <<--")
             val tupleType = TupleType(args.map(_.typ))
             val (tupleTypeName, newTypes) = generateDatatype(tupleType)
+            assert (newTypes.size == 0)
             val (trArgs, memoP1) = translateExprs(args, memo, shouldLetify)
             ("(" + Context.getMkTupleFunction(tupleTypeName) + " " + exprString(trArgs) + ")", memoP1, true)
           case Lambda(_,_) =>
-            smtlib2BaseLogger.info("-->> lambda <<--")
             throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
           case IntLit(value) =>
-            smtlib2BaseLogger.info("-->> intlit <<--")
             (value.toString(), memo, false)
           case BitVectorLit(value, width) =>
-            smtlib2BaseLogger.info("-->> bvlit <<--")
             ("(_ bv" + value.toString() + " " + width.toString() + ")", memo, false)
           case BooleanLit(value) =>
-            smtlib2BaseLogger.info("-->> boollit <<--")
             (value match { case true => "true"; case false => "false" }, memo, false)
         }
         val translatedExpr = if (/*letify && shouldLetify*/false) {
@@ -376,7 +365,12 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     // declaration dependency tracking. (Before this we were printing in a random
     // order given by how scala's set type enumerates)
 
-    declCommands.sorted.foreach(decl => writeCommand(decl))
+    declCommands.sorted.foreach{
+      decl => {
+        smtlibInterfaceLogger.debug("decl: {}", decl)
+        writeCommand(decl)
+      }
+    }
   }
 
   override def check() : SolverResult = {
