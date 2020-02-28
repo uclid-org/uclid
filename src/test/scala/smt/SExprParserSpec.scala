@@ -155,7 +155,76 @@ class SExprParserNoErrorSpec extends FlatSpec {
   "tpp_plus_rev-entails-tpp_plus.smt2" should "parse successfully." in {
     SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/tpp_plus_rev-entails-tpp_plus.smt2")
   }
-  "" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/")
+  "kaluzalong.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/kaluzalong.smt2")
+  }
+  "pisa-000.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-000.smt2")
+  }
+  "pisa-001.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-001.smt2")
+  }
+  "pisa-002.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-002.smt2")
+  }
+  "pisa-003.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-003.smt2")
+  }
+  "pisa-004.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-004.smt2")
+  }
+  "pisa-005.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-005.smt2")
+  }
+  "pisa-006.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-006.smt2")
+  }
+  "pisa-007.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-007.smt2")
+  }
+  "pisa-008.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-008.smt2")
+  }
+  "pisa-009.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-009.smt2")
+  }
+  "pisa-010.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-010.smt2")
+  }
+  "pisa-011.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-011.smt2")
+  }
+  "test1.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/test1.smt2")
+  }
+  "test2.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/test2.smt2")
+  }
+  "test3.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/test3.smt2")
+  }
+  "test4.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/test4.smt2")
+  }
+  "test5.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/test5.smt2")
+  }
+  "test6.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/antlr-examples/test6.smt2")
+  }
+  "2447.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/z3-regress/2447.smt2")
+  }
+  "crash.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/z3-regress/crash.smt2")
+  }
+  "o2.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/z3-regress/o2.smt2")
+  }
+  "t170.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/z3-regress/t170.smt2")
+  }
+  "t178.smt2" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/z3-regress/t178.smt2")
   }
 }
