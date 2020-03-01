@@ -505,14 +505,23 @@ class ParserSpec extends FlatSpec {
         assert (p.errors(0)._1.contains("Trace select can only be used in a module-level expression"))
     }
   }
-  "test-hyperproperty-2.ucl" should "not parse successfully." in {
-    try {
+
+  /* This Test has been updated to not throw an error as trace selects are allowed inside procedural contexts. */
+
+  // "test-hyperproperty-2.ucl" should "not parse successfully." in {
+  //   try {
+  //     val fileModules = UclidMain.compile(List(new File("test/test-hyperproperty-2.ucl")), lang.Identifier("main"))
+  //     assert (false)
+  //   } catch {
+  //     case p : Utils.ParserErrorList =>
+  //       assert (p.errors(0)._1.contains("Trace select can only be used in a verification expression"))
+  //   }
+  // }
+  
+  "test-hyperproperty-2.ucl" should "should parse successfully." in {
       val fileModules = UclidMain.compile(List(new File("test/test-hyperproperty-2.ucl")), lang.Identifier("main"))
-      assert (false)
-    } catch {
-      case p : Utils.ParserErrorList =>
-        assert (p.errors(0)._1.contains("Trace select can only be used in a verification expression"))
-    }
+      val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+      assert (instantiatedModules.size == 1)
   }
   "test-hyperproperty-3.ucl" should "not parse successfully." in {
     try {
