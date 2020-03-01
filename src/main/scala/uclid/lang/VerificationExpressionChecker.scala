@@ -69,7 +69,10 @@ class VerificationExpressionCheckerPass extends ReadOnlyPass[List[ModuleError]]
           case GetNextValueOp() =>
             ModuleError("Primed variables can't be referenced inside procedures", opapp.position) :: in
           case HyperSelect(i) =>
+            if(!context.environment.isAssert && !context.environment.isAssume) {
             ModuleError("Trace select can only be used in a verification expression", opapp.position) :: in
+            }
+            in
           case _ => in
         }
       } else if (!context.environment.isVerificationContext) {
@@ -93,12 +96,19 @@ class VerificationExpressionCheckerPass extends ReadOnlyPass[List[ModuleError]]
           case _ => in
         }
         // deal with hyperselect
-        opapp.op match {
-          case HyperSelect(i) =>
-            ModuleError("Trace select can only be used in a module-level expression", opapp.position) :: errs1
-          case _ =>
-            errs1
+        if(!context.environment.isInPrePost)
+        {
+          opapp.op match {
+            case HyperSelect(i) =>
+              ModuleError("Trace select can only be used in a module-level expression", opapp.position) :: errs1
+            case _ =>
+              errs1
+          }
         }
+        else {
+          errs1
+        }
+        
       } else {
         in
       }
