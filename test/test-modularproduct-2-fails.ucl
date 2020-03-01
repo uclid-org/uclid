@@ -1,0 +1,18 @@
+module main {
+
+    procedure foo(intVal : integer) returns (res : integer)
+    ensures ( (intVal.1 == intVal.2) ==> (res.1 == res.2));
+    ensures ( (intVal.1 >= 0)); /* Should work with atleast 2 traces - Not a hyper property*/
+    {
+        res = 0;
+    }
+
+    control 
+    {
+        v = verify(foo);
+        check;
+        v.print_cex(intVal, res);
+        print_results;
+    }
+    
+}

@@ -1,0 +1,97 @@
+/*
+https://github.com/marcelosousa/descartes/blob/master/benchmarks/pldi-16/stackoverflow/FileItem-true.java
+
+Correct logic of test-fileitem1.ucl
+
+Hyperproperties - Determinism, Transitivity, Antisymmetric
+
+Description - Lexicographic comparison of two FileItems on the basis of toInt field and getFileName field respectively. 
+*/
+
+module main
+{
+    type Fileitem = record {
+        getFileName : integer,
+        toInt       : integer
+    };
+
+    procedure compare(o1 : Fileitem, o2: Fileitem) returns (res: integer)
+    requires ( o1.getFileName == 0 || o1.getFileName == 1);
+    requires ( o2.getFileName == 0 || o2.getFileName == 1);
+    ensures ( (res==0) ==> (o1.toInt == 0 && o2.toInt == 0) || 
+			!(o1.toInt == 0 && o2.toInt == 0) && (o1.getFileName == o2.getFileName)) ;
+    ensures ( (res == 1) ==> (o1.toInt == 0 && o2.toInt != 0) || 
+            !(o1.toInt == 0 && o2.toInt == 0) && (o1.getFileName == 0 && o2.getFileName != 0) || 
+            !(o1.toInt == 0 && o2.toInt == 0) && !(o1.getFileName == 0 && o2.getFileName == 0) && 
+                (o1.getFileName > o2.getFileName));
+
+    ensures ( (res == -1) ==> (o1.toInt != 0 && o2.toInt == 0) || 
+            !(o1.toInt == 0 && o2.toInt == 0) && (o1.getFileName != 0 && o2.getFileName == 0) || 
+            !(o1.toInt == 0 && o2.toInt == 0) && !(o1.getFileName == 0 && o2.getFileName == 0) && 
+                (o2.getFileName > o1.getFileName));
+
+    //HyperProperties
+    ensures ( (o1.1 == o1.2 && o2.1 == o2.2) ==> (res.1 == res.2));    //Determinism
+    ensures ( (o1.1 == o1.3 && o2.1 == o1.2 && o2.2 == o2.3 && res.1 == res.2) ==> (res.3 == res.1)); //transitivity
+    ensures ( (o1.1 == o2.2 && o1.2 == o2.1) ==> ((o1.1 == o2.1) ==> ((res.1 == res.2) && (res.1 == 0)) &&
+                                                ((o1.1 != o2.1) ==> (res.1 == -res.2)))); //antisymmetric
+    
+    {
+        res = 0;
+        if (o1.toInt == 0)
+        {
+            if (o2.toInt == 0)
+            {
+                res = 0;
+            } 
+            else 
+            {
+                res = 1;
+            }
+        } 
+        else 
+        {
+            if (o2.toInt == 0) 
+            {
+                res = -1;
+            }
+            else
+            {
+                var n1, n2 : integer;
+                n1 = o1.getFileName;
+                n2 = o2.getFileName;
+                if(n1 == 0) 
+                {
+                    if(n2 == 0)
+                    {
+                        res = 0;
+                    }
+                    else 
+                    {
+                        res = 1;
+                    }
+                }
+                else
+                {
+                    if(n2 == 0)
+                    {
+                        res = -1;
+                    }
+                    else
+                    {
+                        res = n1 - n2;
+                    }
+                }
+
+            }
+        }
+    }
+
+    control 
+    {
+        v = verify(compare);
+        check;
+        v.print_cex(o1, o2, res);
+        print_results;
+    }
+}

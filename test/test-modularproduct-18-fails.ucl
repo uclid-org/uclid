@@ -1,0 +1,30 @@
+/*
+    Hyperproperties - determinism, symmetry
+*/
+
+module main {
+
+    procedure differsByOne(a: integer, b: integer) returns (res: boolean)
+    ensures ((res == true) ==> (a == b + 1) || (b == a + 1));
+    ensures ((res == false) ==> (a != b + 1) && (b != a + 1));
+    ensures((a.1 == a.2 && b.1 == b.2) ==> (res.1 == res.2)); //determinism
+    ensures((a.1 == b.2) && (a.2 == b.1) ==> (res.1 == res.2)); //symmetry
+    ensures((a.1 == a.3 && b.1 == a.2 && b.2 == b.3 && res.1 == res.2 && res.1 == true) ==> (res.3 == true)); //transitivity
+    {
+        res = false;
+
+        if( a == b+1 || b == a+1) 
+        {
+            res = true;
+        }
+    }
+
+    control 
+    {
+        v = verify(differsByOne);
+        check;
+        v.print_cex(a,b,res);
+        print_results;
+    }
+
+}

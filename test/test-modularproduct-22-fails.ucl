@@ -1,0 +1,31 @@
+
+
+
+
+module main {
+
+    procedure equals(a: integer, b: integer) returns (res: integer)
+    ensures ( (a == b) ==> (res == 1));
+    ensures ( (a != b) ==> (res == 0));
+    ensures((a.1 == a.2 && b.1 == b.2) ==> (res.1 == res.2)); //determinism
+    ensures((a.1 == a.30 && b.1 == a.20 && b.20 == b.30 && res.1 > 0 && res.20 > 0) ==> (res.30 > 0)); //transitivity
+    {
+        if(a==b)
+        {
+            res = 1;
+        }
+        else
+        {
+            res = 0;
+        }
+    }
+
+
+    control 
+    {
+        v = verify(equals);
+        check;
+        print_results;
+    }
+
+}
