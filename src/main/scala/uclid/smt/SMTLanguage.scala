@@ -806,9 +806,18 @@ case class DefineFun(id : Symbol, args : List[(Symbol)], e : Expr) extends Expr(
     "(define-fun %s (%s) %s %s)".format(id.toString(), argString, e.typ.toString(), e.toString())
   }
 }
+case class DeclareFun(id : Symbol, args : List[(Symbol)]) extends Expr(id.typ.asInstanceOf[MapType]) {
+  override val hashId = 314
+  override val hashCode = computeHash(id.toString, args.map(a => a.toString))
+  override val md5hashCode = computeMD5Hash(id, args)
+  override def toString = {
+    val argString = Utils.join(args.map(arg => "(%s %s)".format(arg.id.toString(), arg.symbolTyp.toString())), " ")
+    "(declare-fun %s (%s) %s)".format(id.toString(), argString, id.typ.asInstanceOf[MapType].outType.toString())
+  }
+}
 case class AssignmentModel(functions : List[Expr]) extends Hashable {
   override val hashBaseId = 22923
-  override val hashId = 314
+  override val hashId = 315
   override val hashCode = computeHash(functions.map(fun => fun.toString()))
   override val md5hashCode = computeMD5Hash(functions)
   override def toString = Utils.join(functions.map(fun => fun.toString()), " ")

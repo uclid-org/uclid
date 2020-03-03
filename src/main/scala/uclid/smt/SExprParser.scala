@@ -230,7 +230,6 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val KwBV = "BitVec"
   lazy val KwArray = "Array"
   lazy val KwLambda = "lambda"
-  lazy val KwLet = "let" // let is also reserved
 
   
   // Reserved words
@@ -242,17 +241,36 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val KwUS = "_"
   lazy val KwBang = "!"
   lazy val KwAs = "as"
-  
+
+  lazy val KwLet = "let"
+  lazy val KwExists = "exists"
+  lazy val KwForall = "forall"
+  lazy val KwMatch = "match"
+  lazy val KwPar = "par"
+  lazy val KwDefFun = "define-fun"
+
+  // Need to add to deal with Z3 output
+  lazy val KwDecFun = "declare-fun"
+
 
   lazy val KwTrue = "true"
   lazy val KwFalse = "false"
 
   lexical.delimiters += ("(", ")")
-  lexical.reserved += (KwFalse, KwFalse, KwUS,
-      KwDefineFun, KwModel, KwInt, KwBool, KwBV, KwArray, KwLambda, OpAnd, OpOr, OpNot, OpITE, OpImpl, KwLet,
-      OpEq, OpIntGE, OpIntGT, OpIntLT, OpIntLE, OpIntAdd, OpIntSub, OpIntMul,
-      OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, OpBVAnd, OpBVOr, OpBVXor, OpBVNot, OpBVUrem, OpBVSrem, 
-      OpBVGT, OpBVGTU, OpBVGE, OpBVGEU, OpBVLT, OpBVLTU, OpBVLE, OpBVLEU, OpConcat, OpArraySelect, OpArrayStore)
+  lexical.reserved += (
+      // General reserved
+      KwBang, KwUS, KwAs, KwBINARY, KwDECIMAL, KwExists, KwHEXADECIMAL, 
+      KwForall, KwLet, KwMatch, KwNUMERAL, KwPar, KwSTRING, KwDefFun,
+      KwDecFun,
+    
+      
+      // For UCLID
+      KwFalse,  KwTrue, KwModel, KwInt, KwBool, KwBV, KwArray, KwLambda,
+      OpAnd, OpOr, OpNot, OpITE, OpImpl, OpEq, OpIntGE, OpIntGT, OpIntLT,
+      OpIntLE, OpIntAdd, OpIntSub, OpIntMul, OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, 
+      OpBVAnd, OpBVOr, OpBVXor, OpBVNot, OpBVUrem, OpBVSrem, OpBVGT, OpBVGTU, 
+      OpBVGE, OpBVGEU, OpBVLT, OpBVLTU, OpBVLE, OpBVLEU, OpConcat, OpArraySelect, OpArrayStore
+  )
 
   lazy val Operator : PackratParser[smt.Operator] =
     OpAnd ^^ { _ => smt.ConjunctionOp } |
@@ -315,7 +333,9 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     KwBool ^^ { _ => smt.BoolType } |
     "(" ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
     "(" ~ KwUS ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
-    "(" ~ KwArray ~> Type ~ Type <~ ")" ^^ { case inType ~ outType => smt.ArrayType(List(inType), outType) }
+    "(" ~ KwArray ~> Type ~ Type <~ ")" ^^ { case inType ~ outType => smt.ArrayType(List(inType), outType) } |
+    symbol ^^ { sym =>  smt.UninterpretedType(sym.name) }
+    
 
   lazy val FunArg : PackratParser[smt.Symbol] =
     "(" ~> symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.name, typ) }
@@ -329,16 +349,55 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val Bindings : PackratParser[List[(smt.Symbol, smt.Expr)]] = 
     "(" ~> rep1(Binding) <~ ")"
 
+<<<<<<< HEAD:src/main/scala/uclid/smt/SExprParser.scala
+=======
+  
+  lazy val Expr : PackratParser[smt.Expr] =
+    Symbol | IntegerLit | BitVectorLit | BoolLit |
+    "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)} |
+    "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) } |
+    "(" ~ OpArraySelect ~> Expr ~ rep(Expr) <~ ")" ^^ { case array ~ indices => smt.ArraySelectOperation(smt.Symbol(array.toString, smt.ArrayType(Nil, array.typ)), indices) } |
+    "(" ~ OpArrayStore ~> Expr ~ rep(Expr) ~ Expr <~ ")" ^^ { case array ~ indices ~ value => smt.ArrayStoreOperation(array, indices, value) } |
+    "(" ~ KwLet ~> Bindings ~ Expr <~ ")" ^^ { case bindings ~ expr => smt.LetExpression(bindings, expr) } |
+    "(" ~ KwForall ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => 
+      {
+        //TODO: Add patterns
+        val op = smt.ForallOp(args, List.empty)
+        smt.OperatorApplication(op, List(expr))  
+      }
+    } |
+    //Adding function application; TODO: Check
+    "(" ~> Symbol ~ Expr.+ <~ ")" ^^ { case e ~ args => 
+      {
+        val funcType = MapType(args.map(a => a.typ), e.symbolTyp)
+        val sym = smt.Symbol(e.id, funcType)
+        smt.FunctionApplication(sym, args) 
+      }
+    }
+
+
+  
+>>>>>>> Passing regression tests for parser:src/main/scala/uclid/smt/SolverOutputParser.scala
   lazy val DefineFun : PackratParser[smt.DefineFun] =
     "(" ~ KwDefineFun ~> symbol ~ FunArgs ~ Type ~ Expr <~ ")" ^^ {
       case id ~ args ~ rTyp ~ expr => {
         val funcType = MapType(args.map(a => a.typ), rTyp)
         smt.DefineFun(smt.Symbol(id.name, funcType), args, expr)
       }
+    } 
+  
+  
+  // Necessary addition to support Z3 output format
+  lazy val DeclareFun : PackratParser[smt.DeclareFun] = 
+    "(" ~ KwDecFun ~> symbol ~ FunArgs ~ Type <~ ")" ^^ {
+      case id ~ args ~ rTyp => {
+        val funcType = MapType(args.map(a => a.typ) , rTyp)
+        smt.DeclareFun(smt.Symbol(id.name, funcType), args)
+      }
     }
 
   lazy val AssignmentModel : PackratParser[smt.AssignmentModel] =
-    "(" ~ KwModel ~> rep(DefineFun) <~ ")" ^^ { case functions => smt.AssignmentModel(functions) } |
+    "(" ~ KwModel ~> rep(DeclareFun | DefineFun | Expr) <~ ")" ^^ { case exprs => smt.AssignmentModel(exprs) } |
     "(" ~> rep(DefineFun) <~ ")" ^^ { case functions => smt.AssignmentModel(functions) }
 
   def parseFunction(text: String): DefineFun = {
@@ -356,7 +415,16 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     phrase(AssignmentModel)(tokens) match {
       case Success(model, _) => model
       case NoSuccess(msg, next) =>
+<<<<<<< HEAD:src/main/scala/uclid/smt/SExprParser.scala
         throw new Utils.RuntimeError("SExpr model parser error: %s.".format(msg))
+=======
+        println("Parsing failed.")
+        println(next)
+        println(next.first)
+        println(next.offset)
+        println(next.pos)
+        throw new Utils.RuntimeError("Parser Error: %s.".format(msg))
+>>>>>>> Passing regression tests for parser:src/main/scala/uclid/smt/SolverOutputParser.scala
     }
   }
 }
