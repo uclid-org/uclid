@@ -1,0 +1,60 @@
+(model 
+  (define-fun initial_37_i () Int
+    0)
+  (define-fun initial_22_x () Int
+    0)
+  (define-fun initial_14_j () Int
+    1)
+  (define-fun initial_32_j () Int
+    0)
+  (define-fun initial_31_y () Int
+    0)
+  (define-fun initial_39_j () Int
+    1)
+  (define-fun havoc_47____ucld_1_modifies_i () Int
+    1)
+  (define-fun initial_15_x () Int
+    0)
+  (define-fun initial_13_y () Int
+    0)
+  (define-fun initial_25_j () Int
+    (- 1))
+  (define-fun initial_12_i () Int
+    0)
+  (define-fun initial_30_i () Int
+    (- 1))
+  (define-fun havoc_19____ucld_1_modifies_i () Int
+    (- 3))
+  (define-fun initial_46_j () Int
+    2)
+  (define-fun initial_29_x () Int
+    0)
+  (define-fun havoc_40____ucld_1_modifies_i () Int
+    0)
+  (define-fun initial_16_i () Int
+    (- 3))
+  (define-fun havoc_33____ucld_1_modifies_i () Int
+    (- 1))
+  (define-fun initial_11_x () Int
+    0)
+  (define-fun initial_44_i () Int
+    1)
+  (define-fun havoc_26____ucld_1_modifies_i () Int
+    (- 2))
+  (define-fun initial_38_y () Int
+    0)
+  (define-fun initial_45_y () Int
+    0)
+  (define-fun initial_43_x () Int
+    0)
+  (define-fun initial_36_x () Int
+    0)
+  (define-fun initial_18_j () Int
+    (- 2))
+  (define-fun initial_23_i () Int
+    (- 2))
+  (define-fun initial_24_y () Int
+    0)
+  (define-fun initial_17_y () Int
+    0)
+)

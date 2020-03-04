@@ -1,0 +1,252 @@
+(model 
+  (define-fun taint_262_initial_261_data_out () Bool
+    true)
+  (define-fun initial_126_data_array () (Array Int Int)
+    (lambda ((x!1 Int)) (ite (= x!1 0) 8 (ite (= x!1 2) 31 (ite (= x!1 32) 34 26)))))
+  (define-fun input_14_op () _type_enum_2_
+    pop)
+  (define-fun input_4_user () _type_enum_1_
+    u1)
+  (define-fun input_7_op () _type_enum_2_
+    push)
+  (define-fun input_5_user () _type_enum_1_
+    u1)
+  (define-fun initial_159_tail_ptr () Int
+    1)
+  (define-fun input_14_data_in () Int
+    5)
+  (define-fun taint_139_initial_137_user_array () (Array Int Bool)
+    (lambda ((x!1 Int)) false))
+  (define-fun input_4_data_in () Int
+    7)
+  (define-fun input_10_user () _type_enum_1_
+    u1)
+  (define-fun initial_244_data_out () Int
+    0)
+  (define-fun initial_204_tail_ptr () Int
+    0)
+  (define-fun taint_188_initial_187_data_out () Bool
+    true)
+  (define-fun initial_274_data_array () (Array Int Int)
+    (lambda ((x!1 Int)) (ite (= x!1 0) 8 (ite (= x!1 2) 31 (ite (= x!1 32) 34 26)))))
+  (define-fun taint_209_initial_208_data_array () Bool
+    false)
+  (define-fun initial_118_data_array () (Array Int Int)
+    (lambda ((x!1 Int))
+  (let ((a!1 (ite (= x!1 1) 28 (ite (= x!1 2) 29 (ite (= x!1 32) 33 6)))))
+    (ite (= x!1 3) 30 a!1))))
+  (define-fun initial_157_head_ptr () Int
+    0)
+  (define-fun initial_266_data_array () (Array Int Int)
+    (lambda ((x!1 Int))
+  (let ((a!1 (ite (= x!1 3) 7 (ite (= x!1 2) 7 (ite (= x!1 32) 33 6)))))
+    (ite (= x!1 0) 7 (ite (= x!1 1) 7 a!1)))))
+  (define-fun taint_102_initial_100_user_array () (Array Int Bool)
+    (lambda ((x!1 Int)) false))
+  (define-fun initial_162_data_out () Int
+    0)
+  (define-fun initial_202_head_ptr () Int
+    0)
+  (define-fun initial_122_tail_ptr () Int
+    0)
+  (define-fun input_8_user () _type_enum_1_
+    u1)
+  (define-fun initial_230_user_array () (Array Int _type_enum_1_)
+    (lambda ((x!1 Int)) u1))
+  (define-fun initial_273_data_out () Int
+    0)
+  (define-fun taint_225_initial_224_data_out () Bool
+    true)
+  (define-fun taint_227_input_9_user () Bool
+    false)
+  (define-fun initial_164_user_array () (Array Int _type_enum_1_)
+    (lambda ((x!1 Int)) (ite (= x!1 2) u2 u1)))
+  (define-fun initial_275_user_array () (Array Int _type_enum_1_)
+    (lambda ((x!1 Int)) (ite (= x!1 2) u2 u1)))
+  (define-fun taint_172_initial_171_data_array () Bool
+    false)
+  (define-fun taint_138_initial_137_user_array () Bool
+    false)
+  (define-fun initial_199_data_out () Int
+    0)
+  (define-fun taint_191_input_6_op () Bool
+    true)
+  (define-fun initial_156_user_array () (Array Int _type_enum_1_)
+    (lambda ((x!1 Int)) (ite (= x!1 1) u2 u1)))
+  (define-fun initial_278_tail_ptr () Int
+    0)
+  (define-fun taint_189_input_6_data_in () Bool
+    false)
+  (define-fun input_2_user () _type_enum_1_
+    u1)
+  (define-fun initial_276_head_ptr () Int
+    0)
+  (define-fun input_7_user () _type_enum_1_
+    u1)
+  (define-fun input_5_data_in () Int
+    5)
+  (define-fun initial_165_head_ptr () Int
+    0)
+  (define-fun taint_226_input_9_data_in () Bool
+    false)
+  (define-fun initial_241_tail_ptr () Int
+    0)
+  (define-fun input_2_op () _type_enum_2_
+    pop)
+  (define-fun initial_231_head_ptr () Int
+    0)
+  (define-fun taint_114_initial_113_data_out () Bool
+    true)
+  (define-fun initial_127_user_array () (Array Int _type_enum_1_)
+    (lambda ((x!1 Int)) (ite (= x!1 2) u2 u1)))
+  (define-fun initial_267_user_array () (Array Int _type_enum_1_)
+    (lambda ((x!1 Int)) u1))
+  (define-fun initial_196_tail_ptr () Int
+    2)
+  (define-fun taint_213_initial_211_user_array () (Array Int Bool)
+    (lambda ((x!1 Int)) false))
+  (define-fun input_4_op () _type_enum_2_
+    push)
+  (define-fun initial_128_head_ptr () Int
+    0)
+  (define-fun input_2_data_in () Int
+    5)
+  (define-fun initial_268_head_ptr () Int
+    0)
+  (define-fun taint_145_initial_144_tail_ptr () Bool
+    false)
+  (define-fun taint_249_initial_248_user_array () Bool
+    true)
+  (define-fun taint_265_input_12_op () Bool
+    true)
+  (define-fun taint_250_initial_248_user_array () (Array Int Bool)
+    (lambda ((x!1 Int)) false))
+  (define-fun initial_119_user_array () (Array Int _type_enum_1_)
+    (lambda ((x!1 Int)) (ite (= x!1 1) u2 u1)))
+  (define-fun initial_167_tail_ptr () Int
+    0)
+  (define-fun initial_170_data_out () Int
+    0)
+  (define-fun initial_193_user_array () (Array Int _type_enum_1_)
+    (lambda ((x!1 Int)) u1))
+  (define-fun taint_256_initial_255_tail_ptr () Bool
+    true)
+  (define-fun taint_210_initial_208_data_array () (Array Int Bool)
+    (lambda ((x!1 Int)) false))
+  (define-fun initial_125_data_out () Int
+    0)
+  (define-fun initial_270_tail_ptr () Int
+    4)
+  (define-fun input_13_data_in () Int
+    7)
+  (define-fun initial_201_user_array () (Array Int _type_enum_1_)
+    (lambda ((x!1 Int)) (ite (= x!1 2) u2 u1)))
+  (define-fun taint_247_initial_245_data_array () (Array Int Bool)
+    (lambda ((x!1 Int)) false))
+  (define-fun input_8_op () _type_enum_2_
+    pop)
+  (define-fun taint_136_initial_134_data_array () (Array Int Bool)
+    (lambda ((x!1 Int)) false))
+  (define-fun taint_176_initial_174_user_array () (Array Int Bool)
+    (lambda ((x!1 Int)) false))
+  (define-fun input_8_data_in () Int
+    5)
+  (define-fun input_13_op () _type_enum_2_
+    push)
+  (define-fun input_7_data_in () Int
+    7)
+  (define-fun taint_152_input_3_data_in () Bool
+    false)
+  (define-fun taint_153_input_3_user () Bool
+    false)
+  (define-fun taint_228_input_9_op () Bool
+    true)
+  (define-fun taint_99_initial_97_data_array () (Array Int Bool)
+    (lambda ((x!1 Int)) false))
+  (define-fun taint_104_initial_103_head_ptr () Bool
+    true)
+  (define-fun initial_237_data_array () (Array Int Int)
+    (lambda ((x!1 Int)) (ite (= x!1 0) 8 (ite (= x!1 2) 31 (ite (= x!1 32) 34 26)))))
+  (define-fun initial_236_data_out () Int
+    0)
+  (define-fun input_13_user () _type_enum_1_
+    u1)
+  (define-fun initial_120_head_ptr () Int
+    0)
+  (define-fun initial_163_data_array () (Array Int Int)
+    (lambda ((x!1 Int)) (ite (= x!1 0) 8 (ite (= x!1 2) 31 (ite (= x!1 32) 34 26)))))
+  (define-fun initial_229_data_array () (Array Int Int)
+    (lambda ((x!1 Int))
+  (let ((a!1 (ite (= x!1 3) 30 (ite (= x!1 2) 7 (ite (= x!1 32) 33 6)))))
+    (ite (= x!1 0) 7 (ite (= x!1 1) 7 a!1)))))
+  (define-fun initial_239_head_ptr () Int
+    0)
+  (define-fun initial_133_data_out () Int
+    0)
+  (define-fun initial_238_user_array () (Array Int _type_enum_1_)
+    (lambda ((x!1 Int)) (ite (= x!1 2) u2 u1)))
+  (define-fun input_10_data_in () Int
+    7)
+  (define-fun initial_200_data_array () (Array Int Int)
+    (lambda ((x!1 Int)) (ite (= x!1 0) 8 (ite (= x!1 2) 31 (ite (= x!1 32) 34 26)))))
+  (define-fun taint_115_input_0_data_in () Bool
+    false)
+  (define-fun input_10_op () _type_enum_2_
+    push)
+  (define-fun initial_155_data_array () (Array Int Int)
+    (lambda ((x!1 Int))
+  (let ((a!1 (ite (= x!1 1) 28 (ite (= x!1 2) 29 (ite (= x!1 32) 33 6)))))
+    (ite (= x!1 3) 30 (ite (= x!1 0) 7 a!1)))))
+  (define-fun taint_135_initial_134_data_array () Bool
+    false)
+  (define-fun taint_252_initial_251_head_ptr () Bool
+    true)
+  (define-fun initial_130_tail_ptr () Int
+    0)
+  (define-fun input_14_user () _type_enum_1_
+    u1)
+  (define-fun taint_190_input_6_user () Bool
+    false)
+  (define-fun input_11_data_in () Int
+    5)
+  (define-fun taint_212_initial_211_user_array () Bool
+    true)
+  (define-fun input_11_op () _type_enum_2_
+    pop)
+  (define-fun taint_173_initial_171_data_array () (Array Int Bool)
+    (lambda ((x!1 Int)) false))
+  (define-fun taint_108_initial_107_tail_ptr () Bool
+    true)
+  (define-fun taint_98_initial_97_data_array () Bool
+    false)
+  (define-fun taint_101_initial_100_user_array () Bool
+    false)
+  (define-fun taint_154_input_3_op () Bool
+    true)
+  (define-fun initial_194_head_ptr () Int
+    0)
+  (define-fun initial_281_data_out () Int
+    0)
+  (define-fun taint_215_initial_214_head_ptr () Bool
+    true)
+  (define-fun initial_233_tail_ptr () Int
+    3)
+  (define-fun input_11_user () _type_enum_1_
+    u1)
+  (define-fun initial_207_data_out () Int
+    0)
+  (define-fun taint_219_initial_218_tail_ptr () Bool
+    true)
+  (define-fun input_5_op () _type_enum_2_
+    pop)
+  (define-fun taint_116_input_0_user () Bool
+    false)
+  (define-fun taint_178_initial_177_head_ptr () Bool
+    true)
+  (define-fun taint_117_input_0_op () Bool
+    false)
+  (define-fun initial_192_data_array () (Array Int Int)
+    (lambda ((x!1 Int))
+  (let ((a!1 (ite (= x!1 1) 7 (ite (= x!1 2) 29 (ite (= x!1 32) 33 6)))))
+    (ite (= x!1 3) 30 (ite (= x!1 0) 7 a!1)))))
+)

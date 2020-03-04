@@ -1,0 +1,58 @@
+(model 
+  (define-fun state_1___ucld_9_ss_accept () Bool
+    true)
+  (define-fun havoc_29___ucld_7_ss_z () Bool
+    false)
+  (define-fun state_1___ucld_4_ss_z () Bool
+    false)
+  (define-fun state_1___ucld_3_ss_z () Bool
+    true)
+  (define-fun state_1___ucld_18___ucld_9_ss_accept_HAS_ACCEPTED () Bool
+    true)
+  (define-fun state_1___ucld_7_ss_z () Bool
+    false)
+  (define-fun initial_19___ucld_2_if_star () Bool
+    false)
+  (define-fun state_1_state () Bool
+    false)
+  (define-fun havoc_30___ucld_4_ss_z () Bool
+    false)
+  (define-fun state_1___ucld_19_ss_HAS_ACCEPTED_TRACE () Bool
+    true)
+  (define-fun havoc_22___ucld_7_ss_z () Bool
+    true)
+  (define-fun state_1___ucld_12___ucld_8_ss_pending_copy2 () Bool
+    false)
+  (define-fun input_1___ucld_14_main_copy_state_in () Bool
+    true)
+  (define-fun state_1___ucld_15_main_state_copied () Bool
+    true)
+  (define-fun state_1___ucld_5_ss_pending () Bool
+    true)
+  (define-fun havoc_28___ucld_2_if_star () Bool
+    false)
+  (define-fun havoc_24___ucld_3_ss_z () Bool
+    true)
+  (define-fun state_1___ucld_8_ss_pending () Bool
+    false)
+  (define-fun state_1___ucld_13___ucld_5_ss_pending_copy2 () Bool
+    true)
+  (define-fun state_1___ucld_6_ss_failed () Bool
+    false)
+  (define-fun havoc_23___ucld_4_ss_z () Bool
+    true)
+  (define-fun state_1___ucld_10___ucld_2_if_star_copy2 () Bool
+    false)
+  (define-fun havoc_31___ucld_3_ss_z () Bool
+    true)
+  (define-fun state_1___ucld_2_if_star () Bool
+    false)
+  (define-fun state_1___ucld_17_ss_PENDING () Bool
+    true)
+  (define-fun state_1___ucld_20_main_is_init () Bool
+    false)
+  (define-fun state_1___ucld_16_ss_FAILED () Bool
+    false)
+  (define-fun state_1___ucld_11_state_copy2 () Bool
+    false)
+)

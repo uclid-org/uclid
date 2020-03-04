@@ -334,6 +334,8 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     "(" ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
     "(" ~ KwUS ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
     "(" ~ KwArray ~> Type ~ Type <~ ")" ^^ { case inType ~ outType => smt.ArrayType(List(inType), outType) } |
+    // TODO: Handle defined types
+    "(" ~> symbol ~ rep1(Type) <~ ")" ^^ { case sym ~ typs => smt.TupleType(typs) } |
     symbol ^^ { sym =>  smt.UninterpretedType(sym.name) }
     
 
@@ -349,11 +351,13 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val Bindings : PackratParser[List[(smt.Symbol, smt.Expr)]] = 
     "(" ~> rep1(Binding) <~ ")"
 
-<<<<<<< HEAD:src/main/scala/uclid/smt/SExprParser.scala
-=======
   
   lazy val Expr : PackratParser[smt.Expr] =
     Symbol | IntegerLit | BitVectorLit | BoolLit |
+    //Adding indexed identifier; TODO: Check; TODO: Move to symbol
+    //"(" ~ KwUs ~> Symbol ~ rep1(Symbol | IntLit) <~ ")" ^^ { case sym ~ idxs => smt.Symbol(
+    //Adding qualified identifier; TODO: Check; TODO: Move to symbol
+    "(" ~ KwAs ~> Symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.id, typ) } |
     "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)} |
     "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) } |
     "(" ~ OpArraySelect ~> Expr ~ rep(Expr) <~ ")" ^^ { case array ~ indices => smt.ArraySelectOperation(smt.Symbol(array.toString, smt.ArrayType(Nil, array.typ)), indices) } |
@@ -377,7 +381,6 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
 
 
   
->>>>>>> Passing regression tests for parser:src/main/scala/uclid/smt/SolverOutputParser.scala
   lazy val DefineFun : PackratParser[smt.DefineFun] =
     "(" ~ KwDefineFun ~> symbol ~ FunArgs ~ Type ~ Expr <~ ")" ^^ {
       case id ~ args ~ rTyp ~ expr => {
@@ -415,16 +418,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     phrase(AssignmentModel)(tokens) match {
       case Success(model, _) => model
       case NoSuccess(msg, next) =>
-<<<<<<< HEAD:src/main/scala/uclid/smt/SExprParser.scala
         throw new Utils.RuntimeError("SExpr model parser error: %s.".format(msg))
-=======
-        println("Parsing failed.")
-        println(next)
-        println(next.first)
-        println(next.offset)
-        println(next.pos)
-        throw new Utils.RuntimeError("Parser Error: %s.".format(msg))
->>>>>>> Passing regression tests for parser:src/main/scala/uclid/smt/SolverOutputParser.scala
     }
   }
 }

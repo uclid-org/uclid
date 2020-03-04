@@ -1,0 +1,92 @@
+(model 
+  (define-fun state_3___ucld_3_cnt_eventually_3_z () Bool
+    false)
+  (define-fun havoc_20___ucld_2_cnt_eventually_3_z () Bool
+    true)
+  (define-fun state_2___ucld_6_cnt_copy2 () (_ BitVec 2)
+    #b00)
+  (define-fun state_3_cnt () (_ BitVec 2)
+    #b00)
+  (define-fun state_2___ucld_4_cnt_eventually_3_pending () Bool
+    true)
+  (define-fun state_3___ucld_5_cnt_eventually_3_failed () Bool
+    false)
+  (define-fun state_1___ucld_12_cnt_eventually_3_HAS_ACCEPTED_TRACE () Bool
+    true)
+  (define-fun state_2___ucld_13_main_is_init () Bool
+    false)
+  (define-fun state_3___ucld_12_cnt_eventually_3_HAS_ACCEPTED_TRACE () Bool
+    true)
+  (define-fun state_1___ucld_10_cnt_eventually_3_FAILED () Bool
+    false)
+  (define-fun state_3___ucld_4_cnt_eventually_3_pending () Bool
+    true)
+  (define-fun state_1___ucld_5_cnt_eventually_3_failed () Bool
+    false)
+  (define-fun state_2___ucld_3_cnt_eventually_3_z () Bool
+    false)
+  (define-fun state_2___ucld_7___ucld_4_cnt_eventually_3_pending_copy2 () Bool
+    true)
+  (define-fun state_1___ucld_9_main_state_copied () Bool
+    true)
+  (define-fun state_1___ucld_4_cnt_eventually_3_pending () Bool
+    true)
+  (define-fun state_2_cnt () (_ BitVec 2)
+    #b10)
+  (define-fun state_3___ucld_9_main_state_copied () Bool
+    true)
+  (define-fun havoc_16___ucld_2_cnt_eventually_3_z () Bool
+    true)
+  (define-fun state_3___ucld_7___ucld_4_cnt_eventually_3_pending_copy2 () Bool
+    true)
+  (define-fun state_3___ucld_6_cnt_copy2 () (_ BitVec 2)
+    #b00)
+  (define-fun havoc_23___ucld_2_cnt_eventually_3_z () Bool
+    true)
+  (define-fun state_2___ucld_9_main_state_copied () Bool
+    true)
+  (define-fun state_1___ucld_7___ucld_4_cnt_eventually_3_pending_copy2 () Bool
+    true)
+  (define-fun state_2___ucld_10_cnt_eventually_3_FAILED () Bool
+    false)
+  (define-fun state_3___ucld_13_main_is_init () Bool
+    false)
+  (define-fun havoc_25___ucld_3_cnt_eventually_3_z () Bool
+    false)
+  (define-fun havoc_15___ucld_3_cnt_eventually_3_z () Bool
+    true)
+  (define-fun havoc_22___ucld_3_cnt_eventually_3_z () Bool
+    false)
+  (define-fun havoc_19___ucld_3_cnt_eventually_3_z () Bool
+    false)
+  (define-fun state_1___ucld_13_main_is_init () Bool
+    false)
+  (define-fun state_2___ucld_11_cnt_eventually_3_PENDING () Bool
+    true)
+  (define-fun state_3___ucld_11_cnt_eventually_3_PENDING () Bool
+    true)
+  (define-fun havoc_26___ucld_2_cnt_eventually_3_z () Bool
+    true)
+  (define-fun state_1___ucld_11_cnt_eventually_3_PENDING () Bool
+    true)
+  (define-fun state_2___ucld_12_cnt_eventually_3_HAS_ACCEPTED_TRACE () Bool
+    true)
+  (define-fun state_1___ucld_6_cnt_copy2 () (_ BitVec 2)
+    #b00)
+  (define-fun state_1___ucld_2_cnt_eventually_3_z () Bool
+    true)
+  (define-fun state_1___ucld_3_cnt_eventually_3_z () Bool
+    false)
+  (define-fun state_3___ucld_2_cnt_eventually_3_z () Bool
+    true)
+  (define-fun input_1___ucld_8_main_copy_state_in () Bool
+    true)
+  (define-fun state_2___ucld_5_cnt_eventually_3_failed () Bool
+    false)
+  (define-fun state_2___ucld_2_cnt_eventually_3_z () Bool
+    true)
+  (define-fun state_3___ucld_10_cnt_eventually_3_FAILED () Bool
+    false)
+  (define-fun state_1_cnt () (_ BitVec 2)
+    #b01)
+)

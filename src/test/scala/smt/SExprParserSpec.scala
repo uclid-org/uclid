@@ -227,4 +227,154 @@ class SExprParserNoErrorSpec extends FlatSpec {
   "t178.smt2" should "parse successfully." in {
     SExprParserSpec.expectPass("test/parser/z3-regress/t178.smt2")
   }
+  "parser_test19.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test19.txt")
+  }
+  "parser_test20.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test20.txt")
+  }
+  "parser_test21.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test21.txt")
+  }
+  "parser_test22.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test22.txt")
+  }
+  "parser_test23.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test23.txt")
+  }
+  "parser_test24.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test24.txt")
+  }
+  "parser_test25.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test25.txt")
+  }
+  "parser_test26.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test26.txt")
+  }
+  "parser_test27.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test27.txt")
+  }
+  "parser_test28.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test28.txt")
+  }
+  "parser_test29.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test29.txt")
+  }
+  "parser_test30.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test30.txt")
+  }
+  "parser_test31.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test31.txt")
+  }
+  "parser_test32.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test32.txt")
+  }
+  "parser_test33.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test33.txt")
+  }
+  "parser_test34.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test34.txt")
+  }
+  "parser_test35.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test35.txt")
+  }
+  "parser_test36.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test36.txt")
+  }
+  "parser_test37.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test37.txt")
+  }
+  "parser_test38.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test38.txt")
+  }
+  "parser_test39.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test39.txt")
+  }
+  "parser_test40.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test40.txt")
+  }
+  "parser_test41.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test41.txt")
+  }
+  "parser_test42.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test42.txt")
+  }
+  "parser_test43.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test43.txt")
+  }
+  "parser_test44.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test44.txt")
+  }
+  "parser_test45.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test45.txt")
+  }
+  "parser_test46.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test46.txt")
+  }
+  "parser_test47.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test47.txt")
+  }
+  "parser_test48.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test48.txt")
+  }
+  "parser_test49.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test49.txt")
+  }
+  "parser_test50.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test50.txt")
+  }
+  "parser_test51.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test51.txt")
+  }
+  "parser_test52.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test52.txt")
+  }
+  "parser_test53.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test53.txt")
+  }
+  "parser_test54.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test54.txt")
+  }
+  "parser_test55.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test55.txt")
+  }
+  "parser_test56.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test56.txt")
+  }
+  "parser_test57.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test57.txt")
+  }
+  "parser_test58.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test58.txt")
+  }
+  "parser_test59.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test59.txt")
+  }
+  "parser_test60.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test60.txt")
+  }
+  "parser_test61.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test61.txt")
+  }
+  "parser_test62.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test62.txt")
+  }
+  "parser_test63.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test63.txt")
+  }
+  "parser_test64.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test64.txt")
+  }
+  "parser_test65.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test65.txt")
+  }
+  "parser_test66.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test66.txt")
+  }
+  "parser_test67.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test67.txt")
+  }
+  "parser_test68.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test68.txt")
+  }
 }
