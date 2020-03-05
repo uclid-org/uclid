@@ -1,0 +1,49 @@
+/*
+
+Hyperproperties - Determinism, Monotonicity, injectivity, Antisymmetric
+
+Description - getScore computes the score given the player index, compareScores compares two integral scores 
+
+*/
+
+module main {
+
+    procedure getScore( index: integer) returns (score: integer)
+    requires (index >= 0);
+    ensures (score >= 0);
+    ensures (score == (2*index));
+    ensures ( (index.1 == index.2) ==> (score.1 == score.2)); //determinism
+    ensures ( (index.1 <= index.2) ==> (score.1 <= score.2)); //monotonicity
+    ensures ( (index.1 != index.2) ==> (score.1 != score.2)); //injectivity
+    {
+        score = index + index;
+    }
+
+    procedure compareScores(scoreOne: integer, scoreTwo: integer) returns (res: integer)
+    requires(scoreOne >= 0 && scoreTwo >= 0);
+    ensures ( (res == 0) <==> (scoreOne == scoreTwo));
+    ensures ( (res == 1) <==> (scoreOne > scoreTwo));
+    ensures ( (res == -1) <==> (scoreOne < scoreTwo));
+    ensures ( (scoreOne.1 == scoreOne.2 && scoreTwo.1 == scoreTwo.2) ==> (res.1 == res.2)); //determinism
+    ensures ( (scoreOne.1 == scoreTwo.2 && scoreOne.2 == scoreTwo.1 && scoreOne.1 != scoreTwo.1) ==> (res.1 != res.2)); //antisymmetric
+    {
+        res = 0;
+        if(scoreOne > scoreTwo) {
+            res = 1;
+        }
+        if(scoreOne < scoreTwo) {
+            res = -1;
+        }
+    }
+
+    control 
+    {
+        v = verify(getScore);
+        w = verify(compareScores);
+        check;
+        v.print_cex(index, score);
+        w.print_cex(scoreOne, scoreTwo, res);
+        print_results;
+    }
+
+}

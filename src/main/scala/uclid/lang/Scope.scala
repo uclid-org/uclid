@@ -121,6 +121,11 @@ sealed abstract class ExpressionEnvironment {
   def isProcedural : Boolean = false
   def inLTLSpec: Boolean = false
   def inHyperproperty : Boolean = false
+  def isInPrePost : Boolean = false
+
+  //Added to support assert/assume statements containing hyperselect inside procedures requiring product translation
+  def isAssert : Boolean = false
+  def isAssume : Boolean = false
 }
 case object ModuleEnvironment extends ExpressionEnvironment {
   override def isModuleLevel = true
@@ -132,9 +137,11 @@ case object ProceduralEnvironment extends ExpressionEnvironment {
 }
 case object RequiresEnvironment extends ExpressionEnvironment {
   override def isVerificationContext = true
+  override def isInPrePost = true
 }
 case object EnsuresEnvironment extends ExpressionEnvironment {
   override def isVerificationContext = true
+  override def isInPrePost = true
 }
 case object AssertEnvironment extends ExpressionEnvironment {
   override def isVerificationContext = true
@@ -145,10 +152,12 @@ case object AssumeEnvironment extends ExpressionEnvironment {
 case object ProceduralAssertEnvironment extends ExpressionEnvironment {
   override def isVerificationContext = true
   override def isProcedural = true
+  override def isAssert = true
 }
 case object ProceduralAssumeEnvironment extends ExpressionEnvironment {
   override def isVerificationContext = true
   override def isProcedural = true
+  override def isAssume = true
 }
 case class SpecEnvironment(decl: lang.SpecDecl) extends ExpressionEnvironment {
   override def isModuleLevel = true

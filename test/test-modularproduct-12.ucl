@@ -1,0 +1,67 @@
+/*
+https://github.com/marcelosousa/descartes/blob/master/benchmarks/pldi-16/stackoverflow/ArrayInt-true.java
+
+HyperProperties - determinism, antisymmetric
+
+Issue - Solver hangs while checking Transitivity
+
+Description - Lexicographic comparison of two integer arrays
+
+*/
+
+module main {
+
+    procedure compare(arrayOne : [integer]integer, lengthOne: integer, arrayTwo: [integer]integer, lengthTwo: integer) 
+            returns (res: integer)
+    requires (lengthOne >= 0 && lengthTwo >= 0);
+    ensures ( (res == 0) <==> (lengthOne == lengthTwo && (forall (idx : integer) :: (idx >= 0 && idx < lengthOne) ==> (arrayOne[idx] == arrayTwo[idx]))));
+    ensures ( (res == 1) <==> (exists (j : integer) :: 0 <= j && j<lengthOne && j<lengthTwo && (forall (k : integer) :: (0 <= k && k < j) ==> arrayOne[k] == arrayTwo[k]) && arrayOne[j] > arrayTwo[j])
+                                || (forall (idx : integer) :: (idx >= 0 && idx < lengthTwo) ==> (arrayOne[idx] == arrayTwo[idx])) && (lengthOne > lengthTwo));
+    ensures ( (res == -1) <==> (exists (j : integer) :: 0 <= j && j<lengthOne && j<lengthTwo && (forall (k : integer) :: (0 <= k && k < j) ==> arrayOne[k] == arrayTwo[k]) && arrayOne[j] < arrayTwo[j])
+                                || (forall (idx : integer) :: (idx >= 0 && idx < lengthOne) ==> (arrayOne[idx] == arrayTwo[idx])) && (lengthOne < lengthTwo));
+
+    ensures ( (lengthOne.1 == lengthOne.2 && lengthTwo.1 == lengthTwo.2 && arrayOne.1 == arrayOne.2 && arrayTwo.1 == arrayTwo.2) ==> (res.1 == res.2)); //determinism
+
+    ensures ( (arrayOne.1 == arrayTwo.2 && arrayOne.2 == arrayTwo.1 && arrayOne.1 != arrayTwo.1 && 
+                lengthOne.1 == lengthTwo.2 && lengthOne.2 == lengthTwo.1 && lengthOne.1 != lengthTwo.1) ==> (res.1 != res.2)); //antisymmetric
+
+    //ensures ( (lengthOne.1 == lengthOne.3 && lengthTwo.1 == lengthOne.2 && lengthTwo.2 == lengthTwo.3 &&
+    //            arrayOne.1 == arrayOne.3 && arrayTwo.1 == arrayOne.2 && arrayTwo.2 == arrayTwo.3 &&
+    //            res.1 == res.2) ==> (res.3 == res.1));
+    {
+        var i: integer;
+        i = 0;
+        res = 0; //if both are empty, they are equal
+        while ( i < lengthOne && i < lengthTwo && res == 0)
+            invariant ( i >= 0 && i <= lengthOne && i <= lengthTwo);
+            invariant( (res == 0) <==> (forall (idx : integer) :: (idx >= 0 && idx < i) ==> (arrayOne[idx] == arrayTwo[idx])));
+            invariant( (res == 1) <==> (exists (j : integer) :: 0 <= j && j< i && (forall (k : integer) :: (0 <= k && k < j) ==> arrayOne[k] == arrayTwo[k]) && arrayOne[j] > arrayTwo[j]));
+            invariant( (res == -1) <==> (exists (j : integer) :: 0 <= j && j< i && (forall (k : integer) :: (0 <= k && k < j) ==> arrayOne[k] == arrayTwo[k]) && arrayOne[j] < arrayTwo[j]));
+            
+        {
+            var elementOne, elementTwo: integer;
+            elementOne, elementTwo = arrayOne[i], arrayTwo[i];
+            if(elementOne < elementTwo) {
+                res = -1;
+            }
+            if(elementOne > elementTwo) {
+                res = 1;
+            }
+            i = i + 1;
+        }
+        if(res == 0 && lengthOne < lengthTwo) {
+            res = -1;
+        }
+        if(res == 0 && lengthOne > lengthTwo) {
+            res = 1;
+        }
+    }
+
+    control
+    {
+        v = verify(compare);
+        check;
+        v.print_cex(lengthOne, lengthTwo, res, arrayOne, arrayTwo);
+        print_results;
+    }
+}

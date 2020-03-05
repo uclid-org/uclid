@@ -1,0 +1,105 @@
+/*
+https://github.com/marcelosousa/descartes/blob/master/benchmarks/pldi-16/stackoverflow/Container-true.java
+
+Hyperproperties - Determinism, Transitivity, antisymmetric
+
+Also Checks Procedure Call Statement translations. Here intCompare() is translated and compare() uses this translated version. 
+
+Description - Compares two container records lexicographically on the basis of departureTime, departureMaxDuration, 
+                departureTransportCompany and departureTransportType in the respective order. 
+
+*/
+
+module main 
+{
+    type container = record {
+        departureTime                   : integer,
+        departureMaxDuration            : integer,
+        departureTransportCompany       : integer,
+        departureTransportType          : integer
+    };
+
+    procedure intCompare(num1: integer, num2: integer) returns (res: integer)
+    ensures ( (res == 0) <==> (num1 == num2));
+    ensures ( (res == 1) <==> (num1 > num2));
+    ensures ( (res == -1) <==> (num1 < num2));
+    ensures ( (num1.1 == num1.2 && num2.1 == num2.2) ==> (res.1 == res.2));
+    {
+        res = 0;
+        if(num1 > num2)
+        {
+            res = 1;
+        }
+        if(num1 <num2)
+        {
+            res = -1;
+        }
+    }
+
+    procedure compare(o1: container, o2: container) returns (res: integer)
+    ensures ( (res == 0)  ==> (o1.departureTime == o2.departureTime && o1.departureMaxDuration == o2.departureMaxDuration &&
+                o1.departureTransportCompany == o2.departureTransportCompany && o1.departureTransportType == o2.departureTransportType));
+    
+    ensures ( (res == 1)  ==> (o1.departureTime > o2.departureTime || 
+                    (o1.departureTime == o2.departureTime && o1.departureMaxDuration > o2.departureMaxDuration) ||
+                    (o1.departureTime == o2.departureTime && o1.departureMaxDuration == o2.departureMaxDuration &&
+                        o1.departureTransportCompany > o2.departureTransportCompany) || 
+                    (o1.departureTime == o2.departureTime && o1.departureMaxDuration == o2.departureMaxDuration &&
+                        o1.departureTransportCompany == o2.departureTransportCompany &&
+                        o1.departureTransportType > o2.departureTransportType)));
+
+    ensures ( (res == -1) ==> (o1.departureTime < o2.departureTime || 
+                    (o1.departureTime == o2.departureTime && o1.departureMaxDuration < o2.departureMaxDuration) ||
+                    (o1.departureTime == o2.departureTime && o1.departureMaxDuration == o2.departureMaxDuration &&
+                        o1.departureTransportCompany < o2.departureTransportCompany) || 
+                    (o1.departureTime == o2.departureTime && o1.departureMaxDuration == o2.departureMaxDuration &&
+                        o1.departureTransportCompany == o2.departureTransportCompany &&
+                        o1.departureTransportType < o2.departureTransportType)));
+
+    //Hyperproperties
+    ensures ( (o1.1 == o1.2 && o2.1 == o2.2) ==> (res.1 == res.2));    //Determinism
+    ensures ( (o1.1 == o1.3 && o2.1 == o1.2 && o2.2 == o2.3 && res.1 == res.2) ==> (res.3 == res.1)); //transitivity
+    ensures ( (o1.1 == o2.2 && o1.2 == o2.1) ==> ((o1.1 == o2.1) ==> ((res.1 == res.2) && (res.1 == 0)) &&
+                                               ((o1.1 != o2.1) ==> (res.1 == -res.2)))); //antisymmetric
+    {
+        var rv: integer;
+        assume(o1.departureTime >= 0 && o2.departureTime>=0);
+        assume(o1.departureMaxDuration >= 0 && o2.departureMaxDuration >= 0);
+        assume(o1.departureTransportCompany >= 0 && o2.departureTransportCompany >= 0);
+        assume(o1.departureTransportType >= 0 && o2.departureTransportCompany >= 0);
+        call (rv) = intCompare(o1.departureTime, o2.departureTime);
+        if (rv == 0) 
+        {
+            if (o1.departureMaxDuration < o2.departureMaxDuration) {
+              rv = -1;
+            }
+            else 
+            {
+                if (o1.departureMaxDuration > o2.departureMaxDuration) {
+                    rv = 1;
+                }
+                else {
+                    // Transport company
+                    call (rv) = intCompare(o1.departureTransportCompany, o2.departureTransportCompany);
+                    if (rv == 0) {
+                        // Transport type
+                        call (rv) = intCompare(o1.departureTransportType, o2.departureTransportType);
+                    }
+                }
+            }
+
+        }
+
+        res = rv;
+        
+    }
+
+    control 
+    {
+        v = verify(compare);
+        check;
+        v.print_cex(o1, o2, res);
+        print_results;
+    }
+
+}

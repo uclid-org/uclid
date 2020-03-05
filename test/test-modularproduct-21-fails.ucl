@@ -1,0 +1,30 @@
+
+
+
+
+module main {
+
+    procedure equals(a: integer, b: integer) returns (res: integer)
+    ensures ( (a == b) ==> (res == 1));
+    ensures ( (a != b) ==> (res == 0));
+    ensures((a.0 == a.1 && b.0 == b.1) ==> (res.0 == res.1)); //determinism
+    {
+        if(a==b)
+        {
+            res = 1;
+        }
+        else
+        {
+            res = 0;
+        }
+    }
+
+
+    control 
+    {
+        v = verify(equals);
+        check;
+        print_results;
+    }
+
+}
