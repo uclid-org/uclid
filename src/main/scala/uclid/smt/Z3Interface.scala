@@ -309,6 +309,7 @@ class Z3Interface() extends Context {
 
   /** Convert an OperatorApplication into a Z3 AST.  */
   def opToZ3(op : Operator, operands : List[Expr]) : z3.Expr  = {
+    println(op)
     lazy val args = operands.map((arg) => exprToZ3(arg))
     // These values need to be lazy so that they are only evaluated when the appropriate ctx.mk* functions
     // are called. If they were eager, the casts would fail at runtime.
