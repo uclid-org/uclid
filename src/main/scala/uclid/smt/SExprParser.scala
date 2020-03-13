@@ -342,9 +342,12 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
 
   def parseModel(text : String) : AssignmentModel = {
     val tokens = new PackratReader(new lexical.Scanner(text))
+    println("Parsing model")
     phrase(AssignmentModel)(tokens) match {
-      case Success(model, _) =>
+      case Success(model, _) => {
+        println("Model parsed")
         model
+      }
       case NoSuccess(msg, next) =>
         throw new Utils.RuntimeError("Parser Error: %s.".format(msg))
     }

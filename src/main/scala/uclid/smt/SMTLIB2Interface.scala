@@ -399,21 +399,54 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
   }
 
   def getModel() : Option[Model] = {
+    
+  
+    def readAndCountParen(buf : StringBuilder) : Integer = {
+      val resp  = readResponse() match {
+        case Some(str) => str
+        case None => 
+          throw new Utils.AssertionError("Unexpected EOF result from SMT solver.")
+      }
+      var open = 0
+      resp.foreach(c => {
+        buf += c
+        c match {
+          case '(' => open += 1
+          case ')' => open -= 1
+          case _ => 
+        }
+      })
+      open
+    }
+
     Utils.assert(solverProcess.isAlive(), "Solver process is not alive! Cannot retrieve model.")
     writeCommand("(get-model)")
-    readResponse() match {
-      case Some(strModel) =>
-        smtlibInterfaceLogger.debug("model: {}", strModel)
-        val str = strModel.stripLineEnd
-        val Pattern = "(?s)(.*model.*)".r
-        str match {
-          case Pattern(_) =>
-            Some(new SMTLIB2Model(str))
-          case _ =>
-            None
-        }
-      case None =>
-        throw new Utils.AssertionError("Unexpected EOF result from SMT solver.")
+
+    // Read output until we have a closing parentheses
+    val buf = new StringBuilder
+    var openParen = 0
+    openParen += readAndCountParen(buf)
+
+    while (openParen != 0) {
+      /* TODO: We have a corner case where if the solver feeds exactly the 
+       * correct parentheses but isnt finished. Dealing with this will require
+       * changing readOutput in InteractiveProcess, since we can't make a dummy
+       * call to it. This should be tied to further improvements to 
+       * InteractiveProcess
+      */
+      Utils.assert(openParen >= 0, "Malformed output from SMT solver; too many closing parentheses")
+      openParen += readAndCountParen(buf)
+    }
+
+    val strModel = buf.toString
+    smtlibInterfaceLogger.debug("model: {}", strModel)
+    val str = strModel.stripLineEnd
+    val Pattern = "(?s)(.*model.*)".r
+    str match {
+      case Pattern(_) =>
+        Some(new SMTLIB2Model(str))
+      case _ =>
+        None
     }
   }
 
