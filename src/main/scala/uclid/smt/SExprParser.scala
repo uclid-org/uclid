@@ -31,9 +31,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Pramod Subramanyan
+ * Author: Pramod Subramanyan, Pranav Gaddamadugu
  *
- * Parser for SMTLIB2/SyGuS S-expressions
+ * Parser for solver output.
  *
  */
 
@@ -222,16 +222,17 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val OpConcat= "concat"
   lazy val OpArraySelect = "select"
   lazy val OpArrayStore = "store"
+  lazy val KwTrue = "true"
+  lazy val KwFalse = "false"
 
-  lazy val KwDefineFun = "define-fun"
+
   lazy val KwModel = "model"  // The "model" keyword is specific to Boolector 
   lazy val KwInt = "Int"
   lazy val KwBool = "Bool"
   lazy val KwBV = "BitVec"
   lazy val KwArray = "Array"
   lazy val KwLambda = "lambda"
-
-  
+ 
   // Reserved words
   lazy val KwBINARY = "BINARY"
   lazy val KwDECIMAL = "DECIMAL"
@@ -252,9 +253,6 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   // Need to add to deal with Z3 output
   lazy val KwDecFun = "declare-fun"
 
-
-  lazy val KwTrue = "true"
-  lazy val KwFalse = "false"
 
   lexical.delimiters += ("(", ")")
   lexical.reserved += (
@@ -305,7 +303,6 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     OpBVLE ^^ { _ => smt.BVLEOp(0)} | 
     OpBVLT ^^ { _ => smt.BVLTOp(0)} | 
     OpConcat ^^ { _ => smt.BVConcatOp(0) }
-    
 
   lazy val Symbol : PackratParser[smt.Symbol] =
     symbol ^^ { sym => smt.Symbol(sym.name, smt.UndefinedType) } 
@@ -319,14 +316,6 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val BoolLit : PackratParser[smt.BooleanLit] =
     KwTrue ^^ { _ => smt.BooleanLit(true) } |
     KwFalse ^^ { _ => smt.BooleanLit(false) }
-
-  lazy val Expr : PackratParser[smt.Expr] =
-    Symbol | IntegerLit | BitVectorLit | BoolLit |
-    "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)} |
-    "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) } |
-    "(" ~ OpArraySelect ~> Expr ~ rep(Expr) <~ ")" ^^ { case array ~ indices => smt.ArraySelectOperation(smt.Symbol(array.toString, smt.ArrayType(Nil, array.typ)), indices) } |
-    "(" ~ OpArrayStore ~> Expr ~ rep(Expr) ~ Expr <~ ")" ^^ { case array ~ indices ~ value => smt.ArrayStoreOperation(array, indices, value) } |
-    "(" ~ KwLet ~> Bindings ~ Expr <~ ")" ^^ { case bindings ~ expr => smt.LetExpression(bindings, expr) }
 
   lazy val Type : PackratParser[smt.Type] =
     KwInt ^^ { _ => smt.IntType } |
@@ -382,7 +371,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
 
   
   lazy val DefineFun : PackratParser[smt.DefineFun] =
-    "(" ~ KwDefineFun ~> symbol ~ FunArgs ~ Type ~ Expr <~ ")" ^^ {
+    "(" ~ KwDefFun ~> symbol ~ FunArgs ~ Type ~ Expr <~ ")" ^^ {
       case id ~ args ~ rTyp ~ expr => {
         val funcType = MapType(args.map(a => a.typ), rTyp)
         smt.DefineFun(smt.Symbol(id.name, funcType), args, expr)
