@@ -97,7 +97,7 @@ class InteractiveProcess(args: List[String], saveInput: Boolean=false) {
         done = true
         logger.debug("Process dead.")
       } else {
-        Thread.sleep(15)
+        Thread.sleep(5)
         val numAvail = out.available()
         if (numAvail == 0) {
           Thread.sleep(5)
