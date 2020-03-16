@@ -323,7 +323,6 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     "(" ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
     "(" ~ KwUS ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
     "(" ~ KwArray ~> Type ~ Type <~ ")" ^^ { case inType ~ outType => smt.ArrayType(List(inType), outType) } |
-    // TODO: Handle defined types
     "(" ~> symbol ~ rep1(Type) <~ ")" ^^ { case sym ~ typs => smt.TupleType(typs) } |
     symbol ^^ { sym =>  smt.UninterpretedType(sym.name) }
     
@@ -343,10 +342,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   
   lazy val Expr : PackratParser[smt.Expr] =
     Symbol | IntegerLit | BitVectorLit | BoolLit |
-    //Adding indexed identifier; TODO: Check; TODO: Move to symbol
-    //"(" ~ KwUs ~> Symbol ~ rep1(Symbol | IntLit) <~ ")" ^^ { case sym ~ idxs => smt.Symbol(
-    //Adding qualified identifier; TODO: Check; TODO: Move to symbol
-    "(" ~ KwAs ~> Symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.id, typ) } |
+        "(" ~ KwAs ~> Symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.id, typ) } |
     "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)} |
     "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) } |
     "(" ~ OpArraySelect ~> Expr ~ rep(Expr) <~ ")" ^^ { case array ~ indices => smt.ArraySelectOperation(smt.Symbol(array.toString, smt.ArrayType(Nil, array.typ)), indices) } |
@@ -354,19 +350,26 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     "(" ~ KwLet ~> Bindings ~ Expr <~ ")" ^^ { case bindings ~ expr => smt.LetExpression(bindings, expr) } |
     "(" ~ KwForall ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => 
       {
-        //TODO: Add patterns
+        //TODO: Do we want patterns?
         val op = smt.ForallOp(args, List.empty)
         smt.OperatorApplication(op, List(expr))  
       }
     } |
-    //Adding function application; TODO: Check
     "(" ~> Symbol ~ Expr.+ <~ ")" ^^ { case e ~ args => 
       {
         val funcType = MapType(args.map(a => a.typ), e.symbolTyp)
         val sym = smt.Symbol(e.id, funcType)
         smt.FunctionApplication(sym, args) 
       }
+    } | 
+    //TODO: Check that treating this like a func app is okay?
+    "(" ~ KwUS ~> Symbol ~ rep1(Symbol|IntegerLit) <~ ")" ^^ { case sym ~ idxs => 
+      {
+        val funcType = MapType(idxs.map(a => a.typ), sym.symbolTyp)
+        smt.FunctionApplication(smt.Symbol(sym.id, funcType), idxs) 
+      }
     }
+
 
 
   
