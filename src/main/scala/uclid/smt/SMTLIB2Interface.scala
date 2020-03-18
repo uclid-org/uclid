@@ -435,7 +435,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     val strModel = buf.toString
     smtlibInterfaceLogger.debug("model: {}", strModel)
     val str = strModel.stripLineEnd
-    val Pattern = "(?s)(.*model.*)".r
+    val Pattern = "(?s)(.*)".r
     str match {
       case Pattern(_) =>
         Some(new SMTLIB2Model(str))
