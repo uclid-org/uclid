@@ -428,12 +428,6 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     openParen += readAndCountParen(buf)
 
     while (openParen != 0) {
-      /* TODO: We have a corner case where if the solver feeds exactly the 
-       * correct parentheses but isnt finished. Dealing with this will require
-       * changing readOutput in InteractiveProcess, since we can't make a dummy
-       * call to it. This should be tied to further improvements to 
-       * InteractiveProcess
-      */
       Utils.assert(openParen >= 0, "Malformed output from SMT solver; too many closing parentheses")
       openParen += readAndCountParen(buf)
     }
