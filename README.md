@@ -90,3 +90,7 @@ This repository consists of the following sub-directories.
  - test: test programs for uclid5.
  - tutorial: uclid5 tutorial (with LaTeX source)
  - vim: vim syntax highlighting for uclid5. 
+
+# Related Tools
+
+* [chiselucl](https://github.com/uclid-org/chiselucl) allows Chisel models to be converted into UCLID5.

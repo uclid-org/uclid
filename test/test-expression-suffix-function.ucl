@@ -14,7 +14,7 @@ module main {
     var idx : integer;
 
     next {
-        num' = bv_left_shift(1, bv_zero_extend(1, common.random().arr[idx]))[4:0];
+        num' = bv_left_shift(1bv8, bv_zero_extend(1, common.random().arr[idx]))[4:0];
         flag' = common.random().x;
     }
 

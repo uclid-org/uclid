@@ -1,0 +1,29 @@
+module main
+{
+  var b : bv8;
+  var n : integer;
+  var m : integer;
+  var c : bv8;
+  init {
+    b, c = 0bv8, 0bv8;
+    n, m = 0, 0;
+  }
+  next {
+    b' = b + 1bv8;
+    n' = bv_to_unsigned_int(b');
+    m' = bv_to_signed_int(b');
+    c' = int_to_bv(8, n');
+    assert (b' == int_to_bv(8, m'));
+  }
+
+  invariant b_eq_c : b == c;
+  invariant n_range: n >=0 && n < 256;
+  invariant m_range_bad: m >= 0 && m < 256; // expected to fail.
+  invariant m_range_good: m >= -128 && m < 128;
+
+  control {
+    v = induction;
+    check;
+    print_results;
+  }
+}

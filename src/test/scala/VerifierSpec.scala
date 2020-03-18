@@ -196,6 +196,12 @@ class BasicVerifierSpec extends FlatSpec {
   "test-unsigned-comparators-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-unsigned-comparators-1.ucl", 0)
   }
+  "test-bv2int.ucl" should "verify all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-bv2int.ucl", 1)
+  }
+  "test-range-expr.ucl" should "verify all but two assertions." in {
+    VerifierSpec.expectedFails("./test/test-range-expr.ucl", 2)
+  }
 }
 class ProcedureVerifSpec extends FlatSpec {
   "test-inliner.ucl" should "verify successfully." in {
@@ -306,6 +312,9 @@ class InductionVerifSpec extends FlatSpec {
   }
   "induction-pre-control-5.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/induction-pre-control-5.ucl", 1)
+  }
+  "test-tuple.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-tuple.ucl", 0)
   }
 }
 class QuantifierVerifSpec extends FlatSpec {

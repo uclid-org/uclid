@@ -209,6 +209,19 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val OpBVOr  = "bvor"
   lazy val OpBVXor = "bvxor"
   lazy val OpBVNot = "bvnot"
+  lazy val OpBVUrem = "bvurem"
+  lazy val OpBVSrem = "bvsrem"
+  lazy val OpBVGTU = "bvugt"
+  lazy val OpBVGT = "bvsgt"
+  lazy val OpBVGEU = "bvuge"
+  lazy val OpBVGE = "bvsge"
+  lazy val OpBVLTU = "bvslt"
+  lazy val OpBVLT = "bvslt"
+  lazy val OpBVLEU = "bvule"
+  lazy val OpBVLE = "bvsle"
+  lazy val OpConcat= "concat"
+  lazy val OpArraySelect = "select"
+  lazy val OpArrayStore = "store"
 
   lazy val KwDefineFun = "define-fun"
   lazy val KwModel = "model"  // The "model" keyword is specific to Boolector 
@@ -217,6 +230,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val KwBV = "BitVec"
   lazy val KwArray = "Array"
   lazy val KwLambda = "lambda"
+  lazy val KwLet = "let" // let is also reserved
 
   lazy val KwUS = "_"
   lazy val KwTrue = "true"
@@ -224,9 +238,10 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
 
   lexical.delimiters += ("(", ")")
   lexical.reserved += (KwFalse, KwFalse, KwUS,
-      KwDefineFun, KwModel, KwInt, KwBool, KwBV, KwArray, KwLambda, OpAnd, OpOr, OpNot, OpITE, OpImpl, 
+      KwDefineFun, KwModel, KwInt, KwBool, KwBV, KwArray, KwLambda, OpAnd, OpOr, OpNot, OpITE, OpImpl, KwLet,
       OpEq, OpIntGE, OpIntGT, OpIntLT, OpIntLE, OpIntAdd, OpIntSub, OpIntMul,
-      OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, OpBVAnd, OpBVOr, OpBVXor, OpBVNot)
+      OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, OpBVAnd, OpBVOr, OpBVXor, OpBVNot, OpBVUrem, OpBVSrem, 
+      OpBVGT, OpBVGTU, OpBVGE, OpBVGEU, OpBVLT, OpBVLTU, OpBVLE, OpBVLEU, OpConcat, OpArraySelect, OpArrayStore)
 
   lazy val Operator : PackratParser[smt.Operator] =
     OpAnd ^^ { _ => smt.ConjunctionOp } |
@@ -249,7 +264,18 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     OpBVAnd ^^ { _ => smt.BVAndOp(0) } |
     OpBVOr ^^ { _ => smt.BVOrOp(0) } |
     OpBVXor ^^ { _ => smt.BVXorOp(0) } |
-    OpBVNot ^^ { _ => smt.BVNotOp(0) }
+    OpBVNot ^^ { _ => smt.BVNotOp(0) } |
+    OpBVUrem ^^ { _ => smt.BVUremOp(0) } |
+    OpBVSrem ^^ { _ => smt.BVSremOp(0) } |
+    OpBVGTU ^^ { _ => smt.BVGTUOp(0)} | 
+    OpBVGEU ^^ { _ => smt.BVGEUOp(0)} | 
+    OpBVLEU ^^ { _ => smt.BVLEUOp(0)} | 
+    OpBVLTU ^^ { _ => smt.BVLTUOp(0)} | 
+    OpBVGT ^^ { _ => smt.BVGTOp(0)} | 
+    OpBVGT ^^ { _ => smt.BVGEOp(0)} | 
+    OpBVLE ^^ { _ => smt.BVLEOp(0)} | 
+    OpBVLT ^^ { _ => smt.BVLTOp(0)} | 
+    OpConcat ^^ { _ => smt.BVConcatOp(0) }
     
 
   lazy val Symbol : PackratParser[smt.Symbol] =
@@ -268,7 +294,10 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val Expr : PackratParser[smt.Expr] =
     Symbol | IntegerLit | BitVectorLit | BoolLit |
     "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)} |
-    "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) }
+    "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) } |
+    "(" ~ OpArraySelect ~> Expr ~ rep(Expr) <~ ")" ^^ { case array ~ indices => smt.ArraySelectOperation(smt.Symbol(array.toString, smt.ArrayType(Nil, array.typ)), indices) } |
+    "(" ~ OpArrayStore ~> Expr ~ rep(Expr) ~ Expr <~ ")" ^^ { case array ~ indices ~ value => smt.ArrayStoreOperation(array, indices, value) } |
+    "(" ~ KwLet ~> Bindings ~ Expr <~ ")" ^^ { case bindings ~ expr => smt.LetExpression(bindings, expr) }
 
   lazy val Type : PackratParser[smt.Type] =
     KwInt ^^ { _ => smt.IntType } |
@@ -282,6 +311,12 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
 
   lazy val FunArgs : PackratParser[List[smt.Symbol]] =
     "(" ~> rep(FunArg) <~ ")"
+
+  lazy val Binding : PackratParser[(smt.Symbol, smt.Expr)] = 
+    "(" ~> Symbol ~ Expr <~ ")" ^^ { case sym ~ expr => (sym, expr) }
+
+  lazy val Bindings : PackratParser[List[(smt.Symbol, smt.Expr)]] = 
+    "(" ~> rep1(Binding) <~ ")"
 
   lazy val DefineFun : PackratParser[smt.DefineFun] =
     "(" ~ KwDefineFun ~> symbol ~ FunArgs ~ Type ~ Expr <~ ")" ^^ {

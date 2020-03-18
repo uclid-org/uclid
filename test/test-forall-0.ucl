@@ -24,9 +24,9 @@ module main
   
   control {
     // print_module;
-    unroll (4);
+    v = unroll (4);
     check;
     print_results;
-    // print_cex(sum, value, numbers[0], numbers[1], numbers[2], numbers[3]);
+    v.print_cex(sum, value, numbers[0], numbers[1], numbers[2], numbers[3]);
   }
 }

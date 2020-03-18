@@ -1,0 +1,42 @@
+/*int main(void) {
+  unsigned int x = 1;
+  unsigned int y = 0;
+
+  while (y < 1024) {
+    x = 0;
+    y++;
+  }
+
+  __CPROVER_assert(x == 0, "A");
+
+}*/
+
+module main
+{
+  var x: bv32;
+  var y: bv32;
+
+
+ init
+ {
+   x=0bv32;
+   y=0bv32;
+ }
+
+  next
+  {
+  	if(y < 1024bv32)
+  	{
+  	  x'=0bv32;
+  	  y'=y+1bv32;
+  	}
+  }
+
+  invariant my_invariant: (y < 1024bv32 || x ==0bv32);
+
+control {
+    synthesize_invariant[ALL];
+  }
+}
+
+

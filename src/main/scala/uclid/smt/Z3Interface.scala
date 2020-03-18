@@ -49,8 +49,6 @@ import scala.collection.JavaConverters._
 import com.microsoft.z3.enumerations.Z3_lbool
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.typesafe.scalalogging.Logger
-import java.io.File
-import java.io.PrintWriter
 
 
 /**
@@ -318,6 +316,7 @@ class Z3Interface() extends Context {
     lazy val arithArgs = typecastAST[z3.ArithExpr](args)
     lazy val boolArgs = typecastAST[z3.BoolExpr](args)
     lazy val bvArgs = typecastAST[z3.BitVecExpr](args)
+    lazy val intArgs = typecastAST[z3.IntExpr](args)
 
     def mkReplace(w : Int, hi : Int, lo : Int, arg0 : z3.BitVecExpr, arg1 : z3.BitVecExpr) : z3.BitVecExpr = {
       val slice0 = (w-1, hi+1)
@@ -365,6 +364,8 @@ class Z3Interface() extends Context {
       case BVMulOp(_)             => ctx.mkBVMul(bvArgs(0), bvArgs(1))
       case BVMinusOp(_)           => ctx.mkBVNeg(bvArgs(0))
       case BVAndOp(_)             => ctx.mkBVAND(bvArgs(0), bvArgs(1))
+      case BVUremOp(_)            => ctx.mkBVURem(bvArgs(0), bvArgs(1))
+      case BVSremOp(_)            => ctx.mkBVSRem(bvArgs(0), bvArgs(1))  
       case BVOrOp(_)              => ctx.mkBVOR(bvArgs(0), bvArgs(1))
       case BVXorOp(_)             => ctx.mkBVXOR(bvArgs(0), bvArgs(1))
       case BVNotOp(_)             => ctx.mkBVNot(bvArgs(0))
@@ -373,9 +374,6 @@ class Z3Interface() extends Context {
       case BVReplaceOp(w, hi, lo) => mkReplace(w, hi, lo, bvArgs(0), bvArgs(1))
       case BVSignExtOp(w, e)      => ctx.mkSignExt(e, bvArgs(0))
       case BVZeroExtOp(w, e)      => ctx.mkZeroExt(e, bvArgs(0))
-      case BVLeftShiftIntOp(w, e)    => ctx.mkBVSHL(bvArgs(0), ctx.mkBV(e, w))
-      case BVLRightShiftIntOp(w, e)  => ctx.mkBVLSHR(bvArgs(0), ctx.mkBV(e, w))
-      case BVARightShiftIntOp(w, e)  => ctx.mkBVASHR(bvArgs(0), ctx.mkBV(e, w))
       case BVLeftShiftBVOp(w)     => ctx.mkBVSHL(bvArgs(0), bvArgs(1))
       case BVLRightShiftBVOp(w)   => ctx.mkBVLSHR(bvArgs(0), bvArgs(1))
       case BVARightShiftBVOp(w)   => ctx.mkBVASHR(bvArgs(0), bvArgs(1))
@@ -419,6 +417,12 @@ class Z3Interface() extends Context {
           else prodSort.getFieldDecls()(i).apply(exprArgs(0))
         }
         prodSort.mkDecl().apply(newFields.toSeq : _*)
+      case BV2SignedIntOp() =>
+        ctx.mkBV2Int(bvArgs(0), true)
+      case BV2UnsignedIntOp() =>
+        ctx.mkBV2Int(bvArgs(0), false)
+      case Int2BVOp(w) =>
+        ctx.mkInt2BV(w, intArgs(0))
       case _             => throw new Utils.UnimplementedException("Operator not yet implemented: " + op.toString())
     }
   }
@@ -485,11 +489,6 @@ class Z3Interface() extends Context {
   }
   override def preassert(e: Expr) {}
 
-  def writeToFile(p: String, s: String): Unit = {
-    val pw = new PrintWriter(new File(p.replace(" ", "_")))
-    try pw.write(s) finally pw.close()
-  }
-
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
   override def check() : SolverResult = {
@@ -514,7 +513,7 @@ class Z3Interface() extends Context {
       }
       return checkResult
     } else {
-      writeToFile(f"$filePrefix%s-$curAssertName%s-$curAssertLabel%s-$counten%04d.smt", smtOutput + "\n\n(check-sat)\n(get-info :all-statistics)\n")
+      Utils.writeToFile(f"$filePrefix%s-$curAssertName%s-$curAssertLabel%s-$counten%04d.smt", smtOutput + "\n\n(check-sat)\n(get-info :all-statistics)\n")
       counten += 1
       return SolverResult(None, None)
     }

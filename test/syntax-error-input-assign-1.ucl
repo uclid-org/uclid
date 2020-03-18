@@ -1,0 +1,25 @@
+module sub
+{
+    input a : integer;
+    procedure foo() returns (a_new : integer)
+    {
+        a_new = a + 1;
+    }
+    next {
+        call (a') = foo();
+    }
+}
+
+module main
+{
+    var a : integer;
+    instance sub_i : sub(a : (a));
+
+    next {
+        next (sub_i);
+    }
+
+    control {
+        print_module;
+    }
+}

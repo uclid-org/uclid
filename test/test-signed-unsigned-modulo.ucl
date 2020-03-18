@@ -1,0 +1,22 @@
+module main
+{
+  var x : bv32;
+  var y: bv32;
+  init {
+  x = 3220189472bv32;
+  y = 1073741825bv32;
+  }
+  next {
+    x'=x;
+    y'=y;
+  }
+  invariant modtwo: (x %_u 2bv32) == (x&1bv32);
+  invariant signedvunsigned: (x %_u y) != (x % y);
+  invariant signedvunsigned2: (x %_u y) == (x % y);
+  control {
+    v = unroll(5);
+    check;
+    print_results;
+    v.print_cex(x,y);
+  }
+}

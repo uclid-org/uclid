@@ -1,0 +1,23 @@
+module main
+{
+  var m, n : integer;
+
+  init {
+    assume (1 < m <= 10);
+    n = m - 1;
+    // expected to PASS.
+    assert (n < m <= 20);
+    // expected to FAIL.
+    assert (2 <= m < 5);
+    // expected to PASS.
+    assert (1 <= n < 10);
+    // expected to FAIL.
+    assert (1 < n <= 10);
+  }
+
+  control {
+    v = unroll(1);
+    check;
+    print_results;
+  }
+}

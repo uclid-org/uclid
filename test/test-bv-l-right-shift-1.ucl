@@ -9,7 +9,7 @@ module main {
 		a' = a * 2bv8;
 	}
 
-	invariant z: (bv_left_shift(1, bv_l_right_shift(1, a)) == a);
+	invariant z: (bv_left_shift(1bv8, bv_l_right_shift(1bv8, a)) == a);
 
 	control {
 		unroll(9);

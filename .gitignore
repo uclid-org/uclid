@@ -22,3 +22,9 @@ tutorial/tutorial.toc
 *.swp
 Makefile
 .DS_Store
+.metals
+.bloop
+tasks
+.vscode
+.z3_trace
+lib/libz3java.so

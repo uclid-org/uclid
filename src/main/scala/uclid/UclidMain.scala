@@ -127,6 +127,8 @@ object UclidMain {
         (_, c) => c.copy(testFixedpoint = true)
       }.text("Test fixed point")
 
+      help("help").text("prints this usage text")
+
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
       }.text("List of files to analyze.")
@@ -221,10 +223,11 @@ object UclidMain {
     passManager.addPass(new ControlCommandChecker())
     passManager.addPass(new ComputeInstanceTypes())
     passManager.addPass(new ModuleInstanceChecker())
-    passManager.addPass(new WhileLoopRewriter())
-    passManager.addPass(new ForLoopUnroller())
-    passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new CaseEliminator())
+    passManager.addPass(new ForLoopUnroller())
+    passManager.addPass(new ModularProductProgram())
+    passManager.addPass(new WhileLoopRewriter())
+    passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
     passManager.addPass(new BlockFlattener())
@@ -336,7 +339,7 @@ object UclidMain {
     }
     val sygusInterface : Option[smt.SynthesisContext] = config.synthesizer match {
       case Nil => None
-      case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir, config.sygusFormat))
+      case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir))
     }
     solverInterface.filePrefix = config.smtFileGeneration
     val result = symbolicSimulator.execute(solverInterface, sygusInterface, config)

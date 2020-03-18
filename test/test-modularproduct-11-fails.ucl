@@ -1,0 +1,23 @@
+module main {
+
+    var moduleLevelVar: integer;
+
+
+    procedure foo(intVal : integer) returns (res : integer)
+    ensures ( (intVal.1 == intVal.2) ==> (res.1 == res.2));
+    modifies moduleLevelVar;
+    {
+        /* Procedures with trace select operation cannot use module level variables */
+        moduleLevelVar = intVal;
+        res = 0;
+    }
+
+    control 
+    {
+        v = verify(foo);
+        check;
+        v.print_cex(intVal, res);
+        print_results;
+    }
+    
+}

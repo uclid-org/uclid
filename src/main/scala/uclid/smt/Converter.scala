@@ -124,14 +124,13 @@ object Converter {
       case lang.BVUnaryMinusOp(w) => smt.BVMinusOp(w)
       case lang.BVAndOp(w) => smt.BVAndOp(w)
       case lang.BVOrOp(w) => smt.BVOrOp(w)
+      case lang.BVUremOp(w) => smt.BVUremOp(w)
+      case lang.BVSremOp(w) => smt.BVSremOp(w)  
       case lang.BVXorOp(w) => smt.BVXorOp(w)
       case lang.BVNotOp(w) => smt.BVNotOp(w)
       case lang.ConstExtractOp(slice) => smt.BVExtractOp(slice.hi, slice.lo)
       case lang.BVSignExtOp(w, e) => smt.BVSignExtOp(w, e)
       case lang.BVZeroExtOp(w, e) => smt.BVZeroExtOp(w, e)
-      case lang.BVLeftShiftIntOp(w, e) => smt.BVLeftShiftIntOp(w, e)
-      case lang.BVLRightShiftIntOp(w, e) => smt.BVLRightShiftIntOp(w, e)
-      case lang.BVARightShiftIntOp(w, e) => smt.BVARightShiftIntOp(w, e)
       case lang.BVLeftShiftBVOp(w) => smt.BVLeftShiftBVOp(w)
       case lang.BVLRightShiftBVOp(w) => smt.BVLRightShiftBVOp(w)
       case lang.BVARightShiftBVOp(w) => smt.BVARightShiftBVOp(w)
@@ -145,6 +144,9 @@ object Converter {
       case lang.EqualityOp() => smt.EqualityOp
       case lang.InequalityOp() => smt.InequalityOp
       case lang.DistinctOp() => smt.InequalityOp
+      case lang.BV2SignedIntOp() => smt.BV2SignedIntOp()
+      case lang.BV2UnsignedIntOp() => smt.BV2UnsignedIntOp()
+      case lang.Int2BVOp(w) => smt.Int2BVOp(w)
       // Record select.
       case lang.RecordSelect(r) => smt.RecordSelectOp(r.name)
       // Quantifiers
@@ -194,6 +196,8 @@ object Converter {
       case smt.BVOrOp(w) => lang.BVOrOp(w)
       case smt.BVXorOp(w) => lang.BVXorOp(w)
       case smt.BVNotOp(w) => lang.BVNotOp(w)
+      case smt.BVUremOp(w) => lang.BVUremOp(w)
+      case smt.BVSremOp(w) => lang.BVSremOp(w)  
       case smt.BVExtractOp(hi, lo) => lang.ConstExtractOp(lang.ConstBitVectorSlice(hi, lo))
       case smt.BVConcatOp(_) => lang.ConcatOp()
       // Boolean operators.

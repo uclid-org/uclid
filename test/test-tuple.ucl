@@ -1,0 +1,24 @@
+module main
+{
+    // this is a tuple consisting of two integers
+    var v : {integer, integer};
+    init {
+        // accessing tuple elements
+        v._1 = 0;
+        v._2 = 1;
+    }
+    next {
+        // can't write to tuple twice in the next block. 
+        // so have to make a single assignment that 
+        // creates a new tuple using the { ... } notation.
+        v' = {v._2, v._1 + v._2};
+    }
+    invariant lt  : v._1 <= v._2;
+    invariant pos : v._1 >= 0 && v._2 > 0;
+    control {
+        v = induction;
+        check;
+        print_results;
+        v.print_cex;
+    }
+}
