@@ -47,6 +47,13 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
   lazy val logger = Logger(classOf[ModuleConstantsImportRewriter])
   type T = HashMap[Identifier, Identifier]
 
+/**
+ * This function recursively searches for import dependencies across modules
+ * and forms a list of modules that we need to import from.
+ *
+ * @param id Identifier of the current module
+ * @param ctx Scope containing ModuleDefinitions
+ */
   def findModuleDependencies(id : Identifier, ctx : Scope) : List[Identifier] = {
     val mod = ctx.map.get(id) match {
       case Some(Scope.ModuleDefinition(module)) => module
@@ -63,6 +70,15 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
     fullList
   }
 
+/**
+ * This function finds and stores the identifier and module identifier of all 
+ * imported constants.
+ *
+ * @param d Direction of AST traversal
+ * @param modConstImport Import declaration
+ * @param in HashMap[Identifier, Identifier]
+ * @param context Scope containing ModuleDefinitions
+ */
   override def applyOnModuleConstantsImport(d : TraversalDirection.T, modConstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
       logger.debug("statement: {}", modConstImport.toString())
@@ -102,6 +118,15 @@ class ModuleConstantsImportRewriter extends ASTAnalyzer("ModuleConstantsImportRe
   override def reset() {
     in = Some(HashMap.empty)
   }
+
+/**
+ * This function will traverse a module and append all imported function calls
+ * with their appropriate module tag.
+ *
+ * @param module The module to be visited
+ * @param context The context of the current module (technically accumulated 
+ *    by the PassManager)
+ */
   override def visit(module : Module, context : Scope) : Option[Module] = {
     val modScope = manager.moduleList.foldLeft(Scope.empty)((s, m) => s +& m )
     val initMap = new HashMap[Identifier, Identifier]()

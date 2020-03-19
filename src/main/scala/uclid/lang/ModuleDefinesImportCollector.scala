@@ -168,7 +168,7 @@ class ModuleDefinesImportCollector extends ASTAnalyzer("ModuleDefinesImportColle
       }
     }
     
-    //logger.debug("newImports: " + newImports.toString())
+    logger.debug("newImports: " + newImports.toString())
     val modP = Module(module.id, newImports ++ module.decls, module.cmds, module.notes)
     return Some(modP)
   }
