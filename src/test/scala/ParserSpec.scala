@@ -590,4 +590,74 @@ class ParserSpec extends FlatSpec {
         assert (p.errors(0)._1.contains("is a readonly entity and cannot be assigned to"))
     }
   }
+  
+  "test-func-import-5.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-func-import-5.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case e : Utils.ParserError => assert(e.msg.contains("Redeclaration error"))
+    }
+  }
+
+  "test-func-import-6.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-func-import-6.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case e : Utils.ParserError  => assert(e.msg.contains("Trying to import from a module that does not"))
+    }
+  }
+
+  "test-func-import-7.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-func-import-7.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+        case e : Utils.ParserError => assert(e.msg.contains("Trying to import from the same module"))
+    }
+  }
+
+  "test-const-import-5.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-const-import-5.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case e : Utils.ParserError => assert(e.msg.contains("Trying to import from a module that does not"))
+    }
+  }
+
+  "test-const-import-6.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-const-import-6.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case e : Utils.ParserError => assert(e.msg.contains("Trying to import from the same module"))
+    }
+  }
+
+  "test-def-import-0.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-def-import-0.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+
+  "test-def-import-1.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-def-import-1.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.exists(p => p._1.contains("Redeclaration")))
+    }
+  }
+
+  "test-def-import-2.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-def-import-2.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case e : Utils.ParserError => assert(e.msg.contains("Trying to import from a module that does not"))
+    }
+  }
 }

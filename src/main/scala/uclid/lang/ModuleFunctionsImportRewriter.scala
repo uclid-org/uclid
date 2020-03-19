@@ -40,11 +40,9 @@
 package uclid
 package lang
 
-import com.typesafe.scalalogging.Logger
 import scala.collection.mutable.HashMap
 
 class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier, Identifier]] {
-  lazy val logger = Logger(classOf[ModuleFunctionsImportRewriter])
   type T = HashMap[Identifier, Identifier]
 /**
  * This function recursively searches for import dependencies across modules
@@ -56,13 +54,14 @@ class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
   def findModuleDependencies(id : Identifier, ctx : Scope) : List[Identifier] = {
     val mod = ctx.map.get(id) match {
       case Some(Scope.ModuleDefinition(module)) => module
-      case _ => throw new Utils.AssertionError("Trying to import from a module that doesn't exist; try reordering the input of module files")
+      case _ => throw new Utils.ParserError("Trying to import from a module that does not exist; try reordering the input of module files", None, None)
     }
     
     val importList : List[Identifier] = mod.funcImportDecls.map(d => d.id)
     val fullList = importList ++ importList.foldLeft(List[Identifier]()) { 
-      (list, id) => {
-        val dependencies = findModuleDependencies(id, ctx)
+      (list, i) => {
+        if (i == id) throw new Utils.ParserError(s"Trying to import from the same module: ${id}", None, None)
+        val dependencies = findModuleDependencies(i, ctx)
         list ++ dependencies
       }
     }
@@ -80,7 +79,6 @@ class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
  */
   override def applyOnModuleFunctionsImport(d : TraversalDirection.T, modFunImport : ModuleFunctionsImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
-      logger.debug("statement: {}", modFunImport.toString())
       val id = modFunImport.id
       val dependList = findModuleDependencies(id, context)
       
@@ -92,7 +90,7 @@ class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
         val mod = context.map.get(id).get.asInstanceOf[Scope.ModuleDefinition].mod
         mod.functions.foreach { f => 
           in.get(f.id) match {
-            case Some(_) => throw new Utils.AssertionError(s"Redeclaration error in module functions import. Check module: ${mod.id}")
+            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module functions import. Check module: ${mod.id}", None, None)
             case None => in += ((f.id, mod.id))
           }
         }
@@ -106,7 +104,6 @@ class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
 
 
 class ModuleFunctionsImportRewriter extends ASTAnalyzer("ModuleFunctionsImportRewriter", new ModuleFunctionsImportCollectorPass()) {
-  lazy val logger = Logger(classOf[ModuleFunctionsImportRewriter])
   override def reset() {
     in = Some(HashMap.empty)
   }
@@ -126,7 +123,7 @@ class ModuleFunctionsImportRewriter extends ASTAnalyzer("ModuleFunctionsImportRe
     val initMap = new HashMap[Identifier, Identifier]()
     module.functions.foreach { f => 
       initMap.get(f.id) match {
-        case Some(_) => throw new Utils.AssertionError(s"Function redeclaration error in module: ${module.id}")
+        case Some(_) => throw new Utils.ParserError(s"Function redeclaration error in module: ${module.id}", None, None)
         case None => initMap += ((f.id, module.id))
       }
     }

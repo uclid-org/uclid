@@ -1,0 +1,12 @@
+module child {
+  const one : integer;
+    
+  const * = main.*;
+}
+
+
+module main {
+  const two : integer;
+  
+  const * = child.*;
+}

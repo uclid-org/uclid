@@ -40,11 +40,9 @@
 package uclid
 package lang
 
-import com.typesafe.scalalogging.Logger
 import scala.collection.mutable.HashMap
 
 class ModuleConstantsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier, Identifier]] {
-  lazy val logger = Logger(classOf[ModuleConstantsImportRewriter])
   type T = HashMap[Identifier, Identifier]
 
 /**
@@ -57,13 +55,14 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
   def findModuleDependencies(id : Identifier, ctx : Scope) : List[Identifier] = {
     val mod = ctx.map.get(id) match {
       case Some(Scope.ModuleDefinition(module)) => module
-      case _ => throw new Utils.AssertionError("Trying to import from a module that doesn't exist; try reordering the input of module files")
+      case _ => throw new Utils.ParserError(s"Trying to import from a module that does not exist: ${id}; try reordering the input of module files", None, None)
     }
     
     val importList : List[Identifier] = mod.constImportDecls.map(d => d.id)
     val fullList = importList ++ importList.foldLeft(List[Identifier]()) { 
-      (list, id) => {
-        val dependencies = findModuleDependencies(id, ctx)
+      (list, i) => {
+        if (i == id) throw new Utils.ParserError(s"Trying to import from the same module: ${i}", None, None)
+        val dependencies = findModuleDependencies(i, ctx)
         list ++ dependencies
       }
     }
@@ -81,7 +80,6 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
  */
   override def applyOnModuleConstantsImport(d : TraversalDirection.T, modConstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
-      logger.debug("statement: {}", modConstImport.toString())
       val id = modConstImport.id
       val dependList = findModuleDependencies(id, context)
       
@@ -93,14 +91,14 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
         val mod = context.map.get(id).get.asInstanceOf[Scope.ModuleDefinition].mod
         mod.constLits.foreach { c => 
           in.get(c._1) match {
-            case Some(_) => throw new Utils.AssertionError(s"Redeclaration error in module constants import. Check module: ${mod.id}")
+            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${mod.id}", None, None)
             case None => in += ((c._1, mod.id))
           }
         }
         
         mod.constants.foreach { c => 
           in.get(c._1) match {
-            case Some(_) => throw new Utils.AssertionError(s"Redeclaration error in module constants import. Check module: ${mod.id}")
+            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${mod.id}", None, None)
             case None => in += ((c._1, mod.id))
           }
         }
@@ -114,7 +112,6 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
 
 
 class ModuleConstantsImportRewriter extends ASTAnalyzer("ModuleConstantsImportRewriter", new ModuleConstantsImportCollectorPass()) {
-  lazy val logger = Logger(classOf[ModuleConstantsImportRewriter])
   override def reset() {
     in = Some(HashMap.empty)
   }
@@ -134,14 +131,14 @@ class ModuleConstantsImportRewriter extends ASTAnalyzer("ModuleConstantsImportRe
     // Add constants from this module
     module.constLits.foreach { c => 
       initMap.get(c._1) match {
-        case Some(_) => throw new Utils.AssertionError(s"Redeclaration error in module constants import. Check module: ${module.id}")
+        case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${module.id}", None, None)
         case None => initMap += ((c._1, module.id))
       }
     }
     
     module.constants.foreach { c => 
       initMap.get(c._1) match {
-        case Some(_) => throw new Utils.AssertionError(s"Redeclaration error in module constants import. Check module: ${module.id}")
+        case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${module.id}", None, None)
         case None => initMap += ((c._1, module.id))
       }
     }

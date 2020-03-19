@@ -1,24 +1,34 @@
 module common {
   type word_t = bv8;
-  const k0_word_t, k1_word_t : word_t;
+  const  k1_word_t : word_t;
   axiom k1_word_t == 1bv8;
 }
 
-module main {
+module int {
   type * = common.*;
+  const * = common.*;
+
+  const k0_word_t : word_t;
+  axiom k0_word_t == 0bv8;
+}
+
+module main {
+  type * = int.*;
+  const * = int.*;
 
   var sum : word_t;
   var num : word_t;
 
   init {
     sum = 1bv8;
-    num = common.k1_word_t;
+    num = k1_word_t;
     assert (num == sum);
+    assert (k1_word_t == k1_word_t + k0_word_t);
   }
 
   next {
     sum' = sum + 1bv8;
-    num' = num + common.k1_word_t;
+    num' = num + k1_word_t;
   }
 
   property sum_num : sum == num;

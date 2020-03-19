@@ -8,6 +8,8 @@ module beezee {
 
   type number_t = common.number_t;
 
+  function zero() : number_t;
+
   input z_prime : number_t;
   var b : number_t;
   var z : number_t;
@@ -32,6 +34,10 @@ module beezee {
 module main {
 
   type number_t = common.number_t;
+    
+  function * = beezee.*;
+
+  function zero() : number_t;
 
   input z_p : beezee.number_t;
 

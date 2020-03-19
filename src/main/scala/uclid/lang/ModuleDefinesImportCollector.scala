@@ -81,7 +81,7 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
                Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
                Scope.BlockVar(_, _)           | Scope.SelectorField(_)          =>
-             throw new Utils.RuntimeError("Can't have this identifier in define declaration: " + namedExpr.toString())
+             throw new Utils.ParserError("Can't have this identifier in define declaration: " + namedExpr.toString(), None, None)
         }
       case None =>
         throw new Utils.UnknownIdentifierException(id)
@@ -139,7 +139,7 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
           val newDefs : List[Decl]  = mod.defines.filter(d => isStatelessExpr(d.expr, (Scope.empty + mod) + d.sig)) ++ in
           newDefs
         } 
-        case _ => in
+        case _ => throw new Utils.ParserError(s"Trying to import from a module that does not exist: ${id}", None, None)
       }
     } else {
       in
@@ -171,12 +171,11 @@ class ModuleDefinesImportCollector extends ASTAnalyzer("ModuleDefinesImportColle
       d => {
         d match {
           case d : DefineDecl => ASTNode.introducePos(true, true, d, d.position)
-          case _ => throw new Utils.RuntimeError("Shouldn't have anything but define declarations.")
+          case _ => throw new Utils.RuntimeError("Should not have anything but define declarations.")
         }
       }
     }
     
-    logger.debug("newImports: " + newImports.toString())
     val modP = Module(module.id, newImports ++ module.decls, module.cmds, module.notes)
     return Some(modP)
   }
