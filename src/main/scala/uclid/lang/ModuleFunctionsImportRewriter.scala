@@ -44,7 +44,7 @@ import com.typesafe.scalalogging.Logger
 import scala.collection.mutable.HashMap
 
 class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier, Identifier]] {
-  lazy val logger = Logger(classOf[ModuleTypesImportCollector])
+  lazy val logger = Logger(classOf[ModuleFunctionsImportRewriter])
   type T = HashMap[Identifier, Identifier]
 
   def findModuleDependencies(id : Identifier, ctx : Scope) : List[Identifier] = {
@@ -54,8 +54,6 @@ class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
     }
     
     val importList : List[Identifier] = mod.funcImportDecls.map(d => d.id)
-    println("Prinitng import list")
-    println(mod.decls)
     val fullList = importList ++ importList.foldLeft(List[Identifier]()) { 
       (list, id) => {
         val dependencies = findModuleDependencies(id, ctx)
@@ -93,7 +91,7 @@ class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
 
 
 class ModuleFunctionsImportRewriter extends ASTAnalyzer("ModuleFunctionsImportRewriter", new ModuleFunctionsImportCollectorPass()) {
-  lazy val logger = Logger(classOf[ModuleTypesImportCollector])
+  lazy val logger = Logger(classOf[ModuleFunctionsImportRewriter])
   override def reset() {
     in = Some(HashMap.empty)
   }

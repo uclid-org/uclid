@@ -32,112 +32,98 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Pranav Gaddamadugu
+
  * Rewrite const * = moduleId.*; declarations.
  *
  */
 
-package uclid 
+package uclid
 package lang
 
 import com.typesafe.scalalogging.Logger
 import scala.collection.mutable.HashMap
-import scala.collection.mutable.ListBuffer
 
-//TODO: Verify that we don't actually need to pull in axioms if we just rewrite
-// all constants as 'module' + '.' + const
+class ModuleConstantsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier, Identifier]] {
+  lazy val logger = Logger(classOf[ModuleConstantsImportRewriter])
+  type T = HashMap[Identifier, Identifier]
 
-class ModuleConstantsImportRewriterPass extends RewritePass {}
-
-class ModuleConstantsImportRewriter extends ASTRewriter(
-  "ModuleConstantsImportRewriter", new ModuleConstantsImportRewriterPass()) {
-
-  /*
-   * Collects all constants and constant literals into map, while checking 
-   * for redeclaration errors.
-   *
-   * @returns Returns a map from constant to moduleId.
-   */
-  def collectConstantDecls(module : Module, map : HashMap[Identifier, Identifier]) : HashMap[Identifier, Identifier] = {
-    module.constLits.map(c => map.get(c._1) match {
-      case Some(_) => throw new Utils.AssertionError("Redeclaration error in module constant literals import")
-      case None => map += ((c._1, module.id))
-    })
-    module.constants.map(c => map.get(c._1) match {
-      case Some(_) => throw new Utils.AssertionError("Redeclaration error in module constants import")
-      case None => map += ((c._1, module.id))
-    })
-    map
-  }
-
-  /*
-   * Collects the names of all modules to import constants from.
-   * 
-   * @returns Returns a list module identifiers.
-   */
-  def findModuleDependencies(module : Module, modList : List[Module]) : List[Identifier] = {
-    val importList : List[Identifier] = module.decls.collect { case importDecl : ModuleConstantsImportDecl => importDecl.id }
-    val fullList = importList ++ importList.foldLeft(List[Identifier]()) { (list, id) => {
-        val mod = modList.find(m => m.id == id)
-        if (mod == None) {
-          list
-        } else {
-          val dependencies = findModuleDependencies(mod.get, modList)
-          list ++ dependencies
-        }
+  def findModuleDependencies(id : Identifier, ctx : Scope) : List[Identifier] = {
+    val mod = ctx.map.get(id) match {
+      case Some(Scope.ModuleDefinition(module)) => module
+      case _ => throw new Utils.AssertionError("Trying to import from a module that doesn't exist; try reordering the input of module files")
+    }
+    
+    val importList : List[Identifier] = mod.constImportDecls.map(d => d.id)
+    val fullList = importList ++ importList.foldLeft(List[Identifier]()) { 
+      (list, id) => {
+        val dependencies = findModuleDependencies(id, ctx)
+        list ++ dependencies
       }
     }
     fullList
   }
 
-  /*
-   * Collects all constants from imported module, while preserving nested imports.
-   * @returns Returns a map from constant to moduleId
-   */
-  def collectAllConstants(module : Module, map : HashMap[Identifier, Identifier], modList : List[Module]) : HashMap[Identifier, Identifier] = {
-    val moduleList = findModuleDependencies(module, modList)
-    moduleList.map(id => {
-      // moduleList should only use available modules
-      val mod = modList.find(m => m.id == id)
-      if (mod != None) 
-        collectConstantDecls(mod.get, map)
-      else 
-        throw new Utils.TypeError("Module: " + id.toString + ", not found for importing constants", None, None)
-    })
-    map
-  }
+  override def applyOnModuleConstantsImport(d : TraversalDirection.T, modConstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Up) {
+      logger.debug("statement: {}", modConstImport.toString())
+      val id = modConstImport.id
+      val dependList = findModuleDependencies(id, context)
+      
+      // prepend this modules id to moduleList
+      val moduleList = id :: dependList
 
-  /*
-   * Rewrite constants to refer to the moduleId they are imported from.
-   *
-   * @returns Returns a new module with the rewritten constants.
-   *
-   */
-  override def visitModule(module : Module, initContext : Scope) : Option[Module] = {
-    val constMap = collectAllConstants(module, new HashMap(), manager.moduleList)
-    val rewriterMap = constMap.map(p => (p._1 -> OperatorApplication(PolymorphicSelect(p._1), List(p._2)))).asInstanceOf[HashMap[Expr, Expr]].toMap
-    val rewriter = new ExprRewriter("ConstantRewriter", rewriterMap)
-
-
-
-    val context = initContext + module
-    val id = visitIdentifier(module.id, context)
-    val decls = module.decls.map(visitDecl(_, context)).flatten.map(rewriter.visitDecl(_, context)).flatten
-    val initR : (List[Option[GenericProofCommand]], Scope) = (List.empty, initContext)
-    val cmds = module.cmds.foldRight(initR)((cmd, acc) => (visitCommand(cmd, acc._2) :: acc._1, acc._2 + cmd))._1.flatten
-    val notes = module.notes.map(note => visitNote(note, context)).flatten
-    val moduleIn = id.flatMap((i) => Some(Module(i, decls, cmds, notes)))
-    val moduleP = moduleIn.flatMap((m) => pass.rewriteModule(m, initContext))
-
-    return (ASTNode.introducePos(true, true, moduleP, module.position) match {
-      case Some(m) =>
-        module.filename match {
-          case Some(fn) => Some(m.withFilename(fn))
-          case None     => Some(m)
+      moduleList.foreach { id =>
+        // The module has already been checked in `findModuleDependencies`
+        val mod = context.map.get(id).get.asInstanceOf[Scope.ModuleDefinition].mod
+        mod.constLits.foreach { c => 
+          in.get(c._1) match {
+            case Some(_) => throw new Utils.AssertionError(s"Redeclaration error in module constants import. Check module: ${mod.id}")
+            case None => in += ((c._1, mod.id))
+          }
         }
-      case None =>
-        None
-    })
+        
+        mod.constants.foreach { c => 
+          in.get(c._1) match {
+            case Some(_) => throw new Utils.AssertionError(s"Redeclaration error in module constants import. Check module: ${mod.id}")
+            case None => in += ((c._1, mod.id))
+          }
+        }
+      }
+      in
+    } else {
+      in
+    }
   }
 }
 
 
+class ModuleConstantsImportRewriter extends ASTAnalyzer("ModuleConstantsImportRewriter", new ModuleConstantsImportCollectorPass()) {
+  lazy val logger = Logger(classOf[ModuleConstantsImportRewriter])
+  override def reset() {
+    in = Some(HashMap.empty)
+  }
+  override def visit(module : Module, context : Scope) : Option[Module] = {
+    val modScope = manager.moduleList.foldLeft(Scope.empty)((s, m) => s +& m )
+    val initMap = new HashMap[Identifier, Identifier]()
+    
+    // Add constants from this module
+    module.constLits.foreach { c => 
+      initMap.get(c._1) match {
+        case Some(_) => throw new Utils.AssertionError(s"Redeclaration error in module constants import. Check module: ${module.id}")
+        case None => initMap += ((c._1, module.id))
+      }
+    }
+    
+    module.constants.foreach { c => 
+      initMap.get(c._1) match {
+        case Some(_) => throw new Utils.AssertionError(s"Redeclaration error in module constants import. Check module: ${module.id}")
+        case None => initMap += ((c._1, module.id))
+      }
+    }
+    
+    val constMap = visitModule(module, initMap, modScope).filterNot(p => p._2 == module.id)
+    val rewriterMap = constMap.map(p => (p._1 -> OperatorApplication(PolymorphicSelect(p._1), List(p._2)))).asInstanceOf[HashMap[Expr, Expr]].toMap
+    val rewriter = new ExprRewriter("ConstantRewriter", rewriterMap)
+    rewriter.visit(module, context)
+  }
+}
