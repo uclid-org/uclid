@@ -457,9 +457,6 @@ class ParserSpec extends FlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     val results = UclidMain.execute(instantiatedModules(0), UclidMain.Config())
     val stringOutput = UclidMain.stringOutput.toString().trim()
-    println(stringOutput diff "hello, world")
-    println(stringOutput.length())
-    println("hello, world".length())
     assert (instantiatedModules.size == 1)
     assert (stringOutput == "hello, world!")
   }
