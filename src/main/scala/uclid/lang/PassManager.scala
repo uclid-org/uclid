@@ -73,6 +73,7 @@ class PassManager(name : => String) {
   }
   // run on a single module.
   def run(module : Module, context : Scope) : Option[Module] = {
+    //Note: This line is necessary to import consts, funcs, and defines, which all rely on the modules available
     moduleList = moduleList :+ module
     passes.foreach{ _.reset() }
     val modP = _run(module, context)

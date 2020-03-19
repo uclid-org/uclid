@@ -31,7 +31,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Pramod Subramanyan
+ * Author: Pranav Gaddamadugu
  * Rewrite const * = moduleId.*; declarations.
  *
  */
@@ -45,7 +45,6 @@ import scala.collection.mutable.HashMap
 //TODO: Verify that we don't actually need to pull in axioms if we just rewrite
 // all constants as 'module' + '.' + const
 
-//TODO: Do we want to rewrite the collection of constants in the RewriterPass?
 class ModuleConstantsImportRewriterPass extends RewritePass {}
 
 class ModuleConstantsImportRewriter extends ASTRewriter(
@@ -69,7 +68,6 @@ class ModuleConstantsImportRewriter extends ASTRewriter(
     map
   }
 
-  // TODO: Add error checking for 'fullList'
   /*
    * Collects the names of all modules to import constants from.
    * 
@@ -141,165 +139,5 @@ class ModuleConstantsImportRewriter extends ASTRewriter(
     })
   }
 }
-
-////TODO: Remove this once we stress test the upper implementation
-//class ModuleConstantsImportCollectorPass extends ReadOnlyPass[List[Decl]] {
-//  lazy val logger = Logger(classOf[ModuleConstantsImportCollector])
-//  type T = List[Decl]
-//
-//  def isStatelessExpression(id : Identifier, context : Scope) : Boolean = {
-//    context.get(id) match {
-//      case Some(namedExpr) =>
-//        namedExpr match {
-//          case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
-//               Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
-//               Scope.FunctionArg(_, _) | Scope.Define(_, _, _) |
-//               Scope.Instance(_)       =>
-//             false
-//          case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
-//               Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
-//               Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
-//               Scope.ConstantLit(_, _)    =>
-//             true
-//          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _)             |
-//               Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
-//               Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
-//               Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
-//               Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
-//               Scope.BlockVar(_, _)           | Scope.SelectorField(_)          =>
-//             throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
-//        }
-//      case None =>
-//        throw new Utils.UnknownIdentifierException(id)
-//    }
-//  }
-//  def isStatelessExpr(e: Expr, context : Scope) : Boolean = {
-//    e match {
-//      case id : Identifier =>
-//        isStatelessExpression(id, context)
-//      case ei : ExternalIdentifier =>
-//        true
-//      case lit : Literal =>
-//        true
-//      case rec : Tuple =>
-//        rec.values.forall(e => isStatelessExpr(e, context))
-//      case OperatorApplication(ArraySelect(inds), args) =>
-//        inds.forall(ind => isStatelessExpr(ind, context)) &&
-//        args.forall(arg => isStatelessExpr(arg, context))
-//      case OperatorApplication(ArrayUpdate(inds, value), args) =>
-//        inds.forall(ind => isStatelessExpr(ind, context)) &&
-//        args.forall(arg => isStatelessExpr(arg, context)) &&
-//        isStatelessExpr(value, context)
-//      case opapp : OperatorApplication =>
-//        opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
-//      case a : ConstArray =>
-//        isStatelessExpr(a.exp, context)
-//      case fapp : FuncApplication =>
-//        isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
-//      case lambda : Lambda =>
-//        isStatelessExpr(lambda.e, context + lambda)
-//    }
-//  }
-//  
-//  def isConstantExpression(id : Identifier, context : Scope) : Boolean = {
-//    context.get(id) match {
-//      case Some(namedExpr) => 
-//        namedExpr match {
-//          case Scope.ConstantVar(_, _) => true
-//          case Scope.ConstantLit(_, _) => true;
-//          case _ => false;
-//        }
-//      case None => {
-//        throw new Utils.UnknownIdentifierException(id)
-//      }
-//    }
-//  }
-//  
-//  def isConstantExpr(e : Expr, context : Scope) : Boolean = {
-//      e match {
-//      case id : Identifier =>
-//        isConstantExpression(id, context)
-//      case ei : ExternalIdentifier =>
-//        false
-//      case lit : Literal =>
-//        false
-//      case rec : Tuple =>
-//        rec.values.exists(e => isConstantExpr(e, context))
-//      case OperatorApplication(ArraySelect(inds), args) =>
-//        inds.exists(ind => isConstantExpr(ind, context)) || 
-//        args.exists(arg => isConstantExpr(arg, context))
-//      case OperatorApplication(ArrayUpdate(inds, value), args) =>
-//        inds.exists(ind => isConstantExpr(ind, context)) || 
-//        args.exists(arg => isConstantExpr(arg, context)) ||
-//        isStatelessExpr(value, context)
-//      case opapp : OperatorApplication =>
-//        opapp.operands.exists(arg => isConstantExpr(arg, context + opapp.op))
-//      case a : ConstArray =>
-//        isConstantExpr(a.exp, context)
-//      case fapp : FuncApplication =>
-//        isConstantExpr(fapp.e, context) || fapp.args.exists(a => isConstantExpr(a, context))
-//      case lambda : Lambda =>
-//        isConstantExpr(lambda.e, context + lambda)
-//    }
-//  }
-//
-//  def isStatelessAndConstantExpr(e : Expr, context : Scope) : Boolean = {
-//    isStatelessExpr(e, context) && isConstantExpr(e, context)
-//  }
-//
-//  override def applyOnModuleConstantsImport(d : TraversalDirection.T, modCnstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T = {
-//    if (d == TraversalDirection.Up) {
-//      //logger.debug("statement: {}", modCnstImport.toString())
-//      val id = modCnstImport.id
-//      context.map.get(id) match {
-//        case Some(Scope.ModuleDefinition(mod)) => {
-//          val constVars = mod.constantDecls.map {
-//            c => {
-//              ASTNode.introducePos(true, true, c, modCnstImport.position)
-//            }
-//          } 
-//          val constLits = mod.constLits.map {
-//            c => {
-//              ASTNode.introducePos(true, true, ConstantLitDecl(c._1, c._2), modCnstImport.position)
-//            }
-//          }
-//          val newAxioms = mod.axioms.filter(a => isStatelessAndConstantExpr(a.expr, Scope.empty + mod))
-//          newAxioms.map {
-//            a => {
-//              ASTNode.introducePos(true, true, a, modCnstImport.position)
-//            }
-//          } 
-//          constVars ++ constLits ++ newAxioms ++ in
-//        }
-//        case _ => in
-//      }
-//    } else {
-//      in
-//    }
-//  }
-//}
-//
-//class ModuleConstantsImportCollector extends ASTAnalyzer("ModuleConstantsImportCollector", new ModuleConstantsImportCollectorPass()) {
-//  lazy val logger = Logger(classOf[ModuleConstantsImportCollector])
-//  override def reset() {
-//    in = Some(List.empty)
-//  }
-//  override def visit(module : Module, context : Scope) : Option[Module] = {
-//    val externalIds = visitModule(module, List.empty, context)
-//    val newImports = externalIds.map {
-//      d => {
-//        d match {
-//          case d : AxiomDecl => ASTNode.introducePos(true, true, d, d.position)
-//          case d : ConstantsDecl => ASTNode.introducePos(true, true, d, d.position)
-//          case d : ConstantLitDecl => ASTNode.introducePos(true, true, d, d.position)
-//          case _ => throw new Utils.RuntimeError("Shouldn't have anything but axioms and consts.")
-//        }
-//      }
-//    }
-//    //logger.debug("newImports: " + newImports.toString())
-//    val modP = Module(module.id, newImports ++ module.decls, module.cmds, module.notes)
-//    return Some(modP)
-//  }
-//}
 
 

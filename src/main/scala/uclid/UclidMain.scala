@@ -192,7 +192,6 @@ object UclidMain {
 
   def createCompilePassManager(test: Boolean, mainModuleName: lang.Identifier) = {
     val passManager = new PassManager("compile")
-    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ModuleCanonicalizer())
     passManager.addPass(new LTLOperatorIntroducer())
     passManager.addPass(new ModuleTypesImportCollector())
@@ -240,7 +239,6 @@ object UclidMain {
     passManager.addPass(new BlockFlattener())
     passManager.addPass(new ModuleCleaner(mainModuleName))
     passManager.addPass(new BlockVariableRenamer())
-    // passManager.addPass(new ASTPrinter())
     passManager
   }  
   /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
@@ -303,7 +301,6 @@ object UclidMain {
     if (config.enumToNumeric) passManager.addPass(new EnumTypeAnalysis())
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamer("BV"))
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamerCons("BV"))
-
     // run passes.
     passManager.run(moduleList)
   }
