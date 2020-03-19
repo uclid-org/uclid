@@ -57,9 +57,11 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
    * Checks that an identifier, in a specific context, does not reference any 
    * state variables.
    *
-   * @returns Returns a boolean based on the check.
+   * @param id Name of the expression
+   * @param context Current scope
+   *
    */
-  def isStatelessExpression(id : Identifier, context : Scope) : Boolean = {
+  def isStatelessIdentifier(id : Identifier, context : Scope) : Boolean = {
     context.get(id) match {
       case Some(namedExpr) =>
         namedExpr match {
@@ -89,12 +91,13 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
   /*
    * Checks that an expression does not reference any state variables.
    *
-   * @returns Returns a boolean based on the check.
+   * @param e The expression being checked
+   * @param context The current scope
    */
   def isStatelessExpr(e: Expr, context : Scope) : Boolean = {
     e match {
       case id : Identifier =>
-        isStatelessExpression(id, context)
+        isStatelessIdentifier(id, context)
       case ei : ExternalIdentifier =>
         true
       case lit : Literal =>
@@ -122,7 +125,10 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
   /*
    * Collects define declarations from a module.
    *
-   * @returns Returns a list of declarations.
+   * @param d Direction of AST traversal
+   * @param modDefImport Import declaration
+   * @param in HashMap[Identifier, Identifier]
+   * @param context Scope containing ModuleDefinitions
    */
   override def applyOnModuleDefinesImport(d : TraversalDirection.T, modDefImport : ModuleDefinesImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
@@ -153,9 +159,11 @@ class ModuleDefinesImportCollector extends ASTAnalyzer("ModuleDefinesImportColle
   }
 
   /*
-   * Adds a collected list of define declarations to a module
+   * Explictly adds a collected list of define declarations to a module
    *
-   * @returns Returns a new module that includes the imported define declarations
+   * @param module The module to be visited
+   * @param context The context of the current module (technically accumulated
+   *    by the PassManager)
    */
   override def visit(module : Module, context : Scope) : Option[Module] = {
     val externalDefs = visitModule(module, List.empty, context)
