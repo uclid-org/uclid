@@ -41,6 +41,7 @@ package lang
 
 import com.typesafe.scalalogging.Logger
 import scala.collection.mutable.HashMap
+import scala.collection.mutable.ListBuffer
 
 //TODO: Verify that we don't actually need to pull in axioms if we just rewrite
 // all constants as 'module' + '.' + const
@@ -112,7 +113,6 @@ class ModuleConstantsImportRewriter extends ASTRewriter(
    *
    */
   override def visitModule(module : Module, initContext : Scope) : Option[Module] = {
-
     val constMap = collectAllConstants(module, new HashMap(), manager.moduleList)
     val rewriterMap = constMap.map(p => (p._1 -> OperatorApplication(PolymorphicSelect(p._1), List(p._2)))).asInstanceOf[HashMap[Expr, Expr]].toMap
     val rewriter = new ExprRewriter("ConstantRewriter", rewriterMap)

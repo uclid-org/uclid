@@ -1079,7 +1079,7 @@ case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends T
 case class ModuleType(
     inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)], sharedVars: List[(Identifier, Type)],
     constLits : List[(Identifier, NumericLit)], constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
-    functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, ModuleType)]) extends Type {
+    functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, Type)]) extends Type {
 
   def argToString(arg: (Identifier, Type)) : String = {
     arg._1.toString + ": (" + arg._2.toString + ")"
@@ -1095,7 +1095,7 @@ case class ModuleType(
   lazy val constantMap : Map[Identifier, Type] = constants.map(a => (a._1 -> a._2)).toMap
   lazy val varMap : Map[Identifier, Type] = variables.map(a => (a._1 -> a._2)).toMap
   lazy val funcMap : Map[Identifier, FunctionSig] = functions.map(a => (a._1 -> a._2)).toMap
-  lazy val instanceMap : Map[Identifier, ModuleType] = instances.map(a => (a._1 -> a._2)).toMap
+  lazy val instanceMap : Map[Identifier, Type] = instances.map(a => (a._1 -> a._2)).toMap
   lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ funcMap.map(f => (f._1 -> f._2.typ))  ++ instanceMap
   lazy val externalTypeMap : Map[Identifier, Type] = constantMap ++ funcMap.map(f => (f._1 -> f._2.typ)) ++ constLitMap.map(f => (f._1 -> f._2.typeOf))
   def typeOf(id : Identifier) : Option[Type] = {
@@ -1815,8 +1815,13 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     decls.collect { case constLit : ConstantLitDecl => (constLit.id, constLit.lit) }
   // module constants.
   lazy val constantDecls = decls.collect { case cnsts : ConstantsDecl => cnsts }
+  lazy val constImportDecls : List[ModuleConstantsImportDecl]  = decls.collect { case imp : ModuleConstantsImportDecl => imp }
+
   lazy val constants : List[(Identifier, Type)] =
     constantDecls.flatMap(cnst => cnst.ids.map(id => (id, cnst.typ)))
+  
+  lazy val funcImportDecls : List[ModuleFunctionsImportDecl] = decls.collect {
+  case imp : ModuleFunctionsImportDecl => imp }
   
   // module functions.
   lazy val functions : List[FunctionDecl] =
@@ -1850,7 +1855,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
       inputs, outputs, sharedVars,
       constLits, constants, vars,
       functions.map(c => (c.id, c.sig)),
-      instances.map(inst => (inst.instanceId, inst.modType.get)))
+      instances.map(inst => (inst.instanceId, inst.moduleType)))
 
   // the init block.
   lazy val init : Option[InitDecl] = {
