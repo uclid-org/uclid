@@ -440,7 +440,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
       case Pattern(_) =>
         Some(new SMTLIB2Model(str))
       case _ =>
-        None
+        throw new Utils.AssertionError(s"Unexpected output from SMT solver:\n${str}")
     }
   }
 

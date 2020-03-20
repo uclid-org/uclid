@@ -336,7 +336,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       case Success(function, _) =>
         function
       case NoSuccess(msg, next) =>
-        throw new Utils.SyGuSParserError("Parser Error: %s.".format(msg))
+        throw new Utils.SyGuSParserError("SExpr function parser error: %s.".format(msg))
     }
   }
 
@@ -345,7 +345,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     phrase(AssignmentModel)(tokens) match {
       case Success(model, _) => model
       case NoSuccess(msg, next) =>
-        throw new Utils.RuntimeError("Parser Error: %s.".format(msg))
+        throw new Utils.RuntimeError("SExpr model parser error: %s.".format(msg))
     }
   }
 }
