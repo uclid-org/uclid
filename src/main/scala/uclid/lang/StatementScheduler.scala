@@ -138,10 +138,7 @@ object StatementScheduler {
         val module = context.module.get
         val modifies = instanceId match {
           case Some(iid) => {
-            //val instanceOption = context.module.get.instances.find(inst => inst.instanceId == iid)
-            //val instProcMod = context.get(instanceOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
-            //instProcMod.procedures.find((p) => p.id == id).get
-            //Do nothing
+            // Do nothing; we haven't handled instance proc calls at this point
             List.empty
           }
           case _ => {

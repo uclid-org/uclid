@@ -31,7 +31,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Pramod Subramanyan
+ * Author: Pramod Subramanyan, Kevin Cheang, Pranav Gaddamadugu
  *
  * Inlines all procedure calls.
  *
@@ -47,6 +47,7 @@ import com.typesafe.scalalogging.Logger
 
 class FindProcedureDependencyPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
   type T = Map[Identifier, Set[Identifier]]
+
   override def applyOnProcedureCall(d : TraversalDirection.T, proc : ProcedureCallStmt, in : T, context : Scope) : T = {
     def addEdge(caller : Identifier, callee : Identifier) : T = {
       in.get(caller) match {
@@ -88,6 +89,9 @@ trait NewProcedureInlinerPass extends RewritePass {
   /* 
    * Inlines a procedure call statement.
    *
+   * @param callStmt The procedure call statement to be inlined
+   * @param proc The procedure declaration corresponding to callStmt
+   * @param context The current scope
    * @returns A statement representing the inlined procedure call.
    */
   def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope) : Statement = {
@@ -120,6 +124,7 @@ trait NewProcedureInlinerPass extends RewritePass {
       case ModifiableId(id) => (m, NameProvider.get("modifies_" + id.toString()))
     }).toList
   
+    // Note: We handle the old operator rewrites here
     // map from st_var -> modify_var.
     val modifiesMap : Map[Expr, Expr] = modifyPairs.map(p => (p._1.id -> p._2)).toMap
     // full rewrite map.
@@ -134,8 +139,6 @@ trait NewProcedureInlinerPass extends RewritePass {
                                                                                              
     // rewriter object
     val oldRewriter = new OldExprRewriter(oldRenameMap)
-
-    
     val oldPairs : List[(Identifier, Identifier)] = oldRenameMap.asInstanceOf[Map[ModifiableId, Identifier]].toList.map(p => (p._1.id, p._2))
 
     // variable declarations for return values.
@@ -206,6 +209,13 @@ trait NewProcedureInlinerPass extends RewritePass {
     BlockStmt(varsToDeclare, stmtsP)
   }
 
+/**
+ * This procedure rewrites the module with additional annotations on 
+ * the signatures of its procedure calls.
+ *
+ * @param module The module being analyzed
+ * @param ctx The current scope
+ */
   override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = {
     val instProcMap = module.procedures.foldLeft(Map.empty[List[Identifier], ProcedureDecl])((acc, proc) => acc + (List(module.id, proc.id) -> proc))
     val moduleP = module.withReplacedAnnotation[InstanceProcMapAnnotation](InstanceProcMapAnnotation(instProcMap))
@@ -218,8 +228,10 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
   /* 
    * Rewrite specific procedure call statements as an inlined statement.
    * Note that we only inline calls that do not modify instances or must
-   * be inlined.
+   * be inlined. All other statements are left for latter passes.
    *
+   * @param callStmt The procedure call statement being analyzed
+   * @param context The current scope
    * @returns Returns new procedure call statement.
    */
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
@@ -240,6 +252,7 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
                         })
                 
     }
+    // Note this is where we decide to inline or no-inline
     if (!procOption.isEmpty && !procOption.get.body.hasInternalCall && (!modifiesInst || procOption.get.shouldInline)) {
       val blkStmt = inlineProcedureCall(callStmt, procOption.get, context)
       Some(blkStmt)

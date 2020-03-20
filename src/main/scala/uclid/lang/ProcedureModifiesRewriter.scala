@@ -31,7 +31,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Pramod Subramanyan
+ * Author: Pranav Gaddamadugu
  *
  * Adds in write set of instance procedure calls.
  *
@@ -47,7 +47,7 @@ import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
 
 /*
- * Rewrites a modify clause that refer to a specific instance as modify 
+ * Rewrites a modify clause that refers to a specific instance as a modify 
  * clause that refers to all state variables of an instance modified by 
  * a procedure.
  */
@@ -57,6 +57,8 @@ class ProcedureModifiesRewriterPass extends RewritePass {
    * Identifies the set of instances that are modified by some
    * procedure declaration.
    *
+   * @param proc The ProcedureDeclaration to be analyzed
+   * @param ctx Current scope
    * @returns Returns a set of identifiers for the modified instances.
    *
    */
@@ -76,6 +78,8 @@ class ProcedureModifiesRewriterPass extends RewritePass {
   /*
    * Identifies the set of state variables modified by a procedure.
    *
+   * @param proc The ProcedureDeclaration to be analyzed
+   * @param ctx Current scope
    * @returns Returns a vector of identifiers.
    */
   def getStateVarModifies(proc : ProcedureDecl, ctx : Scope) : Vector[Identifier] = {
@@ -94,6 +98,7 @@ class ProcedureModifiesRewriterPass extends RewritePass {
   /*
    * Get all procedure call statements within some statement.
    *
+   * @param stmt The statement being searched
    * @returns Returns a vector containing ProcedureCallStmts
    */
   def getProcedureCallStmts(stmt : Statement) : Vector[ProcedureCallStmt] = {
@@ -108,7 +113,7 @@ class ProcedureModifiesRewriterPass extends RewritePass {
     }
   }
 
-  //TODO : Consider architecting this pass like ModuleFlattener
+  //Note: Consider architecting this pass like ModuleFlattener
   //  - In order to do this we need find the ModuleDependency graph
 
   // proc : ProcedureDecl
@@ -118,6 +123,13 @@ class ProcedureModifiesRewriterPass extends RewritePass {
   //
 
   /*
+   * This function identifies and returns the modifies set of a procedure. This
+   * function also handles nested instance procedure calls
+   *
+   * @param proc The ProcedureDeclaration to be analyzed
+   * @param instId An optional parameter that tells us if we shoud generate 
+   *    ModifiableInstanceIds
+   * @param ctx Current scope
    * @returns Returns the modifies set of a procedure, including specific
    *          instance state variables.
    */
@@ -160,7 +172,14 @@ class ProcedureModifiesRewriterPass extends RewritePass {
   }
   
   /* 
-   * @returns Returns a new procedure declaration, with its expanded modifies set.
+   * This function is the main driver for computing the specific modifies set
+   * of any procedure call statement. It will create a new procedure with
+   * the same declarations but an augmented modifies set.
+   *
+   * @param proc The procedure declaration that is being analyzed
+   * @param ctx Current scope
+   * @returns Returns a new procedure declaration, with its expanded 
+   * modifies set.
    */
   override def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = {
     val newModifySet = getProcedureModSet(proc, None, ctx).toSet
