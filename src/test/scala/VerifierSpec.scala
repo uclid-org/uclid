@@ -284,6 +284,15 @@ class ProcedureVerifSpec extends FlatSpec {
   "test-procedure-old-1.ucl" should "fail to verify 1 assertion." in {
     VerifierSpec.expectedFails("./test/test-procedure-old-1.ucl", 1)
   }
+  "test-old-instance-var-0.ucl" should "verify all essertions" in {
+    VerifierSpec.expectedFails("./test/test-old-instance-var-0.ucl", 0)
+  }
+  "test-old-instance-var-1.ucl" should "verify all essertions" in {
+    VerifierSpec.expectedFails("./test/test-old-instance-var-1.ucl", 0)
+  }
+  "test-old-instance-var-2.ucl" should "verify all essertions" in {
+    VerifierSpec.expectedFails("./test/test-old-instance-var-2.ucl", 0)
+  }
 }
 class InductionVerifSpec extends FlatSpec {
   "test-k-induction-1.ucl" should "verify all assertions." in {

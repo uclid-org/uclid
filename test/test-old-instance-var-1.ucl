@@ -58,18 +58,26 @@ module main {
     modifies cache;
   {
     call havoc_cache_valid_map();
+    assert(cache.cache_tag_map == old(cache.cache_tag_map));
     call havoc_cache_tag_map();
   }
 
   procedure havoc_whole_cache_direct()
     modifies cache;
   {
-    call cache.update_cache_valid_map();
     call cache.update_cache_tag_map();
+    assert(cache.cache_valid_map == old(cache.cache_valid_map));
+    call cache.update_cache_valid_map();
   }
 
 control {
-  print_module;
+  valid = verify(havoc_cache_valid_map);
+  tag = verify(havoc_cache_tag_map);
+  whole = verify(havoc_whole_cache);
+  direct = verify(havoc_whole_cache_direct);
+  check;
+  print_results;
+  
 }
 
 

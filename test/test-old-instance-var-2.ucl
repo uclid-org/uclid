@@ -38,7 +38,7 @@ module abstract_cpu {
     call cache.update_cache_valid_map();
   }
 
-  procedure havoc_cache_tag_map()
+  procedure [inline] havoc_cache_tag_map()
     ensures (cache.cache_tag_map != old(cache.cache_tag_map));
     modifies cache;
   {
@@ -60,12 +60,15 @@ module main {
 
   procedure cache_mod()
     modifies cpu;
+    ensures (cpu.cache.cache_valid_map == old(cpu.cache.cache_valid_map));
   {
     call cpu.havoc_cache_tag_map();
   }
 
   control {
-    print_module;
+    mod = verify(cache_mod);
+    check;
+    print_results;
   }
 
 }
