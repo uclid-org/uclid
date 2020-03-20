@@ -174,6 +174,10 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           val procOption = instanceId match {
             case Some(iid) => {
               val instOption = context.module.get.instances.find(inst => inst.instanceId == iid)
+              if (instOption.isEmpty) {
+                ret = ret + ModuleError(s"Instance id: ${instanceId} in procedure call: ${id} does not exist in the context. Double check the name", st.position)
+                return ret
+              }
               val instMod = context.get(instOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
               instMod.procedures.find((p) => p.id == id)
             }
