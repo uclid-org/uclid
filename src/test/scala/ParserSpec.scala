@@ -660,4 +660,21 @@ class ParserSpec extends FlatSpec {
       case e : Utils.ParserError => assert(e.msg.contains("Trying to import from a module that does not"))
     }
   }
+
+  "test-instance-procedure-call-6.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-instance-procedure-call-6.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.exists(p => p._1.contains("does not exist in the context. Double check")))
+    }
+  }
+
+  "test-instance-procedure-call-2.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/test-instance-procedure-call-2.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+
 }

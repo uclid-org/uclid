@@ -55,9 +55,11 @@ module main
     ensures (forall (i : integer) :: (i > 0 && i < w) ==> numbers[i] == i+1);
     ensures (chld.x == old(chld.x) + 1);
     ensures (forall (i : integer) :: (chld.nums[i] == numbers[i]));
+    ensures (forall (i : integer) :: (i > 0 && i < w) ==> (chld.nums[i] == numbers[i]));
+
     modifies chld;
   {
-    call (numbers) = chld.sum(10); //Set this to 4 to pass all tests
+    call (numbers) = chld.sum(4); //Set this to 4 to pass all tests
     assert(false);
   }
     
@@ -67,8 +69,7 @@ module main
     child_sum_verif = verify(child_sum);
     check;
     print_results;
-    //add_verif.print_cex(a, b, c);
-    // sum_verif->print_cex(n, x, numbers[1], numbers[2], numbers[3], numbers[4], numbers[5]);
+    child_sum_verif.print_cex(w, numbers[1], numbers[2], numbers[3], numbers[4], numbers[5]);
   }
 
 

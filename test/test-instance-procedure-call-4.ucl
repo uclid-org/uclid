@@ -29,11 +29,8 @@ module main
 
   control {
       add_verif = verify(child_add);
-      //sum_verif = verify(sum);
       check;
       print_results;
-      //add_verif.print_cex(a, b, c);
-      // sum_verif->print_cex(n, x, numbers[1], numbers[2], numbers[3], numbers[4], numbers[5]);
   }
 
 

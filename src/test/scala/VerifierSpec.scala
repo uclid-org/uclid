@@ -389,6 +389,18 @@ class ModuleVerifSpec extends FlatSpec {
   "test-instance-procedure-call-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-instance-procedure-call-1.ucl", 0)
   }
+  "test-instance-procedure-call-3.ucl" should "verify all but one." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-3.ucl", 1)
+  }
+  "test-instance-procedure-call-4.ucl" should "verify all but one." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-4.ucl", 1)
+  }
+  "test-instance-procedure-call-5.ucl" should "verify all but two." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-5.ucl", 2)
+  }
+  "test-instance-procedure-call-7.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-7.ucl", 0)
+  }
   "sp-basic.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/sp-basic.ucl", 0)
   }
