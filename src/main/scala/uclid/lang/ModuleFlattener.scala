@@ -31,7 +31,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Pramod Subramanyan
+ * Author: Pramod Subramanyan, Kevin Cheang, Pranav Gaddamadugu
 
  * Module Instantiation.
  *
@@ -338,6 +338,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
    * HavocableInstanceIds into HavocableIds by retrieving the appropriate 
    * instance state variable.
    *
+   * @param st The havoc statement that we are rewriting
+   * @param ctx The current scope
    * @returns Returns a HavocStmt.
    */
   override def rewriteHavoc(st : HavocStmt, ctx : Scope) : Option[Statement] = {
@@ -392,9 +394,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   /*
    * Inlines procedure calls that either depend on an instance procedure call,
-   * or those that have not been inlined in ProcedureInline. This also handles
+   * or those that have not been inlined in ProcedureInline. This handles
    * procedures that are 'noinlined'.
    *
+   * @param callStmt The procedure call statement to be inlined
+   * @param proc The procedure declaration corresponding to callStmt
+   * @param context The current scope
    * @returns Returns a new BlockStmt containing the inlined procedure.
    */
   def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope) : Statement = {
@@ -586,6 +591,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   /*
    * Rewrites procedure call statements. At this point, all procedure that do not modify any instances or should be inlined have been handled.
    *
+   * @param callStmt The procedure call statement being analyzed
+   * @param context The current scope
    * @returns Returns a BlockStmt containing the internals of the procedure call.
    */
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
@@ -631,6 +638,7 @@ extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetMod
      * Overwrites inherited visitModifiableEntity method and flattens modify
      * clauses that refer to an instance state variable.
      *
+     * @param modifiable The modifiable entity to be flattened
      * @returns A flattened modifiable entity.
      *
      */
