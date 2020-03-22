@@ -1,0 +1,21 @@
+(model 
+  (define-fun input_1_a () Int
+    1)
+  (define-fun initial_12_sum () Int
+    0)
+  (define-fun initial_16_sum () Int
+    (- 1))
+  (define-fun input_0_a () Int
+    1)
+  (define-fun input_1_b () Int
+    2)
+  (define-fun input_0_b () Int
+    2)
+  (define-fun initial_15_prev_sum () Int
+    0)
+  (define-fun initial_11_prev_sum () Int
+    0)
+  (define-fun const_max2 ((x!0 Int) (x!1 Int)) Int
+    (ite (and (= x!0 3) (= x!1 0)) (- 1)
+      3))
+)

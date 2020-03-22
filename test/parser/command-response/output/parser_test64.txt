@@ -1,0 +1,4 @@
+(model 
+  (define-fun input_1_push_cmd () _type_record_1_
+    (_make__type_record_1_ true 0))
+)

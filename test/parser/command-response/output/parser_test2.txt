@@ -1,0 +1,84 @@
+(model 
+  (define-fun initial_32_tail () Int
+    2)
+  (define-fun initial_52_tail () Int
+    6)
+  (define-fun havoc_36____ucld_2_modifies_tail () Int
+    2)
+  (define-fun input_3_push_cmd () _type_record_1_
+    (_make__type_record_1_ true 3))
+  (define-fun initial_62_tail () Int
+    8)
+  (define-fun havoc_55____ucld_1_modifies_numbers () (Array Int Int)
+    (lambda ((x!1 Int))
+  (ite (= x!1 20) 21 (ite (= x!1 4) 3 (ite (= x!1 26) 28 19)))))
+  (define-fun initial_42_tail () Int
+    4)
+  (define-fun initial_49_value_found () Bool
+    false)
+  (define-fun initial_50_initialized () Bool
+    true)
+  (define-fun initial_53_numbers () (Array Int Int)
+    (lambda ((x!1 Int))
+  (ite (= x!1 20) 21 (ite (= x!1 4) 3 (ite (= x!1 26) 28 19)))))
+  (define-fun input_2_push_cmd () _type_record_1_
+    (_make__type_record_1_ true 3))
+  (define-fun havoc_35____ucld_1_modifies_numbers () (Array Int Int)
+    (lambda ((x!1 Int))
+  (ite (= x!1 0) 1 (ite (= x!1 26) 27 (ite (= x!1 23) 24 15)))))
+  (define-fun input_4_search_cmd () _type_record_1_
+    (_make__type_record_1_ false 9))
+  (define-fun initial_26_tail () Int
+    0)
+  (define-fun initial_24_initialized () Bool
+    false)
+  (define-fun havoc_45____ucld_1_modifies_numbers () (Array Int Int)
+    (lambda ((x!1 Int))
+  (ite (= x!1 29) 30 (ite (= x!1 17) 18 (ite (= x!1 14) 16 3)))))
+  (define-fun havoc_56____ucld_2_modifies_tail () Int
+    6)
+  (define-fun input_4_push_cmd () _type_record_1_
+    (_make__type_record_1_ true 3))
+  (define-fun initial_40_initialized () Bool
+    true)
+  (define-fun initial_60_initialized () Bool
+    true)
+  (define-fun initial_43_numbers () (Array Int Int)
+    (lambda ((x!1 Int))
+  (ite (= x!1 29) 30 (ite (= x!1 17) 18 (ite (= x!1 14) 16 3)))))
+  (define-fun havoc_66____ucld_2_modifies_tail () Int
+    8)
+  (define-fun initial_29_value_found () Bool
+    false)
+  (define-fun input_1_push_cmd () _type_record_1_
+    (_make__type_record_1_ true 1))
+  (define-fun initial_33_numbers () (Array Int Int)
+    (lambda ((x!1 Int))
+  (ite (= x!1 0) 1 (ite (= x!1 26) 27 (ite (= x!1 23) 24 15)))))
+  (define-fun input_1_search_cmd () _type_record_1_
+    _type_record_1_)
+  (define-fun input_2_search_cmd () _type_record_1_
+    (_make__type_record_1_ false 9))
+  (define-fun initial_59_value_found () Bool
+    false)
+  (define-fun input_3_search_cmd () _type_record_1_
+    (_make__type_record_1_ false 9))
+  (define-fun initial_23_value_found () Bool
+    false)
+  (define-fun input_0_push_cmd () _type_record_1_
+    (_make__type_record_1_ true 1))
+  (define-fun initial_39_value_found () Bool
+    false)
+  (define-fun input_0_search_cmd () _type_record_1_
+    _type_record_1_)
+  (define-fun initial_63_numbers () (Array Int Int)
+    (lambda ((x!1 Int))
+  (ite (= x!1 29) 31 (ite (= x!1 20) 22 (ite (= x!1 6) 3 25)))))
+  (define-fun initial_30_initialized () Bool
+    true)
+  (define-fun havoc_65____ucld_1_modifies_numbers () (Array Int Int)
+    (lambda ((x!1 Int))
+  (ite (= x!1 29) 31 (ite (= x!1 20) 22 (ite (= x!1 6) 3 25)))))
+  (define-fun havoc_46____ucld_2_modifies_tail () Int
+    4)
+)
