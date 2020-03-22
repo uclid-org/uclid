@@ -58,174 +58,61 @@ object SExprParserSpec {
   }
 }
 
+
 class SExprParserNoErrorSpec extends FlatSpec {
-  "data-ineq-01.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/data-ineq-01.smt2")
+  "parser_test1.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test1.txt")
   }
-  "data-ineq-02.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/data-ineq-02.smt2")
+  "parser_test2.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test2.txt")
   }
-  "dll-entails-dll_rev.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dll-entails-dll_rev.smt2")
+  "parser_test3.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test3.txt")
   }
-  "dll_plus-entails-dll.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dll_plus-entails-dll.smt2")
+  "parser_test4.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test4.txt")
   }
-  "dll_plus-entails-dll_plus_rev.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dll_plus-entails-dll_plus_rev.smt2")
+  "parser_test5.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test5.txt")
   }
-  "dll_plus-entails-node-dll_plus_rev.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dll_plus-entails-node-dll_plus_rev.smt2")
+  "parser_test6.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test6.txt")
   }
-   "dll_plus-entails-node-node-dll_plus.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dll_plus-entails-node-node-dll_plus.smt2")
+  "parser_test7.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test7.txt")
   }
-   "dll_plus_mid-entails-dll_plus_rev.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dll_plus_mid-entails-dll_plus_rev.smt2")
+  "parser_test8.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test8.txt")
   }
-  "dll_plus_rev-entails-dll_plus.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dll_plus_rev-entails-dll_plus.smt2")
+  "parser_test9.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test9.txt")
   }
-  "dll_plus_rev-entails-dll_plus_mid.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dll_plus_rev-entails-dll_plus_mid.smt2")
+  "parser_test10.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test10.txt")
   }
-  "dll_rev-entails-dll.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dll_rev-entails-dll.smt2")
+  "parser_test11.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test11.txt")
   }
-  "dllseg2_plus-entails-dllseg2_plus_rev.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dllseg2_plus-entails-dllseg2_plus_rev.smt2")
+  "parser_test12.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test12.txt")
   }
-  "dllseg2_plus-spaghetti-existential.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dllseg2_plus-spaghetti-existential.smt2")
+  "parser_test13.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test13.txt")
   }
-  "dllseg2_plus-spaghetti.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/dllseg2_plus-spaghetti.smt2")
+  "parser_test14.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test14.txt")
   }
-  "node-dll_plus_rev-dll_plus-entails-dll_plus.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/node-dll_plus_rev-dll_plus-entails-dll_plus.smt2")
+  "parser_test15.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test15.txt")
   }
-  "node-node-dll_plus-entails_dll_plus.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/node-node-dll_plus-entails_dll_plus.smt2")
+  "parser_test16.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test16.txt")
   }
-  "node-tll_plus-tll_plus-entails-tll_plus.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/node-tll_plus-tll_plus-entails-tll_plus.smt2")
+  "parser_test17.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test17.txt")
   }
-  "pto-01.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/pto-01.smt2")
-  }
-  "pto-02.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/pto-02.smt2")
-  }
-  "pto-03.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/pto-03.smt2")
-  }
-  "pto-04.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/pto-04.smt2")
-  }
-  "sep-01.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/sep-01.smt2")
-  }
-  "sep-02.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/sep-02.smt2")
-  }
-  "sep-03.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/sep-03.smt2")
-  }
-  "sep-04.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/sep-04.smt2")
-  }
-  "tll-ravioli-existential.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/tll-ravioli-existential.smt2")
-  }
-  "tll-ravioli.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/tll-ravioli.smt2")
-  }
-  "tll_plus-entails-node-tll_plus-tll_plus.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/tll_plus-entails-node-tll_plus-tll_plus.smt2")
-  }
-  "tll_plus-entails-tll_plus_rev.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/tll_plus-entails-tll_plus_rev.smt2")
-  }
-  "tll_plus_rev-entails-tll_plus.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/tll_plus_rev-entails-tll_plus.smt2")
-  }
-  "tpp_plus-entails-tpp_plus_rev.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/tpp_plus-entails-tpp_plus_rev.smt2")
-  }
-  "tpp_plus_rev-entails-tpp_plus.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/parse-smtlib-benches/tpp_plus_rev-entails-tpp_plus.smt2")
-  }
-  "kaluzalong.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/kaluzalong.smt2")
-  }
-  "pisa-000.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-000.smt2")
-  }
-  "pisa-001.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-001.smt2")
-  }
-  "pisa-002.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-002.smt2")
-  }
-  "pisa-003.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-003.smt2")
-  }
-  "pisa-004.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-004.smt2")
-  }
-  "pisa-005.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-005.smt2")
-  }
-  "pisa-006.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-006.smt2")
-  }
-  "pisa-007.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-007.smt2")
-  }
-  "pisa-008.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-008.smt2")
-  }
-  "pisa-009.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-009.smt2")
-  }
-  "pisa-010.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-010.smt2")
-  }
-  "pisa-011.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/pisa-011.smt2")
-  }
-  "test1.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/test1.smt2")
-  }
-  "test2.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/test2.smt2")
-  }
-  "test3.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/test3.smt2")
-  }
-  "test4.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/test4.smt2")
-  }
-  "test5.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/test5.smt2")
-  }
-  "test6.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/antlr-examples/test6.smt2")
-  }
-  "2447.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/z3-regress/2447.smt2")
-  }
-  "crash.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/z3-regress/crash.smt2")
-  }
-  "o2.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/z3-regress/o2.smt2")
-  }
-  "t170.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/z3-regress/t170.smt2")
-  }
-  "t178.smt2" should "parse successfully." in {
-    SExprParserSpec.expectPass("test/parser/z3-regress/t178.smt2")
+  "parser_test18.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test18.txt")
   }
   "parser_test19.txt" should "parse successfully." in {
     SExprParserSpec.expectPass("test/parser/command-response/output/parser_test19.txt")
