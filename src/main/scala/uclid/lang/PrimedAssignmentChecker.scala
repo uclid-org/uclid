@@ -110,7 +110,7 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           checkParallelConstruct("next")
         case AssignStmt(lhss, _) =>
           checkLhs(lhss, in, context)
-        case ProcedureCallStmt(_, lhss, _) =>
+        case ProcedureCallStmt(_, lhss, _, _, _) =>
           checkLhs(lhss, in, context)
       }
     }

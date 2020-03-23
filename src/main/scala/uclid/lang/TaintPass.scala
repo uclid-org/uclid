@@ -127,6 +127,7 @@ class TaintNextPass extends RewritePass {
             List(taint_assign, HavocStmt(havocable))
           }
           case HavocableFreshLit(f) => List()
+          case HavocableInstanceId(_) => throw new Utils.AssertionError("Should be no havocable instance ids at this point")
         }
       }
       case IfElseStmt(cond, ifblock, elseblock) => {

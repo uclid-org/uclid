@@ -1,0 +1,15 @@
+module common {
+
+
+  define minus(a : integer, b : integer) : integer = a + b;
+
+}
+
+
+module main {
+  define * = main.*;
+
+  define plus(a : integer, b : boolean) : integer = a;
+
+
+}

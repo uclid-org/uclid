@@ -31,7 +31,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Pramod Subramanyan
+ * Author: Pranav Gaddamadugu
+
  * Rewrite function * = moduleId.*; declarations.
  *
  */
@@ -39,162 +40,96 @@
 package uclid
 package lang
 
-import com.typesafe.scalalogging.Logger
+import scala.collection.mutable.HashMap
 
-class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[List[Decl]] {
-  lazy val logger = Logger(classOf[ModuleFunctionsImportCollector])
-  type T = List[Decl]
-  
-  def isStatelessExpression(id : Identifier, context : Scope) : Boolean = {
-    context.get(id) match {
-      case Some(namedExpr) =>
-        namedExpr match {
-          case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
-               Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
-               Scope.FunctionArg(_, _) | Scope.Define(_, _, _) |
-               Scope.Instance(_)       =>
-             false
-          case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
-               Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
-               Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
-               Scope.ConstantLit(_, _)    =>
-             true
-          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _)             |
-               Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
-               Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
-               Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
-               Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
-               Scope.BlockVar(_, _)           | Scope.SelectorField(_)          =>
-             throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
-        }
-      case None =>
-        throw new Utils.UnknownIdentifierException(id)
+class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier, Identifier]] {
+  type T = HashMap[Identifier, Identifier]
+/**
+ * This function recursively searches for import dependencies across modules
+ * and forms a list of modules that we need to import from.
+ *
+ * @param id Identifier of the current module
+ * @param ctx Scope containing ModuleDefinitions
+ */
+  def findModuleDependencies(id : Identifier, ctx : Scope) : List[Identifier] = {
+    val mod = ctx.map.get(id) match {
+      case Some(Scope.ModuleDefinition(module)) => module
+      case _ => throw new Utils.ParserError("Trying to import from a module that does not exist; try reordering the input of module files", None, None)
     }
-  }
-  def isStatelessExpr(e: Expr, context : Scope) : Boolean = {
-    e match {
-      case id : Identifier =>
-        isStatelessExpression(id, context)
-      case ei : ExternalIdentifier =>
-        true
-      case lit : Literal =>
-        true
-      case rec : Tuple =>
-        rec.values.forall(e => isStatelessExpr(e, context))
-      case OperatorApplication(ArraySelect(inds), args) =>
-        inds.forall(ind => isStatelessExpr(ind, context)) &&
-        args.forall(arg => isStatelessExpr(arg, context))
-      case OperatorApplication(ArrayUpdate(inds, value), args) =>
-        inds.forall(ind => isStatelessExpr(ind, context)) &&
-        args.forall(arg => isStatelessExpr(arg, context)) &&
-        isStatelessExpr(value, context)
-      case opapp : OperatorApplication =>
-        opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
-      case a : ConstArray =>
-        isStatelessExpr(a.exp, context)
-      case fapp : FuncApplication =>
-        isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
-      case lambda : Lambda =>
-        isStatelessExpr(lambda.e, context + lambda)
-    }
-  }
-  
-  def isFunctionExpression(id : Identifier, context : Scope) : Boolean = {
-    context.get(id) match {
-      case Some(namedExpr) => 
-        namedExpr match {
-          case Scope.Function(_, _) => true
-          case _ => false;
-        }
-      case None => {
-        throw new Utils.UnknownIdentifierException(id)
+    
+    val importList : List[Identifier] = mod.funcImportDecls.map(d => d.id)
+    val fullList = importList ++ importList.foldLeft(List[Identifier]()) { 
+      (list, i) => {
+        if (i == id) throw new Utils.ParserError(s"Trying to import from the same module: ${id}", None, None)
+        val dependencies = findModuleDependencies(i, ctx)
+        list ++ dependencies
       }
     }
-  }
-  
-  def isFunctionExpr(e : Expr, context : Scope) : Boolean = {
-      e match {
-      case id : Identifier =>
-        isFunctionExpression(id, context)
-      case ei : ExternalIdentifier =>
-        false
-      case lit : Literal =>
-        false
-      case rec : Tuple =>
-        rec.values.exists(e => isFunctionExpr(e, context))
-      case OperatorApplication(ArraySelect(inds), args) =>
-        inds.exists(ind => isFunctionExpr(ind, context)) || 
-        args.exists(arg => isFunctionExpr(arg, context))
-      case OperatorApplication(ArrayUpdate(inds, value), args) =>
-        inds.exists(ind => isFunctionExpr(ind, context)) || 
-        args.exists(arg => isFunctionExpr(arg, context)) ||
-        isStatelessExpr(value, context)
-      case opapp : OperatorApplication =>
-        opapp.operands.exists(arg => isFunctionExpr(arg, context + opapp.op))
-      case a : ConstArray =>
-        isFunctionExpr(a.exp, context)
-      case fapp : FuncApplication =>
-        isFunctionExpr(fapp.e, context) || fapp.args.exists(a => isFunctionExpr(a, context))
-      case lambda : Lambda =>
-        isFunctionExpr(lambda.e, context + lambda)
-    }
+    fullList
   }
 
-  def isStatelessAndFunctionExpr(e : Expr, context : Scope) : Boolean = {
-    isStatelessExpr(e, context) && isFunctionExpr(e, context)
-  }
-
-  override def applyOnModuleFunctionsImport(d : TraversalDirection.T, modFuncImport : ModuleFunctionsImportDecl, in : T, context : Scope) : T = {
+/**
+ * This function finds and stores the identifier and module identifier of all
+ * imported functions.
+ *
+ * @param d Direction of AST traversal
+ * @param modFunImport Import declaration
+ * @param in HashMap[Identifier, Identifier]
+ * @param context Scope containing ModuleDefinitions
+ */
+  override def applyOnModuleFunctionsImport(d : TraversalDirection.T, modFunImport : ModuleFunctionsImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
-      //logger.debug("statement: {}", modFuncImport.toString())
-      val id = modFuncImport.id
-      context.map.get(id) match {
-        case Some(Scope.ModuleDefinition(mod)) => {
-          val newFuncs : List[Decl]  = mod.functions.map {
-            f => {
-              ASTNode.introducePos(true, true, f, modFuncImport.position)
-            }
-          } ++ in
-          // Add axioms related to functions
-          
-          val newAxioms : List[Decl] = mod.axioms.filter(a => isStatelessAndFunctionExpr(a.expr, Scope.empty + mod))
-          newAxioms.map {
-            a => {
-              ASTNode.introducePos(true, true, a, modFuncImport.position)
-            }
-          } ++ newFuncs
+      val id = modFunImport.id
+      val dependList = findModuleDependencies(id, context)
+      
+      // prepend this modules id to moduleList
+      val moduleList = id :: dependList
+
+      moduleList.foreach { id =>
+        // The module has already been checked in `findModuleDependencies`
+        val mod = context.map.get(id).get.asInstanceOf[Scope.ModuleDefinition].mod
+        mod.functions.foreach { f => 
+          in.get(f.id) match {
+            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module functions import. Check module: ${mod.id}", None, None)
+            case None => in += ((f.id, mod.id))
+          }
         }
-        case _ => in
       }
+      in
     } else {
       in
     }
   }
 }
 
-class ModuleFunctionsImportCollector extends ASTAnalyzer("ModuleFunctionsImportCollector", new ModuleFunctionsImportCollectorPass()) {
-  lazy val logger = Logger(classOf[ModuleFunctionsImportCollector])
-  
+
+class ModuleFunctionsImportRewriter extends ASTAnalyzer("ModuleFunctionsImportRewriter", new ModuleFunctionsImportCollectorPass()) {
   override def reset() {
-    in = Some(List.empty)
+    in = Some(HashMap.empty)
   }
+
+/**
+ * This function will traverse a module and append all imported function calls
+ * with their appropriate module tag.
+ *
+ * @param module The module to be visited
+ * @param context The context of the current module (technically accumulated
+ *    by the PassManager)
+ */
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    val externalIds = visitModule(module, List.empty, context)
-    val newImports = externalIds.map {
-      d => {
-        d match {
-          case d : AxiomDecl     => ASTNode.introducePos(true, true, d, d.position)
-          case d : FunctionDecl  => ASTNode.introducePos(true, true, d, d.position)
-          case _ => throw new Utils.RuntimeError("Shouldn't have anything but axioms and functions.")
-        }
+    val modScope = manager.moduleList.foldLeft(Scope.empty)((s, m) => s +& m )
+
+    // Add functions from this module
+    val initMap = new HashMap[Identifier, Identifier]()
+    module.functions.foreach { f => 
+      initMap.get(f.id) match {
+        case Some(_) => throw new Utils.ParserError(s"Function redeclaration error in module: ${module.id}", None, None)
+        case None => initMap += ((f.id, module.id))
       }
     }
-    
-    //logger.debug("newImports: " + newImports.toString())
-    val modP = Module(module.id, newImports ++ module.decls, module.cmds, module.notes)
-    return Some(modP)
+    val funcMap = visitModule(module, initMap, modScope).filterNot(p => p._2 ==module.id)
+    val rewriterMap = funcMap.map(p => (p._1 -> OperatorApplication(PolymorphicSelect(p._1), List(p._2)))).asInstanceOf[HashMap[Expr, Expr]].toMap
+    val rewriter = new ExprRewriter("FunctionRewriter", rewriterMap)
+    rewriter.visit(module, context)
   }
 }
-
-
-

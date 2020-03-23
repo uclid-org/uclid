@@ -1,0 +1,35 @@
+module sub {
+
+  var a : integer;
+
+  procedure [inline] mod(flag : boolean) 
+    ensures(flag == false ==> a == old(a));
+    modifies a;
+  {
+    if (flag == true) {
+      a = 2;
+    }
+  }
+
+}
+
+
+module main {
+  
+  instance s : sub();
+  
+  procedure mod_sub() 
+    modifies s;
+  {
+    call s.mod(false);
+  }
+
+
+  control {
+    verif_mod_sub = verify(mod_sub);
+    check;
+    print_module;
+    print_results;
+  }
+
+}

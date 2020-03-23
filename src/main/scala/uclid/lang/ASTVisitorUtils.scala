@@ -107,6 +107,9 @@ class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass
   }
 }
 
+
+
+
 object ExprRewriter
 {
   def rewriteExpr(e : Expr, rewrites : Map[Expr, Expr], context : Scope) : Expr = {
@@ -143,7 +146,11 @@ class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   }
 
   def rewriteExpr(e : Expr, context : Scope) : Expr = {
-    visitExpr(e, context).get
+    e match {
+      case OperatorApplication(OldOperator(), _) => e
+      case OperatorApplication(HistoryOperator(), _) => e
+      case _ => visitExpr(e, context).get
+    }
   }
 
   def rewriteStatements(stmts : List[Statement], context : Scope) : List[Statement] = {
@@ -153,23 +160,55 @@ class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   def rewriteStatement(stmt : Statement, context : Scope) : Option[Statement] = {
     visitStatement(stmt, context)
   }
+
+  override def visitOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
+    
+    opapp match {
+      case OperatorApplication(HistoryOperator(), _) => {
+        Some(opapp)
+      }
+      case OperatorApplication(OldOperator(), _) => Some(opapp)
+      case _ => {
+        val opAppP = visitOperator(opapp.op, context).flatMap((op) => {
+          pass.rewriteOperatorApp(OperatorApplication(op, opapp.operands.map(visitExpr(_, context + opapp)).flatten), context)
+        })
+        return ASTNode.introducePos(true, true, opAppP, opapp.position)  }
+    }
+  }
 }
 
-class OldExprRewriterPass(rewrites : Map[Identifier, Identifier]) extends RewritePass
+// This class has been modified to handle the abstract class: ModifiableEntity.
+class OldExprRewriterPass(rewrites : Map[ModifiableEntity, Identifier]) extends RewritePass
 {
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     opapp.op match {
       case OldOperator() =>
-        val arg = opapp.operands(0).asInstanceOf[Identifier]
-        rewrites.get(arg) match {
-          case Some(v) => Some(Operator.old(v))
-          case None => Some(Operator.old(arg))
+        opapp.operands(0) match {
+          case arg: Identifier => {
+            rewrites.get(ModifiableId(arg)) match {
+              case Some(v) => Some(v)
+              case None => Some(Operator.old(arg))
+            }
+          }
+          case OperatorApplication(SelectFromInstance(field), list) => {
+            rewrites.get(ModifiableInstanceId(OperatorApplication(SelectFromInstance(field), list))) match {
+              case Some(v) => Some(v)
+              case None => Some(Operator.oldInstance(OperatorApplication(SelectFromInstance(field), list)))
+            }
+          }
+          case _ => {
+            Utils.raiseParsingError("Unexpected argument in the 'old' operator", opapp.pos, context.filename)
+            Some(opapp)
+          }
         }
       case HistoryOperator() =>
+      
         val arg = opapp.operands(0).asInstanceOf[Identifier]
         val past = opapp.operands(1)
-        rewrites.get(arg) match {
-          case Some(v) => Some(Operator.history(v, past))
+        rewrites.get(ModifiableId(arg)) match {
+          // history operators should not refer to instances
+          // TODO: Check that we do not want to modify the history operator at all.
+          case Some(v) => Some(Operator.history(arg, past))
           case None => Some(Operator.history(arg, past))
         }
       case _ => Some(opapp)
@@ -185,7 +224,7 @@ object OldExprRewriter {
   }
 }
 
-class OldExprRewriter(rewrites : Map[Identifier, Identifier])
+class OldExprRewriter(rewrites : Map[ModifiableEntity, Identifier])
   extends ASTRewriter(OldExprRewriter.getName(), new OldExprRewriterPass(rewrites))
 {
   def rewriteExpr(e : Expr, context : Scope) : Expr = {

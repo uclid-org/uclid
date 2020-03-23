@@ -1,0 +1,262 @@
+module common {
+    type event_t = enum { PING, PONG, SUCCESS };
+    type state_t = enum { InitEntry, Init, SendPingEntry, SendPing, WaitPing, WaitPong, SendPongEntry, SendPong, Bad};
+
+    // stuff about queues
+    type index_t = integer;
+    type count_t = integer;
+    type queue_t = record { 
+        contents : [index_t]event_t, 
+        head     : index_t, 
+        tail     : index_t, 
+        count    : count_t, 
+        inited   : boolean, 
+        valid    : boolean, 
+        full     : boolean, 
+        empty    : boolean };
+
+    const SIZE  : integer = 4;
+
+    procedure zero() returns (q : queue_t) {
+        q.head   = 0;
+        q.tail   = 0;
+        q.count  = 0;
+        q.valid  = false;
+        q.full   = false;
+        q.empty  = true;
+        q.inited = false;
+    }
+
+    procedure pushQ(in_q : queue_t, d: event_t) returns (out_q : queue_t)
+        requires !in_q.full;
+        requires (in_q.tail >= 0 && in_q.tail < SIZE);
+        ensures (out_q.contents == in_q.contents[in_q.tail -> d]);
+        ensures (out_q.tail == if (in_q.tail == SIZE-1) then 0 else (in_q.tail + 1));
+        ensures (out_q.count == in_q.count + 1);
+        ensures (out_q.head == in_q.head);
+        ensures (out_q.valid == in_q.valid);
+        ensures (out_q.full == in_q.full);
+        ensures (out_q.empty == in_q.empty);
+        ensures (out_q.inited == in_q.inited);
+    {
+        out_q.contents = in_q.contents[in_q.tail -> d];
+        out_q.tail = in_q.tail + 1;
+        if (out_q.tail >= SIZE) { out_q.tail = 0; }
+        out_q.count = in_q.count + 1;
+
+        out_q.head = in_q.head;
+        out_q.valid = in_q.valid;
+        out_q.full = in_q.full;
+        out_q.empty = in_q.empty;
+        out_q.inited = in_q.inited;
+    }
+
+    procedure popQ(in_q : queue_t) returns (out_q : queue_t, popped: event_t)
+        requires !in_q.empty;
+        requires (in_q.head >= 0 && in_q.head < SIZE);
+        ensures (out_q.head == if (in_q.head == SIZE-1) then 0 else (in_q.head + 1));
+        ensures (out_q.count == in_q.count - 1);
+        ensures (out_q.contents == in_q.contents);
+        ensures (out_q.tail == in_q.tail);
+        ensures (out_q.valid == in_q.valid);
+        ensures (out_q.full == in_q.full);
+        ensures (out_q.empty == in_q.empty);
+        ensures (out_q.inited == in_q.inited);
+        ensures (popped == in_q.contents[in_q.head]);
+    {
+        out_q.head = in_q.head + 1;
+        if (out_q.head >= SIZE) { out_q.head = 0; }
+        out_q.count = in_q.count - 1;
+        popped = in_q.contents[in_q.head];
+
+        out_q.contents = in_q.contents;
+        out_q.tail = in_q.tail;
+        out_q.valid = in_q.valid;
+        out_q.full = in_q.full;
+        out_q.empty = in_q.empty;
+        out_q.inited = in_q.inited;
+    }
+}
+
+module client {
+    // import types
+    type state_t = common.state_t;
+    type event_t = common.event_t;
+    type index_t = common.index_t;
+    type count_t = common.count_t;
+    type queue_t = common.queue_t;
+
+    var state                   : state_t;
+    input input_queue           : queue_t;
+    output updated_input_queue  : queue_t;
+    output output_queue         : queue_t;
+
+    instance comm : common();
+
+    init {
+        state = InitEntry;
+        call (updated_input_queue) = com.zero();
+        call (output_queue)        = com.zero();
+    }
+
+    next {
+        case
+            (state == InitEntry) : {
+                state' = Init;
+            } (state == Init) : {
+                if (!input_queue.empty) {
+                    var first : event_t;
+                    call (updated_input_queue', first) = com.popQ(input_queue);
+                    if (first == SUCCESS) {
+                        state' = SendPingEntry;
+                    } else {
+                        state' = Bad;
+                    }
+                }
+            } (state == SendPingEntry) : {
+                state' = SendPing;
+                call (output_queue') = com.pushQ(output_queue, PING);
+            } (state == SendPing) : {
+                if (!input_queue.empty) {
+                    var first : event_t;
+                    call (updated_input_queue', first) = com.popQ(input_queue);
+                    if (first == SUCCESS) {
+                        state' = WaitPong;
+                    } else {
+                        state' = Bad;
+                    }
+                }
+            } (state == WaitPong) : {
+                if (!input_queue.empty) {
+                    var first : event_t;
+                    call (updated_input_queue', first) = com.popQ(input_queue);
+                    if (first == PONG) {
+                        state' = SendPingEntry;
+                    } else {
+                        state' = Bad;
+                    }
+                }
+            }
+        esac;
+    }
+}
+
+module server {
+    // import types
+    type state_t = common.state_t;
+    type event_t = common.event_t;
+    type index_t = common.index_t;
+    type count_t = common.count_t;
+    type queue_t = common.queue_t;
+
+    var state                   : state_t;
+    input input_queue           : queue_t;
+    output updated_input_queue  : queue_t;
+    output output_queue         : queue_t;
+
+    instance comm : common();
+
+    init {
+        state = InitEntry;
+        call (updated_input_queue) = com.zero();
+        call (output_queue)        = com.zero();
+    }
+
+    next {
+        case
+            (state == SendPongEntry) : {
+                state' = SendPong;
+                call (output_queue') = com.pushQ(output_queue, PONG);
+            } (state == SendPong) : {
+                if (!input_queue.empty) {
+                    var first : event_t;
+                    call (updated_input_queue', first) = com.popQ(input_queue);
+                    if (first == SUCCESS) {
+                        state' = WaitPing;
+                    } else {
+                        state' = Bad;
+                    }
+                }
+            } (state == WaitPing) : {
+                if (!input_queue.empty) {
+                    var first : event_t;
+                    call (updated_input_queue', first) = com.popQ(input_queue);
+                    if (first == PING) {
+                        state' = SendPingEntry;
+                    } else {
+                        state' = Bad;
+                    }
+                }
+            }
+        esac;
+    }
+}
+
+module main {
+    // import types
+    type state_t = common.state_t;
+    type event_t = common.event_t;
+    type index_t = common.index_t;
+    type count_t = common.count_t;
+    type queue_t = common.queue_t;
+
+    const SIZE  : integer = 4;
+    var curr    : event_t;
+
+    var client_input_queue         : queue_t;
+    var client_updated_input_queue : queue_t;
+    var client_output_queue        : queue_t;
+
+    var server_input_queue         : queue_t;
+    var server_updated_input_queue : queue_t;
+    var server_output_queue        : queue_t;
+
+    instance c : client(input_queue : (client_input_queue), updated_input_queue : (client_updated_input_queue), output_queue : (client_output_queue));
+    instance s : server(input_queue : (server_input_queue), updated_input_queue : (server_updated_input_queue), output_queue : (server_output_queue));
+
+    instance comm : common();
+
+    init {
+        call (client_input_queue)         = com.zero();
+        call (client_updated_input_queue) = com.zero();
+        call (client_output_queue)        = com.zero();
+
+        call (server_input_queue)         = com.zero();
+        call (server_updated_input_queue) = com.zero();
+        call (server_output_queue)        = com.zero();
+    }
+
+    next {
+        if (client_updated_input_queue.count > server_updated_input_queue.count) {
+            if (!client_output_queue.empty) {
+                var first : event_t;
+                call (client_output_queue', first) = com.popQ(client_output_queue);
+                if (first == SUCCESS) {
+                    client_input_queue' = com.pushQ(client_updated_input_queue, SUCCESS);
+                } else {
+                    server_input_queue' = com.pushQ(server_updated_input_queue, first);
+                } 
+            }
+        } else {
+            if (!server_output_queue.empty) {
+                var first : event_t;
+                call (server_output_queue', first) = com.popQ(server_output_queue);
+                if (first == SUCCESS) {
+                    server_input_queue' = com.pushQ(server_updated_input_queue, SUCCESS);
+                } else {
+                    client_input_queue' = com.pushQ(client_updated_input_queue, first);
+                } 
+            }
+        }
+    }
+
+    property client_good : c.state != Bad;
+    property server_good : s.state != Bad;
+
+    control {
+        v = unroll(4);
+        check;
+        print_results;
+        v.print_cex();
+    }
+}

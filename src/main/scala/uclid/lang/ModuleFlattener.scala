@@ -1,4 +1,4 @@
-/*
+ /*
  * UCLID5 Verification and Synthesis Engine
  *
  * Copyright (c) 2017.
@@ -31,7 +31,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Pramod Subramanyan
+ * Author: Pramod Subramanyan, Kevin Cheang, Pranav Gaddamadugu
 
  * Module Instantiation.
  *
@@ -41,6 +41,7 @@ package lang
 
 import scala.collection.immutable.Map
 import com.typesafe.scalalogging.Logger
+import scala.collection.mutable.ListBuffer
 
 class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
   type T = Map[Identifier, Set[Identifier]]
@@ -112,11 +113,20 @@ object ModuleInstantiatorPass {
   }
 
   // Convert a RewriteMap into a VarMap
-  def toRewriteMap(varMap : VarMap) : RewriteMap = {
+  def toRewriteMap(varMap : VarMap, instVarMap : InstVarMap) : RewriteMap = {
     val empty : RewriteMap = Map.empty
-    varMap.foldLeft(empty) {
+    val rewriteMap1 = varMap.foldLeft(empty) {
       (acc, mapping) => acc + (mapping._1 -> mapping._2.ident)
     }
+    val rewriteMap2 = instVarMap.foldLeft(rewriteMap1) {
+      (acc, mapping) => {
+        rewriteMap1.exists(_._1 == mapping._1(1)) match {
+          case true => acc                                    // don't replace any shared var mappings or shadowed variables from instances
+          case false => acc + (mapping._1(1) -> mapping._2)
+        } 
+      }
+    }
+    rewriteMap2
   }
 }
 
@@ -205,9 +215,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     instVarMap
   }
 
-  def createNewModule(varMap : VarMap) : Module = {
-    val rewriteMap = MIP.toRewriteMap(varMap)
-    val rewriter = new ExprRewriter("MIP:" + inst.instanceId.toString, rewriteMap)
+  def createNewModule() : Module = {
     rewriter.visit(targetModule, Scope.empty).get
   }
 
@@ -260,8 +268,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   val (varMap, externalSymbolMap) = createVarMap()
+  val targetInstVarMap = targetModule.getAnnotation[InstanceVarMapAnnotation].get.iMap
+
+  val rewriteMap = MIP.toRewriteMap(varMap, targetInstVarMap)
+  val rewriter = new ExprRewriter("MIP:" + inst.instanceId.toString, rewriteMap)
+
   val instVarMap = createInstVarMap(varMap)
-  val newModule = createNewModule(varMap)
+  val newModule = createNewModule()
 
   val newVariables = createNewVariables(varMap)
   val newInputs = createNewInputs(varMap)
@@ -296,6 +309,16 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
   }
 
+  // rewrite a list of identifiers as a nested select from instance
+  def unflattenSelectFromInstance(ids : List[Identifier]) : OperatorApplication = {
+    if (ids.length == 2) {
+      return OperatorApplication(SelectFromInstance(ids.last), List(ids.head))
+    } else {
+      return OperatorApplication(SelectFromInstance(ids.last), List(unflattenSelectFromInstance(ids.init)))
+    }
+     
+  }
+
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     val opappP = opapp.op match {
       case SelectFromInstance(field) =>
@@ -308,6 +331,33 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
     fixPosition(opappP, opapp.position)
   }
+
+  
+  /*
+   * Rewrites havoc statements into the appropriate form. Reduces 
+   * HavocableInstanceIds into HavocableIds by retrieving the appropriate 
+   * instance state variable.
+   *
+   * @param st The havoc statement that we are rewriting
+   * @param ctx The current scope
+   * @returns Returns a HavocStmt.
+   */
+  override def rewriteHavoc(st : HavocStmt, ctx : Scope) : Option[Statement] = {
+    st.havocable match {
+      case HavocableInstanceId(opapp) => {
+        val newOppApp = rewriteOperatorApp(opapp, ctx).get
+        if (newOppApp.isInstanceOf[Identifier]) {
+          Some(HavocStmt(HavocableId(newOppApp.asInstanceOf[Identifier])))
+        } else if (newOppApp.isInstanceOf[OperatorApplication]) {
+          Some(HavocStmt(HavocableInstanceId(newOppApp.asInstanceOf[OperatorApplication])))
+        } else {
+          throw new Utils.AssertionError("HavocInstanceId should not be rewritten in any other form")
+        }
+      }
+      case _ => Some(st)
+    }
+  }
+
   // add initialization for the instance.
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
     newModule.init match {
@@ -341,12 +391,289 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       Some(modCall)
     }
   }
+
+  /*
+   * Inlines procedure calls that either depend on an instance procedure call,
+   * or those that have not been inlined in ProcedureInline. This handles
+   * procedures that are 'noinlined'.
+   *
+   * @param callStmt The procedure call statement to be inlined
+   * @param proc The procedure declaration corresponding to callStmt
+   * @param context The current scope
+   * @returns Returns a new BlockStmt containing the inlined procedure.
+   */
+  def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope) : Statement = {
+    val procSig = proc.sig
+    def getModifyLhs(id : Identifier) = LhsId(id)
+
+    // formal and actual argument pairs.
+    val argPairs : List[(Identifier, Expr)] = ((procSig.inParams.map(p => p._1)) zip (callStmt.args))
+    // formal and actual return value pairs.
+    val retPairs : List[(Identifier, (Identifier, Type))] = procSig.outParams.map(p => (p._1 -> (NameProvider.get("ret_" + p._1.toString()), p._2)))
+    // list of new return variables.
+    val retIds = retPairs.map(r => r._2._1)
+    // map from formal to actual arguments.
+    val argMap : Map[Expr, Expr] = argPairs.map(p => p._1.asInstanceOf[Expr] -> p._2).toMap
+    // map from formal to the fake variables created for return values.
+    val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
+    // map from modified state variables to new variables created for them. ignore modified "instances"
+    // should only use modify exprs that contain a ModifiableId
+    val modifyRenameList: List[(ModifiableEntity, Identifier)] = proc.modifies.filter(m =>  m match {
+      case ModifiableId(id) => context.get(id) match {
+                                 case Some(Scope.Instance(_)) => false
+                                 case None => false // Instance already flattened
+                                 case _ => true
+                                }
+      case ModifiableInstanceId(opapp)  => true
+    }).flatMap(m => m match {
+      case ModifiableId(id) => Some((m, NameProvider.get("modifies_" + id.toString())))
+      case ModifiableInstanceId(opapp) => {
+        instVarMap.get(flattenSelectFromInstance(opapp)) match {
+          case Some(name) => Some((m, NameProvider.get("modifies_" + name)))
+          // Not in the current instance we are flattening
+          case _ => None 
+        }
+      }
+    }).toList
+
+    /*  
+     * For each variable that is modified, get the appropriate renamed identifier.
+     */
+     val modifyPairs : List[(Identifier, Identifier)] = modifyRenameList.flatMap(p => p._1 match {
+      case ModifiableId(id) => Some((id, p._2))
+      case ModifiableInstanceId(opapp) => {
+        instVarMap.get(flattenSelectFromInstance(opapp)) match {
+          case Some(name) => Some((name, p._2))
+          case _ => None
+        }
+      }
+    })
+
+    val notModifiesMap : Map[Expr, Expr] = if (callStmt.instanceId == None) {
+        val flattenedModifiedInstanceIds : Set[List[Identifier]] = proc.modifies.filter(p => p.isInstanceOf[ModifiableInstanceId]).map(p => flattenSelectFromInstance(p.expr))
+        instVarMap.filterKeys(k => !flattenedModifiedInstanceIds.contains(k)).map(p => (unflattenSelectFromInstance(p._1) -> p._2))
+      } else {
+        val modifiedIds : Set[Identifier] = proc.modifies.filter(p => p.isInstanceOf[ModifiableId]).map(p => p.asInstanceOf[ModifiableId].id)
+        varMap.filter(p => !modifiedIds.contains(p._1) && p._2.isInstanceOf[MIP.StateVariable]).map(p => (p._1 -> p._2.asInstanceOf[MIP.StateVariable].id))
+      }
+    
+
+        
+    // map from st_var -> modify_var.
+    // Does not inclide instance state variables
+    val modifiesMap : Map[Expr, Expr] = modifyRenameList.map(p => (p._1.expr -> p._2)).toMap
+
+    // full rewrite map.
+    val rewriteMap = argMap ++ retMap ++ modifiesMap ++ notModifiesMap
+    // rewriter object.
+    val rewriter = new ExprRewriter("InlineRewriter", rewriteMap)
+    
+    // Note that oldRenameMap contains the 'modifies' name and the 'old' name
+    // example entry ['a', 'old_a')]
+    val oldRenameMap : Map[ModifiableEntity, Identifier] = modifyRenameList.flatMap(p => p._1 match {
+      case ModifiableId(id) =>  Some((p._1 -> NameProvider.get("old_" + id.toString())))
+      case ModifiableInstanceId(opapp) => {
+        instVarMap.get(flattenSelectFromInstance(opapp)) match {
+          case Some(name) => Some((p._1 -> NameProvider.get("old_" + name)))
+          // Shouldn't hit this case since we are taking this from modifyRenameList
+          case _ => None
+        }
+      }
+    }).toMap
+
+    // We know that notModifiesMap is compatible with both modifiesId and modifiesInstanceId
+    val notModifiesOldMap : Map[ModifiableEntity, Identifier] = notModifiesMap.flatMap(p => (p._1, p._2) match {
+      case (o : OperatorApplication, id : Identifier) => Some((ModifiableInstanceId(o) -> id))
+      case (id1 : Identifier, id2 : Identifier) => Some((ModifiableId(id1) -> id2))
+      case _ => None
+    })
+    // rewriter object.
+    val oldRewriter = new OldExprRewriter(oldRenameMap ++ notModifiesOldMap)
+
+    val oldPairs : List[(Identifier, Identifier)] = oldRenameMap.flatMap(p => p._1 match {
+      case ModifiableId(id) => Some((id, p._2))
+      case ModifiableInstanceId(opapp) => {
+        instVarMap.get(flattenSelectFromInstance(opapp)) match {
+          case Some(name) => Some((name, p._2))
+          // Shouldn't hit this case
+          case _ => None
+        }
+      }
+    }).toList
+
+    // variable declarations for return values.
+    val retVars = retPairs.map(r => BlockVarsDecl(List(r._2._1), r._2._2))
+    // variable declarations for the modify variables.
+    
+    val modifyVars : List[BlockVarsDecl] = modifyPairs.map(p => BlockVarsDecl(List(p._2), context.get(p._1) match {
+      case Some(v) => v.typ
+      case _ => {
+        val stateVarTypeMap : Map[Identifier, Type] = varMap.flatMap(p => p._2 match {
+          case MIP.StateVariable(id, t) => Some(id -> t)
+          case _ => None
+        })
+        val instTyp = stateVarTypeMap.get(p._1)
+        if (instTyp != None) {
+          instTyp.get
+        } else {
+          context.get(callStmt.moduleId.get).get.asInstanceOf[Scope.ModuleDefinition].mod.vars.find(v => v._1.name == p._1.name).get._2
+        }
+      }
+    }))
+    // variable declarations for old values
+    val oldVars : List[BlockVarsDecl] = oldPairs.map(p => BlockVarsDecl(List(p._2), (context + modifyVars).get(p._1) match {
+      case Some(v) => v.typ
+      case _ => {
+        val stateVarTypeMap : Map[Identifier, Type] = varMap.flatMap(p => p._2 match {
+          case MIP.StateVariable(id, t) => Some(id -> t)
+          case _ => None
+        })
+        val instTyp = stateVarTypeMap.get(p._1)
+        if (instTyp != None) {
+          instTyp.get
+        } else {
+          lang.UndefinedType()
+        }
+      }
+    }))
+    // list of all variable declarations.
+    val varsToDeclare = retVars ++ modifyVars ++ oldVars
+
+    // statements assigning state variables to modify vars.
+    val modifyInitAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
+    // statements tracking variables before procedure call
+    val oldAssigns : List[AssignStmt] = oldPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
+    // havoc'ing of the modified variables.
+    val modifyHavocs : List[HavocStmt] = modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
+    // statements updating the state variables at the end.
+    val modifyFinalAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(getModifyLhs(p._1)), List(p._2)))
+    // create precondition asserts
+    val preconditionAsserts : List[Statement] = proc.requires.map {
+      (req) => {
+        val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(req, context), context)
+        val node = AssertStmt(exprP, Some(Identifier("precondition")))
+        ASTNode.introducePos(true, true, node, req.position)
+      }
+    }
+    // create postcondition asserts
+    val postconditionAsserts : List[Statement] = if (proc.shouldInline) {
+      proc.ensures.map {
+        (ens) => {
+          val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
+          val node = AssertStmt(exprP, Some(Identifier("postcondition")))
+        ASTNode.introducePos(true, true, node, ens.position)
+        }
+      }
+    } else {
+      List.empty
+    }
+    // body of the procedure.
+    val bodyP = if (proc.shouldInline) {
+      oldRewriter.rewriteStatement(rewriter.rewriteStatement(proc.body, Scope.empty).get, context).get
+    } else {
+      val postconditionAssumes : List[Statement] = proc.ensures.map {
+        (ens) => {
+          val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
+          AssumeStmt(exprP, None)
+        }
+      }
+      BlockStmt(List.empty, modifyHavocs ++ postconditionAssumes)
+    }
+    val stmtsP = if (callStmt.callLhss.size > 0) {
+      val returnAssign = AssignStmt(callStmt.callLhss, retIds)
+      modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP, returnAssign) ++ postconditionAsserts ++ modifyFinalAssigns
+    } else {
+      modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
+    }
+    BlockStmt(varsToDeclare, stmtsP)
+  }
+
+  /*
+   * Rewrites procedure call statements. At this point, all procedure that do not modify any instances or should be inlined have been handled.
+   *
+   * @param callStmt The procedure call statement being analyzed
+   * @param context The current scope
+   * @returns Returns a BlockStmt containing the internals of the procedure call.
+   */
+  override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
+    // Handle any instance procedure call.
+    if (callStmt.instanceId != None && callStmt.instanceId.get.name == inst.instanceId.name) {
+            // Replace the instance procedure call if we're flattening that particular instance    
+      val procInst = context.module.get.instances.find(inst => inst.instanceId.name == callStmt.instanceId.get.name).get
+      val procModule = context.get(procInst.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
+      val procOption = procModule.procedures.find(p => p.id.name == callStmt.id.name)
+      val blkStmt = inlineProcedureCall(callStmt, procOption.get, Scope.empty + procModule)
+      rewriter.visitStatement(blkStmt, context)
+    } else {
+      val procId = callStmt.id
+      val procOption = context.module.get.procedures.find(p => p.id == callStmt.id)
+      var modifiesInst = false
+      if (!procOption.isEmpty) {
+        modifiesInst = procOption.get.modifies.exists(
+                          modifiable => modifiable match {
+                            case m : ModifiableId => false
+                            case m : ModifiableInstanceId => true
+                          })
+        modifiesInst = true
+      }
+      
+      // Handle noinlined procedures that modify instances 
+      if (!procOption.isEmpty) {
+        val blkStmt = inlineProcedureCall(callStmt, procOption.get, context)
+        rewriter.visitStatement(blkStmt, context)
+      } else {
+        //TODO: Verify that this is not a reachable state
+        Some(callStmt)
+      }
+    }
+  }
 }
 
 class ModuleInstantiator(
     passName : String, module : Module, inst : InstanceDecl,
     targetModule : Module, externalSymbolMap : ExternalSymbolMap)
-extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false)
+extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false) {
+
+    /*
+     * Overwrites inherited visitModifiableEntity method and flattens modify
+     * clauses that refer to an instance state variable.
+     *
+     * @param modifiable The modifiable entity to be flattened
+     * @returns A flattened modifiable entity.
+     *
+     */
+    override def visitModifiableEntity(modifiable : ModifiableEntity, context : Scope) : Option[ModifiableEntity] = {
+      val instVarMap = pass.asInstanceOf[ModuleInstantiatorPass].instVarMap
+      val modifiableP = modifiable match {
+        case ModifiableId(id) => {
+          visitIdentifier(id, context).flatMap((idP) => {
+            idP match {
+              case id : Identifier =>
+                pass.rewriteModifiableEntity(ModifiableId(id), context)
+              case _ => 
+                Some(modifiable)
+            }
+          })
+        }
+        case ModifiableInstanceId(opapp) => {
+          opapp match {
+            case OperatorApplication(SelectFromInstance(field), list) => {
+              val flatName = pass.asInstanceOf[ModuleInstantiatorPass].flattenSelectFromInstance(opapp) 
+              val newName = pass.asInstanceOf[ModuleInstantiatorPass].instVarMap.get(flatName)
+              if (newName != None) {
+                pass.rewriteModifiableEntity(ModifiableId(newName.get), context)
+              } else {
+                Some(modifiable)
+              }
+            }
+            case _ =>
+              None
+          }
+        }
+      }
+      return ASTNode.introducePos(true, true, modifiableP, modifiable.position)
+    }
+}
 
 class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
   val logger = Logger(classOf[ModuleFlattenerPass])

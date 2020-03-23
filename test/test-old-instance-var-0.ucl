@@ -1,0 +1,86 @@
+module abstract_cache {
+  type cache_set_index_t = integer;
+  type cache_way_index_t = integer;
+  type cache_tag_t       = integer;
+
+  type cache_valid_map_t = [cache_set_index_t, cache_way_index_t]boolean;
+  type cache_tag_map_t   = [cache_set_index_t, cache_way_index_t]cache_tag_t;
+
+  var cache_valid_map : cache_valid_map_t;
+  var cache_tag_map   : cache_tag_map_t;
+
+  procedure [noinline] update_cache_valid_map()
+    ensures (cache_valid_map != old(cache_valid_map));
+    modifies cache_valid_map;
+  {
+    var new_cache_valid_map : cache_valid_map_t;
+    havoc new_cache_valid_map;
+    assume (new_cache_valid_map != cache_valid_map);
+    cache_valid_map = new_cache_valid_map;
+  }
+
+  procedure [noinline] update_cache_tag_map()
+    ensures (cache_tag_map != old(cache_tag_map));
+    modifies cache_tag_map;
+  {
+    var new_cache_tag_map : cache_tag_map_t;
+    havoc new_cache_tag_map;
+    assume (new_cache_tag_map != cache_tag_map);
+    cache_tag_map = new_cache_tag_map;
+  }
+}
+
+
+
+module main {
+
+  instance cache : abstract_cache();
+
+  var a : integer;
+  var b : integer;
+
+  procedure havoc_cache_valid_map()
+    ensures (cache.cache_tag_map == old(cache.cache_tag_map));
+    modifies cache;
+  {
+    call cache.update_cache_valid_map();
+  }
+
+  procedure havoc_cache_tag_map()
+    ensures (cache.cache_valid_map == old(cache.cache_valid_map));
+    modifies cache;
+  {
+    call cache.update_cache_tag_map();
+  }
+
+  procedure [noinline] update_a()
+    ensures(a == a+1);
+    ensures(b == old(b));
+    modifies a;
+    modifies b;
+  {
+    a = a + 1;
+  }
+
+  procedure sequence()
+    requires(b == 0);
+    modifies a;
+    modifies b;
+  {
+    a = 0;
+    b = b + 1;
+    call update_a();
+    assert (old(b) == 0);
+    assert b == 1;
+  }
+
+control {
+  valid_map = verify(havoc_cache_valid_map);
+  tag_map = verify(havoc_cache_tag_map);
+  seq = verify(sequence);
+  check;
+  print_results;
+}
+
+
+}

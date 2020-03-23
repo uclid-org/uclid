@@ -281,6 +281,18 @@ class ProcedureVerifSpec extends FlatSpec {
   "test-distinct-op.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-distinct-op.ucl", 0)
   }
+  "test-procedure-old-1.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-procedure-old-1.ucl", 1)
+  }
+  "test-old-instance-var-0.ucl" should "verify all essertions" in {
+    VerifierSpec.expectedFails("./test/test-old-instance-var-0.ucl", 0)
+  }
+  "test-old-instance-var-1.ucl" should "verify all essertions" in {
+    VerifierSpec.expectedFails("./test/test-old-instance-var-1.ucl", 0)
+  }
+  "test-old-instance-var-2.ucl" should "verify all essertions" in {
+    VerifierSpec.expectedFails("./test/test-old-instance-var-2.ucl", 0)
+  }
 }
 class InductionVerifSpec extends FlatSpec {
   "test-k-induction-1.ucl" should "verify all assertions." in {
@@ -347,6 +359,9 @@ class ModuleVerifSpec extends FlatSpec {
   "test-const-import-3.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-const-import-3.ucl", 0)
   }
+  "test-const-import-4.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-const-import-4.ucl", 0)
+  }
   "test-func-import-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-func-import-1.ucl", 0)
   }
@@ -358,6 +373,9 @@ class ModuleVerifSpec extends FlatSpec {
   }
   "test-func-import-4.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-func-import-4.ucl", 0)
+  }
+  "test-def-import-0.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-def-import-0.ucl", 0)
   }
   "test-procedure-postcondition-1.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-procedure-postcondition-1.ucl", 1)
@@ -373,6 +391,24 @@ class ModuleVerifSpec extends FlatSpec {
   }
   "test-nested-instance-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-nested-instance-1.ucl", 0)
+  }
+  "test-instance-procedure-call-0.ucl" should "verify all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-0.ucl", 1)
+  }
+  "test-instance-procedure-call-1.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-1.ucl", 0)
+  }
+  "test-instance-procedure-call-3.ucl" should "verify all but one." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-3.ucl", 1)
+  }
+  "test-instance-procedure-call-4.ucl" should "verify all but one." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-4.ucl", 1)
+  }
+  "test-instance-procedure-call-5.ucl" should "verify all but two." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-5.ucl", 2)
+  }
+  "test-instance-procedure-call-7.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-instance-procedure-call-7.ucl", 0)
   }
   "sp-basic.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/sp-basic.ucl", 0)

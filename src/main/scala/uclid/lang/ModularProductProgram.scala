@@ -65,7 +65,7 @@ class ModularProductProgramPass extends RewritePass {
         var newVarDeclarations = ListBuffer[BlockVarsDecl]()    //contains activationDecarations in proc body
         var newRequiresList = ListBuffer[Expr]()                //contains modified preconditions     
         var newEnsuresList = ListBuffer[Expr]()                 //contains modified postconditions
-        var newModifiesList = Set[Identifier]()                 //unused now. Can be used later if module variables are supported
+        var newModifiesList = Set[ModifiableEntity]()                 //unused now. Can be used later if module variables are supported
         
 
         def createActivationVariables(k: Int, actVariableMap: mutable.Map[Int, Array[Identifier]], level: Int): BlockVarsDecl = {
@@ -143,7 +143,7 @@ class ModularProductProgramPass extends RewritePass {
                         newVarDeclarations += activationVarsDecl
                         findRequiredActivationVariables(body.asInstanceOf[BlockStmt].stmts, nextScope, context + body.asInstanceOf[BlockStmt].vars)
                     
-                    case ProcedureCallStmt(id, callLhss, args) => 
+                    case ProcedureCallStmt(id, callLhss, args, instId, _) => 
                         val n = callLhss.size
                         val m = args.size
                 
@@ -409,12 +409,13 @@ class ModularProductProgramPass extends RewritePass {
 
             def modifyEnsures(ensuresList: List[Expr], newEnsuresList: ListBuffer[Expr]) = modifyRequires(ensuresList, newEnsuresList) 
 
-            def modifyModifies(modifiesList: Set[Identifier]): Unit = {
+            def modifyModifies(modifiesList: Set[ModifiableEntity]): Unit = {
                 var context = Scope.empty
                 context += proc
-                for (id <- modifiesList) {
+                // There should be no Modifiable Instance Id at this point
+                for (modId <- modifiesList) {
                     for(i <- 0 until k )
-                        newModifiesList += getRenamedExpr(id, context, i).asInstanceOf[Identifier]
+                        newModifiesList += ModifiableId(getRenamedExpr(modId.asInstanceOf[ModifiableId].id, context, i).asInstanceOf[Identifier])
                 }
             }
             
@@ -797,7 +798,7 @@ class ModularProductProgramPass extends RewritePass {
                             ASTNode.introducePos(true, true, newWhileStatement, stmts.head.position)
                             newbody += newWhileStatement
         
-                        case ProcedureCallStmt(id, callLhss, args) => 
+                        case ProcedureCallStmt(id, callLhss, args, instId, _) => 
                             val calledProcedure = id
                             val isCalledProcTranslated = procWithRelSpecUtil(calledProcedure)._1
                             var translationPresent = false
@@ -905,7 +906,7 @@ class ModularProductProgramPass extends RewritePass {
                                 }
                                 //creating new call statement
                                 var newProcId = Identifier(id.name + "$" + (k).toString)
-                                var procCallStmt = ProcedureCallStmt(newProcId, newReturnParameters.toList, newArguments.toList)
+                                var procCallStmt = ProcedureCallStmt(newProcId, newReturnParameters.toList, newArguments.toList, instId)
                                 var modularStatements = newIfStatements1 
                                 modularStatements += procCallStmt
                                 modularStatements ++= newIfStatements2
@@ -928,7 +929,7 @@ class ModularProductProgramPass extends RewritePass {
                                     val newlhss = callLhss.map(
                                         variable => LhsId(getRenamedExpr(variable.ident.asInstanceOf[Expr], context, i).asInstanceOf[Identifier]))
                                     val newargs = args.map(getRenamedExpr(_, context, i))
-                                    var procCallStmt = ProcedureCallStmt(id, newlhss, newargs.toList)
+                                    var procCallStmt = ProcedureCallStmt(id, newlhss, newargs.toList, instId)
                                     var trueBlockStmt = BlockStmt(emptyVarsList,List(procCallStmt))
                                     var falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
                                     var newStmt = IfElseStmt(actVarCheckCondition, trueBlockStmt, falseBlockStmt)

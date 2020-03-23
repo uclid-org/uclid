@@ -1,0 +1,10 @@
+module child {
+  function fun1() : integer;
+
+}
+
+module main {
+  function fun2() : integer;
+  
+  function * = main.*;
+}

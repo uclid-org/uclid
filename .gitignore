@@ -21,7 +21,7 @@ tutorial/tutorial.out
 tutorial/tutorial.toc
 *.swp
 Makefile
-
+.DS_Store
 .metals
 .bloop
 tasks

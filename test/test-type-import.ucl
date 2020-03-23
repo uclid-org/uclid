@@ -1,13 +1,17 @@
 module common {
   type addr_t = bv8;
   type word_t = bv8;
+}
+
+module cpu_types {
+  type * = common.*;
 
   type op_t = enum { add, sub, load, store };
   type mem_t = [addr_t]word_t;
 }
 
 module cpu {
-  type * = common.*;
+  type * = cpu_types.*;
   
   type regindex_t;
   type regs_t = [regindex_t]word_t;
@@ -64,9 +68,9 @@ module cpu {
   
 module main {
   type addr_t = common.addr_t;
-  type mem_t = common.mem_t;
+  type mem_t = cpu_types.mem_t;
   type word_t = common.word_t;
-  type op_t = common.op_t;
+  type op_t = cpu_types.op_t;
   type regindex_t = cpu.regindex_t;
   
   const r0index : regindex_t;

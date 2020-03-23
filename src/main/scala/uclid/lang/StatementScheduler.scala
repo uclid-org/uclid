@@ -56,6 +56,7 @@ object StatementScheduler {
           case HavocableNextId(id) => Set(id)
           case HavocableFreshLit(f) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
+          case HavocableInstanceId(opapp) => Set.empty
         }
       case AssignStmt(lhss, rhss) =>
         lhss.map(lhs => lhs match {
@@ -77,10 +78,18 @@ object StatementScheduler {
         val writeSets = bodies.map(b => writeSet(b._2, context).toSet)
         val allVars = writeSets.foldLeft(Set.empty[Identifier])((acc, set) => acc.union(set))
         writeSets.foldLeft(allVars)((acc, set) => acc.intersect(set))
-      case ProcedureCallStmt(id, callLhss, args) => 
+      case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) =>
         val module = context.module.get
-        val procedure = module.procedures.find(p => p.id == id).get
-        val modifies = procedure.modifies
+        val modifies = instanceId match {
+          case Some(iid) => {
+            List.empty
+          }
+          case None => {
+            val procedure = module.procedures.find(p => p.id == id).get
+            // val modifies = procedure.modifies
+            procedure.modifies.filter(m => m.isInstanceOf[lang.ModifiableId]).asInstanceOf[Set[lang.ModifiableId]].map(m => m.id)
+          }
+        } 
         val modifiedIdents = callLhss.map(lhs => lhs match {
           case LhsId(_) | LhsNextId(_) => Some(lhs.ident)
           case _ => None 
@@ -111,6 +120,7 @@ object StatementScheduler {
           case HavocableNextId(id) => Set(id)
           case HavocableFreshLit(f) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
+          case HavocableInstanceId(opapp) => Set.empty
         }
       case AssignStmt(lhss, rhss) => lhss.map(lhs => lhs.ident).toSet
       case BlockStmt(vars, stmts) =>
@@ -124,11 +134,21 @@ object StatementScheduler {
         writeSetIds(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => writeSetIds(b._2, context)).toSet
-      case ProcedureCallStmt(id, callLhss, args) => 
+      case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => 
         val module = context.module.get
-        val procedure = module.procedures.find(p => p.id == id).get
-        val modifies = procedure.modifies
+        val modifies = instanceId match {
+          case Some(iid) => {
+            // Do nothing; we haven't handled instance proc calls at this point
+            List.empty
+          }
+          case _ => {
+            val procedure = module.procedures.find(p => p.id == id).get
+            procedure.modifies.filter(m => m.isInstanceOf[lang.ModifiableId]).asInstanceOf[Set[lang.ModifiableId]].map(m => m.id)
+
+          }
+        }
         callLhss.map(_.ident).toSet ++ modifies.toSet
+
       case ModuleCallStmt(id) =>
         val namedExprOpt = context.map.get(id)
         Utils.assert(namedExprOpt.isDefined, "Must not haven an unknown instance here: " + id.toString())
@@ -179,7 +199,7 @@ object StatementScheduler {
         readSet(cond) ++ readSet(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => readSet(b._1) ++ readSet(b._2, context)).toSet
-      case ProcedureCallStmt(_, lhss, args) =>
+      case ProcedureCallStmt(_, lhss, args, instanceId, moduleId) =>
         readSets(args)
       case ModuleCallStmt(id) =>
         val namedExprOpt = context.map.get(id)
@@ -234,7 +254,7 @@ object StatementScheduler {
         primeReadSet(cond) ++ primeReadSet(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => primeReadSet(b._1) ++ primeReadSet(b._2, context)).toSet
-      case ProcedureCallStmt(_, lhss, args) =>
+      case ProcedureCallStmt(_, lhss, args, instanceId, moduleId) =>
         primeReadSets(args)
       case ModuleCallStmt(id) =>
         val namedExprOpt = context.map.get(id)

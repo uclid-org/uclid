@@ -31,172 +31,121 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Pramod Subramanyan
+ * Author: Pranav Gaddamadugu
+
  * Rewrite const * = moduleId.*; declarations.
  *
  */
 
-package uclid 
+package uclid
 package lang
 
-import com.typesafe.scalalogging.Logger
+import scala.collection.mutable.HashMap
 
-class ModuleConstantsImportCollectorPass extends ReadOnlyPass[List[Decl]] {
-  lazy val logger = Logger(classOf[ModuleConstantsImportCollector])
-  type T = List[Decl]
+class ModuleConstantsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier, Identifier]] {
+  type T = HashMap[Identifier, Identifier]
 
-  def isStatelessExpression(id : Identifier, context : Scope) : Boolean = {
-    context.get(id) match {
-      case Some(namedExpr) =>
-        namedExpr match {
-          case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
-               Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
-               Scope.FunctionArg(_, _) | Scope.Define(_, _, _) |
-               Scope.Instance(_)       =>
-             false
-          case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
-               Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
-               Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
-               Scope.ConstantLit(_, _)    =>
-             true
-          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _)             |
-               Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
-               Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
-               Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
-               Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
-               Scope.BlockVar(_, _)           | Scope.SelectorField(_)          =>
-             throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
-        }
-      case None =>
-        throw new Utils.UnknownIdentifierException(id)
+/**
+ * This function recursively searches for import dependencies across modules
+ * and forms a list of modules that we need to import from.
+ *
+ * @param id Identifier of the current module
+ * @param ctx Scope containing ModuleDefinitions
+ */
+  def findModuleDependencies(id : Identifier, ctx : Scope) : List[Identifier] = {
+    val mod = ctx.map.get(id) match {
+      case Some(Scope.ModuleDefinition(module)) => module
+      case _ => throw new Utils.ParserError(s"Trying to import from a module that does not exist: ${id}; try reordering the input of module files", None, None)
     }
-  }
-  def isStatelessExpr(e: Expr, context : Scope) : Boolean = {
-    e match {
-      case id : Identifier =>
-        isStatelessExpression(id, context)
-      case ei : ExternalIdentifier =>
-        true
-      case lit : Literal =>
-        true
-      case rec : Tuple =>
-        rec.values.forall(e => isStatelessExpr(e, context))
-      case OperatorApplication(ArraySelect(inds), args) =>
-        inds.forall(ind => isStatelessExpr(ind, context)) &&
-        args.forall(arg => isStatelessExpr(arg, context))
-      case OperatorApplication(ArrayUpdate(inds, value), args) =>
-        inds.forall(ind => isStatelessExpr(ind, context)) &&
-        args.forall(arg => isStatelessExpr(arg, context)) &&
-        isStatelessExpr(value, context)
-      case opapp : OperatorApplication =>
-        opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
-      case a : ConstArray =>
-        isStatelessExpr(a.exp, context)
-      case fapp : FuncApplication =>
-        isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
-      case lambda : Lambda =>
-        isStatelessExpr(lambda.e, context + lambda)
-    }
-  }
-  
-  def isConstantExpression(id : Identifier, context : Scope) : Boolean = {
-    context.get(id) match {
-      case Some(namedExpr) => 
-        namedExpr match {
-          case Scope.ConstantVar(_, _) => true
-          case Scope.ConstantLit(_, _) => true;
-          case _ => false;
-        }
-      case None => {
-        throw new Utils.UnknownIdentifierException(id)
+    
+    val importList : List[Identifier] = mod.constImportDecls.map(d => d.id)
+    val fullList = importList ++ importList.foldLeft(List[Identifier]()) { 
+      (list, i) => {
+        if (i == id) throw new Utils.ParserError(s"Trying to import from the same module: ${i}", None, None)
+        val dependencies = findModuleDependencies(i, ctx)
+        list ++ dependencies
       }
     }
-  }
-  
-  def isConstantExpr(e : Expr, context : Scope) : Boolean = {
-      e match {
-      case id : Identifier =>
-        isConstantExpression(id, context)
-      case ei : ExternalIdentifier =>
-        false
-      case lit : Literal =>
-        false
-      case rec : Tuple =>
-        rec.values.exists(e => isConstantExpr(e, context))
-      case OperatorApplication(ArraySelect(inds), args) =>
-        inds.exists(ind => isConstantExpr(ind, context)) || 
-        args.exists(arg => isConstantExpr(arg, context))
-      case OperatorApplication(ArrayUpdate(inds, value), args) =>
-        inds.exists(ind => isConstantExpr(ind, context)) || 
-        args.exists(arg => isConstantExpr(arg, context)) ||
-        isStatelessExpr(value, context)
-      case opapp : OperatorApplication =>
-        opapp.operands.exists(arg => isConstantExpr(arg, context + opapp.op))
-      case a : ConstArray =>
-        isConstantExpr(a.exp, context)
-      case fapp : FuncApplication =>
-        isConstantExpr(fapp.e, context) || fapp.args.exists(a => isConstantExpr(a, context))
-      case lambda : Lambda =>
-        isConstantExpr(lambda.e, context + lambda)
-    }
+    fullList
   }
 
-  def isStatelessAndConstantExpr(e : Expr, context : Scope) : Boolean = {
-    isStatelessExpr(e, context) && isConstantExpr(e, context)
-  }
-
-  override def applyOnModuleConstantsImport(d : TraversalDirection.T, modCnstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T = {
+/**
+ * This function finds and stores the identifier and module identifier of all 
+ * imported constants.
+ *
+ * @param d Direction of AST traversal
+ * @param modConstImport Import declaration
+ * @param in HashMap[Identifier, Identifier]
+ * @param context Scope containing ModuleDefinitions
+ */
+  override def applyOnModuleConstantsImport(d : TraversalDirection.T, modConstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Up) {
-      //logger.debug("statement: {}", modCnstImport.toString())
-      val id = modCnstImport.id
-      context.map.get(id) match {
-        case Some(Scope.ModuleDefinition(mod)) => {
-          val constVars = mod.constantDecls.map {
-            c => {
-              ASTNode.introducePos(true, true, c, modCnstImport.position)
-            }
-          } ++ in
-          val constLits = mod.constLits.map {
-            c => {
-              ASTNode.introducePos(true, true, ConstantLitDecl(c._1, c._2), modCnstImport.position)
-            }
+      val id = modConstImport.id
+      val dependList = findModuleDependencies(id, context)
+      
+      // prepend this modules id to moduleList
+      val moduleList = id :: dependList
+
+      moduleList.foreach { id =>
+        // The module has already been checked in `findModuleDependencies`
+        val mod = context.map.get(id).get.asInstanceOf[Scope.ModuleDefinition].mod
+        mod.constLits.foreach { c => 
+          in.get(c._1) match {
+            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${mod.id}", None, None)
+            case None => in += ((c._1, mod.id))
           }
-          val newAxioms = mod.axioms.filter(a => isStatelessAndConstantExpr(a.expr, Scope.empty + mod))
-          newAxioms.map {
-            a => {
-              ASTNode.introducePos(true, true, a, modCnstImport.position)
-            }
-          } ++ constVars ++ constLits
         }
-        case _ => in
+        
+        mod.constants.foreach { c => 
+          in.get(c._1) match {
+            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${mod.id}", None, None)
+            case None => in += ((c._1, mod.id))
+          }
+        }
       }
+      in
     } else {
       in
     }
   }
 }
 
-class ModuleConstantsImportCollector extends ASTAnalyzer("ModuleConstantsImportCollector", new ModuleConstantsImportCollectorPass()) {
-  lazy val logger = Logger(classOf[ModuleConstantsImportCollector])
+
+class ModuleConstantsImportRewriter extends ASTAnalyzer("ModuleConstantsImportRewriter", new ModuleConstantsImportCollectorPass()) {
   override def reset() {
-    in = Some(List.empty)
+    in = Some(HashMap.empty)
   }
+
+/**
+ * This function will traverse a module and append all imported function calls
+ * with their appropriate module tag.
+ *
+ * @param module The module to be visited
+ * @param context The context of the current module (technically accumulated 
+ *    by the PassManager)
+ */
   override def visit(module : Module, context : Scope) : Option[Module] = {
-    val externalIds = visitModule(module, List.empty, context)
-    val newImports = externalIds.map {
-      d => {
-        d match {
-          case d : AxiomDecl => ASTNode.introducePos(true, true, d, d.position)
-          case d : ConstantsDecl => ASTNode.introducePos(true, true, d, d.position)
-          case d : ConstantLitDecl => ASTNode.introducePos(true, true, d, d.position)
-          case _ => throw new Utils.RuntimeError("Shouldn't have anything but axioms and consts.")
-        }
+    val modScope = manager.moduleList.foldLeft(Scope.empty)((s, m) => s +& m )
+    val initMap = new HashMap[Identifier, Identifier]()
+    
+    // Add constants from this module
+    module.constLits.foreach { c => 
+      initMap.get(c._1) match {
+        case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${module.id}", None, None)
+        case None => initMap += ((c._1, module.id))
       }
     }
-    //logger.debug("newImports: " + newImports.toString())
-    val modP = Module(module.id, newImports ++ module.decls, module.cmds, module.notes)
-    return Some(modP)
+    
+    module.constants.foreach { c => 
+      initMap.get(c._1) match {
+        case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${module.id}", None, None)
+        case None => initMap += ((c._1, module.id))
+      }
+    }
+    
+    val constMap = visitModule(module, initMap, modScope).filterNot(p => p._2 == module.id)
+    val rewriterMap = constMap.map(p => (p._1 -> OperatorApplication(PolymorphicSelect(p._1), List(p._2)))).asInstanceOf[HashMap[Expr, Expr]].toMap
+    val rewriter = new ExprRewriter("ConstantRewriter", rewriterMap)
+    rewriter.visit(module, context)
   }
 }
-
-

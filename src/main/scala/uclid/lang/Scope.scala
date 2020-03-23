@@ -269,8 +269,13 @@ case class Scope (
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr, params))
           case None => mapAcc
         }
-        case ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) | 
-             ModuleFunctionsImportDecl(_) | InitDecl(_) | NextDecl(_)  => mapAcc
+        //case ModuleConstantsImportDecl(id) => Scope.addToMap(mapAcc, Scope.ConstantsImport(id))
+        //case ModuleFunctionsImportDecl(id) => Scope.addToMap(mapAcc, Scope.FunctionsImport(id))
+        case ModuleConstantsImportDecl(_) => mapAcc
+        case ModuleFunctionsImportDecl(_) => mapAcc
+        case ModuleTypesImportDecl(_) | 
+             ModuleDefinesImportDecl(_) | 
+             InitDecl(_) | NextDecl(_)  => mapAcc
       }
     }
     val m2 = m.decls.foldLeft(m1){(mapAcc, decl) =>
@@ -303,9 +308,9 @@ case class Scope (
         case ConstantLitDecl(id, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
         case ConstantsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
-             ModuleFunctionsImportDecl(_) | InstanceDecl(_, _, _, _, _) |
-             SpecDecl(_, _, _) | AxiomDecl(_, _, _) | 
-             InitDecl(_) | NextDecl(_) => mapAcc
+             ModuleFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
+             InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | 
+             AxiomDecl(_, _, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
     Scope(m2, Some(m), None, None, environment, parent)

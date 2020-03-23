@@ -35,6 +35,7 @@ module main {
   
   property eq_pc : (c1.pc == c2.pc);
   control {
+    print_module;
     unroll(3);
     check;
     print_results;

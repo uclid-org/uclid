@@ -192,13 +192,12 @@ object UclidMain {
 
   def createCompilePassManager(test: Boolean, mainModuleName: lang.Identifier) = {
     val passManager = new PassManager("compile")
-    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ModuleCanonicalizer())
     passManager.addPass(new LTLOperatorIntroducer())
     passManager.addPass(new ModuleTypesImportCollector())
-    passManager.addPass(new ModuleConstantsImportCollector())
-    passManager.addPass(new ModuleFunctionsImportCollector())
-
+    passManager.addPass(new ModuleDefinesImportCollector())
+    passManager.addPass(new ModuleConstantsImportRewriter())
+    passManager.addPass(new ModuleFunctionsImportRewriter())
     passManager.addPass(new ExternalTypeAnalysis())
     passManager.addPass(new ExternalTypeRewriter())
     passManager.addPass(new FuncExprRewriter())
@@ -231,7 +230,7 @@ object UclidMain {
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
     passManager.addPass(new BlockFlattener())
-    passManager.addPass(new NewProcedureInliner())
+    passManager.addPass(new NewInternalProcedureInliner())
     passManager.addPass(new PrimedVariableCollector())
     passManager.addPass(new PrimedVariableEliminator())
     passManager.addPass(new PrimedHistoryRewriter())
@@ -286,8 +285,8 @@ object UclidMain {
     passManager.addPass(new ModuleDependencyFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomFinder(mainModuleName))
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
-    // passManager.addPass(new ASTPrinter())
     passManager.addPass(new ExternalSymbolAnalysis())
+    passManager.addPass(new ProcedureModifiesRewriter())
     passManager.addPass(new ModuleFlattener(mainModuleName))
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new LTLOperatorRewriter())
@@ -302,7 +301,6 @@ object UclidMain {
     if (config.enumToNumeric) passManager.addPass(new EnumTypeAnalysis())
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamer("BV"))
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamerCons("BV"))
-
     // run passes.
     passManager.run(moduleList)
   }

@@ -30,6 +30,7 @@ module main
   }
 
   control {
+  print_module;
 	v2 = unroll(4);
 	check;
 	print_results;

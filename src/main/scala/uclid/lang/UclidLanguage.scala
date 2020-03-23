@@ -152,6 +152,11 @@ object Operator {
   def imply(x : Expr, y : Expr) = OperatorApplication(ImplicationOp(), List(x, y))
   def ite(c : Expr, x : Expr, y : Expr) = OperatorApplication(ITEOp(), List(c, x, y))
   def old(c : Identifier) = OperatorApplication(OldOperator(), List(c))
+  
+  /*
+   * Introduced to reference old state variables of an instance.
+   */
+  def oldInstance(c : OperatorApplication) = OperatorApplication(OldOperator(), List(c))
   def history(c : Identifier, e : Expr) = OperatorApplication(HistoryOperator(), List(c, e))
 }
 sealed trait Operator extends ASTNode {
@@ -1074,7 +1079,7 @@ case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends T
 case class ModuleType(
     inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)], sharedVars: List[(Identifier, Type)],
     constLits : List[(Identifier, NumericLit)], constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
-    functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, ModuleType)]) extends Type {
+    functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, Type)]) extends Type {
 
   def argToString(arg: (Identifier, Type)) : String = {
     arg._1.toString + ": (" + arg._2.toString + ")"
@@ -1090,7 +1095,7 @@ case class ModuleType(
   lazy val constantMap : Map[Identifier, Type] = constants.map(a => (a._1 -> a._2)).toMap
   lazy val varMap : Map[Identifier, Type] = variables.map(a => (a._1 -> a._2)).toMap
   lazy val funcMap : Map[Identifier, FunctionSig] = functions.map(a => (a._1 -> a._2)).toMap
-  lazy val instanceMap : Map[Identifier, ModuleType] = instances.map(a => (a._1 -> a._2)).toMap
+  lazy val instanceMap : Map[Identifier, Type] = instances.map(a => (a._1 -> a._2)).toMap
   lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ funcMap.map(f => (f._1 -> f._2.typ))  ++ instanceMap
   lazy val externalTypeMap : Map[Identifier, Type] = constantMap ++ funcMap.map(f => (f._1 -> f._2.typ)) ++ constLitMap.map(f => (f._1 -> f._2.typeOf))
   def typeOf(id : Identifier) : Option[Type] = {
@@ -1121,6 +1126,15 @@ case class HavocableFreshLit(f : FreshLit) extends HavocableEntity {
   override val md5hashCode = computeMD5Hash(f)
 }
 
+/* Introduced as an intermediate representation to denote havoc'ing 
+ * specific state variables within an instance.
+ */
+case class HavocableInstanceId(opapp : OperatorApplication) extends HavocableEntity {
+  override def toString = opapp.toString()
+  override val hashId = 2903
+  override val md5hashCode = computeMD5Hash(opapp)
+}
+
 /** Statements **/
 sealed abstract class Statement extends ASTNode {
   override def toString = Utils.join(toLines, "\n") + "\n"
@@ -1128,29 +1142,34 @@ sealed abstract class Statement extends ASTNode {
   val isLoop = false
   val hasLoop = false
   val hasCall : Boolean
+  val hasInternalCall : Boolean
   def toLines : List[String]
 }
 case class SkipStmt() extends Statement {
   override def toLines = List("skip; // " + position.toString)
   override val hasCall = false
+  override val hasInternalCall = false
   override val hashId = 3000
   override val md5hashCode = computeMD5Hash
 }
 case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assert " + e + "; // " + position.toString)
   override val hasCall = false
+  override val hasInternalCall = false
   override val hashId = 3001
   override val md5hashCode = computeMD5Hash(e, id)
 }
 case class AssumeStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assume " + e + "; // " + position.toString)
   override val hasCall = false
+  override val hasInternalCall = false
   override val hashId = 3002
   override val md5hashCode = computeMD5Hash(e, id)
 }
 case class HavocStmt(havocable : HavocableEntity) extends Statement {
   override def toLines = List("havoc " + havocable.toString() + "; // " + position.toString)
   override val hasCall = false
+  override val hasInternalCall = false;
   override val hashId = 3003
   override val md5hashCode = computeMD5Hash(havocable)
 }
@@ -1158,6 +1177,7 @@ case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines =
     List(Utils.join(lhss.map (_.toString), ", ") + " = " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
   override val hasCall = false
+  override val hasInternalCall = false
   override val hashId = 3004
   override val md5hashCode = computeMD5Hash(lhss, rhss)
 }
@@ -1171,6 +1191,7 @@ case class BlockStmt(vars: List[BlockVarsDecl], stmts: List[Statement]) extends 
     List("}")
   }
   override val hasCall = stmts.exists(st => st.hasCall)
+  override val hasInternalCall = stmts.exists(st => st.hasInternalCall)
   override val hashId = 3005
   override val md5hashCode = computeMD5Hash(vars, stmts)
 }
@@ -1185,6 +1206,7 @@ case class IfElseStmt(cond: Expr, ifblock: Statement, elseblock: Statement) exte
   }
   override def toLines = lines
   override val hasCall = ifblock.hasCall || elseblock.hasCall
+  override val hasInternalCall = ifblock.hasInternalCall || elseblock.hasInternalCall
   override val hashId = 3006
   override val md5hashCode = computeMD5Hash(cond, ifblock, elseblock)
 }
@@ -1199,6 +1221,7 @@ case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: Stateme
     List(forLine) ++ body.toLines.map(PrettyPrinter.indent(1) + _) ++ List("}")
   }
   override val hasCall = body.hasCall
+  override val hasInternalCall = body.hasInternalCall
   override val hashId = 3007
   override val md5hashCode = computeMD5Hash(id, typ, range, body)
 }
@@ -1214,6 +1237,7 @@ case class WhileStmt(cond: Expr, body: Statement, invariants: List[Expr])
     List(headLine) ++ invLines ++ body.toLines.map(PrettyPrinter.indent(1) + _)
   }
   override val hasCall = body.hasCall
+  override val hasInternalCall = body.hasInternalCall
   override val hashId = 3008
   override val md5hashCode = computeMD5Hash(cond, body, invariants)
 }
@@ -1223,20 +1247,23 @@ case class CaseStmt(body: List[(Expr,Statement)]) extends Statement {
     body.flatMap{ (i) => List(PrettyPrinter.indent(1) + i._1.toString + " : ") ++ i._2.toLines } ++
     List("esac")
   override val hasCall = body.exists(b => b._2.hasCall)
+  override val hasInternalCall = body.exists(b => b._2.hasInternalCall)
   override val hashId = 3009
   override val md5hashCode = computeMD5Hash(body)
 }
-case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr])  extends Statement {
+case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Expr], instanceId : Option[Identifier], moduleId : Option[Identifier]=None)  extends Statement {
   override def toLines = List("call (" +
-    Utils.join(callLhss.map(_.toString), ", ") + ") = " + id + "(" +
+    Utils.join(callLhss.map(_.toString), ", ") + ") = " + (if (instanceId.isEmpty) "" else (instanceId.get.name + ".")) +  id + "(" +
     Utils.join(args.map(_.toString), ", ") + ") // " + id.position.toString)
   override val hasCall = true
+  override val hasInternalCall = instanceId.isEmpty
   override val hashId = 3010
-  override val md5hashCode = computeMD5Hash(id, callLhss, args)
+  override val md5hashCode = computeMD5Hash(id, callLhss, args, instanceId)
 }
 case class ModuleCallStmt(id: Identifier) extends Statement {
   override def toLines = List("next (" + id.toString +")")
   override val hasCall = false
+  override val hasInternalCall = false
   override val hashId = 3011
   override val md5hashCode = computeMD5Hash(id)
 }
@@ -1342,6 +1369,30 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
   }
 }
 
+/* Modifiable entities. */
+/* All modifiable entities found by the parser can only be ModifiableId */
+sealed abstract class ModifiableEntity extends ASTNode {
+  val expr : Expr
+}
+  
+case class ModifiableId(id : Identifier) extends ModifiableEntity {
+  override val expr = id
+  override def toString = id.toString()
+  override val hashId = 3500
+  override val md5hashCode = computeMD5Hash(id)
+}
+
+/* 
+ * Introduced as an intermediate node in the ASTs to track the state 
+ * variables that are modified within an instance.
+ */
+case class ModifiableInstanceId(opapp : OperatorApplication) extends ModifiableEntity {
+  override val expr = opapp
+  override def toString = opapp.toString()
+  override val hashId = 3501
+  override val md5hashCode = computeMD5Hash(opapp)
+}
+
 sealed abstract class ProcedureVerificationExpr extends ASTNode {
   val expr : Expr
 }
@@ -1357,11 +1408,11 @@ case class ProcedureEnsuresExpr(e : Expr) extends ProcedureVerificationExpr {
   override val hashId = 3401
   override val md5hashCode = computeMD5Hash(e)
 }
-case class ProcedureModifiesExpr(id : Identifier) extends ProcedureVerificationExpr {
-  override val expr = id
-  override val toString = "modifies " + id.toString
+case class ProcedureModifiesExpr(modifiable : ModifiableEntity) extends ProcedureVerificationExpr {
+  override val expr = modifiable.expr
+  override val toString = "modifies " + modifiable.toString
   override val hashId = 3402
-  override val md5hashCode = computeMD5Hash(id)
+  override val md5hashCode = computeMD5Hash(modifiable)
 }
 
 case class ProcedureAnnotations(ids : Set[Identifier]) extends ASTNode {
@@ -1378,7 +1429,7 @@ case class ProcedureAnnotations(ids : Set[Identifier]) extends ASTNode {
 
 case class ProcedureDecl(
     id: Identifier, sig: ProcedureSig, body: Statement,
-    requires: List[Expr], ensures: List[Expr], modifies: Set[Identifier],
+    requires: List[Expr], ensures: List[Expr], modifies: Set[ModifiableEntity],
     annotations : ProcedureAnnotations) extends Decl
 {
   override val hashId = 3902
@@ -1479,6 +1530,12 @@ case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl
   override val md5hashCode = computeMD5Hash(id, sig, expr)
   override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
   override def declNames = List(id)
+}
+case class ModuleDefinesImportDecl(id: Identifier) extends Decl {
+  override val hashId = 3921
+  override val md5hashCode = computeMD5Hash(id)
+  override def toString = "define * = $s.*; // %s".format(id.toString)
+  override def declNames = List.empty
 }
 
 sealed abstract class GrammarTerm extends ASTNode
@@ -1695,6 +1752,17 @@ case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) ext
   override val md5hashCode = computeMD5Hash(iMap.toList)
 }
 
+case class InstanceProcMapAnnotation(iMap: Map[List[Identifier], ProcedureDecl]) extends Annotation {
+  override def toString : String = {
+    val start = PrettyPrinter.indent(1) + "// instance_proc_map { "
+    val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), ".") + " ::==> " + p._2.toString)
+    val end = PrettyPrinter.indent(1) + "// } end_instance_proc_map"
+    Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
+  }
+  override val hashId = 4302
+  override val md5hashCode = computeMD5Hash(iMap.toList)
+}
+
 case class ExprRenameMapAnnotation(renameMap_ : MutableMap[Expr, BigInt], enumVarTypeMap_ : MutableMap[Identifier, Type], enumTypeRangeMap_ : MutableMap[Type, (BigInt, BigInt)]) extends Annotation {
   lazy val enumVarTypeMap : MutableMap[Identifier, Type] = enumVarTypeMap_
   lazy val enumTypeRangeMap : MutableMap[Type, (BigInt, BigInt)] = enumTypeRangeMap_
@@ -1747,11 +1815,20 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     decls.collect { case constLit : ConstantLitDecl => (constLit.id, constLit.lit) }
   // module constants.
   lazy val constantDecls = decls.collect { case cnsts : ConstantsDecl => cnsts }
+  lazy val constImportDecls : List[ModuleConstantsImportDecl]  = decls.collect { case imp : ModuleConstantsImportDecl => imp }
+
   lazy val constants : List[(Identifier, Type)] =
     constantDecls.flatMap(cnst => cnst.ids.map(id => (id, cnst.typ)))
+  
+  lazy val funcImportDecls : List[ModuleFunctionsImportDecl] = decls.collect {
+  case imp : ModuleFunctionsImportDecl => imp }
+  
   // module functions.
   lazy val functions : List[FunctionDecl] =
     decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
+  
+  // module macros
+  lazy val defines : List[DefineDecl] = decls.collect{ case d : DefineDecl => d }
   // module properties.
   lazy val properties : List[SpecDecl] = decls.collect{ case spec : SpecDecl => spec }
 
@@ -1778,7 +1855,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
       inputs, outputs, sharedVars,
       constLits, constants, vars,
       functions.map(c => (c.id, c.sig)),
-      instances.map(inst => (inst.instanceId, inst.modType.get)))
+      instances.map(inst => (inst.instanceId, inst.moduleType)))
 
   // the init block.
   lazy val init : Option[InitDecl] = {
@@ -1806,11 +1883,15 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
 
   // replace the first occurrence of a specific annotation.
   def withReplacedAnnotation[T <: Annotation](note : T)(implicit tag: ClassTag[T]) : Module = {
-    val newNotes : List[Annotation] = notes.map {
-      n => {
-        n match {
-          case nt : T => note
-          case _ => n
+    val oldNoteOption = getAnnotation[T]
+    val newNotes : List[Annotation] = oldNoteOption match {
+      case None => notes :+ note
+      case Some(oldNote) => notes.map {
+        n => {
+          n match {
+            case nt : T => note
+            case _ => n
+          }
         }
       }
     }

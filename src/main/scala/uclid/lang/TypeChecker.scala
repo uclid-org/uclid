@@ -533,8 +533,17 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           argTypes(0)
         case OldOperator() =>
           checkTypeError(argTypes.size == 1, "Expect exactly one argument to 'old'", opapp.pos, c.filename)
-          checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "Argument to old operator must be an identifier", opapp.pos, c.filename)
-          argTypes(0)
+          //NOTE (REVISIT): We want to allow polymorphic selects
+          if (opapp.operands(0).isInstanceOf[OperatorApplication]) {
+            val checkOp = opapp.operands(0).asInstanceOf[OperatorApplication]
+            checkTypeError(checkOp.op.isInstanceOf[PolymorphicSelect] || checkOp.op.isInstanceOf[SelectFromInstance], "Argument must be a instance var or an identifier", opapp.pos, c.filename)
+            opAppType(checkOp)
+          } else {
+            checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "Argument to old operator must be an identifier", opapp.pos, c.filename)
+            argTypes(0)
+          }
+          //checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "Argument to old operator must be an identifier", opapp.pos, c.filename)
+          //argTypes(0)
         case PastOperator() =>
           checkTypeError(argTypes.size == 1, "Expect exactly on argument to 'past'", opapp.pos, c.filename)
           checkTypeError(opapp.operands(0).isInstanceOf[Identifier], "Argument to past operator must be an identifier", opapp.pos, c.filename)

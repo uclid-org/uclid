@@ -73,17 +73,6 @@ class PrimedVariableCollectorPass extends ReadOnlyPass[(Map[Identifier, Identifi
       in
     }
   }
-  override def applyOnProcedureCall(d : TraversalDirection.T, callStmt : ProcedureCallStmt, mapIn : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up && context.environment == SequentialEnvironment) {
-      val procId = callStmt.id
-      val module = context.module.get
-      val proc = module.procedures.find(p => p.id == procId).get
-      val mapOut = proc.modifies.foldLeft(mapIn)((acc, m) => (acc + (m -> NameProvider.get(m.toString() + "_modifies"))))
-      mapOut
-    } else {
-      mapIn
-    }
-  }
 }
 
 class PrimedVariableCollector() extends ASTAnalyzer("PrimedVariableCollector", new PrimedVariableCollectorPass())
@@ -106,31 +95,47 @@ class PrimedVariableEliminatorPass extends RewritePass {
   lazy val manager : PassManager = analysis.manager
   lazy val primedVariableCollector = manager.pass("PrimedVariableCollector").asInstanceOf[PrimedVariableCollector]
 
-  def getInitialAssigns() : List[AssignStmt] = {
+  def getInitialAssigns(context : Scope) : List[AssignStmt] = {
     val primeVarMap = primedVariableCollector.primeVarMap.get
-    primeVarMap.map(p => (AssignStmt(List(LhsId(p._2)), List(p._1)))).toList
+    primeVarMap.map(p => {
+      (AssignStmt(List(LhsId(p._2)), List(p._1)))
+    }).toList
   }
-  def getFinalAssigns() : List[AssignStmt] = {
+  def getFinalAssigns(context : Scope) : List[AssignStmt] = {
     val primeVarMap = primedVariableCollector.primeVarMap.get
     primeVarMap.map(p => (AssignStmt(List(LhsId(p._1)), List(p._2)))).toList
   }
   def getPrimeVarDecls(context : Scope) : List[BlockVarsDecl] = {
     val primeVarMap = primedVariableCollector.primeVarMap.get
-    (primeVarMap.map {
+    (primeVarMap.filter(p => context.get(p._1) match {
+      // remove all instances modified
+      case Some(Scope.Instance(_)) => false
+      case _ => true
+    }).map {
       p => {
-        val typ = context.typeOf(p._1).get
+        val typ = context.get(p._1) match {
+          case None => {
+            val namedExpr = context.map.find(namedExpr => {
+              namedExpr._2.isInstanceOf[Scope.ModuleDefinition] &&
+              namedExpr._2.asInstanceOf[Scope.ModuleDefinition].mod.vars.find(v => v._1.name == p._1.name) != None
+            }).get._2
+            val instVarMod = namedExpr.asInstanceOf[Scope.ModuleDefinition].mod
+            instVarMod.vars.find(v => v._1 == p._1).get._2
+          }
+          case _ => context.typeOf(p._1).get
+        }
         BlockVarsDecl(List(p._2), typ)
       }
     }).toList
   }
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
     val primeDecls = getPrimeVarDecls(context)
-    val initP = InitDecl(BlockStmt(primeDecls, getInitialAssigns() ++ List(init.body)))
+    val initP = InitDecl(BlockStmt(primeDecls, getInitialAssigns(context) ++ List(init.body)))
     Some(initP)
   }
   override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
     val primeDecls = getPrimeVarDecls(context)
-    val nextP = NextDecl(BlockStmt(primeDecls, getInitialAssigns() ++ List(next.body) ++ getFinalAssigns()))
+    val nextP = NextDecl(BlockStmt(primeDecls, getInitialAssigns(context) ++ List(next.body) ++ getFinalAssigns(context)))
     Some(nextP)
   }
   override def rewriteHavoc(havocStmt : HavocStmt, context : Scope) : Option[Statement] = {
