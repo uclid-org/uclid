@@ -75,7 +75,7 @@ class ModularProductSpec extends FlatSpec {
         assert (fileModules.size == 1)
         }
         catch {
-        case p : Utils$ParserError =>
+        case p : Utils.ParserError =>
             assert(p.getMessage() == "Pre/Post Conditions using trace select should use atleast two traces")       
         }
     }
@@ -195,7 +195,7 @@ class ModularProductSpec extends FlatSpec {
         assert (fileModules.size == 1)
         }
         catch {
-        case p : Utils$ParserError =>
+        case p : Utils.ParserError =>
             assert(p.getMessage() == "Trace Value cannot be zero")       
         }
     }
@@ -207,7 +207,7 @@ class ModularProductSpec extends FlatSpec {
         assert (fileModules.size == 1)
         }
         catch {
-        case p : Utils$ParserError =>
+        case p : Utils.ParserError =>
             assert(p.getMessage() == "Non sequential trace values are not allowed")       
         }
     }
