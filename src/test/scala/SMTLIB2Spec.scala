@@ -67,6 +67,12 @@ class SMTLIB2Spec extends FlatSpec {
   "test-array-0.ucl" should "verify succesfully." in {
     SMTLIB2Spec.expectedFails("./test/test-array-0.ucl", 0)
   }
+  "test-smtlib-consts.ucl" should "verify successfully." in {
+    SMTLIB2Spec.expectedFails("./test/test-smtlib-consts.ucl", 0)
+  }
+  "test-smtlib-array.ucl" should "verify successfully." in {
+    SMTLIB2Spec.expectedFails("./test/test-smtlib-array.ucl", 0)
+  }
   // the test below is commented out because it errors out.
   ignore /*"test-array-1-unsafe.ucl"*/ should "verify all but 4 assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-array-1-unsafe.ucl", 4)

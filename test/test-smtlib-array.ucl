@@ -1,0 +1,27 @@
+module main {
+    var step: bv8;
+    var arr: [bv8]bv8;
+
+    init {
+        assume (forall (i: bv8) :: arr[i] == 0bv8);
+    }
+
+    procedure [inline] update_array() returns (arrP: [bv8]bv8)
+        modifies arr;
+    {
+        arrP = arr[step -> 0bv8];
+    }
+        
+    next {
+        step' = step + 1bv8;
+        call (arr') =  update_array();
+    }
+
+    invariant same: (forall(i: bv8) :: arr[i] == 0bv8);
+
+    control {
+        v = induction;
+        check;
+        print_results; 
+    }
+}
