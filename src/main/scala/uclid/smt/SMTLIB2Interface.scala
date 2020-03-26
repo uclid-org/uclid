@@ -49,22 +49,18 @@ import scala.language.postfixOps
 trait SMTLIB2Base {
   val smtlib2BaseLogger = Logger(classOf[SMTLIB2Base])
   
-  type VarMap = MutableMap[String, Symbol]
+  type VarSet = MutableSet[Symbol]
   type LetMap = MutableMap[Expr, String]
-  var variables : VarMap = MutableMap.empty
+  var variables : VarSet = MutableSet.empty
   var letVariables : LetMap = MutableMap.empty
   var enumLiterals : MutableSet[EnumLit] = MutableSet.empty
-  var stack : List[(VarMap, LetMap, MutableSet[EnumLit])] = List.empty
+  var stack : List[(VarSet, LetMap, MutableSet[EnumLit])] = List.empty
   var typeMap : SynonymMap = SynonymMap.empty
 
   var counterId = 0
   def getTypeName(suffix: String) : String = {
     counterId += 1
     "_type_" + suffix + "_" + counterId.toString() + "_"
-  }
-  def getVariableName(v: String) : String = {
-    counterId += 1
-    "_var_" + v + counterId.toString() + "_"
   }
   def getLetVariableName() : String = {
     counterId += 1
@@ -197,20 +193,13 @@ trait SMTLIB2Base {
     }
   }
   def translateExpr(eIn: Expr, memo : ExprMap, shouldLetify : Boolean) : (TranslatedExpr, ExprMap) = {
-    val t1 = System.nanoTime().toDouble
     val memoLookup = memo.get(eIn)
-    val t2 = System.nanoTime().toDouble
-    // UclidMain.println("memo lookup for " + eIn.toString().slice(0,5) + " took " + (t2-t1) + " nanoseconds.")
     val (resultExpr, resultMemo) = memoLookup match {
       case Some(resultExpr) => (resultExpr, memo)
       case None =>
         val (exprStr, memoP, letify) : (String, ExprMap, Boolean) = Context.rewriteBVReplace(eIn) match {
           case Symbol(id,_) =>
-            if (variables.contains(id)) {
-              (variables.get(id).get.toString, memo, false)
-            } else {
-              throw new Utils.RuntimeError("Should not get here.")
-            }
+            (id, memo, false)
           case EnumLit(id, _) =>
             (id, memo, false)
           case ConstArray(expr, typ) =>
@@ -348,12 +337,11 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
 
   override def assert (e: Expr) {
     val symbols = Context.findSymbols(e)
-    val symbolsP = symbols.filter(s => !variables.contains(s.id))
+    val symbolsP = symbols.filter(s => !variables.contains(s))
     symbolsP.foreach {
       (s) => {
-        val sym = Symbol(getVariableName(s.id), s.symbolTyp)
-        variables += (s.id -> sym)
-        generateDeclaration(sym)
+        variables += s
+        generateDeclaration(s)
       }
     }
     val smtlib2 = translateExpr(e, true)
@@ -466,7 +454,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
 
   override def push() {
     smtlibInterfaceLogger.debug("push")
-    val e : (VarMap, LetMap, MutableSet[EnumLit]) = (variables.clone(), letVariables.clone(), enumLiterals.clone())
+    val e : (VarSet, LetMap, MutableSet[EnumLit]) = (variables.clone(), letVariables.clone(), enumLiterals.clone())
     stack = e :: stack
     writeCommand("(push 1)")
   }
