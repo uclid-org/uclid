@@ -101,14 +101,18 @@ trait NewProcedureInlinerPass extends RewritePass {
       else { LhsNextId(id) }
     }
 
-    // formal and actual argument pairs.
-    val argPairs : List[(Identifier, Expr)] = ((procSig.inParams.map(p => p._1)) zip (callStmt.args))
+    // formal and actual argument pairs (actual args are replaced with a new variable).
+    val argPairs : List[(Identifier, (Identifier, Type))] = 
+        procSig.inParams.map(p => p._1 -> (NameProvider.get("arg_" + p._1.toString()), p._2))
+    // new variables created for arguments
+    val argIds = argPairs.map(p => p._2._1)
     // formal and actual return value pairs.
-    val retPairs : List[(Identifier, (Identifier, Type))] = procSig.outParams.map(p => (p._1 -> (NameProvider.get("ret_" + p._1.toString()), p._2)))
+    val retPairs : List[(Identifier, (Identifier, Type))] = 
+        procSig.outParams.map(p => (p._1 -> (NameProvider.get("ret_" + p._1.toString()), p._2)))
     // list of new return variables.
     val retIds = retPairs.map(r => r._2._1)
     // map from formal to actual arguments.
-    val argMap : Map[Expr, Expr] = argPairs.map(p => p._1.asInstanceOf[Expr] -> p._2).toMap
+    val argMap : Map[Expr, Expr] = argPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
     // map from formal to the fake variables created for return values.
     val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
     // map from modified state variables to new variables created for them. ignore modified "instances"
@@ -141,6 +145,8 @@ trait NewProcedureInlinerPass extends RewritePass {
     val oldRewriter = new OldExprRewriter(oldRenameMap)
     val oldPairs : List[(Identifier, Identifier)] = oldRenameMap.asInstanceOf[Map[ModifiableId, Identifier]].toList.map(p => (p._1.id, p._2))
 
+    // variable declarations for the arguments
+    val argVars = argPairs.map(a => BlockVarsDecl(List(a._2._1), a._2._2))
     // variable declarations for return values.
     val retVars = retPairs.map(r => BlockVarsDecl(List(r._2._1), r._2._2))
     // variable declarations for the modify variables.
@@ -155,8 +161,12 @@ trait NewProcedureInlinerPass extends RewritePass {
     }))
 
     // list of all variable declarations.
-    val varsToDeclare = retVars ++ modifyVars ++ oldVars
+    val varsToDeclare = argVars ++ retVars ++ modifyVars ++ oldVars
 
+    // statements assigning the argments to the new variables.
+    val argAssigns : List[AssignStmt] = (argPairs.map(a => a._2._1) zip callStmt.args).map({
+        p => AssignStmt(List(LhsId(p._1)), List(p._2))
+    })
     // statements assigning state variables to modify vars.
     val modifyInitAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1.id)))
 
@@ -202,9 +212,9 @@ trait NewProcedureInlinerPass extends RewritePass {
     }
     val stmtsP = if (callStmt.callLhss.size > 0) {
       val returnAssign = AssignStmt(callStmt.callLhss, retIds)
-      modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP, returnAssign) ++ postconditionAsserts ++ modifyFinalAssigns
+      argAssigns ++ modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP, returnAssign) ++ postconditionAsserts ++ modifyFinalAssigns
     } else {
-      modifyInitAssigns ++ oldAssigns  ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
+      argAssigns ++ modifyInitAssigns ++ oldAssigns  ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
     }
     BlockStmt(varsToDeclare, stmtsP)
   }

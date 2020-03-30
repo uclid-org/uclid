@@ -1,0 +1,28 @@
+// current head: 817ba75ff6c75ad624123348fb8138681c8aa489
+// previous: f99d8e97fbe805a450004b66cb6c7feffb5c5add
+module main {
+
+    var cells: [integer]boolean;
+
+    procedure f(id: integer) // Trying to Verify This
+        modifies cells;
+    {
+        var s   : boolean; // (A)
+        var tmp : boolean;
+        cells = cells[id -> tmp]; // (B) " Invalid index type."
+    }
+
+    procedure g() // Never Called
+        modifies cells;
+    {
+        var s: integer; // (C)
+        call () = f(s); // (D)
+    }
+
+    control {
+        print_module;
+        verify(f);
+        check;
+        print_results;
+    }
+}

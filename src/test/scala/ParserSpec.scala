@@ -677,4 +677,10 @@ class ParserSpec extends FlatSpec {
     assert (instantiatedModules.size == 1)
   }
 
+  "issue-187a.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(List(new File("test/issue-187a.ucl")), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+
 }

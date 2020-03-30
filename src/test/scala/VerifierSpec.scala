@@ -413,6 +413,9 @@ class ModuleVerifSpec extends FlatSpec {
   "sp-basic.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/sp-basic.ucl", 0)
   }
+  "issue-187b.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/issue-187b.ucl", 0)
+  }
 }
 class LTLVerifSpec extends FlatSpec {
   "test-history-1.ucl" should "verify all assertions." in {
