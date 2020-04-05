@@ -1,0 +1,89 @@
+module main {
+  type id_t = enum { privileged, unprivileged, invalid };
+  type syscall_t = enum { setresuid, setfsuid, noop };
+  
+  input invocation : syscall_t;
+  input operand_ruid : id_t;    // real
+  input operand_euid : id_t;    // effective
+  input operand_suid : id_t;    // saved
+  input operand_fsuid : id_t;   // filesystem
+  
+  var process_ruid  : id_t;     // real
+  var process_euid  : id_t;     // effective
+  var process_suid  : id_t;     // saved
+  var process_fsuid : id_t;     // filesystem
+
+  init {
+    process_ruid  = privileged;
+    process_euid  = privileged;
+    process_suid  = privileged;
+    process_fsuid = privileged;
+  }
+  
+  procedure set_next_uids()
+    modifies process_ruid, process_euid, process_suid, process_fsuid;
+  {
+    var precond_setresuid : boolean;
+    var precond_setfsuid  : boolean;
+  
+    precond_setresuid = 
+      (process_euid == privileged) || 
+      ((operand_ruid == process_ruid || operand_ruid == process_suid || operand_ruid == process_euid || operand_ruid == invalid)     &&
+       (operand_euid == process_ruid || operand_euid == process_suid || operand_euid == process_euid || operand_euid == invalid)     &&
+       (operand_suid == process_ruid || operand_suid == process_suid || operand_suid == process_euid || operand_suid == invalid));
+    
+    precond_setfsuid = 
+      (process_ruid == privileged || process_euid == privileged || process_suid == privileged);
+
+    case 
+      // setresuid
+      (invocation == setresuid) : {
+        if (precond_setresuid) {
+          if (operand_ruid != invalid) {
+            process_ruid = operand_ruid;
+          }
+          if (operand_euid != invalid) {
+            process_euid = operand_euid;
+          }
+          if (operand_suid != invalid) {
+            process_suid = operand_suid;
+          }
+
+		  /*
+          // this is the buggy code.
+          if (operand_euid != invalid) {
+            process_fsuid = operand_euid;
+          }
+          */
+          // fixed code is like this:
+          if (process_fsuid == privileged && 
+              process_ruid != privileged  && process_euid != privileged  && process_suid != privileged)
+          {
+            process_fsuid = operand_euid; // should we set this to something else?
+          }
+        }
+      }
+      // setfsuid
+      (invocation == setfsuid) : {
+        if (precond_setfsuid && operand_fsuid != invalid) {
+          process_fsuid = operand_fsuid;
+        }
+      }
+    esac
+  }
+  
+  next {
+    call set_next_uids();
+  }
+  
+  property fsinvariant : 
+  		(process_fsuid == privileged) ==> 
+        (process_ruid == privileged || process_euid == privileged || process_suid == privileged);
+        
+  control {
+    x = unroll(3);
+    check;
+    print_results;
+    x.print_cex (invocation, operand_ruid, operand_euid, operand_suid, operand_fsuid, process_ruid, process_euid, process_suid, process_fsuid);
+  }
+}
