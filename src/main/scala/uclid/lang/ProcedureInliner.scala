@@ -47,6 +47,7 @@ import com.typesafe.scalalogging.Logger
 
 class FindProcedureDependencyPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
   type T = Map[Identifier, Set[Identifier]]
+  lazy val logger = Logger(classOf[FindProcedureDependency])
 
   override def applyOnProcedureCall(d : TraversalDirection.T, proc : ProcedureCallStmt, in : T, context : Scope) : T = {
     def addEdge(caller : Identifier, callee : Identifier) : T = {
@@ -55,6 +56,7 @@ class FindProcedureDependencyPass extends ReadOnlyPass[Map[Identifier, Set[Ident
         case None => in + (caller -> Set(callee))
       }
     }
+    logger.debug("statement: {}", proc.toString())
     if (d == TraversalDirection.Down) {
       context.procedure match {
         case Some(currentProc) => addEdge(currentProc.id, proc.id)
@@ -67,17 +69,21 @@ class FindProcedureDependencyPass extends ReadOnlyPass[Map[Identifier, Set[Ident
 class FindProcedureDependency extends ASTAnalyzer("FindProcedureDependency", new FindProcedureDependencyPass())
 {
   var procInliningOrder : List[Identifier] = List.empty
+  lazy val logger = Logger(classOf[FindProcedureDependency])
 
   override def visit(module : Module, context : Scope) : Option[Module] = {
     def recursionError(proc : Identifier, stack : List[Identifier]) : ModuleError = {
-      val msg = "Recursion involving procedures: " + Utils.join(stack.map(_.toString).toList, ", ")
+      val procedures = stack.map(_.toString).filter(n => n != "_top").toList
+      val msg = "Recursion involving procedure(s): " + Utils.join(procedures, ", ")
       ModuleError(msg, proc.position)
     }
 
     val procDepGraph = visitModule(module, Map.empty[Identifier, Set[Identifier]], context)
-    val errors = Utils.findCyclicDependencies(procDepGraph, List(Identifier("_top")), recursionError)
+    val callers = procDepGraph.map(_._1)
+    val errors = Utils.findCyclicDependencies(procDepGraph, callers.toList, recursionError)
+    logger.debug("DepedencyGraph: {}", procDepGraph.toString())
     if (errors.size > 0) {
-      throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)))
+      throw new Utils.ParserErrorList(errors.map(e => (e.msg, e.position)).toSet.toList)
     }
     procInliningOrder = Utils.topoSort(List(Identifier("_top")), procDepGraph)
     Some(module)

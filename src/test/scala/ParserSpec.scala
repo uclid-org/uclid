@@ -137,6 +137,20 @@ class ParserSpec extends FlatSpec {
       // this list has all the errors from parsing
       case p : Utils.ParserErrorList =>
         assert (p.errors.size == 1)
+        assert (p.errors(0)._1.contains("Recursion"))
+    }
+  }
+  "test-recursion-2.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-recursion-2.ucl")), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors(0)._1.contains("Recursion"))
     }
   }
   "test-procedure-types-errors.ucl" should "not parse successfully." in {
@@ -225,8 +239,8 @@ class ParserSpec extends FlatSpec {
     catch {
       // this list has all the errors from parsing
       case p : Utils.ParserErrorList =>
-        assert (p.errors.size == 1)
-        assert (p.errors.exists(p => p._1.contains("Recursion involving procedures")))
+        assert (p.errors.size == 3)
+        assert (p.errors.exists(p => p._1.contains("Recursion involving procedure(s)")))
     }
   }
   "test-parsing-history-op-error.ucl" should "not parse successfully." in {

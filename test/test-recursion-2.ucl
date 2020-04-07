@@ -1,0 +1,18 @@
+
+
+module main
+{
+    procedure f() 
+    {
+        call () = f();
+    }
+
+    var x : integer;
+
+    control
+    {
+        verify(f);
+        check;
+    }
+}
+
