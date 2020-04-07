@@ -373,13 +373,11 @@ class UclidParser extends UclidTokenParsers with PackratParsers {
         } |
         ConstArray |
         KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => Lambda(idtyps, expr) } |
-        "#[" ~> IdTypeList ~ ( "]" ~ ":" ~ "(" ~> Expr <~ ")" ) ^^ {
-          case ids ~ expr => {
-            OperatorApplication(lang.CountingOp(ids), List(expr))
-          }
-        } |
         "(" ~> Expr <~ ")" |
         Id <~ OpPrime ^^ { case id => lang.OperatorApplication(GetNextValueOp(), List(id)) } |
+        ("#[" ~> IdTypeList)  ~ ("::" ~> E1 <~ "]") ^^ {
+          case vars ~ e => OperatorApplication(CountingOp(vars), List(e))
+        } |
         Id
     }
 

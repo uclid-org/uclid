@@ -159,7 +159,7 @@ object Operator {
   def oldInstance(c : OperatorApplication) = OperatorApplication(OldOperator(), List(c))
   def history(c : Identifier, e : Expr) = OperatorApplication(HistoryOperator(), List(c, e))
 }
-sealed trait Operator extends ASTNode {
+trait Operator extends ASTNode {
   def fixity : Int
   def isPolymorphic = false
   def isTemporal = false
@@ -449,15 +449,14 @@ case class ExistsOp(vs: List[(Identifier, Type)], patterns: List[List[Expr]]) ex
   override val hashId = 1401
   override val md5hashCode = computeMD5Hash(vs, patterns)
 }
-case class CountingOp(vs: List[(Identifier, Type)]) extends QuantifiedBooleanOperator {
-  override def variables = vs
+/** CountingOp is used in the model counting extension. */
+case class CountingOp(vs: List[(Identifier, Type)]) extends Operator {
   override def toString() = "#[" +
     Utils.join(vs.map(_.toString()), ", ") + "]"
   override def fixity = Operator.PREFIX
   override val hashId = 1402
   override val md5hashCode = computeMD5Hash(vs)
 }
-
 // (In-)equality operators.
 sealed abstract class ComparisonOperator() extends Operator {
   override def fixity = Operator.INFIX
