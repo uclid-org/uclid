@@ -292,7 +292,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
           }
         }
       } |
-      KwForall ~> IdTypeList ~ Pattern.? ~ ("::" ~> E1) ^^ {
+      KwExists ~> IdTypeList ~ Pattern.? ~ ("::" ~> E1) ^^ {
           case ids ~ pat ~ expr => {
             pat match {
               case None =>
@@ -306,9 +306,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
             }
           }
         } |
-      KwExists ~> IdTypeList ~ ("::" ~> E1) ^^ {
-        case ids ~ expr => OperatorApplication(ExistsOp(ids, List.empty), List(expr))
-      } |
       E3
 
     /** E3 = E4 OpEquiv E3 | E4  **/
