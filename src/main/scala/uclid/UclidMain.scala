@@ -146,7 +146,7 @@ object UclidMain {
         return
       }
       if (config.modelCounter) {
-        config.files.foreach(f => lang.modelcounts.UMCMain.checkModel(f, config))
+        config.files.foreach(f => extensions.modelcounts.UMCMain.checkModel(f, config))
         return
       }
       val mainModuleName = Identifier(config.mainModuleName)
