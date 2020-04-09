@@ -450,12 +450,15 @@ case class ExistsOp(vs: List[(Identifier, Type)], patterns: List[List[Expr]]) ex
   override val md5hashCode = computeMD5Hash(vs, patterns)
 }
 /** CountingOp is used in the model counting extension. */
-case class CountingOp(vs: List[(Identifier, Type)]) extends Operator {
-  override def toString() = "#[" +
-    Utils.join(vs.map(_.toString()), ", ") + "]"
+case class CountingOp(xs: List[(Identifier, Type)], ys: List[(Identifier, Type)]) extends Operator {
+  override def toString() = {
+    val s1 = Utils.join(xs.map(v => v._1.toString() + " : " + v._2.toString()), ", ")
+    val s2 = Utils.join(ys.map(v => v._1.toString() + " : " + v._2.toString()), ", ")
+    "#[(" + s1 + ") for (" + s2 + ") :: "
+  }
   override def fixity = Operator.PREFIX
   override val hashId = 1402
-  override val md5hashCode = computeMD5Hash(vs)
+  override val md5hashCode = computeMD5Hash(xs, ys)
 }
 // (In-)equality operators.
 sealed abstract class ComparisonOperator() extends Operator {
@@ -753,6 +756,8 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
         operands(0).toString + "." + i.toString
       case SelectFromInstance(f) =>
         operands(0).toString + "." + f.toString
+      case CountingOp(_, _) =>
+        op.toString() + operands(0).toString() + "]"
       case ForallOp(_, _) | ExistsOp(_, _) =>
         "(" + op.toString + operands(0).toString + ")"
       case _ =>

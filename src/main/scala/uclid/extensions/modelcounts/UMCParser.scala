@@ -37,7 +37,7 @@
  *
  */
 
-package uclid.lang.modelcounts
+package uclid.extensions.modelcounts
 
 import uclid.{lang => l}
 import uclid.lang.Identifier
@@ -70,20 +70,26 @@ class UMCParser extends l.UclidParser {
   lazy val UMCDecl: PackratParser[l.Decl] =
     positioned (TypeDecl | DefineDecl)
 
-  lazy val AssertDecl: PackratParser[l.SpecDecl] = positioned {
+  lazy val AssertStmt: PackratParser[l.AssertStmt] = positioned {
     KwAssert ~> Id ~ (":" ~> Expr <~ ";") ^^ {
-      case id ~ e => l.SpecDecl(id, e, List.empty)
+      case id ~ e => l.AssertStmt(e, Some(id))
     }
   }
-  lazy val ProofStmt: PackratParser[l.Decl] = 
-    positioned ( AssertDecl );
-  lazy val ProofScript: PackratParser[List[l.Decl]] = {
+  lazy val ProofStmt: PackratParser[l.AssertStmt] = 
+    positioned ( AssertStmt );
+  lazy val ProofScript: PackratParser[List[l.AssertStmt]] = {
     KwProof ~ "{" ~> rep(ProofStmt) <~ "}"
   }
   lazy val UMCModule: PackratParser[l.Module] = positioned {
     KwModule ~> Id ~ ("{" ~> rep(UMCDecl)) ~ (ProofScript <~ "}") ^^ {
       case id ~ decls ~ proof => {
-        l.Module(id, decls ++ proof, ControlBlock, List.empty)
+        val proc = l.ProcedureDecl(
+            l.Identifier("countingProof"),           // procedure name
+            l.ProcedureSig(List.empty, List.empty),  // signature
+            l.BlockStmt(List.empty, proof),          // body
+            List.empty, List.empty, Set.empty,       // requires, ensures, modifies
+            l.ProcedureAnnotations(Set.empty))       // no annotations.
+        l.Module(id, decls ++ List(proc) , ControlBlock, List.empty)
       }
     }
   }

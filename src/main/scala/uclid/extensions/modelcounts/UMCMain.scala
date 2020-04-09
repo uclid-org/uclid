@@ -9,7 +9,6 @@
  * modification, are permitted provided that the following conditions are
  * met:
  * 1. Redistributions of source code must retain the above copyright notice,
- *
  * this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
@@ -36,14 +35,17 @@
  * Main file for the UCLID model counter.
  *
  */
-package uclid.lang.modelcounts
+package uclid.extensions.modelcounts
 
 import uclid.UclidMain
 import uclid.{lang => l}
 
+
 object UMCMain {
   def checkModel(f: java.io.File, config: UclidMain.Config) {
     val module = UMCParser.parseUMCModel(f)
-    println("Managed to parse module: " + module.id.toString())
+    println("Parsed module: " + module.id.toString())
+    println(module.toString())
+    new UMCRewriter(module).process()
   }
 }
