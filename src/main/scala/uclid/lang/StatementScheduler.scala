@@ -48,8 +48,8 @@ object StatementScheduler {
   def writeSet(st : Statement, context : Scope) : Set[Identifier] = {
     st match {
       case SkipStmt() => Set.empty
-      case AssertStmt(_, _) => Set.empty
-      case AssumeStmt(_, _) => Set.empty
+      case AssertStmt(e, _, _) => Set.empty
+      case AssumeStmt(e, _) => Set.empty
       case HavocStmt(h) => 
         h match {
           case HavocableId(id) => Set(id)
@@ -111,8 +111,8 @@ object StatementScheduler {
   def writeSetIds(st : Statement, context : Scope) : Set[Identifier] = {
     st match {
       case SkipStmt() => Set.empty
-      case AssertStmt(_, _) => Set.empty
-      case AssumeStmt(_, _) => Set.empty
+      case AssertStmt(e, _, _) => Set.empty
+      case AssumeStmt(e, _) => Set.empty
       case HavocStmt(h) => 
         h match {
           case HavocableId(id) => Set(id)
@@ -182,7 +182,7 @@ object StatementScheduler {
   def readSet(st : Statement, context : Scope) : Set[Identifier] = {
     st match {
       case SkipStmt() => Set.empty
-      case AssertStmt(e, _) => readSet(e)
+      case AssertStmt(e, _, _) => readSet(e)
       case AssumeStmt(e, _) => readSet(e)
       case HavocStmt(_) => Set.empty
       case AssignStmt(_, rhss) => readSets(rhss)
@@ -236,7 +236,7 @@ object StatementScheduler {
   def primeReadSet(st : Statement, context : Scope) : Set[Identifier] = {
     st match {
       case SkipStmt() => Set.empty
-      case AssertStmt(e, _) => primeReadSet(e)
+      case AssertStmt(e, _, _) => primeReadSet(e)
       case AssumeStmt(e, _) => primeReadSet(e)
       case HavocStmt(_) => Set.empty
       case AssignStmt(_, rhss) => primeReadSets(rhss)
