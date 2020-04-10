@@ -72,7 +72,7 @@ class UMCParser extends l.UclidParser {
 
   lazy val AssertStmt: PackratParser[l.AssertStmt] = positioned {
     KwAssert ~> Id ~ (":" ~> Expr <~ ";") ^^ {
-      case id ~ e => l.AssertStmt(e, Some(id))
+      case id ~ e => l.AssertStmt(e, Some(id), List.empty)
     }
   }
   lazy val ProofStmt: PackratParser[l.AssertStmt] = 

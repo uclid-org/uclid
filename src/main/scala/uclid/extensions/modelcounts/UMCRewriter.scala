@@ -45,12 +45,18 @@ import scala.collection.mutable.{Set => MutableSet, Map => MutableMap}
  
 class UMCRewriter(module : l.Module) {
   val proofProcedure = module.procedures(0)
+  
+  /* We will be using this set in a number of places. */
+  type CountingOpSet = Set[l.OperatorApplication]
+  /* A map from counting ops to the UFs that represent them. */
+  type UFMap = Map[l.OperatorApplication, l.FunctionDecl]
+  
 
   /** Identify counting ops in a sequence of expressions.
    *  
    *  Note the recursion is to identifyCountOps which is a Memo.
    */
-  def _identifyCountOps(es : Seq[l.Expr]) : Set[l.OperatorApplication] = {
+  def _identifyCountOps(es : Seq[l.Expr]) : CountingOpSet = {
     es.foldLeft(Set.empty[l.OperatorApplication]) {
       (acc, e) => acc ++ identifyCountOps(e)
     }
@@ -59,7 +65,7 @@ class UMCRewriter(module : l.Module) {
    *  
    *  Note recursion is to identifyCountsOp which is a memo.
    */
-  def _identifyCountOps(e : l.Expr) : Set[l.OperatorApplication] = {
+  def _identifyCountOps(e : l.Expr) : CountingOpSet = {
     e match {
       case _ : l.Identifier | _ : l.ExternalIdentifier | _ : l.Literal =>
         Set.empty
@@ -68,7 +74,7 @@ class UMCRewriter(module : l.Module) {
       case l.Tuple(es) =>
         _identifyCountOps(es)
       case opapp : l.OperatorApplication =>
-        val init : Set[l.OperatorApplication] = opapp.op match {
+        val init : CountingOpSet = opapp.op match {
           case l.CountingOp(_, _) => Set(opapp)
           case _ => Set.empty
         }
@@ -83,10 +89,10 @@ class UMCRewriter(module : l.Module) {
   /**
    * Memoizing wrapper for finding all counting operators.
    */
-  val identifyCountOps = new Memo[l.Expr, Set[l.OperatorApplication]](_identifyCountOps _)
+  val identifyCountOps = new Memo[l.Expr, CountingOpSet](_identifyCountOps _)
 
   /** Finding all the counting operators in a list of assert statements. */
-  def identifyCountOps(proofBlk: List[l.AssertStmt]) : Set[l.OperatorApplication] = {
+  def identifyCountOps(proofBlk: List[l.AssertStmt]) : CountingOpSet = {
     proofBlk.foldLeft(Set.empty[l.OperatorApplication]) {
       (acc, st) => acc ++ identifyCountOps(st.e)
     }
@@ -118,7 +124,7 @@ class UMCRewriter(module : l.Module) {
   /** Generate UF decls for the identified counting operators.
    *
    */
-  def generateUFDecls(ops : Set[l.OperatorApplication]) : (Map[l.OperatorApplication, l.FunctionDecl]) = {
+  def generateCountingOpToUFMap(ops : CountingOpSet) : (UFMap) = {
     ops.map {
       opapp => {
         assert (opapp.op.isInstanceOf[l.CountingOp])
@@ -131,11 +137,39 @@ class UMCRewriter(module : l.Module) {
     }.toMap
   }
   
+  /**
+   * Create the list of UF + Axiom declarations.
+   */
+  def generateUFDecls(ufMap : UFMap) : List[l.Decl] = {
+    def geqZero(e : l.Expr) : l.Expr = {
+      l.OperatorApplication(l.IntGEOp(), List(e, l.IntLit(0)))
+    }
+    def quantify(ufDecl : l.FunctionDecl, e : l.Expr) : l.Expr = {
+      if (ufDecl.sig.args.size > 0) {
+        l.OperatorApplication(l.ForallOp(ufDecl.sig.args, List.empty), List(e))
+      } else {
+        e
+      }
+    }
+    ufMap.map {
+       p => {
+         val ufDecl = p._2
+         val innerExpr = geqZero(l.FuncApplication(ufDecl.id, ufDecl.sig.args.map(_._1)))
+         val axExpr = quantify(ufDecl, innerExpr)
+         val axiomDecl = l.AxiomDecl(Some(generateId("assump")), axExpr, List.empty)
+         List(ufDecl, axiomDecl)
+       }
+    }.flatten.toList
+  }
+  
   def process() : l.Module = {
     val proofProcBody = module.procedures(0).body.asInstanceOf[l.BlockStmt].stmts.map(_.asInstanceOf[l.AssertStmt])
     val countingOps = identifyCountOps(proofProcBody)
-    val ufDecls = generateUFDecls(countingOps)
+    val ufMap = generateCountingOpToUFMap(countingOps)
+    val ufDecls = generateUFDecls(ufMap)
+    val moduleP = l.Module(module.id, module.decls ++ ufDecls, module.cmds, module.notes)
+    println(ufMap.toString())
     println(ufDecls.toString())
-    module
+    moduleP
   }
 }

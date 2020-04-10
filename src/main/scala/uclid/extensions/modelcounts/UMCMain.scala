@@ -46,6 +46,7 @@ object UMCMain {
     val module = UMCParser.parseUMCModel(f)
     println("Parsed module: " + module.id.toString())
     println(module.toString())
-    new UMCRewriter(module).process()
+    val moduleP = new UMCRewriter(module).process()
+    println(moduleP.toString())
   }
 }
