@@ -120,7 +120,6 @@ class UMCRewriter(module : l.Module) {
     counters.put(prefix, cnt)
     name
   }
-
   /** Generate UF decls for the identified counting operators.
    *
    */
@@ -161,13 +160,104 @@ class UMCRewriter(module : l.Module) {
        }
     }.flatten.toList
   }
+
+  // Helper functions to more easily construct expressions.
+  def _forall(vs : List[(l.Identifier, l.Type)], e : l.Expr) = {
+    val op = l.ForallOp(vs, List.empty)
+    l.OperatorApplication(op, List(e))
+  }
   
+  def _and(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.ConjunctionOp(), List(e1, e2))
+  }
+
+  def _or(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.DisjunctionOp(), List(e1, e2))
+  }
+
+  def _iff(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.IffOp(), List(e1, e2))
+  }
+  
+  def _not(e : l.Expr) = {
+    l.OperatorApplication(l.NegationOp(), List(e))
+  }
+  
+  def _eq(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.EqualityOp(), List(e1, e2))
+  }
+  
+  def _plus(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.AddOp(), List(e1, e2))
+  }
+
+  def extractCountingArgs(e : l.Expr) = {
+    assert (e.isInstanceOf[l.OperatorApplication])
+    val opapp = e.asInstanceOf[l.OperatorApplication]
+    opapp.op match {
+      case l.CountingOp(l1, l2) => l1 ++ l2
+      case _ => throw new AssertionError("Unexpected operator") 
+    }
+  }
+
+  def extractFunction(e : l.Expr) = {
+    assert (e.isInstanceOf[l.OperatorApplication])
+    val opapp = e.asInstanceOf[l.OperatorApplication]
+    opapp.operands(0)
+  }
+
+  def _apply(uf : l.FunctionDecl) = {
+    l.FuncApplication(uf.id, uf.sig.args.map(_._1))
+  }
+  def rewriteDisjoint(ufMap : UFMap, st : l.AssertStmt) : List[l.Statement] = {
+    val e = st.e
+    e match {
+      case l.OperatorApplication(l.EqualityOp(), List(e1, l.OperatorApplication(l.AddOp(), List(e2, e3)))) =>
+        val o1 = e1.asInstanceOf[l.OperatorApplication]
+        val o2 = e2.asInstanceOf[l.OperatorApplication]
+        val o3 = e3.asInstanceOf[l.OperatorApplication]
+        val args = extractCountingArgs(e1)
+        val f1 = extractFunction(e1)
+        val f2 = extractFunction(e2)
+        val f3 = extractFunction(e3)
+        val assertExpr = _and(_forall(args, _iff(f1, _or(f2, f3))),
+                              _forall(args, _not(_and(f2, f3))))
+        val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
+        val ufn1 = _apply(ufMap(o1))
+        val ufn2 = _apply(ufMap(o2))
+        val ufn3 = _apply(ufMap(o3))
+        val assumeExpr = _forall(args, _eq(ufn1, _plus(ufn2, ufn3)))
+        val assumeStmt = l.AssumeStmt(assumeExpr, None)
+        List(assertStmt, assumeStmt)
+      case _ =>
+        throw new AssertionError("Unexpected expression in rewriteDisjoint: " + e.toString())
+    }
+  }
+  
+  def rewriteAssert(ufmap : UFMap, st : l.AssertStmt) : List[l.Statement] = {
+    st.id match {
+      case Some(l.Identifier("disjoint")) =>
+        rewriteDisjoint(ufmap, st)
+      case _ =>
+        throw new AssertionError("Unknown rule: " + st.id.toString())
+    }
+  }
+
   def process() : l.Module = {
+    val proofProc = module.procedures(0)
     val proofProcBody = module.procedures(0).body.asInstanceOf[l.BlockStmt].stmts.map(_.asInstanceOf[l.AssertStmt])
     val countingOps = identifyCountOps(proofProcBody)
     val ufMap = generateCountingOpToUFMap(countingOps)
     val ufDecls = generateUFDecls(ufMap)
-    val moduleP = l.Module(module.id, module.decls ++ ufDecls, module.cmds, module.notes)
+    val newProofStmts = proofProcBody.map(st => rewriteAssert(ufMap, st)).flatten
+    val newProofProc = l.ProcedureDecl(
+        l.Identifier("newCountingProof"), proofProc.sig, 
+        l.BlockStmt(List.empty, newProofStmts), 
+        List.empty, List.empty, Set.empty, proofProc.annotations)
+    val prevDecls = module.decls.filter(p => !p.isInstanceOf[l.ProcedureDecl])
+    val moduleP = l.Module(module.id, 
+                           prevDecls ++ ufDecls ++ List(newProofProc), 
+                           module.cmds, module.notes)
     println(ufMap.toString())
     println(ufDecls.toString())
     moduleP
