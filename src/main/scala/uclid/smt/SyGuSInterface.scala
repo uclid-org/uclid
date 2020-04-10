@@ -114,11 +114,6 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     "type_" + suffix + "_" + counterId.toString()
   }
 
-  override def getVariableName(v : String) : String = {
-    // "var_" + v
-    v
-  }
-
   def getPrimedVariableName(v : String) : String = {
     // "var_" + v + "!"
     v + "!"
@@ -129,12 +124,9 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     val symbol = Symbol(if (prime) ident.name + "!" else ident.name, typ)
     val eqExpr : smt.Expr = OperatorApplication(EqualityOp, List(symbol, expr))
     val symbols = Context.findSymbols(eqExpr)
-    val symbolsP = symbols.filter(s => !variables.contains(s.id))
+    val symbolsP = symbols.filter(s => !variables.contains(s))
     symbolsP.foreach {
-      (s) => {
-        val sIdP = getVariableName(s.id)
-        variables += (s.id -> Symbol(sIdP, s.symbolTyp))
-      }
+      (s) => variables += s
     }
 
     val trExpr = translateExpr(eqExpr, false)
@@ -283,7 +275,7 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     Utils.assert(mutables.size > 0, "There are no variables in the given model.")
     // sygusLog.debug("mutables: {}", mutables.toString())
     //TODO: Change state vars to all vars, since invariant synth doesn't allow for global variables.
-    mutables = mutables.union(variables.filter(p => !p._1.endsWith("!")).map(p => (p._2.id, p._2.symbolTyp)).toList).distinct
+    mutables = mutables.union(variables.filter(p => !p.id.endsWith("!")).map(p => (p.id, p.symbolTyp)).toList).distinct
     sygusLog.debug("mutables: {}", mutables.toString())
 
     var globals = (getGlobals(ctx)++initHavocs++nextHavocs).distinct
@@ -301,7 +293,7 @@ class SyGuSInterface(args: List[String], dir : String) extends SMTLIB2Base with 
     val (axiomFun, axiomArgs) = getAxiomFun(mutables, globals, axioms)
     val instanceLines = {
       // General sygus format
-      mutables = mutables.map(p => (getVariableName(p._1), p._2))
+      mutables = mutables.map(p => (p._1, p._2))
       val synthFunDecl = getSynthFunDecl(mutables, Constants.SyGuSSynthesizeFunCmd)
       val varDecls =  getDeclarations(globals, mutables)
       val initConstraint = getInitConstraint(mutables, axiomArgs)

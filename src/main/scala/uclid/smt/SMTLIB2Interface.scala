@@ -49,23 +49,18 @@ import scala.language.postfixOps
 trait SMTLIB2Base {
   val smtlib2BaseLogger = Logger(classOf[SMTLIB2Base])
   
-  type VarMap = MutableMap[String, Symbol]
+  type VarSet = MutableSet[Symbol]
   type LetMap = MutableMap[Expr, String]
-  var variables : VarMap = MutableMap.empty
+  var variables : VarSet = MutableSet.empty
   var letVariables : LetMap = MutableMap.empty
   var enumLiterals : MutableSet[EnumLit] = MutableSet.empty
-  var stack : List[(VarMap, LetMap, MutableSet[EnumLit])] = List.empty
+  var stack : List[(VarSet, LetMap, MutableSet[EnumLit])] = List.empty
   var typeMap : SynonymMap = SynonymMap.empty
 
   var counterId = 0
   def getTypeName(suffix: String) : String = {
     counterId += 1
     "_type_" + suffix + "_" + counterId.toString() + "_"
-  }
-  def getVariableName(v: String) : String = {
-//    counterId += 1
- //   "_var_" + v + counterId.toString() + "_"
-  v
   }
   def getLetVariableName() : String = {
     counterId += 1
@@ -173,6 +168,22 @@ trait SMTLIB2Base {
     if (index.size > 1) { translateExpr(MakeTuple(index), memoIn, shouldLetify) }
     else { translateExpr(index(0), memoIn, shouldLetify) }
   }
+  /**
+   * Translates an smt operator to its string representation.
+   *
+   * @opIn The smt operator to be translated.
+   */
+  def translateOp(opIn: Operator) : String = {
+    opIn match {
+      case ForallOp(vs, patterns) =>
+        val vsP = vs.map(sym => Symbol(translateExpr(sym, false), sym.typ))
+        ForallOp(vsP, patterns).toString()
+      case ExistsOp(vs, patterns) =>
+        val vsP = vs.map(sym => Symbol(translateExpr(sym, false), sym.typ))
+        ExistsOp(vsP, patterns).toString()
+      case _ => opIn.toString()
+    }
+  }
   def translateExprs(es : List[Expr], memoIn : ExprMap, shouldLetify : Boolean) : (List[TranslatedExpr], ExprMap) = {
     es.foldRight((List.empty[TranslatedExpr], memoIn)){ 
       (arg, acc) => {
@@ -182,23 +193,13 @@ trait SMTLIB2Base {
     }
   }
   def translateExpr(eIn: Expr, memo : ExprMap, shouldLetify : Boolean) : (TranslatedExpr, ExprMap) = {
-    val t1 = System.nanoTime().toDouble
     val memoLookup = memo.get(eIn)
-    // UclidMain.println(eIn.toString().slice(0,5))
-    val t2 = System.nanoTime().toDouble
     val (resultExpr, resultMemo) = memoLookup match {
       case Some(resultExpr) => (resultExpr, memo)
       case None =>
         val (exprStr, memoP, letify) : (String, ExprMap, Boolean) = Context.rewriteBVReplace(eIn) match {
           case Symbol(id,_) =>
-            // Utils.assert(variables.contains(id), "Not found in map: " + id)
-            if (variables.contains(id)) {
-              (variables.get(id).get.toString, memo, false)
-            } else {
-              // Quantified variable.
-              // TODO be able to check this.
-              (id, memo, false)
-            }
+            (id, memo, false)
           case EnumLit(id, _) =>
             (id, memo, false)
           case ConstArray(expr, typ) =>
@@ -208,8 +209,10 @@ trait SMTLIB2Base {
             val str = "((as const %s) %s)".format(typName, eP.exprString())
             (str, memoP, shouldLetify)
           case OperatorApplication(op,operands) =>
-            val (ops, memoP) = translateExprs(operands, memo, shouldLetify)
-            ("(" + op.toString() + " " + exprString(ops) + ")", memoP, shouldLetify)
+            // TODO: Do not letify quantified statements
+            // If we decide to letify them, the quantifiers will be to be on the outside
+            val (ops, memoP) = translateExprs(operands, memo, shouldLetify && (!op.isInstanceOf[ForallOp] && !op.isInstanceOf[ExistsOp]))
+            ("(" + translateOp(op) + " " + exprString(ops) + ")", memoP, shouldLetify)
           case ArraySelectOperation(e, index) =>
             val (trArray, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trIndex, memoP2) = translateOptionalTuple(index, memoP1, shouldLetify)
@@ -243,7 +246,7 @@ trait SMTLIB2Base {
           case BooleanLit(value) =>
             (value match { case true => "true"; case false => "false" }, memo, false)
         }
-        val translatedExpr = if (/*letify && shouldLetify*/false) {
+        val translatedExpr = if (letify && shouldLetify) {
           TranslatedExpr(memoP.size, exprStr, Some(getLetVariableName()))
         } else {
           TranslatedExpr(memoP.size, exprStr, None)
@@ -254,7 +257,7 @@ trait SMTLIB2Base {
   }
   def translateExpr(e : Expr, shouldLetify : Boolean) : String = {
     val (trExpr, memoP) = translateExpr(e, Map.empty, shouldLetify)
-    val resultString = if (/*shouldLetify*/false) {
+    val resultString = if (shouldLetify) {
       if (memoP.size == 0) {
         trExpr.exprString()
       } else {
@@ -334,12 +337,11 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
 
   override def assert (e: Expr) {
     val symbols = Context.findSymbols(e)
-    val symbolsP = symbols.filter(s => !variables.contains(s.id))
+    val symbolsP = symbols.filter(s => !variables.contains(s))
     symbolsP.foreach {
       (s) => {
-        val sym = Symbol(getVariableName(s.id), s.symbolTyp)
-        variables += (s.id -> sym)
-        generateDeclaration(sym)
+        variables += s
+        generateDeclaration(s)
       }
     }
     val smtlib2 = translateExpr(e, true)
@@ -452,7 +454,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
 
   override def push() {
     smtlibInterfaceLogger.debug("push")
-    val e : (VarMap, LetMap, MutableSet[EnumLit]) = (variables.clone(), letVariables.clone(), enumLiterals.clone())
+    val e : (VarSet, LetMap, MutableSet[EnumLit]) = (variables.clone(), letVariables.clone(), enumLiterals.clone())
     stack = e :: stack
     writeCommand("(push 1)")
   }
