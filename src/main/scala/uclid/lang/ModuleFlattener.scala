@@ -550,7 +550,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val preconditionAsserts : List[Statement] = proc.requires.map {
       (req) => {
         val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(req, context), context)
-        val node = AssertStmt(exprP, Some(Identifier("precondition")))
+        val node = AssertStmt(exprP, Some(Identifier("precondition")), List.empty)
         ASTNode.introducePos(true, true, node, req.position)
       }
     }
@@ -559,7 +559,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       proc.ensures.map {
         (ens) => {
           val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
-          val node = AssertStmt(exprP, Some(Identifier("postcondition")))
+          val node = AssertStmt(exprP, Some(Identifier("postcondition")), List.empty)
         ASTNode.introducePos(true, true, node, ens.position)
         }
       }

@@ -460,6 +460,7 @@ case class CountingOp(xs: List[(Identifier, Type)], ys: List[(Identifier, Type)]
   override val hashId = 1402
   override val md5hashCode = computeMD5Hash(xs, ys)
 }
+
 // (In-)equality operators.
 sealed abstract class ComparisonOperator() extends Operator {
   override def fixity = Operator.INFIX
@@ -1148,7 +1149,7 @@ case class HavocableInstanceId(opapp : OperatorApplication) extends HavocableEnt
 }
 
 /** Statements **/
-sealed abstract class Statement extends ASTNode {
+abstract class Statement extends ASTNode {
   override def toString = Utils.join(toLines, "\n") + "\n"
   def hasStmtBlock = false
   val isLoop = false
@@ -1164,8 +1165,17 @@ case class SkipStmt() extends Statement {
   override val hashId = 3000
   override val md5hashCode = computeMD5Hash
 }
-case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
-  override def toLines = List("assert " + e + "; // " + position.toString)
+case class AssertStmt(e: Expr, id : Option[Identifier], params: List[Expr]) extends Statement {
+  override def toLines = {
+    val paramStr = if (params.size > 0) {
+      " [" + Utils.join(params.map(_.toString()), ", ") + "] "
+    } else { "" }
+    val prefix = id match {
+      case Some(n) => "assert " + n.toString() + paramStr + ": "
+      case None => "assert " + paramStr
+    }
+    List(prefix + e.toString() + "; // " + position.toString)
+  }
   override val hasCall = false
   override val hasInternalCall = false
   override val hashId = 3001

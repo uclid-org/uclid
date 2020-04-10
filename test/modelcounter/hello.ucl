@@ -5,8 +5,8 @@ module main {
   define h(n : integer) : boolean = n >= 5 && n <= 20;
 
   proof {
-    assert or: #[(n:integer) for () :: f(n)] == 
-               #[(n:integer) for () :: g(n)] + #[(n:integer) for () :: h(n)];
+    assert disjoint: #[(n:integer) for () :: f(n)] == 
+                     #[(n:integer) for () :: g(n)] + #[(n:integer) for () :: h(n)];
   }
 }
 
