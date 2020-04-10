@@ -1703,10 +1703,10 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr, params: List[ExprDecor
   override val hashId = 3918
   override val md5hashCode = computeMD5Hash(id, expr, params)
   override def toString = {
-    id match {
+    (id match {
       case Some(id) => "axiom " + id.toString + " : " + expr.toString()
       case None => "axiom " + expr.toString
-    }
+    }) + "; // " + pos.toString()
   }
   override def declNames = id match {
     case Some(i) => List(i)
