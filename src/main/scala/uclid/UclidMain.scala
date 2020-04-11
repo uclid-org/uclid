@@ -248,7 +248,6 @@ object UclidMain {
   def compile(srcFiles : Seq[java.io.File], mainModuleName : Identifier, test : Boolean = false): List[Module] = {
     type NameCountMap = Map[Identifier, Int]
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
-    val passManager = createCompilePassManager(test, mainModuleName)
 
     val filenameAdderPass = new AddFilenameRewriter(None)
     // Helper function to parse a single file.
@@ -261,7 +260,17 @@ object UclidMain {
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
       (acc, srcFile) => acc ++ parseFile(srcFile.getPath())
     }
-
+    compileModules(parsedModules, mainModuleName, test)
+  }
+  
+  /** Compile a list of modules (do everything pre-module-instantiation. */
+  def compileModules(
+      parsedModules : List[Module], 
+      mainModuleName : Identifier, 
+      test : Boolean) : List[Module] = 
+  {
+    // create a pass manager.
+    val passManager = createCompilePassManager(test, mainModuleName)
     // now process each module
     val init = (List.empty[Module], Scope.empty)
     // NOTE: The foldLeft/:: combination here reverses the order of modules.
