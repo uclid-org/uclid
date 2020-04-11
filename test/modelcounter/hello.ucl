@@ -1,12 +1,12 @@
 module main {
 
-  define f(n : integer) : boolean = n >= 5 && n <= 10;
+  define f(n : integer) : boolean = n >= 5 && n <= 20;
   define g(n : integer) : boolean = n >= 11 && n <= 20;
-  define h(n : integer) : boolean = n >= 5 && n <= 20;
+  define h(n : integer) : boolean = n >= 5 && n <= 10;
 
   proof {
-    assert disjoint: #[(n:integer) for () :: f(n)] == 
-                     #[(n:integer) for () :: g(n)] + #[(n:integer) for () :: h(n)];
+    assert disjoint: #[(n:integer) for ()] :: f(n) == 
+                     #[(n:integer)] :: g(n) + #[(n:integer)] :: h(n);
   }
 }
 

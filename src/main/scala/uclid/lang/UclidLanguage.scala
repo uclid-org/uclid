@@ -159,7 +159,7 @@ object Operator {
   def oldInstance(c : OperatorApplication) = OperatorApplication(OldOperator(), List(c))
   def history(c : Identifier, e : Expr) = OperatorApplication(HistoryOperator(), List(c, e))
 }
-trait Operator extends ASTNode {
+sealed trait Operator extends ASTNode {
   def fixity : Int
   def isPolymorphic = false
   def isTemporal = false
@@ -449,17 +449,6 @@ case class ExistsOp(vs: List[(Identifier, Type)], patterns: List[List[Expr]]) ex
   override val hashId = 1401
   override val md5hashCode = computeMD5Hash(vs, patterns)
 }
-/** CountingOp is used in the model counting extension. */
-case class CountingOp(xs: List[(Identifier, Type)], ys: List[(Identifier, Type)]) extends Operator {
-  override def toString() = {
-    val s1 = Utils.join(xs.map(v => v._1.toString() + " : " + v._2.toString()), ", ")
-    val s2 = Utils.join(ys.map(v => v._1.toString() + " : " + v._2.toString()), ", ")
-    "#[(" + s1 + ") for (" + s2 + ") :: "
-  }
-  override def fixity = Operator.PREFIX
-  override val hashId = 1402
-  override val md5hashCode = computeMD5Hash(xs, ys)
-}
 
 // (In-)equality operators.
 sealed abstract class ComparisonOperator() extends Operator {
@@ -658,7 +647,7 @@ case class DistinctOp() extends Operator {
   override val hashId = 1709
   override val md5hashCode = computeMD5Hash
 }
-sealed abstract class Expr extends ASTNode {
+abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
   def isConstant = false
   def isTemporal = false
@@ -757,8 +746,6 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
         operands(0).toString + "." + i.toString
       case SelectFromInstance(f) =>
         operands(0).toString + "." + f.toString
-      case CountingOp(_, _) =>
-        op.toString() + operands(0).toString() + "]"
       case ForallOp(_, _) | ExistsOp(_, _) =>
         "(" + op.toString + operands(0).toString + ")"
       case _ =>
@@ -1754,7 +1741,7 @@ case class GenericProofCommand(
   override def toString = {
     val nameStr = name.toString
     val paramStr = if (params.size > 0) { "[" + Utils.join(params.map(_.toString), ", ") + "]" } else { "" }
-    val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
+    val argStr = if (args.size > 0) { "(" + Utils.join(args.map(a => a._1.toString + " /* " + a._2 + "*/"), ", ") + ")" } else { "" }
     val resultStr = resultVar match { case Some(id) => id.toString + " = "; case None => "" }
     val objStr = argObj match { case Some(id) => id.toString + "->"; case None => "" }
     resultStr + objStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
