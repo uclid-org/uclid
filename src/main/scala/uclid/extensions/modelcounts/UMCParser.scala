@@ -42,32 +42,48 @@ package uclid.extensions.modelcounts
 import uclid.{lang => l}
 import uclid.Utils
 import uclid.lang.Identifier
+import uclid.lang.Type
 import uclid.smt.IntLit
 import uclid.extensions.modelcounts.{UMCExpressions => E}
 
 class UMCParser extends l.UclidParser {
   lazy val KwProof = "proof"
   lazy val KwDisjoint = "disjoint"
+  lazy val KwConstLB = "constLB"
   
-  lexical.reserved += (KwProof, KwDisjoint)
+  lexical.reserved += (KwProof, KwDisjoint, KwConstLB)
 
   lazy val UMCDecl: PackratParser[l.Decl] =
     positioned (TypeDecl | DefineDecl)
 
+  lazy val CountingOpPrefix : PackratParser[(List[(Identifier, Type)], List[(Identifier, Type)])] = 
+    ("#[" ~> IdTypeList)  ~ (KwFor ~> IdTypeList) <~ "]" ~ "::" ^^ {
+      case xs ~ ys => (xs, ys)
+    } |
+    ("#[" ~> IdTypeList) <~ "]" ~ "::" ^^ {
+      case xs => (xs, List.empty)
+    }
+
   lazy val CountingExpr : PackratParser[CountingOp] = positioned {
-    ("#[" ~> IdTypeList)  ~ (KwFor ~> IdTypeList) ~ ("]" ~ "::" ~> Expr) ^^ {
-       case xs ~ ys ~ e => CountingOp(xs, ys, e)
-    } | 
-    ("#[" ~> IdTypeList) ~ ("]" ~ "::" ~> Expr)  ^^ {
-       case xs ~ e => CountingOp(xs, List.empty, e)
+    CountingOpPrefix ~ ("(" ~> Expr <~ ")") ^^ {
+      case xs ~ e => CountingOp(xs._1, xs._2, e)
     }
   }
 
   lazy val AssertStmt: PackratParser[Statement] = positioned {
     KwAssert ~ KwDisjoint ~ ":" ~> 
-    (CountingExpr <~ "==") ~ (CountingExpr <~ "+") ~ CountingExpr <~ ";" ^^ 
-    {
+      (CountingExpr <~ "==") ~ (CountingExpr <~ "+") ~ CountingExpr <~ ";" ^^ {
       case e1 ~ e2 ~ e3 => DisjointStmt(e1, e2, e3)
+    } |
+    KwAssert ~ KwRange ~ ":" ~> CountingExpr ~ ("==" ~> Expr) <~ ";" ^^ {
+      case e1 ~ e2 => {
+        RangeStmt(e1, e2) 
+      }
+    } |
+    KwAssert ~ KwConstLB ~ ":" ~>  CountingExpr ~ (">=" ~> Integer) <~ ";" ^^ {
+      case e ~ v => {
+        ConstLbStmt(e, v)
+      }
     }
   }
   lazy val ProofStmt: PackratParser[Statement] = 
@@ -94,10 +110,11 @@ class UMCParser extends l.UclidParser {
 
 object UMCParser {
   val parserObj = new UMCParser()
-  val filenameAdderPass = new l.AddFilenameRewriter(None)
+  val rewriter = new l.RewriteDefines()
   def parseUMCModel(file: java.io.File) : CountingProof = {
     val filePath = file.getPath()
     val text = scala.io.Source.fromFile(filePath).mkString
-    parserObj.parseUMCModel(filePath, text) 
+    val model = parserObj.parseUMCModel(filePath, text)
+    model.rewriteStatments(rewriter)
   }
 }

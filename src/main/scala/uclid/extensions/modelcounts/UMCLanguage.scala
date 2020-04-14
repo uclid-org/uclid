@@ -59,17 +59,92 @@ case class CountingOp(xs: List[(l.Identifier, l.Type)], ys: List[(l.Identifier, 
 }
 
 /** This is the base class for all the "statements" in the proof. */
-abstract class Statement extends l.ASTNode {
+sealed abstract class Statement extends l.ASTNode {
   override def toString = Utils.join(toLines, "\n") + "\n"
   def toLines : List[String]
-  def expressions : Seq[CountingOp]
+  def countingOps : Seq[CountingOp]
+  def expressions: Seq[l.Expr]
+  def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement]
 }
 
 case class DisjointStmt(e1 : CountingOp, e2 : CountingOp, e3 : CountingOp) extends Statement {
   override val hashId = 130001
   override val md5hashCode = computeMD5Hash(e1, e2, e3)
   override def toLines = List("assert disjoint: " + e1.toString() + " == " + e2.toString() + " + " +  e3.toString())
+  override def countingOps = Seq(e1, e2, e3)
   override def expressions = Seq(e1, e2, e3)
+  override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
+    (rewriter(e1.e), rewriter(e2.e), rewriter(e3.e)) match {
+      case (Some(e1p), Some(e2p), Some(e3p)) =>
+        val op1 = CountingOp(e1.xs, e1.ys, e1p)
+        val op2 = CountingOp(e2.xs, e2.ys, e2p)
+        val op3 = CountingOp(e3.xs, e3.ys, e3p)
+        Some(DisjointStmt(op1, op2, op3))
+      case _ => None
+    }
+  }
+}
+
+case class RangeStmt(op : CountingOp, cnt : l.Expr) extends Statement {
+  lazy val lb : l.Expr = {
+    op.e match {
+      case l.OperatorApplication(l.ConjunctionOp(), 
+            List(l.OperatorApplication(l.LEOp(), List(lb, l.Identifier(v))),
+                 l.OperatorApplication(l.LTOp(), List(l.Identifier(u), ub)))) =>
+                   lb
+      case _ =>
+        throw new Utils.AssertionError("Unexpected operand to range expression.")
+    }
+  }
+  lazy val ub : l.Expr = {
+    op.e match {
+      case l.OperatorApplication(l.ConjunctionOp(), 
+            List(l.OperatorApplication(l.LEOp(), List(lb, l.Identifier(v))),
+                 l.OperatorApplication(l.LTOp(), List(l.Identifier(u), ub)))) =>
+                   ub
+      case _ =>
+        throw new Utils.AssertionError("Unexpected operand to range expression.")
+    }
+  }
+  lazy val v : l.Identifier = {
+    op.e match {
+      case l.OperatorApplication(l.ConjunctionOp(), 
+            List(l.OperatorApplication(l.LEOp(), List(lb, l.Identifier(v))),
+                 l.OperatorApplication(l.LTOp(), List(l.Identifier(u), ub)))) =>
+                  assert(u == v)
+                  l.Identifier(v)
+      case _ =>
+        throw new Utils.AssertionError("Unexpected operand to range expression.")
+    }
+  }
+  override val hashId = 130002
+  override val md5hashCode = computeMD5Hash(op, cnt)
+  override def toLines = List("assert range: " + op.toString() + " == " + cnt.toString())
+  override def countingOps = Seq(op)
+  override def expressions = Seq(op, cnt)
+  override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
+    (rewriter(op.e), rewriter(cnt)) match {
+      case (Some(ep), Some(cntp)) =>
+        val op1 = CountingOp(op.xs, op.ys, ep)
+        Some(RangeStmt(op1, cntp))
+      case _ => None
+    }
+  }
+}
+case class ConstLbStmt(e : CountingOp, v : l.IntLit) extends Statement {
+  override val hashId = 130003
+  override val md5hashCode = computeMD5Hash(e, v)
+  override def toLines = List("assert constLB: " + e.toString() + " >= " + v.toString())
+  override def countingOps = Seq(e)
+  override def expressions = Seq(e, v)
+  override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
+    (rewriter(e.e), rewriter(v)) match {
+      case (Some(e1p), Some(e2p)) =>
+        val e1 = CountingOp(e.xs, e.ys, e1p)
+        Some(ConstLbStmt(e1, e2p.asInstanceOf[l.IntLit]))
+      case _ => None
+    }
+  }
 }
 
 case class CountingProof(id : l.Identifier, decls : List[l.Decl], stmts : List[Statement]) extends l.ASTNode {
@@ -80,9 +155,18 @@ case class CountingProof(id : l.Identifier, decls : List[l.Decl], stmts : List[S
     Utils.join(stmts.map(st => "    " + st.toString()), "\n") +
     "\n  }\n}"
   }
+  def rewriteStatments(rewriter : l.ASTRewriter) : CountingProof = {
+    val ctx = decls.foldLeft(l.Scope.empty)((acc, d) => acc + d)
+    def rewriterFn(expr : l.Expr) : Option[l.Expr] = {
+      rewriter.visitExpr(expr, ctx)
+    }
+    val stmtsP = stmts.map(st => st.rewrite(rewriterFn)).flatten
+    CountingProof(id, decls, stmtsP)
+  }
   override val hashId = 131001
   override val md5hashCode = computeMD5Hash(id, decls, stmts)
 }
+
 /** Helpers to construct UCLID5 expressions. */
 object UMCExpressions {
   // Helper functions to more easily construct expressions.
@@ -113,5 +197,29 @@ object UMCExpressions {
   
   def plus(e1 : l.Expr, e2 : l.Expr) = {
     l.OperatorApplication(l.AddOp(), List(e1, e2))
+  }
+  
+  def minus(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.SubOp(), List(e1, e2))
+  }
+  
+  def le(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.IntLEOp(), List(e1, e2))
+  }
+
+  def lt(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.IntLTOp(), List(e1, e2))
+  }
+
+  def rng(e1 : l.Expr, e2 : l.Expr, e3 : l.Expr) = {
+    and(le(e1, e2), lt(e2, e3))
+  }
+  
+  def ite(c : l.Expr, e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.ITEOp(), List(c, e1, e2))
+  }
+  
+  def max(e1 : l.Expr, e2 : l.Expr) = {
+    ite(lt(e1, e2), e2, e1)
   }
 }
