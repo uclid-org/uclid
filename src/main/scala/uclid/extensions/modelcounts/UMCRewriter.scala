@@ -53,7 +53,7 @@ class UMCRewriter(cntProof : CountingProof) {
   /** Finding all the counting operators in a list of assert statements. */
   def identifyCountOps(proofBlk: List[Statement]) : CountingOpSet = {
     proofBlk.foldLeft(Set.empty[CountingOp]) {
-      (acc, st) => acc ++ st.expressions.toSet
+      (acc, st) => acc ++ st.countingOps.toSet
     }
   }
 
@@ -144,10 +144,22 @@ class UMCRewriter(cntProof : CountingProof) {
     List(assertStmt, assumeStmt)
   }
   
+  def rewriteRange(ufMap : UFMap, st : RangeStmt) : List[l.Statement] = {
+    val args = extractCountingArgs(st.op)
+    val ufn = _apply(ufMap(st.op))
+    val assumeExpr = E.forall(args, E.eq(ufn, E.max(l.IntLit(0), E.minus(st.ub, st.lb))))
+    val assumeStmt = l.AssumeStmt(assumeExpr, None)
+    val assertExpr = E.forall(args, E.eq(ufn, st.cnt))
+    val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
+    List(assumeStmt, assertStmt)
+  }
+  
   def rewriteAssert(ufmap : UFMap, st : Statement) : List[l.Statement] = {
     st match {
       case d : DisjointStmt =>
         rewriteDisjoint(ufmap, d)
+      case r : RangeStmt =>
+        rewriteRange(ufmap, r)
       case _ =>
         throw new AssertionError("Unknown proof statement: " + st.toString())
     }
