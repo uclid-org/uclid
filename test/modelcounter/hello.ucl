@@ -7,6 +7,8 @@ module main {
   proof {
     assert range: #[(n:integer)] :: (f(n)) == 16;
     assert constLB: #[(n:integer)] :: (g(n)) >= 5;
+    assert constLB: #[(a:bv1, b:bv1)] :: (a == b) >= 2; 
+    assert constUB: #[(a:bv1, b:bv1)] :: (a == b) <  3; 
     assert disjoint: #[(n:integer) for ()] :: (f(n)) == 
                      #[(n:integer)] :: (g(n)) + #[(n:integer)] :: (h(n));
   }

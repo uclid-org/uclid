@@ -50,8 +50,9 @@ class UMCParser extends l.UclidParser {
   lazy val KwProof = "proof"
   lazy val KwDisjoint = "disjoint"
   lazy val KwConstLB = "constLB"
+  lazy val KwConstUB = "constUB"
   
-  lexical.reserved += (KwProof, KwDisjoint, KwConstLB)
+  lexical.reserved += (KwProof, KwDisjoint, KwConstLB, KwConstUB)
 
   lazy val UMCDecl: PackratParser[l.Decl] =
     positioned (TypeDecl | DefineDecl)
@@ -83,6 +84,11 @@ class UMCParser extends l.UclidParser {
     KwAssert ~ KwConstLB ~ ":" ~>  CountingExpr ~ (">=" ~> Integer) <~ ";" ^^ {
       case e ~ v => {
         ConstLbStmt(e, v)
+      }
+    } |
+    KwAssert ~ KwConstUB ~ ":" ~>  CountingExpr ~ ("<" ~> Integer) <~ ";" ^^ {
+      case e ~ v => {
+        ConstUbStmt(e, v)
       }
     }
   }

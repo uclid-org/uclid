@@ -643,7 +643,7 @@ case class GetNextValueOp() extends Operator {
 }
 case class DistinctOp() extends Operator {
   override def toString = "distinct"
-  override def fixity = Operator.INFIX
+  override def fixity = Operator.PREFIX
   override val hashId = 1709
   override val md5hashCode = computeMD5Hash
 }
