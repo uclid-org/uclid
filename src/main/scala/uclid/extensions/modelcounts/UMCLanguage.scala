@@ -147,6 +147,22 @@ case class ConstLbStmt(e : CountingOp, v : l.IntLit) extends Statement {
   }
 }
 
+case class ConstUbStmt(e : CountingOp, v : l.IntLit) extends Statement {
+  override val hashId = 130004
+  override val md5hashCode = computeMD5Hash(e, v)
+  override def toLines = List("assert constUB: " + e.toString() + " >= " + v.toString())
+  override def countingOps = Seq(e)
+  override def expressions = Seq(e, v)
+  override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
+    (rewriter(e.e), rewriter(v)) match {
+      case (Some(e1p), Some(e2p)) =>
+        val e1 = CountingOp(e.xs, e.ys, e1p)
+        Some(ConstUbStmt(e1, e2p.asInstanceOf[l.IntLit]))
+      case _ => None
+    }
+  }
+}
+
 case class CountingProof(id : l.Identifier, decls : List[l.Decl], stmts : List[Statement]) extends l.ASTNode {
   override def toString = {
     "module " + id.toString() + " {\n" +
@@ -172,6 +188,11 @@ object UMCExpressions {
   // Helper functions to more easily construct expressions.
   def forall(vs : List[(l.Identifier, l.Type)], e : l.Expr) = {
     val op = l.ForallOp(vs, List.empty)
+    l.OperatorApplication(op, List(e))
+  }
+  
+  def exists(vs : List[(l.Identifier, l.Type)], e : l.Expr) = {
+    val op = l.ExistsOp(vs, List.empty)
     l.OperatorApplication(op, List(e))
   }
   
@@ -210,6 +231,15 @@ object UMCExpressions {
   def lt(e1 : l.Expr, e2 : l.Expr) = {
     l.OperatorApplication(l.IntLTOp(), List(e1, e2))
   }
+  
+  def ge(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.IntGEOp(), List(e1, e2))
+  }
+
+  def gt(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.IntGTOp(), List(e1, e2))
+  }
+  
 
   def rng(e1 : l.Expr, e2 : l.Expr, e3 : l.Expr) = {
     and(le(e1, e2), lt(e2, e3))
@@ -221,5 +251,13 @@ object UMCExpressions {
   
   def max(e1 : l.Expr, e2 : l.Expr) = {
     ite(lt(e1, e2), e2, e1)
+  }
+  
+  def distinct(es : List[l.Expr]) = {
+    if (es.size == 1) {
+      es(0)
+    } else {
+      l.OperatorApplication(l.DistinctOp(), es)
+    }
   }
 }

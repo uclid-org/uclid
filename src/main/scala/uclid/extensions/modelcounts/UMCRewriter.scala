@@ -154,12 +154,56 @@ class UMCRewriter(cntProof : CountingProof) {
     List(assumeStmt, assertStmt)
   }
   
+  def rewriteConstLb(ufMap : UFMap, st : ConstLbStmt) : List[l.Statement] = {
+    val args = extractCountingArgs(st.e)
+    val argVars = args.map(a => a._1)
+    val cnt = st.v.value.toInt
+    val argsListP = (1 to cnt).map(i => args.map(a => generateId(a._1.name)))
+    val rwMaps = argsListP.map(argsP => (argVars.map(_.asInstanceOf[l.Expr]) zip argsP).toMap)
+    val exprs = rwMaps.map(rwMap => l.ExprRewriter.rewriteExprOnce(st.e.e, rwMap, l.Scope.empty))
+    val existsVars : List[(l.Identifier, l.Type)] = argsListP.map(argsP => (args zip argsP).map(p => (p._2, p._1._2)).toList).toList.flatten
+    val trueLit = l.BoolLit(true).asInstanceOf[l.Expr]
+    val conjunction = exprs.foldLeft(trueLit)((acc, e) => E.and(acc, e))
+    val falseLit = l.BoolLit(false).asInstanceOf[l.Expr]
+    val distincts = E.distinct(rwMaps.map(m => l.Tuple(m.map(p => p._2).toList)).toList)
+    val query = E.exists(existsVars, E.and(conjunction, distincts))
+    val assertStmt = l.AssertStmt(query, None, List.empty)
+    val ufn = _apply(ufMap(st.e))
+    val assumeExpr = E.forall(args, E.ge(ufn, st.v))
+    val assumeStmt = l.AssumeStmt(assumeExpr, None)
+    List(assertStmt, assumeStmt)
+  }
+  
+  def rewriteConstUb(ufMap : UFMap, st : ConstUbStmt) : List[l.Statement] = {
+    val args = extractCountingArgs(st.e)
+    val argVars = args.map(a => a._1)
+    val cnt = st.v.value.toInt
+    val argsListP = (1 to cnt).map(i => args.map(a => generateId(a._1.name)))
+    val rwMaps = argsListP.map(argsP => (argVars.map(_.asInstanceOf[l.Expr]) zip argsP).toMap)
+    val exprs = rwMaps.map(rwMap => l.ExprRewriter.rewriteExprOnce(st.e.e, rwMap, l.Scope.empty))
+    val vs : List[(l.Identifier, l.Type)] = argsListP.map(argsP => (args zip argsP).map(p => (p._2, p._1._2)).toList).toList.flatten
+    val trueLit = l.BoolLit(true).asInstanceOf[l.Expr]
+    val conjunction = exprs.foldLeft(trueLit)((acc, e) => E.and(acc, e))
+    val falseLit = l.BoolLit(false).asInstanceOf[l.Expr]
+    val distincts = E.distinct(rwMaps.map(m => l.Tuple(m.map(p => p._2).toList)).toList)
+    val query = E.not(E.exists(vs, E.and(conjunction, distincts)))
+    val assertStmt = l.AssertStmt(query, None, List.empty)
+    val ufn = _apply(ufMap(st.e))
+    val assumeExpr = E.forall(args, E.lt(ufn, st.v))
+    val assumeStmt = l.AssumeStmt(assumeExpr, None)
+    List(assertStmt, assumeStmt)
+  }
+
   def rewriteAssert(ufmap : UFMap, st : Statement) : List[l.Statement] = {
     st match {
       case d : DisjointStmt =>
         rewriteDisjoint(ufmap, d)
       case r : RangeStmt =>
         rewriteRange(ufmap, r)
+      case lb : ConstLbStmt =>
+        rewriteConstLb(ufmap, lb)
+      case ub : ConstUbStmt =>
+        rewriteConstUb(ufmap, ub)
       case _ =>
         throw new AssertionError("Unknown proof statement: " + st.toString())
     }
