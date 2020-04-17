@@ -743,7 +743,6 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case None     => result
       case Some(id) => visitIdentifier(id, result, context)
     }
-    result = st.params.foldLeft(result)((acc, e) => visitExpr(e, acc, context))
     val envP = if (context.environment == ProceduralEnvironment) ProceduralAssertEnvironment else AssertEnvironment
     result = visitExpr(st.e, result, context.withEnvironment(envP))
     result = pass.applyOnAssert(TraversalDirection.Up, st, result, context)
@@ -1610,10 +1609,10 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
 
   def visitAssertStatement(st : AssertStmt, context : Scope) : Option[Statement] = {
     val idP = st.id.flatMap(id => visitIdentifier(id, context))
-    val paramsP = st.params.map(p => visitExpr(p, context)).flatten
     val envP = if (context.environment == ProceduralEnvironment) ProceduralAssertEnvironment else AssertEnvironment
+    // TODO: implement visitDecorator
     val stP = visitExpr(st.e, context.withEnvironment(envP)).flatMap((e) => {
-      pass.rewriteAssert(AssertStmt(e, idP, paramsP), context)
+      pass.rewriteAssert(AssertStmt(e, idP, st.decorators), context)
     })
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }

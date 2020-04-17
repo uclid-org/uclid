@@ -1741,7 +1741,7 @@ class SymbolicSimulator (module : Module) {
     frameLog.debug("symbolTable: %s".format(symbolTable.toString()))
     s match {
       case SkipStmt() => return symbolTable
-      case AssertStmt(e, id, params) =>
+      case AssertStmt(e, id, decorators) =>
         val frameTableP = frameTable.clone()
         frameTableP += symbolTable
         val simTable = ArrayBuffer(frameTableP)
@@ -1753,7 +1753,7 @@ class SymbolicSimulator (module : Module) {
         val assert = AssertInfo(
                 assertionName, label, simTable.clone(),
                 scope, frameNumber, pathCondExpr,
-                assertExpr, List.empty, s.position)
+                assertExpr, decorators, s.position)
         assertLog.debug("Assertion: {}", e.toString)
         assertLog.debug("VC: {}", assertExpr.toString)
         frameLog.debug("FrameTableSize: {}", frameTableP.size)
@@ -1829,7 +1829,7 @@ class SymbolicSimulator (module : Module) {
 
   def writeSet(stmt: Statement) : Set[Identifier] = stmt match {
     case SkipStmt() => Set.empty
-    case AssertStmt(e, id, params) => Set.empty
+    case AssertStmt(e, id, _) => Set.empty
     case AssumeStmt(e, id) => Set.empty
     case HavocStmt(h) => 
       h match {

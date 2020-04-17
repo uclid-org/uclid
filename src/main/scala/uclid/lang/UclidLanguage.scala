@@ -846,17 +846,19 @@ case object CoverDecorator extends ExprDecorator {
   override val hashId = 2605
   override val md5hashCode = computeMD5Hash
 }
+case object SATOnlyDecorator extends ExprDecorator {
+  override def toString = "satonly"
+  override val hashId = 2606
+  override val md5hashCode = computeMD5Hash
+}
 
 object ExprDecorator {
   /** Factory constructor. */
   def parse(e : Expr) : ExprDecorator = {
     val dec = e match {
-      case Identifier(id) =>
-        if (id == "LTL") {
-          LTLExprDecorator
-        } else {
-          UnknownDecorator(e.toString)
-        }
+      case Identifier("LTL") => LTLExprDecorator
+      case Identifier("cover") => CoverDecorator
+      case Identifier("SATOnly") => SATOnlyDecorator
       case _ => UnknownDecorator(e.toString)
     }
     dec.pos = e.pos
@@ -1152,14 +1154,15 @@ case class SkipStmt() extends Statement {
   override val hashId = 3000
   override val md5hashCode = computeMD5Hash
 }
-case class AssertStmt(e: Expr, id : Option[Identifier], params: List[Expr]) extends Statement {
+case class AssertStmt(e: Expr, id : Option[Identifier], decorators: List[ExprDecorator]) extends Statement {
   override def toLines = {
-    val paramStr = if (params.size > 0) {
-      " [" + Utils.join(params.map(_.toString()), ", ") + "] "
+    val name = "assert"
+    val decoratorStr = if (decorators.size > 0) {
+      " [" + Utils.join(decorators.map(_.toString()), ", ") + "] "
     } else { "" }
     val prefix = id match {
-      case Some(n) => "assert " + n.toString() + paramStr + ": "
-      case None => "assert " + paramStr
+      case Some(n) => name + " " + n.toString() + decoratorStr + ": "
+      case None => name + " " + decoratorStr
     }
     List(prefix + e.toString() + "; // " + position.toString)
   }

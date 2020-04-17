@@ -167,7 +167,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val falseLit = l.BoolLit(false).asInstanceOf[l.Expr]
     val distincts = E.distinct(rwMaps.map(m => l.Tuple(m.map(p => p._2).toList)).toList)
     val query = E.exists(existsVars, E.and(conjunction, distincts))
-    val assertStmt = l.AssertStmt(query, None, List.empty)
+    val assertStmt = l.AssertStmt(query, None, List(l.CoverDecorator, l.SATOnlyDecorator))
     val ufn = _apply(ufMap(st.e))
     val assumeExpr = E.forall(args, E.ge(ufn, st.v))
     val assumeStmt = l.AssumeStmt(assumeExpr, None)
