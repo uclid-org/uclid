@@ -1,0 +1,19 @@
+module main {
+
+  define U(arr : [integer]boolean, n : integer) : boolean = 
+  		(n > 0) && (forall (i : integer) :: (i < 0 || i >= n) ==> !arr[i]);	 
+  define V(arr : [integer]boolean, n : integer) : boolean = 
+  		(n > 0) && (forall (i : integer) :: (i < 0 || i >= n) ==> !arr[i]) && 
+  		(exists (i : integer) :: 0 <= i < n && arr[i]);
+  define W(arr : [integer]boolean, n : integer) : boolean = 
+  		(n > 0) && (forall (i : integer) :: !arr[i]);
+
+  proof {
+    assert disjoint: #[(n : integer) for (arr: [integer]boolean)] :: (U(arr, n)) == 
+    			     #[(n : integer) for (arr: [integer]boolean)] :: (V(arr, n)) +
+    			     #[(n : integer) for (arr: [integer]boolean)] :: (W(arr, n));
+    assert constLB: #[(n : integer) for (arr: [integer]boolean)] :: (V(arr, n)) >= 1;
+    // assert constUB: #[(n : integer) for (arr: [integer]boolean)] :: (V(arr, n)) <  2;
+  }
+}
+

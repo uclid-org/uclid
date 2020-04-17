@@ -1,0 +1,17 @@
+module main{
+    var arr_1: [integer]boolean;
+    var n_1: integer;
+
+    init {
+        assert [cover, SATOnly]: 
+            (true && (n_1 > 0) ==> 
+             (forall (i : integer) :: (((i < 0) || (i >= n_1)) ==> !((arr_1)[i]))) && 
+             (exists (i : integer) :: (((0 <= i) && (i < n_1)) && (arr_1)[i])));
+    }
+
+    control {
+        v = unroll(1);
+        check;
+        print_results;
+    }
+}

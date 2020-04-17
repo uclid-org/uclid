@@ -175,10 +175,18 @@ class AssertionTree {
           solver.curAssertName = e.name
           solver.curAssertLabel = e.label
           val sat = solver.check(getModel)
-          val result = sat.result match {
-            case Some(true)  => smt.SolverResult(Some(false), sat.model)
-            case Some(false) => smt.SolverResult(Some(true), sat.model)
-            case None        => smt.SolverResult(None, None)
+          val result = if (e.decorators.contains(SATOnlyDecorator)) {
+            sat.result match {
+              case Some(true)  => smt.SolverResult(Some(true), sat.model)
+              case Some(false) => smt.SolverResult(Some(false), sat.model)
+              case None        => smt.SolverResult(None, None)
+            }
+          } else {
+            sat.result match {
+              case Some(true)  => smt.SolverResult(Some(false), sat.model)
+              case Some(false) => smt.SolverResult(Some(true), sat.model)
+              case None        => smt.SolverResult(None, None)
+            }
           }
           solver.pop()
           Some(CheckResult(e, result))

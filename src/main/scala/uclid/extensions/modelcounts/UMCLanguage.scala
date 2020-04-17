@@ -254,8 +254,8 @@ object UMCExpressions {
   }
   
   def distinct(es : List[l.Expr]) = {
-    if (es.size == 1) {
-      es(0)
+    if (es.size <= 1) {
+      l.BoolLit(true)
     } else {
       l.OperatorApplication(l.DistinctOp(), es)
     }
