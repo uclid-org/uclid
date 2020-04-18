@@ -130,6 +130,7 @@ object ExprRewriter
     val rewriter = new ASTRewriter("", new ExprRewriterPass(rewrites))
     rewriter.visitLhs(lhs, context).get
   }
+  
 }
 
 class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
