@@ -37,9 +37,11 @@
  */
 package uclid.extensions.modelcounts
 
+
 import uclid.UclidMain
 import uclid.{lang => l}
 import uclid.Utils
+import uclid.Memo
 
 
 /** CountingOp is a new operator we introduce for the UMC extension. */
@@ -58,21 +60,44 @@ case class CountingOp(xs: List[(l.Identifier, l.Type)], ys: List[(l.Identifier, 
   override val md5hashCode = computeMD5Hash(xs, ys)
 }
 
+
 /** This is the base class for all the "statements" in the proof. */
 sealed abstract class Statement extends l.ASTNode {
   override def toString = Utils.join(toLines, "\n") + "\n"
   def toLines : List[String]
-  def countingOps : Seq[CountingOp]
-  def expressions: Seq[l.Expr]
+  val countingOps : Seq[CountingOp]
+  val expressions: Seq[l.Expr]
   def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement]
+}
+
+case class AssertStmt(e : l.Expr) extends Statement {
+  override val hashId = 130000
+  override val md5hashCode = computeMD5Hash(e)
+  override def toLines = List("assert " + e.toString())
+  override val countingOps = {
+    def isCountingOp(e : l.Expr) = {
+      e match {
+        case CountingOp(_, _, _) => true
+        case _ => false
+      }
+    }
+    UMCExpressions.findSubExpressions(e, isCountingOp _).map(_.asInstanceOf[CountingOp]).toSeq
+  }
+  override val expressions = Seq(e)
+  override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
+    rewriter(e) match {
+      case Some(eP) => Some(AssertStmt(eP))
+      case None => None
+    }
+  }
 }
 
 case class DisjointStmt(e1 : CountingOp, e2 : CountingOp, e3 : CountingOp) extends Statement {
   override val hashId = 130001
   override val md5hashCode = computeMD5Hash(e1, e2, e3)
   override def toLines = List("assert disjoint: " + e1.toString() + " == " + e2.toString() + " + " +  e3.toString())
-  override def countingOps = Seq(e1, e2, e3)
-  override def expressions = Seq(e1, e2, e3)
+  override val countingOps = Seq(e1, e2, e3)
+  override val expressions = Seq(e1, e2, e3)
   override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
     (rewriter(e1.e), rewriter(e2.e), rewriter(e3.e)) match {
       case (Some(e1p), Some(e2p), Some(e3p)) =>
@@ -120,8 +145,8 @@ case class RangeStmt(op : CountingOp, cnt : l.Expr) extends Statement {
   override val hashId = 130002
   override val md5hashCode = computeMD5Hash(op, cnt)
   override def toLines = List("assert range: " + op.toString() + " == " + cnt.toString())
-  override def countingOps = Seq(op)
-  override def expressions = Seq(op, cnt)
+  override val countingOps = Seq(op)
+  override val expressions = Seq(op, cnt)
   override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
     (rewriter(op.e), rewriter(cnt)) match {
       case (Some(ep), Some(cntp)) =>
@@ -135,8 +160,8 @@ case class ConstLbStmt(e : CountingOp, v : l.IntLit) extends Statement {
   override val hashId = 130003
   override val md5hashCode = computeMD5Hash(e, v)
   override def toLines = List("assert constLB: " + e.toString() + " >= " + v.toString())
-  override def countingOps = Seq(e)
-  override def expressions = Seq(e, v)
+  override val countingOps = Seq(e)
+  override val expressions = Seq(e, v)
   override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
     (rewriter(e.e), rewriter(v)) match {
       case (Some(e1p), Some(e2p)) =>
@@ -151,8 +176,8 @@ case class ConstUbStmt(e : CountingOp, v : l.IntLit) extends Statement {
   override val hashId = 130004
   override val md5hashCode = computeMD5Hash(e, v)
   override def toLines = List("assert constUB: " + e.toString() + " >= " + v.toString())
-  override def countingOps = Seq(e)
-  override def expressions = Seq(e, v)
+  override val countingOps = Seq(e)
+  override val expressions = Seq(e, v)
   override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
     (rewriter(e.e), rewriter(v)) match {
       case (Some(e1p), Some(e2p)) =>
@@ -260,4 +285,61 @@ object UMCExpressions {
       l.OperatorApplication(l.DistinctOp(), es)
     }
   }
+
+  def _findSubExpressions(e : l.Expr, fn : l.Expr => Boolean) : Set[l.Expr] = 
+    findSubExpressions((e, fn))
+
+  val findSubExpressions = new Memo[(l.Expr, l.Expr => Boolean), Set[l.Expr]](
+    (p : (l.Expr, l.Expr => Boolean)) => {
+      val expr = p._1
+      val fn = p._2
+      val subExprs : Set[l.Expr] = expr match {
+        case _ : l.Literal => Set.empty
+        case _ : l.Identifier => Set.empty
+        case _ : l.ExternalIdentifier => Set.empty
+        case l.ConstArray(e, t) => _findSubExpressions(e, fn)
+        case l.Tuple(es) => es.foldLeft(Set.empty[l.Expr])((acc, e) => _findSubExpressions(e, fn) ++ acc)
+        case l.OperatorApplication(op, args) =>
+          args.foldLeft(Set.empty[l.Expr])((acc, e) => _findSubExpressions(e, fn) ++ acc)
+        case l.Lambda(ids, e) => _findSubExpressions(e, fn)
+        case l.FuncApplication(e1, e2) => e2.foldLeft(_findSubExpressions(e1, fn))((acc, e) => acc ++ _findSubExpressions(e, fn))
+        case CountingOp(xs, ys, e) => _findSubExpressions(e, fn)
+      }
+      if (fn(expr)) { subExprs + expr}
+      else { subExprs }
+    }
+  )
+}
+
+class ExprRewriter(rwMap : Map[l.Expr, l.Expr]) {
+  val rewrite : Memo[l.Expr, l.Expr] = new Memo[l.Expr, l.Expr](
+    exp => {
+      val expP : l.Expr = exp match {
+        case _ : l.Literal | _ : l.Identifier | _ : l.ExternalIdentifier =>
+          exp
+        case l.ConstArray(e, t) =>
+          val eP : l.Expr = rewrite(e)
+          l.ConstArray(eP, t)
+        case l.Tuple(es) =>
+          val esP = es.map(e => rewrite(e))
+          l.Tuple(esP)
+        case l.OperatorApplication(op, args) =>
+          val argsP = args.map(arg => rewrite(arg))
+          l.OperatorApplication(op, argsP)
+        case l.Lambda(ids, exp) =>
+          val expP = rewrite(exp)
+          l.Lambda(ids, exp)
+        case l.FuncApplication(e1, e2s) =>
+          val e1p = rewrite(e1)
+          val e2sp = e2s.map(e2 => rewrite(e2))
+          l.FuncApplication(e1p, e2sp)
+        case CountingOp(xs, ys, e) =>
+          val eP = rewrite(e)
+          CountingOp(xs, ys, eP)
+      }
+      rwMap.get(expP) match {
+        case Some(repl) => repl
+        case None => expP
+      }
+    })
 }

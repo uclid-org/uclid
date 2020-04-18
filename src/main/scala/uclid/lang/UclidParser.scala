@@ -276,7 +276,7 @@ class UclidParser extends UclidTokenParsers with PackratParsers {
   lazy val Pattern : PackratParser[(lang.Identifier, List[List[lang.Expr]])] =
     Id ~ ("[" ~> PatternList <~ "]") ^^ { case id ~ pats => (id, pats) }
 
-    lazy val E1: PackratParser[Expr] =
+  lazy val E1: PackratParser[Expr] =
       KwForall ~> IdTypeList ~ Pattern.? ~ ("::" ~> E1) ^^ {
         case ids ~ pat ~ expr => {
           pat match {

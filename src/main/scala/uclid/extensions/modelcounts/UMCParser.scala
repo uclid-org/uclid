@@ -71,7 +71,24 @@ class UMCParser extends l.UclidParser {
     }
   }
 
-  lazy val AssertStmt: PackratParser[Statement] = positioned {
+  lazy val C0: PackratParser[l.Expr] = positioned {  CountingExpr | E1 }
+  
+  override lazy val E15: PackratParser[l.Expr] = positioned {
+        Literal |
+        "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => l.Tuple(e::es)} |
+        KwIf ~> ("(" ~> Expr <~ ")") ~ (KwThen ~> Expr) ~ (KwElse ~> Expr) ^^ {
+          case expr ~ thenExpr ~ elseExpr => l.OperatorApplication(l.ITEOp(), List(expr, thenExpr, elseExpr))
+        } |
+        ConstArray |
+        KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => l.Lambda(idtyps, expr) } |
+        "(" ~> CExpr <~ ")" |
+        Id <~ OpPrime ^^ { case id => l.OperatorApplication(l.GetNextValueOp(), List(id)) } |
+        Id
+    }
+
+  lazy val CExpr: PackratParser[l.Expr] = positioned { C0 }
+
+  lazy val Stmt: PackratParser[Statement] = positioned {
     KwAssert ~ KwDisjoint ~ ":" ~> 
       (CountingExpr <~ "==") ~ (CountingExpr <~ "+") ~ CountingExpr <~ ";" ^^ {
       case e1 ~ e2 ~ e3 => DisjointStmt(e1, e2, e3)
@@ -90,10 +107,13 @@ class UMCParser extends l.UclidParser {
       case e ~ v => {
         ConstUbStmt(e, v)
       }
+    } |
+    KwAssert ~> CExpr <~ ";" ^^ {
+      case e => AssertStmt(e)
     }
   }
   lazy val ProofStmt: PackratParser[Statement] = 
-    positioned ( AssertStmt );
+    positioned ( Stmt );
   lazy val ProofScript: PackratParser[List[Statement]] = {
     KwProof ~ "{" ~> rep(ProofStmt) <~ "}"
   }
@@ -114,9 +134,26 @@ class UMCParser extends l.UclidParser {
   }
 }
 
+class RewriteDefines extends l.RewriteDefines {
+  override def visitExpr(e : l.Expr, context : l.Scope) : Option[l.Expr] = {
+    val eP = (e match {
+      case i : Identifier => visitIdentifier(i, context)
+      case eId : l.ExternalIdentifier => visitExternalIdentifier(eId, context)
+      case lit : l.Literal => visitLiteral(lit, context)
+      case rec : l.Tuple => visitTuple(rec, context)
+      case opapp : l.OperatorApplication => visitOperatorApp(opapp, context)
+      case a : l.ConstArray => visitConstArray(a, context)
+      case fapp : l.FuncApplication => visitFuncApp(fapp, context)
+      case lambda : l.Lambda => visitLambda(lambda, context)
+      case cntOp : CountingOp =>
+        visitExpr(cntOp.e, context).flatMap(eP => Some(CountingOp(cntOp.xs, cntOp.ys, eP)))
+    }).flatMap(pass.rewriteExpr(_, context))
+    return l.ASTNode.introducePos(true, true, eP, e.position)
+  }
+}
 object UMCParser {
   val parserObj = new UMCParser()
-  val rewriter = new l.RewriteDefines()
+  val rewriter = new RewriteDefines()
   def parseUMCModel(file: java.io.File) : CountingProof = {
     val filePath = file.getPath()
     val text = scala.io.Source.fromFile(filePath).mkString
