@@ -7,18 +7,27 @@ module main {
         (exists (i : integer) :: 0 <= i < n && arr[i]);
   define W(arr : [integer]boolean, n : integer) : boolean =
         (forall (i : integer) :: !arr[i]);
+  define X(i : integer) : boolean =
+        (0 <= i < 2);
 
   proof {
     assert disjoint: #[(arr: [integer]boolean) for (n : integer)] :: (U(arr, n)) ==
                      #[(arr: [integer]boolean) for (n : integer)] :: (V(arr, n)) +
                      #[(arr: [integer]boolean) for (n : integer)] :: (W(arr, n));
+    // #arr: W(arr, n) == 1
     assert constLB:  #[(arr: [integer]boolean) for (n : integer)] :: (W(arr, n)) >= 1;
     assert constUB:  #[(arr: [integer]boolean) for (n : integer)] :: (W(arr, n)) <  2;
     assert forall (n : integer) :: (#[(arr: [integer]boolean) for (n : integer)] :: (W(arr, n))) == 1;
+    // prove #i: X(i) == 2
+    assert constLB:  #[(i : integer) for (n : integer)] :: (X(i)) >= 2;
+    assert constUB:  #[(i : integer) for (n : integer)] :: (X(i)) <  3;
+    assert forall (i : integer, n : integer) :: (#[(i : integer) for (n : integer)] :: (X(i))) == 2;
+    /*
     assert indLB: #[(arr: [integer]boolean) for (n : integer)] :: (U(arr, n+1)) >=
                   #[(arr: [integer]boolean) for (n : integer)] :: (U(arr, n))   *
                   #[(i : integer) for (n : integer)] :: (0 <= i < 2)
                   using arr[n -> i];
+    */
   }
 }
 
