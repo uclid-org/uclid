@@ -93,6 +93,9 @@ case class AssertStmt(e : l.Expr) extends Statement {
 }
 
 case class DisjointStmt(e1 : CountingOp, e2 : CountingOp, e3 : CountingOp) extends Statement {
+  assert (e1.xs == e2.xs && e2.xs == e3.xs)
+  assert (e1.ys == e2.ys && e2.ys == e3.ys)
+
   override val hashId = 130001
   override val md5hashCode = computeMD5Hash(e1, e2, e3)
   override def toLines = List("assert disjoint: " + e1.toString() + " == " + e2.toString() + " + " +  e3.toString())
@@ -188,6 +191,53 @@ case class ConstUbStmt(e : CountingOp, v : l.IntLit) extends Statement {
   }
 }
 
+case class ConstEqStmt(e : CountingOp, v : l.IntLit) extends Statement {
+  override val hashId = 130005
+  override val md5hashCode = computeMD5Hash(e, v)
+  override def toLines = List("assert constEq: " + e.toString() + " >= " + v.toString())
+  override val countingOps = Seq(e)
+  override val expressions = Seq(e, v)
+  override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
+    (rewriter(e.e), rewriter(v)) match {
+      case (Some(e1p), Some(e2p)) =>
+        val e1 = CountingOp(e.xs, e.ys, e1p)
+        Some(ConstEqStmt(e1, e2p.asInstanceOf[l.IntLit]))
+      case _ => None
+    }
+  }
+}
+
+case class IndLbStmt(fp : CountingOp, f : CountingOp, g : CountingOp, skolems : List[l.Expr]) extends Statement {
+  assert (fp.ys.size == 1 && f.ys.size == 1 && g.ys.size == 1)
+  assert (fp.ys(0)._2.isInt)
+  assert (fp.ys == f.ys && f.ys == g.ys)
+
+  val n = fp.ys(0)._1
+  
+  override val hashId = 130006
+  override val md5hashCode = computeMD5Hash(fp, f, g, skolems)
+  override def toLines = {
+    List("assert indLB: " + fp.toString + " >= " +
+         f.toString() + " * " + g.toString() + " skolems (" + 
+         Utils.join(skolems.map(_.toString()), ", ") + ");")
+  }
+  override val countingOps = Seq(fp, f, g)
+  override val expressions = Seq(fp, f, g) ++ skolems
+  override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
+    val e_fp = rewriter(fp.e)
+    val e_f = rewriter(f.e)
+    val e_g = rewriter(g.e)
+    val skolemsP = skolems.map(rewriter(_)).flatten
+    (e_fp, e_f, e_g) match {
+      case (Some(e1), Some(e2), Some(e3)) =>
+        val fpNew = CountingOp(fp.xs, fp.ys, e1)
+        val fNew = CountingOp(f.xs, f.ys, e2)
+        val gNew = CountingOp(g.xs, g.ys, e3)
+        Some(IndLbStmt(fpNew, fNew, gNew, skolemsP))
+      case _ => None
+    }
+  }
+}
 case class CountingProof(id : l.Identifier, decls : List[l.Decl], stmts : List[Statement]) extends l.ASTNode {
   override def toString = {
     "module " + id.toString() + " {\n" +
@@ -225,14 +275,27 @@ object UMCExpressions {
     l.OperatorApplication(l.ConjunctionOp(), List(e1, e2))
   }
 
+  def andL(es : Seq[l.Expr]) = {
+    assert (es.size >= 1)
+    es.foldLeft(l.BoolLit(true).asInstanceOf[l.Expr])((acc, e) => and(acc, e)) 
+  }
+
   def or(e1 : l.Expr, e2 : l.Expr) = {
     l.OperatorApplication(l.DisjunctionOp(), List(e1, e2))
+  }
+  
+  def orL(es : Seq[l.Expr]) = {
+    assert (es.size >= 1)
+    es.foldLeft(l.BoolLit(false).asInstanceOf[l.Expr])((acc, e) => or(acc, e)) 
   }
 
   def iff(e1 : l.Expr, e2 : l.Expr) = {
     l.OperatorApplication(l.IffOp(), List(e1, e2))
   }
   
+  def implies(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.ImplicationOp(), List(e1, e2))
+  }
   def not(e : l.Expr) = {
     l.OperatorApplication(l.NegationOp(), List(e))
   }
@@ -247,6 +310,10 @@ object UMCExpressions {
   
   def minus(e1 : l.Expr, e2 : l.Expr) = {
     l.OperatorApplication(l.SubOp(), List(e1, e2))
+  }
+  
+  def mul(e1 : l.Expr, e2 : l.Expr) = {
+    l.OperatorApplication(l.MulOp(), List(e1, e2))
   }
   
   def le(e1 : l.Expr, e2 : l.Expr) = {
@@ -278,12 +345,16 @@ object UMCExpressions {
     ite(lt(e1, e2), e2, e1)
   }
   
-  def distinct(es : List[l.Expr]) = {
+  def distinct(es : l.Expr*) = {
     if (es.size <= 1) {
       l.BoolLit(true)
     } else {
-      l.OperatorApplication(l.DistinctOp(), es)
+      l.OperatorApplication(l.DistinctOp(), es.toList)
     }
+  }
+  
+  def apply(id : l.Identifier, args : List[l.Expr]) = {
+    l.FuncApplication(id, args)
   }
 
   def _findSubExpressions(e : l.Expr, fn : l.Expr => Boolean) : Set[l.Expr] = 
@@ -300,7 +371,15 @@ object UMCExpressions {
         case l.ConstArray(e, t) => _findSubExpressions(e, fn)
         case l.Tuple(es) => es.foldLeft(Set.empty[l.Expr])((acc, e) => _findSubExpressions(e, fn) ++ acc)
         case l.OperatorApplication(op, args) =>
-          args.foldLeft(Set.empty[l.Expr])((acc, e) => _findSubExpressions(e, fn) ++ acc)
+          val opExprs = op match {
+            case l.ArraySelect(inds) =>
+              inds.foldLeft(Set.empty[l.Expr])((acc, e) => _findSubExpressions(e, fn) ++ acc)
+            case l.ArrayUpdate(inds, value) =>
+              inds.foldLeft(_findSubExpressions(value, fn))((acc, e) => _findSubExpressions(e, fn) ++ acc)
+            case _ =>
+              Set.empty[l.Expr]
+          }
+          args.foldLeft(opExprs)((acc, e) => _findSubExpressions(e, fn) ++ acc)
         case l.Lambda(ids, e) => _findSubExpressions(e, fn)
         case l.FuncApplication(e1, e2) => e2.foldLeft(_findSubExpressions(e1, fn))((acc, e) => acc ++ _findSubExpressions(e, fn))
         case CountingOp(xs, ys, e) => _findSubExpressions(e, fn)
@@ -309,9 +388,52 @@ object UMCExpressions {
       else { subExprs }
     }
   )
+  
+  def findSupport(es : Seq[l.Expr]) : Set[l.Identifier] = {
+    es.foldLeft(Set.empty[l.Identifier])((acc, e) => acc ++ findSupport(e))
+  }
+  val findSupport : Memo[l.Expr, Set[l.Identifier]] = new Memo[l.Expr, Set[l.Identifier]](
+    e => {
+      e match {
+        case _ : l.Literal | _ : l.Identifier =>
+          Set.empty
+        case l.ConstArray(e, t) =>
+          findSupport(e)
+        case l.Tuple(es) =>
+          findSupport(es)
+        case l.OperatorApplication(op, args) =>
+          val subSupport = findSupport(args)
+          op match {
+            case qOp : l.QuantifiedBooleanOperator =>
+              subSupport -- qOp.variables.map(_._1).toSet
+            case l.ArraySelect(inds) =>
+              findSupport(inds)
+            case l.ArrayUpdate(inds, value) =>
+              findSupport(inds) ++ findSupport(value) ++ subSupport
+            case _ =>
+              subSupport
+          }
+        case l.Lambda(ids, exp) =>
+          val subSupport = findSupport(exp)
+          subSupport -- ids.map(_._1).toSet
+        case CountingOp(xs, ys, e) =>
+          // FIXME: this is a major hack.
+          // Introducing this because we *want* the variables in a CountingOp
+          // to be "captured" by outer quantifiers.
+          // Need to revist and fix this.
+          Set.empty
+        case _ : l.ExternalIdentifier =>
+          throw new Utils.AssertionError("Eliminate external identifiers before calling findSupport.")
+        case l.FuncApplication(e1, e2s) =>
+          throw new Utils.AssertionError("Eliminate function applications before calling findSupport.")
+      }
+    }
+  )
 }
 
-class ExprRewriter(rwMap : Map[l.Expr, l.Expr]) {
+class ExprRewriter(val rwMap : Map[l.Expr, l.Expr]) {
+  val supports = rwMap.map(p => p._1 -> UMCExpressions.findSupport(p._1)).toMap
+
   val rewrite : Memo[l.Expr, l.Expr] = new Memo[l.Expr, l.Expr](
     exp => {
       val expP : l.Expr = exp match {
@@ -324,10 +446,43 @@ class ExprRewriter(rwMap : Map[l.Expr, l.Expr]) {
           val esP = es.map(e => rewrite(e))
           l.Tuple(esP)
         case l.OperatorApplication(op, args) =>
-          val argsP = args.map(arg => rewrite(arg))
-          l.OperatorApplication(op, argsP)
+          op match {
+            case qOp : l.QuantifiedBooleanOperator =>
+              val mapP = rwMap.filter(p => !qOp.variables.exists(v => supports(p._1).contains(v._1)))
+              if (mapP != rwMap) {
+                // have to eliminate the bound variables.
+                val rewriter = new ExprRewriter(mapP)
+                val argsP = args.map(arg => rewriter.rewrite(arg))
+                l.OperatorApplication(op, argsP)
+              } else {
+                // do the usual
+                val argsP = args.map(arg => rewrite(arg))
+                l.OperatorApplication(op, argsP)
+              }
+            case l.ArraySelect(inds) =>
+              val indsP = inds.map(ind => rewrite(ind))
+              val argsP = args.map(arg => rewrite(arg))
+              l.OperatorApplication(l.ArraySelect(indsP), argsP)
+            case l.ArrayUpdate(inds, e) =>
+              val indsP = inds.map(ind => rewrite(ind))
+              val eP = rewrite(e)
+              val argsP = args.map(arg => rewrite(arg))
+              l.OperatorApplication(l.ArrayUpdate(indsP, eP), argsP)
+            case _ =>
+              // do the usual.
+              val argsP = args.map(arg => rewrite(arg))
+              l.OperatorApplication(op, argsP)
+          }
         case l.Lambda(ids, exp) =>
-          val expP = rewrite(exp)
+          val mapP = rwMap.filter(p => !ids.exists(v => supports(p._1).contains(v._1)))
+          val expP = if (mapP != rwMap) {
+            // have to eliminate the bound variables.
+            val rewriter = new ExprRewriter(mapP)
+            rewriter.rewrite(exp)
+          } else {
+            // do the usual.
+            rewrite(exp)
+          }
           l.Lambda(ids, exp)
         case l.FuncApplication(e1, e2s) =>
           val e1p = rewrite(e1)

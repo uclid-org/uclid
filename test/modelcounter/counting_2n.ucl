@@ -1,33 +1,34 @@
 module main {
 
+  // U is the function V_f in the paper.
   define U(arr : [integer]boolean, n : integer) : boolean =
-        (forall (i : integer) :: (i < 0 || i >= n) ==> !arr[i]);
+        (n > 0) && (forall (i : integer) :: (i < 0 || i >= n) ==> !arr[i]);
+  // V is the function V in the paper.
   define V(arr : [integer]boolean, n : integer) : boolean =
-        (forall (i : integer) :: (i < 0 || i >= n) ==> !arr[i]) &&
-        (exists (i : integer) :: 0 <= i < n && arr[i]);
+        (n > 0) && (forall (i : integer) :: (i < 0 || i >= n) ==> !arr[i]) &&
+                   (exists (i : integer) :: 0 <= i < n && arr[i]);
+  // W is the function V_1 in the paper.
   define W(arr : [integer]boolean, n : integer) : boolean =
-        (forall (i : integer) :: !arr[i]);
-  define X(i : integer) : boolean =
-        (0 <= i < 2);
+        (n > 0) && (forall (i : integer) :: !arr[i]);
+  define X(b : boolean) : boolean = true;
 
   proof {
+    // The satisfying assignments to U are the disjoint union of the satisfying
+    // assignments to V and W.
     assert disjoint: #[(arr: [integer]boolean) for (n : integer)] :: (U(arr, n)) ==
                      #[(arr: [integer]boolean) for (n : integer)] :: (V(arr, n)) +
                      #[(arr: [integer]boolean) for (n : integer)] :: (W(arr, n));
-    // #arr: W(arr, n) == 1
-    assert constLB:  #[(arr: [integer]boolean) for (n : integer)] :: (W(arr, n)) >= 1;
-    assert constUB:  #[(arr: [integer]boolean) for (n : integer)] :: (W(arr, n)) <  2;
+    // prove #arr: W(arr, n) == 1
+    assert constEq:  #[(arr: [integer]boolean) for (n : integer)] :: (W(arr, n)) == 1;
     assert forall (n : integer) :: (#[(arr: [integer]boolean) for (n : integer)] :: (W(arr, n))) == 1;
-    // prove #i: X(i) == 2
-    assert constLB:  #[(i : integer) for (n : integer)] :: (X(i)) >= 2;
-    assert constUB:  #[(i : integer) for (n : integer)] :: (X(i)) <  3;
-    assert forall (i : integer, n : integer) :: (#[(i : integer) for (n : integer)] :: (X(i))) == 2;
-    /*
+    // prove #i: X(b) == 2
+    assert constEq:  #[(b : boolean) for (n : integer)] :: (X(b)) == 2;
+    assert forall (n : integer) :: (#[(b : boolean) for (n : integer)] :: (X(b))) == 2;
+    // prove the inductive step in the count. 
     assert indLB: #[(arr: [integer]boolean) for (n : integer)] :: (U(arr, n+1)) >=
                   #[(arr: [integer]boolean) for (n : integer)] :: (U(arr, n))   *
-                  #[(i : integer) for (n : integer)] :: (0 <= i < 2)
-                  using arr[n -> i];
-    */
+                  #[(b : boolean) for (n : integer)] :: (X(b))
+                  skolems (arr[n -> b]);
   }
 }
 
