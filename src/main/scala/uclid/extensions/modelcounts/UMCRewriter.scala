@@ -177,7 +177,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val trueLit = l.BoolLit(true).asInstanceOf[l.Expr]
     val conjunction = exprs.foldLeft(trueLit)((acc, e) => E.and(acc, e))
     val falseLit = l.BoolLit(false).asInstanceOf[l.Expr]
-    val distincts = E.distinct(rwMaps.map(m => l.Tuple(m.map(p => p._2).toList)).toList)
+    val distincts = E.distinct(rwMaps.map(m => l.Tuple(m.map(p => p._2).toList)).toList : _*)
     val query = E.and(conjunction, distincts)
     val assertStmt = l.AssertStmt(query, None, decorators)
     BlockStmt(blkDecls, List(assertStmt))
@@ -198,8 +198,65 @@ class UMCRewriter(cntProof : CountingProof) {
     List(blkStmt, assumeStmt)
   }
 
+  def rewriteIndLb(ufMap : UFMap, indlb : IndLbStmt) : List[l.Statement] = {
+    // First we want f(x, n) && g(y, n) ==> f(skolem(x, y), n + 1)
+    val f = indlb.f
+    val g = indlb.g
+    val f_xn = f.e
+    val g_yn = g.e
+    val ante = E.and(f_xn, g_yn)
+    val nplus1 = E.plus(indlb.n, l.IntLit(1))
+    val skSubs = (f.xs.map(_._1.asInstanceOf[l.Expr]) zip indlb.skolems).toMap +
+                 (indlb.n.asInstanceOf[l.Expr] -> nplus1)
+    val conseq = new ExprRewriter(skSubs).rewrite(f_xn)
+    val impl = E.implies(ante, conseq)
+    val qVars = f.xs ++ g.xs ++ f.ys
+    val qOp = E.forall(qVars, impl)
+    val liftAssertStmt = l.AssertStmt(qOp, None, List.empty)
+    
+    // Now we want to show injectivity of the skolem:
+    // f(x1, n) && g(y1, n) && f(x2, n) && g(y2, n) && (x1 != x2 || y1 != y2) 
+    //   ==> skolem(x1, y1, n) != skolem(x2, y2, n) 
+    val x1s = f.xs.map(p => generateId(p._1.toString()))
+    val x2s = f.xs.map(p => generateId(p._1.toString()))
+    val y1s = g.xs.map(p => generateId(p._1.toString()))
+    val y2s = g.xs.map(p => generateId(p._1.toString()))
+    val rwx1 = new ExprRewriter((f.xs zip x1s).map(p => (p._1._1.asInstanceOf[l.Expr] -> p._2.asInstanceOf[l.Expr])).toMap)
+    val rwy1 = new ExprRewriter((g.xs zip y1s).map(p => (p._1._1.asInstanceOf[l.Expr] -> p._2.asInstanceOf[l.Expr])).toMap)
+    val rwx2 = new ExprRewriter((f.xs zip x2s).map(p => (p._1._1.asInstanceOf[l.Expr] -> p._2.asInstanceOf[l.Expr])).toMap)
+    val rwy2 = new ExprRewriter((g.xs zip y2s).map(p => (p._1._1.asInstanceOf[l.Expr] -> p._2.asInstanceOf[l.Expr])).toMap)
+    val rwxy1 = new ExprRewriter(rwx1.rwMap ++ rwy1.rwMap)
+    val rwxy2 = new ExprRewriter(rwx2.rwMap ++ rwy2.rwMap)
+    val f_x1n = rwx1.rewrite(f.e)
+    val g_y1n = rwy1.rewrite(g.e)
+    val f_x2n = rwx2.rewrite(f.e)
+    val g_y2n = rwy2.rewrite(g.e)
+    val xdiff = E.orL((x1s zip x2s).map(p => E.distinct(p._1, p._2)))
+    val ydiff = E.orL((y1s zip y2s).map(p => E.distinct(p._1, p._2)))
+    val sk1s = indlb.skolems.map(sk => rwxy1.rewrite(sk))
+    val sk2s = indlb.skolems.map(sk => rwxy2.rewrite(sk))
+    val ante2 = E.andL(List(f_x1n, f_x2n, g_y1n, g_y2n, E.or(xdiff, ydiff)))
+    val skdiff = E.orL((sk1s zip sk2s).map(p => E.distinct(p._1, p._2)))
+    val impl2 = E.implies(ante2, skdiff)
+    val vars = (f.xs zip x1s).map(p => (p._2, p._1._2)) ++
+               (f.xs zip x2s).map(p => (p._2, p._1._2)) ++
+               (g.xs zip y1s).map(p => (p._2, p._1._2)) ++
+               (g.xs zip y2s).map(p => (p._2, p._1._2)) ++ f.ys
+    val injAssertStmt = l.AssertStmt(E.forall(vars, impl2), None, List.empty)
+    
+    // Finally, we have to produce the assumption.
+    val ufn = _apply(ufMap(f))
+    val ugn = _apply(ufMap(g))
+    val ufnplus1 = E.apply(ufMap(f).id, List(nplus1))
+    val assumpQVars = f.xs ++ g.xs ++ f.ys
+    val geqExpr = E.ge(ufnplus1, E.mul(ufn, ugn))
+    val assumpStmt = l.AssumeStmt(E.forall(assumpQVars, geqExpr), None)
+    
+    List(liftAssertStmt, injAssertStmt, assumpStmt)
+  }
+
   def rewriteAssert(ufmap : UFMap, st : Statement) : List[l.Statement] = {
-    st match {
+    val newStmts : List[l.Statement] = st match {
       case a : AssertStmt =>
         rewriteAssert(ufmap, a)
       case d : DisjointStmt =>
@@ -210,9 +267,15 @@ class UMCRewriter(cntProof : CountingProof) {
         rewriteConstLb(ufmap, lb)
       case ub : ConstUbStmt =>
         rewriteConstUb(ufmap, ub)
+      case eq : ConstEqStmt =>
+        rewriteConstLb(ufmap, ConstLbStmt(eq.e, eq.v)) ++
+        rewriteConstUb(ufmap, ConstUbStmt(eq.e, l.IntLit(eq.v.value + 1)))
+      case indLb : IndLbStmt =>
+        rewriteIndLb(ufmap, indLb)
       case _ =>
         throw new AssertionError("Unknown proof statement: " + st.toString())
     }
+    l.ASTNode.introducePos(true, true, newStmts, st.position)
   }
 
   lazy val controlBlock : List[l.GenericProofCommand] = List(
