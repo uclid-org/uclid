@@ -73,9 +73,9 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
                Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
                Scope.FunctionArg(_, _)    | Scope.Define(_, _, _) |
-               Scope.ConstantLit(_, _)    =>
+               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) =>
              true
-          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _)             |
+          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _, _)             |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
                Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |

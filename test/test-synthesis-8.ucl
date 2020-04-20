@@ -1,0 +1,24 @@
+module main
+{
+  input a, b : integer;
+  var c : integer;
+
+  synthesis function max2 (x : integer, y : integer) : integer;
+
+  init {
+    c = max2(a, b);
+  }
+  
+  next {
+    c' = max2(a, b);
+  }
+  
+  property bigger_than_a : (c >= a);
+  property bigger_than_b : (c >= b);
+  
+  control {
+    unroll(5);
+    check;
+    print_results;
+  }
+}

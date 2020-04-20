@@ -47,7 +47,6 @@ import scala.collection.immutable._
 import lang.{Identifier, Module,  _}
 import uclid.Utils.ParserErrorList
 import com.typesafe.scalalogging.Logger
-import uclid.smt.SyGuSInterface
 
 /** This is the main class for Uclid.
  *
@@ -72,10 +71,8 @@ object UclidMain {
       mainModuleName : String = "main",
       smtSolver: List[String] = List.empty,
       synthesizer: List[String] = List.empty,
-      synthesisRunDir: String = "",
       smtFileGeneration: String = "",
       sygusFormat: Boolean = false,
-      sygusTypeConvert: Boolean = false,
       enumToNumeric: Boolean = false,
       printStackTrace: Boolean = false,
       verbose : Int = 0,
@@ -99,10 +96,6 @@ object UclidMain {
         (exec, c) => c.copy(synthesizer = exec.split(" ").toList)
       }.text("Command line to invoke SyGuS synthesizer.")
 
-      opt[String]('Y', "synthesizer-run-directory").valueName("<Dir>").action{
-        (dir, c) => c.copy(synthesisRunDir = dir)
-      }.text("Run directory for synthesizer.")
-
       opt[String]('g', "smt-file-generation").action{
         (prefix, c) => c.copy(smtFileGeneration = prefix)
       }.text("File prefix to generate smt files for each assertion.")
@@ -115,13 +108,13 @@ object UclidMain {
         (_, c) => c.copy(sygusFormat = true)
       }.text("Generate the standard SyGuS format.")
 
-      opt[Unit]('c', "sygus-type-convert").action{
-        (_, c) => c.copy(sygusTypeConvert = true)
-      }.text("Enable EnumType conversion in synthesis.")
-
       opt[Unit]('e', "enum-to-numeric").action{
         (_, c) => c.copy(enumToNumeric = true)
       }.text("Enable conversion from EnumType to NumericType.")
+
+      opt[Unit]('u', "uf-to-array").action{
+        (_, c) => c.copy(ufToArray = true)
+      }.text("Enable conversion from Uninterpreted Functions to Arrays.")
 
       opt[Unit]('t', "test-fixedpoint").action {
         (_, c) => c.copy(testFixedpoint = true)
@@ -331,15 +324,13 @@ object UclidMain {
     var solverInterface = if (config.smtSolver.size > 0) {
       logger.debug("args: {}", config.smtSolver)
       new smt.SMTLIB2Interface(config.smtSolver)
+    } else if (config.synthesizer.size > 0) {
+      new smt.SynthLibInterface(config.synthesizer, config.sygusFormat)
     } else {
       new smt.Z3Interface()
     }
-    val sygusInterface : Option[smt.SynthesisContext] = config.synthesizer match {
-      case Nil => None
-      case lst => Some(new smt.SyGuSInterface(lst, config.synthesisRunDir))
-    }
     solverInterface.filePrefix = config.smtFileGeneration
-    val result = symbolicSimulator.execute(solverInterface, sygusInterface, config)
+    val result = symbolicSimulator.execute(solverInterface, config)
     solverInterface.finish()
     return result
   }

@@ -59,7 +59,8 @@ object Scope {
   case class ConstantLit(cId : Identifier, lit : NumericLit) extends ReadOnlyNamedExpression(cId, lit.typeOf)
   case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
-  case class Grammar(gId : Identifier, gTyp : Type) extends ReadOnlyNamedExpression(gId, gTyp)
+  case class Grammar(gId : Identifier, gTyp : Type, nts : List[NonTerminal]) extends ReadOnlyNamedExpression(gId, gTyp)
+  case class SynthesisFunction(fId : Identifier, fTyp: FunctionSig, gId: Option[Identifier], gargs: List[Identifier], conds : List[Expr]) extends ReadOnlyNamedExpression(fId, fTyp.typ)
   case class Define(dId : Identifier, dTyp : Type, defDecl: DefineDecl) extends ReadOnlyNamedExpression(dId, dTyp)
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
@@ -260,9 +261,9 @@ case class Scope (
         case SharedVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.SharedVar(id, typ)))
         case ConstantLitDecl(id, lit) => Scope.addToMap(mapAcc, Scope.ConstantLit(id, lit))
         case ConstantsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.ConstantVar(id, typ)))
-        case GrammarDecl(id, sig, _) => Scope.addToMap(mapAcc, Scope.Grammar(id, sig.typ))
+        case GrammarDecl(id, sig, nts) => Scope.addToMap(mapAcc, Scope.Grammar(id, sig.typ, nts))
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
-        case SynthesisFunctionDecl(id, sig, _, _, _) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ)) // FIXME
+        case SynthesisFunctionDecl(id, sig, gid, gargs, conds) => Scope.addToMap(mapAcc, Scope.SynthesisFunction(id, sig, gid, gargs, conds))
         case DefineDecl(id, sig, expr) => Scope.addToMap(mapAcc, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr)))
         case SpecDecl(id, expr, params) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr, params))
         case AxiomDecl(sId, expr, params) => sId match {

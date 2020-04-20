@@ -3,6 +3,7 @@
 
 module main
 {
+  synthesis function h(x : integer, y : integer) : boolean;
   var x, y : integer;
   
   init {
@@ -15,13 +16,10 @@ module main
     y' = x + y;
   }
   
-  invariant always_positive: (y >= 0);
+  invariant always_positive: (y >= 0) && h(x, y);
   
   control {
-    // print_module;
-    synthesize_invariant[LIA];
-    //induction;
-    //check;
-    //print_results;
+    induction;
+    check;
   }
 }

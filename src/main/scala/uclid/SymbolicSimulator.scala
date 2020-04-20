@@ -48,6 +48,8 @@ import com.typesafe.scalalogging.Logger
 import uclid.smt.{Z3HornSolver, Z3Interface}
 
 import scala.collection.mutable.{Map => MutableMap}
+import org.scalactic.source.Position
+import scala.util.parsing.input.NoPosition
 
 object UniqueIdGenerator {
   var i : Int = 0;
@@ -111,7 +113,12 @@ class SymbolicSimulator (module : Module) {
   def newConstantSymbol(name: String, t: smt.Type) = {
     new smt.Symbol("const_" + name, t)
   }
-
+  def newSynthSymbol(name: String, t: FunctionSig, gid : Option[Identifier], gargs: List[Identifier], conds : List[Expr]) = {
+    new smt.SynthSymbol("synth_" + name, t, gid, gargs, conds)
+  }
+  def newGrammarSymbol(name: String, t: smt.Type, nts: List[NonTerminal]) = {
+    new smt.GrammarSymbol("grammar_" + name, t, nts)
+  }
   def newTaintSymbol(name: String, t: smt.Type) = {
     new smt.Symbol("taint_" + UniqueIdGenerator.unique() + "_" + name, t)
   }
@@ -146,7 +153,7 @@ class SymbolicSimulator (module : Module) {
       }
     }
   }
-  def execute(solver : smt.Context, synthesizer : Option[smt.SynthesisContext], config : UclidMain.Config) : List[CheckResult] = {
+  def execute(solver : smt.Context, config : UclidMain.Config) : List[CheckResult] = {
     proofResults = List.empty
     def noLTLFilter(name : Identifier, decorators : List[ExprDecorator], properties: List[Identifier]) : Boolean = {
       !ExprDecorator.isLTLProperty(decorators) &&
@@ -280,29 +287,18 @@ class SymbolicSimulator (module : Module) {
               case None => proofResults = assertionTree.verify(solver)
               case Some(lz) => proofResults = lz.assertionTree.verify(solver)
             }
-          }
-          case "synthesize_invariant" =>
-            val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            synthesizer match {
-              case None =>
-                UclidMain.println("Error: Can't execute synthesize_invariant as synthesizer was not provided. ")
-              case Some(synth) => {
-                //TODO: Note that cmd.params(0).name.toString is used b/c of temporary fix to parser
-                synthesizeInvariants(context, createNoLTLFilter(properties), synth, cmd.params(0).name.toString, config.sygusTypeConvert) match {
-                  // Failed to synthesize invariant
-                  case None => UclidMain.println("Failed to synthesize invariant.")
-                  // Successfully synthesized an invariant
-                  case Some(invFunc) => {
-                    // Add synthesized function to list
-                    synthesizedInvariants += invFunc
-                    UclidMain.println("====== Successfully synthesized an invariant ======")
-                    UclidMain.println(invFunc.toString())
-                    UclidMain.println("===================================================")
-                  }
-                }
+            if (solver.filePrefix != "") {
+              val smtOutput = solver.toString()
+              val pref = solver.filePrefix
+              if (config.smtSolver.size > 0) {
+                Utils.writeToFile(f"$pref.smt2", smtOutput)
+              } else if (config.synthesizer.size > 0) {
+                Utils.writeToFile(f"$pref.sl", smtOutput)
               }
+            } else if (config.synthesizer.size > 0) {
+              proofResults = List(CheckResult(AssertInfo("Synth", "All", ArrayBuffer(frameList), context, 1, smt.BooleanLit(true), smt.BooleanLit(true), List.empty, ASTPosition(module.filename, NoPosition)), solver.checkSynth()))
             }
-            
+          } 
           case "print" =>
             UclidMain.println(cmd.args(0)._1.asInstanceOf[StringLit].value)
           case "print_results" =>
@@ -340,11 +336,13 @@ class SymbolicSimulator (module : Module) {
         decl._2 match {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.SynthesisFunction(id, typ, gid, gargs, conds) => mapAcc + (id -> newSynthSymbol(id.name, typ, gid, gargs, conds))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> newGrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts))
           case _ => mapAcc
         }
       }
@@ -942,6 +940,7 @@ class SymbolicSimulator (module : Module) {
   def getHyperSelects(e: smt.Expr): List[smt.OperatorApplication]  = {
     e match {
       case smt.Symbol(id, symbolTyp) => List()
+      case smt.SynthSymbol(id, symbolTyp, _, _, _) => List()
       case smt.IntLit(n) => List()
       case smt.BooleanLit(b) => List()
       case smt.BitVectorLit(bv, w) => List()
@@ -986,6 +985,8 @@ class SymbolicSimulator (module : Module) {
     e match {
       case smt.Symbol(id, symbolTyp) =>
         if (id.startsWith("havoc_")) List(e.asInstanceOf[smt.Symbol]) else List()
+      case smt.SynthSymbol(id, symbolTyp, _, _, _) =>
+        List()
 
       case smt.IntLit(n) => List()
       case smt.BooleanLit(b) => List()
@@ -1007,7 +1008,8 @@ class SymbolicSimulator (module : Module) {
           case smt.Symbol(id, symbolTyp) =>
             if (id.startsWith("havoc_")) List(e.asInstanceOf[smt.Symbol]) else List()
           //UclidMain.println("Function application of f == " + f.toString)
-
+          case smt.SynthSymbol(id, symbolTyp, _, _, _) =>
+            List()
           case _ =>
             throw new Utils.RuntimeError("Should never get here.")
         }
@@ -1069,6 +1071,10 @@ class SymbolicSimulator (module : Module) {
         if (sym._1 == e) sym._2
         else e
       }
+      case smt.SynthSymbol(id, symbolTyp, _, _, _) => {
+        if (sym._1 == e) sym._2
+        else e
+      }
       case smt.IntLit(n) => e
       case smt.BooleanLit(b) => e
       case smt.BitVectorLit(bv, w) => e
@@ -1094,6 +1100,8 @@ class SymbolicSimulator (module : Module) {
       case smt.FunctionApplication(f, args) =>
         val f1 = f match {
           case smt.Symbol(id, symbolTyp) =>
+            if (sym._1 == f) sym._2 else f
+          case smt.SynthSymbol(id, symbolTyp, _, _, _) =>
             if (sym._1 == f) sym._2 else f
           case _ =>
             throw new Utils.RuntimeError("Should never get here.")
@@ -1432,9 +1440,9 @@ class SymbolicSimulator (module : Module) {
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
                Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
-               Scope.ConstantLit(_, _)    =>
+               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) =>
              true
-          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _)             |
+          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _, _)             |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
                Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
@@ -1536,11 +1544,13 @@ class SymbolicSimulator (module : Module) {
         decl._2 match {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.SynthesisFunction(id, typ, gid, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gid, gargs, conds))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts))
           case _ => mapAcc
         }
       }
@@ -1552,11 +1562,13 @@ class SymbolicSimulator (module : Module) {
         decl._2 match {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.SynthesisFunction(id, typ, gid, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gid, gargs, conds))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts))
           case _ => mapAcc
         }
       }
@@ -1567,12 +1579,14 @@ class SymbolicSimulator (module : Module) {
       (mapAcc, decl) => {
         decl._2 match {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
+          case Scope.SynthesisFunction(id, typ, gid, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gid, gargs, conds))
           case Scope.Function(id, typ) => mapAcc // functions should never be primed
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!", smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!", smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!", smt.Converter.typeToSMT(typ)))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts))
           case _ => mapAcc
         }
       }
@@ -1604,117 +1618,6 @@ class SymbolicSimulator (module : Module) {
     }.toList ++ assumptions.toList).filter(p => p != smt.BooleanLit(true))
     // Return a conjunction of these expressions.
     smt.Operator.conjunction(symbolicExpressions)
-  }
-
-  def synthesizeInvariants(ctx : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean), synthesizer : smt.SynthesisContext, logic : String, sygusTypeConvert : Boolean) : Option[lang.Expr] = {
-    resetState()
-
-    val passManager = new PassManager("sygusTypeConverter")
-    // Convert enum type
-    if (sygusTypeConvert) {
-      passManager.addPass(new EnumTypeAnalysis())
-      passManager.addPass(new EnumTypeRenamer(logic))
-    }
-    // Synthesis module
-    val synthesisModule = passManager.run(module, Scope.empty).get
-    val synthesisCtx = Scope.empty + synthesisModule
-
-    // assumptions.
-    var initAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
-    var nextAssumptions : ArrayBuffer[smt.Expr] = new ArrayBuffer[smt.Expr]()
-    def initAddAssumption(e : smt.Expr, params : List[ExprDecorator]) : Unit = { initAssumptions += e }
-    def nextAddAssumption(e : smt.Expr, params : List[ExprDecorator]) : Unit = { nextAssumptions += e }
-    // assertions.
-    var initAssertions : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
-    def initAddAssertion(e : AssertInfo) : Unit = { initAssertions += e }
-    var nextAssertions : ArrayBuffer[AssertInfo] = new ArrayBuffer[AssertInfo]()
-    def nextAddAssertion(e : AssertInfo) : Unit = { nextAssertions += e }
-    // axioms
-    var axioms : ListBuffer[smt.Expr] = new ListBuffer[smt.Expr]()
-
-    val defaultSymbolTable = getDefaultSymbolTable(synthesisCtx)
-    val primeSymbolTable = getPrimeSymbolTable(synthesisCtx)
-    // FIXME: Need to account for assumptions and assertions.
-    val initFrameTbl : FrameTable = ArrayBuffer.empty
-    val initState = simulateStmt(0, List.empty, synthesisModule.init.get.body, defaultSymbolTable, initFrameTbl, synthesisCtx, "synthesize", initAddAssumption _, initAddAssertion _)
-    val nextFrameTbl : FrameTable = ArrayBuffer(initState)
-    val nextState = simulateStmt(0, List.empty, synthesisModule.next.get.body, defaultSymbolTable, nextFrameTbl, synthesisCtx, "synthesize", nextAddAssumption _, nextAddAssertion _)
-    val assertions = nextAssertions.map {
-      assert => {
-        if (assert.pathCond == smt.BooleanLit(true)) {
-          assert.expr
-        } else {
-          smt.OperatorApplication(smt.ImplicationOp, List(assert.pathCond, assert.expr))
-        }
-      }
-    }.toList
-    val invariants = synthesisCtx.specs.map(specVar => {
-      val prop = synthesisModule.properties.find(p => p.id == specVar.varId).get
-      if (filter(prop.id, prop.params)) {
-        Some(evaluate(prop.expr, defaultSymbolTable, ArrayBuffer.empty, 0, synthesisCtx))
-      } else {
-        None
-      }
-    }).flatten.toList
-
-    // add all axioms in procedure scope, independent of state variable references
-    module.axioms.foreach { 
-      p => axioms += evaluate(p.expr, defaultSymbolTable, ArrayBuffer.empty, 0, synthesisCtx)
-      assertLog.debug("non-axiomVar: {}", p.toString())
-    }
-
-    // Compute init expression from the result of symbolic simulation.
-    val initExprs = (initState.map {
-      p => {
-        val lhs = defaultSymbolTable.get(p._1).get
-        val rhs = p._2
-        if (lhs == rhs) { smt.BooleanLit(true) }
-        else { 
-          //println("Printing init state construction")
-          //println(p._2.toString.contains("havoc"))
-          //TODO: Tmp fix for havoc statements (just don't include them)
-          //if (p._2.toString.contains("havoc")) {
-          //  smt.OperatorApplication(smt.EqualityOp, List(lhs, lhs))
-          //} else {
-            smt.OperatorApplication(smt.EqualityOp, List(lhs, rhs)) 
-          //}
-        }
-      }
-    }.toList ++ initAssumptions.toList).filter(p => p != smt.BooleanLit(true))
-    val initExpr : smt.Expr = initExprs.size match {
-      case 0 => smt.BooleanLit(true)
-      case 1 => initExprs(0)
-      case _ => smt.OperatorApplication(smt.ConjunctionOp, initExprs)
-    }
-    // Do the same for next expressions.
-    val nextExprs = (nextState.map {
-      p => {
-        // Some things, like functions, will not be in primeSymbolTable. That is fine.
-        if (primeSymbolTable.contains(p._1)) {
-          val lhs = primeSymbolTable.get(p._1).get
-          val rhs = p._2
-          if (lhs != rhs) {
-            smt.OperatorApplication(smt.EqualityOp, List(lhs, rhs))
-          }
-          else {
-            smt.BooleanLit(true)  
-          }
-        } else {
-          smt.BooleanLit(true)
-        }
-      }
-    }.toList ++ nextAssumptions.toList).filter(p => p != smt.BooleanLit(true))
-    val nextExpr : smt.Expr = nextExprs.size match {
-      case 0 => smt.BooleanLit(true)
-      case 1 => nextExprs(0)
-      case _ => smt.OperatorApplication(smt.ConjunctionOp, nextExprs)
-    }
-    val verificationConditions = assertions ++ invariants
-    Utils.assert(verificationConditions.size > 0, "Must have at least one assertion/invariant.")
-    Utils.assert(initAssertions.size == 0, "Must not have assertions in the init block for SyGuS.") 
-    val initHavocs = getHavocs(initExpr).map(p => (p.id, p.typ))
-    val nextHavocs = getHavocs(nextExpr).map(p => (p.id, p.typ))
-    return synthesizer.synthesizeInvariant(initExpr, initHavocs, nextExpr, nextHavocs, verificationConditions, axioms.toList, synthesisCtx, logic)
   }
 
   /** Add module specifications (properties) to the list of proof obligations */
@@ -1989,6 +1892,7 @@ class SymbolicSimulator (module : Module) {
        case smt.IntLit(n) => return e
        case smt.BooleanLit(b) => return e
        case smt.Symbol(id,typ) => return (if (id == s.id) arg else e)
+       case smt.SynthSymbol(id,typ, _, _, _) => return (if (id == s.id) arg else e)
        case _ => throw new Utils.UnimplementedException("Should not get here")
      }
   }

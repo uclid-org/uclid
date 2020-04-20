@@ -208,6 +208,7 @@ abstract trait Context {
   def assert(e: Expr)
   def preassert(e: Expr)
   def check() : SolverResult
+  def checkSynth() : SolverResult
   def finish()
 
   def addOption(option: String, value: Context.SolverOption)
@@ -263,7 +264,7 @@ object Context
       case Some(eP) => eP
       case None =>
         val eP = e match {
-          case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) | ConstArray(_, _) =>
+          case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) | ConstArray(_, _) | SynthSymbol (_, _, _, _, _) =>
             rewrite(e)
           case OperatorApplication(op, operands) =>
             val operandsP = operands.map(arg => rewriteExpr(arg, rewrite, memo))
@@ -325,7 +326,7 @@ object Context
       case None =>
         val eResult = apply(e)
         val results = e match {
-          case Symbol(_, _) | IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) =>
+          case Symbol(_, _) | IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) =>
             eResult
           case ConstArray(expr, typ) =>
             eResult ++ accumulateOverExpr(expr, apply, memo)
@@ -393,7 +394,7 @@ object Context
   }
   def foldOverExpr[T](init : T, f : ((T, Expr) => T), e : Expr) : T = {
     val subResult = e match {
-      case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | EnumLit(_, _) =>
+      case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) =>
         init
       case OperatorApplication(op, operands) =>
         foldOverExprs(init, f, operands)
@@ -408,8 +409,5 @@ object Context
   def foldOverExprs[T](init : T, f : ((T, Expr) => T), es : List[Expr]) : T = {
     es.foldLeft(init)((acc, e) => foldOverExpr(acc, f, e))
   }
-}
 
-abstract trait SynthesisContext {
-  def synthesizeInvariant(initExpr : Expr, initHavocs : List[(String, Type)], nextExpr: Expr, nextHavocs : List[(String, Type)], properties : List[smt.Expr], axioms : List[smt.Expr], ctx : lang.Scope, logic : String) : Option[langExpr]
 }

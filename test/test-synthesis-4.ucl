@@ -3,6 +3,7 @@
 
 module main
 {
+  synthesis function h(x : bv4, y : bv4) : boolean;
   var x, y: bv4;
   
   init {
@@ -20,14 +21,10 @@ module main
   // invariant synthesized_invariant : ((x == y) && (x == 0bv4));
 
   // Invariant to prove
-  invariant y_always_zero : (y == 0bv4);
+  invariant y_always_zero : (y == 0bv4) && h(x, y);
   
   control {
-    // v = induction;
-    // check;
-    // print_results;
-    // v.print_cex();
-    // print_module;
-    synthesize_invariant[BV];
+    v = induction;
+    check;
   }
 }

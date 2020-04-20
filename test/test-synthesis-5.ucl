@@ -1,5 +1,6 @@
 module main
 {
+  synthesis function h(x : integer, y : integer, z : integer) : boolean;
   var x, y, z : integer;
 
   init {
@@ -22,13 +23,10 @@ module main
   }
 
   property post_f : !(x >= 2 && (z < y));
+  invariant hole: h(x,y,z);
 
   control {
-    print_module;
-    synthesize_invariant[LIA];
-    // v = unroll(10);
-    // check;
-    // print_results;
-    // v.print_cex(x, y, z);
+    v = unroll(10);
+    check;
   }
 }

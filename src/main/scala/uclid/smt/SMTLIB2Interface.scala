@@ -200,6 +200,8 @@ trait SMTLIB2Base {
         val (exprStr, memoP, letify) : (String, ExprMap, Boolean) = Context.rewriteBVReplace(eIn) match {
           case Symbol(id,_) =>
             (id, memo, false)
+          case SynthSymbol(id,_, _, _, _) =>
+            (id, memo, false)
           case EnumLit(id, _) =>
             (id, memo, false)
           case ConstArray(expr, typ) =>
@@ -223,7 +225,8 @@ trait SMTLIB2Base {
             val (trValue, memoP3) = translateExpr(value, memoP2, shouldLetify)
             ("(store " + trArray.exprString() + " " + trIndex.exprString() + " " + trValue.exprString() +")", memoP3, true)
           case FunctionApplication(e, args) =>
-            Utils.assert(e.isInstanceOf[Symbol], "Beta substitution has not happened.")
+            smtlib2BaseLogger.info("-->> fapp <<--")
+            Utils.assert(e.isInstanceOf[Symbol] || e.isInstanceOf[SynthSymbol], "Beta substitution has not happened.")
             val (trFunc, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trArgs, memoP2) = translateExprs(args, memoP1, shouldLetify)
             if (args.length == 0) {
@@ -393,8 +396,8 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
           throw new Utils.AssertionError("Unexpected EOF result from SMT solver.")
       }
     } else {
-      val smtOutput = solverProcess.toString()
-      Utils.writeToFile(f"$filePrefix%s-$curAssertName%s-$curAssertLabel%s-$counten%04d.smt", smtOutput + "\n(get-info :all-statistics)\n")
+      // val smtOutput = solverProcess.toString()
+      // Utils.writeToFile(f"$filePrefix%s-$curAssertName%s-$curAssertLabel%s-$counten%04d.smt", smtOutput)
       counten += 1
       return SolverResult(None, None)
     }
@@ -469,8 +472,16 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     writeCommand("(pop 1)")
   }
 
+  override def checkSynth() : SolverResult = {
+    throw new Utils.UnimplementedException("Can't use an SMT solver for synthesis!")
+  }
+
   def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String = {
     throw new Utils.UnimplementedException("toSMT2 is not yet implemented.")
+  }
+
+  override def toString() : String = {
+    solverProcess.toString()
   }
 
   override def addOption(opt : String, value : Context.SolverOption) = {
