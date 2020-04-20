@@ -120,10 +120,6 @@ class UMCRewriter(cntProof : CountingProof) {
     }.flatten.toList
   }
 
-  def extractCountingArgs(e : CountingOp) = {
-    e.xs ++ e.ys
-  }
-
   def _apply(uf : l.FunctionDecl) = {
     l.FuncApplication(uf.id, uf.sig.args.map(_._1))
   }
@@ -139,7 +135,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val o1 = st.e1
     val o2 = st.e2
     val o3 = st.e3
-    val args = extractCountingArgs(o1)
+    val args = o1.xs ++ o1.ys
     val f1 = o1.e
     val f2 = o2.e
     val f3 = o3.e
@@ -149,23 +145,24 @@ class UMCRewriter(cntProof : CountingProof) {
     val ufn1 = _apply(ufMap(o1))
     val ufn2 = _apply(ufMap(o2))
     val ufn3 = _apply(ufMap(o3))
-    val assumeExpr = E.forall(args, E.eq(ufn1, E.plus(ufn2, ufn3)))
+    val assumeExpr = E.forall(st.e1.ys, E.eq(ufn1, E.plus(ufn2, ufn3)))
     val assumeStmt = l.AssumeStmt(assumeExpr, None)
     List(assertStmt, assumeStmt)
   }
   
   def rewriteRange(ufMap : UFMap, st : RangeStmt) : List[l.Statement] = {
-    val args = extractCountingArgs(st.op)
     val ufn = _apply(ufMap(st.op))
-    val assumeExpr = E.forall(args, E.eq(ufn, E.max(l.IntLit(0), E.minus(st.ub, st.lb))))
+    val assumeExpr = E.forall(st.op.ys, E.eq(ufn, E.max(l.IntLit(0), E.minus(st.ub, st.lb))))
     val assumeStmt = l.AssumeStmt(assumeExpr, None)
-    val assertExpr = E.forall(args, E.eq(ufn, st.cnt))
+    val assertExpr = E.forall(st.op.ys, E.eq(ufn, st.cnt))
     val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
     List(assumeStmt, assertStmt)
   }
   
-  def getCnstBoundStmt(ufMap : UFMap, e : CountingOp, cnt : Int, decorators : List[l.ExprDecorator]) = {
+  def getCnstBoundStmt(ufMap : UFMap, assump : l.Expr, e : CountingOp, cnt : Int, decorators : List[l.ExprDecorator]) = {
     val cntArgs = e.xs
+    val qVars = e.ys
+    val ante = assump
     val argVars = cntArgs.map(a => a._1)
     val argsListP = (1 to cnt).map(i => cntArgs.map(a => generateId(a._1.name)))
     val rwMaps = argsListP.map(argsP => (argVars.map(_.asInstanceOf[l.Expr]) zip argsP).toMap)
@@ -178,22 +175,22 @@ class UMCRewriter(cntProof : CountingProof) {
     val conjunction = exprs.foldLeft(trueLit)((acc, e) => E.and(acc, e))
     val falseLit = l.BoolLit(false).asInstanceOf[l.Expr]
     val distincts = E.distinct(rwMaps.map(m => l.Tuple(m.map(p => p._2).toList)).toList : _*)
-    val query = E.and(conjunction, distincts)
+    val query = E.forall(qVars, E.implies(ante, E.and(conjunction, distincts)))
     val assertStmt = l.AssertStmt(query, None, decorators)
     BlockStmt(blkDecls, List(assertStmt))
   }
   def rewriteConstLb(ufMap : UFMap, st : ConstLbStmt) : List[l.Statement] = {
-    val blkStmt = getCnstBoundStmt(ufMap, st.e, st.v.value.toInt, List(l.CoverDecorator, l.SATOnlyDecorator))
+    val blkStmt = getCnstBoundStmt(ufMap, st.assump, st.e, st.v.value.toInt, List(l.CoverDecorator, l.SATOnlyDecorator))
     val ufn = _apply(ufMap(st.e))
-    val assumeExpr = E.forall(extractCountingArgs(st.e), E.ge(ufn, st.v))
+    val assumeExpr = E.forall(st.e.ys, E.implies(st.assump, E.ge(ufn, st.v)))
     val assumeStmt = l.AssumeStmt(assumeExpr, None)
     List(blkStmt, assumeStmt)
   }
   
   def rewriteConstUb(ufMap : UFMap, st : ConstUbStmt) : List[l.Statement] = {
-    val blkStmt = getCnstBoundStmt(ufMap, st.e, st.v.value.toInt, List(l.CoverDecorator))
+    val blkStmt = getCnstBoundStmt(ufMap, st.assump, st.e, st.v.value.toInt, List(l.CoverDecorator))
     val ufn = _apply(ufMap(st.e))
-    val assumeExpr = E.forall(extractCountingArgs(st.e), E.lt(ufn, st.v))
+    val assumeExpr = E.forall(st.e.ys, E.implies(st.assump, E.lt(ufn, st.v)))
     val assumeStmt = l.AssumeStmt(assumeExpr, None)
     List(blkStmt, assumeStmt)
   }
@@ -248,11 +245,14 @@ class UMCRewriter(cntProof : CountingProof) {
     val ufn = _apply(ufMap(f))
     val ugn = _apply(ufMap(g))
     val ufnplus1 = E.apply(ufMap(f).id, List(nplus1))
-    val assumpQVars = f.xs ++ g.xs ++ f.ys
     val geqExpr = E.ge(ufnplus1, E.mul(ufn, ugn))
-    val assumpStmt = l.AssumeStmt(E.forall(assumpQVars, geqExpr), None)
+    val assumpStmt1 = l.AssumeStmt(E.forall(f.ys, geqExpr), None)
     
-    List(liftAssertStmt, injAssertStmt, assumpStmt)
+    val ufpn = _apply(ufMap(indlb.fp))
+    val eqExpr = E.eq(ufnplus1, ufpn)
+    val assumpStmt2 = l.AssumeStmt(E.forall(f.ys, eqExpr), None)
+    
+    List(liftAssertStmt, injAssertStmt, assumpStmt1, assumpStmt2)
   }
 
   def rewriteAssert(ufmap : UFMap, st : Statement) : List[l.Statement] = {
@@ -268,8 +268,8 @@ class UMCRewriter(cntProof : CountingProof) {
       case ub : ConstUbStmt =>
         rewriteConstUb(ufmap, ub)
       case eq : ConstEqStmt =>
-        rewriteConstLb(ufmap, ConstLbStmt(eq.e, eq.v)) ++
-        rewriteConstUb(ufmap, ConstUbStmt(eq.e, l.IntLit(eq.v.value + 1)))
+        rewriteConstLb(ufmap, ConstLbStmt(eq.e, eq.v, eq.assump)) ++
+        rewriteConstUb(ufmap, ConstUbStmt(eq.e, l.IntLit(eq.v.value + 1), eq.assump))
       case indLb : IndLbStmt =>
         rewriteIndLb(ufmap, indLb)
       case _ =>
