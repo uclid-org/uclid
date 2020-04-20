@@ -58,7 +58,7 @@ class UMCParser extends l.UclidParser {
   lexical.reserved += (KwProof, KwDisjoint, KwConstLB, KwConstUB, KwConstEq, KwIndLb, KwSkolems)
 
   lazy val UMCDecl: PackratParser[l.Decl] =
-    positioned (TypeDecl | DefineDecl)
+    positioned (TypeDecl | DefineDecl | FuncDecl | AxiomDecl)
 
   lazy val CountingOpPrefix : PackratParser[(List[(Identifier, Type)], List[(Identifier, Type)])] = 
     ("#[" ~> IdTypeList)  ~ (KwFor ~> IdTypeList) <~ "]" ~ "::" ^^ {
@@ -103,17 +103,32 @@ class UMCParser extends l.UclidParser {
     } |
     KwAssert ~ KwConstLB ~ ":" ~>  CountingExpr ~ (">=" ~> Integer) <~ ";" ^^ {
       case e ~ v => {
-        ConstLbStmt(e, v)
+        ConstLbStmt(e, v, l.BoolLit(true))
+      }
+    } |
+    KwAssert ~ KwConstLB ~ ":" ~>  (Expr <~ "==>") ~ CountingExpr ~ (">=" ~> Integer) <~ ";" ^^ {
+      case assump ~ e ~ v => {
+        ConstLbStmt(e, v, assump)
       }
     } |
     KwAssert ~ KwConstUB ~ ":" ~>  CountingExpr ~ ("<" ~> Integer) <~ ";" ^^ {
       case e ~ v => {
-        ConstUbStmt(e, v)
+        ConstUbStmt(e, v, l.BoolLit(true))
+      }
+    } |
+    KwAssert ~ KwConstUB ~ ":" ~>  (Expr <~ "==>") ~ CountingExpr ~ ("<" ~> Integer) <~ ";" ^^ {
+      case assump ~ e ~ v => {
+        ConstUbStmt(e, v, assump)
       }
     } |
     KwAssert ~ KwConstEq ~ ":" ~>  CountingExpr ~ ("==" ~> Integer) <~ ";" ^^ {
       case e ~ v => {
-        ConstEqStmt(e, v)
+        ConstEqStmt(e, v, l.BoolLit(true))
+      }
+    } |
+    KwAssert ~ KwConstEq ~ ":" ~> (Expr <~ "==>") ~ CountingExpr ~ ("==" ~> Integer) <~ ";" ^^ {
+      case assump ~ e ~ v => {
+        ConstEqStmt(e, v, assump)
       }
     } |
     KwAssert ~ KwIndLb ~ ":" ~> CountingExpr ~ (">=" ~> CountingExpr) ~ ("*" ~> CountingExpr) ~ (KwSkolems ~> ExprList <~ ";") ^^ {

@@ -1,0 +1,24 @@
+ module main {
+   define X (b: boolean): boolean = true;
+   function count_1(n: integer): integer;  // line 0
+   axiom assump_1 : (forall (n : integer) :: (count_1(n) >= 0)); // <undefined position>
+   function count_2(n: integer): integer;  // line 0
+   axiom assump_2 : (forall (n : integer) :: (count_2(n) >= 0)); // <undefined position>
+
+   procedure countingProof() returns ()
+   {
+     var arr : [integer]boolean; // line 22
+     var n : integer; // line 22
+     assert  [cover, SATOnly]: 
+        forall (n : integer) :: 
+            (n > 0 && 
+            (forall (i : integer) :: (i < 0 || i >= n) ==> !arr[i]) && 
+            (exists (i : integer) :: 0 <= i < n && arr[i]));
+   }
+   control {
+     v = verify(countingProof /* countingProof*/); // line 0
+     check; // line 0
+     print_results; // line 0
+   }
+ }
+

@@ -1,0 +1,19 @@
+
+module main{
+    init {
+        var arr_2 : [integer]boolean; // line 16
+        var arr_3 : [integer]boolean; // line 16
+        var n : integer; // line 16
+        assert[cover]: 
+               (((true && (forall (i : integer) :: !((arr_2)[i]))) && 
+                          (forall (i : integer) :: !((arr_3)[i]))) && 
+                  distinct({arr_2}, {arr_3})); // line 0
+
+    }
+
+    control {
+        v = unroll(1);
+        check;
+        print_results;
+    }
+}

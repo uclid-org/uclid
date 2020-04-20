@@ -159,49 +159,67 @@ case class RangeStmt(op : CountingOp, cnt : l.Expr) extends Statement {
     }
   }
 }
-case class ConstLbStmt(e : CountingOp, v : l.IntLit) extends Statement {
+case class ConstLbStmt(e : CountingOp, v : l.IntLit, assump: l.Expr) extends Statement {
   override val hashId = 130003
-  override val md5hashCode = computeMD5Hash(e, v)
-  override def toLines = List("assert constLB: " + e.toString() + " >= " + v.toString())
+  override val md5hashCode = computeMD5Hash(e, v, assump)
+  override def toLines = {
+    if (assump == l.BoolLit(true)) {
+      List("assert constLB: " + e.toString() + " >= " + v.toString())
+    } else {
+      List("assert constLB: " + assump.toString() + " ==> " + e.toString() + " >= " + v.toString()) 
+    }
+  }
   override val countingOps = Seq(e)
-  override val expressions = Seq(e, v)
+  override val expressions = Seq(e, v, assump)
   override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
-    (rewriter(e.e), rewriter(v)) match {
-      case (Some(e1p), Some(e2p)) =>
+    (rewriter(e.e), rewriter(v), rewriter(assump)) match {
+      case (Some(e1p), Some(e2p), Some(aP)) =>
         val e1 = CountingOp(e.xs, e.ys, e1p)
-        Some(ConstLbStmt(e1, e2p.asInstanceOf[l.IntLit]))
+        Some(ConstLbStmt(e1, e2p.asInstanceOf[l.IntLit], aP))
       case _ => None
     }
   }
 }
 
-case class ConstUbStmt(e : CountingOp, v : l.IntLit) extends Statement {
+case class ConstUbStmt(e : CountingOp, v : l.IntLit, assump : l.Expr) extends Statement {
   override val hashId = 130004
-  override val md5hashCode = computeMD5Hash(e, v)
-  override def toLines = List("assert constUB: " + e.toString() + " >= " + v.toString())
+  override val md5hashCode = computeMD5Hash(e, v, assump)
+  override def toLines = {
+    if (assump == l.BoolLit(true)) {
+      List("assert constUB: " + e.toString() + " < " + v.toString())
+    } else {
+      List("assert constUB: " + assump.toString() + " ==> " + e.toString() + " < " + v.toString()) 
+    }
+  }
   override val countingOps = Seq(e)
-  override val expressions = Seq(e, v)
+  override val expressions = Seq(e, v, assump)
   override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
-    (rewriter(e.e), rewriter(v)) match {
-      case (Some(e1p), Some(e2p)) =>
+    (rewriter(e.e), rewriter(v), rewriter(assump)) match {
+      case (Some(e1p), Some(e2p), Some(aP)) =>
         val e1 = CountingOp(e.xs, e.ys, e1p)
-        Some(ConstUbStmt(e1, e2p.asInstanceOf[l.IntLit]))
+        Some(ConstUbStmt(e1, e2p.asInstanceOf[l.IntLit], aP))
       case _ => None
     }
   }
 }
 
-case class ConstEqStmt(e : CountingOp, v : l.IntLit) extends Statement {
+case class ConstEqStmt(e : CountingOp, v : l.IntLit, assump : l.Expr) extends Statement {
   override val hashId = 130005
-  override val md5hashCode = computeMD5Hash(e, v)
-  override def toLines = List("assert constEq: " + e.toString() + " >= " + v.toString())
+  override val md5hashCode = computeMD5Hash(e, v, assump)
+  override def toLines = {
+    if (assump == l.BoolLit(true)) {
+      List("assert constEq: " + e.toString() + " >= " + v.toString())
+    } else {
+      List("assert constEq: " + assump.toString() + " ==> " + e.toString() + " == " + v.toString()) 
+    }
+  }
   override val countingOps = Seq(e)
-  override val expressions = Seq(e, v)
+  override val expressions = Seq(e, v, assump)
   override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
-    (rewriter(e.e), rewriter(v)) match {
-      case (Some(e1p), Some(e2p)) =>
+    (rewriter(e.e), rewriter(v), rewriter(assump)) match {
+      case (Some(e1p), Some(e2p), Some(aP)) =>
         val e1 = CountingOp(e.xs, e.ys, e1p)
-        Some(ConstEqStmt(e1, e2p.asInstanceOf[l.IntLit]))
+        Some(ConstEqStmt(e1, e2p.asInstanceOf[l.IntLit], assump))
       case _ => None
     }
   }
@@ -211,8 +229,8 @@ case class IndLbStmt(fp : CountingOp, f : CountingOp, g : CountingOp, skolems : 
   assert (fp.ys.size == 1 && f.ys.size == 1 && g.ys.size == 1)
   assert (fp.ys(0)._2.isInt)
   assert (fp.ys == f.ys && f.ys == g.ys)
-
   val n = fp.ys(0)._1
+  assert (new ExprRewriter(Map(n -> UMCExpressions.plus(n, l.IntLit(1)))).rewrite(f.e) == fp.e)
   
   override val hashId = 130006
   override val md5hashCode = computeMD5Hash(fp, f, g, skolems)
@@ -262,11 +280,16 @@ case class CountingProof(id : l.Identifier, decls : List[l.Decl], stmts : List[S
 object UMCExpressions {
   // Helper functions to more easily construct expressions.
   def forall(vs : List[(l.Identifier, l.Type)], e : l.Expr) = {
-    val op = l.ForallOp(vs, List.empty)
-    l.OperatorApplication(op, List(e))
+    if (vs.size > 0) {
+      val op = l.ForallOp(vs, List.empty)
+      l.OperatorApplication(op, List(e))
+    } else {
+      e
+    }
   }
   
   def exists(vs : List[(l.Identifier, l.Type)], e : l.Expr) = {
+    assert (vs.size > 0)
     val op = l.ExistsOp(vs, List.empty)
     l.OperatorApplication(op, List(e))
   }
