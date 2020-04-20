@@ -74,6 +74,7 @@ object UclidMain {
       smtFileGeneration: String = "",
       sygusFormat: Boolean = false,
       enumToNumeric: Boolean = false,
+      ufToArray: Boolean = false,
       printStackTrace: Boolean = false,
       verbose : Int = 0,
       files : Seq[java.io.File] = Seq(),
@@ -294,6 +295,8 @@ object UclidMain {
     if (config.enumToNumeric) passManager.addPass(new EnumTypeAnalysis())
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamer("BV"))
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamerCons("BV"))
+    if (config.ufToArray)     passManager.addPass(new UninterpretedFunctionToArray())
+    // passManager.addPass(new ASTPrinter())
     // run passes.
     passManager.run(moduleList)
   }
