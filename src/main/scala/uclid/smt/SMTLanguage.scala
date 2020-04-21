@@ -599,7 +599,7 @@ case class RecordUpdateOp(name: String) extends Operator {
   override val hashId = mix(name.hashCode(), 240)
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash(name)
-  override def toString = "update-field " + name
+  override def toString = "update-field " + Context.getFieldName(name)
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 2)
     Utils.assert(args(0).typ.isInstanceOf[ProductType], "Argument to record update must be a product type.")

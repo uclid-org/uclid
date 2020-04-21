@@ -104,8 +104,8 @@ trait SMTLIB2Base {
             typeMap = typeMap.addSynonym(arrayTypeName, t)
             (arrayTypeName, newTypes1 ++ newTypes2)
           case productType : ProductType =>
-            val typeName = getTypeName(t.typeNamePrefix)
-            val mkTupleFn = Context.getMkTupleFunction(typeName)
+            val typeName = getTypeName(productType.typeNamePrefix)
+            val mkTupleFn = Context.getMkTupleFunction(productType.typeNamePrefix)
             val fieldNames = productType.fieldNames.map(f => Context.getFieldName(f))
             val (fieldTypes, newTypes1) = productType.fieldTypes.foldRight(List.empty[String], List.empty[String]) {
               (fld, acc) => {
@@ -116,7 +116,7 @@ trait SMTLIB2Base {
             val fieldString = (fieldNames zip fieldTypes).map(p => "(%s %s)".format(p._1.toString(), p._2.toString()))
             val nameString = "((%s 0))".format(typeName)
             val argString = "(" + Utils.join(mkTupleFn :: fieldString, " ") + ")"
-            val newType = "(declare-datatypes %s ((%s %s)))".format(nameString, typeName, argString)
+            val newType = "(declare-datatypes %s ((%s)))".format(nameString, argString)
             typeMap = typeMap.addSynonym(typeName, t)
             (typeName, newType :: newTypes1)
           case BoolType => 
@@ -210,6 +210,28 @@ trait SMTLIB2Base {
             assert (newTypes.size == 0)
             val str = "((as const %s) %s)".format(typName, eP.exprString())
             (str, memoP, shouldLetify)
+          case OperatorApplication(RecordUpdateOp(fld), operands) =>
+            val productType = operands(0).typ.asInstanceOf[ProductType]
+            val typeName = productType.typeNamePrefix
+            val mkTupleFn = Context.getMkTupleFunction(productType.typeNamePrefix)
+            val fieldIndex = productType.fieldIndex(fld)
+            val indices = productType.fieldIndices
+
+            var (value, memoP1) = translateExpr(operands(1), memo, shouldLetify)
+
+            val newFields = indices.map{ (i) =>
+              if (i == fieldIndex) {
+                value.exprString()
+              }
+              else {
+                val sel = OperatorApplication(RecordSelectOp(productType.fieldNames(i)), List(operands(0)))
+                val (value, memoP2) = translateExpr(sel, memoP1, shouldLetify)
+                memoP1 = memoP2
+                value.exprString()
+              }
+            }.mkString(" ")
+            
+            ("(" + mkTupleFn + " " + newFields + ")", memoP1, shouldLetify)
           case OperatorApplication(op,operands) =>
             // TODO: Do not letify quantified statements
             // If we decide to letify them, the quantifiers will be to be on the outside
@@ -239,7 +261,7 @@ trait SMTLIB2Base {
             val (tupleTypeName, newTypes) = generateDatatype(tupleType)
             assert (newTypes.size == 0)
             val (trArgs, memoP1) = translateExprs(args, memo, shouldLetify)
-            ("(" + Context.getMkTupleFunction(tupleTypeName) + " " + exprString(trArgs) + ")", memoP1, true)
+            ("(" + Context.getMkTupleFunction(tupleType.typeNamePrefix) + " " + exprString(trArgs) + ")", memoP1, true)
           case Lambda(_,_) =>
             throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
           case IntLit(value) =>
