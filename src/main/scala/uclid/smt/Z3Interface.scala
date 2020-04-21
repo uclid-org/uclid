@@ -519,6 +519,10 @@ class Z3Interface() extends Context {
     }
   }
 
+  override def checkSynth() : SolverResult = {
+    throw new Utils.UnimplementedException("Can't use an SMT solver for synthesis!")
+  }
+
   override def finish() {
     ctx.close()
   }

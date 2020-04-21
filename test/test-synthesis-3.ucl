@@ -3,6 +3,7 @@
 
 module main
 {
+  synthesis function h(x : integer, y : integer, w : integer, z : integer) : boolean;
   var x, y : integer;
   var w, z : integer;
   
@@ -22,9 +23,11 @@ module main
   
   invariant always_positive_xy: (y >= 0);
   invariant always_positive_wz: (z >= 0);
+  invariant hole: h(x, y, w, z);
   
   control {
-    print_module;
-    synthesize_invariant[LIA];
+    induction;
+    check;
+    print_results;
   }
 }

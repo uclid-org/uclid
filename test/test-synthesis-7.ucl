@@ -3,6 +3,7 @@
 
 module main
 {
+  synthesis function h(x : integer, y : integer) : boolean;
   var x, y, z : integer;
   
   init {
@@ -26,10 +27,10 @@ module main
     assert (z >= 0);
   }
   
-  // invariant always_positive: (z >= 0);
+  invariant always_positive: (z >= 0) && h(z, y);
   
   control {
-    //print_module;
-    synthesize_invariant[LIA];
+    induction;
+    check;
   }
 }

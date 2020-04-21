@@ -1,0 +1,46 @@
+// run with -u flag to convert uninterpreted functions to arrays
+
+module main {
+  synthesis function h(i: integer -> integer, j: integer -> integer) : boolean;
+  function f(i: integer): integer;
+  function g(j: integer): integer; 
+  // 1. Convert uninterpreted functions to arrays
+  //var f: [integer]integer;
+  //var g: [integer]integer;
+  
+  var x: integer;
+  var y: integer;
+  var step: integer;
+
+  init {
+    step = 0;
+    x = 1;
+    y = 1;
+    // 2. Change all uninterpreted function calls to array selections
+    assume (f == g);
+  }
+
+  next {
+    step' = step + 1;
+    // 2. Change all uninterpreted function calls to array selections
+    x' = f(x);
+    y' = g(y);
+    //x' = f[y + 1];
+    //y' = g[x + 1];
+  }
+
+  // Note: Strengthening invariant required when we use arrays
+  //       but not for uninterpreted functions
+  //invariant strength : (f == g);
+  // 3. Do not change the calls to synthesis functions to array selects
+  invariant test : (x == y) && h(f, g); 
+ 
+  // Used to check if the model has assumed false
+  //invariant test_bad_model : false;
+
+  control {
+    v = induction(1);
+    check;
+    print_results;
+  }
+}

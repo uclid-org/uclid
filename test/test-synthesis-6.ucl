@@ -1,5 +1,6 @@
 module main
 {
+  synthesis function h(x : integer, y : integer) : boolean;
   var y, z, p : integer;
 
   init {
@@ -20,6 +21,7 @@ module main
   }
   
   invariant not_p : z >= y;
+  invariant hole : h(y, p);
   
   
   control {

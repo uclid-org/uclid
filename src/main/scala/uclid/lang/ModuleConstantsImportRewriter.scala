@@ -32,7 +32,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Pranav Gaddamadugu
-
  * Rewrite const * = moduleId.*; declarations.
  *
  */

@@ -79,7 +79,7 @@ class InteractiveProcess(args: List[String], saveInput: Boolean=false) {
   def writeInput(str: String) {
     logger.debug("-> {}", str)
     in.write(stringToBytes(str))
-    if (saveInput) inputString += str + "\n"
+    if (saveInput) inputString += str
   }
   // Close stdin, this may cause the process to exit.
   def finishInput() {
@@ -95,26 +95,24 @@ class InteractiveProcess(args: List[String], saveInput: Boolean=false) {
     while (!done) {
       if (!isAlive()) {
         done = true
-        logger.debug("Process dead.")
-      } else {
+        logger.debug("Process dead")
+      }
+      val numAvail = out.available()
+      if (numAvail == 0) {
         Thread.sleep(5)
-        val numAvail = out.available()
-        if (numAvail == 0) {
-          Thread.sleep(5)
-        } else {
-          val bytes = Array.ofDim[Byte](numAvail)
-          val numRead = out.read(bytes, 0, numAvail)
-          val string = bytesToString ({
-            if (numRead == numAvail) {
-              bytes
-            } else {
-              bytes.slice(0, numRead)
-            }
-          })
-          logger.debug("<- {}", string)
+      } else {
+        val bytes = Array.ofDim[Byte](numAvail)
+        val numRead = out.read(bytes, 0, numAvail)
+        val string = bytesToString ({
+          if (numRead == numAvail) {
+            bytes
+          } else {
+            bytes.slice(0, numRead)
+          }
+        })
+        logger.debug("<- {}", string)
 
-          return Some(string)
-        }
+        return Some(string)
       }
     }
     return None
