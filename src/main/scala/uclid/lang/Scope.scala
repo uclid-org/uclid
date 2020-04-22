@@ -256,7 +256,7 @@ case class Scope (
       case SharedVarsDecl(ids, typ) => ids.foldLeft(map)((acc, id) => Scope.addToMap(acc, Scope.SharedVar(id, typ)))
       case ConstantLitDecl(id, lit) => Scope.addToMap(map, Scope.ConstantLit(id, lit))
       case ConstantsDecl(ids, typ) => ids.foldLeft(map)((acc, id) => Scope.addToMap(acc, Scope.ConstantVar(id, typ)))
-      case GrammarDecl(id, sig, _) => Scope.addToMap(map, Scope.Grammar(id, sig.typ))
+      case GrammarDecl(id, sig, nts) => Scope.addToMap(map, Scope.Grammar(id, sig.typ, nts))
       case FunctionDecl(id, sig) => Scope.addToMap(map, Scope.Function(id, sig.typ))
       case SynthesisFunctionDecl(id, sig, _, _, _) => Scope.addToMap(map, Scope.Function(id, sig.typ)) // FIXME
       case DefineDecl(id, sig, expr) => Scope.addToMap(map, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr)))
