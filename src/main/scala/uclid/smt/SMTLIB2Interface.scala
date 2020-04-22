@@ -88,7 +88,7 @@ trait SMTLIB2Base {
           case EnumType(members) =>
             val typeName = getTypeName(t.typeNamePrefix)
             val memStr = Utils.join(members.map(s => "[" + s + "]"), " ")
-            val declDatatype = "(declare-datatype [%s] (%s))".format(typeName, memStr)
+            val declDatatype = "(declare-datatype [%s 0] (%s))".format(typeName, memStr)
             typeMap = typeMap.addSynonym(typeName, t)
             // throw new RuntimeException("need a stack trace!")
             (typeName, List(declDatatype))
