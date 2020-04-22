@@ -29,6 +29,8 @@ To fix this issue, put:
 For more information on the resolution of this issue, please refer to:
 https://github.com/Z3Prover/z3/issues/294
 
+For Mac OS Mojave or up, we recommend using Java 11 or earlier. We have found some issues related to the System Integrity Protection when using Catalina or Mojave and later versions of OpenJDK.
+
 
 ## Download Pre-Built Binaries
 
