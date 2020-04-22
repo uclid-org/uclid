@@ -87,8 +87,8 @@ trait SMTLIB2Base {
         t match {
           case EnumType(members) =>
             val typeName = getTypeName(t.typeNamePrefix)
-            val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
-            val declDatatype = "(declare-datatype %s (%s))".format(typeName, memStr)
+            val memStr = Utils.join(members.map(s => "[" + s + "]"), " ")
+            val declDatatype = "(declare-datatype [%s] (%s))".format(typeName, memStr)
             typeMap = typeMap.addSynonym(typeName, t)
             // throw new RuntimeException("need a stack trace!")
             (typeName, List(declDatatype))
@@ -105,7 +105,7 @@ trait SMTLIB2Base {
             (arrayTypeName, newTypes1 ++ newTypes2)
           case productType : ProductType =>
             val typeName = getTypeName(productType.typeNamePrefix)
-            val mkTupleFn = Context.getMkTupleFunction(productType.typeNamePrefix)
+            val mkTupleFn = Context.getMkTupleFunction(typeName)
             val fieldNames = productType.fieldNames.map(f => Context.getFieldName(f))
             val (fieldTypes, newTypes1) = productType.fieldTypes.foldRight(List.empty[String], List.empty[String]) {
               (fld, acc) => {
@@ -114,8 +114,8 @@ trait SMTLIB2Base {
               }
             }
             val fieldString = (fieldNames zip fieldTypes).map(p => "(%s %s)".format(p._1.toString(), p._2.toString()))
-            val nameString = "((%s 0))".format(typeName)
-            val argString = "(" + Utils.join(mkTupleFn :: fieldString, " ") + ")"
+            val nameString = "([%s 0])".format(typeName)
+            val argString = "[" + Utils.join(mkTupleFn :: fieldString, " ") + "]"
             val newType = "(declare-datatypes %s ((%s)))".format(nameString, argString)
             typeMap = typeMap.addSynonym(typeName, t)
             (typeName, newType :: newTypes1)
@@ -212,8 +212,8 @@ trait SMTLIB2Base {
             (str, memoP, shouldLetify)
           case OperatorApplication(RecordUpdateOp(fld), operands) =>
             val productType = operands(0).typ.asInstanceOf[ProductType]
-            val typeName = productType.typeNamePrefix
-            val mkTupleFn = Context.getMkTupleFunction(productType.typeNamePrefix)
+            val typeName = typeMap.get(operands(0).typ).get.name
+            val mkTupleFn = Context.getMkTupleFunction(typeName)
             val fieldIndex = productType.fieldIndex(fld)
             val indices = productType.fieldIndices
 
@@ -261,7 +261,7 @@ trait SMTLIB2Base {
             val (tupleTypeName, newTypes) = generateDatatype(tupleType)
             assert (newTypes.size == 0)
             val (trArgs, memoP1) = translateExprs(args, memo, shouldLetify)
-            ("(" + Context.getMkTupleFunction(tupleType.typeNamePrefix) + " " + exprString(trArgs) + ")", memoP1, true)
+            ("(" + Context.getMkTupleFunction(tupleTypeName) + " " + exprString(trArgs) + ")", memoP1, true)
           case Lambda(_,_) =>
             throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
           case IntLit(value) =>
@@ -382,19 +382,32 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
         newTypes.foreach(typ => declCommands.append(typ))
       }
     }
-    
-    // This is a bit of a hack: sometimes types depend on each other and the order
-    // of declaration matters. The examples that gave us trouble are cases where a
-    // record depends on an enum, but the enum is declared after. The smt-lib
-    // declarations for these cases are "declare-datatypes" and
-    // "declare-datatype", respectively. Sorting the type declarations by
-    // alphabetical order will circumvent these problems without adding
-    // declaration dependency tracking. (Before this we were printing in a random
-    // order given by how scala's set type enumerates)
 
-    declCommands.sorted.foreach{
+    val algebraic = declCommands.filter(d => d.startsWith("(declare-datatype"))
+    if (algebraic.length > 0) {
+      val pattern = """\[[^\]]+\]""".r
+  
+      var names = algebraic.foldLeft("") { 
+        case (acc, d) => { 
+          val tmp = (pattern findAllIn d toList)
+          acc + "(%s)".format(tmp.head.slice(1, tmp.head.length - 1))
+        }
+      }
+  
+      var fields = algebraic.foldLeft("") { 
+        case (acc, d) => {
+          val tmp = (pattern findAllIn d toList).tail.map{d => "(%s)".format(d.slice(1, d.length - 1))}.mkString(" ")
+          acc + "(%s)".format(tmp)
+        }
+      }
+  
+      val decl = "(declare-datatypes (%s) (%s))".format(names, fields)
+      writeCommand(decl)
+    }
+
+    val other = declCommands.filterNot(d => d.startsWith("(declare-datatype"))
+    other.foreach{
       decl => {
-        smtlibInterfaceLogger.debug("decl: {}", decl)
         writeCommand(decl)
       }
     }
