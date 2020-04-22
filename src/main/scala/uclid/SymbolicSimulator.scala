@@ -1,3 +1,4 @@
+
 /*
  * UCLID5 Verification and Synthesis Engine
  *
@@ -1227,9 +1228,16 @@ class SymbolicSimulator (module : Module) {
         case None => true
       }
     }
+
     val passCount = assertionResults.count((p) => labelMatches(p.assert) && p.result.isTrue)
     val failCount = assertionResults.count((p) => labelMatches(p.assert) && p.result.isFalse)
     val undetCount = assertionResults.count((p) => labelMatches(p.assert) && p.result.isUndefined)
+
+    if(!config.smtFileGeneration.isEmpty)
+    {
+      UclidMain.println("Printed SMTlib file(s) for %d assertions".format(undetCount))
+      return
+    }
 
     Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
     UclidMain.println("%d assertions passed.".format(passCount))
