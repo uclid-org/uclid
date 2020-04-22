@@ -69,8 +69,8 @@ trait SMTLIB2Base {
   def generateInputDataTypes(t : Type) : (List[String]) = {
     t match {
       case MapType(inputTyp, outputType) =>
-        inputTyp.foldRight(List.empty[String]) {
-          (typ, acc) => {
+        inputTyp.foldLeft(List.empty[String]) {
+          (acc, typ) => {
             acc :+ generateDatatype(typ)._1;
           }
         }
