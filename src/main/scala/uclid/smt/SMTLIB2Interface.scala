@@ -69,8 +69,8 @@ trait SMTLIB2Base {
   def generateInputDataTypes(t : Type) : (List[String]) = {
     t match {
       case MapType(inputTyp, outputType) =>
-        inputTyp.foldRight(List.empty[String]) {
-          (typ, acc) => {
+        inputTyp.foldLeft(List.empty[String]) {
+          (acc, typ) => {
             acc :+ generateDatatype(typ)._1;
           }
         }
@@ -87,8 +87,8 @@ trait SMTLIB2Base {
         t match {
           case EnumType(members) =>
             val typeName = getTypeName(t.typeNamePrefix)
-            val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
-            val declDatatype = "(declare-datatype %s (%s))".format(typeName, memStr)
+            val memStr = Utils.join(members.map(s => "[" + s + "]"), " ")
+            val declDatatype = "(declare-datatype [%s 0] (%s))".format(typeName, memStr)
             typeMap = typeMap.addSynonym(typeName, t)
             // throw new RuntimeException("need a stack trace!")
             (typeName, List(declDatatype))
@@ -104,7 +104,7 @@ trait SMTLIB2Base {
             typeMap = typeMap.addSynonym(arrayTypeName, t)
             (arrayTypeName, newTypes1 ++ newTypes2)
           case productType : ProductType =>
-            val typeName = getTypeName(t.typeNamePrefix)
+            val typeName = getTypeName(productType.typeNamePrefix)
             val mkTupleFn = Context.getMkTupleFunction(typeName)
             val fieldNames = productType.fieldNames.map(f => Context.getFieldName(f))
             val (fieldTypes, newTypes1) = productType.fieldTypes.foldRight(List.empty[String], List.empty[String]) {
@@ -114,9 +114,9 @@ trait SMTLIB2Base {
               }
             }
             val fieldString = (fieldNames zip fieldTypes).map(p => "(%s %s)".format(p._1.toString(), p._2.toString()))
-            val nameString = "((%s 0))".format(typeName)
-            val argString = "(" + Utils.join(mkTupleFn :: fieldString, " ") + ")"
-            val newType = "(declare-datatypes %s ((%s %s)))".format(nameString, typeName, argString)
+            val nameString = "([%s 0])".format(typeName)
+            val argString = "[" + Utils.join(mkTupleFn :: fieldString, " ") + "]"
+            val newType = "(declare-datatypes %s ((%s)))".format(nameString, argString)
             typeMap = typeMap.addSynonym(typeName, t)
             (typeName, newType :: newTypes1)
           case BoolType => 
@@ -210,6 +210,28 @@ trait SMTLIB2Base {
             assert (newTypes.size == 0)
             val str = "((as const %s) %s)".format(typName, eP.exprString())
             (str, memoP, shouldLetify)
+          case OperatorApplication(RecordUpdateOp(fld), operands) =>
+            val productType = operands(0).typ.asInstanceOf[ProductType]
+            val typeName = typeMap.get(operands(0).typ).get.name
+            val mkTupleFn = Context.getMkTupleFunction(typeName)
+            val fieldIndex = productType.fieldIndex(fld)
+            val indices = productType.fieldIndices
+
+            var (value, memoP1) = translateExpr(operands(1), memo, shouldLetify)
+
+            val newFields = indices.map{ (i) =>
+              if (i == fieldIndex) {
+                value.exprString()
+              }
+              else {
+                val sel = OperatorApplication(RecordSelectOp(productType.fieldNames(i)), List(operands(0)))
+                val (value, memoP2) = translateExpr(sel, memoP1, shouldLetify)
+                memoP1 = memoP2
+                value.exprString()
+              }
+            }.mkString(" ")
+            
+            ("(" + mkTupleFn + " " + newFields + ")", memoP1, shouldLetify)
           case OperatorApplication(op,operands) =>
             // TODO: Do not letify quantified statements
             // If we decide to letify them, the quantifiers will be to be on the outside
@@ -360,19 +382,32 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
         newTypes.foreach(typ => declCommands.append(typ))
       }
     }
-    
-    // This is a bit of a hack: sometimes types depend on each other and the order
-    // of declaration matters. The examples that gave us trouble are cases where a
-    // record depends on an enum, but the enum is declared after. The smt-lib
-    // declarations for these cases are "declare-datatypes" and
-    // "declare-datatype", respectively. Sorting the type declarations by
-    // alphabetical order will circumvent these problems without adding
-    // declaration dependency tracking. (Before this we were printing in a random
-    // order given by how scala's set type enumerates)
 
-    declCommands.sorted.foreach{
+    val algebraic = declCommands.filter(d => d.startsWith("(declare-datatype"))
+    if (algebraic.length > 0) {
+      val pattern = """\[[^\]]+\]""".r
+  
+      var names = algebraic.foldLeft("") { 
+        case (acc, d) => { 
+          val tmp = (pattern findAllIn d toList)
+          acc + "(%s)".format(tmp.head.slice(1, tmp.head.length - 1))
+        }
+      }
+  
+      var fields = algebraic.foldLeft("") { 
+        case (acc, d) => {
+          val tmp = (pattern findAllIn d toList).tail.map{d => "(%s)".format(d.slice(1, d.length - 1))}.mkString(" ")
+          acc + "(%s)".format(tmp)
+        }
+      }
+  
+      val decl = "(declare-datatypes (%s) (%s))".format(names, fields)
+      writeCommand(decl)
+    }
+
+    val other = declCommands.filterNot(d => d.startsWith("(declare-datatype"))
+    other.foreach{
       decl => {
-        smtlibInterfaceLogger.debug("decl: {}", decl)
         writeCommand(decl)
       }
     }

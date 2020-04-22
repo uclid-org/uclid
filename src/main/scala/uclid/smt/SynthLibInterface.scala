@@ -77,8 +77,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     val (typeName, newTypes) = generateDatatype(sym.typ)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
 
-   // val inputTypes = generateInputDataTypes(sym.typ).mkString(" ")
-    val inputTypes = generateInputDataTypes(sym.typ).reverse
+    val inputTypes = generateInputDataTypes(sym.typ)
     val inputNames = sym.symbolTyp.args.map( a => a._1.toString())
     val sig =  (inputNames zip inputTypes).map(a => "(" + a._1 + " " + a._2 + ")").mkString(" ")
     var cmd = ""
