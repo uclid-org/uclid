@@ -90,7 +90,7 @@ class ModuleFunctionsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
         val mod = context.map.get(id).get.asInstanceOf[Scope.ModuleDefinition].mod
         mod.functions.foreach { f => 
           in.get(f.id) match {
-            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module functions import. Check module: ${mod.id}", None, None)
+            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module functions import. Check module: ${mod.id} for ${f.id}", None, None)
             case None => in += ((f.id, mod.id))
           }
         }
@@ -123,7 +123,7 @@ class ModuleFunctionsImportRewriter extends ASTAnalyzer("ModuleFunctionsImportRe
     val initMap = new HashMap[Identifier, Identifier]()
     module.functions.foreach { f => 
       initMap.get(f.id) match {
-        case Some(_) => throw new Utils.ParserError(s"Function redeclaration error in module: ${module.id}", None, None)
+        case Some(_) => throw new Utils.ParserError(s"Function redeclaration error in module: ${module.id} for ${f.id}", None, None)
         case None => initMap += ((f.id, module.id))
       }
     }

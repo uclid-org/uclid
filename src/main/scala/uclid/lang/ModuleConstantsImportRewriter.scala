@@ -91,14 +91,14 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
         val mod = context.map.get(id).get.asInstanceOf[Scope.ModuleDefinition].mod
         mod.constLits.foreach { c => 
           in.get(c._1) match {
-            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${mod.id}", None, None)
+            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${mod.id} for ${c._1}", None, None)
             case None => in += ((c._1, mod.id))
           }
         }
         
         mod.constants.foreach { c => 
           in.get(c._1) match {
-            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${mod.id}", None, None)
+            case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${mod.id} for ${c._1}", None, None)
             case None => in += ((c._1, mod.id))
           }
         }
@@ -131,7 +131,7 @@ class ModuleConstantsImportRewriter extends ASTAnalyzer("ModuleConstantsImportRe
     // Add constants from this module
     module.constLits.foreach { c => 
       initMap.get(c._1) match {
-        case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${module.id}", None, None)
+        case Some(_) => throw new Utils.ParserError(s"Redeclaration error in module constants import. Check module: ${module.id} for ${c._1}", None, None)
         case None => initMap += ((c._1, module.id))
       }
     }
