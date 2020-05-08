@@ -48,19 +48,19 @@ import uclid.extensions.modelcounts.{UMCExpressions => E}
 
 class UMCParser extends l.UclidParser {
   lazy val KwProof = "proof"
-  lazy val KwDisjoint = "disjoint"
+  lazy val KwOr = "or"
   lazy val KwConstLB = "constLB"
   lazy val KwConstUB = "constUB"
   lazy val KwConstEq = "constEq"
   lazy val KwIndLb = "indLB"
   lazy val KwSkolems = "skolems"
-  
-  lexical.reserved += (KwProof, KwDisjoint, KwConstLB, KwConstUB, KwConstEq, KwIndLb, KwSkolems)
+
+  lexical.reserved += (KwProof, KwOr, KwConstLB, KwConstUB, KwConstEq, KwIndLb, KwSkolems)
 
   lazy val UMCDecl: PackratParser[l.Decl] =
     positioned (TypeDecl | DefineDecl | FuncDecl | AxiomDecl)
 
-  lazy val CountingOpPrefix : PackratParser[(List[(Identifier, Type)], List[(Identifier, Type)])] = 
+  lazy val CountingOpPrefix : PackratParser[(List[(Identifier, Type)], List[(Identifier, Type)])] =
     ("#[" ~> IdTypeList)  ~ (KwFor ~> IdTypeList) <~ "]" ~ "::" ^^ {
       case xs ~ ys => (xs, ys)
     } |
@@ -75,7 +75,7 @@ class UMCParser extends l.UclidParser {
   }
 
   lazy val C0: PackratParser[l.Expr] = positioned {  CountingExpr | E1 }
-  
+
   override lazy val E15: PackratParser[l.Expr] = positioned {
         Literal |
         "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => l.Tuple(e::es)} |
@@ -92,9 +92,9 @@ class UMCParser extends l.UclidParser {
   lazy val CExpr: PackratParser[l.Expr] = positioned { C0 }
 
   lazy val Stmt: PackratParser[Statement] = positioned {
-    KwAssert ~ KwDisjoint ~ ":" ~> 
+    KwAssert ~ KwOr ~ ":" ~>
       (CountingExpr <~ "==") ~ (CountingExpr <~ "+") ~ CountingExpr <~ ";" ^^ {
-      case e1 ~ e2 ~ e3 => DisjointStmt(e1, e2, e3)
+      case e1 ~ e2 ~ e3 => OrStmt(e1, e2, e3)
     } |
     KwAssert ~ KwRange ~ ":" ~> CountingExpr ~ ("==" ~> Expr) <~ ";" ^^ {
       case e1 ~ e2 => {

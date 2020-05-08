@@ -81,7 +81,7 @@ case class AssertStmt(e : l.Expr) extends Statement {
         case _ => false
       }
     }
-    UMCExpressions.findSubExpressions(e, isCountingOp _).map(_.asInstanceOf[CountingOp]).toSeq
+    UMCExpressions.findSubExpressions(e, isCountingOp).map(_.asInstanceOf[CountingOp]).toSeq
   }
   override val expressions = Seq(e)
   override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
@@ -92,13 +92,13 @@ case class AssertStmt(e : l.Expr) extends Statement {
   }
 }
 
-case class DisjointStmt(e1 : CountingOp, e2 : CountingOp, e3 : CountingOp) extends Statement {
+case class OrStmt(e1 : CountingOp, e2 : CountingOp, e3 : CountingOp) extends Statement {
   assert (e1.xs == e2.xs && e2.xs == e3.xs)
   assert (e1.ys == e2.ys && e2.ys == e3.ys)
 
   override val hashId = 130001
   override val md5hashCode = computeMD5Hash(e1, e2, e3)
-  override def toLines = List("assert disjoint: " + e1.toString() + " == " + e2.toString() + " + " +  e3.toString())
+  override def toLines = List("assert or: " + e1.toString() + " == " + e2.toString() + " + " +  e3.toString())
   override val countingOps = Seq(e1, e2, e3)
   override val expressions = Seq(e1, e2, e3)
   override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
@@ -107,7 +107,7 @@ case class DisjointStmt(e1 : CountingOp, e2 : CountingOp, e3 : CountingOp) exten
         val op1 = CountingOp(e1.xs, e1.ys, e1p)
         val op2 = CountingOp(e2.xs, e2.ys, e2p)
         val op3 = CountingOp(e3.xs, e3.ys, e3p)
-        Some(DisjointStmt(op1, op2, op3))
+        Some(OrStmt(op1, op2, op3))
       case _ => None
     }
   }
@@ -118,8 +118,7 @@ case class RangeStmt(op : CountingOp, cnt : l.Expr) extends Statement {
     op.e match {
       case l.OperatorApplication(l.ConjunctionOp(), 
             List(l.OperatorApplication(l.LEOp(), List(lb, l.Identifier(v))),
-                 l.OperatorApplication(l.LTOp(), List(l.Identifier(u), ub)))) =>
-                   lb
+                 l.OperatorApplication(l.LTOp(), List(l.Identifier(u), ub)))) => lb
       case _ =>
         throw new Utils.AssertionError("Unexpected operand to range expression.")
     }
@@ -128,8 +127,7 @@ case class RangeStmt(op : CountingOp, cnt : l.Expr) extends Statement {
     op.e match {
       case l.OperatorApplication(l.ConjunctionOp(), 
             List(l.OperatorApplication(l.LEOp(), List(lb, l.Identifier(v))),
-                 l.OperatorApplication(l.LTOp(), List(l.Identifier(u), ub)))) =>
-                   ub
+                 l.OperatorApplication(l.LTOp(), List(l.Identifier(u), ub)))) => ub
       case _ =>
         throw new Utils.AssertionError("Unexpected operand to range expression.")
     }
