@@ -15,7 +15,7 @@ module main {
   proof {
     // The satisfying assignments to U are the disjoint union of the satisfying
     // assignments to V and W.
-    assert disjoint: #[(arr: [integer]boolean) for (n : integer)] :: (U(arr, n)) ==
+    assert or: #[(arr: [integer]boolean) for (n : integer)] :: (U(arr, n)) ==
                      #[(arr: [integer]boolean) for (n : integer)] :: (V(arr, n)) +
                      #[(arr: [integer]boolean) for (n : integer)] :: (W(arr, n));
     // prove #arr: W(arr, n) == 1
