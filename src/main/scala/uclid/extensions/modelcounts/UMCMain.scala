@@ -61,6 +61,7 @@ object UMCMain {
     println("Parsed module: " + module.id.toString())
     println(module.toString())
     val moduleP = new UMCRewriter(module).process()
+    println("\nModule after rewriting: ")
     println(moduleP.toString())
     runProcessedModel(moduleP)
   }

@@ -60,7 +60,7 @@ class UMCRewriter(cntProof : CountingProof) {
   }
 
   /** Identifiers that are already declared in the module. */
-  val existingIds = cntProof.decls.map(d => d.declNames).flatten.toSet
+  val existingIds = cntProof.decls.flatMap(d => d.declNames).toSet
   /** Identifiers that are declared + newly generated names. */
   val usedIds : MutableSet[l.Identifier] = MutableSet.empty[l.Identifier] ++ existingIds
   /** Counters that track (roughly) the number of generated identifiers with each prefix. */
@@ -103,21 +103,21 @@ class UMCRewriter(cntProof : CountingProof) {
       l.OperatorApplication(l.IntGEOp(), List(e, l.IntLit(0)))
     }
     def quantify(ufDecl : l.FunctionDecl, e : l.Expr) : l.Expr = {
-      if (ufDecl.sig.args.size > 0) {
+      if (ufDecl.sig.args.nonEmpty) {
         l.OperatorApplication(l.ForallOp(ufDecl.sig.args, List.empty), List(e))
       } else {
         e
       }
     }
-    ufMap.map {
-       p => {
-         val ufDecl = p._2
-         val innerExpr = geqZero(l.FuncApplication(ufDecl.id, ufDecl.sig.args.map(_._1)))
-         val axExpr = quantify(ufDecl, innerExpr)
-         val axiomDecl = l.AxiomDecl(Some(generateId("assump")), axExpr, List.empty)
-         List(ufDecl, axiomDecl)
-       }
-    }.flatten.toList
+    ufMap.flatMap {
+      p => {
+        val ufDecl = p._2
+        val innerExpr = geqZero(l.FuncApplication(ufDecl.id, ufDecl.sig.args.map(_._1)))
+        val axExpr = quantify(ufDecl, innerExpr)
+        val axiomDecl = l.AxiomDecl(Some(generateId("assump")), axExpr, List.empty)
+        List(ufDecl, axiomDecl)
+      }
+    }.toList
   }
 
   def _apply(uf : l.FunctionDecl) = {
@@ -131,7 +131,7 @@ class UMCRewriter(cntProof : CountingProof) {
     List(assertStmt)
   }
 
-  def rewriteDisjoint(ufMap : UFMap, st : DisjointStmt) : List[l.Statement] = {
+  def rewriteOr(ufMap : UFMap, st : OrStmt) : List[l.Statement] = {
     val o1 = st.e1
     val o2 = st.e2
     val o3 = st.e3
@@ -149,7 +149,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val assumeStmt = l.AssumeStmt(assumeExpr, None)
     List(assertStmt, assumeStmt)
   }
-  
+
   def rewriteRange(ufMap : UFMap, st : RangeStmt) : List[l.Statement] = {
     val ufn = _apply(ufMap(st.op))
     val assumeExpr = E.forall(st.op.ys, E.eq(ufn, E.max(l.IntLit(0), E.minus(st.ub, st.lb))))
@@ -158,7 +158,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
     List(assumeStmt, assertStmt)
   }
-  
+
   def getCnstBoundStmt(ufMap : UFMap, assump : l.Expr, e : CountingOp, cnt : Int, decorators : List[l.ExprDecorator]) = {
     val cntArgs = e.xs
     val qVars = e.ys
@@ -167,7 +167,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val argsListP = (1 to cnt).map(i => cntArgs.map(a => generateId(a._1.name)))
     val rwMaps = argsListP.map(argsP => (argVars.map(_.asInstanceOf[l.Expr]) zip argsP).toMap)
     val exprs = rwMaps.map(rwMap => l.ExprRewriter.rewriteExprOnce(e.e, rwMap, l.Scope.empty))
-    val newVars : List[(l.Identifier, l.Type)] = 
+    val newVars : List[(l.Identifier, l.Type)] =
       argsListP.map(argsP => (cntArgs zip argsP).map(p => (p._2, p._1._2)).toList).toList.flatten ++
       e.ys
     val blkDecls = newVars.map(p => l.BlockVarsDecl(List(p._1), p._2))
@@ -186,7 +186,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val assumeStmt = l.AssumeStmt(assumeExpr, None)
     List(blkStmt, assumeStmt)
   }
-  
+
   def rewriteConstUb(ufMap : UFMap, st : ConstUbStmt) : List[l.Statement] = {
     val blkStmt = getCnstBoundStmt(ufMap, st.assump, st.e, st.v.value.toInt, List(l.CoverDecorator))
     val ufn = _apply(ufMap(st.e))
@@ -210,10 +210,10 @@ class UMCRewriter(cntProof : CountingProof) {
     val qVars = f.xs ++ g.xs ++ f.ys
     val qOp = E.forall(qVars, impl)
     val liftAssertStmt = l.AssertStmt(qOp, None, List.empty)
-    
+
     // Now we want to show injectivity of the skolem:
-    // f(x1, n) && g(y1, n) && f(x2, n) && g(y2, n) && (x1 != x2 || y1 != y2) 
-    //   ==> skolem(x1, y1, n) != skolem(x2, y2, n) 
+    // f(x1, n) && g(y1, n) && f(x2, n) && g(y2, n) && (x1 != x2 || y1 != y2)
+    //   ==> skolem(x1, y1, n) != skolem(x2, y2, n)
     val x1s = f.xs.map(p => generateId(p._1.toString()))
     val x2s = f.xs.map(p => generateId(p._1.toString()))
     val y1s = g.xs.map(p => generateId(p._1.toString()))
@@ -240,18 +240,18 @@ class UMCRewriter(cntProof : CountingProof) {
                (g.xs zip y1s).map(p => (p._2, p._1._2)) ++
                (g.xs zip y2s).map(p => (p._2, p._1._2)) ++ f.ys
     val injAssertStmt = l.AssertStmt(E.forall(vars, impl2), None, List.empty)
-    
+
     // Finally, we have to produce the assumption.
     val ufn = _apply(ufMap(f))
     val ugn = _apply(ufMap(g))
     val ufnplus1 = E.apply(ufMap(f).id, List(nplus1))
     val geqExpr = E.ge(ufnplus1, E.mul(ufn, ugn))
     val assumpStmt1 = l.AssumeStmt(E.forall(f.ys, geqExpr), None)
-    
+
     val ufpn = _apply(ufMap(indlb.fp))
     val eqExpr = E.eq(ufnplus1, ufpn)
     val assumpStmt2 = l.AssumeStmt(E.forall(f.ys, eqExpr), None)
-    
+
     List(liftAssertStmt, injAssertStmt, assumpStmt1, assumpStmt2)
   }
 
@@ -259,8 +259,8 @@ class UMCRewriter(cntProof : CountingProof) {
     val newStmts : List[l.Statement] = st match {
       case a : AssertStmt =>
         rewriteAssert(ufmap, a)
-      case d : DisjointStmt =>
-        rewriteDisjoint(ufmap, d)
+      case d : OrStmt =>
+        rewriteOr(ufmap, d)
       case r : RangeStmt =>
         rewriteRange(ufmap, r)
       case lb : ConstLbStmt =>
@@ -298,7 +298,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val countingOps = identifyCountOps(cntProof.stmts)
     val ufMap = generateCountingOpToUFMap(countingOps)
     val ufDecls = generateUFDecls(ufMap)
-    val newProofStmts = cntProof.stmts.map(st => rewriteAssert(ufMap, st)).flatten
+    val newProofStmts = cntProof.stmts.flatMap(st => rewriteAssert(ufMap, st))
     val newProofProc = l.ProcedureDecl(
         l.Identifier("countingProof"),
         l.ProcedureSig(List.empty, List.empty),
