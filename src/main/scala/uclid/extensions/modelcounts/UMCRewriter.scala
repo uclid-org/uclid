@@ -210,6 +210,26 @@ class UMCRewriter(cntProof : CountingProof) {
     List(assertStmt, assumeStmt)
   }
 
+  def rewriteAndUb(ufMap : UFMap, st : AndUbStmt) : List[l.Statement] = {
+    val s1 = st.e1
+    val s2 = st.e2
+    val s3 = st.e3
+    val args1 = s1.xs ++ s1.ys
+    val args2 = s2.xs ++ s2.ys
+    val args3 = s3.xs ++ s3.ys
+    val f1 = s1.e
+    val f2 = s2.e
+    val f3 = s3.e
+    val assertExpr = E.iff(E.forall(args1, f1), E.and(E.forall(args2, f2), E.forall(args3, f3)))
+    val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
+    val ufn1 = _apply(ufMap(s1))
+    val ufn2 = _apply(ufMap(s2))
+    val ufn3 = _apply(ufMap(s3))
+    val assumeExpr = E.forall(st.e1.ys, E.le(ufn1, E.mul(ufn2, ufn3)))
+    val assumeStmt = l.AssumeStmt(assumeExpr, None)
+    List(assertStmt, assumeStmt)
+  }
+
   def rewriteIndLb(ufMap : UFMap, indlb : IndLbStmt) : List[l.Statement] = {
     // First we want f(x, n) && g(y, n) ==> f(skolem(x, y), n + 1)
     val f = indlb.f
@@ -290,6 +310,8 @@ class UMCRewriter(cntProof : CountingProof) {
         rewriteIndLb(ufmap, indLb)
       case ub : UbStmt =>
         rewriteUb(ufmap, ub)
+      case andUb : AndUbStmt =>
+        rewriteAndUb(ufmap, andUb)
       case _ =>
         throw new AssertionError("Unknown proof statement: " + st.toString())
     }

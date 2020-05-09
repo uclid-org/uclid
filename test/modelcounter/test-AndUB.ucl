@@ -1,0 +1,14 @@
+module main {
+  define f(n : integer) : boolean = 1 <= n < 10;
+  define g(n : integer) : boolean = 5 <= n < 10;
+  define h(n : integer, m : integer) : boolean = (1 <= n < 10) && (5 <= m < 10);
+
+  proof {
+    assert andUB:  #[(n: integer, m : integer)] :: (h(n, m)) <=
+                       #[(n: integer)] :: (f(n)) *
+                       #[(m: integer)] :: (g(m));
+  }
+}
+
+
+
