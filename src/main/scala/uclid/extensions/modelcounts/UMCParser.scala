@@ -47,15 +47,16 @@ import uclid.smt.IntLit
 import uclid.extensions.modelcounts.{UMCExpressions => E}
 
 class UMCParser extends l.UclidParser {
-  lazy val KwProof = "proof"
-  lazy val KwOr = "or"
-  lazy val KwConstLB = "constLB"
-  lazy val KwConstUB = "constUB"
-  lazy val KwConstEq = "constEq"
-  lazy val KwIndLb = "indLB"
-  lazy val KwSkolems = "skolems"
+  lazy val KwProof    = "proof"
+  lazy val KwConstLB  = "constLB"
+  lazy val KwConstUB  = "constUB"
+  lazy val KwConstEq  = "constEq"
+  lazy val KwUB       = "UB"
+  lazy val KwOr       = "or"
+  lazy val KwIndLb    = "indLB"
+  lazy val KwSkolems  = "skolems"
 
-  lexical.reserved += (KwProof, KwOr, KwConstLB, KwConstUB, KwConstEq, KwIndLb, KwSkolems)
+  lexical.reserved += (KwProof, KwOr, KwConstLB, KwConstUB, KwConstEq, KwIndLb, KwSkolems, KwUB)
 
   lazy val UMCDecl: PackratParser[l.Decl] =
     positioned (TypeDecl | DefineDecl | FuncDecl | AxiomDecl)
@@ -134,6 +135,11 @@ class UMCParser extends l.UclidParser {
     KwAssert ~ KwIndLb ~ ":" ~> CountingExpr ~ (">=" ~> CountingExpr) ~ ("*" ~> CountingExpr) ~ (KwSkolems ~> ExprList <~ ";") ^^ {
       case e1 ~ e2 ~ e3 ~ es => {
         IndLbStmt(e1, e2, e3, es)
+      }
+    } |
+    KwAssert ~ KwUB ~ ":" ~>  CountingExpr ~ ("<=" ~> CountingExpr) <~ ";" ^^ {
+      case e1 ~ e2 => {
+        UbStmt(e1, e2)
       }
     } |
     KwAssert ~> CExpr <~ ";" ^^ {

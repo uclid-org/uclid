@@ -254,6 +254,25 @@ case class IndLbStmt(fp : CountingOp, f : CountingOp, g : CountingOp, skolems : 
     }
   }
 }
+
+case class UbStmt(e1 : CountingOp, e2: CountingOp) extends Statement {
+  override val hashId = 130007
+  override val md5hashCode = computeMD5Hash(e1, e2)
+  override def toLines =
+      List("assert UB: " + e1.toString() + " <= " + e2.toString())
+  override val countingOps = Seq(e1, e2)
+  override val expressions = Seq(e1, e2)
+  override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
+    (rewriter(e1.e), rewriter(e2.e)) match {
+      case (Some(e1p), Some(e2p)) =>
+        val e1New = CountingOp(e1.xs, e1.ys, e1p)
+        val e2New = CountingOp(e2.xs, e2.ys, e2p)
+        Some(UbStmt(e1New, e2New))
+      case _ => None
+    }
+  }
+}
+
 case class CountingProof(id : l.Identifier, decls : List[l.Decl], stmts : List[Statement]) extends l.ASTNode {
   override def toString = {
     "module " + id.toString() + " {\n" +
