@@ -195,6 +195,21 @@ class UMCRewriter(cntProof : CountingProof) {
     List(blkStmt, assumeStmt)
   }
 
+  def rewriteUb(ufMap : UFMap, st : UbStmt) : List[l.Statement] = {
+    val s1 = st.e1
+    val s2 = st.e2
+    val args = s1.xs ++ s1.ys
+    val f = s1.e
+    val g = s2.e
+    val assertExpr = E.forall(args, E.implies(f, g))
+    val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
+    val ufn1 = _apply(ufMap(s1))
+    val ufn2 = _apply(ufMap(s2))
+    val assumeExpr = E.forall(st.e1.ys, E.le(ufn1, ufn2))
+    val assumeStmt = l.AssumeStmt(assumeExpr, None)
+    List(assertStmt, assumeStmt)
+  }
+
   def rewriteIndLb(ufMap : UFMap, indlb : IndLbStmt) : List[l.Statement] = {
     // First we want f(x, n) && g(y, n) ==> f(skolem(x, y), n + 1)
     val f = indlb.f
@@ -255,6 +270,7 @@ class UMCRewriter(cntProof : CountingProof) {
     List(liftAssertStmt, injAssertStmt, assumpStmt1, assumpStmt2)
   }
 
+
   def rewriteAssert(ufmap : UFMap, st : Statement) : List[l.Statement] = {
     val newStmts : List[l.Statement] = st match {
       case a : AssertStmt =>
@@ -263,15 +279,17 @@ class UMCRewriter(cntProof : CountingProof) {
         rewriteOr(ufmap, d)
       case r : RangeStmt =>
         rewriteRange(ufmap, r)
-      case lb : ConstLbStmt =>
-        rewriteConstLb(ufmap, lb)
-      case ub : ConstUbStmt =>
-        rewriteConstUb(ufmap, ub)
+      case constLb : ConstLbStmt =>
+        rewriteConstLb(ufmap, constLb)
+      case constUb : ConstUbStmt =>
+        rewriteConstUb(ufmap, constUb)
       case eq : ConstEqStmt =>
         rewriteConstLb(ufmap, ConstLbStmt(eq.e, eq.v, eq.assump)) ++
         rewriteConstUb(ufmap, ConstUbStmt(eq.e, l.IntLit(eq.v.value + 1), eq.assump))
       case indLb : IndLbStmt =>
         rewriteIndLb(ufmap, indLb)
+      case ub : UbStmt =>
+        rewriteUb(ufmap, ub)
       case _ =>
         throw new AssertionError("Unknown proof statement: " + st.toString())
     }
