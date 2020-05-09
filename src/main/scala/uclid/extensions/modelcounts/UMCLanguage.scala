@@ -256,6 +256,8 @@ case class IndLbStmt(fp : CountingOp, f : CountingOp, g : CountingOp, skolems : 
 }
 
 case class UbStmt(e1 : CountingOp, e2: CountingOp) extends Statement {
+  assert (e1.xs == e2.xs && e1.ys == e2.ys)
+
   override val hashId = 130007
   override val md5hashCode = computeMD5Hash(e1, e2)
   override def toLines =
