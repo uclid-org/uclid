@@ -277,10 +277,8 @@ case class UbStmt(e1 : CountingOp, e2: CountingOp) extends Statement {
 }
 
 case class AndUbStmt(e1 : CountingOp, e2 : CountingOp, e3 : CountingOp) extends Statement {
-  println("Reached here")
-  assert (e1.xs.toSet == (e2.xs.toSet | e1.xs.toSet))
+  assert (e1.xs.toSet == (e2.xs.toSet union e3.xs.toSet))
 
-  println("Assertions passed")
   override val hashId = 130008
   override val md5hashCode = computeMD5Hash(e1, e2, e3)
   override def toLines = List("assert andUB: " + e1.toString() + " <= " + e2.toString() + " * " +  e3.toString())
@@ -293,6 +291,26 @@ case class AndUbStmt(e1 : CountingOp, e2 : CountingOp, e3 : CountingOp) extends 
         val op2 = CountingOp(e2.xs, e2.ys, e2p)
         val op3 = CountingOp(e3.xs, e3.ys, e3p)
         Some(AndUbStmt(op1, op2, op3))
+      case _ => None
+    }
+  }
+}
+
+case class DisjointStmt(e1 : CountingOp, e2 : CountingOp, e3 : CountingOp) extends Statement {
+  assert (e1.xs.toSet == (e2.xs.toSet union e3.xs.toSet))
+
+  override val hashId = 130009
+  override val md5hashCode = computeMD5Hash(e1, e2, e3)
+  override def toLines = List("assert disjoint: " + e1.toString() + " == " + e2.toString() + " * " +  e3.toString())
+  override val countingOps = Seq(e1, e2, e3)
+  override val expressions = Seq(e1, e2, e3)
+  override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
+    (rewriter(e1.e), rewriter(e2.e), rewriter(e3.e)) match {
+      case (Some(e1p), Some(e2p), Some(e3p)) =>
+        val op1 = CountingOp(e1.xs, e1.ys, e1p)
+        val op2 = CountingOp(e2.xs, e2.ys, e2p)
+        val op3 = CountingOp(e3.xs, e3.ys, e3p)
+        Some(DisjointStmt(op1, op2, op3))
       case _ => None
     }
   }
