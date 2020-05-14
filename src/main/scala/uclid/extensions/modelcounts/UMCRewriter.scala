@@ -230,6 +230,48 @@ class UMCRewriter(cntProof : CountingProof) {
     List(assertStmt, assumeStmt)
   }
 
+  def rewriteInjectivity(ufMap : UFMap, inj : InjectivityStmt) : List[l.Statement] = {
+    // forall x. f(x) ==> g(skolem(x))
+    val f = inj.f
+    val g = inj.g
+    val f_x = f.e
+    val g_y = g.e
+    val skSubs = (g.xs.map(_._1.asInstanceOf[l.Expr]) zip inj.skolems).toMap
+    val conseq = new ExprRewriter(skSubs).rewrite(g_y)
+    val impl = E.implies(f_x, conseq)
+    val qVars = f.xs ++ f.ys
+    val qOp = E.forall(qVars, impl)
+    val liftAssertStmt = l.AssertStmt(qOp, None, List.empty)
+
+    // Next we want to show injectivity of the skolem:
+    // f(x1) && f(x2) && (x1 != x2) ==> skolem(x1) != skolem(x2)
+    val x1s = f.xs.map(p => generateId(p._1.toString()))
+    val x2s = f.xs.map(p => generateId(p._1.toString()))
+    val rwx1 = new ExprRewriter((f.xs zip x1s).map(p => (p._1._1.asInstanceOf[l.Expr] -> p._2.asInstanceOf[l.Expr])).toMap)
+    val rwx2 = new ExprRewriter((f.xs zip x2s).map(p => (p._1._1.asInstanceOf[l.Expr] -> p._2.asInstanceOf[l.Expr])).toMap)
+
+    val f_x1n = rwx1.rewrite(f.e)
+    val f_x2n = rwx2.rewrite(f.e)
+    val xdiff = E.orL((x1s zip x2s).map(p => E.distinct(p._1, p._2)))
+    val sk1s = inj.skolems.map(sk => rwx1.rewrite(sk))
+    val sk2s = inj.skolems.map(sk => rwx2.rewrite(sk))
+    val ante2 = E.andL(List(f_x1n, f_x2n, xdiff))
+    val skdiff = E.orL((sk1s zip sk2s).map(p => E.distinct(p._1, p._2)))
+    val impl2 = E.implies(ante2, skdiff)
+    val vars = (f.xs zip x1s).map(p => (p._2, p._1._2)) ++
+      (f.xs zip x2s).map(p => (p._2, p._1._2)) ++ f.ys
+    val injAssertStmt = l.AssertStmt(E.forall(vars, impl2), None, List.empty)
+
+    // Now the assumption.
+    val ufn = _apply(ufMap(f))
+    val ugn = _apply(ufMap(g))
+    val leqExpr = E.le(ufn, ugn)
+    val assumpStmt1 = l.AssumeStmt(E.forall(f.ys, leqExpr), None)
+
+    List(liftAssertStmt, injAssertStmt, assumpStmt1)
+  }
+
+
   def rewriteDisjoint(ufMap : UFMap, st : DisjointStmt) : List[l.Statement] = {
     val e2s = st.e2.xs.toSet
     val e3s = st.e3.xs.toSet
@@ -338,6 +380,8 @@ class UMCRewriter(cntProof : CountingProof) {
         rewriteAndUb(ufmap, andUb)
       case disj : DisjointStmt =>
         rewriteDisjoint(ufmap, disj)
+      case inj : InjectivityStmt =>
+        rewriteInjectivity(ufmap, inj)
       case _ =>
         throw new AssertionError("Unknown proof statement: " + st.toString())
     }
