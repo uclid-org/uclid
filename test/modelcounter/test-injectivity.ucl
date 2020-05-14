@@ -1,0 +1,8 @@
+module main {
+  define f(n : integer) : boolean = 1 <= n < 10;
+  define g(n : integer) : boolean = 15 <= n < 30;
+
+  proof {
+    assert injectivity: #[(n: integer)] :: (f(n)) <= #[(m: integer)] :: (g(m)) skolems(n+14);
+  }
+}

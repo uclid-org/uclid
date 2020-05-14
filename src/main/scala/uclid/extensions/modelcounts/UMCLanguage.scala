@@ -244,7 +244,7 @@ case class IndLbStmt(fp : CountingOp, f : CountingOp, g : CountingOp, skolems : 
     val e_fp = rewriter(fp.e)
     val e_f = rewriter(f.e)
     val e_g = rewriter(g.e)
-    val skolemsP = skolems.map(rewriter(_)).flatten
+    val skolemsP = skolems.flatMap(rewriter(_))
     (e_fp, e_f, e_g) match {
       case (Some(e1), Some(e2), Some(e3)) =>
         val fpNew = CountingOp(fp.xs, fp.ys, e1)
@@ -311,6 +311,26 @@ case class DisjointStmt(e1 : CountingOp, e2 : CountingOp, e3 : CountingOp) exten
         val op2 = CountingOp(e2.xs, e2.ys, e2p)
         val op3 = CountingOp(e3.xs, e3.ys, e3p)
         Some(DisjointStmt(op1, op2, op3))
+      case _ => None
+    }
+  }
+}
+
+case class InjectivityStmt(f : CountingOp, g: CountingOp, skolems : List[l.Expr] ) extends Statement {
+  override val hashId = 130010
+  override val md5hashCode = computeMD5Hash(f, g, skolems)
+  override def toLines =
+    List("assert injectivity: " + f.toString() + " <= " + g.toString() + " skolems (" +
+      Utils.join(skolems.map(_.toString()), ", ") + ");")
+  override val countingOps = Seq(f, g)
+  override val expressions = Seq(f, g) ++ skolems
+  override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
+    val skolemsP = skolems.flatMap(rewriter(_))
+    (rewriter(f.e), rewriter(g.e)) match {
+      case (Some(e1p), Some(e2p)) =>
+        val e1New = CountingOp(f.xs, f.ys, e1p)
+        val e2New = CountingOp(g.xs, g.ys, e2p)
+        Some(InjectivityStmt(e1New, e2New, skolemsP))
       case _ => None
     }
   }
