@@ -39,14 +39,14 @@
 
 package uclid.extensions.modelcounts
 
-import uclid.{lang => l}
-import uclid.Utils
-import uclid.lang.Identifier
-import uclid.lang.Type
+import uclid.{Utils, lang => l}
+import uclid.lang.{Decl, Identifier, ProcedureAnnotations, Type}
 import uclid.smt.IntLit
 import uclid.extensions.modelcounts.{UMCExpressions => E}
 
 class UMCParser extends l.UclidParser {
+  lazy val KwLemmas   = "lemmas"
+  lazy val KwLemma    = "lemma"
   lazy val KwProof    = "proof"
   lazy val KwConstLB  = "constLB"
   lazy val KwConstUB  = "constUB"
@@ -61,7 +61,7 @@ class UMCParser extends l.UclidParser {
   lazy val KwSkolems  = "skolems"
 
   lexical.reserved += (KwProof, KwOr, KwConstLB, KwConstUB, KwConstEq, KwIndLb, KwSkolems, KwUB, KwAndUB,
-                        KwDisjoint, KwInj, KwIndUb)
+                        KwDisjoint, KwInj, KwIndUb, KwLemmas, KwLemma)
 
   lazy val UMCDecl: PackratParser[l.Decl] =
     positioned (TypeDecl | DefineDecl | FuncDecl | AxiomDecl)
@@ -169,15 +169,59 @@ class UMCParser extends l.UclidParser {
       case e => AssertStmt(e)
     }
   }
+
+  lazy val LemmaDecl : PackratParser[l.ProcedureDecl] = positioned {
+    KwLemma ~> ProcedureAnnotationList.? ~ Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
+      rep(ProcedureVerifExpr) ~ BlkStmt ^^
+      { case annotOpt ~ id ~ args ~ outs ~ verifExprs ~ body =>
+        val annotations = annotOpt match {
+          case Some(ids) => ProcedureAnnotations(ids.toSet)
+          case None => ProcedureAnnotations(Set.empty)
+        }
+        val verifExprList = verifExprs.flatMap(v => v)
+        val requiresList = collectRequires(verifExprList)
+        val ensuresList = collectEnsures(verifExprList)
+        val modifiesList = collectModifies(verifExprList)
+        l.ProcedureDecl(id, l.ProcedureSig(args,outs),
+          body, requiresList, ensuresList, modifiesList.toSet, annotations) } |
+      // procedure with no return value
+      KwLemma ~> ProcedureAnnotationList.? ~ Id ~ IdTypeList ~ rep(ProcedureVerifExpr) ~ BlkStmt ^^
+        { case annotOpt ~ id ~ args ~ verifExprs ~ body =>
+          val annotations = annotOpt match {
+            case Some(ids) => ProcedureAnnotations(ids.toSet)
+            case None => ProcedureAnnotations(Set.empty)
+          }
+          val verifExprList = verifExprs.flatMap(v => v)
+          val requiresList = collectRequires(verifExprList)
+          val ensuresList = collectEnsures(verifExprList)
+          val modifiesList = collectModifies(verifExprList)
+          l.ProcedureDecl(id, l.ProcedureSig(args, List.empty),
+            body, requiresList, ensuresList, modifiesList.toSet, annotations) }
+  }
+
+  lazy val LemmaDeclarations: PackratParser[l.ProcedureDecl] =
+    positioned ( LemmaDecl );
+
+  lazy val LemmaBlock: PackratParser[List[Decl]] = {
+    KwLemmas ~ "{" ~> rep(LemmaDeclarations) <~ "}"
+  }
+
   lazy val ProofStmt: PackratParser[Statement] = 
     positioned ( Stmt );
+
   lazy val ProofScript: PackratParser[List[Statement]] = {
     KwProof ~ "{" ~> rep(ProofStmt) <~ "}"
   }
+
   lazy val CntProof: PackratParser[CountingProof] = positioned {
     KwModule ~> Id ~ ("{" ~> rep(UMCDecl)) ~ (ProofScript <~ "}") ^^ {
       case id ~ decls ~ proof => {
-        CountingProof(id, decls, proof)
+        CountingProof(id, decls, List(), proof)
+      }
+    } |
+    KwModule ~> Id ~ ("{" ~> rep(UMCDecl)) ~ LemmaBlock ~ (ProofScript <~ "}") ^^ {
+      case id ~ decls ~ lemmas ~ proof => {
+        CountingProof(id, decls, lemmas, proof)
       }
     }
   }

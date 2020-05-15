@@ -368,10 +368,12 @@ case class IndUbStmt(fp : CountingOp, f : CountingOp, g : CountingOp, skolems : 
   }
 }
 
-case class CountingProof(id : l.Identifier, decls : List[l.Decl], stmts : List[Statement]) extends l.ASTNode {
+case class CountingProof(id : l.Identifier, decls : List[l.Decl], lemmas: List[l.Decl],
+                         stmts : List[Statement]) extends l.ASTNode {
   override def toString = {
     "module " + id.toString() + " {\n" +
-    Utils.join(decls.map("  " + _.toString()), "\n") +
+    Utils.join(decls.map("  " + _.toString()), "\n") + "\n\n" +
+    Utils.join(lemmas.map("  " + _.toString()), "\n") +
     "\n\n  proof {\n" +
     Utils.join(stmts.map(st => "    " + st.toString()), "\n") +
     "\n  }\n}"
@@ -381,8 +383,9 @@ case class CountingProof(id : l.Identifier, decls : List[l.Decl], stmts : List[S
     def rewriterFn(expr : l.Expr) : Option[l.Expr] = {
       rewriter.visitExpr(expr, ctx)
     }
-    val stmtsP = stmts.map(st => st.rewrite(rewriterFn)).flatten
-    CountingProof(id, decls, stmtsP)
+
+    val stmtsP = stmts.flatMap(st => st.rewrite(rewriterFn))
+    CountingProof(id, decls, lemmas, stmtsP)
   }
   override val hashId = 131001
   override val md5hashCode = computeMD5Hash(id, decls, stmts)
@@ -392,7 +395,7 @@ case class CountingProof(id : l.Identifier, decls : List[l.Decl], stmts : List[S
 object UMCExpressions {
   // Helper functions to more easily construct expressions.
   def forall(vs : List[(l.Identifier, l.Type)], e : l.Expr) = {
-    if (vs.size > 0) {
+    if (vs.nonEmpty) {
       val op = l.ForallOp(vs, List.empty)
       l.OperatorApplication(op, List(e))
     } else {
@@ -401,7 +404,7 @@ object UMCExpressions {
   }
   
   def exists(vs : List[(l.Identifier, l.Type)], e : l.Expr) = {
-    assert (vs.size > 0)
+    assert (vs.nonEmpty)
     val op = l.ExistsOp(vs, List.empty)
     l.OperatorApplication(op, List(e))
   }
@@ -411,7 +414,7 @@ object UMCExpressions {
   }
 
   def andL(es : Seq[l.Expr]) = {
-    assert (es.size >= 1)
+    assert (es.nonEmpty)
     es.foldLeft(l.BoolLit(true).asInstanceOf[l.Expr])((acc, e) => and(acc, e)) 
   }
 
@@ -420,7 +423,7 @@ object UMCExpressions {
   }
   
   def orL(es : Seq[l.Expr]) = {
-    assert (es.size >= 1)
+    assert (es.nonEmpty)
     es.foldLeft(l.BoolLit(false).asInstanceOf[l.Expr])((acc, e) => or(acc, e)) 
   }
 
