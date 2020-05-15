@@ -1,0 +1,46 @@
+// Model counting in ZK Hats - Motivating example in CAV 2020 paper
+
+module main {
+
+  define V(Y : [integer]boolean, R : integer) : boolean =
+        (R >= 0) && (exists (i : integer) :: 0 <= i < R && Y[i])
+                && (forall (i : integer) :: (i < 0 || i >= R) ==> !Y[i]);
+
+  define Vf(Y : [integer]boolean, R : integer) : boolean =
+     (R >= 0) && (forall (i : integer) :: (i < 0 || i >= R) ==> !Y[i]);
+
+  define V1(Y : [integer]boolean, R : integer) : boolean =
+        (R >= 0) && (forall (i : integer) :: !Y[i]);
+
+  define W(i : boolean) : boolean = 0 <= i < 2;
+
+  proof {
+    // Proof rules 2 - 7 from paper.
+
+    // 2. (Or) #Y. Vf(Y, R) = #Y. V(Y, R) + #Y.(V1(Y,R))
+    assert or: #[(Y: [integer]boolean) for (R : integer)] :: (Vf(Y, R)) ==
+                         #[(Y: [integer]boolean) for (R : integer)] :: (V(Y, R)) +
+                         #[(Y: [integer]boolean) for (R : integer)] :: (V1(Y, R));
+
+    // 3. (ConstEq) #Y. V1(Y, R) = 1
+    assert constEq: R >= 0 ==> #[(Y: [integer]boolean) for (R: integer)] :: (V1(Y, R)) == 1;
+
+    // 4. (ConstEq) #Y. Vf(Y, 1) = 2
+        assert constEq: R == 1 ==> #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R)) == 2;
+
+    // 5. (IndUB) #Y. Vf(Y, R) <= #i.W(i) * #Y. Vf(Y, R-1)
+        // TODO
+
+    // 6. (IndLB) #Y. Vf(Y, R) >= #i.W(i) * #Y. Vf(Y, R-1)
+    // TODO : Not Working yet
+    
+        assert indLB: #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R)) >=
+                      #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R-1)) *
+                      #[(i: integer)] :: (W(i))
+                      skolems(Y[(R+1) -> i]);
+
+    // 7. (Range) #i. W(i) == 2
+        assert range: #[(i: integer)] :: (W(i)) == 2;
+
+  }
+}
