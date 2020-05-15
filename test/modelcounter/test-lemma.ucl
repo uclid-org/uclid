@@ -1,0 +1,20 @@
+module main {
+    define f (n: integer): boolean = 1 <= n < 10;
+
+    lemmas{
+      lemma lemma1()
+        returns (b: boolean)
+        {
+            b= true;
+        }
+      lemma lemma2()
+        returns (i: integer)
+        {
+            i= 42;
+        }
+    }
+
+    proof {
+        assert range: #[(n: integer)] :: (f(n)) == 9;
+    }
+}

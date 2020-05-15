@@ -415,8 +415,9 @@ class UMCRewriter(cntProof : CountingProof) {
         l.BlockStmt(List.empty, newProofStmts), 
         List.empty, List.empty, Set.empty, l.ProcedureAnnotations(Set.empty))
     val prevDecls = cntProof.decls.filter(p => !p.isInstanceOf[l.ProcedureDecl])
+    val prevProcDecls = cntProof.lemmas
     val moduleP = l.Module(cntProof.id, 
-                           prevDecls ++ ufDecls ++ List(newProofProc), 
+                           prevDecls ++ prevProcDecls ++ ufDecls ++ List(newProofProc),
                            controlBlock, List.empty)
     println(ufMap.toString())
     println(ufDecls.toString())
