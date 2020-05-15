@@ -368,7 +368,7 @@ case class IndUbStmt(fp : CountingOp, f : CountingOp, g : CountingOp, skolems : 
   }
 }
 
-case class CountingProof(id : l.Identifier, decls : List[l.Decl], lemmas: List[l.Decl],
+case class CountingProof(id : l.Identifier, decls : List[l.Decl], lemmas: List[l.ProcedureDecl],
                          stmts : List[Statement]) extends l.ASTNode {
   override def toString = {
     "module " + id.toString() + " {\n" +

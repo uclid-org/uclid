@@ -403,6 +403,11 @@ class UMCRewriter(cntProof : CountingProof) {
         None, None),
   )
 
+  lazy val verifyLemmas : List[l.GenericProofCommand] =
+    cntProof.lemmas.map(lem => l.GenericProofCommand(
+      l.Identifier("verify"),
+      List.empty, List((lem.id, lem.id.toString+ " in Lemma block.")),
+      None, None))
 
   def process() : l.Module = {
     val countingOps = identifyCountOps(cntProof.stmts)
@@ -418,7 +423,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val prevProcDecls = cntProof.lemmas
     val moduleP = l.Module(cntProof.id, 
                            prevDecls ++ prevProcDecls ++ ufDecls ++ List(newProofProc),
-                           controlBlock, List.empty)
+                            verifyLemmas ++ controlBlock, List.empty)
     println(ufMap.toString())
     println(ufDecls.toString())
     moduleP
