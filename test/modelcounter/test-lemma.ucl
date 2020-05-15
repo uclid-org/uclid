@@ -9,6 +9,7 @@ module main {
         }
       lemma lemma2()
         returns (i: integer)
+        ensures i > 10;
         {
             i= 42;
         }

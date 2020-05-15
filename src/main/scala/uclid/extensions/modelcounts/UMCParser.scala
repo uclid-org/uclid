@@ -202,7 +202,7 @@ class UMCParser extends l.UclidParser {
   lazy val LemmaDeclarations: PackratParser[l.ProcedureDecl] =
     positioned ( LemmaDecl );
 
-  lazy val LemmaBlock: PackratParser[List[Decl]] = {
+  lazy val LemmaBlock: PackratParser[List[l.ProcedureDecl]] = {
     KwLemmas ~ "{" ~> rep(LemmaDeclarations) <~ "}"
   }
 
