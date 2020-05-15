@@ -336,6 +336,38 @@ case class InjectivityStmt(f : CountingOp, g: CountingOp, skolems : List[l.Expr]
   }
 }
 
+case class IndUbStmt(fp : CountingOp, f : CountingOp, g : CountingOp, skolems : List[l.Expr]) extends Statement {
+  assert (fp.ys.size == 1 && f.ys.size == 1 && g.ys.size == 1)
+  assert (fp.ys(0)._2.isInt)
+  assert (fp.ys == f.ys && f.ys == g.ys)
+  val n = fp.ys(0)._1
+  assert (new ExprRewriter(Map(n -> UMCExpressions.plus(n, l.IntLit(1)))).rewrite(f.e) == fp.e)
+
+  override val hashId = 130011
+  override val md5hashCode = computeMD5Hash(fp, f, g, skolems)
+  override def toLines = {
+    List("assert indUB: " + fp.toString + " <= " +
+      f.toString() + " * " + g.toString() + " skolems (" +
+      Utils.join(skolems.map(_.toString()), ", ") + ");")
+  }
+  override val countingOps = Seq(fp, f, g)
+  override val expressions = Seq(fp, f, g) ++ skolems
+  override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
+    val e_fp  = rewriter(fp.e)
+    val e_f   = rewriter(f.e)
+    val e_g   = rewriter(g.e)
+    val skolemsP = skolems.flatMap(rewriter(_))
+    (e_fp, e_f, e_g) match {
+      case (Some(e1), Some(e2), Some(e3)) =>
+        val fpNew = CountingOp(fp.xs, fp.ys, e1)
+        val fNew  = CountingOp(f.xs, f.ys, e2)
+        val gNew  = CountingOp(g.xs, g.ys, e3)
+        Some(IndUbStmt(fpNew, fNew, gNew, skolemsP))
+      case _ => None
+    }
+  }
+}
+
 case class CountingProof(id : l.Identifier, decls : List[l.Decl], stmts : List[Statement]) extends l.ASTNode {
   override def toString = {
     "module " + id.toString() + " {\n" +
