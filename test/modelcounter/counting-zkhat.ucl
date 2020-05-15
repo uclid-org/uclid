@@ -12,7 +12,7 @@ module main {
   define V1(Y : [integer]boolean, R : integer) : boolean =
         (R >= 0) && (forall (i : integer) :: !Y[i]);
 
-  define W(i : boolean) : boolean = 0 <= i < 2;
+  define W(i : integer) : boolean = 0 <= i < 2;
 
   proof {
     // Proof rules 2 - 7 from paper.
@@ -32,12 +32,10 @@ module main {
         // TODO
 
     // 6. (IndLB) #Y. Vf(Y, R) >= #i.W(i) * #Y. Vf(Y, R-1)
-    // TODO : Not Working yet
-    
-        assert indLB: #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R)) >=
-                      #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R-1)) *
-                      #[(i: integer)] :: (W(i))
-                      skolems(Y[(R+1) -> i]);
+        assert indLB: #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R + 1)) >=
+                      #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R)) *
+                      #[(i: integer) for (R: integer)] :: (W(i))
+                      skolems(Y[(R) -> (i == 1)]);
 
     // 7. (Range) #i. W(i) == 2
         assert range: #[(i: integer)] :: (W(i)) == 2;
