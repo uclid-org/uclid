@@ -4,10 +4,10 @@ module main {
 
   define V(Y : [integer]boolean, R : integer) : boolean =
         (R >= 0) && (exists (i : integer) :: 0 <= i < R && Y[i])
-                && (forall (i : integer) :: (i < 0 || i >= R) ==> !Y[i]);
+                 && (forall (i : integer) :: (i < 0 || i >= R) ==> !Y[i]);
 
   define Vf(Y : [integer]boolean, R : integer) : boolean =
-     (R >= 0) && (forall (i : integer) :: (i < 0 || i >= R) ==> !Y[i]);
+        (R >= 0) && (forall (i : integer) :: (i < 0 || i >= R) ==> !Y[i]);
 
   define V1(Y : [integer]boolean, R : integer) : boolean =
         (R >= 0) && (forall (i : integer) :: !Y[i]);
@@ -26,19 +26,19 @@ module main {
     assert constEq: R >= 0 ==> #[(Y: [integer]boolean) for (R: integer)] :: (V1(Y, R)) == 1;
 
     // 4. (ConstEq) #Y. Vf(Y, 1) = 2
-        assert constEq: R == 1 ==> #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R)) == 2;
+    assert constEq: R == 1 ==> #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R)) == 2;
 
     // 5. (IndUB) #Y. Vf(Y, R) <= #i.W(i) * #Y. Vf(Y, R-1)
-        // TODO
+    // TODO
 
     // 6. (IndLB) #Y. Vf(Y, R) >= #i.W(i) * #Y. Vf(Y, R-1)
-        assert indLB: #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R + 1)) >=
+    assert indLB: #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R + 1)) >=
                       #[(Y: [integer]boolean) for (R: integer)] :: (Vf(Y, R)) *
                       #[(i: integer) for (R: integer)] :: (W(i))
                       skolems(Y[(R) -> (i == 1)]);
 
     // 7. (Range) #i. W(i) == 2
-        assert range: #[(i: integer)] :: (W(i)) == 2;
+    assert range: #[(i: integer) for (R: integer)] :: (W(i)) == 2;
 
   }
 }

@@ -1,0 +1,65 @@
+ module main {
+   define V (Y: [integer]boolean, R: integer): boolean = ((R >= 0) && ((exists (i : integer) :: (((0 <= i) && (i < R)) && (Y)[i])) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y)[i])))));
+   define Vf (Y: [integer]boolean, R: integer): boolean = ((R >= 0) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y)[i]))));
+   define V1 (Y: [integer]boolean, R: integer): boolean = ((R >= 0) && (forall (i : integer) :: !((Y)[i])));
+   define W (i: integer): boolean = ((0 <= i) && (i < 2));
+   function count_1(R: integer): integer;  // line 0
+   axiom assump_1 : (forall (R : integer) :: (count_1(R) >= 0)); // <undefined position>
+   function count_2(R: integer): integer;  // line 0
+   axiom assump_2 : (forall (R : integer) :: (count_2(R) >= 0)); // <undefined position>
+   function count_3(R: integer): integer;  // line 0
+   axiom assump_3 : (forall (R : integer) :: (count_3(R) >= 0)); // <undefined position>
+   function count_4(R: integer): integer;  // line 0
+   axiom assump_4 : (forall (R : integer) :: (count_4(R) >= 0)); // <undefined position>
+   function count_5(R: integer): integer;  // line 0
+   axiom assump_5 : (forall (R : integer) :: (count_5(R) >= 0)); // <undefined position>
+   procedure countingProof() returns ()
+     {
+       assert ((forall (Y : [integer]boolean, R : integer) :: (((R >= 0) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y)[i])))) <==> (((R >= 0) && ((exists (i : integer) :: (((0 <= i) && (i < R)) && (Y)[i])) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y)[i]))))) || ((R >= 0) && (forall (i : integer) :: !((Y)[i])))))) && (forall (Y : [integer]boolean, R : integer) :: !((((R >= 0) && ((exists (i : integer) :: (((0 <= i) && (i < R)) && (Y)[i])) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y)[i]))))) && ((R >= 0) && (forall (i : integer) :: !((Y)[i]))))))); // line 0
+       assume (forall (R : integer) :: (count_4(R) == (count_1(R) + count_5(R)))); // line 0
+       {
+         var Y_1 : [integer]boolean; // line 26
+         var R : integer; // line 26
+         assert  [cover, SATOnly]: (forall (R : integer) :: (R >= 0 ==> (R >= 0 && (forall (i : integer) :: !Y_1[i])))); // line 0
+       }
+       assume (forall (R : integer) :: ((R >= 0) ==> (count_5(R) >= 1))); // line 0
+       {
+         var Y_2 : [integer]boolean; // line 26
+         var Y_3 : [integer]boolean; // line 26
+         var R : integer; // line 26
+         assert  [cover]: (forall (R : integer) :: ((R >= 0) ==> (((true && ((R >= 0) && (forall (i : integer) :: !((Y_2)[i])))) && ((R >= 0) && (forall (i : integer) :: !((Y_3)[i])))) && distinct({Y_2}, {Y_3})))); // line 0
+       }
+       assume (forall (R : integer) :: ((R >= 0) ==> (count_5(R) < 2))); // line 0
+       {
+         var Y_4 : [integer]boolean; // line 29
+         var Y_5 : [integer]boolean; // line 29
+         var R : integer; // line 29
+         assert  [cover, SATOnly]: (forall (R : integer) :: ((R == 1) ==> (((true && ((R >= 0) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y_4)[i]))))) && ((R >= 0) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y_5)[i]))))) && distinct({Y_4}, {Y_5})))); // line 0
+       }
+       assume (forall (R : integer) :: ((R == 1) ==> (count_4(R) >= 2))); // line 0
+       {
+         var Y_6 : [integer]boolean; // line 29
+         var Y_7 : [integer]boolean; // line 29
+         var Y_8 : [integer]boolean; // line 29
+         var R : integer; // line 29
+         assert  [cover]: (forall (R : integer) :: ((R == 1) ==> ((((true && ((R >= 0) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y_6)[i]))))) && ((R >= 0) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y_7)[i]))))) && ((R >= 0) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y_8)[i]))))) && distinct({Y_6}, {Y_7}, {Y_8})))); // line 0
+       }
+       assume (forall (R : integer) :: ((R == 1) ==> (count_4(R) < 3))); // line 0
+       assert (forall (Y : [integer]boolean, i : integer, R : integer) :: ((((R >= 0) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y)[i])))) && ((0 <= i) && (i < 2))) ==> (((R + 1) >= 0) && (forall (i : integer) :: (((i < 0) || (i >= (R + 1))) ==> !(((Y)[R -> (i == 1)])[i])))))); // line 0
+       assert (forall (Y_9 : [integer]boolean, Y_10 : [integer]boolean, i_1 : integer, i_2 : integer, R : integer) :: ((((((true && ((R >= 0) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y_9)[i]))))) && ((R >= 0) && (forall (i : integer) :: (((i < 0) || (i >= R)) ==> !((Y_10)[i]))))) && ((0 <= i_1) && (i_1 < 2))) && ((0 <= i_2) && (i_2 < 2))) && ((false || distinct(Y_9, Y_10)) || (false || distinct(i_1, i_2)))) ==> (false || distinct((Y_9)[R -> (i_1 == 1)], (Y_10)[R -> (i_2 == 1)])))); // line 0
+       assume (forall (R : integer) :: (count_4((R + 1)) >= (count_4(R) * count_3(R)))); // line 0
+       assume (forall (R : integer) :: (count_4((R + 1)) == count_2(R))); // line 0
+       assume (forall (R : integer) :: (count_3(R) == (if(0 < 2) then 2 else 0))); // line 0
+       assert (forall (R : integer) :: (count_3(R) == 2)); // line 0
+
+       assert (forall (R : integer) :: count_4(R+1) >= count_4(R) * 2);
+       assert (count_4(1) >= 2);
+       assert (forall (R : integer) :: (R >= 0) ==> (count_1(R) == count_4(R) - 1));
+     }
+   control {
+     v = verify(countingProof /* countingProof*/); // line 0
+     check; // line 0
+     print_results; // line 0
+   }
+ }
+
