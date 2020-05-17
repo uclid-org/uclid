@@ -21,6 +21,7 @@ syn keyword ucl4Decl            module init next control function procedure retu
 syn keyword ucl4Cmd             unroll lazysc check print_module print_cex print_results k_induction_base k_induction_step induction clear_context synthesize_invariant set_solver_option
 " user labels
 syn keyword ucl4Constant        false true
+syn keyword ucl4Count           proof range constUB constLB constEq UB andUB disjoint or injectivity indLB indUB skolems lemmas lemma
 
 
 syn match   ucl4Identifier      display "[A-Za-z_][A-Za-z0-9_]*"
@@ -63,5 +64,6 @@ hi def link ucl4Cmd             Define
 hi def link ucl4Operator        Special
 hi def link ucl4Delimiter       Normal
 hi def link ucl4Number          Number
+hi def link ucl4Count           Keyword
 
 let b:current_syntax = "ucl"
