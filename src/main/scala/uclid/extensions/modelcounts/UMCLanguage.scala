@@ -225,7 +225,7 @@ case class ConstEqStmt(e : CountingOp, v : l.IntLit, assump : l.Expr) extends St
 }
 
 case class IndLbStmt(fp : CountingOp, f : CountingOp, g : CountingOp, skolems : List[l.Expr]) extends Statement {
-  assert (fp.ys.size == 1 && f.ys.size == 1 && g.ys.size >= 1)
+  assert (fp.ys.size >= 1 && f.ys.size >= 1 && g.ys.size >= 1)
   assert (fp.ys(0)._2.isInt)
   assert (fp.ys == f.ys)
   val n = fp.ys(0)._1
