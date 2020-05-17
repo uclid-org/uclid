@@ -42,7 +42,7 @@ syn match   ucl4Number      "\<\d\+bv\d\+\>"
 syn match   ucl4Number      "\<0[xX][0-9A-F]\+bv\d\+\>"
 syn match   ucl4Number      "\<0[bB][01]\+bv\d\+\>"
 syn match   ucl4Delimiter   "\[\|\]\|(\|)"
-syn match   ucl4Operator    "=\|==\|+\|-\|*\|&&\|||\|^\|!\|==>\|<==>\|<\|<=\|>\|>="
+syn match   ucl4Operator    "=\|==\|+\|-\|*\|&&\|||\|^\|!\|==>\|<==>\|<\|<=\|>\|>=\|#"
 syn match   ucl4UComparator "<_u\|<=_u\|>_u\|>=_u"
 
 syn region ucl4MultilineComment start="/\*" end="\*/"
