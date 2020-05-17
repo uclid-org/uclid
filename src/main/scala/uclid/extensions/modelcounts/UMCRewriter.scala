@@ -308,7 +308,7 @@ class UMCRewriter(cntProof : CountingProof) {
                  (indlb.n.asInstanceOf[l.Expr] -> nplus1)
     val conseq = new ExprRewriter(skSubs).rewrite(f_xn)
     val impl = E.implies(ante, conseq)
-    val qVars = f.xs ++ g.xs ++ f.ys
+    val qVars = f.xs ++ g.xs ++ f.ys ++ g.ys
     val qOp = E.forall(qVars, impl)
     val liftAssertStmt = l.AssertStmt(qOp, None, List.empty)
 
@@ -339,7 +339,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val vars = (f.xs zip x1s).map(p => (p._2, p._1._2)) ++
                (f.xs zip x2s).map(p => (p._2, p._1._2)) ++
                (g.xs zip y1s).map(p => (p._2, p._1._2)) ++
-               (g.xs zip y2s).map(p => (p._2, p._1._2)) ++ f.ys
+               (g.xs zip y2s).map(p => (p._2, p._1._2)) ++ f.ys ++ g.ys
     val injAssertStmt = l.AssertStmt(E.forall(vars, impl2), None, List.empty)
 
     // Finally, we have to produce the assumption.
@@ -347,7 +347,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val ugn = _apply(ufMap(g))
     val ufnplus1 = E.apply(ufMap(f).id, List(nplus1))
     val geqExpr = E.ge(ufnplus1, E.mul(ufn, ugn))
-    val assumpStmt1 = l.AssumeStmt(E.forall(f.ys, geqExpr), None)
+    val assumpStmt1 = l.AssumeStmt(E.forall(f.ys ++ g.ys, geqExpr), None)
 
     val ufpn = _apply(ufMap(indlb.fp))
     val eqExpr = E.eq(ufnplus1, ufpn)
