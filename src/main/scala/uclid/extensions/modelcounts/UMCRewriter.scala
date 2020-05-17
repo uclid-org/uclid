@@ -345,14 +345,12 @@ class UMCRewriter(cntProof : CountingProof) {
     // Finally, we have to produce the assumption.
     val ufn = _apply(ufMap(f))
     val ugn = _apply(ufMap(g))
-    val ufnplus1 = E.apply(ufMap(f).id, List(nplus1))
+    val ufnplus1 = E.apply(ufMap(f).id, List(nplus1) ++ ufMap(f).sig.args.drop(1).map(_._1))
     val geqExpr = E.ge(ufnplus1, E.mul(ufn, ugn))
     val assumpStmt1 = l.AssumeStmt(E.forall(f.ys ++ g.ys, geqExpr), None)
-
     val ufpn = _apply(ufMap(indlb.fp))
     val eqExpr = E.eq(ufnplus1, ufpn)
     val assumpStmt2 = l.AssumeStmt(E.forall(f.ys, eqExpr), None)
-
     List(liftAssertStmt, injAssertStmt, assumpStmt1, assumpStmt2)
   }
 
