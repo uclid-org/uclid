@@ -849,7 +849,7 @@ case object CoverDecorator extends ExprDecorator {
   override val md5hashCode = computeMD5Hash
 }
 case object SATOnlyDecorator extends ExprDecorator {
-  override def toString = "satonly"
+  override def toString = "SATOnly"
   override val hashId = 2606
   override val md5hashCode = computeMD5Hash
 }
@@ -1160,7 +1160,7 @@ case class AssertStmt(e: Expr, id : Option[Identifier], decorators: List[ExprDec
   override def toLines = {
     val name = "assert"
     val decoratorStr = if (decorators.size > 0) {
-      " [" + Utils.join(decorators.map(_.toString()), ", ") + "] "
+      " [" + Utils.join(decorators.map(_.toString()), ", ") + "] :"
     } else { "" }
     val prefix = id match {
       case Some(n) => name + " " + n.toString() + decoratorStr + ": "
