@@ -1,0 +1,38 @@
+// Model counting in Array Shuffle
+
+module main {
+
+  define V(Y : [integer]integer, R : integer) : boolean =
+        (R >= 0) && (forall (i : integer) :: 0 <= i < R ==> i <= Y[i] <= R)
+                 && (forall (i : integer) :: (i < 0 || i >= R) ==> Y[i] == 0);
+
+  define Vf(Y : [integer]integer, R : integer) : boolean =
+        (R >= 0) && (forall (i : integer) :: (i < 0 || i >= R) ==> (Y[i] == 0));
+
+  define W(i : integer, j: integer, R: integer) : boolean = j <= i < R;
+
+
+  proof {
+
+    // (ConstEq) #Y. V(Y, 1) = 1
+    // assert constEq: R == 1 ==> #[(Y: [integer]integer) for (R: integer)] :: (V(Y, R)) == 1;
+
+    // Proving for Vf  (NOT REQUIRED)
+    // (IndLB) #Y. Vf(Y, R) >= #Y. Vf(Y, R-1) * #i. W(i, j, R)
+    assert indLB: #[(Y: [integer]integer) for (R: integer)] :: (Vf(Y, R + 1)) >=
+                  #[(Y: [integer]integer) for (R: integer)] :: (Vf(Y, R)) *
+                  #[(i: integer) for (j: integer, R: integer)] :: (W(i, j, R))
+                  skolems(Y[(R) -> i]);
+
+    // Proving for V
+    // (IndLB) #Y. V(Y, R) >= #Y. V(Y, R-1) * #i. W(i, j, R)
+    assert indLB: #[(Y: [integer]integer) for (R: integer)] :: (V(Y, R + 1)) >=
+                  #[(Y: [integer]integer) for (R: integer)] :: (V(Y, R)) *
+                  #[(i: integer) for (j: integer, R: integer)] :: (W(i, j, R))
+                  skolems(Y[(R) -> i]);
+
+    // (Range) #i. W(i, j, R) == R - j
+    assert range: (j > 0 && R > j) ==> #[(i: integer) for (j: integer, R: integer)] :: (W(i, j, R)) == (R - j);
+  }
+}
+
