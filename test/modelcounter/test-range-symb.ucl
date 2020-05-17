@@ -1,0 +1,8 @@
+module main {
+
+  define f(i : integer, j: integer, R: integer) : boolean = j <= i < R;
+
+  proof {
+    assert range: (j > 0 && R > j) ==> #[(i: integer) for (j: integer, R: integer)] :: (f(i, j, R)) == (R - j);
+  }
+}
