@@ -114,7 +114,7 @@ case class OrStmt(e1 : CountingOp, e2 : CountingOp, e3 : CountingOp) extends Sta
   }
 }
 
-case class RangeStmt(op : CountingOp, cnt : l.Expr) extends Statement {
+case class RangeStmt(op : CountingOp, cnt : l.Expr, assump: l.Expr) extends Statement {
   lazy val lb : l.Expr = {
     op.e match {
       case l.OperatorApplication(l.ConjunctionOp(), 
@@ -146,14 +146,14 @@ case class RangeStmt(op : CountingOp, cnt : l.Expr) extends Statement {
   }
   override val hashId = 130002
   override val md5hashCode = computeMD5Hash(op, cnt)
-  override def toLines = List("assert range: " + op.toString() + " == " + cnt.toString())
+  override def toLines = List("assert range: " + assump.toString + " ==> " + op.toString() + " == " + cnt.toString())
   override val countingOps = Seq(op)
   override val expressions = Seq(op, cnt)
   override def rewrite(rewriter : l.Expr => Option[l.Expr]) : Option[Statement] = {
-    (rewriter(op.e), rewriter(cnt)) match {
-      case (Some(ep), Some(cntp)) =>
+    (rewriter(op.e), rewriter(cnt), rewriter(assump)) match {
+      case (Some(ep), Some(cntp), Some(aP)) =>
         val op1 = CountingOp(op.xs, op.ys, ep)
-        Some(RangeStmt(op1, cntp))
+        Some(RangeStmt(op1, cntp, aP))
       case _ => None
     }
   }

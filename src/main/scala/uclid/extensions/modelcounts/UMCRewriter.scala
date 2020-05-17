@@ -154,7 +154,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val ufn = _apply(ufMap(st.op))
     val assumeExpr = E.forall(st.op.ys, E.eq(ufn, E.max(l.IntLit(0), E.minus(st.ub, st.lb))))
     val assumeStmt = l.AssumeStmt(assumeExpr, None)
-    val assertExpr = E.forall(st.op.ys, E.eq(ufn, st.cnt))
+    val assertExpr = E.forall(st.op.ys, E.implies(st.assump, E.eq(ufn, st.cnt)))
     val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
     List(assumeStmt, assertStmt)
   }

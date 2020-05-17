@@ -104,7 +104,12 @@ class UMCParser extends l.UclidParser {
     } |
     KwAssert ~ KwRange ~ ":" ~> CountingExpr ~ ("==" ~> Expr) <~ ";" ^^ {
       case e1 ~ e2 => {
-        RangeStmt(e1, e2) 
+        RangeStmt(e1, e2, l.BoolLit(true))
+      }
+    } |
+    KwAssert ~ KwRange ~ ":" ~> (Expr <~ "==>") ~ CountingExpr ~ ("==" ~> Expr) <~ ";" ^^ {
+      case assump ~ e1 ~ e2 => {
+        RangeStmt(e1, e2, assump)
       }
     } |
     KwAssert ~ KwConstLB ~ ":" ~>  CountingExpr ~ (">=" ~> Integer) <~ ";" ^^ {
