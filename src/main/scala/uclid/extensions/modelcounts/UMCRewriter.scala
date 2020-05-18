@@ -141,7 +141,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val f3 = o3.e
     val assertExpr = E.and(E.forall(args, E.iff(f1, E.or(f2, f3))),
                           E.forall(args, E.not(E.and(f2, f3))))
-    val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
+    val assertStmt = l.AssertStmt(assertExpr, Some(l.Identifier("Or")), List.empty)
     val ufn1 = _apply(ufMap(o1))
     val ufn2 = _apply(ufMap(o2))
     val ufn3 = _apply(ufMap(o3))
@@ -155,7 +155,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val assumeExpr = E.forall(st.op.ys, E.eq(ufn, E.max(l.IntLit(0), E.minus(st.ub, st.lb))))
     val assumeStmt = l.AssumeStmt(assumeExpr, None)
     val assertExpr = E.forall(st.op.ys, E.implies(st.assump, E.eq(ufn, st.cnt)))
-    val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
+    val assertStmt = l.AssertStmt(assertExpr, Some(l.Identifier("Range")), List.empty)
     List(assumeStmt, assertStmt)
   }
 
@@ -176,7 +176,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val falseLit = l.BoolLit(false).asInstanceOf[l.Expr]
     val distincts = E.distinct(rwMaps.map(m => l.Tuple(m.map(p => p._2).toList)).toList : _*)
     val query = E.forall(qVars, E.implies(ante, E.and(conjunction, distincts)))
-    val assertStmt = l.AssertStmt(query, None, decorators)
+    val assertStmt = l.AssertStmt(query, Some(l.Identifier("ConstantBound")), decorators)
     BlockStmt(blkDecls, List(assertStmt))
   }
   def rewriteConstLb(ufMap : UFMap, st : ConstLbStmt) : List[l.Statement] = {
@@ -202,7 +202,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val f = s1.e
     val g = s2.e
     val assertExpr = E.forall(args, E.implies(f, g))
-    val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
+    val assertStmt = l.AssertStmt(assertExpr, Some(l.Identifier("UB")), List.empty)
     val ufn1 = _apply(ufMap(s1))
     val ufn2 = _apply(ufMap(s2))
     val assumeExpr = E.forall(st.e1.ys, E.le(ufn1, ufn2))
@@ -221,7 +221,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val f2 = s2.e
     val f3 = s3.e
     val assertExpr = E.iff(E.forall(args1, f1), E.and(E.forall(args2, f2), E.forall(args3, f3)))
-    val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
+    val assertStmt = l.AssertStmt(assertExpr, Some(l.Identifier("AndUB")), List.empty)
     val ufn1 = _apply(ufMap(s1))
     val ufn2 = _apply(ufMap(s2))
     val ufn3 = _apply(ufMap(s3))
@@ -241,7 +241,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val impl = E.implies(f_x, conseq)
     val qVars = f.xs ++ f.ys
     val qOp = E.forall(qVars, impl)
-    val liftAssertStmt = l.AssertStmt(qOp, None, List.empty)
+    val liftAssertStmt = l.AssertStmt(qOp, Some(l.Identifier("Injectivity_SkolemApplication")), List.empty)
 
     // Next we want to show injectivity of the skolem:
     // f(x1) && f(x2) && (x1 != x2) ==> skolem(x1) != skolem(x2)
@@ -260,7 +260,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val impl2 = E.implies(ante2, skdiff)
     val vars = (f.xs zip x1s).map(p => (p._2, p._1._2)) ++
       (f.xs zip x2s).map(p => (p._2, p._1._2)) ++ f.ys
-    val injAssertStmt = l.AssertStmt(E.forall(vars, impl2), None, List.empty)
+    val injAssertStmt = l.AssertStmt(E.forall(vars, impl2), Some(l.Identifier("Injectivity_SkolemInjectivity")), List.empty)
 
     // Now the assumption.
     val ufn = _apply(ufMap(f))
@@ -287,7 +287,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val f2 = s2.e
     val f3 = s3.e
     val assertExpr = E.and(E.iff(E.forall(args1, f1), E.and(E.forall(args2, f2), E.forall(args3, f3))), intersection)
-    val assertStmt = l.AssertStmt(assertExpr, None, List.empty)
+    val assertStmt = l.AssertStmt(assertExpr, Some(l.Identifier("Disjoint")), List.empty)
     val ufn1 = _apply(ufMap(s1))
     val ufn2 = _apply(ufMap(s2))
     val ufn3 = _apply(ufMap(s3))
@@ -310,7 +310,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val impl = E.implies(ante, conseq)
     val qVars = f.xs ++ g.xs ++ f.ys ++ g.ys
     val qOp = E.forall(qVars, impl)
-    val liftAssertStmt = l.AssertStmt(qOp, None, List.empty)
+    val liftAssertStmt = l.AssertStmt(qOp, Some(l.Identifier("IndLB_SkolemApplication")), List.empty)
 
     // Now we want to show injectivity of the skolem:
     // f(x1, n) && g(y1, n) && f(x2, n) && g(y2, n) && (x1 != x2 || y1 != y2)
@@ -340,7 +340,7 @@ class UMCRewriter(cntProof : CountingProof) {
                (f.xs zip x2s).map(p => (p._2, p._1._2)) ++
                (g.xs zip y1s).map(p => (p._2, p._1._2)) ++
                (g.xs zip y2s).map(p => (p._2, p._1._2)) ++ f.ys ++ g.ys
-    val injAssertStmt = l.AssertStmt(E.forall(vars, impl2), None, List.empty)
+    val injAssertStmt = l.AssertStmt(E.forall(vars, impl2), Some(l.Identifier("IndLB_SkolemInjectivity")), List.empty)
 
     // Finally, we have to produce the assumption.
     val ufn = _apply(ufMap(f))
