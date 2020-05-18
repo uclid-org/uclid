@@ -309,7 +309,7 @@ class UMCRewriter(cntProof : CountingProof) {
     val conseq = new ExprRewriter(skSubs).rewrite(f_xn)
     val impl = E.implies(ante, conseq)
     val qVars = f.xs ++ g.xs ++ f.ys ++ g.ys
-    val qOp = E.forall(qVars, impl)
+    val qOp = E.forall(qVars.distinct, impl)
     val liftAssertStmt = l.AssertStmt(qOp, Some(l.Identifier("IndLB_SkolemApplication")), List.empty)
 
     // Now we want to show injectivity of the skolem:
@@ -340,7 +340,7 @@ class UMCRewriter(cntProof : CountingProof) {
                (f.xs zip x2s).map(p => (p._2, p._1._2)) ++
                (g.xs zip y1s).map(p => (p._2, p._1._2)) ++
                (g.xs zip y2s).map(p => (p._2, p._1._2)) ++ f.ys ++ g.ys
-    val injAssertStmt = l.AssertStmt(E.forall(vars, impl2), Some(l.Identifier("IndLB_SkolemInjectivity")), List.empty)
+    val injAssertStmt = l.AssertStmt(E.forall(vars.distinct, impl2), Some(l.Identifier("IndLB_SkolemInjectivity")), List.empty)
 
     // Finally, we have to produce the assumption.
     val ufn = _apply(ufMap(f))
