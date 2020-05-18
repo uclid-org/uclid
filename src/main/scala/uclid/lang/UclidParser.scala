@@ -464,6 +464,13 @@ class UclidParser extends UclidTokenParsers with PackratParsers {
         case ids ~ e =>
           AssertStmt(e, None, ids.map(ExprDecorator.parse(_)))
       } |
+      KwAssert ~> (Id <~ ":") ~ Expr <~ ";" ^^ {
+        case id ~ e => AssertStmt(e, Some(id), List.empty)
+      } |
+      KwAssert ~> (Id) ~ ("[" ~> IdList <~ "]" ~ ":") ~ Expr <~ ";" ^^ {
+        case id ~ ids ~ e =>
+          AssertStmt(e, Some(id), ids.map(ExprDecorator.parse(_)))
+      } |
       KwAssume ~> Expr <~ ";" ^^ { case e => AssumeStmt(e, None) } |
       KwHavoc ~> Id <~ ";" ^^ { case id => HavocStmt(HavocableId(id)) } |
       Lhs ~ rep("," ~> Lhs) ~ "=" ~ Expr ~ rep("," ~> Expr) <~ ";" ^^
