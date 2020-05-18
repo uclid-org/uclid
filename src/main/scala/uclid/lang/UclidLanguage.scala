@@ -1160,11 +1160,17 @@ case class AssertStmt(e: Expr, id : Option[Identifier], decorators: List[ExprDec
   override def toLines = {
     val name = "assert"
     val decoratorStr = if (decorators.size > 0) {
-      " [" + Utils.join(decorators.map(_.toString()), ", ") + "] :"
-    } else { "" }
+      " [" + Utils.join(decorators.map(_.toString()), ", ") + "] : "
+    } else { " " }
     val prefix = id match {
-      case Some(n) => name + " " + n.toString() + decoratorStr + ": "
-      case None => name + " " + decoratorStr
+      case Some(n) =>
+        if (decorators.nonEmpty) {
+          name + " " + n.toString() + decoratorStr
+        }
+        else {
+          name + " " + n.toString() + " : "
+        }
+      case None => name + decoratorStr
     }
     List(prefix + e.toString() + "; // " + position.toString)
   }
