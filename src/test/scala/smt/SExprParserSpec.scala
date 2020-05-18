@@ -264,4 +264,7 @@ class SExprParserNoErrorSpec extends FlatSpec {
   "parser_test68.txt" should "parse successfully." in {
     SExprParserSpec.expectPass("test/parser/command-response/output/parser_test68.txt")
   }
+  "parser_test69.txt" should "parse successfully." in {
+    SExprParserSpec.expectPass("test/parser/command-response/output/parser_test69.txt")
+  }
 }

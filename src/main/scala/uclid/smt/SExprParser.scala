@@ -339,14 +339,37 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val Bindings : PackratParser[List[(smt.Symbol, smt.Expr)]] = 
     "(" ~> rep1(Binding) <~ ")"
 
+  lazy val Identifier : PackratParser[smt.Expr] = 
+    Symbol | 
+    //TODO: Add support for indexed identifiers in Uclid SMT
+    "(" ~ KwUS ~> Symbol ~ rep1(Symbol|IntegerLit) <~ ")" ^^ { case sym ~ idxs => 
+      {
+        val funcType = MapType(idxs.map(a => a.typ), sym.symbolTyp)
+        smt.FunctionApplication(smt.Symbol(sym.id, funcType), idxs) 
+      }
+    }
+
+  lazy val QualIdentifier : PackratParser[smt.Expr] = 
+    Identifier |
+    "(" ~ KwAs ~> Identifier ~ Type <~ ")" ^^ { case sym ~ typ => 
+      {
+        val e = sym match {
+          case s : smt.Symbol => s
+          case f : smt.FunctionApplication => f.e.asInstanceOf[smt.Symbol]
+        }
+        smt.Symbol(e.id, typ) 
+      }
+    }
+
+
   
   lazy val Expr : PackratParser[smt.Expr] =
-    Symbol | IntegerLit | BitVectorLit | BoolLit |
-        "(" ~ KwAs ~> Symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.id, typ) } |
+    BitVectorLit | 
+    BoolLit |
+    IntegerLit |
+    QualIdentifier |
     "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)} |
     "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) } |
-    "(" ~ OpArraySelect ~> Expr ~ rep(Expr) <~ ")" ^^ { case array ~ indices => smt.ArraySelectOperation(smt.Symbol(array.toString, smt.ArrayType(Nil, array.typ)), indices) } |
-    "(" ~ OpArrayStore ~> Expr ~ rep(Expr) ~ Expr <~ ")" ^^ { case array ~ indices ~ value => smt.ArrayStoreOperation(array, indices, value) } |
     "(" ~ KwLet ~> Bindings ~ Expr <~ ")" ^^ { case bindings ~ expr => smt.LetExpression(bindings, expr) } |
     "(" ~ KwForall ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => 
       {
@@ -355,20 +378,23 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
         smt.OperatorApplication(op, List(expr))  
       }
     } |
-    "(" ~> Symbol ~ Expr.+ <~ ")" ^^ { case e ~ args => 
+    "(" ~> QualIdentifier ~ Expr.+ <~ ")" ^^ { case q ~ args => 
       {
+        val e = q match {
+          case s : smt.Symbol => s
+          case f : smt.FunctionApplication => f.e.asInstanceOf[smt.Symbol]
+        }
         val funcType = MapType(args.map(a => a.typ), e.symbolTyp)
         val sym = smt.Symbol(e.id, funcType)
         smt.FunctionApplication(sym, args) 
       }
-    } | 
-    //TODO: Check that treating this like a func app is okay?
-    "(" ~ KwUS ~> Symbol ~ rep1(Symbol|IntegerLit) <~ ")" ^^ { case sym ~ idxs => 
-      {
-        val funcType = MapType(idxs.map(a => a.typ), sym.symbolTyp)
-        smt.FunctionApplication(smt.Symbol(sym.id, funcType), idxs) 
-      }
-    }
+    } |
+    "(" ~ OpArraySelect ~> Expr ~ rep(Expr) <~ ")" ^^ { case array ~ indices => smt.ArraySelectOperation(smt.Symbol(array.toString, smt.ArrayType(Nil, array.typ)), indices) } |
+    // TODO: Remove these array ops, they don't technically belong here; 
+    "(" ~ OpArrayStore ~> Expr ~ Expr ~ Expr <~ ")" ^^ { case array ~ indices ~ value => smt.ArrayStoreOperation(array, List(indices), value) }
+
+    
+    
 
 
 
@@ -410,6 +436,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     phrase(AssignmentModel)(tokens) match {
       case Success(model, _) => model
       case NoSuccess(msg, next) =>
+        println(next.pos)
         throw new Utils.RuntimeError("SExpr model parser error: %s.".format(msg))
     }
   }
