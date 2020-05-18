@@ -21,11 +21,12 @@ module main
 }  
   invariant always_positive: (forall (var_i : bv3) :: x[i] >= 0) ; 
   
-control {
-    // print_module;
-    synthesize_invariant[ALL];
-    //induction;
-    //check;
-    //print_results;
+  synthesis function h(x : bv3, y : [bv3]integer, z : integer) : boolean;
+  property hole: h(i, x, y);
+
+  control {
+    induction;
+    check;
+    print_results;
   }
 }

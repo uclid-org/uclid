@@ -24,8 +24,12 @@ module main
 
   function uninterpreted_function  (a : integer) : integer;
 
+  synthesis function h(x : integer, y : integer) : boolean;
+  property hole: h(i, y);
 
-control {
-    synthesize_invariant[ALL];
+  control {
+    induction;
+    check;
+    print_results;
   }
 }

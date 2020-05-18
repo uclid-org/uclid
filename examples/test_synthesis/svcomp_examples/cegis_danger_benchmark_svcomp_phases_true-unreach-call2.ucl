@@ -40,9 +40,14 @@ module main{
 
     invariant my_invariant: (y==0bv32) || x==y || (y>0bv32 && x<y));
 
-control{
-	synthesize_invariant[ALL];
-}
+  synthesis function h(x : bv32, y : bv32) : boolean;
+  property hole: h(x, y);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
 
 }
 

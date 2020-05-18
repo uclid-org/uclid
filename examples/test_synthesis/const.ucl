@@ -11,7 +11,12 @@ module main
    i' = i+k;
   }
   invariant always_positive: (i>=0);
-control {
-    synthesize_invariant[ALL];
+  synthesis function h(x : integer, y : integer) : boolean;
+  invariant hole: h(i, k);
+
+  control {
+    induction;
+    check;
+    print_results;
   }
 }

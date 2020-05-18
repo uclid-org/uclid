@@ -28,7 +28,12 @@ procedure update()
     x[i]=x[i]+1bv32;}
   }
 
-control {
-    synthesize_invariant[ALL];
+  synthesis function h(x : bv1, y : [bv1]bv32) : boolean;
+  property hole: h(i, x);
+
+  control {
+    induction;
+    check;
+    print_results;
   }
 }

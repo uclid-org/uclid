@@ -34,8 +34,13 @@ module main
     }
 
     property eq_data : (forall (i : integer) :: ((i >= 0 && i < first.count) ==> first.data[i] == second.data[i]));
+    
+    synthesis function h(x : integer, y : integer) : boolean;
+    property hole: h(first.count, second.count);
 
     control {
-      synthesize_invariant[LIA];
+      induction;
+      check;
+      print_results;
     }
 }

@@ -21,7 +21,12 @@ module main
 
   invariant always_positive: (forall (index : bv1) :: x[index] >= 1bv2);
 
-control {
-    synthesize_invariant[ALL];
+  synthesis function h(x : bv1, y : [bv1]bv2) : boolean;
+  property hole: h(i, x);
+
+  control {
+    induction;
+    check;
+    print_results;
   }
 }

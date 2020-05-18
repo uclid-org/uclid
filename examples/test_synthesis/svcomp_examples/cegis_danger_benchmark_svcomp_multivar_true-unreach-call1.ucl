@@ -33,8 +33,13 @@ module main
 
   invariant my_invariant: (x==y)||(x < 1024bv32);
 
-  control{
-  	synthesize_invariant[ALL];
+  synthesis function h(x : bv32, y : bv32) : boolean;
+  property hole: h(x, y);
+
+  control {
+    induction;
+    check;
+    print_results;
   }
 
 }

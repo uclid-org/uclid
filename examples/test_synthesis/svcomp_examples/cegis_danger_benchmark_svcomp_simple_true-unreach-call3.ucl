@@ -23,9 +23,14 @@ module main{
 
 	invariant myinv: (x < N) || ((x&1)==0); 
 
-	control{
-		synthesize_invariant[ALL];
-	}
+  synthesis function h(x : bv32, y : bv32) : boolean;
+  property hole: h(x, N);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
 }
 
 

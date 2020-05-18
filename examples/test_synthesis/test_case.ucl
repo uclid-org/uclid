@@ -21,8 +21,13 @@ module main
 
   invariant always_positive: (i>=0);
 
-control {
-    synthesize_invariant[ALL];
+  synthesis function h(x : integer) : boolean;
+  property hole: h(i);
+
+  control {
+    induction;
+    check;
+    print_results;
   }
 }
 

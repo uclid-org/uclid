@@ -20,7 +20,12 @@ procedure update()
     else
      {i=i-1;}
   }
-control {
-    synthesize_invariant[ALL];
+  synthesis function h(x : integer, y : integer) : boolean;
+  property hole: h(i, y);
+
+  control {
+    induction;
+    check;
+    print_results;
   }
 }

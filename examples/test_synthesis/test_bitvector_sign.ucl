@@ -15,8 +15,13 @@ module main
 
   invariant always_positive: (i>=_u 0bv32);
 
-control {
-    synthesize_invariant[ALL];
+  synthesis function h(x : bv32, y : bv32) : boolean;
+  property hole: h(i, k);
+
+  control {
+    induction;
+    check;
+    print_results;
   }
 }
 
