@@ -171,26 +171,7 @@ class PrimedVariableEliminatorPass extends RewritePass {
     lazy val primeVarMap = primedVariableCollector.primeVarMap.get
     val modType = instD.modType.get
     val writeableArgs = (modType.outputs ++ modType.sharedVars).map(p => p._1).toSet
-    val argsP = instD.arguments.map {
-      case (argId, exprOption) => {
-        exprOption match {
-          case Some(expr) =>
-            if (writeableArgs.contains(argId)) {
-              // Output arguments must strictly be identifiers.
-              Utils.assert(expr.isInstanceOf[Identifier], "Module outputs and shared variables must be identifiers.")
-              val varId = expr.asInstanceOf[Identifier]
-              primeVarMap.get(varId) match {
-                case Some(varIdP) => (argId, Some(varIdP))
-                case None => (argId, exprOption)
-              }
-            } else {
-              (argId, exprOption)
-            }
-          case None =>
-            (argId, exprOption)
-        }
-      }
-    }
+    val argsP = instD.arguments
     val instP = InstanceDecl(instD.instanceId, instD.moduleId, argsP, instD.instType, instD.modType)
     Some(instP)
   }
