@@ -17,7 +17,7 @@ jobs:
       id: cache-z3
       uses: actions/cache@v1
       with:
-        path: z3-4.8.6-x64-ubuntu-16.04/
+        path: z3/
         key: ${{ runner.os }}-z3-${{ hashFiles('get-z3-linux.sh') }}-1
 
     - name: Download Z3
@@ -26,9 +26,9 @@ jobs:
        
     - name: Add Z3 to Path
       run: |
-       ls $GITHUB_WORKSPACE/z3-4.8.6-x64-ubuntu-16.04/bin/
-       echo "::add-path::$GITHUB_WORKSPACE/z3-4.8.6-x64-ubuntu-16.04/bin/"
-       echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3-4.8.6-x64-ubuntu-16.04/bin/"
+       ls $GITHUB_WORKSPACE/z3/bin/
+       echo "::add-path::$GITHUB_WORKSPACE/z3/bin/"
+       echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/"
 
     - name: Print Z3 Version
       run: z3 --version
