@@ -1,6 +1,6 @@
 #! /bin/bash
 
-VERSION=4.8.6
+VERSION=4.8.8
 
 # HOW TO USE THIS SCRIPT?
 #
