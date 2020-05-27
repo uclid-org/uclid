@@ -413,7 +413,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     }
   }
 
-  override def check() : SolverResult = {
+  override def check(produceModel: Boolean = true) : SolverResult = {
     smtlibInterfaceLogger.debug("check")
     Utils.assert(solverProcess.isAlive(), "Solver process is not alive!")
     writeCommand("(check-sat)")
@@ -422,7 +422,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
         case Some(strP) =>
           val str = strP.stripLineEnd
           str match {
-            case "sat" => SolverResult(Some(true), getModel())
+            case "sat" => SolverResult(Some(true), if(produceModel) getModel() else None)
             case "unsat" => SolverResult(Some(false), None)
             case _ =>
               throw new Utils.AssertionError("Unexpected result from SMT solver: " + str.toString())
