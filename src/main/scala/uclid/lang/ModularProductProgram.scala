@@ -658,17 +658,32 @@ class ModularProductProgramPass extends RewritePass {
                         case HavocStmt(havocable) => havocable match {
                             case HavocableId(id) => 
                                 for( i <- 0 until k) {
+                                    
                                     val newhavocable = HavocableId(getRenamedExpr(id.asInstanceOf[Expr], context, i).asInstanceOf[Identifier])
                                     val havocstmt = HavocStmt(newhavocable)
                                     ASTNode.introducePos(true, true, havocstmt, stmts.head.position)
-                                    newbody += havocstmt
+                                    val actVarArray = helperObj.mapOfActivationVariables(currentScope)
+                                    val actVarCond = actVarArray(i)
+                                    val emptyVarsList: List[BlockVarsDecl] = List()
+                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(havocstmt.asInstanceOf[Statement] ))
+                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                    val modularStmt = IfElseStmt(actVarCond, trueBlockStmt, falseBlockStmt)
+                                    ASTNode.introducePos(true, true, modularStmt, stmts.head.position)
+                                    newbody += modularStmt
                                 }
                             case HavocableNextId(id) => 
                                 for( i <- 0 until k) {
                                     val newhavocable = HavocableNextId(getRenamedExpr(id.asInstanceOf[Expr], context, i).asInstanceOf[Identifier])
                                     val havocstmt = HavocStmt(newhavocable)
                                     ASTNode.introducePos(true, true, havocstmt, stmts.head.position)
-                                    newbody += havocstmt
+                                    val actVarArray = helperObj.mapOfActivationVariables(currentScope)
+                                    val actVarCond = actVarArray(i)
+                                    val emptyVarsList: List[BlockVarsDecl] = List()
+                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(havocstmt.asInstanceOf[Statement] ))
+                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                    val modularStmt = IfElseStmt(actVarCond, trueBlockStmt, falseBlockStmt)
+                                    ASTNode.introducePos(true, true, modularStmt, stmts.head.position)
+                                    newbody += modularStmt
                                 }
                             case _ =>
                                 newbody += stmts.head
