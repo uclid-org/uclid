@@ -1,4 +1,5 @@
 <a href="https://travis-ci.org/uclid-org/uclid"><img src="https://travis-ci.org/uclid-org/uclid.svg?branch=master"></a>
+![](https://github.com/uclid-org/uclid/workflows/Uclid%20CI/badge.svg)
 
 # uclid5 Tutorial/Publication
 
