@@ -1,0 +1,20 @@
+module main 
+{
+    procedure foo(x : integer) returns (y: integer)
+    ensures (x.1 > 5 && x.2 > 5 && x.1 == x.2) ==> (y.1 == y.2);
+    {
+        y = 0;
+        if (x <= 5) {
+        havoc y;
+        }
+    } 
+
+
+    control
+    {
+        v = verify(foo);
+        check;
+        v.print_cex(x, y);
+        print_results;
+    }
+}

@@ -212,5 +212,9 @@ class ModularProductSpec extends FlatSpec {
         }
     }
 
+    "test-modularproduct-23.ucl" should "verify successfully" in {
+        ModularProductHelperSpec.expectedFails("./test/test-modularproduct-23.ucl", 0)
+    }
+
 
 }
