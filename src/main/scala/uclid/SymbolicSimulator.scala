@@ -1314,6 +1314,7 @@ class SymbolicSimulator (module : Module) {
     }}
   }
 
+// this function is unused
   def dumpSimTable(simTable : SimulationTable) {
     simTable.foreach {
       println("======================")
@@ -1340,7 +1341,7 @@ class SymbolicSimulator (module : Module) {
       }
     }}
   }
-
+// this function is unused
   def printSymbolTable(symbolTable : SymbolTable) {
     val keys = symbolTable.keys.toList.sortWith((l, r) => l.name < r.name)
     keys.foreach {
