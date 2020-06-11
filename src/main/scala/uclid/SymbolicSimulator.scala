@@ -1373,7 +1373,7 @@ class SymbolicSimulator (module : Module) {
       case BooleanType() => 1
       case BitVectorType(w: Int) => w
       case IntegerType() => defaultIntWidth
-      case _ => throw new Utils.UnimplementedException("VCD dumping supports only bitvector, boolean, and integral types.")
+      case _ => throw new Utils.UnimplementedException("VCD dumping supports only bitvector, boolean, and integer types.")
     }
 
     val vcdWriter = VCD("Top")
