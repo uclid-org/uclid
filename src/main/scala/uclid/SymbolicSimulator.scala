@@ -309,8 +309,6 @@ class SymbolicSimulator (module : Module) {
             printCEX(proofResults, cmd.args, cmd.argObj)
           case "dump_cex_vcds" =>
             dumpCEXVCDFiles(proofResults)
-          case "print_smt2" =>
-            printSMT2(assertionTree, cmd.argObj, solver)
           case "print_module" =>
             UclidMain.println(module.toString)
           case "set_solver_option" =>
@@ -1314,10 +1312,6 @@ class SymbolicSimulator (module : Module) {
       printFrame(simTable, i, model, exprsToPrint, scope)
       UclidMain.println("=================================")
     }}
-  }
-
-  def printSMT2(aTree : AssertionTree, label : Option[Identifier], solver : smt.Context) {
-    throw new Utils.UnimplementedException("Implement print_smt2.")
   }
 
   def dumpSimTable(simTable : SimulationTable) {
