@@ -706,7 +706,7 @@ case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
   override def to (n : NumericLit) : Seq[NumericLit] = {
     n match {
       case bv : BitVectorLit => (value to bv.value).map(BitVectorLit(_, width))
-      case _ => throw new Utils.RuntimeError("Cannot create range for differening types of numeric literals.")
+      case _ => throw new Utils.RuntimeError("Cannot create range for differing types of numeric literals.")
     }
   }
   override def negate = BitVectorLit(-value, width)
