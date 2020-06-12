@@ -59,9 +59,6 @@ object VCD extends LazyLogging {
   val DumpVarsDeclaration: String = "$dumpvars"
   val End: String = "$end"
 
-  private val ClockName = "clock"
-  private val ResetName = "reset"
-
   val idChars: Seq[String] = (33 to 126).map { asciiValue => asciiValue.toChar.toString }
   val numberOfIdChars: Int = idChars.length
 
