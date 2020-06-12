@@ -65,7 +65,7 @@ object Converter {
         smt.RecordType(fields.map((f) => (f._1.toString, typeToSMT(f._2))))
       case lang.EnumType(ids) =>
         smt.EnumType(ids.map(_.name))
-      case lang.SynonymType(typ) =>
+      case lang.SynonymType(_) =>
         throw new Utils.UnimplementedException("Synonym types must have been eliminated by now.")
       case lang.UndefinedType() | lang.ProcedureType(_, _) | lang.ExternalType(_, _) |
            lang.ModuleInstanceType(_) | lang.ModuleType(_, _, _, _, _, _, _, _) =>
@@ -161,7 +161,7 @@ object Converter {
       case lang.ITEOp() => smt.ITEOp
       case lang.HyperSelect(i) => smt.HyperSelectOp(i)
       // Polymorphic operators are not allowed.
-      case p : lang.PolymorphicOperator =>
+      case _ : lang.PolymorphicOperator =>
         throw new Utils.RuntimeError("Polymorphic operators must have been eliminated by now.")
       case _ => throw new Utils.UnimplementedException("Operator not supported yet: " + op.toString)
     }
@@ -271,19 +271,19 @@ object Converter {
              smt.OperatorApplication(opToSMT(op, scope + opapp, past, idToSMT), argsInSMT)
          }
        case lang.FuncApplication(f,args) => f match {
-         case lang.Identifier(id) =>
+         case lang.Identifier(_) =>
            smt.FunctionApplication(toSMT(f, scope, past), toSMTs(args, scope, past))
-         case lang.Lambda(idtypes,le) =>
+         case lang.Lambda(_,_) =>
            // FIXME: beta sub
            throw new Utils.UnimplementedException("Beta reduction is not implemented yet.")
          case _ =>
            throw new Utils.RuntimeError("Should never get here.")
        }
        // Unimplemented operators.
-       case lang.Lambda(ids,le) =>
+       case lang.Lambda(_,_) =>
          throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
        // Troublesome operators.
-       case lang.FreshLit(t) =>
+       case lang.FreshLit(_) =>
          throw new Utils.RuntimeError("Should never get here. FreshLits must have been rewritten by this point.")
        case lang.ExternalIdentifier(_, _) =>
          throw new Utils.RuntimeError("Should never get here. ExternalIdentifiers must have been rewritten by this point.")
@@ -307,7 +307,7 @@ object Converter {
     def toExprs(es : List[smt.Expr]) : List[lang.Expr] = es.map((e : smt.Expr) => toExpr(e))
 
     expr match {
-      case smt.Symbol(id, symbolTyp) => lang.Identifier(id)
+      case smt.Symbol(id, _) => lang.Identifier(id)
       case smt.IntLit(n) => lang.IntLit(n)
       case smt.BooleanLit(b) => lang.BoolLit(b)
       case smt.BitVectorLit(bv, w) => lang.BitVectorLit(bv, w)
@@ -321,7 +321,7 @@ object Converter {
         lang.OperatorApplication(lang.ArrayUpdate(toExprs(index), toExpr(value)), List(toExpr(a)))
       case smt.FunctionApplication(f, args) =>
         f match {
-          case smt.Symbol(id, symbolTyp) =>
+          case smt.Symbol(id, _) =>
             UclidMain.println("Function application of f == " + f.toString)
             lang.FuncApplication(lang.Identifier(id), toExprs(args))
           case _ =>

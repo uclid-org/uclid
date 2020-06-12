@@ -42,7 +42,6 @@ package lang
 
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.mutable.{Set => MutableSet}
-import scala.collection.immutable.{Map => ImmutableMap}
 import scala.util.parsing.input.Position
 import com.typesafe.scalalogging.Logger
 
@@ -178,7 +177,7 @@ object ReplacePolymorphicOperators {
   }
   def toType(op : PolymorphicOperator, typ : NumericType) = {
     typ match {
-      case intTyp : IntegerType => toInt(op)
+      case _ : IntegerType => toInt(op)
       case bvTyp : BitVectorType => toBitvector(op, bvTyp.width)
     }
   }
@@ -187,9 +186,9 @@ object ReplacePolymorphicOperators {
     def rs(es : List[Expr])  = es.map(r(_))
 
     e match {
-      case i : Identifier => e
-      case ei : ExternalIdentifier => e
-      case l : Literal => e
+      case _ : Identifier => e
+      case _ : ExternalIdentifier => e
+      case _ : Literal => e
       case Tuple(es) => Tuple(es.map(r(_)))
       case OperatorApplication(op, operands) =>
         val opP = op match {
@@ -293,7 +292,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         val bvType = typ.asInstanceOf[BitVectorType]
         checkTypeError(bvType.isValidSlice(slice), "Invalid slice: " + slice.toString, slice.pos, c.filename)
         BitVectorType(slice.width.get)
-      case LhsVarSliceSelect(id, slice) =>
+      case LhsVarSliceSelect(_, slice) =>
         checkTypeError(slice.width.isDefined, "Width of bitvector slice is not constant", lhs.pos, c.filename)
         BitVectorType(slice.width.get)
     }
@@ -370,25 +369,25 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               val t = BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width)
               bvOpMap.put(bvOp.astNodeId, t.width)
               t
-            case BVSignExtOp(w, e) =>
+            case BVSignExtOp(_, e) =>
               checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
               val w = e + argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
               BitVectorType(w)
-            case BVZeroExtOp(w, e) =>
+            case BVZeroExtOp(_, e) =>
               checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
               val w = e + argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
               BitVectorType(w)
-            case BVLeftShiftBVOp(w) =>
+            case BVLeftShiftBVOp(_) =>
               val w = argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
               BitVectorType(w)
-            case BVLRightShiftBVOp(w) =>
+            case BVLRightShiftBVOp(_) =>
               val w = argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
               BitVectorType(w)
-            case BVARightShiftBVOp(w) =>
+            case BVARightShiftBVOp(_) =>
               val w = argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
               BitVectorType(w)
@@ -409,7 +408,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           }
           BooleanType()
         }
-        case cmpOp : ComparisonOperator => {
+        case _ : ComparisonOperator => {
           checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
           checkTypeError(argTypes(0) == argTypes(1), "Arguments to operator '" + opapp.op.toString + "' must be of the same type", opapp.pos, c.filename)
           BooleanType()
@@ -424,7 +423,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes(0).isInstanceOf[IntegerType], "Operator  '" + opapp.op.toString() + "' must have an integer literal as the first argument", opapp.pos, c.filename)
           BitVectorType(n)
         }
-        case tOp : TemporalOperator => BooleanType()
+        case _ : TemporalOperator => BooleanType()
         case extrOp : ExtractOp => {
           extrOp match {
             case ConstExtractOp(slice) => {
@@ -494,7 +493,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               checkTypeError(false, "Argument to select operator must be of type record", opapp.pos, c.filename)
               new UndefinedType()
           }
-        case HyperSelect(k) =>
+        case HyperSelect(_) =>
           Utils.assert(argTypes.size == 1, "Trace select operator must have one operand.")
           argTypes(0)
         case ArraySelect(es) =>
@@ -604,14 +603,14 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case Some(typ) => typ
           }
         case f : FreshLit => f.typ
-        case b : BoolLit => BooleanType()
-        case i : IntLit => IntegerType()
-        case s : StringLit => StringType()
+        case _ : BoolLit => BooleanType()
+        case _ : IntLit => IntegerType()
+        case _ : StringLit => StringType()
         case bv : BitVectorLit => BitVectorType(bv.width)
         case a : ConstArray =>
           val valTyp = typeOf(a.exp, c)
           a.typ match {
-            case ArrayType(inTyps, outTyp) =>
+            case ArrayType(_, outTyp) =>
               checkTypeError(outTyp == valTyp, "Array type does not match literal type", a.exp.pos, c.filename)
               a.typ
             case _ =>
@@ -653,7 +652,7 @@ class PolymorphicTypeRewriterPass extends RewritePass {
       reifiedOp
     }
     op match {
-      case p : PolymorphicOperator=>
+      case _ : PolymorphicOperator=>
         mappedOp
       case PolymorphicSelect(_) =>
         mappedOp

@@ -68,7 +68,7 @@ class BitVectorSliceFindWidthPass extends RewritePass {
     val loExp = Converter.exprToSMT(loP, ctx)
     val subExp = smt.OperatorApplication(smt.IntSubOp, List(hiExp, loExp))
     val widthExpr = smt.OperatorApplication(smt.IntAddOp, List(subExp, smt.IntLit(1)))
-    val width = ExpressionAnalyzer.getConstIntValue(widthExpr, ctx)
+    val width = ExpressionAnalyzer.getConstIntValue(widthExpr)
     VarBitVectorSlice(hiP, loP, width)
   }
 
@@ -91,8 +91,8 @@ class BitVectorSliceConstifyPass extends RewritePass {
       case Some(w) =>
         val hiExp = Converter.exprToSMT(slice.hi, ctx)
         val loExp = Converter.exprToSMT(slice.lo, ctx)
-        val hiInt = ExpressionAnalyzer.getConstIntValue(hiExp, ctx)
-        val loInt = ExpressionAnalyzer.getConstIntValue(loExp, ctx)
+        val hiInt = ExpressionAnalyzer.getConstIntValue(hiExp)
+        val loInt = ExpressionAnalyzer.getConstIntValue(loExp)
         (hiInt, loInt) match {
           case (Some(hi), Some(lo)) =>
             Some(ConstBitVectorSlice(hi, lo))

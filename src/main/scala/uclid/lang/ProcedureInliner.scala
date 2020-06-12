@@ -109,8 +109,6 @@ trait NewProcedureInlinerPass extends RewritePass {
     // formal and actual argument pairs (actual args are replaced with a new variable).
     val argPairs : List[(Identifier, (Identifier, Type))] = 
         procSig.inParams.map(p => p._1 -> (NameProvider.get("arg_" + p._1.toString()), p._2))
-    // new variables created for arguments
-    val argIds = argPairs.map(p => p._2._1)
     // formal and actual return value pairs.
     val retPairs : List[(Identifier, (Identifier, Type))] = 
         procSig.outParams.map(p => (p._1 -> (NameProvider.get("ret_" + p._1.toString()), p._2)))
@@ -128,7 +126,7 @@ trait NewProcedureInlinerPass extends RewritePass {
                                  case None => throw new Utils.AssertionError("ModfiableId should not refer to a variable that does not exist")
                                  case _ => true
                                 }
-      case ModifiableInstanceId(opapp)  => throw new Utils.AssertionError("There should be no ModifiableInstanceIds at this point")
+      case ModifiableInstanceId(_)  => throw new Utils.AssertionError("There should be no ModifiableInstanceIds at this point")
     }).asInstanceOf[Set[ModifiableId]].map(m => m match {
       case ModifiableId(id) => (m, NameProvider.get("modifies_" + id.toString()))
     }).toList
@@ -263,7 +261,7 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
                               case _ => false
                             }
                           }
-                          case m : ModifiableInstanceId => throw new Utils.AssertionError("There should be no ModifiableInstanceIds at this point")
+                          case _ : ModifiableInstanceId => throw new Utils.AssertionError("There should be no ModifiableInstanceIds at this point")
                         })
                 
     }
@@ -274,7 +272,7 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
     } else {
       // Update the ProcedureCallStmt moduleId for external procedure inliner in module flattener
       callStmt.instanceId match {
-        case Some(iid) => {
+        case Some(_) => {
           val procInstOption = context.module.get.instances.find(inst => inst.instanceId.name == callStmt.instanceId.get.name)
           val modId = procInstOption.get.moduleId
           Some(ProcedureCallStmt(callStmt.id, callStmt.callLhss, callStmt.args, callStmt.instanceId, Some(modId)))

@@ -115,7 +115,7 @@ class ModularProductProgramPass extends RewritePass {
                 stmts.head match {
                     case BlockStmt(vars, blockstmts) =>
                         findRequiredActivationVariables(blockstmts, currentScope, context + vars)
-                    case IfElseStmt(condition, ifblock, elseblock) => 
+                    case IfElseStmt(_, ifblock, elseblock) => 
                         val activationVarsDecl1 = createActivationVariables(k,helperObj.mapOfActivationVariables,helperObj.maxScope+1)
                         val activationVarsDecl2 = createActivationVariables(k,helperObj.mapOfActivationVariables,helperObj.maxScope+2)
                         if(!ifblock.asInstanceOf[BlockStmt].stmts.isEmpty)
@@ -132,7 +132,7 @@ class ModularProductProgramPass extends RewritePass {
                         findRequiredActivationVariables(ifblock.asInstanceOf[BlockStmt].stmts, ifScope, context + ifblock.asInstanceOf[BlockStmt].vars)
                         findRequiredActivationVariables(elseblock.asInstanceOf[BlockStmt].stmts, elseScope, context + elseblock.asInstanceOf[BlockStmt].vars)
                     
-                    case WhileStmt(condition, body, invariants) => 
+                    case WhileStmt(_, body, _) => 
                         val activationVarsDecl = createActivationVariables(k,helperObj.mapOfActivationVariables,helperObj.maxScope+1)
                         if(!body.asInstanceOf[BlockStmt].stmts.isEmpty)
                             ASTNode.introducePos(true, true, activationVarsDecl, body.asInstanceOf[BlockStmt].stmts.head.position)
@@ -141,12 +141,9 @@ class ModularProductProgramPass extends RewritePass {
                         newVarDeclarations += activationVarsDecl
                         findRequiredActivationVariables(body.asInstanceOf[BlockStmt].stmts, nextScope, context + body.asInstanceOf[BlockStmt].vars)
                     
-                    case ProcedureCallStmt(id, callLhss, args, instId, _) => 
-                        val n = callLhss.size
-                        val m = args.size
-                
+                    case ProcedureCallStmt(_, callLhss, args, _, _) =>                 
                         def getType(exp: Expr): Type = exp match {
-                            case FuncApplication(e, args) => 
+                            case FuncApplication(e, _) => 
                                 val typeOfIdentifier = ctxx.get(e.asInstanceOf[Identifier])
                                 typeOfIdentifier match {
                                     case Some(value) => value.typ.asInstanceOf[MapType].outType
@@ -223,12 +220,12 @@ class ModularProductProgramPass extends RewritePass {
                 {
                     stmts.head match
                     {
-                        case IfElseStmt(condition, ifblock, elseblock) => 
+                        case IfElseStmt(_, ifblock, elseblock) => 
                             collectRenamedVariablesFromBlockVars(ifblock.asInstanceOf[BlockStmt].vars)
                             collectRenamedVariablesFromBlockBody(ifblock.asInstanceOf[BlockStmt].stmts)
                             collectRenamedVariablesFromBlockVars(elseblock.asInstanceOf[BlockStmt].vars)
                             collectRenamedVariablesFromBlockBody(elseblock.asInstanceOf[BlockStmt].stmts)
-                        case WhileStmt(condition, body, invariants) => 
+                        case WhileStmt(_, body, _) => 
                             collectRenamedVariablesFromBlockVars(body.asInstanceOf[BlockStmt].vars)
                             collectRenamedVariablesFromBlockBody(body.asInstanceOf[BlockStmt].stmts)
                         case BlockStmt(vars, blockstmts) =>
@@ -296,7 +293,7 @@ class ModularProductProgramPass extends RewritePass {
                 {
                     stmts.head match
                     {
-                        case IfElseStmt(condition, ifblock, elseblock) => 
+                        case IfElseStmt(_, ifblock, elseblock) => 
                             
                             maxblock += 1
                             addDeclarationsToMap(maxblock, ifblock.asInstanceOf[BlockStmt].vars)
@@ -306,7 +303,7 @@ class ModularProductProgramPass extends RewritePass {
                             addDeclarationsToMap(maxblock, elseblock.asInstanceOf[BlockStmt].vars)
                             collectInsideBlockVarsUtil(elseblock.asInstanceOf[BlockStmt].stmts)
                         
-                        case WhileStmt(condition, body, invariants) => 
+                        case WhileStmt(_, body, _) => 
 
                             maxblock += 1
                             addDeclarationsToMap(maxblock, body.asInstanceOf[BlockStmt].vars)
@@ -429,7 +426,7 @@ class ModularProductProgramPass extends RewritePass {
         def getRenamedExpr(expr: Expr, context: Scope, copy: Int): Expr = {
             expr match 
             {
-                case Identifier(name) => 
+                case Identifier(_) => 
                     val typeOfIdentifier = context.get(expr.asInstanceOf[Identifier])
                     typeOfIdentifier match {
                         case Some(value) => 
@@ -440,7 +437,7 @@ class ModularProductProgramPass extends RewritePass {
                         case None => 
                             expr
                     }
-                case ConstArray(exp, typ) =>
+                case ConstArray(_, _) =>
                     throw new Utils.UnimplementedException("Type ConstArray not supported.")
 
                 case Tuple(values) => Tuple(values.map(getRenamedExpr(_, context, copy)))
@@ -460,7 +457,7 @@ class ModularProductProgramPass extends RewritePass {
 
                 case FuncApplication(e, args) => FuncApplication(e, args.map(getRenamedExpr(_, context, copy)))
                 
-                case Lambda(ids, e) => 
+                case Lambda(_, _) => 
                     throw new Utils.UnimplementedException("Lambdas not supported.")
                     
                 case _ => 
@@ -600,10 +597,9 @@ class ModularProductProgramPass extends RewritePass {
                             }
                             
                         case AssignStmt(lhss, rhss) => 
-                            val activationVariableArray = helperObj.mapOfActivationVariables(currentScope)
                             for(i <- 0 until k)
                             {   
-                                var newlhss = ListBuffer[Lhs]()
+                                val newlhss = ListBuffer[Lhs]()
                                 for( lhsVar <- lhss)
                                 {
                                     lhsVar match {
@@ -801,7 +797,6 @@ class ModularProductProgramPass extends RewritePass {
                             }
                             
                             helperObj.maxScope+=1
-                            var remainingwhilebody = ListBuffer[Statement]()
                             translateBody(helperObj.maxScope, List(body), whilebody, context)
                             val emptyVarsList: List[BlockVarsDecl] = List()
                             val whilebodyblock = BlockStmt(emptyVarsList, whilebody.toList)
@@ -952,7 +947,7 @@ class ModularProductProgramPass extends RewritePass {
                                 
                             }
                         
-                        case ModuleCallStmt(id) =>
+                        case ModuleCallStmt(_) =>
                             throw new Utils.UnimplementedException("Module Calls are unsupported")
 
                         case _ => newbody += stmts.head
@@ -1094,7 +1089,7 @@ class ModularProductProgramPass extends RewritePass {
             {
                 oldstmts.head match
                 {
-                    case AssumeStmt(expr, id) =>
+                    case AssumeStmt(expr, _) =>
                         expr match {
                             case OperatorApplication(op, operands) =>
                                 val hasHyperSelect = isHyperSelectPresent(op, operands)
@@ -1110,7 +1105,7 @@ class ModularProductProgramPass extends RewritePass {
                                 newstmts += oldstmts.head
                         }
 
-                    case AssertStmt(expr, id) =>
+                    case AssertStmt(expr, _) =>
                         expr match {
                             case OperatorApplication(op, operands) =>
                                 val hasHyperSelect = isHyperSelectPresent(op, operands)
@@ -1186,7 +1181,7 @@ class ModularProductProgramPass extends RewritePass {
     private def findTranslatableProcedures(moduleInDecls: List[Decl]): Unit = {
         if(!moduleInDecls.isEmpty) {
             moduleInDecls.head match {
-                case proc : ProcedureDecl =>
+                case _ : ProcedureDecl =>
                     val proc = moduleInDecls.head.asInstanceOf[ProcedureDecl]
                     val traceValueList = checkForRelationalSpecification(proc)
                     val isProcRelevant = if (traceValueList.size > 0) true else false
@@ -1260,8 +1255,6 @@ class ModularProductProgramPass extends RewritePass {
                 val command = oldCmds.head
                 if(command.isVerify) {
                     val args = command.args
-                    var newArgs = ListBuffer[(Expr, String)]()
-                    var newCommandList: List[GenericProofCommand] = List()
                     val exp = args(0)._1
 
                     for ( p <- procedures if p.id == exp.asInstanceOf[Identifier]) {
@@ -1269,7 +1262,6 @@ class ModularProductProgramPass extends RewritePass {
                         if(isProcRelevant) {
                             val copyArray = procWithRelSpec(p)._2
                             val procArray = procedureMap(p)
-                            val noOfProcCopies = copyArray.size
                             var index = 0
                             for(k <- copyArray)
                             {

@@ -966,12 +966,12 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
         val lhs = hypAssert.expr.asInstanceOf[smt.OperatorApplication].operands(0)
         val rhs = hypAssert.expr.asInstanceOf[smt.OperatorApplication].operands(1)
         val convertedLhs = convertHypAssertLhs(lhs, nextVarToTaintVarMap)
-        val convertedRhs = convertHypAssertRhs(rhs, nextVarToTaintVarMap)
+        val convertedRhs = convertHypAssertRhs(rhs)
 
     }
   }
 
-  def convertHypAssertRhs(rhs: smt.Expr, nextVarToTaintVarMap: Map[smt.Expr, List[smt.Symbol]]) = {
+  def convertHypAssertRhs(rhs: smt.Expr) = {
       // rhs is assumed to be a conjunction of equalities
 
       def getEqualities(e: smt.Expr): Set[smt.Expr] = {

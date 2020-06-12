@@ -133,7 +133,7 @@ class SExprLexical extends Lexical with SExprTokens {
     // construct parser for delimiters by |'ing together the parsers for the individual delimiters,
     // starting with the longest one -- otherwise a delimiter D will never be matched if there is
     // another delimiter that is a prefix of D
-    def parseDelim(s: String): Parser[Token] = accept(s.toList) ^^ { x => Keyword(s) }
+    def parseDelim(s: String): Parser[Token] = accept(s.toList) ^^ { _ => Keyword(s) }
 
     val d = new Array[String](delimiters.size)
     delimiters.copyToArray(d, 0)
@@ -323,7 +323,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     "(" ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
     "(" ~ KwUS ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
     "(" ~ KwArray ~> Type ~ Type <~ ")" ^^ { case inType ~ outType => smt.ArrayType(List(inType), outType) } |
-    "(" ~> symbol ~ rep1(Type) <~ ")" ^^ { case sym ~ typs => smt.TupleType(typs) } |
+    "(" ~> symbol ~ rep1(Type) <~ ")" ^^ { case _ ~ typs => smt.TupleType(typs) } |
     symbol ^^ { sym =>  smt.UninterpretedType(sym.name) }
     
 
@@ -426,7 +426,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     phrase(DefineFun)(tokens) match {
       case Success(function, _) =>
         function
-      case NoSuccess(msg, next) =>
+      case NoSuccess(msg, _) =>
         throw new Utils.SyGuSParserError("SExpr function parser error: %s.\nIn: %s".format(msg, text))
     }
   }

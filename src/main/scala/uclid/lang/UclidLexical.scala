@@ -135,7 +135,7 @@ class UclidLexical extends Lexical with UclidTokens with Positional {
     // construct parser for delimiters by |'ing together the parsers for the individual delimiters,
     // starting with the longest one -- otherwise a delimiter D will never be matched if there is
     // another delimiter that is a prefix of D
-    def parseDelim(s: String): Parser[Token] = accept(s.toList) ^^ { x => Keyword(s) }
+    def parseDelim(s: String): Parser[Token] = accept(s.toList) ^^ { _ => Keyword(s) }
 
     val d = new Array[String](delimiters.size)
     delimiters.copyToArray(d, 0)

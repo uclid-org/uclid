@@ -191,7 +191,6 @@ abstract trait Context {
             val synMapP = synMap.addSynonym(typeName, enumType)
             (synMapP.get(typeName).get, synMapP)
           case synTyp : SynonymType =>
-            val typeName = synTyp.name
             val (newType, synMapP1) = flatten(synTyp.typ, synMap)
             val synMapP = synMapP1.addSynonym(synTyp.name, newType)
             (newType, synMapP)
@@ -327,9 +326,9 @@ object Context
         val results = e match {
           case Symbol(_, _) | IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) =>
             eResult
-          case ConstArray(expr, typ) =>
+          case ConstArray(expr, _) =>
             eResult ++ accumulateOverExpr(expr, apply, memo)
-          case OperatorApplication(op,operands) =>
+          case OperatorApplication(_,operands) =>
             eResult ++ accumulateOverExprs(operands, apply, memo)
           case ArraySelectOperation(e, index) =>
             eResult ++ accumulateOverExpr(e, apply, memo) ++ accumulateOverExprs(index, apply, memo)
@@ -388,14 +387,12 @@ object Context
       k -> cnt
     }).toMap
   }
-  def countOccurrences(e : Expr) : Map[Expr, Int] = {
-    Map.empty
-  }
+
   def foldOverExpr[T](init : T, f : ((T, Expr) => T), e : Expr) : T = {
     val subResult = e match {
       case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) =>
         init
-      case OperatorApplication(op, operands) =>
+      case OperatorApplication(_, operands) =>
         foldOverExprs(init, f, operands)
       case ArraySelectOperation(e, index) =>
         foldOverExprs(foldOverExpr(init, f, e), f, index)

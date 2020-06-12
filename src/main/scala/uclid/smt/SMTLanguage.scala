@@ -189,7 +189,7 @@ trait Operator extends Hashable {
   def checkAllArgsSameType(args: List[Expr]) : Unit = {
     args match {
       case Nil => Utils.assert(false, "Expected at least one operand for '" + toString + "' operator.")
-      case head :: tail =>
+      case head :: _ =>
         Utils.assert(args.forall(op => op.typ == head.typ),
             "Operands to '" + toString + "' must of the same type. Got: " +
             Utils.join(args.map(a => a.typ.toString()), " "))

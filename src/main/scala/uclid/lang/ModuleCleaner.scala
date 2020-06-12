@@ -1,7 +1,7 @@
 package uclid
 package lang
 
-class ModuleCleanerPass(mainModuleName : Identifier) extends RewritePass {
+class ModuleCleanerPass() extends RewritePass {
   override def rewriteModuleTypesImport(modTypImport : ModuleTypesImportDecl, ctx : Scope) : Option[ModuleTypesImportDecl] = {
     None
   }
@@ -20,8 +20,8 @@ class ModuleCleanerPass(mainModuleName : Identifier) extends RewritePass {
   }
 }
 
-class ModuleCleaner(mainModuleName : Identifier) extends ASTRewriter(
-    "ModuleCleaner", new ModuleCleanerPass(mainModuleName))
+class ModuleCleaner() extends ASTRewriter(
+    "ModuleCleaner", new ModuleCleanerPass())
 
 class ModuleEliminatorPass(moduleName : Identifier) extends RewritePass {
   override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = {

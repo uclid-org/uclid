@@ -231,7 +231,7 @@ object UclidMain {
     passManager.addPass(new IntroduceFreshHavocs())
     passManager.addPass(new RewriteFreshLiterals())
     passManager.addPass(new BlockFlattener())
-    passManager.addPass(new ModuleCleaner(mainModuleName))
+    passManager.addPass(new ModuleCleaner())
     passManager.addPass(new BlockVariableRenamer())
     passManager
   }  
@@ -286,7 +286,7 @@ object UclidMain {
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
     passManager.addPass(new Optimizer())
-    passManager.addPass(new ModuleCleaner(mainModuleName))
+    passManager.addPass(new ModuleCleaner())
     passManager.addPass(new Optimizer())
     passManager.addPass(new BlockVariableRenamer())
     passManager.addPass(new ExpressionTypeChecker())

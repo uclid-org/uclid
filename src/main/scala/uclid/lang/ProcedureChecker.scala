@@ -90,8 +90,6 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           call.instanceId match {
             case Some(iid) => {
               val instOption = context.module.get.instances.find(inst => inst.instanceId == iid)
-              val instMod = context.get(instOption.get.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
-              val calledProc = instMod.procedures.find((p) => p.id == call.id).get
               checkIdent(proc, instOption.get.instanceId, call.position, context, in)
             }
             case _ => {
@@ -115,9 +113,9 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           havocStmt.havocable match {
             case HavocableId(id) =>
               checkIdent(proc, id, id.position, context, in)
-            case HavocableNextId(id) =>
+            case HavocableNextId(_) =>
               throw new Utils.AssertionError("Should not have havocable next ids inside procedures.")
-            case HavocableFreshLit(f) =>
+            case HavocableFreshLit(_) =>
               in
             case HavocableInstanceId(_) => 
               throw new Utils.AssertionError("No havocable instance ids should have been introduced at this point.")
@@ -141,7 +139,7 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
                      Scope.SharedVar(_, _) => false
                 case Scope.Instance(_) => {
                   val hasInstProcCall = proc.body.asInstanceOf[BlockStmt].stmts.find(stmt => stmt match {
-                    case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => (instanceId == v)
+                    case ProcedureCallStmt(_, _, _, instanceId, _) => (instanceId == v)
                     case _ => false
                   })
                   !hasInstProcCall.isEmpty

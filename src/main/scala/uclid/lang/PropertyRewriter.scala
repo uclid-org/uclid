@@ -270,7 +270,7 @@ class LTLPropertyRewriterPass extends RewritePass {
   def replace(expr: Expr, spec: SpecDecl, context: Scope) : Expr = {
     if (exprTypeChecker.typeOf(expr, context).isBool) {
       expr match {
-        case OperatorApplication(op, operands) =>
+        case OperatorApplication(_, operands) =>
           for (opr <- operands) {
             replace(opr, spec, context)
           }
@@ -309,7 +309,7 @@ class LTLPropertyRewriterPass extends RewritePass {
   def createMonitorExpressions(specName : Identifier, expr : Expr, context : Scope) : MonitorInfo = {
     val isExprTemporal = expr match {
       case tExpr : PossiblyTemporalExpr => tExpr.isTemporal
-      case ntExpr : Expr => false
+      case _ : Expr => false
     }
     if (!isExprTemporal) {
       val newVar = NameProvider.get(specName.toString() + "_z")
@@ -392,9 +392,9 @@ class LTLPropertyRewriterPass extends RewritePass {
             case op : BooleanOperator =>
               Utils.assert(!op.isQuantified, "Temporal expression within quantifier: " + expr.toString)
               createMonitorsForOpApp(opapp)
-            case cOp : ComparisonOperator =>
+            case _ : ComparisonOperator =>
               createMonitorsForOpApp(opapp)
-            case tOp : TemporalOperator =>
+            case _ : TemporalOperator =>
               createMonitorsForOpApp(opapp)
             case _ =>
               throw new Utils.AssertionError("Invalid temporal expression: " + expr.toString)
@@ -414,7 +414,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
-  def newVars(vars : List[(Identifier, Type)], context : Scope) : List[(Identifier, Identifier, Type)] = {
+  def newVars(vars : List[(Identifier, Type)]) : List[(Identifier, Identifier, Type)] = {
     vars.map((p) => (p._1, NameProvider.get(p._1.toString() + "_copy2"), p._2))
   }
 
@@ -478,7 +478,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     // create a copy of the state variables and non-deterministically assign the current state to it.
     val allPendingVars = monitors.flatMap(s => s.pendingVars.map(s => (s, BooleanType())))
     val varsToCopy = module.vars ++ allPendingVars
-    val varCopyPairs = newVars(varsToCopy, ctx)
+    val varCopyPairs = newVars(varsToCopy)
     val varsToCopyP = varCopyPairs.map(p => (p._2, p._3))
     val varsToCopyPDecl = varsToCopyP.map(v => StateVarsDecl(List(v._1), v._2))
     val copyStateInput = NameProvider.get(module.id.toString() + "_copy_state_in")

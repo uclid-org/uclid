@@ -80,7 +80,7 @@ class DefDepGraphPass extends ReadOnlyPass[DefDepAccumulator] {
   override def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : Scope) : T = {
     in.defineId match {
       case None     => in
-      case Some(id) =>
+      case Some(_) =>
         fapp.e match {
           case id : Identifier =>
             context.map.get(id) match {
@@ -124,7 +124,7 @@ class RewriteDefinesPass extends RewritePass {
     fapp.e match {
       case id : Identifier =>
         ctx.map.get(id) match {
-          case Some(Scope.Define(id, sig, defDecl)) =>
+          case Some(Scope.Define(_, _, defDecl)) =>
             changed = true
             rewrite(defDecl, fapp.args, ctx)
           case _ => Some(fapp)
