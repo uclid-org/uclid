@@ -161,6 +161,7 @@ object Operator {
 }
 sealed trait Operator extends ASTNode {
   def fixity : Int
+  def dumpC = toString()
   def isPolymorphic = false
   def isTemporal = false
   override val hashBaseId = 32400
@@ -261,45 +262,54 @@ case class IntUnaryMinusOp() extends IntArgOperator {
 // These operators take bitvector operands and return bitvector results.
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
   override def fixity = Operator.INFIX
+  def signed_operands = false
   val arity = 2
 }
 case class BVLTOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "<"
+  override def signed_operands = true
   override val hashId = 1200
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVLEOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "<="
+  override def signed_operands = true
   override val hashId = 1201
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVGTOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = ">"
+  override def signed_operands = true
   override val hashId = 1202
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVGEOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = ">="
+  override def signed_operands = true
   override val hashId = 1203
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVLTUOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "<_u"
+  override def dumpC = "<"
   override val hashId = 1204
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVLEUOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "<=_u"
+  override def dumpC = "<="
   override val hashId = 1205
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVGTUOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = ">_u"
+  override def dumpC = ">"
   override val hashId = 1206
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVGEUOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = ">=_u"
+  override def dumpC = ">="
   override val hashId = 1207
   override val md5hashCode = computeMD5Hash(w)
 }
@@ -364,28 +374,34 @@ case class BVZeroExtOp(override val w : Int, val e : Int) extends BVArgOperator(
 case class BVLeftShiftBVOp(override val w : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "bv_left_shift"
+  override def dumpC = "<<"
   override val hashId = 1221
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVLRightShiftBVOp(override val w : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "bv_l_right_shift"
+  override def dumpC = ">>"
   override val hashId = 1222
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVARightShiftBVOp(override val w : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "bv_a_right_shift"
+  override def signed_operands = true
+  override def dumpC = ">>"
   override val hashId = 1223
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVUremOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "%_u"
+  override def dumpC = "%"
   override val hashId = 1224
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVSremOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "%"
+  override def signed_operands = true
   override val hashId = 1225
   override val md5hashCode = computeMD5Hash(w)
 }
@@ -406,6 +422,7 @@ case class DisjunctionOp() extends BooleanOperator {
 }
 case class IffOp() extends BooleanOperator {
   override def toString = "<==>"
+  override def dumpC = "=="
   override val hashId = 1302
   override val md5hashCode = computeMD5Hash
 }
@@ -550,6 +567,7 @@ case class ITEOp() extends Operator {
 abstract class BitVectorSlice extends ASTNode {
   def width : Option[Int]
   def isConstantWidth : Boolean
+  def dumpC = toString()
 }
 case class ConstBitVectorSlice(hi: Int, lo: Int) extends BitVectorSlice  {
   Utils.assert(hi >= lo && hi >= 0 && lo >= 0, "Invalid bitvector slice: [" + hi.toString + ":" + lo.toString + "].")
@@ -651,6 +669,7 @@ sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
   def isConstant = false
   def isTemporal = false
+  def dumpC = toString()
 }
 sealed abstract class PossiblyTemporalExpr extends Expr
 
@@ -672,6 +691,7 @@ sealed abstract class Literal extends Expr {
 /** A non-deterministic new constant. */
 case class FreshLit(typ : Type) extends Literal {
   override def toString = "*"
+  override def dumpC = "nondet()"
   override val hashId = 2200
   override val md5hashCode = computeMD5Hash(typ)
 }
@@ -702,6 +722,7 @@ case class IntLit(value: BigInt) extends NumericLit {
 
 case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
   override def toString = value.toString + "bv" + width.toString
+  override def dumpC = value.toString
   override def typeOf : NumericType = BitVectorType(width)
   override def to (n : NumericLit) : Seq[NumericLit] = {
     n match {
@@ -736,10 +757,32 @@ case class Tuple(values: List[Expr]) extends Expr {
 //for symbols interpreted by underlying Theory solvers
 case class OperatorApplication(op: Operator, operands: List[Expr]) extends PossiblyTemporalExpr {
   override def isConstant = operands.forall(_.isConstant)
+  override def dumpC = {
+    op match {
+      case PolymorphicSelect(r) =>
+        operands(0).dumpC + "." + r.dumpC
+      case RecordSelect(r) =>
+        operands(0).dumpC + "." + r.dumpC
+      case HyperSelect(i) =>
+        operands(0).dumpC + "." + i
+      case SelectFromInstance(f) =>
+        operands(0).dumpC + "." + f.dumpC
+      case ForallOp(_, _) | ExistsOp(_, _) =>
+        "{" + op.dumpC + operands(0).dumpC + "}"
+      case _ =>
+        if (op.fixity == Operator.INFIX) {
+          "(" + Utils.join(operands.map(_.dumpC), " " + op + " ") + ")"
+        } else if (op.fixity == Operator.PREFIX) {
+          op + "(" + Utils.join(operands.map(_.dumpC), ", ") + ")"
+        } else {
+          "(" + Utils.join(operands.map(_.dumpC), ", ") + ")" + op
+        }
+      }
+  }
   override def toString = {
     op match {
       case PolymorphicSelect(r) =>
-        operands(0).toString + "." + r.toString()
+        operands(0).toString + "." + r.toString
       case RecordSelect(r) =>
         operands(0).toString + "." + r.toString
       case HyperSelect(i) =>
@@ -776,6 +819,7 @@ case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
 
 sealed abstract class Lhs(val ident: Identifier) extends ASTNode {
   def isProceduralLhs : Boolean
+  def dumpC = toString()
 }
 case class LhsId(id: Identifier) extends Lhs(id) {
   override def toString = id.toString
@@ -887,6 +931,7 @@ sealed abstract class Type extends PositionedNode {
   def ids = List.empty[Identifier]
   def matches (t2 : Type) = (this == t2)
   def defaultValue : Option[Expr] = None
+  def dumpC = toString()
 }
 
 /**
@@ -934,10 +979,12 @@ case class IntegerType() extends NumericType {
   override def defaultValue = Some(IntLit(0))
   override val hashId = 2703
   override val md5hashCode = computeMD5Hash
+  override def dumpC = "int"
 }
 case class BitVectorType(width: Int) extends NumericType {
   override def toString = "bv" + width.toString
   override def isBitVector = true
+  override def dumpC = "__CPROVERbitvec["+ width.toString+"]"
   def isValidSlice(slice : ConstBitVectorSlice) : Boolean = {
     return (slice.lo >= 0 && slice.hi < width)
   }
@@ -1138,12 +1185,14 @@ case class HavocableInstanceId(opapp : OperatorApplication) extends HavocableEnt
 /** Statements **/
 sealed abstract class Statement extends ASTNode {
   override def toString = Utils.join(toLines, "\n") + "\n"
+  def dumpC = Utils.join(toCLines, "\n")+"\n"
   def hasStmtBlock = false
   val isLoop = false
   val hasLoop = false
   val hasCall : Boolean
   val hasInternalCall : Boolean
   def toLines : List[String]
+  def toCLines = toLines
 }
 case class SkipStmt() extends Statement {
   override def toLines = List("skip; // " + position.toString)
@@ -1154,6 +1203,7 @@ case class SkipStmt() extends Statement {
 }
 case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assert " + e + "; // " + position.toString)
+  override def toCLines = List("assert( " + e + "); // " + position.toString)
   override val hasCall = false
   override val hasInternalCall = false
   override val hashId = 3001
@@ -1161,6 +1211,7 @@ case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
 }
 case class AssumeStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assume " + e + "; // " + position.toString)
+  override def toCLines = List("assume (" + e + "); // " + position.toString)
   override val hasCall = false
   override val hasInternalCall = false
   override val hashId = 3002
@@ -1168,6 +1219,7 @@ case class AssumeStmt(e: Expr, id : Option[Identifier]) extends Statement {
 }
 case class HavocStmt(havocable : HavocableEntity) extends Statement {
   override def toLines = List("havoc " + havocable.toString() + "; // " + position.toString)
+  override def toCLines = List("havoc (" + havocable.toString() + "); // " + position.toString)
   override val hasCall = false
   override val hasInternalCall = false;
   override val hashId = 3003
@@ -1176,6 +1228,8 @@ case class HavocStmt(havocable : HavocableEntity) extends Statement {
 case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override def toLines =
     List(Utils.join(lhss.map (_.toString), ", ") + " = " + Utils.join(rhss.map(_.toString), ", ") + "; // " + position.toString)
+  override def toCLines  =
+    List(Utils.join(lhss.map (_.dumpC), ", ") + " = " + Utils.join(rhss.map(_.dumpC), ", ") + "; // " + position.toString)  
   override val hasCall = false
   override val hasInternalCall = false
   override val hashId = 3004
@@ -1190,6 +1244,11 @@ case class BlockStmt(vars: List[BlockVarsDecl], stmts: List[Statement]) extends 
       stmts.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++
     List("}")
   }
+  override def toCLines  = {
+      vars.map(PrettyPrinter.indent(1) + _.dumpC) ++
+      stmts.flatMap(_.toCLines).map(PrettyPrinter.indent(1) + _)
+  }
+
   override val hasCall = stmts.exists(st => st.hasCall)
   override val hasInternalCall = stmts.exists(st => st.hasInternalCall)
   override val hashId = 3005
@@ -1205,6 +1264,13 @@ case class IfElseStmt(cond: Expr, ifblock: Statement, elseblock: Statement) exte
     elseblock.toLines.map(PrettyPrinter.indent(1) + _)
   }
   override def toLines = lines
+  lazy val clines : List[String] = {
+    List("if(%s)".format(cond.toString())) ++
+    ifblock.toCLines.map(PrettyPrinter.indent(1) + _) ++
+    List("else") ++
+    elseblock.toCLines.map(PrettyPrinter.indent(1) + _)
+  }
+  override def toCLines = clines
   override val hasCall = ifblock.hasCall || elseblock.hasCall
   override val hasInternalCall = ifblock.hasInternalCall || elseblock.hasInternalCall
   override val hashId = 3006
@@ -1220,6 +1286,11 @@ case class ForStmt(id: Identifier, typ : Type, range: (Expr,Expr), body: Stateme
     val forLine = "for " + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString
     List(forLine) ++ body.toLines.map(PrettyPrinter.indent(1) + _) ++ List("}")
   }
+    override def toCLines = {
+    val forLine = "for " + typ.toString() + id + " in range(" + range._1 +"," + range._2 + ") {  // " + position.toString
+    List(forLine) ++ body.toCLines.map(PrettyPrinter.indent(1) + _) ++ List("}")
+  }
+
   override val hasCall = body.hasCall
   override val hasInternalCall = body.hasInternalCall
   override val hashId = 3007
@@ -1236,6 +1307,7 @@ case class WhileStmt(cond: Expr, body: Statement, invariants: List[Expr])
     val invLines = invariants.map(inv => PrettyPrinter.indent(1) + "invariant " + inv.toString() + "; // " + inv.position.toString())
     List(headLine) ++ invLines ++ body.toLines.map(PrettyPrinter.indent(1) + _)
   }
+
   override val hasCall = body.hasCall
   override val hasInternalCall = body.hasInternalCall
   override val hashId = 3008
@@ -1270,6 +1342,7 @@ case class ModuleCallStmt(id: Identifier) extends Statement {
 case class BlockVarsDecl(ids : List[Identifier], typ : Type) extends ASTNode {
   override def toString = "var " + Utils.join(ids.map(id => id.toString()), ", ") +
                           " : " + typ.toString() + "; // " + typ.position.toString()
+  def dumpC = typ.dumpC + " "+ Utils.join(ids.map(id => id.toString()), ", ") + "; //" + typ.position.toString()                     
   override val hashId = 3100
   override val md5hashCode = computeMD5Hash(ids, typ)
 }
@@ -1319,6 +1392,8 @@ case class FunctionSig(args: List[(Identifier,Type)], retType: Type) extends AST
 sealed abstract class Decl extends ASTNode {
   def declNames : List[Identifier]
   val hashId : Int
+  def dumpC = toString()
+  def dumpC_assumption = toString()
 }
 
 case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, arguments: List[(Identifier, Option[Expr])], instType : Option[ModuleInstanceType], modType : Option[ModuleType]) extends Decl
@@ -1466,6 +1541,7 @@ case class StateVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
   override val hashId = 3905
   override val md5hashCode = computeMD5Hash(ids, typ)
   override def toString = "var " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
+  override def dumpC = typ.dumpC +" "+ Utils.join(ids.map(_.toString), ", ") + "; // " + position.toString
   override def declNames = ids
 }
 case class InputVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
@@ -1591,6 +1667,7 @@ case class LetVariableTerm(typ: Type) extends GrammarTerm {
 }
 case class VariableTerm(typ: Type) extends GrammarTerm {
   override def toString = "var " + typ.toString()
+  def dumpC = typ.dumpC + " "
   override val hashId = 4007
   override val md5hashCode = computeMD5Hash(typ)
 }
@@ -1638,6 +1715,8 @@ case class InitDecl(body: Statement) extends Decl {
   override def toString =
     "init // " + position.toString + "\n" +
     Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
+  override def dumpC =
+    Utils.join(body.toCLines.map(PrettyPrinter.indent(2) + _), "\n")  
   override def declNames = List.empty
 }
 case class NextDecl(body: Statement) extends Decl {
@@ -1646,6 +1725,10 @@ case class NextDecl(body: Statement) extends Decl {
   override def toString =
     "next // " + position.toString + "\n" +
     Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
+  override def dumpC =  
+    Utils.join(body.toCLines.map(PrettyPrinter.indent(2) + _), "\n") 
+    
+
   override def declNames = List.empty
 }
 case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
@@ -1664,6 +1747,8 @@ case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) ext
     }
     "%s %s%s : %s; // %s".format(propertyKeyword, id.toString, declString, expr.toString, position.toString)
   }
+  override def dumpC = "assert("+ expr.dumpC + ");\n"
+  override def dumpC_assumption = "__CPROVER_assume("+expr.dumpC +");\n"
   override def declNames = List(id)
   def name = "%s %s".format(propertyKeyword, id.toString())
 }
@@ -1677,6 +1762,12 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr, params: List[ExprDecor
       case Some(id) => "axiom " + id.toString + " : " + expr.toString()
       case None => "axiom " + expr.toString
     }
+  }
+  override def dumpC = {
+     id match {
+      case Some(id) => "__CPROVER_assume(" + id.dumpC + " : " + expr.dumpC +");\n"
+      case None => "__CPROVER_assume( " + expr.dumpC + ");\n"
+     }
   }
   override def declNames = id match {
     case Some(i) => List(i)
@@ -1721,6 +1812,7 @@ case class GenericProofCommand(
     }
   }
   def isVerify : Boolean = { name == Identifier("verify") }
+
   override def toString = {
     val nameStr = name.toString
     val paramStr = if (params.size > 0) { "[" + Utils.join(params.map(_.toString), ", ") + "]" } else { "" }
@@ -1728,6 +1820,36 @@ case class GenericProofCommand(
     val resultStr = resultVar match { case Some(id) => id.toString + " = "; case None => "" }
     val objStr = argObj match { case Some(id) => id.toString + "->"; case None => "" }
     resultStr + objStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
+  }
+
+  def dumpC = {
+    name match{
+      case Identifier("verify") => {
+       val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
+       "void verify"+argStr+"();\n"
+      }
+      case Identifier("induction") => 
+      "void induction(void){\nhavoc_all();\n" + 
+      PrettyPrinter.indent(1) + "init();\n" + 
+      PrettyPrinter.indent(1) + "assert_properties();\n" +
+      PrettyPrinter.indent(1) + "havoc_all();\nassume_properties();\n" + 
+      PrettyPrinter.indent(1) + "next();\n" + 
+      PrettyPrinter.indent(1) + "assert_properties();\n" +
+      "}\n"; 
+      case Identifier("unroll")=>
+      val iterations=args(0)._2;
+      "void unroll(void){\nhavoc_all();\n" +
+      PrettyPrinter.indent(1) + "init();\n" + 
+      PrettyPrinter.indent(1) + "assert_properties();\n" +
+      PrettyPrinter.indent(1) + "for(int i=0; i<" + iterations+ " ;i++){\n" +
+      PrettyPrinter.indent(2) + "next();\n" + 
+      PrettyPrinter.indent(2) + "assert_properties();\n" +
+      PrettyPrinter.indent(1) + "}\n" +
+      "}\n"
+      case Identifier("bmc")=>"unroll: not able to dump C for LTL properties"
+      case Identifier("check") | Identifier("print_results") |Identifier("print_cex") | Identifier("dump_c") | Identifier("print_module")  =>""
+      case _ => "not able to dump C for this property"
+    }
   }
   override val hashId = 4200
   override val md5hashCode = computeMD5Hash(name, params, args, resultVar, argObj)
@@ -1809,6 +1931,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   // module state variables.
   lazy val vars : List[(Identifier, Type)] =
     decls.collect { case vars : StateVarsDecl => vars }.flatMap(v => v.ids.map(id => (id, v.typ)))
+  
   lazy val sharedVars: List[(Identifier, Type)] =
     decls.collect { case sVars : SharedVarsDecl => sVars }.flatMap(sVar => sVar.ids.map(id => (id, sVar.typ)))
   lazy val constLits: List[(Identifier, NumericLit)] =
@@ -1899,6 +2022,58 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     }
     Module(id, decls, cmds, newNotes)
   }
+
+
+
+  def dumpC = 
+  {
+    lazy val varDecls = decls.filter(_.isInstanceOf[StateVarsDecl])
+    lazy val initDecl = decls.filter(_.isInstanceOf[InitDecl])
+    lazy val nextDecl = decls.filter(_.isInstanceOf[NextDecl])
+    lazy val procedureDecls = decls.filter(_.isInstanceOf[ProcedureDecl])
+    lazy val propertyDecls = decls.filter(_.isInstanceOf[SpecDecl])
+    var cmdCalls : String  = ""
+
+    val havoc = 
+    "void havoc_all(){\n" +
+    varDecls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + 
+      i.declNames.foldLeft("") {case (acc, i) => acc + PrettyPrinter.indent(1) + "__CPROVER_havoc(" + i.dumpC + ");\n" }} +
+    "}\n"
+    val assert_property = 
+    "void assert_properties(){\n"+
+    propertyDecls.foldLeft(""){case (acc,i) => acc + PrettyPrinter.indent(1) + i.dumpC + "\n" } + "}\n"
+
+    val assume_property = 
+    "void assume_properties(){\n"+
+    propertyDecls.foldLeft(""){case (acc,i) => acc + PrettyPrinter.indent(1) + i.dumpC_assumption + "\n" } + "}\n"
+
+    def getCmdString(cmd: GenericProofCommand):String = {
+      cmd.name match {
+         case Identifier("verify") => cmdCalls += "verify"+cmd.args(0).toString + "();\n"
+         case Identifier("unroll") => cmdCalls += "unroll();\n";
+         case Identifier("induction") => cmdCalls += "induction();\n"
+         case _ => // do nothing
+      }
+      cmd.dumpC
+    }
+
+
+  "// C code generated by UCLID5 \n"+
+  "// global variables \n" + 
+  varDecls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i.dumpC + "\n" } + "\n"+
+  havoc + assert_property + assume_property + 
+  "void init()" + "{\n" +
+  initDecl.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i.dumpC + "\n" } + 
+  "}\n\nvoid next()"+"{\n" +
+  nextDecl.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i.dumpC + "\n" } + 
+  "}\n" +
+  procedureDecls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i.dumpC + "\n" } +
+  PrettyPrinter.indent(1) + "\n" + 
+  cmds.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + getCmdString(i) } + 
+  "\nvoid main() {\n" +  
+  PrettyPrinter.indent(1) + cmdCalls + "\n}\n"
+  }
+
 
   override def toString =
     "\nmodule " + id + " {\n" +
