@@ -1781,16 +1781,6 @@ case class ExprRenameMapAnnotation(renameMap_ : MutableMap[Expr, BigInt], enumVa
 
 object Annotation {
   val default = List(InstanceVarMapAnnotation(Map.empty))
-  def defaultVars(decls : List[Decl]) : List[Annotation] = {
-    val inputs = decls.collect{ case inps : InputVarsDecl => inps.ids }
-    val outputs = decls.collect{ case outs : OutputVarsDecl => outs.ids }
-    val vars = decls.collect{ case vars : StateVarsDecl => vars.ids }
-    val sharedVars = decls.collect{ case sharedVars : SharedVarsDecl => sharedVars.ids }
-    def flatten (l : List[List[Identifier]]) : List[Identifier] = l.flatMap(ll => ll)
-    val names = flatten(inputs) ++ flatten(outputs) ++ flatten(vars) ++ flatten(sharedVars)
-    val instMap = names.map(n => (List(n) -> n)).toMap
-    List(InstanceVarMapAnnotation(instMap))
-  }
 }
 
 case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCommand], notes: List[Annotation]) extends ASTNode {
