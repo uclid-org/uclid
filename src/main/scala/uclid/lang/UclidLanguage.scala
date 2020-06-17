@@ -1196,6 +1196,7 @@ sealed abstract class Statement extends ASTNode {
 }
 case class SkipStmt() extends Statement {
   override def toLines = List("skip; // " + position.toString)
+  override def toCLines = List("// skip;")
   override val hasCall = false
   override val hasInternalCall = false
   override val hashId = 3000
@@ -1470,24 +1471,28 @@ case class ModifiableInstanceId(opapp : OperatorApplication) extends ModifiableE
 
 sealed abstract class ProcedureVerificationExpr extends ASTNode {
   val expr : Expr
+  def dumpC = toString
 }
 case class ProcedureRequiresExpr(e : Expr) extends ProcedureVerificationExpr {
   override val expr = e
   override val toString = "requires " + e.toString()
   override val hashId = 3400
   override val md5hashCode = computeMD5Hash(e)
+  override val dumpC = "__CPROVER_assume(" + e.toString() + ");\n"
 }
 case class ProcedureEnsuresExpr(e : Expr) extends ProcedureVerificationExpr {
   override val expr = e
   override val toString = "ensures " + e.toString()
   override val hashId = 3401
   override val md5hashCode = computeMD5Hash(e)
+  override val dumpC = "assert(" + e.toString() + ");\n"
 }
 case class ProcedureModifiesExpr(modifiable : ModifiableEntity) extends ProcedureVerificationExpr {
   override val expr = modifiable.expr
   override val toString = "modifies " + modifiable.toString
   override val hashId = 3402
   override val md5hashCode = computeMD5Hash(modifiable)
+  override val dumpC = ""
 }
 
 case class ProcedureAnnotations(ids : Set[Identifier]) extends ASTNode {
@@ -1518,6 +1523,18 @@ case class ProcedureDecl(
     Utils.join(requires.map(PrettyPrinter.indent(2) + "requires " + _.toString + ";\n"), "") +
     Utils.join(ensures.map(PrettyPrinter.indent(2) + "ensures " + _.toString + "; \n"), "") +
     Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
+  }
+  override def dumpC = {
+    val declareVars = sig.inParams.foldLeft("")
+    {case (acc,i) => acc + PrettyPrinter.indent(1)+ i._2.dumpC + " " + i._1.dumpC + ";\n" + PrettyPrinter.indent(1) + "havoc(" + i._1 + ");\n" }
+    val declareOutputVars = sig.outParams.foldLeft("")
+        {case (acc,i) => acc + PrettyPrinter.indent(1)+ i._2.dumpC + " " + i._1.dumpC + ";\n" + PrettyPrinter.indent(1) + "havoc(" + i._1 + ");\n" }
+
+    "void " + "verify_"+id + "() {\n" + declareVars + declareOutputVars +
+    Utils.join(requires.map(PrettyPrinter.indent(2) + "__CPROVER_assume(" + _.dumpC + ");\n"), "") +
+    Utils.join(body.toCLines.map(PrettyPrinter.indent(2) + _), "\n") + "\n" + 
+    Utils.join(ensures.map(PrettyPrinter.indent(2) + "assert(" + _.dumpC + "); \n"), "") +
+    "}\n"
   }
   override def declNames = List(id)
   def hasPrePost = requires.size > 0 || ensures.size > 0
@@ -1824,10 +1841,7 @@ case class GenericProofCommand(
 
   def dumpC = {
     name match{
-      case Identifier("verify") => {
-       val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
-       "void verify"+argStr+"();\n"
-      }
+      case Identifier("verify") => ""// do nothing here. 
       case Identifier("induction") => 
       "void induction(void){\nhavoc_all();\n" + 
       PrettyPrinter.indent(1) + "init();\n" + 
@@ -2049,7 +2063,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
 
     def getCmdString(cmd: GenericProofCommand):String = {
       cmd.name match {
-         case Identifier("verify") => cmdCalls += "verify"+cmd.args(0).toString + "();\n"
+         case Identifier("verify") => cmdCalls += "verify_"+cmd.args(0)._2 + "();\n"
          case Identifier("unroll") => cmdCalls += "unroll();\n";
          case Identifier("induction") => cmdCalls += "induction();\n"
          case _ => // do nothing
