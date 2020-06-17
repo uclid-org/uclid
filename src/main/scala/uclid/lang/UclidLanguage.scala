@@ -972,6 +972,7 @@ case class BooleanType() extends PrimitiveType {
   override def defaultValue = Some(BoolLit(false))
   override val hashId = 2702
   override val md5hashCode = computeMD5Hash
+  override def dumpC = "bool"
 }
 case class IntegerType() extends NumericType {
   override def toString = "integer"
@@ -984,7 +985,7 @@ case class IntegerType() extends NumericType {
 case class BitVectorType(width: Int) extends NumericType {
   override def toString = "bv" + width.toString
   override def isBitVector = true
-  override def dumpC = "__CPROVERbitvec["+ width.toString+"]"
+  override def dumpC = "__CPROVER_bitvector["+ width.toString+"]"
   def isValidSlice(slice : ConstBitVectorSlice) : Boolean = {
     return (slice.lo >= 0 && slice.hi < width)
   }
@@ -1047,6 +1048,7 @@ abstract sealed class ProductType extends Type {
 case class TupleType(fieldTypes: List[Type]) extends ProductType {
   override def fields = fieldTypes.zipWithIndex.map(p  => (Identifier("_" + (p._2+1).toString), p._1))
   override def toString = "{" + Utils.join(fieldTypes.map(_.toString), ", ") + "}"
+  override def dumpC = "struct {" + Utils.join(fields.map((f) => f._2.dumpC + " " + f._1.dumpC), "; ")  + ";}"
   override def isTuple = true
   override def defaultValue = {
     val defaults = fieldTypes.map(_.defaultValue).flatten
@@ -1063,6 +1065,7 @@ case class TupleType(fieldTypes: List[Type]) extends ProductType {
 case class RecordType(members : List[(Identifier,Type)]) extends ProductType {
   override def fields = members
   override def toString = "record {" + Utils.join(fields.map((f) => f._1.toString + " : " + f._2.toString), ", ")  + "}"
+  override def dumpC = "struct {" + Utils.join(fields.map((f) => f._2.dumpC + " " + f._1.dumpC), "; ")  + ";}"
   override def isRecord = true
   override def matches(t2 : Type) : Boolean = {
     t2 match {
@@ -1531,9 +1534,9 @@ case class ProcedureDecl(
         {case (acc,i) => acc + PrettyPrinter.indent(1)+ i._2.dumpC + " " + i._1.dumpC + ";\n" + PrettyPrinter.indent(1) + "havoc(" + i._1 + ");\n" }
 
     "void " + "verify_"+id + "() {\n" + declareVars + declareOutputVars +
-    Utils.join(requires.map(PrettyPrinter.indent(2) + "__CPROVER_assume(" + _.dumpC + ");\n"), "") +
+    Utils.join(requires.map(PrettyPrinter.indent(2) + "__CPROVER_assume" + _.dumpC + ";\n"), "") +
     Utils.join(body.toCLines.map(PrettyPrinter.indent(2) + _), "\n") + "\n" + 
-    Utils.join(ensures.map(PrettyPrinter.indent(2) + "assert(" + _.dumpC + "); \n"), "") +
+    Utils.join(ensures.map(PrettyPrinter.indent(2) + "assert" + _.dumpC + "; \n"), "") +
     "}\n"
   }
   override def declNames = List(id)
@@ -1547,6 +1550,7 @@ case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override val md5hashCode = computeMD5Hash(id, typ)
   override def toString = "type " + id + " = " + typ + "; // " + position.toString
   override def declNames = List(id)
+  override def dumpC = "typedef " + typ.dumpC + " " + id + ";"
 }
 case class ModuleTypesImportDecl(id : Identifier) extends Decl {
   override val hashId = 3904
@@ -1558,7 +1562,7 @@ case class StateVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
   override val hashId = 3905
   override val md5hashCode = computeMD5Hash(ids, typ)
   override def toString = "var " + Utils.join(ids.map(_.toString), ", ") + " : " + typ + "; // " + position.toString
-  override def dumpC = typ.dumpC +" "+ Utils.join(ids.map(_.toString), ", ") + "; // " + position.toString
+  override def dumpC = typ.dumpC +" "+ Utils.join(ids.map(_.toString), ", ") + "; // " + position.toString 
   override def declNames = ids
 }
 case class InputVarsDecl(ids: List[Identifier], typ: Type) extends Decl {
@@ -1589,6 +1593,7 @@ case class ConstantLitDecl(id : Identifier, lit : NumericLit) extends Decl {
   override val md5hashCode = computeMD5Hash(id, lit)
   override def toString = "const %s = %s; // %s".format(id.toString(), lit.toString(), position.toString())
   override def declNames = List(id)
+ // override def dumpC = "const %s = %s; // %s".format(id.dumpC, lit.dumpC, position.toString())
 }
 case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with ModuleExternal {
   override val hashId = 3910
@@ -1597,6 +1602,7 @@ case class ConstantsDecl(ids: List[Identifier], typ: Type) extends Decl with Mod
   override def declNames = ids
   override def extNames = ids
   override def extType = typ
+  override def dumpC = "const" + typ.dumpC +" "+ Utils.join(ids.map(_.toString), ", ") + "; // " + position.toString
 }
 case class ModuleConstantsImportDecl(id: Identifier) extends Decl {
   override val hashId = 3919 
@@ -2046,6 +2052,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     lazy val nextDecl = decls.filter(_.isInstanceOf[NextDecl])
     lazy val procedureDecls = decls.filter(_.isInstanceOf[ProcedureDecl])
     lazy val propertyDecls = decls.filter(_.isInstanceOf[SpecDecl])
+    lazy val typeDecls = decls.filter(_.isInstanceOf[TypeDecl])
     var cmdCalls : String  = ""
 
     val havoc = 
@@ -2073,7 +2080,8 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
 
 
   "// C code generated by UCLID5 \n"+
-  "// WARNING: all integer types are printed as C integers" +
+  "// WARNING: all integer types are printed as C integers\n" +
+  "#include \"stdbool.h\"\n" + 
   "// global variables \n" + 
   varDecls.foldLeft("") { case (acc,i) => acc + PrettyPrinter.indent(1) + i.dumpC + "\n" } + "\n"+
   havoc + assert_property + assume_property + 
