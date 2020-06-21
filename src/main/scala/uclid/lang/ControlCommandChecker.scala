@@ -176,7 +176,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkParamIsALogic(cmd, context, filename)
         checkNoArgObj(cmd, filename)
         checkNoResultVar(cmd, filename)
-      case "check" | "print_module" =>
+      case "check" | "print_module" | "dump_c" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)
         checkNoArgObj(cmd, filename)

@@ -313,6 +313,8 @@ class SymbolicSimulator (module : Module) {
             printSMT2(assertionTree, cmd.argObj, solver)
           case "print_module" =>
             UclidMain.println(module.toString)
+          case "dump_c" =>
+            UclidMain.println(module.dumpC)  
           case "set_solver_option" =>
             val option = cmd.args(0)._1.asInstanceOf[lang.StringLit].value
             val value : smt.Context.SolverOption = cmd.args(1)._1 match {
