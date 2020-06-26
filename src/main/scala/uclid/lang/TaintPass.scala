@@ -45,8 +45,8 @@ class TaintNextPass extends RewritePass {
 
   def get_taint_vars(vars: List[BlockVarsDecl]) : List[BlockVarsDecl] = {
     vars.map(blkVarsDecl => {
-      var taint_ids = blkVarsDecl.ids.map(id => {
-        var taint_id = Identifier(id.name + "_taint_var")
+      val taint_ids = blkVarsDecl.ids.map(id => {
+        val taint_id = Identifier(id.name + "_taint_var")
         TaintVarMap.insert(id, taint_id)
         assert(TaintVarMap.get(id) == Some(taint_id))
         taint_id
@@ -110,20 +110,20 @@ class TaintNextPass extends RewritePass {
   def addTaintToStatement(statement: Statement, precondition: List[Expr]): List[Statement] = {
     statement match {
       case BlockStmt(vars, stmts) => {
-        var taint_vars = get_taint_vars(vars)
-        var new_stmts = stmts.map(st => addTaintToStatement(st, precondition)).flatten
+        val taint_vars = get_taint_vars(vars)
+        val new_stmts = stmts.map(st => addTaintToStatement(st, precondition)).flatten
         List(BlockStmt(taint_vars ++ vars, new_stmts))
       }
       case HavocStmt(havocable) => {
         havocable match {
           case HavocableId(id) => {
-            var taint_var = TaintVarMap.get(id).get
-            var taint_assign = AssignStmt(List(LhsId(taint_var)), List(new BoolLit(false)))
+            val taint_var = TaintVarMap.get(id).get
+            val taint_assign = AssignStmt(List(LhsId(taint_var)), List(new BoolLit(false)))
             List(taint_assign, HavocStmt(havocable))
           }
           case HavocableNextId(id) => {
-            var taint_var = TaintVarMap.get(id).get
-            var taint_assign = AssignStmt(List(LhsId(taint_var)), List(new BoolLit(false)))
+            val taint_var = TaintVarMap.get(id).get
+            val taint_assign = AssignStmt(List(LhsId(taint_var)), List(new BoolLit(false)))
             List(taint_assign, HavocStmt(havocable))
           }
           case HavocableFreshLit(_) => List()
@@ -131,20 +131,20 @@ class TaintNextPass extends RewritePass {
         }
       }
       case IfElseStmt(cond, ifblock, elseblock) => {
-        var newif = addTaintToStatement(ifblock, precondition ++ List(cond))
-        var newelse = addTaintToStatement(elseblock, precondition ++ List(cond))
+        val newif = addTaintToStatement(ifblock, precondition ++ List(cond))
+        val newelse = addTaintToStatement(elseblock, precondition ++ List(cond))
         List(IfElseStmt(cond, newif(0), newelse(0))) // Assuming that ifblock and elseblock are block statements
       }
       case CaseStmt(body) => {
         // Assuming each statement is a block statment
-        var new_body = body.map(x => (x._1, addTaintToStatement(x._2, precondition ++ List(x._1))(0)))
+        val new_body = body.map(x => (x._1, addTaintToStatement(x._2, precondition ++ List(x._1))(0)))
         List(CaseStmt(new_body))
 
       }
       case AssignStmt(lhss, rhss) => {
-        var taint_exprs = lhss.zip(rhss).map(pair => get_taint_assignment(pair, precondition)).flatten
-        var newlhss = lhss ++ taint_exprs.map(pair => pair._1)
-        var newrhss = rhss ++ taint_exprs.map(pair => pair._2)
+        val taint_exprs = lhss.zip(rhss).map(pair => get_taint_assignment(pair, precondition)).flatten
+        val newlhss = lhss ++ taint_exprs.map(pair => pair._1)
+        val newrhss = rhss ++ taint_exprs.map(pair => pair._2)
         List(AssignStmt(newlhss, newrhss))
       }
       case _ => List()
@@ -159,7 +159,7 @@ class TaintNextPass extends RewritePass {
     // Add taint vars for each variable decl in BlockStmt
     // propagate taint vars for each statement
 
-    var new_next = addTaintToStatement(next.body, List())
+    val new_next = addTaintToStatement(next.body, List())
     Some(NextDecl(new_next(0)))
   }
 

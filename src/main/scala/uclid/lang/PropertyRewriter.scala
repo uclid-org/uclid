@@ -48,7 +48,7 @@ class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
   def checkBooleans(operands: List[Expr], context : Scope, in : T) : T = {
     var ret = in
     for (op <- operands) {
-      var oType = exprTypeChecker.typeOf(op, context)
+      val oType = exprTypeChecker.typeOf(op, context)
       if (!oType.isBool) {
         ret = ret + ModuleError("LTL operator expected argument of type boolean but received argument of type %s".format(oType.toString), op.position)
       }
@@ -64,27 +64,27 @@ class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
         case Identifier(name) =>
           name match {
             case "G" =>
-              var numOps = fapp.args.length
+              val numOps = fapp.args.length
               if (numOps != 1) {
                 ret = ret + ModuleError("globally operator expected 1 argument but received %s".format(numOps), fapp.position)
               }
             case "X" =>
-              var numOps = fapp.args.length
+              val numOps = fapp.args.length
               if (numOps != 1) {
                 ret = ret + ModuleError("next operator expected 1 argument but received %s".format(numOps), fapp.position)
               }
             case "U" =>
-              var numOps = fapp.args.length
+              val numOps = fapp.args.length
               if (numOps != 2) {
                 ret = ret + ModuleError("until operator expected 2 argument but received %s".format(numOps), fapp.position)
               }
             case "W" =>
-              var numOps = fapp.args.length
+              val numOps = fapp.args.length
               if (numOps != 2) {
                 ret = ret + ModuleError("Weak-until operator expected 2 argument but received %s".format(numOps), fapp.position)
               }
             case "F" =>
-              var numOps = fapp.args.length
+              val numOps = fapp.args.length
               if (numOps != 1) {
                 ret = ret + ModuleError("finally operator expected 1 argument but received %s".format(numOps), fapp.position)
               }

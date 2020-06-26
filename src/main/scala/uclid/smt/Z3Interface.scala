@@ -64,7 +64,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
 
   def convertZ3ArrayString(initExpr : z3.Expr) : String = {
 
-    var array : Map[String, String] = Map.empty[String, String]
+    val array : Map[String, String] = Map.empty[String, String]
     var e    : z3.Expr = model.eval(initExpr, true)
     var bottom : String = ""
     var longest : Integer = 1

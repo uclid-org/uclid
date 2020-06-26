@@ -93,7 +93,7 @@ sealed  trait PositionedNode extends Positional with Hashable {
 object ASTNode {
   def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename : Boolean, node : T, pos : ASTPosition) : T = {
     if (setPosition || node.pos.line == 0) {
-      var nodeP = node
+      val nodeP = node
       if (setFilename || nodeP.filename.isEmpty) { nodeP.filename = pos.filename }
       nodeP.pos = pos.pos
       nodeP
@@ -106,7 +106,7 @@ object ASTNode {
     node match {
       case Some(n) =>
         if (setPosition || n.pos.line == 0) {
-          var nP = n
+          val nP = n
           if (setFilename || nP.filename.isEmpty) { nP.filename = pos.filename }
           nP.pos = pos.pos
           Some(nP)
@@ -120,7 +120,7 @@ object ASTNode {
   def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename: Boolean, nodes : List[T], pos : ASTPosition) : List[T] = {
     nodes.map((n) => {
       if (setPosition || n.pos.line == 0) {
-        var nP = n
+        val nP = n
         if (setFilename || nP.filename.isEmpty) { nP.filename = pos.filename }
         nP.pos = pos.pos
         nP
@@ -264,7 +264,7 @@ sealed abstract class BVArgOperator(val w : Int) extends Operator {
   val arity = 2
 }
 case class BVLTOp(override val w : Int) extends BVArgOperator(w) {
-  override def toString = "<"
+  override def toString = "<" 
   override val hashId = 1200
   override val md5hashCode = computeMD5Hash(w)
 }

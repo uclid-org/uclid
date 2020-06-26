@@ -160,7 +160,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         case CaseStmt(body) =>
           body.foldLeft(in) {
             (acc, c) => {
-              var cType = exprTypeChecker.typeOf(c._1, context)
+              val cType = exprTypeChecker.typeOf(c._1, context)
               if (!cType.isBool) {
                 acc + ModuleError("Case clause must be of type boolean", st.position)
               } else {
@@ -191,7 +191,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           val proc = procOption.get.asInstanceOf[ProcedureDecl]
           for ((param, arg) <- proc.sig.inParams zip args) {
             var (pId, pType) = param.asInstanceOf[(Identifier, Type)]
-            var aType = exprTypeChecker.typeOf(arg.asInstanceOf[Expr], context)
+            val aType = exprTypeChecker.typeOf(arg.asInstanceOf[Expr], context)
             if (!pType.matches(aType)) {
               ret = ret + ModuleError("Parameter %s expected argument of type %s but received type %s".format(pId.name, pType.toString, aType.toString), st.position)
             }
