@@ -43,8 +43,7 @@ package lang
 import scala.collection.immutable.{Set => Set}
 // Vector class has faster operations
 import scala.collection.immutable.Vector
-import scala.collection.mutable.ListBuffer
-import com.typesafe.scalalogging.Logger
+
 
 /*
  * Rewrites a modify clause that refers to a specific instance as a modify 

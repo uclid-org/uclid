@@ -39,7 +39,6 @@
 package uclid
 package smt
 
-import lang.{Expr => langExpr}
 import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.mutable.{Map => MutableMap}
 

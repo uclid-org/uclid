@@ -39,9 +39,6 @@
 package uclid
 package lang
 
-import scala.collection.mutable.{Map => MutableMap}
-import scala.collection.immutable.Map
-
 class UninterpretedFunctionToArrayRewriterPass extends RewritePass {
   def functionDeclToArrayDecl(funcDecl: FunctionDecl): StateVarsDecl = {
     val id = funcDecl.id

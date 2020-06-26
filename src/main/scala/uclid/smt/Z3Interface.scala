@@ -45,7 +45,6 @@ import java.util.HashMap
 import scala.collection.immutable.ListMap
 
 import scala.collection.mutable.Map
-import scala.collection.JavaConverters._
 import com.microsoft.z3.enumerations.Z3_lbool
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.typesafe.scalalogging.Logger

@@ -36,8 +36,6 @@
 
 package uclid.smt
 
-import uclid.lang._
-
 import scala.io.Source
 import scala.collection.mutable
 import scala.util.matching.Regex

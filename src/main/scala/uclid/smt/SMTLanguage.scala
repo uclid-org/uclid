@@ -38,9 +38,7 @@
  */
 package uclid
 package smt
-import scala.collection.mutable.Map
 import scala.util.matching.Regex
-import uclid.lang.Scope.Grammar
 import uclid.lang.Identifier
 import uclid.lang.NonTerminal
 

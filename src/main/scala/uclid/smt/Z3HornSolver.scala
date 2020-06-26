@@ -44,9 +44,8 @@ import com.microsoft.z3
 import com.typesafe.scalalogging.Logger
 import uclid.lang._
 
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.mutable.HashMap
+
 
 
 case class TransitionSystem(

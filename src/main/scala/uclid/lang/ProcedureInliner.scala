@@ -41,7 +41,6 @@ package uclid
 package lang
 
 import scala.collection.immutable.{Set => Set}
-import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
 
 

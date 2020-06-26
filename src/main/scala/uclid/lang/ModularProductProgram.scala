@@ -1,12 +1,10 @@
 package uclid
 package lang
 
-import scala.collection.mutable.{Set => MutableSet}
+
 import scala.collection.immutable.Map
 import com.typesafe.scalalogging.Logger
 import scala.collection.mutable
-import scala.math.{abs, max}
-import scala.util.control.Breaks._
 import scala.collection.mutable.ListBuffer
 import scala.annotation.tailrec
 

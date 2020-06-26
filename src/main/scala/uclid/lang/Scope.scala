@@ -40,8 +40,6 @@
 package uclid
 package lang
 
-import scala.collection.mutable.{Set => MutableSet}
-
 object Scope {
   sealed abstract class NamedExpression(val id : Identifier, val typ: Type) {
     val isReadOnly = false

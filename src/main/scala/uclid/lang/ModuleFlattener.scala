@@ -41,7 +41,6 @@ package lang
 
 import scala.collection.immutable.Map
 import com.typesafe.scalalogging.Logger
-import scala.collection.mutable.ListBuffer
 
 class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
   type T = Map[Identifier, Set[Identifier]]

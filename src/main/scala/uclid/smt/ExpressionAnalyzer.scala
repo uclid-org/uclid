@@ -40,8 +40,6 @@
 package uclid
 package smt
 
-import scala.collection.immutable.Map
-
 object ExpressionAnalyzer {
   var z3ConstInterface = new Z3Interface()
   def getConstIntValue(expr : smt.Expr, scope : lang.Scope) : Option[Int] = {
