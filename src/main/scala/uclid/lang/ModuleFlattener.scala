@@ -41,7 +41,6 @@ package lang
 
 import scala.collection.immutable.Map
 import com.typesafe.scalalogging.Logger
-import scala.collection.mutable.ListBuffer
 
 class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
   type T = Map[Identifier, Set[Identifier]]
@@ -229,7 +228,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     varMap.map {
       v => {
         v._2 match {
-          case MIP.BoundInput(id, t, _t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
+          case MIP.BoundInput(id, t, _) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.UnboundOutput(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.StateVariable(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.Constant(id, t) => fixPosition(Some(ConstantsDecl(List(id), t)), id.position)
@@ -258,7 +257,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     varMap.map {
       v => {
         v._2 match {
-          case MIP.BoundInput(id, t, expr) =>
+          case MIP.BoundInput(id, _, expr) =>
             fixPosition(Some(AssignStmt(List(LhsId(id)), List(expr))), id.position)
           case _ =>
             None
@@ -321,7 +320,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     val opappP = opapp.op match {
-      case SelectFromInstance(field) =>
+      case SelectFromInstance(_) =>
         val flatList = flattenSelectFromInstance(opapp)
         instVarMap.get(flatList) match {
           case Some(id) => Some(id)
@@ -424,7 +423,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
                                  case None => false // Instance already flattened
                                  case _ => true
                                 }
-      case ModifiableInstanceId(opapp)  => true
+      case ModifiableInstanceId(_)  => true
     }).flatMap(m => m match {
       case ModifiableId(id) => Some((m, NameProvider.get("modifies_" + id.toString())))
       case ModifiableInstanceId(opapp) => {
@@ -605,14 +604,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       val blkStmt = inlineProcedureCall(callStmt, procOption.get, Scope.empty + procModule)
       rewriter.visitStatement(blkStmt, context)
     } else {
-      val procId = callStmt.id
       val procOption = context.module.get.procedures.find(p => p.id == callStmt.id)
       var modifiesInst = false
       if (!procOption.isEmpty) {
         modifiesInst = procOption.get.modifies.exists(
                           modifiable => modifiable match {
-                            case m : ModifiableId => false
-                            case m : ModifiableInstanceId => true
+                            case _ : ModifiableId => false
+                            case _ : ModifiableInstanceId => true
                           })
         modifiesInst = true
       }
@@ -643,7 +641,6 @@ extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetMod
      *
      */
     override def visitModifiableEntity(modifiable : ModifiableEntity, context : Scope) : Option[ModifiableEntity] = {
-      val instVarMap = pass.asInstanceOf[ModuleInstantiatorPass].instVarMap
       val modifiableP = modifiable match {
         case ModifiableId(id) => {
           visitIdentifier(id, context).flatMap((idP) => {
@@ -657,7 +654,7 @@ extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetMod
         }
         case ModifiableInstanceId(opapp) => {
           opapp match {
-            case OperatorApplication(SelectFromInstance(field), list) => {
+            case OperatorApplication(SelectFromInstance(_), _) => {
               val flatName = pass.asInstanceOf[ModuleInstantiatorPass].flattenSelectFromInstance(opapp) 
               val newName = pass.asInstanceOf[ModuleInstantiatorPass].instVarMap.get(flatName)
               if (newName != None) {
@@ -687,7 +684,7 @@ class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
   var extSymMap : ExternalSymbolMap = null;
   def rewrite(module : Module, ctx : Scope) : Module = {
     module.instances match {
-      case inst :: rest =>
+      case inst :: _ =>
         val targetModule = ctx.map.find(p => p._1 == inst.moduleId).get._2.asInstanceOf[Scope.ModuleDefinition].mod // modules.find(_.id == inst.moduleId).get
         val passName = "ModuleInstantiator:" + module.id + ":" + inst.instanceId
         val rewriter = new ModuleInstantiator(passName, module, inst, targetModule, extSymMap)

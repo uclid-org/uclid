@@ -36,8 +36,6 @@
 
 package uclid.smt
 
-import uclid.lang._
-
 import scala.io.Source
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -345,7 +343,7 @@ object Btor2Parser {
       def width = sort match {
         case BoolType => 1
         case BitVectorType(w) => w
-        case other => throw new RuntimeException(s"{other}")
+        case _ => throw new RuntimeException(s"{other}")
       }
       // nodes besides output that feature nid
       def expr(offset: Int) = {

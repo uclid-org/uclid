@@ -98,9 +98,9 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
     e match {
       case id : Identifier =>
         isStatelessIdentifier(id, context)
-      case ei : ExternalIdentifier =>
+      case _ : ExternalIdentifier =>
         true
-      case lit : Literal =>
+      case _ : Literal =>
         true
       case rec : Tuple =>
         rec.values.forall(e => isStatelessExpr(e, context))

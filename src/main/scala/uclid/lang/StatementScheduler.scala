@@ -48,17 +48,17 @@ object StatementScheduler {
   def writeSet(st : Statement, context : Scope) : Set[Identifier] = {
     st match {
       case SkipStmt() => Set.empty
-      case AssertStmt(e, _) => Set.empty
-      case AssumeStmt(e, _) => Set.empty
+      case AssertStmt(_, _) => Set.empty
+      case AssumeStmt(_, _) => Set.empty
       case HavocStmt(h) => 
         h match {
           case HavocableId(id) => Set(id)
           case HavocableNextId(id) => Set(id)
-          case HavocableFreshLit(f) =>
+          case HavocableFreshLit(_) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
-          case HavocableInstanceId(opapp) => Set.empty
+          case HavocableInstanceId(_) => Set.empty
         }
-      case AssignStmt(lhss, rhss) =>
+      case AssignStmt(lhss, _) =>
         lhss.map(lhs => lhs match {
           case LhsId(_) | LhsNextId(_) => Some(lhs.ident)
           case _ => None 
@@ -66,7 +66,7 @@ object StatementScheduler {
       case BlockStmt(vars, stmts) =>
         val declaredVars = vars.flatMap(vs => vs.ids.map(v => v)).toSet
         writeSets(stmts, context + vars) -- declaredVars
-      case IfElseStmt(cond, ifblock, elseblock) =>
+      case IfElseStmt(_, ifblock, elseblock) =>
         val ifWrites = writeSet(ifblock, context)
         val elseWrites = writeSet(elseblock, context)
         ifWrites.intersect(elseWrites)
@@ -78,10 +78,10 @@ object StatementScheduler {
         val writeSets = bodies.map(b => writeSet(b._2, context).toSet)
         val allVars = writeSets.foldLeft(Set.empty[Identifier])((acc, set) => acc.union(set))
         writeSets.foldLeft(allVars)((acc, set) => acc.intersect(set))
-      case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) =>
+      case ProcedureCallStmt(id, callLhss, _, instanceId, _) =>
         val module = context.module.get
         val modifies = instanceId match {
-          case Some(iid) => {
+          case Some(_) => {
             List.empty
           }
           case None => {
@@ -101,7 +101,6 @@ object StatementScheduler {
         val namedExpr = namedExprOpt.get
         Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
-        val moduleType : ModuleType = instD.modType.get.asInstanceOf[ModuleType]
         instD.outputMap.map(p => p._3.asInstanceOf[Identifier]).toSet
     }
   }
@@ -112,21 +111,21 @@ object StatementScheduler {
   def writeSetIds(st : Statement, context : Scope) : Set[Identifier] = {
     st match {
       case SkipStmt() => Set.empty
-      case AssertStmt(e, _) => Set.empty
-      case AssumeStmt(e, _) => Set.empty
+      case AssertStmt(_, _) => Set.empty
+      case AssumeStmt(_, _) => Set.empty
       case HavocStmt(h) => 
         h match {
           case HavocableId(id) => Set(id)
           case HavocableNextId(id) => Set(id)
-          case HavocableFreshLit(f) =>
+          case HavocableFreshLit(_) =>
             throw new Utils.AssertionError("Fresh literals must have been eliminated by now.")
-          case HavocableInstanceId(opapp) => Set.empty
+          case HavocableInstanceId(_) => Set.empty
         }
-      case AssignStmt(lhss, rhss) => lhss.map(lhs => lhs.ident).toSet
+      case AssignStmt(lhss, _) => lhss.map(lhs => lhs.ident).toSet
       case BlockStmt(vars, stmts) =>
         val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(v => v)).toSet
         writeSetIds(stmts, context + vars) -- declaredVars
-      case IfElseStmt(cond, ifblock, elseblock) =>
+      case IfElseStmt(_, ifblock, elseblock) =>
         writeSetIds(ifblock, context) ++ writeSetIds(elseblock, context)
       case ForStmt(_, _, _, body) =>
         writeSetIds(body, context)
@@ -134,10 +133,10 @@ object StatementScheduler {
         writeSetIds(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => writeSetIds(b._2, context)).toSet
-      case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => 
+      case ProcedureCallStmt(id, callLhss, _, instanceId, _) => 
         val module = context.module.get
         val modifies = instanceId match {
-          case Some(iid) => {
+          case Some(_) => {
             // Do nothing; we haven't handled instance proc calls at this point
             List.empty
           }
@@ -155,7 +154,6 @@ object StatementScheduler {
         val namedExpr = namedExprOpt.get
         Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
-        val moduleType : ModuleType = instD.modType.get.asInstanceOf[ModuleType]
         instD.outputMap.map(p => p._3.asInstanceOf[Identifier]).toSet
     }
   }
@@ -167,15 +165,15 @@ object StatementScheduler {
     e match {
       case id : Identifier => Set(id)
       case ExternalIdentifier(_, _) => Set.empty
-      case lit : Literal => Set.empty
+      case _ : Literal => Set.empty
       case Tuple(values) => readSets(values)
       case OperatorApplication(GetNextValueOp(), List(id : Identifier)) => Set(id)
       case OperatorApplication(ArraySelect(inds), exps) => readSets(inds) ++ readSets(exps)
       case OperatorApplication(ArrayUpdate(inds, exp), exps) => readSets(inds) ++ readSet(exp) ++ readSets(exps)
       case OperatorApplication(_, es) => readSets(es)
-      case ConstArray(e, t) => readSet(e)
+      case ConstArray(e, _) => readSet(e)
       case FuncApplication(e, args) => readSet(e) ++ readSets(args)
-      case Lambda(ids, expr) => readSet(expr)
+      case Lambda(_, expr) => readSet(expr)
     }
   }
   def readSets(es : List[Expr]) : Set[Identifier] = {
@@ -186,8 +184,8 @@ object StatementScheduler {
       case SkipStmt() => Set.empty
       case AssertStmt(e, _) => readSet(e)
       case AssumeStmt(e, _) => readSet(e)
-      case HavocStmt(h) => Set.empty
-      case AssignStmt(lhss, rhss) => readSets(rhss)
+      case HavocStmt(_) => Set.empty
+      case AssignStmt(_, rhss) => readSets(rhss)
       case BlockStmt(vars, stmts) =>
         val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(v => v)).toSet
         readSets(stmts, context + vars) -- declaredVars
@@ -195,11 +193,11 @@ object StatementScheduler {
         readSet(cond) ++ readSet(ifblock, context) ++ readSet(elseblock, context)
       case ForStmt(_, _, range, body) =>
         readSet(range._1) ++ readSet(range._2) ++ readSet(body, context)
-      case WhileStmt(cond, body, invs) =>
+      case WhileStmt(cond, body, _) =>
         readSet(cond) ++ readSet(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => readSet(b._1) ++ readSet(b._2, context)).toSet
-      case ProcedureCallStmt(_, lhss, args, instanceId, moduleId) =>
+      case ProcedureCallStmt(_, _, args, _, _) =>
         readSets(args)
       case ModuleCallStmt(id) =>
         val namedExprOpt = context.map.get(id)
@@ -207,7 +205,6 @@ object StatementScheduler {
         val namedExpr = namedExprOpt.get
         Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
-        val moduleType : ModuleType = instD.modType.get.asInstanceOf[ModuleType]
         val moduleInputs = instD.inputMap.map(p => p._3)
         val moduleSharedVars = instD.sharedVarMap.map(p => p._3)
         logger.trace("moduleInputs: {}", moduleInputs.toString())
@@ -223,14 +220,14 @@ object StatementScheduler {
     e match {
       case Identifier(_) => Set.empty
       case ExternalIdentifier(_, _) => Set.empty
-      case lit : Literal => Set.empty
+      case _ : Literal => Set.empty
       case Tuple(values) => primeReadSets(values)
       case OperatorApplication(GetNextValueOp(), List(id : Identifier)) => Set(id)
       case OperatorApplication(ArraySelect(inds), exps) => primeReadSets(inds) ++ primeReadSets(exps)
       case OperatorApplication(ArrayUpdate(inds, exp), exps) => primeReadSets(inds) ++ primeReadSet(exp) ++ primeReadSets(exps)
       case OperatorApplication(_, es) => primeReadSets(es)
       case FuncApplication(e, args) => primeReadSet(e) ++ primeReadSets(args)
-      case Lambda(ids, expr) => primeReadSet(expr)
+      case Lambda(_, expr) => primeReadSet(expr)
     }
   }
   def primeReadSets(es : List[Expr]) : Set[Identifier] = {
@@ -241,8 +238,8 @@ object StatementScheduler {
       case SkipStmt() => Set.empty
       case AssertStmt(e, _) => primeReadSet(e)
       case AssumeStmt(e, _) => primeReadSet(e)
-      case HavocStmt(h) => Set.empty
-      case AssignStmt(lhss, rhss) => primeReadSets(rhss)
+      case HavocStmt(_) => Set.empty
+      case AssignStmt(_, rhss) => primeReadSets(rhss)
       case BlockStmt(vars, stmts) =>
         val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(v => v)).toSet
         primeReadSets(stmts, context + vars) -- declaredVars
@@ -250,11 +247,11 @@ object StatementScheduler {
         primeReadSet(cond) ++ primeReadSet(ifblock, context) ++ primeReadSet(elseblock, context)
       case ForStmt(_, _, range, body) =>
         primeReadSet(range._1) ++ primeReadSet(range._2) ++ primeReadSet(body, context)
-      case WhileStmt(cond, body, invs) =>
+      case WhileStmt(cond, body, _) =>
         primeReadSet(cond) ++ primeReadSet(body, context)
       case CaseStmt(bodies) =>
         bodies.flatMap(b => primeReadSet(b._1) ++ primeReadSet(b._2, context)).toSet
-      case ProcedureCallStmt(_, lhss, args, instanceId, moduleId) =>
+      case ProcedureCallStmt(_, _, args, _, _) =>
         primeReadSets(args)
       case ModuleCallStmt(id) =>
         val namedExprOpt = context.map.get(id)
@@ -262,7 +259,6 @@ object StatementScheduler {
         val namedExpr = namedExprOpt.get
         Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
-        val moduleType : ModuleType = instD.modType.get.asInstanceOf[ModuleType]
         val moduleInputs = instD.inputMap.map(p => p._3)
         val moduleSharedVars = instD.sharedVarMap.map(p => p._3)
         logger.trace("moduleInputs: {}", moduleInputs.toString())
@@ -378,7 +374,6 @@ class StatementSchedulerPass extends RewritePass {
     val nodeIds = blkStmt.stmts.map(st => st.astNodeId)
     val idToStmtIdMap : IdToStmtMap = (nodeIds zip deps).flatMap(p => p._2._2.map(id => (id -> p._1))).toMap
     val stmtIdToStmtMap : Map[IdGenerator.Id, Statement] = blkStmt.stmts.map(st => (st.astNodeId -> st)).toMap
-    val stmtIdToIndexMap : Map[IdGenerator.Id, Int] = (nodeIds zip (1 to nodeIds.length)).toMap
     logger.debug("Statement Id Map: {}", stmtIdToStmtMap.toString())
     val stmtDepGraph = (blkStmt.stmts zip deps).foldLeft(Map.empty[IdGenerator.Id, Set[IdGenerator.Id]]) {
       (acc, p) => {

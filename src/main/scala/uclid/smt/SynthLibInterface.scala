@@ -42,9 +42,7 @@ package smt
 
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.mutable.{Set => MutableSet}
-import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
-import scala.language.postfixOps
 
 class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLIB2Interface(args) {
   val synthliblogger = Logger(classOf[SynthLibInterface])

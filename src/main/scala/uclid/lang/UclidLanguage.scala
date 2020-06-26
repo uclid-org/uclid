@@ -93,7 +93,7 @@ sealed  trait PositionedNode extends Positional with Hashable {
 object ASTNode {
   def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename : Boolean, node : T, pos : ASTPosition) : T = {
     if (setPosition || node.pos.line == 0) {
-      var nodeP = node
+      val nodeP = node
       if (setFilename || nodeP.filename.isEmpty) { nodeP.filename = pos.filename }
       nodeP.pos = pos.pos
       nodeP
@@ -106,7 +106,7 @@ object ASTNode {
     node match {
       case Some(n) =>
         if (setPosition || n.pos.line == 0) {
-          var nP = n
+          val nP = n
           if (setFilename || nP.filename.isEmpty) { nP.filename = pos.filename }
           nP.pos = pos.pos
           Some(nP)
@@ -120,7 +120,7 @@ object ASTNode {
   def introducePos[T <: PositionedNode](setPosition : Boolean, setFilename: Boolean, nodes : List[T], pos : ASTPosition) : List[T] = {
     nodes.map((n) => {
       if (setPosition || n.pos.line == 0) {
-        var nP = n
+        val nP = n
         if (setFilename || nP.filename.isEmpty) { nP.filename = pos.filename }
         nP.pos = pos.pos
         nP
@@ -264,7 +264,7 @@ sealed abstract class BVArgOperator(val w : Int) extends Operator {
   val arity = 2
 }
 case class BVLTOp(override val w : Int) extends BVArgOperator(w) {
-  override def toString = "<"
+  override def toString = "<" 
   override val hashId = 1200
   override val md5hashCode = computeMD5Hash(w)
 }
@@ -957,8 +957,8 @@ case class EnumType(ids_ : List[Identifier]) extends Type {
     ids.tail.foldLeft(ids.head.toString) {(acc,i) => acc + "," + i} + "}"
   override def defaultValue = {
     ids match {
-      case hd :: tl => Some(hd)
-      case nil => None
+      case hd :: _ => Some(hd)
+      case _ => None
     }
   }
   override val hashId = 2706
@@ -1617,7 +1617,6 @@ case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonT
   override val hashId = 3913
   override val md5hashCode = computeMD5Hash(id, sig, nonterminals)
   override def toString = {
-    val argTypes = Utils.join(sig.args.map(a => a._1.toString + ": " + a._2.toString), ", ")
     val header :String = "grammar %s %s = { // %s".format(id.toString, sig.toString(), position.toString)
     val lines = nonterminals.map(PrettyPrinter.indent(2) + _.toString)
     header + "\n" + Utils.join(lines, "\n") + "\n" + PrettyPrinter.indent(1) + "}"
@@ -1714,8 +1713,8 @@ case class GenericProofCommand(
           }
         } catch {
           // if something goes wrong return context unchanged.
-          case e : java.util.NoSuchElementException => context
-          case e : scala.ClassCastException => context
+          case _ : java.util.NoSuchElementException => context
+          case _ : scala.ClassCastException => context
         }
       case None => context
     }
@@ -1878,10 +1877,10 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
     val oldNoteOption = getAnnotation[T]
     val newNotes : List[Annotation] = oldNoteOption match {
       case None => notes :+ note
-      case Some(oldNote) => notes.map {
+      case Some(_) => notes.map {
         n => {
           n match {
-            case nt : T => note
+            case _ : T => note
             case _ => n
           }
         }

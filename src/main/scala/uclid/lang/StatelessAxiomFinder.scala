@@ -90,9 +90,9 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
     e match {
       case id : Identifier =>
         isStatelessExpression(id, context)
-      case ei : ExternalIdentifier =>
+      case _ : ExternalIdentifier =>
         true
-      case lit : Literal =>
+      case _ : Literal =>
         true
       case rec : Tuple =>
         rec.values.forall(e => isStatelessExpr(e, context))

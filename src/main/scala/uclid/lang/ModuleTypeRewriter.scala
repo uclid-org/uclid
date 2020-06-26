@@ -44,7 +44,7 @@ class InstanceModuleNameCheckerPass extends ReadOnlyPass[List[ModuleError]] {
   override def applyOnInstance(d : TraversalDirection.T, instD : InstanceDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
       context.moduleDefinitionMap.get(instD.moduleId) match {
-        case Some(mod) => in
+        case Some(_) => in
         case None =>
           val msg = "Unknown module: %s".format(instD.moduleId.toString)
           ModuleError(msg, instD.moduleId.position) :: in

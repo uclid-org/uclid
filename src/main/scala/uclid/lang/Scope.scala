@@ -40,8 +40,6 @@
 package uclid
 package lang
 
-import scala.collection.mutable.{Set => MutableSet}
-
 object Scope {
   sealed abstract class NamedExpression(val id : Identifier, val typ: Type) {
     val isReadOnly = false
@@ -200,7 +198,7 @@ case class Scope (
     map.get(id) match {
       case Some(namedExpr) =>
         namedExpr match {
-          case Scope.Procedure(pId, typ) => true
+          case Scope.Procedure(_, _) => true
           case _ => false
         }
       case None => false
@@ -281,33 +279,33 @@ case class Scope (
     }
     val m2 = m.decls.foldLeft(m1){(mapAcc, decl) =>
       decl match {
-        case ProcedureDecl(id, sig, _, _, _, _, _) =>
+        case ProcedureDecl(_, sig, _, _, _, _, _) =>
           val m1 = sig.inParams.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = sig.outParams.foldLeft(m1)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           m2
-        case FunctionDecl(id, sig) =>
+        case FunctionDecl(_, sig) =>
           val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
-        case GrammarDecl(id, sig, _) =>
+        case GrammarDecl(_, sig, _) =>
           val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
-        case SynthesisFunctionDecl(id, sig, _, _, _) =>
+        case SynthesisFunctionDecl(_, sig, _, _, _) =>
           val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
-        case DefineDecl(id, sig, _) =>
+        case DefineDecl(_, sig, _) =>
           val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
-        case TypeDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
-        case StateVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
-        case InputVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
-        case OutputVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
-        case SharedVarsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
-        case ConstantLitDecl(id, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
-        case ConstantsDecl(id, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case TypeDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case StateVarsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case InputVarsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case OutputVarsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case SharedVarsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case ConstantLitDecl(_, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
+        case ConstantsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
              ModuleFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
              InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | 

@@ -41,7 +41,6 @@ package uclid
 package lang
 
 import scala.util.parsing.input.Positional
-import scala.util.parsing.combinator.token._
 import scala.util.parsing.combinator.syntactical._
 import scala.util.parsing.combinator.PackratParsers
 

@@ -50,14 +50,14 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       in
     } else {
       st match {
-        case AssertStmt(e, id) =>
+        case AssertStmt(e, _) =>
           val eType = exprTypeChecker.typeOf(e, context)
           if (!eType.isBool) {
             in + ModuleError("Assertion expression must be of Boolean or Temporal type", st.position)
           } else {
             in
           }
-        case AssumeStmt(e, id) =>
+        case AssumeStmt(e, _) =>
           val eType = exprTypeChecker.typeOf(e, context)
           if (!eType.isBool) {
             in + ModuleError("Assumption must be Boolean", st.position)
@@ -78,7 +78,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
               } else {
                 in
               }
-            case HavocableFreshLit(f) =>
+            case HavocableFreshLit(_) =>
               in
             case HavocableInstanceId(_) =>
               throw new Utils.AssertionError("Should be no havocable instance ids at this point")
@@ -137,17 +137,17 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
               } else {
                 in
               }
-            case (a: NumericLit, b : NumericLit) =>
+            case (_: NumericLit, _ : NumericLit) =>
               in + ModuleError("Range lower and upper bounds must be of same type", st.position)
             // The following three cases catch the same error, but we split them so that the error points to the right location.
-            case (a: NumericLit, _) =>
+            case (_: NumericLit, _) =>
               in + ModuleError("Invalid for loop range", range._2.position)
-            case (_, b : NumericLit) =>
+            case (_, _ : NumericLit) =>
               in + ModuleError("Invalid for loop range", range._1.position)
             case _ =>
               in + ModuleError("Invalid for loop range", range._1.position)
           }
-        case WhileStmt(cond, body, invs) =>
+        case WhileStmt(cond, _, invs) =>
           val cType = exprTypeChecker.typeOf(cond, context)
           val inP1 = if (cType.isBool) {
             in
@@ -160,7 +160,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         case CaseStmt(body) =>
           body.foldLeft(in) {
             (acc, c) => {
-              var cType = exprTypeChecker.typeOf(c._1, context)
+              val cType = exprTypeChecker.typeOf(c._1, context)
               if (!cType.isBool) {
                 acc + ModuleError("Case clause must be of type boolean", st.position)
               } else {
@@ -168,7 +168,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
               }
             }
           }
-        case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) =>
+        case ProcedureCallStmt(id, callLhss, args, instanceId, _) =>
           var ret = in
           Utils.assert(context.module.isDefined, "Module must be defined!")
           val procOption = instanceId match {
@@ -191,7 +191,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           val proc = procOption.get.asInstanceOf[ProcedureDecl]
           for ((param, arg) <- proc.sig.inParams zip args) {
             var (pId, pType) = param.asInstanceOf[(Identifier, Type)]
-            var aType = exprTypeChecker.typeOf(arg.asInstanceOf[Expr], context)
+            val aType = exprTypeChecker.typeOf(arg.asInstanceOf[Expr], context)
             if (!pType.matches(aType)) {
               ret = ret + ModuleError("Parameter %s expected argument of type %s but received type %s".format(pId.name, pType.toString, aType.toString), st.position)
             }
@@ -237,7 +237,6 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
   }
   override def applyOnDefine(d : TraversalDirection.T, defDecl : DefineDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
-      val contextP = context + defDecl.sig
       val exprType = exprTypeChecker.typeOf(defDecl.expr, context + defDecl.sig)
       if (exprType != defDecl.sig.retType) {
         val error = ModuleError("Return type and expression type do not match", defDecl.expr.position)
@@ -253,7 +252,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
     if (d == TraversalDirection.Down) {
       val id = modTypImport.id
       context.map.get(id) match {
-        case Some(Scope.ModuleDefinition(mod)) =>
+        case Some(Scope.ModuleDefinition(_)) =>
           in
         case _ =>
           val error = ModuleError("Unknown module in module types import declaration", modTypImport.id.position)

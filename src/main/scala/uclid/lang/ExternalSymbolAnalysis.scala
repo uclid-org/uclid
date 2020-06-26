@@ -1,8 +1,6 @@
 package uclid
 package lang
 
-import scala.reflect.ClassTag
-
 class ExternalSymbolMap (val externalMap: Map[ExternalIdentifier, (Identifier, ModuleExternal)]) {
 
   def + (module : Module, context : Scope) : ExternalSymbolMap = {

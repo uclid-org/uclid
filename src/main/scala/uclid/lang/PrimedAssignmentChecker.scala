@@ -75,7 +75,7 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         case GetNextValueOp() =>
           val arg1 = opapp.operands(0)
           val err1 = arg1 match {
-            case id : Identifier => in
+            case _ : Identifier => in
             case _ => in + ModuleError("Invalid application of prime operator", arg1.position)
           }
           if (context.environment == ProceduralEnvironment) {

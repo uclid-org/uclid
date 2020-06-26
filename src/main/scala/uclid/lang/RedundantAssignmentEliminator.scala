@@ -45,7 +45,7 @@ class RedundantAssignmentEliminatorPass extends RewritePass {
   val log = Logger(classOf[RedundantAssignmentEliminatorPass])
   override def rewriteBlock(blkStmt : BlockStmt, context : Scope) : Option[Statement] = {
     val initWrites : (Map[IdGenerator.Id, Set[Identifier]], Map[Identifier, IdGenerator.Id]) = (Map.empty, Map.empty)
-    val (deadWrites, liveWrites) = blkStmt.stmts.foldLeft(initWrites) {
+    val (deadWrites, _) = blkStmt.stmts.foldLeft(initWrites) {
       (writesIn, stmt) => {
         val readSet = StatementScheduler.readSet(stmt, context)
         val liveWritesP1 = writesIn._2 -- readSet

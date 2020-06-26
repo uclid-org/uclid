@@ -48,7 +48,7 @@ class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
   def checkBooleans(operands: List[Expr], context : Scope, in : T) : T = {
     var ret = in
     for (op <- operands) {
-      var oType = exprTypeChecker.typeOf(op, context)
+      val oType = exprTypeChecker.typeOf(op, context)
       if (!oType.isBool) {
         ret = ret + ModuleError("LTL operator expected argument of type boolean but received argument of type %s".format(oType.toString), op.position)
       }
@@ -64,27 +64,27 @@ class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
         case Identifier(name) =>
           name match {
             case "G" =>
-              var numOps = fapp.args.length
+              val numOps = fapp.args.length
               if (numOps != 1) {
                 ret = ret + ModuleError("globally operator expected 1 argument but received %s".format(numOps), fapp.position)
               }
             case "X" =>
-              var numOps = fapp.args.length
+              val numOps = fapp.args.length
               if (numOps != 1) {
                 ret = ret + ModuleError("next operator expected 1 argument but received %s".format(numOps), fapp.position)
               }
             case "U" =>
-              var numOps = fapp.args.length
+              val numOps = fapp.args.length
               if (numOps != 2) {
                 ret = ret + ModuleError("until operator expected 2 argument but received %s".format(numOps), fapp.position)
               }
             case "W" =>
-              var numOps = fapp.args.length
+              val numOps = fapp.args.length
               if (numOps != 2) {
                 ret = ret + ModuleError("Weak-until operator expected 2 argument but received %s".format(numOps), fapp.position)
               }
             case "F" =>
-              var numOps = fapp.args.length
+              val numOps = fapp.args.length
               if (numOps != 1) {
                 ret = ret + ModuleError("finally operator expected 1 argument but received %s".format(numOps), fapp.position)
               }
@@ -270,7 +270,7 @@ class LTLPropertyRewriterPass extends RewritePass {
   def replace(expr: Expr, spec: SpecDecl, context: Scope) : Expr = {
     if (exprTypeChecker.typeOf(expr, context).isBool) {
       expr match {
-        case OperatorApplication(op, operands) =>
+        case OperatorApplication(_, operands) =>
           for (opr <- operands) {
             replace(opr, spec, context)
           }
@@ -309,7 +309,7 @@ class LTLPropertyRewriterPass extends RewritePass {
   def createMonitorExpressions(specName : Identifier, expr : Expr, context : Scope) : MonitorInfo = {
     val isExprTemporal = expr match {
       case tExpr : PossiblyTemporalExpr => tExpr.isTemporal
-      case ntExpr : Expr => false
+      case _ : Expr => false
     }
     if (!isExprTemporal) {
       val newVar = NameProvider.get(specName.toString() + "_z")
@@ -392,9 +392,9 @@ class LTLPropertyRewriterPass extends RewritePass {
             case op : BooleanOperator =>
               Utils.assert(!op.isQuantified, "Temporal expression within quantifier: " + expr.toString)
               createMonitorsForOpApp(opapp)
-            case cOp : ComparisonOperator =>
+            case _ : ComparisonOperator =>
               createMonitorsForOpApp(opapp)
-            case tOp : TemporalOperator =>
+            case _ : TemporalOperator =>
               createMonitorsForOpApp(opapp)
             case _ =>
               throw new Utils.AssertionError("Invalid temporal expression: " + expr.toString)
@@ -414,7 +414,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
-  def newVars(vars : List[(Identifier, Type)], context : Scope) : List[(Identifier, Identifier, Type)] = {
+  def newVars(vars : List[(Identifier, Type)]) : List[(Identifier, Identifier, Type)] = {
     vars.map((p) => (p._1, NameProvider.get(p._1.toString() + "_copy2"), p._2))
   }
 
@@ -478,7 +478,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     // create a copy of the state variables and non-deterministically assign the current state to it.
     val allPendingVars = monitors.flatMap(s => s.pendingVars.map(s => (s, BooleanType())))
     val varsToCopy = module.vars ++ allPendingVars
-    val varCopyPairs = newVars(varsToCopy, ctx)
+    val varCopyPairs = newVars(varsToCopy)
     val varsToCopyP = varCopyPairs.map(p => (p._2, p._3))
     val varsToCopyPDecl = varsToCopyP.map(v => StateVarsDecl(List(v._1), v._2))
     val copyStateInput = NameProvider.get(module.id.toString() + "_copy_state_in")

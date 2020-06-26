@@ -45,7 +45,6 @@ import java.util.HashMap
 import scala.collection.immutable.ListMap
 
 import scala.collection.mutable.Map
-import scala.collection.JavaConverters._
 import com.microsoft.z3.enumerations.Z3_lbool
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.typesafe.scalalogging.Logger
@@ -65,7 +64,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
 
   def convertZ3ArrayString(initExpr : z3.Expr) : String = {
 
-    var array : Map[String, String] = Map.empty[String, String]
+    val array : Map[String, String] = Map.empty[String, String]
     var e    : z3.Expr = model.eval(initExpr, true)
     var bottom : String = ""
     var longest : Integer = 1
@@ -370,13 +369,13 @@ class Z3Interface() extends Context {
       case BVXorOp(_)             => ctx.mkBVXOR(bvArgs(0), bvArgs(1))
       case BVNotOp(_)             => ctx.mkBVNot(bvArgs(0))
       case BVExtractOp(hi, lo)    => ctx.mkExtract(hi, lo, bvArgs(0))
-      case BVConcatOp(w)          => ctx.mkConcat(bvArgs(0), bvArgs(1))
+      case BVConcatOp(_)          => ctx.mkConcat(bvArgs(0), bvArgs(1))
       case BVReplaceOp(w, hi, lo) => mkReplace(w, hi, lo, bvArgs(0), bvArgs(1))
-      case BVSignExtOp(w, e)      => ctx.mkSignExt(e, bvArgs(0))
-      case BVZeroExtOp(w, e)      => ctx.mkZeroExt(e, bvArgs(0))
-      case BVLeftShiftBVOp(w)     => ctx.mkBVSHL(bvArgs(0), bvArgs(1))
-      case BVLRightShiftBVOp(w)   => ctx.mkBVLSHR(bvArgs(0), bvArgs(1))
-      case BVARightShiftBVOp(w)   => ctx.mkBVASHR(bvArgs(0), bvArgs(1))
+      case BVSignExtOp(_, e)      => ctx.mkSignExt(e, bvArgs(0))
+      case BVZeroExtOp(_, e)      => ctx.mkZeroExt(e, bvArgs(0))
+      case BVLeftShiftBVOp(_)     => ctx.mkBVSHL(bvArgs(0), bvArgs(1))
+      case BVLRightShiftBVOp(_)   => ctx.mkBVLSHR(bvArgs(0), bvArgs(1))
+      case BVARightShiftBVOp(_)   => ctx.mkBVASHR(bvArgs(0), bvArgs(1))
       case NegationOp             => ctx.mkNot (boolArgs(0))
       case IffOp                  => ctx.mkIff (boolArgs(0), boolArgs(1))
       case ImplicationOp          => ctx.mkImplies (boolArgs(0), boolArgs(1))
