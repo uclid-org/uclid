@@ -309,8 +309,6 @@ class SymbolicSimulator (module : Module) {
             printCEX(proofResults, cmd.args, cmd.argObj)
           case "dump_cex_vcds" =>
             dumpCEXVCDFiles(proofResults)
-          case "print_smt2" =>
-            printSMT2(assertionTree, cmd.argObj, solver)
           case "print_module" =>
             UclidMain.println(module.toString)
           case "set_solver_option" =>
@@ -1316,10 +1314,7 @@ class SymbolicSimulator (module : Module) {
     }}
   }
 
-  def printSMT2(aTree : AssertionTree, label : Option[Identifier], solver : smt.Context) {
-    throw new Utils.UnimplementedException("Implement print_smt2.")
-  }
-
+// this function is unused
   def dumpSimTable(simTable : SimulationTable) {
     simTable.foreach {
       println("======================")
@@ -1346,7 +1341,7 @@ class SymbolicSimulator (module : Module) {
       }
     }}
   }
-
+// this function is unused
   def printSymbolTable(symbolTable : SymbolTable) {
     val keys = symbolTable.keys.toList.sortWith((l, r) => l.name < r.name)
     keys.foreach {
@@ -1379,7 +1374,7 @@ class SymbolicSimulator (module : Module) {
       case BooleanType() => 1
       case BitVectorType(w: Int) => w
       case IntegerType() => defaultIntWidth
-      case _ => throw new Utils.UnimplementedException("VCD dumping supports only bitvector, boolean, and integral types.")
+      case _ => throw new Utils.UnimplementedException("VCD dumping supports only bitvector, boolean, and integer types.")
     }
 
     val vcdWriter = VCD("Top")
