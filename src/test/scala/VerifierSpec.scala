@@ -160,6 +160,9 @@ class BasicVerifierSpec extends FlatSpec {
   "test-functions-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-functions-1.ucl", 0)
   }
+  "test-conflicting-assumptions.ucl" should "verify all but 1 assertion" in {
+    VerifierSpec.expectedFails("./test/test-conflicting-assumptions.ucl", 1)
+  }
   "test-exprs-1.ucl" should "verify four assertions and fail to verify two assertions." in {
     VerifierSpec.expectedFails("./test/test-exprs-1.ucl", 2)
   }

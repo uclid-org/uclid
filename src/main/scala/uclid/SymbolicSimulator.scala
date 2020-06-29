@@ -188,6 +188,7 @@ class SymbolicSimulator (module : Module) {
             proofResults = List.empty
             dumpResults("clear_context", defaultLog)
           case "unroll" =>
+            assertionTree.startVerificationScope()
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString
               case None    => "unroll"
@@ -196,12 +197,6 @@ class SymbolicSimulator (module : Module) {
             val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
             symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, 
                                     context, label, createNoLTLFilter(properties), createNoLTLFilter(properties), solver)
-            //initialize(false, true, false, context, label, noLTLFilter)
-            //symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
-            // initialize(false, true, false, context, label, noLTLFilter)
-            // symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, noLTLFilter)
-            //runLazySC(cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, noLTLFilter, solver)
-
           case "horn" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString
@@ -220,6 +215,7 @@ class SymbolicSimulator (module : Module) {
             val propertyFilter = createNoLTLFilter(properties)
             runLazySC(lz, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, propertyFilter, propertyFilter, solver)
           case "bmc" =>
+            assertionTree.startVerificationScope()
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString()
               case None => "bmc"
@@ -229,6 +225,7 @@ class SymbolicSimulator (module : Module) {
             initialize(false, true, false, context, label, propertyFilter, propertyFilter)
             symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, propertyFilter, propertyFilter)
           case "induction" =>
+            assertionTree.startVerificationScope()
             val labelBase : String = cmd.resultVar match {
               case Some(l) => l.toString + ": induction_base"
               case None    => "induction_base"
@@ -1414,6 +1411,7 @@ class SymbolicSimulator (module : Module) {
   }
   /** Add assumption. */
   def addAssumptionToTree(e : smt.Expr, params : List[ExprDecorator]) {
+    assertLog.debug("Assumption: {}", e.toString())
     assertionTree.addAssumption(e)
   }
 
@@ -1486,6 +1484,8 @@ class SymbolicSimulator (module : Module) {
   }
 
   def verifyProcedure(proc : ProcedureDecl, label : String) = {
+    assertionTree.startVerificationScope()
+
     val procScope = context + proc
     val initSymbolTable = getInitSymbolTable(context)
     val initProcState0 = newInputSymbols(initSymbolTable, 1, context)

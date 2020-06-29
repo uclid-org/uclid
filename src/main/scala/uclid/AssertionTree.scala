@@ -101,14 +101,27 @@ class AssertionTree {
   val initialRoot : TreeNode = root
   var currentNode : TreeNode = root
 
+  /** Helper function to create a new child node. */
+  def newChildNode() {
+    val childNode = new TreeNode(Some(currentNode), List.empty)
+    currentNode.children += childNode
+    currentNode = childNode
+  }
+
+  /** This function should be called for each separate verificaiton task.
+   *
+   *  It ensures that assumptions are not reused across procedures or
+   *  other verification tasks.
+   */
+  def startVerificationScope() {
+    newChildNode()
+  }
+
   def addAssumption(assump: smt.Expr) {
     if (currentNode.assertions.size > 0) {
-      val childNode = new TreeNode(Some(currentNode), List(assump))
-      currentNode.children += childNode
-      currentNode = childNode
-    } else {
-      currentNode += assump
+      newChildNode()
     }
+    currentNode += assump
   }
 
   def addAssert(assert: AssertInfo) {
