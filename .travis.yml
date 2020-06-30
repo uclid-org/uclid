@@ -8,11 +8,7 @@ cache:
     - $HOME/.ivy2/cache
     - $HOME/.sbt
 before_script:
-  - wget https://github.com/Z3Prover/z3/releases/download/z3-4.8.6/z3-4.8.6-x64-ubuntu-16.04.zip
-  - unzip z3-4.8.6-x64-ubuntu-16.04.zip
-  - cp z3-4.8.6-x64-ubuntu-16.04/bin/com.microsoft.z3.jar lib/
-  - export PATH=$PATH:$PWD/z3-4.8.6-x64-ubuntu-16.04/bin/
-  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/z3-4.8.6-x64-ubuntu-16.04/bin/
+  - source get-z3-linux.sh
 script: sbt ++$TRAVIS_SCALA_VERSION test
 
 
