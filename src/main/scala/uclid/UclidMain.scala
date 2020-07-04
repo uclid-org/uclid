@@ -223,7 +223,6 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
-    passManager.addPass(new BlockFlattener())
     passManager.addPass(new NewInternalProcedureInliner())
     passManager.addPass(new PrimedVariableCollector())
     passManager.addPass(new PrimedVariableEliminator())
