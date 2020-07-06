@@ -1,0 +1,45 @@
+module fib
+{
+    sharedvar a, b : integer;
+
+    init {
+        // assume (a >= 0);
+        // assume (b >  0);
+        // assume (a <= b);
+    }
+
+    next {
+        a' = b;
+        b' = a + b;
+    }
+}
+
+module main
+{
+    var as : [integer]integer;
+    var bs : [integer]integer;
+    instances fibs : [integer]fib(a : (as), b : (bs));
+
+    init {
+        assume (fibs[1].a == fibs[2].a && fibs[1].b == fibs[2].b);
+    }
+
+    next {
+        next (fibs[1]);
+        next (fibs[2]);
+    }
+
+    property b_are_eq : fibs[1].b == fibs[2].b;
+    property a_are_eq : fibs[1].a == fibs[2].a;
+    property b_gt_0  : fibs[1].b > 0 && fibs[2].b > 0;
+    property a_ge_0  : fibs[1].a >= 0 && fibs[2].a >= 0;
+    property a_le_b  : fibs[1].a <= fibs[1].b && fibs[2].a <= fibs[2].b;
+
+    control {
+        v = unroll(5);
+        // v = induction;
+        check;
+        print_results;
+        v.print_cex(fibs[1].a, fibs[1].b, fibs[2].a, fibs[2].b);
+    }
+}

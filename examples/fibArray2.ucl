@@ -1,0 +1,39 @@
+module fib
+{
+    var a, b : integer;
+
+    next {
+        a' = b;
+        b' = a + b;
+    }
+}
+
+module main
+{
+    type machines;    
+    instances fibs : [machines]fib();
+
+    var m : machines;
+
+    init {
+        assume (forall (x : machines) :: fibs[x].a == fibs[x].b);
+        assume (forall (x : machines) :: fibs[x].a >= 0);
+        assume (forall (x : machines) :: fibs[x].b >= 0);
+    }
+
+    next {
+        next (fibs[m]);
+        havoc m;
+    }
+
+    property b_are_eq : (forall (x : machines) :: fibs[x].b >= fibs[x].a);
+    property b_gt_0 : (forall (x : machines) :: fibs[x].b >= 0);
+    property a_gt_0 : (forall (x : machines) :: fibs[x].a >= 0);
+
+    control {
+        v = induction;
+        check;
+        print_results;
+        v.print_cex(fibs[m].a, fibs[m].b);
+    }
+}

@@ -126,6 +126,14 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
       in
     }
   }
+  override def applyOnInstanceArray(d : TraversalDirection.T, inst : InstanceArrayDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
+    if (d == TraversalDirection.Down) {
+//      val modType = inst.modType.get
+      in
+    } else {
+      in
+    }
+  }
   override def applyOnBlock(d : TraversalDirection.T, blk : BlockStmt, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       checkBlockNesting(blk, in, context)

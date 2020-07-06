@@ -1438,7 +1438,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
                Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
                Scope.FunctionArg(_, _) | Scope.Define(_, _, _) |
-               Scope.Instance(_)       =>
+               Scope.Instance(_)       | Scope.InstanceArray(_) =>
              false
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
@@ -1815,6 +1815,7 @@ class SymbolicSimulator (module : Module) {
       case CaseStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute case statement.")
       case ProcedureCallStmt(id,lhss,args,instanceId,moduleId) => throw new Utils.AssertionError("Cannot symbolically execute procedure calls.")
       case ModuleCallStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute module calls.")
+      case ModuleArrayCallStmt(_, _) => throw new Utils.AssertionError("Cannot symbolically execute module array calls.")
     }
   }
 
@@ -1849,6 +1850,8 @@ class SymbolicSimulator (module : Module) {
     }
     case ModuleCallStmt(id) =>
       throw new Utils.RuntimeError("ModuleCallStmt must have been inlined by now.")
+    case ModuleArrayCallStmt(_, _) =>
+      throw new Utils.RuntimeError("ModuleArrayCallStmt must have been inlined by now.")
   }
   def writeSets(stmts: List[Statement]) : Set[Identifier] = {
     return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ writeSet(s)}

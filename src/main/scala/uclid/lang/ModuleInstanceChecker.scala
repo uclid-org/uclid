@@ -97,6 +97,58 @@ class ModuleInstanceCheckerPass() extends ReadOnlyPass[List[ModuleError]] {
     errs4 ++ unwiredSharedVarsErrors
   }
 
+  def doesInstanceArrayTypeMatch(modT : ModuleType, instT : ModuleInstanceType, in : List[ModuleError], pos : ASTPosition) : List[ModuleError] = {
+    // check the types of a list of pairs of identifiers and types..
+    def checkTypes(args : List[(Identifier, Type)], in : List[ModuleError], argType : String, typeMap : Map[Identifier, Type]) : List[ModuleError] = {
+      args.foldLeft(in) {
+        (acc, arg) => {
+          val id = arg._1
+          val actualTyp = arg._2
+          typeMap.get(id) match {
+            case Some(expTyp) =>
+              if (actualTyp.matches(expTyp)) {
+                acc
+              } else {
+                val msg = "Incorrect type for module " + argType + ": " + id.toString + ". Got " +
+                          actualTyp.toString + ", expected " + expTyp.toString + " instead"
+                ModuleError(msg, id.position) :: acc
+              }
+            case None =>
+              // we've already reported this.
+              acc
+          }
+        }
+      }
+    }
+
+    // first check there are no unknown arguments (arguments that don't correspond to the I/Os of module).
+    val badArgs = instT.args.map(_._1).filter(a => !modT.argSet.contains(a))
+    val errs1 = badArgs.foldLeft(in) {
+      (acc, arg) => {
+        ModuleError("Unknown module input/output: " + arg.toString, arg.position) :: acc
+      }
+    }
+    // for this first let's filter out the inputs who are "wired"
+    val wiredInputs = instT.args.filter((a) => modT.inputMap.contains(a._1) && a._2.isDefined).map((a) => (a._1, a._2.get))
+    // now check that all input types match.
+    val errs2 = checkTypes(wiredInputs, errs1, "input", modT.inputMap)
+
+    // filter out wired outputs.
+    val wiredOutputs = instT.args.filter((a) => modT.outputMap.contains(a._1) && a._2.isDefined).map((a) => (a._1, a._2.get))
+    // check output types.
+    val errs3 = checkTypes(wiredOutputs, errs2, "output", modT.outputMap)
+
+    // filter out shared variables.
+    val wiredSharedVars = instT.args.filter((a) => modT.sharedVarMap.contains(a._1) && a._2.isDefined).map((a) => (a._1, a._2.get))
+    val errs4 = checkTypes(wiredSharedVars, errs3, "sharedvar", modT.sharedVarMap)
+
+    // ensure all shared variables are mapped.
+    val unwiredSharedVars = modT.sharedVarMap.filter(v => !instT.argMap.contains(v._1))
+    val unwiredSharedVarsErrors = unwiredSharedVars.map(v => ModuleError("Unmapped shared variable: " + v._1.toString, pos))
+
+    errs4 ++ unwiredSharedVarsErrors
+  }
+
   def checkInstance(inst : InstanceDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     val targetModNamedExpr = context.map.get(inst.moduleId)
     targetModNamedExpr match {
@@ -140,10 +192,61 @@ class ModuleInstanceCheckerPass() extends ReadOnlyPass[List[ModuleError]] {
     }
   }
 
+  def checkInstanceArray(inst : InstanceArrayDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
+    val targetModNamedExpr = context.map.get(inst.moduleId)
+    targetModNamedExpr match {
+      case None =>
+        val error = ModuleError("Unknown module being instantiated: " + inst.moduleId.toString, inst.moduleId.position)
+        error :: in
+      case Some(namedExpr) =>
+        namedExpr match {
+          case Scope.ModuleDefinition(targetMod) =>
+            val targetModT = targetMod.moduleType
+            Utils.assert(inst.instType.isDefined, "InstanceArray type must be defined at this point!")
+            val err1 = doesInstanceArrayTypeMatch(targetModT, inst.instType.get, in, inst.position)
+            // make sure all outputs are wired to identifiers.
+            val outputExprs = inst.arguments.filter(a => targetModT.outputMap.contains(a._1) && a._2.isDefined).map(a => a._2.get)
+            val sharedVarExprs = inst.arguments.filter(a => targetModT.sharedVarMap.contains(a._1) && a._2.isDefined).map(a => a._2.get)
+            logger.debug("Outputs: {}", outputExprs.toString())
+            val err2 = outputExprs.foldLeft(err1) {
+              (acc, arg) => {
+                arg match {
+                  case Identifier(_) => acc
+                  case _ =>
+                    val msg = "Invalid module output : '%s'".format(arg.toString)
+                    ModuleError(msg, arg.position) :: acc
+                }
+              }
+            }
+            sharedVarExprs.foldLeft(err2) {
+              (acc, arg) => {
+                arg match {
+                  case Identifier(_) => acc
+                  case _ =>
+                    val msg = "Invalid shared variable : '%s'; must be an identifier".format(arg.toString())
+                    ModuleError(msg, arg.position) :: acc
+                }
+              }
+            }
+          case _ =>
+            val error = ModuleError("Module not in scope: " + inst.moduleId.toString, inst.moduleId.position)
+            error :: in
+        }
+    }
+  }
+
   override def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
     if (d == TraversalDirection.Down) {
       // only need to check in one direction.
       checkInstance(inst, in, context)
+    } else {
+      in
+    }
+  }
+  override def applyOnInstanceArray(d : TraversalDirection.T, inst : InstanceArrayDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
+    if (d == TraversalDirection.Down) {
+      // only need to check in one direction.
+      checkInstanceArray(inst, in, context)
     } else {
       in
     }

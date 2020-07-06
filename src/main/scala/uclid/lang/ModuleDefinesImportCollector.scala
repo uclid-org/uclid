@@ -67,7 +67,7 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
         namedExpr match {
           case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
                Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
-               Scope.Instance(_)       =>
+               Scope.Instance(_) | Scope.InstanceArray(_) =>
              false
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |

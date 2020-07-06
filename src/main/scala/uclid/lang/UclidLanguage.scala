@@ -1079,7 +1079,8 @@ case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends T
 case class ModuleType(
     inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)], sharedVars: List[(Identifier, Type)],
     constLits : List[(Identifier, NumericLit)], constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
-    functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, Type)]) extends Type {
+    functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, Type)],
+    instanceArrays : List[(Identifier, Type)]) extends Type {
 
   def argToString(arg: (Identifier, Type)) : String = {
     arg._1.toString + ": (" + arg._2.toString + ")"
@@ -1096,7 +1097,8 @@ case class ModuleType(
   lazy val varMap : Map[Identifier, Type] = variables.map(a => (a._1 -> a._2)).toMap
   lazy val funcMap : Map[Identifier, FunctionSig] = functions.map(a => (a._1 -> a._2)).toMap
   lazy val instanceMap : Map[Identifier, Type] = instances.map(a => (a._1 -> a._2)).toMap
-  lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ funcMap.map(f => (f._1 -> f._2.typ))  ++ instanceMap
+  lazy val instanceArrayMap : Map[Identifier, Type] = instanceArrays.map(a => (a._1 -> a._2)).toMap
+  lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ funcMap.map(f => (f._1 -> f._2.typ))  ++ instanceMap ++ instanceArrayMap
   lazy val externalTypeMap : Map[Identifier, Type] = constantMap ++ funcMap.map(f => (f._1 -> f._2.typ)) ++ constLitMap.map(f => (f._1 -> f._2.typeOf))
   def typeOf(id : Identifier) : Option[Type] = {
     typeMap.get(id)
@@ -1267,6 +1269,13 @@ case class ModuleCallStmt(id: Identifier) extends Statement {
   override val hashId = 3011
   override val md5hashCode = computeMD5Hash(id)
 }
+case class ModuleArrayCallStmt(id: Identifier, expr : Expr) extends Statement {
+  override def toLines = List("next (" + id.toString + "[" + expr.toString + "]" + ")")
+  override val hasCall = false
+  override val hasInternalCall = false
+  override val hashId = 3012
+  override val md5hashCode = computeMD5Hash(id, expr)
+}
 case class BlockVarsDecl(ids : List[Identifier], typ : Type) extends ASTNode {
   override def toString = "var " + Utils.join(ids.map(id => id.toString()), ", ") +
                           " : " + typ.toString() + "; // " + typ.position.toString()
@@ -1366,6 +1375,54 @@ case class InstanceDecl(instanceId : Identifier, moduleId : Identifier, argument
   def moduleType : Type = modType match {
     case None => UndefinedType()
     case Some(modT) => modT
+  }
+}
+
+case class InstanceArrayDecl(instanceId : Identifier, inTypes: List[Type], moduleId : Identifier, arguments: List[(Identifier, Option[Expr])], instType : Option[ModuleInstanceType], modType : Option[ModuleType]) extends Decl
+{
+  override val hashId = 3902
+  override val md5hashCode = computeMD5Hash(instanceId, inTypes, moduleId, arguments, instType, modType)
+  lazy val argMap = arguments.foldLeft(Map.empty[Identifier, Expr]) {
+    (acc, arg) => {
+      arg._2 match {
+        case Some(expr) => acc + (arg._1 -> expr)
+        case None => acc
+      }
+    }
+  }
+  lazy val inputMap = modType.get.inputs.map({
+    p => argMap.get(p._1) match {
+      case Some(expr) => Some(p._1, p._2, expr)
+      case None => None
+    }
+  }).flatten
+  lazy val sharedVarMap = modType.get.sharedVars.map({ 
+    p => argMap.get(p._1) match {
+      case Some(expr) => Some(p._1, p._2, expr)
+      case None => None
+    }
+  }).flatten
+  lazy val outputMap = modType.get.outputs.map({ 
+    p => argMap.get(p._1) match {
+      case Some(expr) => Some(p._1, p._2, expr)
+      case None => None
+    }
+  }).flatten
+
+  def argToString(arg : (Identifier, Option[Expr])) = arg._2 match {
+    case Some(e) => arg._1.toString + ":" + e.toString
+    case None => arg._1.toString + ": ()"
+  }
+  lazy val argsToString = Utils.join(arguments.map(argToString(_)), ", ")
+  override def toString = "instances " + instanceId.toString + " : " + "[" + Utils.join(inTypes.map(_.toString), " * ") + "]" + moduleId.toString + "(" + argsToString + "); // " + position.toString
+  override def declNames = List(instanceId)
+  def instanceType : Type = instType match {
+    case None => UndefinedType()
+    case Some(instT) => ArrayType(inTypes, instT)
+  }
+  def moduleType : Type = modType match {
+    case None => UndefinedType()
+    case Some(modT) => ArrayType(inTypes, modT)
   }
 }
 
@@ -1834,8 +1891,11 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   def isInlineableProcedure(id : Identifier) : Boolean = inlineableProcedures.contains(id)
   // module instances of other modules.
   lazy val instances : List[InstanceDecl] = decls.filter(_.isInstanceOf[InstanceDecl]).map(_.asInstanceOf[InstanceDecl])
+  lazy val instanceArrays : List[InstanceArrayDecl] = decls.filter(_.isInstanceOf[InstanceArrayDecl]).map(_.asInstanceOf[InstanceArrayDecl])
   // set of instance names (for easy searching.)
   lazy val instanceNames : Set[Identifier] = instances.map(_.instanceId).toSet
+  // set of instance names (for easy searching.)
+  lazy val instanceArrayNames : Set[Identifier] = instanceArrays.map(_.instanceId).toSet
   // set of type declarations.
   lazy val typeDeclarationMap : Map[Identifier, Type] = decls.filter(_.isInstanceOf[TypeDecl]).map(_.asInstanceOf[TypeDecl]).map {
     t => (t.id -> t.typ)
@@ -1846,7 +1906,8 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
       inputs, outputs, sharedVars,
       constLits, constants, vars,
       functions.map(c => (c.id, c.sig)),
-      instances.map(inst => (inst.instanceId, inst.moduleType)))
+      instances.map(inst => (inst.instanceId, inst.moduleType)),
+      instanceArrays.map(inst => (inst.instanceId, inst.moduleType)))
 
   // the init block.
   lazy val init : Option[InitDecl] = {

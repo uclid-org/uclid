@@ -109,7 +109,7 @@ class PrimedVariableEliminatorPass extends RewritePass {
     val primeVarMap = primedVariableCollector.primeVarMap.get
     (primeVarMap.filter(p => context.get(p._1) match {
       // remove all instances modified
-      case Some(Scope.Instance(_)) => false
+      case Some(Scope.Instance(_)) | Some(Scope.InstanceArray(_)) => false
       case _ => true
     }).map {
       p => {
@@ -170,6 +170,11 @@ class PrimedVariableEliminatorPass extends RewritePass {
   override def rewriteInstance(instD : InstanceDecl, context : Scope) : Option[InstanceDecl] = {
     val argsP = instD.arguments
     val instP = InstanceDecl(instD.instanceId, instD.moduleId, argsP, instD.instType, instD.modType)
+    Some(instP)
+  }
+  override def rewriteInstanceArray(instD : InstanceArrayDecl, context : Scope) : Option[InstanceArrayDecl] = {
+    val argsP = instD.arguments
+    val instP = InstanceArrayDecl(instD.instanceId, instD.inTypes, instD.moduleId, argsP, instD.instType, instD.modType)
     Some(instP)
   }
 }

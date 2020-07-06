@@ -148,6 +148,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwRange = "range"
     lazy val KwWhile = "while"
     lazy val KwInstance = "instance"
+    lazy val KwInstanceArray = "instances"
     lazy val KwType = "type"
     lazy val KwInput = "input"
     lazy val KwOutput = "output"
@@ -191,7 +192,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall,
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
-      KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
+      KwInstance, KwInstanceArray, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
       KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit,
       KwNext, KwLambda, KwModifies, KwProperty, KwDefineAxiom,
       KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires,
@@ -474,6 +475,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case lhss ~ instanceId ~ "." ~ procId ~ args => ProcedureCallStmt(procId, lhss, args, Some(instanceId)) } |
       KwNext ~ "(" ~> Id <~ ")" ~ ";" ^^
         { case id => lang.ModuleCallStmt(id) } |
+      KwNext ~ "(" ~> Id ~ ("[" ~> Expr <~ "]") <~ ")" <~ ";" ^^
+        { case id ~ expr => lang.ModuleArrayCallStmt(id, expr) } |
       KwIf ~ "(" ~ "*" ~ ")" ~> (BlkStmt <~ KwElse) ~ BlkStmt ^^
         { case tblk ~ fblk => lang.IfElseStmt(lang.FreshLit(lang.BooleanType()), tblk, fblk) } |
       KwIf ~ "(" ~ "*" ~ ")" ~> BlkStmt ^^
@@ -514,6 +517,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val InstanceDecl : PackratParser[lang.InstanceDecl] = positioned {
       KwInstance ~> Id ~ ":" ~ Id ~ ArgMapList <~ ";" ^^ { case instId ~ ":" ~ moduleId ~ args => lang.InstanceDecl(instId, moduleId, args, None, None) }
+    }
+    lazy val InstanceArrayDecl : PackratParser[lang.InstanceArrayDecl] = positioned {
+      KwInstanceArray ~> Id ~ ":" ~ "[" ~ Type ~ (rep ("," ~> Type) <~ "]") ~ Id ~ ArgMapList <~ ";" ^^ { case instId ~ ":" ~ "[" ~ t ~ ts ~ moduleId ~ args => lang.InstanceArrayDecl(instId, t :: ts, moduleId, args, None, None) }
     }
     lazy val RequiresExprs : PackratParser[List[lang.ProcedureRequiresExpr]] = {
       KwRequires ~> Expr <~ ";" ^^ {
@@ -756,7 +762,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val Decl: PackratParser[Decl] =
-      positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl |
+      positioned (InstanceDecl | InstanceArrayDecl | TypeDecl | ConstDecl | FuncDecl |
                   ModuleTypesImportDecl | ModuleFuncsImportDecl | ModuleConstsImportDecl |
                   SynthFuncDecl | DefineDecl | ModuleDefsImportDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |

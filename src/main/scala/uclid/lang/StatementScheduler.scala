@@ -102,6 +102,13 @@ object StatementScheduler {
         Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
         instD.outputMap.map(p => p._3.asInstanceOf[Identifier]).toSet
+      case ModuleArrayCallStmt(id, expr) => // TODO: what to do with expr? Linear types?
+        val namedExprOpt = context.map.get(id)
+        Utils.assert(namedExprOpt.isDefined, "Must not haven an unknown instance array here: " + id.toString())
+        val namedExpr = namedExprOpt.get
+        Utils.assert(namedExpr.isInstanceOf[Scope.InstanceArray], "Must be an array of module instances: " + id.toString())
+        val instsD = namedExpr.asInstanceOf[Scope.InstanceArray].instsD
+        instsD.outputMap.map(p => p._3.asInstanceOf[Identifier]).toSet
     }
   }
   def writeSets(stmts: List[Statement], context : Scope) : (Set[Identifier]) = {
@@ -155,6 +162,13 @@ object StatementScheduler {
         Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
         instD.outputMap.map(p => p._3.asInstanceOf[Identifier]).toSet
+      case ModuleArrayCallStmt(id, expr) => // TODO: what to do with expr? Linear types?
+        val namedExprOpt = context.map.get(id)
+        Utils.assert(namedExprOpt.isDefined, "Must not haven an unknown instance array here: " + id.toString())
+        val namedExpr = namedExprOpt.get
+        Utils.assert(namedExpr.isInstanceOf[Scope.InstanceArray], "Must be an array of module instances: " + id.toString())
+        val instsD = namedExpr.asInstanceOf[Scope.InstanceArray].instsD
+        instsD.outputMap.map(p => p._3.asInstanceOf[Identifier]).toSet
     }
   }
   def writeSetIds(stmts: List[Statement], context : Scope) : (Set[Identifier]) = {
@@ -207,6 +221,17 @@ object StatementScheduler {
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
         val moduleInputs = instD.inputMap.map(p => p._3)
         val moduleSharedVars = instD.sharedVarMap.map(p => p._3)
+        logger.trace("moduleInputs: {}", moduleInputs.toString())
+        logger.trace("moduleSharedVars: {}", moduleSharedVars.toString())
+        readSets(moduleInputs) ++ readSets(moduleSharedVars)      
+      case ModuleArrayCallStmt(id, expr) => // TODO: what to do with expr? Linear types?
+        val namedExprOpt = context.map.get(id)
+        Utils.assert(namedExprOpt.isDefined, "Must not haven an unknown instance array here: " + id.toString())
+        val namedExpr = namedExprOpt.get
+        Utils.assert(namedExpr.isInstanceOf[Scope.InstanceArray], "Must be an array of module instances: " + id.toString())
+        val instsD = namedExpr.asInstanceOf[Scope.InstanceArray].instsD
+        val moduleInputs = instsD.inputMap.map(p => p._3)
+        val moduleSharedVars = instsD.sharedVarMap.map(p => p._3)
         logger.trace("moduleInputs: {}", moduleInputs.toString())
         logger.trace("moduleSharedVars: {}", moduleSharedVars.toString())
         readSets(moduleInputs) ++ readSets(moduleSharedVars)
@@ -263,7 +288,18 @@ object StatementScheduler {
         val moduleSharedVars = instD.sharedVarMap.map(p => p._3)
         logger.trace("moduleInputs: {}", moduleInputs.toString())
         logger.trace("moduleSharedVars: {}", moduleSharedVars.toString())
-        primeReadSets(moduleInputs) ++ primeReadSets(moduleSharedVars)
+        primeReadSets(moduleInputs) ++ primeReadSets(moduleSharedVars)  
+      case ModuleArrayCallStmt(id, expr) => // TODO: what to do with expr? Linear types?
+        val namedExprOpt = context.map.get(id)
+        Utils.assert(namedExprOpt.isDefined, "Must not haven an unknown instance array here: " + id.toString())
+        val namedExpr = namedExprOpt.get
+        Utils.assert(namedExpr.isInstanceOf[Scope.InstanceArray], "Must be an array of module instances: " + id.toString())
+        val instsD = namedExpr.asInstanceOf[Scope.InstanceArray].instsD
+        val moduleInputs = instsD.inputMap.map(p => p._3)
+        val moduleSharedVars = instsD.sharedVarMap.map(p => p._3)
+        logger.trace("moduleInputs: {}", moduleInputs.toString())
+        logger.trace("moduleSharedVars: {}", moduleSharedVars.toString())
+        primeReadSets(moduleInputs) ++ primeReadSets(moduleSharedVars)  
     }
   }
   def primeReadSets(stmts : List[Statement], context : Scope) : (Set[Identifier]) = {

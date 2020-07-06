@@ -53,6 +53,18 @@ class InstanceModuleNameCheckerPass extends ReadOnlyPass[List[ModuleError]] {
       in
     }
   }
+  override def applyOnInstanceArray(d : TraversalDirection.T, instD : InstanceArrayDecl, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down) {
+      context.moduleDefinitionMap.get(instD.moduleId) match {
+        case Some(_) => in
+        case None =>
+          val msg = "Unknown module: %s".format(instD.moduleId.toString)
+          ModuleError(msg, instD.moduleId.position) :: in
+      }
+    } else {
+      in
+    }
+  }
 }
 
 class InstanceModuleNameChecker extends ASTAnalyzer(
@@ -75,6 +87,14 @@ class InstanceModuleTypeRewriterPass extends RewritePass {
     val mod = modOption.get
     val modType = mod.moduleType
     val instDP = InstanceDecl(instD.instanceId, instD.moduleId, instD.arguments, instD.instType, Some(modType))
+    Some(instDP)
+  }
+  override def rewriteInstanceArray(instD : InstanceArrayDecl, context : Scope) : Option[InstanceArrayDecl] = {
+    val modOption = context.moduleDefinitionMap.get(instD.moduleId)
+    Utils.assert(modOption.isDefined, "Unknown modules must have been detected by now: " + instD.toString)
+    val mod = modOption.get
+    val modType = mod.moduleType
+    val instDP = InstanceArrayDecl(instD.instanceId, instD.inTypes, instD.moduleId, instD.arguments, instD.instType, Some(modType))
     Some(instDP)
   }
 }

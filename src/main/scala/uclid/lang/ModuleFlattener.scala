@@ -56,6 +56,18 @@ class ModuleDependencyFinderPass extends ReadOnlyPass[Map[Identifier, Set[Identi
       in
     }
   }
+  override def applyOnInstanceArray(d : TraversalDirection.T, inst : InstanceArrayDecl, in : T, context : Scope) : T = {
+    if (d == TraversalDirection.Down) {
+      // this module calls inst.moduleId
+      val moduleName = context.module.get.id
+      in.get(moduleName) match {
+        case Some(modules) => in + (moduleName -> (modules + inst.moduleId))
+        case None => in + (moduleName -> Set(inst.moduleId))
+      }
+    } else {
+      in
+    }
+  }
 }
 
 class ModuleDependencyFinder(mainModuleName : Identifier) extends ASTAnalyzer(
@@ -129,7 +141,7 @@ object ModuleInstantiatorPass {
   }
 }
 
-class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule : Module, initExternalSymbolMap : ExternalSymbolMap) extends RewritePass {
+class ModuleInstantiatorPass(module : Module, inst : Either[InstanceDecl, InstanceArrayDecl], targetModule : Module, initExternalSymbolMap : ExternalSymbolMap) extends RewritePass {
   lazy val logger = Logger(classOf[ModuleInstantiatorPass])
   val MIP = ModuleInstantiatorPass
   val targetModuleName = targetModule.id
@@ -138,45 +150,128 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   type InstVarMap = MIP.InstVarMap
   type RewriteMap = MIP.RewriteMap
   val ctx = Scope.empty + module
+
+  val instArgMap = inst match {
+    case Left(i) => i.argMap
+    case Right(i) => i.argMap
+  }
+  val instId = inst match {
+    case Left(i) => i.instanceId
+    case Right(i) => i.instanceId
+  }
+
   def createVarMap() : (VarMap, ExternalSymbolMap) = {
     // sanity check
     Utils.assert(targetModule.instances.size == 0, "All instances in target module must have been flattened by now. Module: %s. Instance: %s.\n%s".format(module.id.toString, inst.toString, targetModule.toString))
+    Utils.assert(targetModule.instanceArrays.size == 0, "All instance arrays in target module must have been flattened by now. Module: %s. Instance: %s.\n%s".format(module.id.toString, inst.toString, targetModule.toString))
 
     val idMap0 : VarMap = Map.empty
     // map each input
-    val idMap1 = targetModule.inputs.foldLeft(idMap0) {
-      (mapAcc, inp) => {
-        inst.argMap.get(inp._1) match {
-          case Some(expr) =>  mapAcc + (inp._1 -> MIP.BoundInput(NameProvider.get(inp._1.toString + "_bound_input"), inp._2, expr))
-          case None => mapAcc + (inp._1 -> MIP.UnboundInput(NameProvider.get(inp._1.toString + "_unbound_input"), inp._2))
+
+    val idMap1 = inst match {
+      case Left(_) => {
+        targetModule.inputs.foldLeft(idMap0) {
+          (mapAcc, inp) => {
+            instArgMap.get(inp._1) match {
+              case Some(expr) =>  mapAcc + (inp._1 -> MIP.BoundInput(NameProvider.get(inp._1.toString + "_bound_input"), inp._2, expr))
+              case None => mapAcc + (inp._1 -> MIP.UnboundInput(NameProvider.get(inp._1.toString + "_unbound_input"), inp._2))
+            }
+          }
         }
       }
+      case Right(i) => {
+        targetModule.inputs.foldLeft(idMap0) {
+          (mapAcc, inp) => {
+            instArgMap.get(inp._1) match {
+              case Some(expr) =>  mapAcc + (inp._1 -> MIP.BoundInput(NameProvider.get(inp._1.toString + "_bound_input"), ArrayType(i.inTypes, inp._2), expr))
+              case None => mapAcc + (inp._1 -> MIP.UnboundInput(NameProvider.get(inp._1.toString + "_unbound_input"), ArrayType(i.inTypes, inp._2)))
+            }
+          }
+        }
+      } 
     }
+
     // map each output
-    val idMap2 = targetModule.outputs.foldLeft(idMap1) {
-      (mapAcc, out) => {
-        inst.argMap.get(out._1) match {
-          case Some(expr) => mapAcc + (out._1 -> MIP.BoundOutput(MIP.extractLhs(expr).get, out._2))
-          case None => mapAcc + (out._1 -> MIP.UnboundOutput(NameProvider.get(out._1.toString() + "_unbound_output"), out._2))
+    val idMap2 = inst match {
+      case Left(_) => {
+        targetModule.outputs.foldLeft(idMap1) {
+          (mapAcc, out) => {
+            instArgMap.get(out._1) match {
+              case Some(expr) => mapAcc + (out._1 -> MIP.BoundOutput(MIP.extractLhs(expr).get, out._2))
+              case None => mapAcc + (out._1 -> MIP.UnboundOutput(NameProvider.get(out._1.toString() + "_unbound_output"), out._2))
+            }
+          }
         }
       }
+      case Right(i) => {
+        targetModule.outputs.foldLeft(idMap1) {
+          (mapAcc, out) => {
+            instArgMap.get(out._1) match {
+              case Some(expr) => mapAcc + (out._1 -> MIP.BoundOutput(MIP.extractLhs(expr).get, ArrayType(i.inTypes, out._2)))
+              case None => mapAcc + (out._1 -> MIP.UnboundOutput(NameProvider.get(out._1.toString() + "_unbound_output"), ArrayType(i.inTypes, out._2)))
+            }
+          }
+        }
+      } 
     }
+
     // map each shared variable
-    val idMap3 = targetModule.sharedVars.foldLeft(idMap2) {
-      (mapAcc, sharedVar) => {
-        val mapping = inst.argMap.get(sharedVar._1)
-        Utils.assert(mapping.isDefined, "All shared variables must be mapped.")
-        val origVar = MIP.extractId(mapping.get).get
-        mapAcc + (sharedVar._1 -> MIP.SharedVariable(origVar, sharedVar._2))
+    val idMap3 = inst match {
+      case Left(_) => {
+        targetModule.sharedVars.foldLeft(idMap2) {
+          (mapAcc, sharedVar) => {
+            val mapping = instArgMap.get(sharedVar._1)
+            Utils.assert(mapping.isDefined, "All shared variables must be mapped.")
+            val origVar = MIP.extractId(mapping.get).get
+            mapAcc + (sharedVar._1 -> MIP.SharedVariable(origVar, sharedVar._2))
+          }
+        }
       }
+      case Right(i) => {
+        targetModule.sharedVars.foldLeft(idMap2) {
+          (mapAcc, sharedVar) => {
+            val mapping = instArgMap.get(sharedVar._1)
+            Utils.assert(mapping.isDefined, "All shared variables must be mapped.")
+            val origVar = MIP.extractId(mapping.get).get
+            mapAcc + (sharedVar._1 -> MIP.SharedVariable(origVar, ArrayType(i.inTypes, sharedVar._2)))
+          }
+        }
+      } 
     }
+
     // map each state variable.
-    val idMap4 = targetModule.vars.foldLeft(idMap3) {
-      (mapAcc, v) => mapAcc + (v._1 -> MIP.StateVariable(NameProvider.get(v._1.toString() + "_var"), v._2))
-    }
+    val idMap4 = inst match {
+      case Left(_) => {
+        targetModule.vars.foldLeft(idMap3) {
+          (mapAcc, v) => {
+            mapAcc + (v._1 -> MIP.StateVariable(NameProvider.get(v._1.toString() + "_var"), v._2))
+          }
+        }
+      }
+      case Right(i) => {
+        targetModule.vars.foldLeft(idMap3) {
+          (mapAcc, v) => {
+            mapAcc + (v._1 -> MIP.StateVariable(NameProvider.get(v._1.toString() + "_var"), ArrayType(i.inTypes, v._2)))
+          }
+        }
+      }
+    } 
     // map each constant.
-    val map5 = targetModule.constants.foldLeft((idMap4)) {
-      (acc, c) => acc + (c._1 -> MIP.Constant(NameProvider.get(c._1.toString() + "_const"), c._2))
+    val map5 = inst match {
+      case Left(_) => {
+        targetModule.constants.foldLeft((idMap4)) {
+          (acc, c) => {
+            acc + (c._1 -> MIP.Constant(NameProvider.get(c._1.toString() + "_const"), c._2))
+          }
+        }
+      }
+      case Right(i) => {
+        targetModule.constants.foldLeft((idMap4)) {
+          (acc, c) => {
+            acc + (c._1 -> MIP.Constant(NameProvider.get(c._1.toString() + "_const"), ArrayType(i.inTypes, c._2)))
+          }
+        }
+      }
     }
     // map each function.
     val map6 = targetModule.functions.foldLeft(map5, initExternalSymbolMap) {
@@ -196,7 +291,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
                MIP.BoundOutput(_, _) | MIP.UnboundOutput(_, _)  |
                MIP.StateVariable(_, _) | MIP.SharedVariable(_, _) |
                MIP.Constant(_, _) =>
-            instVarMap + (List(inst.instanceId, renaming._1) -> renaming._2.ident)
+            instVarMap + (List(instId, renaming._1) -> renaming._2.ident)
           case _ =>
             instVarMap
         }
@@ -205,9 +300,9 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val initInstVarMap : InstVarMap = (targetModule.getAnnotation[InstanceVarMapAnnotation]()).get.iMap
     val instVarMap2 = (initInstVarMap.map {
       p => {
-        val key1 = List(inst.instanceId, p._2)
+        val key1 = List(instId, p._2)
         val result = instVarMap1.get(key1).get
-        (inst.instanceId :: p._1) -> result
+        (instId :: p._1) -> result
       }
     }).toMap
     val instVarMap = instVarMap1 ++ instVarMap2
@@ -215,7 +310,13 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   def createNewModule() : Module = {
-    rewriter.visit(targetModule, Scope.empty).get
+    // TODO: Generalize for instance arrays!
+    inst match {
+      case Left(i) => rewriter.visit(targetModule, Scope.empty).get
+      case Right(i) =>
+        val tmpRewriter = new ModuleInitGeneralizerRewriter("InlineAddIndxs", i.inTypes)
+        tmpRewriter.visit(rewriter.visit(targetModule, Scope.empty).get, Scope.empty).get
+    }
   }
 
   def fixPosition[T <: PositionedNode](node : Option[T], pos : ASTPosition) : Option[T] = {
@@ -270,7 +371,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   val targetInstVarMap = targetModule.getAnnotation[InstanceVarMapAnnotation].get.iMap
 
   val rewriteMap = MIP.toRewriteMap(varMap, targetInstVarMap)
-  val rewriter = new ExprRewriter("MIP:" + inst.instanceId.toString, rewriteMap)
+  val rewriter = new ExprRewriter("MIP:" + instId.toString, rewriteMap)
 
   val instVarMap = createInstVarMap(varMap)
   val newModule = createNewModule()
@@ -299,6 +400,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // rewrite SelectFromInstance operations.
   def flattenSelectFromInstance(expr : Expr) : List[Identifier] = {
     expr match {
+      case OperatorApplication(SelectFromInstance(field), List(OperatorApplication(ArraySelect(idx), List(Identifier(e))))) => 
+        List(Identifier(e)) ++ List(field)
       case OperatorApplication(SelectFromInstance(field), List(e)) =>
         flattenSelectFromInstance(e) ++ List(field)
       case id : Identifier =>
@@ -315,18 +418,28 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     } else {
       return OperatorApplication(SelectFromInstance(ids.last), List(unflattenSelectFromInstance(ids.init)))
     }
-     
   }
 
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
-    val opappP = opapp.op match {
-      case SelectFromInstance(_) =>
+    val opappP = opapp match {
+      case OperatorApplication(SelectFromInstance(_), List(OperatorApplication(ArraySelect(idx), List(Identifier(e))))) =>
         val flatList = flattenSelectFromInstance(opapp)
         instVarMap.get(flatList) match {
-          case Some(id) => Some(id)
-          case None => Some(opapp)
+          case Some(id) => 
+            Some(OperatorApplication(ArraySelect(idx), List(id)))
+          case None => 
+            Some(opapp)
         }
-      case _ => Some(opapp)
+      case OperatorApplication(SelectFromInstance(_), _) =>
+        val flatList = flattenSelectFromInstance(opapp)
+        instVarMap.get(flatList) match {
+          case Some(id) => 
+            Some(id)
+          case None => 
+            Some(opapp)
+        }
+      case _ => 
+        Some(opapp)
     }
     fixPosition(opappP, opapp.position)
   }
@@ -366,7 +479,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   // "delete" this instance.
-  override def rewriteInstance(instD : InstanceDecl, context : Scope) : Option[InstanceDecl] = {
+  override def rewriteInstanceOrInstanceArray(instD : Either[InstanceDecl, InstanceArrayDecl], context : Scope) : Option[Either[InstanceDecl, InstanceArrayDecl]] = {
     if (instD == inst) {
       None
     } else {
@@ -384,8 +497,20 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   // rewrite module.
   override def rewriteModuleCall(modCall : ModuleCallStmt, context : Scope) : Option[Statement] = {
-    if (modCall.id == inst.instanceId) {
+    if (modCall.id == instId) {
       Some(BlockStmt(List.empty, newInputAssignments ++ newNextStatements))
+    } else {
+      Some(modCall)
+    }
+  }
+  // rewrite module array.
+  override def rewriteModuleArrayCall(modCall : ModuleArrayCallStmt, context : Scope) : Option[Statement] = {
+    if (modCall.id == instId) {
+      val idxmap : Map[Expr, Expr] = instVarMap.map({ case (a, b) => b -> OperatorApplication(ArraySelect(List(modCall.expr)), List(b))})
+      val tmprewriter = new ModuleNextGeneralizerRewriter("InlineAddIndxs", modCall.expr, idxmap)
+      val newins = tmprewriter.rewriteStatements(newInputAssignments, context)
+      val newnexts = tmprewriter.rewriteStatements(newNextStatements, context)
+      Some(BlockStmt(List.empty, newins ++ newnexts))
     } else {
       Some(modCall)
     }
@@ -419,7 +544,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     // should only use modify exprs that contain a ModifiableId
     val modifyRenameList: List[(ModifiableEntity, Identifier)] = proc.modifies.filter(m =>  m match {
       case ModifiableId(id) => context.get(id) match {
-                                 case Some(Scope.Instance(_)) => false
+                                 case Some(Scope.Instance(_)) | Some(Scope.InstanceArray(_)) => false
                                  case None => false // Instance already flattened
                                  case _ => true
                                 }
@@ -596,9 +721,9 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
    */
   override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
     // Handle any instance procedure call.
-    if (callStmt.instanceId != None && callStmt.instanceId.get.name == inst.instanceId.name) {
+    if (callStmt.instanceId != None && callStmt.instanceId.get.name == instId.name) {
             // Replace the instance procedure call if we're flattening that particular instance    
-      val procInst = context.module.get.instances.find(inst => inst.instanceId.name == callStmt.instanceId.get.name).get
+      val procInst = context.module.get.instances.find(inst => instId.name == callStmt.instanceId.get.name).get
       val procModule = context.get(procInst.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
       val procOption = procModule.procedures.find(p => p.id.name == callStmt.id.name)
       val blkStmt = inlineProcedureCall(callStmt, procOption.get, Scope.empty + procModule)
@@ -628,7 +753,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 }
 
 class ModuleInstantiator(
-    passName : String, module : Module, inst : InstanceDecl,
+    passName : String, module : Module, inst : Either[InstanceDecl, InstanceArrayDecl],
     targetModule : Module, externalSymbolMap : ExternalSymbolMap)
 extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false) {
 
@@ -683,17 +808,29 @@ class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
 
   var extSymMap : ExternalSymbolMap = null;
   def rewrite(module : Module, ctx : Scope) : Module = {
-    module.instances match {
-      case inst :: _ =>
+    val instances : List[Either[InstanceDecl, InstanceArrayDecl]] = module.instances.map(i => Left(i)) ++ module.instanceArrays.map(a => Right(a))
+    instances match {
+      case Left(inst) :: _ =>
         val targetModule = ctx.map.find(p => p._1 == inst.moduleId).get._2.asInstanceOf[Scope.ModuleDefinition].mod // modules.find(_.id == inst.moduleId).get
         val passName = "ModuleInstantiator:" + module.id + ":" + inst.instanceId
-        val rewriter = new ModuleInstantiator(passName, module, inst, targetModule, extSymMap)
+        val rewriter = new ModuleInstantiator(passName, module, Left(inst), targetModule, extSymMap)
         logger.debug("rewriting module:%s inst:%s targetModule:%s.".format(module.id.toString, inst.instanceId.toString, targetModule.id.toString))
         // update external symbol map.
         extSymMap = rewriter.pass.asInstanceOf[ModuleInstantiatorPass].externalSymbolMap
         logger.debug("original module:\n%s".format(module.toString))
         val modP = rewriter.visit(module, ctx).get
         logger.debug("rewritten module:\n%s".format(modP.toString))
+        rewrite(modP, ctx)
+      case Right(inst) :: _ =>
+        val targetModule = ctx.map.find(p => p._1 == inst.moduleId).get._2.asInstanceOf[Scope.ModuleDefinition].mod // modules.find(_.id == inst.moduleId).get
+        val passName = "ModuleInstantiator:" + module.id + ":" + inst.instanceId
+        val rewriter = new ModuleInstantiator(passName, module, Right(inst), targetModule, extSymMap)
+        logger.debug("rewriting module array:%s inst:%s targetModule:%s.".format(module.id.toString, inst.instanceId.toString, targetModule.id.toString))
+        // update external symbol map.
+        extSymMap = rewriter.pass.asInstanceOf[ModuleInstantiatorPass].externalSymbolMap
+        logger.debug("original module array:\n%s".format(module.toString))
+        val modP = rewriter.visit(module, ctx).get
+        logger.debug("rewritten module array:\n%s".format(modP.toString))
         rewrite(modP, ctx)
       case Nil =>
         if (module.id == mainModule) {
@@ -716,3 +853,35 @@ class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
 
 class ModuleFlattener(mainModule : Identifier) extends ASTRewriter(
     "ModuleFlattener", new ModuleFlattenerPass(mainModule))
+
+
+// Generalize module that will be used for instance array
+class ModuleInitGeneralizerRewriterPass(inTypes : List[Type]) extends RewritePass
+{
+
+}
+
+class ModuleInitGeneralizerRewriter(name: String, inTypes : List[Type])
+  extends ASTRewriter(name, new ModuleInitGeneralizerRewriterPass(inTypes))
+{
+  override def visitType(typ: Type, context: Scope): Option[Type] = {
+    Some(ArrayType(inTypes, typ))
+  }
+}
+
+class ModuleNextGeneralizerRewriter(name: String, idx : Expr, rewrites : Map[Expr, Expr])
+  extends ExprRewriter(name, rewrites)
+{
+  override def visitAssignStatement(st : AssignStmt, ctx : Scope) : Option[Statement] = {
+    st match {
+      case AssignStmt(List(x), List(y)) =>
+        rewrites.get(x.ident) match {
+          case Some(e) => Some(st)
+          case None => 
+            val update = rewriteExpr(OperatorApplication(ArrayUpdate(List(idx), y), List(x.ident)), ctx)
+            Some(AssignStmt(List(x), List(update)))
+        }
+      case _ => Some(st)
+    }
+  }
+}

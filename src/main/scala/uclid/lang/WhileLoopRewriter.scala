@@ -53,7 +53,7 @@ class WhileLoopRewriterPass extends RewritePass {
     val varsToHavoc = StatementScheduler.writeSetIds(whileSt.body, context).toList
     val havocStmts = varsToHavoc.filter(id => context.get(id) match {
       // Note: We do not handle instances since we have not expanded them yet
-      case Some(Scope.Instance(_)) => false
+      case Some(Scope.Instance(_)) | Some(Scope.InstanceArray(_)) => false
       case _ => true
     }).map(v => HavocStmt(HavocableId(v)))
     val assumeStmts = AssumeStmt(cond, None) :: invs.map(inv => AssumeStmt(inv, None))

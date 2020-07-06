@@ -1,0 +1,44 @@
+module fib
+{
+    var a, b : integer;
+
+    init {
+        // assume (a >= 0);
+        // assume (b >  0);
+        // assume (a <= b);
+    }
+
+    next {
+        a' = b;
+        b' = a + b;
+    }
+}
+
+module main
+{
+    instances fibs : [integer]fib();
+    instance fib2 : fib();
+
+    init {
+        assume (fibs[1].a == fib2.a && fibs[1].b == fib2.b);
+    }
+
+    next {
+        next (fibs[1]);
+        next (fib2);
+    }
+
+    property b_are_eq : fibs[1].b == fib2.b;
+    property a_are_eq : fibs[1].a == fib2.a;
+    property b_gt_0  : fibs[1].b > 0 && fib2.b > 0;
+    property a_ge_0  : fibs[1].a >= 0 && fib2.a >= 0;
+    property a_le_b  : fibs[1].a <= fibs[1].b && fib2.a <= fib2.b;
+
+    control {
+        // v = unroll(5);
+        v = induction;
+        check;
+        print_results;
+        v.print_cex(fibs[1].a, fibs[1].b, fib2.a, fib2.b);
+    }
+}

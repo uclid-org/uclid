@@ -936,7 +936,7 @@ class ModularProductProgramPass extends RewritePass {
                                 
                             }
                         
-                        case ModuleCallStmt(_) =>
+                        case ModuleCallStmt(_) | ModuleArrayCallStmt(_, _) =>
                             throw new Utils.UnimplementedException("Module Calls are unsupported")
 
                         case _ => newbody += stmts.head

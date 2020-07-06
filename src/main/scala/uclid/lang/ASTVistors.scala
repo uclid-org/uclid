@@ -88,6 +88,7 @@ trait ReadOnlyPass[T] {
   def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : T, context : Scope) : T = { in }
   def applyOnAnnotation(d : TraversalDirection.T, note : Annotation, in : T, context : Scope) : T = { in }
   def applyOnInstance(d : TraversalDirection.T, inst : InstanceDecl, in : T, context : Scope) : T = { in }
+  def applyOnInstanceArray(d : TraversalDirection.T, insts : InstanceArrayDecl, in : T, context : Scope) : T = { in }
   def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : Scope) : T = { in }
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : Scope) : T = { in }
   def applyOnModuleFunctionsImport(d : TraversalDirection.T, modFuncImport : ModuleFunctionsImportDecl, in : T, context : Scope) : T = { in }
@@ -142,6 +143,7 @@ trait ReadOnlyPass[T] {
   def applyOnCase(d : TraversalDirection.T, st : CaseStmt, in : T, context : Scope) : T = { in }
   def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, context : Scope) : T = { in }
   def applyOnModuleCall(d : TraversalDirection.T, st : ModuleCallStmt, in : T, context : Scope) : T = { in }
+  def applyOnModuleArrayCall(d : TraversalDirection.T, st : ModuleArrayCallStmt, in : T, context : Scope) : T = { in }
   def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = { in }
   def applyOnBitVectorSlice(d : TraversalDirection.T, slice : BitVectorSlice, in : T, context : Scope) : T = { in }
   def applyOnModifiableEntity(d : TraversalDirection.T, modifiable : ModifiableEntity, in : T, context : Scope) : T = { in }
@@ -176,6 +178,8 @@ trait RewritePass {
   def rewriteCommand(cmd : GenericProofCommand, ctx : Scope) : Option[GenericProofCommand] = { Some(cmd) }
   def rewriteAnnotation(note : Annotation, ctx : Scope) : Option[Annotation] = { Some(note) }
   def rewriteInstance(inst : InstanceDecl, ctx : Scope) : Option[InstanceDecl] = { Some(inst) }
+  def rewriteInstanceArray(insts : InstanceArrayDecl, ctx : Scope) : Option[InstanceArrayDecl] = { Some(insts) }
+  def rewriteInstanceOrInstanceArray(inst : Either[InstanceDecl, InstanceArrayDecl], ctx : Scope) : Option[Either[InstanceDecl, InstanceArrayDecl]] = { Some(inst) }
   def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : Scope) : Option[FunctionDecl] = { Some(func) }
   def rewriteModuleFunctionsImport(modFuncImport : ModuleFunctionsImportDecl, ctx : Scope) : Option[ModuleFunctionsImportDecl] = { Some(modFuncImport) }
@@ -230,6 +234,7 @@ trait RewritePass {
   def rewriteCase(st : CaseStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteProcedureCall(st : ProcedureCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteModuleCall(st : ModuleCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteModuleArrayCall(st : ModuleArrayCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteLHS(lhs : Lhs, ctx : Scope) : Option[Lhs] = { Some(lhs) }
   def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : Scope) : Option[BitVectorSlice] = { Some(slice) }
   def rewriteModifiableEntity(modifiable : ModifiableEntity, ctx : Scope) : Option[ModifiableEntity] = { Some(modifiable) }
@@ -303,6 +308,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnDecl(TraversalDirection.Down, decl, result, context)
     result = decl match {
       case inst : InstanceDecl => visitInstance(inst, result, context)
+      case insts : InstanceArrayDecl => visitInstanceArray(insts, result, context)
       case proc: ProcedureDecl => visitProcedure(proc, result, context)
       case typ : TypeDecl => visitTypeDecl(typ, result, context)
       case modTypesImport : ModuleTypesImportDecl => visitModuleTypesImport(modTypesImport, result, context)
@@ -347,6 +353,29 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case None => result
     }
     result = pass.applyOnInstance(TraversalDirection.Up, inst, result, context)
+    return result
+  }
+  def visitInstanceArray(insts : InstanceArrayDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnInstanceArray(TraversalDirection.Down, insts, result, context)
+    result = visitIdentifier(insts.instanceId, result, context)
+    result = insts.inTypes.foldLeft(result)((acc, t) => visitType(t, acc, context))
+    result = visitIdentifier(insts.moduleId, result, context)
+    result = insts.arguments.foldLeft(result){
+      (acc, arg) => arg._2 match {
+        case Some(expr) => visitExpr(expr, acc, context)
+        case None => acc
+      }
+    }
+    result = insts.instType match {
+      case Some(typ) => visitType(typ, result, context)
+      case None => result
+    }
+    result = insts.modType match {
+      case Some(typ) => visitType(typ, result, context)
+      case None => result
+    }
+    result = pass.applyOnInstanceArray(TraversalDirection.Up, insts, result, context)
     return result
   }
   def visitProcedure(proc : ProcedureDecl, in : T, contextIn : Scope) : T = {
@@ -726,6 +755,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case caseStmt     : CaseStmt => visitCaseStatement(caseStmt, result, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, result, context)
       case modCallStmt  : ModuleCallStmt => visitModuleCallStatement(modCallStmt, result, context)
+      case modArrayCallStmt : ModuleArrayCallStmt => visitModuleArrayCallStatement(modArrayCallStmt, result, context)
     }
     result = pass.applyOnStatement(TraversalDirection.Up, st, result, context)
     return result
@@ -844,6 +874,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnModuleCall(TraversalDirection.Down, st, result, context)
     result = visitIdentifier(st.id, result, context)
     result = pass.applyOnModuleCall(TraversalDirection.Up, st, result, context)
+    return result
+  }
+  def visitModuleArrayCallStatement(st : ModuleArrayCallStmt, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnModuleArrayCall(TraversalDirection.Down, st, result, context)
+    result = visitIdentifier(st.id, result, context)
+    result = visitExpr(st.expr, result, context)
+    result = pass.applyOnModuleArrayCall(TraversalDirection.Up, st, result, context)
     return result
   }
   def visitLhs(lhs : Lhs, in : T, context : Scope) : T = {
@@ -1120,6 +1158,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitDecl(decl : Decl, context : Scope) : Option[Decl] = {
     val declP = (decl match {
       case instDecl : InstanceDecl => visitInstance(instDecl, context)
+      case instArrayDecl : InstanceArrayDecl => visitInstanceArray(instArrayDecl, context)
       case procDecl : ProcedureDecl => visitProcedure(procDecl, context)
       case typeDecl : TypeDecl => visitTypeDecl(typeDecl, context)
       case modTypeImport : ModuleTypesImportDecl => visitModuleTypesImport(modTypeImport, context)
@@ -1167,11 +1206,58 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     val instP = (instIdP, modIdP) match {
       case (Some(instId), Some(modId)) =>
-        pass.rewriteInstance(InstanceDecl(instId, modId, argP, instTP, modTP), context)
+        val tmpInst = pass.rewriteInstance(InstanceDecl(instId, modId, argP, instTP, modTP), context)
+        tmpInst match {
+          case Some(i) => pass.rewriteInstanceOrInstanceArray(Left(i), context) match {
+            case Some(Left(v)) => Some(v)
+            case Some(_) => None 
+            case None => None
+          }
+          case None => None
+        }
       case _ =>
         None
     }
     return ASTNode.introducePos(setPosition, setFilename, instP, inst.position)
+  }
+
+  def visitInstanceArray(insts : InstanceArrayDecl, context : Scope) : Option[InstanceArrayDecl] = {
+    val instIdP = visitIdentifier(insts.instanceId, context)
+    val inTypesP = insts.inTypes.map(visitType(_, context)).flatten
+    val modIdP = visitIdentifier(insts.moduleId, context)
+    val argP = insts.arguments.map {
+      (a) => a._2 match {
+          case Some(e) => (a._1, visitExpr(e, context))
+          case None => (a._1, None)
+        }
+      }
+    val instTP = insts.instType.flatMap((t) => visitType(t, context)).flatMap {
+      (t) => t match {
+        case tp : ModuleInstanceType => Some(tp)
+        case _ => None
+      }
+    }
+    val modTP = insts.modType.flatMap((t) => visitType(t, context)).flatMap {
+      (t) => t match {
+        case tp : ModuleType => Some(tp)
+        case _ => None
+      }
+    }
+    val instP = (instIdP, modIdP) match {
+      case (Some(instId), Some(modId)) =>
+        val tmpInst = pass.rewriteInstanceArray(InstanceArrayDecl(instId, inTypesP, modId, argP, instTP, modTP), context)
+        tmpInst match {
+          case Some(i) => pass.rewriteInstanceOrInstanceArray(Right(i), context) match {
+            case Some(Right(v)) => Some(v)
+            case Some(_) => None
+            case None => None
+          }
+          case None => None
+        }
+      case _ =>
+        None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, instP, insts.position)
   }
 
   def visitProcedure(proc : ProcedureDecl, contextIn : Scope) : Option[ProcedureDecl] = {
@@ -1598,6 +1684,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case caseStmt : CaseStmt => visitCaseStatement(caseStmt, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
       case modCallStmt : ModuleCallStmt => visitModuleCallStatement(modCallStmt, context)
+      case modArrayCallStmt : ModuleArrayCallStmt => visitModuleArrayCallStatement(modArrayCallStmt, context)
     }).flatMap(pass.rewriteStatement(_, context))
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
@@ -1750,6 +1837,22 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(id) =>
         val stP1 = ModuleCallStmt(id)
         pass.rewriteModuleCall(stP1, context)
+      case None =>
+        None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
+  }
+  def visitModuleArrayCallStatement(st : ModuleArrayCallStmt,  context : Scope) : Option[Statement] = {
+    val stP = visitIdentifier(st.id, context) match {
+      case Some(id) => {
+        visitExpr(st.expr, context) match {
+          case Some(expr) => {
+            val stP1 = ModuleArrayCallStmt(id, expr)
+            pass.rewriteModuleArrayCall(stP1, context)
+          }
+          case None => None
+        }
+      }
       case None =>
         None
     }

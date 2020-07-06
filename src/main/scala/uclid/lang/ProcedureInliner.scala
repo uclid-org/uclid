@@ -122,7 +122,7 @@ trait NewProcedureInlinerPass extends RewritePass {
     // should only use modify exprs that contain a ModifiableId
     val modifyPairs : List[(ModifiableId, Identifier)] = proc.modifies.filter(m =>  m match {
       case ModifiableId(id) => context.get(id) match {
-                                 case Some(Scope.Instance(_)) => false
+                                 case Some(Scope.Instance(_)) | Some(Scope.InstanceArray(_)) => false
                                  case None => throw new Utils.AssertionError("ModfiableId should not refer to a variable that does not exist")
                                  case _ => true
                                 }
@@ -256,7 +256,7 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
                         modifiable => modifiable match {
                           case m : ModifiableId => {
                             context.get(m.id) match {
-                              case Some(Scope.Instance(_)) => true
+                              case Some(Scope.Instance(_)) | Some(Scope.InstanceArray(_)) => true
                               case None => throw new Utils.AssertionError("Modifiable Id should not refer to none")
                               case _ => false
                             }

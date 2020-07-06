@@ -231,6 +231,14 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           } else {
             in
           }
+        case ModuleArrayCallStmt(id, expr) =>
+          val instanceArrayNames : Set[Identifier] = context.module.get.instanceArrayNames
+          if (!instanceArrayNames.contains(id)) {
+            val error = ModuleError("Unknown array of module instances: " + id.toString, id.position)
+            in + error
+          } else {
+            in
+          }
         case SkipStmt() => in
       }
     }

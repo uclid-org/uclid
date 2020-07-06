@@ -67,7 +67,7 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
           case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
                Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
                Scope.FunctionArg(_, _) | Scope.Define(_, _, _) |
-               Scope.Instance(_)       =>
+               Scope.Instance(_) | Scope.InstanceArray(_)       =>
              false
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
@@ -128,7 +128,8 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
                Scope.VerifResultVar(_, _)     | Scope.FunctionArg(_, _)         |
                Scope.Define(_, _, _)          | Scope.Grammar(_, _, _)          |
                Scope.ConstantLit(_, _)        | Scope.BlockVar(_, _)            |
-               Scope.ForIndexVar(_ , _)       | Scope.SelectorField(_)          =>
+               Scope.ForIndexVar(_ , _)       | Scope.SelectorField(_)          |
+               Scope.InstanceArray(_) =>
               id
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)  | Scope.SynthesisFunction(_, _, _, _, _) =>
              ExternalIdentifier(moduleName, id)

@@ -60,7 +60,7 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
     context.get(id) match {
       case Some(namedExpr) =>
         namedExpr match {
-          case Scope.StateVar(_, _) | Scope.OutputVar(_, _) | Scope.Instance(_) =>
+          case Scope.StateVar(_, _) | Scope.OutputVar(_, _) | Scope.Instance(_) | Scope.InstanceArray(_) =>
             if (!modifyIds.contains(id)) {
               val error = ModuleError("Identifier was not declared modifiable: %s".format(id.toString), pos)
               in + error
@@ -137,7 +137,7 @@ class ProcedureCheckerPass extends ReadOnlyPass[Set[ModuleError]]
                 case Scope.StateVar(_, _)  |
                      Scope.OutputVar(_, _) |
                      Scope.SharedVar(_, _) => false
-                case Scope.Instance(_) => {
+                case Scope.Instance(_) | Scope.InstanceArray(_) => {
                   val hasInstProcCall = proc.body.asInstanceOf[BlockStmt].stmts.find(stmt => stmt match {
                     case ProcedureCallStmt(_, _, _, instanceId, _) => (instanceId == v)
                     case _ => false

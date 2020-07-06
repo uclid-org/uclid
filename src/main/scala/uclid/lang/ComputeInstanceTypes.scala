@@ -55,6 +55,17 @@ class ComputeInstanceTypesPass extends RewritePass {
     val instDeclP = InstanceDecl(instD.instanceId, instD.moduleId, instD.arguments, Some(instType), instD.modType)
     Some(instDeclP)
   }
+  override def rewriteInstanceArray(instD : InstanceArrayDecl, context : Scope) : Option[InstanceArrayDecl] = {
+    val actualArgTypes = instD.arguments.map {
+      (p) => p._2 match {
+        case Some(arg) => (p._1, Some(exprTypeChecker.typeOf(arg, context)))
+        case None => (p._1, None)
+      }
+    }
+    val instType = ModuleInstanceType(actualArgTypes)
+    val instDeclP = InstanceArrayDecl(instD.instanceId, instD.inTypes, instD.moduleId, instD.arguments, Some(instType), instD.modType)
+    Some(instDeclP)
+  }
 }
 
 class ComputeInstanceTypes extends ASTRewriter(

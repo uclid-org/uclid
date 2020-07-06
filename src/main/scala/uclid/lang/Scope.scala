@@ -49,6 +49,7 @@ object Scope {
   }
   case class ModuleDefinition(mod : Module) extends ReadOnlyNamedExpression(mod.id, mod.moduleType)
   case class Instance(instD: InstanceDecl) extends ReadOnlyNamedExpression(instD.instanceId, instD.moduleType)
+  case class InstanceArray(instsD: InstanceArrayDecl) extends ReadOnlyNamedExpression(instsD.instanceId, instsD.moduleType)
   case class TypeSynonym(typId : Identifier, sTyp: Type) extends ReadOnlyNamedExpression(typId, sTyp)
   case class StateVar(varId : Identifier, varTyp: Type) extends NamedExpression(varId, varTyp)
   case class InputVar(inpId : Identifier, inpTyp: Type) extends ReadOnlyNamedExpression(inpId, inpTyp)
@@ -251,6 +252,8 @@ case class Scope (
       decl match {
         case instD : InstanceDecl =>
           Scope.addToMap(mapAcc, Scope.Instance(instD))
+        case instsD : InstanceArrayDecl =>
+          Scope.addToMap(mapAcc, Scope.InstanceArray(instsD))
         case ProcedureDecl(id, sig, _, _, _, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
         case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
         case StateVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.StateVar(id, typ)))
@@ -308,7 +311,7 @@ case class Scope (
         case ConstantsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
              ModuleFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
-             InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | 
+             InstanceDecl(_, _, _, _, _) | InstanceArrayDecl(_, _, _, _, _, _) | SpecDecl(_, _, _) | 
              AxiomDecl(_, _, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
     }
