@@ -1,3 +1,4 @@
+```
 Install Java 11
 1. `brew update`
 2. `brew tap homebrew/cask-versions`
@@ -25,3 +26,4 @@ install UCLID
 2. `sbt update clean compile`
 3. `sbt universal:packageBin`
 4. `unzip <target/universal>/uclid-0.9.5.zip; cd uclid-0.9.5; export PATH=$PATH:$PWD/bin`
+```
