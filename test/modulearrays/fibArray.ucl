@@ -21,7 +21,7 @@ module main
     instances fibs : [integer]fib(a : (as), b : (bs));
 
     init {
-        assume (fibs[1].a == fibs[2].a && fibs[1].b == fibs[2].b);
+        assume (as[1] == as[2] && bs[1] == bs[2]);
     }
 
     next {
@@ -29,17 +29,16 @@ module main
         next (fibs[2]);
     }
 
-    property b_are_eq : fibs[1].b == fibs[2].b;
-    property a_are_eq : fibs[1].a == fibs[2].a;
-    property b_gt_0  : fibs[1].b > 0 && fibs[2].b > 0;
-    property a_ge_0  : fibs[1].a >= 0 && fibs[2].a >= 0;
-    property a_le_b  : fibs[1].a <= fibs[1].b && fibs[2].a <= fibs[2].b;
+    property b_are_eq : bs[1] == bs[2];
+    property a_are_eq : as[1] == as[2];
+    property b_gt_0  : bs[1] > 0 && bs[2] > 0;
+    property a_ge_0  : as[1] >= 0 && as[2] >= 0;
+    property a_le_b  : as[1] <= bs[1] && as[2] <= bs[2];
 
     control {
-        v = unroll(5);
-        // v = induction;
+        v = induction;
         check;
         print_results;
-        v.print_cex(fibs[1].a, fibs[1].b, fibs[2].a, fibs[2].b);
+        v.print_cex(as[1], bs[1], as[2], bs[2]);
     }
 }

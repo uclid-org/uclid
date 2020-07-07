@@ -416,6 +416,18 @@ class ModuleVerifSpec extends FlatSpec {
   "issue-187b.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/issue-187b.ucl", 0)
   }
+  "fibArray.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/modulearrays/fibArray.ucl", 0)
+  }
+  "fibArray2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/modulearrays/fibArray2.ucl", 0)
+  }
+  "fibArray3.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/modulearrays/fibArray3.ucl", 0)
+  }
+  "fibArrayAndInstance.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/modulearrays/fibArrayAndInstance.ucl", 0)
+  }
 }
 class LTLVerifSpec extends FlatSpec {
   "test-history-1.ucl" should "verify all assertions." in {
