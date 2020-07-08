@@ -24,8 +24,8 @@ module main
     }
 
     next {
-        next (fibs[1]);
-        next (fibs[2]);
+        var tmp : integer;
+        next (fibs[tmp + 1]);
     }
 
     property b_are_eq : bs[1] == bs[2];

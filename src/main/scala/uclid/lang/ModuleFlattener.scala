@@ -505,9 +505,13 @@ class ModuleInstantiatorPass(module : Module, inst : Either[InstanceDecl, Instan
   }
   // rewrite module array.
   override def rewriteModuleArrayCall(modCall : ModuleArrayCallStmt, context : Scope) : Option[Statement] = {
+    val intypes = inst match {
+      case Left(i) => List()
+      case Right(i) => i.inTypes
+    }
     if (modCall.id == instId) {
       val idxmap : Map[Expr, Expr] = instVarMap.map({ case (a, b) => b -> OperatorApplication(ArraySelect(List(modCall.expr)), List(b))})
-      val tmprewriter = new ModuleNextGeneralizerRewriter("InlineAddIndxs", modCall.expr, idxmap)
+      val tmprewriter = new ModuleNextGeneralizerRewriter("InlineAddIndxs", modCall.expr, idxmap, intypes)
       val newins = tmprewriter.rewriteStatements(newInputAssignments, context)
       val newnexts = tmprewriter.rewriteStatements(newNextStatements, context)
       Some(BlockStmt(List.empty, newins ++ newnexts))
@@ -858,20 +862,64 @@ class ModuleFlattener(mainModule : Identifier) extends ASTRewriter(
 // Generalize module that will be used for instance array
 class ModuleInitGeneralizerRewriterPass(inTypes : List[Type]) extends RewritePass
 {
+  override def rewriteType(typ: Type, context: Scope): Option[Type] = {
+    Some(ArrayType(inTypes, typ))
+  }
 
+ override def rewriteAssign(st: AssignStmt, ctx: Scope): Option[Statement] = {
+    val zipped = st.lhss zip st.rhss
+    val mapped : List[Statement] = zipped.map(v => generalizeAssign(inTypes, v._1, v._2))
+    if (mapped.size > 1) {
+      Some(BlockStmt(List(), mapped))
+    } else {
+     Some(mapped(0)) 
+    }
+  }  
+  
+  def generalizeAssign(inTypes : List[Type], lhs : Lhs, rhs : Expr) : Statement = {
+    val vs = inTypes.zipWithIndex.map(v => (Identifier("x" + v._2), v._1))
+    val rwr = new AddQuantifierRewriter("Add Quantifiers", vs.map(v => v._1))
+    val quantified = OperatorApplication(EqualityOp(), List(rwr.visitExpr(lhs.ident, Scope.empty).get, rwr.visitExpr(rhs, Scope.empty).get))
+    AssumeStmt(OperatorApplication(ForallOp(vs, List()), List(quantified)), None)
+  }
 }
 
 class ModuleInitGeneralizerRewriter(name: String, inTypes : List[Type])
   extends ASTRewriter(name, new ModuleInitGeneralizerRewriterPass(inTypes))
 {
-  override def visitType(typ: Type, context: Scope): Option[Type] = {
-    Some(ArrayType(inTypes, typ))
+  override def visitNext(next: NextDecl, context: Scope): Option[NextDecl] = {
+    Some(next)
   }
 }
 
-class ModuleNextGeneralizerRewriter(name: String, idx : Expr, rewrites : Map[Expr, Expr])
+class AddQuantifierRewriterPass(vs : List[Identifier]) extends RewritePass
+{
+  override def rewriteExpr(e: Expr, ctx: Scope): Option[Expr] = {
+    e match {
+      case v : Identifier => Some(OperatorApplication(ArraySelect(vs), List(v)))
+      case _ => Some(e)
+    }
+  }
+}
+
+class AddQuantifierRewriter(name: String, vs : List[Identifier])
+  extends ASTRewriter(name, new AddQuantifierRewriterPass(vs))
+{
+
+}
+
+class ModuleNextGeneralizerRewriter(name: String, idx : Expr, rewrites : Map[Expr, Expr], inTypes : List[Type])
   extends ExprRewriter(name, rewrites)
 {
+
+  override def visitType(typ: Type, context: Scope): Option[Type] = {
+    if (inTypes.size > 0) {
+      Some(ArrayType(inTypes, typ))
+    } else {
+      Some(typ)
+    }
+  }
+
   override def visitAssignStatement(st : AssignStmt, ctx : Scope) : Option[Statement] = {
     st match {
       case AssignStmt(List(x), List(y)) =>
