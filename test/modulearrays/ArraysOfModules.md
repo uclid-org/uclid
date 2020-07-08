@@ -24,3 +24,6 @@ assume(ms_a[0] == true);
 # Details/Notes
 - We create an array for everything the `ModuleFlattener` flattens.
 - Need to take special care with "instance procedure map"
+
+# TODO
+- multiple calls to next with different arguments?
