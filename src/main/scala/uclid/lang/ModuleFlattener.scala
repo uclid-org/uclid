@@ -474,16 +474,15 @@ class ModuleInstantiatorPass(module : Module, inst : Either[InstanceDecl, Instan
   }
   // rewrite module array.
   override def rewriteModuleArrayCall(modCall : ModuleArrayCallStmt, context : Scope) : Option[Statement] = {
-    val intypes = inst match {
-      case Left(i) => List()
-      case Right(i) => i.inTypes
-    }
     if (modCall.id == instId) {
       val idxmap : Map[Expr, Expr] = instVarMap.map({ case (a, b) => b -> OperatorApplication(ArraySelect(List(modCall.expr)), List(b))})
-      val tmprewriter = new ModuleNextGeneralizerRewriter("InlineAddIndxs", modCall.expr, idxmap, intypes)
+      val tmprewriter = new ExprRewriter("InlineAddIndxs", idxmap)
       val newins = tmprewriter.rewriteStatements(newInputAssignments, context)
       val newnexts = tmprewriter.rewriteStatements(newNextStatements, context)
-      Some(BlockStmt(List.empty, newins ++ newnexts))
+      val tmpGeneralizer = new ModuleNextGeneralizerRewriter("InlineFixTypes", modCall.expr)
+      val newins2 = newins.map(p => tmpGeneralizer.visitStatement(p, context).get)
+      val newnexts2 = newnexts.map(p => tmpGeneralizer.visitStatement(p, context).get)
+      Some(BlockStmt(List.empty, newins2 ++ newnexts2))
     } else {
       Some(modCall)
     }
@@ -863,33 +862,50 @@ class ModuleInitGeneralizerRewriterPass(inTypes : List[Type]) extends RewritePas
 class ModuleInitGeneralizerRewriter(name: String, inTypes : List[Type])
   extends ASTRewriter(name, new ModuleInitGeneralizerRewriterPass(inTypes))
 {  
-  override def visitNext(next: NextDecl, context: Scope): Option[NextDecl] = {
-    Some(next)
+  override def visitDecl(decl : Decl, context : Scope) : Option[Decl] = {
+    val declP = (decl match {
+      case initDecl : InitDecl => visitInit(initDecl, context.withEnvironment(ProceduralEnvironment))
+      case _ => Some(decl)
+    }).flatMap(pass.rewriteDecl(_, context))
+    return declP
   }
 }
 
-class ModuleNextGeneralizerRewriter(name: String, idx : Expr, rewrites : Map[Expr, Expr], inTypes : List[Type])
-  extends ExprRewriter(name, rewrites)
+class ModuleNextGeneralizerRewriterPass(arg : Expr) extends RewritePass
 {
-
-  override def visitType(typ: Type, context: Scope): Option[Type] = {
-    if (inTypes.size > 0) {
-      Some(ArrayType(inTypes, typ))
-    } else {
-      Some(typ)
-    }
+  override def rewriteBlock(st: BlockStmt, ctx: Scope): Option[Statement] = {
+    val contextP = ctx + st.vars
+    val blkStmtP1 = BlockStmt(st.vars, st.stmts.flatMap(bst => visitInsideBlock(bst, contextP, st.vars)))
+    Some(blkStmtP1)
   }
 
-  override def visitAssignStatement(st : AssignStmt, ctx : Scope) : Option[Statement] = {
+  def visitInsideBlock(st  : Statement, ctx: Scope, local : List[BlockVarsDecl]): Option[Statement] = {
     st match {
-      case AssignStmt(List(x), List(y)) =>
-        rewrites.get(x.ident) match {
-          case Some(e) => Some(st)
-          case None => 
-            val update = rewriteExpr(OperatorApplication(ArrayUpdate(List(idx), y), List(x.ident)), ctx)
-            Some(AssignStmt(List(x), List(update)))
-        }
+      case AssignStmt(lhss, rhss) => 
+        val zipped = lhss zip rhss
+        val mapped : List[(Lhs, Expr)] = zipped.map(v => generalizeAssign(v._1, v._2, ctx, local))
+        Some(AssignStmt(mapped.map(v => v._1), mapped.map(v => v._2)))
       case _ => Some(st)
     }
+  }
+  
+  def generalizeAssign(lhs : Lhs, rhs : Expr, ctx: Scope, local : List[BlockVarsDecl]) : (Lhs, Expr) = {
+    if (local.map(v => v.ids).flatten.contains(lhs.ident)) {
+      (lhs, rhs)
+    } else {
+      (lhs, OperatorApplication(ArrayUpdate(List(arg), rhs), List(lhs.ident)))
+    }
+  }
+}
+
+class ModuleNextGeneralizerRewriter(name: String, arg : Expr)
+  extends ASTRewriter(name, new ModuleNextGeneralizerRewriterPass(arg))
+{  
+  override def visitDecl(decl : Decl, context : Scope) : Option[Decl] = {
+    val declP = (decl match {
+      case nextDecl : NextDecl => visitNext(nextDecl, context.withEnvironment(SequentialEnvironment))
+      case _ => Some(decl)
+    }).flatMap(pass.rewriteDecl(_, context))
+    return declP
   }
 }
