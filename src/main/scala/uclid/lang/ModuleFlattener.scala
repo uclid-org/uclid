@@ -169,7 +169,7 @@ class ModuleInstantiatorPass(module : Module, inst : Either[InstanceDecl, Instan
     // map each input
 
     val idMap1 = inst match {
-      case Left(_) => {
+      case Left(_) | Right(_) => {
         targetModule.inputs.foldLeft(idMap0) {
           (mapAcc, inp) => {
             instArgMap.get(inp._1) match {
@@ -179,21 +179,11 @@ class ModuleInstantiatorPass(module : Module, inst : Either[InstanceDecl, Instan
           }
         }
       }
-      case Right(i) => {
-        targetModule.inputs.foldLeft(idMap0) {
-          (mapAcc, inp) => {
-            instArgMap.get(inp._1) match {
-              case Some(expr) =>  mapAcc + (inp._1 -> MIP.BoundInput(NameProvider.get(inp._1.toString + "_bound_input"), ArrayType(i.inTypes, inp._2), expr))
-              case None => mapAcc + (inp._1 -> MIP.UnboundInput(NameProvider.get(inp._1.toString + "_unbound_input"), ArrayType(i.inTypes, inp._2)))
-            }
-          }
-        }
-      } 
     }
 
     // map each output
     val idMap2 = inst match {
-      case Left(_) => {
+      case Left(_) | Right(_) => {
         targetModule.outputs.foldLeft(idMap1) {
           (mapAcc, out) => {
             instArgMap.get(out._1) match {
@@ -203,37 +193,17 @@ class ModuleInstantiatorPass(module : Module, inst : Either[InstanceDecl, Instan
           }
         }
       }
-      case Right(i) => {
-        targetModule.outputs.foldLeft(idMap1) {
-          (mapAcc, out) => {
-            instArgMap.get(out._1) match {
-              case Some(expr) => mapAcc + (out._1 -> MIP.BoundOutput(MIP.extractLhs(expr).get, ArrayType(i.inTypes, out._2)))
-              case None => mapAcc + (out._1 -> MIP.UnboundOutput(NameProvider.get(out._1.toString() + "_unbound_output"), ArrayType(i.inTypes, out._2)))
-            }
-          }
-        }
-      } 
     }
 
     // map each shared variable
     val idMap3 = inst match {
-      case Left(_) => {
+      case Left(_) | Right(_) => {
         targetModule.sharedVars.foldLeft(idMap2) {
           (mapAcc, sharedVar) => {
             val mapping = instArgMap.get(sharedVar._1)
             Utils.assert(mapping.isDefined, "All shared variables must be mapped.")
             val origVar = MIP.extractId(mapping.get).get
             mapAcc + (sharedVar._1 -> MIP.SharedVariable(origVar, sharedVar._2))
-          }
-        }
-      }
-      case Right(i) => {
-        targetModule.sharedVars.foldLeft(idMap2) {
-          (mapAcc, sharedVar) => {
-            val mapping = instArgMap.get(sharedVar._1)
-            Utils.assert(mapping.isDefined, "All shared variables must be mapped.")
-            val origVar = MIP.extractId(mapping.get).get
-            mapAcc + (sharedVar._1 -> MIP.SharedVariable(origVar, ArrayType(i.inTypes, sharedVar._2)))
           }
         }
       } 
@@ -310,7 +280,6 @@ class ModuleInstantiatorPass(module : Module, inst : Either[InstanceDecl, Instan
   }
 
   def createNewModule() : Module = {
-    // TODO: Generalize for instance arrays!
     inst match {
       case Left(i) => rewriter.visit(targetModule, Scope.empty).get
       case Right(i) =>
@@ -510,11 +479,12 @@ class ModuleInstantiatorPass(module : Module, inst : Either[InstanceDecl, Instan
       case Right(i) => i.inTypes
     }
     if (modCall.id == instId) {
-      val idxmap : Map[Expr, Expr] = instVarMap.map({ case (a, b) => b -> OperatorApplication(ArraySelect(List(modCall.expr)), List(b))})
-      val tmprewriter = new ModuleNextGeneralizerRewriter("InlineAddIndxs", modCall.expr, idxmap, intypes)
-      val newins = tmprewriter.rewriteStatements(newInputAssignments, context)
-      val newnexts = tmprewriter.rewriteStatements(newNextStatements, context)
-      Some(BlockStmt(List.empty, newins ++ newnexts))
+      // val idxmap : Map[Expr, Expr] = instVarMap.map({ case (a, b) => b -> OperatorApplication(ArraySelect(List(modCall.expr)), List(b))})
+      // val tmprewriter = new ModuleNextGeneralizerRewriter("InlineAddIndxs", modCall.expr, idxmap, intypes)
+      // val newins = tmprewriter.rewriteStatements(newInputAssignments, context)
+      // val newnexts = tmprewriter.rewriteStatements(newNextStatements, context)
+      // Some(BlockStmt(List.empty, newins ++ newnexts))
+      Some(BlockStmt(List.empty, newInputAssignments ++ newNextStatements))
     } else {
       Some(modCall)
     }
@@ -866,70 +836,81 @@ class ModuleInitGeneralizerRewriterPass(inTypes : List[Type]) extends RewritePas
     Some(ArrayType(inTypes, typ))
   }
 
- override def rewriteAssign(st: AssignStmt, ctx: Scope): Option[Statement] = {
-    val zipped = st.lhss zip st.rhss
-    val mapped : List[Statement] = zipped.map(v => generalizeAssign(inTypes, v._1, v._2))
-    if (mapped.size > 1) {
-      Some(BlockStmt(List(), mapped))
-    } else {
-     Some(mapped(0)) 
+  override def rewriteBlock(st: BlockStmt, ctx: Scope): Option[Statement] = {
+    val contextP = ctx + st.vars
+    val blkStmtP1 = BlockStmt(st.vars, st.stmts.flatMap(bst => visitInsideBlock(bst, contextP, st.vars)))
+    Some(blkStmtP1)
+  }
+
+  def visitInsideBlock(st  : Statement, ctx: Scope, local : List[BlockVarsDecl]): Option[Statement] = {
+    st match {
+      case AssignStmt(lhss, rhss) => 
+        val zipped = lhss zip rhss
+        val mapped : List[(Lhs, Expr)] = zipped.map(v => generalizeAssign(v._1, v._2, ctx, local))
+        Some(AssignStmt(mapped.map(v => v._1), mapped.map(v => v._2)))
+      case _ => Some(st)
     }
-  }  
+  }
   
-  def generalizeAssign(inTypes : List[Type], lhs : Lhs, rhs : Expr) : Statement = {
-    val vs = inTypes.zipWithIndex.map(v => (Identifier("x" + v._2), v._1))
-    val rwr = new AddQuantifierRewriter("Add Quantifiers", vs.map(v => v._1))
-    val quantified = OperatorApplication(EqualityOp(), List(rwr.visitExpr(lhs.ident, Scope.empty).get, rwr.visitExpr(rhs, Scope.empty).get))
-    AssumeStmt(OperatorApplication(ForallOp(vs, List()), List(quantified)), None)
+  def generalizeAssign(lhs : Lhs, rhs : Expr, ctx: Scope, local : List[BlockVarsDecl]) : (Lhs, Expr) = {
+    if (local.map(v => v.ids).flatten.contains(lhs.ident)) {
+      (lhs, rhs)
+    } else {
+      if (ctx.vars.map(v => v.id).contains(lhs.ident)) {
+        (lhs, ConstArray(rhs, ArrayType(inTypes, ctx.typeOf(lhs.ident).get)))
+      } else {
+        (lhs, ConstArray(rhs, ctx.typeOf(lhs.ident).get))
+      }
+    }
   }
 }
 
 class ModuleInitGeneralizerRewriter(name: String, inTypes : List[Type])
   extends ASTRewriter(name, new ModuleInitGeneralizerRewriterPass(inTypes))
-{
+{  
   override def visitNext(next: NextDecl, context: Scope): Option[NextDecl] = {
     Some(next)
   }
 }
 
-class AddQuantifierRewriterPass(vs : List[Identifier]) extends RewritePass
-{
-  override def rewriteExpr(e: Expr, ctx: Scope): Option[Expr] = {
-    e match {
-      case v : Identifier => Some(OperatorApplication(ArraySelect(vs), List(v)))
-      case _ => Some(e)
-    }
-  }
-}
+// class AddQuantifierRewriterPass(vs : List[Identifier]) extends RewritePass
+// {
+//   override def rewriteExpr(e: Expr, ctx: Scope): Option[Expr] = {
+//     e match {
+//       case v : Identifier => Some(OperatorApplication(ArraySelect(vs), List(v)))
+//       case _ => Some(e)
+//     }
+//   }
+// }
 
-class AddQuantifierRewriter(name: String, vs : List[Identifier])
-  extends ASTRewriter(name, new AddQuantifierRewriterPass(vs))
-{
+// class AddQuantifierRewriter(name: String, vs : List[Identifier])
+//   extends ASTRewriter(name, new AddQuantifierRewriterPass(vs))
+// {
 
-}
+// }
 
-class ModuleNextGeneralizerRewriter(name: String, idx : Expr, rewrites : Map[Expr, Expr], inTypes : List[Type])
-  extends ExprRewriter(name, rewrites)
-{
+// class ModuleNextGeneralizerRewriter(name: String, idx : Expr, rewrites : Map[Expr, Expr], inTypes : List[Type])
+//   extends ExprRewriter(name, rewrites)
+// {
 
-  override def visitType(typ: Type, context: Scope): Option[Type] = {
-    if (inTypes.size > 0) {
-      Some(ArrayType(inTypes, typ))
-    } else {
-      Some(typ)
-    }
-  }
+//   override def visitType(typ: Type, context: Scope): Option[Type] = {
+//     if (inTypes.size > 0) {
+//       Some(ArrayType(inTypes, typ))
+//     } else {
+//       Some(typ)
+//     }
+//   }
 
-  override def visitAssignStatement(st : AssignStmt, ctx : Scope) : Option[Statement] = {
-    st match {
-      case AssignStmt(List(x), List(y)) =>
-        rewrites.get(x.ident) match {
-          case Some(e) => Some(st)
-          case None => 
-            val update = rewriteExpr(OperatorApplication(ArrayUpdate(List(idx), y), List(x.ident)), ctx)
-            Some(AssignStmt(List(x), List(update)))
-        }
-      case _ => Some(st)
-    }
-  }
-}
+//   override def visitAssignStatement(st : AssignStmt, ctx : Scope) : Option[Statement] = {
+//     st match {
+//       case AssignStmt(List(x), List(y)) =>
+//         rewrites.get(x.ident) match {
+//           case Some(e) => Some(st)
+//           case None => 
+//             val update = rewriteExpr(OperatorApplication(ArrayUpdate(List(idx), y), List(x.ident)), ctx)
+//             Some(AssignStmt(List(x), List(update)))
+//         }
+//       case _ => Some(st)
+//     }
+//   }
+// }

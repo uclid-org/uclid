@@ -1100,9 +1100,9 @@ case class ModuleType(
   lazy val instanceArrayMap : Map[Identifier, Type] = instanceArrays.map(a => (a._1 -> a._2)).toMap
   lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ funcMap.map(f => (f._1 -> f._2.typ))  ++ instanceMap ++ instanceArrayMap
   lazy val externalTypeMap : Map[Identifier, Type] = constantMap ++ funcMap.map(f => (f._1 -> f._2.typ)) ++ constLitMap.map(f => (f._1 -> f._2.typeOf))
-  def typeOf(id : Identifier) : Option[Type] = {
-    typeMap.get(id)
-  }
+  // def typeOf(id : Identifier) : Option[Type] = {
+  //   typeMap.get(id)
+  // }
 
   override def toString =
     "inputs (" + argsToString(inputs) + ") outputs (" + argsToString(outputs) + ")"
@@ -1392,19 +1392,19 @@ case class InstanceArrayDecl(instanceId : Identifier, inTypes: List[Type], modul
   }
   lazy val inputMap = modType.get.inputs.map({
     p => argMap.get(p._1) match {
-      case Some(expr) => Some(p._1, p._2, expr)
+      case Some(expr) => Some(p._1, ArrayType(inTypes, p._2), expr)
       case None => None
     }
   }).flatten
   lazy val sharedVarMap = modType.get.sharedVars.map({ 
     p => argMap.get(p._1) match {
-      case Some(expr) => Some(p._1, p._2, expr)
+      case Some(expr) => Some(p._1, ArrayType(inTypes, p._2), expr)
       case None => None
     }
   }).flatten
   lazy val outputMap = modType.get.outputs.map({ 
     p => argMap.get(p._1) match {
-      case Some(expr) => Some(p._1, p._2, expr)
+      case Some(expr) => Some(p._1, ArrayType(inTypes, p._2), expr)
       case None => None
     }
   }).flatten
