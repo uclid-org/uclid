@@ -1723,9 +1723,9 @@ case class GenericProofCommand(
   override def toString = {
     val nameStr = name.toString
     val paramStr = if (params.size > 0) { "[" + Utils.join(params.map(_.toString), ", ") + "]" } else { "" }
-    val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
+    val argStr = if (args.size > 0) { "(" + args(0)._2 + ")"} else {""} 
     val resultStr = resultVar match { case Some(id) => id.toString + " = "; case None => "" }
-    val objStr = argObj match { case Some(id) => id.toString + "->"; case None => "" }
+    val objStr = argObj match { case Some(id) => id.toString + "."; case None => "" }
     resultStr + objStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
   }
   override val hashId = 4200
@@ -1756,7 +1756,7 @@ case class InstanceProcMapAnnotation(iMap: Map[List[Identifier], ProcedureDecl])
     val start = PrettyPrinter.indent(1) + "// instance_proc_map { "
     val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), ".") + " ::==> " + p._2.toString)
     val end = PrettyPrinter.indent(1) + "// } end_instance_proc_map"
-    Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
+    Utils.join(List(start) ++ /*(lines ++*/ List(end), "\n") +"\n"
   }
   override val hashId = 4302
   override val md5hashCode = computeMD5Hash(iMap.toList)
@@ -1772,7 +1772,7 @@ case class ExprRenameMapAnnotation(renameMap_ : MutableMap[Expr, BigInt], enumVa
     val start = PrettyPrinter.indent(1) + "// expr_rename_map { "
     val lines = renameMap_.map(p => PrettyPrinter.indent(1) + "//   " + (p._1.toString + " => " + p._2.toString))
     val end = PrettyPrinter.indent(1) + "// } end_expr_rename_map"
-    Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
+    Utils.join(List(start) ++ /*(lines ++*/ List(end), "\n") +"\n"
   }
   override val hashId = 4301
   override val md5hashCode = computeMD5Hash(renameMap_.toList, enumVarTypeMap_.toList)
