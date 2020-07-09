@@ -21,9 +21,7 @@ module main
     var m : machines;
 
     init {
-        assume (forall (x : machines) :: fibs[x].a == fibs[x].b);
-        assume (forall (x : machines) :: fibs[x].a >= 0);
-        assume (forall (x : machines) :: fibs[x].b >= 0);
+        
     }
 
     next {

@@ -26,4 +26,4 @@ assume(ms_a[0] == true);
 - Need to take special care with "instance procedure map"
 
 # TODO
-- multiple calls to next with different arguments?
+- Assume/Assert and other specs in child module

@@ -2,10 +2,10 @@ module fib
 {
     sharedvar a, b : integer;
 
-    // init {
-    //     a = 0;
-    //     b = 1;
-    // }
+    init {
+        a = 0;
+        b = 1;
+    }
 
     next {
         a' = b;
