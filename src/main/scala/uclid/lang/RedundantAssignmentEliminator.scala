@@ -90,6 +90,29 @@ class RedundantAssignmentEliminatorPass extends RewritePass {
     }
     Some(blkP)
   }
+
+    override def rewriteAssign(st: AssignStmt, ctx: Scope): Option[Statement] = {
+    val zipped = st.lhss zip st.rhss
+    val mapped : List[Option[(Lhs, Expr)]] = zipped.map(v => redundantAssign(v._1, v._2))
+    val filtered : List[(Lhs, Expr)] = mapped.filter(p => p.isDefined).map(p => p.get)
+    if (filtered.isEmpty) {
+      None
+    } else {
+      Some(AssignStmt(filtered.map(p => p._1),  filtered.map(p => p._2)))
+    }
+  }
+  def redundantAssign(lhs : Lhs, rhs : Expr) : Option[(Lhs, Expr)] = {
+    rhs match {
+      case e : Identifier => {
+        if (e == lhs.ident) {
+          None
+        } else {
+          Some((lhs, rhs))
+        }
+      }
+      case _ => Some((lhs, rhs))
+    }
+  }
 }
 
 class RedundantAssignmentEliminator extends ASTRewriter("RedundantAssignmentEliminator", new RedundantAssignmentEliminatorPass())
