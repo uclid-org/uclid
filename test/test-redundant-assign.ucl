@@ -1,0 +1,15 @@
+module main
+{
+  var n : integer;
+  var x : integer;
+  init {
+    n = 0;
+    n = n;
+    n,x = n,x;
+  }
+  next {
+    n' = n + 1;
+  }
+
+}
+
