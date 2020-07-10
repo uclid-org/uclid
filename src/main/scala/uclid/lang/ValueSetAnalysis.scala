@@ -181,10 +181,12 @@ class ValueSetAnalysis extends ASTAnalysis {
             val valueSetRewriter = new ASTRewriter("valueSetAnalysis.ValueSetRewriter", new ValueSetAssignRewriterPass(changeSet))
             modP = valueSetRewriter.visit(mod1.getOrElse(mod), context)
             done = true;
+            
             if(changeSet.size>0)
             {
-              println("changeSet size: "+ changeSet.size + ", Set: " + changeSet)
+              println("changeSet: " + changeSet)
             }
+            println("changeSet size: " + changeSet.size)
 
             val redundantAssignmentEliminator = new RedundantAssignmentEliminator()
             modP2 = redundantAssignmentEliminator.visit(modP.getOrElse(mod),context)      
