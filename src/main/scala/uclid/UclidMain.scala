@@ -296,6 +296,7 @@ object UclidMain {
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamer("BV"))
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamerCons("BV"))
     if (config.ufToArray)     passManager.addPass(new UninterpretedFunctionToArray())
+    passManager.addPass(new ValueSetAnalysis()) 
     // passManager.addPass(new ASTPrinter())
     // run passes.
     passManager.run(moduleList)
