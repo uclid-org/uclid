@@ -214,6 +214,7 @@ case class Scope (
   lazy val vars = map.filter(_._2.isInstanceOf[Scope.StateVar]).map(_._2.asInstanceOf[Scope.StateVar]).toSet
   lazy val outputs = map.filter(_._2.isInstanceOf[Scope.OutputVar]).map(_._2.asInstanceOf[Scope.OutputVar]).toSet
   lazy val specs = map.filter(_._2.isInstanceOf[Scope.SpecVar]).map(_._2.asInstanceOf[Scope.SpecVar]).toSet
+  lazy val blockvars = map.filter(_._2.isInstanceOf[Scope.BlockVar]).map(_._2.asInstanceOf[Scope.BlockVar]).toSet
   lazy val moduleDefinitionMap = map.filter(_._2.isInstanceOf[Scope.ModuleDefinition]).map {
     d => {
       val moduleDefn = d._2.asInstanceOf[Scope.ModuleDefinition]

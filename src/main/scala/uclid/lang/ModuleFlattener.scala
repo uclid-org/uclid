@@ -830,8 +830,28 @@ class ModuleFlattener(mainModule : Identifier) extends ASTRewriter(
 // Generalize module that will be used for instance array
 class ModuleInitGeneralizerRewriterPass(inTypes : List[Type]) extends RewritePass
 {
-  override def rewriteType(typ: Type, context: Scope): Option[Type] = {
-    Some(ArrayType(inTypes, typ))
+  override def rewriteBlockVars(bvars : BlockVarsDecl, ctx : Scope) : Option[BlockVarsDecl] = { 
+    Some(bvars.copy(typ = ArrayType(inTypes, bvars.typ))) 
+  }
+
+  override def rewriteStateVars(stVars : StateVarsDecl, ctx : Scope) : Option[StateVarsDecl] = { 
+    Some(stVars.copy(typ = ArrayType(inTypes, stVars.typ))) 
+  }
+
+  override def rewriteInputVars(inpVars : InputVarsDecl, ctx : Scope) : Option[InputVarsDecl] = { 
+    Some(inpVars.copy(typ = ArrayType(inTypes, inpVars.typ))) 
+  }
+
+  override def rewriteOutputVars(outvars : OutputVarsDecl, ctx : Scope) : Option[OutputVarsDecl] = { 
+    Some(outvars.copy(typ = ArrayType(inTypes, outvars.typ))) 
+  }
+
+  override def rewriteSharedVars(sharedVars : SharedVarsDecl, ctx : Scope) : Option[SharedVarsDecl] = { 
+    Some(sharedVars.copy(typ = ArrayType(inTypes, sharedVars.typ))) 
+  }
+
+  override def rewriteConstant(cnst : ConstantsDecl, ctx : Scope) : Option[ConstantsDecl] = { 
+    Some(cnst.copy(typ = ArrayType(inTypes, cnst.typ))) 
   }
 
   override def rewriteBlock(st: BlockStmt, ctx: Scope): Option[Statement] = {
@@ -862,35 +882,30 @@ class ModuleInitGeneralizerRewriterPass(inTypes : List[Type]) extends RewritePas
 class ModuleInitGeneralizerRewriter(name: String, inTypes : List[Type])
   extends ASTRewriter(name, new ModuleInitGeneralizerRewriterPass(inTypes))
 {  
-  override def visitDecl(decl : Decl, context : Scope) : Option[Decl] = {
-    val declP = (decl match {
-      case initDecl : InitDecl => visitInit(initDecl, context.withEnvironment(ProceduralEnvironment))
-      case _ => Some(decl)
-    }).flatMap(pass.rewriteDecl(_, context))
-    return declP
-  }
+  // don't do anything to next
+  override def visitNext(next: NextDecl, context: Scope): Option[NextDecl] = { Some(next) }
 }
 
 class ModuleNextGeneralizerRewriterPass(arg : Expr) extends RewritePass
 {
   override def rewriteBlock(st: BlockStmt, ctx: Scope): Option[Statement] = {
     val contextP = ctx + st.vars
-    val blkStmtP1 = BlockStmt(st.vars, st.stmts.flatMap(bst => visitInsideBlock(bst, contextP, st.vars)))
+    val blkStmtP1 = BlockStmt(st.vars, st.stmts.flatMap(bst => visitInsideBlock(bst, contextP)))
     Some(blkStmtP1)
   }
 
-  def visitInsideBlock(st  : Statement, ctx: Scope, local : List[BlockVarsDecl]): Option[Statement] = {
+  def visitInsideBlock(st  : Statement, ctx: Scope): Option[Statement] = {
     st match {
       case AssignStmt(lhss, rhss) => 
         val zipped = lhss zip rhss
-        val mapped : List[(Lhs, Expr)] = zipped.map(v => generalizeAssign(v._1, v._2, ctx, local))
+        val mapped : List[(Lhs, Expr)] = zipped.map(v => generalizeAssign(v._1, v._2, ctx))
         Some(AssignStmt(mapped.map(v => v._1), mapped.map(v => v._2)))
       case _ => Some(st)
     }
   }
   
-  def generalizeAssign(lhs : Lhs, rhs : Expr, ctx: Scope, local : List[BlockVarsDecl]) : (Lhs, Expr) = {
-    if (local.map(v => v.ids).flatten.contains(lhs.ident)) {
+  def generalizeAssign(lhs : Lhs, rhs : Expr, ctx: Scope) : (Lhs, Expr) = {
+    if (ctx.blockvars.map(v => v.id).contains(lhs.ident)) {
       (lhs, rhs)
     } else {
       (lhs, OperatorApplication(ArrayUpdate(List(arg), rhs), List(lhs.ident)))
@@ -901,11 +916,6 @@ class ModuleNextGeneralizerRewriterPass(arg : Expr) extends RewritePass
 class ModuleNextGeneralizerRewriter(name: String, arg : Expr)
   extends ASTRewriter(name, new ModuleNextGeneralizerRewriterPass(arg))
 {  
-  override def visitDecl(decl : Decl, context : Scope) : Option[Decl] = {
-    val declP = (decl match {
-      case nextDecl : NextDecl => visitNext(nextDecl, context.withEnvironment(SequentialEnvironment))
-      case _ => Some(decl)
-    }).flatMap(pass.rewriteDecl(_, context))
-    return declP
-  }
+  // don't do anything to the init block
+  override def visitInit(init: InitDecl, context: Scope): Option[InitDecl] = { Some(init) } 
 }

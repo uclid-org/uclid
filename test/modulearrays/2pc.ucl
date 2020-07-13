@@ -1,0 +1,191 @@
+// BEST MODEL SO FAR
+module common
+{
+    type transID;
+    type key;
+    type value;
+    const null : value;
+    function keys(t : transID) : key;
+    function values(t : transID) : value;
+}
+
+module Participant
+{
+    type * = common.*;
+
+    // incoming events
+    sharedvar ePrepare        : [transID]integer; 
+    sharedvar eGlobalCommit   : [transID]integer;
+    sharedvar eGlobalAbort    : [transID]integer; 
+    // outgoing events
+    sharedvar ePrepareSuccess : [transID]integer; 
+    sharedvar ePrepareFailed  : [transID]integer;
+
+    var kvstore : [key]value; // p's kvstore
+
+    init
+    {
+        ePrepare        = const (0, [transID]integer);
+        eGlobalAbort    = const (0, [transID]integer);
+        eGlobalCommit   = const (0, [transID]integer);
+        ePrepareSuccess = const (0, [transID]integer);
+        ePrepareFailed  = const (0, [transID]integer);
+
+        kvstore = const (common.null, [key]value);
+    }
+
+    next
+    {
+        var t : transID; // pick some transaction
+        if (*) {
+            // participant p ePrepare on the current
+            if (ePrepare[t] > 0) {
+                if (*) {
+                    ePrepareSuccess' = ePrepareSuccess[t -> ePrepareSuccess[t] + 1];
+                } else {
+                    ePrepareFailed' = ePrepareFailed[t -> ePrepareFailed[t] + 1];
+                }
+                ePrepare' = ePrepare[t -> ePrepare[t] - 1];
+            }
+        } else { if (*) {
+            // participant p eGlobalCommits the round it was told to eGlobalCommit
+            if (eGlobalCommit[t] > 0) {
+                kvstore' = kvstore[common.keys(t) -> common.values(t)];
+                eGlobalCommit' = eGlobalCommit[t -> eGlobalCommit[t] - 1];
+            }
+        } else {
+            // participant p eGlobalAborts the round it was told to eGlobalAbort
+            if (eGlobalAbort[t] > 0) {
+                eGlobalAbort' = eGlobalAbort[t -> eGlobalAbort[t] - 1];
+            }
+        }}
+    }
+}
+
+
+
+module main
+{
+    type * = common.*;
+    type p_ref;
+    type state_enum = enum {WaitForTransactions, WaitForPrepareResponses};
+
+    var state : state_enum;
+    var current : transID;
+
+    var ePrepares         : [p_ref][transID]integer; 
+    var eGlobalCommits    : [p_ref][transID]integer;
+    var eGlobalAborts     : [p_ref][transID]integer; 
+    var ePrepareSuccesses : [p_ref][transID]integer;
+    var ePrepareFaileds   : [p_ref][transID]integer;
+
+    instances participants : [p_ref]Participant(ePrepare : (ePrepares), ePrepareSuccess : (ePrepareSuccesses), ePrepareFailed : (ePrepareFaileds), eGlobalCommit : (eGlobalCommits), eGlobalAbort : (eGlobalAborts));
+
+    // Helper Procedures
+    procedure add_one(w: [p_ref][transID]integer, id : transID) returns (v: [p_ref][transID]integer)
+        requires forall (n : p_ref) :: w[n][id] == 0;
+        ensures forall (n : p_ref) :: v[n][id] == w[n][id] + 1;
+        ensures forall (n : p_ref, t : transID) :: t != id ==> v[n][t] == w[n][t];  // doesn't matter how we achieve this
+    { }
+
+    procedure reset(w: [p_ref][transID]integer, id : transID) returns (v: [p_ref][transID]integer)
+        ensures forall (n : p_ref) :: v[n][id] == 0;
+        ensures forall (n : p_ref, t : transID) :: id != t ==> v[n][t] == w[n][t]; // doesn't matter how we achieve this
+    { }
+
+    init
+    {
+        state = WaitForTransactions;
+    }
+
+    next
+    {
+        // Participant
+        var p : p_ref; // pick some participant
+        var t : transID; // pick some transaction
+
+        if (*) {
+            next(participants[p]);
+        } else { if (*) {
+            // THE MAIN ASSUMPTION: only get a new current once all p_ref have eGlobalCommited (or they are aborting)
+            if(forall (n : p_ref) :: eGlobalCommits[n][current] == 0 && eGlobalAborts[n][current] == 0){
+                if(state == WaitForTransactions) {
+                    // coordinator receives request
+                    current' = t;
+                    call (ePrepares') = add_one(ePrepares, t);
+                    state' = WaitForPrepareResponses;
+
+                }
+            }
+        } else { if (*) {
+            // some participant rejects the current round, so the coordinator tells them all to eGlobalAbort
+            if(state == WaitForPrepareResponses && ePrepareFaileds[p][t] > 0) {
+                // p voted no
+                call (eGlobalAborts')    = add_one(eGlobalAborts, t);
+                state' = WaitForTransactions;
+
+                call (ePrepareFaileds')   = reset(ePrepareFaileds, t);
+                call (ePrepareSuccesses') = reset(ePrepareSuccesses, t);
+                call (ePrepares')         = reset(ePrepares, t);
+            }
+        } else {
+            if (state == WaitForPrepareResponses && ePrepareSuccesses[p][t] > 0) {
+                // p voted yes
+                if(forall (n : p_ref) :: ePrepareSuccesses[n][t] > 0) {
+                    // all p_ref accept the current round, so the coordinator tells them to eGlobalCommit
+                    call (eGlobalCommits')   = add_one(eGlobalCommits, t);
+                    state' = WaitForTransactions;
+
+                    call (ePrepareFaileds')   = reset(ePrepareFaileds, t);
+                    call (ePrepareSuccesses') = reset(ePrepareSuccesses, t);
+                    call (ePrepares')         = reset(ePrepares, t);
+                }
+            }
+        }}}
+    }
+
+    // main invariant: when no eGlobalCommit is on the way, every kvstore must be equal.
+    invariant sync_when_no_eGlobalCommit: (forall (n : p_ref) :: eGlobalCommits[n][current] == 0) ==> 
+            (forall (n1 : p_ref, n2 : p_ref, k : key) :: participants[n1].kvstore[k] == participants[n2].kvstore[k]);
+
+    // helpers
+    invariant eGlobalCommit_means_everyone_eGlobalCommit_or_eGlobalCommited: 
+        (forall (n1 : p_ref, t : transID) :: eGlobalCommits[n1][t] > 0 ==> 
+            (forall (n2 : p_ref) :: (eGlobalCommits[n2][t] > 0 || participants[n2].kvstore[common.keys(t)] == common.values(t))));
+
+    invariant no_lonely_kvstore: (forall (n1 : p_ref,  n2 : p_ref, k1 : key, v1 : value) :: 
+        participants[n1].kvstore[k1] == v1 ==> (participants[n2].kvstore[k1] == v1 || k1 == common.keys(current)));
+
+    invariant one_GlobalCommit_at_a_time: (forall (n : p_ref, t : transID) :: eGlobalCommits[n][t] > 0 ==> (eGlobalCommits[n][t] == 1));
+    invariant one_GlobalAbort_at_a_time: (forall (n : p_ref, t : transID) :: eGlobalAborts[n][t] > 0 ==> (eGlobalAborts[n][t] == 1));
+    invariant one_Prepare_at_a_time: (forall (n : p_ref, t : transID) :: ePrepares[n][t] > 0 ==> (ePrepares[n][t] == 1));
+    invariant one_PrepareSuccess_at_a_time: (forall (n : p_ref, t : transID) :: ePrepareSuccesses[n][t] > 0 ==> (ePrepareSuccesses[n][t] == 1));
+    invariant one_PrepareFailed_at_a_time: (forall (n : p_ref, t : transID) :: ePrepareFaileds[n][t] > 0 ==> (ePrepareFaileds[n][t] == 1));
+
+    invariant GlobalCommit_always_natural: (forall (n : p_ref, t : transID) :: eGlobalCommits[n][t] >= 0);
+    invariant GlobalAbort_always_natural: (forall (n : p_ref, t : transID) :: eGlobalAborts[n][t] >= 0);
+    invariant Prepare_always_natural: (forall (n : p_ref, t : transID) :: ePrepares[n][t] >= 0);
+    invariant PrepareSuccess_always_natural: (forall (n : p_ref, t : transID) :: ePrepareSuccesses[n][t] >= 0);
+    invariant PrepareFailed_always_natural: (forall (n : p_ref, t : transID) :: ePrepareFaileds[n][t] >= 0);
+
+    invariant GlobalCommit_means_WaitForTransactions: (exists (n : p_ref, t : transID) :: (eGlobalCommits[n][t] > 0 || eGlobalAborts[n][t] > 0)) ==> state == WaitForTransactions;
+    invariant Prepare_means_WaitForPrepareResponses: (exists (n : p_ref, t : transID) :: (ePrepares[n][t] > 0 || ePrepareFaileds[n][t] > 0 || ePrepareSuccesses[n][t] > 0)) ==> state == WaitForPrepareResponses;
+
+    invariant one_GlobalCommit_overall: (forall (n : p_ref, t1 : transID) :: eGlobalCommits[n][t1] > 0 ==> (forall (t2 : transID) :: t1 != t2 ==> eGlobalCommits[n][t2] == 0));
+    invariant one_GlobalAbort_overall: (forall (n : p_ref, t1 : transID) :: eGlobalAborts[n][t1] > 0 ==> (forall (t2 : transID) :: t1 != t2 ==> eGlobalAborts[n][t2] == 0));
+    invariant one_Prepare_overall: (forall (n : p_ref, t1 : transID) :: ePrepares[n][t1] > 0 ==> (forall (t2 : transID) :: t1 != t2 ==> ePrepares[n][t2] == 0));
+
+    invariant everything_false_except_current: (forall (n1 : p_ref, t : transID) :: t != current ==> (eGlobalCommits[n1][t] == 0 && eGlobalAborts[n1][t] == 0 && ePrepares[n1][t] == 0 && ePrepareSuccesses[n1][t] == 0 && ePrepareFaileds[n1][t] == 0));
+
+    invariant cant_succed_and_fail: (forall (n1: p_ref, t : transID) :: (ePrepareSuccesses[n1][t] == 0 && ePrepareFaileds[n1][t] == 0) || ((ePrepareSuccesses[n1][t] > 0 || ePrepareFaileds[n1][t] > 0) && (ePrepareSuccesses[n1][t] == 0 || ePrepareFaileds[n1][t] == 0)));
+    invariant cant_prepare_and_fail: (forall (n1: p_ref, t : transID) :: (ePrepares[n1][t] == 0 && ePrepareFaileds[n1][t] == 0) || ((ePrepares[n1][t] > 0 || ePrepareFaileds[n1][t] > 0) && (ePrepares[n1][t] == 0 || ePrepareFaileds[n1][t] == 0)));
+    invariant cant_prepare_and_succed: (forall (n1: p_ref, t : transID) :: (ePrepares[n1][t] == 0 && ePrepareSuccesses[n1][t] == 0) || ((ePrepares[n1][t] > 0 || ePrepareSuccesses[n1][t] > 0) && (ePrepares[n1][t] == 0 || ePrepareSuccesses[n1][t] == 0)));
+
+    control
+    {
+        v = induction;
+        check;
+        print_results;
+        v.print_cex;
+    }
+}
