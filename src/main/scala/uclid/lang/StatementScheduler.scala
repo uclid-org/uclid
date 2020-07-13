@@ -246,6 +246,7 @@ object StatementScheduler {
       case Identifier(_) => Set.empty
       case ExternalIdentifier(_, _) => Set.empty
       case _ : Literal => Set.empty
+      case ConstArray(exp, typ) => Set.empty
       case Tuple(values) => primeReadSets(values)
       case OperatorApplication(GetNextValueOp(), List(id : Identifier)) => Set(id)
       case OperatorApplication(ArraySelect(inds), exps) => primeReadSets(inds) ++ primeReadSets(exps)

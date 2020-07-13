@@ -62,8 +62,6 @@ module Participant
     }
 }
 
-
-
 module main
 {
     type * = common.*;
@@ -85,13 +83,10 @@ module main
     procedure add_one(w: [p_ref][transID]integer, id : transID) returns (v: [p_ref][transID]integer)
         requires forall (n : p_ref) :: w[n][id] == 0;
         ensures forall (n : p_ref) :: v[n][id] == w[n][id] + 1;
-        ensures forall (n : p_ref, t : transID) :: t != id ==> v[n][t] == w[n][t];  // doesn't matter how we achieve this
-    { }
-
-    procedure reset(w: [p_ref][transID]integer, id : transID) returns (v: [p_ref][transID]integer)
-        ensures forall (n : p_ref) :: v[n][id] == 0;
-        ensures forall (n : p_ref, t : transID) :: id != t ==> v[n][t] == w[n][t]; // doesn't matter how we achieve this
-    { }
+        ensures forall (n : p_ref, t : transID) :: t != id ==> v[n][t] == w[n][t];  
+    { 
+        // doesn't matter how we achieve this
+    }
 
     init
     {
@@ -114,19 +109,18 @@ module main
                     current' = t;
                     call (ePrepares') = add_one(ePrepares, t);
                     state' = WaitForPrepareResponses;
-
                 }
             }
         } else { if (*) {
             // some participant rejects the current round, so the coordinator tells them all to eGlobalAbort
             if(state == WaitForPrepareResponses && ePrepareFaileds[p][t] > 0) {
                 // p voted no
-                call (eGlobalAborts')    = add_one(eGlobalAborts, t);
+                call (eGlobalAborts') = add_one(eGlobalAborts, t);
                 state' = WaitForTransactions;
 
-                call (ePrepareFaileds')   = reset(ePrepareFaileds, t);
-                call (ePrepareSuccesses') = reset(ePrepareSuccesses, t);
-                call (ePrepares')         = reset(ePrepares, t);
+                ePrepareFaileds'   = const (const (0, [transID]integer), [p_ref][transID]integer);
+                ePrepareSuccesses' = const (const (0, [transID]integer), [p_ref][transID]integer);
+                ePrepares'         = const (const (0, [transID]integer), [p_ref][transID]integer);
             }
         } else {
             if (state == WaitForPrepareResponses && ePrepareSuccesses[p][t] > 0) {
@@ -136,9 +130,9 @@ module main
                     call (eGlobalCommits')   = add_one(eGlobalCommits, t);
                     state' = WaitForTransactions;
 
-                    call (ePrepareFaileds')   = reset(ePrepareFaileds, t);
-                    call (ePrepareSuccesses') = reset(ePrepareSuccesses, t);
-                    call (ePrepares')         = reset(ePrepares, t);
+                    ePrepareFaileds'   = const (const (0, [transID]integer), [p_ref][transID]integer);
+                    ePrepareSuccesses' = const (const (0, [transID]integer), [p_ref][transID]integer);
+                    ePrepares'         = const (const (0, [transID]integer), [p_ref][transID]integer);
                 }
             }
         }}}
