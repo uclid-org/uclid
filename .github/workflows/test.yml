@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  test:
+  test-ubuntu:
     runs-on: ubuntu-latest
 
     steps:
@@ -58,3 +58,40 @@ jobs:
 
     - name: Package
       run: sbt universal:packageBin
+
+  test-macos:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: olafurpg/setup-scala@v5
+      with:
+        java-version: openjdk@1.11
+
+    - name: Install Z3
+      run: |
+        git clone https://github.com/Z3Prover/z3.git
+        cd z3
+        python scripts/mk_make.py --java
+        cd build
+        make -j4
+        sudo make install
+        cd ../..
+
+    - name: Print Z3 Version
+      run: z3 --version
+
+    - name: Copy the Z3 java libraries
+      run: |
+        sudo cp $GITHUB_WORKSPACE/z3/build/libz3java.dylib /Library/Java/Extensions/
+        sudo cp $GITHUB_WORKSPACE/z3/build/libz3.dylib /usr/local/lib/     
+
+    - name: Compile
+      run: sbt compile
+
+    - name: Test UCLID
+      run: sbt "set fork:=true" test
+
+    - name: Package UCLID
+      run: |
+        sbt universal:packageBin
