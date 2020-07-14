@@ -68,23 +68,25 @@ jobs:
       with:
         java-version: openjdk@1.11
 
-    - name: Install Z3
+    - name: Cache Z3
+      id: cache-z3
+      uses: actions/cache@v1
+      with:
+        path: z3/
+        key: ${{ runner.os }}-z3-${{ hashFiles('get-z3-macos.sh') }}-1
+
+    - name: Download Z3
+      if: steps.cache-z3.outputs.cache-hit != 'true'
+      run: ./get-z3-macos.sh
+       
+    - name: Add Z3 to Path
       run: |
-        git clone https://github.com/Z3Prover/z3.git
-        cd z3
-        python scripts/mk_make.py --java
-        cd build
-        make -j4
-        sudo make install
-        cd ../..
+       ls $GITHUB_WORKSPACE/z3/bin/
+       echo "::add-path::$GITHUB_WORKSPACE/z3/bin/"
+       echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/"
 
     - name: Print Z3 Version
-      run: z3 --version
-
-    - name: Copy the Z3 java libraries
-      run: |
-        sudo cp $GITHUB_WORKSPACE/z3/build/libz3java.dylib /Library/Java/Extensions/
-        sudo cp $GITHUB_WORKSPACE/z3/build/libz3.dylib /usr/local/lib/     
+      run: z3 --version 
 
     - name: Compile
       run: sbt compile
