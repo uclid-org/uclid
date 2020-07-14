@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  test:
+  test-ubuntu:
     runs-on: ubuntu-latest
 
     steps:
@@ -57,4 +57,42 @@ jobs:
       run: sbt "set fork:=true" test
 
     - name: Package
+      run: sbt universal:packageBin
+
+  test-macos:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: olafurpg/setup-scala@v5
+      with:
+        java-version: openjdk@1.11
+
+    - name: Cache Z3
+      id: cache-z3
+      uses: actions/cache@v1
+      with:
+        path: z3/
+        key: ${{ runner.os }}-z3-${{ hashFiles('get-z3-macos.sh') }}-1
+
+    - name: Download Z3
+      if: steps.cache-z3.outputs.cache-hit != 'true'
+      run: ./get-z3-macos.sh
+       
+    - name: Add Z3 to Path
+      run: |
+       ls $GITHUB_WORKSPACE/z3/bin/
+       echo "::add-path::$GITHUB_WORKSPACE/z3/bin/"
+       echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/"
+
+    - name: Print Z3 Version
+      run: z3 --version 
+
+    - name: Compile
+      run: sbt compile
+
+    - name: Test UCLID
+      run: sbt "set fork:=true" test
+
+    - name: Package UCLID
       run: sbt universal:packageBin
