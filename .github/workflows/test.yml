@@ -93,5 +93,4 @@ jobs:
       run: sbt "set fork:=true" test
 
     - name: Package UCLID
-      run: |
-        sbt universal:packageBin
+      run: sbt universal:packageBin
