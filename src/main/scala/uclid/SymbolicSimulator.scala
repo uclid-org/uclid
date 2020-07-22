@@ -195,8 +195,12 @@ class SymbolicSimulator (module : Module) {
             }
             // get_init_lambda(false, context, "some")
             val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, 
-                                    context, label, createNoLTLFilter(properties), createNoLTLFilter(properties), solver)
+            initialize(false, true, false, context, label, createNoLTLFilter(properties), createNoLTLFilter(properties))
+            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, 
+                            createNoLTLFilter(properties), createNoLTLFilter(properties))
+
+            // symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, 
+            //                         context, label, createNoLTLFilter(properties), createNoLTLFilter(properties), solver)
           case "horn" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString
