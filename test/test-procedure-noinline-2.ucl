@@ -1,0 +1,23 @@
+
+module main {
+    var v : integer;
+
+  procedure [noinline] incr()
+    modifies v;
+    {
+        assert(v==0);
+    }
+    init {
+        v = 0;
+        call () = incr();
+    }
+    next{}
+
+    invariant myinv: v==0;
+
+    control {
+        v = induction; // should fail
+        check;
+        print_results;
+    }
+}
