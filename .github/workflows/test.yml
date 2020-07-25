@@ -84,7 +84,8 @@ jobs:
        ls $GITHUB_WORKSPACE/z3/bin/
        echo "::add-path::$GITHUB_WORKSPACE/z3/bin/"
        echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/"
-
+       ./setup-z3-macos.sh
+  
     - name: Print Z3 Version
       run: z3 --version 
 
