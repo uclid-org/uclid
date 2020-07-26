@@ -1306,7 +1306,11 @@ class SymbolicSimulator (module : Module) {
     (0 to lastFrame).foreach{ case (i) => {
       UclidMain.println("=================================")
       UclidMain.println("Step #" + i.toString)
-      printFrame(simTable, i, model, exprsToPrint, scope)
+      try{
+          printFrame(simTable, i, model, exprsToPrint, scope)
+      }  catch{
+            case _: Throwable => UclidMain.println("error: unable to parse counterexample frame")
+      }
       UclidMain.println("=================================")
     }}
   }
