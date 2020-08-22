@@ -117,7 +117,7 @@ class SymbolicSimulator (module : Module) {
   def newSynthSymbol(name: String, t: FunctionSig, gid : Option[Identifier], gargs: List[Identifier], conds : List[Expr]) = {
     new smt.SynthSymbol("synth_" + name, t, gid, gargs, conds)
   }
-  def newGrammarSymbol(name: String, t: smt.Type, nts: List[NonTerminal]) = {
+  def newGrammarSymbol(name: String, t: smt.Type, nts: List[smt.NonTerminal]) = {
     new smt.GrammarSymbol("grammar_" + name, t, nts)
   }
   def newTaintSymbol(name: String, t: smt.Type) = {
@@ -342,7 +342,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.OutputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> newGrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> newGrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts.map(smt.Converter.nonTerminalToSMT(_, scope))))
           case _ => mapAcc
         }
       }
@@ -1488,6 +1488,7 @@ class SymbolicSimulator (module : Module) {
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
       case lambda : Lambda =>
         isStatelessExpr(lambda.e, context + lambda)
+      // case FuncAppTerm(_, _) | OpAppTerm(_, _) => throw new Utils.RuntimeError("Grammar terms should not be part of model expressions.")
     }
   }
 
@@ -1561,7 +1562,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts.map(smt.Converter.nonTerminalToSMT(_, scope))))
           case _ => mapAcc
         }
       }
@@ -1579,7 +1580,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
-          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts.map(smt.Converter.nonTerminalToSMT(_, scope))))
           case _ => mapAcc
         }
       }
@@ -1597,7 +1598,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!", smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!", smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!", smt.Converter.typeToSMT(typ)))
-          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts.map(smt.Converter.nonTerminalToSMT(_, scope))))
           case _ => mapAcc
         }
       }

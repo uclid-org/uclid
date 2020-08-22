@@ -328,7 +328,7 @@ object UclidMain {
       logger.debug("args: {}", config.smtSolver)
       new smt.SMTLIB2Interface(config.smtSolver)
     } else if (config.synthesizer.size > 0) {
-      new smt.SynthLibInterface(config.synthesizer, config.sygusFormat)
+      new smt.SynthLibInterface(config.synthesizer, config.sygusFormat, module)
     } else {
       new smt.Z3Interface()
     }

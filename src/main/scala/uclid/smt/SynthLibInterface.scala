@@ -44,7 +44,7 @@ import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.mutable.{Set => MutableSet}
 import com.typesafe.scalalogging.Logger
 
-class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLIB2Interface(args) {
+class SynthLibInterface(args: List[String], sygusSyntax : Boolean, module: lang.Module) extends SMTLIB2Interface(args) {
   val synthliblogger = Logger(classOf[SynthLibInterface])
 
   var astack   : List[List[String]] = List.empty
@@ -71,6 +71,11 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     out += cmd
   }
 
+  // TODO: change to grammar symbol
+  def generateGrammarDeclaration(gSym: lang.GrammarDecl): String = {
+    ""
+  }
+
   def generateSynthDeclaration(sym: SynthSymbol) = {
     val (typeName, newTypes) = generateDatatype(sym.typ)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
@@ -81,7 +86,10 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     var cmd = ""
 
     if (sygusSyntax) {
-      cmd = "(synth-fun %s (%s) %s)\n".format(sym, sig, typeName)
+      println("found grammar: " + module.grammarDecls.find(gDecl => !sym.gid.isEmpty && gDecl.id == sym.gid.get).toString())
+      val grammarDeclOpt = module.grammarDecls.find(gDecl => !sym.gid.isEmpty && gDecl.id == sym.gid.get)
+      val grammar = grammarDeclOpt.fold("")(generateGrammarDeclaration _)
+      cmd = "(synth-fun %s (%s) %s %s)\n".format(sym, sig, typeName, grammar)
     } else {
       cmd = "(synth-blocking-fun %s (%s) %s)\n".format(sym, sig, typeName)
     }
@@ -136,6 +144,8 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
 
   override def checkSynth() : SolverResult = {
     val query = toString()
+    synthliblogger.debug("========= synthesis query =========\n" + query)
+    synthliblogger.debug("===================================")
     writeCommand(query)
     val ans = {
       readResponse() match {
