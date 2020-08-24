@@ -822,12 +822,6 @@ case class AssignmentModel(functions : List[Expr]) extends Hashable {
   override val md5hashCode = computeMD5Hash(functions)
   override def toString = Utils.join(functions.map(fun => fun.toString()), " ")
 }
-case class SynthSymbol(id: String, symbolTyp: lang.FunctionSig, gid: Option[Identifier], gargs: List[Identifier], conds : List[lang.Expr]) extends Expr (smt.Converter.typeToSMT(symbolTyp.typ)) {
-  override val hashId = mix(id.hashCode(), mix(symbolTyp.typ.hashCode(), 315))
-  override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash(id, symbolTyp.typ)
-  override def toString = id.toString
-}
 
 class Bindings(val freeVars : List[Symbol], val letVars : List[Symbol], val lambdaVars : List[Symbol], val quantifierVars: List[Symbol]) {
   def addFreeVar(v : Symbol) = {

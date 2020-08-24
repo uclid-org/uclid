@@ -71,9 +71,8 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean, module: lang.
     out += cmd
   }
 
-  // TODO: change to grammar symbol
-  def generateGrammarDeclaration(gSym: lang.GrammarDecl): String = {
-    ""
+  def generateGrammarDeclaration(grammarSymbol: smt.GrammarSymbol): String = {
+    grammarSymbol.toString
   }
 
   def generateSynthDeclaration(sym: SynthSymbol) = {
@@ -86,9 +85,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean, module: lang.
     var cmd = ""
 
     if (sygusSyntax) {
-      println("found grammar: " + module.grammarDecls.find(gDecl => !sym.gid.isEmpty && gDecl.id == sym.gid.get).toString())
-      val grammarDeclOpt = module.grammarDecls.find(gDecl => !sym.gid.isEmpty && gDecl.id == sym.gid.get)
-      val grammar = grammarDeclOpt.fold("")(generateGrammarDeclaration _)
+      val grammar = sym.grammar.fold("")(generateGrammarDeclaration _)
       cmd = "(synth-fun %s (%s) %s %s)\n".format(sym, sig, typeName, grammar)
     } else {
       cmd = "(synth-blocking-fun %s (%s) %s)\n".format(sym, sig, typeName)
@@ -144,8 +141,6 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean, module: lang.
 
   override def checkSynth() : SolverResult = {
     val query = toString()
-    synthliblogger.debug("========= synthesis query =========\n" + query)
-    synthliblogger.debug("===================================")
     writeCommand(query)
     val ans = {
       readResponse() match {

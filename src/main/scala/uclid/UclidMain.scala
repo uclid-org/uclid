@@ -205,6 +205,7 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceFindWidth())
     passManager.addPass(new ExpressionTypeChecker())
     if (!test) passManager.addPass(new VerificationExpressionChecker())
+    passManager.addPass(new PolymorphicGrammarTypeRewriter())
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new FindProcedureDependency())
     passManager.addPass(new DefDepGraphChecker())

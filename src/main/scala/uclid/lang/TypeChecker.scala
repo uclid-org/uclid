@@ -697,3 +697,143 @@ class PolymorphicTypeRewriterPass extends RewritePass {
 }
 class PolymorphicTypeRewriter extends ASTRewriter(
     "PolymorphicTypeRewriter", new PolymorphicTypeRewriterPass())
+
+
+// Polymorphic type rewriter for synthesis grammars
+class PolymorphicGrammarTypeRewriterPass extends RewritePass {
+  // Map storing the types of the grammar terms
+  // TODO(kkmc): Need to implement a renamer pass to rewrite all the grammar terms
+  //             so shadowing doesn't occur if multiple grammars are defined with
+  //             the same symbol or nonterminal identifiers
+  var typeMap: MutableMap[GrammarTerm, Type] = MutableMap.empty
+
+  /** Returns the type for a grammar term
+   *  @term The grammar term
+   *  @ctx  Context of the current AST visit
+   */
+  def getTermType(term: GrammarTerm, ctx: Scope): Type = {
+    // Try to find type from the memoized type map
+    val typOpt = typeMap.get(term)
+    if (!typOpt.isEmpty) return typOpt.get
+
+    // Try to find type from grammar non terminals
+    term match {
+      case st: SymbolTerm => ctx.get(st.id) match {
+        case Some(nt) => nt.typ
+        case None => throw new Utils.RuntimeError("Should never get here. Could not find non terminal " + st.id + " type.")
+      }
+      case _ => throw new Utils.RuntimeError("Should never get here. Could not determine grammar term type of " + term.toString + ".")
+    }
+  }
+
+  /** Infers the type of the operator application term
+   *
+   *  @opAppTerm The operator application term whose operator is polymorphic
+   */
+  def getReifiedOpType(opAppTerm: OpAppTerm): Option[Type] = {
+    Utils.assert(opAppTerm.op.isPolymorphic, "Cannot get reified op type of a non polymorphic operator " + opAppTerm.op + ".")
+    opAppTerm.op match {
+      case AddOp() | SubOp() | LEOp() => typeMap.get(opAppTerm.args(0))
+      case _ => None
+    }
+  }
+
+  /** Returns the operator application term type based on the operator and arguments
+   *
+   *  TODO(kkmc): Add BVSignExtOp and BVZeroExtOp
+   *
+   *  @opAppTerm The operator application term to infer the type for
+   */
+  def getOpAppTermType(opAppTerm: OpAppTerm): Type = {
+    Utils.assert(!opAppTerm.op.isPolymorphic, "Cannot infer type of polymorphic operator " + opAppTerm.op.toString + ".")
+    opAppTerm.op match {
+      case IntAddOp() | IntSubOp() | IntMulOp() | IntUnaryMinusOp() | ITEOp() |
+           BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVAndOp(_) | BVOrOp(_) |
+           BVXorOp(_) | BVNotOp(_) | BVUnaryMinusOp(_) | BVLeftShiftBVOp(_) |
+           BVLRightShiftBVOp(_) | BVARightShiftBVOp(_) | BVUremOp(_) | BVSremOp(_) => typeMap(opAppTerm.args(0))
+      case IntLTOp() | IntLEOp() | IntGTOp() | IntGEOp() | BVLTOp(_) |
+           BVLEOp(_) | BVGTOp(_) | BVGEOp(_) | BVLTUOp(_) | BVLEUOp(_) |
+           BVGTUOp(_) | BVGEUOp(_) => BooleanType()
+      case _ => throw new Utils.UnimplementedException("Unimplemented OpAppTerm type inference for operator " + opAppTerm.op + ".")
+    }
+  }
+
+  /** Computes the reified operator for the given OpAppTerm
+   *
+   *  @opAppTerm Operator application term
+   */
+  def getReifiedOp(opAppTerm: OpAppTerm): Option[Operator] = {
+    // Return None if the operator is already reified reifify the operator
+    if (!opAppTerm.op.isPolymorphic) return None
+
+    val op = opAppTerm.op.asInstanceOf[PolymorphicOperator]
+    getReifiedOpType(opAppTerm).get match {
+      case IntegerType() => Some(ReplacePolymorphicOperators.toInt(op))
+      case BitVectorType(w) => Some(ReplacePolymorphicOperators.toBitvector(op, w))
+      case _ => throw new Utils.UnimplementedException("Unimplemented reified OpAppTerm Operator translation for " + opAppTerm.op + ".")
+    }
+  }
+
+  /** Update type map with function application type
+   *
+   *  @funcAppTerm the function application whose type needs to be memoized
+   *  @ctx the current context
+   */
+  override def rewriteFuncAppTerm(funcAppTerm : FuncAppTerm, ctx : Scope) : Option[FuncAppTerm] = {
+    val typ = ctx.typeOf(funcAppTerm.id).get
+    typeMap += (funcAppTerm -> typ)
+    Some(funcAppTerm)
+  }
+
+  /** Rewrite the operator application with the reified type and update the type map
+   *
+   *  @opAppTerm the operator application whose operator needs to be reified
+   *  @ctx the current context
+   */
+  override def rewriteOpAppTerm(opAppTerm : OpAppTerm, ctx : Scope) : Option[OpAppTerm] = {
+    val reifiedOpOpt = getReifiedOp(opAppTerm)
+    reifiedOpOpt match {
+      case Some(op) => {
+        val opAppTermP = OpAppTerm(op, opAppTerm.args)
+        val opAppType = getOpAppTermType(opAppTermP)
+        typeMap += (opAppTermP -> opAppType)
+        Some(opAppTermP)
+      }
+      case None => Some(opAppTerm)
+    }
+  }
+
+  /** Update type map with the literal term type
+   *
+   *  @litTerm the term whose type needs to be memoized
+   *  @ctx the current context
+   */
+  override def rewriteLiteralTerm(litTerm : LiteralTerm, ctx : Scope) : Option[LiteralTerm] = {
+    typeMap += (litTerm -> litTerm.lit.typeOf)
+    Some(litTerm)
+  }
+
+  /** Update type map with the symbol term type
+   *
+   *  @symTerm the term whose type needs to be memoized
+   *  @ctx the current context
+   */
+  override def rewriteSymbolTerm(symTerm : SymbolTerm, ctx : Scope) : Option[SymbolTerm] = {
+    val typ = getTermType(symTerm, ctx)
+    typeMap += (symTerm -> typ)
+    Some(symTerm)
+  }
+
+  /** Update type map with the constant term type
+   *
+   *  @constTerm the term whose type needs to be memoized
+   *  @ctx the current context
+   */
+  override def rewriteConstantTerm(constTerm : ConstantTerm, ctx : Scope) : Option[ConstantTerm] = {
+    typeMap += (constTerm -> constTerm.typ)
+    Some(constTerm)
+  }
+
+}
+
+class PolymorphicGrammarTypeRewriter extends ASTRewriter("PolymorphicGrammarTypeRewriter", new PolymorphicGrammarTypeRewriterPass())

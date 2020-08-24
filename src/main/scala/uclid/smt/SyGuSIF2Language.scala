@@ -39,6 +39,13 @@
 package uclid
 package smt
 
+case class SynthSymbol(id: String, symbolTyp: lang.FunctionSig, grammar: Option[GrammarSymbol], gargs: List[String], conds : List[lang.Expr]) extends Expr (smt.Converter.typeToSMT(symbolTyp.typ)) {
+  override val hashId = mix(id.hashCode(), mix(symbolTyp.typ.hashCode(), 315))
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash(id, symbolTyp.typ)
+  override def toString = id.toString
+}
+
 case class GrammarSymbol(id: String, symbolTyp: Type, nts : List[NonTerminal]) extends Expr (symbolTyp) {
   override val hashId = mix(id.hashCode(), mix(symbolTyp.hashCode(), 316))
   override val hashCode = computeHash
@@ -46,7 +53,7 @@ case class GrammarSymbol(id: String, symbolTyp: Type, nts : List[NonTerminal]) e
   override def toString = {
   	val nonTermDecls = Utils.join(nts.map(nt => "(" + nt.id + " " + nt.typ.toString + ")"), " ")
   	val grammarDecl = Utils.join(nts.map(_.toString), " ")
-  	"((%s) (%s))".format(nonTermDecls, grammarDecl)
+  	"(%s) (%s)".format(nonTermDecls, grammarDecl)
   }
 }
 
@@ -54,7 +61,7 @@ case class NonTerminal(id: String, typ: Type, terms: List[GrammarTerm]) extends 
   override val hashId = 4100
   override val hashBaseId = 4100
   override def toString = {
-    "(%s %s (%s))".format(id.toString, typ.toString, Utils.join(terms.map("(" + _.toString + ")"), " "))
+    "(%s %s (%s))".format(id.toString, typ.toString, Utils.join(terms.map(_.toString), " "))
   }
   override val md5hashCode = computeMD5Hash(id, typ, terms)
 }

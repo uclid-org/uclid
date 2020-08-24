@@ -57,7 +57,8 @@ object Scope {
   case class ConstantLit(cId : Identifier, lit : NumericLit) extends ReadOnlyNamedExpression(cId, lit.typeOf)
   case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
-  case class Grammar(gId : Identifier, gTyp : Type, nts : List[NonTerminal]) extends ReadOnlyNamedExpression(gId, gTyp)
+  case class Grammar(gId : Identifier, gTyp : Type, nts : List[lang.NonTerminal]) extends ReadOnlyNamedExpression(gId, gTyp)
+  case class NonTerminal(ntId: Identifier, ntTyp: Type, terms: List[GrammarTerm]) extends ReadOnlyNamedExpression(ntId, ntTyp)
   case class SynthesisFunction(fId : Identifier, fTyp: FunctionSig, gId: Option[Identifier], gargs: List[Identifier], conds : List[Expr]) extends ReadOnlyNamedExpression(fId, fTyp.typ)
   case class Define(dId : Identifier, dTyp : Type, defDecl: DefineDecl) extends ReadOnlyNamedExpression(dId, dTyp)
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
@@ -337,6 +338,11 @@ case class Scope (
     val newMap = sig.args.foldLeft(map){
       (mapAcc, id) => Scope.addToMap(mapAcc, Scope.FunctionArg(id._1, id._2))
     }
+    return Scope(newMap, module, procedure, cmd, environment, Some(this))
+  }
+  /** Return a new context with the nonterminal included. */
+  def +(nt: NonTerminal): Scope = {
+    val newMap = Scope.addToMap(map, Scope.NonTerminal(nt.id, nt.typ, nt.terms))
     return Scope(newMap, module, procedure, cmd, environment, Some(this))
   }
   /** Return a new context with effect of operator added. */

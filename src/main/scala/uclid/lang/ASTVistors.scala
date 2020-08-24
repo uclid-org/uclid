@@ -1291,9 +1291,10 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitNonterminal(nonTerm: NonTerminal, context: Scope) : Option[NonTerminal] = {
+    val contextP = context
     val idP = visitIdentifier(nonTerm.id, context)
     val typP = visitType(nonTerm.typ, context)
-    val termsP = nonTerm.terms //nonTerm.terms.map(visitGrammarTerm(_)).flatten
+    val termsP = nonTerm.terms.map(visitGrammarTerm(_, context)).flatten
     val nonTermP = (idP, typP) match {
       case (Some(id), Some(typ)) => pass.rewriteNonterminal(NonTerminal(id, typ, termsP), context)
       case _ => None
@@ -1311,11 +1312,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitGrammar(grammar: GrammarDecl, context: Scope) : Option[GrammarDecl] = {
-    val idOpt = visitIdentifier(grammar.id, context)
-    val sigOpt = visitFunctionSig(grammar.sig, context)
-    val nonterminalsP = grammar.nonterminals.map(visitNonterminal(_, context + grammar.sig)).flatten
+    val contextP = grammar.nonterminals.foldLeft(context)((acc, nt) => acc + nt)
+    val idOpt = visitIdentifier(grammar.id, contextP)
+    val sigOpt = visitFunctionSig(grammar.sig, contextP)
+    val nonterminalsP = grammar.nonterminals.map(visitNonterminal(_, contextP + grammar.sig)).flatten
     val grammarP = (idOpt, sigOpt) match {
-      case (Some(id), Some(sig)) => pass.rewriteGrammar(GrammarDecl(id, sig, nonterminalsP), context)
+      case (Some(id), Some(sig)) => pass.rewriteGrammar(GrammarDecl(id, sig, nonterminalsP), contextP)
       case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, grammarP, grammar.position)
