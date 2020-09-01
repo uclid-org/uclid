@@ -15,7 +15,7 @@ class ModuleCleanerPass() extends RewritePass {
     None
   }
   override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = {
-    val declsP = module.decls.sortWith((d1, d2) => d1.hashId < d2.hashId)
+    val declsP = module.decls.sortWith((d1, d2) => d1.hashCode() < d2.hashCode())
     Some(Module(module.id, declsP, module.cmds, module.notes))
   }
 }
