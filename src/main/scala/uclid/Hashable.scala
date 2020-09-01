@@ -12,14 +12,13 @@ trait Hashable {
   val hashId : Int
   val md5hashCode : Array[Byte]
 
-  val md5 : MD = MD.getInstance("MD5")
-
   def intToBytes(i : Int) : Array[Byte] = {
     ByteBuffer.allocate(4).putInt(i).array()
   }
 
   def computeMD5Hash() : Array[Byte] = computeMD5Hash(List.empty[Any])  // Empty argument call on computeMD5Hash
   def computeMD5Hash(args : Any*) : Array[Byte] = {
+    val md5 = MD.getInstance("MD5")
     md5.reset()
     md5.update(intToBytes(hashBaseId))
     md5.update(intToBytes(hashId))
