@@ -244,9 +244,11 @@ object UclidMain {
     val filenameAdderPass = new AddFilenameRewriter(None)
     // Helper function to parse a single file.
     def parseFile(srcFile : String) : List[Module] = {
-      val text = scala.io.Source.fromFile(srcFile).mkString
+      val file = scala.io.Source.fromFile(srcFile)
+      // TODO: parse line by line instead of loading the complete file into a string
+      val modules = UclidParser.parseModel(srcFile, file.mkString)
+      file.close()
       filenameAdderPass.setFilename(srcFile)
-      val modules = UclidParser.parseModel(srcFile, text)
       modules.map(m => filenameAdderPass.visit(m, Scope.empty)).flatten
     }
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
