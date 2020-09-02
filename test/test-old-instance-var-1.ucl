@@ -38,7 +38,7 @@ module main {
 
   instance cache : abstract_cache();
 
-  procedure havoc_cache_valid_map()
+  procedure [noinline] havoc_cache_valid_map()
     ensures (cache.cache_tag_map == old(cache.cache_tag_map));
     ensures (cache.cache_valid_map != old(cache.cache_valid_map));
     modifies cache;
@@ -46,7 +46,7 @@ module main {
     call cache.update_cache_valid_map();
   }
 
-  procedure havoc_cache_tag_map()
+  procedure [noinline] havoc_cache_tag_map()
     ensures (cache.cache_valid_map == old(cache.cache_valid_map));
     ensures (cache.cache_tag_map != old(cache.cache_tag_map));
     modifies cache;

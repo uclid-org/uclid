@@ -225,9 +225,9 @@ class ProcedureVerifSpec extends FlatSpec {
   "test-procedure-noinline.ucl" should "verify all but 1 assertion successfully" in {
     VerifierSpec.expectedFails("./test/test-procedure-noinline.ucl", 1)
   }
-  // "test-procedure-noinline-2.ucl" should "fail" in {
-  //   VerifierSpec.expectedFails("./test/test-procedure-noinline-2.ucl", 1)
-  // }
+  "test-procedure-noinline-2.ucl" should "fail" in {
+    VerifierSpec.expectedFails("./test/test-procedure-noinline-2.ucl", 1)
+  }
   "test-procedure-checker-2.ucl" should "verify all but 4 invariants successfully." in {
     VerifierSpec.expectedFails("./test/test-procedure-checker-2.ucl", 4)
   }
