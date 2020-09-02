@@ -62,7 +62,7 @@ object ASTPrinter {
 /** Simple analysis that instantiates ASTPrinterPass to print module. */
 class ASTPrinter() extends ASTAnalyzer(ASTPrinter.getName(), new ASTPrinterPass()) {
   override def pass = super.pass.asInstanceOf[ASTPrinterPass]
-  in = Some(Unit)
+  in = Some(())
 }
 
 class ExprRewriterPass(rewrites : Map[Expr, Expr]) extends RewritePass

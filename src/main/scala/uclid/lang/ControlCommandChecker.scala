@@ -61,7 +61,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     val cntLit = cmd.args(0)
     Utils.checkParsingError(cntLit._1.isInstanceOf[IntLit], "'%s' command expects a constant integer argument".format(cmd.name.toString), cmd.pos, filename)
     val cnt = cntLit._1.asInstanceOf[IntLit].value
-    val cntInt = cnt.intValue()
+    val cntInt = cnt.intValue
     Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large".format(cmd.name.toString), cmd.pos, filename)
   }
   def checkHasOneStringLitArg(cmd : GenericProofCommand, filename : Option[String]) {
@@ -96,7 +96,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       val cntLit = cmd.args(0)
       Utils.checkParsingError(cntLit._1.isInstanceOf[IntLit], "'%s' command expects a constant integer argument".format(cmd.name.toString), cmd.pos, filename)
       val cnt = cntLit._1.asInstanceOf[IntLit].value
-      val cntInt = cnt.intValue()
+      val cntInt = cnt.intValue
       Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large".format(cmd.name.toString), cmd.pos, filename)
     }
   }
@@ -205,5 +205,5 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
 }
 
 class ControlCommandChecker extends ASTAnalyzer("ContralCommandChecker", new ControlCommandCheckerPass())  {
-  in = Some(Unit)
+  in = Some(())
 }

@@ -128,7 +128,7 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
 
 class TypeSynonymFinder extends ASTAnalyzer("TypeSynonymFinder", new TypeSynonymFinderPass())  {
   override def pass = super.pass.asInstanceOf[TypeSynonymFinderPass]
-  in = Some(Unit)
+  in = Some(())
 }
 
 class TypeSynonymRewriterPass extends RewritePass {

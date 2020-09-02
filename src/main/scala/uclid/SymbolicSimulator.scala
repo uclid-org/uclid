@@ -1339,7 +1339,7 @@ class SymbolicSimulator (module : Module) {
     exprs.foreach { (e) => {
       try {
         val exprs = simTable.map(ft => m.evalAsString(evaluate(e._1, ft(frameNumber), ft, frameNumber, scope)))
-        val strings = Utils.join(exprs.map(_.toString()), ", ")
+        val strings = exprs.mkString(", ")
         UclidMain.println("  " + e._2 + " : " + strings)
       } catch {
         case excp : Utils.UnknownIdentifierException =>

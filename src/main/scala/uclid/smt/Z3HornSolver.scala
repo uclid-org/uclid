@@ -412,7 +412,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     //val initRule = createForall(initSymbolsBound.toArray, ctx.mkImplies(initConjunctsZ3(0),
     //  applyDecl(invSingle, initSymbolsBound)))
 
-    val initHyperRule = createForall(initHyperSymbolsBound.toArray, ctx.mkImplies(ctx.mkAnd(initConjunctsZ3 ++ hypAssumesInitZ3 : _*),
+    val initHyperRule = createForall(initHyperSymbolsBound.toArray, ctx.mkImplies(ctx.mkAnd((initConjunctsZ3 ++ hypAssumesInitZ3).toSeq : _*),
       applyDecl(invHyperDecl, initHyperSymbolsBound)))
     log.debug("The Init Conjunct " + initConjunctsZ3(0))
     //fp.addRule(initRule, ctx.mkSymbol("initRule"))
@@ -588,7 +588,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
 
     val nextHyperRule = createForall((initHyperSymbolsBound ++ nextHyperSymbolsBound).toArray,
-      ctx.mkImplies(ctx.mkAnd(applyDecl(invHyperDecl, initHyperSymbolsBound), ctx.mkAnd(nextConjunctsZ3 ++ hyperAssumesNextZ3 : _*)),
+      ctx.mkImplies(ctx.mkAnd(applyDecl(invHyperDecl, initHyperSymbolsBound), ctx.mkAnd((nextConjunctsZ3 ++ hyperAssumesNextZ3).toSeq : _*)),
         applyDecl(invHyperDecl, nextHyperSymbolsBound)
       )
     )
@@ -1186,7 +1186,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
     //val initRule = createForall(initSymbolsBound.toArray, ctx.mkImplies(initConjunctsZ3(0),
     //  applyDecl(invSingle, initSymbolsBound)))
 
-    val initHyperRule = createForall(initHyperSymbolsBound.toArray, ctx.mkImplies(ctx.mkAnd(initConjunctsZ3 ++ hypAssumesInitZ3 : _*),
+    val initHyperRule = createForall(initHyperSymbolsBound.toArray, ctx.mkImplies(ctx.mkAnd((initConjunctsZ3 ++ hypAssumesInitZ3).toSeq : _*),
       applyDecl(invHyperDecl, initHyperSymbolsBound)))
     log.debug("The Init Conjunct " + initConjunctsZ3(0))
     //fp.addRule(initRule, ctx.mkSymbol("initRule"))
@@ -1369,7 +1369,7 @@ class Z3HornSolver(sim: SymbolicSimulator) extends Z3Interface {
 
 
     val nextHyperRule = createForall((initHyperSymbolsBound ++ nextHyperSymbolsBound).toArray,
-      ctx.mkImplies(ctx.mkAnd(applyDecl(invHyperDecl, initHyperSymbolsBound), ctx.mkAnd(nextConjunctsZ3 ++ hyperAssumesNextZ3 : _*)),
+      ctx.mkImplies(ctx.mkAnd(applyDecl(invHyperDecl, initHyperSymbolsBound), ctx.mkAnd((nextConjunctsZ3 ++ hyperAssumesNextZ3).toSeq : _*)),
         applyDecl(invHyperDecl, nextHyperSymbolsBound)
       )
     )
