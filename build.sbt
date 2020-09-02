@@ -14,4 +14,7 @@ libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.2"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
 libraryDependencies += "com.github.scopt" %% "scopt" % "3.7.1"
 
+// do not require tests before building a fat JAR
+test in assembly := {}
+
 enablePlugins(JavaAppPackaging)
