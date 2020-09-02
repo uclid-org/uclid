@@ -40,9 +40,10 @@
 package uclid
 package test
 
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import uclid.{lang => l}
 import uclid.smt._
+
 import scala.io.Source
 
 object SExprParserSpec {
@@ -59,7 +60,7 @@ object SExprParserSpec {
 }
 
 
-class SExprParserNoErrorSpec extends FlatSpec {
+class SExprParserNoErrorSpec extends AnyFlatSpec {
   "parser_test1.txt" should "parse successfully." in {
     SExprParserSpec.expectPass("test/parser/command-response/output/parser_test1.txt")
   }

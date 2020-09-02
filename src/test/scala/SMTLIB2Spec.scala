@@ -40,7 +40,7 @@
 package uclid
 package test
 
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import java.io.File
 import uclid.{lang => l}
 
@@ -60,7 +60,7 @@ object SMTLIB2Spec {
     outputString
   }
 }
-class SMTLIB2Spec extends FlatSpec {
+class SMTLIB2Spec extends AnyFlatSpec {
   "test-int-fib.ucl" should "verify all but one assertion." in {
     SMTLIB2Spec.expectedFails("./test/test-int-fib.ucl", 1)
   }

@@ -40,7 +40,7 @@
 package uclid
 package test
 
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import java.io.File
 import uclid.{lang => l}
 
@@ -61,7 +61,7 @@ object VerifierSpec {
     outputString
   }
 }
-class VerifierSanitySpec extends FlatSpec {
+class VerifierSanitySpec extends AnyFlatSpec {
   "test-assert-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-assert-1.ucl", 0)
   }
@@ -117,7 +117,7 @@ class VerifierSanitySpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/test-assume-primed-var.ucl", 6)
   }
 }
-class BasicVerifierSpec extends FlatSpec {
+class BasicVerifierSpec extends AnyFlatSpec {
   "test-bv-assign.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-bv-assign.ucl", 0)
   }
@@ -206,7 +206,7 @@ class BasicVerifierSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/test-range-expr.ucl", 2)
   }
 }
-class ProcedureVerifSpec extends FlatSpec {
+class ProcedureVerifSpec extends AnyFlatSpec {
   "test-inliner.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-inliner.ucl", 0)
   }
@@ -312,7 +312,7 @@ class ProcedureVerifSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/test-old-instance-var-2.ucl", 0)
   }
 }
-class InductionVerifSpec extends FlatSpec {
+class InductionVerifSpec extends AnyFlatSpec {
   "test-k-induction-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-k-induction-1.ucl", 0)
   }
@@ -344,7 +344,7 @@ class InductionVerifSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/test-tuple.ucl", 0)
   }
 }
-class QuantifierVerifSpec extends FlatSpec {
+class QuantifierVerifSpec extends AnyFlatSpec {
   "test-forall-0.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-forall-0.ucl", 0)
   }
@@ -352,7 +352,7 @@ class QuantifierVerifSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/test-exists-0.ucl", 0)
   }
 }
-class ModuleVerifSpec extends FlatSpec {
+class ModuleVerifSpec extends AnyFlatSpec {
   "test-modules.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-modules.ucl", 0)
   }
@@ -435,7 +435,7 @@ class ModuleVerifSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/issue-187b.ucl", 0)
   }
 }
-class LTLVerifSpec extends FlatSpec {
+class LTLVerifSpec extends AnyFlatSpec {
   "test-history-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-history-1.ucl", 0)
   }
@@ -500,7 +500,7 @@ class LTLVerifSpec extends FlatSpec {
     VerifierSpec.expectedFails("./test/ltl-toy-1.ucl", 11)
   }
 }
-class HyperPropertySpec extends FlatSpec {
+class HyperPropertySpec extends AnyFlatSpec {
   ignore /*"test-hyperproperty-4.ucl"*/ should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-hyperproperty-4.ucl", 0)
   }
@@ -537,7 +537,7 @@ object PrintCexSpec {
     }
   }
 }
-class PrintCexSpec extends FlatSpec {
+class PrintCexSpec extends AnyFlatSpec {
   "test-bmc-0.ucl" should "print a one-step CEX" in {
     PrintCexSpec.checkPrintCex("test/test-bmc-0.ucl", 1)
   }
