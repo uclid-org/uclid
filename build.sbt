@@ -9,11 +9,11 @@ scalacOptions += "-deprecation"
 
 resolvers += "Artima Maven Repository" at "http://repo.artima.com/releases"
 
-libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0"
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
-libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1" withSources()
-libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.5"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-libraryDependencies += "com.github.scopt" %% "scopt" % "3.7.0"
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2" withSources()
+libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.2"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
+libraryDependencies += "com.github.scopt" %% "scopt" % "3.7.1"
 
 enablePlugins(JavaAppPackaging)
