@@ -72,8 +72,11 @@ class PassManager(name : => String) {
         val delta =  (System.nanoTime() - start) / 1000000.0
         println(f"${pass.passName} took $delta%.1f ms")
         res.foreach { m =>
-          //val count = NodeCount(m)
-          //println(s"nonequivalent AST nodes: ${count.nonequivalent} ; unique objects in AST ${count.unique}")
+           if(pass.outputNodeCount)
+          {
+           val count = NodeCount(m)
+           println(s"nonequivalent AST nodes: ${count.nonequivalent} ; unique objects in AST ${count.unique}")
+          }
         }
         println("-")
         res

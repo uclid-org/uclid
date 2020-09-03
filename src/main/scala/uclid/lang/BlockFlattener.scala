@@ -156,6 +156,7 @@ object BlockFlattener {
 class BlockFlattener() extends ASTRewriter(BlockFlattener.getName(), new BlockFlattenerPass())
 {
   override val repeatUntilNoChange = true
+  override def outputNodeCount: Boolean = true
 }
 
 object Optimizer {

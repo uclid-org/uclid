@@ -285,4 +285,5 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
 
 class NewInternalProcedureInliner() extends ASTRewriter("InternalProcedureInliner", new NewInternalProcedureInlinerPass()) {
   override val repeatUntilNoChange = true
+  override def outputNodeCount: Boolean = true;
 }
