@@ -225,13 +225,15 @@ object UclidMain {
     passManager.addPass(new StatementScheduler())
     passManager.addPass(new BlockFlattener())
     passManager.addPass(new NewInternalProcedureInliner())
+    passManager.addPass(new VerifiedProceduresAnalysis())
+    passManager.addPass(new ModuleCleaner())
     passManager.addPass(new PrimedVariableCollector())
     passManager.addPass(new PrimedVariableEliminator())
     passManager.addPass(new PrimedHistoryRewriter())
     passManager.addPass(new IntroduceFreshHavocs())
     passManager.addPass(new RewriteFreshLiterals())
     passManager.addPass(new BlockFlattener())
-    passManager.addPass(new ModuleCleaner())
+    // passManager.addPass(new BlockFlattener())
     passManager.addPass(new BlockVariableRenamer())
     passManager
   }  
