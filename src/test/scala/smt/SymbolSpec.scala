@@ -1,21 +1,23 @@
 package uclid.smt
-import org.scalatest.{FlatSpec, Matchers}
 
-class SymbolSpec extends FlatSpec with Matchers {
+import org.scalatest.flatspec.AnyFlatSpec
+
+
+class SymbolSpec extends AnyFlatSpec {
   val t = BoolType
 
   it should "not escape simple symbols" in {
-    Symbol("a", t).toString should be ("a")
-    Symbol("++", t).toString should be ("++")
-    Symbol("*-", t).toString should be ("*-")
-    Symbol("=a=", t).toString should be ("=a=")
-    Symbol("...", t).toString should be ("...")
-    Symbol("<<<<", t).toString should be ("<<<<")
-    Symbol("@1", t).toString should be ("@1")
-    Symbol("a/b/c", t).toString should be ("a/b/c")
-    Symbol("&~&", t).toString should be ("&~&")
-    Symbol("^_^", t).toString should be ("^_^")
-    Symbol("!?", t).toString should be ("!?")
+    assert(Symbol("a", t).toString == "a")
+    assert(Symbol("++", t).toString == "++")
+    assert(Symbol("*-", t).toString == "*-")
+    assert(Symbol("=a=", t).toString == "=a=")
+    assert(Symbol("...", t).toString == "...")
+    assert(Symbol("<<<<", t).toString == "<<<<")
+    assert(Symbol("@1", t).toString == "@1")
+    assert(Symbol("a/b/c", t).toString == "a/b/c")
+    assert(Symbol("&~&", t).toString == "&~&")
+    assert(Symbol("^_^", t).toString == "^_^")
+    assert(Symbol("!?", t).toString == "!?")
   }
 
   it should "reject ids that cannot be represented" in {
@@ -27,13 +29,13 @@ class SymbolSpec extends FlatSpec with Matchers {
   }
 
   it should "escape symbols when they are not simple" in {
-    Symbol("1", t).toString should be ("|1|")
-    Symbol("1a", t).toString should be ("|1a|")
-    Symbol("", t).toString should be ("||")
-    Symbol(" ", t).toString should be ("| |")
-    Symbol("(select mem test)", t).toString should be ("|(select mem test)|")
-    Symbol("mem[test]", t).toString should be ("|mem[test]|")
+    assert(Symbol("1", t).toString == "|1|")
+    assert(Symbol("1a", t).toString == "|1a|")
+    assert(Symbol("", t).toString == "||")
+    assert(Symbol(" ", t).toString == "| |")
+    assert(Symbol("(select mem test)", t).toString == "|(select mem test)|")
+    assert(Symbol("mem[test]", t).toString == "|mem[test]|")
     // the SMTLib spec says "printable characters", not sure if this includes UNICODE
-    Symbol("\uD83D\uDC4D", t).toString should be ("|\uD83D\uDC4D|")
+    assert(Symbol("\uD83D\uDC4D", t).toString == "|\uD83D\uDC4D|")
   }
 }

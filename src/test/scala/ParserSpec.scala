@@ -40,11 +40,11 @@
 package uclid
 package test
 
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import uclid.{lang => l}
 import java.io.File
 
-class ParserSpec extends FlatSpec {
+class ParserSpec extends AnyFlatSpec {
   "test-type1.ucl" should "not parse successfully." in {
     try {
       val filename = "test/test-type1.ucl"

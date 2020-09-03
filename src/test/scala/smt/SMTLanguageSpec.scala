@@ -1,8 +1,8 @@
 package uclid.smt
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
 
-class SMTLanguageSpec extends FlatSpec with Matchers {
+class SMTLanguageSpec extends AnyFlatSpec {
 
   type AssertError = uclid.Utils.AssertionError
 
@@ -40,27 +40,27 @@ class SMTLanguageSpec extends FlatSpec with Matchers {
   }
 
   "BitVectorLit" should "serialize to a positive bv literal" in {
-    BitVectorLit(0,1).toString should be ("(_ bv0 1)")
-    BitVectorLit( 1,1).toString should be ("(_ bv1 1)")
-    BitVectorLit( 1,2).toString should be ("(_ bv1 2)")
-    BitVectorLit(-1,1).toString should be ("(_ bv1 1)")
-    BitVectorLit(-1,2).toString should be ("(_ bv3 2)")
+    assert(BitVectorLit(0,1).toString == "(_ bv0 1)")
+    assert(BitVectorLit( 1,1).toString == "(_ bv1 1)")
+    assert(BitVectorLit( 1,2).toString == "(_ bv1 2)")
+    assert(BitVectorLit(-1,1).toString == "(_ bv1 1)")
+    assert(BitVectorLit(-1,2).toString == "(_ bv3 2)")
 
     // three bit values (two's complement)
-    BitVectorLit( 3,3).toString should be ("(_ bv3 3)")
-    BitVectorLit( 2,3).toString should be ("(_ bv2 3)")
-    BitVectorLit( 1,3).toString should be ("(_ bv1 3)")
-    BitVectorLit( 0,3).toString should be ("(_ bv0 3)")
-    BitVectorLit(-1,3).toString should be ("(_ bv7 3)")
-    BitVectorLit(-2,3).toString should be ("(_ bv6 3)")
-    BitVectorLit(-3,3).toString should be ("(_ bv5 3)")
-    BitVectorLit(-4,3).toString should be ("(_ bv4 3)")
+    assert(BitVectorLit( 3,3).toString == "(_ bv3 3)")
+    assert(BitVectorLit( 2,3).toString == "(_ bv2 3)")
+    assert(BitVectorLit( 1,3).toString == "(_ bv1 3)")
+    assert(BitVectorLit( 0,3).toString == "(_ bv0 3)")
+    assert(BitVectorLit(-1,3).toString == "(_ bv7 3)")
+    assert(BitVectorLit(-2,3).toString == "(_ bv6 3)")
+    assert(BitVectorLit(-3,3).toString == "(_ bv5 3)")
+    assert(BitVectorLit(-4,3).toString == "(_ bv4 3)")
 
     // other positive three bit values
-    BitVectorLit( 4,3).toString should be ("(_ bv4 3)")
-    BitVectorLit( 5,3).toString should be ("(_ bv5 3)")
-    BitVectorLit( 6,3).toString should be ("(_ bv6 3)")
-    BitVectorLit( 7,3).toString should be ("(_ bv7 3)")
+    assert(BitVectorLit( 4,3).toString == "(_ bv4 3)")
+    assert(BitVectorLit( 5,3).toString == "(_ bv5 3)")
+    assert(BitVectorLit( 6,3).toString == "(_ bv6 3)")
+    assert(BitVectorLit( 7,3).toString == "(_ bv7 3)")
   }
 
 

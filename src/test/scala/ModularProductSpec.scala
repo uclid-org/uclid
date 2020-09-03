@@ -40,7 +40,7 @@
 package uclid
 package test
 
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import uclid.{lang => l}
 import java.io.File
 
@@ -60,7 +60,7 @@ object ModularProductHelperSpec {
     }
 }
 
-class ModularProductSpec extends FlatSpec {
+class ModularProductSpec extends AnyFlatSpec {
 
     "test-modularproduct-1.ucl" should "parse successfully." in {
         val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-1.ucl")), lang.Identifier("main"))
