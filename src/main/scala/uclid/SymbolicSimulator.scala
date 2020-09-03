@@ -285,9 +285,10 @@ class SymbolicSimulator (module : Module) {
             }
             verifyProcedure(proc, label)
           case "check" => {
+            val getModel = module.cmds.contains("print_cex")
             lazySC match {
-              case None => proofResults = assertionTree.verify(solver)
-              case Some(lz) => proofResults = lz.assertionTree.verify(solver)
+              case None => proofResults = assertionTree.verify(solver, getModel)
+              case Some(lz) => proofResults = lz.assertionTree.verify(solver, getModel)
             }
             if (solver.filePrefix != "") {
               val smtOutput = solver.toString()

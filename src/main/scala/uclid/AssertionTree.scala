@@ -148,7 +148,7 @@ class AssertionTree {
     override val isAssert = false
   }
 
-  def _verify(node : TreeNode, solver : smt.Context, mode : VerifyMode) : List[CheckResult] = {
+  def _verify(node : TreeNode, solver : smt.Context, mode : VerifyMode, getModel : Boolean = true) : List[CheckResult] = {
     if (mode.isAssert) {
       solver.push()
       node.assumptions.foreach(a => solver.assert(a))
@@ -174,7 +174,7 @@ class AssertionTree {
           solver.assert(checkExpr)
           solver.curAssertName = e.name
           solver.curAssertLabel = e.label
-          val sat = solver.check()
+          val sat = solver.check(getModel)
           val result = sat.result match {
             case Some(true)  => smt.SolverResult(Some(false), sat.model)
             case Some(false) => smt.SolverResult(Some(true), sat.model)
@@ -201,9 +201,9 @@ class AssertionTree {
         List.empty
     }
   }
-  def verify(solver : smt.Context) : List[CheckResult] = {
-    _verify(root, solver, VerifyModePreprocess)
-    _verify(root, solver, VerifyModeAssert)
+  def verify(solver : smt.Context, getModel: Boolean=true) : List[CheckResult] = {
+    _verify(root, solver, VerifyModePreprocess, getModel)
+    _verify(root, solver, VerifyModeAssert, getModel)
   }
 
   def _printSMT(node : TreeNode, parentAssumptions : List[smt.Expr], label : Option[Identifier], solver : smt.SolverInterface) : List[String] = {
