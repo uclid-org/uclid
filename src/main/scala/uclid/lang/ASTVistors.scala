@@ -64,7 +64,7 @@ import com.typesafe.scalalogging.Logger
 abstract class ASTAnalysis {
   var _manager : Option[PassManager] = None
   def manager : PassManager = { _manager.get }
-
+  def outputNodeCount: Boolean = false;
   def passName : String
   def reset() {}
   def rewind() {}
