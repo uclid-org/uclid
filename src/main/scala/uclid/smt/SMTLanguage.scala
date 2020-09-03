@@ -785,8 +785,9 @@ case class FunctionApplication(e: Expr, args: List[Expr])
   override val hashId = 311
   override val hashCode = computeHash(args, e)
   override val md5hashCode = computeMD5Hash(args, e)
-  override def toString = e.toString + "(" + args.tail.fold(args.head.toString)
-    { (acc,i) => acc + "," + i.toString } + ")"
+  override def toString = if(args.isEmpty) { e.toString } else {
+    s"(${e.toString} " + args.map(_.toString).mkString(" ") + ")"
+  }
   override val isConstant = e.isConstant && args.forall(a => a.isConstant)
 }
 
