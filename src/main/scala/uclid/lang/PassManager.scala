@@ -99,6 +99,7 @@ class PassManager(name : => String) {
     moduleList = modules
     val modulesP = passes.foldLeft(modules) {
       (mods, pass) => {
+        val start = System.nanoTime()
         pass.reset()
         val initCtx = Scope.empty
         val initModules = List.empty[Module]
@@ -117,6 +118,14 @@ class PassManager(name : => String) {
           }
         }._2
         pass.finish()
+        val delta =  (System.nanoTime() - start) / 1000000.0
+         println(f"${pass.passName} took $delta%.1f ms")
+        
+        // modsP.foreach{ m =>
+        //   val count = NodeCount(m)
+        //   println(s"nonequivalent AST nodes: ${count.nonequivalent} ; unique objects in AST ${count.unique}")
+        // }
+        println("-")
         modsP
       }
     }
