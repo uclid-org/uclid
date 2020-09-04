@@ -1,7 +1,8 @@
 name := "uclid"
 version := "0.9.5"
 maintainer := "spramod@cse.iitk.ac.in"
-scalaVersion := "2.13.3"
+scalaVersion := "2.12.12"
+crossScalaVersions := Seq("2.12.12", "2.13.3")
  
 scalacOptions += "-feature"
 scalacOptions += "-unchecked"

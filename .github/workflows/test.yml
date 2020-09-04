@@ -56,6 +56,9 @@ jobs:
     - name: Test
       run: sbt "set fork:=true" test
 
+    - name: Test (Scala 2.13)
+      run: sbt ++2.13.3 "set fork:=true" test
+
     - name: Package
       run: sbt universal:packageBin
 
@@ -94,6 +97,9 @@ jobs:
 
     - name: Test UCLID
       run: sbt "set fork:=true" test
+
+    - name: Test (Scala 2.13)
+      run: sbt ++2.13.3 "set fork:=true" test
 
     - name: Package UCLID
       run: sbt universal:packageBin
