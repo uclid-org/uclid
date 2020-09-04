@@ -52,7 +52,7 @@ class PassManager(name : => String) {
   var passNames : Set[String] = Set.empty
   var moduleList : List[Module] = List.empty
 
-  def addPass(pass : ASTAnalysis) {
+  def addPass(pass : ASTAnalysis): Unit = {
     Utils.assert(!passNames.contains(pass.passName), "Pass with the same name already exists.")
     passNames += pass.passName
     passes += pass

@@ -174,43 +174,43 @@ sealed abstract class PolymorphicOperator extends Operator {
 case class LTOp() extends PolymorphicOperator {
   override def toString = "<"
   override val hashId = 1000
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class LEOp() extends PolymorphicOperator {
   override def toString = "<="
   override val hashId = 1001
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class GTOp() extends PolymorphicOperator {
   override def toString = ">"
   override val hashId = 1002
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class GEOp() extends PolymorphicOperator {
   override def toString = ">="
   override val hashId = 1003
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class AddOp() extends PolymorphicOperator {
   override def toString = "+"
   override val hashId = 1004
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class SubOp() extends PolymorphicOperator {
   override def toString = "-"
   override val hashId = 1005
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class MulOp() extends PolymorphicOperator {
   override def toString = "*"
   override val hashId = 1006
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class UnaryMinusOp() extends PolymorphicOperator {
   override def toString = "-"
   override def fixity = Operator.PREFIX
   override val hashId = 1007
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 
 // These are operators with integer operators.
@@ -220,43 +220,43 @@ sealed abstract class IntArgOperator extends Operator {
 case class IntLTOp() extends IntArgOperator {
   override def toString = "<"
   override val hashId = 1100
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class IntLEOp() extends IntArgOperator {
   override def toString = "<="
   override val hashId = 1101
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class IntGTOp() extends IntArgOperator {
   override def toString = ">"
   override val hashId = 1102
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class IntGEOp() extends IntArgOperator {
   override def toString = ">="
   override val hashId = 1103
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class IntAddOp() extends IntArgOperator {
   override def toString ="+"
   override val hashId = 1104
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class IntSubOp() extends IntArgOperator {
   override def toString = "-"
   override val hashId = 1105
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class IntMulOp() extends IntArgOperator {
   override def toString = "*"
   override val hashId = 1106
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class IntUnaryMinusOp() extends IntArgOperator {
   override def toString = "-"
   override def fixity = Operator.PREFIX
   override val hashId = 1107
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 // These operators take bitvector operands and return bitvector results.
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
@@ -397,28 +397,28 @@ sealed abstract class BooleanOperator extends Operator {
 case class ConjunctionOp() extends BooleanOperator {
   override def toString = "&&"
   override val hashId = 1300
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class DisjunctionOp() extends BooleanOperator {
   override def toString = "||"
   override val hashId = 1301
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class IffOp() extends BooleanOperator {
   override def toString = "<==>"
   override val hashId = 1302
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class ImplicationOp() extends BooleanOperator {
   override def toString = "==>"
   override val hashId = 1303
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class NegationOp() extends BooleanOperator {
   override def fixity = Operator.PREFIX
   override def toString = "!"
   override val hashId = 1304
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 // Quantifiers
 sealed abstract class QuantifiedBooleanOperator extends BooleanOperator {
@@ -457,32 +457,32 @@ sealed abstract class ComparisonOperator() extends Operator {
 case class EqualityOp() extends ComparisonOperator {
   override def toString = "=="
   override val hashId = 1500
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class InequalityOp() extends ComparisonOperator {
   override def toString = "!="
   override val hashId = 1501
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 // BV2Int and Int2BV
 case class BV2SignedIntOp() extends Operator {
   override def toString() = "bv_to_signed_int"
   override def fixity = Operator.PREFIX
   override val hashId = 1502
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class BV2UnsignedIntOp() extends Operator {
   override def toString() = "bv_to_unsigned_int"
   override def fixity = Operator.PREFIX
   override val hashId = 1503
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 // Int2BV
 case class Int2BVOp(val w: Int) extends Operator {
   override def toString() = "int_to_bv"
   override def fixity = Operator.PREFIX
   override val hashId = 1504
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 // LTL Operators
 sealed abstract class TemporalOperator() extends Operator {
@@ -492,32 +492,32 @@ sealed abstract class TemporalOperator() extends Operator {
 case class GloballyTemporalOp() extends TemporalOperator {
   override def toString = "G"
   override val hashId = 1600
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class NextTemporalOp() extends TemporalOperator {
   override def toString = "X"
   override val hashId = 1601
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class UntilTemporalOp() extends TemporalOperator {
   override def toString = "U"
   override val hashId = 1602
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class FinallyTemporalOp() extends TemporalOperator {
   override def toString = "F"
   override val hashId = 1603
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class ReleaseTemporalOp() extends TemporalOperator {
   override def toString = "R"
   override val hashId = 1604
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class WUntilTemporalOp() extends TemporalOperator {
   override def toString = "W"
   override val hashId = 1605
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 
 // "Old" operator.
@@ -525,26 +525,26 @@ case class OldOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def toString = "old"
   override val hashId = 1700
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class PastOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def toString = "past"
   override val hashId = 1701
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class HistoryOperator() extends Operator {
   override def fixity = Operator.PREFIX
   override def toString = "history"
   override val hashId = 1702
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 // ITE operator
 case class ITEOp() extends Operator {
   override def toString = "ite"
   override def fixity = Operator.PREFIX
   override val hashId = 1703
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 
 abstract class BitVectorSlice extends ASTNode {
@@ -585,7 +585,7 @@ case class ConcatOp() extends Operator {
   override def toString = "++"
   override def fixity = Operator.INFIX
   override val hashId = 1704
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 sealed abstract class SelectorOperator extends Operator {
   val ident : Identifier
@@ -639,13 +639,13 @@ case class GetNextValueOp() extends Operator {
   override def toString = "'"
   override def fixity = Operator.POSTFIX
   override val hashId = 1708
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class DistinctOp() extends Operator {
   override def toString = "distinct"
   override def fixity = Operator.INFIX
   override val hashId = 1709
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
@@ -752,7 +752,7 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
         if (op.fixity == Operator.INFIX) {
           "(" + Utils.join(operands.map(_.toString), " " + op + " ") + ")"
         } else if (op.fixity == Operator.PREFIX) {
-          op + "(" + Utils.join(operands.map(_.toString), ", ") + ")"
+          op.toString + "(" + Utils.join(operands.map(_.toString), ", ") + ")"
         } else {
           "(" + Utils.join(operands.map(_.toString), ", ") + ")" + op
         }
@@ -764,7 +764,7 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
 }
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class FuncApplication(e: Expr, args: List[Expr]) extends Expr {
-  override def toString = e + "(" + Utils.join(args.map(_.toString), ", ") + ")"
+  override def toString = e.toString + "(" + Utils.join(args.map(_.toString), ", ") + ")"
   override val hashId = 2104
   override val md5hashCode = computeMD5Hash(e, args)
 }
@@ -824,7 +824,7 @@ case class UnknownDecorator(value: String) extends ExprDecorator {
 case object LTLExprDecorator extends ExprDecorator {
   override def toString = "LTL"
   override val hashId = 2601
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class HyperpropertyDecorator(k: Int) extends ExprDecorator {
   override def toString = k.toString()
@@ -834,17 +834,17 @@ case class HyperpropertyDecorator(k: Int) extends ExprDecorator {
 case object LTLSafetyFragmentDecorator extends ExprDecorator {
   override def toString = "LTLSafetyFragment"
   override val hashId = 2603
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case object LTLLivenessFragmentDecorator extends ExprDecorator {
   override def toString = "LTLLivenessFragment"
   override val hashId = 2604
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case object CoverDecorator extends ExprDecorator {
   override def toString = "cover"
   override val hashId = 2605
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 
 object ExprDecorator {
@@ -907,7 +907,7 @@ sealed abstract class NumericType extends PrimitiveType {
 case class UndefinedType() extends Type {
   override def toString = "undefined"
   override val hashId = 2700
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 /**
  *  Uninterpreted types.
@@ -926,14 +926,14 @@ case class BooleanType() extends PrimitiveType {
   override def isBool = true
   override def defaultValue = Some(BoolLit(false))
   override val hashId = 2702
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class IntegerType() extends NumericType {
   override def toString = "integer"
   override def isInt = true
   override def defaultValue = Some(IntLit(0))
   override val hashId = 2703
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class BitVectorType(width: Int) extends NumericType {
   override def toString = "bv" + width.toString
@@ -949,7 +949,7 @@ case class StringType() extends PrimitiveType {
   override def toString = "string"
   override def defaultValue = Some(StringLit(""))
   override val hashId = 2705
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class EnumType(ids_ : List[Identifier]) extends Type {
   override def ids = ids_
@@ -1150,7 +1150,7 @@ case class SkipStmt() extends Statement {
   override val hasCall = false
   override val hasInternalCall = false
   override val hashId = 3000
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
 }
 case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
   override def toLines = List("assert " + e + "; // " + position.toString)
@@ -1874,7 +1874,7 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
 
   // replace the first occurrence of a specific annotation.
   def withReplacedAnnotation[T <: Annotation](note : T)(implicit tag: ClassTag[T]) : Module = {
-    val oldNoteOption = getAnnotation[T]
+    val oldNoteOption = getAnnotation[T]()
     val newNotes : List[Annotation] = oldNoteOption match {
       case None => notes :+ note
       case Some(_) => notes.map {

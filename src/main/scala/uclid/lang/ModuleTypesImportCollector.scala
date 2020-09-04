@@ -66,7 +66,7 @@ class ModuleTypesImportCollectorPass extends ReadOnlyPass[List[ExternalType]] {
 
 class ModuleTypesImportCollector extends ASTAnalyzer("ModuleTypeImportCollector", new ModuleTypesImportCollectorPass()) {
   lazy val logger = Logger(classOf[ModuleTypesImportCollector])
-  override def reset() {
+  override def reset(): Unit = {
     in = Some(List.empty)
   }
   override def visit(module : Module, context : Scope) : Option[Module] = {

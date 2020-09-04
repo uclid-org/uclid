@@ -154,7 +154,7 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
 class ModuleDefinesImportCollector extends ASTAnalyzer("ModuleDefinesImportCollector", new ModuleDefinesImportCollectorPass()) {
   lazy val logger = Logger(classOf[ModuleDefinesImportCollector])
   
-  override def reset() {
+  override def reset(): Unit = {
     in = Some(List.empty)
   }
 

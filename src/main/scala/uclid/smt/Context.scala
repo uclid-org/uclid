@@ -201,15 +201,15 @@ abstract trait Context {
   }
 
   // Interface to the symbolic simulator.
-  def push()
-  def pop()
-  def assert(e: Expr)
-  def preassert(e: Expr)
+  def push(): Unit
+  def pop(): Unit
+  def assert(e: Expr): Unit
+  def preassert(e: Expr): Unit
   def check(produceModel: Boolean = true) : SolverResult
   def checkSynth() : SolverResult
-  def finish()
+  def finish(): Unit
 
-  def addOption(option: String, value: Context.SolverOption)
+  def addOption(option: String, value: Context.SolverOption): Unit
 }
 
 object Context

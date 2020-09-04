@@ -52,7 +52,7 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
   var typeDeclMap : TypeMap = MutableMap.empty
   var typeSynonyms : TypeSet = MutableSet.empty
 
-  override def reset () {
+  override def reset (): Unit = {
     typeDeclMap.clear()
     typeSynonyms.clear()
   }
@@ -76,7 +76,7 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
     }
   }
 
-  def validateSynonyms(module : Module) {
+  def validateSynonyms(module : Module): Unit = {
     typeSynonyms.foreach {
       (syn) => Utils.checkParsingError(
           typeDeclMap.contains(syn),
@@ -107,7 +107,7 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
     }
   }
 
-  def simplifySynonyms(m : Module) {
+  def simplifySynonyms(m : Module): Unit = {
     var simplified = false
     do {
       simplified = false
@@ -250,10 +250,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     return in
   }
 
-  def raiseTypeError(msg: => String, pos: => Position, filename: => Option[String]) {
+  def raiseTypeError(msg: => String, pos: => Position, filename: => Option[String]): Unit = {
       throw new Utils.TypeError(msg, Some(pos), filename)
   }
-  def checkTypeError(condition: Boolean, msg: => String, pos: => Position, filename: => Option[String]) {
+  def checkTypeError(condition: Boolean, msg: => String, pos: => Position, filename: => Option[String]): Unit = {
     if (!condition) {
       raiseTypeError(msg, pos, filename)
     }

@@ -507,7 +507,7 @@ class HyperPropertySpec extends AnyFlatSpec {
 }
 
 object PrintCexSpec {
-  def checkPrintCex(filename: String, n : Int) {
+  def checkPrintCex(filename: String, n : Int): Unit = {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
     val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)

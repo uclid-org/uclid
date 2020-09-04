@@ -105,7 +105,7 @@ object VCD extends LazyLogging {
     def hasNext: Boolean = _hasNext
     var nextWord = ""
 
-    def next: String = {
+    override def next(): String = {
       val lastWord = nextWord
       loadNextWord()
       lastWord
@@ -126,7 +126,7 @@ object VCD extends LazyLogging {
       else {
         if(lines.hasNext) {
           currentLineNumber += 1
-          currentLine = lines.next().trim.split("""\s+""").toIterator
+          currentLine = lines.next().trim.split("""\s+""").iterator
           loadNextWord()
         }
         else {
@@ -312,7 +312,7 @@ case class VCD(
     }
   }
 
-  def incrementTime(increment: Long = 1L) {
+  def incrementTime(increment: Long = 1L): Unit = {
     timeStamp += increment
   }
 

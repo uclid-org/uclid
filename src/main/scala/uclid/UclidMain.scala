@@ -54,7 +54,7 @@ import com.typesafe.scalalogging.Logger
 object UclidMain {
   val logger = Logger("uclid.UclidMain")
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     parseOptions(args) match {
       case None =>
       case Some(config) => main(config)
@@ -134,7 +134,7 @@ object UclidMain {
 
   /** This version of 'main' does all the real work.
    */
-  def main(config : Config) {
+  def main(config : Config): Unit = {
     try {
       if (config.testFixedpoint) {
         smt.Z3HornSolver.test1()
@@ -340,13 +340,13 @@ object UclidMain {
 
   var stringOutput : StringBuilder = new StringBuilder()
   var stringOutputEnabled = false
-  def enableStringOutput() {
+  def enableStringOutput(): Unit = {
     stringOutputEnabled = true
   }
-  def clearStringOutput() {
+  def clearStringOutput(): Unit = {
     stringOutput.clear()
   }
-  def println(str : String) {
+  def println(str : String): Unit = {
     if (stringOutputEnabled) {
       stringOutput ++= str
       stringOutput ++= "\n"

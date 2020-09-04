@@ -124,13 +124,13 @@ class SymbolicSimulator (module : Module) {
     new smt.Symbol("taint_" + UniqueIdGenerator.unique() + "_" + name, t)
   }
 
-  def resetState() {
+  def resetState(): Unit = {
     assertionTree.resetToInitial()
     symbolTable = Map.empty
     frameList.clear()
   }
   var proofResults : List[CheckResult] = List.empty
-  def dumpResults(label: String, log : Logger) {
+  def dumpResults(label: String, log : Logger): Unit = {
     log.debug("{} --> proofResults.size = {}", label, proofResults.size.toString)
   }
   def frameTableToHyperTable(frameTbl : FrameTable) : FrameHyperTable = {
@@ -421,7 +421,7 @@ class SymbolicSimulator (module : Module) {
   def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean, 
                  scope : Scope, label : String, 
                  assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean),
-                 propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean))
+                 propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean)): Unit =
   {
     val initSymbolTable = getInitSymbolTable(scope)
     val frameTbl = ArrayBuffer(initSymbolTable)
@@ -1193,7 +1193,7 @@ class SymbolicSimulator (module : Module) {
       startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
       scope : Scope, label : String, 
       assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean),
-      propertyFilter: ((Identifier, List[ExprDecorator]) => Boolean))
+      propertyFilter: ((Identifier, List[ExprDecorator]) => Boolean)): Unit =
   {
     var currentState = symbolTable
     var states = new ArrayBuffer[SymbolTable]()
@@ -1221,7 +1221,7 @@ class SymbolicSimulator (module : Module) {
     symbolTable = currentState
   }
 
-  def printResults(assertionResults : List[CheckResult], arg : Option[Identifier], config : UclidMain.Config) {
+  def printResults(assertionResults : List[CheckResult], arg : Option[Identifier], config : UclidMain.Config): Unit = {
     def labelMatches(p : AssertInfo) : Boolean = {
       arg match {
         case Some(id) => id.toString == p.label
@@ -1268,7 +1268,7 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def printCEX(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier]) {
+  def printCEX(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier]): Unit = {
     def labelMatches(p : AssertInfo) : Boolean = {
       arg match {
         case Some(id) => id.toString == p.label || p.label.startsWith(id.toString + ":")
@@ -1282,7 +1282,7 @@ class SymbolicSimulator (module : Module) {
     })
   }
 
-  def printCEX(res : CheckResult, exprs : List[(Expr, String)]) {
+  def printCEX(res : CheckResult, exprs : List[(Expr, String)]): Unit = {
     UclidMain.println("CEX for %s".format(res.assert.toString, res.assert.pos.toString))
     val scope = res.assert.context
     lazy val instVarMap = module.getAnnotation[InstanceVarMapAnnotation]().get
@@ -1321,7 +1321,7 @@ class SymbolicSimulator (module : Module) {
   }
 
 // this function is unused
-  def dumpSimTable(simTable : SimulationTable) {
+  def dumpSimTable(simTable : SimulationTable): Unit = {
     simTable.foreach {
       println("======================")
       ft => ft.foreach {
@@ -1335,7 +1335,7 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def printFrame(simTable : SimulationTable, frameNumber : Int, m : smt.Model, exprs : List[(Expr, String)], scope : Scope) {
+  def printFrame(simTable : SimulationTable, frameNumber : Int, m : smt.Model, exprs : List[(Expr, String)], scope : Scope): Unit = {
     exprs.foreach { (e) => {
       try {
         val exprs = simTable.map(ft => m.evalAsString(evaluate(e._1, ft(frameNumber), ft, frameNumber, scope)))
@@ -1348,7 +1348,7 @@ class SymbolicSimulator (module : Module) {
     }}
   }
 // this function is unused
-  def printSymbolTable(symbolTable : SymbolTable) {
+  def printSymbolTable(symbolTable : SymbolTable): Unit = {
     val keys = symbolTable.keys.toList.sortWith((l, r) => l.name < r.name)
     keys.foreach {
       (k) => {
@@ -1357,11 +1357,11 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
-  def dumpCEXVCDFiles(results : List[CheckResult]) {
+  def dumpCEXVCDFiles(results : List[CheckResult]): Unit = {
     results.filter(_.result.isModelDefined).foreach(dumpCEXVCD(_))
   }
 
-  def dumpCEXVCD(res : CheckResult) {
+  def dumpCEXVCD(res : CheckResult): Unit = {
     val filename = "%s_step_%d.vcd".format(res.assert.name.map{ case ' ' | ':' => '_' case c => c } , res.assert.iter)
     // Integers are represented as 64b values
     val defaultIntWidth = 64
@@ -1401,7 +1401,7 @@ class SymbolicSimulator (module : Module) {
     vcdWriter.write(filename)
   }
 
-  def updateFrameVCD(vcd : VCD, f : SymbolTable, frameTbl : FrameTable, frameNumber : Int, m : smt.Model, exprs : List[(Scope.NamedExpression, String)], scope : Scope) {
+  def updateFrameVCD(vcd : VCD, f : SymbolTable, frameTbl : FrameTable, frameNumber : Int, m : smt.Model, exprs : List[(Scope.NamedExpression, String)], scope : Scope): Unit = {
     exprs.foreach { (e) => {
       try {
         val result = m.evalAsString(evaluate(e._1.id, f, frameTbl, frameNumber, scope))
@@ -1415,17 +1415,17 @@ class SymbolicSimulator (module : Module) {
   }
 
   /** Add assertion. */
-  def addAssertToTree(prop : AssertInfo) {
+  def addAssertToTree(prop : AssertInfo): Unit = {
     assertionTree.addAssert(prop)
   }
   /** Add assumption. */
-  def addAssumptionToTree(e : smt.Expr, params : List[ExprDecorator]) {
+  def addAssumptionToTree(e : smt.Expr, params : List[ExprDecorator]): Unit = {
     assertLog.debug("Assumption: {}", e.toString())
     assertionTree.addAssumption(e)
   }
 
   /** Debug logger. */
-  def logState(logger : Logger, label : String, symTbl : SymbolTable) {
+  def logState(logger : Logger, label : String, symTbl : SymbolTable): Unit = {
     logger.debug("==" + label + "==")
     symTbl.foreach {
       case (id, expr) =>
@@ -1635,7 +1635,7 @@ class SymbolicSimulator (module : Module) {
   /** Add module specifications (properties) to the list of proof obligations */
   def addAsserts(frameNumber : Int, symbolTable : SymbolTable, frameTbl : FrameTable, simTbl : SimulationTable,
                 label : String, scope : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean),
-                addAssert : (AssertInfo => Unit)) {
+                addAssert : (AssertInfo => Unit)): Unit = {
 
     scope.specs.foreach(specVar => {
       val prop = module.properties.find(p => p.id == specVar.varId).get
@@ -1649,14 +1649,14 @@ class SymbolicSimulator (module : Module) {
   }
 
   /** Add module-level axioms/assumptions. */
-  def addModuleAssumptions(symbolTable : SymbolTable, frameTbl : FrameTable, frameNumber : Int, scope : Scope, addAssumption : (smt.Expr, List[ExprDecorator]) => Unit) {
+  def addModuleAssumptions(symbolTable : SymbolTable, frameTbl : FrameTable, frameNumber : Int, scope : Scope, addAssumption : (smt.Expr, List[ExprDecorator]) => Unit): Unit = {
     module.axioms.foreach(ax => addAssumption(evaluate(ax.expr, symbolTable, frameTbl, frameNumber, scope), ax.params))
   }
 
   /** Assume assertions (for inductive proofs). */
   def assumeAssertions(symbolTable : SymbolTable, frameTbl : FrameTable, frameNumber : Int, scope : Scope,
                        filter : ((Identifier, List[ExprDecorator]) => Boolean),
-                       addAssumption : (smt.Expr, List[ExprDecorator]) => Unit) {
+                       addAssumption : (smt.Expr, List[ExprDecorator]) => Unit): Unit = {
     scope.specs.foreach(sp => 
       {
         val prop = module.properties.find(p => p.id == sp.varId).get

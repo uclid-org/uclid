@@ -39,9 +39,10 @@
 
 package uclid
 
-import scala.concurrent.SyncChannel
-import scala.collection.JavaConverters._
+import java.util.concurrent.Exchanger
+
 import com.typesafe.scalalogging.Logger
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class InteractiveProcess(args: List[String], saveInput: Boolean=false) {
   val logger = Logger(classOf[InteractiveProcess])
@@ -60,8 +61,8 @@ class InteractiveProcess(args: List[String], saveInput: Boolean=false) {
   override def toString() = inputString
 
   // channels for input and output.
-  val inputChannel = new SyncChannel[Option[String]]()
-  val outputChannel = new SyncChannel[Option[String]]()
+  val inputChannel = new Exchanger[Option[String]]()
+  val outputChannel = new Exchanger[Option[String]]()
 
   // Is this the best way of telling if a process is alive?
   def isAlive() : Boolean = {
@@ -76,13 +77,13 @@ class InteractiveProcess(args: List[String], saveInput: Boolean=false) {
 
 
   // Write to the process's input stream.
-  def writeInput(str: String) {
+  def writeInput(str: String): Unit = {
     logger.debug("-> {}", str)
     in.write(stringToBytes(str))
     if (saveInput) inputString += str
   }
   // Close stdin, this may cause the process to exit.
-  def finishInput() {
+  def finishInput(): Unit = {
     in.flush()
     inputString = ""
     in.close()
@@ -118,7 +119,7 @@ class InteractiveProcess(args: List[String], saveInput: Boolean=false) {
     return None
   }
   // Kill the process.
-  def kill() {
+  def kill(): Unit = {
     process.destroy()
   }
 }

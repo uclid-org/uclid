@@ -4,7 +4,7 @@ package lang
 class RewriteFreshLiteralsPass extends RewritePass {
   var freshLit : Option[Identifier] = None
   
-  override def reset() {
+  override def reset(): Unit = {
     freshLit = None
   }
 

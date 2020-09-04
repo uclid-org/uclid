@@ -6,10 +6,10 @@ class Btor2Spec extends AnyFlatSpec{
 
   // this function actually parses, serializes and parses again
   // in order to also test the serialization
-  def parse(src: Seq[String]): SymbolicTransitionSystem = {
-    val sys0 = Btor2.read(src.toIterator)
+  def parse(src: Iterable[String]): SymbolicTransitionSystem = {
+    val sys0 = Btor2.read(src.iterator)
     val src1 = Btor2.serialize(sys0)
-    val sys1 = Btor2.read(src1.toIterator)
+    val sys1 = Btor2.read(src1.iterator)
     sys1
   }
 

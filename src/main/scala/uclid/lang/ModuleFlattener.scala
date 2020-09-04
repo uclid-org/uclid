@@ -62,11 +62,11 @@ class ModuleDependencyFinder(mainModuleName : Identifier) extends ASTAnalyzer(
     "ModuleDependencyFinder", new ModuleDependencyFinderPass())
 {
   var cyclicalDependency : Option[Boolean] = None
-  override def reset() {
+  override def reset(): Unit = {
     in = Some(Map.empty[Identifier, Set[Identifier]])
   }
 
-  override def finish() {
+  override def finish(): Unit = {
     val depGraph = out.get
     def cyclicModuleError(node : Identifier, stack : List[Identifier]) : ModuleError = {
       val msg = "Cyclical dependency among modules: " + Utils.join(stack.map(_.toString).toList, ", ")
@@ -267,7 +267,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   }
 
   val (varMap, externalSymbolMap) = createVarMap()
-  val targetInstVarMap = targetModule.getAnnotation[InstanceVarMapAnnotation].get.iMap
+  val targetInstVarMap = targetModule.getAnnotation[InstanceVarMapAnnotation]().get.iMap
 
   val rewriteMap = MIP.toRewriteMap(varMap, targetInstVarMap)
   val rewriter = new ExprRewriter("MIP:" + inst.instanceId.toString, rewriteMap)
@@ -448,9 +448,9 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       }
     })
 
-    val notModifiesMap : Map[Expr, Expr] = if (callStmt.instanceId == None) {
+    val notModifiesMap : Map[Expr, Expr] = if (callStmt.instanceId.isEmpty) {
         val flattenedModifiedInstanceIds : Set[List[Identifier]] = proc.modifies.filter(p => p.isInstanceOf[ModifiableInstanceId]).map(p => flattenSelectFromInstance(p.expr))
-        instVarMap.filterKeys(k => !flattenedModifiedInstanceIds.contains(k)).map(p => (unflattenSelectFromInstance(p._1) -> p._2)).toMap
+        instVarMap.filter{ case (k, _) => !flattenedModifiedInstanceIds.contains(k)}.map(p => (unflattenSelectFromInstance(p._1) -> p._2)).toMap
       } else {
         val modifiedIds : Set[Identifier] = proc.modifies.filter(p => p.isInstanceOf[ModifiableId]).map(p => p.asInstanceOf[ModifiableId].id)
         varMap.filter(p => !modifiedIds.contains(p._1) && p._2.isInstanceOf[MIP.StateVariable]).map(p => (p._1 -> p._2.asInstanceOf[MIP.StateVariable].id))
@@ -705,7 +705,7 @@ class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
     }
   }
 
-  override def reset() {
+  override def reset(): Unit = {
     extSymMap = externalSymbolAnalysis.out.get
   }
   override def rewriteModule(moduleIn : Module, ctx : Scope) : Option[Module] = {

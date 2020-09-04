@@ -101,7 +101,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     Context.accumulateOverExpr(e, symbolFinder _, MutableMap.empty)
   }
 
-  override def assert (e: Expr) {
+  override def assert (e: Expr): Unit = {
     val symbols = Context.findSymbols(e)
     val symbolsP = symbols.filter(s => !variables.contains(s))
     symbolsP.foreach {
@@ -166,18 +166,18 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     None
   }
 
-  override def finish() {
+  override def finish(): Unit = {
     solverProcess.finishInput()
     Thread.sleep(5)
     solverProcess.kill()
   }
 
-  override def push() {
+  override def push(): Unit = {
     synthliblogger.debug("push")
     astack = List.empty :: astack
   }
 
-  override def pop() {
+  override def pop(): Unit = {
     synthliblogger.debug("pop")
     astack = astack.tail
   }

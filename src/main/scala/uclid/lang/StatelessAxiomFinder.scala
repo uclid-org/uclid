@@ -201,7 +201,7 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
 class StatelessAxiomFinder(mainModuleName: Identifier) extends ASTAnalyzer(
     "StatelessAxiomFinder", new StatelessAxiomFinderPass(mainModuleName))
 {
-  override def reset() {
+  override def reset(): Unit = {
     in = Some((true, List.empty))
   }
 }

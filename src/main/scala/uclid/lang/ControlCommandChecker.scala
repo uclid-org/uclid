@@ -41,22 +41,22 @@ package uclid
 package lang
 
 class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
-  def checkNoResultVar(cmd : GenericProofCommand, filename: Option[String]) {
+  def checkNoResultVar(cmd : GenericProofCommand, filename: Option[String]): Unit = {
     Utils.checkParsingError(cmd.resultVar.isEmpty, "'%s' command does not produce a result".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkNoArgObj(cmd : GenericProofCommand, filename: Option[String]) {
+  def checkNoArgObj(cmd : GenericProofCommand, filename: Option[String]): Unit = {
     Utils.checkParsingError(cmd.argObj.isEmpty, "'%s' command does not expect an argument object".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkHasArgObj(cmd : GenericProofCommand, filename: Option[String]) {
+  def checkHasArgObj(cmd : GenericProofCommand, filename: Option[String]): Unit = {
     Utils.checkParsingError(cmd.argObj.isDefined, "'%s' command expects an argument object".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkNoArgs(cmd : GenericProofCommand, filename : Option[String]) {
+  def checkNoArgs(cmd : GenericProofCommand, filename : Option[String]): Unit = {
     Utils.checkParsingError(cmd.args.size == 0, "'%s' command does not expect any arguments".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkNoParams(cmd : GenericProofCommand, filename : Option[String]) {
+  def checkNoParams(cmd : GenericProofCommand, filename : Option[String]): Unit = {
     Utils.checkParsingError(cmd.params.size == 0, "'%s' command does not expect any parameters".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkHasOneIntLitArg(cmd : GenericProofCommand, filename : Option[String]) {
+  def checkHasOneIntLitArg(cmd : GenericProofCommand, filename : Option[String]): Unit = {
     Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument".format(cmd.name.toString), cmd.pos, filename)
     val cntLit = cmd.args(0)
     Utils.checkParsingError(cntLit._1.isInstanceOf[IntLit], "'%s' command expects a constant integer argument".format(cmd.name.toString), cmd.pos, filename)
@@ -64,12 +64,12 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     val cntInt = cnt.intValue
     Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkHasOneStringLitArg(cmd : GenericProofCommand, filename : Option[String]) {
+  def checkHasOneStringLitArg(cmd : GenericProofCommand, filename : Option[String]): Unit = {
     Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument".format(cmd.name.toString), cmd.pos, filename)
     val cntLit = cmd.args(0)
     Utils.checkParsingError(cntLit._1.isInstanceOf[StringLit], "'%s' command expects a string literal as an argument".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkHasOneIdentifierArg(cmd : GenericProofCommand, filename : Option[String]) {
+  def checkHasOneIdentifierArg(cmd : GenericProofCommand, filename : Option[String]): Unit = {
     Utils.checkParsingError(cmd.args.size == 1, "'%s' command expects exactly one argument".format(cmd.name.toString), cmd.pos, filename)
     val cntLit = cmd.args(0)
     Utils.checkParsingError(cntLit._1.isInstanceOf[Identifier], "'%s' command expects a identifier as argument".format(cmd.name.toString), cmd.pos, filename)
@@ -90,7 +90,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       cmd.pos, filename
     )
   }
-  def checkHasZeroOrOneIntLitArg(cmd : GenericProofCommand, filename : Option[String]) {
+  def checkHasZeroOrOneIntLitArg(cmd : GenericProofCommand, filename : Option[String]): Unit = {
     Utils.checkParsingError(cmd.args.size <= 1, "'%s' command expects no more than one argument".format(cmd.name.toString), cmd.pos, filename)
     if (cmd.args.size > 0) {
       val cntLit = cmd.args(0)
@@ -100,7 +100,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       Utils.checkParsingError(cntInt == cnt, "Argument to '%s' is too large".format(cmd.name.toString), cmd.pos, filename)
     }
   }
-  def checkPropertiesValid(paramName: Identifier, cmd : GenericProofCommand, context : Scope, filename : Option[String]) {
+  def checkPropertiesValid(paramName: Identifier, cmd : GenericProofCommand, context : Scope, filename : Option[String]): Unit = {
     def idIsProperty(id : Identifier) : Boolean = {
       context.get(id) match {
         case Some(Scope.SpecVar(_, _, _)) => true
@@ -123,7 +123,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     }
     Utils.checkParsingError(badProperties.size == 0, errorMsg, cmd.pos, filename)
   }
-  def checkParamIsALogic(cmd : GenericProofCommand, context : Scope, filename : Option[String]) {
+  def checkParamIsALogic(cmd : GenericProofCommand, context : Scope, filename : Option[String]): Unit = {
     Utils.checkParsingError(cmd.params.size == 1, "'%s' command expects one parameter specifying the logic".format(cmd.name.toString), cmd.pos, filename)
     def logicIsSupported(logic : String) : Boolean = {
       logic match {
