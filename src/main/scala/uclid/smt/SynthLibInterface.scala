@@ -126,7 +126,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     astack = (smtlib2 :: astack.head) :: astack.tail
   }
 
-  override def check() : SolverResult = {
+  override def check(produceModel: Boolean = true) : SolverResult = {
     synthliblogger.debug("check")
     // put in all the assertions as a conjunction
     total = "(and " + astack.foldLeft(""){ (acc, s) => acc + " " + s.mkString(" ")} + ")" :: total

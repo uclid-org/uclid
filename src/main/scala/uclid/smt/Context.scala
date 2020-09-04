@@ -205,7 +205,7 @@ abstract trait Context {
   def pop()
   def assert(e: Expr)
   def preassert(e: Expr)
-  def check() : SolverResult
+  def check(produceModel: Boolean = true) : SolverResult
   def checkSynth() : SolverResult
   def finish()
 

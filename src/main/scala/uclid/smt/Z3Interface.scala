@@ -490,7 +490,7 @@ class Z3Interface() extends Context {
 
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
-  override def check() : SolverResult = {
+  override def check(produceModel: Boolean = true) : SolverResult = {
     lazy val smtOutput = solver.toString()
     checkLogger.debug(smtOutput)
 
@@ -499,10 +499,13 @@ class Z3Interface() extends Context {
 
       val checkResult : SolverResult = z3Result match {
         case z3.Status.SATISFIABLE =>
-          val z3Model = solver.getModel()
           checkLogger.debug("SAT")
-          checkLogger.debug("Model: {}", z3Model.toString())
-          SolverResult(Some(true), Some(new Z3Model(this, z3Model)))
+          val model = if(produceModel) {
+            val z3Model = solver.getModel()
+            checkLogger.debug("Model: {}", z3Model.toString())
+            Some(new Z3Model(this, z3Model))
+          } else { None }
+          SolverResult(Some(true), model)
         case z3.Status.UNSATISFIABLE =>
           checkLogger.debug("UNSAT")
           SolverResult(Some(false), None)
