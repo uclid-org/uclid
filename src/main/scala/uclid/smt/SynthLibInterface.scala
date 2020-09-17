@@ -62,8 +62,12 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     var cmd = ""
 
     if (sygusSyntax) {
-      inputTypes = (generateInputDataTypes(sym.typ) ::: List(typeName)).mkString(" -> ")
-      cmd = "(declare-var %s %s)\n".format(sym, inputTypes)
+      if(sym.typ.isInstanceOf[MapType])
+        inputTypes = "-> " + generateInputDataTypes(sym.typ).mkString(" ")
+      else
+        inputTypes = generateInputDataTypes(sym.typ).mkString(" ")
+
+      cmd = "(declare-var %s (%s %s ))\n".format(sym, inputTypes, typeName)
     } else {
       inputTypes = generateInputDataTypes(sym.typ).mkString(" ")
       cmd = "(declare-fun %s (%s) %s)\n".format(sym, inputTypes, typeName)
