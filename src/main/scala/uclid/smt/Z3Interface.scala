@@ -101,7 +101,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
 
       bottom = fint.getElse().toString
     } else {
-      return "ERROR " + e.toString + "\n"
+      return "UCLID is unable to convert this z3 array to string: " + e.toString + "\n"
     }
 
     array.foreach{ case (k, v) => {
