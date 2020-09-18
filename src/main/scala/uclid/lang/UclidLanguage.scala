@@ -1445,10 +1445,19 @@ case class ProcedureDecl(
     Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
   }
   override def declNames = List(id)
-  def hasPrePost = requires.size > 0 || ensures.size > 0
-  val shouldInline =
-    (annotations.ids.contains(Identifier("inline")) && !annotations.ids.contains(Identifier("noinline"))) ||
-    (ensures.size == 0)
+
+  lazy val shouldInline = {
+    if(annotations.ids.contains(Identifier("noinline")))
+    {
+      if(ensures.size == 0)
+        UclidMain.println("Warning: noinlining procedure "+ id + " even though it has no ensures statement")
+      if(annotations.ids.contains(Identifier("inline")))
+        throw new Utils.RuntimeError("Procedure " + id + " has both inline and noinline annotations.")
+      false;  
+    }
+    else
+      true;
+  }
 }
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override val hashId = 3903
