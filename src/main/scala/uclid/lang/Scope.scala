@@ -316,7 +316,10 @@ case class Scope (
   }
   /** Return a new context with the declarations in this procedure added to it. */
   def +(proc: ProcedureDecl) : Scope = {
-    Utils.assert(procedure.isEmpty, "A procedure was already added to this context.")
+    if (!procedure.isEmpty) {
+      throw new AssertionError("A procedure was already added to this context")
+    }
+    //Utils.assert(procedure.isEmpty, "A procedure was already added to this context.")
     val map1 = proc.sig.inParams.foldLeft(map){
       (mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ProcedureInputArg(arg._1, arg._2))
     }

@@ -238,3 +238,31 @@ class OldExprRewriter(rewrites : Map[ModifiableEntity, Identifier])
   }
 }
 
+
+// This class has been modified to handle the abstract class: ModifiableEntity.
+class OldExprFinderPass() extends ReadOnlyPass[Set[ModifiableEntity]]  
+{
+  type T = Set[ModifiableEntity]
+  override def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = {
+    opapp.op match {
+      case OldOperator() =>
+        opapp.operands(0) match {
+          case arg: Identifier => in + ModifiableId(arg)
+          case OperatorApplication(SelectFromInstance(field), list) => in + ModifiableInstanceId(OperatorApplication(SelectFromInstance(field), list))
+          case _ => throw new Utils.AssertionError("Unexpected argument in the 'old' operator")          
+        }
+      case HistoryOperator() => in + ModifiableId(opapp.operands(0).asInstanceOf[Identifier])
+      case _ => in
+    }
+  }
+}
+
+class OldExprFinder()
+  extends ASTAnalyzer("OldExprFinder", new OldExprFinderPass())
+{
+  lazy val logger = Logger(classOf[OldExprFinder])
+}
+
+
+
+
