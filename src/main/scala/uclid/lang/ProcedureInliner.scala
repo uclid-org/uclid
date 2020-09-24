@@ -247,7 +247,7 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
    * @param context The current scope
    * @returns Returns new procedure call statement.
    */
-  override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
+  def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope)(implicit inNextBlock : Boolean = false) : Option[Statement] = {
     val procId = callStmt.id
     val procOption = context.module.get.procedures.find(p => p.id == procId)
     var modifiesInst = false;
@@ -264,6 +264,9 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
                           case _ : ModifiableInstanceId => throw new Utils.AssertionError("There should be no ModifiableInstanceIds at this point")
                         })
                 
+    }
+    if (inNextBlock) {
+      println("FOUND YOU");
     }
     // Note this is where we decide to inline or no-inline
     if (!procOption.isEmpty && !procOption.get.body.hasInternalCall && (!modifiesInst || procOption.get.shouldInline)) {
@@ -285,4 +288,13 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
 
 class NewInternalProcedureInliner() extends ASTRewriter("InternalProcedureInliner", new NewInternalProcedureInlinerPass()) {
   override val repeatUntilNoChange = true
+
+  implicit var inNextBlock: Boolean = false;
+
+  override def visitNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
+    inNextBlock = true;
+    val nextP = visitStatement(next.body, context).flatMap(body => pass.rewriteNext(NextDecl(body), context))
+    inNextBlock = false;
+    return ASTNode.introducePos(true, true, nextP, next.position)
+  }
 }
