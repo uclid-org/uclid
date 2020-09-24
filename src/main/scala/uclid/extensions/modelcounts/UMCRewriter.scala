@@ -354,6 +354,68 @@ class UMCRewriter(cntProof : CountingProof) {
     List(liftAssertStmt, injAssertStmt, assumpStmt1, assumpStmt2)
   }
 
+  def rewriteIndUb(ufMap : UFMap, indub : IndUbStmt) : List[l.Statement] = {
+    // First we want f(x, n) ==> f(skolem_x(x, n), n - 1) && g(skolem_y(x, n), n - 1)
+    val fp = indub.fp
+    val f  = indub.f
+    val g  = indub.g
+    val f_xn = f.e
+    val g_yn = g.e
+    val ante = fp.e
+    val skSubs = (f.xs.map(_._1.asInstanceOf[l.Expr]) zip indub.skolems.lift(0)).toMap ++
+                 (g.xs.map(_._1.asInstanceOf[l.Expr]) zip indub.skolems.lift(1)).toMap
+
+    val conseq_f_subs = new ExprRewriter(skSubs).rewrite(f_xn)
+    val conseq_g_subs = new ExprRewriter(skSubs).rewrite(g_yn)
+
+    // add base case of induction to consequent. i.e. n+1 == 0
+    val nplus1 = E.plus(indub.n, l.IntLit(1))
+    val conseq_base   = E.eq(nplus1,l.IntLit(0))
+
+    val conseq = E.or( E.and(conseq_f_subs, conseq_g_subs), conseq_base)
+    val impl = E.implies(ante, conseq)
+    val qVars = f.xs ++ g.xs ++ f.ys ++ g.ys
+    val qOp = E.forall(qVars.distinct, impl)
+    val lowerAssertStmt = l.AssertStmt(qOp, Some(l.Identifier("IndUB_SkolemApplication")), List.empty)
+
+    // Now we want to show injectivity of the skolem:
+    // f(x1, n+1) && f(x2, n+1) && (x1 != x2)
+    //   ==> skolem_x(x1, n) != skolem_x(x2,n) || skolem_y(x1,n) != skolem_y(x2, n)
+    val x1s = fp.xs.map(p => generateId(p._1.toString()))
+    val x2s = fp.xs.map(p => generateId(p._1.toString()))
+
+    val rwx1 = new ExprRewriter((fp.xs zip x1s).map(p => (p._1._1.asInstanceOf[l.Expr] -> p._2.asInstanceOf[l.Expr])).toMap)
+    val rwx2 = new ExprRewriter((fp.xs zip x2s).map(p => (p._1._1.asInstanceOf[l.Expr] -> p._2.asInstanceOf[l.Expr])).toMap)
+
+    val f_x1n = rwx1.rewrite(fp.e)
+    val f_x2n = rwx2.rewrite(fp.e)
+    val xdiff = E.orL((x1s zip x2s).map(p => E.distinct(p._1, p._2)))
+
+    val ante2 = E.andL(List(f_x1n, f_x2n, xdiff))
+
+    val sk_x1 = indub.skolems.map(sk => rwx1.rewrite(sk))
+    val sk_x2 = indub.skolems.map(sk => rwx2.rewrite(sk))
+
+    val skdiff = E.orL((sk_x1 zip sk_x2).map(p => E.distinct(p._1, p._2)))
+
+    val impl2 = E.implies(ante2, skdiff)
+
+    val vars = (f.xs zip x1s).map(p => (p._2, p._1._2)) ++
+      (f.xs zip x2s).map(p => (p._2, p._1._2)) ++  f.ys
+    val injAssertStmt = l.AssertStmt(E.forall(vars.distinct, impl2), Some(l.Identifier("IndUB_SkolemInjectivity")), List.empty)
+
+    // Finally, we have to produce the assumption.
+    val ufn = _apply(ufMap(f))
+    val ugn = _apply(ufMap(g))
+    val ufnplus1 = E.apply(ufMap(f).id, List(nplus1) ++ ufMap(f).sig.args.drop(1).map(_._1))
+    val geqExpr = E.le(ufnplus1, E.mul(ufn, ugn))
+    val assumpStmt1 = l.AssumeStmt(E.forall(f.ys ++ g.ys, geqExpr), None)
+    val ufpn = _apply(ufMap(indub.fp))
+    val eqExpr = E.eq(ufnplus1, ufpn)
+    val assumpStmt2 = l.AssumeStmt(E.forall(f.ys, eqExpr), None)
+    List(lowerAssertStmt, injAssertStmt, assumpStmt1, assumpStmt2)
+  }
+
 
   def rewriteAssert(ufmap : UFMap, st : Statement) : List[l.Statement] = {
     val newStmts : List[l.Statement] = st match {
@@ -380,6 +442,8 @@ class UMCRewriter(cntProof : CountingProof) {
         rewriteDisjoint(ufmap, disj)
       case inj : InjectivityStmt =>
         rewriteInjectivity(ufmap, inj)
+      case indUb : IndUbStmt =>
+        rewriteIndUb(ufmap, indUb)
       case _ =>
         throw new AssertionError("Unknown proof statement: " + st.toString())
     }
