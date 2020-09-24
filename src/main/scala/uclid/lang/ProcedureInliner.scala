@@ -202,7 +202,11 @@ trait NewProcedureInlinerPass extends RewritePass {
     val oldAssigns : List[AssignStmt] = oldPairs.map(p => AssignStmt(List(LhsId(p._2)), List(p._1)))
 
     // havoc'ing of the modified variables.
-    lazy val modifyHavocs : List[HavocStmt] = modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
+    lazy val modifyHavocs : List[HavocStmt] = if (inNextBlock) {
+      modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
+    } else {
+      modifyPairs.map(p => HavocStmt(HavocableId(p._1.id)))
+    }
     // statements updating the state variables at the end.
     lazy val modifyFinalAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(getModifyLhs(p._1.id)), List(p._2)))
 
@@ -303,11 +307,6 @@ class NewInternalProcedureInlinerPass extends NewProcedureInlinerPass() {
     // Note this is where we decide to inline or no-inline
     // TODO: Might need to revisit some of these conditions
     if (!procOption.isEmpty && !procOption.get.body.hasInternalCall && (!modifiesInst || procOption.get.shouldInline)) {
-      if (inNextBlock) {
-        println("I'm in NEXT")
-      } else {
-        println("I'm in PROC")
-      }
       val blkStmt = inlineProcedureCall(callStmt, procOption.get, context, inNextBlock)
       Some(blkStmt)
     } else {
