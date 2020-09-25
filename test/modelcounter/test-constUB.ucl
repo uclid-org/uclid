@@ -1,0 +1,6 @@
+module main {
+
+  proof {
+    assert constUB: #[(a:bv1, b:bv1)] :: (a == b) <  3;
+   }
+}
