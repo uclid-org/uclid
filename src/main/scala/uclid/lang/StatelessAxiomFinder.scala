@@ -79,7 +79,8 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
                Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
                Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
-               Scope.BlockVar(_, _)           | Scope.SelectorField(_)          =>
+               Scope.BlockVar(_, _)           | Scope.SelectorField(_)          |
+               Scope.NonTerminal(_, _, _) =>
              throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
         }
       case None =>
@@ -128,7 +129,8 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
                Scope.VerifResultVar(_, _)     | Scope.FunctionArg(_, _)         |
                Scope.Define(_, _, _)          | Scope.Grammar(_, _, _)          |
                Scope.ConstantLit(_, _)        | Scope.BlockVar(_, _)            |
-               Scope.ForIndexVar(_ , _)       | Scope.SelectorField(_)          =>
+               Scope.ForIndexVar(_ , _)       | Scope.SelectorField(_)          |
+               Scope.NonTerminal(_, _, _) =>
               id
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)  | Scope.SynthesisFunction(_, _, _, _, _) =>
              ExternalIdentifier(moduleName, id)

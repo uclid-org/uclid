@@ -205,6 +205,7 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceFindWidth())
     passManager.addPass(new ExpressionTypeChecker())
     if (!test) passManager.addPass(new VerificationExpressionChecker())
+    passManager.addPass(new PolymorphicGrammarTypeRewriter())
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new FindProcedureDependency())
     passManager.addPass(new DefDepGraphChecker())
@@ -328,7 +329,7 @@ object UclidMain {
       logger.debug("args: {}", config.smtSolver)
       new smt.SMTLIB2Interface(config.smtSolver)
     } else if (config.synthesizer.size > 0) {
-      new smt.SynthLibInterface(config.synthesizer, config.sygusFormat)
+      new smt.SynthLibInterface(config.synthesizer, config.sygusFormat, module)
     } else {
       new smt.Z3Interface()
     }

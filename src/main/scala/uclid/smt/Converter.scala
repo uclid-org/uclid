@@ -351,4 +351,43 @@ object Converter {
         return expr
     }
   }
+
+  /** Convert a Uclid NonTerminal to SMT/SyGuS Nonterminal
+   *
+   *  @nt Uclid Nonterminal to convert
+   *  @scope context used for type information
+   */
+  def nonTerminalToSyGuS2(nt: lang.NonTerminal, scope: lang.Scope): smt.NonTerminal = {
+    smt.NonTerminal(nt.id.name, typeToSMT(nt.typ), nt.terms.map(grammarTermToSyGuS2(_, scope)))
+  }
+
+  /** Convert a Uclid GrammarTerm to SMT/SyGuS GrammarTerm
+   *
+   *  @gt Uclid GrammarTerm to convert
+   *  @scope context used for type information
+   */
+  def grammarTermToSyGuS2(gt: lang.GrammarTerm, scope: lang.Scope): smt.GrammarTerm = {
+    def idToSMT(id : lang.Identifier, scope : lang.Scope, past : Int) : smt.Expr = {
+      val typ = scope.typeOf(id) match {
+        case Some(typ) => typeToSMT(typ)
+        case None => smt.UndefinedType
+      }
+      smt.Symbol(id.name, typ)
+    }
+    val expr = gt match {
+      case lang.FuncAppTerm(id, args) => {
+        val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, scope))
+        smt.FunctionApplication(smt.Symbol(id.name, typeToSMT(scope.typeOf(id).get)), argsP)
+      }
+      case lang.OpAppTerm(op, args) => {
+        val opP = opToSMT(op, scope, 0, idToSMT)
+        val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, scope))
+        smt.OperatorApplication(opP, argsP)
+      }
+      case lang.LiteralTerm(lit: lang.Literal) => _exprToSMT(lit, scope, 0, idToSMT)
+      case lang.SymbolTerm(id: lang.Identifier) => _exprToSMT(id, scope, 0, idToSMT)
+      case _ => throw new Utils.UnimplementedException("grammar translation of " + gt.toString() + " is not yet supported.")
+    }
+    GrammarTerm(expr)
+  }
 }
