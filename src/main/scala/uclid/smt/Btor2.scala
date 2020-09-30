@@ -189,7 +189,7 @@ object Btor2Parser {
     // unique name generator
     val unique_names = new mutable.HashSet[String]()
     def is_unique(name: String): Boolean = !unique_names.contains(name)
-    def unique_name(prefix: String): String = Iterator.from(0).map(i => s"_${prefix}_$i").filter(is_unique(_)).next
+    def unique_name(prefix: String): String = Iterator.from(0).map(i => s"_${prefix}_$i").filter(is_unique(_)).next()
 
     // while not part of the btor2 spec, yosys annotates the systems name
     var name: Option[String] = None
@@ -198,7 +198,7 @@ object Btor2Parser {
     def to_bv(expr: Expr) = OperatorApplication(ITEOp, List(expr, BitVectorLit(1,1),  BitVectorLit(0,1)))
     def to_bv_if_needed(expr: Expr) = expr.typ match { case BoolType => to_bv(expr) case _ => expr}
 
-    def parse_sort(parts: Seq[String]): Type = {
+    def parse_sort(parts: Int => String): Type = {
       lazy val w1 = Integer.parseInt(parts(3))
       lazy val w2 = Integer.parseInt(parts(4))
       if(parts(2) == "bitvec") {

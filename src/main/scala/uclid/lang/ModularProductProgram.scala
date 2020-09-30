@@ -128,7 +128,7 @@ class ModularProductProgramPass extends RewritePass {
                         val ifScope = helperObj.maxScope + 1
                         val elseScope = helperObj.maxScope + 2
                         helperObj.maxScope += 2
-                        newVarDeclarations += (activationVarsDecl1, activationVarsDecl2)
+                        newVarDeclarations ++= List(activationVarsDecl1, activationVarsDecl2)
                         findRequiredActivationVariables(ifblock.asInstanceOf[BlockStmt].stmts, ifScope, context + ifblock.asInstanceOf[BlockStmt].vars)
                         findRequiredActivationVariables(elseblock.asInstanceOf[BlockStmt].stmts, elseScope, context + elseblock.asInstanceOf[BlockStmt].vars)
                     
@@ -710,7 +710,7 @@ class ModularProductProgramPass extends RewritePass {
                                 }
                                 if (!elseblock.asInstanceOf[BlockStmt].stmts.isEmpty) 
                                     ASTNode.introducePos(true, true, newActVarAssignment2, elseblock.asInstanceOf[BlockStmt].stmts.head.position)
-                                newbody += (newActVarAssignment1, newActVarAssignment2)
+                                newbody ++= List(newActVarAssignment1, newActVarAssignment2)
                             }
                             val trueScope = helperObj.maxScope+1
                             val falseScope = helperObj.maxScope+2
@@ -1287,7 +1287,7 @@ class ModularProductProgramPass extends RewritePass {
                                         val copyArray = procWithRelSpec(proc)._2
                                         for(k <- copyArray) {
                                             val newArgs = ListBuffer[(Expr, String)]()
-                                            val newArgObj = Some(Identifier(varName + "$" + k.toString()))
+                                            val newArgObj = Some(Identifier(varName.toString + "$" + k.toString))
                                             for(arg <- command.args) {
                                                 val ident = arg._1
                                                 for(i <- 0 until k) {
@@ -1320,8 +1320,7 @@ class ModularProductProgramPass extends RewritePass {
         newCommands.toList
     }
 
-    def cleanup
-    {
+    def cleanup: Unit = {
         newModuleDecls.clear()
         newDecls.clear()
     }

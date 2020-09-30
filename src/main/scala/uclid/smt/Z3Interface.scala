@@ -472,21 +472,21 @@ class Z3Interface() extends Context {
     else z3AST
   })
 
-  override def push() {
+  override def push(): Unit = {
     solver.push()
   }
-  override def pop() {
+  override def pop(): Unit = {
     solver.pop()
   }
 
   lazy val assertLogger = Logger("uclid.smt.Z3Interface.assert")
-  override def assert(e : Expr) {
+  override def assert(e : Expr): Unit = {
     val z3Expr = exprToZ3(e).asInstanceOf[z3.BoolExpr]
     assertLogger.debug(e.toString)
     assertLogger.debug(z3Expr.toString())
     solver.add(z3Expr)
   }
-  override def preassert(e: Expr) {}
+  override def preassert(e: Expr): Unit = {}
 
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
@@ -525,7 +525,7 @@ class Z3Interface() extends Context {
     throw new Utils.UnimplementedException("Can't use an SMT solver for synthesis!")
   }
 
-  override def finish() {
+  override def finish(): Unit = {
     ctx.close()
   }
 

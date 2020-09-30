@@ -70,7 +70,7 @@ case class UninterpretedType(name: String) extends Type {
 case object BoolType extends Type {
   override val hashId = 101
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "Bool"
   override def isBool = true
   override val typeNamePrefix = "bool"
@@ -79,7 +79,7 @@ case object BoolType extends Type {
 case object IntType extends Type {
   override val hashId = 102
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "Int"
   override def isInt = true
   override val typeNamePrefix = "int"
@@ -128,7 +128,7 @@ case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override val md5hashCode = computeMD5Hash(inTypes, outType)
   override def toString = {
     "map [" +
-    inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + "," + i.toString } +
+    inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc.toString + "," + i.toString } +
     "] " + outType
   }
   override def isMap = true
@@ -140,7 +140,7 @@ case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override val md5hashCode = computeMD5Hash(inTypes, outType)
   override def toString = {
     "array [" +
-    inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc + "," + i.toString } +
+    inTypes.tail.fold(inTypes.head.toString){ (acc,i) => acc.toString + "," + i.toString } +
     "] " + outType
   }
   override def isArray = true
@@ -166,7 +166,7 @@ case class SynonymType(name: String, typ: Type) extends Type {
 case object UndefinedType extends Type {
   override val hashId = 110
   override val hashCode = finalize(hashId, 0)
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "undefined"
   override val typeNamePrefix = "undefined"
   override def isUndefined = true
@@ -222,19 +222,19 @@ abstract class IntResultOp extends Operator {
 object IntAddOp extends IntResultOp {
   override val hashId = 200
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "+"
 }
 object IntSubOp extends IntResultOp {
   override val hashId = 201
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "-"
 }
 object IntMulOp extends IntResultOp {
   override val hashId = 202
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "*"
 }
 
@@ -438,7 +438,7 @@ case class ExistsOp(vs : List[Symbol], patterns: List[List[Expr]]) extends Quant
 case object IffOp extends BoolResultOp {
   override val hashId = 217
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "="
   override def typeCheck (args: List[Expr]) = {
     Utils.assert(args.size == 2, "Iff must have two operands.")
@@ -448,14 +448,14 @@ case object IffOp extends BoolResultOp {
 case object ImplicationOp extends BoolResultOp {
   override val hashId = 218
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString  = "=>"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, BoolType) }
 }
 case object ConjunctionOp extends BoolResultOp {
   override val hashId = 219
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "and"
   override def typeCheck(args: List[Expr]) : Unit = {
     Utils.assert(args.size > 1, "Expected two or more arguments to 'and'.")
@@ -465,7 +465,7 @@ case object ConjunctionOp extends BoolResultOp {
 case object DisjunctionOp extends BoolResultOp {
   override val hashId = 220
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "or"
   override def typeCheck(args: List[Expr]) : Unit = {
     Utils.assert(args.size > 1, "Expected two or more arguments to 'or'.")
@@ -475,21 +475,21 @@ case object DisjunctionOp extends BoolResultOp {
 case object NegationOp extends BoolResultOp {
   override val hashId = 221
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "not"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 1); checkAllArgTypes(args, BoolType) }
 }
 case object EqualityOp extends BoolResultOp {
   override val hashId = 222
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "="
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgsSameType(args) }
 }
 case object InequalityOp extends BoolResultOp {
   override val hashId = 223
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "distinct"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgsGt(args, 2); checkAllArgsSameType(args) }
 }
@@ -497,28 +497,28 @@ case object InequalityOp extends BoolResultOp {
 case object IntLTOp extends BoolResultOp {
   override val hashId = 224
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "<"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
 }
 case object IntLEOp extends BoolResultOp {
   override val hashId = 225
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "<="
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
 }
 case object IntGTOp extends BoolResultOp {
   override val hashId = 226
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = ">"
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
 }
 case object IntGEOp extends BoolResultOp {
   override val hashId = 227
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = ">="
   override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, IntType) }
 }
@@ -621,7 +621,7 @@ case class HyperSelectOp(i : Int) extends Operator {
 case object ITEOp extends Operator {
   override val hashId = 242
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "ite"
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 3)
@@ -633,7 +633,7 @@ case object ITEOp extends Operator {
 case class BV2SignedIntOp() extends IntResultOp {
   override val hashId = 243
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "bv2uint"
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 1)
@@ -643,7 +643,7 @@ case class BV2SignedIntOp() extends IntResultOp {
 case class BV2UnsignedIntOp() extends IntResultOp {
   override val hashId = 244
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "bv2sint"
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 1)
@@ -653,7 +653,7 @@ case class BV2UnsignedIntOp() extends IntResultOp {
 case class Int2BVOp(w : Int) extends BVResultOp(w) {
   override val hashId = 245
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash
+  override val md5hashCode = computeMD5Hash()
   override def toString = "int2bv"
   override def typeCheck(args: List[Expr]) : Unit = {
     checkNumArgs(args, 1)
@@ -754,7 +754,7 @@ case class ArraySelectOperation(e: Expr, index: List[Expr])
   override val hashCode = computeHash(index, e)
   override val md5hashCode = computeMD5Hash(e, index)
   override def toString = "(" + e.toString + ")" + "[" + index.tail.fold(index.head.toString)
-    { (acc,i) => acc + "," + i.toString } + "]"
+    { (acc,i) => acc.toString + "," + i.toString } + "]"
   override val isConstant = e.isConstant && index.forall(i => i.isConstant)
 }
 case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends Expr(e.typ)
@@ -763,7 +763,7 @@ case class ArrayStoreOperation(e: Expr, index: List[Expr], value: Expr) extends 
   override val hashCode = computeHash(index, e, value)
   override val md5hashCode = computeMD5Hash(e, index, value)
   override def toString = e.toString + "[" + index.tail.fold(index.head.toString)
-    { (acc,i) => acc + "," + i.toString } + " := " + value.toString + "]"
+    { (acc,i) => acc.toString + "," + i.toString } + " := " + value.toString + "]"
   override val isConstant = e.isConstant && index.forall(i => i.isConstant) && value.isConstant
 }
 case class LetExpression(letBindings : List[(Symbol, Expr)], expr : Expr) extends Expr(expr.typ)
@@ -854,13 +854,13 @@ class Bindings(val freeVars : List[Symbol], val letVars : List[Symbol], val lamb
 
 abstract class SolverInterface {
   // Assert 'e' in the solver. (Modifies solver context to contain 'e'.)
-  def addConstraint(e : Expr)
+  def addConstraint(e : Expr): Unit
   // Check whether 'e' is satisfiable in the current solver context.
   def check(e : Expr) : SolverResult
   // Add a list of assumptions
-  def addAssumptions(es : List[Expr])
+  def addAssumptions(es : List[Expr]): Unit
   // Pop the the last added list of assumptions
-  def popAssumptions()
+  def popAssumptions(): Unit
 
   // Produce SMT2 output for this expression.
   def toSMT2(e : Expr, assumptions : List[Expr], name : String) : String

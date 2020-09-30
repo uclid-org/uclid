@@ -51,7 +51,7 @@ object SExprParserSpec {
   def expectPass(filename: String) : Unit = {
     val buffSource = Source.fromFile(filename)
     try {
-      val input = buffSource.getLines mkString "\n"
+      val input = buffSource.getLines().mkString("\n")
       SExprParser.parseModel(input)
     } finally {
       buffSource.close

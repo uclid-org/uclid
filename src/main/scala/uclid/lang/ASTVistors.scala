@@ -66,10 +66,10 @@ abstract class ASTAnalysis {
   def manager : PassManager = { _manager.get }
 
   def passName : String
-  def reset() {}
-  def rewind() {}
+  def reset(): Unit = {}
+  def rewind(): Unit = {}
   def visit (module : Module, context : Scope) : Option[Module]
-  def finish() {}
+  def finish(): Unit = {}
 }
 
 object TraversalDirection extends Enumeration {
@@ -81,7 +81,7 @@ object TraversalDirection extends Enumeration {
 trait ReadOnlyPass[T] {
   var _analysis : Option[ASTAnalysis] = None
   def analysis : ASTAnalysis = _analysis.get
-  def reset() {}
+  def reset(): Unit = {}
 
   def applyOnModule(d : TraversalDirection.T, module : Module, in : T, context : Scope) : T = { in }
   def applyOnDecl(d : TraversalDirection.T, decl : Decl, in : T, context : Scope) : T = { in }
@@ -169,7 +169,7 @@ trait ReadOnlyPass[T] {
 trait RewritePass {
   var _analysis : Option[ASTAnalysis] = None
   def analysis : ASTAnalysis = _analysis.get
-  def reset() { }
+  def reset(): Unit = { }
 
   def rewriteModule(module : Module, ctx : Scope) : Option[Module] = { Some(module) }
   def rewriteDecl(decl : Decl, ctx : Scope) : Option[Decl] = { Some(decl) }
@@ -273,7 +273,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
   /** Name of the pass. */
   override def passName = _passName
   /** Sets in to out in order to chain modules. **/
-  override def rewind() {
+  override def rewind(): Unit = {
     _in = _out
   }
   /** The main 'do-er' method. */
@@ -1092,7 +1092,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   val log = Logger(classOf[ASTRewriter])
-  override def reset() {
+  override def reset(): Unit = {
     pass.reset()
   }
 

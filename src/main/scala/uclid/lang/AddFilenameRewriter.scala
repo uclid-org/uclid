@@ -92,7 +92,7 @@ class AddFilenamePass(var filename : Option[String]) extends RewritePass {
 class AddFilenameRewriter(filename : Option[String]) extends ASTRewriter(
     "AddFilenameRewriter", new AddFilenamePass(filename), false)  {
 
-  def setFilename(fn: String) {
+  def setFilename(fn: String): Unit = {
     pass.asInstanceOf[AddFilenamePass].filename = Some(fn)
   }
 }

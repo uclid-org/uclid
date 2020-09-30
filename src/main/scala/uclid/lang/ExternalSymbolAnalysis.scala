@@ -17,7 +17,7 @@ class ExternalSymbolMap (val externalMap: Map[ExternalIdentifier, (Identifier, M
       case Some((newName, extDecl)) =>
         (this, newName)
       case None =>
-        val newMap = this + (extId, extDecl, context)
+        val newMap = this.+(extId, extDecl, context)
         (newMap, newMap.externalMap.get(extId).get._1)
     }
   }
@@ -31,13 +31,13 @@ object ExternalSymbolMap {
 
 class ExternalSymbolAnalysisPass extends ReadOnlyPass[ExternalSymbolMap] {
   override def applyOnModule(d : TraversalDirection.T, mod : Module, in : ExternalSymbolMap, context : Scope) : ExternalSymbolMap = {
-    in + (mod, context)
+    in.+(mod, context)
   }
   override def applyOnExternalIdentifier(d : TraversalDirection.T, eId : ExternalIdentifier, in  : ExternalSymbolMap, context : Scope) : ExternalSymbolMap = {
     context.moduleDefinitionMap.get(eId.moduleId) match {
       case Some(mod) =>
         mod.externalMap.get (eId.id) match {
-          case Some(modExt) => in + (eId, modExt, context)
+          case Some(modExt) => in.+(eId, modExt, context)
           case None =>
             throw new Utils.RuntimeError("Unknown ExternalIdentifiers must have been eliminated by now.")
         }
@@ -48,7 +48,7 @@ class ExternalSymbolAnalysisPass extends ReadOnlyPass[ExternalSymbolMap] {
 }
 
 class ExternalSymbolAnalysis extends ASTAnalyzer("ExternalSymbolAnalysis", new ExternalSymbolAnalysisPass()) {
-  override def reset() {
+  override def reset(): Unit = {
     in = Some(ExternalSymbolMap.empty)
   }
 }

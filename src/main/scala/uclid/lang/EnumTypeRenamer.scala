@@ -86,7 +86,7 @@ class EnumTypeAnalysisPass() extends ReadOnlyPass[ExprRenameMapAnnotation] {
 }
 
 class EnumTypeAnalysis() extends ASTAnalyzer("EnumTypeAnalysis", new EnumTypeAnalysisPass()) {
-  override def reset() {
+  override def reset(): Unit = {
     in = Some(ExprRenameMapAnnotation(MutableMap.empty, MutableMap.empty, MutableMap.empty))
   }
   

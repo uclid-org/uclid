@@ -254,8 +254,8 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val KwDecFun = "declare-fun"
 
 
-  lexical.delimiters += ("(", ")")
-  lexical.reserved += (
+  lexical.delimiters ++= List("(", ")")
+  lexical.reserved ++= List(
       // General reserved
       KwBang, KwUS, KwAs, KwBINARY, KwDECIMAL, KwExists, KwHEXADECIMAL, 
       KwForall, KwLet, KwMatch, KwNUMERAL, KwPar, KwSTRING, KwDefFun,

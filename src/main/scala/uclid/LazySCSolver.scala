@@ -968,15 +968,15 @@ class LazySCSolver(simulator: SymbolicSimulator) extends Z3Interface {
   }
 
   /** Add assertion. */
-  def addAssertToTree(prop : AssertInfo) {
+  def addAssertToTree(prop : AssertInfo): Unit = {
     assertionTree.addAssert(prop)
   }
   /** Add assumption. */
-  def addAssumptionToTree(e : smt.Expr, params : List[ExprDecorator]) {
+  def addAssumptionToTree(e : smt.Expr, params : List[ExprDecorator]): Unit = {
     assertionTree.addAssumption(e)
   }
 
-  def addAssumptionToTaintSolver(e: smt.Expr) = {
+  def addAssumptionToTaintSolver(e: smt.Expr): Unit = {
     taintSolver.assert(e)
   }
 

@@ -88,13 +88,13 @@ class AssertionTree {
     }
 
     // these two functions add assumptions.
-    def +=(e : smt.Expr) {
+    def +=(e : smt.Expr): Unit = {
       if (!isAssumptionInScope(e)) {
         assumptions += e
       }
     }
     // and these two add assertions
-    def +=(assert: AssertInfo) { assertions += assert }
+    def +=(assert: AssertInfo): Unit = { assertions += assert }
   }
 
   val root : TreeNode = new TreeNode(None, List.empty)
@@ -102,7 +102,7 @@ class AssertionTree {
   var currentNode : TreeNode = root
 
   /** Helper function to create a new child node. */
-  def newChildNode() {
+  def newChildNode(): Unit = {
     val childNode = new TreeNode(Some(currentNode), List.empty)
     currentNode.children += childNode
     currentNode = childNode
@@ -113,18 +113,18 @@ class AssertionTree {
    *  It ensures that assumptions are not reused across procedures or
    *  other verification tasks.
    */
-  def startVerificationScope() {
+  def startVerificationScope(): Unit = {
     newChildNode()
   }
 
-  def addAssumption(assump: smt.Expr) {
+  def addAssumption(assump: smt.Expr): Unit = {
     if (currentNode.assertions.size > 0) {
       newChildNode()
     }
     currentNode += assump
   }
 
-  def addAssert(assert: AssertInfo) {
+  def addAssert(assert: AssertInfo): Unit = {
     log.debug("assert: {}; iter: {}; size: {}",
         assert.expr.toString(), assert.iter, SymbolicSimulator.simRecordLength(assert.frameTable))
     log.debug("frameTable: {}", assert.frameTable.toString())
@@ -134,7 +134,7 @@ class AssertionTree {
     currentNode += assert
   }
 
-  def resetToInitial() {
+  def resetToInitial(): Unit = {
     currentNode = initialRoot
   }
 

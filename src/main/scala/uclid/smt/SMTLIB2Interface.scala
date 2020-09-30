@@ -350,7 +350,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     writeCommand(cmd)
   }
 
-  def writeCommand(str : String) {
+  def writeCommand(str : String): Unit = {
     solverProcess.writeInput(str + "\n")
   }
 
@@ -359,7 +359,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     msg
   }
 
-  override def assert (e: Expr) {
+  override def assert (e: Expr): Unit = {
     val symbols = Context.findSymbols(e)
     val symbolsP = symbols.filter(s => !variables.contains(s))
     symbolsP.foreach {
@@ -373,7 +373,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     writeCommand("(assert " + smtlib2 +")")
   }
 
-  override def preassert(e: Expr) {
+  override def preassert(e: Expr): Unit = {
     val declCommands = new ListBuffer[String]()
     Context.findTypes(e).filter(typ => !typeMap.contains(typ)).foreach {
       newType => {
@@ -483,20 +483,20 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     }
   }
 
-  override def finish() {
+  override def finish(): Unit = {
     solverProcess.finishInput()
     Thread.sleep(5)
     solverProcess.kill()
   }
 
-  override def push() {
+  override def push(): Unit = {
     smtlibInterfaceLogger.debug("push")
     val e : (VarSet, LetMap, MutableSet[EnumLit]) = (variables.clone(), letVariables.clone(), enumLiterals.clone())
     stack = e :: stack
     writeCommand("(push 1)")
   }
 
-  override def pop() {
+  override def pop(): Unit = {
     smtlibInterfaceLogger.debug("pop")
     val e = stack.head
     variables = e._1
@@ -514,7 +514,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     solverProcess.toString()
   }
 
-  override def addOption(opt : String, value : Context.SolverOption) = {
+  override def addOption(opt : String, value : Context.SolverOption): Unit = {
     // TODO: add the implementation here.
   }
 }

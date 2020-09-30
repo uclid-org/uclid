@@ -111,7 +111,7 @@ class ModuleConstantsImportCollectorPass extends ReadOnlyPass[HashMap[Identifier
 
 
 class ModuleConstantsImportRewriter extends ASTAnalyzer("ModuleConstantsImportRewriter", new ModuleConstantsImportCollectorPass()) {
-  override def reset() {
+  override def reset(): Unit = {
     in = Some(HashMap.empty)
   }
 
