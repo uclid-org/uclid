@@ -44,8 +44,7 @@ import uclid.Utils
 
 object UMCMain {
   /** Executes regular UCLID5 on the processed module. */
-  def runProcessedModel(module : l.Module) : Unit = {
-    val config = UclidMain.Config()
+  def runProcessedModel(module : l.Module, config: UclidMain.Config) : Unit = {
     val mainModuleName = l.Identifier("main")
     val modules = UclidMain.compileModules(List(module), mainModuleName, false)
     val mainModule = UclidMain.instantiate(config, modules, mainModuleName, true)
@@ -55,7 +54,7 @@ object UMCMain {
         throw new Utils.ParserError("Unable to find main module", None, None)
     }
   }
-  
+
   def checkModel(f: java.io.File, config: UclidMain.Config) {
     val module = UMCParser.parseUMCModel(f)
     println("Parsed module: " + module.id.toString())
@@ -63,6 +62,6 @@ object UMCMain {
     val moduleP = new UMCRewriter(module).process()
     println("\nModule after rewriting: ")
     println(moduleP.toString())
-    runProcessedModel(moduleP)
+    runProcessedModel(moduleP, config)
   }
 }
