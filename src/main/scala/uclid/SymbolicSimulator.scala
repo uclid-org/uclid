@@ -280,8 +280,8 @@ class SymbolicSimulator (module : Module) {
             val procName = cmd.args(0)._1.asInstanceOf[Identifier]
             val proc = module.procedures.find(p => p.id == procName).get
             val label : String = cmd.resultVar match {
-              case Some(l) => l.toString + ": verify(%s)".format(procName.toString())
-              case None    => "verify(%s)".format(procName.toString)
+              case Some(l) => l.toString + ": verify_%s".format(procName.toString())
+              case None    => "verify_%s".format(procName.toString)
             }
             verifyProcedure(proc, label)
           case "check" => {
