@@ -185,7 +185,15 @@ object StatementScheduler {
       case AssertStmt(e, _) => readSet(e)
       case AssumeStmt(e, _) => readSet(e)
       case HavocStmt(_) => Set.empty
-      case AssignStmt(_, rhss) => readSets(rhss)
+      case AssignStmt(lhss, rhss) =>
+      {
+        val arrayIndices =
+        lhss flatMap {
+          case arrayselect : LhsArraySelect => Some(arrayselect.indices)
+          case _ => None
+        }
+        readSets(rhss)++readSets(arrayIndices.flatten)
+      }
       case BlockStmt(vars, stmts) =>
         val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(v => v)).toSet
         readSets(stmts, context + vars) -- declaredVars

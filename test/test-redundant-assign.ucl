@@ -1,0 +1,31 @@
+module main {
+
+    var index: integer;
+    var myArray: [integer]integer; 
+    
+    procedure shouldPass()
+    modifies myArray, index;
+    {       
+        index = 1;
+        myArray[index] = 0;
+        assert(myArray[1] == 0); // this assertion should pass
+    }
+
+    procedure shouldPass2()
+    modifies myArray, index;
+    {       
+        index = 1;
+        myArray[index] = 0;
+        assert(myArray[1] == 0); // this assertion should pass
+        index = 2;  // assignment should be ignored
+    }
+    
+
+    control {
+        v = verify(shouldPass);
+        v  = verify(shouldPass2);
+        check;
+        print_results;
+        v.print_cex(index);
+    }
+}
