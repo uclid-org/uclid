@@ -434,6 +434,9 @@ class ModuleVerifSpec extends AnyFlatSpec {
   "issue-187b.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/issue-187b.ucl", 0)
   }
+  "test-redundant-assign.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-redundant-assign.ucl", 0)
+  }
 }
 class LTLVerifSpec extends AnyFlatSpec {
   "test-history-1.ucl" should "verify all assertions." in {

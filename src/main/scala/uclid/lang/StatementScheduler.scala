@@ -185,7 +185,15 @@ object StatementScheduler {
       case AssertStmt(e, _) => readSet(e)
       case AssumeStmt(e, _) => readSet(e)
       case HavocStmt(_) => Set.empty
-      case AssignStmt(_, rhss) => readSets(rhss)
+      case AssignStmt(lhss, rhss) =>
+      {
+        val arrayIndices =
+        lhss flatMap {
+          case arrayselect : LhsArraySelect => Some(arrayselect.indices)
+          case _ => None
+        }
+        readSets(rhss)++readSets(arrayIndices.flatten)
+      }
       case BlockStmt(vars, stmts) =>
         val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(v => v)).toSet
         readSets(stmts, context + vars) -- declaredVars
@@ -239,7 +247,17 @@ object StatementScheduler {
       case AssertStmt(e, _) => primeReadSet(e)
       case AssumeStmt(e, _) => primeReadSet(e)
       case HavocStmt(_) => Set.empty
-      case AssignStmt(_, rhss) => primeReadSets(rhss)
+      case AssignStmt(lhss, rhss) => 
+      // this code is not necessary because we do not support updating arrays using an array select e.g., A[i]' = 0
+      // but it is added here incase we do support this in future
+      {
+        val arrayIndices =
+        lhss flatMap {
+          case arrayselect : LhsArraySelect => Some(arrayselect.indices)
+          case _ => None
+        }
+        primeReadSets(rhss)++primeReadSets(arrayIndices.flatten)
+      }
       case BlockStmt(vars, stmts) =>
         val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(v => v)).toSet
         primeReadSets(stmts, context + vars) -- declaredVars
