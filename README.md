@@ -16,8 +16,8 @@ There are currently two ways to install UCLID5: downloading the latest pre-build
 
 ## Pre-requisites
 
-#### 1. [Z3 version 4.6.0.](https://github.com/Z3Prover/z3/releases/tag/z3-4.6.0)
-You will need the Z3 SMT solver to be installed on your system. If you are building Z3 from source, make sure the Z3/Java interface is enabled in your build (typically by passing `--java` to the `mk_make.py` script). To install z3 on Unix-like systems, download the source code and run the following:
+#### 1. [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)
+You will need the Z3 SMT solver to be installed on your system. Earlier versions of Z3 should work, but the CI is tested with version 4.8.8. If you are building Z3 from source, make sure the Z3/Java interface is enabled in your build (typically by passing `--java` to the `mk_make.py` script). To install z3 on Unix-like systems, download the source code and run the following:
 
 ```bash
 python scripts/mk_make.py --java
