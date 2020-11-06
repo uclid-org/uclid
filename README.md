@@ -12,12 +12,12 @@ Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating 
 *Proceedings of the 16th ACM-IEEE International Conference on Formal Methods and Models for System Design*. **(MEMOCODE 2018)**. Beijing, China. October 2018. 
 
 # Installation
-There are currently two ways to install UCLID5: downloading the latest pre-build package and building from source. Please make sure you have all the pre-requisites before proceeding to installation. Due to the nuances in the later Mac OS versions, we prepare separately a compact list of the installation instructions [here](mac-install.md). 
+There are currently two ways to install UCLID5: [downloading the latest pre-build package](#prebuilt) and [building from source](#srcbuild). Please make sure you have all the pre-requisites before proceeding to installation. Due to the nuances in the later Mac OS versions, we prepare separately a compact list of the installation instructions [here](mac-install.md). 
 
 ## <a name="prereqs"></a> Pre-requisites
 
 #### 1. [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)
-You will need the Z3 SMT solver to be installed on your system. Earlier versions of Z3 should work, but the CI is tested with version 4.8.8. uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix-like platforms; just `PATH` on Windows).
+You will need the Z3 SMT solver to be installed on your system. Earlier versions of Z3 should work, but the CI is tested with version 4.8.8. uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix-like platforms; just `PATH` on Windows). If compiling from source, the source repository provides an easy way to set up Z3. See the instructions for [compiling from source](#srcbuild) for details.
 
 If you prefer to build Z3 from source, make sure the Z3/Java interface is enabled in your build (typically by passing `--java` to the `mk_make.py` script). To install z3 on Unix-like systems from source, download the source code and run the following:
 
@@ -42,11 +42,11 @@ https://github.com/Z3Prover/z3/issues/294
 #### 2. [OpenJDK version 8](https://openjdk.java.net/) or [Oracle JDK version 8](https://www.oracle.com/java/technologies/javase/javase-jdk8-downloads.html)
 **If you are using Mac OS X Mojave or above**, we recommend using Java 11 or earlier. We have found some issues related to the System Integrity Protection when using Catalina or Mojave and later versions of OpenJDK.
 
-## Download Pre-Built Binaries
+## <a name="prebuilt"></a> Download Pre-Built Binaries
 
 Download the latest stable pre-built package from [releases tab](https://github.com/uclid-org/uclid/releases).
 
-## Building From Source
+## <a name="srcbuild"></a> Building From Source
 
 Or, you could clone this repository and build from source. If you run into problems here, don't forget you can always fall back on the pre-built binaries linked above.
 
