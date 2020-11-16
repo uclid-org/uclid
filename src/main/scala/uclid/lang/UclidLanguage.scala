@@ -1282,17 +1282,6 @@ sealed abstract class IOSig(inputs: List[(Identifier,Type)], outputs: List[(Iden
   lazy val printfn = {(a: T) => a._1.toString + ": " + a._2}
 }
 /**
- * Module signatures.
- */
-case class ModuleSig(inParams: List[(Identifier, Type)], outParams: List[(Identifier, Type)]) extends IOSig(inParams, outParams)
-{
-  override def toString =
-    "inputs (" + Utils.join(inParams.map(printfn(_)), ", ") + ")" +
-    " outputs " + "(" + Utils.join(outParams.map(printfn(_)), ", ") + ")"
-  override val hashId = 3200
-  override val md5hashCode = computeMD5Hash(inParams, outParams)
-}
-/**
  * Procedure signatures.
  */
 case class ProcedureSig(inParams: List[(Identifier,Type)], outParams: List[(Identifier,Type)]) extends IOSig(inParams, outParams)
