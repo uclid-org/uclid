@@ -1,0 +1,9 @@
+module main {
+
+  define f(n : integer) : boolean = 1 <= n < 10;
+
+  proof {
+    assert constLB: #[(n:integer)] :: (f(n)) >= 5;
+    assert constLB: #[(a:bv1, b:bv1)] :: (a == b) >= 2;
+  }
+}

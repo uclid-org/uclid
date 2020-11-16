@@ -1,0 +1,8 @@
+module main {
+
+  define f(n : integer) : boolean = 1 <= n < 21;
+
+  proof {
+    assert range: #[(n:integer)] :: (f(n)) == 20;
+    }
+}

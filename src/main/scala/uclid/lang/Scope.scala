@@ -244,6 +244,37 @@ case class Scope (
     Scope(map + (m.id -> Scope.ModuleDefinition(m)), module, procedure, cmd, environment, parent)
   }
 
+  def +(d: Decl) : Scope = {
+    val mapP = d match {
+      case instD : InstanceDecl =>
+        Scope.addToMap(map, Scope.Instance(instD))
+      case ProcedureDecl(id, sig, _, _, _, _, _) => Scope.addToMap(map, Scope.Procedure(id, sig.typ))
+      case TypeDecl(id, typ) => Scope.addToMap(map, Scope.TypeSynonym(id, typ))
+      case StateVarsDecl(ids, typ) => ids.foldLeft(map)((acc, id) => Scope.addToMap(acc, Scope.StateVar(id, typ)))
+      case InputVarsDecl(ids, typ) => ids.foldLeft(map)((acc, id) => Scope.addToMap(acc, Scope.InputVar(id, typ)))
+      case OutputVarsDecl(ids, typ) => ids.foldLeft(map)((acc, id) => Scope.addToMap(acc, Scope.OutputVar(id, typ)))
+      case SharedVarsDecl(ids, typ) => ids.foldLeft(map)((acc, id) => Scope.addToMap(acc, Scope.SharedVar(id, typ)))
+      case ConstantLitDecl(id, lit) => Scope.addToMap(map, Scope.ConstantLit(id, lit))
+      case ConstantsDecl(ids, typ) => ids.foldLeft(map)((acc, id) => Scope.addToMap(acc, Scope.ConstantVar(id, typ)))
+      case GrammarDecl(id, sig, nts) => Scope.addToMap(map, Scope.Grammar(id, sig.typ, nts))
+      case FunctionDecl(id, sig) => Scope.addToMap(map, Scope.Function(id, sig.typ))
+      case SynthesisFunctionDecl(id, sig, _, _, _) => Scope.addToMap(map, Scope.Function(id, sig.typ)) // FIXME
+      case DefineDecl(id, sig, expr) => Scope.addToMap(map, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr)))
+      case SpecDecl(id, expr, params) => Scope.addToMap(map, Scope.SpecVar(id, expr, params))
+      case AxiomDecl(sId, expr, params) => sId match {
+        case Some(id) => Scope.addToMap(map, Scope.AxiomVar(id, expr, params))
+        case None => map
+      }
+      //case ModuleConstantsImportDecl(id) => Scope.addToMap(mapAcc, Scope.ConstantsImport(id))
+      //case ModuleFunctionsImportDecl(id) => Scope.addToMap(mapAcc, Scope.FunctionsImport(id))
+      case ModuleConstantsImportDecl(_) => map
+      case ModuleFunctionsImportDecl(_) => map
+      case ModuleTypesImportDecl(_) | 
+           ModuleDefinesImportDecl(_) | 
+           InitDecl(_) | NextDecl(_)  => map
+    }
+    Scope(mapP, None, None, None, environment, parent)
+  }
   /** Return a new context with the declarations in this module added to it. */
   def +(m: Module) : Scope = {
     Utils.assert(module.isEmpty, "A module was already added to this Context.")

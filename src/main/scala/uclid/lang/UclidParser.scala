@@ -83,7 +83,7 @@ trait UclidTokenParsers extends TokenParsers {
     elem("identifier", _.isInstanceOf[Identifier]) ^^ (_.chars)
 }
 
-object UclidParser extends UclidTokenParsers with PackratParsers {
+class UclidParser extends UclidTokenParsers with PackratParsers {
     type Tokens = UclidTokens
     val lexical = new UclidLexical
 
@@ -180,7 +180,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     // lazy val TemporalOpWUntil = "W"
     // lazy val TemporalOpRelease = "R"
 
-    lexical.delimiters ++= List("(", ")", ",", "[", "]",
+    lexical.delimiters ++= List("(", ")", ",", "[", "]", "#[",
       "bv", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, 
@@ -276,7 +276,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
   lazy val Pattern : PackratParser[(lang.Identifier, List[List[lang.Expr]])] =
     Id ~ ("[" ~> PatternList <~ "]") ^^ { case id ~ pats => (id, pats) }
 
-    lazy val E1: PackratParser[Expr] =
+  lazy val E1: PackratParser[Expr] =
       KwForall ~> IdTypeList ~ Pattern.? ~ ("::" ~> E1) ^^ {
         case ids ~ pat ~ expr => {
           pat match {
@@ -459,7 +459,18 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Statement: PackratParser[Statement] = positioned {
       KwSkip <~ ";" ^^ { case _ => SkipStmt() } |
-      KwAssert ~> Expr <~ ";" ^^ { case e => AssertStmt(e, None) } |
+      KwAssert ~> Expr <~ ";" ^^ { case e => AssertStmt(e, None, List.empty) } |
+      KwAssert ~> ("[" ~> IdList <~ "]" ~ ":") ~ Expr <~ ";" ^^ {
+        case ids ~ e =>
+          AssertStmt(e, None, ids.map(ExprDecorator.parse(_)))
+      } |
+      KwAssert ~> (Id <~ ":") ~ Expr <~ ";" ^^ {
+        case id ~ e => AssertStmt(e, Some(id), List.empty)
+      } |
+      KwAssert ~> (Id) ~ ("[" ~> IdList <~ "]" ~ ":") ~ Expr <~ ";" ^^ {
+        case id ~ ids ~ e =>
+          AssertStmt(e, Some(id), ids.map(ExprDecorator.parse(_)))
+      } |
       KwAssume ~> Expr <~ ";" ^^ { case e => AssumeStmt(e, None) } |
       KwHavoc ~> Id <~ ";" ^^ { case id => HavocStmt(HavocableId(id)) } |
       Lhs ~ rep("," ~> Lhs) ~ "=" ~ Expr ~ rep("," ~> Expr) <~ ";" ^^
@@ -804,4 +815,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case NoSuccess(msg, next) => throw new Utils.SyntaxError(msg, Some(next.pos), Some(filename))
       }
     }
+}
+
+object UclidParser {
+  val parserObj = new UclidParser()
+  def parseModel(filename: String, text: String): List[Module] = {
+    parserObj.parseModel(filename, text)
   }
+}
+ 

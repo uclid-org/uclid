@@ -78,7 +78,8 @@ object UclidMain {
       printStackTrace: Boolean = false,
       verbose : Int = 0,
       files : Seq[java.io.File] = Seq(),
-      testFixedpoint: Boolean = false
+      testFixedpoint: Boolean = false,
+      modelCounter: Boolean = false
   )
 
   def parseOptions(args: Array[String]) : Option[Config] = {
@@ -120,6 +121,10 @@ object UclidMain {
       opt[Unit]('t', "test-fixedpoint").action {
         (_, c) => c.copy(testFixedpoint = true)
       }.text("Test fixed point")
+      
+      opt[Unit]('C', "model-counter").action {
+        (_, c) => c.copy(modelCounter = true)
+      }.text("Model counter DSL.")
 
       help("help").text("prints this usage text")
 
@@ -138,6 +143,10 @@ object UclidMain {
     try {
       if (config.testFixedpoint) {
         smt.Z3HornSolver.test1()
+        return
+      }
+      if (config.modelCounter) {
+        config.files.foreach(f => extensions.modelcounts.UMCMain.checkModel(f, config))
         return
       }
       val mainModuleName = Identifier(config.mainModuleName)
@@ -239,7 +248,6 @@ object UclidMain {
   def compile(srcFiles : Seq[java.io.File], mainModuleName : Identifier, test : Boolean = false): List[Module] = {
     type NameCountMap = Map[Identifier, Int]
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
-    val passManager = createCompilePassManager(test, mainModuleName)
 
     val filenameAdderPass = new AddFilenameRewriter(None)
     // Helper function to parse a single file.
@@ -252,7 +260,17 @@ object UclidMain {
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
       (acc, srcFile) => acc ++ parseFile(srcFile.getPath())
     }
-
+    compileModules(parsedModules, mainModuleName, test)
+  }
+  
+  /** Compile a list of modules (do everything pre-module-instantiation. */
+  def compileModules(
+      parsedModules : List[Module], 
+      mainModuleName : Identifier, 
+      test : Boolean) : List[Module] = 
+  {
+    // create a pass manager.
+    val passManager = createCompilePassManager(test, mainModuleName)
     // now process each module
     val init = (List.empty[Module], Scope.empty)
     // NOTE: The foldLeft/:: combination here reverses the order of modules.

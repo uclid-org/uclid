@@ -9,7 +9,6 @@
  * modification, are permitted provided that the following conditions are
  * met:
  * 1. Redistributions of source code must retain the above copyright notice,
- *
  * this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
@@ -31,45 +30,38 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Pramod Subramanyan
-
- * Rewrites while loops.
+ * Author: Pramod Subramanyan, Shubham Sahai
+ *
+ * Main file for the UCLID model counter.
  *
  */
+package uclid.extensions.modelcounts
 
-package uclid
-package lang
+import uclid.UclidMain
+import uclid.{lang => l}
+import uclid.Utils
 
-class WhileLoopRewriterPass extends RewritePass {
-  override def rewriteWhile(whileSt : WhileStmt, context: Scope) : Option[Statement] = {
-    val cond = whileSt.cond
-    val body = whileSt.body
-    val invs = whileSt.invariants
-    val initialAsserts = invs.map{
-      inv => {
-        ASTNode.introducePos(true, true, AssertStmt(inv, Some(Identifier("loop invariant (entry)")), List.empty), inv.position)
-      }
+
+object UMCMain {
+  /** Executes regular UCLID5 on the processed module. */
+  def runProcessedModel(module : l.Module, config: UclidMain.Config) : Unit = {
+    val mainModuleName = l.Identifier("main")
+    val modules = UclidMain.compileModules(List(module), mainModuleName, false)
+    val mainModule = UclidMain.instantiate(config, modules, mainModuleName, true)
+    mainModule match {
+      case Some(m) => UclidMain.execute(m, config)
+      case None    =>
+        throw new Utils.ParserError("Unable to find main module", None, None)
     }
-    val varsToHavoc = StatementScheduler.writeSetIds(whileSt.body, context).toList
-    val havocStmts = varsToHavoc.filter(id => context.get(id) match {
-      // Note: We do not handle instances since we have not expanded them yet
-      case Some(Scope.Instance(_)) => false
-      case _ => true
-    }).map(v => HavocStmt(HavocableId(v)))
-    val assumeStmts = AssumeStmt(cond, None) :: invs.map(inv => AssumeStmt(inv, None))
-    val assertStmts = invs.map{
-      inv => {
-        ASTNode.introducePos(true, true, AssertStmt(inv, Some(Identifier("loop invariant (iteration)")), List.empty), inv.position)
-      }
-    }
-    val finishAssump = AssumeStmt(Operator.not(cond), None)
-    val ifBody = havocStmts ++ assumeStmts ++ List(body) ++ assertStmts
-    val ifElseStmt = IfElseStmt(cond, BlockStmt(List.empty, ifBody), BlockStmt(List.empty, List.empty))
-    Some(BlockStmt(List.empty, initialAsserts ++ List(ifElseStmt, finishAssump)))
   }
-}
 
-class WhileLoopRewriter extends ASTRewriter(
-    "WhileLoopRewriter", new WhileLoopRewriterPass())
-{
+  def checkModel(f: java.io.File, config: UclidMain.Config) {
+    val module = UMCParser.parseUMCModel(f)
+    println("Parsed module: " + module.id.toString())
+    println(module.toString())
+    val moduleP = new UMCRewriter(module).process()
+    println("\nModule after rewriting: ")
+    println(moduleP.toString())
+    runProcessedModel(moduleP, config)
+  }
 }

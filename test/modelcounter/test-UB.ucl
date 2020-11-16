@@ -1,0 +1,9 @@
+module main {
+  define f(n : integer) : boolean = 11 <= n < 21;
+  define g(n : integer) : boolean = 5 <= n < 21;
+
+  proof {
+    assert UB: #[(n:integer)] :: (f(n)) <= #[(n:integer)] :: (g(n));
+  }
+}
+

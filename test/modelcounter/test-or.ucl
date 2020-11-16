@@ -1,0 +1,11 @@
+module main {
+
+  define f(n : integer) : boolean = 5 <= n < 21;
+  define g(n : integer) : boolean = 11 <= n < 21;
+  define h(n : integer) : boolean = 5 <= n < 11;
+
+  proof {
+    assert or: #[(n:integer) for ()] :: (f(n)) ==
+                     #[(n:integer)] :: (g(n)) + #[(n:integer)] :: (h(n));
+  }
+}

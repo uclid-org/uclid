@@ -1,0 +1,11 @@
+module main {
+    define X(j: integer) : boolean = 0 <= j < 2;
+    define U(arr: [integer]integer, n: integer): boolean =
+        (n >= 0) && (forall (i: integer) :: (i < 0  || i >= n) ==> arr[i] == 0) && (forall (i: integer) :: (i >= 0  || i < n) ==> (0 <= arr[i] < 2));
+    proof {
+        assert indLB: #[(arr: [integer]integer) for (n : integer)] :: (U(arr, n+1)) >=
+                      #[(arr: [integer]integer) for (n : integer)] :: (U(arr, n))   *
+                      #[(j : integer) for (n : integer)] :: (X(j))
+                      skolems (arr[n -> j]);
+    }
+}

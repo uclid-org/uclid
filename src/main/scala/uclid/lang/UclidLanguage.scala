@@ -135,7 +135,7 @@ object ASTNode {
 /** All elements in the AST are derived from this class.
  *  The plan is to stick an ID into this later so that we can use the ID to store auxiliary information.
  */
-sealed trait ASTNode extends Positional with PositionedNode {
+trait ASTNode extends Positional with PositionedNode {
   val astNodeId = IdGenerator.newId()
 }
 
@@ -643,11 +643,11 @@ case class GetNextValueOp() extends Operator {
 }
 case class DistinctOp() extends Operator {
   override def toString = "distinct"
-  override def fixity = Operator.INFIX
+  override def fixity = Operator.PREFIX
   override val hashId = 1709
   override val md5hashCode = computeMD5Hash
 }
-sealed abstract class Expr extends ASTNode {
+abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
   def isConstant = false
   def isTemporal = false
@@ -746,6 +746,8 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
         operands(0).toString + "." + i.toString
       case SelectFromInstance(f) =>
         operands(0).toString + "." + f.toString
+      case ITEOp() =>
+        "(if (" + operands(0).toString + ") then (" + operands(1).toString + ") else (" + operands(2).toString + "))"
       case ForallOp(_, _) | ExistsOp(_, _) =>
         "(" + op.toString + operands(0).toString + ")"
       case _ =>
@@ -846,17 +848,19 @@ case object CoverDecorator extends ExprDecorator {
   override val hashId = 2605
   override val md5hashCode = computeMD5Hash
 }
+case object SATOnlyDecorator extends ExprDecorator {
+  override def toString = "SATOnly"
+  override val hashId = 2606
+  override val md5hashCode = computeMD5Hash
+}
 
 object ExprDecorator {
   /** Factory constructor. */
   def parse(e : Expr) : ExprDecorator = {
     val dec = e match {
-      case Identifier(id) =>
-        if (id == "LTL") {
-          LTLExprDecorator
-        } else {
-          UnknownDecorator(e.toString)
-        }
+      case Identifier("LTL") => LTLExprDecorator
+      case Identifier("cover") => CoverDecorator
+      case Identifier("SATOnly") => SATOnlyDecorator
       case _ => UnknownDecorator(e.toString)
     }
     dec.pos = e.pos
@@ -1136,7 +1140,7 @@ case class HavocableInstanceId(opapp : OperatorApplication) extends HavocableEnt
 }
 
 /** Statements **/
-sealed abstract class Statement extends ASTNode {
+abstract class Statement extends ASTNode {
   override def toString = Utils.join(toLines, "\n") + "\n"
   def hasStmtBlock = false
   val isLoop = false
@@ -1152,8 +1156,24 @@ case class SkipStmt() extends Statement {
   override val hashId = 3000
   override val md5hashCode = computeMD5Hash
 }
-case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
-  override def toLines = List("assert " + e + "; // " + position.toString)
+case class AssertStmt(e: Expr, id : Option[Identifier], decorators: List[ExprDecorator]) extends Statement {
+  override def toLines = {
+    val name = "assert"
+    val decoratorStr = if (decorators.size > 0) {
+      " [" + Utils.join(decorators.map(_.toString()), ", ") + "] : "
+    } else { " " }
+    val prefix = id match {
+      case Some(n) =>
+        if (decorators.nonEmpty) {
+          name + " " + n.toString() + decoratorStr
+        }
+        else {
+          name + " " + n.toString() + " : "
+        }
+      case None => name + decoratorStr
+    }
+    List(prefix + e.toString() + "; // " + position.toString)
+  }
   override val hasCall = false
   override val hasInternalCall = false
   override val hashId = 3001
@@ -1670,10 +1690,10 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr, params: List[ExprDecor
   override val hashId = 3918
   override val md5hashCode = computeMD5Hash(id, expr, params)
   override def toString = {
-    id match {
+    (id match {
       case Some(id) => "axiom " + id.toString + " : " + expr.toString()
       case None => "axiom " + expr.toString
-    }
+    }) + "; // " + pos.toString()
   }
   override def declNames = id match {
     case Some(i) => List(i)
@@ -1721,7 +1741,7 @@ case class GenericProofCommand(
   override def toString = {
     val nameStr = name.toString
     val paramStr = if (params.size > 0) { "[" + Utils.join(params.map(_.toString), ", ") + "]" } else { "" }
-    val argStr = if (args.size > 0) { "(" + Utils.join(args.map(_.toString), ", ") + ")" } else { "" }
+    val argStr = if (args.size > 0) { "(" + Utils.join(args.map(a => a._1.toString + " /* " + a._2 + "*/"), ", ") + ")" } else { "" }
     val resultStr = resultVar match { case Some(id) => id.toString + " = "; case None => "" }
     val objStr = argObj match { case Some(id) => id.toString + "->"; case None => "" }
     resultStr + objStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
