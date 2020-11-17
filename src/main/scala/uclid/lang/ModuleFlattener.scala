@@ -401,20 +401,25 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
    * @param context The current scope
    * @returns Returns a new BlockStmt containing the inlined procedure.
    */
-  def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope) : Statement = {
+  def inlineProcedureCall(callStmt : ProcedureCallStmt, proc : ProcedureDecl, context : Scope, inNextBlock : Boolean) : Statement = {
     val procSig = proc.sig
     def getModifyLhs(id : Identifier) = LhsId(id)
 
     // formal and actual argument pairs.
     val argPairs : List[(Identifier, Expr)] = ((procSig.inParams.map(p => p._1)) zip (callStmt.args))
+
     // formal and actual return value pairs.
     val retPairs : List[(Identifier, (Identifier, Type))] = procSig.outParams.map(p => (p._1 -> (NameProvider.get("ret_" + p._1.toString()), p._2)))
+
     // list of new return variables.
     val retIds = retPairs.map(r => r._2._1)
+
     // map from formal to actual arguments.
     val argMap : Map[Expr, Expr] = argPairs.map(p => p._1.asInstanceOf[Expr] -> p._2).toMap
+
     // map from formal to the fake variables created for return values.
     val retMap : Map[Expr, Expr] = retPairs.map(p => p._1.asInstanceOf[Expr] -> p._2._1).toMap
+
     // map from modified state variables to new variables created for them. ignore modified "instances"
     // should only use modify exprs that contain a ModifiableId
     val modifyRenameList: List[(ModifiableEntity, Identifier)] = proc.modifies.filter(m =>  m match {
@@ -455,12 +460,12 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
         val modifiedIds : Set[Identifier] = proc.modifies.filter(p => p.isInstanceOf[ModifiableId]).map(p => p.asInstanceOf[ModifiableId].id)
         varMap.filter(p => !modifiedIds.contains(p._1) && p._2.isInstanceOf[MIP.StateVariable]).map(p => (p._1 -> p._2.asInstanceOf[MIP.StateVariable].id))
       }
-    
 
         
     // map from st_var -> modify_var.
     // Does not inclide instance state variables
     val modifiesMap : Map[Expr, Expr] = modifyRenameList.map(p => (p._1.expr -> p._2)).toMap
+
 
     // full rewrite map.
     val rewriteMap = argMap ++ retMap ++ modifiesMap ++ notModifiesMap
@@ -594,14 +599,14 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
    * @param context The current scope
    * @returns Returns a BlockStmt containing the internals of the procedure call.
    */
-  override def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope) : Option[Statement] = {
+  def rewriteProcedureCall(callStmt : ProcedureCallStmt, context : Scope, inNextBlock : Boolean) : Option[Statement] = {
     // Handle any instance procedure call.
     if (callStmt.instanceId != None && callStmt.instanceId.get.name == inst.instanceId.name) {
             // Replace the instance procedure call if we're flattening that particular instance    
       val procInst = context.module.get.instances.find(inst => inst.instanceId.name == callStmt.instanceId.get.name).get
       val procModule = context.get(procInst.moduleId).get.asInstanceOf[Scope.ModuleDefinition].mod
       val procOption = procModule.procedures.find(p => p.id.name == callStmt.id.name)
-      val blkStmt = inlineProcedureCall(callStmt, procOption.get, Scope.empty + procModule)
+      val blkStmt = inlineProcedureCall(callStmt, procOption.get, Scope.empty + procModule, inNextBlock)
       rewriter.visitStatement(blkStmt, context)
     } else {
       val procOption = context.module.get.procedures.find(p => p.id == callStmt.id)
@@ -617,7 +622,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       
       // Handle noinlined procedures that modify instances 
       if (!procOption.isEmpty) {
-        val blkStmt = inlineProcedureCall(callStmt, procOption.get, context)
+        val blkStmt = inlineProcedureCall(callStmt, procOption.get, context, inNextBlock)
         rewriter.visitStatement(blkStmt, context)
       } else {
         //TODO: Verify that this is not a reachable state
@@ -631,6 +636,36 @@ class ModuleInstantiator(
     passName : String, module : Module, inst : InstanceDecl,
     targetModule : Module, externalSymbolMap : ExternalSymbolMap)
 extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetModule, externalSymbolMap), false, false) {
+
+    var inNextBlock: Boolean = false;
+
+    override def visitNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
+      inNextBlock = true;
+      val nextP = visitStatement(next.body, context).flatMap(body => pass.rewriteNext(NextDecl(body), context))
+      inNextBlock = false;
+      return ASTNode.introducePos(true, true, nextP, next.position)
+    }
+
+    override def visitProcedureCallStatement(st : ProcedureCallStmt, context : Scope) : Option[Statement] = {
+      val idP = visitIdentifier(st.id, context)
+      val lhssP = st.callLhss.map(visitLhs(_, context)).flatten
+      val argsP = st.args.map(visitExpr(_, context)).flatten
+      val instanceIdP = st.instanceId match { // TODO: Do we need this?
+        case Some(instanceId) => visitIdentifier(instanceId, context)
+        case _ => None
+      }
+      val moduleIdP = st.moduleId match {
+        case Some(moduleId) => visitIdentifier(moduleId, context)
+        case _ => None
+      }
+      if (inNextBlock) {
+        println("I'm in NEXT")
+      } else {
+        println("I'm in PROC")
+      }
+      val stP = idP.flatMap((id) => pass.asInstanceOf[ModuleInstantiatorPass].rewriteProcedureCall(ProcedureCallStmt(id, lhssP, argsP, instanceIdP, moduleIdP), context, inNextBlock))
+      return ASTNode.introducePos(true, true, stP, st.position)
+    }
 
     /*
      * Overwrites inherited visitModifiableEntity method and flattens modify
@@ -670,6 +705,7 @@ extends ASTRewriter(passName, new ModuleInstantiatorPass(module, inst, targetMod
       }
       return ASTNode.introducePos(true, true, modifiableP, modifiable.position)
     }
+    
 }
 
 class ModuleFlattenerPass(mainModule : Identifier) extends RewritePass {
