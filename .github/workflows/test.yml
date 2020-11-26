@@ -27,8 +27,8 @@ jobs:
     - name: Add Z3 to Path
       run: |
        ls $GITHUB_WORKSPACE/z3/bin/
-       echo "::add-path::$GITHUB_WORKSPACE/z3/bin/"
-       echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/"
+       echo "$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_PATH
+       echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_ENV
 
     - name: Print Z3 Version
       run: z3 --version
@@ -64,7 +64,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - uses: olafurpg/setup-scala@v5
+    - uses: olafurpg/setup-scala@v10
       with:
         java-version: openjdk@1.11
 
@@ -82,8 +82,8 @@ jobs:
     - name: Add Z3 to Path
       run: |
        ls $GITHUB_WORKSPACE/z3/bin/
-       echo "::add-path::$GITHUB_WORKSPACE/z3/bin/"
-       echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/"
+       echo "$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_PATH
+       echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_ENV
        ./setup-z3-macos.sh
   
     - name: Print Z3 Version
