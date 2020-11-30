@@ -62,6 +62,9 @@ object VerifierSpec {
   }
 }
 class VerifierSanitySpec extends AnyFlatSpec {
+  "test-int-fib.ucl" should "verify all but one assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-int-fib.ucl", 1)
+  }
   "test-assert-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-assert-1.ucl", 0)
   }
@@ -181,7 +184,7 @@ class BasicVerifierSpec extends AnyFlatSpec {
   "test-subst-1.ucl" should "fail to verify 2 assertions" in {
     VerifierSpec.expectedFails("./test/test-subst-1.ucl", 2)
   }
-  ignore /*"test-const-array.ucl"*/ should "verify all but one assertion." in {
+  "test-const-array.ucl" should "verify all but one assertion." in {
     VerifierSpec.expectedFails("./test/test-const-array.ucl", 1)
   }
   "test-record-havoc.ucl" should "verify all assertions." in {
@@ -207,6 +210,9 @@ class BasicVerifierSpec extends AnyFlatSpec {
   }
   "test-multiply-divide.ucl" should "verify all but one assertions." in {
     VerifierSpec.expectedFails("./test/test-multiply-divide.ucl", 1)
+  }
+  "test-smtlib-consts.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-smtlib-consts.ucl", 0)
   }
 }
 class ProcedureVerifSpec extends AnyFlatSpec {
@@ -507,9 +513,9 @@ class LTLVerifSpec extends AnyFlatSpec {
   }
 }
 class HyperPropertySpec extends AnyFlatSpec {
-  ignore /*"test-hyperproperty-4.ucl"*/ should "verify all assertions." in {
-    VerifierSpec.expectedFails("./test/test-hyperproperty-4.ucl", 0)
-  }
+  // "test-hyperproperty-4.ucl" should "verify all assertions." in {
+  //   VerifierSpec.expectedFails("./test/test-hyperproperty-4.ucl", 0)
+  // }
 }
 
 object PrintCexSpec {
