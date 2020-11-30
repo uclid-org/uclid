@@ -350,6 +350,7 @@ class Z3Interface() extends Context {
           ctx.mkSub (arithArgs: _*)
         }
       case IntMulOp               => ctx.mkMul (arithArgs : _*)
+      case IntDivOp               => ctx.mkDiv (arithArgs(0), arithArgs(1))
       case BVLTOp(_)              => ctx.mkBVSLT(bvArgs(0), bvArgs(1))
       case BVLEOp(_)              => ctx.mkBVSLE(bvArgs(0), bvArgs(1))
       case BVGTOp(_)              => ctx.mkBVSGT(bvArgs(0), bvArgs(1))
@@ -361,6 +362,8 @@ class Z3Interface() extends Context {
       case BVAddOp(_)             => ctx.mkBVAdd(bvArgs(0), bvArgs(1))
       case BVSubOp(_)             => ctx.mkBVSub(bvArgs(0), bvArgs(1))
       case BVMulOp(_)             => ctx.mkBVMul(bvArgs(0), bvArgs(1))
+      case BVDivOp(_)             => ctx.mkBVSDiv(bvArgs(0), bvArgs(1))
+      case BVUDivOp(_)            => ctx.mkBVUDiv(bvArgs(0), bvArgs(1))
       case BVMinusOp(_)           => ctx.mkBVNeg(bvArgs(0))
       case BVAndOp(_)             => ctx.mkBVAND(bvArgs(0), bvArgs(1))
       case BVUremOp(_)            => ctx.mkBVURem(bvArgs(0), bvArgs(1))

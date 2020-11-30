@@ -205,6 +205,9 @@ class BasicVerifierSpec extends AnyFlatSpec {
   "test-range-expr.ucl" should "verify all but two assertions." in {
     VerifierSpec.expectedFails("./test/test-range-expr.ucl", 2)
   }
+  "test-multiply-divide.ucl" should "verify all but one assertions." in {
+    VerifierSpec.expectedFails("./test/test-multiply-divide.ucl", 1)
+  }
 }
 class ProcedureVerifSpec extends AnyFlatSpec {
   "test-inliner.ucl" should "verify successfully." in {
