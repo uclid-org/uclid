@@ -104,7 +104,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val OpAdd = "+"
     lazy val OpSub = "-"
     lazy val OpMul = "*"
-    lazy val OpUMul = "*_u"
+    lazy val OpDiv = "/"
+    lazy val OpUDiv = "/_u"
     lazy val OpBvSrem = "%"
     lazy val OpBvUrem = "%_u"
     lazy val OpBiImpl = "<==>"
@@ -182,10 +183,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lexical.delimiters ++= List("(", ")", ",", "[", "]",
       "bv", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->",
-      OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul,
+      OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul, OpDiv, OpUDiv,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, 
       OpEQ, OpNE, OpConcat, OpNot, OpMinus, OpPrime, OpBvUrem, OpBvSrem)
-    lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul,
+    lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul, OpDiv, OpUDiv,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvUrem, OpBvSrem, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
@@ -222,6 +223,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       case x ~ OpAdd ~ y => OperatorApplication(AddOp(), List(x,y))
       case x ~ OpSub ~ y => OperatorApplication(SubOp(), List(x,y))
       case x ~ OpMul ~ y => OperatorApplication(MulOp(), List(x,y))
+      case x ~ OpDiv ~ y => OperatorApplication(DivOp(), List(x,y))
+      case x ~ OpUDiv ~ y => OperatorApplication(BVUDivOp(0), List(x,y))
     }
 
     lazy val LLOp : Parser[Operator] = positioned { 
@@ -341,7 +344,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     /** E9 = E9 OpSub E10 | E10 **/
     lazy val E9: PackratParser[Expr] = positioned ( E10 ~ OpSub ~ E10 ^^ ast_binary | E10 )
     /** E10 = E11 OpMul E11 | E11 **/
-    lazy val E10: PackratParser[Expr] = E11 ~ OpMul ~ E11 ^^ ast_binary | E11
+    lazy val E10: PackratParser[Expr] = E11 ~ OpMul ~ E11 ^^ ast_binary | E11 ~ OpDiv ~ E11 ^^ ast_binary  | E11 ~ OpUDiv ~ E11 ^^ ast_binary  | E11
     /** E11 = UnOp E12 | E12 **/
     lazy val E11: PackratParser[Expr] = positioned {
         OpNeg ~> E12 ^^ { case e => OperatorApplication(UnaryMinusOp(), List(e)) } |
@@ -645,7 +648,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       OpConcat ^^ { case _ => ConcatOp() } |
       OpAdd ^^ { case _ => AddOp() } |
       OpSub ^^ { case _ => SubOp() } |
-      OpMul ^^ { case _ => MulOp() } | 
+      OpMul ^^ { case _ => MulOp() } |
+      OpDiv ^^ { case _ => DivOp() } | 
+      OpUDiv ^^ { case _ => BVUDivOp(0) } |  
       OpBvUrem ^^ { case _ => BVUremOp(0) } |
       OpBvSrem ^^ { case _ => BVSremOp(0) }
     }

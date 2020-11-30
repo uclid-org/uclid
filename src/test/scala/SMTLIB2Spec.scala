@@ -197,6 +197,9 @@ class SMTLIB2Spec extends AnyFlatSpec {
   "test-range-expr.ucl" should "verify all but two assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-range-expr.ucl", 2)
   }
+  "test-multiply-divide.ucl" should "verify all but one assertions." in {
+    VerifierSpec.expectedFails("./test/test-multiply-divide.ucl", 1)
+  }
 
   "test-inliner.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-inliner.ucl", 0)

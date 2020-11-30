@@ -212,6 +212,11 @@ case class UnaryMinusOp() extends PolymorphicOperator {
   override val hashId = 1007
   override val md5hashCode = computeMD5Hash
 }
+case class DivOp() extends PolymorphicOperator {
+  override def toString = "/"
+  override val hashId = 1008
+  override val md5hashCode = computeMD5Hash
+}
 
 // These are operators with integer operators.
 sealed abstract class IntArgOperator extends Operator {
@@ -256,6 +261,11 @@ case class IntUnaryMinusOp() extends IntArgOperator {
   override def toString = "-"
   override def fixity = Operator.PREFIX
   override val hashId = 1107
+  override val md5hashCode = computeMD5Hash
+}
+case class IntDivOp() extends IntArgOperator {
+  override def toString = "/"
+  override val hashId = 1108
   override val md5hashCode = computeMD5Hash
 }
 // These operators take bitvector operands and return bitvector results.
@@ -318,46 +328,56 @@ case class BVMulOp(override val w : Int) extends BVArgOperator(w) {
   override val hashId = 1210
   override val md5hashCode = computeMD5Hash(w)
 }
+case class BVDivOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "/"
+  override val hashId = 1211
+  override val md5hashCode = computeMD5Hash(w)
+}
+case class BVUDivOp(override val w : Int) extends BVArgOperator(w) {
+  override def toString = "/_u"
+  override val hashId = 1212
+  override val md5hashCode = computeMD5Hash(w)
+}
 case class BVAndOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "&"
-  override val hashId = 1211
+  override val hashId = 1213
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVOrOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "|"
-  override val hashId = 1212
+  override val hashId = 1214
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVXorOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "^"
-  override val hashId = 1213
+  override val hashId = 1215
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVNotOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "~"
   override val arity = 1
-  override val hashId = 1214
+  override val hashId = 1216
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVUnaryMinusOp(override val w : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "-"
   override val arity = 1
-  override val hashId = 1215
+  override val hashId = 1217
   override val md5hashCode = computeMD5Hash(w)
 }
 case class BVSignExtOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "bv_sign_extend"
   override val arity = 1
-  override val hashId = 1216
+  override val hashId = 1218
   override val md5hashCode = computeMD5Hash(w, e)
 }
 case class BVZeroExtOp(override val w : Int, val e : Int) extends BVArgOperator(w) {
   override def fixity = Operator.PREFIX
   override def toString = "bv_zero_extend"
   override val arity = 1
-  override val hashId = 1217
+  override val hashId = 1219
   override val md5hashCode = computeMD5Hash(w, e)
 }
 
