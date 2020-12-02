@@ -135,6 +135,11 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     val logic = cmd.params(0).name.toString
     Utils.checkParsingError(logicIsSupported(logic), "'%s' command expects a supported logic as a parameter".format(cmd.name.toString), cmd.pos, filename)
   }
+  def checkParamsValid(cmd: GenericProofCommand, filename : Option[String], validParams: List[Identifier]) {
+    val matchingParams = cmd.params.filter(p => validParams.contains(p.name))
+    Utils.checkParsingError(matchingParams.size == cmd.params.size, "invalid parameter for command '%s'".format(cmd.name.toString), cmd.pos, filename)
+  }
+
   override def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : Unit, context : Scope) : Unit = {
     val filename = context.module.flatMap(_.filename)
     cmd.name.toString match {
@@ -157,10 +162,12 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkPropertiesValid(Identifier("properties"), cmd, context, filename)
         checkPropertiesValid(Identifier("pre"), cmd, context, filename)
         checkPropertiesValid(Identifier("assumptions"), cmd, context, filename)
+        checkParamsValid(cmd, filename, List(Identifier("properties"), Identifier("pre"), Identifier("assumptions")))
         checkHasZeroOrOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
       case "bmc" =>
         checkPropertiesValid(Identifier("properties"), cmd, context, filename)
+        checkParamsValid(cmd, filename, List(Identifier("properties")))
         checkHasOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
       case "verify" =>
