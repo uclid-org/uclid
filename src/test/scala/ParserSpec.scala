@@ -701,4 +701,24 @@ class ParserSpec extends AnyFlatSpec {
     assert (instantiatedModules.size == 1)
   }
 
+  "test-invalid-cmd-param.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-invalid-cmd-param.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserError => assert (true)
+      case _ : Throwable => assert (false)
+    }
+  }
+
+  "test-invalid-cmd-param-2.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-invalid-cmd-param-2.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserError => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+
 }
