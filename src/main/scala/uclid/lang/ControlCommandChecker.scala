@@ -47,9 +47,15 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
   def checkNoArgObj(cmd : GenericProofCommand, filename: Option[String]) {
     Utils.checkParsingError(cmd.argObj.isEmpty, "'%s' command does not expect an argument object".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkHasArgObj(cmd : GenericProofCommand, filename: Option[String]) {
+  def checkHasArgObj(cmd : GenericProofCommand, filename: Option[String], context : Scope ) {
     Utils.checkParsingError(cmd.argObj.isDefined, "'%s' command expects an argument object".format(cmd.name.toString), cmd.pos, filename)
+    val gotMatch = context.get(cmd.argObj.get) match {
+      case Some(Scope.VerifResultVar(_, _)) => true
+      case _ => false
+      }
+    Utils.checkParsingError(gotMatch, "'%s' is an invalid argument object".format(cmd.argObj.get), cmd.pos, filename)
   }
+
   def checkNoArgs(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size == 0, "'%s' command does not expect any arguments".format(cmd.name.toString), cmd.pos, filename)
   }
@@ -199,11 +205,11 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       case "print_cex" =>
         checkNoParams(cmd, filename)
         checkNoResultVar(cmd, filename)
-        checkHasArgObj(cmd, filename)
+        checkHasArgObj(cmd, filename, context)
       case "dump_cex_vcds" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)
-        checkHasArgObj(cmd, filename)
+        checkHasArgObj(cmd, filename, context)
         checkNoResultVar(cmd, filename)
       case _ =>
         Utils.raiseParsingError("Unknown control command: " + cmd.name.toString, cmd.pos, filename)

@@ -721,4 +721,14 @@ class ParserSpec extends AnyFlatSpec {
     }
   }
 
+  "test-invalid-verif-var.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-invalid-verif-var.ucl")), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserError => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+
 }
