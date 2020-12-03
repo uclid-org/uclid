@@ -170,7 +170,7 @@ trait SMTLIB2Base {
   /**
    * Translates an smt operator to its string representation.
    *
-   * @opIn The smt operator to be translated.
+   * @param opIn The smt operator to be translated.
    */
   def translateOp(opIn: Operator) : String = {
     opIn match {
