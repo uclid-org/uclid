@@ -15,6 +15,7 @@ module main {
     property p2 : (and(true, true) == true);
 
     control {
+        v = unroll(1);
         check;
         print_results;
     }

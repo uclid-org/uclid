@@ -679,12 +679,6 @@ class ParserSpec extends AnyFlatSpec {
     }
   }
 
-  "test-def-import-4.ucl" should "parse successfully." in {
-    val fileModules = UclidMain.compile(List(new File("test/test-def-import-4.ucl")), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
-    assert (instantiatedModules.size == 1)
-  }
-
   "test-instance-procedure-call-6.ucl" should "not parse successfully" in {
     try {
       val fileModules = UclidMain.compile(List(new File("test/test-instance-procedure-call-6.ucl")), lang.Identifier("main"))
