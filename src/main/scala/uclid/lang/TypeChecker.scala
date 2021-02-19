@@ -404,6 +404,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case NegationOp() =>
               checkTypeError(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument", opapp.pos, c.filename)
               checkTypeError(argTypes.forall(_.isInstanceOf[BooleanType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool", opapp.pos, c.filename)
+            case ConjunctionOp() =>
+              checkTypeError(argTypes.size >= 2, "Operator '" + opapp.op.toString + "' must have at least two arguments", opapp.pos, c.filename)
+              checkTypeError(argTypes.forall(_.isInstanceOf[BooleanType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool", opapp.pos, c.filename)
             case _ =>
               checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
               checkTypeError(argTypes.forall(_.isInstanceOf[BooleanType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool", opapp.pos, c.filename)

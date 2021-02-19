@@ -419,7 +419,7 @@ class LTLPropertyRewriterPass extends RewritePass {
   }
 
   def orExpr(a : Expr, b : Expr) : Expr = OperatorApplication(DisjunctionOp(), List(a, b))
-  def andExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ConjunctionOp(), List(a, b))
+  def andExpr(a : Expr*) : Expr = OperatorApplication(ConjunctionOp(), a.toList)
   def notExpr(a : Expr) : Expr = OperatorApplication(NegationOp(), List(a))
   def eqExpr(a : Expr, b : Expr) : Expr = OperatorApplication(EqualityOp(), List(a, b))
   def implExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ImplicationOp(), List(a, b))
@@ -443,7 +443,7 @@ class LTLPropertyRewriterPass extends RewritePass {
       case (v1, v2) => eqExpr(v1._1, v2._1)
     }
     val initExpr : Expr = BoolLit(true)
-    eqExprs.foldLeft(initExpr)((acc, e) => andExpr(acc, e))
+    andExpr(initExpr :: eqExprs:_*)
   }
 
   def createRepeatedAssignment(vars : List[Identifier], value : Expr) : Option[AssignStmt] = {
@@ -519,7 +519,7 @@ class LTLPropertyRewriterPass extends RewritePass {
         val hasAcceptedTraceExpr = if (hasAcceptedVars.size == 0) {
           stateCopiedVar
         } else {
-          hasAcceptedVars.foldLeft(foldInit)((acc, v) => andExpr(acc, v))
+          andExpr(foldInit :: hasAcceptedVars:_*)
         }
 
         ((hasAcceptedVars, hasAcceptedExprs), (hasAcceptedTrace, hasAcceptedTraceExpr))
