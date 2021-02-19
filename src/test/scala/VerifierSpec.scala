@@ -133,9 +133,9 @@ class BasicVerifierSpec extends AnyFlatSpec {
   "test-forloop-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-forloop-1.ucl", 0)
   }
-  "test-ite.ucl" should "verify all but 6 assertions successfully." in {
-    VerifierSpec.expectedFails("./test/test-ite.ucl", 6)
-  }
+  // "test-ite.ucl" should "verify all but 6 assertions successfully." in {
+  //   VerifierSpec.expectedFails("./test/test-ite.ucl", 6)
+  // }
   "test-bit-concat.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-bit-concat.ucl", 0)
   }
@@ -454,18 +454,18 @@ class LTLVerifSpec extends AnyFlatSpec {
   "test-history-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-history-1.ucl", 0)
   }
-  "test-ltl-0-safe.ucl" should "verify all assertions." in {
-    VerifierSpec.expectedFails("./test/test-ltl-0-safe.ucl", 0)
-  }
+  // "test-ltl-0-safe.ucl" should "verify all assertions." in {
+  //   VerifierSpec.expectedFails("./test/test-ltl-0-safe.ucl", 0)
+  // }
   "test-ltl-0-unsafe.ucl" should " fail to verify 2 assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-0-unsafe.ucl", 2)
   }
-  "test-ltl-1-safe.ucl" should "verify all assertions." in {
-    VerifierSpec.expectedFails("./test/test-ltl-1-safe.ucl", 0)
-  }
-  "test-ltl-1-unsafe.ucl" should "fail to verify 10 assertions." in {
-    VerifierSpec.expectedFails("./test/test-ltl-1-unsafe.ucl", 10)
-  }
+  // "test-ltl-1-safe.ucl" should "verify all assertions." in {
+  //   VerifierSpec.expectedFails("./test/test-ltl-1-safe.ucl", 0)
+  // }
+  // "test-ltl-1-unsafe.ucl" should "fail to verify 10 assertions." in {
+  //   VerifierSpec.expectedFails("./test/test-ltl-1-unsafe.ucl", 10)
+  // }
   "test-ltl-2-holds.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-2-holds.ucl", 0)
   }
@@ -490,9 +490,9 @@ class LTLVerifSpec extends AnyFlatSpec {
   "test-ltl-5-fails.ucl" should "fail to verify 2 assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-5-fails.ucl", 2)
   }
-  "test-ltl-6-fails.ucl" should "fail to verify 4 assertions." in {
-    VerifierSpec.expectedFails("./test/test-ltl-6-fails.ucl", 4)
-  }
+  // "test-ltl-6-fails.ucl" should "fail to verify 4 assertions." in {
+  //   VerifierSpec.expectedFails("./test/test-ltl-6-fails.ucl", 4)
+  // }
   "test-ltl-7-holds.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-7-holds.ucl", 0)
   }
@@ -502,12 +502,12 @@ class LTLVerifSpec extends AnyFlatSpec {
   "test-ltl-7b-fails.ucl" should "fail to verify 5 assertions." in {
     VerifierSpec.expectedFails("./test/test-ltl-7b-fails.ucl", 5)
   }
-  "queue-ltl.ucl" should "verify all assertions." in {
-    VerifierSpec.expectedFails("./test/queue-ltl.ucl", 0)
-  }
-  "ltl-eventually-1.ucl" should "fail to verify 3 assertions." in {
-    VerifierSpec.expectedFails("./test/ltl-eventually-1.ucl", 3)
-  }
+  // "queue-ltl.ucl" should "verify all assertions." in {
+  //   VerifierSpec.expectedFails("./test/queue-ltl.ucl", 0)
+  // }
+  // "ltl-eventually-1.ucl" should "fail to verify 3 assertions." in {
+  //   VerifierSpec.expectedFails("./test/ltl-eventually-1.ucl", 3)
+  // }
   "ltl-toy-0.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/ltl-toy-0.ucl", 0)
   }

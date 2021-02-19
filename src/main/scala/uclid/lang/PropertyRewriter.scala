@@ -409,7 +409,15 @@ class LTLPropertyRewriterPass extends RewritePass {
     if (ltlSpecs.size == 0) {
       Some(module)
     } else {
+      // throw errors if more than 1 LTL spec found
+      // TODO: this is a temporary fix for a known bug that occurs when conjoining an LTL specification with any other property
+      // where assumptions inserted into the module for the LTL property affect satisfiability of the other specifications
+      if(ltlSpecs.size > 1)
+        throw new Utils.RuntimeError(s"Modules containing more than 1 LTL specification are currently not supported. This support will be added in the next UCLID release.")
       val otherSpecs = moduleSpecs.filter(s => !s.params.exists(d => d == LTLExprDecorator))
+      if(otherSpecs.size > 0)
+        throw new Utils.RuntimeError(s"Modules containing at least 1 LTL specification combined with non-LTL specifications are not currently supported. This support will be added in the next UCLID release.")
+    
       Some(rewriteSpecs(module, ctx, ltlSpecs, otherSpecs))
     }
   }
