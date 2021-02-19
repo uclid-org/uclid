@@ -515,4 +515,7 @@ class SMTLIB2Spec extends AnyFlatSpec {
     SMTLIB2Spec.expectedFails("./test/test-smtlib-consts.ucl", 0)
   }
 
+  "test-too-many-vars-error.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-too-many-vars-error.ucl", 0)
+  }
 }
