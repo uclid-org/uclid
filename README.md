@@ -12,7 +12,7 @@ Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating 
 
 UCLID5 is an evolution of the earlier UCLID modeling and verification system. The UCLID project was one of the first to develop satisfiability modulo theories (SMT) solvers and SMT-based verification methods. Here is the original UCLID paper that appeared at CAV 2002:
 
-Randal E. Bryant, Shuvendu K. Lahiri, and Sanjit A. Seshia. <font color="blue>Modeling and Verifying Systems using a Logic of Counter Arithmetic with Lambda Expressions and Uninterpreted Functions.</font> [\[HTML\]](https://people.eecs.berkeley.edu/~sseshia/pubs/b2hd-bryant-cav02.html)
+Randal E. Bryant, Shuvendu K. Lahiri, and Sanjit A. Seshia. <font color="blue">Modeling and Verifying Systems using a Logic of Counter Arithmetic with Lambda Expressions and Uninterpreted Functions.</font> [\[HTML\]](https://people.eecs.berkeley.edu/~sseshia/pubs/b2hd-bryant-cav02.html)
 *Proceedings of the 14th International Conference on Computer-Aided Verification (CAV)*, pp. 78–92, LNCS 2404 , July 2002.
 
 # Installation
