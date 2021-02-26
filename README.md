@@ -1,15 +1,20 @@
 <a href="https://travis-ci.org/uclid-org/uclid"><img src="https://travis-ci.org/uclid-org/uclid.svg?branch=master"></a>
 ![](https://github.com/uclid-org/uclid/workflows/Uclid%20CI/badge.svg)
 
-# uclid5 Tutorial/Publication
+# UCLID5 Tutorial/Publication
 
-The [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf) has a gentle introduction to using uclid5.
+The [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf) has a gentle introduction to using UCLID5.
 
-If you use uclid5 in your work, please cite the following MEMOCODE 2018 paper:
+If you use UCLID5 in your work, please cite the following MEMOCODE 2018 paper:
 
 Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating Modeling, Verification, Synthesis and Learning.</font>
- [\[PDF\]](https://cse.iitk.ac.in/users/spramod/papers/memocode18.pdf)    
+ [\[HTML\]](https://people.eecs.berkeley.edu/~sseshia/pubs/b2hd-seshia-memocode18.html)
 *Proceedings of the 16th ACM-IEEE International Conference on Formal Methods and Models for System Design*. **(MEMOCODE 2018)**. Beijing, China. October 2018. 
+
+UCLID5 is an evolution of the earlier UCLID modeling and verification system. The UCLID project was one of the first to develop satisfiability modulo theories (SMT) solvers and SMT-based verification methods. Here is the original UCLID paper that appeared at CAV 2002:
+
+Randal E. Bryant, Shuvendu K. Lahiri, and Sanjit A. Seshia. <font color="blue>Modeling and Verifying Systems using a Logic of Counter Arithmetic with Lambda Expressions and Uninterpreted Functions.</font> [\[HTML\]](https://people.eecs.berkeley.edu/~sseshia/pubs/b2hd-bryant-cav02.html)
+*Proceedings of the 14th International Conference on Computer-Aided Verification (CAV)*, pp. 78–92, LNCS 2404 , July 2002.
 
 # Installation
 There are currently two ways to install UCLID5: [downloading the latest pre-build package](#prebuilt) and [building from source](#srcbuild). Please make sure you have all the pre-requisites before proceeding to installation. Due to the nuances in the later Mac OS versions, we prepare separately a compact list of the installation instructions [here](mac-install.md). 
