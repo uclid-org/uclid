@@ -1,12 +1,12 @@
 ## macOS Installation Instructions
 
 ### Install Java 11
+1. `brew install openjdk@11`
+
+If the above step does not work and you are running an old version of macOS, try:
 1. `brew update`
 2. `brew tap homebrew/cask-versions`
 3. `brew cask install java11`
-
-If the steps above do not work due to `Error: Unknown command: cask`, this is because `cask` is now depricated as of December 1, 2020. Try the following command instead:
-1. `brew install openjdk@11`
 
 Make sure Java 11 is the default by adding the following lines to your dotfiles. For `bash` this is usually `.bash_profile` and for `zsh` this is usually `.zshrc`.
 ```
@@ -33,3 +33,4 @@ Make sure the Z3 Java libraries are in the right place by copying the files in t
 2. `sbt update clean compile`
 3. `sbt universal:packageBin`
 4. `unzip <target/universal>/uclid-0.9.5.zip; cd uclid-0.9.5; export PATH=$PATH:$PWD/bin`
+
