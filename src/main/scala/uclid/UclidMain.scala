@@ -111,7 +111,7 @@ object UclidMain {
 
       opt[Unit]('e', "enum-to-numeric").action{
         (_, c) => c.copy(enumToNumeric = true)
-      }.text("Enable conversion from EnumType to NumericType.")
+      }.text("Enable conversion from EnumType to NumericType - KNOWN BUGS.")
 
       opt[Unit]('u', "uf-to-array").action{
         (_, c) => c.copy(ufToArray = true)
