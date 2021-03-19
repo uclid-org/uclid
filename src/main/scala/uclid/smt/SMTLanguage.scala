@@ -845,7 +845,7 @@ case class AssignmentModel(functions : List[Expr]) extends Hashable {
 case class SynthSymbol(id: String, symbolTyp: lang.FunctionSig, gid: Option[Identifier], gargs: List[Identifier], conds : List[lang.Expr]) extends Expr (smt.Converter.typeToSMT(symbolTyp.typ)) {
   override val hashId = mix(id.hashCode(), mix(symbolTyp.typ.hashCode(), 315))
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash(id, symbolTyp.typ)
+  override val md5hashCode = computeMD5Hash(id)
   override def toString = id.toString
 }
 case class GrammarSymbol(id: String, symbolTyp: Type, nts : List[NonTerminal]) extends Expr (symbolTyp) {
