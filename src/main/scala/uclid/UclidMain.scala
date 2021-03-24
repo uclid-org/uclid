@@ -339,22 +339,35 @@ object UclidMain {
     }
 
     // combine all modules with the same name
-    val parsedModulesP = parsedModules
+    val combinedParsedModules = parsedModules
       .groupBy(_.id)
       .map((kv) => {
         val id = kv._1
         val modules = kv._2
-        modules.foldLeft(Module(id, List.empty, List.empty, List.empty)){
-          (acc, module) => Module(id, acc.decls++module.decls, acc.cmds++module.cmds, acc.notes++module.notes)
+        val combinedModule = modules.foldLeft(Module(id, List.empty, List.empty, List.empty)){
+          (acc, module) => {
+            val declsP = (acc.decls ++ module.decls).distinct
+            val cmdsP = (acc.cmds ++ module.cmds).distinct
+            val notesP = (acc.notes ++ module.notes).distinct
+            Module(id, declsP, cmdsP, notesP)
+          }
         }
+        id -> combinedModule
       })
+      .toMap
+    // restore ordering of modules
+    val combinedParsedModulesP = parsedModules
+      .map(module => module.id)
+      .distinct
+      .map(id => combinedParsedModules.get(id).get)
+      .toList
 
     // now process each module
     val init = (List.empty[Module], Scope.empty)
     // NOTE: The foldLeft/:: combination here reverses the order of modules.
     // The PassManager in instantiate calls run(ms : List[Module]); this version of run uses foldRight.
     // So modules end up being processed in the same order in both PassManagers.
-    val processedModules = parsedModulesP.foldLeft(init) {
+    val processedModules = combinedParsedModulesP.foldLeft(init) {
       (acc, m) =>
         val modules = acc._1
         val context = acc._2
