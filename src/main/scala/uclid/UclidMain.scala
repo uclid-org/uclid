@@ -338,12 +338,23 @@ object UclidMain {
       (acc, srcFile) => acc ++ parseFile(srcFile.getPath())
     }
 
+    // combine all modules with the same name
+    val parsedModulesP = parsedModules
+      .groupBy(_.id)
+      .map((kv) => {
+        val id = kv._1
+        val modules = kv._2
+        modules.foldLeft(Module(id, List.empty, List.empty, List.empty)){
+          (acc, module) => Module(id, acc.decls++module.decls, acc.cmds++module.cmds, acc.notes++module.notes)
+        }
+      })
+
     // now process each module
     val init = (List.empty[Module], Scope.empty)
     // NOTE: The foldLeft/:: combination here reverses the order of modules.
     // The PassManager in instantiate calls run(ms : List[Module]); this version of run uses foldRight.
     // So modules end up being processed in the same order in both PassManagers.
-    val processedModules = parsedModules.foldLeft(init) {
+    val processedModules = parsedModulesP.foldLeft(init) {
       (acc, m) =>
         val modules = acc._1
         val context = acc._2
