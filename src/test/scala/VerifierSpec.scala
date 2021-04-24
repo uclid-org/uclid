@@ -49,7 +49,7 @@ object VerifierSpec {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
     val config = UclidMain.Config() 
-    val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
+    val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
     // val config = UclidMain.Config("main", List("/usr/bin/z3", "-in", "-smt2"), List.empty)
@@ -525,7 +525,7 @@ object PrintCexSpec {
   def checkPrintCex(filename: String, n : Int) {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
-    val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
+    val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
     val config = UclidMain.Config() 

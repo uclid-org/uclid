@@ -49,7 +49,7 @@ object SMTLIB2Spec {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
     val config = UclidMain.Config().copy(smtSolver=List("z3", "-smt2", "-in"))
-    val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
+    val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
     val results = UclidMain.execute(mainModule.get, config)
