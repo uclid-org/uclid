@@ -64,7 +64,15 @@ class ModSetAnalysisPass() extends ReadOnlyPass[Map[Identifier, Set[Identifier]]
         case ForStmt(_, _, _, body) => collectStatementModifies(body, varIdSet)
         case WhileStmt(_, body, _) => collectStatementModifies(body, varIdSet)
         case CaseStmt(body) => body.map(pair => collectStatementModifies(pair._2, varIdSet)).flatten.toSet
-        case ProcedureCallStmt(_, lhss, _, _, _) => lhss.map(lhs => lhs.ident).filter(varIdSet.contains(_)).foldLeft(List.empty[Identifier])((acc, ident) => ident :: acc).toSet
+        case ProcedureCallStmt(id, lhss, _, instanceId, _) => {
+          if (instanceId.isDefined) {
+            throw new Utils.UnimplementedException("Modifies set analysis is unimplemented for instance procedure calls.");
+          }
+          lhss.map(lhs => lhs.ident)
+              .filter(varIdSet.contains(_))
+              .foldLeft(List.empty[Identifier])((acc, ident) => ident :: acc)
+              .toSet
+        }
         case _ => Set.empty
     }
   }
