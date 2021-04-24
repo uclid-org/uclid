@@ -1,0 +1,21 @@
+module main {
+
+    var x: integer;
+
+    // Should only infer that x is modified
+    procedure foo() {
+        var y: integer;
+        y = 0;
+        x = 0;
+    }
+
+    procedure bar() {
+        call foo();
+    }
+
+    control {
+        v = verify(foo);
+        check;
+        print_results;
+    }
+}
