@@ -40,37 +40,58 @@ package uclid
 package lang
 
 class ModSetAnalysisPass() extends ReadOnlyPass[Map[Identifier, Set[Identifier]]] {
-  // Map from procedure id to its inferred modifies set
+  // Map from procedure id to its inferred modifies set.
   type T = Map[Identifier, Set[Identifier]]
+
+  /** Returns whether the variable should be added to the modifies set using the
+    * state variable set and current local variable set.
+    *  @param varIdSet The set of state variables to include in the modifies set.
+    *                  This is usually the set of output and state variables.
+    *  @param locVarIdSet The set of local variables at the current scope.
+    *                     This is used to avoid adding shadowed local variables.
+    */
+  def isModified(id: Identifier, varIdSet: Set[Identifier], locVarIdSet: Set[Identifier]): Boolean = {
+    varIdSet.contains(id) && !locVarIdSet.contains(id)
+  }
 
   /** Recursively computes the modifies set for a statement by looking at the
    *  left hand side assignments and havoc statements.
    *
    *  @param stmt The statement to infer
-   *  @param varIdSet A Set of state variables to include in the modifies set.
+   *  @param varIdSet The set of state variables to include in the modifies set.
    *                  This is usually the set of output and state variables.
+   *  @param locVarIdSet The set of local variables at the current scope.
+   *                     This is used to avoid adding shadowed local variables.
    */
-  def collectStatementModifies(stmt: Statement, varIdSet: Set[Identifier]): Set[Identifier] = {
+  def collectStatementModifies(stmt: Statement, varIdSet: Set[Identifier], locVarIdSet: Set[Identifier]): Set[Identifier] = {
     stmt match {
         case HavocStmt(havocableEntity) => {
             havocableEntity match {
-                case HavocableId(id) => if (varIdSet.contains(id)) Set(id) else Set.empty
+                case HavocableId(id) => if (isModified(id, varIdSet, locVarIdSet)) Set(id) else Set.empty
                 case _ => Set.empty
             }
         }
-        case AssignStmt(lhss, _) => lhss.map(lhs => lhs.ident).filter(ident => varIdSet.contains(ident)).foldLeft(List.empty[Identifier])((acc, ident) => ident :: acc).toSet
-        case BlockStmt(_, stmts) => stmts.foldLeft(Set.empty[Identifier])((acc, stmt) => acc ++ collectStatementModifies(stmt, varIdSet))
-        case IfElseStmt(_, thn, els) => collectStatementModifies(thn, varIdSet) ++ collectStatementModifies(els, varIdSet)
-        case ForStmt(_, _, _, body) => collectStatementModifies(body, varIdSet)
-        case WhileStmt(_, body, _) => collectStatementModifies(body, varIdSet)
-        case CaseStmt(body) => body.map(pair => collectStatementModifies(pair._2, varIdSet)).flatten.toSet
+        case AssignStmt(lhss, _) => {
+          lhss.map(lhs => lhs.ident)
+              .filter(id => isModified(id, varIdSet, locVarIdSet))
+              .foldLeft(List.empty[Identifier])((acc, id) => id :: acc)
+              .toSet
+        }
+        case BlockStmt(vars, stmts) => {
+          val locVarIdSetP = vars.foldLeft(locVarIdSet)((acc, bvd) => acc ++ bvd.ids.toSet)
+          stmts.foldLeft(Set.empty[Identifier])((acc, stmt) => acc ++ collectStatementModifies(stmt, varIdSet, locVarIdSetP))
+        }
+        case IfElseStmt(_, thn, els) => collectStatementModifies(thn, varIdSet, locVarIdSet) ++ collectStatementModifies(els, varIdSet, locVarIdSet)
+        case ForStmt(_, _, _, body) => collectStatementModifies(body, varIdSet, locVarIdSet)
+        case WhileStmt(_, body, _) => collectStatementModifies(body, varIdSet, locVarIdSet)
+        case CaseStmt(body) => body.map(pair => collectStatementModifies(pair._2, varIdSet, locVarIdSet)).flatten.toSet
         case ProcedureCallStmt(id, lhss, _, instanceId, _) => {
           if (instanceId.isDefined) {
             throw new Utils.UnimplementedException("Modifies set analysis is unimplemented for instance procedure calls.");
           }
           lhss.map(lhs => lhs.ident)
-              .filter(varIdSet.contains(_))
-              .foldLeft(List.empty[Identifier])((acc, ident) => ident :: acc)
+              .filter(isModified(_, varIdSet, locVarIdSet))
+              .foldLeft(List.empty[Identifier])((acc, id) => id :: acc)
               .toSet
         }
         case _ => Set.empty
@@ -81,7 +102,8 @@ class ModSetAnalysisPass() extends ReadOnlyPass[Map[Identifier, Set[Identifier]]
     val stateVarIds = context.vars.map(v => v.varId)
     val outputVarIds = context.outputs.map(v => v.outId)
     val varIdSet = stateVarIds ++ outputVarIds
-    val modSet = collectStatementModifies(proc.body, varIdSet)
+    val returnIdSet = proc.sig.outParams.map(_._1).toSet
+    val modSet = collectStatementModifies(proc.body, varIdSet, returnIdSet)
     in + (proc.id -> modSet)
   }
 }
