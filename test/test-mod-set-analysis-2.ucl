@@ -1,6 +1,7 @@
 module main {
 
     var x: integer;
+    var z: integer;
 
     // Should only infer that x is modified
     procedure foo() {
@@ -9,8 +10,16 @@ module main {
         x = 0;
     }
 
+    // Modifies z but not the return value res
+    procedure zap() returns (res: integer) {
+        z = 0;
+        res = z;
+    }
+
     procedure bar() {
+        var tmp: integer;
         call foo();
+        call (tmp) = zap();
     }
 
     control {

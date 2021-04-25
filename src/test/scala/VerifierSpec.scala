@@ -324,6 +324,9 @@ class ProcedureVerifSpec extends AnyFlatSpec {
   "test-mod-set-analysis-4.ucl" should "verify all assertions" in {
     VerifierSpec.expectedFails("./test/test-mod-set-analysis-4.ucl", 0, Some(ConfigCons.createConfigWithMSA("test/test-mod-set-analysis-4.ucl")))
   }
+  "test-mod-set-analysis-5.ucl" should "verify all assertions" in {
+    VerifierSpec.expectedFails("./test/test-mod-set-analysis-5.ucl", 0, Some(ConfigCons.createConfigWithMSA("test/test-mod-set-analysis-5.ucl")))
+  }
 }
 class InductionVerifSpec extends AnyFlatSpec {
   "test-k-induction-1.ucl" should "verify all assertions." in {
