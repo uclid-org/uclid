@@ -282,6 +282,30 @@ class ParserSpec extends AnyFlatSpec {
         assert (p.errors.exists(p => p._1.contains("Return type and expression type do not match")))
     }
   }
+  "test-module-import-1.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-module-import-1.ucl")), lang.Identifier("main"))
+      // should never get here.
+      // assert (false);
+    }
+    catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors(0)._1.contains("Redeclaration of identifier 'bar'."))
+    }
+  }
+  "test-module-import-2.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-module-import-2.ucl")), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserError =>
+        assert (p.getMessage().contains("Module module1 not found. Failed to import into main"))
+    }
+  }
   "test-types-import-redecl.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(List(new File("test/test-types-import-redecl.ucl")), lang.Identifier("main"))
