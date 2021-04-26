@@ -1188,6 +1188,10 @@ case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "type " + id + " = " + typ + "; // " + position.toString
   override def declNames = List(id)
 }
+case class ModuleImportDecl(modId: Identifier) extends Decl {
+  override def toString = "import %s;".format(modId.toString())
+  override def declNames = List.empty
+}
 case class ModuleTypesImportDecl(id : Identifier) extends Decl {
   override def toString = "type * = %s.*; // %s".format(id.toString(), position.toString())
   override def declNames = List.empty
@@ -1475,6 +1479,10 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   lazy val constants : List[(Identifier, Type)] =
     constantDecls.flatMap(cnst => cnst.ids.map(id => (id, cnst.typ)))
   
+  // module imports.
+  lazy val moduleImportDecls : List[ModuleImportDecl] = decls.collect { case decl : ModuleImportDecl => decl }
+  
+  // module function imports.
   lazy val funcImportDecls : List[ModuleFunctionsImportDecl] = decls.collect {
   case imp : ModuleFunctionsImportDecl => imp }
   
