@@ -106,6 +106,7 @@ trait ReadOnlyPass[T] {
   def applyOnSpec(d : TraversalDirection.T, spec : SpecDecl, in : T, context : Scope) : T = { in }
   def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : Scope) : T = { in }
   def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : T, context : Scope) : T = { in }
+  def applyOnModuleImport(d : TraversalDirection.T, modImport : ModuleImportDecl, in : T, context : Scope) : T = { in }
   def applyOnModuleTypesImport(d : TraversalDirection.T, modTypeImport : ModuleTypesImportDecl, in : T, context : Scope) : T = { in }
   def applyOnInit(d : TraversalDirection.T, init : InitDecl, in : T, context : Scope) : T = { in }
   def applyOnNext(d : TraversalDirection.T, next : NextDecl, in : T, context : Scope) : T = { in }
@@ -194,6 +195,7 @@ trait RewritePass {
   def rewriteSpec(spec : SpecDecl, ctx : Scope) : Option[SpecDecl] = { Some(spec) }
   def rewriteAxiom(axiom : AxiomDecl, ctx : Scope) : Option[AxiomDecl] = { Some(axiom) }
   def rewriteTypeDecl(typDec : TypeDecl, ctx : Scope) : Option[TypeDecl] = { Some(typDec) }
+  def rewriteModuleImport(modImport : ModuleImportDecl, ctx : Scope) : Option[ModuleImportDecl] = { Some(modImport) }
   def rewriteModuleTypesImport(modTypeImport : ModuleTypesImportDecl, ctx : Scope) : Option[ModuleTypesImportDecl] = { Some(modTypeImport) }
   def rewriteInit(init : InitDecl, ctx : Scope) : Option[InitDecl] = { Some(init) }
   def rewriteNext(next : NextDecl, ctx : Scope) : Option[NextDecl] = { Some(next) }
@@ -305,6 +307,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case inst : InstanceDecl => visitInstance(inst, result, context)
       case proc: ProcedureDecl => visitProcedure(proc, result, context)
       case typ : TypeDecl => visitTypeDecl(typ, result, context)
+      case modImport : ModuleImportDecl => visitModuleImport(modImport, result, context)
       case modTypesImport : ModuleTypesImportDecl => visitModuleTypesImport(modTypesImport, result, context)
       case stVars : StateVarsDecl => visitStateVars(stVars, result, context)
       case inpVars : InputVarsDecl => visitInputVars(inpVars, result, context)
@@ -503,6 +506,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitIdentifier(typDec.id, result, context)
     result = visitType(typDec.typ, result, context)
     result = pass.applyOnTypeDecl(TraversalDirection.Up, typDec, result, context)
+    return result
+  }
+  def visitModuleImport(moduleImport : ModuleImportDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnModuleImport(TraversalDirection.Down, moduleImport, result, context)
+    result = visitIdentifier(moduleImport.modId, result, context)
+    result = pass.applyOnModuleImport(TraversalDirection.Up, moduleImport, result, context)
     return result
   }
   def visitModuleTypesImport(moduleTypesImport : ModuleTypesImportDecl, in : T, context : Scope) : T = {
@@ -1122,6 +1132,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case instDecl : InstanceDecl => visitInstance(instDecl, context)
       case procDecl : ProcedureDecl => visitProcedure(procDecl, context)
       case typeDecl : TypeDecl => visitTypeDecl(typeDecl, context)
+      case modImport : ModuleImportDecl => visitModuleImport(modImport, context)
       case modTypeImport : ModuleTypesImportDecl => visitModuleTypesImport(modTypeImport, context)
       case stateVars : StateVarsDecl => visitStateVars(stateVars, context)
       case inputVars : InputVarsDecl => visitInputVars(inputVars, context)
@@ -1216,6 +1227,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     
   def visitNonterminals(nonterms : List[NonTerminal], context : Scope) : List[NonTerminal] = {
     nonterms.map(nt => ASTNode.introducePos(setPosition, setFilename, pass.rewriteNonterminal(nt, context), nt.position)).flatten
+  }
+
+  def visitModuleImport(moduleImport : ModuleImportDecl, context : Scope) : Option[ModuleImportDecl] = {
+    val idOpt = visitIdentifier(moduleImport.modId, context)
+    val moduleImportP = idOpt match {
+      case Some(id) => pass.rewriteModuleImport(ModuleImportDecl(id), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, moduleImportP, moduleImport.position)
   }
 
   def visitModuleTypesImport(modTypImp : ModuleTypesImportDecl, context : Scope) : Option[ModuleTypesImportDecl] = {

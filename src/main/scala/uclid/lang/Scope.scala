@@ -272,7 +272,8 @@ case class Scope (
         //case ModuleFunctionsImportDecl(id) => Scope.addToMap(mapAcc, Scope.FunctionsImport(id))
         case ModuleConstantsImportDecl(_) => mapAcc
         case ModuleFunctionsImportDecl(_) => mapAcc
-        case ModuleTypesImportDecl(_) | 
+        case ModuleImportDecl(_) |
+             ModuleTypesImportDecl(_) | 
              ModuleDefinesImportDecl(_) | 
              InitDecl(_) | NextDecl(_)  => mapAcc
       }
@@ -306,7 +307,7 @@ case class Scope (
         case SharedVarsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ConstantLitDecl(_, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
         case ConstantsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
-        case ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
+        case ModuleImportDecl(_) | ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
              ModuleFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
              InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | 
              AxiomDecl(_, _, _) | InitDecl(_) | NextDecl(_) => mapAcc

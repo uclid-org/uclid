@@ -149,6 +149,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwRange = "range"
     lazy val KwWhile = "while"
     lazy val KwInstance = "instance"
+    lazy val KwImport = "import"
     lazy val KwType = "type"
     lazy val KwInput = "input"
     lazy val KwOutput = "output"
@@ -190,7 +191,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvUrem, OpBvSrem, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
-      KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall,
+      KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwImport,
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
       KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
       KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit,
@@ -583,6 +584,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwType ~> Id <~ ";" ^^ { case id => lang.TypeDecl(id, lang.UninterpretedType(id)) }
     }
 
+    lazy val ModuleImportDecl : PackratParser[lang.ModuleImportDecl] = positioned {
+      KwImport ~> Id <~ ";" ^^ { case id => lang.ModuleImportDecl(id) }
+    }
+
     lazy val ModuleTypesImportDecl : PackratParser[lang.ModuleTypesImportDecl] = positioned {
       KwType ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleTypesImportDecl(id) }
     }
@@ -766,7 +771,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
                   SynthFuncDecl | DefineDecl | ModuleDefsImportDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstLitDecl | ConstDecl | ProcedureDecl |
-                  InitDecl | NextDecl | SpecDecl | AxiomDecl)
+                  InitDecl | NextDecl | SpecDecl | AxiomDecl |
+                  ModuleImportDecl)
 
     // control commands.
     lazy val CmdParam : PackratParser[lang.CommandParams] = 
