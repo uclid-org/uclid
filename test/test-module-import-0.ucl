@@ -3,7 +3,7 @@ module common {
 }
 
 module module1 {
-    type * = common.*;
+    import common;
 
     var x: integer;
 

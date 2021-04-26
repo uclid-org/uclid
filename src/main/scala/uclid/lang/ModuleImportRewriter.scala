@@ -60,10 +60,10 @@ class ModuleImportRewriterPass() extends RewritePass {
                   val declsP = mod.decls.filter(decl => !decl.isInstanceOf[InitDecl] && !decl.isInstanceOf[NextDecl])
                   acc ++ declsP
                 }
-                case _ => throw new Utils.RuntimeError("%s is not a module type. Failed to import into %s.".format(moduleToImportId, module.id))
+                case _ => throw new Utils.ParserError("%s is not a module type. Failed to import into %s".format(moduleToImportId, module.id), Some(modImportDecl.pos), modImportDecl.filename)
               }
             }
-            case None => throw new Utils.RuntimeError("Module %s not found. Failed to import into %s.".format(moduleToImportId, module.id))
+            case None => throw new Utils.ParserError("Module %s not found. Failed to import into %s".format(moduleToImportId, module.id), Some(modImportDecl.pos), modImportDecl.filename)
           }
         }
       )
