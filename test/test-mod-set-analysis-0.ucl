@@ -1,0 +1,13 @@
+module main {
+    var x: integer;
+
+    procedure foo() {
+        x = 0;
+    }
+
+    control {
+        v = verify(foo);
+        check;
+        print_results;
+    }
+}

@@ -74,12 +74,13 @@ object UclidMain {
       smtFileGeneration: String = "",
       sygusFormat: Boolean = false,
       enumToNumeric: Boolean = false,
+      modSetAnalysis: Boolean = false,
       ufToArray: Boolean = false,
       printStackTrace: Boolean = false,
       verbose : Int = 0,
       files : Seq[java.io.File] = Seq(),
       testFixedpoint: Boolean = false
-  )
+  ) 
 
   def parseOptions(args: Array[String]) : Option[Config] = {
     val parser = new scopt.OptionParser[Config]("uclid") {
@@ -113,6 +114,10 @@ object UclidMain {
         (_, c) => c.copy(enumToNumeric = true)
       }.text("Enable conversion from EnumType to NumericType - KNOWN BUGS.")
 
+      opt[Unit]('M', "mod-set-analysis").action{
+        (_, c) => c.copy(modSetAnalysis = true)
+      }.text("Infers modifies set automatically.")
+
       opt[Unit]('u', "uf-to-array").action{
         (_, c) => c.copy(ufToArray = true)
       }.text("Enable conversion from Uninterpreted Functions to Arrays.")
@@ -141,7 +146,7 @@ object UclidMain {
         return
       }
       val mainModuleName = Identifier(config.mainModuleName)
-      val modules = compile(config.files, mainModuleName)
+      val modules = compile(config, mainModuleName)
       val mainModule = instantiate(config, modules, mainModuleName, true)
       mainModule match {
         case Some(m) => execute(m, config)
@@ -184,7 +189,7 @@ object UclidMain {
     }
   }
 
-  def createCompilePassManager(test: Boolean, mainModuleName: lang.Identifier) = {
+  def createCompilePassManager(config: Config, test: Boolean, mainModuleName: lang.Identifier) = {
     val passManager = new PassManager("compile")
     // adds init and next to every module
     passManager.addPass(new ModuleCanonicalizer())
@@ -200,6 +205,11 @@ object UclidMain {
     passManager.addPass(new ModuleConstantsImportRewriter())
     // imports uninterpreted functions
     passManager.addPass(new ModuleFunctionsImportRewriter())
+    // automatically compute modifies set
+    if (config.modSetAnalysis) {
+        passManager.addPass(new ModSetAnalysis())
+        passManager.addPass(new ModSetRewriter())
+    }
     // collects external types to the current module (e.g., module.mytype)
     passManager.addPass(new ExternalTypeAnalysis())
     // replaces module.mytype with external type 
@@ -278,10 +288,11 @@ object UclidMain {
     passManager
   }  
   /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
-  def compile(srcFiles : Seq[java.io.File], mainModuleName : Identifier, test : Boolean = false): List[Module] = {
+  def compile(config: Config, mainModuleName : Identifier, test : Boolean = false): List[Module] = {
     type NameCountMap = Map[Identifier, Int]
+    val srcFiles : Seq[java.io.File] = config.files
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
-    val passManager = createCompilePassManager(test, mainModuleName)
+    val passManager = createCompilePassManager(config, test, mainModuleName)
 
     val filenameAdderPass = new AddFilenameRewriter(None)
     // Helper function to parse a single file.

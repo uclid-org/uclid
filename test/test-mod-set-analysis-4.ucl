@@ -1,0 +1,26 @@
+module main {
+
+    var x: integer;
+    var y: integer;
+
+    procedure [noinline] bar()
+        ensures x == old(x) + 1;
+    {
+        x = x + 1;
+    }
+
+    // Check that calling bar does not change y
+    procedure foo()
+        ensures y == old(y);
+        ensures x == old(x) + 1;
+    {
+        call bar();
+    }
+
+    control {
+        v = verify(bar);
+        v = verify(foo);
+        check;
+        print_results;
+    }
+}

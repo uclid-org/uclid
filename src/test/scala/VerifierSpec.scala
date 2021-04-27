@@ -45,15 +45,16 @@ import java.io.File
 import uclid.{lang => l}
 
 object VerifierSpec {
-  def expectedFails(filename: String, nFail : Int) : String = {
+  def expectedFails(filename: String, nFail : Int, config: Option[UclidMain.Config]=None) : String = {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
-    val config = UclidMain.Config() 
-    val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
-    val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
+    val compileConfig = if (config.isDefined) config.get else ConfigCons.createConfig(filename)
+    val modules = UclidMain.compile(compileConfig, lang.Identifier("main"), true)
+    val instantiateConfig = UclidMain.Config() 
+    val mainModule = UclidMain.instantiate(instantiateConfig, modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
     // val config = UclidMain.Config("main", List("/usr/bin/z3", "-in", "-smt2"), List.empty)
-    val results = UclidMain.execute(mainModule.get, config)
+    val results = UclidMain.execute(mainModule.get, instantiateConfig)
     val outputString = UclidMain.stringOutput.toString()
     assert (results.count((e) => e.result.isFalse) == nFail)
 
@@ -320,6 +321,12 @@ class ProcedureVerifSpec extends AnyFlatSpec {
   "test-old-instance-var-2.ucl" should "verify all assertions" in {
     VerifierSpec.expectedFails("./test/test-old-instance-var-2.ucl", 0)
   }
+  "test-mod-set-analysis-4.ucl" should "verify all assertions" in {
+    VerifierSpec.expectedFails("./test/test-mod-set-analysis-4.ucl", 0, Some(ConfigCons.createConfigWithMSA("test/test-mod-set-analysis-4.ucl")))
+  }
+  "test-mod-set-analysis-5.ucl" should "verify all assertions" in {
+    VerifierSpec.expectedFails("./test/test-mod-set-analysis-5.ucl", 0, Some(ConfigCons.createConfigWithMSA("test/test-mod-set-analysis-5.ucl")))
+  }
 }
 class InductionVerifSpec extends AnyFlatSpec {
   "test-k-induction-1.ucl" should "verify all assertions." in {
@@ -528,7 +535,7 @@ object PrintCexSpec {
   def checkPrintCex(filename: String, n : Int) {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
-    val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
+    val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
     val config = UclidMain.Config() 
