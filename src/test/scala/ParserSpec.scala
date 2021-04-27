@@ -304,7 +304,7 @@ class ParserSpec extends AnyFlatSpec {
   }
   "test-module-import-1.ucl" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List(new File("test/test-module-import-1.ucl")), lang.Identifier("main"))
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-module-import-1.ucl"), lang.Identifier("main"))
       // should never get here.
       // assert (false);
     }
@@ -316,7 +316,7 @@ class ParserSpec extends AnyFlatSpec {
   }
   "test-module-import-2.ucl" should "not parse successfully." in {
     try {
-      val fileModules = UclidMain.compile(List(new File("test/test-module-import-2.ucl")), lang.Identifier("main"))
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-module-import-2.ucl"), lang.Identifier("main"))
       // should never get here.
       assert (false);
     }
