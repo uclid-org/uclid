@@ -32,7 +32,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Kevin Cheang
- * Rewrite import moduleId; declarations. This copies all declarations from the module named moduleId to the declaring module.
+ * Rewrite import moduleId; declarations. This copies all declarations from the module named moduleId to the declaring module
+ * with the exception of init and next block declarations.
  *
  */
 
@@ -46,7 +47,7 @@ class ModuleImportRewriterPass() extends RewritePass {
     // remove the import module declarations
     val declsP = module.decls.filter(decl => !decl.isInstanceOf[ModuleImportDecl])
 
-    // add all imported modules
+    // add all declarations from imported modules (except init and next block declarations)
     val declsPP = module
       .moduleImportDecls
       .foldLeft(declsP)(

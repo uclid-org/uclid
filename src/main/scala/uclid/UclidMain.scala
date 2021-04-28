@@ -195,7 +195,7 @@ object UclidMain {
     passManager.addPass(new ModuleCanonicalizer())
     // introduces LTL operators (which were parsed as function applications)
     passManager.addPass(new LTLOperatorIntroducer())
-    // imports declarations from modules to modules
+    // imports all declarations except init and next declarations into module
     passManager.addPass(new ModuleImportRewriter())
     // imports types into module
     passManager.addPass(new ModuleTypesImportCollector())
