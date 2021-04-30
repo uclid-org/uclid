@@ -48,7 +48,7 @@ object SMTLIB2Spec {
   def expectedFails(filename: String, nFail : Int) : String = {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
-    val config = UclidMain.Config().copy(smtSolver=List("cvc4", "--lang", "smt2", "--force-logic=ALL", "incremental", "--produce-models"))
+    val config = UclidMain.Config().copy(smtSolver=List("cvc4", "--lang", "smt2", "--force-logic=ALL", "--incremental", "--produce-models"))
     val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
