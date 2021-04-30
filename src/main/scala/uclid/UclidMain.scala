@@ -242,6 +242,8 @@ object UclidMain {
     passManager.addPass(new BitVectorSliceFindWidth())
     // the big type checker 
     passManager.addPass(new ExpressionTypeChecker())
+    // Expands (grounds) finite_forall and finite_exists quantifiers
+    passManager.addPass(new FiniteQuantsExpander())
     // test flag is default false
     // checks if prime/old/history are used in the incorrect places
     if (!test) passManager.addPass(new VerificationExpressionChecker())
