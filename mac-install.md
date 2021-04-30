@@ -22,7 +22,7 @@ java11
 4. `make -j4`
 
 Make sure the Z3 Java libraries are in the right place by copying the files in the `build` directory to their proper place. See the main `README.md` for more details on why this is necessary.
-1. `sudo cp <buildfolderInZ3>/libz3.dylib /usr/local/bin`
+1. `sudo cp <buildfolderInZ3>/libz3.dylib /usr/local/lib`
 2. `sudo cp <buildfolderInZ3>/libz3java.dylib /Library/Java/Extensions`
 
 ### Install sbt
