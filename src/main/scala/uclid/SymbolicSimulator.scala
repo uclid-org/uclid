@@ -1445,12 +1445,13 @@ class SymbolicSimulator (module : Module) {
           case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
                Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
                Scope.FunctionArg(_, _) | Scope.Define(_, _, _) |
-               Scope.Instance(_)       =>
+               Scope.Instance(_)       | Scope.Group(_, _, _) =>
              false
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
                Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
-               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) =>
+               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) |
+               Scope.GroupVar(_, _) =>
              true
           case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _, _)             |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |

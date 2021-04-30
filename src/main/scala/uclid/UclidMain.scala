@@ -204,6 +204,7 @@ object UclidMain {
     passManager.addPass(new BlockVariableRenamer())
     passManager.addPass(new BitVectorSliceFindWidth())
     passManager.addPass(new ExpressionTypeChecker())
+    passManager.addPass(new FiniteQuantsExpander())
     if (!test) passManager.addPass(new VerificationExpressionChecker())
     passManager.addPass(new PolymorphicTypeRewriter())
     passManager.addPass(new FindProcedureDependency())

@@ -1,0 +1,21 @@
+module main {
+    group myGroup : integer = {0, 1, 2, 3};
+
+    var hello : integer;
+
+    axiom test1 : finite_forall int in myGroup :: int < 2;
+
+    init {
+    }
+
+    next {
+    }
+
+    property acyclic : false;
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}
