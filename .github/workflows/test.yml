@@ -33,6 +33,17 @@ jobs:
     - name: Print Z3 Version
       run: z3 --version
 
+    - name: Download cvc4
+      run: ./get-cvc4-linux.sh
+ 
+    - name: Add CVC4 to Path
+      run: |
+       ls $GITHUB_WORKSPACE/cvc4/bin/
+       echo "$GITHUB_WORKSPACE/cvc4/bin/" >> $GITHUB_PATH
+
+    - name: Print CVC4 Version
+      run: cvc4 --version
+
     - name: Set up JDK 11
       uses: actions/setup-java@v1
       with:
