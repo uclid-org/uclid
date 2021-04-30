@@ -33,7 +33,7 @@ jobs:
     - name: Print Z3 Version
       run: z3 --version
 
-     - name: Download cvc4
+    - name: Download cvc4
       run: ./get-cvc4-linux.sh
 
     - name: Set up JDK 11
