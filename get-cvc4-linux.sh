@@ -7,8 +7,9 @@
 #
 
 wget https://github.com/CVC4/CVC4/releases/download/1.8/cvc4-1.8-x86_64-linux-opt
-mv cvc4-1.8-x86_64-linux-opt cvc4
-chmod 755 cvc4
-export PATH=$PATH:$PWD
+mkdir -p -f cvc4/bin/
+mv cvc4-1.8-x86_64-linux-opt cvc4/bin/cvc4
+chmod 755 cvc4/bin/cvc4
+export PATH=$PATH:$PWD/cvc4/bin
 cvc4 --version
 
