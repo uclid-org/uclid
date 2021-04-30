@@ -59,6 +59,7 @@ object Scope {
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
   case class Grammar(gId : Identifier, gTyp : Type, nts : List[NonTerminal]) extends ReadOnlyNamedExpression(gId, gTyp)
   case class SynthesisFunction(fId : Identifier, fTyp: FunctionSig, gId: Option[Identifier], gargs: List[Identifier], conds : List[Expr]) extends ReadOnlyNamedExpression(fId, fTyp.typ)
+  case class OracleFunction(oId : Identifier, oTyp: FunctionSig, binary: String) extends ReadOnlyNamedExpression(oId, oTyp.typ)
   case class Define(dId : Identifier, dTyp : Type, defDecl: DefineDecl) extends ReadOnlyNamedExpression(dId, dTyp)
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
@@ -262,6 +263,7 @@ case class Scope (
         case GrammarDecl(id, sig, nts) => Scope.addToMap(mapAcc, Scope.Grammar(id, sig.typ, nts))
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SynthesisFunctionDecl(id, sig, gid, gargs, conds) => Scope.addToMap(mapAcc, Scope.SynthesisFunction(id, sig, gid, gargs, conds))
+        case OracleFunctionDecl(id, sig, binary) => Scope.addToMap(mapAcc, Scope.OracleFunction(id, sig, binary))
         case DefineDecl(id, sig, expr) => Scope.addToMap(mapAcc, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr)))
         case SpecDecl(id, expr, params) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr, params))
         case AxiomDecl(sId, expr, params) => sId match {
@@ -293,6 +295,10 @@ case class Scope (
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
         case SynthesisFunctionDecl(_, sig, _, _, _) =>
+          val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
+          val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
+          m2
+        case OracleFunctionDecl(_, sig, _) =>
           val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2

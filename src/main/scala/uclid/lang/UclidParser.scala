@@ -158,6 +158,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwModule = "module"
     lazy val KwLambda = "lambda"
     lazy val KwFunction = "function"
+    lazy val KwOracle = "oracle"
     lazy val KwControl = "control"
     lazy val KwForall = "forall"
     lazy val KwExists = "exists"
@@ -194,7 +195,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwImport,
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
       KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
-      KwRecord, KwSkip, KwDefine, KwFunction, KwControl, KwInit,
+      KwRecord, KwSkip, KwDefine, KwFunction, KwOracle, KwControl, KwInit,
       KwNext, KwLambda, KwModifies, KwProperty, KwDefineAxiom,
       KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires,
       KwEnsures, KwInvariant, KwParameter, 
@@ -539,6 +540,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val ProcedureAnnotationList : PackratParser[List[Identifier]] = {
       "[" ~> IdList <~ "]"
     }
+    lazy val SingleAnnotation: PackratParser[Identifier] = {
+      "[" ~> Id <~ "]"
+    }
     lazy val ProcedureVerifExpr = RequiresExprs | EnsuresExprs | ModifiesExprs
 
     def collectRequires(vs : List[lang.ProcedureVerificationExpr]) : List[Expr] = {
@@ -617,6 +621,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val FuncDecl : PackratParser[lang.FunctionDecl] = positioned {
       KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) <~ ";" ^^
       { case id ~ idtyps ~ rt => lang.FunctionDecl(id, lang.FunctionSig(idtyps, rt)) }
+    }
+    lazy val OracleFuncDecl : PackratParser[lang.OracleFunctionDecl] = positioned {
+      KwOracle ~ KwFunction ~> SingleAnnotation ~ Id ~ IdTypeList ~ (":" ~> Type) <~ ";" ^^
+      { case annotation ~ id ~ idtyps ~ rt => lang.OracleFunctionDecl(id, lang.FunctionSig(idtyps, rt), annotation.toString) }
     }
     lazy val ModuleFuncsImportDecl : PackratParser[lang.ModuleFunctionsImportDecl] = positioned {
       KwFunction ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleFunctionsImportDecl(id) }
@@ -766,7 +774,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val Decl: PackratParser[Decl] =
-      positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl |
+      positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl | OracleFuncDecl |
                   ModuleTypesImportDecl | ModuleFuncsImportDecl | ModuleConstsImportDecl |
                   SynthFuncDecl | DefineDecl | ModuleDefsImportDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |

@@ -50,6 +50,8 @@ trait SMTLIB2Base {
   
   type VarSet = MutableSet[Symbol]
   type LetMap = MutableMap[Expr, String]
+  type OracleVarSet = MutableSet[OracleSymbol]
+  var oracleVariables : OracleVarSet = MutableSet.empty
   var variables : VarSet = MutableSet.empty
   var letVariables : LetMap = MutableMap.empty
   var enumLiterals : MutableSet[EnumLit] = MutableSet.empty
@@ -201,6 +203,8 @@ trait SMTLIB2Base {
             (id, memo, false)
           case SynthSymbol(id,_, _, _, _) =>
             (id, memo, false)
+          case OracleSymbol(id,_, _) =>
+            (id, memo, false)
           case EnumLit(id, _) =>
             (id, memo, false)
           case ConstArray(expr, typ) =>
@@ -247,7 +251,7 @@ trait SMTLIB2Base {
             ("(store " + trArray.exprString() + " " + trIndex.exprString() + " " + trValue.exprString() +")", memoP3, true)
           case FunctionApplication(e, args) =>
             smtlib2BaseLogger.info("-->> fapp <<--")
-            Utils.assert(e.isInstanceOf[Symbol] || e.isInstanceOf[SynthSymbol], "Beta substitution has not happened.")
+            Utils.assert(e.isInstanceOf[Symbol] || e.isInstanceOf[SynthSymbol] || e.isInstanceOf[OracleSymbol], "Beta substitution has not happened.")
             val (trFunc, memoP1) = translateExpr(e, memo, shouldLetify)
             val (trArgs, memoP2) = translateExprs(args, memoP1, shouldLetify)
             if (args.length == 0) {
@@ -350,6 +354,32 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
     writeCommand(cmd)
   }
 
+  /**
+   *  Helper function that finds the list of all Oracle Symbols in an expression.
+   */
+  def findOracleSymbols(e : Expr) : Set[OracleSymbol] = {
+    def symbolFinder(e : Expr) : Set[OracleSymbol] = {
+      e match {
+        case sym : OracleSymbol => Set(sym)
+        case _ => Set.empty[OracleSymbol]
+      }
+    }
+    Context.accumulateOverExpr(e, symbolFinder _, MutableMap.empty)
+  }
+
+  def generateOracleDeclaration(sym: OracleSymbol) = {
+    val (typeName, newTypes) = generateDatatype(sym.typ)
+    Utils.assert(newTypes.size == 0, "No new types are expected here.")
+
+    val inputTypes = generateInputDataTypes(sym.typ)
+    val inputNames = sym.symbolTyp.args.map( a => a._1.toString())
+    val sig =  (inputNames zip inputTypes).map(a => a._2 ).mkString(" ")
+    var cmd = ""
+    cmd = "(declare-oracle-fun %s %s (%s) %s)\n".format(sym, sym.binary,  sig, typeName)
+    writeCommand(cmd)
+  }
+
+
   def writeCommand(str : String) {
     solverProcess.writeInput(str + "\n")
   }
@@ -368,6 +398,15 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
         generateDeclaration(s)
       }
     }
+    val oracleSymbols = findOracleSymbols(e)
+    val oracleSymbolsP = oracleSymbols.filter(s => !oracleVariables.contains(s))
+    oracleSymbolsP.foreach {
+      (s) => {
+        oracleVariables += s
+        generateOracleDeclaration(s)
+      }
+    }
+
     val smtlib2 = translateExpr(e, true)
     smtlibInterfaceLogger.debug("assert: {}", smtlib2)
     writeCommand("(assert " + smtlib2 +")")

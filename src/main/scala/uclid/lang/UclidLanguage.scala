@@ -1319,6 +1319,11 @@ case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : O
   override def declNames = List(id)
 }
 
+case class OracleFunctionDecl(id: Identifier, sig: FunctionSig, binary: String) extends Decl {
+  override def toString = "oracle function [" + binary + "]" + id + sig + "; //" + position.toString()
+  override def declNames = List(id)
+}
+
 case class InitDecl(body: Statement) extends Decl {
   override def toString =
     "init // " + position.toString + "\n" +

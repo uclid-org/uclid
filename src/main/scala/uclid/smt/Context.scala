@@ -262,7 +262,8 @@ object Context
       case Some(eP) => eP
       case None =>
         val eP = e match {
-          case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) | ConstArray(_, _) | SynthSymbol (_, _, _, _, _) =>
+          case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) | 
+            ConstArray(_, _) | SynthSymbol (_, _, _, _, _) | OracleSymbol(_, _, _) =>
             rewrite(e)
           case OperatorApplication(op, operands) =>
             val operandsP = operands.map(arg => rewriteExpr(arg, rewrite, memo))
@@ -324,7 +325,7 @@ object Context
       case None =>
         val eResult = apply(e)
         val results = e match {
-          case Symbol(_, _) | IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) =>
+          case Symbol(_, _) | IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) | OracleSymbol(_, _, _) =>
             eResult
           case ConstArray(expr, _) =>
             eResult ++ accumulateOverExpr(expr, apply, memo)
@@ -390,7 +391,7 @@ object Context
 
   def foldOverExpr[T](init : T, f : ((T, Expr) => T), e : Expr) : T = {
     val subResult = e match {
-      case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) =>
+      case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) | OracleSymbol(_, _, _) =>
         init
       case OperatorApplication(_, operands) =>
         foldOverExprs(init, f, operands)

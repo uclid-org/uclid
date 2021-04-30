@@ -114,6 +114,9 @@ class SymbolicSimulator (module : Module) {
   def newConstantSymbol(name: String, t: smt.Type) = {
     new smt.Symbol("const_" + name, t)
   }
+  def newOracleSymbol(name: String, t: FunctionSig, binary : String) = {
+    new smt.OracleSymbol("oracle_" + name, t, binary)
+  }
   def newSynthSymbol(name: String, t: FunctionSig, gid : Option[Identifier], gargs: List[Identifier], conds : List[Expr]) = {
     new smt.SynthSymbol("synth_" + name, t, gid, gargs, conds)
   }
@@ -338,6 +341,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SynthesisFunction(id, typ, gid, gargs, conds) => mapAcc + (id -> newSynthSymbol(id.name, typ, gid, gargs, conds))
+          case Scope.OracleFunction(id, typ, binary) => mapAcc + (id -> newOracleSymbol(id.name, typ, binary))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
@@ -942,6 +946,7 @@ class SymbolicSimulator (module : Module) {
     e match {
       case smt.Symbol(id, symbolTyp) => List()
       case smt.SynthSymbol(id, symbolTyp, _, _, _) => List()
+      case smt.OracleSymbol(id, symbolTyp, _) => List()
       case smt.IntLit(n) => List()
       case smt.BooleanLit(b) => List()
       case smt.BitVectorLit(bv, w) => List()
@@ -988,7 +993,8 @@ class SymbolicSimulator (module : Module) {
         if (id.startsWith("havoc_")) List(e.asInstanceOf[smt.Symbol]) else List()
       case smt.SynthSymbol(id, symbolTyp, _, _, _) =>
         List()
-
+      case smt.OracleSymbol(_, _, _) =>
+        List()
       case smt.IntLit(n) => List()
       case smt.BooleanLit(b) => List()
       case smt.BitVectorLit(bv, w) => List()
@@ -1010,6 +1016,8 @@ class SymbolicSimulator (module : Module) {
             if (id.startsWith("havoc_")) List(e.asInstanceOf[smt.Symbol]) else List()
           //UclidMain.println("Function application of f == " + f.toString)
           case smt.SynthSymbol(id, symbolTyp, _, _, _) =>
+            List()
+          case smt.OracleSymbol(_, _, _) =>
             List()
           case _ =>
             throw new Utils.RuntimeError("Should never get here.")
@@ -1076,6 +1084,10 @@ class SymbolicSimulator (module : Module) {
         if (sym._1 == e) sym._2
         else e
       }
+      case smt.OracleSymbol( _, _, _) => {
+        if (sym._1 == e) sym._2
+        else e
+      }
       case smt.IntLit(n) => e
       case smt.BooleanLit(b) => e
       case smt.BitVectorLit(bv, w) => e
@@ -1103,6 +1115,8 @@ class SymbolicSimulator (module : Module) {
           case smt.Symbol(id, symbolTyp) =>
             if (sym._1 == f) sym._2 else f
           case smt.SynthSymbol(id, symbolTyp, _, _, _) =>
+            if (sym._1 == f) sym._2 else f
+          case smt.OracleSymbol(id, symbolTyp, _) =>
             if (sym._1 == f) sym._2 else f
           case _ =>
             throw new Utils.RuntimeError("Should never get here.")
@@ -1450,7 +1464,8 @@ class SymbolicSimulator (module : Module) {
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
                Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
-               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) =>
+               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) |
+               Scope.OracleFunction(_, _, _) =>
              true
           case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _, _)             |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
@@ -1557,6 +1572,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SynthesisFunction(id, typ, gid, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gid, gargs, conds))
+          case Scope.OracleFunction(id, typ, binary) => mapAcc + (id -> smt.OracleSymbol(id.name, typ, binary))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
@@ -1575,6 +1591,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SynthesisFunction(id, typ, gid, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gid, gargs, conds))
+          case Scope.OracleFunction(id, typ, binary) => mapAcc + (id -> smt.OracleSymbol(id.name, typ, binary))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
@@ -1905,6 +1922,7 @@ class SymbolicSimulator (module : Module) {
        case smt.BooleanLit(b) => return e
        case smt.Symbol(id,typ) => return (if (id == s.id) arg else e)
        case smt.SynthSymbol(id,typ, _, _, _) => return (if (id == s.id) arg else e)
+       case smt.OracleSymbol(id,typ, _) => return (if (id == s.id) arg else e)
        case _ => throw new Utils.UnimplementedException("Should not get here")
      }
   }

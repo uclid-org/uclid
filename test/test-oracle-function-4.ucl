@@ -1,0 +1,11 @@
+module main {
+  var factor1: integer;
+  var factor2: integer;
+  var factor3: integer;
+
+// should not parse
+  oracle function [isprime] isPrime(x: integer);
+
+  // this finds prime factors of 76
+
+}
