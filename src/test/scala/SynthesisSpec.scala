@@ -48,7 +48,7 @@ object SynthesisSpec {
   def expectedFails(filename: String, nFail : Int) : String = {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
-    val config = UclidMain.Config().copy(synthesizer=List("cvc4", "--lang", "sygus", "--force-logic=ALL"), sygusFormat = true)
+    val config = UclidMain.Config().copy(synthesizer=List("cvc4_wait.sh"), sygusFormat = true)
     val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
