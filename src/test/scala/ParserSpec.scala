@@ -774,5 +774,37 @@ class ParserSpec extends AnyFlatSpec {
       case _: Throwable => assert (false)
     }
   }
+  "test-oracle-function-1.ucl" should "parse successfully" in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-oracle-function-1.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-oracle-function-2.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-oracle-function-2.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserError => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "test-oracle-function-3.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-oracle-function-3.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserError => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "test-oracle-function-4.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-oracle-function-4.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserError => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
 
 }

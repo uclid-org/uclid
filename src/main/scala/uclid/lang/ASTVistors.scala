@@ -94,6 +94,7 @@ trait ReadOnlyPass[T] {
   def applyOnNonterminal(d : TraversalDirection.T, nonterm : NonTerminal, in : T, context : Scope) : T = { in }
   def applyOnGrammar(d : TraversalDirection.T, grammar: GrammarDecl, in : T, context : Scope) : T = { in }
   def applyOnSynthesisFunction(d : TraversalDirection.T, synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = { in }
+  def applyOnOracleFunction(d : TraversalDirection.T, synFunc : OracleFunctionDecl, in : T, context : Scope) : T = { in }
   def applyOnDefine(d : TraversalDirection.T, defDecl : DefineDecl, in : T, context : Scope) : T = { in }
   def applyOnModuleDefinesImport(d : TraversalDirection.T, modDefImport : ModuleDefinesImportDecl, in : T, context : Scope) : T = { in }
   def applyOnStateVars(d : TraversalDirection.T, stVars : StateVarsDecl, in : T, context : Scope) : T = { in }
@@ -183,6 +184,7 @@ trait RewritePass {
   def rewriteNonterminal(nonterm : NonTerminal, ctx : Scope) : Option[NonTerminal] = { Some(nonterm) }
   def rewriteGrammar(grammar : GrammarDecl, ctx : Scope) : Option[GrammarDecl] = { Some(grammar) }
   def rewriteSynthesisFunction(synFunc : SynthesisFunctionDecl, ctx : Scope) : Option[SynthesisFunctionDecl] = { Some(synFunc) }
+  def rewriteOracleFunction(oracleFunc : OracleFunctionDecl, ctx : Scope) : Option[OracleFunctionDecl] = { Some(oracleFunc) }
   def rewriteDefine(defDecl : DefineDecl, ctx : Scope) : Option[DefineDecl] = { Some(defDecl) }
   def rewriteModuleDefinesImport(modDefImport : ModuleDefinesImportDecl, ctx : Scope) : Option[ModuleDefinesImportDecl] = { Some(modDefImport) }
   def rewriteStateVars(stVars : StateVarsDecl, ctx : Scope) : Option[StateVarsDecl] = { Some(stVars) }
@@ -320,6 +322,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case modFuncsImport : ModuleFunctionsImportDecl => visitModuleFunctionsImport(modFuncsImport, result, context)
       case grammar : GrammarDecl => visitGrammar(grammar, result, context)
       case synFunc : SynthesisFunctionDecl => visitSynthesisFunction(synFunc, result, context)
+      case oracleFunc : OracleFunctionDecl => visitOracleFunction(oracleFunc, result, context)
       case defDecl : DefineDecl => visitDefine(defDecl, in, context)
       case modDefImport : ModuleDefinesImportDecl => visitModuleDefinesImport(modDefImport, result, context)
       case init : InitDecl => visitInit(init, result, context.withEnvironment(ProceduralEnvironment))
@@ -405,6 +408,15 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     val contextP = context + synFunc.sig
     // FIXME: synthesis function.
     result = pass.applyOnSynthesisFunction(TraversalDirection.Up, synFunc, result, context)
+    return result
+  }
+  def visitOracleFunction(oracleFunc : OracleFunctionDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnOracleFunction(TraversalDirection.Down, oracleFunc, result, context)
+    result = visitIdentifier(oracleFunc.id, result, context)
+    result = visitFunctionSig(oracleFunc.sig, result, context)
+    val contextP = context + oracleFunc.sig
+    result = pass.applyOnOracleFunction(TraversalDirection.Up, oracleFunc, result, context)
     return result
   }
   def visitDefine(defDecl : DefineDecl, in : T, context : Scope) : T = {
@@ -1145,6 +1157,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case modFuncImport : ModuleFunctionsImportDecl => visitModuleFunctionsImport(modFuncImport, context)
       case grammarDecl : GrammarDecl => visitGrammar(grammarDecl, context)
       case synFuncDecl : SynthesisFunctionDecl => visitSynthesisFunction(synFuncDecl, context)
+      case oracleFuncDecl : OracleFunctionDecl => visitOracleFunction(oracleFuncDecl, context)
       case defDecl : DefineDecl => visitDefine(defDecl, context)
       case modDefImport : ModuleDefinesImportDecl => visitModuleDefinesImport(modDefImport, context)
       case initDecl : InitDecl => visitInit(initDecl, context.withEnvironment(ProceduralEnvironment))
@@ -1270,6 +1283,18 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case (Some(id), Some(sig)) =>
         val synFuncP = SynthesisFunctionDecl(id, sig, gIdP, gArgsP, conditionsP)
         pass.rewriteSynthesisFunction(synFuncP, context)
+      case _ => None
+    }
+  }
+
+  def visitOracleFunction(oracleFunc : OracleFunctionDecl, context : Scope) : Option[OracleFunctionDecl] = {
+    val idP = visitIdentifier(oracleFunc.id, context)
+    val sigP = visitFunctionSig(oracleFunc.sig, context)
+    val contextP = context + oracleFunc.sig
+    (idP, sigP) match {
+      case (Some(id), Some(sig)) =>
+        val oracleFuncP = OracleFunctionDecl(id, sig, oracleFunc.binary)
+        pass.rewriteOracleFunction(oracleFuncP, context)
       case _ => None
     }
   }

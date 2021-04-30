@@ -854,6 +854,12 @@ case class GrammarSymbol(id: String, symbolTyp: Type, nts : List[NonTerminal]) e
   override val md5hashCode = computeMD5Hash(id, symbolTyp)
   override def toString = id.toString
 }
+case class OracleSymbol(id: String, symbolTyp: lang.FunctionSig, binary : String) extends Expr (smt.Converter.typeToSMT(symbolTyp.typ)) {
+  override val hashId = mix(id.hashCode(), mix(symbolTyp.typ.hashCode(), 317))
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash(id)
+  override def toString = id.toString
+}
 
 class Bindings(val freeVars : List[Symbol], val letVars : List[Symbol], val lambdaVars : List[Symbol], val quantifierVars: List[Symbol]) {
   def addFreeVar(v : Symbol) = {

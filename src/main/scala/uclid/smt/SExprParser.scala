@@ -252,6 +252,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
 
   // Need to add to deal with Z3 output
   lazy val KwDecFun = "declare-fun"
+  
 
 
   lexical.delimiters += ("(", ")")

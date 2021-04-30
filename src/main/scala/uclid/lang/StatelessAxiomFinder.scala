@@ -72,6 +72,7 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
                Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
+               Scope.OracleFunction(_,_,_) |
                Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) =>
              true
           case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _, _)          |
@@ -130,7 +131,7 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
                Scope.ConstantLit(_, _)        | Scope.BlockVar(_, _)            |
                Scope.ForIndexVar(_ , _)       | Scope.SelectorField(_)          =>
               id
-          case Scope.ConstantVar(_, _)    | Scope.Function(_, _)  | Scope.SynthesisFunction(_, _, _, _, _) =>
+          case Scope.ConstantVar(_, _)    | Scope.Function(_, _)  | Scope.OracleFunction(_,_,_) | Scope.SynthesisFunction(_, _, _, _, _) =>
              ExternalIdentifier(moduleName, id)
         }
       case None =>
