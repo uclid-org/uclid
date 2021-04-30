@@ -397,7 +397,19 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         }
         case qOp : QuantifiedBooleanOperator => {
           checkTypeError(argTypes(0).isInstanceOf[BooleanType], "Operand to the quantifier '" + qOp.toString + "' must be boolean", opapp.pos, c.filename)
-          BooleanType()
+
+          qOp match {
+            case FiniteForallOp(_, groupId) =>
+              val typ = c.typeOf(groupId)
+
+              checkTypeError(typ.isDefined && typ.get.isInstanceOf[GroupType], "finite_forall must be over a group", opapp.pos, c.filename)
+              BooleanType()
+            case FiniteExistsOp(_, groupId) =>
+              val typ = c.typeOf(groupId)
+              checkTypeError(typ.isDefined && typ.get.isInstanceOf[GroupType], "finite_exists must be over a group", opapp.pos, c.filename)
+              BooleanType()
+            case _ => BooleanType()
+          }
         }
         case boolOp : BooleanOperator => {
           boolOp match {

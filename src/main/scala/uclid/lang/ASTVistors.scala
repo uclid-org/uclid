@@ -125,6 +125,7 @@ trait ReadOnlyPass[T] {
   def applyOnProcedureType(d : TraversalDirection.T, procT : ProcedureType, in : T, context : Scope) : T = { in }
   def applyOnArrayType(d : TraversalDirection.T, arrayT : ArrayType, in : T, context : Scope) : T = { in }
   def applyOnSynonymType(d : TraversalDirection.T, synT : SynonymType, in : T, context : Scope) : T = { in }
+  def applyOnGroupType(d : TraversalDirection.T, groupT : GroupType, in : T, context : Scope) : T = { in }
   def applyOnExternalType(d : TraversalDirection.T, extT : ExternalType, in : T, context : Scope) : T = { in }
   def applyOnModuleInstanceType(d : TraversalDirection.T, instT : ModuleInstanceType, in : T, context : Scope) : T = { in }
   def applyOnModuleType(d : TraversalDirection.T, modT : ModuleType, in : T, context : Scope) : T = { in }
@@ -165,6 +166,7 @@ trait ReadOnlyPass[T] {
   def applyOnLambda(d : TraversalDirection.T, lambda : Lambda, in : T, context : Scope) : T = { in }
   def applyOnExprDecorator(d : TraversalDirection.T, dec : ExprDecorator, in : T, context : Scope) : T = { in }
   def applyOnProcedureAnnotations(d : TraversalDirection.T, annot : ProcedureAnnotations, in : T, context : Scope) : T = { in }
+  def applyOnGroup(d : TraversalDirection.T, groupDecl : GroupDecl, in : T, context : Scope) : T = { in }
 }
 
 /* AST Visitor that rewrites and generates a new AST. */
@@ -215,6 +217,7 @@ trait RewritePass {
   def rewriteProcedureType(procT : ProcedureType, context : Scope) : Option[ProcedureType] = { Some(procT) }
   def rewriteArrayType(arrayT : ArrayType, context : Scope) : Option[ArrayType] = { Some(arrayT)  }
   def rewriteSynonymType(synT : SynonymType, context : Scope) : Option[Type] = { Some(synT)  }
+  def rewriteGroupType(groupT : GroupType, context : Scope) : Option[Type] = { Some(groupT) }
   def rewriteExternalType(extT : ExternalType, context : Scope) : Option[Type] = { Some(extT) }
   def rewriteModuleInstanceType(instT : ModuleInstanceType, context : Scope) : Option[ModuleInstanceType] = { Some(instT)  }
   def rewriteModuleType(modT : ModuleType, context : Scope) : Option[ModuleType] = { Some(modT)  }
@@ -329,6 +332,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case next : NextDecl => visitNext(next, result, context.withEnvironment(SequentialEnvironment))
       case spec : SpecDecl => visitSpec(spec, result, context)
       case axiom : AxiomDecl => visitAxiom(axiom, result, context)
+      case groupDecl : GroupDecl => visitGroup(groupDecl, result, context)
     }
     result = pass.applyOnDecl(TraversalDirection.Up, decl, result, context)
     return result
@@ -512,6 +516,17 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnAxiom(TraversalDirection.Up, axiom, result, context)
     return result
   }
+
+  def visitGroup(groupDecl : GroupDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnGroup(TraversalDirection.Down, groupDecl, result, context)
+    result = visitIdentifier(groupDecl.id, result, context)
+    result = visitType(groupDecl.typ, result, context)
+    result = groupDecl.members.foldLeft(result)((acc, member) => visitExpr(member, acc, context))
+    result = pass.applyOnGroup(TraversalDirection.Up, groupDecl, result, context)
+    return result
+  }
+
   def visitTypeDecl(typDec : TypeDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnTypeDecl(TraversalDirection.Down, typDec, result, context)
@@ -591,6 +606,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case extT : ExternalType => visitExternalType(extT, result, context)
       case instT : ModuleInstanceType => visitModuleInstanceType(instT, result, context)
       case modT : ModuleType => visitModuleType(modT, result, context)
+      case groupT : GroupType => visitGroupType(groupT, result, context)
     }
     result = pass.applyOnType(TraversalDirection.Up, typ, result, context)
     return result
@@ -684,6 +700,14 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnSynonymType(TraversalDirection.Up, synT, result, context)
     return result
   }
+
+  def visitGroupType(groupT : GroupType, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnGroupType(TraversalDirection.Down, groupT, result, context)
+    result = pass.applyOnGroupType(TraversalDirection.Up, groupT, result, context)
+    return result
+  }
+
   def visitExternalType(extT : ExternalType, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnExternalType(TraversalDirection.Down, extT, result, context)
@@ -1164,6 +1188,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case nextDecl : NextDecl => visitNext(nextDecl, context.withEnvironment(SequentialEnvironment))
       case specDecl : SpecDecl => visitSpec(specDecl, context)
       case axiomDecl : AxiomDecl => visitAxiom(axiomDecl, context)
+      case groupDecl : GroupDecl => visitGroup(groupDecl, context)
     }).flatMap(pass.rewriteDecl(_, context))
     return ASTNode.introducePos(setPosition, setFilename, declP, decl.position)
   }
@@ -1414,6 +1439,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val axiomP = exprP.flatMap((e) => pass.rewriteAxiom(AxiomDecl(idP, e, decsP), context))
     return ASTNode.introducePos(setPosition, setFilename, axiomP, axiom.position)
   }
+
+  def visitGroup(groupDecl : GroupDecl, context : Scope) : Option[GroupDecl] = {
+    val id = visitIdentifier(groupDecl.id, context)
+    val typ = visitType(groupDecl.typ, context)
+    val members = groupDecl.members.map((member) => pass.rewriteExpr(member, context)).flatten
+    val newGroupDecl =
+        if (id.isDefined && typ.isDefined) {
+            Some(GroupDecl(id.get, typ.get.asInstanceOf[GroupType], members))
+        } else {
+            None
+        }
+
+    return ASTNode.introducePos(setPosition, setFilename, newGroupDecl, groupDecl.position)
+  }
+
   def visitTypeDecl(typDec : TypeDecl, context : Scope) : Option[TypeDecl] = {
     val idP = visitIdentifier(typDec.id, context)
     val typeP = visitType(typDec.typ, context)
@@ -1474,6 +1514,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case extT : ExternalType => visitExternalType(extT, context)
       case instT : ModuleInstanceType => visitModuleInstanceType(instT, context)
       case modT : ModuleType => visitModuleType(modT, context)
+      case groupT : GroupType => visitGroupType(groupT, context)
     }).flatMap(pass.rewriteType(_, context))
     return ASTNode.introducePos(setPosition, setFilename, typP, typ.position)
   }
@@ -1561,6 +1602,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val idP = visitIdentifier(synT.id, context)
     val synTP = idP.flatMap(id => pass.rewriteSynonymType(SynonymType(id), context))
     return ASTNode.introducePos(setPosition, setFilename, synTP, synT.position)
+  }
+
+  def visitGroupType(groupT : GroupType, context : Scope) : Option[Type] = {
+    val groupTP = pass.rewriteGroupType(groupT, context)
+    return ASTNode.introducePos(setPosition, setFilename, groupTP, groupT.position)
   }
 
   def visitExternalType(extT : ExternalType, context : Scope) : Option[Type] = {

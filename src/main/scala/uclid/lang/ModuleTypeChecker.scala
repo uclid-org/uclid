@@ -248,6 +248,38 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       in
     }
   }
+
+  override def applyOnGroup(d : TraversalDirection.T, groupDecl : GroupDecl, in : T, context : Scope) : T = {
+    val groupElemType = 
+      groupDecl.typ match {
+        case GroupType(typ) => typ
+        case _ => throw new Utils.RuntimeError("GroupDecl does not have type GroupType?")
+      }
+
+    def checkGroupTypes(errors : T, expr : Expr) : T =
+    {
+      val exprType = exprTypeChecker.typeOf(expr, context)
+
+      if (exprType != groupDecl.typ.typ)
+      {
+        val error = ModuleError("Expected member of group type %s but found member of type %s".format(groupDecl.typ.typ.toString, exprType.toString), expr.position)
+        errors + error
+      }
+      else
+      {
+        errors
+      }
+    }
+
+    var ret = in
+    
+    if (d == TraversalDirection.Down) {
+      ret = groupDecl.members.foldLeft(ret)(checkGroupTypes)
+    }
+
+    ret
+  }
+
   override def applyOnModuleTypesImport(d : TraversalDirection.T, modTypImport : ModuleTypesImportDecl, in : T, context : Scope) : T = {
     if (d == TraversalDirection.Down) {
       val id = modTypImport.id
