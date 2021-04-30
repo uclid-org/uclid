@@ -10,5 +10,5 @@ wget https://github.com/CVC4/CVC4/releases/download/1.8/cvc4-1.8-x86_64-linux-op
 mv cvc4-1.8-x86_64-linux-opt cvc4
 chmod 755 cvc4
 export PATH=$PATH:$PWD
-which cvc4
+cvc4 --version
 
