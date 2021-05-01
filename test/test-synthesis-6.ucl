@@ -25,7 +25,7 @@ module main
   
   
   control {
-    print_module;
+    // print_module;
     v = unroll(5);
     check;
     print_results;

@@ -30,7 +30,6 @@ module main
   property sum_monotonically_incr : (sum >= prev_sum);
   
   control {
-  	print_module;
     unroll(5);
     check;
     print_results;
