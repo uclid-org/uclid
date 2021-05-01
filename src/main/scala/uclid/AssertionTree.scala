@@ -148,7 +148,7 @@ class AssertionTree {
     override val isAssert = false
   }
 
-  def _verify(node : TreeNode, solver : smt.Context, mode : VerifyMode, getModel : Boolean = true) : List[CheckResult] = {
+  def _verify(node : TreeNode, solver : smt.Context, mode : VerifyMode, getModel : Boolean) : List[CheckResult] = {
     if (mode.isAssert) {
       solver.push()
       node.assumptions.foreach(a => solver.assert(a))
@@ -193,15 +193,15 @@ class AssertionTree {
     }
     // now recurse into children
     if (mode.isAssert) {
-        val childResults = node.children.flatMap(c => _verify(c, solver, mode))
+        val childResults = node.children.flatMap(c => _verify(c, solver, mode, getModel))
         solver.pop()
         node.results ++ childResults
     } else {
-        node.children.foreach(c => _verify(c, solver, mode))
+        node.children.foreach(c => _verify(c, solver, mode, getModel))
         List.empty
     }
   }
-  def verify(solver : smt.Context, getModel: Boolean=true) : List[CheckResult] = {
+  def verify(solver : smt.Context, getModel: Boolean) : List[CheckResult] = {
     _verify(root, solver, VerifyModePreprocess, getModel)
     _verify(root, solver, VerifyModeAssert, getModel)
   }

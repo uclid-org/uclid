@@ -288,10 +288,10 @@ class SymbolicSimulator (module : Module) {
             }
             verifyProcedure(proc, label)
           case "check" => {
-            val getModel = module.cmds.contains("print_cex")
+            val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
             lazySC match {
-              case None => proofResults = assertionTree.verify(solver, getModel)
-              case Some(lz) => proofResults = lz.assertionTree.verify(solver, getModel)
+              case None => proofResults = assertionTree.verify(solver, needModel)
+              case Some(lz) => proofResults = lz.assertionTree.verify(solver, needModel)
             }
             if (solver.filePrefix != "") {
               val smtOutput = solver.toString()
@@ -724,7 +724,8 @@ class SymbolicSimulator (module : Module) {
       }
     }
     symbolTable = symTabStep
-    val results = assertionTree.verify(solver)
+    val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
+    val results = assertionTree.verify(solver, needModel)
     UclidMain.println("The results are: " + results)
   }
 
