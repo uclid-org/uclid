@@ -22,5 +22,6 @@ module main {
 	control {
 		v = induction(1);
 		check;
+		print_results;
 	}
 }
