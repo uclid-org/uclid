@@ -1411,6 +1411,7 @@ case class GenericProofCommand(
     val objStr = argObj match { case Some(id) => id.toString + "->"; case None => "" }
     resultStr + objStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
   }
+  def isPrintCEX : Boolean = { name == Identifier("print_cex") }
 }
 
 sealed abstract class Annotation extends ASTNode
