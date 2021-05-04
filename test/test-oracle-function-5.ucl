@@ -1,0 +1,23 @@
+// https://connect.collins.co.uk/repo1/Content/Live/JI/Leckie/GCSE-Maths-Student-Book-Edexcel-Final-03-MarSAMPLEBOOK/wrapper/index.html?r=t#23
+
+module main {
+  var n: integer;
+
+
+// should parse
+  oracle function [issquare] isSquare(x: integer) : boolean;
+
+  axiom  n==12 || n==8 || n==13 || n==17 || n==25 || n==9 || n==10 || n==18 || n==16 || n==6;
+
+  init{}
+  next{}
+
+// invariant fails if there is an n that is square
+  invariant find_factors : !isSquare(n);
+
+  control {
+    v = unroll(0);
+    check;
+    print_results;
+  }
+}
