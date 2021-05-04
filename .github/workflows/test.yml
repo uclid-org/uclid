@@ -52,15 +52,15 @@ jobs:
     - name: Print CVC4 Version
       run: cvc4 --version
 
-    - name: Cache Delphi
-      id: cache-delphi
-      uses: actions/cache@v1
-      with:
-        path: delphi/
-        key: ${{ runner.os }}-delphi-${{ hashFiles('get-delphi-linux.sh') }}-1
+    # - name: Cache Delphi
+    #   id: cache-delphi
+    #   uses: actions/cache@v1
+    #   with:
+    #     path: delphi/
+    #     key: ${{ runner.os }}-delphi-${{ hashFiles('get-delphi-linux.sh') }}-1
 
     - name: Download delphi
-      if: steps.cache-delphi.outputs.cache-hit != 'true'
+      # if: steps.cache-delphi.outputs.cache-hit != 'true'
       run: ./get-delphi-linux.sh
 
     - name: Add delphi to Path
@@ -148,15 +148,15 @@ jobs:
     - name: Print CVC4 Version
       run: cvc4 --version
 
-    - name: Cache delphi
-      id: cache-delphi
-      uses: actions/cache@v1
-      with:
-        path: delphi/
-        key: ${{ runner.os }}-delphi-${{ hashFiles('get-delphi-macos.sh') }}-1
+    # - name: Cache delphi
+    #   id: cache-delphi
+    #   uses: actions/cache@v1
+    #   with:
+    #     path: delphi/
+    #     key: ${{ runner.os }}-delphi-${{ hashFiles('get-delphi-macos.sh') }}-1
 
     - name: Download delphi
-      if: steps.cache-delphi.outputs.cache-hit != 'true'
+      # if: steps.cache-delphi.outputs.cache-hit != 'true'
       run: ./get-delphi-macos.sh
 
     - name: Add delphi to Path
