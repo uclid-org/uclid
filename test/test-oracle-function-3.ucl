@@ -8,7 +8,5 @@ module main {
 
   axiom isPrime(factor1) && isPrime(factor2) && isPrime(factor3);
   
-// this finds prime factors of 76
-
 
 }

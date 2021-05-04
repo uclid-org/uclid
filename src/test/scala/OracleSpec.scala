@@ -65,4 +65,7 @@ class OracleSpec extends AnyFlatSpec {
   "test-oracle-function-1.ucl" should "fail one assertion." in {
     OracleSpec.expectedFails("./test/test-oracle-function-1.ucl", 1)
   }
+  "test-oracle-function-5.ucl" should "fail one assertion." in {
+    OracleSpec.expectedFails("./test/test-oracle-function-5.ucl", 1)
+  }
 }

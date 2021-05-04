@@ -6,6 +6,4 @@ module main {
 // should not parse
   oracle function [isprime] isPrime(x: integer);
 
-  // this finds prime factors of 76
-
 }

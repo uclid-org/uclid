@@ -11,7 +11,7 @@ module main {
   next{}
 
   
-// this finds prime factors of 76
+// this finds prime factors of 76 (invariant fails if prime factors are found)
   invariant find_factors : (factor1*factor3)*factor2!=76;
 
   control {
