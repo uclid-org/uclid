@@ -15,7 +15,11 @@ module main {
 
     procedure foo() {
         havoc x;
-        y = x;
+        if (true) {
+          {
+            y = x;
+          }
+        }
     }
 
     instance submodule: sub(x: (x));
