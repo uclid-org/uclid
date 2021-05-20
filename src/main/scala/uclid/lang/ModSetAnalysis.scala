@@ -124,6 +124,23 @@ class ModSetAnalysis() extends ASTAnalyzer("ModSetAnalysis", new ModSetAnalysisP
 }
 
 class ModSetRewriterPass() extends RewritePass {
+    /** Returns the modified variables in a statement
+     *  @stmt The statement whose write set is being inferred.
+     *  @modSetMap The modifies set map inferred by the ModSetAnalysis pass. Should contain a map from procedures to thier inferred modifies sets.
+     */
+    def getStmtModSet(stmt: Statement, modSetMap: Map[Identifier, Set[Identifier]]): Set[ModifiableId] = stmt match {
+      case BlockStmt(_, stmts) => stmts.foldLeft(Set.empty[ModifiableId])((acc, stmt) => acc ++ getStmtModSet(stmt, modSetMap))
+      case ProcedureCallStmt(id, _, _, _, _) => modSetMap.get(id) match {
+        case Some(set) => set.map(ident => ModifiableId(ident)).toSet
+        case None => Set.empty[ModifiableId]
+      }
+      case IfElseStmt(_, ifblock, elseblock) => getStmtModSet(ifblock, modSetMap) ++ getStmtModSet(elseblock, modSetMap)
+      case ForStmt(_, _, _, body) => getStmtModSet(body, modSetMap)
+      case WhileStmt(_, body, _) => getStmtModSet(body, modSetMap)
+      case CaseStmt(body) => body.foldLeft(Set.empty[ModifiableId])((acc, pair) => acc ++ getStmtModSet(pair._2, modSetMap))
+      case _ => Set.empty[ModifiableId]
+    }
+
     /** Rewrites the modifies set to contain all left hand side and havoced variables
         including the ones nested in procedure calls.
         NOTE: This does not overwrite the entire modifies set! It adds the inferred
@@ -135,16 +152,7 @@ class ModSetRewriterPass() extends RewritePass {
             case Some(set) => set.map(ident => ModifiableId(ident))
             case None => Set.empty[ModifiableEntity]
         }
-        val calleeModSets = proc.body match {
-            case BlockStmt(_, stmts) => {
-                stmts.filter(stmt => stmt.isInstanceOf[ProcedureCallStmt])
-                     .map(stmt => modSetMap.get(stmt.asInstanceOf[ProcedureCallStmt].id) match {
-                        case Some(set) => set.map(ident => ModifiableId(ident)).toList
-                        case None => List.empty[ModifiableEntity]
-                     }).flatten.toSet
-            }
-            case _ => Set.empty
-        }
+        val calleeModSets = getStmtModSet(proc.body, modSetMap)
         val modSet = proc.modifies
         // combined modifies set containing the original modifies set, inferred modifies set, and modifies set of the callees
         val combinedModSet = modSet ++ inferredModSet ++ calleeModSets
