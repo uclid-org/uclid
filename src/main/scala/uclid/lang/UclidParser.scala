@@ -239,7 +239,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val RelOp: Parser[String] = OpGT | OpUGT | OpLT | OpULT | OpEQ | OpNE | OpGE | OpUGE | OpLE | OpULE
     lazy val UnOp: Parser[String] = OpNot | OpMinus
     lazy val RecordSelectOp: Parser[PolymorphicSelect] = positioned {
-      ("." ~> Id) ^^ { case id => PolymorphicSelect(id) }
+      ("." ~> RecordElementId) ^^ { case id => PolymorphicSelect(id) }
     }
     lazy val HyperSelectOp: Parser[lang.HyperSelect] = positioned {
       "." ~> Integer ^^ { case i => lang.HyperSelect(i.value.toInt) }
@@ -259,6 +259,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       positioned { ("[" ~> Expr ~ ":" ~ Expr <~ "]") ^^ { case x ~ ":" ~ y => lang.VarExtractOp(lang.VarBitVectorSlice(x, y)) } }
     lazy val ExtractOp : Parser[lang.ExtractOp] = positioned { ConstExtractOp | VarExtractOp }
     lazy val Id: PackratParser[Identifier] = positioned { ident ^^ {case i => Identifier(i)} }
+    lazy val RecordElementId: PackratParser[Identifier] = positioned { ident ^^ {case i => Identifier("rec_"+i)} }
     /* BEGIN Literals. */
     lazy val Bool: PackratParser[BoolLit] =
       positioned { "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) } }
@@ -404,7 +405,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       ("{" ~> Type ~ rep("," ~> Type) <~ "}") ^^ { case t ~ ts => lang.TupleType(t :: ts) }
     }
     lazy val RecordType : PackratParser[lang.RecordType] = positioned {
-      KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) <~ "}" ^^ { case id ~ ids => lang.RecordType(id::ids) }
+      KwRecord ~> ("{" ~> RecordIdType) ~ rep("," ~> RecordIdType) <~ "}" ^^ { // append to ids here
+        case id ~ ids => lang.RecordType(id::ids) 
+        }
     }
     lazy val MapType : PackratParser[lang.MapType] = positioned {
       PrimitiveType ~ rep ("*" ~> PrimitiveType) ~ ("->" ~> Type) ^^ { case t ~ ts ~ rt => lang.MapType(t :: ts, rt)}
@@ -419,6 +422,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Type : PackratParser[Type] = positioned {
       MapType | ArrayType | EnumType | TupleType | RecordType | ExternalType | SynonymType | PrimitiveType
     }
+    
+    lazy val RecordIdType : PackratParser[(Identifier,Type)] =
+      RecordElementId ~ (":" ~> Type) ^^ { case id ~ typ => (id,typ)}
 
     lazy val IdType : PackratParser[(Identifier,Type)] =
       Id ~ (":" ~> Type) ^^ { case id ~ typ => (id,typ)}
