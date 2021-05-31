@@ -46,7 +46,7 @@ import vcd.VCD
 import scala.util.Try
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import com.typesafe.scalalogging.Logger
-import uclid.smt.{Z3HornSolver, Z3Interface}
+import uclid.smt.Z3Interface
 
 import scala.collection.mutable.{Map => MutableMap}
 import org.scalactic.source.Position
@@ -92,8 +92,6 @@ class SymbolicSimulator (module : Module) {
 
   var symbolTable : SymbolTable = Map.empty
   var frameList : FrameTable = ArrayBuffer.empty
-
-  var lazySC : Option[LazySCSolver] = None
   var synthesizedInvariants : ArrayBuffer[lang.Expr] = ArrayBuffer.empty
 
   def newHavocSymbol(name: String, t: smt.Type) = {
@@ -155,27 +153,6 @@ class SymbolicSimulator (module : Module) {
   var proofResults : List[CheckResult] = List.empty
   def dumpResults(label: String, log : Logger) {
     log.debug("{} --> proofResults.size = {}", label, proofResults.size.toString)
-  }
-  def frameTableToHyperTable(frameTbl : FrameTable) : FrameHyperTable = {
-    frameTbl.map {
-      (symTbl) => { symTbl.map((sym) => (sym._1 -> Array(sym._2))) }
-    }.toArray
-  }
-  def simTableToHyperTable(simTbl : SimulationTable) : FrameHyperTable = {
-    Utils.assert(simTbl.size > 0, "Must have at least one array of frames")
-    val numFrames = simTbl(0).size
-    Utils.assert(simTbl.forall(frameTbl => frameTbl.size == numFrames), "Must have the same number of frames in each trace")
-    val numTraces = simTbl.size
-    (1 to numFrames).toArray.map {
-      (frameIndex) => {
-        val symTbl0 : SymbolTable = simTbl(0)(frameIndex)
-        val ids0 = symTbl0.map(id => id._1)
-        val ids = ids0.filter(id => simTbl.forall(frameTbl => frameTbl(frameIndex).contains(id)))
-        ids.map(
-            id => (id -> simTbl.map(frameTbl => frameTbl(frameIndex).get(id).get).toArray)
-        ).toMap[Identifier, Array[smt.Expr]]
-      }
-    }
   }
   def execute(solver : smt.Context, config : UclidMain.Config) : List[CheckResult] = {
     proofResults = List.empty
@@ -246,27 +223,6 @@ class SymbolicSimulator (module : Module) {
           case "unroll" | "bmc_noLTL" =>
             assertionTree.startVerificationScope()
             prove(false, hasHyperInvariant(module.properties), cmd)
-          case "horn" =>
-            val label : String = cmd.resultVar match {
-              case Some(l) => l.toString
-              case None    => "horn"
-            }
-            val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            runHornSolver(context, label, createNoLTLFilter(properties), createNoLTLFilter(properties))
-            val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"Symbolic simulation for horn solver construction took $delta%.1f ms")
-          case "lazysc" =>
-            val label : String = cmd.resultVar match {
-              case Some(l) => l.toString
-              case None    => "unroll"
-            }
-            val lz = new LazySCSolver(this)
-            lazySC = Some(lz)
-            val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            val propertyFilter = createNoLTLFilter(properties)
-            runLazySC(lz, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, propertyFilter, propertyFilter, solver)
-            val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"Symbolic simulation for lazySC took $delta%.1f ms")
           case "bmc" =>
           // do the LTL properties
             assertionTree.startVerificationScope()
@@ -339,10 +295,7 @@ class SymbolicSimulator (module : Module) {
             UclidMain.printStats(f"Symbolic simulation for verify took $delta%.1f ms")
           case "check" => {
             val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
-            lazySC match {
-              case None => proofResults = assertionTree.verify(solver, needModel)
-              case Some(lz) => proofResults = lz.assertionTree.verify(solver, needModel)
-            }
+            proofResults = assertionTree.verify(solver, needModel)
             if (solver.filePrefix != "") {
               val smtOutput = solver.toString()
               val pref = solver.filePrefix
@@ -639,152 +592,6 @@ class SymbolicSimulator (module : Module) {
       hyperAsserts.toList, hyperAssumes.toList, assumesLambda.toList)
   }
 
-  def runHornSolver(scope: Scope, label: String, 
-      assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean),
-      propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
-    val init_lambda = getInitLambda(false, true, false, scope, label, assumptionFilter, propertyFilter)
-    val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, assumptionFilter, propertyFilter)
-    val h = new Z3HornSolver(this)
-    val context = new Z3Interface()
-    val lazySc = new LazySCSolver(this)
-    val initTaintLambda = lazySc.getTaintInitLambdaV2(init_lambda._1, scope, context, init_lambda._5)
-    val nextTaintLambda = lazySc.getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, next_lambda._4, scope)
-    val combinedInitLambda = lazySc.getCombinedInitLambda(init_lambda._1, initTaintLambda)
-    val combinedNextLambda = lazySc.getCombinedNextLambda(next_lambda._1, nextTaintLambda._1)
-    //h.convertHyperInvToTaint(next_lambda._1, next_lambda._4)
-    //h.solveTaintLambdasV2(combinedInitLambda, combinedNextLambda, scope)
-    h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
-  }
-
-  def runLazySC(lazySC: LazySCSolver, bound: Int, scope: Scope, label: String, 
-      assumptionFilter: ((Identifier, List[ExprDecorator]) => Boolean), 
-      propertyFilter: ((Identifier, List[ExprDecorator]) => Boolean), 
-      solver: smt.Context) = {
-
-      //Z3HornSolver.test1()
-
-      lazySC.simulateLazySCV2(bound, scope, label, assumptionFilter, propertyFilter)
-  }
-
-  def symbolicSimulateLambdasHyperAssert(startStep: Int, numberOfSteps: Int, hypPropIdx: Int, 
-                              addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
-                              scope : Scope, label : String, 
-                              assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean),
-                              propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean),
-                              solver: smt.Context) = {
-    // At this point symbolTable must have the initial symbols.
-    resetState()
-
-    val init_lambda = getInitLambda(false, true, false, scope, label, assumptionFilter, propertyFilter)
-    val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, assumptionFilter, propertyFilter)
-    //val s = new LazySCSolver(this, solver)
-
-    val num_copies = getMaxHyperInvariant(scope)
-    val simRecord = new SimulationTable
-    var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
-    var havocTable = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
-
-    var inputStep = 0
-    for (i <- 1 to num_copies) {
-      var frames = new FrameTable
-      val initSymTab = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
-      inputStep += 1
-      frames += initSymTab
-      var prevVars = getVarsInOrder(initSymTab.map(_.swap), scope)
-      prevVarTable += prevVars
-      val init_havocs = getHavocs(init_lambda._1.e)
-      val havoc_subs = init_havocs.map {
-        havoc =>
-          val s = havoc.id.split("_")
-          val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
-          (havoc, newHavocSymbol(name, havoc.typ))
-      }
-      havocTable += havoc_subs
-      val init_conjunct = substitute(betaSubstitution(init_lambda._1, prevVars.flatten), havoc_subs)
-      addAssumptionToTree(init_conjunct, List.empty)
-      simRecord += frames
-    }
-
-    val hyperAssumesInit = rewriteHyperAssumes(
-      init_lambda._1, 0, init_lambda._5, simRecord, 0, scope, prevVarTable.toList)
-    hyperAssumesInit.foreach {
-      hypAssume =>
-        addAssumptionToTree(hypAssume, List.empty)
-    }
-
-    /*
-    val asserts_init = rewriteAsserts(
-      init_lambda._1, init_lambda._2, 0,
-      prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
-      simRecord.clone(), havocTable(0))
-
-    asserts_init.foreach {
-      assert =>
-        // FIXME: simTable
-        addAssertToTree(assert)
-    }
-    */
-    val filteredInitHyperAssert = List(init_lambda._4(hypPropIdx))
-    val asserts_init_hyper = rewriteHyperAsserts(
-      init_lambda._1, 0, filteredInitHyperAssert, simRecord, 0, scope, prevVarTable.toList)
-    asserts_init_hyper.foreach {
-      assert =>
-        // FIXME: simTable
-        addAssertToTree(assert)
-    }
-
-    var symTabStep = symbolTable
-    for (i <- 1 to numberOfSteps) {
-      for (j <- 1 to num_copies) {
-        symTabStep = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
-        inputStep += 1
-        simRecord(j - 1) += symTabStep
-        val new_vars = getVarsInOrder(symTabStep.map(_.swap), scope)
-        val next_havocs = getHavocs(next_lambda._1.e)
-        val havoc_subs = next_havocs.map {
-          havoc =>
-            val s = havoc.id.split("_")
-            val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
-            (havoc, newHavocSymbol(name, havoc.typ))
-        }
-        val next_conjunct = substitute(betaSubstitution(next_lambda._1, (prevVarTable(j - 1) ++ new_vars).flatten), havoc_subs)
-        addAssumptionToTree(next_conjunct, List.empty)
-        havocTable(j - 1) = havoc_subs
-        prevVarTable(j - 1) = new_vars
-      }
-
-      val hyperAssumesNext = rewriteHyperAssumes(next_lambda._1, numberOfSteps, next_lambda._5, simRecord, i, scope, prevVarTable.toList)
-      hyperAssumesNext.foreach {
-        hypAssume =>
-          addAssumptionToTree(hypAssume, List.empty)
-      }
-      /*
-      // Asserting on-HyperInvariant assertions
-      // FIXME: simTable
-      val asserts_next = rewriteAsserts(
-        next_lambda._1, next_lambda._2, i,
-        getVarsInOrder(simRecord(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
-          prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord.clone(), havocTable(0))
-      asserts_next.foreach {
-        assert =>
-          addAssertToTree(assert)
-      }*/
-
-      // FIXME: simTable
-      defaultLog.debug("i: {}", i)
-      val filteredNextHyperAssert = List(next_lambda._4(hypPropIdx))
-      val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, numberOfSteps, filteredNextHyperAssert, simRecord, i, scope, prevVarTable.toList)
-      asserts_next_hyper.foreach {
-        assert => {
-          addAssertToTree(assert)
-        }
-      }
-    }
-    symbolTable = symTabStep
-    val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
-    val results = assertionTree.verify(solver, needModel)
-    UclidMain.printResult("The results are: " + results)
-  }
 
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
                               scope : Scope, label : String, 
@@ -796,7 +603,6 @@ class SymbolicSimulator (module : Module) {
 
       val init_lambda = getInitLambda(false, true, false, scope, label, assumptionFilter, propertyFilter)
       val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, assumptionFilter, propertyFilter)
-      //val s = new LazySCSolver(this, solver)
 
       val num_copies = getMaxHyperInvariant(scope)
       val simRecord = new SimulationTable
