@@ -46,7 +46,7 @@ import vcd.VCD
 import scala.util.Try
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import com.typesafe.scalalogging.Logger
-import uclid.smt.{Z3HornSolver, Z3Interface}
+import uclid.smt.Z3Interface
 
 import scala.collection.mutable.{Map => MutableMap}
 import org.scalactic.source.Position
@@ -92,8 +92,6 @@ class SymbolicSimulator (module : Module) {
 
   var symbolTable : SymbolTable = Map.empty
   var frameList : FrameTable = ArrayBuffer.empty
-
-  var lazySC : Option[LazySCSolver] = None
   var synthesizedInvariants : ArrayBuffer[lang.Expr] = ArrayBuffer.empty
 
   def newHavocSymbol(name: String, t: smt.Type) = {
@@ -204,23 +202,6 @@ class SymbolicSimulator (module : Module) {
 
             // symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, 
             //                         context, label, createNoLTLFilter(properties), createNoLTLFilter(properties), solver)
-          case "horn" =>
-            val label : String = cmd.resultVar match {
-              case Some(l) => l.toString
-              case None    => "horn"
-            }
-            val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            runHornSolver(context, label, createNoLTLFilter(properties), createNoLTLFilter(properties))
-          case "lazysc" =>
-            val label : String = cmd.resultVar match {
-              case Some(l) => l.toString
-              case None    => "unroll"
-            }
-            val lz = new LazySCSolver(this)
-            lazySC = Some(lz)
-            val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            val propertyFilter = createNoLTLFilter(properties)
-            runLazySC(lz, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, propertyFilter, propertyFilter, solver)
           case "bmc" =>
             assertionTree.startVerificationScope()
             val label : String = cmd.resultVar match {
@@ -289,10 +270,7 @@ class SymbolicSimulator (module : Module) {
             verifyProcedure(proc, label)
           case "check" => {
             val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
-            lazySC match {
-              case None => proofResults = assertionTree.verify(solver, needModel)
-              case Some(lz) => proofResults = lz.assertionTree.verify(solver, needModel)
-            }
+            proofResults = assertionTree.verify(solver, needModel)
             if (solver.filePrefix != "") {
               val smtOutput = solver.toString()
               val pref = solver.filePrefix
@@ -582,33 +560,6 @@ class SymbolicSimulator (module : Module) {
       hyperAsserts.toList, hyperAssumes.toList, assumesLambda.toList)
   }
 
-  def runHornSolver(scope: Scope, label: String, 
-      assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean),
-      propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
-    val init_lambda = getInitLambda(false, true, false, scope, label, assumptionFilter, propertyFilter)
-    val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, assumptionFilter, propertyFilter)
-    val h = new Z3HornSolver(this)
-    val context = new Z3Interface()
-    val lazySc = new LazySCSolver(this)
-    val initTaintLambda = lazySc.getTaintInitLambdaV2(init_lambda._1, scope, context, init_lambda._5)
-    val nextTaintLambda = lazySc.getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, next_lambda._4, scope)
-    val combinedInitLambda = lazySc.getCombinedInitLambda(init_lambda._1, initTaintLambda)
-    val combinedNextLambda = lazySc.getCombinedNextLambda(next_lambda._1, nextTaintLambda._1)
-    //h.convertHyperInvToTaint(next_lambda._1, next_lambda._4)
-    //h.solveTaintLambdasV2(combinedInitLambda, combinedNextLambda, scope)
-    h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
-  }
-
-  def runLazySC(lazySC: LazySCSolver, bound: Int, scope: Scope, label: String, 
-      assumptionFilter: ((Identifier, List[ExprDecorator]) => Boolean), 
-      propertyFilter: ((Identifier, List[ExprDecorator]) => Boolean), 
-      solver: smt.Context) = {
-
-      //Z3HornSolver.test1()
-
-      lazySC.simulateLazySCV2(bound, scope, label, assumptionFilter, propertyFilter)
-  }
-
   def symbolicSimulateLambdasHyperAssert(startStep: Int, numberOfSteps: Int, hypPropIdx: Int, 
                               addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
                               scope : Scope, label : String, 
@@ -620,7 +571,6 @@ class SymbolicSimulator (module : Module) {
 
     val init_lambda = getInitLambda(false, true, false, scope, label, assumptionFilter, propertyFilter)
     val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, assumptionFilter, propertyFilter)
-    //val s = new LazySCSolver(this, solver)
 
     val num_copies = getMaxHyperInvariant(scope)
     val simRecord = new SimulationTable
@@ -739,7 +689,6 @@ class SymbolicSimulator (module : Module) {
 
       val init_lambda = getInitLambda(false, true, false, scope, label, assumptionFilter, propertyFilter)
       val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, assumptionFilter, propertyFilter)
-      //val s = new LazySCSolver(this, solver)
 
       val num_copies = getMaxHyperInvariant(scope)
       val simRecord = new SimulationTable
