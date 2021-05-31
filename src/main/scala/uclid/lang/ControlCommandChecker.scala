@@ -166,11 +166,11 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkNoArgObj(cmd, filename)
       case "set_solver_option" =>
         checkSetOptionCmd(cmd, filename)
-      case "lazysc" =>
+      case "unroll" =>
         checkNoParams(cmd, filename)
         checkHasOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
-      case "induction" | "horn" =>
+      case "induction" =>
         checkPropertiesValid(Identifier("properties"), cmd, context, filename)
         checkPropertiesValid(Identifier("pre"), cmd, context, filename)
         checkPropertiesValid(Identifier("assumptions"), cmd, context, filename)
