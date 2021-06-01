@@ -34,11 +34,13 @@
  * Author: Pramod Subramanyan
  *
  * Replace a.b with the appropriate select operator.
+ * also strips prefix off non-record selects
  *
  */
 
 package uclid
 package lang
+
 
 class RewritePolymorphicSelectPass extends RewritePass {
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
@@ -48,15 +50,41 @@ class RewritePolymorphicSelectPass extends RewritePass {
         expr match {
           case arg : Identifier =>
             context.map.get(arg) match {
-              case Some(Scope.ModuleDefinition(_)) => Some(ExternalIdentifier(arg, id))
+              case Some(Scope.ModuleDefinition(_)) => 
+              val new_id = Identifier(id.name.stripPrefix("__UCLID_sel_"))
+              Some(ExternalIdentifier(arg, new_id))
               case _ => Some(opapp)
             }
           case _ => Some(opapp)
         }
       case _ => Some(opapp)
-    }
+   }
   }
 }
+
+
+//       case PolymorphicSelect(field) =>
+//           val argTypes = opapp.operands.map(typeOf(_, c + opapp))
+//           Utils.assert(argTypes.size == 1, "Select operator must have exactly one operand.")
+//           argTypes(0) match {
+//             case modT : ModuleType =>
+//               // rename opapp
+//               val old_id = field.asInstanceOf[Module].id.toString
+//               field.asInstanceOf[Module].id == Identifier(old_id.stripPrefix("__UCLID_sel_"))
+              
+//               PolymorphicSelect()
+//             case tupType : TupleType =>
+//               // rename opapp
+//               val old_id = field.name
+//               opapp.operands(0).asInstanceOf[Module].id == Identifier(old_id.stripPrefix("__UCLID_sel_"))
+            
+//             case _ =>
+//               // do nothing
+//           }
+//         case _ => Some(opapp)
+//       }
+//   }
+// }
 
 class RewritePolymorphicSelect extends ASTRewriter(
     "RewritePolymorphicSelect", new RewritePolymorphicSelectPass())

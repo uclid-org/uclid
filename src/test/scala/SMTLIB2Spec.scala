@@ -155,6 +155,9 @@ class SMTLIB2Spec extends AnyFlatSpec {
   "test-record-1.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-record-1.ucl", 0)
   }
+  "test-record-3.ucl" should "verify successfully." in {
+    SMTLIB2Spec.expectedFails("./test/test-record-1.ucl", 0)
+  }
   "test-tuple-record-1.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-tuple-record-1.ucl", 0)
   }
