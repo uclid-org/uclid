@@ -64,6 +64,14 @@ The `get-z3-linux.sh` script in the source repository makes it easy to set up Z3
 #### 2. [SBT version 1.0 or greater.](http://www.scala-sbt.org/1.0/docs/Setup.html)
 If you intend to build from source, you need to install sbt. You can skip this step if you are using the pre-build binaries. Install instructions for sbt are available at http://www.scala-sbt.org/1.0/docs/Setup.html
 
+#### 3. CVC4 Setup Script
+
+The `get-cvc4-linux.sh` script in the source repository sets up CVC4 for use with uclid5. To use this script, run `source get-cvc4-linux.sh` from the root directory of the uclid5 source repository. This script will download [CVC4 1.8](https://github.com/CVC4/CVC4) binaries from GitHub and add it to your `PATH`.
+
+#### 4. Delphi Setup Script
+
+The `get-delphi-linux.sh` script in the source repository sets up Delphi for use with uclid5. To use this script, run `source get-delphi-linux.sh` from the root directory of the uclid5 source repository. This script will download [Delphi](https://github.com/polgreen/delphi) binaries from GitHub and add it to your `PATH`.
+
 ### Compiling uclid5
 
 If all goes well, running update, clean, compile and test in sbt from the uclid5 directory should do the trick. The command to do all this is:
