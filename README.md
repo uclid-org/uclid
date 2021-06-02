@@ -39,7 +39,7 @@ The following are optional requirements but several CI tests will fail without t
 
 
 ## Installation of prerequisites on Linux
-- To install prerequisites on linux, run the following scripts from the root directory of the UCLID5 source repository:
+- For easy install of prerequisites on Linux, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC4/Delphi for use with uclid5. This script will download [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)/[CVC4 1.8](https://github.com/cvc5/cvc5/releases/tag/1.8)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
 ~~~
     $ source get-z3-linux.sh 
     $ source get-cvc4-linux.sh 
@@ -58,13 +58,13 @@ Alternatively, [Z3](https://github.com/Z3Prover/z3), [CVC4](https://github.com/c
 - Install instructions for OpenJDK are available at https://openjdk.java.net/install/
 
 ## Installation of prerequisites on MacOS
-- To install prerequisites on macOS, run the following scripts from the root directory of the UCLID5 source repository:
+- For easy install of prerequisites on macOS, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC4/Delphi for use with uclid5. This script will download [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)/[CVC4 1.8](https://github.com/cvc5/cvc5/releases/tag/1.8)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
 ~~~
     $ source get-z3-macos.sh 
     $ source get-cvc4-macos.sh 
     $ source get-delphi-macos.sh
 ~~~
-- These scripts download the binaries for Z3, CVC4 and Delphi respectively and set up your `PATH` and `LD_LIBRARY_PATH` accordingly. You may wish to permanently add the following lines to your bash_profile:
+- These scripts add the downloaded binaries to your `PATH` and `LD_LIBRARY_PATH` accordingly. You may wish to permanently add the following lines to your bash_profile:
 ~~~
     export PATH=$PATH:/path/to/uclid/z3/bin/:/path/to/uclid/cvc4/bin:/path/to/uclid/delphi/bin/
 ~~~
