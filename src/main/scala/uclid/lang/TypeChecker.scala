@@ -102,6 +102,8 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
         MapType(inTypes.map(simplifyType(_, visited, m)), simplifyType(outType, visited, m))
       case ArrayType(inTypes, outType) =>
         ArrayType(inTypes.map(simplifyType(_, visited, m)), simplifyType(outType, visited, m))
+      case GroupType(gTyp) =>
+        GroupType(simplifyType(gTyp, visited, m))
       case _ =>
         typ
     }
@@ -137,6 +139,13 @@ class TypeSynonymRewriterPass extends RewritePass {
   override def rewriteType(typ : Type, ctx : Scope) : Option[Type] = {
     val result = typ match {
       case SynonymType(name) => typeSynonymFinderPass.typeDeclMap.get(name)
+      case GroupType(SynonymType(name)) =>
+        val realName = typeSynonymFinderPass.typeDeclMap.get(name)
+        if (realName.isDefined) {
+            Some(GroupType(realName.get))
+        } else {
+            Some(typ) //Undefined synonym types are checked for in validateSynonyms(..).
+        }
       case _ => Some(typ)
     }
     return result
