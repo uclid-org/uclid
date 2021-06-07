@@ -371,6 +371,17 @@ class QuantifierVerifSpec extends AnyFlatSpec {
     VerifierSpec.expectedFails("./test/test-exists-0.ucl", 0)
   }
 }
+class GroupVerifSpec extends AnyFlatSpec {
+  "test-group-0.ucl" should "verify one and fail one assertion." in {
+    VerifierSpec.expectedFails("./test/test-group-0.ucl", 1)
+  }
+  "test-group-1.ucl" should "verify one and fail one assertion." in {
+    VerifierSpec.expectedFails("./test/test-group-1.ucl", 1)
+  }
+  "test-group-2.ucl" should "verify one and fail one assertion." in {
+    VerifierSpec.expectedFails("./test/test-group-2.ucl", 1)
+  }
+}
 class ModuleVerifSpec extends AnyFlatSpec {
   "test-modules.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-modules.ucl", 0)
