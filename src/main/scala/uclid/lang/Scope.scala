@@ -359,7 +359,7 @@ case class Scope (
           module, procedure, cmd, environment, Some(this))
       case ExistsOp(vs, _) =>
         Scope(
-          vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
+          vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ExistsVar(arg._1, arg._2))),
           module, procedure, cmd, environment, Some(this))
       case sel : SelectorOperator =>
         addSelectorField(sel.ident)
