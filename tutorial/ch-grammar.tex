@@ -223,17 +223,17 @@ The usual logical and bitwise operators are allowed.
 As are relational operators, bitvector concatentation (++) and arithmetic.
 
 \begin{grammar}
-<E5> ::=  <E6> <RelOp> <E6> 
+<E5> ::=  <E6> <RelOp> <E6> | <E6>
 
 <RelOp> ::= `>' | `<' | `=' | `!=' | `>=' | `<='
 
-<E6> ::=  <E7> `++' <E6> 
+<E6> ::=  <E7> `++' <E6> | <E7>
 
-<E7> ::=  <E8> `+' <E7>
+<E7> ::=  <E8> `+' <E7> | <E8>
 
-<E8> ::=  <E9> `-' <E9>
+<E8> ::=  <E8> `-' <E9> | <E9>
 
-<E9> ::= <E10> `*' <E10>
+<E9> ::= <E9> `*' <E10> | <E9> `/' <E10> | <E10>
 \end{grammar}
 
 The unary operators are arithmetic negation (unary minus), logical negation and bitwise negation of bitvectors.
