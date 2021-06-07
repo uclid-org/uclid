@@ -210,7 +210,7 @@ class SMTLIB2Spec extends AnyFlatSpec {
     SMTLIB2Spec.expectedFails("./test/test-multiply-divide.ucl", 1)
   }
   "test-multiply-divide-subtract-chaining.ucl" should "verify all assertions." in {
-    SMTLIB2Spec.expectedFails("./test/test-multiply-divide-subtract-chaining.ucl", 0)
+    SMTLIB2Spec.expectedFails("./test/test-multiply-divide-subtract-chaining.ucl", 1)
   }
   "test-inliner.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-inliner.ucl", 0)
