@@ -344,9 +344,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     /** E8 = E9 OpAdd E8 | E9 **/
     lazy val E8: PackratParser[Expr] = positioned ( E9 ~ OpAdd ~ E8 ^^ ast_binary | E9 )
     /** E9 = E9 OpSub E10 | E10 **/
-    lazy val E9: PackratParser[Expr] = positioned ( E10 ~ OpSub ~ E10 ^^ ast_binary | E10 )
-    /** E10 = E11 OpMul E11 | E11 **/
-    lazy val E10: PackratParser[Expr] = E11 ~ OpMul ~ E11 ^^ ast_binary | E11 ~ OpDiv ~ E11 ^^ ast_binary  | E11 ~ OpUDiv ~ E11 ^^ ast_binary  | E11
+    lazy val E9: PackratParser[Expr] = positioned ( E9 ~ OpSub ~ E10 ^^ ast_binary | E10 )
+    /** E10 = E10 OpMul E11 | E10 OpDiv E11 | E10 OpUDiv E11 | E11 **/
+    lazy val E10: PackratParser[Expr] = E10 ~ OpMul ~ E11 ^^ ast_binary | E10 ~ OpDiv ~ E11 ^^ ast_binary  | E10 ~ OpUDiv ~ E11 ^^ ast_binary  | E11
     /** E11 = UnOp E12 | E12 **/
     lazy val E11: PackratParser[Expr] = positioned {
         OpNeg ~> E12 ^^ { case e => OperatorApplication(UnaryMinusOp(), List(e)) } |
