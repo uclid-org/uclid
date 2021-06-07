@@ -213,7 +213,7 @@ class BasicVerifierSpec extends AnyFlatSpec {
     VerifierSpec.expectedFails("./test/test-multiply-divide.ucl", 1)
   }
   "test-multiply-divide-subtract-chaining.ucl" should "verify all assertions." in {
-    VerifierSpec.expectedFails("./test/test-multiply-divide-subtract-chaining.ucl", 0)
+    VerifierSpec.expectedFails("./test/test-multiply-divide-subtract-chaining.ucl", 1)
   }
   "test-smtlib-consts.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-smtlib-consts.ucl", 0)
