@@ -1,8 +1,8 @@
 module main {
     group myGroup : integer = {0, 1, 2, 3};
 
-    property test1 : finite_forall int in myGroup :: int < 4; //Should pass
-    property test2 : finite_forall int in myGroup :: int < 2; //Should fail
+    property test1 : finite_forall (int : integer) in myGroup :: int < 4; //Should pass
+    property test2 : finite_forall (int : integer) in myGroup :: int < 2; //Should fail
 
     init {
     }
