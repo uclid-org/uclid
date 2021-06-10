@@ -82,6 +82,8 @@ class FiniteQuantsExpanderPass() extends RewritePass {
     ctx.map.get(gId) match {
       case Some(Scope.Group(_, _, elems)) =>
         Some(flattenQuant(operands.map(expandFiniteQuantInner(id, elems, ctx, _, isForall)), isForall))
+      //We're inside the define's specification, so no need to rewrite. Returning None will signal the parent to return the original opApp.
+      case Some(Scope.FunctionArg(_, GroupType(_))) => None
       case _ => throw new Utils.RuntimeError("Could not find group %s".format(gId.toString))
     }
   }
@@ -94,9 +96,21 @@ class FiniteQuantsExpanderPass() extends RewritePass {
             op match
             {
                 case FiniteForallOp(id, gId) =>
-                    expandFiniteQuant(id, gId, ctx, operands, true)
+                    val ret = expandFiniteQuant(id._1, gId, ctx, operands, true)
+                    if (!(ret.isDefined)) {
+                        //Just return the original.
+                        Some(opapp)
+                    } else {
+                        ret
+                    }
                 case FiniteExistsOp(id, gId) =>
-                    expandFiniteQuant(id, gId, ctx, operands, false)
+                    val ret = expandFiniteQuant(id._1, gId, ctx, operands, false)
+                    if (!(ret.isDefined)) {
+                        //Just return the original.
+                        Some(opapp)
+                    } else {
+                        ret
+                    }
                 case _ =>
                     Some(opapp)
             }

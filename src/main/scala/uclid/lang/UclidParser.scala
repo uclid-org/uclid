@@ -314,12 +314,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
             }
           }
         } |
-      KwFiniteForall ~> Id ~ (KwIn ~> Id) ~ ("::" ~> E1) ^^ {
+      KwFiniteForall ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> Id) ~ ("::" ~> E1) ^^ {
         case id ~ groupId ~ expr => {
           OperatorApplication(FiniteForallOp(id, groupId), List(expr))
         }
       } |
-      KwFiniteExists ~> Id ~ (KwIn ~> Id) ~ ("::" ~> E1) ^^ {
+      KwFiniteExists ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> Id) ~ ("::" ~> E1) ^^ {
         case id ~ groupId ~ expr => {
           OperatorApplication(FiniteExistsOp(id, groupId), List(expr))
         }
@@ -425,12 +425,15 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val ArrayType : PackratParser[lang.ArrayType] = positioned {
       ("[") ~> Type ~ (rep ("," ~> Type) <~ "]") ~ Type ^^ { case t ~ ts ~ rt => lang.ArrayType(t :: ts, rt)}
     }
+    lazy val GroupType : PackratParser[lang.GroupType] = positioned {
+      KwGroup ~ "(" ~> Type <~ ")" ^^ { case t => lang.GroupType(t)}
+    }
     lazy val SynonymType : PackratParser[lang.SynonymType] = positioned ( Id ^^ { case id => lang.SynonymType(id) } )
     lazy val ExternalType : PackratParser[lang.ExternalType] = positioned {
       Id ~ ("." ~> Id) ^^ { case moduleId ~ typeId => lang.ExternalType(moduleId, typeId) }
     }
     lazy val Type : PackratParser[Type] = positioned {
-      MapType | ArrayType | EnumType | TupleType | RecordType | ExternalType | SynonymType | PrimitiveType
+      MapType | ArrayType | EnumType | TupleType | RecordType | ExternalType | SynonymType | PrimitiveType | GroupType
     }
 
     lazy val IdType : PackratParser[(Identifier,Type)] =

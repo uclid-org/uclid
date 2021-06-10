@@ -2104,6 +2104,32 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       (argsP, patternsP)
     }
 
+    def rewriteFiniteQuantVars(id : (Identifier, Type), groupId : Identifier, isForall : Boolean) : Option[Operator] = {
+      val ctxP = context + op
+      val idP = visitIdentifier(id._1, ctxP)
+      val typeP = visitType(id._2, ctxP)
+      val groupIdP = visitIdentifier(groupId, ctxP)
+
+      if (idP.isDefined && typeP.isDefined && groupIdP.isDefined) {
+        if (isForall) {
+          Some(FiniteForallOp((idP.get, typeP.get), groupIdP.get))
+        } else {
+          Some(FiniteExistsOp((idP.get, typeP.get), groupIdP.get))
+        }
+      } else {
+        if (!(idP.isDefined)) {
+          throw new Utils.RuntimeError("Pass %s rewrote %s to be None".format(pass.toString, id._1.toString))
+        }
+        if (!(typeP.isDefined)) {
+          throw new Utils.RuntimeError("Pass %s rewrote %s to be None".format(pass.toString, id._2.toString))
+        }
+        if (!(groupIdP.isDefined)) {
+          throw new Utils.RuntimeError("Pass %s rewrote %s to be None".format(pass.toString, groupId.toString))
+        }
+        None
+      }
+    }
+
     val opP : Option[Operator] = op match {
       case ConstExtractOp(slice) =>
         val sliceP = visitBitVectorSlice(slice, context)
@@ -2119,6 +2145,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case ExistsOp(args, pats) =>
         val (argsP, patsP) = rewriteQuantifiedVars(args, pats)
         Some(ExistsOp(argsP, patsP))
+      case FiniteForallOp(id, groupId) => rewriteFiniteQuantVars(id, groupId, true)
+      case FiniteExistsOp(id, groupId) => rewriteFiniteQuantVars(id, groupId, false)
       case ArraySelect(inds) =>
         val indsP = inds.map(ind => visitExpr(ind, context)).flatten
         Some(ArraySelect(indsP))

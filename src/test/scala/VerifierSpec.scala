@@ -381,6 +381,9 @@ class GroupVerifSpec extends AnyFlatSpec {
   "test-group-2.ucl" should "verify one and fail one assertion." in {
     VerifierSpec.expectedFails("./test/test-group-2.ucl", 1)
   }
+  "test-group-3.ucl" should "verify one and fail one assertion." in {
+    VerifierSpec.expectedFails("./test/test-group-3.ucl", 1)
+  }
 }
 class ModuleVerifSpec extends AnyFlatSpec {
   "test-modules.ucl" should "verify all assertions." in {
