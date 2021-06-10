@@ -362,23 +362,6 @@ case class Scope (
   }
   /** Return a new context with operator added. */
   def +(op : Operator) : Scope = {
-    def addGroupVar(id : Identifier, groupId : Identifier) : Scope = {
-      val groupTyp = typeOf(groupId)
-      if (groupTyp.isDefined) {
-        if (groupTyp.get.isInstanceOf[GroupType]) {
-          Scope(Scope.addToMap(map, Scope.GroupVar(id, groupTyp.get.asInstanceOf[GroupType].typ)), module, procedure, cmd, environment, Some(this))
-        } else {
-          Utils.raiseParsingError(
-            "Grounding a quantifier over %s, which is an element of type %s and not a group".format(groupId.toString, groupTyp.get.toString),
-            groupId.pos, groupId.filename)
-          this
-        }
-      } else {
-        Utils.raiseParsingError("Cannot find type of group %s".format(groupId.toString), groupId.pos, groupId.filename)
-        this
-      }
-    }
-
     op match {
       case ForallOp(vs, _) =>
         Scope(
@@ -388,8 +371,10 @@ case class Scope (
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ExistsVar(arg._1, arg._2))),
           module, procedure, cmd, environment, Some(this))
-      case FiniteForallOp(id, groupId) => addGroupVar(id, groupId)
-      case FiniteExistsOp(id, groupId) => addGroupVar(id, groupId)
+      case FiniteForallOp(id, groupId) =>
+          Scope(Scope.addToMap(map, Scope.GroupVar(id._1, id._2)), module, procedure, cmd, environment, Some(this))
+      case FiniteExistsOp(id, groupId) =>
+          Scope(Scope.addToMap(map, Scope.GroupVar(id._1, id._2)), module, procedure, cmd, environment, Some(this))
       case sel : SelectorOperator =>
         addSelectorField(sel.ident)
       case _ => this

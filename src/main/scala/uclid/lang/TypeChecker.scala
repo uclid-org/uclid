@@ -407,16 +407,25 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case qOp : QuantifiedBooleanOperator => {
           checkTypeError(argTypes(0).isInstanceOf[BooleanType], "Operand to the quantifier '" + qOp.toString + "' must be boolean", opapp.pos, c.filename)
 
-          qOp match {
-            case FiniteForallOp(_, groupId) =>
-              val typ = c.typeOf(groupId)
+          def checkFiniteQuantTypes(id : (Identifier, Type), groupId : Identifier, isForall : Boolean) : Type = {
+            val typ = c.typeOf(groupId)
+            val idTyp = id._2
+            val quantTypeStr = if (isForall) "finite_forall" else "finite_exists"
 
-              checkTypeError(typ.isDefined && typ.get.isInstanceOf[GroupType], "finite_forall must be over a group", opapp.pos, c.filename)
-              BooleanType()
-            case FiniteExistsOp(_, groupId) =>
-              val typ = c.typeOf(groupId)
-              checkTypeError(typ.isDefined && typ.get.isInstanceOf[GroupType], "finite_exists must be over a group", opapp.pos, c.filename)
-              BooleanType()
+            checkTypeError(typ.isDefined && typ.get.isInstanceOf[GroupType], "%s must be over a group".format(quantTypeStr), opapp.pos, c.filename)
+
+            val innerTyp = typ.get.asInstanceOf[GroupType].typ
+
+            checkTypeError(idTyp == innerTyp,
+              "%s quantification variable %s has a different type than group type %s".format(quantTypeStr, idTyp, innerTyp), opapp.pos, c.filename)
+            BooleanType()
+          }
+
+          qOp match {
+            case FiniteForallOp(id, groupId) =>
+              checkFiniteQuantTypes(id, groupId, true)
+            case FiniteExistsOp(id, groupId) =>
+              checkFiniteQuantTypes(id, groupId, false)
             case _ => BooleanType()
           }
         }
