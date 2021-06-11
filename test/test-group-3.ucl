@@ -1,0 +1,20 @@
+module main {
+    group myGroup : integer = {0, 1, 2, 3};
+
+    define allGreaterThan(grp : group(integer), i : integer) : boolean = finite_forall (int : integer) in grp :: int > i;
+
+    property test1 : allGreaterThan(myGroup, -1); //Should pass
+    property test2 : allGreaterThan(myGroup, 2); //Should fail
+
+    init {
+    }
+
+    next {
+    }
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

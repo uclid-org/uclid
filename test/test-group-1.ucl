@@ -1,0 +1,18 @@
+module main {
+    group myGroup : integer = {0, 1, 2, 3};
+
+    property test1 : finite_exists (int : integer) in myGroup :: int < 2; //Should pass
+    property test2 : finite_exists (int : integer) in myGroup :: int > 3; //Should fail
+
+    init {
+    }
+
+    next {
+    }
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}
