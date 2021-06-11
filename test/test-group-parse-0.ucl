@@ -3,7 +3,7 @@ module main {
 
     var hello : boolean;
 
-    axiom test1 : finite_forall int in myGroup :: int < hello; // Should throw a type error.
+    axiom test1 : finite_forall (int : integer) in myGroup :: int < hello; // Should throw a type error.
 
     init {
     }
