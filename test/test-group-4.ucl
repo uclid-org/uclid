@@ -1,0 +1,34 @@
+module decl {
+    input myGroup : group(integer);
+
+    var a, b : boolean;
+
+    init {
+        a = finite_forall (int : integer) in myGroup :: int > -1; //Satisfied by grp
+        b = finite_exists (int : integer) in myGroup :: int < 0; //Not satisfied by grp
+    }
+
+    next {
+    }
+}
+
+module main {
+    group grp : integer = {0, 1, 2, 3};
+
+    instance declInst : decl(myGroup : (grp));
+
+    init {
+    }
+
+    next {
+    }
+
+    property f : declInst.a; //Should pass
+    property t : declInst.b; //Should fail
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

@@ -39,7 +39,11 @@
 package uclid
 package lang
 
+import com.typesafe.scalalogging.Logger
+
 class FiniteQuantsExpanderPass() extends RewritePass {
+  lazy val logger = Logger(classOf[FiniteQuantsExpanderPass])
+
   def expandFiniteQuant(id : Identifier, gId : Identifier, ctx : Scope, operands : List[Expr], isForall : Boolean) : Option[Expr] =
   {
     def flattenQuant(exprs : List[Expr], isForall : Boolean) : Expr =
@@ -81,10 +85,12 @@ class FiniteQuantsExpanderPass() extends RewritePass {
     //Get the elements of the group.
     ctx.map.get(gId) match {
       case Some(Scope.Group(_, _, elems)) =>
+        logger.debug("Expanding over group %s".format(gId.toString))
         Some(flattenQuant(operands.map(expandFiniteQuantInner(id, elems, ctx, _, isForall)), isForall))
       //We're inside the define's specification, so no need to rewrite. Returning None will signal the parent to return the original opApp.
       case Some(Scope.FunctionArg(_, GroupType(_))) => None
-      case _ => throw new Utils.RuntimeError("Could not find group %s".format(gId.toString))
+      case None => throw new Utils.RuntimeError("Could not find group %s".format(gId.toString))
+      case Some(s) => throw new Utils.RuntimeError("Group %s was matched to %s, which isn't a Group or a FunctionArg".format(gId.toString, s.toString))
     }
   }
 
