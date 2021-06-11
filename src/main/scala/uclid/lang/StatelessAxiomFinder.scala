@@ -106,6 +106,14 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
         inds.forall(ind => isStatelessExpr(ind, context)) &&
         args.forall(arg => isStatelessExpr(arg, context)) &&
         isStatelessExpr(value, context)
+      case OperatorApplication(FiniteForallOp(_, gId), _) =>
+        val opapp = e.asInstanceOf[OperatorApplication]
+        isStatelessExpr(gId, context) &&
+        opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
+      case OperatorApplication(FiniteExistsOp(_, gId), _) =>
+        val opapp = e.asInstanceOf[OperatorApplication]
+        isStatelessExpr(gId, context) &&
+        opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
       case opapp : OperatorApplication =>
         opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
       case a : ConstArray =>
@@ -188,6 +196,7 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
   }
   override def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : Scope) : T = {
     if (in._1 && d == TraversalDirection.Down && isStatelessExpr(axiom.expr, context)) {
+      logger.debug("Making a new axiom for %s %s".format(axiom.expr.toString, axiom.params.toString))
       val moduleName = context.module.get.id
       val exprP = rewriteToExternalIds(moduleName, axiom.expr, context)
       val name = axiom.id match {

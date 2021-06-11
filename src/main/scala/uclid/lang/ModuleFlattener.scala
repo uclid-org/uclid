@@ -80,8 +80,8 @@ class ModuleDependencyFinder(mainModuleName : Identifier) extends ASTAnalyzer(
 }
 
 object ModuleInstantiatorPass {
-  sealed abstract class InstanceVarRenaming(val ident : Identifier, val typ : Type)
-  case class BoundInput(id : Identifier, t : Type, expr : Expr) extends InstanceVarRenaming(id, t)
+  sealed abstract class InstanceVarRenaming(val expr : Expr, val typ : Type)
+  case class BoundInput(exp : Expr, t : Type) extends InstanceVarRenaming(exp, t)
   case class UnboundInput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
   case class BoundOutput(lhs : Lhs, t : Type) extends InstanceVarRenaming(lhs.ident, t)
   case class UnboundOutput(id : Identifier, t : Type) extends InstanceVarRenaming(id, t)
@@ -111,11 +111,11 @@ object ModuleInstantiatorPass {
     }
   }
 
-  // Convert a RewriteMap into a VarMap
+  // Convert a VarMap into a RewriteMap.
   def toRewriteMap(varMap : VarMap, instVarMap : InstVarMap) : RewriteMap = {
     val empty : RewriteMap = Map.empty
     val rewriteMap1 = varMap.foldLeft(empty) {
-      (acc, mapping) => acc + (mapping._1 -> mapping._2.ident)
+      (acc, mapping) => acc + (mapping._1 -> mapping._2.expr)
     }
     val rewriteMap2 = instVarMap.foldLeft(rewriteMap1) {
       (acc, mapping) => {
@@ -146,8 +146,11 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     // map each input
     val idMap1 = targetModule.inputs.foldLeft(idMap0) {
       (mapAcc, inp) => {
+        logger.debug("inp is %s".format(inp.toString))
         inst.argMap.get(inp._1) match {
-          case Some(expr) =>  mapAcc + (inp._1 -> MIP.BoundInput(NameProvider.get(inp._1.toString + "_bound_input"), inp._2, expr))
+          case Some(expr) => 
+            logger.debug("expr is %s".format(expr.toString))
+            mapAcc + (inp._1 -> MIP.BoundInput(expr, inp._2))
           case None => mapAcc + (inp._1 -> MIP.UnboundInput(NameProvider.get(inp._1.toString + "_unbound_input"), inp._2))
         }
       }
@@ -192,11 +195,18 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val instVarMap1 = varMap.foldLeft(Map.empty[List[Identifier], Identifier]) {
       (instVarMap, renaming) => {
         renaming._2 match {
-          case MIP.BoundInput(_, _, _) | MIP.UnboundInput(_, _) |
+          case MIP.BoundInput(_, _) =>
+            if (renaming._2.expr.isInstanceOf[Identifier])
+            {
+              instVarMap + (List(inst.instanceId, renaming._1) -> renaming._2.expr.asInstanceOf[Identifier])
+            }
+            else
+              instVarMap
+          case MIP.UnboundInput(_, _) |
                MIP.BoundOutput(_, _) | MIP.UnboundOutput(_, _)  |
                MIP.StateVariable(_, _) | MIP.SharedVariable(_, _) |
                MIP.Constant(_, _) =>
-            instVarMap + (List(inst.instanceId, renaming._1) -> renaming._2.ident)
+            instVarMap + (List(inst.instanceId, renaming._1) -> renaming._2.expr.asInstanceOf[Identifier])
           case _ =>
             instVarMap
         }
@@ -228,7 +238,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     varMap.map {
       v => {
         v._2 match {
-          case MIP.BoundInput(id, t, _) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
+          case MIP.BoundInput(_, _) => None
           case MIP.UnboundOutput(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.StateVariable(id, t) => fixPosition(Some(StateVarsDecl(List(id), t)), id.position)
           case MIP.Constant(id, t) => fixPosition(Some(ConstantsDecl(List(id), t)), id.position)
@@ -244,7 +254,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       v => {
         v._2 match {
           case MIP.UnboundInput(id, t) => fixPosition(Some(InputVarsDecl(List(id), t)), id.position)
-          case MIP.BoundInput(_, _, _) | MIP.BoundOutput(_, _) |
+          case MIP.BoundInput(_, _) | MIP.BoundOutput(_, _) |
                MIP.UnboundOutput(_, _) | MIP.StateVariable(_, _) |
                MIP.SharedVariable(_, _) | MIP.Constant(_, _) | MIP.Function(_, _) =>
              None
@@ -253,18 +263,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }.toList.flatten
   }
 
-  def createNextInputAssignments(varMap : VarMap) : List[Statement] = {
-    varMap.map {
-      v => {
-        v._2 match {
-          case MIP.BoundInput(id, _, expr) =>
-            fixPosition(Some(AssignStmt(List(LhsId(id)), List(expr))), id.position)
-          case _ =>
-            None
-        }
-      }
-    }.toList.flatten
-  }
+  def createNextInputAssignments(varMap : VarMap) : List[Statement] = { List() }
 
   val (varMap, externalSymbolMap) = createVarMap()
   val targetInstVarMap = targetModule.getAnnotation[InstanceVarMapAnnotation].get.iMap
