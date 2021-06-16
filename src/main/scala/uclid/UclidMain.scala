@@ -122,10 +122,6 @@ object UclidMain {
         (_, c) => c.copy(ufToArray = true)
       }.text("Enable conversion from Uninterpreted Functions to Arrays.")
 
-      opt[Unit]('t', "test-fixedpoint").action {
-        (_, c) => c.copy(testFixedpoint = true)
-      }.text("Test fixed point")
-
       help("help").text("prints this usage text")
 
       arg[java.io.File]("<file> ...").unbounded().required().action {
@@ -141,10 +137,6 @@ object UclidMain {
    */
   def main(config : Config) {
     try {
-      if (config.testFixedpoint) {
-        smt.Z3HornSolver.test1()
-        return
-      }
       val mainModuleName = Identifier(config.mainModuleName)
       val modules = compile(config, mainModuleName)
       val mainModule = instantiate(config, modules, mainModuleName, true)
