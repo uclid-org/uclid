@@ -1245,6 +1245,12 @@ case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl
   override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
   override def declNames = List(id)
 }
+case class MacroDecl(id: Identifier, sig: FunctionSig, body: Statement) extends Decl {
+  override def toString =
+    "macro // " + position.toString + "\n" +
+    Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
+  override def declNames = List(id)
+}
 case class ModuleDefinesImportDecl(id: Identifier) extends Decl {
   override def toString = "define * = $s.*; // %s".format(id.toString)
   override def declNames = List.empty
