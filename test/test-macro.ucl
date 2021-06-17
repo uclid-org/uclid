@@ -1,0 +1,23 @@
+module main {
+    var x : integer;
+    var y : integer;
+
+    macro one {
+        x = 0;
+    }
+
+    macro two {
+        x = 1;
+        y = 1;
+    }
+
+    init {
+        x = 0;
+    }
+    
+    control {
+        unroll(0);
+        check;
+        print_results;
+    }
+}

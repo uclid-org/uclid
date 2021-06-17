@@ -176,6 +176,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwHyperProperty = "hyperproperty"
     lazy val KwHyperInvariant = "hyperinvariant"
     lazy val KwHyperAxiom = "hyperaxiom"
+    lazy val KwMacro = "macro"
     // lazy val TemporalOpGlobally = "G"
     // lazy val TemporalOpFinally = "F"
     // lazy val TemporalOpNext = "Next"
@@ -199,7 +200,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwNext, KwLambda, KwModifies, KwProperty, KwDefineAxiom,
       KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires,
       KwEnsures, KwInvariant, KwParameter, 
-      KwHyperProperty, KwHyperInvariant, KwHyperAxiom)
+      KwHyperProperty, KwHyperInvariant, KwHyperAxiom, KwMacro)
 
     lazy val ast_binary: Expr ~ String ~ Expr => Expr = {
       case x ~ OpBiImpl ~ y => OperatorApplication(IffOp(), List(x, y))
@@ -736,6 +737,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         }
       }
     }
+    lazy val MacroDecl : PackratParser[lang.MacroDecl] = positioned {
+      KwMacro ~> Id ~ BlkStmt ^^
+        { case id ~ b => lang.MacroDecl(id, FunctionSig(List(), new UndefinedType()), b) }
+    }
     lazy val ModuleDefsImportDecl : PackratParser[lang.ModuleDefinesImportDecl] = positioned {
       KwDefine ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleDefinesImportDecl(id) }
     }
@@ -780,7 +785,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstLitDecl | ConstDecl | ProcedureDecl |
                   InitDecl | NextDecl | SpecDecl | AxiomDecl |
-                  ModuleImportDecl)
+                  ModuleImportDecl | MacroDecl)
 
     // control commands.
     lazy val CmdParam : PackratParser[lang.CommandParams] = 
