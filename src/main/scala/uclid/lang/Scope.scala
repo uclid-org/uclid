@@ -61,6 +61,7 @@ object Scope {
   case class SynthesisFunction(fId : Identifier, fTyp: FunctionSig, gId: Option[Identifier], gargs: List[Identifier], conds : List[Expr]) extends ReadOnlyNamedExpression(fId, fTyp.typ)
   case class OracleFunction(oId : Identifier, oTyp: FunctionSig, binary: String) extends ReadOnlyNamedExpression(oId, oTyp.typ)
   case class Define(dId : Identifier, dTyp : Type, defDecl: DefineDecl) extends ReadOnlyNamedExpression(dId, dTyp)
+  case class Macro(mId : Identifier, mTyp : Type, macroDecl: MacroDecl) extends ReadOnlyNamedExpression(mId, mTyp)
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class ProcedureOutputArg(argId : Identifier, argTyp: Type) extends NamedExpression(argId, argTyp)
@@ -265,6 +266,7 @@ case class Scope (
         case SynthesisFunctionDecl(id, sig, gid, gargs, conds) => Scope.addToMap(mapAcc, Scope.SynthesisFunction(id, sig, gid, gargs, conds))
         case OracleFunctionDecl(id, sig, binary) => Scope.addToMap(mapAcc, Scope.OracleFunction(id, sig, binary))
         case DefineDecl(id, sig, expr) => Scope.addToMap(mapAcc, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr)))
+        case MacroDecl(id, sig, statement) => Scope.addToMap(mapAcc, Scope.Macro(id, sig.typ, MacroDecl(id, sig, statement)))
         case SpecDecl(id, expr, params) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr, params))
         case AxiomDecl(sId, expr, params) => sId match {
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr, params))
@@ -303,6 +305,10 @@ case class Scope (
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
         case DefineDecl(_, sig, _) =>
+          val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
+          val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
+          m2
+        case MacroDecl(_, sig, _) =>
           val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
