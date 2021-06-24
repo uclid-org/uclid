@@ -12,7 +12,14 @@ module main {
     }
 
     init {
-        x = 0;
+        x = 2;
+        y = 2;
+        assert(x == 0);
+        one;
+        assert(x == 0);
+        two;
+        assert(x == 1);
+        assert(y == 1);
     }
     
     control {

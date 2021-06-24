@@ -801,5 +801,13 @@ class ParserSpec extends AnyFlatSpec {
       case _: Throwable => assert (false)
     }
   }
+  "test-macro-parse-fails.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-macro-parse-fails.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case e : Utils.ParserError  => assert(e.msg.contains("Macro does not exist"))
+    }
+  }
 
 }
