@@ -1,0 +1,22 @@
+module main {
+    macro assertions {
+        assert(x == 2);
+        assert(y == 3);
+        assert(x == y);
+    }
+
+    var x : integer;
+    var y : integer;
+
+    init {
+        x = 2;
+        y = 3;
+        assertions;
+    }
+    
+    control {
+        unroll(0);
+        check;
+        print_results;
+    }
+}

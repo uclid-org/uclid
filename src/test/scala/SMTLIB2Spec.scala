@@ -521,4 +521,16 @@ class SMTLIB2Spec extends AnyFlatSpec {
   "test-too-many-vars-error.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-too-many-vars-error.ucl", 0)
   }
+  "test-macro-1.ucl" should "fail to verify 1 assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-macro-1.ucl", 1)
+  }
+  "test-macro-2.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-macro-2.ucl", 0)
+  }
+  "test-macro-3.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-macro-3.ucl", 0)
+  }
+  "test-macro-4.ucl" should "fail to verify 1 assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-macro-4.ucl", 1)
+  }
 }

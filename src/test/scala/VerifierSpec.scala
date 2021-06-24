@@ -462,6 +462,18 @@ class ModuleVerifSpec extends AnyFlatSpec {
   "test-redundant-assign.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-redundant-assign.ucl", 0)
   }
+  "test-macro-1.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-macro-1.ucl", 1)
+  }
+  "test-macro-2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-macro-2.ucl", 0)
+  }
+  "test-macro-3.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-macro-3.ucl", 0)
+  }
+  "test-macro-4.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-macro-4.ucl", 1)
+  }
 }
 class LTLVerifSpec extends AnyFlatSpec {
   "test-history-1.ucl" should "verify all assertions." in {
