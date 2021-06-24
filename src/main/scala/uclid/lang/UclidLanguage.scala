@@ -1012,6 +1012,11 @@ case class ProcedureCallStmt(id: Identifier, callLhss: List[Lhs], args: List[Exp
   override val hasCall = true
   override val hasInternalCall = instanceId.isEmpty
 }
+case class MacroCallStmt(id: Identifier) extends Statement {
+  override def toLines = List(id + "; // " + id.position.toString())
+  override val hasCall = false
+  override val hasInternalCall = false
+}
 case class ModuleCallStmt(id: Identifier) extends Statement {
   override def toLines = List("next (" + id.toString +")")
   override val hasCall = false
@@ -1247,7 +1252,7 @@ case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl
 }
 case class MacroDecl(id: Identifier, sig: FunctionSig, body: Statement) extends Decl {
   override def toString =
-    "macro // " + position.toString + "\n" +
+    "macro " + id + "// " + position.toString + "\n" +
     Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
   override def declNames = List(id)
 }

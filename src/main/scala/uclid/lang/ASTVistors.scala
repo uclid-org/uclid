@@ -145,6 +145,7 @@ trait ReadOnlyPass[T] {
   def applyOnCase(d : TraversalDirection.T, st : CaseStmt, in : T, context : Scope) : T = { in }
   def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, context : Scope) : T = { in }
   def applyOnModuleCall(d : TraversalDirection.T, st : ModuleCallStmt, in : T, context : Scope) : T = { in }
+  def applyOnMacroCall(d : TraversalDirection.T, st : MacroCallStmt, in : T, context : Scope) : T = { in }
   def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = { in }
   def applyOnBitVectorSlice(d : TraversalDirection.T, slice : BitVectorSlice, in : T, context : Scope) : T = { in }
   def applyOnModifiableEntity(d : TraversalDirection.T, modifiable : ModifiableEntity, in : T, context : Scope) : T = { in }
@@ -236,6 +237,7 @@ trait RewritePass {
   def rewriteCase(st : CaseStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteProcedureCall(st : ProcedureCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteModuleCall(st : ModuleCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteMacroCall(st : MacroCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteLHS(lhs : Lhs, ctx : Scope) : Option[Lhs] = { Some(lhs) }
   def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : Scope) : Option[BitVectorSlice] = { Some(slice) }
   def rewriteModifiableEntity(modifiable : ModifiableEntity, ctx : Scope) : Option[ModifiableEntity] = { Some(modifiable) }
@@ -749,18 +751,19 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnStatement(TraversalDirection.Down, st, result, context)
     result = st match {
-      case skipStmt     : SkipStmt    => visitSkipStatement(skipStmt, result, context)
-      case assertStmt   : AssertStmt => visitAssertStatement(assertStmt, result, context)
-      case assumeStmt   : AssumeStmt => visitAssumeStatement(assumeStmt, result, context)
-      case havocStmt    : HavocStmt => visitHavocStatement(havocStmt, result, context)
-      case assignStmt   : AssignStmt => visitAssignStatement(assignStmt, result, context)
-      case blkStmt      : BlockStmt => visitBlockStatement(blkStmt, result, context)
-      case ifElseStmt   : IfElseStmt => visitIfElseStatement(ifElseStmt, result, context)
-      case forStmt      : ForStmt => visitForStatement(forStmt, result, context)
-      case whileStmt    : WhileStmt => visitWhileStatement(whileStmt, result, context)
-      case caseStmt     : CaseStmt => visitCaseStatement(caseStmt, result, context)
-      case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, result, context)
-      case modCallStmt  : ModuleCallStmt => visitModuleCallStatement(modCallStmt, result, context)
+      case skipStmt      : SkipStmt    => visitSkipStatement(skipStmt, result, context)
+      case assertStmt    : AssertStmt => visitAssertStatement(assertStmt, result, context)
+      case assumeStmt    : AssumeStmt => visitAssumeStatement(assumeStmt, result, context)
+      case havocStmt     : HavocStmt => visitHavocStatement(havocStmt, result, context)
+      case assignStmt    : AssignStmt => visitAssignStatement(assignStmt, result, context)
+      case blkStmt       : BlockStmt => visitBlockStatement(blkStmt, result, context)
+      case ifElseStmt    : IfElseStmt => visitIfElseStatement(ifElseStmt, result, context)
+      case forStmt       : ForStmt => visitForStatement(forStmt, result, context)
+      case whileStmt     : WhileStmt => visitWhileStatement(whileStmt, result, context)
+      case caseStmt      : CaseStmt => visitCaseStatement(caseStmt, result, context)
+      case procCallStmt  : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, result, context)
+      case modCallStmt   : ModuleCallStmt => visitModuleCallStatement(modCallStmt, result, context)
+      case macroCallStmt : MacroCallStmt => visitMacroCallStatement(macroCallStmt, result, context)
     }
     result = pass.applyOnStatement(TraversalDirection.Up, st, result, context)
     return result
@@ -879,6 +882,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnModuleCall(TraversalDirection.Down, st, result, context)
     result = visitIdentifier(st.id, result, context)
     result = pass.applyOnModuleCall(TraversalDirection.Up, st, result, context)
+    return result
+  }
+  def visitMacroCallStatement(st : MacroCallStmt, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnMacroCall(TraversalDirection.Down, st, result, context)
+    result = visitIdentifier(st.id, result, context)
+    result = pass.applyOnMacroCall(TraversalDirection.Up, st, result, context)
     return result
   }
   def visitLhs(lhs : Lhs, in : T, context : Scope) : T = {
@@ -1672,6 +1682,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case caseStmt : CaseStmt => visitCaseStatement(caseStmt, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
       case modCallStmt : ModuleCallStmt => visitModuleCallStatement(modCallStmt, context)
+      case macroCallStmt : MacroCallStmt => visitMacroCallStatement(macroCallStmt, context)
     }).flatMap(pass.rewriteStatement(_, context))
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
@@ -1824,6 +1835,17 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(id) =>
         val stP1 = ModuleCallStmt(id)
         pass.rewriteModuleCall(stP1, context)
+      case None =>
+        None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
+  }
+
+  def visitMacroCallStatement(st : MacroCallStmt, context : Scope) : Option[Statement] = {
+    val stP = visitIdentifier(st.id, context) match {
+      case Some(id) =>
+        val stP1 = MacroCallStmt(id)
+        pass.rewriteMacroCall(stP1, context)
       case None =>
         None
     }

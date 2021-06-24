@@ -478,6 +478,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case instanceId ~ "." ~ procId ~ args => ProcedureCallStmt(procId, List.empty, args, Some(instanceId)) } |
       KwCall ~> LhsList ~ ("=" ~> Id) ~ "." ~ Id ~ ExprList <~ ";" ^^
         { case lhss ~ instanceId ~ "." ~ procId ~ args => ProcedureCallStmt(procId, lhss, args, Some(instanceId)) } |
+      Id <~ ";" ^^
+        { case macroId => lang.MacroCallStmt(macroId) } |
       KwNext ~ "(" ~> Id <~ ")" ~ ";" ^^
         { case id => lang.ModuleCallStmt(id) } |
       KwIf ~ "(" ~ "*" ~ ")" ~> (BlkStmt <~ KwElse) ~ BlkStmt ^^
