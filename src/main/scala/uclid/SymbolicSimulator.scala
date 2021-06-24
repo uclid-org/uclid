@@ -1473,7 +1473,8 @@ class SymbolicSimulator (module : Module) {
                Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
                Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
-               Scope.BlockVar(_, _)           | Scope.SelectorField(_)          =>
+               Scope.BlockVar(_, _)           | Scope.SelectorField(_)          |
+               Scope.Macro(_, _, _)           =>
              throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
         }
       case None =>
@@ -1842,6 +1843,7 @@ class SymbolicSimulator (module : Module) {
       case CaseStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute case statement.")
       case ProcedureCallStmt(id,lhss,args,instanceId,moduleId) => throw new Utils.AssertionError("Cannot symbolically execute procedure calls.")
       case ModuleCallStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute module calls.")
+      case MacroCallStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute macro calls.") 
     }
   }
 
@@ -1876,6 +1878,8 @@ class SymbolicSimulator (module : Module) {
     }
     case ModuleCallStmt(id) =>
       throw new Utils.RuntimeError("ModuleCallStmt must have been inlined by now.")
+    case MacroCallStmt(id) =>
+      throw new Utils.RuntimeError("MacroCallStmt must have been inlined by now")
   }
   def writeSets(stmts: List[Statement]) : Set[Identifier] = {
     return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ writeSet(s)}

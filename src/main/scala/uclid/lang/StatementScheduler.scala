@@ -102,6 +102,8 @@ object StatementScheduler {
         Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
         instD.outputMap.map(p => p._3.asInstanceOf[Identifier]).toSet
+      case MacroCallStmt(_) =>
+        throw new Utils.AssertionError("Macro call statements must have been eliminated by now.")
     }
   }
   def writeSets(stmts: List[Statement], context : Scope) : (Set[Identifier]) = {
@@ -155,6 +157,8 @@ object StatementScheduler {
         Utils.assert(namedExpr.isInstanceOf[Scope.Instance], "Must be a module instance: " + id.toString())
         val instD = namedExpr.asInstanceOf[Scope.Instance].instD
         instD.outputMap.map(p => p._3.asInstanceOf[Identifier]).toSet
+      case MacroCallStmt(_) =>
+        throw new Utils.AssertionError("Macro call statements must have been eliminated by now.")
     }
   }
   def writeSetIds(stmts: List[Statement], context : Scope) : (Set[Identifier]) = {
@@ -224,6 +228,8 @@ object StatementScheduler {
         logger.trace("moduleInputs: {}", moduleInputs.toString())
         logger.trace("moduleSharedVars: {}", moduleSharedVars.toString())
         readSets(moduleInputs, prime) ++ readSets(moduleSharedVars, prime)
+      case MacroCallStmt(_) =>
+        throw new Utils.AssertionError("Macro call statements must have been eliminated by now.")
     }
   }
   def readSets(stmts : List[Statement], context : Scope, prime: Boolean = false) : (Set[Identifier]) = {
