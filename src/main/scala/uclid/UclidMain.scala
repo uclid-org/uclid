@@ -141,10 +141,6 @@ object UclidMain {
    */
   def main(config : Config) {
     try {
-      if (config.testFixedpoint) {
-        smt.Z3HornSolver.test1()
-        return
-      }
       val mainModuleName = Identifier(config.mainModuleName)
       val modules = compile(config, mainModuleName)
       val mainModule = instantiate(config, modules, mainModuleName, true)
