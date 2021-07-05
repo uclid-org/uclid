@@ -256,6 +256,28 @@ class ParserSpec extends FlatSpec {
         assert (p.errors.exists(p => p._1.contains("Operator can only be used in a verification expression")))
     }
   }
+  "test-synthesis-grammar-0.ucl" should "parse successfully." in {
+      val fileModules = UclidMain.compile(List(new File("test/test-synthesis-grammar-0.ucl")), lang.Identifier("main"))
+      val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+      assert (instantiatedModules.size == 1)
+  }
+  "test-synthesis-grammar-1.ucl" should "parse successfully." in {
+      val fileModules = UclidMain.compile(List(new File("test/test-synthesis-grammar-1.ucl")), lang.Identifier("main"))
+      val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+      assert (instantiatedModules.size == 1)
+  }
+  "test-synthesis-grammar-2.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(List(new File("test/test-synthesis-grammar-2.ucl")), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size > 0)
+    }
+  }
   "test-typechecker-7.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(List(new File("test/test-typechecker-7.ucl")), lang.Identifier("main"))
