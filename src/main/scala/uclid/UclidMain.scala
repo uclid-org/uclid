@@ -72,7 +72,7 @@ object UclidMain {
       smtSolver: List[String] = List.empty,
       synthesizer: List[String] = List.empty,
       smtFileGeneration: String = "",
-      sygusFormat: Boolean = false,
+      sygusFormat: Boolean = true,
       enumToNumeric: Boolean = false,
       modSetAnalysis: Boolean = false,
       ufToArray: Boolean = false,
@@ -108,7 +108,11 @@ object UclidMain {
 
       opt[Unit]('f', "sygus-format").action{
         (_, c) => c.copy(sygusFormat = true)
-      }.text("Generate the standard SyGuS format.")
+      }.text("(deprecated, enabled by default) Generate the standard SyGuS format.")
+
+      opt[Unit]('l', "llama-format").action{
+        (_, c) => c.copy(sygusFormat = false)
+      }.text("Generates synthesis format for llama.")
 
       opt[Unit]('e', "enum-to-numeric").action{
         (_, c) => c.copy(enumToNumeric = true)
