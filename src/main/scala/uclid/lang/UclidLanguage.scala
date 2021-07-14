@@ -915,7 +915,7 @@ sealed abstract class Statement extends ASTNode {
   override def toString = 
   {
     if(macroAnnotation.isEmpty)
-      Utils.join(toLines, "\n") + "\n"
+      Utils.join(toLines, "\n") + "no macro annotation \n"
     else
       Utils.join(toLines, "\\ was macro " + macroAnnotation.toString + "\n ") + "\n"
   }

@@ -16,8 +16,7 @@ class MacroReplacerPass extends RewritePass {
     Some(st)
   }
 
-  override def rewriteStatement(st: MacroCallStmt, ctx: Scope): Option[Statement] = {
-  }
+
 
 
 // should not be any macro call statements?
