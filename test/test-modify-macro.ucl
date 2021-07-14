@@ -1,0 +1,27 @@
+module main {
+    macro foo {
+        x = 0;
+    }
+
+    var x : integer;
+
+    init {
+        foo;
+        assert (x == 0);
+    }
+
+    control {
+        // First block
+        unroll (0);
+        check;
+        print_results;
+        // print_module;
+
+        // Second block
+        assign_macro(foo, { x = 1; });
+        unroll (0);
+        check;
+        print_results;
+        // print_module;
+    }
+}

@@ -803,13 +803,15 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Cmd : PackratParser[lang.GenericProofCommand] = positioned {
       (Id <~ "=").? ~ (Id <~ ".").? ~ Id <~ ";" ^^
-        { case rId ~ oId ~ id => lang.GenericProofCommand(id, List.empty, List.empty, rId, oId) } |
+        { case rId ~ oId ~ id => lang.GenericProofCommand(id, List.empty, List.empty, rId, oId, None) } |
       (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ CmdParamList <~ ";" ^^
-        { case rId ~ oId ~ id ~ cmdParams => lang.GenericProofCommand(id, cmdParams, List.empty, rId, oId) } |
+        { case rId ~ oId ~ id ~ cmdParams => lang.GenericProofCommand(id, cmdParams, List.empty, rId, oId, None) } |
       (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ ExprList <~ ";" ^^
-        { case rId ~ oId ~ id ~ es => lang.GenericProofCommand(id, List.empty, es.map(e => (e, e.toString())), rId, oId) } |
+        { case rId ~ oId ~ id ~ es => lang.GenericProofCommand(id, List.empty, es.map(e => (e, e.toString())), rId, oId, None) } |
       (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ CmdParamList ~ ExprList <~ ";" ^^
-        { case rId ~ oId ~ id ~ cmdParams ~ es => lang.GenericProofCommand(id, cmdParams, es.map(e => (e, e.toString())), rId, oId) }
+        { case rId ~ oId ~ id ~ cmdParams ~ es => lang.GenericProofCommand(id, cmdParams, es.map(e => (e, e.toString())), rId, oId, None) } |
+      (Id <~ "=").? ~ (Id <~ ".").? ~ Id ~ ("(" ~> Id <~ ",") ~ BlkStmt <~ ")" ~ ";" ^^
+        { case rId ~ oId ~ id ~ macroId ~ blkStmt => lang.GenericProofCommand(id, List.empty, List((macroId, macroId.toString())), rId, oId, Some(blkStmt)) }
     }
 
     lazy val CmdBlock : PackratParser[List[GenericProofCommand]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"

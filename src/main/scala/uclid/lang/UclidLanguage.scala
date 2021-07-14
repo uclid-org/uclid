@@ -1395,7 +1395,7 @@ case class CommandParams(name: Identifier, values: List[Expr]) extends ASTNode
 
 case class GenericProofCommand(
     name : Identifier, params: List[CommandParams], args : List[(Expr, String)], 
-    resultVar: Option[Identifier], argObj: Option[Identifier]) 
+    resultVar: Option[Identifier], argObj: Option[Identifier], macroBody: Option[BlockStmt]) 
   extends ProofCommand {
 
   def getContext(context : Scope) : Scope = {
@@ -1429,6 +1429,8 @@ case class GenericProofCommand(
     resultStr + objStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
   }
   def isPrintCEX : Boolean = { name == Identifier("print_cex") }
+
+  def modifiesModule : Boolean = { name == Identifier("assign_macro") }
 }
 
 sealed abstract class Annotation extends ASTNode
@@ -1475,7 +1477,7 @@ object Annotation {
   val default = List(InstanceVarMapAnnotation(Map.empty))
 }
 
-case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCommand], notes: List[Annotation]) extends ASTNode {
+case class Module(id: Identifier, decls: List[Decl], var cmds : List[GenericProofCommand], notes: List[Annotation]) extends ASTNode {
   // create a new module with with the filename set.
   def withFilename(name : String) : Module = {
     val newModule = Module(id, decls, cmds, notes)
