@@ -1341,11 +1341,16 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val idP = visitIdentifier(macroDecl.id, context)
     val sigP = visitFunctionSig(macroDecl.sig, context)
     val contextP = context + macroDecl.sig
-    val statementP = visitStatement(macroDecl.body, contextP)
+    val statementP = visitBlockStatement(macroDecl.body, contextP)
     (idP, sigP, statementP) match {
       case (Some(id), Some(sig), Some(statement)) =>
-        val macroDeclP = MacroDecl(id, sig, statement)
-        pass.rewriteMacro(macroDeclP, context)
+        if(statement.isInstanceOf[BlockStmt])
+        {
+          val macroDeclP = MacroDecl(id, sig, statement.asInstanceOf[BlockStmt])
+          pass.rewriteMacro(macroDeclP, context)
+        }
+        else
+          None
       case _ =>
         None
     }
