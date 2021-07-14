@@ -1267,7 +1267,7 @@ class ModularProductProgramPass extends RewritePass {
                                 val newArgs = ListBuffer[(Expr, String)]()
                                 val tup = (modularProcedure.id.asInstanceOf[Expr], modularProcedure.id.name)
                                 newArgs += tup
-                                val newCommand = GenericProofCommand(command.name, command.params, newArgs.toList, newResultVar, command.argObj)
+                                val newCommand = GenericProofCommand(command.name, command.params, newArgs.toList, newResultVar, command.argObj, command.macroBody)
                                 ASTNode.introducePos(true, true, newCommand, command.position)
                                 newCommands  += newCommand
 
@@ -1296,7 +1296,7 @@ class ModularProductProgramPass extends RewritePass {
                                                     newArgs += newtuple
                                                 }
                                             }
-                                            val newCommand = GenericProofCommand(command.name, command.params, newArgs.toList, command.resultVar, newArgObj)
+                                            val newCommand = GenericProofCommand(command.name, command.params, newArgs.toList, command.resultVar, newArgObj, command.macroBody)
                                             ASTNode.introducePos(true, true, newCommand, command.position)
                                             newCommands += newCommand
                                         }

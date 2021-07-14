@@ -157,7 +157,23 @@ object UclidMain {
       val modules = compile(config, mainModuleName)
       val mainModule = instantiate(config, modules, mainModuleName)
       mainModule match {
-        case Some(m) => execute(m, config)
+        case Some(m) =>
+          var cmdBlocks = List(List(m.cmds(0)))
+          for (cmd <- m.cmds.tail)
+            if (cmd.modifiesModule)
+              cmdBlocks = cmdBlocks :+ List(cmd)
+            else
+              cmdBlocks = cmdBlocks.init :+ (cmdBlocks.last :+ cmd)
+          for (cmdBlock <- cmdBlocks) {
+            if (cmdBlock(0).modifiesModule) {
+              val newMacroBody = cmdBlock(0).macroBody match {
+                case Some(mb) => mb
+                case _ => throw new Utils.RuntimeError("assign_macro command should include a new macro body")
+              }
+            }
+            m.cmds = cmdBlock
+            execute(m, config)
+          }
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
       }

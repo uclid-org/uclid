@@ -211,6 +211,10 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkNoParams(cmd, filename)
         checkHasArgObj(cmd, filename, context)
         checkNoResultVar(cmd, filename)
+      case "assign_macro" =>
+        checkNoParams(cmd, filename)
+        checkNoArgObj(cmd, filename)
+        checkNoResultVar(cmd, filename)
       case _ =>
         Utils.raiseParsingError("Unknown control command: " + cmd.name.toString, cmd.pos, filename)
     }

@@ -1628,7 +1628,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }).flatten
     val resultVarP = cmd.resultVar.flatMap(r => visitIdentifier(r, contextP))
     val argObjP = cmd.argObj.flatMap(r => visitIdentifier(r, contextP))
-    val cmdP = pass.rewriteCommand(GenericProofCommand(cmd.name, cmd.params, argsP, resultVarP, argObjP), context)
+    val cmdP = pass.rewriteCommand(GenericProofCommand(cmd.name, cmd.params, argsP, resultVarP, argObjP, cmd.macroBody), context)
     return ASTNode.introducePos(setPosition, setFilename, cmdP, cmd.position)
   }
 
