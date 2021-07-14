@@ -935,12 +935,21 @@ case class HavocableInstanceId(opapp : OperatorApplication) extends HavocableEnt
 
 /** Statements **/
 sealed abstract class Statement extends ASTNode {
-  override def toString = Utils.join(toLines, "\n") + "\n"
+
+  override def toString = 
+  {
+    if(macroAnnotation.isEmpty)
+      Utils.join(toLines, "\n") + "\n"
+    else
+      Utils.join(toLines, "\\ was macro " + macroAnnotation.toString + "\n ") + "\n"
+  }
+  // TODO: these should be moved to annotations?
   def hasStmtBlock = false
   val isLoop = false
   val hasLoop = false
   val hasCall : Boolean
   val hasInternalCall : Boolean
+  var macroAnnotation: Option[MacroAnnotation] = None;
   def toLines : List[String]
 }
 case class SkipStmt() extends Statement {
@@ -973,10 +982,10 @@ case class BlockStmt(vars: List[BlockVarsDecl], stmts: List[Statement]) extends 
   override def hasStmtBlock = true
   override val hasLoop = stmts.exists(st => st.hasLoop)
   override def toLines = { 
-    List("{") ++
+      List("{ //" ) ++
       vars.map(PrettyPrinter.indent(1) + _.toString()) ++
       stmts.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++
-    List("}")
+      List("}")
   }
   override val hasCall = stmts.exists(st => st.hasCall)
   override val hasInternalCall = stmts.exists(st => st.hasInternalCall)
@@ -1274,12 +1283,17 @@ case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl
   override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
   override def declNames = List(id)
 }
-case class MacroDecl(id: Identifier, sig: FunctionSig, body: Statement) extends Decl {
+case class MacroDecl(id: Identifier, sig: FunctionSig, body: BlockStmt) extends Decl {
   override def toString =
     "macro " + id + "// " + position.toString + "\n" +
     Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
   override def declNames = List(id)
 }
+
+case class MacroAnnotation(id: Identifier, size: Int) extends Annotation {
+  override def toString = id.toString;
+}
+
 case class ModuleDefinesImportDecl(id: Identifier) extends Decl {
   override def toString = "define * = $s.*; // %s".format(id.toString)
   override def declNames = List.empty
@@ -1474,15 +1488,6 @@ case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) ext
     val start = PrettyPrinter.indent(1) + "// instance_var_map { "
     val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), ".") + " ::==> " + p._2.toString)
     val end = PrettyPrinter.indent(1) + "// } end_instance_var_map"
-    Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
-  }
-}
-
-case class InstanceProcMapAnnotation(iMap: Map[List[Identifier], ProcedureDecl]) extends Annotation {
-  override def toString : String = {
-    val start = PrettyPrinter.indent(1) + "// instance_proc_map { "
-    val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), ".") + " ::==> " + p._2.toString)
-    val end = PrettyPrinter.indent(1) + "// } end_instance_proc_map"
     Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
   }
 }
