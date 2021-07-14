@@ -27,7 +27,7 @@ class MacroReplacerPass extends RewritePass {
       {
         var body  = macroDecl.body
         body.macroAnnotation = Some(MacroAnnotation(mId,macroDecl.body.stmts.size))
-        Some(macroDecl.body)
+        Some(body)
       }
       case _ => Some(st)
     }
