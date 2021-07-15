@@ -228,6 +228,8 @@ object UclidMain {
     passManager.addPass(new RewritePolymorphicSelect())
     // Replaces constant lits with actual literal value
     passManager.addPass(new ConstantLitRewriter())
+    // checks for invalid statements in macros and incorrect usage
+    passManager.addPass(new MacroChecker())
     // inlines statement macros
     passManager.addPass(new MacroRewriter())
     // finds uses of type defs
