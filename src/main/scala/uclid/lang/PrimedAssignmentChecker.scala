@@ -123,14 +123,6 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
       checkLhs(callStmt.callLhss, in, context)
     }
   }
-
-  override def applyOnMacro(d : TraversalDirection.T, macroDecl : MacroDecl, in : T, context : Scope) : T = {
-    if (d == TraversalDirection.Up) {
-      Set.empty[ModuleError]
-    } else {
-      in
-    }
-  }
 }
 
 class PrimedAssignmentChecker extends ASTAnalyzer("PrimedAssignmentChecker", new PrimedAssignmentCheckerPass())  {
