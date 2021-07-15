@@ -801,13 +801,40 @@ class ParserSpec extends AnyFlatSpec {
       case _: Throwable => assert (false)
     }
   }
-  "test-macro-parse-fails.ucl" should "not parse successfully" in {
+  "test-macro-5-fails.ucl" should "not parse successfully" in {
     try {
-      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-macro-parse-fails.ucl"), lang.Identifier("main"))
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-macro-5-fails.ucl"), lang.Identifier("main"))
       assert (false)
     } catch {
       case p : Utils.ParserErrorList =>
         assert (p.errors.exists(p => p._1.contains("Macro does not exist")))
+    }
+  }
+  "test-macro-6-fails.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-macro-6-fails.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.exists(p => p._1.contains("Primed assignments are not allowed in procedural code")))
+    }
+  }
+  "test-macro-7-fails.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-macro-7-fails.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.exists(p => p._1.contains("Macro calls are not allowed in macro declarations")))
+    }
+  }
+  "test-macro-8-fails.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-macro-8-fails.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.exists(p => p._1.contains("Macro calls are not allowed in the next block")))
     }
   }
 

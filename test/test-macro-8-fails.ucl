@@ -7,11 +7,14 @@ module main {
     }
 
     init {
+        x = 1;
         y = 2;
-        foo;
-        bar;
     }
     
+    next {
+        foo;
+    }
+
     control {
         unroll(0);
         check;
