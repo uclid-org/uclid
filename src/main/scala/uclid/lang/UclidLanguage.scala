@@ -1509,8 +1509,13 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
   
   // module macros
   lazy val defines : List[DefineDecl] = decls.collect{ case d : DefineDecl => d }
+
+  // module statement macros
+  lazy val macroDecls : List[MacroDecl] = decls.collect{ case d : MacroDecl => d }
+
   lazy val synthFunctions: List[SynthesisFunctionDecl] =
     decls.filter(_.isInstanceOf[SynthesisFunctionDecl]).map(_.asInstanceOf[SynthesisFunctionDecl])
+
   // module properties.
   lazy val properties : List[SpecDecl] = decls.collect{ case spec : SpecDecl => spec }
 
