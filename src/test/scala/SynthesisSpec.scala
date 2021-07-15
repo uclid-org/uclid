@@ -92,5 +92,13 @@ class SynthesisSpec extends AnyFlatSpec {
   "test-synthesis-9.ucl" should "verify all assertions." in {
     SynthesisSpec.expectedFails("./test/test-synthesis-9.ucl", 0)
   }
-
+  "test-synthesis-11.ucl" should "verify all assertions." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-11.ucl", 0)
+  }
+  "test-synthesis-12.ucl" should "verify all assertions." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-12.ucl", 0)
+  }
+  "test-synthesis-13.ucl" should "verify all assertions." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-13.ucl", 0)
+  }
 }
