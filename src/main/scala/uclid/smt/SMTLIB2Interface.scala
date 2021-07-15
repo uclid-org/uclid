@@ -345,6 +345,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
   type NameProviderFn = (String, Option[String]) => String
   var expressions : List[Expr] = List.empty
   val solverProcess = new InteractiveProcess(args, true)
+  var synthDeclCommands : String = ""
 
   def generateDeclaration(sym: Symbol) = {
     val (typeName, newTypes) = generateDatatype(sym.typ)
@@ -441,6 +442,7 @@ class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
   
       val decl = "(declare-datatypes (%s) (%s))".format(names, fields)
       writeCommand(decl)
+      synthDeclCommands += decl
     }
 
     val other = declCommands.filterNot(d => d.startsWith("(declare-datatype"))
