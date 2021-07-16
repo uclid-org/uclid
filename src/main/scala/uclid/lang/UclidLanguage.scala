@@ -1451,7 +1451,7 @@ case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) ext
 case class MacroAnnotation(macroMap: Map[Identifier, List[ASTPosition]]) extends Annotation{
   override def toString : String = {
     val start = PrettyPrinter.indent(1) + "// macro_annotation_map { "
-    val lines = macroMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._2.map(_.toString), " + ") + " ::==> " + p._1.toString)
+    val lines = macroMap.map(p => PrettyPrinter.indent(1) + "//   " + p._1.toString + " ::===>" + Utils.join(p._2.map(_.toString), " + ") )
     val end = PrettyPrinter.indent(1) + "// } end_macro_annotation_map"
     Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
   }
