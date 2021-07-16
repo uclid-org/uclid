@@ -914,10 +914,7 @@ sealed abstract class Statement extends ASTNode {
 
   override def toString = 
   {
-    if(macroAnnotation.isEmpty)
-      Utils.join(toLines, "\n") + "no macro annotation \n"
-    else
-      Utils.join(toLines, "\\ was macro " + macroAnnotation.toString + "\n ") + "\n"
+      Utils.join(toLines, "\n")
   }
   // TODO: these should be moved to annotations?
   def hasStmtBlock = false
@@ -925,7 +922,6 @@ sealed abstract class Statement extends ASTNode {
   val hasLoop = false
   val hasCall : Boolean
   val hasInternalCall : Boolean
-  var macroAnnotation: Option[MacroAnnotation] = None;
   def toLines : List[String]
 }
 case class SkipStmt() extends Statement {
@@ -1266,10 +1262,6 @@ case class MacroDecl(id: Identifier, sig: FunctionSig, body: BlockStmt) extends 
   override def declNames = List(id)
 }
 
-case class MacroAnnotation(id: Identifier, size: Int) extends Annotation {
-  override def toString = id.toString;
-}
-
 case class ModuleDefinesImportDecl(id: Identifier) extends Decl {
   override def toString = "define * = $s.*; // %s".format(id.toString)
   override def declNames = List.empty
@@ -1452,6 +1444,15 @@ case class InstanceVarMapAnnotation(iMap: Map[List[Identifier], Identifier]) ext
     val start = PrettyPrinter.indent(1) + "// instance_var_map { "
     val lines = iMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._1.map(_.toString), ".") + " ::==> " + p._2.toString)
     val end = PrettyPrinter.indent(1) + "// } end_instance_var_map"
+    Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
+  }
+}
+
+case class MacroAnnotation(macroMap: Map[Identifier, List[ASTPosition]]) extends Annotation{
+  override def toString : String = {
+    val start = PrettyPrinter.indent(1) + "// macro_annotation_map { "
+    val lines = macroMap.map(p => PrettyPrinter.indent(1) + "//   " + Utils.join(p._2.map(_.toString), " + ") + " ::==> " + p._1.toString)
+    val end = PrettyPrinter.indent(1) + "// } end_macro_annotation_map"
     Utils.join(List(start) ++ lines ++ List(end), "\n") +"\n"
   }
 }
