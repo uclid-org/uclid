@@ -235,6 +235,7 @@ object UclidMain {
     // checks for invalid statements in macros and incorrect usage
     passManager.addPass(new MacroChecker())
     // inlines statement macros
+    passManager.addPass(new MacroAnnotator())
     passManager.addPass(new MacroRewriter())
     // finds uses of type defs
     passManager.addPass(new TypeSynonymFinder())
