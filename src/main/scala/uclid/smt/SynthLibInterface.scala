@@ -51,6 +51,10 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean, module: lang.
   var total   : List[String] = List.empty
   var out     : String = ""
 
+  var defineDecls : String = ""
+  type DefinesSet = MutableSet[DefineSymbol]
+  var addedDefines : DefinesSet = MutableSet.empty
+
   type SynthVarSet = MutableSet[SynthSymbol]
   var synthVariables : SynthVarSet = MutableSet.empty
 
@@ -72,6 +76,16 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean, module: lang.
   }
 
   def generateGrammarDeclaration(grammarSymbol: smt.GrammarSymbol): String = {
+    grammarSymbol.nts.foreach {
+      (nt) => nt.terms.foreach {
+        (trm) => {
+          trm.e match {
+            case MacroApplication(e, defDecl, args) => generateDefines(defDecl)
+            case _ => None
+          }
+        }
+      }
+    }
     grammarSymbol.toString
   }
 
@@ -91,6 +105,24 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean, module: lang.
       cmd = "(synth-blocking-fun %s (%s) %s)\n".format(sym, sig, typeName)
     }
     out += cmd
+  }
+
+  def generateDefines(sym: DefineSymbol) = {
+    val (typeName, newTypes) = generateDatatype(sym.typ)
+    Utils.assert(newTypes.size == 0, "No new types are expected here.")
+    val inputTypes = generateInputDataTypes(sym.typ)
+    val inputNames = sym.symbolTyp.args.map( a => a._1.toString())
+    val sig =  (inputNames zip inputTypes).map(a => "(" + a._1 + " " + a._2 
+    + ")").mkString(" ")
+
+    var cmd : String = ""
+    if (sygusSyntax) {
+      if (!addedDefines.contains(sym))  
+      {
+        cmd = "(define-fun %s (%s) %s %s)\n".format(sym, sig, typeName, sym.expr)
+        defineDecls += cmd
+      }
+    }
   }
 
   /**
@@ -190,7 +222,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean, module: lang.
   override def toString() : String = {
     val aexp = "(or " + total.mkString("\t\n") + ")"
     val query = if (sygusSyntax) {
-      out + "(constraint (not " + aexp +"))\n(check-synth)\n"
+      defineDecls + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
     } else {
       out + "(assert " + aexp +")\n(check-sat)\n"
     }

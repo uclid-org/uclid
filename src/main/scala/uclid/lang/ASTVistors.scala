@@ -161,6 +161,7 @@ trait ReadOnlyPass[T] {
   def applyOnOperator(d : TraversalDirection.T, op : Operator, in : T, context : Scope) : T = { in }
   def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : Scope) : T = { in }
   def applyOnLambda(d : TraversalDirection.T, lambda : Lambda, in : T, context : Scope) : T = { in }
+  // def applyOnMacroApp(d : TraversalDirection.T, mapp : MacroApplication, in : T, context : Scope) : T = { in }
   def applyOnExprDecorator(d : TraversalDirection.T, dec : ExprDecorator, in : T, context : Scope) : T = { in }
   def applyOnProcedureAnnotations(d : TraversalDirection.T, annot : ProcedureAnnotations, in : T, context : Scope) : T = { in }
 }
@@ -181,6 +182,7 @@ trait RewritePass {
   def rewriteModuleFunctionsImport(modFuncImport : ModuleFunctionsImportDecl, ctx : Scope) : Option[ModuleFunctionsImportDecl] = { Some(modFuncImport) }
   def rewriteFuncAppTerm(term : FuncAppTerm, ctx : Scope) : Option[FuncAppTerm] = { Some(term) }
   def rewriteOpAppTerm(term : OpAppTerm, ctx : Scope) : Option[OpAppTerm] = { Some(term) }
+  def rewriteMacroAppTerm(term : MacroAppTerm, ctx : Scope) : Option[MacroAppTerm] = { Some(term) }
   def rewriteLiteralTerm(term : LiteralTerm, ctx : Scope) : Option[LiteralTerm] = { Some(term) }
   def rewriteSymbolTerm(term : SymbolTerm, ctx : Scope) : Option[SymbolTerm] = { Some(term) }
   def rewriteConstantTerm(term : ConstantTerm, ctx : Scope) : Option[ConstantTerm] = { Some(term) }
@@ -1241,6 +1243,16 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setPosition, setFilename, opAppTermP, opAppTerm.position)
   }
 
+  def visitMacroAppTerm(macroAppTerm: MacroAppTerm, context: Scope) : Option[MacroAppTerm] = {
+    val idP = visitIdentifier(macroAppTerm.id, context)
+    val argsP = macroAppTerm.args.map(visitGrammarTerm(_, context)).flatten
+    val macroAppTermP = idP match {
+      case Some(id) => pass.rewriteMacroAppTerm(MacroAppTerm(id, argsP), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, macroAppTermP, macroAppTerm.position)
+  }
+
   def visitLiteralTerm(litTerm: LiteralTerm, context: Scope) : Option[LiteralTerm] = {
     val litP = visitLiteral(litTerm.lit, context)
     val litTermP = litP match {
@@ -1281,6 +1293,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val grammarTermP = grammarTerm match {
       case funcAppTerm: FuncAppTerm => visitFuncAppTerm(funcAppTerm, context)
       case opAppTerm: OpAppTerm => visitOpAppTerm(opAppTerm, context)
+      case macroAppTerm: MacroAppTerm => visitMacroAppTerm(macroAppTerm, context)
       case litTerm: LiteralTerm => visitLiteralTerm(litTerm, context)
       case symTerm: SymbolTerm => visitSymbolTerm(symTerm, context)
       case constTerm: ConstantTerm => visitConstantTerm(constTerm, context)
@@ -2084,7 +2097,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(e) => pass.rewriteFuncApp(FuncApplication(e, args), context)
       case _ => None
     }
-    return ASTNode.introducePos(setPosition, setFilename, fappP, fapp.position)
+    var node_ = ASTNode.introducePos(setPosition, setFilename, fappP, fapp.position)
+    return node_
+    // return ASTNode.introducePos(setPosition, setFilename, fappP, fapp.position)
   }
 
   def visitLambda(lambda: Lambda, contextIn : Scope) : Option[Lambda] = {

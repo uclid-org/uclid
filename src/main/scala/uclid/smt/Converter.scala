@@ -384,10 +384,18 @@ object Converter {
         val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, scope))
         smt.OperatorApplication(opP, argsP)
       }
+      case lang.MacroAppTerm(id, args) => {
+        val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, scope))
+        smt.MacroApplication(smt.Symbol(id.name, typeToSMT(scope.typeOf(id).get)), defineDeclToSyGuS2(scope.get(id).get.asInstanceOf[lang.Scope.Define], scope), argsP)
+      }
       case lang.LiteralTerm(lit: lang.Literal) => _exprToSMT(lit, scope, 0, idToSMT)
       case lang.SymbolTerm(id: lang.Identifier) => _exprToSMT(id, scope, 0, idToSMT)
       case _ => throw new Utils.UnimplementedException("grammar translation of " + gt.toString() + " is not yet supported.")
     }
     GrammarTerm(expr)
+  }
+ 
+  def defineDeclToSyGuS2 (defdecl : lang.Scope.Define, scope : lang.Scope) : smt.DefineSymbol = {
+    smt.DefineSymbol(defdecl.defDecl.id.name, scope.get(defdecl.dId).get.asInstanceOf[lang.Scope.Define].defDecl.sig, exprToSMT(defdecl.defDecl.expr, scope))
   }
 }

@@ -662,6 +662,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       }
     }
 
+    lazy val MacroAppTerm: PackratParser[lang.MacroAppTerm] = positioned {
+          Id ~ ("("  ~> rep( GrammarTerm ) <~ ")") ^^ {
+            case id ~ terms => lang.MacroAppTerm(id, terms)
+        }
+    }
+
     lazy val ITETerm: PackratParser[lang.OpAppTerm] = positioned {
       "(" ~ KwIf ~ "(" ~> (GrammarTerm <~ ")") ~ (KwThen ~> GrammarTerm) ~ (KwElse ~> GrammarTerm) <~ ")" ^^ {
         case c ~ t ~ f => lang.OpAppTerm(ITEOp(), List(c, t, f))
@@ -677,7 +683,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val GrammarTerm : PackratParser[lang.GrammarTerm] = positioned {
-      UnaryOpAppTerm | BinaryOpAppTerm | ITETerm | LiteralTerm | SymbolTerm | ConstantTerm | ParameterTerm
+      UnaryOpAppTerm | BinaryOpAppTerm | ITETerm | MacroAppTerm | LiteralTerm | SymbolTerm | ConstantTerm | ParameterTerm
     }
 
     lazy val GrammarTermList : PackratParser[List[lang.GrammarTerm]] = {
