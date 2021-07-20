@@ -1,24 +1,57 @@
 package uclid
 package lang
 
+class MacroReplacerPass(macroId : Identifier, newMacroBody : BlockStmt) extends RewritePass {
 
-class MacroReplacerPass extends RewritePass {
+  override def rewriteBlock(st : BlockStmt, ctx : Scope): Option[Statement] = {
+    ctx.module match {
+      case Some(module) =>
+        var blockStatements = st.stmts
+        var macroMap = module.getAnnotation[MacroAnnotation]().get.macroMap
+        var macroPositions = macroMap get macroId match {
+          case Some(p) => p
+          case _ => throw new Utils.RuntimeError("Macro does not exist.")
+        }
+        var blockPositions = blockStatements.map(s => s.position)
+        val allStmtsMacro = blockPositions.forall(pos => {macroPositions contains pos})
+        val noStmtsMacro = blockPositions.forall(pos => !(macroPositions contains pos))
+        if (allStmtsMacro) {
+          // The entire block statement consists of statements originating from the given macro
+          Some(newMacroBody)
+        } else if (noStmtsMacro) {
+          // No statements in the block statements originated from the given macro
+          Some(st)
+        } else {
+          // Some statements in the block statement originated from the given macro
+          // These statements are expected to be contiguous
+          Some(replaceMacroWithinBlock(st, macroPositions, newMacroBody))
+        }
+        Some(st)
+      case _ => 
+        Some(st)
+    }
+  }
 
-
-  override def rewriteBlock(st: BlockStmt, ctx: Scope): Option[Statement] = {
-    // if all statements in block have macro annotation, replace all statements with macro 
-    // (add macro annotation to new block)
-    // throw runtime error if macro doesn't exist
-
-    // if some statements but not all have macro annotations, throw error? we replace full blocks only?
-
-    // if no statements have macro annotations, return original block
-    Some(st)
+  def replaceMacroWithinBlock(st : BlockStmt, macroPositions : List[ASTPosition], newMacroBody : BlockStmt) = {
+    /** Given a block statement replaces the statements originating from the macro with the given
+     * positions with the statements from the new macro body
+     */
+    var (leftStmts, rightStmts) = st.stmts.span(s => !(macroPositions contains s.position))
+    while (!rightStmts.isEmpty) {
+      leftStmts = leftStmts ++ newMacroBody.stmts
+      rightStmts.span(s => !(macroPositions contains s.position)) match {
+        case (l, r) =>
+          leftStmts = leftStmts ++ l
+          rightStmts = r
+        case _ =>
+      }
+    }
+    leftStmts
   }
 }
 
-class MacroReplacer extends ASTRewriter(
-  "MacroReplacer", new MacroRewriterPass())
+class MacroReplacer(macroId : Identifier, newMacroBody : BlockStmt) extends ASTRewriter(
+  "MacroReplacer", new MacroReplacerPass(macroId, newMacroBody))
 
 class MacroAnnotationCollector extends ReadOnlyPass [MacroAnnotation] {
   type T = MacroAnnotation
