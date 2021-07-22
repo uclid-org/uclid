@@ -158,21 +158,16 @@ object UclidMain {
       val mainModule = instantiate(config, modules, mainModuleName)
       mainModule match {
         case Some(m) =>
+          // Split the control block commands to blocks on commands that modify themodule
           var cmdBlocks = List(List(m.cmds(0)))
           for (cmd <- m.cmds.tail)
             if (cmd.modifiesModule)
               cmdBlocks = cmdBlocks :+ List(cmd)
             else
               cmdBlocks = cmdBlocks.init :+ (cmdBlocks.last :+ cmd)
+          // Execute the commands for each block
           for (cmdBlock <- cmdBlocks) {
-            if (cmdBlock(0).modifiesModule) {
-              val newMacroBody = cmdBlock(0).macroBody match {
-                case Some(mb) => mb
-                case _ => throw new Utils.RuntimeError("assign_macro command should include a new macro body")
-              }
-            }
-            m.cmds = cmdBlock
-            execute(m, config)
+            executeCommands(m, cmdBlock, config)
           }
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
@@ -431,6 +426,31 @@ object UclidMain {
     val result = symbolicSimulator.execute(solverInterface, config)
     solverInterface.finish()
     return result
+  }
+
+  def executeCommands(module : Module, cmds : List[GenericProofCommand], config : Config) : List[CheckResult] = {
+    var resModule = module
+    if (cmds(0).name == Identifier("assign_macro")) {
+      val newMacroBody = cmds(0).macroBody match {
+        case Some(b) => b
+        case _ => throw new Utils.RuntimeError("assign_macro command should include a new macro body")
+      }
+      val macroId = cmds(0).args(0)._1 match {
+        case Identifier(n) => Identifier(n)
+        case _ => throw new Utils.RuntimeError("assign_macro argument should be a macro identifier")
+      }
+      resModule = assignMacro(module, macroId, newMacroBody)
+      resModule.cmds = cmds.tail
+    } else {
+      resModule.cmds = cmds
+    }
+    return execute(resModule, config)
+  }
+
+  def assignMacro(module : Module, macroId : Identifier, newMacroBody : BlockStmt) : Module = {
+    val passManager = new PassManager("assign_macro")
+    passManager.addPass(new MacroReplacer(macroId, newMacroBody))
+    passManager.run(List(module))(0)
   }
 
   var stringOutput : StringBuilder = new StringBuilder()

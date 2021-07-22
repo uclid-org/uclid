@@ -26,7 +26,6 @@ class MacroReplacerPass(macroId : Identifier, newMacroBody : BlockStmt) extends 
           // These statements are expected to be contiguous
           Some(replaceMacroWithinBlock(st, macroPositions, newMacroBody))
         }
-        Some(st)
       case _ => 
         Some(st)
     }
@@ -39,6 +38,7 @@ class MacroReplacerPass(macroId : Identifier, newMacroBody : BlockStmt) extends 
     var (leftStmts, rightStmts) = st.stmts.span(s => !(macroPositions contains s.position))
     while (!rightStmts.isEmpty) {
       leftStmts = leftStmts ++ newMacroBody.stmts
+      rightStmts = rightStmts.dropWhile(s => macroPositions contains s.position)
       rightStmts.span(s => !(macroPositions contains s.position)) match {
         case (l, r) =>
           leftStmts = leftStmts ++ l
@@ -46,7 +46,7 @@ class MacroReplacerPass(macroId : Identifier, newMacroBody : BlockStmt) extends 
         case _ =>
       }
     }
-    leftStmts
+    BlockStmt(st.vars, leftStmts)
   }
 }
 
