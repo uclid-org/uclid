@@ -145,6 +145,16 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     val matchingParams = cmd.params.filter(p => validParams.contains(p.name))
     Utils.checkParsingError(matchingParams.size == cmd.params.size, "invalid parameter for command '%s'".format(cmd.name.toString), cmd.pos, filename)
   }
+  def checkHasMacroBody(cmd : GenericProofCommand, filename : Option[String]) {
+    Utils.checkParsingError(cmd.macroBody.isDefined, "'%s' command expects a macro body as a parameter".format(cmd.name.toString), cmd.pos, filename)
+  }
+  def checkHasValidMacroIdentifier(cmd : GenericProofCommand, filename : Option[String], context : Scope) {
+    val mId = cmd.args(0)._1.asInstanceOf[Identifier]
+    context.map.get(mId) match {
+      case Some(Scope.Macro(mId, typ, macroDecl)) =>
+      case _ => Utils.raiseParsingError("'%s' command expects a valid macro identifier as an argument. '%s' is not a macro".format(cmd.name.toString, mId.toString), cmd.pos, filename)
+    }
+  }
 
   override def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : Unit, context : Scope) : Unit = {
     val filename = context.module.flatMap(_.filename)
@@ -215,6 +225,9 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkNoParams(cmd, filename)
         checkNoArgObj(cmd, filename)
         checkNoResultVar(cmd, filename)
+        checkHasOneIdentifierArg(cmd, filename)
+        checkHasMacroBody(cmd, filename)
+        checkHasValidMacroIdentifier(cmd, filename, context)
       case _ =>
         Utils.raiseParsingError("Unknown control command: " + cmd.name.toString, cmd.pos, filename)
     }
