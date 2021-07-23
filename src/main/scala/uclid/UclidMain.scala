@@ -154,17 +154,10 @@ object UclidMain {
       val mainModule = instantiate(config, modules, mainModuleName, true)
       mainModule match {
         case Some(m) =>
-          // Split the control block commands to blocks on commands that modify themodule
-          var cmdBlocks = List(List(m.cmds(0)))
-          for (cmd <- m.cmds.tail)
-            if (cmd.modifiesModule)
-              cmdBlocks = cmdBlocks :+ List(cmd)
-            else
-              cmdBlocks = cmdBlocks.init :+ (cmdBlocks.last :+ cmd)
+          // Split the control block commands to blocks on commands that modify the module
+          val cmdBlocks = splitCommands(m.cmds)
           // Execute the commands for each block
-          for (cmdBlock <- cmdBlocks) {
-            executeCommands(m, cmdBlock, config)
-          }
+          cmdBlocks.foreach(cmdBlock => executeCommands(m, cmdBlock, config, mainModuleName))
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
       }
@@ -204,7 +197,7 @@ object UclidMain {
     }
   }
 
-  def createCompilePassManager(config: Config, test: Boolean, mainModuleName: lang.Identifier) = {
+  def createCompilePassManager(config: Config, test: Boolean, mainModuleName: lang.Identifier, recompile : Boolean = false) = {
     val passManager = new PassManager("compile")
     // adds init and next to every module
     passManager.addPass(new ModuleCanonicalizer())
@@ -242,7 +235,8 @@ object UclidMain {
     // checks for invalid statements in macros and incorrect usage
     passManager.addPass(new MacroChecker())
     // inlines statement macros
-    passManager.addPass(new MacroAnnotator())
+    if (!recompile)
+      passManager.addPass(new MacroAnnotator())
     passManager.addPass(new MacroRewriter())
     // finds uses of type defs
     passManager.addPass(new TypeSynonymFinder())
@@ -421,26 +415,59 @@ object UclidMain {
     return result
   }
 
-  def executeCommands(module : Module, cmds : List[GenericProofCommand], config : Config) : List[CheckResult] = {
+  /** Splits a list of proof commands into blocks based on whether they modify the module */
+  def splitCommands(cmds : List[GenericProofCommand]) : List[List[GenericProofCommand]] = {
+    var cmdBlocks = List(List(cmds.head))
+    var previousModifiesModule = cmds.head.modifiesModule
+    cmds.tail.foreach(cmd => {
+      if (cmd.modifiesModule && !previousModifiesModule)
+        cmdBlocks = cmdBlocks :+ List(cmd)
+      else
+        cmdBlocks = cmdBlocks.init :+ (cmdBlocks.last :+ cmd)
+      previousModifiesModule = cmd.modifiesModule
+    })
+    UclidMain.println(cmdBlocks.toString)
+    return cmdBlocks
+  }
+
+  /** Executes a block of commands. Either all of the commands modify the module or none of the commands
+   *  modify the module.
+   */
+  def executeCommands(module : Module, cmds : List[GenericProofCommand], config : Config, mainModuleName : Identifier, test : Boolean = false) : List[CheckResult] = {
     var resModule = module
-    if (cmds(0).name == Identifier("assign_macro")) {
-      val newMacroBody = cmds(0).macroBody match {
-        case Some(b) => b
-        case _ => throw new Utils.RuntimeError("assign_macro command should include a new macro body")
+    var previousModifiesModule = cmds(0).modifiesModule
+    var modifyCmdCount = 0
+    cmds.foreach(cmd => {
+      cmd.name match {
+        case Identifier("assign_macro") =>
+          val newMacroBody = cmd.macroBody match {
+            case Some(b) => b
+            case _ => throw new Utils.RuntimeError("Should never get here")
+          }
+          val macroId = cmd.args(0)._1 match {
+            case Identifier(n) => Identifier(n)
+            case _ => throw new Utils.RuntimeError("Should never get here")
+          }
+          resModule = assignMacro(module, macroId, newMacroBody)
+          modifyCmdCount += 1
+        case _ =>
+          if (previousModifiesModule) {
+            // Re-run the compile passes
+            val passManager = createCompilePassManager(config, test, mainModuleName, true)
+            resModule = passManager.run(List(resModule))(0)
+          }
       }
-      val macroId = cmds(0).args(0)._1 match {
-        case Identifier(n) => Identifier(n)
-        case _ => throw new Utils.RuntimeError("assign_macro argument should be a macro identifier")
-      }
-      resModule = assignMacro(module, macroId, newMacroBody)
-      resModule.cmds = cmds.tail
-    } else {
-      resModule.cmds = cmds
-    }
+      previousModifiesModule = cmd.modifiesModule
+    })
+
+    // Remove the commands that modified the module
+    resModule.cmds = cmds.slice(modifyCmdCount, cmds.length)
+
     return execute(resModule, config)
   }
 
   def assignMacro(module : Module, macroId : Identifier, newMacroBody : BlockStmt) : Module = {
+    UclidMain.println("Setting macro '%s' to %s".format(macroId.toString, newMacroBody.toString))
     val passManager = new PassManager("assign_macro")
     passManager.addPass(new MacroReplacer(macroId, newMacroBody))
     passManager.run(List(module))(0)
