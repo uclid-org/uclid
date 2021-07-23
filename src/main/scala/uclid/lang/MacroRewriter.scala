@@ -2,8 +2,35 @@ package uclid
 package lang
 
 class MacroReplacerPass(macroId : Identifier, newMacroBody : BlockStmt) extends RewritePass {
+  var newMacroMap : Option[Map[Identifier, List[ASTPosition]]] = None
 
-  override def rewriteBlock(st : BlockStmt, ctx : Scope): Option[Statement] = {
+  override def rewriteAnnotation(note : Annotation, ctx : Scope) : Option[Annotation] = {
+    note match {
+      case MacroAnnotation(macroMap) =>
+        newMacroMap match {
+          case Some(m) => Some(MacroAnnotation(m))
+          case None    => Some(note)
+        }
+      case _ => Some(note)
+    }
+  }
+
+  def updateNewMacroMap(listOfPositions : List[ASTPosition], ctx : Scope) = {
+    newMacroMap = newMacroMap match {
+      case Some(m) =>
+        val allPositions = listOfPositions ++ m(macroId)
+        Some(m + (macroId -> allPositions))
+      case None =>
+        val oldMacroMap = ctx.module match {
+          case Some(module) => module.getAnnotation[MacroAnnotation]().get.macroMap
+          case None         => Map[Identifier, List[ASTPosition]]()
+        }
+        val allPositions = listOfPositions ++ oldMacroMap(macroId)
+        Some(oldMacroMap + (macroId -> listOfPositions))
+    }
+  }
+
+  override def rewriteBlock(st : BlockStmt, ctx : Scope) : Option[Statement] = {
     ctx.module match {
       case Some(module) =>
         var blockStatements = st.stmts
@@ -17,14 +44,22 @@ class MacroReplacerPass(macroId : Identifier, newMacroBody : BlockStmt) extends 
         val noStmtsMacro = blockPositions.forall(pos => !(macroPositions contains pos))
         if (allStmtsMacro) {
           // The entire block statement consists of statements originating from the given macro
+          val listOfPositions = newMacroBody.stmts.foldLeft(List[ASTPosition]()){
+            (acc, s) => acc :+ s.position }
+          val newMacroMap = macroMap + (macroId -> listOfPositions)
+          updateNewMacroMap(listOfPositions, ctx)
           Some(newMacroBody)
         } else if (noStmtsMacro) {
-          // No statements in the block statements originated from the given macro
+          // No statements in the block statement originated from the given macro
           Some(st)
         } else {
           // Some statements in the block statement originated from the given macro
           // These statements are expected to be contiguous
-          Some(replaceMacroWithinBlock(st, macroPositions, newMacroBody))
+          val newBlockStmt = replaceMacroWithinBlock(st, macroPositions, newMacroBody)
+          val listOfPositions = newMacroBody.stmts.foldLeft(List[ASTPosition]()){
+            (acc, s) => acc :+ s.position }
+          updateNewMacroMap(listOfPositions, ctx)
+          Some(newBlockStmt)
         }
       case _ => 
         Some(st)
