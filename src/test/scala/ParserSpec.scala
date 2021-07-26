@@ -273,10 +273,24 @@ class ParserSpec extends FlatSpec {
       assert (false);
     }
     catch {
-      // this list has all the errors from parsing
-      case p : Utils.ParserErrorList =>
-        assert (p.errors.size > 0)
+      case r : Utils.RuntimeError => 
+        assert (r.getMessage().contains("Could not find non terminal"));
     }
+  }
+  "test-synthesis-grammar-3.ucl" should "parse successfully." in {
+      val fileModules = UclidMain.compile(List(new File("test/test-synthesis-grammar-3.ucl")), lang.Identifier("main"))
+      val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+      assert (instantiatedModules.size == 1)
+  }
+  "test-synthesis-grammar-4.ucl" should "parse successfully." in {
+      val fileModules = UclidMain.compile(List(new File("test/test-synthesis-grammar-4.ucl")), lang.Identifier("main"))
+      val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+      assert (instantiatedModules.size == 1)
+  }
+  "test-synthesis-grammar-5.ucl" should "parse successfully." in {
+      val fileModules = UclidMain.compile(List(new File("test/test-synthesis-grammar-5.ucl")), lang.Identifier("main"))
+      val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+      assert (instantiatedModules.size == 1)
   }
   "test-typechecker-7.ucl" should "not parse successfully." in {
     try {

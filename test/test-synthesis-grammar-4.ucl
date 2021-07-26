@@ -1,6 +1,8 @@
 /* Toy example #4 to test grammar with integers.
     Run with `run -f -y "cvc4 --lang sygus2" test/test-synthesis-grammar-4.ucl`
-    This test should fail (type mismatch of grammar and function)
+    This test parses well
+    This test should fail on SynthesisSpec 
+    (type mismatch of grammar and function)
 */
 module main
 {
@@ -17,9 +19,7 @@ module main
 
   synthesis function max2 (x : integer, y : integer) : integer
     grammar max_grammar(x, y);
-    //ensures (max2(x, y) >= x && max2(x, y) >= y);
   
-
   procedure max2_impl(x: integer, y: integer) returns (res: integer)
     ensures (res >= x && res >= y);
   {

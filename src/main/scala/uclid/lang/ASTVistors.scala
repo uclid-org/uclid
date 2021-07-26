@@ -2097,9 +2097,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(e) => pass.rewriteFuncApp(FuncApplication(e, args), context)
       case _ => None
     }
-    var node_ = ASTNode.introducePos(setPosition, setFilename, fappP, fapp.position)
-    return node_
-    // return ASTNode.introducePos(setPosition, setFilename, fappP, fapp.position)
+    return ASTNode.introducePos(setPosition, setFilename, fappP, fapp.position)
   }
 
   def visitLambda(lambda: Lambda, contextIn : Scope) : Option[Lambda] = {

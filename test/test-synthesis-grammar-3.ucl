@@ -1,6 +1,6 @@
 /* Toy example #3 to test grammar with integers.
-    Run with `run -f -y "cvc4 --lang sygus2" test/test-synthesis-grammar-0.ucl`
-    This test should fail (type of cond should be boolean)
+    Run with `run -f -y "cvc4 --lang sygus2" test/test-synthesis-grammar-3.ucl`
+    This test should pass (cond type cannot be determined internally in uclid)
 */
 module main
 {
@@ -17,8 +17,7 @@ module main
 
   synthesis function max2 (x : integer, y : integer) : integer
     grammar max_grammar(x, y);
-    //ensures (max2(x, y) >= x && max2(x, y) >= y);
-  
+    
 
   procedure max2_impl(x: integer, y: integer) returns (res: integer)
     ensures (res >= x && res >= y);

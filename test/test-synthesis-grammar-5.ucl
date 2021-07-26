@@ -1,6 +1,7 @@
-/* Toy example #2 to test grammar with integers.
-   Run with `run -f -y "cvc4 --lang sygus2" test/test-synthesis-grammar-2.ucl`
-   This test should fail to parse (no output type for grammar)
+/* Example #5 to test grammar with integers.
+    Run with `run -f -y "cvc4 --lang sygus2" test/test-synthesis-grammar-5.ucl`
+    This test parses without failure.
+    This test should fail on SynthesisSpec (grammar identifier max_grammar1 undefined)
 */
 module main
 {
@@ -8,17 +9,15 @@ module main
   var sum : integer;
   var prev_sum : integer;
   
-  grammar max_grammar2 (x : integer, y : integer) : integer = {
+  grammar max_grammar (x : integer, y : integer) : boolean = {
     (start : integer) ::= 0 | 1 | x | y | 
     					 (start + start) | (start - start) |
-    					 (if (cond1) then start else start);
-    (cond : boolean) ::= true | false | (!cond) | (start <= start);
+    					 (if (cond) then start else start);
+    (cond : integer) ::= true | false | (!cond) | (start <= start);
   }
 
   synthesis function max2 (x : integer, y : integer) : integer
-    grammar max_grammar(x, y);
-    //ensures (max2(x, y) >= x && max2(x, y) >= y);
-  
+    grammar max_grammar1 (x, y);
 
   procedure max2_impl(x: integer, y: integer) returns (res: integer)
     ensures (res >= x && res >= y);

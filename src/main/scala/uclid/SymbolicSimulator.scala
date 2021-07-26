@@ -129,7 +129,15 @@ class SymbolicSimulator (module : Module) {
    *  @grammar the scope grammar to convert
    *  @scope current context
    */
-  def grammarToGrammarSymbol(grammar: lang.Scope.Grammar, scope: lang.Scope): smt.GrammarSymbol = {
+  def grammarToGrammarSymbol(gSym: lang.Identifier, typ : lang.FunctionSig, scope: lang.Scope): smt.GrammarSymbol = {
+    val getgrammar = scope.get(gSym)
+    val grammar : lang.Scope.Grammar = getgrammar match {
+      case Some(_) => getgrammar.get.asInstanceOf[lang.Scope.Grammar]
+      case None => throw new Utils.RuntimeError("Grammar not found: grammar " + gSym.toString())
+    }
+    if (grammar.gTyp != typ.retType) {
+      throw new Utils.RuntimeError("Grammar type does not match synth-fun: for grammar " + gSym.toString())
+    }
     val id = grammar.id.name
     val symbolTyp = smt.Converter.typeToSMT(grammar.gTyp)
     val nts = grammar.nts.map(smt.Converter.nonTerminalToSyGuS2(_, scope))
@@ -348,7 +356,7 @@ class SymbolicSimulator (module : Module) {
         decl._2 match {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.SynthesisFunction(id, typ, gSym, gargs, conds) => mapAcc + (id -> newSynthSymbol(id.name, typ, gSym.map(gSym => grammarToGrammarSymbol(scope.get(gSym).get.asInstanceOf[lang.Scope.Grammar], scope)), gargs.map(_.name), conds))
+          case Scope.SynthesisFunction(id, typ, gSym, gargs, conds) => mapAcc + (id -> newSynthSymbol(id.name, typ, gSym.map(gSym => grammarToGrammarSymbol(gSym, typ, scope)), gargs.map(_.name), conds))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
@@ -1569,7 +1577,7 @@ class SymbolicSimulator (module : Module) {
         decl._2 match {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.SynthesisFunction(id, typ, gSym, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gSym.map(gSym => grammarToGrammarSymbol(scope.get(gSym).get.asInstanceOf[lang.Scope.Grammar], scope)), gargs.map(_.name), conds))
+          case Scope.SynthesisFunction(id, typ, gSym, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gSym.map(gSym => grammarToGrammarSymbol(gSym, typ, scope)), gargs.map(_.name), conds))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
@@ -1587,7 +1595,7 @@ class SymbolicSimulator (module : Module) {
         decl._2 match {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.SynthesisFunction(id, typ, gSym, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gSym.map(gSym => grammarToGrammarSymbol(scope.get(gSym).get.asInstanceOf[lang.Scope.Grammar], scope)), gargs.map(_.name), conds))
+          case Scope.SynthesisFunction(id, typ, gSym, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gSym.map(gSym => grammarToGrammarSymbol(gSym, typ, scope)), gargs.map(_.name), conds))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
@@ -1604,7 +1612,7 @@ class SymbolicSimulator (module : Module) {
       (mapAcc, decl) => {
         decl._2 match {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.SynthesisFunction(id, typ, gSym, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gSym.map(gSym => grammarToGrammarSymbol(scope.get(gSym).get.asInstanceOf[lang.Scope.Grammar], scope)), gargs.map(_.name), conds))
+          case Scope.SynthesisFunction(id, typ, gSym, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gSym.map(gSym => grammarToGrammarSymbol(gSym, typ, scope)), gargs.map(_.name), conds))
           case Scope.Function(id, typ) => mapAcc // functions should never be primed
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
