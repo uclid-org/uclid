@@ -1,6 +1,6 @@
 package uclid.smt
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
 
 /**
  * The Btor2 format only features BitVector and Array types.
@@ -9,7 +9,7 @@ import org.scalatest.{FlatSpec, Matchers}
  * This spec verifies our hand coded conversion from functions
  * working on BV<1> to boolean expressions.
  */
-class BitVectorToBoolSpec extends FlatSpec with Matchers {
+class BitVectorToBoolSpec extends AnyFlatSpec {
   def startSolver() = new SMTLIB2Interface(List("z3", "-in"))
 
   def check_eq(solver: Context, a: Expr, b: Expr): Boolean = {
@@ -30,10 +30,10 @@ class BitVectorToBoolSpec extends FlatSpec with Matchers {
     val a = Symbol("a", BitVectorType(1))
     val not_a  = OperatorApplication(NegationOp, List(to_bool(a)))
 
-    check_eq(s, OperatorApplication(BVNotOp(1), List(a)), not_a) should be (true) // not
-    check_eq(s, OperatorApplication(BVAddOp(1), List(a, BitVectorLit(1,1))), not_a) should be (true) // inc
-    check_eq(s, OperatorApplication(BVSubOp(1), List(a, BitVectorLit(1,1))), not_a) should be (true) // dec
-    check_eq(s, OperatorApplication(BVSubOp(1), List(BitVectorLit(0,1), a)), a) should be (true) // neg
+    assert(check_eq(s, OperatorApplication(BVNotOp(1), List(a)), not_a)) // not
+    assert(check_eq(s, OperatorApplication(BVAddOp(1), List(a, BitVectorLit(1,1))), not_a)) // inc
+    assert(check_eq(s, OperatorApplication(BVSubOp(1), List(a, BitVectorLit(1,1))), not_a)) // dec
+    assert(check_eq(s, OperatorApplication(BVSubOp(1), List(BitVectorLit(0,1), a)), a)) // neg
 
     s.finish()
   }
@@ -53,24 +53,24 @@ class BitVectorToBoolSpec extends FlatSpec with Matchers {
     val a_or_b = OperatorApplication(DisjunctionOp, List(ab, bb))
     val a_and_b = OperatorApplication(ConjunctionOp, List(ab, bb))
 
-    check_eq(s, OperatorApplication(EqualityOp, List(a, b)), a_iff_b) should be (true) // eq
+    assert(check_eq(s, OperatorApplication(EqualityOp, List(a, b)), a_iff_b)) // eq
 
     def cmp(op: Int => BoolResultOp) = OperatorApplication(op(1), List(a, b))
     // unsigned
-    check_eq(s, cmp(BVGTUOp), a_and_not_b) should be (true) // ugt
-    check_eq(s, cmp(BVGEUOp), a_or_not_b)  should be (true) // uge
-    check_eq(s, cmp(BVLTUOp), not_a_and_b) should be (true) // ult (= not(uge))
-    check_eq(s, cmp(BVLEUOp), not_a_or_b)  should be (true) // ule (= not(ugt))
+    assert(check_eq(s, cmp(BVGTUOp), a_and_not_b)) // ugt
+    assert(check_eq(s, cmp(BVGEUOp), a_or_not_b) ) // uge
+    assert(check_eq(s, cmp(BVLTUOp), not_a_and_b)) // ult (= not(uge))
+    assert(check_eq(s, cmp(BVLEUOp), not_a_or_b) ) // ule (= not(ugt))
     // signed
-    check_eq(s, cmp(BVGTOp), not_a_and_b) should be (true) // sgt
-    check_eq(s, cmp(BVGEOp), not_a_or_b)  should be (true) // sge
-    check_eq(s, cmp(BVLTOp), a_and_not_b) should be (true) // slt (= not(sge))
-    check_eq(s, cmp(BVLEOp), a_or_not_b)  should be (true) // sle (= not(sgt))
+    assert(check_eq(s, cmp(BVGTOp), not_a_and_b)) // sgt
+    assert(check_eq(s, cmp(BVGEOp), not_a_or_b) ) // sge
+    assert(check_eq(s, cmp(BVLTOp), a_and_not_b)) // slt (= not(sge))
+    assert(check_eq(s, cmp(BVLEOp), a_or_not_b) ) // sle (= not(sgt))
 
     def ar(op: Int => BVResultOp) = OperatorApplication(op(1), List(a,b))
-    check_eq(s, ar(BVAddOp), a_xor_b) should be (true) // add
-    check_eq(s, ar(BVSubOp), a_xor_b) should be (true) // sub
-    check_eq(s, ar(BVMulOp), a_and_b) should be (true) // mul
+    assert(check_eq(s, ar(BVAddOp), a_xor_b)) // add
+    assert(check_eq(s, ar(BVSubOp), a_xor_b)) // sub
+    assert(check_eq(s, ar(BVMulOp), a_and_b)) // mul
 
     s.finish()
   }

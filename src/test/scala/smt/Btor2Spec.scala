@@ -1,8 +1,8 @@
 package uclid.smt
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
 
-class Btor2Spec extends FlatSpec with Matchers {
+class Btor2Spec extends AnyFlatSpec{
 
   // this function actually parses, serializes and parses again
   // in order to also test the serialization
@@ -15,20 +15,20 @@ class Btor2Spec extends FlatSpec with Matchers {
 
   "single bool state" should "be parsed correctly" in {
     val sys = parse(Seq("1 sort bitvec 1", "2 state 1 test"))
-    sys.inputs.isEmpty should be (true)
-    sys.states.head.sym.id should be ("test")
-    sys.states.head.sym.typ should be (BoolType)
+    assert(sys.inputs.isEmpty)
+    assert(sys.states.head.sym.id == "test")
+    assert(sys.states.head.sym.typ == BoolType)
   }
 
   "single bitvector state" should "be parsed correctly" in {
     val sys = parse(Seq("1 sort bitvec 3", "2 state 1 test"))
-    sys.states.head.sym.typ should be (BitVectorType(3))
+    assert(sys.states.head.sym.typ == BitVectorType(3))
   }
 
   "single array state" should "be parsed correctly" in {
     val sys = parse(Seq("1 sort bitvec 3", "2 sort array 1 1", "3 state 2 test"))
     val bv3 = BitVectorType(3)
-    sys.states.head.sym.typ should be (ArrayType(List(bv3), bv3))
+    assert(sys.states.head.sym.typ == ArrayType(List(bv3), bv3))
   }
 
   def parse_res(src: Seq[String]): Expr = {
@@ -39,7 +39,7 @@ class Btor2Spec extends FlatSpec with Matchers {
 
   "mul expressions" should "be parsed correctly" in {
     val e = parse_res(Seq("1 sort bitvec 1", "2 const 1 1", "3 const 1 0", "4 mul 1 2 3", "5 output 4"))
-    e should be (OperatorApplication(ConjunctionOp, List(BooleanLit(true), BooleanLit(false))))
+    assert(e == OperatorApplication(ConjunctionOp, List(BooleanLit(true), BooleanLit(false))))
   }
 
   // this example if from the official btor2tools repository
@@ -61,11 +61,11 @@ class Btor2Spec extends FlatSpec with Matchers {
 
     val sys = parse(count2)
     val s0 = sys.states.head
-    s0.sym.id should be ("_state_0")
-    s0.init should be (Some(BitVectorLit(0, 3)))
-    s0.next should be (Some(OperatorApplication(BVAddOp(3), List(s0.sym, BitVectorLit(1, 3)))))
+    assert(s0.sym.id == "_state_0")
+    assert(s0.init.contains(BitVectorLit(0, 3)))
+    assert(s0.next.contains(OperatorApplication(BVAddOp(3), List(s0.sym, BitVectorLit(1, 3)))))
     val b0 = sys.bad.head
-    b0 should be (OperatorApplication(EqualityOp, List(s0.sym, BitVectorLit(7, 3))))
+    assert(b0 == OperatorApplication(EqualityOp, List(s0.sym, BitVectorLit(7, 3))))
   }
 
   // this example if from the official btor2tools repository
@@ -97,16 +97,16 @@ class Btor2Spec extends FlatSpec with Matchers {
     val factorial = sys.states.find(_.sym.id == "factorial").get
     val i = sys.states.find(_.sym.id == "i").get
 
-    factorial.sym.id should be ("factorial")
-    factorial.init should be (Some(BitVectorLit(1, 4)))
-    factorial.next should be (Some(OperatorApplication(BVMulOp(4), List(factorial.sym, i.sym))))
+    assert(factorial.sym.id == "factorial")
+    assert(factorial.init.contains(BitVectorLit(1, 4)))
+    assert(factorial.next.contains(OperatorApplication(BVMulOp(4), List(factorial.sym, i.sym))))
 
-    i.sym.id should be ("i")
-    i.init should be (factorial.init)
-    i.next should be (Some(OperatorApplication(BVAddOp(4), List(i.sym, BitVectorLit(1, 4)))))
+    assert(i.sym.id == "i")
+    assert(i.init == factorial.init)
+    assert(i.next.contains(OperatorApplication(BVAddOp(4), List(i.sym, BitVectorLit(1, 4)))))
 
     val b0 = sys.bad.head
-    b0 should be (OperatorApplication(EqualityOp, List(i.sym, BitVectorLit(15, 4))))
+    assert(b0 == OperatorApplication(EqualityOp, List(i.sym, BitVectorLit(15, 4))))
 
     val b1 = sys.bad(1)
     val ugt = OperatorApplication(BVGTUOp(4), List(i.sym, BitVectorLit(3, 4)))
@@ -114,7 +114,7 @@ class Btor2Spec extends FlatSpec with Matchers {
     val slice_b = OperatorApplication(EqualityOp, List(slice, BitVectorLit(1, 1)))
     // this is an artifact from the parse, serialize, parse
     val slice_b_artifact = OperatorApplication(EqualityOp, List(slice_b, BooleanLit(true)))
-    b1 should be (OperatorApplication(ConjunctionOp, List(ugt, slice_b_artifact)))
+    assert(b1 == OperatorApplication(ConjunctionOp, List(ugt, slice_b_artifact)))
   }
 
   // this example was written by Kevin Laeufer to demonstrate a bug in cosa2's parsing
@@ -166,19 +166,19 @@ class Btor2Spec extends FlatSpec with Matchers {
     val a = sys.states.find(_.sym.id == "a").get
     val b0 = sys.bad.head
 
-    addr.next should be (Some(addr.sym))
-    data.next should be (Some(data.sym))
-    mem.next should be (Some(mem.sym))
-    mem_n.next should be (Some(mem_n.sym))
+    assert(addr.next.contains(addr.sym))
+    assert(data.next.contains(data.sym))
+    assert(mem.next.contains(mem.sym))
+    assert(mem_n.next.contains(mem_n.sym))
 
-    addr.sym.typ should be (BitVectorType(5))
-    data.sym.typ should be (BitVectorType(32))
-    mem.sym.typ should be (ArrayType(List(addr.sym.typ), data.sym.typ))
+    assert(addr.sym.typ == BitVectorType(5))
+    assert(data.sym.typ == BitVectorType(32))
+    assert(mem.sym.typ == ArrayType(List(addr.sym.typ), data.sym.typ))
 
-    mem_n.init should be (Some(ArrayStoreOperation(mem.sym, List(addr.sym), data.sym)))
+    assert(mem_n.init.contains(ArrayStoreOperation(mem.sym, List(addr.sym), data.sym)))
     val mem_a = ArraySelectOperation(mem.sym, List(a.sym))
     val mem_n_a = ArraySelectOperation(mem_n.sym, List(a.sym))
-    b0 should be (OperatorApplication(InequalityOp, List(mem_a, mem_n_a)))
+    assert(b0 == OperatorApplication(InequalityOp, List(mem_a, mem_n_a)))
   }
 
   // this was generated from the verilog source files for one of the benchmarks from the HWMCC'19

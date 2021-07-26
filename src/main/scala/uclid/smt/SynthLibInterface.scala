@@ -66,8 +66,16 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     var cmd = ""
 
     if (sygusSyntax) {
-      inputTypes = (generateInputDataTypes(sym.typ) ::: List(typeName)).mkString(" -> ")
-      cmd = "(declare-var %s %s)\n".format(sym, inputTypes)
+      if(sym.typ.isInstanceOf[MapType])
+      {
+        inputTypes = "-> " + generateInputDataTypes(sym.typ).mkString(" ")
+        cmd = "(declare-var %s (%s %s ))\n".format(sym, inputTypes, typeName)
+      }
+      else
+      {
+        inputTypes = generateInputDataTypes(sym.typ).mkString(" ")
+        cmd = "(declare-var %s %s %s )\n".format(sym, inputTypes, typeName)
+      }
     } else {
       inputTypes = generateInputDataTypes(sym.typ).mkString(" ")
       cmd = "(declare-fun %s (%s) %s)\n".format(sym, inputTypes, typeName)
@@ -163,7 +171,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     astack = (smtlib2 :: astack.head) :: astack.tail
   }
 
-  override def check() : SolverResult = {
+  override def check(produceModel: Boolean = true) : SolverResult = {
     synthliblogger.debug("check")
     // put in all the assertions as a conjunction
     total = "(and " + astack.foldLeft(""){ (acc, s) => acc + " " + s.mkString(" ")} + ")" :: total
@@ -181,7 +189,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
           if (str.contains("unsat") || str.startsWith("(")) {
              SolverResult(Some(true), getModel(str))
           } else if (str.contains("sat") || str.contains("unknown")){
-            println(str);
+            UclidMain.println(str);
             SolverResult(Some(false), None)
           } else {
             throw new Utils.AssertionError("Unexpected result from SMT solver: " + str.toString())
@@ -199,7 +207,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   }
 
   def getModel(str : String) : Option[Model] = {
-    println(str)
+    UclidMain.println(str)
     None
   }
 
@@ -222,7 +230,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   override def toString() : String = {
     val aexp = "(or " + total.mkString("\t\n") + ")"
     val query = if (sygusSyntax) {
-      defineDecls + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
+      defineDecls + synthDeclCommands + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
     } else {
       out + "(assert " + aexp +")\n(check-sat)\n"
     }

@@ -1,0 +1,32 @@
+module sub {
+    output x: integer;
+    var z: integer;
+
+    procedure bar() {
+        havoc x;
+        havoc z; 
+    }
+}
+
+module main {
+
+    var x: integer;
+    var y: integer;
+
+    procedure foo() {
+        havoc x;
+        if (true) {
+          {
+            y = x;
+          }
+        }
+    }
+
+    instance submodule: sub(x: (x));
+
+    control {
+        v = verify(foo);
+        check;
+        print_results;
+    }
+}

@@ -40,9 +40,9 @@
 package uclid
 package test
 
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
-class InteractiveProcessSpec extends FlatSpec {
+class InteractiveProcessSpec extends AnyFlatSpec {
   behavior of "InteractiveProcess"
 
   ignore should "pass the sanity check" in {

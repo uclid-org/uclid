@@ -47,9 +47,15 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
   def checkNoArgObj(cmd : GenericProofCommand, filename: Option[String]) {
     Utils.checkParsingError(cmd.argObj.isEmpty, "'%s' command does not expect an argument object".format(cmd.name.toString), cmd.pos, filename)
   }
-  def checkHasArgObj(cmd : GenericProofCommand, filename: Option[String]) {
+  def checkHasArgObj(cmd : GenericProofCommand, filename: Option[String], context : Scope ) {
     Utils.checkParsingError(cmd.argObj.isDefined, "'%s' command expects an argument object".format(cmd.name.toString), cmd.pos, filename)
+    val gotMatch = context.get(cmd.argObj.get) match {
+      case Some(Scope.VerifResultVar(_, _)) => true
+      case _ => false
+      }
+    Utils.checkParsingError(gotMatch, "'%s' is an invalid argument object".format(cmd.argObj.get), cmd.pos, filename)
   }
+
   def checkNoArgs(cmd : GenericProofCommand, filename : Option[String]) {
     Utils.checkParsingError(cmd.args.size == 0, "'%s' command does not expect any arguments".format(cmd.name.toString), cmd.pos, filename)
   }
@@ -135,6 +141,11 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     val logic = cmd.params(0).name.toString
     Utils.checkParsingError(logicIsSupported(logic), "'%s' command expects a supported logic as a parameter".format(cmd.name.toString), cmd.pos, filename)
   }
+  def checkParamsValid(cmd: GenericProofCommand, filename : Option[String], validParams: List[Identifier]) {
+    val matchingParams = cmd.params.filter(p => validParams.contains(p.name))
+    Utils.checkParsingError(matchingParams.size == cmd.params.size, "invalid parameter for command '%s'".format(cmd.name.toString), cmd.pos, filename)
+  }
+
   override def applyOnCmd(d : TraversalDirection.T, cmd : GenericProofCommand, in : Unit, context : Scope) : Unit = {
     val filename = context.module.flatMap(_.filename)
     cmd.name.toString match {
@@ -157,10 +168,12 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkPropertiesValid(Identifier("properties"), cmd, context, filename)
         checkPropertiesValid(Identifier("pre"), cmd, context, filename)
         checkPropertiesValid(Identifier("assumptions"), cmd, context, filename)
+        checkParamsValid(cmd, filename, List(Identifier("properties"), Identifier("pre"), Identifier("assumptions")))
         checkHasZeroOrOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
       case "bmc" =>
         checkPropertiesValid(Identifier("properties"), cmd, context, filename)
+        checkParamsValid(cmd, filename, List(Identifier("properties")))
         checkHasOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
       case "verify" =>
@@ -192,11 +205,11 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
       case "print_cex" =>
         checkNoParams(cmd, filename)
         checkNoResultVar(cmd, filename)
-        checkHasArgObj(cmd, filename)
+        checkHasArgObj(cmd, filename, context)
       case "dump_cex_vcds" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)
-        checkHasArgObj(cmd, filename)
+        checkHasArgObj(cmd, filename, context)
         checkNoResultVar(cmd, filename)
       case _ =>
         Utils.raiseParsingError("Unknown control command: " + cmd.name.toString, cmd.pos, filename)

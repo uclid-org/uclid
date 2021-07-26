@@ -1,0 +1,11 @@
+module main {
+  init {}
+  next {}
+
+  control {
+
+    induction[nonsense](1);
+    check;
+    print_results;
+  }
+}

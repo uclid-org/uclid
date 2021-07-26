@@ -409,7 +409,15 @@ class LTLPropertyRewriterPass extends RewritePass {
     if (ltlSpecs.size == 0) {
       Some(module)
     } else {
+      // throw errors if more than 1 LTL spec found
+      // TODO: this is a temporary fix for a known bug that occurs when conjoining an LTL specification with any other property
+      // where assumptions inserted into the module for the LTL property affect satisfiability of the other specifications
+      if(ltlSpecs.size > 1)
+        throw new Utils.RuntimeError(s"Modules containing more than 1 LTL specification are currently not supported. This support will be added in the next UCLID release.")
       val otherSpecs = moduleSpecs.filter(s => !s.params.exists(d => d == LTLExprDecorator))
+      if(otherSpecs.size > 0)
+        throw new Utils.RuntimeError(s"Modules containing at least 1 LTL specification combined with non-LTL specifications are not currently supported. This support will be added in the next UCLID release.")
+    
       Some(rewriteSpecs(module, ctx, ltlSpecs, otherSpecs))
     }
   }
@@ -419,7 +427,7 @@ class LTLPropertyRewriterPass extends RewritePass {
   }
 
   def orExpr(a : Expr, b : Expr) : Expr = OperatorApplication(DisjunctionOp(), List(a, b))
-  def andExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ConjunctionOp(), List(a, b))
+  def andExpr(a : Expr*) : Expr = OperatorApplication(ConjunctionOp(), a.toList)
   def notExpr(a : Expr) : Expr = OperatorApplication(NegationOp(), List(a))
   def eqExpr(a : Expr, b : Expr) : Expr = OperatorApplication(EqualityOp(), List(a, b))
   def implExpr(a : Expr, b : Expr) : Expr = OperatorApplication(ImplicationOp(), List(a, b))
@@ -443,7 +451,7 @@ class LTLPropertyRewriterPass extends RewritePass {
       case (v1, v2) => eqExpr(v1._1, v2._1)
     }
     val initExpr : Expr = BoolLit(true)
-    eqExprs.foldLeft(initExpr)((acc, e) => andExpr(acc, e))
+    andExpr(initExpr :: eqExprs:_*)
   }
 
   def createRepeatedAssignment(vars : List[Identifier], value : Expr) : Option[AssignStmt] = {
@@ -519,7 +527,7 @@ class LTLPropertyRewriterPass extends RewritePass {
         val hasAcceptedTraceExpr = if (hasAcceptedVars.size == 0) {
           stateCopiedVar
         } else {
-          hasAcceptedVars.foldLeft(foldInit)((acc, v) => andExpr(acc, v))
+          andExpr(foldInit :: hasAcceptedVars:_*)
         }
 
         ((hasAcceptedVars, hasAcceptedExprs), (hasAcceptedTrace, hasAcceptedTraceExpr))

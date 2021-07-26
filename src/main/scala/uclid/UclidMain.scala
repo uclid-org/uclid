@@ -72,14 +72,15 @@ object UclidMain {
       smtSolver: List[String] = List.empty,
       synthesizer: List[String] = List.empty,
       smtFileGeneration: String = "",
-      sygusFormat: Boolean = false,
+      sygusFormat: Boolean = true,
       enumToNumeric: Boolean = false,
+      modSetAnalysis: Boolean = false,
       ufToArray: Boolean = false,
       printStackTrace: Boolean = false,
       verbose : Int = 0,
       files : Seq[java.io.File] = Seq(),
       testFixedpoint: Boolean = false
-  )
+  ) 
 
   def parseOptions(args: Array[String]) : Option[Config] = {
     val parser = new scopt.OptionParser[Config]("uclid") {
@@ -107,11 +108,19 @@ object UclidMain {
 
       opt[Unit]('f', "sygus-format").action{
         (_, c) => c.copy(sygusFormat = true)
-      }.text("Generate the standard SyGuS format.")
+      }.text("(deprecated, enabled by default) Generate the standard SyGuS format.")
+
+      opt[Unit]('l', "llama-format").action{
+        (_, c) => c.copy(sygusFormat = false)
+      }.text("Generates synthesis format for llama.")
 
       opt[Unit]('e', "enum-to-numeric").action{
         (_, c) => c.copy(enumToNumeric = true)
-      }.text("Enable conversion from EnumType to NumericType.")
+      }.text("Enable conversion from EnumType to NumericType - KNOWN BUGS.")
+
+      opt[Unit]('M', "mod-set-analysis").action{
+        (_, c) => c.copy(modSetAnalysis = true)
+      }.text("Infers modifies set automatically.")
 
       opt[Unit]('u', "uf-to-array").action{
         (_, c) => c.copy(ufToArray = true)
@@ -141,7 +150,7 @@ object UclidMain {
         return
       }
       val mainModuleName = Identifier(config.mainModuleName)
-      val modules = compile(config.files, mainModuleName)
+      val modules = compile(config, mainModuleName)
       val mainModule = instantiate(config, modules, mainModuleName, true)
       mainModule match {
         case Some(m) => execute(m, config)
@@ -184,70 +193,124 @@ object UclidMain {
     }
   }
 
-  def createCompilePassManager(test: Boolean, mainModuleName: lang.Identifier) = {
+  def createCompilePassManager(config: Config, test: Boolean, mainModuleName: lang.Identifier) = {
     val passManager = new PassManager("compile")
+    // adds init and next to every module
     passManager.addPass(new ModuleCanonicalizer())
+    // introduces LTL operators (which were parsed as function applications)
     passManager.addPass(new LTLOperatorIntroducer())
+    // imports all declarations except init and next declarations into module
+    passManager.addPass(new ModuleImportRewriter())
+    // imports types into module
     passManager.addPass(new ModuleTypesImportCollector())
+    // imports defines
     passManager.addPass(new ModuleDefinesImportCollector())
+    // imports constants
     passManager.addPass(new ModuleConstantsImportRewriter())
+    // imports uninterpreted functions
     passManager.addPass(new ModuleFunctionsImportRewriter())
+    // automatically compute modifies set
+    if (config.modSetAnalysis) {
+        passManager.addPass(new ModSetAnalysis())
+        passManager.addPass(new ModSetRewriter())
+    }
+    // collects external types to the current module (e.g., module.mytype)
     passManager.addPass(new ExternalTypeAnalysis())
+    // replaces module.mytype with external type 
     passManager.addPass(new ExternalTypeRewriter())
+    // turns some specific functions e.g., bv_left_shift into operator applications
     passManager.addPass(new FuncExprRewriter())
+    // checks instance module names exist
     passManager.addPass(new InstanceModuleNameChecker())
+    // gives types to the instances
     passManager.addPass(new InstanceModuleTypeRewriter())
+    // Replace a.b with the appropriate external identifier
     passManager.addPass(new RewritePolymorphicSelect())
+    // Replaces constant lits with actual literal value
     passManager.addPass(new ConstantLitRewriter())
+    // checks for invalid statements in macros and incorrect usage
+    passManager.addPass(new MacroChecker())
+    // inlines statement macros
+    passManager.addPass(new MacroRewriter())
+    // finds uses of type defs
     passManager.addPass(new TypeSynonymFinder())
+    // rewrites the type defs to be original type
     passManager.addPass(new TypeSynonymRewriter())
+    // renames local variables to blocks so that they don't clash?
     passManager.addPass(new BlockVariableRenamer())
+    // compute the width of bitvector slice operations.
     passManager.addPass(new BitVectorSliceFindWidth())
+    // the big type checker 
     passManager.addPass(new ExpressionTypeChecker())
+    // test flag is default false
+    // checks if prime/old/history are used in the incorrect places
     if (!test) passManager.addPass(new VerificationExpressionChecker())
     passManager.addPass(new PolymorphicGrammarTypeRewriter())
+    // rewrites bitvector operators (except slice) to have a width and returns a "reified" operator
+    // runs expression type checker pass again ? is this necessary
+    // then replaces operators with operators from the polyOpMap
     passManager.addPass(new PolymorphicTypeRewriter())
+    // check for recursive dependencies 
     passManager.addPass(new FindProcedureDependency())
+    // check for recursive defines
     passManager.addPass(new DefDepGraphChecker())
+    // expands macros
     passManager.addPass(new RewriteDefines())
+    // type checker for module specific things e.g., module declarations
     passManager.addPass(new ModuleTypeChecker())
+    // checks for incorrect assignments to next state vars
     passManager.addPass(new PrimedAssignmentChecker())
+    // looks for semantic errors e.g., redeclarations
     passManager.addPass(new SemanticAnalyzer())
+    //  ProcedureChecker
+    //  *  If a procedure has pre/post conditions
+    //  *    - it should not write to a variable that has not been declared modified.
+    //  *    - only state variables should be declared modifiable
     passManager.addPass(new ProcedureChecker())
+    // checks arguments of control commands and types etc
     passManager.addPass(new ControlCommandChecker())
+    // types of each argument in a module instantiation
     passManager.addPass(new ComputeInstanceTypes())
+    // checks module instancs are instantiated correctly
     passManager.addPass(new ModuleInstanceChecker())
     passManager.addPass(new CaseEliminator())
     passManager.addPass(new ForLoopUnroller())
+    // hyperproperties for procedures
     passManager.addPass(new ModularProductProgram())
     passManager.addPass(new WhileLoopRewriter())
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
     passManager.addPass(new BlockFlattener())
+
     passManager.addPass(new NewInternalProcedureInliner())
+    // self explanatory
     passManager.addPass(new PrimedVariableCollector())
     passManager.addPass(new PrimedVariableEliminator())
     passManager.addPass(new PrimedHistoryRewriter())
     passManager.addPass(new IntroduceFreshHavocs())
     passManager.addPass(new RewriteFreshLiterals())
+    // Optimisation, called multiple times. This also calls redundantassignmenteliminator
     passManager.addPass(new BlockFlattener())
     passManager.addPass(new ModuleCleaner())
     passManager.addPass(new BlockVariableRenamer())
     passManager
   }  
   /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
-  def compile(srcFiles : Seq[java.io.File], mainModuleName : Identifier, test : Boolean = false): List[Module] = {
+  def compile(config: Config, mainModuleName : Identifier, test : Boolean = false): List[Module] = {
     type NameCountMap = Map[Identifier, Int]
+    val srcFiles : Seq[java.io.File] = config.files
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
-    val passManager = createCompilePassManager(test, mainModuleName)
+    val passManager = createCompilePassManager(config, test, mainModuleName)
 
     val filenameAdderPass = new AddFilenameRewriter(None)
     // Helper function to parse a single file.
     def parseFile(srcFile : String) : List[Module] = {
-      val text = scala.io.Source.fromFile(srcFile).mkString
+      val file = scala.io.Source.fromFile(srcFile)
+      // TODO: parse line by line instead of loading the complete file into a string
+      val modules = UclidParser.parseModel(srcFile, file.mkString)
+      file.close()
       filenameAdderPass.setFilename(srcFile)
-      val modules = UclidParser.parseModel(srcFile, text)
       modules.map(m => filenameAdderPass.visit(m, Scope.empty)).flatten
     }
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
@@ -282,22 +345,30 @@ object UclidMain {
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ProcedureModifiesRewriter())
+    // flattens modules into main
     passManager.addPass(new ModuleFlattener(mainModuleName))
+    // gets rid of modules apart from main
     passManager.addPass(new ModuleEliminator(mainModuleName))
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
     passManager.addPass(new Optimizer())
+    // optimisation, has previously been called
     passManager.addPass(new ModuleCleaner())
+     // optimisation, has previously been called
     passManager.addPass(new Optimizer())
+    // optimisation, has previously been called
     passManager.addPass(new BlockVariableRenamer())
+    // optimisation, has previously been called
     passManager.addPass(new ExpressionTypeChecker())
+    // optimisation, has previously been called
     passManager.addPass(new ModuleTypeChecker())
+    // optimisation, has previously been called
     passManager.addPass(new SemanticAnalyzer())
+    // known bugs in the following passes
     if (config.enumToNumeric) passManager.addPass(new EnumTypeAnalysis())
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamer("BV"))
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamerCons("BV"))
     if (config.ufToArray)     passManager.addPass(new UninterpretedFunctionToArray())
-    // passManager.addPass(new ASTPrinter())
     // run passes.
     passManager.run(moduleList)
   }

@@ -236,6 +236,12 @@ object IntMulOp extends IntResultOp {
   override val md5hashCode = computeMD5Hash
   override def toString = "*"
 }
+object IntDivOp extends IntResultOp {
+  override val hashId = 203
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "div"
+}
 
 // Operators that return bitvectors.
 abstract class BVResultOp(width : Int) extends Operator {
@@ -353,6 +359,18 @@ case class BVZeroExtOp(w : Int, e : Int) extends BVResultOp(w) {
     Utils.assert(e > 0, "Extension for zero_extend must be greater than zero.")
     Utils.assert((argW + e) == w, "Incorrect width for first operand to BVZeroExtOp.")
   }
+}
+case class BVDivOp(w : Int) extends BVResultOp(w) {
+  override val hashId = mix(w, 217)
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash(w)
+  override def toString = "bvsdiv"
+}
+case class BVUDivOp(w : Int) extends BVResultOp(w) {
+  override val hashId = mix(w, 218)
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash(w)
+  override def toString = "bvudiv"
 }
 
 
@@ -784,8 +802,9 @@ case class FunctionApplication(e: Expr, args: List[Expr])
   override val hashId = 311
   override val hashCode = computeHash(args, e)
   override val md5hashCode = computeMD5Hash(args, e)
-  override def toString = e.toString + "(" + args.tail.fold(args.head.toString)
-    { (acc,i) => acc + "," + i.toString } + ")"
+  override def toString = if(args.isEmpty) { e.toString } else {
+    s"(${e.toString} " + args.map(_.toString).mkString(" ") + ")"
+  }
   override val isConstant = e.isConstant && args.forall(a => a.isConstant)
 }
 
@@ -822,7 +841,6 @@ case class AssignmentModel(functions : List[Expr]) extends Hashable {
   override val md5hashCode = computeMD5Hash(functions)
   override def toString = Utils.join(functions.map(fun => fun.toString()), " ")
 }
-
 class Bindings(val freeVars : List[Symbol], val letVars : List[Symbol], val lambdaVars : List[Symbol], val quantifierVars: List[Symbol]) {
   def addFreeVar(v : Symbol) = {
     new Bindings(v :: freeVars, letVars, lambdaVars, quantifierVars)

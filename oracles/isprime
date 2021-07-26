@@ -1,0 +1,8 @@
+#!/bin/bash  
+if [[ "$1" == "2" ]] ; then
+	echo "true"
+elif [[ "$1" == "19" ]] ; then
+	echo "true"
+else
+	echo "false"
+fi

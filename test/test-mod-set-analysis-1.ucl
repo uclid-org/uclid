@@ -1,0 +1,19 @@
+module main {
+    var x: integer;
+
+    // bar should be infered to modify x
+    procedure bar() {
+       x = 0; 
+    }
+
+    // foo should be infered to modify x
+    procedure foo() {
+        call bar();
+    }
+
+    control {
+        v = verify(foo);
+        check;
+        print_results;
+    }
+}

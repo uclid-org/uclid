@@ -72,6 +72,7 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
                Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
+               Scope.OracleFunction(_,_,_) |
                Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) =>
              true
           case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _, _)          |
@@ -80,7 +81,7 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
                Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
                Scope.BlockVar(_, _)           | Scope.SelectorField(_)          |
-               Scope.NonTerminal(_, _, _) =>
+               Scope.NonTerminal(_, _, _)     | Scope.Macro(_, _, _)           =>
              throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
         }
       case None =>
@@ -130,9 +131,9 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
                Scope.Define(_, _, _)          | Scope.Grammar(_, _, _)          |
                Scope.ConstantLit(_, _)        | Scope.BlockVar(_, _)            |
                Scope.ForIndexVar(_ , _)       | Scope.SelectorField(_)          |
-               Scope.NonTerminal(_, _, _) =>
+               Scope.NonTerminal(_, _, _)     | Scope.Macro(_, _, _)           =>
               id
-          case Scope.ConstantVar(_, _)    | Scope.Function(_, _)  | Scope.SynthesisFunction(_, _, _, _, _) =>
+          case Scope.ConstantVar(_, _)    | Scope.Function(_, _)  | Scope.OracleFunction(_,_,_) | Scope.SynthesisFunction(_, _, _, _, _) =>
              ExternalIdentifier(moduleName, id)
         }
       case None =>

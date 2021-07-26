@@ -100,7 +100,7 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         }
       }
       st match {
-        case IfElseStmt(_, _, _)  | 
+        case IfElseStmt(_, _, _)  | MacroCallStmt(_)    |
              ForStmt(_, _, _, _)  | WhileStmt(_, _, _)  |
              CaseStmt(_)          | SkipStmt()          |
              AssertStmt(_, _)     | AssumeStmt(_, _)    |

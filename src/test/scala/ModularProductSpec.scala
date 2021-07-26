@@ -40,7 +40,7 @@
 package uclid
 package test
 
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import uclid.{lang => l}
 import java.io.File
 
@@ -49,7 +49,7 @@ object ModularProductHelperSpec {
         UclidMain.enableStringOutput()
         UclidMain.clearStringOutput()
         val config = UclidMain.Config() 
-        val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
+        val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
         val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
         assert (mainModule.isDefined)
         val results = UclidMain.execute(mainModule.get, config)
@@ -60,10 +60,10 @@ object ModularProductHelperSpec {
     }
 }
 
-class ModularProductSpec extends FlatSpec {
+class ModularProductSpec extends AnyFlatSpec {
 
     "test-modularproduct-1.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-1.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-1.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
@@ -71,7 +71,7 @@ class ModularProductSpec extends FlatSpec {
     "test-modularproduct-2-fails.ucl" should "not parse successfully." in {
         try {
         val filename = "test/test-modularproduct-2-fails.ucl"
-        val fileModules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
         assert (fileModules.size == 1)
         }
         catch {
@@ -81,49 +81,49 @@ class ModularProductSpec extends FlatSpec {
     }
 
     "test-modularproduct-3.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-3.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-3.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-4.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-4.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-4.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-5.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-5.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-5.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-6.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-6.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-6.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-7.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-7.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-7.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-8.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-8.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-8.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-9.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-9.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-9.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-10.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-10.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-10.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
@@ -131,7 +131,7 @@ class ModularProductSpec extends FlatSpec {
     "test-modularproduct-11-fails.ucl" should "not parse successfully." in {
         try {
         val filename = "test/test-modularproduct-11-fails.ucl"
-        val fileModules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
         assert (fileModules.size == 1)
         }
         catch {
@@ -141,37 +141,37 @@ class ModularProductSpec extends FlatSpec {
     }
 
     "test-modularproduct-12.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-12.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-12.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-13.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-13.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-13.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-14.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-14.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-14.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-15.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-15.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-15.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-16.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-16.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-16.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
 
     "test-modularproduct-17.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(List(new File("test/test-modularproduct-17.ucl")), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-17.ucl"), lang.Identifier("main"))
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
@@ -191,7 +191,7 @@ class ModularProductSpec extends FlatSpec {
     "test-modularproduct-21-fails.ucl" should "not parse successfully" in {
         try {
         val filename = "test/test-modularproduct-21-fails.ucl"
-        val fileModules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
         assert (fileModules.size == 1)
         }
         catch {
@@ -203,7 +203,7 @@ class ModularProductSpec extends FlatSpec {
     "test-modularproduct-22-fails.ucl" should "not parse successfully" in {
         try {
         val filename = "test/test-modularproduct-22-fails.ucl"
-        val fileModules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"))
+        val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
         assert (fileModules.size == 1)
         }
         catch {

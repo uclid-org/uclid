@@ -114,8 +114,8 @@ class SymbolicSimulator (module : Module) {
   def newConstantSymbol(name: String, t: smt.Type) = {
     new smt.Symbol("const_" + name, t)
   }
-  def newSynthSymbol(name: String, t: FunctionSig, gSym : Option[smt.GrammarSymbol], gargs: List[String], conds : List[Expr]) = {
-    new smt.SynthSymbol("synth_" + name, t, gSym, gargs, conds)
+  def newOracleSymbol(name: String, t: FunctionSig, binary : String) = {
+    new smt.OracleSymbol("oracle_" + name, t, binary)
   }
   def newGrammarSymbol(name: String, t: smt.Type, nts: List[smt.NonTerminal]) = {
     new smt.GrammarSymbol("grammar_" + name, t, nts)
@@ -300,14 +300,15 @@ class SymbolicSimulator (module : Module) {
             val procName = cmd.args(0)._1.asInstanceOf[Identifier]
             val proc = module.procedures.find(p => p.id == procName).get
             val label : String = cmd.resultVar match {
-              case Some(l) => l.toString + ": verify(%s)".format(procName.toString())
-              case None    => "verify(%s)".format(procName.toString)
+              case Some(l) => l.toString + ": verify_%s".format(procName.toString())
+              case None    => "verify_%s".format(procName.toString)
             }
             verifyProcedure(proc, label)
           case "check" => {
+            val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
             lazySC match {
-              case None => proofResults = assertionTree.verify(solver)
-              case Some(lz) => proofResults = lz.assertionTree.verify(solver)
+              case None => proofResults = assertionTree.verify(solver, needModel)
+              case Some(lz) => proofResults = lz.assertionTree.verify(solver, needModel)
             }
             if (solver.filePrefix != "") {
               val smtOutput = solver.toString()
@@ -357,6 +358,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> newConstantSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SynthesisFunction(id, typ, gSym, gargs, conds) => mapAcc + (id -> newSynthSymbol(id.name, typ, gSym.map(gSym => grammarToGrammarSymbol(gSym, typ, scope)), gargs.map(_.name), conds))
+          case Scope.OracleFunction(id, typ, binary) => mapAcc + (id -> newOracleSymbol(id.name, typ, binary))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
@@ -739,7 +741,8 @@ class SymbolicSimulator (module : Module) {
       }
     }
     symbolTable = symTabStep
-    val results = assertionTree.verify(solver)
+    val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
+    val results = assertionTree.verify(solver, needModel)
     UclidMain.println("The results are: " + results)
   }
 
@@ -961,6 +964,7 @@ class SymbolicSimulator (module : Module) {
     e match {
       case smt.Symbol(id, symbolTyp) => List()
       case smt.SynthSymbol(id, symbolTyp, _, _, _) => List()
+      case smt.OracleSymbol(id, symbolTyp, _) => List()
       case smt.IntLit(n) => List()
       case smt.BooleanLit(b) => List()
       case smt.BitVectorLit(bv, w) => List()
@@ -1007,7 +1011,8 @@ class SymbolicSimulator (module : Module) {
         if (id.startsWith("havoc_")) List(e.asInstanceOf[smt.Symbol]) else List()
       case smt.SynthSymbol(id, symbolTyp, _, _, _) =>
         List()
-
+      case smt.OracleSymbol(_, _, _) =>
+        List()
       case smt.IntLit(n) => List()
       case smt.BooleanLit(b) => List()
       case smt.BitVectorLit(bv, w) => List()
@@ -1029,6 +1034,8 @@ class SymbolicSimulator (module : Module) {
             if (id.startsWith("havoc_")) List(e.asInstanceOf[smt.Symbol]) else List()
           //UclidMain.println("Function application of f == " + f.toString)
           case smt.SynthSymbol(id, symbolTyp, _, _, _) =>
+            List()
+          case smt.OracleSymbol(_, _, _) =>
             List()
           case _ =>
             throw new Utils.RuntimeError("Should never get here.")
@@ -1095,6 +1102,10 @@ class SymbolicSimulator (module : Module) {
         if (sym._1 == e) sym._2
         else e
       }
+      case smt.OracleSymbol( _, _, _) => {
+        if (sym._1 == e) sym._2
+        else e
+      }
       case smt.IntLit(n) => e
       case smt.BooleanLit(b) => e
       case smt.BitVectorLit(bv, w) => e
@@ -1122,6 +1133,8 @@ class SymbolicSimulator (module : Module) {
           case smt.Symbol(id, symbolTyp) =>
             if (sym._1 == f) sym._2 else f
           case smt.SynthSymbol(id, symbolTyp, _, _, _) =>
+            if (sym._1 == f) sym._2 else f
+          case smt.OracleSymbol(id, symbolTyp, _) =>
             if (sym._1 == f) sym._2 else f
           case _ =>
             throw new Utils.RuntimeError("Should never get here.")
@@ -1469,7 +1482,8 @@ class SymbolicSimulator (module : Module) {
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
                Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
-               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) =>
+               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) |
+               Scope.OracleFunction(_, _, _) =>
              true
           case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _, _)          |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
@@ -1477,7 +1491,7 @@ class SymbolicSimulator (module : Module) {
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
                Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
                Scope.BlockVar(_, _)           | Scope.SelectorField(_)          |
-               Scope.NonTerminal(_, _, _) =>
+               Scope.NonTerminal(_, _, _)     | Scope.Macro(_, _, _)           =>
              throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
         }
       case None =>
@@ -1577,6 +1591,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SynthesisFunction(id, typ, gSym, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gSym.map(gSym => grammarToGrammarSymbol(gSym, typ, scope)), gargs.map(_.name), conds))
+          case Scope.OracleFunction(id, typ, binary) => mapAcc + (id -> smt.OracleSymbol(id.name, typ, binary))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
@@ -1595,6 +1610,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.ConstantVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.Function(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SynthesisFunction(id, typ, gSym, gargs, conds) => mapAcc + (id -> smt.SynthSymbol(id.name, typ, gSym.map(gSym => grammarToGrammarSymbol(gSym, typ, scope)), gargs.map(_.name), conds))
+          case Scope.OracleFunction(id, typ, binary) => mapAcc + (id -> smt.OracleSymbol(id.name, typ, binary))
           case Scope.EnumIdentifier(id, typ) => mapAcc + (id -> smt.EnumLit(id.name, smt.EnumType(typ.ids.map(_.toString))))
           case Scope.InputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
@@ -1844,6 +1860,7 @@ class SymbolicSimulator (module : Module) {
       case CaseStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute case statement.")
       case ProcedureCallStmt(id,lhss,args,instanceId,moduleId) => throw new Utils.AssertionError("Cannot symbolically execute procedure calls.")
       case ModuleCallStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute module calls.")
+      case MacroCallStmt(_) => throw new Utils.AssertionError("Cannot symbolically execute macro calls.") 
     }
   }
 
@@ -1878,6 +1895,8 @@ class SymbolicSimulator (module : Module) {
     }
     case ModuleCallStmt(id) =>
       throw new Utils.RuntimeError("ModuleCallStmt must have been inlined by now.")
+    case MacroCallStmt(id) =>
+      throw new Utils.RuntimeError("MacroCallStmt must have been inlined by now")
   }
   def writeSets(stmts: List[Statement]) : Set[Identifier] = {
     return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ writeSet(s)}
@@ -1925,6 +1944,7 @@ class SymbolicSimulator (module : Module) {
        case smt.BooleanLit(b) => return e
        case smt.Symbol(id,typ) => return (if (id == s.id) arg else e)
        case smt.SynthSymbol(id,typ, _, _, _) => return (if (id == s.id) arg else e)
+       case smt.OracleSymbol(id,typ, _) => return (if (id == s.id) arg else e)
        case _ => throw new Utils.UnimplementedException("Should not get here")
      }
   }

@@ -40,7 +40,7 @@
 package uclid
 package test
 
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import java.io.File
 import uclid.{lang => l}
 
@@ -49,7 +49,7 @@ object SMTLIB2Spec {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
     val config = UclidMain.Config().copy(smtSolver=List("z3", "-smt2", "-in"))
-    val modules = UclidMain.compile(List(new File(filename)), lang.Identifier("main"), true)
+    val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
     assert (mainModule.isDefined)
     val results = UclidMain.execute(mainModule.get, config)
@@ -60,40 +60,37 @@ object SMTLIB2Spec {
     outputString
   }
 }
-class SMTLIB2Spec extends FlatSpec {
-  "test-int-fib.ucl" should "verify all but one assertion." in {
+class SMTLIB2Spec extends AnyFlatSpec {
+  
+"test-int-fib.ucl" should "verify all but one assertion." in {
     SMTLIB2Spec.expectedFails("./test/test-int-fib.ucl", 1)
   }
-  "test-array-0.ucl" should "verify succesfully." in {
-    SMTLIB2Spec.expectedFails("./test/test-array-0.ucl", 0)
-  }
-  "test-smtlib-consts.ucl" should "verify successfully." in {
-    SMTLIB2Spec.expectedFails("./test/test-smtlib-consts.ucl", 0)
-  }
-  "test-smtlib-array.ucl" should "verify successfully." in {
-    SMTLIB2Spec.expectedFails("./test/test-smtlib-array.ucl", 0)
-  }
-  // the test below is commented out because it errors out.
-  // "test-array-1-unsafe.ucl" should "verify all but 4 assertions." in {
-  //   SMTLIB2Spec.expectedFails("./test/test-array-1-unsafe.ucl", 4)
-  // }
   "test-assert-1.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-assert-1.ucl", 0)
+  }
+  "test-array-0.ucl" should "verify successfully." in {
+    SMTLIB2Spec.expectedFails("./test/test-array-0.ucl", 0)
   }
   "test-array-1.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-array-1.ucl", 0)
   }
-  // "test-array-2.ucl" should "fail to verify 1 assertion." in {
-  //   SMTLIB2Spec.expectedFails("./test/test-array-2.ucl", 1)
-  // }
+  "test-array-2.ucl" should "fail to verify 1 assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-array-2.ucl", 1)
+  }
   "array-update.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/array-update.ucl", 0)
   }
-  "test-bv-fib.ucl" should "verify all but one assertion." in {
+  "test-array-1-unsafe.ucl" should "verify all but 4 assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-array-1-unsafe.ucl", 4)
+  }
+  "test-bv-fib.ucl" should "fail to verify 1 assertion" in {
     SMTLIB2Spec.expectedFails("./test/test-bv-fib.ucl", 1)
   }
   "test-case-mc91.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-case-mc91.ucl", 0)
+  }
+  "test-int-fib.ucl" should "verify successfully all but one assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-int-fib.ucl", 1)
   }
   "test-mc91.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-mc91.ucl", 0)
@@ -134,11 +131,17 @@ class SMTLIB2Spec extends FlatSpec {
   "test-forloop-1.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-forloop-1.ucl", 0)
   }
-  "test-ite.ucl" should "verify all but 6 assertions successfully." in {
-    SMTLIB2Spec.expectedFails("./test/test-ite.ucl", 6)
-  }
+  // "test-ite.ucl" should "verify all but 6 assertions successfully." in {
+  //   SMTLIB2Spec.expectedFails("./test/test-ite.ucl", 6)
+  // }
   "test-bit-concat.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-bit-concat.ucl", 0)
+  }
+  "test-bv-sign-ext-1.ucl" should "verify successfully." in {
+    SMTLIB2Spec.expectedFails("./test/test-bv-sign-ext-1.ucl", 0)
+  }
+  "test-bv-zero-ext-1.ucl" should "verify successfully." in {
+    SMTLIB2Spec.expectedFails("./test/test-bv-zero-ext-1.ucl", 0)
   }
   "test-bv-left-shift-1.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-bv-left-shift-1.ucl", 0)
@@ -158,6 +161,9 @@ class SMTLIB2Spec extends FlatSpec {
   "test-functions-1.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-functions-1.ucl", 0)
   }
+  "test-conflicting-assumptions.ucl" should "verify all but 1 assertion" in {
+    SMTLIB2Spec.expectedFails("./test/test-conflicting-assumptions.ucl", 1)
+  }
   "test-exprs-1.ucl" should "verify four assertions and fail to verify two assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-exprs-1.ucl", 2)
   }
@@ -173,36 +179,59 @@ class SMTLIB2Spec extends FlatSpec {
   "test-array-new.ucl" should "fail to verify 5 assertions" in {
     SMTLIB2Spec.expectedFails("./test/test-array-new.ucl", 5)
   }
-  "test-subst-1.ucl" should "ail to verify 2 assertions" in {
+  "test-subst-1.ucl" should "fail to verify 2 assertions" in {
     SMTLIB2Spec.expectedFails("./test/test-subst-1.ucl", 2)
   }
-  ignore /*"test-const-array.ucl"*/ should "verify all but one assertion." in {
+  "test-const-array.ucl" should "verify all but one assertion." in {
     SMTLIB2Spec.expectedFails("./test/test-const-array.ucl", 1)
   }
   "test-record-havoc.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-record-havoc.ucl", 0)
   }
-  // "test-const-array-2.ucl" should "verify all but 6 assertions." in {
-  //   SMTLIB2Spec.expectedFails("./test/test-const-array-2.ucl", 6)
-  // }
-  // "test-const-array-3.ucl" should "verify all but 4 assertions." in {
-  //   SMTLIB2Spec.expectedFails("./test/test-const-array-3.ucl", 4)
-  // }
+  "test-const-array-2.ucl" should "verify all but 6 assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-const-array-2.ucl", 6)
+  }
+  "test-const-array-3.ucl" should "verify all but 4 assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-const-array-3.ucl", 4)
+  }
   "test-array-update.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-array-update.ucl", 0)
   }
   "test-unsigned-comparators-1.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-unsigned-comparators-1.ucl", 0)
   }
+  // "test-bv2int.ucl" should "verify all but one assertion." in {
+  //   SMTLIB2Spec.expectedFails("./test/test-bv2int.ucl", 1)
+  // }
   "test-range-expr.ucl" should "verify all but two assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-range-expr.ucl", 2)
   }
-
+  "test-multiply-divide.ucl" should "verify all but one assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-multiply-divide.ucl", 1)
+  }
+  "test-multiply-divide-subtract-chaining.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-multiply-divide-subtract-chaining.ucl", 1)
+  }
   "test-inliner.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-inliner.ucl", 0)
   }
   "test-inliner-1.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-inliner-1.ucl", 0)
+  }
+  "test-procedure-inline.ucl" should "verify successfully." in {
+    SMTLIB2Spec.expectedFails("./test/test-procedure-inline.ucl", 0)
+  }
+  "test-procedure-inline-2.ucl" should "verify successfully." in {
+    SMTLIB2Spec.expectedFails("./test/test-procedure-inline-2.ucl", 0)
+  }
+  "test-procedure-inline-3.ucl" should "verify all but 1" in {
+    SMTLIB2Spec.expectedFails("./test/test-procedure-inline-3.ucl", 1)
+  }
+  "test-procedure-noinline.ucl" should "verify all but 1 assertion successfully" in {
+    SMTLIB2Spec.expectedFails("./test/test-procedure-noinline.ucl", 1)
+  }
+  "test-procedure-noinline-2.ucl" should "fail" in {
+    SMTLIB2Spec.expectedFails("./test/test-procedure-noinline-2.ucl", 1)
   }
   "test-procedure-checker-2.ucl" should "verify all but 4 invariants successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-procedure-checker-2.ucl", 4)
@@ -225,10 +254,10 @@ class SMTLIB2Spec extends FlatSpec {
   "test-procedure-checker-8.ucl" should "fail to verify 4 assertions" in {
     SMTLIB2Spec.expectedFails("./test/test-procedure-checker-8.ucl", 4)
   }
-  // "test-procedure-global-axiom.ucl" should "verify all invariants successfully." in {
-  //   SMTLIB2Spec.expectedFails("./test/test-procedure-global-axiom.ucl", 0)
-  // }
-  "test-procedure-postcondition-0.ucl" should "fail to verify 1 assertions" in {
+  "test-procedure-global-axiom.ucl" should "verify all invariants successfully." in {
+    SMTLIB2Spec.expectedFails("./test/test-procedure-global-axiom.ucl", 0)
+  }
+  "test-procedure-postcondition-0.ucl" should "fail to verify 1 assertion" in {
     SMTLIB2Spec.expectedFails("./test/test-procedure-postcondition-0.ucl", 1)
   }
   "test-procedure-postcondition-3.ucl" should "verify successfully." in {
@@ -260,22 +289,33 @@ class SMTLIB2Spec extends FlatSpec {
   "test-while-1.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-while-1.ucl", 0)
   }
-  "test-while-2.ucl" should "verify all but 2 assertions" in {
+  "test-while-2.ucl" should "fail to verify 2 assertions" in {
     SMTLIB2Spec.expectedFails("./test/test-while-2.ucl", 2)
   }
   "test-while-3.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-while-3.ucl", 0)
   }
-  // "test-while-4.ucl" should "verify successfully." in {
-  //   SMTLIB2Spec.expectedFails("./test/test-while-4.ucl", 6)
-  // }
-  "test-block-var.ucl" should "verify all but 2 assertions" in {
+  "test-while-4.ucl" should "fail to verify 6 assertions" in {
+    SMTLIB2Spec.expectedFails("./test/test-while-4.ucl", 6)
+  }
+  "test-block-var.ucl" should "fail to verify 2 assertions" in {
     SMTLIB2Spec.expectedFails("./test/test-block-var.ucl", 2)
   }
   "test-distinct-op.ucl" should "verify successfully." in {
     SMTLIB2Spec.expectedFails("./test/test-distinct-op.ucl", 0)
   }
-
+  "test-procedure-old-1.ucl" should "fail to verify 1 assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-procedure-old-1.ucl", 1)
+  }
+  "test-old-instance-var-0.ucl" should "verify all assertions" in {
+    SMTLIB2Spec.expectedFails("./test/test-old-instance-var-0.ucl", 0)
+  }
+  "test-old-instance-var-1.ucl" should "verify all assertions" in {
+    SMTLIB2Spec.expectedFails("./test/test-old-instance-var-1.ucl", 0)
+  }
+  "test-old-instance-var-2.ucl" should "verify all assertions" in {
+    SMTLIB2Spec.expectedFails("./test/test-old-instance-var-2.ucl", 0)
+  }
   "test-k-induction-1.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-k-induction-1.ucl", 0)
   }
@@ -306,13 +346,13 @@ class SMTLIB2Spec extends FlatSpec {
   "test-tuple.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-tuple.ucl", 0)
   }
-
   "test-forall-0.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-forall-0.ucl", 0)
   }
   "test-exists-0.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-exists-0.ucl", 0)
   }
+
 
   "test-modules.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-modules.ucl", 0)
@@ -338,6 +378,9 @@ class SMTLIB2Spec extends FlatSpec {
   "test-const-import-3.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-const-import-3.ucl", 0)
   }
+  "test-const-import-4.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-const-import-4.ucl", 0)
+  }
   "test-func-import-1.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-func-import-1.ucl", 0)
   }
@@ -350,6 +393,12 @@ class SMTLIB2Spec extends FlatSpec {
   // "test-func-import-4.ucl" should "verify all assertions." in {
   //   SMTLIB2Spec.expectedFails("./test/test-func-import-4.ucl", 0)
   // }
+  "test-def-import-0.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-def-import-0.ucl", 0)
+  }
+  "test-def-import-4.ucl" should "verify 2 assertions and fail 1." in {
+    SMTLIB2Spec.expectedFails("./test/test-def-import-4.ucl", 1)
+  }
   "test-procedure-postcondition-1.ucl" should "verify all but one assertion." in {
     SMTLIB2Spec.expectedFails("./test/test-procedure-postcondition-1.ucl", 1)
   }
@@ -365,25 +414,50 @@ class SMTLIB2Spec extends FlatSpec {
   "test-nested-instance-1.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-nested-instance-1.ucl", 0)
   }
+  "test-instance-procedure-call-0.ucl" should "verify all but one assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-instance-procedure-call-0.ucl", 1)
+  }
+  "test-instance-procedure-call-1.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-instance-procedure-call-1.ucl", 0)
+  }
+  "test-instance-procedure-call-3.ucl" should "verify all but one." in {
+    SMTLIB2Spec.expectedFails("./test/test-instance-procedure-call-3.ucl", 1)
+  }
+  "test-instance-procedure-call-4.ucl" should "verify all but one." in {
+    SMTLIB2Spec.expectedFails("./test/test-instance-procedure-call-4.ucl", 1)
+  }
+  "test-instance-procedure-call-5.ucl" should "verify all but two." in {
+    SMTLIB2Spec.expectedFails("./test/test-instance-procedure-call-5.ucl", 2)
+  }
+  "test-instance-procedure-call-7.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-instance-procedure-call-7.ucl", 0)
+  }
   "sp-basic.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/sp-basic.ucl", 0)
   }
+  "issue-187b.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/issue-187b.ucl", 0)
+  }
+  "test-redundant-assign.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-redundant-assign.ucl", 0)
+  }
+
 
   "test-history-1.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-history-1.ucl", 0)
   }
-  "test-ltl-0-safe.ucl" should "verify all assertions." in {
-    SMTLIB2Spec.expectedFails("./test/test-ltl-0-safe.ucl", 0)
-  }
+  // "test-ltl-0-safe.ucl" should "verify all assertions." in {
+  //   SMTLIB2Spec.expectedFails("./test/test-ltl-0-safe.ucl", 0)
+  // }
   "test-ltl-0-unsafe.ucl" should " fail to verify 2 assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-ltl-0-unsafe.ucl", 2)
   }
-  "test-ltl-1-safe.ucl" should "verify all assertions." in {
-    SMTLIB2Spec.expectedFails("./test/test-ltl-1-safe.ucl", 0)
-  }
-  "test-ltl-1-unsafe.ucl" should "fail to verify 10 assertions." in {
-    SMTLIB2Spec.expectedFails("./test/test-ltl-1-unsafe.ucl", 10)
-  }
+  // "test-ltl-1-safe.ucl" should "verify all assertions." in {
+  //   SMTLIB2Spec.expectedFails("./test/test-ltl-1-safe.ucl", 0)
+  // }
+  // "test-ltl-1-unsafe.ucl" should "fail to verify 10 assertions." in {
+  //   SMTLIB2Spec.expectedFails("./test/test-ltl-1-unsafe.ucl", 10)
+  // }
   "test-ltl-2-holds.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-ltl-2-holds.ucl", 0)
   }
@@ -408,9 +482,9 @@ class SMTLIB2Spec extends FlatSpec {
   "test-ltl-5-fails.ucl" should "fail to verify 2 assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-ltl-5-fails.ucl", 2)
   }
-  "test-ltl-6-fails.ucl" should "fail to verify 4 assertions." in {
-    SMTLIB2Spec.expectedFails("./test/test-ltl-6-fails.ucl", 4)
-  }
+  // "test-ltl-6-fails.ucl" should "fail to verify 4 assertions." in {
+  //   SMTLIB2Spec.expectedFails("./test/test-ltl-6-fails.ucl", 4)
+  // }
   "test-ltl-7-holds.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-ltl-7-holds.ucl", 0)
   }
@@ -420,20 +494,43 @@ class SMTLIB2Spec extends FlatSpec {
   "test-ltl-7b-fails.ucl" should "fail to verify 5 assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-ltl-7b-fails.ucl", 5)
   }
-  "queue-ltl.ucl" should "verify all assertions." in {
-    SMTLIB2Spec.expectedFails("./test/queue-ltl.ucl", 0)
-  }
-  "ltl-eventually-1.ucl" should "fail to verify 3 assertions." in {
-    SMTLIB2Spec.expectedFails("./test/ltl-eventually-1.ucl", 3)
-  }
+  // "queue-ltl.ucl" should "verify all assertions." in {
+  //   SMTLIB2Spec.expectedFails("./test/queue-ltl.ucl", 0)
+  // }
+  // "ltl-eventually-1.ucl" should "fail to verify 3 assertions." in {
+  //   SMTLIB2Spec.expectedFails("./test/ltl-eventually-1.ucl", 3)
+  // }
   "ltl-toy-0.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/ltl-toy-0.ucl", 0)
   }
   "ltl-toy-1.ucl" should "fail to verify 11 assertions." in {
     SMTLIB2Spec.expectedFails("./test/ltl-toy-1.ucl", 11)
   }
+  "test-smtlib-array.ucl" should "verify successfully." in {
+    SMTLIB2Spec.expectedFails("./test/test-smtlib-array.ucl", 0)
+  }
+
+  // "test-hyperproperty-4.ucl" should "verify all assertions." in {
+  //   SMTLIB2Spec.expectedFails("./test/test-hyperproperty-4.ucl", 0)
+  // }
+
   "test-smtlib-consts.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-smtlib-consts.ucl", 0)
   }
 
+  "test-too-many-vars-error.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-too-many-vars-error.ucl", 0)
+  }
+  "test-macro-1.ucl" should "fail to verify 1 assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-macro-1.ucl", 1)
+  }
+  "test-macro-2.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-macro-2.ucl", 0)
+  }
+  "test-macro-3.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-macro-3.ucl", 0)
+  }
+  "test-macro-4.ucl" should "fail to verify 1 assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-macro-4.ucl", 1)
+  }
 }

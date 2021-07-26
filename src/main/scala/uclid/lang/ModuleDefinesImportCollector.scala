@@ -73,15 +73,16 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
                Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
                Scope.FunctionArg(_, _)    | Scope.Define(_, _, _) |
-               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) =>
+               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) |
+               Scope.OracleFunction(_, _, _) =>
              true
-          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _, _)             |
+          case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _, _)          |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
                Scope.ProcedureInputArg(_ , _) | Scope.ProcedureOutputArg(_ , _) |
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
                Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
                Scope.BlockVar(_, _)           | Scope.SelectorField(_)          |
-               Scope.NonTerminal(_, _, _) =>
+               Scope.NonTerminal(_, _, _)     | Scope.Macro(_, _, _)           =>
              throw new Utils.ParserError("Can't have this identifier in define declaration: " + namedExpr.toString(), None, None)
         }
       case None =>

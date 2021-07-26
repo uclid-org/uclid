@@ -231,6 +231,12 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
           } else {
             in
           }
+        case MacroCallStmt(id) =>
+          var ret = in
+          context.map.get(id) match {
+              case Some(Scope.Macro(mId, typ, macroDecl)) => ret
+              case _ => ret + ModuleError("Macro does not exist", id.position)
+          }
         case SkipStmt() => in
       }
     }

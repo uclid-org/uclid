@@ -156,6 +156,7 @@ object ReplacePolymorphicOperators {
       case AddOp() => IntAddOp()
       case SubOp() => IntSubOp()
       case MulOp() => IntMulOp()
+      case DivOp() => IntDivOp()
       case UnaryMinusOp() => IntUnaryMinusOp()
     }
     intOp.pos = op.pos
@@ -170,6 +171,7 @@ object ReplacePolymorphicOperators {
       case AddOp() => BVAddOp(w)
       case SubOp() => BVSubOp(w)
       case MulOp() => BVMulOp(w)
+      case DivOp() => BVDivOp(w)
       case UnaryMinusOp() => BVUnaryMinusOp(w)
     }
     bvOp.pos = op.pos
@@ -305,7 +307,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     def polyResultType(op : PolymorphicOperator, argType : Type) : Type = {
       op match {
         case LTOp() | LEOp() | GTOp() | GEOp() => new BooleanType()
-        case AddOp() | SubOp() | MulOp() | UnaryMinusOp() => argType
+        case AddOp() | SubOp() | MulOp() | DivOp() | UnaryMinusOp() => argType
       }
     }
     def opAppType(opapp : OperatorApplication) : Type = {
@@ -349,26 +351,26 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes.forall(_.isInstanceOf[IntegerType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Integer", opapp.pos, c.filename)
           intOp match {
             case IntLTOp() | IntLEOp() | IntGTOp() | IntGEOp() => new BooleanType()
-            case IntAddOp() | IntSubOp() | IntMulOp() | IntUnaryMinusOp() => new IntegerType()
+            case IntAddOp() | IntSubOp() | IntMulOp() | IntDivOp() | IntUnaryMinusOp() => new IntegerType()
           }
         }
         case bvOp : BVArgOperator => {
           checkTypeError(argTypes.size == bvOp.arity, "Operator '%s' must have exactly %d argument(s)".format(opapp.op.toString, bvOp.arity), opapp.pos, c.filename)
-          //checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Argument(s) to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
+          checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Argument(s) to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
           bvOp match {
             case BVLTOp(_) | BVLEOp(_) | BVGTOp(_) | BVGEOp(_) =>
-              new BooleanType()
+              BooleanType()
             case BVLTUOp(_) | BVLEUOp(_) | BVGTUOp(_) | BVGEUOp(_) =>
               val w = argTypes(0).asInstanceOf[BitVectorType].width
               bvOpMap.put(bvOp.astNodeId, w)
-              new BooleanType()
-            case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVUnaryMinusOp(_) =>
+              BooleanType()
+            case BVAddOp(_) | BVSubOp(_) | BVMulOp(_) | BVDivOp(_) | BVUnaryMinusOp(_) =>
               checkTypeError(bvOp.w != 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
-              new BitVectorType(bvOp.w)
-            case BVAndOp(_) | BVOrOp(_) | BVXorOp(_) | BVNotOp(_)| BVUremOp(_) | BVSremOp(_) =>
-              val t = BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width)
-              bvOpMap.put(bvOp.astNodeId, t.width)
-              t
+              BitVectorType(bvOp.w)
+            case BVAndOp(_) | BVOrOp(_) | BVXorOp(_) | BVNotOp(_)| BVUremOp(_) | BVSremOp(_) | BVUDivOp(_) =>
+              val w = argTypes(0).asInstanceOf[BitVectorType].width
+              bvOpMap.put(bvOp.astNodeId, w)
+              BitVectorType(w)
             case BVSignExtOp(_, e) =>
               checkTypeError(e > 0, "Invalid width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
               val w = e + argTypes(0).asInstanceOf[BitVectorType].width
@@ -401,6 +403,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           boolOp match {
             case NegationOp() =>
               checkTypeError(argTypes.size == 1, "Operator '" + opapp.op.toString + "' must have one argument", opapp.pos, c.filename)
+              checkTypeError(argTypes.forall(_.isInstanceOf[BooleanType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool", opapp.pos, c.filename)
+            case ConjunctionOp() =>
+              checkTypeError(argTypes.size >= 2, "Operator '" + opapp.op.toString + "' must have at least two arguments", opapp.pos, c.filename)
               checkTypeError(argTypes.forall(_.isInstanceOf[BooleanType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Bool", opapp.pos, c.filename)
             case _ =>
               checkTypeError(argTypes.size == 2, "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
@@ -675,7 +680,8 @@ class PolymorphicTypeRewriterPass extends RewritePass {
             case BVLRightShiftBVOp(_) => width.flatMap((w) => Some(BVLRightShiftBVOp(w)))
             case BVARightShiftBVOp(_) => width.flatMap((w) => Some(BVARightShiftBVOp(w)))
             case BVUremOp(_) => width.flatMap((w) => Some(BVUremOp(w)))
-            case BVSremOp(_) => width.flatMap((w) => Some(BVSremOp(w)))  
+            case BVSremOp(_) => width.flatMap((w) => Some(BVSremOp(w)))
+            case BVUDivOp(_) => width.flatMap((w)=> Some(BVUDivOp(w)))  
             case _ => Some(bv)
           }
           newOp match {

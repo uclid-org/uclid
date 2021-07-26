@@ -1,95 +1,113 @@
 <a href="https://travis-ci.org/uclid-org/uclid"><img src="https://travis-ci.org/uclid-org/uclid.svg?branch=master"></a>
 ![](https://github.com/uclid-org/uclid/workflows/Uclid%20CI/badge.svg)
 
-# uclid5 Tutorial/Publication
+# About
 
-The [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf) has a gentle introduction to using uclid5.
+UCLID5 is an integrated modeling, verification and synthesis tool. UCLID5 is an evolution of the earlier UCLID modeling and verification system. The UCLID project was one of the first to develop satisfiability modulo theories (SMT) solvers and SMT-based verification methods. Here is the original UCLID paper that appeared at CAV 2002:
 
-If you use uclid5 in your work, please cite the following MEMOCODE 2018 paper:
+Randal E. Bryant, Shuvendu K. Lahiri, and Sanjit A. Seshia. <font color="blue">Modeling and Verifying Systems using a Logic of Counter Arithmetic with Lambda Expressions and Uninterpreted Functions.</font> [\[HTML\]](https://people.eecs.berkeley.edu/~sseshia/pubs/b2hd-bryant-cav02.html)
+*Proceedings of the 14th International Conference on Computer-Aided Verification (CAV)*, pp. 78–92, LNCS 2404 , July 2002.
 
-Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating Modeling, Verification, Synthesis and Learning.</font>
- [\[PDF\]](https://cse.iitk.ac.in/users/spramod/papers/memocode18.pdf)    
-*Proceedings of the 16th ACM-IEEE International Conference on Formal Methods and Models for System Design*. **(MEMOCODE 2018)**. Beijing, China. October 2018. 
+If you use UCLID5 in your work, please cite the following MEMOCODE 2018 paper:
+
+Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating Modeling, Verification, Synthesis and Learning.</font> [\[HTML\]](https://people.eecs.berkeley.edu/~sseshia/pubs/b2hd-seshia-memocode18.html)
+*Proceedings of the 16th ACM-IEEE International Conference on Formal Methods and Models for System Design (MEMOCODE 2018)*, Beijing, China. October 2018. 
+
+
+## UCLID5 Tutorial/Publication
+
+The [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf) has a gentle introduction to using UCLID5.
+
+
+## Versions
+
+Get the [latest release](https://github.com/uclid-org/uclid/releases), or get the latest development version `git clone https://github.com/uclid-ord/uclid`.
 
 # Installation
-There are currently two ways to install UCLID5: downloading the latest pre-build package and building from source. Please make sure you have all the pre-requisites before proceeding to installation. Due to the nuances in the later Mac OS versions, we prepare separately a compact list of the installation instructions [here](mac-install.md). 
 
-## Pre-requisites
+## Prerequisites:
+To use the prebuilt binaries, UCLID5 requires:
+- [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8) with the Java bindings
+- [OpenJDK](https://openjdk.java.net/) version 8,9,10 or 11
 
-#### 1. [Z3 version 4.6.0.](https://github.com/Z3Prover/z3/releases/tag/z3-4.6.0)
-You will need the Z3 SMT solver to be installed on your system. If you are building Z3 from source, make sure the Z3/Java interface is enabled in your build (typically by passing `--java` to the `mk_make.py` script). To install z3 on Unix-like systems, download the source code and run the following:
+To compile from source, UCLID5 requires all of the above plus:
+- [SBT version 1.0 or greater.](http://www.scala-sbt.org/1.0/docs/Setup.html) 
 
-```bash
-python scripts/mk_make.py --java
-cd build
-make
-sudo make install
+The following are optional requirements but several CI tests will fail without them:
+- (optional) [CVC4](https://github.com/cvc5/cvc5) version 1.8 is the SyGuS-IF compliant solver used for synthesis tests in the CI. 
+- (optional) [Delphi](https://github.com/polgreen/delphi) is used for verification modulo oracles tests in the CI.
+
+
+## Installation of prerequisites on Linux
+- For easy install of prerequisites on Linux, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC4/Delphi for use with uclid5. This script will download [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)/[CVC4 1.8](https://github.com/cvc5/cvc5/releases/tag/1.8)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
+~~~
+    $ source get-z3-linux.sh 
+    $ source get-cvc4-linux.sh 
+    $ source get-delphi-linux.sh
+~~~
+- These scripts download the binaries for Z3, CVC4 and Delphi respectively and set up your `PATH` and `LD_LIBRARY_PATH` accordingly. 
+You may wish to permanently add the following lines to your bash_profile:
+~~~
+    export PATH=$PATH:/path/to/uclid/z3/bin/:/path/to/uclid/cvc4/bin:/path/to/uclid/delphi/bin/
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/uclid/z3/bin/
+~~~
+
+Alternatively, [Z3](https://github.com/Z3Prover/z3), [CVC4](https://github.com/cvc5/cvc5), and [Delphi](https://github.com/polgreen/delphi) can all be built from source, and instructions can be found on their respective git repositories. If you prefer to build Z3 from source, make sure the Z3/Java interface is enabled in your build (currently by passing `--java` to the `mk_make.py` script).
+
+- Install instructions for SBT are available at http://www.scala-sbt.org/1.0/docs/Setup.html
+- Install instructions for OpenJDK are available at https://openjdk.java.net/install/
+
+## Installation of prerequisites on MacOS
+- For easy install of prerequisites on macOS, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC4/Delphi for use with uclid5. This script will download [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)/[CVC4 1.8](https://github.com/cvc5/cvc5/releases/tag/1.8)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
+~~~
+    $ source get-z3-macos.sh 
+    $ source get-cvc4-macos.sh 
+    $ source get-delphi-macos.sh
+~~~
+- These scripts add the downloaded binaries to your `PATH` and `LD_LIBRARY_PATH` accordingly. You may wish to permanently add the following lines to your bash_profile:
+~~~
+    export PATH=$PATH:/path/to/uclid/z3/bin/:/path/to/uclid/cvc4/bin:/path/to/uclid/delphi/bin/
+~~~
+- Due to System Integrity Protection, introduced in OS X El Capitan, Java ignores the user set DYLD_LIBRARY_PATH. To fix this issue copy the JNI dynamic link libraries to Java/Library/Extensions and the non-JNI dynamic link libraries to /usr/local/lib as follows (if you build Z3 from source these files are found in the build directory):
+~~~
+    cp /path/to/uclid/z3/bin/libz3.dylib /usr/local/lib
+    cp /path/to/uclid/z3/bin/libz3java.dylib /Library/Java/Extensions
+~~~
+
+- To install SBT run `brew install sbt`
+- To install openJDK run `brew install openjdk@11`. If this does not work, you may need to run 
+- Make sure Java 11 is the default by adding the following lines to your dotfiles. For `bash` this is usually `.bash_profile` and for `zsh` this is usually `.zshrc`.
+```
+export JAVA_11_HOME=$(/usr/libexec/java_home -v11)
+alias java11='export JAVA_HOME=$JAVA_11_HOME'
+java11
 ```
 
-uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix-like platforms; just `PATH` on Windows).
+## Compiling uclid5
 
-**If you are using Mac OS X El Capitan or above**, System Integrity Protection is a feature introduced by Apple in OS X El Capitan; it prevents the modifications of system-owned files and directories by any process without a specific ‘entitlement’, even when executed by a root user or a user with root privileges. Since Java is a SIP protected executable, it ignores the user set DYLD_LIBRARY_PATH, which prevents the system from recognizing the Z3 Dynamic Library. 
-
-To fix this issue, put:
-- JNI dynamic link libraries (e.g libz3java.dylib) in:       /Library/Java/Extensions
-- non-JNI dynamic link libraries (e.g libz3.dylib) in:      /usr/local/lib
-
-For more information on the resolution of this issue, please refer to:
-https://github.com/Z3Prover/z3/issues/294
-
-#### 2. [OpenJDK version 8](https://openjdk.java.net/) or [Oracle JDK version 8](https://www.oracle.com/java/technologies/javase/javase-jdk8-downloads.html)
-**If you are using Mac OS X Mojave or above**, we recommend using Java 11 or earlier. We have found some issues related to the System Integrity Protection when using Catalina or Mojave and later versions of OpenJDK.
-
-#### 3. [SBT version 1.0 or greater.](http://www.scala-sbt.org/1.0/docs/Setup.html)
-If you intend to build from source, you need to install sbt. You can skip this step if you are using the pre-build binaries. Install instructions for sbt are available at http://www.scala-sbt.org/1.0/docs/Setup.html
-
-## Download Pre-Built Binaries
-
-Download the latest stable pre-built package from [releases tab](https://github.com/uclid-org/uclid/releases).
-
-## Building From Source
-
-Or, you could clone this repository and build from source. If you run into problems here, don't forget you can always fall back on the pre-built binaries linked above.
-
-
-### Prerequisites
-Before you begin, make sure you have the following installed and properly set up:
-
-#### 1. Z3 version 4.6.0. 
-Make sure the Z3/Java interface is enabled in your build (typically by passing `--java` to the `mk_make.py` script). 
-
-**(Z3 configuration)** uclid5 requires that the Z3 dynamic link library (libz3.so on Unix-like platforms) as well as the dynamic link library for the Z3/Java API (libz3java.so on Unix-like platforms) be in your dynamic library path (`$LD_LIBRARY_PATH` on Unix-like platforms; just `PATH` on Windows).
-
-Finally copy the jar file  `path/to/z3/build/com.microsoft.z3.jar` to the dir `path/to/uclid5/lib/com.microsoft.z3.jar`
-
-#### 2. OpenJDK version 8 or Oracle JDK version 8
-
-#### 3. SBT version 1.0 or greater. 
-
-Install instructions for sbt are available at http://www.scala-sbt.org/1.0/docs/Setup.html
-
-
-### Compiling uclid5
-
-If all goes well, running update, clean, compile and test in sbt from the uclid5 directory should do the trick. The command to do all this is:
+Run the following command in the root directory of the UCLID5 repository:
 
     $ sbt update clean compile "set fork:=true" test
 
-If compilation and tests pass, you can build a universal package.
+If compilation and tests pass (or if the only failing tests are due to CVC4 and Delphi not being found), you can build a universal package.
 
     $ sbt universal:packageBin
 
 This will create uclid/target/universal/uclid-0.9.5.zip, which contains the uclid binary in the bin/ subdirectory. Unzip this file, and add it to your path.
 
-## Installing and Running uclid5
-
     $ unzip uclid-0.9.5.zip
     $ cd uclid-0.9.5
     $ export PATH=$PATH:$PWD/bin
 
+## Running UCLID
+
 Now you can run uclid using the 'uclid' command. For example:
 
     $ uclid examples/tutorial/ex1.1-fib-model.ucl
+    
+ Some useful commands to know:
+ - To print the SMT files use the `-g` flag, e.g., `uclid examples/tutorial/ex1.1-fib-model.ucl -g "filename"` will print the SMT file to SMT files with the prefix `filename`.
+ - To run UCLID5 with another solver use the `-s` flag, e.g., `uclid examples/tutorial/ex1.1-fib-model.ucl -s "cvc4 --lang smt2 --produce-models"` will use CVC4 as the back-end solver.
 
 # Directory Structure
 

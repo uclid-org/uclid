@@ -64,7 +64,7 @@ import com.typesafe.scalalogging.Logger
 abstract class ASTAnalysis {
   var _manager : Option[PassManager] = None
   def manager : PassManager = { _manager.get }
-
+  def outputNodeCount: Boolean = false;
   def passName : String
   def reset() {}
   def rewind() {}
@@ -94,7 +94,9 @@ trait ReadOnlyPass[T] {
   def applyOnNonterminal(d : TraversalDirection.T, nonterm : NonTerminal, in : T, context : Scope) : T = { in }
   def applyOnGrammar(d : TraversalDirection.T, grammar: GrammarDecl, in : T, context : Scope) : T = { in }
   def applyOnSynthesisFunction(d : TraversalDirection.T, synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = { in }
+  def applyOnOracleFunction(d : TraversalDirection.T, synFunc : OracleFunctionDecl, in : T, context : Scope) : T = { in }
   def applyOnDefine(d : TraversalDirection.T, defDecl : DefineDecl, in : T, context : Scope) : T = { in }
+  def applyOnMacro(d : TraversalDirection.T, macroDecl : MacroDecl, in : T, context : Scope) : T = { in }
   def applyOnModuleDefinesImport(d : TraversalDirection.T, modDefImport : ModuleDefinesImportDecl, in : T, context : Scope) : T = { in }
   def applyOnStateVars(d : TraversalDirection.T, stVars : StateVarsDecl, in : T, context : Scope) : T = { in }
   def applyOnInputVars(d : TraversalDirection.T, inpVars : InputVarsDecl, in : T, context : Scope) : T = { in }
@@ -106,6 +108,7 @@ trait ReadOnlyPass[T] {
   def applyOnSpec(d : TraversalDirection.T, spec : SpecDecl, in : T, context : Scope) : T = { in }
   def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : Scope) : T = { in }
   def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : T, context : Scope) : T = { in }
+  def applyOnModuleImport(d : TraversalDirection.T, modImport : ModuleImportDecl, in : T, context : Scope) : T = { in }
   def applyOnModuleTypesImport(d : TraversalDirection.T, modTypeImport : ModuleTypesImportDecl, in : T, context : Scope) : T = { in }
   def applyOnInit(d : TraversalDirection.T, init : InitDecl, in : T, context : Scope) : T = { in }
   def applyOnNext(d : TraversalDirection.T, next : NextDecl, in : T, context : Scope) : T = { in }
@@ -142,6 +145,7 @@ trait ReadOnlyPass[T] {
   def applyOnCase(d : TraversalDirection.T, st : CaseStmt, in : T, context : Scope) : T = { in }
   def applyOnProcedureCall(d : TraversalDirection.T, st : ProcedureCallStmt, in : T, context : Scope) : T = { in }
   def applyOnModuleCall(d : TraversalDirection.T, st : ModuleCallStmt, in : T, context : Scope) : T = { in }
+  def applyOnMacroCall(d : TraversalDirection.T, st : MacroCallStmt, in : T, context : Scope) : T = { in }
   def applyOnLHS(d : TraversalDirection.T, lhs : Lhs, in : T, context : Scope) : T = { in }
   def applyOnBitVectorSlice(d : TraversalDirection.T, slice : BitVectorSlice, in : T, context : Scope) : T = { in }
   def applyOnModifiableEntity(d : TraversalDirection.T, modifiable : ModifiableEntity, in : T, context : Scope) : T = { in }
@@ -190,7 +194,9 @@ trait RewritePass {
   def rewriteGrammar(grammar : GrammarDecl, ctx : Scope) : Option[GrammarDecl] = { Some(grammar) }
   def rewriteGrammarTerm(term: GrammarTerm, ctx: Scope) : Option[GrammarTerm] = { Some(term) }
   def rewriteSynthesisFunction(synFunc : SynthesisFunctionDecl, ctx : Scope) : Option[SynthesisFunctionDecl] = { Some(synFunc) }
+  def rewriteOracleFunction(oracleFunc : OracleFunctionDecl, ctx : Scope) : Option[OracleFunctionDecl] = { Some(oracleFunc) }
   def rewriteDefine(defDecl : DefineDecl, ctx : Scope) : Option[DefineDecl] = { Some(defDecl) }
+  def rewriteMacro(macroDecl : MacroDecl, ctx : Scope) : Option[MacroDecl] = { Some(macroDecl) }
   def rewriteModuleDefinesImport(modDefImport : ModuleDefinesImportDecl, ctx : Scope) : Option[ModuleDefinesImportDecl] = { Some(modDefImport) }
   def rewriteStateVars(stVars : StateVarsDecl, ctx : Scope) : Option[StateVarsDecl] = { Some(stVars) }
   def rewriteInputVars(inpVars : InputVarsDecl, ctx : Scope) : Option[InputVarsDecl] = { Some(inpVars) }
@@ -202,6 +208,7 @@ trait RewritePass {
   def rewriteSpec(spec : SpecDecl, ctx : Scope) : Option[SpecDecl] = { Some(spec) }
   def rewriteAxiom(axiom : AxiomDecl, ctx : Scope) : Option[AxiomDecl] = { Some(axiom) }
   def rewriteTypeDecl(typDec : TypeDecl, ctx : Scope) : Option[TypeDecl] = { Some(typDec) }
+  def rewriteModuleImport(modImport : ModuleImportDecl, ctx : Scope) : Option[ModuleImportDecl] = { Some(modImport) }
   def rewriteModuleTypesImport(modTypeImport : ModuleTypesImportDecl, ctx : Scope) : Option[ModuleTypesImportDecl] = { Some(modTypeImport) }
   def rewriteInit(init : InitDecl, ctx : Scope) : Option[InitDecl] = { Some(init) }
   def rewriteNext(next : NextDecl, ctx : Scope) : Option[NextDecl] = { Some(next) }
@@ -238,6 +245,7 @@ trait RewritePass {
   def rewriteCase(st : CaseStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteProcedureCall(st : ProcedureCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteModuleCall(st : ModuleCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
+  def rewriteMacroCall(st : MacroCallStmt, ctx : Scope) : Option[Statement] = { Some(st) }
   def rewriteLHS(lhs : Lhs, ctx : Scope) : Option[Lhs] = { Some(lhs) }
   def rewriteBitVectorSlice(slice : BitVectorSlice, ctx : Scope) : Option[BitVectorSlice] = { Some(slice) }
   def rewriteModifiableEntity(modifiable : ModifiableEntity, ctx : Scope) : Option[ModifiableEntity] = { Some(modifiable) }
@@ -313,6 +321,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case inst : InstanceDecl => visitInstance(inst, result, context)
       case proc: ProcedureDecl => visitProcedure(proc, result, context)
       case typ : TypeDecl => visitTypeDecl(typ, result, context)
+      case modImport : ModuleImportDecl => visitModuleImport(modImport, result, context)
       case modTypesImport : ModuleTypesImportDecl => visitModuleTypesImport(modTypesImport, result, context)
       case stVars : StateVarsDecl => visitStateVars(stVars, result, context)
       case inpVars : InputVarsDecl => visitInputVars(inpVars, result, context)
@@ -325,7 +334,9 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case modFuncsImport : ModuleFunctionsImportDecl => visitModuleFunctionsImport(modFuncsImport, result, context)
       case grammar : GrammarDecl => visitGrammar(grammar, result, context)
       case synFunc : SynthesisFunctionDecl => visitSynthesisFunction(synFunc, result, context)
+      case oracleFunc : OracleFunctionDecl => visitOracleFunction(oracleFunc, result, context)
       case defDecl : DefineDecl => visitDefine(defDecl, in, context)
+      case macroDecl : MacroDecl => visitMacro(macroDecl, in, context.withEnvironment(ProceduralEnvironment))
       case modDefImport : ModuleDefinesImportDecl => visitModuleDefinesImport(modDefImport, result, context)
       case init : InitDecl => visitInit(init, result, context.withEnvironment(ProceduralEnvironment))
       case next : NextDecl => visitNext(next, result, context.withEnvironment(SequentialEnvironment))
@@ -412,6 +423,15 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnSynthesisFunction(TraversalDirection.Up, synFunc, result, context)
     return result
   }
+  def visitOracleFunction(oracleFunc : OracleFunctionDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnOracleFunction(TraversalDirection.Down, oracleFunc, result, context)
+    result = visitIdentifier(oracleFunc.id, result, context)
+    result = visitFunctionSig(oracleFunc.sig, result, context)
+    val contextP = context + oracleFunc.sig
+    result = pass.applyOnOracleFunction(TraversalDirection.Up, oracleFunc, result, context)
+    return result
+  }
   def visitDefine(defDecl : DefineDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnDefine(TraversalDirection.Down, defDecl, result, context)
@@ -420,6 +440,16 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     val contextP = context + defDecl.sig
     result = visitExpr(defDecl.expr, result, contextP)
     result = pass.applyOnDefine(TraversalDirection.Up, defDecl, result, context)
+    return result
+  }
+  def visitMacro(macroDecl : MacroDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnMacro(TraversalDirection.Down, macroDecl, result, context)
+    result = visitIdentifier(macroDecl.id, result, context)
+    result = visitFunctionSig(macroDecl.sig, result, context)
+    val contextP = context + macroDecl.sig
+    result = visitStatement(macroDecl.body, result, contextP)
+    result = pass.applyOnMacro(TraversalDirection.Up, macroDecl, result, context)
     return result
   }
   def visitModuleDefinesImport(moduleDefinesImport : ModuleDefinesImportDecl, in : T, context : Scope) : T = {
@@ -511,6 +541,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitIdentifier(typDec.id, result, context)
     result = visitType(typDec.typ, result, context)
     result = pass.applyOnTypeDecl(TraversalDirection.Up, typDec, result, context)
+    return result
+  }
+  def visitModuleImport(moduleImport : ModuleImportDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnModuleImport(TraversalDirection.Down, moduleImport, result, context)
+    result = visitIdentifier(moduleImport.modId, result, context)
+    result = pass.applyOnModuleImport(TraversalDirection.Up, moduleImport, result, context)
     return result
   }
   def visitModuleTypesImport(moduleTypesImport : ModuleTypesImportDecl, in : T, context : Scope) : T = {
@@ -722,18 +759,19 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result : T = in
     result = pass.applyOnStatement(TraversalDirection.Down, st, result, context)
     result = st match {
-      case skipStmt     : SkipStmt    => visitSkipStatement(skipStmt, result, context)
-      case assertStmt   : AssertStmt => visitAssertStatement(assertStmt, result, context)
-      case assumeStmt   : AssumeStmt => visitAssumeStatement(assumeStmt, result, context)
-      case havocStmt    : HavocStmt => visitHavocStatement(havocStmt, result, context)
-      case assignStmt   : AssignStmt => visitAssignStatement(assignStmt, result, context)
-      case blkStmt      : BlockStmt => visitBlockStatement(blkStmt, result, context)
-      case ifElseStmt   : IfElseStmt => visitIfElseStatement(ifElseStmt, result, context)
-      case forStmt      : ForStmt => visitForStatement(forStmt, result, context)
-      case whileStmt    : WhileStmt => visitWhileStatement(whileStmt, result, context)
-      case caseStmt     : CaseStmt => visitCaseStatement(caseStmt, result, context)
-      case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, result, context)
-      case modCallStmt  : ModuleCallStmt => visitModuleCallStatement(modCallStmt, result, context)
+      case skipStmt      : SkipStmt    => visitSkipStatement(skipStmt, result, context)
+      case assertStmt    : AssertStmt => visitAssertStatement(assertStmt, result, context)
+      case assumeStmt    : AssumeStmt => visitAssumeStatement(assumeStmt, result, context)
+      case havocStmt     : HavocStmt => visitHavocStatement(havocStmt, result, context)
+      case assignStmt    : AssignStmt => visitAssignStatement(assignStmt, result, context)
+      case blkStmt       : BlockStmt => visitBlockStatement(blkStmt, result, context)
+      case ifElseStmt    : IfElseStmt => visitIfElseStatement(ifElseStmt, result, context)
+      case forStmt       : ForStmt => visitForStatement(forStmt, result, context)
+      case whileStmt     : WhileStmt => visitWhileStatement(whileStmt, result, context)
+      case caseStmt      : CaseStmt => visitCaseStatement(caseStmt, result, context)
+      case procCallStmt  : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, result, context)
+      case modCallStmt   : ModuleCallStmt => visitModuleCallStatement(modCallStmt, result, context)
+      case macroCallStmt : MacroCallStmt => visitMacroCallStatement(macroCallStmt, result, context)
     }
     result = pass.applyOnStatement(TraversalDirection.Up, st, result, context)
     return result
@@ -852,6 +890,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnModuleCall(TraversalDirection.Down, st, result, context)
     result = visitIdentifier(st.id, result, context)
     result = pass.applyOnModuleCall(TraversalDirection.Up, st, result, context)
+    return result
+  }
+  def visitMacroCallStatement(st : MacroCallStmt, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnMacroCall(TraversalDirection.Down, st, result, context)
+    result = visitIdentifier(st.id, result, context)
+    result = pass.applyOnMacroCall(TraversalDirection.Up, st, result, context)
     return result
   }
   def visitLhs(lhs : Lhs, in : T, context : Scope) : T = {
@@ -1130,6 +1175,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case instDecl : InstanceDecl => visitInstance(instDecl, context)
       case procDecl : ProcedureDecl => visitProcedure(procDecl, context)
       case typeDecl : TypeDecl => visitTypeDecl(typeDecl, context)
+      case modImport : ModuleImportDecl => visitModuleImport(modImport, context)
       case modTypeImport : ModuleTypesImportDecl => visitModuleTypesImport(modTypeImport, context)
       case stateVars : StateVarsDecl => visitStateVars(stateVars, context)
       case inputVars : InputVarsDecl => visitInputVars(inputVars, context)
@@ -1142,7 +1188,9 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case modFuncImport : ModuleFunctionsImportDecl => visitModuleFunctionsImport(modFuncImport, context)
       case grammarDecl : GrammarDecl => visitGrammar(grammarDecl, context)
       case synFuncDecl : SynthesisFunctionDecl => visitSynthesisFunction(synFuncDecl, context)
+      case oracleFuncDecl : OracleFunctionDecl => visitOracleFunction(oracleFuncDecl, context)
       case defDecl : DefineDecl => visitDefine(defDecl, context)
+      case macroDecl : MacroDecl => visitMacro(macroDecl, context.withEnvironment(ProceduralEnvironment))
       case modDefImport : ModuleDefinesImportDecl => visitModuleDefinesImport(modDefImport, context)
       case initDecl : InitDecl => visitInit(initDecl, context.withEnvironment(ProceduralEnvironment))
       case nextDecl : NextDecl => visitNext(nextDecl, context.withEnvironment(SequentialEnvironment))
@@ -1314,6 +1362,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setPosition, setFilename, nonTermP, nonTerm.position)
   }
 
+  def visitModuleImport(moduleImport : ModuleImportDecl, context : Scope) : Option[ModuleImportDecl] = {
+    val idOpt = visitIdentifier(moduleImport.modId, context)
+    val moduleImportP = idOpt match {
+      case Some(id) => pass.rewriteModuleImport(ModuleImportDecl(id), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, moduleImportP, moduleImport.position)
+  }
+
   def visitModuleTypesImport(modTypImp : ModuleTypesImportDecl, context : Scope) : Option[ModuleTypesImportDecl] = {
     val idOpt = visitIdentifier(modTypImp.id, context)
     val modTypImpP = idOpt match {
@@ -1351,6 +1408,18 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
   }
 
+  def visitOracleFunction(oracleFunc : OracleFunctionDecl, context : Scope) : Option[OracleFunctionDecl] = {
+    val idP = visitIdentifier(oracleFunc.id, context)
+    val sigP = visitFunctionSig(oracleFunc.sig, context)
+    val contextP = context + oracleFunc.sig
+    (idP, sigP) match {
+      case (Some(id), Some(sig)) =>
+        val oracleFuncP = OracleFunctionDecl(id, sig, oracleFunc.binary)
+        pass.rewriteOracleFunction(oracleFuncP, context)
+      case _ => None
+    }
+  }
+
   def visitDefine(defDecl : DefineDecl, context : Scope) : Option[DefineDecl] = {
     val idP = visitIdentifier(defDecl.id, context)
     val sigP = visitFunctionSig(defDecl.sig, context)
@@ -1364,6 +1433,21 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         None
     }
   }
+
+  def visitMacro(macroDecl : MacroDecl, context : Scope) : Option[MacroDecl] = {
+    val idP = visitIdentifier(macroDecl.id, context)
+    val sigP = visitFunctionSig(macroDecl.sig, context)
+    val contextP = context + macroDecl.sig
+    val statementP = visitStatement(macroDecl.body, contextP)
+    (idP, sigP, statementP) match {
+      case (Some(id), Some(sig), Some(statement)) =>
+        val macroDeclP = MacroDecl(id, sig, statement)
+        pass.rewriteMacro(macroDeclP, context)
+      case _ =>
+        None
+    }
+  }
+
   def visitModuleDefinesImport(modDefImp : ModuleDefinesImportDecl, context : Scope) : Option[ModuleDefinesImportDecl] = {
     val idOpt = visitIdentifier(modDefImp.id, context)
     val modDefImpP = idOpt match {
@@ -1695,6 +1779,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case caseStmt : CaseStmt => visitCaseStatement(caseStmt, context)
       case procCallStmt : ProcedureCallStmt => visitProcedureCallStatement(procCallStmt, context)
       case modCallStmt : ModuleCallStmt => visitModuleCallStatement(modCallStmt, context)
+      case macroCallStmt : MacroCallStmt => visitMacroCallStatement(macroCallStmt, context)
     }).flatMap(pass.rewriteStatement(_, context))
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }
@@ -1847,6 +1932,17 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case Some(id) =>
         val stP1 = ModuleCallStmt(id)
         pass.rewriteModuleCall(stP1, context)
+      case None =>
+        None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
+  }
+
+  def visitMacroCallStatement(st : MacroCallStmt, context : Scope) : Option[Statement] = {
+    val stP = visitIdentifier(st.id, context) match {
+      case Some(id) =>
+        val stP1 = MacroCallStmt(id)
+        pass.rewriteMacroCall(stP1, context)
       case None =>
         None
     }

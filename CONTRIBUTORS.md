@@ -1,15 +1,19 @@
-## Main Contributors 
+## The UCLID team
 
-| Name               | E-mail                    |
+| Name               | E-mail / username         |
 | ------------------ | ------------------------- |
-| Pramod Subramanyan | spramod@eecs.berkeley.edu |
+| Pramod Subramanyan | pramodsu                  |
 | Sanjit Seshia      | sseshia@eecs.berkeley.edu |
-| Rohit Sinha        | rsinha@eecs.berkeley.edu  |
-| Kevin Cheang       | kcheang@berkeley.edu      |
-| Cameron Rasmussen  | crasmussen@berkeley.edu   |
+| Pranav Gaddamadugu | d0cd                      |
+| Deepak Sirone      | deepaksirone              |
+| Elizabeth Polgreen | polgreen                  |
+| Rohit Sinha        | rsinha                    |
+| Kevin Cheang       | kkmc                      |
+| Kevin Lauefer      | ekiwi                     |
+| Federico Mora      | FedericoAureliano         |
+| Cameron Rasmussen  | CameronRasmussen          |
+| Shaokai Lin        | lsk567                    |
+| Yatin Manerkar     | ymanerka                  |
 
-## Other Contributors
-
-| Name               | E-mail                    |
-| ------------------ | ------------------------- |
-| Norman Mu          | thenorm@berkeley.edu      |
+## Other Contributors:
+https://github.com/uclid-org/uclid/graphs/contributors

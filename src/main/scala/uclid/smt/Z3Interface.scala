@@ -101,7 +101,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
 
       bottom = fint.getElse().toString
     } else {
-      return "ERROR " + e.toString + "\n"
+      return "UCLID is unable to convert this z3 array to string: " + e.toString + "\n"
     }
 
     array.foreach{ case (k, v) => {
@@ -350,6 +350,7 @@ class Z3Interface() extends Context {
           ctx.mkSub (arithArgs: _*)
         }
       case IntMulOp               => ctx.mkMul (arithArgs : _*)
+      case IntDivOp               => ctx.mkDiv (arithArgs(0), arithArgs(1))
       case BVLTOp(_)              => ctx.mkBVSLT(bvArgs(0), bvArgs(1))
       case BVLEOp(_)              => ctx.mkBVSLE(bvArgs(0), bvArgs(1))
       case BVGTOp(_)              => ctx.mkBVSGT(bvArgs(0), bvArgs(1))
@@ -361,6 +362,8 @@ class Z3Interface() extends Context {
       case BVAddOp(_)             => ctx.mkBVAdd(bvArgs(0), bvArgs(1))
       case BVSubOp(_)             => ctx.mkBVSub(bvArgs(0), bvArgs(1))
       case BVMulOp(_)             => ctx.mkBVMul(bvArgs(0), bvArgs(1))
+      case BVDivOp(_)             => ctx.mkBVSDiv(bvArgs(0), bvArgs(1))
+      case BVUDivOp(_)            => ctx.mkBVUDiv(bvArgs(0), bvArgs(1))
       case BVMinusOp(_)           => ctx.mkBVNeg(bvArgs(0))
       case BVAndOp(_)             => ctx.mkBVAND(bvArgs(0), bvArgs(1))
       case BVUremOp(_)            => ctx.mkBVURem(bvArgs(0), bvArgs(1))
@@ -490,7 +493,7 @@ class Z3Interface() extends Context {
 
   lazy val checkLogger = Logger("uclid.smt.Z3Interface.check")
   /** Check whether a particular expression is satisfiable.  */
-  override def check() : SolverResult = {
+  override def check(produceModel: Boolean = true) : SolverResult = {
     lazy val smtOutput = solver.toString()
     checkLogger.debug(smtOutput)
 
@@ -499,10 +502,13 @@ class Z3Interface() extends Context {
 
       val checkResult : SolverResult = z3Result match {
         case z3.Status.SATISFIABLE =>
-          val z3Model = solver.getModel()
           checkLogger.debug("SAT")
-          checkLogger.debug("Model: {}", z3Model.toString())
-          SolverResult(Some(true), Some(new Z3Model(this, z3Model)))
+          val model = if(produceModel) {
+            val z3Model = solver.getModel()
+            checkLogger.debug("Model: {}", z3Model.toString())
+            Some(new Z3Model(this, z3Model))
+          } else { None }
+          SolverResult(Some(true), model)
         case z3.Status.UNSATISFIABLE =>
           checkLogger.debug("UNSAT")
           SolverResult(Some(false), None)

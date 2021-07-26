@@ -60,7 +60,9 @@ object Scope {
   case class Grammar(gId : Identifier, gTyp : Type, nts : List[lang.NonTerminal]) extends ReadOnlyNamedExpression(gId, gTyp)
   case class NonTerminal(ntId: Identifier, ntTyp: Type, terms: List[GrammarTerm]) extends ReadOnlyNamedExpression(ntId, ntTyp)
   case class SynthesisFunction(fId : Identifier, fTyp: FunctionSig, gId: Option[Identifier], gargs: List[Identifier], conds : List[Expr]) extends ReadOnlyNamedExpression(fId, fTyp.typ)
+  case class OracleFunction(oId : Identifier, oTyp: FunctionSig, binary: String) extends ReadOnlyNamedExpression(oId, oTyp.typ)
   case class Define(dId : Identifier, dTyp : Type, defDecl: DefineDecl) extends ReadOnlyNamedExpression(dId, dTyp)
+  case class Macro(mId : Identifier, mTyp : Type, macroDecl: MacroDecl) extends ReadOnlyNamedExpression(mId, mTyp)
   case class Procedure(pId : Identifier, pTyp: Type) extends ReadOnlyNamedExpression(pId, pTyp)
   case class ProcedureInputArg(argId : Identifier, argTyp: Type) extends ReadOnlyNamedExpression(argId, argTyp)
   case class ProcedureOutputArg(argId : Identifier, argTyp: Type) extends NamedExpression(argId, argTyp)
@@ -263,7 +265,9 @@ case class Scope (
         case GrammarDecl(id, sig, nts) => Scope.addToMap(mapAcc, Scope.Grammar(id, sig.typ, nts))
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SynthesisFunctionDecl(id, sig, gid, gargs, conds) => Scope.addToMap(mapAcc, Scope.SynthesisFunction(id, sig, gid, gargs, conds))
+        case OracleFunctionDecl(id, sig, binary) => Scope.addToMap(mapAcc, Scope.OracleFunction(id, sig, binary))
         case DefineDecl(id, sig, expr) => Scope.addToMap(mapAcc, Scope.Define(id, sig.typ, DefineDecl(id, sig, expr)))
+        case MacroDecl(id, sig, statement) => Scope.addToMap(mapAcc, Scope.Macro(id, sig.typ, MacroDecl(id, sig, statement)))
         case SpecDecl(id, expr, params) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr, params))
         case AxiomDecl(sId, expr, params) => sId match {
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr, params))
@@ -273,7 +277,8 @@ case class Scope (
         //case ModuleFunctionsImportDecl(id) => Scope.addToMap(mapAcc, Scope.FunctionsImport(id))
         case ModuleConstantsImportDecl(_) => mapAcc
         case ModuleFunctionsImportDecl(_) => mapAcc
-        case ModuleTypesImportDecl(_) | 
+        case ModuleImportDecl(_) |
+             ModuleTypesImportDecl(_) | 
              ModuleDefinesImportDecl(_) | 
              InitDecl(_) | NextDecl(_)  => mapAcc
       }
@@ -296,7 +301,15 @@ case class Scope (
           val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
+        case OracleFunctionDecl(_, sig, _) =>
+          val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
+          val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
+          m2
         case DefineDecl(_, sig, _) =>
+          val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
+          val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
+          m2
+        case MacroDecl(_, sig, _) =>
           val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
@@ -307,7 +320,7 @@ case class Scope (
         case SharedVarsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ConstantLitDecl(_, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
         case ConstantsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
-        case ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
+        case ModuleImportDecl(_) | ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
              ModuleFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
              InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | 
              AxiomDecl(_, _, _) | InitDecl(_) | NextDecl(_) => mapAcc
@@ -358,7 +371,7 @@ case class Scope (
           module, procedure, cmd, environment, Some(this))
       case ExistsOp(vs, _) =>
         Scope(
-          vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ForallVar(arg._1, arg._2))),
+          vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ExistsVar(arg._1, arg._2))),
           module, procedure, cmd, environment, Some(this))
       case sel : SelectorOperator =>
         addSelectorField(sel.ident)
