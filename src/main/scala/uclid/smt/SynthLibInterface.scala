@@ -44,7 +44,7 @@ import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.mutable.{Set => MutableSet}
 import com.typesafe.scalalogging.Logger
 
-class SynthLibInterface(args: List[String], sygusSyntax : Boolean, module: lang.Module) extends SMTLIB2Interface(args) {
+class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLIB2Interface(args) {
   val synthliblogger = Logger(classOf[SynthLibInterface])
 
   var astack   : List[List[String]] = List.empty

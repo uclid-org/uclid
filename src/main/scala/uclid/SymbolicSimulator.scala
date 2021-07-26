@@ -1509,7 +1509,6 @@ class SymbolicSimulator (module : Module) {
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
       case lambda : Lambda =>
         isStatelessExpr(lambda.e, context + lambda)
-      // case FuncAppTerm(_, _) | OpAppTerm(_, _) => throw new Utils.RuntimeError("Grammar terms should not be part of model expressions.")
     }
   }
 

@@ -161,7 +161,6 @@ trait ReadOnlyPass[T] {
   def applyOnOperator(d : TraversalDirection.T, op : Operator, in : T, context : Scope) : T = { in }
   def applyOnFuncApp(d : TraversalDirection.T, fapp : FuncApplication, in : T, context : Scope) : T = { in }
   def applyOnLambda(d : TraversalDirection.T, lambda : Lambda, in : T, context : Scope) : T = { in }
-  // def applyOnMacroApp(d : TraversalDirection.T, mapp : MacroApplication, in : T, context : Scope) : T = { in }
   def applyOnExprDecorator(d : TraversalDirection.T, dec : ExprDecorator, in : T, context : Scope) : T = { in }
   def applyOnProcedureAnnotations(d : TraversalDirection.T, annot : ProcedureAnnotations, in : T, context : Scope) : T = { in }
 }
