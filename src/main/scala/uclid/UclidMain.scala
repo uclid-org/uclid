@@ -426,7 +426,6 @@ object UclidMain {
         cmdBlocks = cmdBlocks.init :+ (cmdBlocks.last :+ cmd)
       previousModifiesModule = cmd.modifiesModule
     })
-    UclidMain.println(cmdBlocks.toString)
     return cmdBlocks
   }
 
@@ -448,7 +447,7 @@ object UclidMain {
             case Identifier(n) => Identifier(n)
             case _ => throw new Utils.RuntimeError("Should never get here")
           }
-          resModule = assignMacro(module, macroId, newMacroBody)
+          resModule = assignMacro(resModule, macroId, newMacroBody)
           modifyCmdCount += 1
         case _ =>
           if (previousModifiesModule) {
