@@ -63,7 +63,7 @@ extends Expr (smt.Converter.typeToSMT(symbolTyp.typ))
 case class SynthSymbol(id: String, symbolTyp: lang.FunctionSig, grammar: Option[GrammarSymbol], gargs: List[String], conds : List[lang.Expr]) extends Expr (smt.Converter.typeToSMT(symbolTyp.typ)) {
   override val hashId = mix(id.hashCode(), mix(symbolTyp.typ.hashCode(), 315))
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash(id, symbolTyp.typ)
+  override val md5hashCode = computeMD5Hash(id)
   override def toString = id.toString
 }
 

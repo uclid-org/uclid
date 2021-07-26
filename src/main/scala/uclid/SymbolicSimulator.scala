@@ -117,6 +117,9 @@ class SymbolicSimulator (module : Module) {
   def newOracleSymbol(name: String, t: FunctionSig, binary : String) = {
     new smt.OracleSymbol("oracle_" + name, t, binary)
   }
+  def newSynthSymbol(name: String, t: FunctionSig, gSym : Option[smt.GrammarSymbol], gargs: List[String], conds : List[Expr]) = {
+    new smt.SynthSymbol("synth_" + name, t, gSym, gargs, conds)
+  }
   def newGrammarSymbol(name: String, t: smt.Type, nts: List[smt.NonTerminal]) = {
     new smt.GrammarSymbol("grammar_" + name, t, nts)
   }
@@ -135,9 +138,9 @@ class SymbolicSimulator (module : Module) {
       case Some(_) => getgrammar.get.asInstanceOf[lang.Scope.Grammar]
       case None => throw new Utils.RuntimeError("Grammar not found: grammar " + gSym.toString())
     }
-    if (grammar.gTyp != typ.retType) {
-      throw new Utils.RuntimeError("Grammar type does not match synth-fun: for grammar " + gSym.toString())
-    }
+    // if (grammar.gTyp != typ.retType) {
+    //   throw new Utils.RuntimeError("Grammar type does not match synth-fun: for grammar " + gSym.toString())
+    // }
     val id = grammar.id.name
     val symbolTyp = smt.Converter.typeToSMT(grammar.gTyp)
     val nts = grammar.nts.map(smt.Converter.nonTerminalToSyGuS2(_, scope))
