@@ -811,13 +811,13 @@ class PolymorphicGrammarTypeRewriterPass extends RewritePass {
 
   /** Update type map with function application type
    *
-   *  @macroAppTerm the macro application whose type needs to be memoized
+   *  @defineAppTerm the define-macro application whose type needs to be memoized
    *  @ctx the current context
    */
-  override def rewriteMacroAppTerm(macroAppTerm : MacroAppTerm, ctx : Scope) : Option[MacroAppTerm] = {
-    val typ = ctx.typeOf(macroAppTerm.id).get
-    typeMap += (macroAppTerm -> typ)
-    Some(macroAppTerm)
+  override def rewriteDefineAppTerm(defineAppTerm : DefineAppTerm, ctx : Scope) : Option[DefineAppTerm] = {
+    val typ = ctx.typeOf(defineAppTerm.id).get
+    typeMap += (defineAppTerm -> typ)
+    Some(defineAppTerm)
   }
 
   /** Update type map with the literal term type

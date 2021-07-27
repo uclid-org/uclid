@@ -40,14 +40,14 @@ package uclid
 package smt
 
 // For define-macro application as SyGuS grammar terminal
-case class MacroApplication(e: Expr, defDecl: DefineSymbol, args: List[Expr])
+case class DefineApplication(e: Expr, defDecl: DefineSymbol, args: List[Expr])
   extends Expr (e.typ.asInstanceOf[MapType].outType)
 {
   override val hashId = 317
   override val hashCode = computeHash(args, e)
   override val md5hashCode = computeMD5Hash(args, e)
   override def toString = "(" + e.toString + " " + args.tail.fold(args.head.toString)
-    { (acc,i) => acc + "," + i.toString } + ")"
+    { (acc,i) => acc + " " + i.toString } + ")"
   override val isConstant = e.isConstant && args.forall(a => a.isConstant)
 }
 
@@ -56,7 +56,7 @@ extends Expr (smt.Converter.typeToSMT(symbolTyp.typ))
 {
   override val hashId = mix(id.hashCode(), mix(symbolTyp.typ.hashCode(), 318))
   override val hashCode = computeHash(id)
-  override val md5hashCode = computeMD5Hash(id, symbolTyp)
+  override val md5hashCode = computeMD5Hash(id)
   override def toString = id.toString
 }
 

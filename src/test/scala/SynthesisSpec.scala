@@ -101,4 +101,46 @@ class SynthesisSpec extends AnyFlatSpec {
   "test-synthesis-13.ucl" should "verify all assertions." in {
     SynthesisSpec.expectedFails("./test/test-synthesis-13.ucl", 0)
   }
+  "test-synthesis-grammar-0.ucl" should "verify all assertions." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-grammar-0.ucl", 0)
+  }
+  "test-synthesis-grammar-1.ucl" should "verify all assertions." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-grammar-1.ucl", 0)
+  }
+  "test-synthesis-grammar-4.ucl" should "not execute correctly." in {
+    try {
+      val filename = "./test/test-synthesis-grammar-4.ucl"
+      val config = UclidMain.Config().copy(synthesizer=List("cvc4_wait.sh"), sygusFormat = true)
+      val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
+      val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
+      assert (mainModule.isDefined)
+      val results = UclidMain.execute(mainModule.get, config)
+      assert(false)
+    }
+    catch {
+      case r : Utils.RuntimeError => 
+        assert (r.getMessage().contains("SyGuS grammar type does not match synth-fun"));
+    }
+  }
+  "test-synthesis-grammar-5.ucl" should "not execute correctly." in {
+    try {
+      val filename = "./test/test-synthesis-grammar-5.ucl"
+      val config = UclidMain.Config().copy(synthesizer=List("cvc4_wait.sh"), sygusFormat = true)
+      val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
+      val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
+      assert (mainModule.isDefined)
+      val results = UclidMain.execute(mainModule.get, config)
+      assert(false)
+    }
+    catch {
+      case r : Utils.RuntimeError => 
+        assert (r.getMessage().contains("SyGuS grammar not found"));
+    }
+  }
+  "test-synthesis-grammar-6.ucl" should "verify all assertions." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-grammar-6.ucl", 0)
+  }
+  "test-synthesis-grammar-7.ucl" should "verify all assertions." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-grammar-7.ucl", 0)
+  }
 }

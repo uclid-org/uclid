@@ -185,7 +185,7 @@ trait RewritePass {
   def rewriteModuleFunctionsImport(modFuncImport : ModuleFunctionsImportDecl, ctx : Scope) : Option[ModuleFunctionsImportDecl] = { Some(modFuncImport) }
   def rewriteFuncAppTerm(term : FuncAppTerm, ctx : Scope) : Option[FuncAppTerm] = { Some(term) }
   def rewriteOpAppTerm(term : OpAppTerm, ctx : Scope) : Option[OpAppTerm] = { Some(term) }
-  def rewriteMacroAppTerm(term : MacroAppTerm, ctx : Scope) : Option[MacroAppTerm] = { Some(term) }
+  def rewriteDefineAppTerm(term : DefineAppTerm, ctx : Scope) : Option[DefineAppTerm] = { Some(term) }
   def rewriteLiteralTerm(term : LiteralTerm, ctx : Scope) : Option[LiteralTerm] = { Some(term) }
   def rewriteSymbolTerm(term : SymbolTerm, ctx : Scope) : Option[SymbolTerm] = { Some(term) }
   def rewriteConstantTerm(term : ConstantTerm, ctx : Scope) : Option[ConstantTerm] = { Some(term) }
@@ -1290,14 +1290,14 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     return ASTNode.introducePos(setPosition, setFilename, opAppTermP, opAppTerm.position)
   }
 
-  def visitMacroAppTerm(macroAppTerm: MacroAppTerm, context: Scope) : Option[MacroAppTerm] = {
-    val idP = visitIdentifier(macroAppTerm.id, context)
-    val argsP = macroAppTerm.args.map(visitGrammarTerm(_, context)).flatten
-    val macroAppTermP = idP match {
-      case Some(id) => pass.rewriteMacroAppTerm(MacroAppTerm(id, argsP), context)
+  def visitDefineAppTerm(defineAppTerm: DefineAppTerm, context: Scope) : Option[DefineAppTerm] = {
+    val idP = visitIdentifier(defineAppTerm.id, context)
+    val argsP = defineAppTerm.args.map(visitGrammarTerm(_, context)).flatten
+    val defineAppTermP = idP match {
+      case Some(id) => pass.rewriteDefineAppTerm(DefineAppTerm(id, argsP), context)
       case None => None
     }
-    return ASTNode.introducePos(setPosition, setFilename, macroAppTermP, macroAppTerm.position)
+    return ASTNode.introducePos(setPosition, setFilename, defineAppTermP, defineAppTerm.position)
   }
 
   def visitLiteralTerm(litTerm: LiteralTerm, context: Scope) : Option[LiteralTerm] = {
@@ -1340,7 +1340,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val grammarTermP = grammarTerm match {
       case funcAppTerm: FuncAppTerm => visitFuncAppTerm(funcAppTerm, context)
       case opAppTerm: OpAppTerm => visitOpAppTerm(opAppTerm, context)
-      case macroAppTerm: MacroAppTerm => visitMacroAppTerm(macroAppTerm, context)
+      case defineAppTerm: DefineAppTerm => visitDefineAppTerm(defineAppTerm, context)
       case litTerm: LiteralTerm => visitLiteralTerm(litTerm, context)
       case symTerm: SymbolTerm => visitSymbolTerm(symTerm, context)
       case constTerm: ConstantTerm => visitConstantTerm(constTerm, context)

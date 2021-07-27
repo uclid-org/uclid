@@ -136,11 +136,11 @@ class SymbolicSimulator (module : Module) {
     val getgrammar = scope.get(gSym)
     val grammar : lang.Scope.Grammar = getgrammar match {
       case Some(_) => getgrammar.get.asInstanceOf[lang.Scope.Grammar]
-      case None => throw new Utils.RuntimeError("Grammar not found: grammar " + gSym.toString())
+      case None => throw new Utils.RuntimeError("SyGuS grammar not found: grammar " + gSym.toString())
     }
-    // if (grammar.gTyp != typ.retType) {
-    //   throw new Utils.RuntimeError("Grammar type does not match synth-fun: for grammar " + gSym.toString())
-    // }
+    if (grammar.gTyp.asInstanceOf[lang.MapType].outType != typ.retType) {
+      throw new Utils.RuntimeError("SyGuS grammar type does not match synth-fun: for grammar " + gSym.toString())
+    }
     val id = grammar.id.name
     val symbolTyp = smt.Converter.typeToSMT(grammar.gTyp)
     val nts = grammar.nts.map(smt.Converter.nonTerminalToSyGuS2(_, scope))

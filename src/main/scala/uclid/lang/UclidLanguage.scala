@@ -1320,14 +1320,12 @@ case class LetTerm(assigns: List[(Identifier, Type, GrammarTerm)], expr: Grammar
   }
 }
 
-case class MacroAppTerm(id: Identifier, args: List[GrammarTerm]) extends GrammarTerm {
+case class DefineAppTerm(id: Identifier, args: List[GrammarTerm]) extends GrammarTerm {
   override def toString = {
     val argStr = args.map(_.toString)
     val str = id.toString + "(" + Utils.join(argStr, ", ") + ")"
     "(" + str + ")"
   }
-  // override val hashId = 4009
-  // override val md5hashCode = computeMD5Hash(id, args)
 }
 
 case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) extends ASTNode {

@@ -387,9 +387,9 @@ object Converter {
         val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, scope))
         smt.OperatorApplication(opP, argsP)
       }
-      case lang.MacroAppTerm(id, args) => {
+      case lang.DefineAppTerm(id, args) => {
         val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, scope))
-        smt.MacroApplication(smt.Symbol(id.name, typeToSMT(scope.typeOf(id).get)), defineDeclToSyGuS2(scope.get(id).get.asInstanceOf[lang.Scope.Define], scope), argsP)
+        smt.DefineApplication(smt.Symbol(id.name, typeToSMT(scope.typeOf(id).get)), defineDeclToSyGuS2(scope.get(id).get.asInstanceOf[lang.Scope.Define], scope), argsP)
       }
       case lang.LiteralTerm(lit: lang.Literal) => _exprToSMT(lit, scope, 0, idToSMT)
       case lang.SymbolTerm(id: lang.Identifier) => _exprToSMT(id, scope, 0, idToSMT)
@@ -399,6 +399,14 @@ object Converter {
   }
  
   def defineDeclToSyGuS2 (defdecl : lang.Scope.Define, scope : lang.Scope) : smt.DefineSymbol = {
-    smt.DefineSymbol(defdecl.defDecl.id.name, scope.get(defdecl.dId).get.asInstanceOf[lang.Scope.Define].defDecl.sig, exprToSMT(defdecl.defDecl.expr, scope))
+    val langDefineDecl : List[(lang.Identifier, lang.Type)] = defdecl.defDecl.sig.args
+    def declIdToSMT(id : lang.Identifier, scope : lang.Scope, past : Int) : smt.Expr = {
+      val typeMap = langDefineDecl.toMap
+      typeMap.get(id) match {
+        case Some(t) => smt.Symbol(id.name, typeToSMT(t))
+        case None => throw new Utils.RuntimeError("Id not found in args for DefineDecl: for id " + id.name + " for DefineDecl " + defdecl.dId.name)
+      }
+    }
+    smt.DefineSymbol(defdecl.defDecl.id.name, scope.get(defdecl.dId).get.asInstanceOf[lang.Scope.Define].defDecl.sig, exprToSMT(defdecl.defDecl.expr, declIdToSMT, scope))
   }
 }

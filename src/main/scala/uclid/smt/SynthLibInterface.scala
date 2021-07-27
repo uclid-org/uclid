@@ -88,7 +88,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
       (nt) => nt.terms.foreach {
         (trm) => {
           trm.e match {
-            case MacroApplication(e, defDecl, args) => generateDefines(defDecl)
+            case DefineApplication(e, defDecl, args) => generateDefines(defDecl)
             case _ => None
           }
         }
