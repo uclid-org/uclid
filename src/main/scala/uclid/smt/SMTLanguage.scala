@@ -40,7 +40,6 @@ package uclid
 package smt
 import scala.util.matching.Regex
 import uclid.lang.Identifier
-import uclid.lang.NonTerminal
 
 sealed trait Type extends Hashable {
   override val hashBaseId = 22575 // Random number. Not super important, must just be unique for each abstract base class.
@@ -841,18 +840,6 @@ case class AssignmentModel(functions : List[Expr]) extends Hashable {
   override val hashCode = computeHash(functions.map(fun => fun.toString()))
   override val md5hashCode = computeMD5Hash(functions)
   override def toString = Utils.join(functions.map(fun => fun.toString()), " ")
-}
-case class SynthSymbol(id: String, symbolTyp: lang.FunctionSig, gid: Option[Identifier], gargs: List[Identifier], conds : List[lang.Expr]) extends Expr (smt.Converter.typeToSMT(symbolTyp.typ)) {
-  override val hashId = mix(id.hashCode(), mix(symbolTyp.typ.hashCode(), 315))
-  override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash(id)
-  override def toString = id.toString
-}
-case class GrammarSymbol(id: String, symbolTyp: Type, nts : List[NonTerminal]) extends Expr (symbolTyp) {
-  override val hashId = mix(id.hashCode(), mix(symbolTyp.hashCode(), 316))
-  override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash(id, symbolTyp)
-  override def toString = id.toString
 }
 case class OracleSymbol(id: String, symbolTyp: lang.FunctionSig, binary : String) extends Expr (smt.Converter.typeToSMT(symbolTyp.typ)) {
   override val hashId = mix(id.hashCode(), mix(symbolTyp.typ.hashCode(), 317))

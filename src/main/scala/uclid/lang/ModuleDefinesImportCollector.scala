@@ -82,7 +82,7 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
                Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
                Scope.BlockVar(_, _)           | Scope.SelectorField(_)          |
-               Scope.Macro(_, _, _)           =>
+               Scope.NonTerminal(_, _, _)     | Scope.Macro(_, _, _)           =>
              throw new Utils.ParserError("Can't have this identifier in define declaration: " + namedExpr.toString(), None, None)
         }
       case None =>

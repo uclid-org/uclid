@@ -1,0 +1,23 @@
+// This test should pass
+module main {
+   
+    grammar max_grammar (x : integer) : integer = {
+        (start : integer) ::= 1 | nullfunc(x);
+    }
+
+    define nullfunc(a : integer) : integer = 0;
+
+    synthesis function choose (x : integer) : integer
+    grammar max_grammar(x);
+    
+    init {}
+    next {}
+
+    property myprop : choose(1) == 0;
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

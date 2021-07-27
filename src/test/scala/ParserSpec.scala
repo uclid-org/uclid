@@ -276,6 +276,42 @@ class ParserSpec extends AnyFlatSpec {
         assert (p.errors.exists(p => p._1.contains("Operator can only be used in a verification expression")))
     }
   }
+  "test-synthesis-grammar-0.ucl" should "parse successfully." in {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-synthesis-grammar-0.ucl"), lang.Identifier("main"))
+      val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+      assert (instantiatedModules.size == 1)
+  }
+  "test-synthesis-grammar-1.ucl" should "parse successfully." in {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-synthesis-grammar-1.ucl"), lang.Identifier("main"))
+      val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+      assert (instantiatedModules.size == 1)
+  }
+  "test-synthesis-grammar-2.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-synthesis-grammar-2.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      case r : Utils.RuntimeError => 
+        assert (r.getMessage().contains("Could not find non terminal"));
+    }
+  }
+  "test-synthesis-grammar-3.ucl" should "parse successfully." in {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-synthesis-grammar-3.ucl"), lang.Identifier("main"))
+      val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+      assert (instantiatedModules.size == 1)
+  }
+  "test-synthesis-grammar-4.ucl" should "parse successfully." in {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-synthesis-grammar-4.ucl"), lang.Identifier("main"))
+      val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+      assert (instantiatedModules.size == 1)
+  }
+  "test-synthesis-grammar-5.ucl" should "parse successfully." in {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-synthesis-grammar-5.ucl"), lang.Identifier("main"))
+      val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+      assert (instantiatedModules.size == 1)
+  }
   "test-typechecker-7.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-typechecker-7.ucl"), lang.Identifier("main"))

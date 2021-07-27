@@ -1,0 +1,31 @@
+/* Toy example #1 to test grammars with bitvectors.
+    Run with `run -f -y "cvc4 --lang sygus2" test/test-synthesis-grammar-1.ucl`
+*/
+module main
+{
+  grammar sign_grammar (x : bv64) : bv64 = {
+    (start : bv64) ::= 0bv64 | 1bv64 | x |
+    					 (start + start) | (start - start) |
+    					 (if (cond) then start else start);
+    (cond : boolean) ::= true | false | (!cond) | (start <= start);
+  }
+
+  synthesis function sign(x : bv64) : bv64
+    grammar sign_grammar(x, y);
+
+  procedure sign_impl(x: bv64) returns (res: bv64)
+    ensures (res == sign(x));
+  {
+    if (x > 0bv64) {
+        res = 1bv64;
+    } else {
+        res = 0bv64;
+    };
+  }
+
+  control {
+    vf = verify(sign_impl);
+    check;
+    print_results;
+  }
+}

@@ -535,19 +535,26 @@ sealed abstract class Literal extends Expr {
   /** All literals are constants. */
   override def isConstant = true
   def isNumeric = false
+  def typeOf: Type
 }
 /** A non-deterministic new constant. */
 case class FreshLit(typ : Type) extends Literal {
   override def toString = "*"
+  // override val hashId = 2200
+  override def typeOf: Type = typ
+  // override val md5hashCode = computeMD5Hash(typ)
 }
 sealed abstract class NumericLit extends Literal {
   override def isNumeric = true
-  def typeOf : NumericType
+  override def typeOf : NumericType
   def to (n : NumericLit) : Seq[NumericLit]
   def negate: NumericLit
 }
 case class BoolLit(value: Boolean) extends Literal {
   override def toString = value.toString
+  // override val hashId = 2201
+  override def typeOf: Type = BooleanType()
+  // override val md5hashCode = computeMD5Hash(value)
 }
 case class IntLit(value: BigInt) extends NumericLit {
   override def toString = value.toString
@@ -575,6 +582,9 @@ case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
 
 case class StringLit(value: String) extends Literal {
   override def toString = "\"" + value + "\""
+  // override val hashId = 2202
+  override def typeOf: Type = StringType()
+  // override val md5hashCode = computeMD5Hash(value)
 }
 
 case class ConstArray(exp: Expr, typ: Type) extends Expr {
@@ -1328,6 +1338,14 @@ case class LetTerm(assigns: List[(Identifier, Type, GrammarTerm)], expr: Grammar
   }
 }
 
+case class DefineAppTerm(id: Identifier, args: List[GrammarTerm]) extends GrammarTerm {
+  override def toString = {
+    val argStr = args.map(_.toString)
+    val str = id.toString + "(" + Utils.join(argStr, ", ") + ")"
+    "(" + str + ")"
+  }
+}
+
 case class NonTerminal(id: Identifier, typ: Type, terms: List[GrammarTerm]) extends ASTNode {
   override def toString = {
     "(%s : %s) ::= %s;".format(id.toString, typ.toString, Utils.join(terms.map(_.toString), " | "))
@@ -1533,6 +1551,8 @@ case class Module(id: Identifier, decls: List[Decl], cmds : List[GenericProofCom
 
   lazy val synthFunctions: List[SynthesisFunctionDecl] =
     decls.filter(_.isInstanceOf[SynthesisFunctionDecl]).map(_.asInstanceOf[SynthesisFunctionDecl])
+  
+  lazy val grammarDecls: List[GrammarDecl] = decls.collect { case gDecl: GrammarDecl => gDecl }
 
   // module properties.
   lazy val properties : List[SpecDecl] = decls.collect{ case spec : SpecDecl => spec }

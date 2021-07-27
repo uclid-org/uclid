@@ -1,0 +1,25 @@
+// This test should pass
+module main {
+   
+    grammar max_grammar (x : integer, y : integer) : integer = {
+        (start : integer) ::= x | y | (if (cond) then start else start);
+        (cond : boolean) ::= true | false | isGt(x, y);
+    }
+
+    define nullfunc(a : integer) : integer = 0;
+    define isGt(a : integer, b : integer) : boolean = a > b;
+
+    synthesis function choose (x : integer, y : integer) : integer
+    grammar max_grammar(x, y);
+    
+    init {}
+    next {}
+
+    property myprop : choose(1, 0) > 0 && choose(0, 1) > 0;
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

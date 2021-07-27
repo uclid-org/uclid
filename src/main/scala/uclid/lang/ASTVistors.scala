@@ -185,8 +185,16 @@ trait RewritePass {
   def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : Scope) : Option[FunctionDecl] = { Some(func) }
   def rewriteModuleFunctionsImport(modFuncImport : ModuleFunctionsImportDecl, ctx : Scope) : Option[ModuleFunctionsImportDecl] = { Some(modFuncImport) }
+  def rewriteFuncAppTerm(term : FuncAppTerm, ctx : Scope) : Option[FuncAppTerm] = { Some(term) }
+  def rewriteOpAppTerm(term : OpAppTerm, ctx : Scope) : Option[OpAppTerm] = { Some(term) }
+  def rewriteDefineAppTerm(term : DefineAppTerm, ctx : Scope) : Option[DefineAppTerm] = { Some(term) }
+  def rewriteLiteralTerm(term : LiteralTerm, ctx : Scope) : Option[LiteralTerm] = { Some(term) }
+  def rewriteSymbolTerm(term : SymbolTerm, ctx : Scope) : Option[SymbolTerm] = { Some(term) }
+  def rewriteConstantTerm(term : ConstantTerm, ctx : Scope) : Option[ConstantTerm] = { Some(term) }
+  def rewriteVariableTerm(term : VariableTerm, ctx : Scope) : Option[VariableTerm] = { Some(term) }
   def rewriteNonterminal(nonterm : NonTerminal, ctx : Scope) : Option[NonTerminal] = { Some(nonterm) }
   def rewriteGrammar(grammar : GrammarDecl, ctx : Scope) : Option[GrammarDecl] = { Some(grammar) }
+  def rewriteGrammarTerm(term: GrammarTerm, ctx: Scope) : Option[GrammarTerm] = { Some(term) }
   def rewriteSynthesisFunction(synFunc : SynthesisFunctionDecl, ctx : Scope) : Option[SynthesisFunctionDecl] = { Some(synFunc) }
   def rewriteOracleFunction(oracleFunc : OracleFunctionDecl, ctx : Scope) : Option[OracleFunctionDecl] = { Some(oracleFunc) }
   def rewriteDefine(defDecl : DefineDecl, ctx : Scope) : Option[DefineDecl] = { Some(defDecl) }
@@ -1286,9 +1294,97 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     }
     return ASTNode.introducePos(setPosition, setFilename, modFuncImpP, modFuncImp.position)
   }
-    
-  def visitNonterminals(nonterms : List[NonTerminal], context : Scope) : List[NonTerminal] = {
-    nonterms.map(nt => ASTNode.introducePos(setPosition, setFilename, pass.rewriteNonterminal(nt, context), nt.position)).flatten
+
+  def visitFuncAppTerm(funcAppTerm: FuncAppTerm, context: Scope) : Option[FuncAppTerm] = {
+    val idP = visitIdentifier(funcAppTerm.id, context)
+    val argsP = funcAppTerm.args.map(visitGrammarTerm(_, context)).flatten
+    val funcAppTermP = idP match {
+      case Some(id) => pass.rewriteFuncAppTerm(FuncAppTerm(id, argsP), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, funcAppTermP, funcAppTerm.position)
+  }
+
+  def visitOpAppTerm(opAppTerm: OpAppTerm, context: Scope) : Option[OpAppTerm] = {
+    val opP = visitOperator(opAppTerm.op, context)
+    val argsP = opAppTerm.args.map(visitGrammarTerm(_, context)).flatten
+    val opAppTermP = opP match {
+      case Some(op) => pass.rewriteOpAppTerm(OpAppTerm(op, argsP), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, opAppTermP, opAppTerm.position)
+  }
+
+  def visitDefineAppTerm(defineAppTerm: DefineAppTerm, context: Scope) : Option[DefineAppTerm] = {
+    val idP = visitIdentifier(defineAppTerm.id, context)
+    val argsP = defineAppTerm.args.map(visitGrammarTerm(_, context)).flatten
+    val defineAppTermP = idP match {
+      case Some(id) => pass.rewriteDefineAppTerm(DefineAppTerm(id, argsP), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, defineAppTermP, defineAppTerm.position)
+  }
+
+  def visitLiteralTerm(litTerm: LiteralTerm, context: Scope) : Option[LiteralTerm] = {
+    val litP = visitLiteral(litTerm.lit, context)
+    val litTermP = litP match {
+      case Some(lit) => pass.rewriteLiteralTerm(LiteralTerm(lit.asInstanceOf[Literal]), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, litTermP, litTerm.position)
+  }
+
+  def visitSymbolTerm(symTerm: SymbolTerm, context: Scope) : Option[SymbolTerm] = {
+    val idP = visitIdentifier(symTerm.id, context)
+    val symTermP = idP match {
+      case Some(id) => pass.rewriteSymbolTerm(SymbolTerm(id), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, symTermP, symTerm.position)
+  }
+
+  def visitConstantTerm(constTerm: ConstantTerm, context: Scope) : Option[ConstantTerm] = {
+    val typP = visitType(constTerm.typ, context)
+    val constTermP = typP match {
+      case Some(typ) => pass.rewriteConstantTerm(ConstantTerm(typ), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, constTermP, constTerm.position)
+  }
+
+  def visitVariableTerm(varTerm: VariableTerm, context: Scope) : Option[VariableTerm] = {
+    val typP = visitType(varTerm.typ, context)
+    val varTermP = typP match {
+      case Some(typ) => pass.rewriteVariableTerm(VariableTerm(typ), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, varTermP, varTerm.position)
+  }
+
+  def visitGrammarTerm(grammarTerm: GrammarTerm, context: Scope) : Option[GrammarTerm] = {
+    val grammarTermP = grammarTerm match {
+      case funcAppTerm: FuncAppTerm => visitFuncAppTerm(funcAppTerm, context)
+      case opAppTerm: OpAppTerm => visitOpAppTerm(opAppTerm, context)
+      case defineAppTerm: DefineAppTerm => visitDefineAppTerm(defineAppTerm, context)
+      case litTerm: LiteralTerm => visitLiteralTerm(litTerm, context)
+      case symTerm: SymbolTerm => visitSymbolTerm(symTerm, context)
+      case constTerm: ConstantTerm => visitConstantTerm(constTerm, context)
+      case varTerm: VariableTerm => visitVariableTerm(varTerm, context)
+      case _ => throw new Utils.UnimplementedException("Grammar term visit unimplemented.")
+    }
+    return ASTNode.introducePos(setPosition, setFilename, grammarTermP, grammarTerm.position)
+  }
+
+  def visitNonterminal(nonTerm: NonTerminal, context: Scope) : Option[NonTerminal] = {
+    val contextP = context
+    val idP = visitIdentifier(nonTerm.id, context)
+    val typP = visitType(nonTerm.typ, context)
+    val termsP = nonTerm.terms.map(visitGrammarTerm(_, context)).flatten
+    val nonTermP = (idP, typP) match {
+      case (Some(id), Some(typ)) => pass.rewriteNonterminal(NonTerminal(id, typ, termsP), context)
+      case _ => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, nonTermP, nonTerm.position)
   }
 
   def visitModuleImport(moduleImport : ModuleImportDecl, context : Scope) : Option[ModuleImportDecl] = {
@@ -1310,11 +1406,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   }
 
   def visitGrammar(grammar: GrammarDecl, context: Scope) : Option[GrammarDecl] = {
-    val idOpt = visitIdentifier(grammar.id, context)
-    val sigOpt = visitFunctionSig(grammar.sig, context)
-    val nonterminalsP = visitNonterminals(grammar.nonterminals, context + grammar.sig)
+    val contextP = grammar.nonterminals.foldLeft(context)((acc, nt) => acc + nt)
+    val idOpt = visitIdentifier(grammar.id, contextP)
+    val sigOpt = visitFunctionSig(grammar.sig, contextP)
+    val nonterminalsP = grammar.nonterminals.map(visitNonterminal(_, contextP + grammar.sig)).flatten
     val grammarP = (idOpt, sigOpt) match {
-      case (Some(id), Some(sig)) => pass.rewriteGrammar(GrammarDecl(id, sig, nonterminalsP), context)
+      case (Some(id), Some(sig)) => pass.rewriteGrammar(GrammarDecl(id, sig, nonterminalsP), contextP)
       case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, grammarP, grammar.position)

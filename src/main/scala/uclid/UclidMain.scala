@@ -245,6 +245,7 @@ object UclidMain {
     // test flag is default false
     // checks if prime/old/history are used in the incorrect places
     if (!test) passManager.addPass(new VerificationExpressionChecker())
+    passManager.addPass(new PolymorphicGrammarTypeRewriter())
     // rewrites bitvector operators (except slice) to have a width and returns a "reified" operator
     // runs expression type checker pass again ? is this necessary
     // then replaces operators with operators from the polyOpMap

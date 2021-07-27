@@ -51,6 +51,10 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   var total   : List[String] = List.empty
   var out     : String = ""
 
+  var defineDecls : String = ""
+  type DefinesSet = MutableSet[DefineSymbol]
+  var addedDefines : DefinesSet = MutableSet.empty
+
   type SynthVarSet = MutableSet[SynthSymbol]
   var synthVariables : SynthVarSet = MutableSet.empty
 
@@ -79,6 +83,20 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     out += cmd
   }
 
+  def generateGrammarDeclaration(grammarSymbol: smt.GrammarSymbol): String = {
+    grammarSymbol.nts.foreach {
+      (nt) => nt.terms.foreach {
+        (trm) => {
+          trm.e match {
+            case DefineApplication(e, defDecl, args) => generateDefines(defDecl)
+            case _ => None
+          }
+        }
+      }
+    }
+    grammarSymbol.toString
+  }
+
   def generateSynthDeclaration(sym: SynthSymbol) = {
     val (typeName, newTypes) = generateDatatype(sym.typ)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
@@ -89,11 +107,30 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     var cmd = ""
 
     if (sygusSyntax) {
-      cmd = "(synth-fun %s (%s) %s)\n".format(sym, sig, typeName)
+      val grammar = sym.grammar.fold("")(generateGrammarDeclaration _)
+      cmd = "(synth-fun %s (%s) %s %s)\n".format(sym, sig, typeName, grammar)
     } else {
       cmd = "(synth-blocking-fun %s (%s) %s)\n".format(sym, sig, typeName)
     }
     out += cmd
+  }
+
+  def generateDefines(sym: DefineSymbol) = {
+    val (typeName, newTypes) = generateDatatype(sym.typ)
+    Utils.assert(newTypes.size == 0, "No new types are expected here.")
+    val inputTypes = generateInputDataTypes(sym.typ)
+    val inputNames = sym.symbolTyp.args.map( a => a._1.toString())
+    val sig =  (inputNames zip inputTypes).map(a => "(" + a._1 + " " + a._2 
+    + ")").mkString(" ")
+
+    var cmd : String = ""
+    if (sygusSyntax) {
+      if (!addedDefines.contains(sym))  
+      {
+        cmd = "(define-fun %s (%s) %s %s)\n".format(sym, sig, typeName, sym.expr)
+        defineDecls += cmd
+      }
+    }
   }
 
   /**
@@ -193,7 +230,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   override def toString() : String = {
     val aexp = "(or " + total.mkString("\t\n") + ")"
     val query = if (sygusSyntax) {
-      synthDeclCommands + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
+      defineDecls + synthDeclCommands + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
     } else {
       out + "(assert " + aexp +")\n(check-sat)\n"
     }
