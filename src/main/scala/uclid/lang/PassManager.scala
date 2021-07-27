@@ -65,19 +65,19 @@ class PassManager(name : => String) {
     val init : Option[Module] = Some(module)
     passes.foldLeft(init){
       (mod, pass) => {
+        val modName = if (mod.isDefined) mod.get.id.toString() else "None"
+        UclidMain.printVerbose(f"Running ${pass.passName} on module ${modName}")
         logger.debug("{} => running pass: {} on module: {}", 
-            name, pass.passName, (if (mod.isDefined) mod.get.id.toString() else "None"))
+            name, pass.passName, modName)
         val start = System.nanoTime()
         val res = mod.flatMap(pass.visit(_, context))
         val delta =  (System.nanoTime() - start) / 1000000.0
-        if(pass.outputNodeCount){
-          println(f"${pass.passName} took $delta%.1f ms")
-        }
+        UclidMain.printStats( f"${pass.passName} took $delta%.1f ms" )
         res.foreach { m =>
            if(pass.outputNodeCount)
           {
            val count = NodeCount(m)
-           println(s"nonequivalent AST nodes: ${count.nonequivalent} ; unique objects in AST ${count.unique}")
+           UclidMain.printVerbose(s"nonequivalent AST nodes: ${count.nonequivalent} ; unique objects in AST ${count.unique}")
           }
         }
         if(pass.outputNodeCount){

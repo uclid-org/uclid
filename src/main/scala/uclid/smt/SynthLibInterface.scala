@@ -181,7 +181,11 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
 
   override def checkSynth() : SolverResult = {
     val query = toString()
+    UclidMain.printStats(f"Starting solver")
+    val start = System.nanoTime()
     writeCommand(query)
+    val delta =  (System.nanoTime() - start) / 1000000.0
+    UclidMain.printStats(f"Solving took $delta%.1f ms")
     val ans = {
       readResponse() match {
         case Some(strP) =>
@@ -189,7 +193,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
           if (str.contains("unsat") || str.startsWith("(")) {
              SolverResult(Some(true), getModel(str))
           } else if (str.contains("sat") || str.contains("unknown")){
-            UclidMain.println(str);
+            UclidMain.printEssential(str);
             SolverResult(Some(false), None)
           } else {
             throw new Utils.AssertionError("Unexpected result from SMT solver: " + str.toString())
@@ -207,7 +211,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   }
 
   def getModel(str : String) : Option[Model] = {
-    UclidMain.println(str)
+    UclidMain.printEssential(str)
     None
   }
 

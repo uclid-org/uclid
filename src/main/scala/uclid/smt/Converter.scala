@@ -325,7 +325,7 @@ object Converter {
       case smt.FunctionApplication(f, args) =>
         f match {
           case smt.Symbol(id, _) =>
-            UclidMain.println("Function application of f == " + f.toString)
+            UclidMain.printVerbose("Function application of f == " + f.toString)
             lang.FuncApplication(lang.Identifier(id), toExprs(args))
           case _ =>
             throw new Utils.RuntimeError("Should never get here.")

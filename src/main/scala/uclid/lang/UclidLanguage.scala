@@ -1204,7 +1204,7 @@ case class ProcedureDecl(
     if(annotations.ids.contains(Identifier("noinline")))
     {
       if(ensures.size == 0)
-        UclidMain.println("Warning: noinlining procedure "+ id + " even though it has no ensures statement")
+        UclidMain.printBasic("Warning: noinlining procedure "+ id + " even though it has no ensures statement")
       if(annotations.ids.contains(Identifier("inline")))
         throw new Utils.RuntimeError("Procedure " + id + " has both inline and noinline annotations.")
       false;  

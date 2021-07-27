@@ -36,7 +36,7 @@ trait Hashable {
         case lista   : List[Any] => lista.foreach(e => computeMD5HashR(e))
         case hash    : Hashable => md5.update(hash.md5hashCode)
         case _ => {
-          UclidMain.println("Can't convert: " + a.getClass().toString())
+          UclidMain.printEssential("Can't convert: " + a.getClass().toString())
           throw new Utils.RuntimeError("Should not get here; Missing case!" +  a.getClass().toString())
         }
       }
@@ -65,7 +65,7 @@ trait Hashable {
         case tupleb : (Any, Any, Any) => computeHashR(computeHashR(computeHashR(acc, tupleb._1), tupleb._2), tupleb._3)
         case lista : List[Any] => lista.foldLeft(acc)((acc2, h) => computeHashR(acc2, h))
         case hash : Hashable => mix(acc, hash.hashCode())
-        case any : Any => { UclidMain.println("test" + any.toString()); mix(acc, any.hashCode()) }
+        case any : Any => { UclidMain.printVerbose("test" + any.toString()); mix(acc, any.hashCode()) }
       }
     }
     val endHash = args.foldLeft(start)((acc, a) => computeHashR(acc, a))
