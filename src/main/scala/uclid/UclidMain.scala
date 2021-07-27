@@ -92,7 +92,7 @@ object UclidMain {
 
       opt[String]('s', "solver").valueName("<Cmd>").action{ 
         (exec, c) => c.copy(smtSolver = exec.split(" ").toList) 
-      }.text("External SMT solver binary.")
+      }.text("Command line to invoke external SMT solver binary.")
 
       opt[String]('y', "synthesizer").valueName("<Cmd>").action{
         (exec, c) => c.copy(synthesizer = exec.split(" ").toList)
