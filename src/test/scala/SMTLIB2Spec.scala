@@ -50,7 +50,7 @@ object SMTLIB2Spec {
     UclidMain.clearStringOutput()
     val config = UclidMain.Config().copy(smtSolver=List("z3", "-smt2", "-in"))
     val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
-    val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
+    val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"))
     assert (mainModule.isDefined)
     val results = UclidMain.execute(mainModule.get, config)
     val outputString = UclidMain.stringOutput.toString()

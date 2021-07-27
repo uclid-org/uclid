@@ -54,6 +54,8 @@ import com.typesafe.scalalogging.Logger
 object UclidMain {
   val logger = Logger("uclid.UclidMain")
 
+  var mainVerbosity: Int = 1;
+
   def main(args: Array[String]) {
     parseOptions(args) match {
       case None =>
@@ -77,7 +79,11 @@ object UclidMain {
       modSetAnalysis: Boolean = false,
       ufToArray: Boolean = false,
       printStackTrace: Boolean = false,
-      verbose : Int = 0,
+      verbose : Int = 1, // verbosities: 
+      // 0: essential: print nothing but results and error messages
+      // 1: basic: current default behaviour, includes statuses
+      // 2: stats: includes statistics on time/which properties are being solved
+      // 3: print everything
       files : Seq[java.io.File] = Seq(),
       testFixedpoint: Boolean = false
   ) 
@@ -126,6 +132,10 @@ object UclidMain {
         (_, c) => c.copy(ufToArray = true)
       }.text("Enable conversion from Uninterpreted Functions to Arrays.")
 
+      opt[Int]('w', "verbosity").action {
+        ( x, c) => {c.copy(verbose = x)}
+      }.text("verbosity level (0-3)")
+
       help("help").text("prints this usage text")
 
       arg[java.io.File]("<file> ...").unbounded().required().action {
@@ -134,7 +144,9 @@ object UclidMain {
       
       // override def renderingMode = scopt.RenderingMode.OneColumn
     }
-    parser.parse(args, Config())
+    val config = parser.parse(args, Config())
+    mainVerbosity = config.getOrElse(Config()).verbose;
+    config
   }
 
   /** This version of 'main' does all the real work.
@@ -143,43 +155,43 @@ object UclidMain {
     try {
       val mainModuleName = Identifier(config.mainModuleName)
       val modules = compile(config, mainModuleName)
-      val mainModule = instantiate(config, modules, mainModuleName, true)
+      val mainModule = instantiate(config, modules, mainModuleName)
       mainModule match {
         case Some(m) => execute(m, config)
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
       }
-      UclidMain.println("Finished execution for module: %s.".format(mainModuleName.toString))
+      UclidMain.printBasic("Finished execution for module: %s.".format(mainModuleName.toString))
     }
     catch  {
       case (e : java.io.FileNotFoundException) =>
-        UclidMain.println("Error: " + e.getMessage() + ".")
+        UclidMain.printEssential("Error: " + e.getMessage() + ".")
         if(config.printStackTrace) { e.printStackTrace() }
         System.exit(1)
       case (p : Utils.ParserError) =>
-        UclidMain.println("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        UclidMain.printEssential("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
         if(config.printStackTrace) { p.printStackTrace() }
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
           (p) => {
-            UclidMain.println("Type error at %s: %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
+            UclidMain.printEssential("Type error at %s: %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
           }
         }
-        UclidMain.println("Parsing failed. %d errors found.".format(typeErrors.errors.size))
+        UclidMain.printEssential("Parsing failed. %d errors found.".format(typeErrors.errors.size))
         if(config.printStackTrace) { typeErrors.printStackTrace() }
         System.exit(1)
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
-            UclidMain.println("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString)
+            UclidMain.printEssential("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString)
           }
         }
-        UclidMain.println("Parsing failed. " + ps.errors.size.toString + " errors found.")
+        UclidMain.printEssential("Parsing failed. " + ps.errors.size.toString + " errors found.")
         if(config.printStackTrace) { ps.printStackTrace() }
         System.exit(1)
       case(a : Utils.AssertionError) =>
-        UclidMain.println("[Assertion Failure]: " + a.getMessage)
+        UclidMain.printEssential("[Assertion Failure]: " + a.getMessage)
         if(config.printStackTrace) { a.printStackTrace() }
         System.exit(2)
     }
@@ -290,6 +302,7 @@ object UclidMain {
   }  
   /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
   def compile(config: Config, mainModuleName : Identifier, test : Boolean = false): List[Module] = {
+    UclidMain.printVerbose("Compiling modules")
     type NameCountMap = Map[Identifier, Int]
     val srcFiles : Seq[java.io.File] = config.files
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
@@ -373,14 +386,12 @@ object UclidMain {
    * @param mainModuleName Name of main module.
    * @param verbose If this is true, we print the message describing the number of modules parsed and instantiated.
    */
-  def instantiate(config : Config, moduleList : List[Module], mainModuleName : Identifier, verbose : Boolean) : Option[Module] = {
+  def instantiate(config : Config, moduleList : List[Module], mainModuleName : Identifier) : Option[Module] = {
     if (moduleList.find(m => m.id == mainModuleName).isEmpty) {
       return None
     }
     val moduleListP = instantiateModules(config, moduleList, mainModuleName)
-    if (verbose) {
-      UclidMain.println("Successfully parsed %d and instantiated %d module(s).".format(moduleList.size, moduleListP.size))
-    }
+    UclidMain.printBasic("Successfully instantiated %d module(s).".format(moduleList.size, moduleListP.size))
     // return main module.
     moduleListP.find((m) => m.id == mainModuleName)
   }
@@ -389,6 +400,7 @@ object UclidMain {
    *
    */
   def execute(module : Module, config : Config) : List[CheckResult] = {
+    UclidMain.printVerbose("Begining execution")
     var symbolicSimulator = new SymbolicSimulator(module)
     var solverInterface = if (config.smtSolver.size > 0) {
       logger.debug("args: {}", config.smtSolver)
@@ -412,7 +424,29 @@ object UclidMain {
   def clearStringOutput() {
     stringOutput.clear()
   }
+
+
+  def printVerbose(str : String) {
+    if(mainVerbosity>=3)
+      println(str)
+  }
+
+  def printStats(str : String) {
+    if(mainVerbosity>=2)
+      println(str)
+  }
+
+  def printBasic(str : String) {
+    if(mainVerbosity>=1)
+      println(str)
+  }
+
+  def printEssential(str : String) {
+    println(str)
+  }
+
   def println(str : String) {
+
     if (stringOutputEnabled) {
       stringOutput ++= str
       stringOutput ++= "\n"

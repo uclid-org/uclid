@@ -437,7 +437,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     phrase(AssignmentModel)(tokens) match {
       case Success(model, _) => model
       case NoSuccess(msg, next) =>
-        println(next.pos)
+        UclidMain.printEssential(next.pos.toString)
         throw new Utils.RuntimeError("SExpr model parser error: %s.\nIn: %s".format(msg, text))
     }
   }

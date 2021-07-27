@@ -50,7 +50,7 @@ object SynthesisSpec {
     UclidMain.clearStringOutput()
     val config = UclidMain.Config().copy(synthesizer=List("cvc4_wait.sh"), sygusFormat = true)
     val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
-    val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
+    val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"))
     assert (mainModule.isDefined)
     val results = UclidMain.execute(mainModule.get, config)
     val outputString = UclidMain.stringOutput.toString()
@@ -112,7 +112,7 @@ class SynthesisSpec extends AnyFlatSpec {
       val filename = "./test/test-synthesis-grammar-4.ucl"
       val config = UclidMain.Config().copy(synthesizer=List("cvc4_wait.sh"), sygusFormat = true)
       val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
-      val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
+      val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"))
       assert (mainModule.isDefined)
       val results = UclidMain.execute(mainModule.get, config)
       assert(false)
@@ -127,7 +127,7 @@ class SynthesisSpec extends AnyFlatSpec {
       val filename = "./test/test-synthesis-grammar-5.ucl"
       val config = UclidMain.Config().copy(synthesizer=List("cvc4_wait.sh"), sygusFormat = true)
       val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
-      val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"), false)
+      val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"))
       assert (mainModule.isDefined)
       val results = UclidMain.execute(mainModule.get, config)
       assert(false)
