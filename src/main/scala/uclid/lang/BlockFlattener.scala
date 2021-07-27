@@ -92,6 +92,18 @@ class BlockVariableRenamerPass extends RewritePass {
     val funcP = FunctionDecl(func.id, sigP)
     Some(funcP)
   }
+
+  override def rewriteDefine(defDecl : DefineDecl, context : Scope) : Option[DefineDecl] = {
+    val varTuples = renameVarList(defDecl.sig.args, context)
+    val contextP = context + defDecl.sig
+    val rewriteMap = getRewriteMap(varTuples)
+    val rewriter = new ExprRewriter("BlockVariableRenamerPass:Define", rewriteMap)
+    val argsP = defDecl.sig.args.map(arg => (rewriter.rewriteExpr(arg._1, contextP).asInstanceOf[Identifier], arg._2))
+    val sigP = FunctionSig(argsP, defDecl.sig.retType)
+    val bodyP = rewriter.rewriteExpr(defDecl.expr, contextP)
+    val defP = DefineDecl(defDecl.id, sigP, bodyP) 
+    Some(defP)
+  }
 }
 
 object BlockVariableRenamer {

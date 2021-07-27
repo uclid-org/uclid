@@ -162,6 +162,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwControl = "control"
     lazy val KwForall = "forall"
     lazy val KwExists = "exists"
+    lazy val KwFiniteForall = "finite_forall"
+    lazy val KwFiniteExists = "finite_exists"
     lazy val KwDefault = "default"
     lazy val KwSynthesis = "synthesis"
     lazy val KwGrammar = "grammar"
@@ -177,6 +179,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwHyperInvariant = "hyperinvariant"
     lazy val KwHyperAxiom = "hyperaxiom"
     lazy val KwMacro = "macro"
+    lazy val KwGroup = "group"
     // lazy val TemporalOpGlobally = "G"
     // lazy val TemporalOpFinally = "F"
     // lazy val TemporalOpNext = "Next"
@@ -198,7 +201,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
       KwRecord, KwSkip, KwDefine, KwFunction, KwOracle, KwControl, KwInit,
       KwNext, KwLambda, KwModifies, KwProperty, KwDefineAxiom,
-      KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires,
+      KwForall, KwExists, KwFiniteForall, KwFiniteExists, KwGroup, KwDefault, KwSynthesis, KwGrammar, KwRequires,
       KwEnsures, KwInvariant, KwParameter, 
       KwHyperProperty, KwHyperInvariant, KwHyperAxiom, KwMacro)
 
@@ -311,6 +314,16 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
             }
           }
         } |
+      KwFiniteForall ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> Id) ~ ("::" ~> E1) ^^ {
+        case id ~ groupId ~ expr => {
+          OperatorApplication(FiniteForallOp(id, groupId), List(expr))
+        }
+      } |
+      KwFiniteExists ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> Id) ~ ("::" ~> E1) ^^ {
+        case id ~ groupId ~ expr => {
+          OperatorApplication(FiniteExistsOp(id, groupId), List(expr))
+        }
+      } |
       E3
 
     /** E3 = E4 OpEquiv E3 | E4  **/
@@ -412,12 +425,15 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val ArrayType : PackratParser[lang.ArrayType] = positioned {
       ("[") ~> Type ~ (rep ("," ~> Type) <~ "]") ~ Type ^^ { case t ~ ts ~ rt => lang.ArrayType(t :: ts, rt)}
     }
+    lazy val GroupType : PackratParser[lang.GroupType] = positioned {
+      KwGroup ~ "(" ~> Type <~ ")" ^^ { case t => lang.GroupType(t)}
+    }
     lazy val SynonymType : PackratParser[lang.SynonymType] = positioned ( Id ^^ { case id => lang.SynonymType(id) } )
     lazy val ExternalType : PackratParser[lang.ExternalType] = positioned {
       Id ~ ("." ~> Id) ^^ { case moduleId ~ typeId => lang.ExternalType(moduleId, typeId) }
     }
     lazy val Type : PackratParser[Type] = positioned {
-      MapType | ArrayType | EnumType | TupleType | RecordType | ExternalType | SynonymType | PrimitiveType
+      MapType | ArrayType | EnumType | TupleType | RecordType | ExternalType | SynonymType | PrimitiveType | GroupType
     }
 
     lazy val IdType : PackratParser[(Identifier,Type)] =
@@ -789,6 +805,15 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       }
     }
 
+    lazy val GroupDecl : PackratParser[lang.GroupDecl] = positioned {
+      KwGroup ~> Id ~ (":" ~> Type) ~ ("=" ~ "{" ~> CommaSeparatedExprList) <~ "}" ~ ";" ^^
+      {
+        case id ~ gType ~ gElems => {
+          lang.GroupDecl(id, lang.GroupType(gType), gElems)
+        }
+      }
+    }
+
     lazy val Decl: PackratParser[Decl] =
       positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl | OracleFuncDecl |
                   ModuleTypesImportDecl | ModuleFuncsImportDecl | ModuleConstsImportDecl |
@@ -796,7 +821,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstLitDecl | ConstDecl | ProcedureDecl |
                   InitDecl | NextDecl | SpecDecl | AxiomDecl |
-                  ModuleImportDecl | MacroDecl)
+                  ModuleImportDecl | MacroDecl | GroupDecl)
 
     // control commands.
     lazy val CmdParam : PackratParser[lang.CommandParams] = 

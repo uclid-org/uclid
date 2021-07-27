@@ -349,6 +349,8 @@ object UclidMain {
     passManager.addPass(new ModuleFlattener(mainModuleName))
     // gets rid of modules apart from main
     passManager.addPass(new ModuleEliminator(mainModuleName))
+    // Expands (grounds) finite_forall and finite_exists quantifiers
+    passManager.addPass(new FiniteQuantsExpander())
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
     passManager.addPass(new Optimizer())

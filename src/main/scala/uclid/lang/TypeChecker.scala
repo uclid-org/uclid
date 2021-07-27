@@ -102,6 +102,8 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
         MapType(inTypes.map(simplifyType(_, visited, m)), simplifyType(outType, visited, m))
       case ArrayType(inTypes, outType) =>
         ArrayType(inTypes.map(simplifyType(_, visited, m)), simplifyType(outType, visited, m))
+      case GroupType(gTyp) =>
+        GroupType(simplifyType(gTyp, visited, m))
       case _ =>
         typ
     }
@@ -137,6 +139,13 @@ class TypeSynonymRewriterPass extends RewritePass {
   override def rewriteType(typ : Type, ctx : Scope) : Option[Type] = {
     val result = typ match {
       case SynonymType(name) => typeSynonymFinderPass.typeDeclMap.get(name)
+      case GroupType(SynonymType(name)) =>
+        val realName = typeSynonymFinderPass.typeDeclMap.get(name)
+        if (realName.isDefined) {
+            Some(GroupType(realName.get))
+        } else {
+            Some(typ) //Undefined synonym types are checked for in validateSynonyms(..).
+        }
       case _ => Some(typ)
     }
     return result
@@ -397,7 +406,28 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         }
         case qOp : QuantifiedBooleanOperator => {
           checkTypeError(argTypes(0).isInstanceOf[BooleanType], "Operand to the quantifier '" + qOp.toString + "' must be boolean", opapp.pos, c.filename)
-          BooleanType()
+
+          def checkFiniteQuantTypes(id : (Identifier, Type), groupId : Identifier, isForall : Boolean) : Type = {
+            val typ = c.typeOf(groupId)
+            val idTyp = id._2
+            val quantTypeStr = if (isForall) "finite_forall" else "finite_exists"
+
+            checkTypeError(typ.isDefined && typ.get.isInstanceOf[GroupType], "%s must be over a group".format(quantTypeStr), opapp.pos, c.filename)
+
+            val innerTyp = typ.get.asInstanceOf[GroupType].typ
+
+            checkTypeError(idTyp == innerTyp,
+              "%s quantification variable %s has a different type than group type %s".format(quantTypeStr, idTyp, innerTyp), opapp.pos, c.filename)
+            BooleanType()
+          }
+
+          qOp match {
+            case FiniteForallOp(id, groupId) =>
+              checkFiniteQuantTypes(id, groupId, true)
+            case FiniteExistsOp(id, groupId) =>
+              checkFiniteQuantTypes(id, groupId, false)
+            case _ => BooleanType()
+          }
         }
         case boolOp : BooleanOperator => {
           boolOp match {

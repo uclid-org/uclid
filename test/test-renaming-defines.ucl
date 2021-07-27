@@ -1,0 +1,21 @@
+module main {
+    var aliased : [integer][integer]boolean;
+    define Aliased (i, j : integer) : boolean = (aliased[i][j]);
+    axiom aliased[0][1];
+
+    var j : integer;
+    var i : integer;
+
+    property test: Aliased(j,i);
+    init {
+        j=0;
+        i=1;
+    }
+    next {
+    }
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

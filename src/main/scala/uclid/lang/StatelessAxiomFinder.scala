@@ -67,13 +67,14 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
           case Scope.StateVar(_, _)    | Scope.InputVar(_, _)  |
                Scope.OutputVar(_, _)   | Scope.SharedVar(_, _) |
                Scope.FunctionArg(_, _) | Scope.Define(_, _, _) |
-               Scope.Instance(_)       =>
+               Scope.Instance(_)       | Scope.Group(_, _, _)       =>
              false
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)       |
                Scope.LambdaVar(_ , _)     | Scope.ForallVar(_, _)      |
                Scope.ExistsVar(_, _)      | Scope.EnumIdentifier(_, _) |
                Scope.OracleFunction(_,_,_) |
-               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) =>
+               Scope.ConstantLit(_, _)    | Scope.SynthesisFunction(_, _, _, _, _) |
+               Scope.GroupVar(_, _) =>
              true
           case Scope.ModuleDefinition(_)      | Scope.Grammar(_, _, _)          |
                Scope.TypeSynonym(_, _)        | Scope.Procedure(_, _)           |
@@ -131,7 +132,8 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
                Scope.Define(_, _, _)          | Scope.Grammar(_, _, _)          |
                Scope.ConstantLit(_, _)        | Scope.BlockVar(_, _)            |
                Scope.ForIndexVar(_ , _)       | Scope.SelectorField(_)          |
-               Scope.NonTerminal(_, _, _)     | Scope.Macro(_, _, _)           =>
+               Scope.NonTerminal(_, _, _)     | Scope.Macro(_, _, _)            |
+               Scope.Group(_, _, _)           | Scope.GroupVar(_, _)           =>
               id
           case Scope.ConstantVar(_, _)    | Scope.Function(_, _)  | Scope.OracleFunction(_,_,_) | Scope.SynthesisFunction(_, _, _, _, _) =>
              ExternalIdentifier(moduleName, id)

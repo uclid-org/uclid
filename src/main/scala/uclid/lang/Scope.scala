@@ -57,6 +57,7 @@ object Scope {
   case class ConstantLit(cId : Identifier, lit : NumericLit) extends ReadOnlyNamedExpression(cId, lit.typeOf)
   case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
+  case class Group(gId : Identifier, gTyp: Type, elems : List[Expr]) extends ReadOnlyNamedExpression(gId, gTyp)
   case class Grammar(gId : Identifier, gTyp : Type, nts : List[lang.NonTerminal]) extends ReadOnlyNamedExpression(gId, gTyp)
   case class NonTerminal(ntId: Identifier, ntTyp: Type, terms: List[GrammarTerm]) extends ReadOnlyNamedExpression(ntId, ntTyp)
   case class SynthesisFunction(fId : Identifier, fTyp: FunctionSig, gId: Option[Identifier], gargs: List[Identifier], conds : List[Expr]) extends ReadOnlyNamedExpression(fId, fTyp.typ)
@@ -76,6 +77,7 @@ object Scope {
   case class SelectorField(fId : Identifier) extends ReadOnlyNamedExpression(fId, UndefinedType())
   case class ForallVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class ExistsVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
+  case class GroupVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
   case class VerifResultVar(vId : Identifier, cmd : GenericProofCommand) extends ReadOnlyNamedExpression(vId, UndefinedType())
 
   type IdentifierMap = Map[Identifier, NamedExpression]
@@ -281,6 +283,7 @@ case class Scope (
              ModuleTypesImportDecl(_) | 
              ModuleDefinesImportDecl(_) | 
              InitDecl(_) | NextDecl(_)  => mapAcc
+        case GroupDecl(_, _, _) => mapAcc
       }
     }
     val m2 = m.decls.foldLeft(m1){(mapAcc, decl) =>
@@ -320,6 +323,7 @@ case class Scope (
         case SharedVarsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case ConstantLitDecl(_, lit) => Scope.addTypeToMap(mapAcc, lit.typeOf, Some(m))
         case ConstantsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case GroupDecl(id, typ, elems) => Scope.addToMap(mapAcc, Scope.Group(id, typ, elems))
         case ModuleImportDecl(_) | ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
              ModuleFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
              InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | 
@@ -373,6 +377,10 @@ case class Scope (
         Scope(
           vs.foldLeft(map)((mapAcc, arg) => Scope.addToMap(mapAcc, Scope.ExistsVar(arg._1, arg._2))),
           module, procedure, cmd, environment, Some(this))
+      case FiniteForallOp(id, groupId) =>
+          Scope(Scope.addToMap(map, Scope.GroupVar(id._1, id._2)), module, procedure, cmd, environment, Some(this))
+      case FiniteExistsOp(id, groupId) =>
+          Scope(Scope.addToMap(map, Scope.GroupVar(id._1, id._2)), module, procedure, cmd, environment, Some(this))
       case sel : SelectorOperator =>
         addSelectorField(sel.ident)
       case _ => this

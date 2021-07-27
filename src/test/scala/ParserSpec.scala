@@ -873,5 +873,19 @@ class ParserSpec extends AnyFlatSpec {
         assert (p.errors.exists(p => p._1.contains("Macro calls are not allowed in the next block")))
     }
   }
+  "test-group-parse-0.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "test-group-parse-1.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfigWithMSA("test/test-group-parse-1.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
 
 }

@@ -368,6 +368,15 @@ case class ExistsOp(vs: List[(Identifier, Type)], patterns: List[List[Expr]]) ex
   override def variables = vs
 }
 
+case class FiniteForallOp(id : (Identifier, Type), groupId : Identifier) extends QuantifiedBooleanOperator {
+  override def variables = List.empty
+  override def toString = QuantifiedBooleanOperator.toString("finite_forall", List.empty, List.empty)
+}
+case class FiniteExistsOp(id : (Identifier, Type), groupId : Identifier) extends QuantifiedBooleanOperator {
+  override def toString = QuantifiedBooleanOperator.toString("finite_exists", List.empty, List.empty)
+  override def variables = List.empty
+}
+
 // (In-)equality operators.
 sealed abstract class ComparisonOperator() extends Operator {
   override def fixity = Operator.INFIX
@@ -600,7 +609,7 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
         operands(0).toString + "." + i.toString
       case SelectFromInstance(f) =>
         operands(0).toString + "." + f.toString
-      case ForallOp(_, _) | ExistsOp(_, _) =>
+      case ForallOp(_, _) | ExistsOp(_, _) | FiniteForallOp(_, _) | FiniteExistsOp(_, _) =>
         "(" + op.toString + operands(0).toString + ")"
       case _ =>
         if (op.fixity == Operator.INFIX) {
@@ -855,6 +864,11 @@ case class SynonymType(id: Identifier) extends Type {
     case _ => false
   }
 }
+
+case class GroupType(typ : Type) extends Type {
+  override def toString = "group (" + typ.toString + ")"
+}
+
 case class ExternalType(moduleId : Identifier, typeId : Identifier) extends Type {
   override def toString = moduleId.toString + "." + typeId.toString
 }
@@ -1269,6 +1283,10 @@ case class MacroDecl(id: Identifier, sig: FunctionSig, body: Statement) extends 
 case class ModuleDefinesImportDecl(id: Identifier) extends Decl {
   override def toString = "define * = $s.*; // %s".format(id.toString)
   override def declNames = List.empty
+}
+case class GroupDecl(id: Identifier, typ : GroupType, members: List[Expr]) extends Decl {
+  override def toString = "define %s : %s = %s;".format(id.toString, typ.toString, members.toString)
+  override def declNames = List(id)
 }
 
 sealed abstract class GrammarTerm extends ASTNode
