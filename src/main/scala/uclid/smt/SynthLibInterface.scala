@@ -193,7 +193,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
           if (str.contains("unsat") || str.startsWith("(")) {
              SolverResult(Some(true), getModel(str))
           } else if (str.contains("sat") || str.contains("unknown")){
-            UclidMain.printEssential(str);
+            UclidMain.printResult(str);
             SolverResult(Some(false), None)
           } else {
             throw new Utils.AssertionError("Unexpected result from SMT solver: " + str.toString())
@@ -211,7 +211,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   }
 
   def getModel(str : String) : Option[Model] = {
-    UclidMain.printEssential(str)
+    UclidMain.printStatus(str)
     None
   }
 

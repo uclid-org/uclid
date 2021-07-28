@@ -134,7 +134,7 @@ object UclidMain {
 
       opt[Int]('w', "verbosity").action {
         ( x, c) => {c.copy(verbose = x)}
-      }.text("verbosity level (0-3)")
+      }.text("verbosity level (0-4)")
 
       help("help").text("prints this usage text")
 
@@ -161,37 +161,37 @@ object UclidMain {
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
       }
-      UclidMain.printBasic("Finished execution for module: %s.".format(mainModuleName.toString))
+      UclidMain.printStatus("Finished execution for module: %s.".format(mainModuleName.toString))
     }
     catch  {
       case (e : java.io.FileNotFoundException) =>
-        UclidMain.printEssential("Error: " + e.getMessage() + ".")
+        UclidMain.printError("Error: " + e.getMessage() + ".")
         if(config.printStackTrace) { e.printStackTrace() }
         System.exit(1)
       case (p : Utils.ParserError) =>
-        UclidMain.printEssential("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        UclidMain.printError("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
         if(config.printStackTrace) { p.printStackTrace() }
         System.exit(1)
       case (typeErrors : Utils.TypeErrorList) =>
         typeErrors.errors.foreach {
           (p) => {
-            UclidMain.printEssential("Type error at %s: %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
+            UclidMain.printError("Type error at %s: %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
           }
         }
-        UclidMain.printEssential("Parsing failed. %d errors found.".format(typeErrors.errors.size))
+        UclidMain.printError("Parsing failed. %d errors found.".format(typeErrors.errors.size))
         if(config.printStackTrace) { typeErrors.printStackTrace() }
         System.exit(1)
       case (ps : Utils.ParserErrorList) =>
         ps.errors.foreach {
           (err) => {
-            UclidMain.printEssential("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString)
+            UclidMain.printError("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString)
           }
         }
-        UclidMain.printEssential("Parsing failed. " + ps.errors.size.toString + " errors found.")
+        UclidMain.printError("Parsing failed. " + ps.errors.size.toString + " errors found.")
         if(config.printStackTrace) { ps.printStackTrace() }
         System.exit(1)
       case(a : Utils.AssertionError) =>
-        UclidMain.printEssential("[Assertion Failure]: " + a.getMessage)
+        UclidMain.printError("[Assertion Failure]: " + a.getMessage)
         if(config.printStackTrace) { a.printStackTrace() }
         System.exit(2)
     }
@@ -391,7 +391,7 @@ object UclidMain {
       return None
     }
     val moduleListP = instantiateModules(config, moduleList, mainModuleName)
-    UclidMain.printBasic("Successfully instantiated %d module(s).".format(moduleList.size, moduleListP.size))
+    UclidMain.printStatus("Successfully instantiated %d module(s).".format(moduleList.size, moduleListP.size))
     // return main module.
     moduleListP.find((m) => m.id == mainModuleName)
   }
@@ -427,6 +427,11 @@ object UclidMain {
 
 
   def printVerbose(str : String) {
+    if(mainVerbosity>=4)
+      println(str)
+  }
+
+  def printDetailedStats(str : String) {
     if(mainVerbosity>=3)
       println(str)
   }
@@ -436,12 +441,17 @@ object UclidMain {
       println(str)
   }
 
-  def printBasic(str : String) {
+
+  def printStatus(str : String) {
     if(mainVerbosity>=1)
       println(str)
   }
 
-  def printEssential(str : String) {
+  def printResult(str : String) {
+    println(str)
+  }
+
+  def printError(str : String) {
     println(str)
   }
 
