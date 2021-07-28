@@ -1331,7 +1331,7 @@ class SymbolicSimulator (module : Module) {
   }
 
   def printCEX(res : CheckResult, exprs : List[(Expr, String)]) {
-    UclidMain.printResult("CEX for %s".format(res.assert.toString, res.assert.pos.toString))
+    UclidMain.printStatus("CEX for %s".format(res.assert.toString, res.assert.pos.toString))
     val scope = res.assert.context
     lazy val instVarMap = module.getAnnotation[InstanceVarMapAnnotation]().get
 
@@ -1357,14 +1357,14 @@ class SymbolicSimulator (module : Module) {
     Utils.assert(simTable.size >= 1, "Must have at least one trace")
     val lastFrame = res.assert.iter
     (0 to lastFrame).foreach{ case (i) => {
-      UclidMain.printResult("=================================")
-      UclidMain.printResult("Step #" + i.toString)
+      UclidMain.printStatus("=================================")
+      UclidMain.printStatus("Step #" + i.toString)
       try{
           printFrame(simTable, i, model, exprsToPrint, scope)
       }  catch{
             case _: Throwable => UclidMain.printError("error: unable to parse counterexample frame")
       }
-      UclidMain.printResult("=================================")
+      UclidMain.printStatus("=================================")
     }}
   }
 
@@ -1373,10 +1373,10 @@ class SymbolicSimulator (module : Module) {
       try {
         val exprs = simTable.map(ft => m.evalAsString(evaluate(e._1, ft(frameNumber), ft, frameNumber, scope)))
         val strings = Utils.join(exprs.map(_.toString()), ", ")
-        UclidMain.printResult("  " + e._2 + " : " + strings)
+        UclidMain.printStatus("  " + e._2 + " : " + strings)
       } catch {
         case excp : Utils.UnknownIdentifierException =>
-          UclidMain.printResult("  " + e.toString + " : <UNDEF> ")
+          UclidMain.printStatus("  " + e.toString + " : <UNDEF> ")
       }
     }}
   }
