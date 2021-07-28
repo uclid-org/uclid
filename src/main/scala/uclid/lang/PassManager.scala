@@ -72,7 +72,7 @@ class PassManager(name : => String) {
         val start = System.nanoTime()
         val res = mod.flatMap(pass.visit(_, context))
         val delta =  (System.nanoTime() - start) / 1000000.0
-        UclidMain.printStats( f"${pass.passName} took $delta%.1f ms" )
+        UclidMain.printDetailedStats( f"${pass.passName} took $delta%.1f ms" )
         res.foreach { m =>
            if(pass.outputNodeCount)
           {

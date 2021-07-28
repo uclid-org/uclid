@@ -340,7 +340,7 @@ class SymbolicSimulator (module : Module) {
             printResults(proofResults, cmd.argObj, config)
           } 
           case "print" =>
-            UclidMain.printEssential(cmd.args(0)._1.asInstanceOf[StringLit].value)
+            UclidMain.printStatus(cmd.args(0)._1.asInstanceOf[StringLit].value)
           case "print_results" =>
             // do nothing because we printed results when we checked
             // dumpResults("print_results", defaultLog)
@@ -350,7 +350,7 @@ class SymbolicSimulator (module : Module) {
           case "dump_cex_vcds" =>
             dumpCEXVCDFiles(proofResults)
           case "print_module" =>
-            UclidMain.printEssential(module.toString)
+            UclidMain.printStatus(module.toString)
           case "set_solver_option" =>
             val option = cmd.args(0)._1.asInstanceOf[lang.StringLit].value
             val value : smt.Context.SolverOption = cmd.args(1)._1 match {
@@ -761,7 +761,7 @@ class SymbolicSimulator (module : Module) {
     symbolTable = symTabStep
     val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
     val results = assertionTree.verify(solver, needModel)
-    UclidMain.printEssential("The results are: " + results)
+    UclidMain.printResult("The results are: " + results)
   }
 
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
@@ -1283,26 +1283,26 @@ class SymbolicSimulator (module : Module) {
 
     if(!config.smtFileGeneration.isEmpty)
     {
-      UclidMain.printEssential("Printed SMTlib file(s) for %d assertions".format(undetCount))
+      UclidMain.printStatus("Printed SMTlib file(s) for %d assertions".format(undetCount))
       return
     }
 
     Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
-    UclidMain.printEssential("%d assertions passed.".format(passCount))
-    UclidMain.printEssential("%d assertions failed.".format(failCount))
-    UclidMain.printEssential("%d assertions indeterminate.".format(undetCount))
+    UclidMain.printResult("%d assertions passed.".format(passCount))
+    UclidMain.printResult("%d assertions failed.".format(failCount))
+    UclidMain.printResult("%d assertions indeterminate.".format(undetCount))
 
     if (config.verbose > 0) {
       assertionResults.foreach{ (p) =>
         if (p.result.isTrue) {
-          UclidMain.printBasic("  PASSED -> " + p.assert.toString)
+          UclidMain.printStatus("  PASSED -> " + p.assert.toString)
         }
       }
     }
     if (failCount > 0) {
       assertionResults.foreach{ (p) =>
         if (p.result.isFalse) {
-          UclidMain.printBasic("  FAILED -> " + p.assert.toString)
+          UclidMain.printStatus("  FAILED -> " + p.assert.toString)
           defaultLog.debug("FAILED EXPR -> " + p.assert.expr.toString())
         }
       }
@@ -1310,7 +1310,7 @@ class SymbolicSimulator (module : Module) {
     if (undetCount > 0) {
       assertionResults.foreach{ (p) =>
         if (p.result.isUndefined) {
-          UclidMain.printBasic("  UNDEF -> " + p.assert.toString)
+          UclidMain.printStatus("  UNDEF -> " + p.assert.toString)
         }
       }
     }
@@ -1331,7 +1331,7 @@ class SymbolicSimulator (module : Module) {
   }
 
   def printCEX(res : CheckResult, exprs : List[(Expr, String)]) {
-    UclidMain.printEssential("CEX for %s".format(res.assert.toString, res.assert.pos.toString))
+    UclidMain.printResult("CEX for %s".format(res.assert.toString, res.assert.pos.toString))
     val scope = res.assert.context
     lazy val instVarMap = module.getAnnotation[InstanceVarMapAnnotation]().get
 
@@ -1357,14 +1357,14 @@ class SymbolicSimulator (module : Module) {
     Utils.assert(simTable.size >= 1, "Must have at least one trace")
     val lastFrame = res.assert.iter
     (0 to lastFrame).foreach{ case (i) => {
-      UclidMain.printEssential("=================================")
-      UclidMain.printEssential("Step #" + i.toString)
+      UclidMain.printResult("=================================")
+      UclidMain.printResult("Step #" + i.toString)
       try{
           printFrame(simTable, i, model, exprsToPrint, scope)
       }  catch{
-            case _: Throwable => UclidMain.printEssential("error: unable to parse counterexample frame")
+            case _: Throwable => UclidMain.printError("error: unable to parse counterexample frame")
       }
-      UclidMain.printEssential("=================================")
+      UclidMain.printResult("=================================")
     }}
   }
 
@@ -1373,10 +1373,10 @@ class SymbolicSimulator (module : Module) {
       try {
         val exprs = simTable.map(ft => m.evalAsString(evaluate(e._1, ft(frameNumber), ft, frameNumber, scope)))
         val strings = Utils.join(exprs.map(_.toString()), ", ")
-        UclidMain.printEssential("  " + e._2 + " : " + strings)
+        UclidMain.printResult("  " + e._2 + " : " + strings)
       } catch {
         case excp : Utils.UnknownIdentifierException =>
-          UclidMain.printEssential("  " + e.toString + " : <UNDEF> ")
+          UclidMain.printResult("  " + e.toString + " : <UNDEF> ")
       }
     }}
   }
@@ -1442,7 +1442,7 @@ class SymbolicSimulator (module : Module) {
         vcd.wireChanged(e._2, value)
       } catch {
         case excp : Utils.UnknownIdentifierException =>
-          UclidMain.printEssential("  " + e.toString + " : <UNDEF> ")
+          UclidMain.printResult("  " + e.toString + " : <UNDEF> ")
       }
     }}
   }

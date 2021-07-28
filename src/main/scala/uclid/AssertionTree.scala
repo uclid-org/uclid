@@ -170,11 +170,15 @@ class AssertionTree {
           smt.OperatorApplication(smt.ConjunctionOp, List(pcExpr, assertExpr))
         }
         if (mode.isAssert) {
+          val start = System.nanoTime()
+          UclidMain.printStats(f"Starting solver on assertion")
           solver.push()
           solver.assert(checkExpr)
           solver.curAssertName = e.name
           solver.curAssertLabel = e.label
           val sat = solver.check(getModel)
+          val delta =  (System.nanoTime() - start) / 1000000.0
+          UclidMain.printStats(f"Solver finished in $delta%.1f ms")
           val result = sat.result match {
             case Some(true)  => smt.SolverResult(Some(false), sat.model)
             case Some(false) => smt.SolverResult(Some(true), sat.model)

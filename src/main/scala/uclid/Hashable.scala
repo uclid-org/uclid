@@ -36,7 +36,7 @@ trait Hashable {
         case lista   : List[Any] => lista.foreach(e => computeMD5HashR(e))
         case hash    : Hashable => md5.update(hash.md5hashCode)
         case _ => {
-          UclidMain.printEssential("Can't convert: " + a.getClass().toString())
+          UclidMain.printError("Can't convert: " + a.getClass().toString())
           throw new Utils.RuntimeError("Should not get here; Missing case!" +  a.getClass().toString())
         }
       }
