@@ -473,7 +473,7 @@ object UclidMain {
   }
 
   def assignMacro(module : Module, macroId : Identifier, newMacroBody : BlockStmt) : Module = {
-    UclidMain.println("Setting macro '%s' to %s".format(macroId.toString, newMacroBody.toString))
+    UclidMain.printStatus("Setting macro '%s' to %s".format(macroId.toString, newMacroBody.toString))
     val passManager = new PassManager("assign_macro")
     passManager.addPass(new MacroReplacer(macroId, newMacroBody))
     passManager.run(List(module))(0)

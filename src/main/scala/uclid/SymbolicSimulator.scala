@@ -362,9 +362,9 @@ class SymbolicSimulator (module : Module) {
             }
             solver.addOption(option, value)
           case "assign_macro" =>
-            UclidMain.println("This will modify a macro")
-            UclidMain.println(cmd.args(0).toString())
-            UclidMain.println(cmd.macroBody.toString())
+            UclidMain.printStatus("This will modify a macro")
+            UclidMain.printStatus(cmd.args(0).toString())
+            UclidMain.printStatus(cmd.macroBody.toString())
           case _ =>
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }
