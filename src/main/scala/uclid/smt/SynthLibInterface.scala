@@ -234,7 +234,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   override def toString() : String = {
     val aexp = "(or " + total.mkString("\t\n") + ")"
     val query = if (sygusSyntax) {
-      defineDecls + synthDeclCommands + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
+      synthDeclCommands + "\n" + defineDecls + "\n" + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
     } else {
       out + "(assert " + aexp +")\n(check-sat)\n"
     }
