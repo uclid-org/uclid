@@ -1,0 +1,8 @@
+#
+# These owners will be the default owners for everything in the repo,
+# unless a later match takes precedence
+*       @polgreen
+
+/oracles/ @polgreen
+/scripts/SMT-LIB-clone.sh @d0cd
+
