@@ -404,7 +404,12 @@ object Converter {
       val typeMap = langDefineDecl.toMap
       typeMap.get(id) match {
         case Some(t) => smt.Symbol(id.name, typeToSMT(t))
-        case None => throw new Utils.RuntimeError("Id not found in args for DefineDecl: for id " + id.name + " for DefineDecl " + defdecl.dId.name)
+        case None => 
+          val smtType = scope.typeOf(id) match {
+            case Some(t) => smt.Converter.typeToSMT(t)
+            case None => throw new Utils.RuntimeError("Id not found in args for DefineDecl: for id " + id.name + " for DefineDecl " + defdecl.dId.name)
+          }
+          smt.Symbol(id.name, smtType)
       }
     }
     smt.DefineSymbol(defdecl.defDecl.id.name, scope.get(defdecl.dId).get.asInstanceOf[lang.Scope.Define].defDecl.sig, exprToSMT(defdecl.defDecl.expr, declIdToSMT, scope))

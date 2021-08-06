@@ -1,0 +1,25 @@
+// This test should pass
+module main {
+
+    type I = enum {a, b, c};
+    type J = record { valid : boolean, value : bv8 };
+    
+    define test(i : I) : boolean = (i == a);
+    
+    grammar synth_grammar (i : I) : boolean = {
+        (cond : boolean) ::= test(i);
+    }
+
+    synthesis function choose (i : I) : boolean
+        grammar synth_grammar(i);
+    
+    init {}
+    next {}
+
+    property always_positive: choose(a) && choose(b);
+
+    control {
+        v = unroll(0);
+        check;
+    }
+}

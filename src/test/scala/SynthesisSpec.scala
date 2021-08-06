@@ -137,10 +137,13 @@ class SynthesisSpec extends AnyFlatSpec {
         assert (r.getMessage().contains("SyGuS grammar not found"));
     }
   }
-  "test-synthesis-grammar-6.ucl" should "verify all assertions." in {
+  "test-synthesis-grammar-6.ucl" should "synthesize a solution." in {
     SynthesisSpec.expectedFails("./test/test-synthesis-grammar-6.ucl", 0)
   }
-  "test-synthesis-grammar-7.ucl" should "verify all assertions." in {
+  "test-synthesis-grammar-7.ucl" should "synthesize a solution." in {
     SynthesisSpec.expectedFails("./test/test-synthesis-grammar-7.ucl", 0)
+  }
+  "test-synthesis-grammar-8.ucl" should "return unknown." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-grammar-8.ucl", 0)
   }
 }
