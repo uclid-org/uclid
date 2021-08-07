@@ -212,7 +212,7 @@ class SymbolicSimulator (module : Module) {
             assertionTree = new AssertionTree()
             proofResults = List.empty
             dumpResults("clear_context", defaultLog)
-          case "unroll" =>
+          case "unroll" | "bmc_noLTL" =>
             assertionTree.startVerificationScope()
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString
@@ -220,13 +220,12 @@ class SymbolicSimulator (module : Module) {
             }
             // get_init_lambda(false, context, "some")
             val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            initialize(false, true, false, context, label, createNoLTLFilter(properties), createNoLTLFilter(properties))
+            val noLTLpropertyFilter = (id : Identifier, decorators : List[ExprDecorator]) => noLTLFilter(id, decorators, properties)
+            initialize(false, true, false, context, label, noLTLpropertyFilter, noLTLpropertyFilter)
             symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, 
-                            createNoLTLFilter(properties), createNoLTLFilter(properties))
+                            noLTLpropertyFilter, noLTLpropertyFilter)
             val delta =  (System.nanoTime() - start) / 1000000.0
-             UclidMain.printStats(f"symbolic simulation for unrolling took $delta%.1f ms")
-            // symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, 
-            //                         context, label, createNoLTLFilter(properties), createNoLTLFilter(properties), solver)
+             UclidMain.printStats(f"Symbolic simulation for unrolling on non-LTL properties took $delta%.1f ms")
           case "horn" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString
@@ -235,7 +234,7 @@ class SymbolicSimulator (module : Module) {
             val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
             runHornSolver(context, label, createNoLTLFilter(properties), createNoLTLFilter(properties))
             val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"symbolic simulation for horn solver construction took $delta%.1f ms")
+            UclidMain.printStats(f"Symbolic simulation for horn solver construction took $delta%.1f ms")
           case "lazysc" =>
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString
@@ -247,19 +246,41 @@ class SymbolicSimulator (module : Module) {
             val propertyFilter = createNoLTLFilter(properties)
             runLazySC(lz, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, propertyFilter, propertyFilter, solver)
             val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"symbolic simulation for lazySC took $delta%.1f ms")
+            UclidMain.printStats(f"Symbolic simulation for lazySC took $delta%.1f ms")
           case "bmc" =>
+          // do the LTL properties
             assertionTree.startVerificationScope()
             val label : String = cmd.resultVar match {
               case Some(l) => l.toString()
               case None => "bmc"
             }
+            val LTLproperties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
+            val propertyFilter = (id : Identifier, decorators : List[ExprDecorator]) => LTLFilter(id, decorators, LTLproperties)
+            initialize(false, true, false, context, label, propertyFilter, propertyFilter)
+            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, propertyFilter, propertyFilter)
+            val deltaLTL =  (System.nanoTime() - start) / 1000000.0
+            
             val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            val propertyFilter = (id : Identifier, decorators : List[ExprDecorator]) => LTLFilter(id, decorators, properties)
+            val noLTLpropertyFilter = (id : Identifier, decorators : List[ExprDecorator]) => noLTLFilter(id, decorators, properties)
+            initialize(false, true, false, context, label, noLTLpropertyFilter, noLTLpropertyFilter)
+            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, 
+                            noLTLpropertyFilter, noLTLpropertyFilter)
+            val delta =  (System.nanoTime() - start) / 1000000.0
+            UclidMain.printStats(f"Symbolic simulation for bmc took $delta%.1f ms")
+          case "bmc_LTL" =>
+          // do the LTL properties
+            assertionTree.startVerificationScope()
+            val label : String = cmd.resultVar match {
+              case Some(l) => l.toString()
+              case None => "bmc"
+            }
+            val LTLproperties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
+            val propertyFilter = (id : Identifier, decorators : List[ExprDecorator]) => LTLFilter(id, decorators, LTLproperties)
             initialize(false, true, false, context, label, propertyFilter, propertyFilter)
             symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, propertyFilter, propertyFilter)
             val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"symbolic simulation for BMC took $delta%.1f ms")
+            UclidMain.printStats(f"Symbolic simulation for bmc took $delta%.1f ms")
+
           case "induction" =>
             assertionTree.startVerificationScope()
             val labelBase : String = cmd.resultVar match {
@@ -306,7 +327,7 @@ class SymbolicSimulator (module : Module) {
             // now are asserting that the assertion holds by pass true, false to symbolicSimulate.
             symbolicSimulate(k-1, 1, true,  false, context, labelStep, assumptionFilter, propertyFilter)
             val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"symbolic simulation for induction took $delta%.1f ms")
+            UclidMain.printStats(f"Symbolic simulation for induction took $delta%.1f ms")
             // go back to original state.
             resetState()
           case "verify" =>
@@ -318,7 +339,7 @@ class SymbolicSimulator (module : Module) {
             }
             verifyProcedure(proc, label)
             val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"symbolic simulation for verify took $delta%.1f ms")
+            UclidMain.printStats(f"Symbolic simulation for verify took $delta%.1f ms")
           case "check" => {
             val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
             lazySC match {
@@ -1685,6 +1706,10 @@ class SymbolicSimulator (module : Module) {
             prop.name, label, simTbl.map(ft => ft.clone()), scope, frameNumber, smt.BooleanLit(true),
             evaluate(prop.expr, symbolTable, frameTbl, frameNumber, scope), prop.params, prop.expr.position)
         addAssert(property)
+      }
+      else
+      {
+        UclidMain.printWarning("Warning: ignoring property " + prop.name)
       }
     })
   }

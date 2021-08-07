@@ -8,7 +8,7 @@ module main {
 	invariant z: (bv_a_right_shift(1bv8, a) != bv_l_right_shift(1bv8, a));
 
 	control {
-		unroll(8);
+		bmc(8);
 		check;
 		print_results;
 	}

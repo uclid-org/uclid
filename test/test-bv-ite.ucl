@@ -24,7 +24,7 @@ module main
   invariant[LTL] s_eq_n_plus_1 : G(s == (n+1bv8));
 
   control {
-    bmc(25);
+    bmc_LTL(25);
     check;
     print_results;
   }

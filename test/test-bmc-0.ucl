@@ -8,8 +8,9 @@ module main
     n' = n + 1;
   }
   invariant prop_eq: n != 0;
+
   control {
-    v = unroll(5);
+    v = bmc(5);
     check;
     print_results;
     v.print_cex(n);
