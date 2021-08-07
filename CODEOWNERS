@@ -36,8 +36,8 @@
 /src/main/scala/uclid/UclidLexical.scala @FedericoAureliano @ymanerka @kcheang
 
 #uclid language/main data structures
-/src/main/scala/uclid/UclidLanguage.scala @adwait
-/src/main/scala/uclid/AssertionTree.scala @adwait
+/src/main/scala/uclid/UclidLanguage.scala @adwait @polgreen
+/src/main/scala/uclid/AssertionTree.scala @adwait @polgreen
 
 
 # Uclid main work doing things
