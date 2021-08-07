@@ -31,9 +31,9 @@
 /src/main/scala/uclid/smt/SyGuSIF2Language.scala  @adwait
 
 #parsers  Federico, Yatin, Kevin
-/src/main/scala/uclid/smt/SExprParser.scala @FedericoAureliano @ymanerka @kcheang
-/src/main/scala/uclid/UclidParser.scala @FedericoAureliano @ymanerka @kcheang
-/src/main/scala/uclid/UclidLexical.scala @FedericoAureliano @ymanerka @kcheang
+/src/main/scala/uclid/smt/SExprParser.scala @FedericoAureliano @ymanerka @kkmc
+/src/main/scala/uclid/UclidParser.scala @FedericoAureliano @ymanerka @kkmc
+/src/main/scala/uclid/UclidLexical.scala @FedericoAureliano @ymanerka @kkmc
 
 #uclid language/main data structures
 /src/main/scala/uclid/UclidLanguage.scala @adwait @polgreen
@@ -71,7 +71,7 @@ CaseEliminator.scala
 ComputeInstanceTypes.scala
 ConstantLitRewriter.scala
 ControlCommandChecker.scala
-EnumTypeRenamer.scala @kcheang
+EnumTypeRenamer.scala @kkmc
 ExternalSymbolAnalysis.scala
 ExternalTypeRewriter.scala
 FiniteQuantsExpander.scala @ymanerka
@@ -79,7 +79,7 @@ FuncExprRewriter.scala
 LoopUnroller.scala
 MacroChecker.scala @polgreen
 MacroRewriter.scala @polgreen
-ModSetAnalysis.scala @kcheang
+ModSetAnalysis.scala @kkmc
 ModularProductProgram.scala
 ModuleCanonicalizer.scala
 ModuleCleaner.scala
@@ -87,7 +87,7 @@ ModuleConstantsImportRewriter.scala
 ModuleDefinesImportCollector.scala
 ModuleFlattener.scala @ymanerka
 ModuleFunctionsImportRewriter.scala
-ModuleImportRewriter.scala @kcheang
+ModuleImportRewriter.scala @kkmc
 ModuleInstanceChecker.scala
 ModuleTypeChecker.scala
 ModuleTypeRewriter.scala
@@ -95,9 +95,9 @@ ModuleTypesImportCollector.scala
 PrimedAssignmentChecker.scala
 PrimedHistoryRewriter.scala
 PrimedVariableEliminator.scala
-ProcedureChecker.scala @kcheang
-ProcedureInliner.scala  @kcheang @d0cd
-ProcedureModifiesRewriter.scala @kcheang @d0cd
+ProcedureChecker.scala @kkmc
+ProcedureInliner.scala  @kkmc @d0cd
+ProcedureModifiesRewriter.scala @kkmc @d0cd
 RedundantAssignmentEliminator.scala
 RewriteDefines.scala @ymanerka
 RewriteFreshLiterals.scala
@@ -107,7 +107,7 @@ StatelessAxiomFinder.scala
 StatementScheduler.scala
 TaintPass.scala 
 TypeChecker.scala
-UninterpretedFunctionToArrayRenamer.scala @kcheang
+UninterpretedFunctionToArrayRenamer.scala @kkmc
 VerificationExpressionChecker.scala
 WhileLoopRewriter.scala
 
