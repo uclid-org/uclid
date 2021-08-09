@@ -263,8 +263,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }.toList.flatten
   }
 
-  def createNextInputAssignments(varMap : VarMap) : List[Statement] = { List() }
-
   val (varMap, externalSymbolMap) = createVarMap()
   val targetInstVarMap = targetModule.getAnnotation[InstanceVarMapAnnotation].get.iMap
 
@@ -276,7 +274,6 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
 
   val newVariables = createNewVariables(varMap)
   val newInputs = createNewInputs(varMap)
-  val newInputAssignments = createNextInputAssignments(varMap)
   val newAxioms = newModule.axioms.map {
     ax => {
       val idP = ax.id.flatMap(axId => Some(NameProvider.get(axId.toString() + "_axiom")))
@@ -359,7 +356,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // add initialization for the instance.
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
     newModule.init match {
-      case Some(initD) => Some(InitDecl(BlockStmt(List.empty, newInputAssignments ++ List(initD.body) ++ List(init.body))))
+      case Some(initD) => Some(InitDecl(BlockStmt(List.empty, List(initD.body) ++ List(init.body))))
       case None => Some(init)
     }
   }
@@ -384,7 +381,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // rewrite module.
   override def rewriteModuleCall(modCall : ModuleCallStmt, context : Scope) : Option[Statement] = {
     if (modCall.id == inst.instanceId) {
-      Some(BlockStmt(List.empty, newInputAssignments ++ newNextStatements))
+      Some(BlockStmt(List.empty, newNextStatements))
     } else {
       Some(modCall)
     }
