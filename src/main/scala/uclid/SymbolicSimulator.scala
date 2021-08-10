@@ -154,6 +154,25 @@ class SymbolicSimulator (module : Module) {
   def dumpResults(label: String, log : Logger) {
     log.debug("{} --> proofResults.size = {}", label, proofResults.size.toString)
   }
+
+  def check(solver : smt.Context, config : UclidMain.Config, cmd: GenericProofCommand) = {
+    proofResults = List.empty
+    val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
+    proofResults = assertionTree.verify(solver, needModel)
+    if (solver.filePrefix != "") {
+      val smtOutput = solver.toString()
+      val pref = solver.filePrefix
+      if (config.smtSolver.size > 0) {
+        Utils.writeToFile(f"$pref.smt2", smtOutput)
+      } else if (config.synthesizer.size > 0) {
+        Utils.writeToFile(f"$pref.sl", smtOutput)
+      }
+    } else if (config.synthesizer.size > 0) {
+        proofResults = List(CheckResult(AssertInfo("Synth", "All", ArrayBuffer(frameList), context, 1, smt.BooleanLit(true), smt.BooleanLit(true), List.empty, ASTPosition(module.filename, NoPosition)), solver.checkSynth()))
+      }
+  }
+
+
   def execute(solver : smt.Context, config : UclidMain.Config) : List[CheckResult] = {
     proofResults = List.empty
     def noLTLFilter(name : Identifier, decorators : List[ExprDecorator], properties: List[Identifier]) : Boolean = {
@@ -210,7 +229,8 @@ class SymbolicSimulator (module : Module) {
       val delta =  (System.nanoTime() - start) / 1000000.0
       UclidMain.printStats(f"Symbolic simulation took ${delta}%.1f ms")
     }
-    // add axioms as assumptions.
+    var needToPrintResults = false
+
     module.cmds.foreach {
       (cmd) => {
         val start = System.nanoTime()
@@ -223,17 +243,26 @@ class SymbolicSimulator (module : Module) {
           case "unroll" | "bmc_noLTL" =>
             assertionTree.startVerificationScope()
             prove(false, hasHyperInvariant(module.properties), cmd)
+            check(solver, config, cmd);
+            needToPrintResults=true
           case "bmc" =>
           // do the LTL properties
             assertionTree.startVerificationScope()
-            // do nonLTL
-            prove(false, hasHyperInvariant(module.properties), cmd)
-            // do LTL
-            prove(true, hasHyperInvariant(module.properties), cmd)
+
+            if(hasNonLTLprop(module.properties))
+              prove(false, hasHyperInvariant(module.properties), cmd)
+
+            if(hasLTLprop(module.properties))
+              prove(true, hasHyperInvariant(module.properties), cmd)
+
+            check(solver, config, cmd);
+            needToPrintResults=true
           case "bmc_LTL" =>
           // do the LTL properties
             assertionTree.startVerificationScope()
             prove(true, hasHyperInvariant(module.properties), cmd)
+            check(solver, config, cmd);
+            needToPrintResults=true
           case "induction" =>
             assertionTree.startVerificationScope()
             val labelBase : String = cmd.resultVar match {
@@ -283,6 +312,8 @@ class SymbolicSimulator (module : Module) {
             UclidMain.printStats(f"Symbolic simulation for induction took $delta%.1f ms")
             // go back to original state.
             resetState()
+            check(solver, config, cmd);
+            needToPrintResults=true
           case "verify" =>
             val procName = cmd.args(0)._1.asInstanceOf[Identifier]
             val proc = module.procedures.find(p => p.id == procName).get
@@ -292,30 +323,19 @@ class SymbolicSimulator (module : Module) {
             }
             verifyProcedure(proc, label)
             val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"Symbolic simulation for verify took $delta%.1f ms")
+            UclidMain.printStats(f"symbolic simulation for verify took $delta%.1f ms")
+            check(solver, config, cmd);
+            needToPrintResults=true
           case "check" => {
-            val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
-            proofResults = assertionTree.verify(solver, needModel)
-            if (solver.filePrefix != "") {
-              val smtOutput = solver.toString()
-              val pref = solver.filePrefix
-              if (config.smtSolver.size > 0) {
-                Utils.writeToFile(f"$pref.smt2", smtOutput)
-              } else if (config.synthesizer.size > 0) {
-                Utils.writeToFile(f"$pref.sl", smtOutput)
-              }
-            } else if (config.synthesizer.size > 0) {
-              proofResults = List(CheckResult(AssertInfo("Synth", "All", ArrayBuffer(frameList), context, 1, smt.BooleanLit(true), smt.BooleanLit(true), List.empty, ASTPosition(module.filename, NoPosition)), solver.checkSynth()))
-            }
-            dumpResults("print_results", defaultLog)
-            printResults(proofResults, cmd.argObj, config)
+            // deprecated command: do nothing because we printed results when we checked
           } 
           case "print" =>
             UclidMain.printStatus(cmd.args(0)._1.asInstanceOf[StringLit].value)
           case "print_results" =>
-            // do nothing because we printed results when we checked
-            // dumpResults("print_results", defaultLog)
-            // printResults(proofResults, cmd.argObj, config)
+            // deprecated command: do nothing because we printed results when we checked
+            dumpResults("print_results", defaultLog)
+            printResults(proofResults, cmd.argObj, config)
+            needToPrintResults=false
           case "print_cex" =>
             printCEX(proofResults, cmd.args, cmd.argObj)
           case "dump_cex_vcds" =>
@@ -340,6 +360,11 @@ class SymbolicSimulator (module : Module) {
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }
       }
+    }
+    if(needToPrintResults==true)
+    {
+      dumpResults("print_results", defaultLog)
+      printResults(proofResults, None, config)
     }
     return proofResults
   }
@@ -854,6 +879,22 @@ class SymbolicSimulator (module : Module) {
   def hasHyperInvariant(properties: List[SpecDecl]) : Boolean = {
     properties.foreach(prop => {
       if (ExprDecorator.isHyperproperty(prop.params))
+        return true;
+      })
+    return false;
+  }
+
+  def hasLTLprop(properties: List[SpecDecl]) : Boolean = {
+    properties.foreach(prop => {
+      if (ExprDecorator.isLTLProperty(prop.params))
+        return true;
+      })
+    return false;
+  }
+  
+  def hasNonLTLprop(properties: List[SpecDecl]) : Boolean = {
+    properties.foreach(prop => {
+      if (!ExprDecorator.isLTLProperty(prop.params))
         return true;
       })
     return false;
