@@ -936,8 +936,6 @@ class SymbolicSimulator (module : Module) {
       }
     }
     s.foldLeft(e)((acc, p) => _substitute(acc, p))
-    //var memo: MutableMap[smt.Expr, smt.Expr] = MutableMap.empty
-    //smt.Context.rewriteExpr(e, rewrite, memo)
   }
 
   def _substitute(e: smt.Expr, sym: (smt.Expr, smt.Expr)): smt.Expr = {
@@ -1737,53 +1735,6 @@ class SymbolicSimulator (module : Module) {
   }
   def writeSets(stmts: List[Statement]) : Set[Identifier] = {
     return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ writeSet(s)}
-  }
-
-  def substitute(e: Expr, id: Identifier, arg: Expr) : Expr = {
-     e match {
-       case OperatorApplication(ArraySelect(inds), es) =>
-         val indsP = inds.map(ind => substitute(ind, id, arg))
-         val esP = es.map(e => substitute(e, id, arg))
-         OperatorApplication(ArraySelect(indsP), esP)
-       case OperatorApplication(ArrayUpdate(inds, value), es) =>
-         val indsP = inds.map(ind => substitute(ind, id, arg))
-         val esP = es.map(e => substitute(e, id, arg))
-         val valueP = substitute(value, id, arg)
-         OperatorApplication(ArrayUpdate(indsP, valueP), esP)
-       case OperatorApplication(op,args) =>
-         OperatorApplication(op, args.map(x => substitute(x, id, arg)))
-       case FuncApplication(f,args) =>
-         FuncApplication(substitute(f,id,arg), args.map(x => substitute(x,id,arg)))
-       case Lambda(idtypes, le) =>
-         Utils.assert(idtypes.exists(x => x._1.name == id.name), "Lambda arguments of the same name")
-         Lambda(idtypes, substitute(le, id, arg))
-       case IntLit(n) => e
-       case BoolLit(b) => e
-       case Identifier(i) => (if (id.name == i) arg else e)
-       case _ => throw new Utils.UnimplementedException("Should not get here")
-     }
-  }
-
-  def substituteSMT(e: smt.Expr, s: smt.Symbol, arg: smt.Expr) : smt.Expr = {
-     e match {
-       case smt.OperatorApplication(op,args) =>
-         return smt.OperatorApplication(op, args.map(x => substituteSMT(x, s, arg)))
-       case smt.ArraySelectOperation(a,index) =>
-         return smt.ArraySelectOperation(a, index.map(x => substituteSMT(x, s, arg)))
-       case smt.ArrayStoreOperation(a,index,value) =>
-         return smt.ArrayStoreOperation(a, index.map(x => substituteSMT(x, s, arg)), substituteSMT(value, s, arg))
-       case smt.FunctionApplication(f,args) =>
-         return smt.FunctionApplication(substituteSMT(f,s,arg), args.map(x => substituteSMT(x,s,arg)))
-       case smt.Lambda(idtypes, le) =>
-         Utils.assert(idtypes.exists(x => x.id == s.id), "Lambda arguments of the same name")
-         return smt.Lambda(idtypes, substituteSMT(le, s, arg))
-       case smt.IntLit(n) => return e
-       case smt.BooleanLit(b) => return e
-       case smt.Symbol(id,typ) => return (if (id == s.id) arg else e)
-       case smt.SynthSymbol(id,typ, _, _, _) => return (if (id == s.id) arg else e)
-       case smt.OracleSymbol(id,typ, _) => return (if (id == s.id) arg else e)
-       case _ => throw new Utils.UnimplementedException("Should not get here")
-     }
   }
 
   def evaluate(e: Expr, symbolTable: SymbolTable, frameTable : FrameTable, frameNumber : Int, scope : Scope) : smt.Expr = {
