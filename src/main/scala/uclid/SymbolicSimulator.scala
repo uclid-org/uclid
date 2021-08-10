@@ -218,12 +218,21 @@ class SymbolicSimulator (module : Module) {
               case Some(l) => l.toString
               case None    => "unroll"
             }
-            // get_init_lambda(false, context, "some")
             val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
             val noLTLpropertyFilter = (id : Identifier, decorators : List[ExprDecorator]) => noLTLFilter(id, decorators, properties)
-            initialize(false, true, false, context, label, noLTLpropertyFilter, noLTLpropertyFilter)
-            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, 
+            if(hasHyperInvariant(module.properties))
+            {
+              UclidMain.printVerbose("Module has hyperproperties. Using symbolic simulation for hyperproperties")
+              symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false,
+                                      context, label, createNoLTLFilter(properties), createNoLTLFilter(properties), solver);
+            }
+            else
+            {
+              UclidMain.printVerbose("Module has no hyperproperties. Using plain symbolic simulation")
+              initialize(false, true, false, context, label, noLTLpropertyFilter, noLTLpropertyFilter)
+              symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, 
                             noLTLpropertyFilter, noLTLpropertyFilter)
+            }
             val delta =  (System.nanoTime() - start) / 1000000.0
              UclidMain.printStats(f"Symbolic simulation for unrolling on non-LTL properties took $delta%.1f ms")
           case "horn" =>
@@ -254,17 +263,30 @@ class SymbolicSimulator (module : Module) {
               case Some(l) => l.toString()
               case None => "bmc"
             }
-            val LTLproperties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            val propertyFilter = (id : Identifier, decorators : List[ExprDecorator]) => LTLFilter(id, decorators, LTLproperties)
-            initialize(false, true, false, context, label, propertyFilter, propertyFilter)
-            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, propertyFilter, propertyFilter)
-            val deltaLTL =  (System.nanoTime() - start) / 1000000.0
-            
             val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
+            val propertyFilter = (id : Identifier, decorators : List[ExprDecorator]) => LTLFilter(id, decorators, properties)
             val noLTLpropertyFilter = (id : Identifier, decorators : List[ExprDecorator]) => noLTLFilter(id, decorators, properties)
-            initialize(false, true, false, context, label, noLTLpropertyFilter, noLTLpropertyFilter)
-            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, 
+            if(hasHyperInvariant(module.properties))
+            {
+              UclidMain.printVerbose("Module has hyperproperties. Using symbolic simulation for hyperproperties")
+              // LTL
+              symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false,
+                                      context, label, propertyFilter, propertyFilter, solver);
+              symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false,
+                                      context, label, noLTLpropertyFilter, noLTLpropertyFilter, solver);
+            }
+            else
+            {
+              UclidMain.printVerbose("Module has no hyperproperties. Using plain symbolic simulation")
+
+              // LTL
+              initialize(false, true, false, context, label, propertyFilter, propertyFilter)
+              symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, propertyFilter, propertyFilter)
+              // non LTL            
+              initialize(false, true, false, context, label, noLTLpropertyFilter, noLTLpropertyFilter)
+              symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, 
                             noLTLpropertyFilter, noLTLpropertyFilter)
+            }
             val delta =  (System.nanoTime() - start) / 1000000.0
             UclidMain.printStats(f"Symbolic simulation for bmc took $delta%.1f ms")
           case "bmc_LTL" =>
@@ -1046,6 +1068,14 @@ class SymbolicSimulator (module : Module) {
       }
     })
     max_k
+  }
+
+  def hasHyperInvariant(properties: List[SpecDecl]) : Boolean = {
+    properties.foreach(prop => {
+      if (ExprDecorator.isHyperproperty(prop.params))
+        return true;
+      })
+    return false;
   }
 
   def getHavocs(e: smt.Expr): List[smt.Symbol] = {
