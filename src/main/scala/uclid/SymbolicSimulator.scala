@@ -1737,10 +1737,6 @@ class SymbolicSimulator (module : Module) {
             evaluate(prop.expr, symbolTable, frameTbl, frameNumber, scope), prop.params, prop.expr.position)
         addAssert(property)
       }
-      else
-      {
-        UclidMain.printWarning("Warning: ignoring property " + prop.name)
-      }
     })
   }
 
