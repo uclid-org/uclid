@@ -39,7 +39,7 @@ module main {
   invariant result_eq_sum: inited ==> (result == (arg0 + arg1));
   invariant t1_eq_t2 : inited ==> (t1 == t2);
   control {
-  	x = unroll (3);
+  	x = bmc_noLTL(3);
   	check;
   	print_results;
   }

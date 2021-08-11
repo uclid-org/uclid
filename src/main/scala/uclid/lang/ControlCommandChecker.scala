@@ -166,10 +166,6 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkNoArgObj(cmd, filename)
       case "set_solver_option" =>
         checkSetOptionCmd(cmd, filename)
-      case "unroll" =>
-        checkNoParams(cmd, filename)
-        checkHasOneIntLitArg(cmd, filename)
-        checkNoArgObj(cmd, filename)
       case "lazysc" =>
         checkNoParams(cmd, filename)
         checkHasOneIntLitArg(cmd, filename)
@@ -181,7 +177,13 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkParamsValid(cmd, filename, List(Identifier("properties"), Identifier("pre"), Identifier("assumptions")))
         checkHasZeroOrOneIntLitArg(cmd, filename)
         checkNoArgObj(cmd, filename)
-      case "bmc" =>
+      case "unroll"   =>
+        UclidMain.printWarning("Command unroll is deprecated. Please use bmc, or bmc_noLTL in future for non-LTL properties");
+        checkPropertiesValid(Identifier("properties"), cmd, context, filename)
+        checkParamsValid(cmd, filename, List(Identifier("properties")))
+        checkHasOneIntLitArg(cmd, filename)
+        checkNoArgObj(cmd, filename)
+      case "bmc" | "bmc_LTL" | "bmc_noLTL"=>
         checkPropertiesValid(Identifier("properties"), cmd, context, filename)
         checkParamsValid(cmd, filename, List(Identifier("properties")))
         checkHasOneIntLitArg(cmd, filename)

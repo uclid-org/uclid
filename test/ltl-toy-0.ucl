@@ -5,7 +5,7 @@ module main
   next { }
   invariant[LTL] x_true: G(x);
   control {
-    v = bmc(5);
+    v = bmc_LTL(5);
     check;
     print_results;
   }

@@ -9,7 +9,7 @@ module main
   }
   invariant prop_eq: n != 3;
   control {
-    v = unroll(5);
+    v = bmc[properties=[prop_eq]](5);
     check;
     print_results;
     v.print_cex(n);

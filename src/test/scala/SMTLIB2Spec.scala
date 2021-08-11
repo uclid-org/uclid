@@ -510,9 +510,13 @@ class SMTLIB2Spec extends AnyFlatSpec {
     SMTLIB2Spec.expectedFails("./test/test-smtlib-array.ucl", 0)
   }
 
-  // "test-hyperproperty-4.ucl" should "verify all assertions." in {
-  //   SMTLIB2Spec.expectedFails("./test/test-hyperproperty-4.ucl", 0)
-  // }
+  "test-hyperproperty-0.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-hyperproperty-0.ucl", 0)
+  }
+  
+  "test-hyperproperty-4.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-hyperproperty-4.ucl", 0)
+  }
 
   "test-smtlib-consts.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-smtlib-consts.ucl", 0)
