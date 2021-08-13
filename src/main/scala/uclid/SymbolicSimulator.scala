@@ -327,12 +327,11 @@ class SymbolicSimulator (module : Module) {
             check(solver, config, cmd);
             needToPrintResults=true
           case "check" => {
-            // deprecated command: do nothing because we printed results when we checked
+            // deprecated command: do nothing because we checked after every verification command
           } 
           case "print" =>
             UclidMain.printStatus(cmd.args(0)._1.asInstanceOf[StringLit].value)
           case "print_results" =>
-            // deprecated command: do nothing because we printed results when we checked
             dumpResults("print_results", defaultLog)
             printResults(proofResults, cmd.argObj, config)
             needToPrintResults=false
