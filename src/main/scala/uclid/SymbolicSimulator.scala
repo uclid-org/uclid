@@ -120,7 +120,7 @@ class SymbolicSimulator (module : Module) {
   def newSynthSymbol(name: String, t: FunctionSig, gSym : Option[smt.GrammarSymbol], gargs: List[String], conds : List[Expr]) = {
     new smt.SynthSymbol("synth_" + name, t, gSym, gargs, conds)
   }
-  def newGrammarSymbol(name: String, t: smt.Type, nts: List[smt.NonTerminal]) = {
+  def newGrammarSymbol(name: String, t: FunctionSig, nts: List[smt.NonTerminal]) = {
     new smt.GrammarSymbol("grammar_" + name, t, nts)
   }
   def newTaintSymbol(name: String, t: smt.Type) = {
@@ -138,12 +138,13 @@ class SymbolicSimulator (module : Module) {
       case Some(_) => getgrammar.get.asInstanceOf[lang.Scope.Grammar]
       case None => throw new Utils.RuntimeError("SyGuS grammar not found: grammar " + gSym.toString())
     }
-    if (grammar.gTyp.asInstanceOf[lang.MapType].outType != typ.retType) {
+    if (grammar.fTyp.typ.asInstanceOf[lang.MapType].outType != typ.retType) {
       throw new Utils.RuntimeError("SyGuS grammar type does not match synth-fun: for grammar " + gSym.toString())
     }
     val id = grammar.id.name
-    val symbolTyp = smt.Converter.typeToSMT(grammar.gTyp)
-    val nts = grammar.nts.map(smt.Converter.nonTerminalToSyGuS2(_, scope))
+    val symbolTyp = grammar.fTyp
+      // smt.Converter.typeToSMT(grammar.gTyp)
+    val nts = grammar.nts.map(smt.Converter.nonTerminalToSyGuS2(_, typ, grammar.nts.map(x => (x.id, x.typ)), scope))
     smt.GrammarSymbol(id, symbolTyp, nts)
   }
 
@@ -386,7 +387,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.OutputVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> newInitSymbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> newGrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts.map(smt.Converter.nonTerminalToSyGuS2(_, scope))))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> newGrammarSymbol(id.name, typ, nts.map(smt.Converter.nonTerminalToSyGuS2(_, typ, nts.map(x => (x.id, x.typ)), scope))))
           case _ => mapAcc
         }
       }
@@ -1602,7 +1603,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name, smt.Converter.typeToSMT(typ)))
-          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts.map(smt.Converter.nonTerminalToSyGuS2(_, scope))))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, typ, nts.map(smt.Converter.nonTerminalToSyGuS2(_, typ, nts.map(x => (x.id, x.typ)), scope))))
           case _ => mapAcc
         }
       }
@@ -1621,7 +1622,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "$" + index.toString(), smt.Converter.typeToSMT(typ)))
-          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts.map(smt.Converter.nonTerminalToSyGuS2(_, scope))))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, typ, nts.map(smt.Converter.nonTerminalToSyGuS2(_, typ, nts.map(x => (x.id, x.typ)), scope))))
           case _ => mapAcc
         }
       }
@@ -1639,7 +1640,7 @@ class SymbolicSimulator (module : Module) {
           case Scope.OutputVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!", smt.Converter.typeToSMT(typ)))
           case Scope.StateVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!", smt.Converter.typeToSMT(typ)))
           case Scope.SharedVar(id, typ) => mapAcc + (id -> smt.Symbol(id.name + "!", smt.Converter.typeToSMT(typ)))
-          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, smt.Converter.typeToSMT(typ), nts.map(smt.Converter.nonTerminalToSyGuS2(_, scope))))
+          case Scope.Grammar(id, typ, nts) => mapAcc + (id -> smt.GrammarSymbol(id.name, typ, nts.map(smt.Converter.nonTerminalToSyGuS2(_, typ, nts.map(x => (x.id, x.typ)), scope))))
           case _ => mapAcc
         }
       }

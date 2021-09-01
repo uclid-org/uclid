@@ -51,7 +51,7 @@ case class DefineApplication(e: Expr, defDecl: DefineSymbol, args: List[Expr])
   override val isConstant = e.isConstant && args.forall(a => a.isConstant)
 }
 
-case class DefineSymbol(id: String, symbolTyp: lang.FunctionSig, expr: Expr)
+case class DefineSymbol(id: String, symbolTyp: lang.FunctionSig, expr: smt.Expr)
 extends Expr (smt.Converter.typeToSMT(symbolTyp.typ))
 {
   override val hashId = mix(id.hashCode(), mix(symbolTyp.typ.hashCode(), 318))
@@ -67,10 +67,10 @@ case class SynthSymbol(id: String, symbolTyp: lang.FunctionSig, grammar: Option[
   override def toString = id.toString
 }
 
-case class GrammarSymbol(id: String, symbolTyp: Type, nts : List[NonTerminal]) extends Expr (symbolTyp) {
+case class GrammarSymbol(id: String, symbolTyp: lang.FunctionSig, nts : List[NonTerminal]) extends Expr (smt.Converter.typeToSMT(symbolTyp.typ)) {
   override val hashId = mix(id.hashCode(), mix(symbolTyp.hashCode(), 316))
   override val hashCode = computeHash
-  override val md5hashCode = computeMD5Hash(id, symbolTyp)
+  override val md5hashCode = computeMD5Hash(id)
   override def toString = {
   	val nonTermDecls = Utils.join(nts.map(nt => "(" + nt.id + " " + nt.typ.toString + ")"), " ")
   	val grammarDecl = Utils.join(nts.map(_.toString), " ")

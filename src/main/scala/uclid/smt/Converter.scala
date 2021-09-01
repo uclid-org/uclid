@@ -360,8 +360,8 @@ object Converter {
    *  @nt Uclid Nonterminal to convert
    *  @scope context used for type information
    */
-  def nonTerminalToSyGuS2(nt: lang.NonTerminal, scope: lang.Scope): smt.NonTerminal = {
-    smt.NonTerminal(nt.id.name, typeToSMT(nt.typ), nt.terms.map(grammarTermToSyGuS2(_, scope)))
+  def nonTerminalToSyGuS2(nt: lang.NonTerminal, fTyp : lang.FunctionSig,  ntsIds : List[(lang.Identifier, lang.Type)], scope: lang.Scope): smt.NonTerminal = {
+    smt.NonTerminal(nt.id.name, typeToSMT(nt.typ), nt.terms.map(grammarTermToSyGuS2(_, fTyp, ntsIds, scope)))
   }
 
   /** Convert a Uclid GrammarTerm to SMT/SyGuS GrammarTerm
@@ -369,7 +369,7 @@ object Converter {
    *  @gt Uclid GrammarTerm to convert
    *  @scope context used for type information
    */
-  def grammarTermToSyGuS2(gt: lang.GrammarTerm, scope: lang.Scope): smt.GrammarTerm = {
+  def grammarTermToSyGuS2(gt: lang.GrammarTerm, fTyp : lang.FunctionSig, ntsIds : List[(lang.Identifier, lang.Type)],  scope: lang.Scope): smt.GrammarTerm = {
     def idToSMT(id : lang.Identifier, scope : lang.Scope, past : Int) : smt.Expr = {
       val typ = scope.typeOf(id) match {
         case Some(typ) => typeToSMT(typ)
@@ -379,20 +379,33 @@ object Converter {
     }
     val expr = gt match {
       case lang.FuncAppTerm(id, args) => {
-        val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, scope))
+        val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, fTyp, ntsIds, scope))
         smt.FunctionApplication(smt.Symbol(id.name, typeToSMT(scope.typeOf(id).get)), argsP)
       }
       case lang.OpAppTerm(op, args) => {
         val opP = opToSMT(op, scope, 0, idToSMT)
-        val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, scope))
+        val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, fTyp, ntsIds, scope))
         smt.OperatorApplication(opP, argsP)
       }
       case lang.DefineAppTerm(id, args) => {
-        val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, scope))
+        val argsP = args.foldLeft(List.empty[GrammarTerm])((acc, arg) => acc :+ grammarTermToSyGuS2(arg, fTyp, ntsIds, scope))
         smt.DefineApplication(smt.Symbol(id.name, typeToSMT(scope.typeOf(id).get)), defineDeclToSyGuS2(scope.get(id).get.asInstanceOf[lang.Scope.Define], scope), argsP)
       }
       case lang.LiteralTerm(lit: lang.Literal) => _exprToSMT(lit, scope, 0, idToSMT)
-      case lang.SymbolTerm(id: lang.Identifier) => _exprToSMT(id, scope, 0, idToSMT)
+      case lang.SymbolTerm(id: lang.Identifier) => 
+        {
+          val grammarArgs : List[(lang.Identifier, lang.Type)] = fTyp.args
+          val typeMap = grammarArgs.toMap.++(ntsIds.toMap)
+          typeMap.get(id) match {
+            case Some(value) => _exprToSMT(id, scope, 0, idToSMT)
+            case None => val smtType = scope.typeOf(id) match {
+              case Some(t) => smt.Converter.typeToSMT(t)
+              case None => throw new Utils.RuntimeError("Id not found in global scope for Grammar: for id " + id.name)
+            }
+            if (!smtType.isEnum) throw new Utils.RuntimeError("Id " + id.name + " in SymbolTerm from global scope is not an Enum type. Note that all symbols in the grammar must be inputs arguments or constants (Enums) (ref. SyGuS standard).");
+            _exprToSMT(id, scope, 0, idToSMT);
+          }
+        }
       case _ => throw new Utils.UnimplementedException("grammar translation of " + gt.toString() + " is not yet supported.")
     }
     GrammarTerm(expr)
@@ -404,12 +417,15 @@ object Converter {
       val typeMap = langDefineDecl.toMap
       typeMap.get(id) match {
         case Some(t) => smt.Symbol(id.name, typeToSMT(t))
-        case None => 
+        case None => {
           val smtType = scope.typeOf(id) match {
             case Some(t) => smt.Converter.typeToSMT(t)
-            case None => throw new Utils.RuntimeError("Id not found in args for DefineDecl: for id " + id.name + " for DefineDecl " + defdecl.dId.name)
+            case None => throw new Utils.RuntimeError("Id not found in global scope for DefineDecl: for id " + id.name + " for DefineDecl " + defdecl.dId.name)
           }
+          // Check if the external symbol is an enum (only constants are allowed: ref. SyGuS standard)
+          if (!smtType.isEnum) throw new Utils.RuntimeError("Id " + id.name + " in DefineDecl from global scope is not an Enum type: in DefineDecl " + defdecl.dId.name + ". Note that all symbols in the grammar must be inputs arguments or constants (Enums) (ref. SyGuS standard).")
           smt.Symbol(id.name, smtType)
+        }
       }
     }
     smt.DefineSymbol(defdecl.defDecl.id.name, scope.get(defdecl.dId).get.asInstanceOf[lang.Scope.Define].defDecl.sig, exprToSMT(defdecl.defDecl.expr, declIdToSMT, scope))

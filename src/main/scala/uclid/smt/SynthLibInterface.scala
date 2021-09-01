@@ -127,7 +127,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     if (sygusSyntax) {
       if (!addedDefines.contains(sym))  
       {
-        cmd = "(define-fun %s (%s) %s %s)\n".format(sym, sig, typeName, sym.expr)
+        cmd = "(define-fun %s (%s) %s %s)\n".format(sym, sig, typeName, translateExpr(sym.expr, false))
         defineDecls += cmd
       }
     }
