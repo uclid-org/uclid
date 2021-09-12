@@ -8,8 +8,9 @@ module main
     n' = n + 1;
   }
   invariant prop_eq: n != 1;
+  property stupid: false;
   control {
-    v = unroll(5);
+    v = bmc_noLTL[properties=[prop_eq]](5);
     check;
     print_results;
     v.print_cex(n);

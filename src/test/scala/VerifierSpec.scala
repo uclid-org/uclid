@@ -384,6 +384,9 @@ class GroupVerifSpec extends AnyFlatSpec {
   "test-group-3.ucl" should "verify one and fail one assertion." in {
     VerifierSpec.expectedFails("./test/test-group-3.ucl", 1)
   }
+  "test-group-4.ucl" should "verify one and fail one assertion." in {
+    VerifierSpec.expectedFails("./test/test-group-4.ucl", 1)
+  }
 }
 class ModuleVerifSpec extends AnyFlatSpec {
   "test-modules.ucl" should "verify all assertions." in {
@@ -558,9 +561,12 @@ class LTLVerifSpec extends AnyFlatSpec {
   }
 }
 class HyperPropertySpec extends AnyFlatSpec {
-  // "test-hyperproperty-4.ucl" should "verify all assertions." in {
-  //   VerifierSpec.expectedFails("./test/test-hyperproperty-4.ucl", 0)
-  // }
+  "test-hyperproperty-0.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-hyperproperty-0.ucl", 0)
+  }
+  "test-hyperproperty-4.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-hyperproperty-4.ucl", 0)
+  }
 }
 
 object PrintCexSpec {

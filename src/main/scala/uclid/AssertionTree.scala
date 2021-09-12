@@ -171,7 +171,7 @@ class AssertionTree {
         }
         if (mode.isAssert) {
           val start = System.nanoTime()
-          UclidMain.printStats(f"Starting solver on assertion")
+          UclidMain.printStats(f"Starting solver on: " + e.toString)
           solver.push()
           solver.assert(checkExpr)
           solver.curAssertName = e.name

@@ -13,14 +13,15 @@ module main
   }
   
   property[LTL] p1 : G(inited ==> (sum == a + b));
+  property dummy: true;
   // This property is obviously not satisfied, but we 
   // won't include it in the call to the 'bmc' command below.
-  property[LTL] p2 : G(false);
+  // property[LTL] p2 : G(false);
   
   
   control {
     // print_module;
-    vobj = bmc[properties=[p1]] (3);
+    vobj = bmc(3);
     check;
     print_results;
   }

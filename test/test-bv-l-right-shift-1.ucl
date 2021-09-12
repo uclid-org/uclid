@@ -12,7 +12,7 @@ module main {
 	invariant z: (bv_left_shift(1bv8, bv_l_right_shift(1bv8, a)) == a);
 
 	control {
-		unroll(9);
+		bmc(9);
 		check;
 		print_results;
 	}

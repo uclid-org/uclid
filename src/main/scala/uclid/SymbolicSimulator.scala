@@ -46,7 +46,7 @@ import vcd.VCD
 import scala.util.Try
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import com.typesafe.scalalogging.Logger
-import uclid.smt.{Z3HornSolver, Z3Interface}
+import uclid.smt.Z3Interface
 
 import scala.collection.mutable.{Map => MutableMap}
 import org.scalactic.source.Position
@@ -92,8 +92,6 @@ class SymbolicSimulator (module : Module) {
 
   var symbolTable : SymbolTable = Map.empty
   var frameList : FrameTable = ArrayBuffer.empty
-
-  var lazySC : Option[LazySCSolver] = None
   var synthesizedInvariants : ArrayBuffer[lang.Expr] = ArrayBuffer.empty
 
   def newHavocSymbol(name: String, t: smt.Type) = {
@@ -157,27 +155,25 @@ class SymbolicSimulator (module : Module) {
   def dumpResults(label: String, log : Logger) {
     log.debug("{} --> proofResults.size = {}", label, proofResults.size.toString)
   }
-  def frameTableToHyperTable(frameTbl : FrameTable) : FrameHyperTable = {
-    frameTbl.map {
-      (symTbl) => { symTbl.map((sym) => (sym._1 -> Array(sym._2))) }
-    }.toArray
-  }
-  def simTableToHyperTable(simTbl : SimulationTable) : FrameHyperTable = {
-    Utils.assert(simTbl.size > 0, "Must have at least one array of frames")
-    val numFrames = simTbl(0).size
-    Utils.assert(simTbl.forall(frameTbl => frameTbl.size == numFrames), "Must have the same number of frames in each trace")
-    val numTraces = simTbl.size
-    (1 to numFrames).toArray.map {
-      (frameIndex) => {
-        val symTbl0 : SymbolTable = simTbl(0)(frameIndex)
-        val ids0 = symTbl0.map(id => id._1)
-        val ids = ids0.filter(id => simTbl.forall(frameTbl => frameTbl(frameIndex).contains(id)))
-        ids.map(
-            id => (id -> simTbl.map(frameTbl => frameTbl(frameIndex).get(id).get).toArray)
-        ).toMap[Identifier, Array[smt.Expr]]
+
+  def check(solver : smt.Context, config : UclidMain.Config, cmd: GenericProofCommand) = {
+    proofResults = List.empty
+    val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
+    proofResults = assertionTree.verify(solver, needModel)
+    if (solver.filePrefix != "") {
+      val smtOutput = solver.toString()
+      val pref = solver.filePrefix
+      if (config.smtSolver.size > 0) {
+        Utils.writeToFile(f"$pref.smt2", smtOutput)
+      } else if (config.synthesizer.size > 0) {
+        Utils.writeToFile(f"$pref.sl", smtOutput)
       }
-    }
+    } else if (config.synthesizer.size > 0) {
+        proofResults = List(CheckResult(AssertInfo("Synth", "All", ArrayBuffer(frameList), context, 1, smt.BooleanLit(true), smt.BooleanLit(true), List.empty, ASTPosition(module.filename, NoPosition)), solver.checkSynth()))
+      }
   }
+
+
   def execute(solver : smt.Context, config : UclidMain.Config) : List[CheckResult] = {
     proofResults = List.empty
     def noLTLFilter(name : Identifier, decorators : List[ExprDecorator], properties: List[Identifier]) : Boolean = {
@@ -187,6 +183,10 @@ class SymbolicSimulator (module : Module) {
     def createNoLTLFilter(properties : List[Identifier]) : ((Identifier, List[ExprDecorator]) => Boolean) = {
       (id : Identifier, decorators : List[ExprDecorator]) => noLTLFilter(id, decorators, properties)
     }
+    def createLTLFilter(properties : List[Identifier]) : ((Identifier, List[ExprDecorator]) => Boolean) = {
+      (id : Identifier, decorators : List[ExprDecorator]) => LTLFilter(id, decorators, properties)
+    }
+
     def LTLFilter(name : Identifier, decorators: List[ExprDecorator], properties: List[Identifier]) : Boolean = {
       val nameStr = name.name
       val nameStrToCheck = if (nameStr.endsWith(":safety")) {
@@ -203,7 +203,35 @@ class SymbolicSimulator (module : Module) {
     def extractProperties(name : Identifier, params: List[CommandParams]) : List[Identifier] = {
       params.filter(p => p.name == name).flatMap(ps => ps.values.map(p => p.asInstanceOf[Identifier]))
     }
-    // add axioms as assumptions.
+
+    def prove(isLTL: Boolean, hyperInv: Boolean, cmd: GenericProofCommand) =
+    {
+      UclidMain.printVerbose("Starting symbolic simulation for " + cmd.name)
+      val start = System.nanoTime()
+      val label : String = cmd.resultVar match {
+        case Some(l) => l.toString
+        case None    => cmd.name.toString
+      }
+      val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
+      val propertyFilter =  if(isLTL) createLTLFilter(properties)else createNoLTLFilter(properties)
+      if(hyperInv)
+      {
+        UclidMain.printVerbose("Module has hyperproperties. Using symbolic simulation for hyperproperties")
+        symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false,
+                                      context, label, propertyFilter, propertyFilter, solver);
+      }
+      else
+      {
+        UclidMain.printVerbose("Module has no hyperproperties. Using plain symbolic simulation")
+        initialize(false, true, false, context, label, propertyFilter, propertyFilter)
+        symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, 
+                            propertyFilter, propertyFilter)
+      }
+      val delta =  (System.nanoTime() - start) / 1000000.0
+      UclidMain.printStats(f"Symbolic simulation took ${delta}%.1f ms")
+    }
+    var needToPrintResults = false
+
     module.cmds.foreach {
       (cmd) => {
         val start = System.nanoTime()
@@ -213,54 +241,29 @@ class SymbolicSimulator (module : Module) {
             assertionTree = new AssertionTree()
             proofResults = List.empty
             dumpResults("clear_context", defaultLog)
-          case "unroll" =>
+          case "unroll" | "bmc_noLTL" =>
             assertionTree.startVerificationScope()
-            val label : String = cmd.resultVar match {
-              case Some(l) => l.toString
-              case None    => "unroll"
-            }
-            // get_init_lambda(false, context, "some")
-            val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            initialize(false, true, false, context, label, createNoLTLFilter(properties), createNoLTLFilter(properties))
-            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, 
-                            createNoLTLFilter(properties), createNoLTLFilter(properties))
-            val delta =  (System.nanoTime() - start) / 1000000.0
-             UclidMain.printStats(f"symbolic simulation for unrolling took $delta%.1f ms")
-            // symbolicSimulateLambdas(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, 
-            //                         context, label, createNoLTLFilter(properties), createNoLTLFilter(properties), solver)
-          case "horn" =>
-            val label : String = cmd.resultVar match {
-              case Some(l) => l.toString
-              case None    => "horn"
-            }
-            val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            runHornSolver(context, label, createNoLTLFilter(properties), createNoLTLFilter(properties))
-            val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"symbolic simulation for horn solver construction took $delta%.1f ms")
-          case "lazysc" =>
-            val label : String = cmd.resultVar match {
-              case Some(l) => l.toString
-              case None    => "unroll"
-            }
-            val lz = new LazySCSolver(this)
-            lazySC = Some(lz)
-            val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            val propertyFilter = createNoLTLFilter(properties)
-            runLazySC(lz, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, context, label, propertyFilter, propertyFilter, solver)
-            val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"symbolic simulation for lazySC took $delta%.1f ms")
+            prove(false, hasHyperInvariant(module.properties), cmd)
+            check(solver, config, cmd);
+            needToPrintResults=true
           case "bmc" =>
+          // do the LTL properties
             assertionTree.startVerificationScope()
-            val label : String = cmd.resultVar match {
-              case Some(l) => l.toString()
-              case None => "bmc"
-            }
-            val properties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
-            val propertyFilter = (id : Identifier, decorators : List[ExprDecorator]) => LTLFilter(id, decorators, properties)
-            initialize(false, true, false, context, label, propertyFilter, propertyFilter)
-            symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, propertyFilter, propertyFilter)
-            val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"symbolic simulation for BMC took $delta%.1f ms")
+
+            if(hasNonLTLprop(module.properties))
+              prove(false, hasHyperInvariant(module.properties), cmd)
+
+            if(hasLTLprop(module.properties))
+              prove(true, hasHyperInvariant(module.properties), cmd)
+
+            check(solver, config, cmd);
+            needToPrintResults=true
+          case "bmc_LTL" =>
+          // do the LTL properties
+            assertionTree.startVerificationScope()
+            prove(true, hasHyperInvariant(module.properties), cmd)
+            check(solver, config, cmd);
+            needToPrintResults=true
           case "induction" =>
             assertionTree.startVerificationScope()
             val labelBase : String = cmd.resultVar match {
@@ -307,9 +310,11 @@ class SymbolicSimulator (module : Module) {
             // now are asserting that the assertion holds by pass true, false to symbolicSimulate.
             symbolicSimulate(k-1, 1, true,  false, context, labelStep, assumptionFilter, propertyFilter)
             val delta =  (System.nanoTime() - start) / 1000000.0
-            UclidMain.printStats(f"symbolic simulation for induction took $delta%.1f ms")
+            UclidMain.printStats(f"Symbolic simulation for induction took $delta%.1f ms")
             // go back to original state.
             resetState()
+            check(solver, config, cmd);
+            needToPrintResults=true
           case "verify" =>
             val procName = cmd.args(0)._1.asInstanceOf[Identifier]
             val proc = module.procedures.find(p => p.id == procName).get
@@ -320,32 +325,17 @@ class SymbolicSimulator (module : Module) {
             verifyProcedure(proc, label)
             val delta =  (System.nanoTime() - start) / 1000000.0
             UclidMain.printStats(f"symbolic simulation for verify took $delta%.1f ms")
+            check(solver, config, cmd);
+            needToPrintResults=true
           case "check" => {
-            val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
-            lazySC match {
-              case None => proofResults = assertionTree.verify(solver, needModel)
-              case Some(lz) => proofResults = lz.assertionTree.verify(solver, needModel)
-            }
-            if (solver.filePrefix != "") {
-              val smtOutput = solver.toString()
-              val pref = solver.filePrefix
-              if (config.smtSolver.size > 0) {
-                Utils.writeToFile(f"$pref.smt2", smtOutput)
-              } else if (config.synthesizer.size > 0) {
-                Utils.writeToFile(f"$pref.sl", smtOutput)
-              }
-            } else if (config.synthesizer.size > 0) {
-              proofResults = List(CheckResult(AssertInfo("Synth", "All", ArrayBuffer(frameList), context, 1, smt.BooleanLit(true), smt.BooleanLit(true), List.empty, ASTPosition(module.filename, NoPosition)), solver.checkSynth()))
-            }
-            dumpResults("print_results", defaultLog)
-            printResults(proofResults, cmd.argObj, config)
+            // deprecated command: do nothing because we checked after every verification command
           } 
           case "print" =>
             UclidMain.printStatus(cmd.args(0)._1.asInstanceOf[StringLit].value)
           case "print_results" =>
-            // do nothing because we printed results when we checked
-            // dumpResults("print_results", defaultLog)
-            // printResults(proofResults, cmd.argObj, config)
+            dumpResults("print_results", defaultLog)
+            printResults(proofResults, cmd.argObj, config)
+            needToPrintResults=false
           case "print_cex" =>
             printCEX(proofResults, cmd.args, cmd.argObj)
           case "dump_cex_vcds" =>
@@ -370,6 +360,11 @@ class SymbolicSimulator (module : Module) {
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }
       }
+    }
+    if(needToPrintResults==true)
+    {
+      dumpResults("print_results", defaultLog)
+      printResults(proofResults, None, config)
     }
     return proofResults
   }
@@ -622,152 +617,6 @@ class SymbolicSimulator (module : Module) {
       hyperAsserts.toList, hyperAssumes.toList, assumesLambda.toList)
   }
 
-  def runHornSolver(scope: Scope, label: String, 
-      assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean),
-      propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean)) = {
-    val init_lambda = getInitLambda(false, true, false, scope, label, assumptionFilter, propertyFilter)
-    val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, assumptionFilter, propertyFilter)
-    val h = new Z3HornSolver(this)
-    val context = new Z3Interface()
-    val lazySc = new LazySCSolver(this)
-    val initTaintLambda = lazySc.getTaintInitLambdaV2(init_lambda._1, scope, context, init_lambda._5)
-    val nextTaintLambda = lazySc.getNextTaintLambdaV2(next_lambda._1, next_lambda._5, next_lambda._6, next_lambda._4, scope)
-    val combinedInitLambda = lazySc.getCombinedInitLambda(init_lambda._1, initTaintLambda)
-    val combinedNextLambda = lazySc.getCombinedNextLambda(next_lambda._1, nextTaintLambda._1)
-    //h.convertHyperInvToTaint(next_lambda._1, next_lambda._4)
-    //h.solveTaintLambdasV2(combinedInitLambda, combinedNextLambda, scope)
-    h.solveLambdas(init_lambda._1, next_lambda._1, init_lambda._5, init_lambda._2, init_lambda._4, next_lambda._4, next_lambda._5, next_lambda._2, scope)
-  }
-
-  def runLazySC(lazySC: LazySCSolver, bound: Int, scope: Scope, label: String, 
-      assumptionFilter: ((Identifier, List[ExprDecorator]) => Boolean), 
-      propertyFilter: ((Identifier, List[ExprDecorator]) => Boolean), 
-      solver: smt.Context) = {
-
-      //Z3HornSolver.test1()
-
-      lazySC.simulateLazySCV2(bound, scope, label, assumptionFilter, propertyFilter)
-  }
-
-  def symbolicSimulateLambdasHyperAssert(startStep: Int, numberOfSteps: Int, hypPropIdx: Int, 
-                              addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
-                              scope : Scope, label : String, 
-                              assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean),
-                              propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean),
-                              solver: smt.Context) = {
-    // At this point symbolTable must have the initial symbols.
-    resetState()
-
-    val init_lambda = getInitLambda(false, true, false, scope, label, assumptionFilter, propertyFilter)
-    val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, assumptionFilter, propertyFilter)
-    //val s = new LazySCSolver(this, solver)
-
-    val num_copies = getMaxHyperInvariant(scope)
-    val simRecord = new SimulationTable
-    var prevVarTable = new ArrayBuffer[List[List[smt.Expr]]]()
-    var havocTable = new ArrayBuffer[List[(smt.Symbol, smt.Symbol)]]()
-
-    var inputStep = 0
-    for (i <- 1 to num_copies) {
-      var frames = new FrameTable
-      val initSymTab = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
-      inputStep += 1
-      frames += initSymTab
-      var prevVars = getVarsInOrder(initSymTab.map(_.swap), scope)
-      prevVarTable += prevVars
-      val init_havocs = getHavocs(init_lambda._1.e)
-      val havoc_subs = init_havocs.map {
-        havoc =>
-          val s = havoc.id.split("_")
-          val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
-          (havoc, newHavocSymbol(name, havoc.typ))
-      }
-      havocTable += havoc_subs
-      val init_conjunct = substitute(betaSubstitution(init_lambda._1, prevVars.flatten), havoc_subs)
-      addAssumptionToTree(init_conjunct, List.empty)
-      simRecord += frames
-    }
-
-    val hyperAssumesInit = rewriteHyperAssumes(
-      init_lambda._1, 0, init_lambda._5, simRecord, 0, scope, prevVarTable.toList)
-    hyperAssumesInit.foreach {
-      hypAssume =>
-        addAssumptionToTree(hypAssume, List.empty)
-    }
-
-    /*
-    val asserts_init = rewriteAsserts(
-      init_lambda._1, init_lambda._2, 0,
-      prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]),
-      simRecord.clone(), havocTable(0))
-
-    asserts_init.foreach {
-      assert =>
-        // FIXME: simTable
-        addAssertToTree(assert)
-    }
-    */
-    val filteredInitHyperAssert = List(init_lambda._4(hypPropIdx))
-    val asserts_init_hyper = rewriteHyperAsserts(
-      init_lambda._1, 0, filteredInitHyperAssert, simRecord, 0, scope, prevVarTable.toList)
-    asserts_init_hyper.foreach {
-      assert =>
-        // FIXME: simTable
-        addAssertToTree(assert)
-    }
-
-    var symTabStep = symbolTable
-    for (i <- 1 to numberOfSteps) {
-      for (j <- 1 to num_copies) {
-        symTabStep = newInputSymbols(getInitSymbolTable(scope), inputStep, scope)
-        inputStep += 1
-        simRecord(j - 1) += symTabStep
-        val new_vars = getVarsInOrder(symTabStep.map(_.swap), scope)
-        val next_havocs = getHavocs(next_lambda._1.e)
-        val havoc_subs = next_havocs.map {
-          havoc =>
-            val s = havoc.id.split("_")
-            val name = s.takeRight(s.length - 2).foldLeft("")((acc, p) => acc + "_" + p)
-            (havoc, newHavocSymbol(name, havoc.typ))
-        }
-        val next_conjunct = substitute(betaSubstitution(next_lambda._1, (prevVarTable(j - 1) ++ new_vars).flatten), havoc_subs)
-        addAssumptionToTree(next_conjunct, List.empty)
-        havocTable(j - 1) = havoc_subs
-        prevVarTable(j - 1) = new_vars
-      }
-
-      val hyperAssumesNext = rewriteHyperAssumes(next_lambda._1, numberOfSteps, next_lambda._5, simRecord, i, scope, prevVarTable.toList)
-      hyperAssumesNext.foreach {
-        hypAssume =>
-          addAssumptionToTree(hypAssume, List.empty)
-      }
-      /*
-      // Asserting on-HyperInvariant assertions
-      // FIXME: simTable
-      val asserts_next = rewriteAsserts(
-        next_lambda._1, next_lambda._2, i,
-        getVarsInOrder(simRecord(0)(i - 1).map(_.swap), scope).flatten.map(p => p.asInstanceOf[smt.Symbol]) ++
-          prevVarTable(0).flatten.map(p => p.asInstanceOf[smt.Symbol]), simRecord.clone(), havocTable(0))
-      asserts_next.foreach {
-        assert =>
-          addAssertToTree(assert)
-      }*/
-
-      // FIXME: simTable
-      defaultLog.debug("i: {}", i)
-      val filteredNextHyperAssert = List(next_lambda._4(hypPropIdx))
-      val asserts_next_hyper = rewriteHyperAsserts(next_lambda._1, numberOfSteps, filteredNextHyperAssert, simRecord, i, scope, prevVarTable.toList)
-      asserts_next_hyper.foreach {
-        assert => {
-          addAssertToTree(assert)
-        }
-      }
-    }
-    symbolTable = symTabStep
-    val needModel = module.cmds.filter(p => p.isPrintCEX).size > 0
-    val results = assertionTree.verify(solver, needModel)
-    UclidMain.printResult("The results are: " + results)
-  }
 
   def symbolicSimulateLambdas(startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
                               scope : Scope, label : String, 
@@ -779,7 +628,6 @@ class SymbolicSimulator (module : Module) {
 
       val init_lambda = getInitLambda(false, true, false, scope, label, assumptionFilter, propertyFilter)
       val next_lambda = getNextLambda(init_lambda._3, true, false, scope, label, assumptionFilter, propertyFilter)
-      //val s = new LazySCSolver(this, solver)
 
       val num_copies = getMaxHyperInvariant(scope)
       val simRecord = new SimulationTable
@@ -1028,6 +876,30 @@ class SymbolicSimulator (module : Module) {
     max_k
   }
 
+  def hasHyperInvariant(properties: List[SpecDecl]) : Boolean = {
+    properties.foreach(prop => {
+      if (ExprDecorator.isHyperproperty(prop.params))
+        return true;
+      })
+    return false;
+  }
+
+  def hasLTLprop(properties: List[SpecDecl]) : Boolean = {
+    properties.foreach(prop => {
+      if (ExprDecorator.isLTLProperty(prop.params))
+        return true;
+      })
+    return false;
+  }
+  
+  def hasNonLTLprop(properties: List[SpecDecl]) : Boolean = {
+    properties.foreach(prop => {
+      if (!ExprDecorator.isLTLProperty(prop.params))
+        return true;
+      })
+    return false;
+  }
+
   def getHavocs(e: smt.Expr): List[smt.Symbol] = {
     e match {
       case smt.Symbol(id, symbolTyp) =>
@@ -1105,8 +977,6 @@ class SymbolicSimulator (module : Module) {
       }
     }
     s.foldLeft(e)((acc, p) => _substitute(acc, p))
-    //var memo: MutableMap[smt.Expr, smt.Expr] = MutableMap.empty
-    //smt.Context.rewriteExpr(e, rewrite, memo)
   }
 
   def _substitute(e: smt.Expr, sym: (smt.Expr, smt.Expr)): smt.Expr = {
@@ -1906,53 +1776,6 @@ class SymbolicSimulator (module : Module) {
   }
   def writeSets(stmts: List[Statement]) : Set[Identifier] = {
     return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ writeSet(s)}
-  }
-
-  def substitute(e: Expr, id: Identifier, arg: Expr) : Expr = {
-     e match {
-       case OperatorApplication(ArraySelect(inds), es) =>
-         val indsP = inds.map(ind => substitute(ind, id, arg))
-         val esP = es.map(e => substitute(e, id, arg))
-         OperatorApplication(ArraySelect(indsP), esP)
-       case OperatorApplication(ArrayUpdate(inds, value), es) =>
-         val indsP = inds.map(ind => substitute(ind, id, arg))
-         val esP = es.map(e => substitute(e, id, arg))
-         val valueP = substitute(value, id, arg)
-         OperatorApplication(ArrayUpdate(indsP, valueP), esP)
-       case OperatorApplication(op,args) =>
-         OperatorApplication(op, args.map(x => substitute(x, id, arg)))
-       case FuncApplication(f,args) =>
-         FuncApplication(substitute(f,id,arg), args.map(x => substitute(x,id,arg)))
-       case Lambda(idtypes, le) =>
-         Utils.assert(idtypes.exists(x => x._1.name == id.name), "Lambda arguments of the same name")
-         Lambda(idtypes, substitute(le, id, arg))
-       case IntLit(n) => e
-       case BoolLit(b) => e
-       case Identifier(i) => (if (id.name == i) arg else e)
-       case _ => throw new Utils.UnimplementedException("Should not get here")
-     }
-  }
-
-  def substituteSMT(e: smt.Expr, s: smt.Symbol, arg: smt.Expr) : smt.Expr = {
-     e match {
-       case smt.OperatorApplication(op,args) =>
-         return smt.OperatorApplication(op, args.map(x => substituteSMT(x, s, arg)))
-       case smt.ArraySelectOperation(a,index) =>
-         return smt.ArraySelectOperation(a, index.map(x => substituteSMT(x, s, arg)))
-       case smt.ArrayStoreOperation(a,index,value) =>
-         return smt.ArrayStoreOperation(a, index.map(x => substituteSMT(x, s, arg)), substituteSMT(value, s, arg))
-       case smt.FunctionApplication(f,args) =>
-         return smt.FunctionApplication(substituteSMT(f,s,arg), args.map(x => substituteSMT(x,s,arg)))
-       case smt.Lambda(idtypes, le) =>
-         Utils.assert(idtypes.exists(x => x.id == s.id), "Lambda arguments of the same name")
-         return smt.Lambda(idtypes, substituteSMT(le, s, arg))
-       case smt.IntLit(n) => return e
-       case smt.BooleanLit(b) => return e
-       case smt.Symbol(id,typ) => return (if (id == s.id) arg else e)
-       case smt.SynthSymbol(id,typ, _, _, _) => return (if (id == s.id) arg else e)
-       case smt.OracleSymbol(id,typ, _) => return (if (id == s.id) arg else e)
-       case _ => throw new Utils.UnimplementedException("Should not get here")
-     }
   }
 
   def evaluate(e: Expr, symbolTable: SymbolTable, frameTable : FrameTable, frameNumber : Int, scope : Scope) : smt.Expr = {

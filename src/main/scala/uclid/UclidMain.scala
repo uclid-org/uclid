@@ -520,6 +520,11 @@ object UclidMain {
     println(str)
   }
 
+  def printWarning(str : String) {
+    if(mainVerbosity>=1)
+      println(str)
+  }
+
   def println(str : String) {
 
     if (stringOutputEnabled) {

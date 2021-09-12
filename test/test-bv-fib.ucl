@@ -16,7 +16,7 @@ module main {
   invariant a_le_b_v2 : (a+b <= b+b);
   invariant a_le_b_v3 : (a-a <= b-a);
   control {
-  	x = unroll (5);
+  	x = bmc(5);
   	check;
   	print_results;
   	// x.print_cex;

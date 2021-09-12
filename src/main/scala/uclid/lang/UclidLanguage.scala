@@ -370,10 +370,10 @@ case class ExistsOp(vs: List[(Identifier, Type)], patterns: List[List[Expr]]) ex
 
 case class FiniteForallOp(id : (Identifier, Type), groupId : Identifier) extends QuantifiedBooleanOperator {
   override def variables = List.empty
-  override def toString = QuantifiedBooleanOperator.toString("finite_forall", List.empty, List.empty)
+  override def toString = "finite_forall %s : %s in %s".format(id._1, id._2, groupId)
 }
 case class FiniteExistsOp(id : (Identifier, Type), groupId : Identifier) extends QuantifiedBooleanOperator {
-  override def toString = QuantifiedBooleanOperator.toString("finite_exists", List.empty, List.empty)
+  override def toString = "finite_exists %s : %s in %s".format(id._1, id._2, groupId)
   override def variables = List.empty
 }
 

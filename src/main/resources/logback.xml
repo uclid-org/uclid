@@ -35,6 +35,7 @@
   <logger name="uclid.lang.VariableDependencyFinder" level="OFF"/>
   <logger name="uclid.lang.VerificationExpressionCheckerPass" level="OFF"/>
   <logger name="uclid.lang.VerificationExpressionPass" level="OFF"/>
+  <logger name="uclid.lang.FiniteQuantsExpanderPass" level="OFF"/>
   <logger name="uclid.smt.Z3HornSolver" level="OFF"/>
   <logger name="uclid.smt.SExprLexical" level="OFF"/>
   <logger name="uclid.smt.SMTLIB2Base" level="OFF"/>
