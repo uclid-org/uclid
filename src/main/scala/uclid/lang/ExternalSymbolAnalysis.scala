@@ -58,6 +58,7 @@ class ExternalSymbolRewriterPass(externalSymbolMap: ExternalSymbolMap) extends R
     val extDecls = externalSymbolMap.externalMap.map(p => {
       p._2._2 match {
         case f : FunctionDecl => FunctionDecl(p._2._1, f.sig)
+        case sf : SynthesisFunctionDecl => SynthesisFunctionDecl(p._2._1, sf.sig, sf.grammarId, sf.grammarArgs, sf.conditions)
         case c : ConstantsDecl => ConstantsDecl(List(p._2._1), c.typ)
       }
     }).toList

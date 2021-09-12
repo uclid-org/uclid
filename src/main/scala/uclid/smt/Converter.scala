@@ -68,7 +68,7 @@ object Converter {
       case lang.SynonymType(_) =>
         throw new Utils.UnimplementedException("Synonym types must have been eliminated by now.")
       case lang.UndefinedType() | lang.ProcedureType(_, _) | lang.ExternalType(_, _) |
-           lang.ModuleInstanceType(_) | lang.ModuleType(_, _, _, _, _, _, _, _) | lang.GroupType(_) =>
+           lang.ModuleInstanceType(_) | lang.ModuleType(_, _, _, _, _, _, _, _, _) | lang.GroupType(_) =>
         throw new AssertionError("Type '" + typ.toString + "' not expected here.")
     }
   }

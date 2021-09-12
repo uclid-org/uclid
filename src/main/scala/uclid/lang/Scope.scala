@@ -279,6 +279,7 @@ case class Scope (
         //case ModuleFunctionsImportDecl(id) => Scope.addToMap(mapAcc, Scope.FunctionsImport(id))
         case ModuleConstantsImportDecl(_) => mapAcc
         case ModuleFunctionsImportDecl(_) => mapAcc
+        case ModuleSynthFunctionsImportDecl(_) => mapAcc
         case ModuleImportDecl(_) |
              ModuleTypesImportDecl(_) | 
              ModuleDefinesImportDecl(_) | 
@@ -325,7 +326,7 @@ case class Scope (
         case ConstantsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case GroupDecl(id, typ, elems) => Scope.addToMap(mapAcc, Scope.Group(id, typ, elems))
         case ModuleImportDecl(_) | ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
-             ModuleFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
+             ModuleFunctionsImportDecl(_) | ModuleSynthFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
              InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | 
              AxiomDecl(_, _, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }
