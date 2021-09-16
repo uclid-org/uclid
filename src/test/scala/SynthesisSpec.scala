@@ -101,6 +101,12 @@ class SynthesisSpec extends AnyFlatSpec {
   "test-synthesis-13.ucl" should "verify all assertions." in {
     SynthesisSpec.expectedFails("./test/test-synthesis-13.ucl", 0)
   }
+  "test-synthesis-14.ucl" should "syntheisize a solution." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-14.ucl", 0)
+  }
+  "test-synthesis-15.ucl" should "synthesize a solution." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-15.ucl", 0)
+  }
   "test-synthesis-grammar-0.ucl" should "verify all assertions." in {
     SynthesisSpec.expectedFails("./test/test-synthesis-grammar-0.ucl", 0)
   }
@@ -145,5 +151,23 @@ class SynthesisSpec extends AnyFlatSpec {
   }
   "test-synthesis-grammar-8.ucl" should "return unknown." in {
     SynthesisSpec.expectedFails("./test/test-synthesis-grammar-8.ucl", 0)
+  }
+  "test-synthesis-grammar-9.ucl" should "not execute correctly." in {
+    try {
+      val filename = "./test/test-synthesis-grammar-9.ucl"
+      val config = UclidMain.Config().copy(synthesizer=List("cvc4_wait.sh"), sygusFormat = true)
+      val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
+      val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"))
+      assert (mainModule.isDefined)
+      val results = UclidMain.execute(mainModule.get, config)
+      assert(false)
+    }
+    catch {
+      case r : Utils.RuntimeError => 
+        assert (r.getMessage().contains("SymbolTerm from global scope is not an Enum type. Note that all symbols in the grammar must be inputs arguments or constants (Enums)"));
+    }
+  }
+  "test-synthesis-grammar-10.ucl" should "synthesize a solution." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-grammar-10.ucl", 0)
   }
 }

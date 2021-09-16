@@ -217,6 +217,8 @@ object UclidMain {
     passManager.addPass(new ModuleConstantsImportRewriter())
     // imports uninterpreted functions
     passManager.addPass(new ModuleFunctionsImportRewriter())
+    // imports synthesis functions 
+    passManager.addPass(new ModuleSynthFunctionsImportRewriter())
     // automatically compute modifies set
     if (config.modSetAnalysis) {
         passManager.addPass(new ModSetAnalysis())

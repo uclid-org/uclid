@@ -58,7 +58,7 @@ object Scope {
   case class ConstantVar(cId : Identifier, cTyp : Type) extends ReadOnlyNamedExpression(cId, cTyp)
   case class Function(fId : Identifier, fTyp: Type) extends ReadOnlyNamedExpression(fId, fTyp)
   case class Group(gId : Identifier, gTyp: Type, elems : List[Expr]) extends ReadOnlyNamedExpression(gId, gTyp)
-  case class Grammar(gId : Identifier, gTyp : Type, nts : List[lang.NonTerminal]) extends ReadOnlyNamedExpression(gId, gTyp)
+  case class Grammar(gId : Identifier, fTyp : FunctionSig, nts : List[lang.NonTerminal]) extends ReadOnlyNamedExpression(gId, fTyp.typ)
   case class NonTerminal(ntId: Identifier, ntTyp: Type, terms: List[GrammarTerm]) extends ReadOnlyNamedExpression(ntId, ntTyp)
   case class SynthesisFunction(fId : Identifier, fTyp: FunctionSig, gId: Option[Identifier], gargs: List[Identifier], conds : List[Expr]) extends ReadOnlyNamedExpression(fId, fTyp.typ)
   case class OracleFunction(oId : Identifier, oTyp: FunctionSig, binary: String) extends ReadOnlyNamedExpression(oId, oTyp.typ)
@@ -264,7 +264,7 @@ case class Scope (
         case SharedVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.SharedVar(id, typ)))
         case ConstantLitDecl(id, lit) => Scope.addToMap(mapAcc, Scope.ConstantLit(id, lit))
         case ConstantsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.ConstantVar(id, typ)))
-        case GrammarDecl(id, sig, nts) => Scope.addToMap(mapAcc, Scope.Grammar(id, sig.typ, nts))
+        case GrammarDecl(id, sig, nts) => Scope.addToMap(mapAcc, Scope.Grammar(id, sig, nts))
         case FunctionDecl(id, sig) => Scope.addToMap(mapAcc, Scope.Function(id, sig.typ))
         case SynthesisFunctionDecl(id, sig, gid, gargs, conds) => Scope.addToMap(mapAcc, Scope.SynthesisFunction(id, sig, gid, gargs, conds))
         case OracleFunctionDecl(id, sig, binary) => Scope.addToMap(mapAcc, Scope.OracleFunction(id, sig, binary))
@@ -279,6 +279,7 @@ case class Scope (
         //case ModuleFunctionsImportDecl(id) => Scope.addToMap(mapAcc, Scope.FunctionsImport(id))
         case ModuleConstantsImportDecl(_) => mapAcc
         case ModuleFunctionsImportDecl(_) => mapAcc
+        case ModuleSynthFunctionsImportDecl(_) => mapAcc
         case ModuleImportDecl(_) |
              ModuleTypesImportDecl(_) | 
              ModuleDefinesImportDecl(_) | 
@@ -325,7 +326,7 @@ case class Scope (
         case ConstantsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case GroupDecl(id, typ, elems) => Scope.addToMap(mapAcc, Scope.Group(id, typ, elems))
         case ModuleImportDecl(_) | ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
-             ModuleFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
+             ModuleFunctionsImportDecl(_) | ModuleSynthFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
              InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | 
              AxiomDecl(_, _, _) | InitDecl(_) | NextDecl(_) => mapAcc
       }

@@ -887,7 +887,7 @@ case class ModuleInstanceType(args : List[(Identifier, Option[Type])]) extends T
 case class ModuleType(
     inputs: List[(Identifier, Type)], outputs: List[(Identifier, Type)], sharedVars: List[(Identifier, Type)],
     constLits : List[(Identifier, NumericLit)], constants: List[(Identifier, Type)], variables: List[(Identifier, Type)],
-    functions: List[(Identifier, FunctionSig)], instances: List[(Identifier, Type)]) extends Type {
+    functions: List[(Identifier, FunctionSig)], synthFunctions : List[(Identifier, FunctionSig)], instances: List[(Identifier, Type)]) extends Type {
 
   def argToString(arg: (Identifier, Type)) : String = {
     arg._1.toString + ": (" + arg._2.toString + ")"
@@ -903,9 +903,10 @@ case class ModuleType(
   lazy val constantMap : Map[Identifier, Type] = constants.map(a => (a._1 -> a._2)).toMap
   lazy val varMap : Map[Identifier, Type] = variables.map(a => (a._1 -> a._2)).toMap
   lazy val funcMap : Map[Identifier, FunctionSig] = functions.map(a => (a._1 -> a._2)).toMap
+  lazy val synthFuncMap : Map[Identifier, FunctionSig] = synthFunctions.map(a => (a._1 -> a._2)).toMap
   lazy val instanceMap : Map[Identifier, Type] = instances.map(a => (a._1 -> a._2)).toMap
   lazy val typeMap : Map[Identifier, Type] = inputMap ++ outputMap ++ constantMap ++ varMap ++ funcMap.map(f => (f._1 -> f._2.typ))  ++ instanceMap
-  lazy val externalTypeMap : Map[Identifier, Type] = constantMap ++ funcMap.map(f => (f._1 -> f._2.typ)) ++ constLitMap.map(f => (f._1 -> f._2.typeOf))
+  lazy val externalTypeMap : Map[Identifier, Type] = constantMap ++ funcMap.map(f => (f._1 -> f._2.typ)) ++ constLitMap.map(f => (f._1 -> f._2.typeOf)) ++ synthFuncMap.map(sf => (sf._1 -> sf._2.typ))
   def typeOf(id : Identifier) : Option[Type] = {
     typeMap.get(id)
   }
@@ -1275,6 +1276,10 @@ case class ModuleFunctionsImportDecl(id: Identifier) extends Decl {
   override def toString = "function * = %s.*; // %s".format(id.toString, position.toString)
   override def declNames = List.empty
 }
+case class ModuleSynthFunctionsImportDecl(id : Identifier) extends Decl {
+  override def toString = "synthesis function * = %s.*; // %s".format(id.toString, position.toString)
+  override def declNames = List.empty
+}
 case class DefineDecl(id: Identifier, sig: FunctionSig, expr: Expr) extends Decl {
   override def toString = "define %s %s = %s;".format(id.toString, sig.toString, expr.toString)
   override def declNames = List(id)
@@ -1367,9 +1372,11 @@ case class GrammarDecl(id: Identifier, sig: FunctionSig, nonterminals: List[NonT
   override def declNames = List(id)
 }
 
-case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : Option[Identifier], grammarArgs: List[Identifier], conditions: List[Expr]) extends Decl {
+case class SynthesisFunctionDecl(id: Identifier, sig: FunctionSig, grammarId : Option[Identifier], grammarArgs: List[Identifier], conditions: List[Expr]) extends Decl with ModuleExternal {
   override def toString = "synthesis function " + id + sig + "; //" + position.toString()
   override def declNames = List(id)
+  override def extNames = List(id)
+  override def extType = sig.typ
 }
 
 case class OracleFunctionDecl(id: Identifier, sig: FunctionSig, binary: String) extends Decl {
@@ -1551,6 +1558,10 @@ case class Module(id: Identifier, decls: List[Decl], var cmds : List[GenericProo
   lazy val functions : List[FunctionDecl] =
     decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
   
+  // module synthesis function imports.
+  lazy val synthFuncImportDecls : List[ModuleSynthFunctionsImportDecl] = decls.collect {
+    case imp : ModuleSynthFunctionsImportDecl => imp }
+
   // module macros
   lazy val defines : List[DefineDecl] = decls.collect{ case d : DefineDecl => d }
 
@@ -1566,7 +1577,7 @@ case class Module(id: Identifier, decls: List[Decl], var cmds : List[GenericProo
   lazy val properties : List[SpecDecl] = decls.collect{ case spec : SpecDecl => spec }
 
   lazy val externalMap : Map[Identifier, ModuleExternal] =
-    (functions.map(f => (f.id -> f)) ++ (constantDecls.flatMap(c => c.ids.map(id => (id, c))).map(p => p._1 -> p._2))).toMap
+    (functions.map(f => (f.id -> f))  ++ synthFunctions.map(sf => (sf.id -> sf)) ++ (constantDecls.flatMap(c => c.ids.map(id => (id, c))).map(p => p._1 -> p._2))).toMap
 
   // module procedures.
   lazy val procedures : List[ProcedureDecl] = decls.filter(_.isInstanceOf[ProcedureDecl]).map(_.asInstanceOf[ProcedureDecl])
@@ -1588,6 +1599,7 @@ case class Module(id: Identifier, decls: List[Decl], var cmds : List[GenericProo
       inputs, outputs, sharedVars,
       constLits, constants, vars,
       functions.map(c => (c.id, c.sig)),
+      synthFunctions.map(sf => (sf.id, sf.sig)),
       instances.map(inst => (inst.instanceId, inst.moduleType)))
 
   // the init block.

@@ -649,6 +649,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwFunction ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleFunctionsImportDecl(id) }
     }
 
+    lazy val ModuleSynthFuncsImportDecl : PackratParser[lang.ModuleSynthFunctionsImportDecl] = positioned {
+      KwSynthesis ~ KwFunction ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ {
+        case id => lang.ModuleSynthFunctionsImportDecl(id) }
+    }
+
     // Grammar parsing begins here. //
     lazy val LiteralTerm : PackratParser[lang.LiteralTerm] = positioned {
       Bool ^^ { case b => lang.LiteralTerm(b) } |
@@ -816,7 +821,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Decl: PackratParser[Decl] =
       positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl | OracleFuncDecl |
-                  ModuleTypesImportDecl | ModuleFuncsImportDecl | ModuleConstsImportDecl |
+                  ModuleTypesImportDecl | ModuleFuncsImportDecl | ModuleSynthFuncsImportDecl | ModuleConstsImportDecl |
                   SynthFuncDecl | DefineDecl | ModuleDefsImportDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstLitDecl | ConstDecl | ProcedureDecl |

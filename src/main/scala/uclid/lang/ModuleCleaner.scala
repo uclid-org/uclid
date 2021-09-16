@@ -8,6 +8,9 @@ class ModuleCleanerPass() extends RewritePass {
   override def rewriteModuleFunctionsImport(modFuncImport : ModuleFunctionsImportDecl, ctx : Scope) : Option[ModuleFunctionsImportDecl] = {
     None
   }
+  override def rewriteModuleSynthFunctionsImport(modSynthFuncImport : ModuleSynthFunctionsImportDecl, ctx : Scope) : Option[ModuleSynthFunctionsImportDecl] = {
+    None
+  }
   override def rewriteModuleConstantsImport(modCnstImport : ModuleConstantsImportDecl, ctx : Scope) : Option[ModuleConstantsImportDecl] = {
     None
   }

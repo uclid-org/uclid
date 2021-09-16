@@ -91,6 +91,7 @@ trait ReadOnlyPass[T] {
   def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : T, context : Scope) : T = { in }
   def applyOnFunction(d : TraversalDirection.T, func : FunctionDecl, in : T, context : Scope) : T = { in }
   def applyOnModuleFunctionsImport(d : TraversalDirection.T, modFuncImport : ModuleFunctionsImportDecl, in : T, context : Scope) : T = { in }
+  def applyOnModuleSynthFunctionsImport(d : TraversalDirection.T, modSynthFuncImport : ModuleSynthFunctionsImportDecl, in : T, context : Scope) : T = { in }
   def applyOnNonterminal(d : TraversalDirection.T, nonterm : NonTerminal, in : T, context : Scope) : T = { in }
   def applyOnGrammar(d : TraversalDirection.T, grammar: GrammarDecl, in : T, context : Scope) : T = { in }
   def applyOnSynthesisFunction(d : TraversalDirection.T, synFunc : SynthesisFunctionDecl, in : T, context : Scope) : T = { in }
@@ -185,6 +186,7 @@ trait RewritePass {
   def rewriteProcedure(proc : ProcedureDecl, ctx : Scope) : Option[ProcedureDecl] = { Some(proc) }
   def rewriteFunction(func : FunctionDecl, ctx : Scope) : Option[FunctionDecl] = { Some(func) }
   def rewriteModuleFunctionsImport(modFuncImport : ModuleFunctionsImportDecl, ctx : Scope) : Option[ModuleFunctionsImportDecl] = { Some(modFuncImport) }
+  def rewriteModuleSynthFunctionsImport(modSynthFuncImport : ModuleSynthFunctionsImportDecl, ctx : Scope) : Option[ModuleSynthFunctionsImportDecl] = { Some(modSynthFuncImport) }
   def rewriteFuncAppTerm(term : FuncAppTerm, ctx : Scope) : Option[FuncAppTerm] = { Some(term) }
   def rewriteOpAppTerm(term : OpAppTerm, ctx : Scope) : Option[OpAppTerm] = { Some(term) }
   def rewriteDefineAppTerm(term : DefineAppTerm, ctx : Scope) : Option[DefineAppTerm] = { Some(term) }
@@ -335,6 +337,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case modConstsImport : ModuleConstantsImportDecl => visitModuleConstantsImport(modConstsImport, result, context)
       case func : FunctionDecl => visitFunction(func, result, context)
       case modFuncsImport : ModuleFunctionsImportDecl => visitModuleFunctionsImport(modFuncsImport, result, context)
+      case modSynthFuncsImport : ModuleSynthFunctionsImportDecl => visitModuleSynthFunctionsImport (modSynthFuncsImport, result, context)
       case grammar : GrammarDecl => visitGrammar(grammar, result, context)
       case synFunc : SynthesisFunctionDecl => visitSynthesisFunction(synFunc, result, context)
       case oracleFunc : OracleFunctionDecl => visitOracleFunction(oracleFunc, result, context)
@@ -400,6 +403,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnModuleFunctionsImport(TraversalDirection.Down, moduleFunctionsImport, result, context)
     result = visitIdentifier(moduleFunctionsImport.id, result, context)
     result = pass.applyOnModuleFunctionsImport(TraversalDirection.Up, moduleFunctionsImport, result, context)
+    return result
+  }
+  def visitModuleSynthFunctionsImport(moduleSynthFuncsImport : ModuleSynthFunctionsImportDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnModuleSynthFunctionsImport(TraversalDirection.Down, moduleSynthFuncsImport, result, context)
+    result = visitIdentifier(moduleSynthFuncsImport.id, result, context)
+    result = pass.applyOnModuleSynthFunctionsImport(TraversalDirection.Up, moduleSynthFuncsImport, result, context)
     return result
   }
   def visitNonterminals(nonterminals : List[NonTerminal], in : T, context : Scope) : T = {
@@ -1210,6 +1220,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case modConstImport : ModuleConstantsImportDecl => visitModuleConstantsImport(modConstImport, context)
       case funcDecl : FunctionDecl => visitFunction(funcDecl, context)
       case modFuncImport : ModuleFunctionsImportDecl => visitModuleFunctionsImport(modFuncImport, context)
+      case modSynthFuncImport : ModuleSynthFunctionsImportDecl => visitModuleSynthFunctionsImport(modSynthFuncImport, context)
       case grammarDecl : GrammarDecl => visitGrammar(grammarDecl, context)
       case synFuncDecl : SynthesisFunctionDecl => visitSynthesisFunction(synFuncDecl, context)
       case oracleFuncDecl : OracleFunctionDecl => visitOracleFunction(oracleFuncDecl, context)
@@ -1293,6 +1304,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case None => None
     }
     return ASTNode.introducePos(setPosition, setFilename, modFuncImpP, modFuncImp.position)
+  }
+
+  def visitModuleSynthFunctionsImport(modSynthFuncImp : ModuleSynthFunctionsImportDecl, context : Scope) : Option[ModuleSynthFunctionsImportDecl] = {
+    val idOpt = visitIdentifier(modSynthFuncImp.id, context)
+    val modSynthFuncImpP = idOpt match {
+      case Some(id) => pass.rewriteModuleSynthFunctionsImport(ModuleSynthFunctionsImportDecl(id), context)
+      case None => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, modSynthFuncImpP, modSynthFuncImp.position)
   }
 
   def visitFuncAppTerm(funcAppTerm: FuncAppTerm, context: Scope) : Option[FuncAppTerm] = {
