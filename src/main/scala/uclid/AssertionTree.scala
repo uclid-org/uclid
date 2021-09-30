@@ -176,6 +176,7 @@ class AssertionTree {
           solver.assert(checkExpr)
           solver.curAssertName = e.name
           solver.curAssertLabel = e.label
+          solver.curAssertPos = e.pos.toString.replace('.', '_').replace('/', '_').replace(',','_')
           val sat = solver.check(getModel)
           val delta =  (System.nanoTime() - start) / 1000000.0
           UclidMain.printStats(f"Solver finished in $delta%.1f ms")
