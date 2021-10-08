@@ -128,6 +128,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwProcedure = "procedure"
     lazy val KwBoolean = "boolean"
     lazy val KwInteger = "integer"
+    lazy val KwFloat = "float"
     lazy val KwEnum = "enum"
     lazy val KwRecord = "record"
     lazy val KwReturns = "returns"
@@ -195,7 +196,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul, OpDiv, OpUDiv,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvUrem, OpBvSrem, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
-      "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwReturns,
+      "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwFloat, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwImport,
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
       KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
@@ -266,14 +267,17 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Bool: PackratParser[BoolLit] =
       positioned { "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) } }
     lazy val Integer: PackratParser[lang.IntLit] =
-      positioned { integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base)) } }
+      positioned { integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base))} }
+    lazy val Float: PackratParser[lang.FloatLit] =
+        (Integer ~ "." ~ Integer) ^^  { case f1 ~ "." ~ f2 => FloatLit(f1.value, f2.value) }
     lazy val BitVector: PackratParser[lang.BitVectorLit] =
       positioned { bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) } }
-    lazy val Number : PackratParser[lang.NumericLit] = positioned (Integer | BitVector)
+    lazy val Number : PackratParser[lang.NumericLit] = positioned (Float | Integer | BitVector)
     lazy val String  : PackratParser[lang.StringLit] = positioned {
       stringLit ^^ { case stringLit => lang.StringLit(stringLit) }
     }
-    lazy val Literal : PackratParser[lang.Literal] = positioned (Bool | Number | String)
+    lazy val Literal : PackratParser[lang.Literal] = positioned (
+      Bool | Number | String )
     /* END of Literals. */
     // Match quantifier patterns; but we don't want to make pattern a keyword.
     lazy val CommaSeparatedExprList : PackratParser[List[lang.Expr]] =
@@ -378,6 +382,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         E12 ~ ExprList ^^ { case e ~ f => FuncApplication(e, f) } |
         E15
     }
+
     lazy val ConstArray : PackratParser[lang.ConstArray] = positioned {
       KwConst ~ "(" ~> Expr ~ ("," ~> Type) <~ ")" ^^ {
         case (exp ~ typ) => lang.ConstArray(exp, typ)
@@ -406,7 +411,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     /** Examples of allowed types are bool | int | [int,int,bool] int **/
     lazy val PrimitiveType : PackratParser[Type] = positioned {
       KwBoolean ^^ {case _ => BooleanType()}   |
-      KwInteger ^^ {case _ => IntegerType()}     |
+      KwInteger ^^ {case _ => IntegerType()}   |
+      KwFloat ^^ {case _ => FloatType()}     |
       bitVectorType ^^ {case bvType => BitVectorType(bvType.width)}
     }
 
@@ -449,9 +455,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Lhs : PackratParser[lang.Lhs] = positioned {
       Id ~ VarBitVectorSlice ^^ { case id ~ slice => lang.LhsVarSliceSelect(id, slice) } |
       Id ~ ArraySelectOp ^^ { case id ~ mapOp => lang.LhsArraySelect(id, mapOp.indices) } |
-      Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ {
-        case id ~ rOp ~ rOps => lang.LhsRecordSelect(id, (rOp.id)::(rOps.map(_.id))) 
-      }  |
+      Id ~ RecordSelectOp ~ rep(RecordSelectOp) ^^ { case id ~ rOp ~ rOps => lang.LhsRecordSelect(id, (rOp.id)::(rOps.map(_.id))) }  |
       Id <~ OpPrime ^^ { case id => LhsNextId(id) } |
       Id ^^ { case id => lang.LhsId(id) }
     }

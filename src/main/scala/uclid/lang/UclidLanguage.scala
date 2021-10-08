@@ -230,6 +230,33 @@ case class IntUnaryMinusOp() extends IntArgOperator {
 case class IntDivOp() extends IntArgOperator {
   override def toString = "/"
 }
+
+// These operators take float operands and return float results.
+sealed abstract class FloatArgOperator() extends Operator {
+  override def fixity = Operator.INFIX
+  // default rounding is roundNearestTiesToEven. If we want to support more rounding, we add it here
+  val arity = 2
+}
+case class FPLTOp() extends FloatArgOperator() {
+  override def toString = "<"
+}
+case class FPGTOp() extends FloatArgOperator() {
+  override def toString = ">"
+}
+case class FPSubOp() extends FloatArgOperator() {
+  override def toString = "-"
+}
+case class FPAddOp() extends FloatArgOperator() {
+  override def toString = "-"
+}
+case class FPMulOp() extends FloatArgOperator() {
+  override def toString = "*"
+}
+case class FPIsNanOp() extends FloatArgOperator() {
+  override def toString = "isNaN"
+  override val arity = 1
+}
+
 // These operators take bitvector operands and return bitvector results.
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
   override def fixity = Operator.INFIX
@@ -568,6 +595,17 @@ case class IntLit(value: BigInt) extends NumericLit {
   override def negate = IntLit(-value)
 }
 
+case class FloatLit(integral: BigInt, fractional: BigInt) extends NumericLit {
+  override def toString = integral.toString + "." + fractional.toString
+  override def typeOf : NumericType = FloatType()
+  override def to (n : NumericLit) : Seq[NumericLit]  = {
+    n match {
+      case _ => throw new Utils.RuntimeError("Cannot create range for float literals")
+    }
+  }
+  override def negate = FloatLit(-integral, -fractional)
+}
+
 case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
   override def toString = value.toString + "bv" + width.toString
   override def typeOf : NumericType = BitVectorType(width)
@@ -710,6 +748,7 @@ sealed abstract class Type extends PositionedNode {
   def isNumeric = false
   def isInt = false
   def isBitVector = false
+  def isFloat = false
   def isPrimitive = false
   def isProduct = false
   def isRecord = false
@@ -759,6 +798,11 @@ case class IntegerType() extends NumericType {
   override def toString = "integer"
   override def isInt = true
   override def defaultValue = Some(IntLit(0))
+}
+case class FloatType() extends NumericType {
+  override def toString = "float"
+  override def isFloat = true
+  override def defaultValue = Some(FloatLit(0, 0))
 }
 case class BitVectorType(width: Int) extends NumericType {
   override def toString = "bv" + width.toString
