@@ -51,6 +51,7 @@ sealed trait Type extends Hashable {
   def isMap = false
   def isArray = false
   def isEnum = false
+  def isFloat = false
   def isUninterpreted = false
   def isSynonym = false
   def isUndefined = false
@@ -93,6 +94,17 @@ case class BitVectorType(width: Int) extends Type
   override def isBitVector = true
   override val typeNamePrefix = "bv" + width.toString()
 }
+// The float type.
+case object FltType extends Type
+{
+  override val hashId = 111
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "(_ FloatingPoint 5 11)"
+  override def isFloat = true
+  override val typeNamePrefix = "flt"
+}
+
 object BitVectorType {
   val t = new Memo[Int, BitVectorType]((w : Int) => new BitVectorType(w))
 }
@@ -677,6 +689,55 @@ case class Int2BVOp(w : Int) extends BVResultOp(w) {
     Utils.assert(args(0).typ.isInt, "Argument to Int2BVOp must be an integer")
   }
 }
+
+// Floating point operators
+// Operators that return bitvectors.
+abstract class FloatResultOp() extends Operator {
+  override def resultType(args: List[Expr]) : Type = { FltType }
+  override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 2); checkAllArgTypes(args, FltType) }
+}
+
+case class FPMulOp() extends FloatResultOp {
+  override val hashId = 260
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "fp.mul roundNearestTiesToEven"
+}
+case class FPAddOp() extends FloatResultOp {
+  override val hashId = 260
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "fp.add roundNearestTiesToEven"
+}
+case class FPSubOp() extends FloatResultOp {
+  override val hashId = 260
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "fp.sub roundNearestTiesToEven"
+}
+case class FPLTOp() extends BoolResultOp {
+  override val hashId = 260
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "fp.lt"
+  override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 2); checkAllArgTypes(args, FltType) }
+}
+case class FPGTOp() extends BoolResultOp {
+  override val hashId = 260
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "fp.gt"
+  override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 2); checkAllArgTypes(args, FltType) }
+}
+case class FPIsNanOp() extends BoolResultOp {
+  override val hashId = 260
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "fp.isNaN"
+  override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 1); checkAllArgTypes(args, FltType) }
+}
+
+
 // Expressions
 abstract class Expr(val typ: Type) extends Hashable {
   val hashBaseId : Int = 662
@@ -717,6 +778,16 @@ case class EnumLit(id : String, eTyp : EnumType) extends Literal (eTyp) {
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash(id, eTyp)
   override def toString  = id.toString
+}
+
+case class FloatLit(integral: BigInt, fractional: BigInt) extends Literal (FltType){
+  override val hashId = mix(mix(integral.hashCode(), fractional.hashCode()), 316)
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash(integral, fractional)
+  override def toString = if(integral>0 )
+  {"((_ to_fp 5 11) roundNearestTiesToEven " + integral.toString + "." + fractional.toString +")"}
+  else
+  {"((_ to_fp 5 11) roundNearestTiesToEven (" + integral.toString + "." + fractional.toString + "))"}
 }
 
 case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {

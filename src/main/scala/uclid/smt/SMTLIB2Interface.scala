@@ -130,6 +130,10 @@ trait SMTLIB2Base {
             val typeStr = "(_ BitVec %d)".format(n)
             typeMap = typeMap.addSynonym(typeStr, t)
             (typeStr, List.empty)
+          case FltType => 
+            val typeStr = "(_ FloatingPoint 5 11)"
+            typeMap = typeMap.addSynonym(typeStr, t)
+            (typeStr, List.empty)
           case MapType(inTypes, outType) =>
             val (typeStr, newTypes1) = generateDatatype(outType)
             val (_, newTypes) = inTypes.foldRight((List.empty[String], newTypes1)) {
@@ -271,6 +275,12 @@ trait SMTLIB2Base {
             (value.toString(), memo, false)
           case BitVectorLit(value, width) =>
             ("(_ bv" + value.toString() + " " + width.toString() + ")", memo, false)
+          case FloatLit(integral,fractional) =>
+            if(integral >= 0)
+              ("((_ to_fp 5 11) roundNearestTiesToEven "+integral.toString() + "." + fractional.toString + ")", memo, false)
+            else
+              ("((_ to_fp 5 11) roundNearestTiesToEven (-"+integral.toString() + "." + fractional.toString + "))", memo, false)
+  
           case BooleanLit(value) =>
             (value match { case true => "true"; case false => "false" }, memo, false)
         }
