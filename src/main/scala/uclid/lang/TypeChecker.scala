@@ -190,9 +190,13 @@ object ReplacePolymorphicOperators {
     val fltOp = op match {
       case LTOp() => FPLTOp()
       case GTOp() => FPGTOp()
+      case LEOp() => FPLEOp()
+      case GEOp() => FPGEOp()
       case AddOp() => FPAddOp()
       case SubOp() => FPSubOp()
       case MulOp() => FPMulOp()
+      case DivOp() => FPDivOp()
+      case UnaryMinusOp() => FPUnaryMinusOp()
     }
     fltOp.pos = op.pos
     fltOp
@@ -383,9 +387,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes.size == floatOp.arity, "Operator '%s' must have exactly %d argument(s)".format(opapp.op.toString, floatOp.arity), opapp.pos, c.filename)
           checkTypeError(argTypes.forall(_.isInstanceOf[FloatType]), "Argument(s) to operator '" + opapp.op.toString + "' must be of type float", opapp.pos, c.filename)
           floatOp match {
-            case FPGTOp() | FPLTOp()| FPIsNanOp() =>
+            case FPGTOp() | FPLTOp()| FPGEOp() | FPLEOp()| FPIsNanOp() =>
               BooleanType()
-            case FPMulOp() | FPSubOp() | FPAddOp()  =>
+            case FPMulOp() | FPSubOp() | FPAddOp() | FPDivOp() | FPUnaryMinusOp()  =>
               FloatType()
           }
         }

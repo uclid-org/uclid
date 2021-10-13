@@ -142,10 +142,14 @@ object Converter {
       // float operators
       case lang.FPAddOp() => smt.FPAddOp()
       case lang.FPMulOp() => smt.FPMulOp()
+      case lang.FPDivOp() => smt.FPDivOp()
       case lang.FPSubOp() => smt.FPSubOp()
       case lang.FPLTOp() => smt.FPLTOp()
       case lang.FPGTOp() => smt.FPGTOp()
+      case lang.FPLEOp() => smt.FPLEOp()
+      case lang.FPGEOp() => smt.FPGEOp()
       case lang.FPIsNanOp() => smt.FPIsNanOp()
+      case lang.FPUnaryMinusOp() => smt.FPMinusOp()
       // Boolean operators.
       case lang.ConjunctionOp() => smt.ConjunctionOp
       case lang.DisjunctionOp() => smt.DisjunctionOp
