@@ -253,7 +253,7 @@ case class FPSubOp() extends FloatArgOperator() {
   override def toString = "-"
 }
 case class FPAddOp() extends FloatArgOperator() {
-  override def toString = "-"
+  override def toString = "+"
 }
 case class FPMulOp() extends FloatArgOperator() {
   override def toString = "*"
