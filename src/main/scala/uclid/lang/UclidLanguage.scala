@@ -243,6 +243,12 @@ case class FPLTOp() extends FloatArgOperator() {
 case class FPGTOp() extends FloatArgOperator() {
   override def toString = ">"
 }
+case class FPLEOp() extends FloatArgOperator() {
+  override def toString = "<="
+}
+case class FPGEOp() extends FloatArgOperator() {
+  override def toString = ">="
+}
 case class FPSubOp() extends FloatArgOperator() {
   override def toString = "-"
 }
@@ -252,8 +258,16 @@ case class FPAddOp() extends FloatArgOperator() {
 case class FPMulOp() extends FloatArgOperator() {
   override def toString = "*"
 }
+case class FPDivOp() extends FloatArgOperator() {
+  override def toString = "/"
+}
 case class FPIsNanOp() extends FloatArgOperator() {
   override def toString = "isNaN"
+  override val arity = 1
+}
+case class FPUnaryMinusOp() extends FloatArgOperator() {
+  override def fixity = Operator.PREFIX
+  override def toString = "-"
   override val arity = 1
 }
 

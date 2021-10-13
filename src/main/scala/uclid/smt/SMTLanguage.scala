@@ -704,38 +704,62 @@ case class FPMulOp() extends FloatResultOp {
   override def toString = "fp.mul roundNearestTiesToEven"
 }
 case class FPAddOp() extends FloatResultOp {
-  override val hashId = 260
+  override val hashId = 261
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash
   override def toString = "fp.add roundNearestTiesToEven"
 }
 case class FPSubOp() extends FloatResultOp {
-  override val hashId = 260
+  override val hashId = 262
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash
   override def toString = "fp.sub roundNearestTiesToEven"
 }
 case class FPLTOp() extends BoolResultOp {
-  override val hashId = 260
+  override val hashId = 263
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash
   override def toString = "fp.lt"
-  override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 2); checkAllArgTypes(args, FltType) }
 }
 case class FPGTOp() extends BoolResultOp {
-  override val hashId = 260
+  override val hashId = 264
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash
   override def toString = "fp.gt"
-  override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 2); checkAllArgTypes(args, FltType) }
 }
 case class FPIsNanOp() extends BoolResultOp {
-  override val hashId = 260
+  override val hashId = 265
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash
   override def toString = "fp.isNaN"
   override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 1); checkAllArgTypes(args, FltType) }
 }
+case class FPDivOp() extends FloatResultOp {
+  override val hashId = 266
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "fp.div roundNearestTiesToEven"
+}
+case class FPLEOp() extends BoolResultOp {
+  override val hashId = 267
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "fp.leq"
+}
+case class FPGEOp() extends BoolResultOp {
+  override val hashId = 268
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "fp.geq"
+}
+case class FPMinusOp() extends FloatResultOp {
+  override val hashId = 269
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "fp.neg"
+  override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 1); checkAllArgTypes(args, FltType) }
+}
+
 
 
 // Expressions
