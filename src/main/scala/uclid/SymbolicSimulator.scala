@@ -223,9 +223,9 @@ class SymbolicSimulator (module : Module) {
       else
       {
         UclidMain.printVerbose("Module has no hyperproperties. Using plain symbolic simulation")
-        initialize(false, true, false, context, label, propertyFilter, propertyFilter)
-        symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, false, context, label, 
-                            propertyFilter, propertyFilter)
+        initialize(false, true, context, label, propertyFilter)
+        symbolicSimulate(0, cmd.args(0)._1.asInstanceOf[IntLit].value.toInt, true, context, label, 
+                            propertyFilter)
       }
       val delta =  (System.nanoTime() - start) / 1000000.0
       UclidMain.printStats(f"Symbolic simulation took ${delta}%.1f ms")
@@ -297,18 +297,18 @@ class SymbolicSimulator (module : Module) {
 
             // base case.
             resetState()
-            initialize(false, true, false, context, labelBase, assumptionFilter, propertyFilter)
-            symbolicSimulate(0, k-1, true, false, context, labelBase, assumptionFilter, propertyFilter) // if k - 1 = 0, symbolicSimulate is a NOP.
+            initialize(false, true, context, labelBase, propertyFilter)
+            symbolicSimulate(0, k-1, true, context, labelBase, propertyFilter) // if k - 1 = 0, symbolicSimulate is a NOP.
 
             // inductive step
             resetState()
-            // we are assuming that the assertions hold for k-1 steps (by passing false, true to initialize and symbolicSimulate)
-            initialize(true, false, true, context, labelStep, assumptionFilter, propertyFilter)
+            // we are assuming that the assertions hold for k-1 steps (by passing false)
+            initialize(true, false, context, labelStep, assumptionFilter)
             if ((k - 1) > 0) {
-              symbolicSimulate(0, k-1, false, true, context, labelStep, assumptionFilter, propertyFilter)
+              symbolicSimulate(0, k-1, false, context, labelStep, assumptionFilter)
             }
             // now are asserting that the assertion holds by pass true, false to symbolicSimulate.
-            symbolicSimulate(k-1, 1, true,  false, context, labelStep, assumptionFilter, propertyFilter)
+            symbolicSimulate(k-1, 1, true, context, labelStep, propertyFilter)
             val delta =  (System.nanoTime() - start) / 1000000.0
             UclidMain.printStats(f"Symbolic simulation for induction took $delta%.1f ms")
             // go back to original state.
@@ -450,16 +450,14 @@ class SymbolicSimulator (module : Module) {
    * Create symbolic expressions for the init block.
    *
    * @param havocInit: if this is true, then the initial state is left unconstrained. If not, we execute the module's init block.
-   * @param addAssertions: if this is true, then we assert module-level assertions, otherwise we ignore them unless addAssumptions = true.
-   * @param addAssumptions: if this is true, then we assume module-level assertions, otherwise we assert them if addAssertions = true.
+   * @param addAssertions: if this is true, then we assert assertions in the property filter, otherwise we assume them.
    * @param scope: is the context.
    * @param label: is a label for the result (this may be auto-generated if none is specified by the user.)
    * @param filter is a function that tells us which properties (module-level assertions/invariants) should be considered.
    * 	             For property p if filter(p.id, p.decorators) == false, then the property is ignored.
    */
-  def initialize(havocInit : Boolean, addAssertions : Boolean, addAssumptions : Boolean, 
+  def initialize(havocInit : Boolean, addAssertions : Boolean, 
                  scope : Scope, label : String, 
-                 assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean),
                  propertyFilter : ((Identifier, List[ExprDecorator]) => Boolean))
   {
     val initSymbolTable = getInitSymbolTable(scope)
@@ -480,7 +478,7 @@ class SymbolicSimulator (module : Module) {
     val simTbl : SimulationTable = ArrayBuffer(frameList)
 
     if (addAssertions) { addAsserts(0, symbolTable, frameList, simTbl, label, scope, propertyFilter, addAssertToTree _) }
-    if (addAssumptions) { assumeAssertions(symbolTable, frameTbl, 1, scope, assumptionFilter, addAssumptionToTree _) }
+    else { assumeAssertions(symbolTable, frameTbl, 1, scope, propertyFilter, addAssumptionToTree _) }
   }
 
   def newInputSymbols(st : SymbolTable, step : Int, scope : Scope) : SymbolTable = {
@@ -1106,16 +1104,14 @@ class SymbolicSimulator (module : Module) {
    *
    * @param startStep The step number from which start (usually 1, except for k-induction, where it is k.)
    * @param numberOfSteps The number of steps for which to execute.
-   * @param addAssertions If this is true, then all module-level assertions are asserted. If this is false, then assertions are ignored unless addAssertionsAsAssume = true.
-   * @param addAssertionsAsAssumes If this is true, then module-level assertion are assumed, not asserted.
+   * @param assertProperties If this is true, then everything in the propertyfilter is asserted. If this is false, then everything in the filter is assumed
    * @param scope The current scope.
    * @param label A label associated with the current verification task.
    * @param filter A function which identifies which assertions are to be considered.
    */
   def symbolicSimulate(
-      startStep: Int, numberOfSteps: Int, addAssertions : Boolean, addAssertionsAsAssumes : Boolean,
+      startStep: Int, numberOfSteps: Int, assertProperties : Boolean,
       scope : Scope, label : String, 
-      assumptionFilter : ((Identifier, List[ExprDecorator]) => Boolean),
       propertyFilter: ((Identifier, List[ExprDecorator]) => Boolean))
   {
     var currentState = symbolTable
@@ -1138,8 +1134,8 @@ class SymbolicSimulator (module : Module) {
       val simTbl = ArrayBuffer(frameList)
       // FIXME: simTable
       addModuleAssumptions(currentState, frameList, numPastFrames, scope, addAssumptionToTree _)
-      if (addAssertions) { addAsserts(step, currentState, frameList, simTbl, label, scope, propertyFilter, addAssertToTree _)  }
-      if (addAssertionsAsAssumes) { assumeAssertions(currentState, frameList, numPastFrames, scope, assumptionFilter, addAssumptionToTree _) }
+      if (assertProperties) { addAsserts(step, currentState, frameList, simTbl, label, scope, propertyFilter, addAssertToTree _)  }
+      else { assumeAssertions(currentState, frameList, numPastFrames, scope, propertyFilter, addAssumptionToTree _) }
     }
     symbolTable = currentState
   }
