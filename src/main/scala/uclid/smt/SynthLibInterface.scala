@@ -58,6 +58,18 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   type SynthVarSet = MutableSet[SynthSymbol]
   var synthVariables : SynthVarSet = MutableSet.empty
 
+  override def generateOracleDeclaration(sym: OracleSymbol) = {
+    val (typeName, newTypes) = generateDatatype(sym.typ)
+    Utils.assert(newTypes.size == 0, "No new types are expected here.")
+
+    val inputTypes = generateInputDataTypes(sym.typ)
+    val inputNames = sym.symbolTyp.args.map( a => a._1.toString())
+    val sig =  (inputNames zip inputTypes).map(a => a._2 ).mkString(" ")
+    var cmd = ""
+    cmd = "(declare-oracle-fun %s %s (%s) %s)\n".format(sym, sym.binary,  sig, typeName)
+    out += cmd
+  }
+
   override def generateDeclaration(sym: Symbol) = {
     val (typeName, newTypes) = generateDatatype(sym.typ)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
@@ -153,6 +165,15 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
       (s) => {
         variables += s
         generateDeclaration(s)
+      }
+    }
+    val oracleSymbols = findOracleSymbols(e)
+    val oracleSymbolsP = oracleSymbols.filter(s => !oracleVariables.contains(s))
+    oracleSymbolsP.foreach {
+      (s) => {
+        oracleVariables += s
+        println("generating oracle dec "+ s)
+        generateOracleDeclaration(s)
       }
     }
 

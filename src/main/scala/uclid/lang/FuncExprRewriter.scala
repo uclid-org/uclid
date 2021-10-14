@@ -98,8 +98,8 @@ class FuncExprRewriterPass extends RewritePass {
           } else {
             fapp
           }
-        } else if (fnName == "isNan"){
-          Utils.assert(fapp.args.size==1, "Expected one operands for isNan")
+        } else if (fnName == "isNaN"){
+          Utils.assert(fapp.args.size==1, "Expected one operands for isNaN")
           OperatorApplication(FPIsNanOp(), List(fapp.args(0)))
         } else {
           fapp
