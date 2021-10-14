@@ -18,7 +18,7 @@ module main
     y' = y - 1.0;
     assume(q > 0.0);
     q' = 2.0 *q;
-    assert(isNan(q));
+    assert(isNaN(q));
     assert(q' < q); // should fail
   }
 

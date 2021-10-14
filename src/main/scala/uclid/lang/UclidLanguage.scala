@@ -617,7 +617,7 @@ case class FloatLit(integral: BigInt, fractional: BigInt) extends NumericLit {
       case _ => throw new Utils.RuntimeError("Cannot create range for float literals")
     }
   }
-  override def negate = FloatLit(-integral, -fractional)
+  override def negate = FloatLit(-integral, fractional)
 }
 
 case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
