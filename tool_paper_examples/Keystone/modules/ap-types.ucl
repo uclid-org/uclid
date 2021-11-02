@@ -1,0 +1,211 @@
+module ap_types {
+
+type * = common_types.*;
+const * = common_types.*;
+function * = common_types.*;
+define * = common_types.*;
+
+  
+// 
+// registers
+//
+type regindex_t = integer;
+type regs_t = [regindex_t]word_t;
+const k0_regindex_t : integer = 0;
+const k1_regindex_t : integer = 1;
+const kmax_regindex_t : integer = 511;
+const kN_regindex_t : integer = 512;
+const kN_regindex_t_as_int : integer = 512;
+const kzero_regs_t : regs_t;
+axiom (forall (ri : regindex_t) :: kzero_regs_t[ri] == k0_word_t);
+define LE_ri(p1 : regindex_t, p2 : regindex_t) : boolean = p1 <= p2;
+define valid_regindex(ri : regindex_t) : boolean
+= ri >= k0_regindex_t && ri < kN_regindex_t;
+
+
+
+
+
+//
+// operating mode of the cpu
+//
+type mode_t = enum {
+  mode_untrusted,
+  mode_enclave
+};
+
+
+//
+// Page Tables (sort of: because we map addresses and not pages).
+//
+type addr_perm_t    = bv5;
+type vaddr2bool_t   = [vaddr_t]boolean;
+type excl_vaddr_t   = [vaddr_t]boolean;
+type addr_valid_t   = [vaddr_t]addr_perm_t;
+type addr_map_t     = [vaddr_t]wap_addr_t;
+
+
+
+define tap_addr_perm_p(p : addr_perm_t) : boolean = p[0:0] == 1bv1;
+define tap_addr_perm_a(p : addr_perm_t) : boolean = p[1:1] == 1bv1;
+define tap_addr_perm_x(p : addr_perm_t) : boolean = p[2:2] == 1bv1;
+define tap_addr_perm_r(p : addr_perm_t) : boolean = p[3:3] == 1bv1;
+define tap_addr_perm_w(p : addr_perm_t) : boolean = p[4:4] == 1bv1;
+define tap_addr_perm_v(p : addr_perm_t) : boolean
+= tap_addr_perm_x(p) || tap_addr_perm_r(p) || tap_addr_perm_w(p);
+
+// setters
+define tap_set_addr_perm_p(p : addr_perm_t) : addr_perm_t = p[4:1] ++ 1bv1;
+define tap_set_addr_perm_a(p : addr_perm_t) : addr_perm_t = p[4:2] ++ 1bv1 ++ p[0:0];
+define tap_set_addr_perm_x(p : addr_perm_t) : addr_perm_t = p[4:3] ++ 1bv1 ++ p[1:0];
+define tap_set_addr_perm_r(p : addr_perm_t) : addr_perm_t = p[4:4] ++ 1bv1 ++ p[2:0];
+define tap_set_addr_perm_w(p : addr_perm_t) : addr_perm_t =           1bv1 ++ p[3:0];
+
+// un-setters
+define tap_unset_addr_perm_p(p : addr_perm_t) : addr_perm_t = p[4:1] ++ 0bv1;
+define tap_unset_addr_perm_a(p : addr_perm_t) : addr_perm_t = p[4:2] ++ 0bv1 ++ p[0:0];
+define tap_unset_addr_perm_x(p : addr_perm_t) : addr_perm_t = p[4:3] ++ 0bv1 ++ p[1:0];
+define tap_unset_addr_perm_r(p : addr_perm_t) : addr_perm_t = p[4:4] ++ 0bv1 ++ p[2:0];
+define tap_unset_addr_perm_w(p : addr_perm_t) : addr_perm_t =           0bv1 ++ p[3:0];
+
+
+// remove the "irrelevant" (OS-settable) bits from addr_perm_t
+define tap_addr_perm_bits(p : addr_perm_t) : addr_perm_t  = p[4:2] ++ 0bv2;
+
+// predicates
+define tap_addr_perm_eq(p1 : addr_perm_t, p2 : addr_perm_t) : boolean
+= tap_addr_perm_x(p1) == tap_addr_perm_x(p2) &&
+  tap_addr_perm_r(p1) == tap_addr_perm_r(p2) &&
+  tap_addr_perm_w(p1) == tap_addr_perm_w(p2);
+
+
+//
+// enclave types
+//
+type tap_enclave_id_t                      = integer;
+type tap_thread_id_t                       = integer;
+type count_t                               = integer;
+type container_data_t                      = [wap_addr_t]word_t;
+type container_valid_t                     = [wap_addr_t]boolean;
+
+// New state for FAAS enclaves
+type tap_enclave_is_parent_t               = [tap_enclave_id_t]boolean;
+type tap_enclave_metadata_parent_t         = [tap_enclave_id_t]tap_enclave_id_t;
+
+
+// what enclaves exists in the system?
+type tap_enclave_metadata_valid_t          = [tap_enclave_id_t]boolean;
+
+// what is the state of the enclave?
+type tap_enclave_metadata_regs_t           = [tap_enclave_id_t]regs_t;
+type tap_enclave_metadata_num_threads_t    = [tap_enclave_id_t]count_t;
+type tap_enclave_metadata_entrypoint_t     = [tap_enclave_id_t]vaddr_t;
+type tap_enclave_metadata_pc_t             = [tap_enclave_id_t]vaddr_t;
+
+// what memory is an enclave allowed to access?
+type tap_enclave_metadata_addr_excl_t      = [tap_enclave_id_t]excl_vaddr_t;
+type tap_enclave_metadata_addr_valid_t     = [tap_enclave_id_t]addr_valid_t;
+type tap_enclave_metadata_addr_map_t       = [tap_enclave_id_t]addr_map_t;
+
+// what addresses are exlusive to an enclave?
+type excl_map_t                            = [wap_addr_t]boolean;
+type shared_paddr_map_t                    = [wap_addr_t]boolean;
+type shared_vaddr_map_t                    = [vaddr_t]boolean;
+type paddr2paddr_map_t                     = [wap_addr_t]wap_addr_t;
+type owner_map_t                           = [wap_addr_t]tap_enclave_id_t;
+
+// what is the measurement of this enclave?
+type tap_enclave_metadata_measurement_t    = [tap_enclave_id_t]measurement_t;
+
+// has this enclave been paused?
+type tap_enclave_metadata_paused_t         = [tap_enclave_id_t]boolean;
+
+// do the cache sets of this enclave conflict with the rest of memory?
+type tap_enclave_metadata_cache_conflict_t = [tap_enclave_id_t]boolean;
+
+// enclave API call results
+type enclave_op_result_t = enum {
+  enclave_op_success,
+  enclave_op_invalid_arg,
+  enclave_op_failed
+};
+
+type tap_proof_op_t = enum {
+  tap_proof_op_launch,
+  tap_proof_op_enter,
+  tap_proof_op_exit,
+  tap_proof_op_resume,
+  tap_proof_op_pause,
+  tap_proof_op_compute,
+  tap_proof_op_destroy,
+  tap_proof_op_release,
+  tap_proof_op_block
+};
+
+
+//
+// exceptions
+//
+type exception_t = enum {
+  excp_none,
+  excp_os_protection_fault,
+  excp_tp_protection_fault
+};
+
+// Uninterpreted functions to model deterministic computation.
+function uf_cpu_r0_index(opcode : word_t) : regindex_t;
+function uf_cpu_r1_index(opcode : word_t) : regindex_t;
+function uf_cpu_r2_index(opcode : word_t) : regindex_t;
+axiom (forall (w : word_t) :: valid_regindex(uf_cpu_r0_index(w)));
+axiom (forall (w : word_t) :: valid_regindex(uf_cpu_r1_index(w)));
+axiom (forall (w : word_t) :: valid_regindex(uf_cpu_r2_index(w)));
+
+
+function uf_mem_load_vaddr(pc : vaddr_t, op : word_t, r1 : word_t, r2 : word_t) : vaddr_t;
+function uf_load_data(vaddr : vaddr_t, iter : integer) : word_t;
+function uf_mem_store_vaddr(pc : vaddr_t, op : word_t, l_data : word_t, r1 : word_t, r2 : word_t) : vaddr_t;
+function uf_mem_store_data(pc : vaddr_t, op : word_t, l_data : word_t, r1 : word_t, r2 : word_t) : word_t;
+function uf_cpu_pc(pc : vaddr_t, op : word_t, l_data : word_t, r1 : word_t, r2 : word_t) : vaddr_t;
+function uf_cpu_result(pc : vaddr_t, op : word_t, l_data : word_t, r1 : word_t, r2 : word_t) : word_t;function uf_observation(cpu_pc : vaddr_t, l_word : word_t, r_word : word_t, hit1 : boolean, hit2 : boolean, r_valid : addr_perm_t, r_paddr : wap_addr_t) : word_t;
+function uf_observation_mem(cpu_pc : vaddr_t, l_word : word_t, r_word : word_t) : word_t;
+function uf_observation_cache(hit1 : boolean, hit2 : boolean) : word_t;
+function uf_observation_pt(r_valid : addr_perm_t, r_paddr : wap_addr_t) : word_t;
+
+// 
+// Observer types
+//
+type observer_t;
+const k_mem_observer_t : observer_t;
+const k_cache_observer_t : observer_t;
+const k_pt_observer_t : observer_t;
+axiom (k_mem_observer_t != k_cache_observer_t) && (k_mem_observer_t != k_pt_observer_t) &&
+      (k_cache_observer_t != k_pt_observer_t);
+
+// Bunch of constants
+
+//
+// Page Table Constants
+//
+const k0_addr_perm_t : addr_perm_t = 0bv5;
+const kmax_addr_perm_t_as_int : integer = 31;
+
+//
+// constants and functions for enclave ids
+//
+const tap_null_enc_id       : tap_enclave_id_t = 0;
+const tap_blocked_enc_id    : tap_enclave_id_t = 1;
+const tap_user_def_enc_id_1 : tap_enclave_id_t = 2;
+const tap_user_def_enc_id_2 : tap_enclave_id_t = 3;
+const tap_user_def_enc_id_3 : tap_enclave_id_t = 4;
+const tap_user_def_enc_id_4 : tap_enclave_id_t = 5;
+const tap_user_def_enc_id_5 : tap_enclave_id_t = 6;
+
+define valid_enclave_id(id : tap_enclave_id_t) : boolean
+= id != tap_null_enc_id       && id != tap_blocked_enc_id    &&
+  id != tap_user_def_enc_id_1 && id != tap_user_def_enc_id_2 &&
+  id != tap_user_def_enc_id_3 && id != tap_user_def_enc_id_4 &&
+  id != tap_user_def_enc_id_5;
+
+
+
+} // end module ap_types
