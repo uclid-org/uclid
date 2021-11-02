@@ -3,11 +3,13 @@ This is an UCLID5 model that demonstrates the use of instantiating transitions s
 
 ## Usage
 To run the tap model,
-```cd model
+```
+cd model
 make tap
 ```
 
 To run the integrity proof,
-```cd proofs
+```
+cd proofs
 make
 ```
