@@ -19,7 +19,6 @@ module main {
         timestamp_t,
         microstep_t
     };
-    // FIXME: in LF, the interval is an integer.
     type interval_t  = tag_t;
     
     // Projection macros
@@ -81,15 +80,11 @@ module main {
     /**********************************
      * Reactions & connectivity graph *
      *********************************/
-    
-    //////////////////////////
-    // Application Specific
     // Element IDs
     type id_t = enum {  
         NULL,                                           // NULL 
         controller_1, controller_2, door_1, train_1     // Reactions
     };
-    //////////////////////////
      
     /*****************
      * Trace Element *
@@ -118,10 +113,7 @@ module main {
      *********/
     var trainMoves : boolean;
     var doorCloses : boolean;
-    // type flag_t = enum { TRUE, FALSE, UNKNOWN };
-    // var trainMoves : flag_t;
-    // var doorCloses : flag_t;
-    
+
     /************
      * Topology *
      ************/
@@ -148,16 +140,10 @@ module main {
     axiom(id(trainState) == NULL || id(trainState) == train_1);
     axiom(id(doorState) == NULL || id(doorState) == door_1);
 
-    // NULL state <==> UNKNWON flag
-    // axiom(id(trainState) == NULL <==> trainMoves == UNKNOWN);
-    // axiom(id(doorState) == NULL <==> doorCloses == UNKNOWN);
-
     init {
         doorCloses = false;
         trainMoves = false;
-        // doorCloses = UNKNOWN;
-        // trainMoves = UNKNOWN;
-        doorState = {NULL, {0,0}};
+        doorState  = {NULL, {0,0}};
         trainState = {NULL, {0,0}};
         ctrl1State = {NULL, {0,0}};
         ctrl2State = {NULL, {0,0}};
@@ -169,12 +155,10 @@ module main {
         case
             (id(state) == door_1) : {
                 doorCloses' = true;
-                // doorCloses' = TRUE;
                 doorState' = state;
             }
             (id(state) == train_1) : {
                 trainMoves' = true;
-                // trainMoves' = TRUE;
                 trainState' = state;
             }
             (id(state) == controller_1) : {
@@ -214,12 +198,11 @@ module main {
     }
 
     //////////////////////////////////////////////////
-    // property prop: trainMoves ==> doorCloses;
-    property prop2: !(trainMoves && !doorCloses);
-    // property prop: trainMoves == TRUE ==> doorCloses == TRUE;
+    // Safety property: Train cannot move while the door is open.
+    property safety: !(trainMoves && !doorCloses);
 
     control {
-        v = induction(1);
+        v = induction;
         check;
         print_results;
         v.print_cex;
