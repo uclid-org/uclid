@@ -131,7 +131,7 @@ trait SMTLIB2Base {
             typeMap = typeMap.addSynonym(typeStr, t)
             (typeStr, List.empty)
           case FltType => 
-            val typeStr = "(_ FloatingPoint 5 11)"
+            val typeStr = "(_ FloatingPoint 8 24)"
             typeMap = typeMap.addSynonym(typeStr, t)
             (typeStr, List.empty)
           case MapType(inTypes, outType) =>
@@ -277,9 +277,9 @@ trait SMTLIB2Base {
             ("(_ bv" + value.toString() + " " + width.toString() + ")", memo, false)
           case FloatLit(integral,fractional) =>
             if(integral >= 0)
-              ("((_ to_fp 5 11) roundNearestTiesToEven "+integral.toString() + "." + fractional.toString + ")", memo, false)
+              ("((_ to_fp 8 24) roundNearestTiesToEven "+integral.toString() + "." + fractional.toString + ")", memo, false)
             else
-              ("((_ to_fp 5 11) roundNearestTiesToEven (-"+integral.toString() + "." + fractional.toString + "))", memo, false)
+              ("((_ to_fp 8 24) roundNearestTiesToEven (-"+integral.toString() + "." + fractional.toString + "))", memo, false)
   
           case BooleanLit(value) =>
             (value match { case true => "true"; case false => "false" }, memo, false)

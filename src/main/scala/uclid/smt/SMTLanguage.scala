@@ -804,14 +804,14 @@ case class EnumLit(id : String, eTyp : EnumType) extends Literal (eTyp) {
   override def toString  = id.toString
 }
 
-case class FloatLit(integral: BigInt, fractional: BigInt) extends Literal (FltType){
+case class FloatLit(integral: BigInt, fractional: String) extends Literal (FltType){
   override val hashId = mix(mix(integral.hashCode(), fractional.hashCode()), 316)
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash(integral, fractional)
   override def toString = if(integral>0 )
-  {"((_ to_fp 5 11) roundNearestTiesToEven " + integral.toString + "." + fractional.toString +")"}
+  {"((_ to_fp 5 11) roundNearestTiesToEven " + integral.toString + "." + fractional +")"}
   else
-  {"((_ to_fp 5 11) roundNearestTiesToEven (" + integral.toString + "." + fractional.toString + "))"}
+  {"((_ to_fp 5 11) roundNearestTiesToEven (" + integral.toString + "." + fractional + "))"}
 }
 
 case class Symbol(id: String, symbolTyp: Type) extends Expr (symbolTyp) {

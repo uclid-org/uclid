@@ -52,6 +52,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   var out     : String = ""
 
   var defineDecls : String = ""
+  var oracleDecls : String = ""
   type DefinesSet = MutableSet[DefineSymbol]
   var addedDefines : DefinesSet = MutableSet.empty
 
@@ -67,7 +68,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     val sig =  (inputNames zip inputTypes).map(a => a._2 ).mkString(" ")
     var cmd = ""
     cmd = "(declare-oracle-fun %s %s (%s) %s)\n".format(sym, sym.binary,  sig, typeName)
-    out += cmd
+    oracleDecls += cmd
   }
 
   override def generateDeclaration(sym: Symbol) = {
@@ -172,7 +173,6 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     oracleSymbolsP.foreach {
       (s) => {
         oracleVariables += s
-        println("generating oracle dec "+ s)
         generateOracleDeclaration(s)
       }
     }
@@ -255,7 +255,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   override def toString() : String = {
     val aexp = "(or " + total.mkString("\t\n") + ")"
     val query = if (sygusSyntax) {
-      synthDeclCommands + "\n" + defineDecls + "\n" + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
+      synthDeclCommands + "\n" + defineDecls + "\n" + oracleDecls +"\n" + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
     } else {
       out + "(assert " + aexp +")\n(check-sat)\n"
     }
