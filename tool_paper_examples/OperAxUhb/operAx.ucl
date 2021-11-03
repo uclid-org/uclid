@@ -1,0 +1,201 @@
+module main {
+    type * = uhb.*;
+    define * = uhb.*;
+    const * = uhb.*;
+
+    var i1, i2, i3, i4 : microop_t;
+
+    //Litmus test mp.
+    axiom i1.valid == true;
+    axiom i1.globalID == 0;
+    axiom i1.coreID == 0;
+    axiom i1.uopType == Write;
+    axiom i1.physAddr == 0; //x
+    axiom i1.data == 1;
+
+    axiom i2.valid == true;
+    axiom i2.globalID == 1;
+    axiom i2.coreID == 0;
+    axiom i2.uopType == Write;
+    axiom i2.physAddr == 1; //y
+    axiom i2.data == 1;
+
+    axiom i3.valid == true;
+    axiom i3.globalID == 2;
+    axiom i3.coreID == 1;
+    axiom i3.uopType == Read;
+    axiom i3.physAddr == 1; //y
+    axiom i3.data == 1;
+
+    axiom i4.valid == true;
+    axiom i4.globalID == 3;
+    axiom i4.coreID == 1;
+    axiom i4.uopType == Read;
+    axiom i4.physAddr == 0; //x
+    axiom i4.data == 0;
+
+    group testInstrs : microop_t = {i1, i2, i3, i4};
+
+    //Vars to decide which instrs to step and when.
+    var next1, next2, next3, next4 : boolean;
+    var curTime : integer;
+
+    init {
+        //initialise instruction state.
+        i1.Fetch.nExists = false;
+        i1.Execute.nExists = false;
+        i1.Writeback.nExists = false;
+
+        i2.Fetch.nExists = false;
+        i2.Execute.nExists = false;
+        i2.Writeback.nExists = false;
+
+        i3.Fetch.nExists = false;
+        i3.Execute.nExists = false;
+        i3.Writeback.nExists = false;
+
+        i4.Fetch.nExists = false;
+        i4.Execute.nExists = false;
+        i4.Writeback.nExists = false;
+
+        curTime = 0;
+    }
+
+    //Axiom enforcing that instructions are fetched in order.
+    axiom fifoFetch :
+        finite_forall (i : microop_t) in testInstrs ::
+        finite_forall (j : microop_t) in testInstrs ::
+            (ProgramOrder(i, j) &&
+              (NodeExists(i.Fetch) || NodeExists(j.Fetch))) ==>
+                EdgeExists(i.Fetch, j.Fetch);
+
+    procedure stepInst(index : integer)
+      returns (instr_next : microop_t)
+    {
+        //Steps the instruction at index, unless it has
+        //already completed.
+        case
+            (index == 1) : {
+                instr_next = i1;
+                if (!instr_next.Fetch.nExists) {
+                    instr_next.Fetch.nExists = true;
+                    instr_next.Fetch.nTime = curTime;
+                } else {
+                    if (!instr_next.Execute.nExists) {
+                        instr_next.Execute.nExists = true;
+                        instr_next.Execute.nTime = curTime;
+                    } else {
+                        if (!instr_next.Writeback.nExists) {
+                            instr_next.Writeback.nExists = true;
+                            instr_next.Writeback.nTime = curTime;
+                        }
+                    }
+                }
+            }
+            (index == 2) : {
+                instr_next = i2;
+                if (!instr_next.Fetch.nExists) {
+                    instr_next.Fetch.nExists = true;
+                    instr_next.Fetch.nTime = curTime;
+                } else {
+                    if (!instr_next.Execute.nExists) {
+                        instr_next.Execute.nExists = true;
+                        instr_next.Execute.nTime = curTime;
+                    } else {
+                        if (!instr_next.Writeback.nExists) {
+                            instr_next.Writeback.nExists = true;
+                            instr_next.Writeback.nTime = curTime;
+                        }
+                    }
+                }
+            }
+            (index == 3) : {
+                instr_next = i3;
+                if (!instr_next.Fetch.nExists) {
+                    instr_next.Fetch.nExists = true;
+                    instr_next.Fetch.nTime = curTime;
+                } else {
+                    if (!instr_next.Execute.nExists) {
+                        instr_next.Execute.nExists = true;
+                        instr_next.Execute.nTime = curTime;
+                    } else {
+                        if (!instr_next.Writeback.nExists) {
+                            instr_next.Writeback.nExists = true;
+                            instr_next.Writeback.nTime = curTime;
+                        }
+                    }
+                }
+            }
+            (index == 4) : {
+                instr_next = i4;
+                if (!instr_next.Fetch.nExists) {
+                    instr_next.Fetch.nExists = true;
+                    instr_next.Fetch.nTime = curTime;
+                } else {
+                    if (!instr_next.Execute.nExists) {
+                        instr_next.Execute.nExists = true;
+                        instr_next.Execute.nTime = curTime;
+                    } else {
+                        if (!instr_next.Writeback.nExists) {
+                            instr_next.Writeback.nExists = true;
+                            instr_next.Writeback.nTime = curTime;
+                        }
+                    }
+                }
+            }
+        esac
+    }
+
+    next {
+        //Increment the current timestamp and
+        //nondeterministically step isntructions.
+        curTime' = curTime + 1;
+
+        havoc next1; havoc next2; havoc next3; havoc next4;
+
+        if (next1) { call (i1') = stepInst(1); }
+        if (next2) { call (i2') = stepInst(2); }
+        if (next3) { call (i3') = stepInst(3); }
+        if (next4) { call (i4') = stepInst(4); }
+    }
+
+    //These properties will pass with the model as is.
+    //If the axiom fifoFetch is commented out, they will fail at step 3.
+    property WBFifo1 : i2.Writeback.nExists ==> i1.Writeback.nExists;
+    property WBFifo2 : i4.Writeback.nExists ==> i3.Writeback.nExists;
+
+    control {
+        v = bmc(3);
+        check;
+        v.print_cex(
+            i1.Fetch.nExists,
+            i1.Fetch.nTime,
+            i1.Execute.nExists,
+            i1.Execute.nTime,
+            i1.Writeback.nExists,
+            i1.Writeback.nTime,
+
+            i2.Fetch.nExists,
+            i2.Fetch.nTime,
+            i2.Execute.nExists,
+            i2.Execute.nTime,
+            i2.Writeback.nExists,
+            i2.Writeback.nTime,
+
+            i3.Fetch.nExists,
+            i3.Fetch.nTime,
+            i3.Execute.nExists,
+            i3.Execute.nTime,
+            i3.Writeback.nExists,
+            i3.Writeback.nTime,
+
+            i4.Fetch.nExists,
+            i4.Fetch.nTime,
+            i4.Execute.nExists,
+            i4.Execute.nTime,
+            i4.Writeback.nExists,
+            i4.Writeback.nTime
+        );
+        print_results;
+    }
+}

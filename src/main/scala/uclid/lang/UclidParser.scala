@@ -268,8 +268,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       positioned { "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) } }
     lazy val Integer: PackratParser[lang.IntLit] =
       positioned { integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base))} }
+
     lazy val Float: PackratParser[lang.FloatLit] =
-        (Integer ~ "." ~ Integer) ^^  { case f1 ~ "." ~ f2 => FloatLit(f1.value, f2.value) }
+        (Integer ~ "." ~ integerLit) ^^  { case f1 ~ "." ~ f2 => 
+        FloatLit(f1.value, f2.chars) }
     lazy val BitVector: PackratParser[lang.BitVectorLit] =
       positioned { bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) } }
     lazy val Number : PackratParser[lang.NumericLit] = positioned (Float | Integer | BitVector)

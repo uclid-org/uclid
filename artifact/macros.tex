@@ -1,0 +1,101 @@
+\usepackage{times} % uses less space
+\usepackage{graphicx}
+\usepackage{todonotes}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{algorithm2e}
+\usepackage{enumitem}
+\usepackage{wrapfig}
+\usepackage{url}
+\usepackage{ctable} % for \specialrule command
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{wrapfig} % for wrapping text around tables and figures
+\usepackage{caption}
+\usepackage{comment}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{dirtree}
+% \usepackage{subcaption}
+\definecolor{darkgreen}{rgb}{0.0, 0.3, 0.0}
+\definecolor{codegreen}{rgb}{0,0.4,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{darkmagenta}{rgb}{0.55,0,0.55}
+\definecolor{backcolour}{rgb}{1.0,1.0,1.0}
+
+\newcommand{\uclid}{UCLID5\xspace}
+\newcommand{\boogie}{Boogie\xspace}
+\newcommand{\zthree}{Z3\xspace}
+\newcommand{\smtlib}{SMT-LIB\xspace}
+\newcommand{\llamalib}{Synth-Lib\xspace}
+\newcommand{\sygusif}{SyGuS-IF\xspace}
+\newcommand{\tap}{{\textsc{TAP}}\xspace}
+\newcommand{\keyword}[1]{\textcolor{darkmagenta}{\texttt{#1}}}
+\newcommand{\ident}[1]{\textcolor{black}{\texttt{#1}}}
+\newcommand{\keywordbf}[1]{\textcolor{darkmagenta}{\texttt{{#1}}}}
+\newcommand{\proofcmd}[1]{\textcolor{blue}{\texttt{{#1}}}}
+\newcommand{\codelike}[1]{\texttt{#1}}
+\newcommand{\hbrel}{{\color{blue} \mathsf{hb}}}
+
+
+\lstdefinelanguage{uclid}{
+  sensitive = true,
+  keywords={module, forall, exists, Lambda, if, else, assert, assume, havoc,
+            for, range, skip, case, esac, init, next, control, function, procedure, oracle,
+            returns, call, define, type, var, input, output, const, property,
+            invariant, synthesis, grammar, requires, ensures, modifies, instance, axiom, 
+            enum, record, integer, boolean, float, true, false, finite_forall, finite_exists, group},
+  numbers=left,
+  numberstyle=\footnotesize,
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  frame=top,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+}
+
+\lstdefinelanguage{smt}{
+  sensitive = false,
+  keywords={declare, fun, synth, check, assert, sat, blocking, define, constraint},
+  numbers=left,
+  numberstyle=\footnotesize,
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  frame=top,
+  comment=[l]{;},
+}
+
+
+
+\lstdefinestyle{uclidstyle}{
+  backgroundcolor=\color{backcolour},
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{magenta},
+  numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},
+  basicstyle=\footnotesize,
+  breakatwhitespace=false,
+  basicstyle=\bf\scriptsize\ttfamily,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=5pt,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2,
+  frame=shadowbox
+}
+
+\newcommand{\addcite}[1]{\todo[linecolor=blue,backgroundcolor=blue!25,bordercolor=blue]{cite: #1}}
+
+\newcommand{\mat}[1]{{#1}}
+\newif\ifcontrol
+\controltrue
