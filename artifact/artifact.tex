@@ -118,6 +118,14 @@ We now describe each of these examples in more detail:
 
 \subsection{\excommand{Control}}
 \input{example_Control.tex}
+\subsection{\excommand{OperAxUhb}}
+
+This example corresponds to Figure 8 in our submitted paper, namely the combined operational-axiomatic model of a microarchitecture whose pipelines fetch instructions in program order.
+The example code contains \texttt{uhb\_common.ucl}, the embedding of $\mu$spec in \uclid (parts of which are shown in Figure 7 of our submitted paper).
+It also contains the code of the model depicted in Figure 8\footnote{Note that the \texttt{fifoFetch} axiom differs very slightly from Figure 8 of our paper due to a small inaccuracy in the submitted paper's code.} of our paper in \texttt{operAx.ucl}.
+The \texttt{operAx.ucl} file also contains two properties (\texttt{FetchHBNextExecute} and \texttt{WBFifo}). The control block of \texttt{operAx.ucl} checks these properties using bounded model checking for traces up to size 5.
+The first property (\texttt{FetchHBNextExecute}) is maintained by a combination of the operational and axiomatic constraints, and so will always be true.
+The second property (\texttt{WBFifo}) is not maintained by the model, and the \texttt{bmc} command duly detects a counterexample trace of length 5 for it.
 
 \textbf{This should take around ?.}
 
