@@ -40,12 +40,16 @@ University of Michigan
 \maketitle
 
 \newcommand{\artcommand}[1]{\texttt{#1}}
-\newcommand{\uclidcmd}{\textbf{\texttt{uclid}}~}
+\newcommand{\uclidcmd}{\textbf{{UCLID5}}~}
 
 \section{Setup}
 
-The submission has the following structure:
+The submission tarball has the following structure:
 \dirtree{%
+.0 .
+.1 License.txt.
+.1 Readme.txt.
+.1 artifact.pdf.
 .1 packages.
 .2 sbt\_1.5.5\_all.deb.
 .1 uclid.
@@ -70,22 +74,21 @@ The submission has the following structure:
 .3 Readme.md.
 .3 fib.ucl.
 .2 src.
-.2 test.
 .2 <others>.
 }
 
 \paragraph{}
-The \artcommand{packages} directory contains the \artcommand{sbt} Debian package which is required to build \uclidcmd from source, it is not required for running \uclidcmd using the binaries that we have provided.
+The \artcommand{packages} directory contains the \artcommand{sbt} Debian package which is required to build \uclidcmd from source. This is completely optional and it is not required for running \uclidcmd using the binaries that we have provided.
 The \artcommand{uclid} directory is a snapshot of the \uclidcmd GitHub repository at commit \texttt{add commit}. The \artcommand{tool\_paper\_examples} folder is self contained for running the tool on the examples with the provided binaries (see Running with prebuilt binaries below).
 To begin, copy the \artcommand{packages} and \artcommand{uclid} directories into the \artcommand{\$HOME} directory of the VM.
 
 
 \paragraph{Running with prebuilt binaries (recommended)}
 
-The \artcommand{tool\_paper\_examples} directory is self contained with prebuilt \uclidcmd and external solver binaries as well as the relevant examples mentioned in the paper. Please change move into this directory and follow the instructions given in Section \ref{sec:running}
+The \artcommand{tool\_paper\_examples} directory is self contained with prebuilt \uclidcmd and external solver binaries as well as the relevant examples mentioned in the paper. Please change move into this directory and follow the instructions given in Section \ref{sec:running}.
 
 
-\paragraph{Building from source} The supplied \artcommand{sbt} Debian package is only required if you wish to build \uclidcmd from source. Start by installing \artcommand{sbt} by running \artcommand{sudo dpkg -i sbt\_1.5.5\_all.deb} from the \artcommand{packages} directory. Then from the \artcommand{uclid} directory, follow the instructions given at \url{https://github.com/uclid-org/uclid#compiling-uclid5}. After doing so, 
+\paragraph{Building from source} The supplied \artcommand{sbt} Debian package is only required if you wish to build \uclidcmd from source. Start by installing \artcommand{sbt} by running \artcommand{sudo dpkg -i sbt\_1.5.5\_all.deb} from the \artcommand{packages} directory. Then from the \artcommand{uclid} directory, follow the instructions given at \url{https://github.com/uclid-org/uclid#compiling-uclid5}. After doing so, you can either build the \uclidcmd binary or run examples directly from within the \artcommand{}{sbt} prompt.
 
 
 
@@ -113,18 +116,27 @@ We now describe each of these examples in more detail:
 \subsection{\excommand{Fib}}
 \input{example_Fib.tex}
 
+\textbf{This should take around 10 seconds.}
+
 \subsection{\excommand{Control}}
 \input{example_Control.tex}
+
+\textbf{This should take around ?.}
 
 \subsection{\excommand{TrainSystem}}
 \input{example_TrainSystem.tex}
 
+\textbf{This should take around 10 seconds.}
+
 \subsection{\excommand{OperAxUhb}}
 \input{example_OperAxUhb.tex}
+
+\textbf{This should take around 10 seconds.}
 
 \subsection{\excommand{Keystone}}
 \input{example_Keystone.tex}
 
+\textbf{This should take around 1 hour.}
 
 \end{document}
 
