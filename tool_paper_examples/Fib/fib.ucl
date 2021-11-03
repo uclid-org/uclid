@@ -1,0 +1,25 @@
+module main {
+  // Part 1: System Description.
+  var a, b : integer;
+  init {
+    a, b = 0, 1;
+  }
+  next {
+    a', b' = b, a + b;
+  }
+
+  // Part 2: System Specification.
+  invariant a_le_b: a <= b; 
+  
+  // Part 3: (NEW) Synthesis Integration
+  synthesis function 
+    h(x : integer, y : integer): boolean;
+  invariant hole: h(a, b);
+
+  // Part 4: Proof Script.
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}

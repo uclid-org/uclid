@@ -1,0 +1,120 @@
+\documentclass[runningheads]{llncs}
+
+\input{macros}
+
+\begin{document}
+%
+\title{Artifact for Paper \\
+\uclid: Multi-Modal Formal Modeling, Verification, and Synthesis}
+%\title{\uclid}
+%
+\titlerunning{\uclid}
+\authorrunning{Anon}
+% If the paper title is too long for the running head, you can set
+% an abbreviated paper title here
+%
+\author{Elizabeth Polgreen \inst{1,2}
+ \and 
+Kevin Cheang\inst{1}
+\and
+Pranav Gaddamadugu\inst{1}
+\and
+Adwait Godbole \inst{1}
+\and
+Kevin Laeufer\inst{1}
+\and
+Shaokai Lin\inst{1}
+\and
+Yatin A.~Manerkar\inst{1,3}
+\and
+Federico Mora\inst{1}
+\and ~~~~~~~~~~~~
+Sanjit A.~Seshia\inst{1}}
+%
+
+\institute{UC Berkeley \and
+University of Edinburgh \and
+University of Michigan
+}
+
+\maketitle
+
+\newcommand{\artcommand}[1]{\texttt{#1}}
+\newcommand{\uclidcmd}{\textbf{\texttt{uclid}}~}
+
+\section{Setup}
+
+The submission has the following structure:
+\dirtree{%
+.1 packages.
+.2 sbt\_1.5.5\_all.deb.
+.1 uclid.
+.2 License.txt.
+.2 Readme.txt.
+.2 tool\_paper\_examples.
+.3 uclid.
+.3 z3.
+.4 solver files.
+.3 delphi.
+.4 solver files.
+.3 cvc4.
+.4 solver files.
+.3 Control.
+.4 associated files.
+.3 Keystone.
+.4 associated files.
+.3 OperAxUhb.
+.4 associated files.
+.3 TrainSystem.
+.4 associated files.
+.3 Readme.md.
+.3 fib.ucl.
+.2 src.
+.2 test.
+.2 <others>.
+}
+
+\paragraph{}
+The \artcommand{packages} directory contains the \artcommand{sbt} Debian package which is required to build \uclidcmd from source, it is not required for running \uclidcmd using the binaries that we have provided.
+The \artcommand{uclid} directory is a snapshot of the \uclidcmd GitHub repository at commit \texttt{add commit}. The \artcommand{tool\_paper\_examples} folder is self contained for running the tool on the examples with the provided binaries (see Running with prebuilt binaries below).
+To begin, copy the \artcommand{packages} and \artcommand{uclid} directories into the \artcommand{\$HOME} directory of the VM.
+
+
+\paragraph{Running with prebuilt binaries (recommended)}
+
+The \artcommand{tool\_paper\_examples} directory is self contained with prebuilt \uclidcmd and external solver binaries as well as the relevant examples mentioned in the paper. Please change move into this directory and follow the instructions given in Section \ref{sec:running}
+
+
+\paragraph{Building from source} The supplied \artcommand{sbt} Debian package is only required if you wish to build \uclidcmd from source. Start by installing \artcommand{sbt} by running \artcommand{sudo dpkg -i sbt\_1.5.5\_all.deb} from the \artcommand{packages} directory. Then from the \artcommand{uclid} directory, follow the instructions given at \url{https://github.com/uclid-org/uclid#compiling-uclid5}. After doing so, 
+
+
+
+
+\section{Running the examples}
+\label{sec:running}
+
+Move into the \artcommand{tool\_paper\_examples} directory. This directory consists of the following:
+
+\begin{itemize}
+    \item The prebuilt binary for the tool \artcommand{uclid}
+    \item The prebuilt binaries for the external solvers \artcommand{z3}, \artcommand{cvc4} and \artcommand{delphi} in their respective directories
+    \item Four test-examples directories: \artcommand{Fib}, \artcommand{Control},
+    \artcommand{Keystone},
+    \artcommand{OperAxUhb}, and
+    \artcommand{TrainSystem}
+\end{itemize}
+
+
+We now describe each of these examples in more detail:
+
+\newcommand{\excommand}[1]{$\mathsf{#1}$}
+
+\subsection{\excommand{Fib}}
+\subsection{\excommand{Control}}
+\subsection{\excommand{Keystone}}
+\subsection{\excommand{OperAxUhb}}
+\subsection{\excommand{TrainSystem}}
+
+
+\end{document}
+
