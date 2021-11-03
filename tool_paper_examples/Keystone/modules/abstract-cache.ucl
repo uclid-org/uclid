@@ -1,0 +1,127 @@
+module abstract_cache {
+
+type * = common_types.*;
+const * = common_types.*;
+function * = common_types.*;  
+define * = common_types.*;
+
+var cache_valid_map  : cache_valid_map_t;
+var cache_tag_map    : cache_tag_map_t;
+
+procedure [noinline] init_cache()
+	ensures (forall (i : cache_set_index_t, w : cache_way_index_t) ::
+			(valid_cache_set_index(i) && valid_cache_way_index(w)) ==> !cache_valid_map[i, w]);
+  modifies cache_valid_map;
+{
+	var ind : cache_set_index_t;
+	var way : cache_way_index_t;
+	ind = 0;
+
+	while (ind < kmax_cache_set_index_t)
+		invariant (forall (i : cache_set_index_t, w : cache_way_index_t) ::
+				(i >= 0 && i < ind && valid_cache_way_index(w)) ==> !cache_valid_map[i, w]);
+	{
+		way = 0;
+		while (way < kmax_cache_way_index_t)
+			invariant (forall (i : cache_set_index_t, w : cache_way_index_t) ::
+					((i >= 0 && i < ind && valid_cache_way_index(w)) || (i == ind && w >= 0 && w < way)) ==>
+					!cache_valid_map[i, w]);
+		{
+			cache_valid_map[ind, way] = false;
+			way = way + 1;
+		}
+		ind = ind + 1;
+	}
+}
+
+procedure [noinline] query_cache(pa : wap_addr_t, repl_way : cache_way_index_t)
+	returns (hit : boolean, hit_way : cache_way_index_t)
+  requires (valid_cache_way_index(repl_way));
+  
+  // set hit status
+  ensures !hit <==> (forall (w : cache_way_index_t) ::
+                      valid_cache_way_index(w) ==>
+                        (!old(cache_valid_map)[paddr2set(pa) , w] ||
+                          old(cache_tag_map)[paddr2set(pa), w] != paddr2tag(pa)));
+  ensures (hit <==> (exists (w : cache_way_index_t) ::
+                      valid_cache_way_index(w)              &&
+                      old(cache_valid_map)[paddr2set(pa), w] &&
+                      old(cache_tag_map)[paddr2set(pa), w] == paddr2tag(pa)));
+  // do replacement if necessary.
+  ensures (if (!hit)
+              then cache_valid_map[paddr2set(pa), repl_way]
+              else cache_valid_map[paddr2set(pa), hit_way]);
+  ensures (if (!hit)
+              then cache_tag_map[paddr2set(pa), repl_way] == paddr2tag(pa)
+              else cache_tag_map[paddr2set(pa), hit_way]  == paddr2tag(pa));
+
+  // and no other lines are affected.
+  ensures !hit ==>
+          (forall (i : cache_set_index_t, w : cache_way_index_t) ::
+            (i != paddr2set(pa) || w != repl_way) ==> cache_valid_map[i, w] == old(cache_valid_map)[i, w]);
+  ensures !hit ==>
+          (forall (i : cache_set_index_t, w : cache_way_index_t) ::
+            (i != paddr2set(pa) || w != repl_way) ==> cache_tag_map[i, w] == old(cache_tag_map)[i, w]);
+  ensures hit ==> (cache_valid_map == old(cache_valid_map) && cache_tag_map == old(cache_tag_map));
+	modifies cache_valid_map, cache_tag_map;
+{
+	var set : cache_set_index_t;
+	var tag : cache_tag_t;
+	var way : cache_way_index_t;
+
+	set = paddr2set(pa);
+	tag = paddr2tag(pa);
+
+	way = 0;
+	hit = false;
+	while(!hit && way < kmax_cache_way_index_t)
+		invariant (way >= 0);
+		invariant (way <= kmax_cache_way_index_t);
+		invariant hit ==> (cache_valid_map[set, hit_way] && cache_tag_map[set, hit_way] == tag);
+		invariant
+			(!hit <==>
+				(forall (w : cache_way_index_t) ::
+					(w >= 0 && w < way) ==>
+						(!cache_valid_map[set, w] || cache_tag_map[set, w] != tag)));
+	{
+		if (cache_valid_map[set, way] && cache_tag_map[set, way] == tag) {
+			hit = true;
+			hit_way = way;
+		}
+		way = way + 1;
+	}
+
+	if (!hit) {
+		cache_valid_map[set, repl_way] = true;
+		cache_tag_map[set, repl_way] = tag;
+	}
+}
+
+procedure update_cache(pa : wap_addr_t)
+  modifies cache_valid_map;
+  modifies cache_tag_map;
+{
+  havoc cache_valid_map;
+  havoc cache_tag_map;
+}
+
+procedure set_cache_state(_cache_valid_map : cache_valid_map_t, _cache_tag_map : cache_tag_map_t)
+  ensures (cache_valid_map == _cache_valid_map);
+  ensures (cache_tag_map == _cache_tag_map);
+  modifies cache_valid_map;
+  modifies cache_tag_map;
+{
+  cache_valid_map = _cache_valid_map;
+  cache_tag_map = _cache_tag_map;
+}
+
+
+control {
+  verif_init_cache  = verify(init_cache);
+  verif_query_cache = verify(query_cache);
+  
+  check;
+  print_results;
+}
+
+}

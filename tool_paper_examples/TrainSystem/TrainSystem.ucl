@@ -1,0 +1,210 @@
+/**
+ * Author: Shaokai Lin <shaokai@berkeley.edu>
+ * 
+ * This is an UCLID5 model that demonstrates the hybrid approach
+ * of combining axiomatic and operational modeling. The model
+ * describes a train system written in Lingua Franca (LF),
+ * a polyglot coordination language.
+ *
+ * To run the model, simply do `uclid TrainSystem.ucl`.
+ */
+module main {
+ 
+    /*******************************
+     * Time and Related Operations *
+     ******************************/
+    type timestamp_t = integer; // Unit is nanoseconds
+    type microstep_t = integer;
+    type tag_t = {
+        timestamp_t,
+        microstep_t
+    };
+    type interval_t  = tag_t;
+    
+    // Projection macros
+    define pi1(t : tag_t)   : timestamp_t   = t._1;         // Get timestamp from tag
+    define pi2(t : tag_t)   : microstep_t   = t._2;         // Get microstep from tag
+    
+    // Interval constructor
+    define zero() : interval_t
+    = {0, 0};
+    define startup() : interval_t
+    = zero();
+    define mstep() : interval_t
+    = {0, 1};
+    define nsec(t : integer) : interval_t
+    = {t, 0};
+    define usec(t : integer) : interval_t
+    = {t * 1000, 0};
+    define msec(t : integer) : interval_t
+    = {t * 1000000, 0};
+    define sec(t : integer) : interval_t
+    = {t * 1000000000, 0};
+    define inf() : interval_t
+    = {-1, 0};
+    
+    // Helper function
+    define isInf(i : interval_t) : boolean
+    = pi1(i) < 0;
+    
+    // Tag comparison
+    define tag_later(t1 : tag_t, t2 : tag_t) : boolean
+    = pi1(t1) > pi1(t2)
+        || (pi1(t1) == pi1(t2) && pi2(t1) > pi2(t2))
+        || (isInf(t1) && !isInf(t2));
+    
+    define tag_same(t1 : tag_t, t2 : tag_t) : boolean
+    = t1 == t2;
+    
+    define tag_earlier(t1 : tag_t, t2 : tag_t) : boolean
+    = pi1(t1) < pi1(t2)
+        || (pi1(t1) == pi1(t2) && pi2(t1) < pi2(t2))
+        || (!isInf(t1) && isInf(t2));
+    
+    // Tag algebra
+    define tag_schedule(t : tag_t, i : interval_t) : tag_t
+    = if (!isInf(t) && pi1(i) == 0 && !isInf(i))
+        then { pi1(t), pi2(t) + 1 } // microstep delay
+        else ( if (!isInf(t) && pi1(i) > 0 && !isInf(i))
+            then { pi1(t) + pi1(i), 0 }
+            else inf());
+    
+    define tag_delay(t : tag_t, i : interval_t) : tag_t
+    = if (!isInf(t) && !isInf(i))
+        then { pi1(t) + pi1(i), pi2(t) + pi2(i) }
+        else inf();
+
+    define tag_diff(t1, t2 : tag_t) : tag_t
+    = {pi1(t1) - pi1(t2), pi2(t1) - pi2(t2)};
+    
+    /**********************************
+     * Reactions & connectivity graph *
+     *********************************/
+    // Element IDs
+    type id_t = enum {  
+        NULL,                                           // NULL 
+        controller_1, controller_2, door_1, train_1     // Reactions
+    };
+     
+    /*****************
+     * Trace Element *
+     ****************/
+    type element_t = { id_t, tag_t };
+    
+    // Projection macros
+    define id(e : element_t) : id_t     = e._1;
+    define g(e : element_t) : tag_t     = e._2;
+    
+    define isNULL(e : element_t) : boolean = id(e) == NULL;
+     
+    // Mark the start of the trace.
+    var start : timestamp_t;
+
+    // Declare the current state
+    var state : element_t;
+
+    var trainState : element_t;
+    var doorState : element_t;
+    var ctrl1State : element_t;
+    var ctrl2State : element_t;
+
+    /*********
+     * Flags *
+     *********/
+    var trainMoves : boolean;
+    var doorCloses : boolean;
+
+    /************
+     * Topology *
+     ************/
+    // Return reaction priority.
+    define priority(i : id_t) : integer
+    = if (i == controller_1) then 1 else (
+        if (i == controller_2) then 2 else (
+            if (i == door_1) then 1 else (
+                if (i == train_1) then 1 else (
+                    999))));
+     
+    define same_reactor(i1, i2 : id_t) : boolean
+    = i1 == i2 ||
+        (i1 == controller_1 && i2 == controller_2) ||
+        (i1 == controller_2 && i2 == controller_1);
+
+    //////////////////////////////////////////////////
+    // All timestamps and microsteps are nonnegative.
+    axiom(pi1(g(state)) >= 0 && pi2(g(state)) >= 0);
+
+    // Each state can either be NULL or has an ID specific to the rxn.
+    axiom(id(ctrl1State) == NULL || id(ctrl1State) == controller_1);
+    axiom(id(ctrl2State) == NULL || id(ctrl2State) == controller_2);
+    axiom(id(trainState) == NULL || id(trainState) == train_1);
+    axiom(id(doorState) == NULL || id(doorState) == door_1);
+
+    init {
+        doorCloses = false;
+        trainMoves = false;
+        doorState  = {NULL, {0,0}};
+        trainState = {NULL, {0,0}};
+        ctrl1State = {NULL, {0,0}};
+        ctrl2State = {NULL, {0,0}};
+    }
+
+    next {
+        // Update status
+        havoc state; 
+        case
+            (id(state) == door_1) : {
+                doorCloses' = true;
+                doorState' = state;
+            }
+            (id(state) == train_1) : {
+                trainMoves' = true;
+                trainState' = state;
+            }
+            (id(state) == controller_1) : {
+                ctrl1State' = state;
+            }
+            (id(state) == controller_2) : {
+                ctrl2State' = state;
+            }
+        esac
+        
+        /*********************
+         * Reactor Semantics *
+         *********************/
+        // Tags progress monotonically.
+        assume(tag_same(g(state'), g(state)) || tag_later(g(state'), g(state)));
+
+        // The same event can only trigger once in a logical instant.
+        assume(g(state) == g(state') ==> id(state) != id(state'));
+
+        // Reaction with higher priority triggers first.
+        assume((g(state) == g(state') && same_reactor(id(state), id(state'))) 
+            ==> priority(id(state)) < priority(id(state')));
+
+        // Connection delay
+        assume((id(ctrl1State) != NULL && id(ctrl2State') != NULL)
+            ==> tag_diff(g(ctrl2State'), g(ctrl1State)) == zero());
+        assume((id(ctrl2State) != NULL && id(trainState') != NULL)
+            ==> tag_diff(g(trainState'), g(ctrl2State)) == zero());
+            // ==> tag_diff(g(trainState'), g(ctrl2State)) == {1,0}); // FIXME: this should resolve the CEX, but it doesn't.
+        assume((id(ctrl2State) != NULL && id(doorState') != NULL)
+            ==> tag_diff(g(doorState'), g(ctrl2State)) == zero());
+
+        // Trigger mechanism
+        assume(id(ctrl1State) == NULL ==> id(ctrl2State') == NULL);
+        assume(id(ctrl2State) == NULL ==> id(trainState') == NULL);
+        assume(id(ctrl2State) == NULL ==> id(doorState') == NULL);
+    }
+
+    //////////////////////////////////////////////////
+    // Safety property: Train cannot move while the door is open.
+    property safety: !(trainMoves && !doorCloses);
+
+    control {
+        v = induction;
+        check;
+        print_results;
+        v.print_cex;
+    }
+}

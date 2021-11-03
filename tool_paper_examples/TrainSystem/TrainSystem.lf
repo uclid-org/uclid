@@ -1,0 +1,50 @@
+target C;
+
+reactor Controller {
+    
+    output lock:bool;
+    output move:bool;
+    
+    physical action external:bool;
+    
+    reaction(startup) {=
+        ...Set up sensing.
+    =}
+    
+    reaction(external) -> lock, move {=
+        SET(lock, external->value);
+        SET(move, external->value);
+    =}
+}
+
+reactor Train {
+    
+    input move:bool;
+    state moving:bool(false);
+    
+    reaction(move) {=
+        ... actuate to move or stop.
+        self->moving = move;
+    =}
+}
+
+reactor Door {
+    
+    input lock:bool;
+    state locked:bool(false);
+    
+    reaction(lock) {=
+        ... Actuate to lock or unlock door.
+        self->locked = lock;
+    =}
+}
+
+main reactor {
+    
+    controller = new Controller();
+    door = new Door();
+    train = new Train();
+    
+    controller.lock -> door.lock;
+    controller.move -> train.move;
+}

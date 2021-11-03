@@ -1,0 +1,462 @@
+module abstract_cpu {
+
+//=======================================================//
+// Prelude                                               //
+//=======================================================//
+
+// Import types, constants, functions, and define macros
+// from ap_types module.
+type * = ap_types.*;
+const * = ap_types.*;
+function * = ap_types.*;
+define * = ap_types.*;
+
+//=======================================================//
+// Data Cache                                            //
+//=======================================================//
+
+/* Cache state variables
+
+   @cache_valid_map map that stores the valid bit for each cache line
+   @cache_tag_map   map that stores the tag for each cache line
+*/
+var cache_valid_map  : cache_valid_map_t;
+var cache_tag_map    : cache_tag_map_t;
+
+procedure [noinline] init_cache()
+  ensures (forall (i : cache_set_index_t, w : cache_way_index_t) ::
+      (valid_cache_set_index(i) && valid_cache_way_index(w)) ==> !cache_valid_map[i, w]);
+  modifies cache_valid_map;
+{
+  var ind : cache_set_index_t;
+  var way : cache_way_index_t;
+  ind = 0;
+
+  while (ind < kmax_cache_set_index_t)
+    invariant (forall (i : cache_set_index_t, w : cache_way_index_t) ::
+        (i >= 0 && i < ind && valid_cache_way_index(w)) ==> !cache_valid_map[i, w]);
+  {
+    way = 0;
+    while (way < kmax_cache_way_index_t)
+      invariant (forall (i : cache_set_index_t, w : cache_way_index_t) ::
+          ((i >= 0 && i < ind && valid_cache_way_index(w)) || (i == ind && w >= 0 && w < way)) ==>
+          !cache_valid_map[i, w]);
+    {
+      cache_valid_map[ind, way] = false;
+      way = way + 1;
+    }
+    ind = ind + 1;
+  }
+}
+
+procedure [noinline] query_cache(pa : wap_addr_t, repl_way : cache_way_index_t)
+  returns (hit : boolean, hit_way : cache_way_index_t)
+  requires (valid_cache_way_index(repl_way));
+  
+  // set hit status
+  ensures !hit <==> (forall (w : cache_way_index_t) ::
+                      valid_cache_way_index(w) ==>
+                        (!old(cache_valid_map)[paddr2set(pa) , w] ||
+                          old(cache_tag_map)[paddr2set(pa), w] != paddr2tag(pa)));
+  ensures (hit <==> (exists (w : cache_way_index_t) ::
+                      valid_cache_way_index(w)              &&
+                      old(cache_valid_map)[paddr2set(pa), w] &&
+                      old(cache_tag_map)[paddr2set(pa), w] == paddr2tag(pa)));
+  // do replacement if necessary.
+  ensures (if (!hit)
+              then cache_valid_map[paddr2set(pa), repl_way]
+              else cache_valid_map[paddr2set(pa), hit_way]);
+  ensures (if (!hit)
+              then cache_tag_map[paddr2set(pa), repl_way] == paddr2tag(pa)
+              else cache_tag_map[paddr2set(pa), hit_way]  == paddr2tag(pa));
+
+  // and no other lines are affected.
+  ensures !hit ==>
+          (forall (i : cache_set_index_t, w : cache_way_index_t) ::
+            (i != paddr2set(pa) || w != repl_way) ==> cache_valid_map[i, w] == old(cache_valid_map)[i, w]);
+  ensures !hit ==>
+          (forall (i : cache_set_index_t, w : cache_way_index_t) ::
+            (i != paddr2set(pa) || w != repl_way) ==> cache_tag_map[i, w] == old(cache_tag_map)[i, w]);
+  ensures hit ==> (cache_valid_map == old(cache_valid_map) && cache_tag_map == old(cache_tag_map));
+  modifies cache_valid_map, cache_tag_map;
+{
+  var set : cache_set_index_t;
+  var tag : cache_tag_t;
+  var way : cache_way_index_t;
+
+  set = paddr2set(pa);
+  tag = paddr2tag(pa);
+
+  way = 0;
+  hit = false;
+  while(!hit && way < kmax_cache_way_index_t)
+    invariant (way >= 0);
+    invariant (way <= kmax_cache_way_index_t);
+    invariant hit ==> (cache_valid_map[set, hit_way] && cache_tag_map[set, hit_way] == tag);
+    invariant
+      (!hit <==>
+        (forall (w : cache_way_index_t) ::
+          (w >= 0 && w < way) ==>
+            (!cache_valid_map[set, w] || cache_tag_map[set, w] != tag)));
+  {
+    if (cache_valid_map[set, way] && cache_tag_map[set, way] == tag) {
+      hit = true;
+      hit_way = way;
+    }
+    way = way + 1;
+  }
+
+  if (!hit) {
+    cache_valid_map[set, repl_way] = true;
+    cache_tag_map[set, repl_way] = tag;
+  }
+}
+
+procedure update_cache(pa : wap_addr_t)
+  modifies cache_valid_map;
+  modifies cache_tag_map;
+{
+  havoc cache_valid_map;
+  havoc cache_tag_map;
+}
+
+procedure set_cache_state(_cache_valid_map : cache_valid_map_t, _cache_tag_map : cache_tag_map_t)
+  ensures (cache_valid_map == _cache_valid_map);
+  ensures (cache_tag_map == _cache_tag_map);
+  modifies cache_valid_map;
+  modifies cache_tag_map;
+{
+  cache_valid_map = _cache_valid_map;
+  cache_tag_map = _cache_tag_map;
+}
+
+//=======================================================//
+// CPU                                                   //
+//=======================================================//
+
+//
+// CPU state
+//
+var cpu_mem         : mem_t;
+var cpu_regs        : regs_t;
+var cpu_pc          : vaddr_t;
+var cpu_enclave_id  : tap_enclave_id_t;
+var cpu_addr_valid  : addr_valid_t;
+var cpu_addr_map    : addr_map_t;
+var cpu_owner_map   : owner_map_t;
+
+//
+// CPU Flags
+//
+var cpu_cache_enabled : boolean;
+
+
+
+
+//
+// CPU Procedures 
+//
+procedure initialize_cache() 
+  modifies cache_valid_map;
+{
+  call init_cache();
+}
+
+procedure [inline] set_cache(_valid_map: cache_valid_map_t, _tag_map : cache_tag_map_t)
+  modifies cache_valid_map;
+  modifies cache_tag_map;
+{
+  call set_cache_state(_valid_map, _tag_map);
+}
+
+procedure [inline] set_cpu_state(
+  _cpu_enclave_id : tap_enclave_id_t,
+  _cpu_addr_map   : addr_map_t,
+  _cpu_addr_valid : addr_valid_t,
+  _cpu_pc         : vaddr_t,
+  _cpu_regs       : regs_t
+)
+  modifies cpu_enclave_id;
+  modifies cpu_addr_map;
+  modifies cpu_addr_valid;
+  modifies cpu_pc;
+  modifies cpu_regs;
+{
+  cpu_enclave_id = _cpu_enclave_id;
+  cpu_addr_map   = _cpu_addr_map;
+  cpu_addr_valid = _cpu_addr_valid;
+  cpu_pc         = _cpu_pc;
+  cpu_regs       = _cpu_regs;
+}
+
+
+procedure [inline] update_cpu_owner_map(paddr : wap_addr_t, eid : tap_enclave_id_t)
+  modifies cpu_owner_map;
+{
+  cpu_owner_map[paddr] = eid;
+}
+
+procedure [inline] update_cpu_mem(paddr : wap_addr_t, word : word_t)
+  modifies cpu_mem;
+{
+  cpu_mem[paddr] = word;
+}
+
+procedure [inline] update_cpu_addr_valid(vaddr : vaddr_t, valid : addr_perm_t)
+  modifies cpu_addr_valid;
+{
+  cpu_addr_valid[vaddr] = valid;
+}
+
+procedure [inline] update_cpu_addr_map(vaddr : vaddr_t, paddr : wap_addr_t)
+  modifies cpu_addr_map;
+{
+  cpu_addr_map[vaddr] = paddr;
+}
+
+procedure [inline] update_cpu_regs(idx : regindex_t, word : word_t)
+  modifies cpu_regs;
+{
+  cpu_regs[idx] = word;
+}
+
+
+
+procedure [inline] set_cpu_owner_map(_cpu_owner_map : owner_map_t)
+  modifies cpu_owner_map;
+{
+  cpu_owner_map = _cpu_owner_map;
+}
+
+procedure [inline] set_cpu_mem(_cpu_mem : mem_t)
+  modifies cpu_mem;
+{
+  cpu_mem = _cpu_mem;
+}
+
+procedure [inline] set_cpu_addr_valid(_cpu_addr_valid : addr_valid_t)
+  modifies cpu_addr_valid;
+{
+  cpu_addr_valid = _cpu_addr_valid;
+}
+
+procedure [inline] set_cpu_addr_map(_cpu_addr_map : addr_map_t)
+  modifies cpu_addr_map;
+{
+  cpu_addr_map = _cpu_addr_map;
+}
+
+
+procedure [inline] set_cpu_pc(_cpu_pc : vaddr_t)
+  modifies cpu_pc;
+{
+  cpu_pc = _cpu_pc;
+}
+
+procedure [inline] set_cpu_regs(_cpu_regs : regs_t)
+  modifies cpu_regs;
+{
+  cpu_regs = _cpu_regs;
+}
+
+
+procedure [inline] havoc_cpu_mem()
+  modifies cpu_mem;
+{
+  havoc cpu_mem;
+}
+
+procedure [inline] havoc_cpu_owner_map()
+  modifies cpu_owner_map;
+{
+  havoc cpu_owner_map;
+}
+
+procedure [inline] havoc_cpu_pc()
+  modifies cpu_pc;
+{
+  havoc cpu_pc;
+}
+
+procedure [inline] havoc_cpu_regs()
+  modifies cpu_regs;
+{
+  havoc cpu_regs;
+}
+
+procedure [inline] fetch_va(vaddr : vaddr_t, repl_way : cache_way_index_t)
+  returns (data : word_t, excp : exception_t, hit : boolean)
+  requires valid_cache_way_index(repl_way);
+  modifies cpu_addr_valid;
+  modifies cache_valid_map, cache_tag_map;
+{
+  var paddr : wap_addr_t;
+  var owner_eid : tap_enclave_id_t;
+  var hit_way : cache_way_index_t;
+  
+  // default
+  data = k0_word_t;
+  hit = false;
+
+
+  
+  // translate VA -> PA
+  if (!tap_addr_perm_x(cpu_addr_valid[vaddr])) {
+    excp = excp_os_protection_fault; 
+  } else {
+    paddr = cpu_addr_map[vaddr];
+    // are we not allowed to access this memory
+    owner_eid = cpu_owner_map[paddr];
+    if (owner_eid != tap_null_enc_id && owner_eid != cpu_enclave_id) {
+      excp = excp_os_protection_fault; 
+    } else {
+      // update accessed bit
+      cpu_addr_valid[vaddr] = tap_set_addr_perm_a(cpu_addr_valid[vaddr]);
+      // perform load
+      data = cpu_mem[paddr];
+      excp = excp_none;
+      // update cahce
+      if (cpu_cache_enabled) {
+        assert(valid_cache_way_index(repl_way));
+        call (hit, hit_way) = query_cache(paddr, repl_way);
+      }
+    }
+  }
+}
+
+procedure [inline] load_va(vaddr : vaddr_t, repl_way : cache_way_index_t)
+  returns (data : word_t, excp : exception_t, hit : boolean)
+  requires valid_cache_way_index(repl_way);
+  ensures (!tap_addr_perm_r(old(cpu_addr_valid)[vaddr]) ||
+           (cpu_owner_map[cpu_addr_map[vaddr]] != tap_null_enc_id && cpu_owner_map[cpu_addr_map[vaddr]] != cpu_enclave_id))
+            ==> (hit == false);
+  ensures (forall (p : wap_addr_t, w : cache_way_index_t) ::
+            (paddr2set(p) != paddr2set(cpu_addr_map[vaddr]) || w != repl_way)
+              ==> ((cache_valid_map[paddr2set(p), w] == old(cache_valid_map)[paddr2set(p), w]) &&
+                   (cache_tag_map[paddr2set(p), w] == old(cache_tag_map)[paddr2set(p), w])));
+
+  ensures (excp == excp_none && cpu_cache_enabled && !hit)
+              ==> ((cache_valid_map[paddr2set(old(cpu_addr_map)[vaddr]), repl_way] == true) &&
+                    (cache_tag_map[paddr2set(old(cpu_addr_map)[vaddr]), repl_way] == paddr2tag(old(cpu_addr_map)[vaddr])));
+  ensures (!cpu_cache_enabled) ==> (cache_valid_map == old(cache_valid_map) && cache_tag_map == old(cache_tag_map));
+
+
+  modifies cpu_addr_valid;
+  modifies cache_valid_map, cache_tag_map;
+{
+  var paddr : wap_addr_t;
+  var owner_eid : tap_enclave_id_t;
+  var hit_way : cache_way_index_t;
+  
+  // default 
+  data = k0_word_t;
+  hit = false;
+
+
+
+  // translate VA -> PA
+  if (!tap_addr_perm_r(cpu_addr_valid[vaddr])) {
+    excp = excp_os_protection_fault; 
+  } else {
+    paddr = cpu_addr_map[vaddr];
+    // are we not allowed to access this memory
+    owner_eid = cpu_owner_map[paddr];
+    if (owner_eid != tap_null_enc_id && owner_eid != cpu_enclave_id) {
+      excp = excp_tp_protection_fault; 
+    } else {
+      // update accessed bit
+      cpu_addr_valid[vaddr] = tap_set_addr_perm_a(cpu_addr_valid[vaddr]);
+      // perform load
+      data = cpu_mem[paddr];
+      excp = excp_none;
+      // update cache
+      if (cpu_cache_enabled) {
+        call (hit, hit_way) = query_cache(paddr, repl_way);
+      }
+    }
+  }
+}
+
+procedure [inline] store_va(vaddr : vaddr_t, data : word_t, repl_way : cache_way_index_t)
+  returns (excp : exception_t, hit : boolean)
+  requires valid_cache_way_index(repl_way);
+  ensures (excp != excp_none ==> cpu_mem == old(cpu_mem));
+  ensures (excp != excp_none) ==> (cpu_addr_valid == old(cpu_addr_valid));
+  ensures (excp == excp_none) ==> 
+            (forall (va : vaddr_t) ::
+              (va != vaddr)
+                ==> (cpu_addr_valid[va] == old(cpu_addr_valid)[va]));
+  ensures (excp == excp_none) 
+            ==> (cpu_addr_valid[vaddr] == tap_set_addr_perm_a(old(cpu_addr_valid)[vaddr]));
+  ensures (!tap_addr_perm_w(old(cpu_addr_valid)[vaddr]) ||
+           (cpu_owner_map[cpu_addr_map[vaddr]] != tap_null_enc_id && cpu_owner_map[cpu_addr_map[vaddr]] != cpu_enclave_id))
+          ==> (hit == false);
+  ensures (forall (p : wap_addr_t, w : cache_way_index_t) ::
+            (paddr2set(p) != paddr2set(cpu_addr_map[vaddr]) || w != repl_way)
+              ==> ((cache_valid_map[paddr2set(p), w] == old(cache_valid_map)[paddr2set(p), w]) &&
+                   (cache_tag_map[paddr2set(p), w] == old(cache_tag_map)[paddr2set(p), w])));
+  
+
+  ensures (!cpu_cache_enabled) ==> (cache_valid_map == old(cache_valid_map) && cache_tag_map == old(cache_tag_map));
+
+  
+  modifies cpu_mem;
+  modifies cpu_addr_valid;
+  modifies cache_valid_map, cache_tag_map;
+{
+  var paddr : wap_addr_t;
+  var owner_eid : tap_enclave_id_t;
+  var hit_way : cache_way_index_t;
+  
+  // default
+  hit = false;
+
+  //translate VA -> PA
+  if (!tap_addr_perm_w(cpu_addr_valid[vaddr])) {
+    excp = excp_os_protection_fault; ;
+  } else {
+    paddr = cpu_addr_map[vaddr];
+    // are we not allowed to access this memory
+    owner_eid = cpu_owner_map[paddr];
+    if (owner_eid != tap_null_enc_id && owner_eid != cpu_enclave_id) {
+      excp = excp_tp_protection_fault; 
+    } else {
+      // update accessed bit
+      cpu_addr_valid[vaddr] = tap_set_addr_perm_a(cpu_addr_valid[vaddr]);
+      // perform store
+      cpu_mem[paddr] = data;
+      excp = excp_none;
+      // update cache
+      if (cpu_cache_enabled) {
+        call (hit, hit_way) = query_cache(paddr, repl_way);
+      }
+    }
+  }
+  assert (forall (v : vaddr_t) ::
+            (v != vaddr) ==> (cpu_addr_valid[v] == old(cpu_addr_valid)[v])); 
+}
+
+
+procedure modify_owner_map(eid : tap_enclave_id_t, excl_paddr : excl_map_t)
+  returns (status : enclave_op_result_t)
+  modifies cpu_owner_map;
+  modifies cpu_mem;
+{
+  havoc cpu_owner_map;
+  havoc cpu_mem;
+}
+
+
+control {
+  fetch_va_verif = verify(fetch_va);
+  load_va_verif = verify(load_va);
+  store_va_verif = verify(store_va);
+
+
+  check;
+  print_results;
+}
+
+}
+
+

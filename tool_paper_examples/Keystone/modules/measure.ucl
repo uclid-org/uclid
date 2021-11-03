@@ -1,0 +1,262 @@
+module measure {
+
+
+type * = tap.*;
+const * = tap.*;
+function * = tap.*;
+define * = tap.*;
+
+var g_index : integer;
+var g_x1 : integer;
+var g_x2 : integer;
+var g_t1 : measurement_t;
+var g_t2 : measurement_t;
+
+
+
+// utility fns                                                              //
+//--------------------------------------------------------------------------//
+//function word2int(w : word_t) : integer;
+
+//TODO: Revisit the below axioms for word2int and vaddr2int and put them into common-types, after we know that axioms are pulled in
+axiom w2i1 : (forall (w1, w2 : word_t) :: (w1 != w2) ==> (word2int(w1) != word2int(w2)));
+axiom w2i2 : (forall (w : word_t) :: word2int(w) >= 0 && word2int(w) <= kmax_word_t_as_int);
+//
+//function vaddr2int(va : vaddr_t) : integer;
+axiom v2i1 : (forall (v1, v2 : vaddr_t) :: (v1 != v2) ==> (vaddr2int(v1) != vaddr2int(v2)));
+axiom v2i2 : (forall (w : vaddr_t) :: vaddr2int(w) >= 0 && vaddr2int(w) <= kmax_vaddr_t_as_int);
+
+function addrperm2int(p : addr_perm_t) : integer;
+axiom a2i1 : (forall (v1, v2 : addr_perm_t) :: (v1 != v2) ==> (addrperm2int(v1) != addrperm2int(v2)));
+axiom a2i2 : (forall (w : addr_perm_t) :: addrperm2int(w) >= 0 && addrperm2int(w) <= kmax_addr_perm_t_as_int);
+
+
+
+
+
+
+
+//
+// hash function used in TAP 
+//
+function update_digest(x : integer, m : measurement_t) : measurement_t;
+// collision resistant
+axiom collision_resistant : (forall (x1, x2 : integer, t1, t2 : measurement_t) ::
+        !(x1 == x2 && t1 == t2) <==> (update_digest(x1, t1) != update_digest(x2, t2)));
+// second-preimage resistant implied by collision resistance
+axiom second_preimage_resistant :(forall (x1, x2 : integer, t1, t2 : measurement_t) ::
+        (update_digest(x1, t1) == update_digest(x2, t2)) <==> (x1 == x2 && t1 == t2));
+
+
+
+define valid_regindex_le(ri: regindex_t, rmax: regindex_t) : boolean
+= LE_ri(k0_regindex_t, ri) && LE_ri(ri, rmax);
+
+//
+// Helper fns in order to state measurement invariants
+//
+
+define excl_match(ev1: excl_vaddr_t, ev2: excl_vaddr_t, v: vaddr_t) : boolean
+= ev1[v] == ev2[v];
+
+define addr_valid_match(ev1, ev2 : excl_vaddr_t, av1, av2 : addr_valid_t, v: vaddr_t) : boolean
+= (ev1[v] && ev2[v]) ==> tap_addr_perm_eq(av1[v], av2[v]);
+
+define private_data_match(
+  ev1, ev2 : excl_vaddr_t,
+  am1, am2 : addr_map_t,
+  m1, m2   : mem_t,
+  v        : vaddr_t
+) : boolean = (ev1[v] && ev2[v]) ==> (m1[am1[v]] == m2[am2[v]]);
+
+define shared_data_match(
+  e1, e2   : tap_enclave_id_t,
+  av1, av2 : addr_valid_t,
+  am1, am2 : addr_map_t,
+  o1, o2   : owner_map_t,
+  m1, m2   : mem_t,
+  v        : vaddr_t
+) : boolean 
+= (tap_addr_perm_v(av1[v]) && tap_addr_perm_v(av2[v]) &&
+   o1[am1[v]] != e1 && o2[am2[v]] != e2)
+    ==> (m1[am1[v]] == m2[am2[v]]);
+
+
+// 
+// Measurement helper functions
+//
+
+define update_digest_virt_addr(
+  addr_valid : addr_valid_t,
+  addr_map   : addr_map_t,
+  excl_vaddr : excl_vaddr_t,
+  mem        : mem_t,
+  va         : vaddr_t,
+  s          : measurement_t
+) : measurement_t
+= if (excl_vaddr[va])
+      then update_digest(1 + word2int(mem[addr_map[va]]),
+                         update_digest(1 + addrperm2int(
+                                            tap_addr_perm_bits(addr_valid[va])), s))
+      else 
+           update_digest(0, update_digest(0, s));
+
+
+
+// This should always be set to kN_regindex_t_as_int + 2
+const kmax_cpu_measurement_index : integer = 514;
+
+procedure [inline] measure_cpu_state_at_index(
+  regs        : regs_t,
+  pc          : vaddr_t,
+  entrypoint  : vaddr_t,
+  index       : integer,
+  s           : measurement_t
+) 
+  returns (t : measurement_t)
+  requires (index >= 0 && index < kmax_cpu_measurement_index);
+{
+
+  var ri  : regindex_t;
+  var vi  : integer;
+  var temp : measurement_t;
+  var temp_nxt : measurement_t;
+
+  if (index == 0) {
+    t = update_digest(vaddr2int(pc), s);
+  }
+  if (index == 1) {
+    t = update_digest(vaddr2int(entrypoint), s);
+  }
+  if (index >= 2 && index < (2 + kN_regindex_t_as_int)) {
+    ri = index - 2;
+    assert valid_regindex(ri);
+    t = update_digest(word2int(regs[ri]), s);
+  }
+}
+
+
+
+//
+// Self-composed version of the measurement fn
+// The self-composition is required to state the 2-safety properties of
+// the measurement.
+//
+
+procedure [noinline] measure_state_self_composed(
+  e1            , e2          : tap_enclave_id_t,
+  av1           , av2         : addr_valid_t,
+  am1           , am2         : addr_map_t,
+  ev1           , ev2         : excl_vaddr_t,
+  m1            , m2          : mem_t,
+  regs1         , regs2       : regs_t,
+  pc1           , pc2         : vaddr_t,
+  entrypoint1   , entrypoint2 : vaddr_t
+) 
+  returns (t1 : measurement_t, t2 : measurement_t)
+  ensures ((forall (v : vaddr_t) ::
+              (excl_match(ev1, ev2, v)                                                    &&
+               addr_valid_match(ev1, ev2, av1, av2, v)                                    &&
+               private_data_match(ev1, ev2, am1, am2, m1, m2, v)))                        &&
+               (forall (ri : regindex_t) :: valid_regindex(ri) ==> (regs1[ri] == regs2[ri])) &&
+           (pc1 == pc2 && entrypoint1 == entrypoint2))
+          ==> (t1 == t2);
+  ensures ((exists (v : vaddr_t) ::   
+              (!excl_match(ev1, ev2, v)                                                    ||
+               !addr_valid_match(ev1, ev2, av1, av2, v)                                   ||
+               !private_data_match(ev1, ev2, am1, am2, m1, m2, v)))                       ||
+           (exists (ri : regindex_t) :: valid_regindex(ri) && (regs1[ri] != regs2[ri]))   ||
+           (pc1 != pc2 || entrypoint1 != entrypoint2))
+          ==> (t1 != t2);
+  modifies g_index;
+{
+  var index : integer;
+  var va    : vaddr_t;
+  var v1    : measurement_t;
+  var v2    : measurement_t;
+
+
+  //t1 = 0bv32; t2 = 0bv32; 
+  t1 = k0_measurement_t;
+  t2 = k0_measurement_t;
+  index = 0;
+  g_index = index;
+  while ( index < kmax_cpu_measurement_index)
+    invariant (index >= 0 && index <= kmax_cpu_measurement_index);
+    invariant ((pc1 == pc2 && entrypoint1 == entrypoint2 && e1 == e2)                      &&
+               (forall (ri : regindex_t) :: valid_regindex(ri) ==> regs1[ri] == regs2[ri]) &&
+               (forall (v : vaddr_t) :: av1[v] == av2[v] && am1[v] == am2[v]))
+              ==> (t1 == t2);
+    invariant (index >= 1) ==> ((pc1 != pc2) ==> (t1 != t2));
+    invariant (index <= 1) ==> ((pc1 == pc2) ==> (t1 == t2));
+    invariant (index >= 2) ==> ((entrypoint1 != entrypoint2) ==> (t1 != t2));
+    invariant (index <= 2) ==> (((pc1 == pc2) && (entrypoint1 == entrypoint2)) ==> (t1 == t2));
+    invariant (index >= 2) ==>
+                ((exists (ri : regindex_t) ::
+                    (valid_regindex(ri) && ri < (index - 2) && (regs1[ri] != regs2[ri])))
+                       ==> (t1 != t2));
+    invariant (index >= 3) ==> 
+                (((pc1 == pc2) && (entrypoint1 == entrypoint2) &&
+                  (forall (ri : regindex_t) ::
+                      (valid_regindex(ri) && ri < (index - 2)) ==> (regs1[ri] == regs2[ri])))
+                ==> (t1 == t2));
+  {
+    call (t1) = measure_cpu_state_at_index(regs1, pc1, entrypoint1, index, t1);
+    call (t2) = measure_cpu_state_at_index(regs2, pc2, entrypoint2, index, t2);
+    index = index + 1;
+    g_index = index;
+  }
+  assert ((forall (ri : regindex_t) :: valid_regindex(ri) ==> (regs1[ri] == regs2[ri])) &&
+          pc1 == pc2 && entrypoint1 == entrypoint2)
+         <==> (t1 == t2);
+  assert ((exists (ri : regindex_t) :: valid_regindex(ri) && (regs1[ri] != regs2[ri] )) ||
+          pc1 != pc2 || entrypoint1 != entrypoint2)
+         <==> (t1 != t2);
+
+  va = k0_vaddr_t;
+  v1 = k0_measurement_t;
+  v2 = k0_measurement_t;
+  while (LT_va(va, kmax_vaddr_t))
+    invariant ((forall (ri : regindex_t) :: valid_regindex(ri) ==> (regs1[ri] == regs2[ri])) &&
+               pc1 == pc2 && entrypoint1 == entrypoint2                                       &&
+               (forall (v : vaddr_t) :: LT_va(v, va) ==>
+                  (excl_match(ev1, ev2, v)                                                   &&
+                   addr_valid_match(ev1, ev2, av1, av2, v)                                   &&
+                   private_data_match(ev1, ev2, am1, am2, m1, m2, v))))
+              ==> (t1 == t2);
+
+    invariant ((exists (ri : regindex_t) :: valid_regindex(ri) && (regs1[ri] != regs2[ri]))  ||
+               pc1 != pc2 || entrypoint1 != entrypoint2                                       ||
+               (exists (v : vaddr_t) ::
+                  LT_va(v, va) &&
+                    (!excl_match(ev1, ev2, v)                           ||
+                     !private_data_match(ev1, ev2, am1, am2, m1, m2, v) ||
+                     !addr_valid_match(ev1, ev2, av1, av2, v))))
+              ==> (t1 != t2);
+  
+  {
+    t1 = update_digest_virt_addr(av1, am1, ev1, m1, va, t1);
+    t2 = update_digest_virt_addr(av2, am2, ev2, m2, va, t2);
+    va = PLUS_va(va, k1_vaddr_t);
+  }
+  t1 = update_digest_virt_addr(av1, am1, ev1, m1, va, t1);
+  t2 = update_digest_virt_addr(av2, am2, ev2, m2, va, t2);
+
+  //assert (false);
+}
+
+
+
+control {
+  set_solver_option(":mbqi", false);
+  set_solver_option(":case_split", 0);
+  set_solver_option(":relevancy", 0);
+  set_solver_option(":threads", 4);
+  verif_measure_cpu_state_at_idx = verify(measure_cpu_state_at_index);
+  verif_measure_state_self_comp = verify(measure_state_self_composed);
+  check;
+  print_results;
+}
+                                  
+
+}
