@@ -597,6 +597,7 @@ case class BoolLit(value: Boolean) extends Literal {
   override def typeOf: Type = BooleanType()
   // override val md5hashCode = computeMD5Hash(value)
 }
+
 case class IntLit(value: BigInt) extends NumericLit {
   override def toString = value.toString
   override def typeOf : NumericType = IntegerType()
@@ -609,8 +610,8 @@ case class IntLit(value: BigInt) extends NumericLit {
   override def negate = IntLit(-value)
 }
 
-case class FloatLit(integral: BigInt, fractional: BigInt) extends NumericLit {
-  override def toString = integral.toString + "." + fractional.toString
+case class FloatLit(integral: BigInt, fractional: String) extends NumericLit {
+  override def toString = integral.toString + "." + fractional
   override def typeOf : NumericType = FloatType()
   override def to (n : NumericLit) : Seq[NumericLit]  = {
     n match {
@@ -816,7 +817,7 @@ case class IntegerType() extends NumericType {
 case class FloatType() extends NumericType {
   override def toString = "float"
   override def isFloat = true
-  override def defaultValue = Some(FloatLit(0, 0))
+  override def defaultValue = Some(FloatLit(0, 0.toString))
 }
 case class BitVectorType(width: Int) extends NumericType {
   override def toString = "bv" + width.toString
