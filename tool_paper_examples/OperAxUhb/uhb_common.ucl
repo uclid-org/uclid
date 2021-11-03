@@ -1,0 +1,51 @@
+/* Copyright (c) 2021 Yatin A. Manerkar (UC Berkeley/Michigan). */
+
+module uhb {
+    type uopType_t = enum {Read, Write, Fence};
+
+    type uhbNode_t =
+        record
+        {
+            nExists : boolean,
+            nTime : integer
+        };
+
+    type microop_t =
+        record
+        {
+            valid : boolean,
+            globalID : integer,
+            coreID : integer,
+            uopType : uopType_t,
+            virtAddr : integer,
+            physAddr : integer,
+            data : integer,
+            Fetch : uhbNode_t,
+            Execute : uhbNode_t,
+            Writeback : uhbNode_t
+        };
+
+    type instrIndex_t = integer;
+
+    const maxTimestamp : integer = 20;
+
+    type test_t = [instrIndex_t]microop_t;
+
+    //Uspec primitives.
+    define IsLoad (i : microop_t) : boolean = (i.uopType == Read);
+    define IsStore (i : microop_t) : boolean = (i.uopType == Write);
+    define IsFence (i : microop_t) : boolean = (i.uopType == Fence);
+    define AddEdge (src, dest : uhbNode_t) : boolean = (src.nExists == true && dest.nExists == true && src.nTime < dest.nTime);
+    define EdgeExists (src, dest : uhbNode_t) : boolean = (AddEdge(src, dest));
+    define NodeExists (n : uhbNode_t) : boolean = (n.nExists == true);
+    define ProgramOrder (i, j : microop_t) : boolean = (i.globalID < j.globalID && i.coreID == j.coreID);
+    define SameCore (i, j : microop_t) : boolean = (i.coreID == j.coreID);
+    define SamePhysicalAddress (i, j : microop_t) : boolean = (i.physAddr == j.physAddr);
+    define SameData (i, j : microop_t) : boolean = (i.data == j.data);
+    define DataFromInitialStateAtPA (i : microop_t) : boolean = (i.data == 0); //We're assuming 0 is the initial state here.
+    define SameMicroop (i, j : microop_t) : boolean = (i.globalID == j.globalID);
+
+    //Preventing use of invalid uops.
+    define IsValid (i : microop_t) : boolean = i.valid;
+    define nullified (n : uhbNode_t) : boolean = (n.nExists == false && n.nTime == 0);
+}
