@@ -1,0 +1,22 @@
+#!/bin/bash
+
+
+echo "Exporting PATH for uclid ..."
+export PATH=$PATH:$(pwd)/uclid-0.9.5/bin
+
+echo "Exporting PATH for z3 ..."
+export PATH=$PATH:$(pwd)/z3/bin
+
+echo "Exporting PATH for cvc4 ..."
+export PATH=$PATH:$(pwd)/cvc4/bin
+
+echo "Exporting PATH for Delphi ..."
+export PATH=$PATH:$(pwd)/delphi/bin
+
+echo "Enabling execute access for binaries ..."
+chmod 755 uclid-0.9.5/bin/uclidtool
+chmod 755 z3/bin/z3
+chmod 755 cvc4/bin/cvc4
+chmod 755 delphi/bin/delphi
+
+echo "Done!"

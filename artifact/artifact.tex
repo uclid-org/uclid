@@ -99,21 +99,31 @@ Move into the \artcommand{tool\_paper\_examples} directory. This directory consi
     \item The prebuilt binary for the tool \artcommand{uclid}
     \item The prebuilt binaries for the external solvers \artcommand{z3}, \artcommand{cvc4} and \artcommand{delphi} in their respective directories
     \item Four test-examples directories: \artcommand{Fib}, \artcommand{Control},
-    \artcommand{Keystone},
+    \artcommand{TrainSystem},
     \artcommand{OperAxUhb}, and
-    \artcommand{TrainSystem}
+    \artcommand{Keystone}
 \end{itemize}
 
 
+To run example \artcommand{examplename}, run the script \artcommand{./run\_<examplename>} from the \artcommand{tool\_paper\_examples} directory.
 We now describe each of these examples in more detail:
 
 \newcommand{\excommand}[1]{$\mathsf{#1}$}
 
 \subsection{\excommand{Fib}}
+\input{example_Fib.tex}
+
 \subsection{\excommand{Control}}
-\subsection{\excommand{Keystone}}
-\subsection{\excommand{OperAxUhb}}
+\input{example_Control.tex}
+
 \subsection{\excommand{TrainSystem}}
+\input{example_TrainSystem.tex}
+
+\subsection{\excommand{OperAxUhb}}
+\input{example_OperAxUhb.tex}
+
+\subsection{\excommand{Keystone}}
+\input{example_Keystone.tex}
 
 
 \end{document}
