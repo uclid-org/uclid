@@ -1,0 +1,40 @@
+module main {
+  var x0, x1: float;
+  group stateVars : float = {x0, x1};
+
+  const a00, a01, a10, a11 : float;
+  const b0, b1 : float;
+
+  oracle function [is_stable] isStable
+        (s00: float, s01: float, s10: float, s11: float) : boolean;
+  var steps : integer;
+  synthesis function k0 (): float;
+  synthesis function k1 (): float;
+
+  // LTI system spec
+  axiom A: (a00==0.901224922471 && a01==0.000000013429 && a10==0.000000007451 && a11==0.000000000000);
+  axiom B: (b0==128.000000000000 && b1==0.000000000000);
+ 
+  // pre calculation:
+  axiom precal1: !isNaN(a00 - b0*k0());
+  axiom precal2: !isNaN(a01 - b0*k1());
+  axiom precal3: !isNaN(a10 - b1*k0());
+  axiom precal4: !isNaN(a11 - b1*k1());
+
+  init { // bound initial states
+    assume (finite_forall (state: float) in stateVars :: state<0.1 && state > -0.1);
+  }
+  next { // step the system
+    x0' = (a00 - b0*k0())*x0 + (a01 - b0*k1())*x1;
+    x1' = (a10 - b1*k0())*x0 + (a11 - b1*k1())*x1;
+  }
+  // the safety condition
+  invariant stability: isStable(a00 - b0*k0(), a01 - b0*k1(), a10 - b1*k0(), a11 - b1*k1());
+  invariant safety: finite_forall (state: float) in stateVars :: state < 1.0 && state > -1.0;
+  invariant isNotNaN: finite_forall (state: float) in stateVars :: state < 1.0 && state > -1.0;
+ 
+  control {
+    unroll(3); // fix safety bound
+    check;
+  }
+}
