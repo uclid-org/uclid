@@ -66,7 +66,7 @@ module main {
         finite_forall (i : microop_t) in testInstrs ::
         finite_forall (j : microop_t) in testInstrs ::
             (ProgramOrder(i, j) &&
-              (NodeExists(i.Fetch) || NodeExists(j.Fetch))) ==>
+              (NodeExists(j.Fetch))) ==>
                 EdgeExists(i.Fetch, j.Fetch);
 
     procedure stepInst(index : integer)
@@ -159,13 +159,27 @@ module main {
         if (next4) { call (i4') = stepInst(4); }
     }
 
-    //These properties will pass with the model as is.
-    //If the axiom fifoFetch is commented out, they will fail at step 3.
-    property WBFifo1 : i2.Writeback.nExists ==> i1.Writeback.nExists;
-    property WBFifo2 : i4.Writeback.nExists ==> i3.Writeback.nExists;
+    //These properties will pass for traces of length 4, but for traces
+    //of length 5 (i.e. with bmc(4) as below), they will fail at step 4
+    //(step 0 is the initial state), as the instructions on a core are
+    //free to execute in whatever order they choose, and in-order fetch
+    //(as enforced by the fifoFetch axiom) does not imply in-order writeback.
+
+    //This property will pass, because the operational part of the model
+    //enforces that each instruction's Fetch stage happens before its Execute stage,
+    //and the fifoFetch axiom enforces that i1.Fetch happens before i2.Fetch.
+    property FetchHBNextExecute :
+        (i1.Fetch.nExists && i2.Execute.nExists) ==> (i1.Fetch.nTime < i2.Execute.nTime);
+
+    //However, this property will fail, because the model does not enforce
+    //in-order Writeback of instructions. Only the Fetch stage is enforced
+    //to be in-order by the fifoFetch axiom, and the operational portion
+    //of the model only enforces that each instruction goes through its
+    //stages in order.
+    property WBFifo : i4.Writeback.nExists ==> i3.Writeback.nExists;
 
     control {
-        v = bmc(3);
+        v = bmc(4);
         check;
         v.print_cex(
             i1.Fetch.nExists,
