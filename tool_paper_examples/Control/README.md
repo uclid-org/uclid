@@ -15,3 +15,5 @@ delphi delphi_file.sl
 ```
 
 Note that to run these files you must have following the installation instructions in the artifact readme. 
+
+[1] https://arxiv.org/abs/2107.13477
