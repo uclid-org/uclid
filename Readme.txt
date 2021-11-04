@@ -14,7 +14,7 @@ Copy the `packages` and `uclid` directories into the home directory (`~/`).
 
 1. (Optional) Only if you want to compile uclid from source: Install `sbt`.
 	- `sbt` is made available as a debian package in `packages/sbt_1.5.5_all.deb`. Please install it using: `sudo dpkg -i sbt_1.5.5_all.deb`
-	- Note that compiling uclid from source would require an internet connection
+	- Note that compiling uclid from source would require an internet connection.
 		
 ---
 

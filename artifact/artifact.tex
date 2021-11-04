@@ -56,23 +56,18 @@ The submission tarball has the following structure:
 .2 License.txt.
 .2 Readme.txt.
 .2 tool\_paper\_examples.
+.3 example\_<name>.sh scripts.
+.3 export\_paths.
 .3 uclid.
 .3 z3.
-.4 solver files.
 .3 delphi.
-.4 solver files.
 .3 cvc4.
-.4 solver files.
+.3 Fib.
 .3 Control.
-.4 associated files.
 .3 Keystone.
-.4 associated files.
 .3 OperAxUhb.
-.4 associated files.
 .3 TrainSystem.
-.4 associated files.
 .3 Readme.md.
-.3 fib.ucl.
 .2 src.
 .2 <others>.
 }
@@ -97,17 +92,29 @@ The \artcommand{tool\_paper\_examples} directory is self contained with prebuilt
 Move into the \artcommand{tool\_paper\_examples} directory. This directory consists of the following:
 
 \begin{itemize}
-    \item The prebuilt binary for the tool \artcommand{uclid}
-    \item The prebuilt binaries for the external solvers \artcommand{z3}, \artcommand{cvc4} and \artcommand{delphi} in their respective directories
-    \item Four test-examples directories: \artcommand{Fib}, \artcommand{Control},
+    \item Prebuilt binaries for the \uclidcmd tool and the external solvers \artcommand{z3}, \artcommand{cvc4} and \artcommand{delphi} in their respective directories
+    \item Five test-examples directories: \artcommand{Fib}, \artcommand{Control},
     \artcommand{TrainSystem},
     \artcommand{OperAxUhb}, and
     \artcommand{Keystone}
+    \item Run scripts for each of the above examples, named as \artcommand{run\_<name>.sh}
+    \item A \artcommand{export\_paths} sourcefile
 \end{itemize}
 
 
-To run example \artcommand{examplename}, run the script \artcommand{./run\_<examplename>} from the \artcommand{tool\_paper\_examples} directory.
-We now describe each of these examples in more detail:
+\paragraph{Startup instructions}
+To begin, source the \artcommand{export\_paths} script. 
+This should set permissions for running all the binaries and add required paths to the \artcommand{\$PATH} variable.
+\begin{equation*}
+    \artcommand{source export\_paths}
+\end{equation*}
+To run example \artcommand{examplename}, 
+run the script \artcommand{./run\_<examplename>.sh} 
+from the \artcommand{tool\_paper\_examples} directory.
+Here \artcommand{examplename} corresponds to:
+\artcommand{Fib}, \artcommand{Control},
+\artcommand{TrainSystem}, \artcommand{OperAxUhb}, and \artcommand{Keystone}.
+We now describe each of these examples in order:
 
 \newcommand{\excommand}[1]{$\mathsf{#1}$}
 
@@ -118,7 +125,18 @@ We now describe each of these examples in more detail:
 
 \subsection{\excommand{Control}}
 \input{example_Control.tex}
+
+\textbf{This should take around 10 seconds.}
+
+\subsection{\excommand{TrainSystem}}
+\input{example_TrainSystem.tex}
+
+\textbf{This should take around 10 seconds.}
+
+
 \subsection{\excommand{OperAxUhb}}
+
+\textbf{This should take around 10 seconds.}
 
 This example corresponds to Figure 8 in our submitted paper, namely the combined operational-axiomatic model of a microarchitecture whose pipelines fetch instructions in program order.
 The example code contains \texttt{uhb\_common.ucl}, the embedding of $\mu$spec in \uclid (parts of which are shown in Figure 7 of our submitted paper).
@@ -126,18 +144,6 @@ It also contains the code of the model depicted in Figure 8\footnote{Note that t
 The \texttt{operAx.ucl} file also contains two properties (\texttt{FetchHBNextExecute} and \texttt{WBFifo}). The control block of \texttt{operAx.ucl} checks these properties using bounded model checking for traces up to size 5.
 The first property (\texttt{FetchHBNextExecute}) is maintained by a combination of the operational and axiomatic constraints, and so will always be true.
 The second property (\texttt{WBFifo}) is not maintained by the model, and the \texttt{bmc} command duly detects a counterexample trace of length 5 for it.
-
-\textbf{This should take around ?.}
-
-\subsection{\excommand{TrainSystem}}
-\input{example_TrainSystem.tex}
-
-\textbf{This should take around 10 seconds.}
-
-\subsection{\excommand{OperAxUhb}}
-\input{example_OperAxUhb.tex}
-
-\textbf{This should take around 10 seconds.}
 
 \subsection{\excommand{Keystone}}
 \input{example_Keystone.tex}
