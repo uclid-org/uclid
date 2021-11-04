@@ -1,16 +1,12 @@
 This example corresponds to Figure 5 in our submitted paper. It demonstrates how to use
-UCLID5's integration with oracles
-
+UCLID5's integration with oracles: 
+it uses the oracle \artcommand{is\_stable}, provided in the 
+\artcommand{Control} sub-directory.
 The model in test-control.ucl represents a Linear Time Invariant system with two state variables. The system is specified using the following matrices:
-A = [0.901224922471, 0.000000013429; 0.000000007451, 0.000000000000]
-B = [128, 0]
-
-The UCLID model finds a two values for the controller: k0 and k1
-
+\begin{align*}
+    A &= [0.901224922471, 0.000000013429; 0.000000007451, 0.000000000000] \\
+    B &= [128, 0]
+\end{align*}
+The UCLID model finds a two values for the controller: k0 and k1.
 The invariants specify that the controller should stabilize the system (i.e., the eigenvalues should fall within the unit circle, whilst the system states remain within safe bounds up to a finite unrolling bound. 
-
 For more example controllers see \url{https://ssvlab.github.io/dsverifier/dssynth-toolbox/index.html}. 
-
-
-\textbf{Running
-run\_control.sh should take around 40 seconds.}

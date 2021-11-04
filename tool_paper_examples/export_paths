@@ -10,6 +10,9 @@ export PATH=$PATH:$(pwd)/cvc4/bin
 echo "Exporting PATH for Delphi ..."
 export PATH=$PATH:$(pwd)/delphi/bin
 
+echo "Exporting PATH for is_stable oracle"
+export PATH=$PATH:$(pwd)/Control
+
 echo "Enabling execute access for binaries ..."
 chmod 755 uclid-0.9.5/bin/uclid
 chmod 755 z3/bin/z3

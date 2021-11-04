@@ -7,8 +7,8 @@ TAP_SOURCES=$(CPU_SOURCES) ./tap-mod.ucl
 MEASURE=./measure.ucl
 
 tap:
-	uclid --main tap $(TAP_SOURCES)
+	uclid -s "z3 -in" --main tap $(TAP_SOURCES)
 cpu:
-	uclid --main abstract_cpu $(CPU_SOURCES)
+	uclid -s "z3 -in" --main abstract_cpu $(CPU_SOURCES)
 measure:
-	uclid --main measure $(TAP_SOURCES) $(MEASURE)
+	uclid -s "z3 -in" --main measure $(TAP_SOURCES) $(MEASURE)

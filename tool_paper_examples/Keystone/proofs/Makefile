@@ -7,5 +7,4 @@ PROOF_SOURCES=$(TAP_SOURCES) ./proof-common.ucl
 INTEGRITY_PROOF=./integrity-proof.ucl
 
 all:
-	uclid --main integrity_proof $(PROOF_SOURCES) $(INTEGRITY_PROOF)
-
+	uclid -s "z3 -in" --main integrity_proof $(PROOF_SOURCES) $(INTEGRITY_PROOF)
