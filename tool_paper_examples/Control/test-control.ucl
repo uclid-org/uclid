@@ -34,7 +34,7 @@ module main {
   invariant isNotNaN: finite_forall (state: float) in stateVars :: state < 1.0 && state > -1.0;
  
   control {
-    unroll(3); // fix safety bound
+    bmc(3); // fix safety bound
     check;
   }
 }
