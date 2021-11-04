@@ -1,3 +1,7 @@
+// Expected Output: h(x, y) := x >= 0
+// Note: must run with a synthesis engine backend, like cvc4
+// Note: format of output depends on synthesis engine backend
+
 module main {
   // Part 1: System Description.
   var a, b : integer;

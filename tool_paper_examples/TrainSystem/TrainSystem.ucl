@@ -187,7 +187,6 @@ module main {
             ==> tag_diff(g(ctrl2State'), g(ctrl1State)) == zero());
         assume((id(ctrl2State) != NULL && id(trainState') != NULL)
             ==> tag_diff(g(trainState'), g(ctrl2State)) == zero());
-            // ==> tag_diff(g(trainState'), g(ctrl2State)) == {1,0}); // FIXME: this should resolve the CEX, but it doesn't.
         assume((id(ctrl2State) != NULL && id(doorState') != NULL)
             ==> tag_diff(g(doorState'), g(ctrl2State)) == zero());
 
