@@ -1,0 +1,3 @@
+This example corresponds to Figure 9 and 10 in our submitted paper. It demonstrates the hybrid approach of combining operational and axiomatic modeling using UCLID5.
+
+The model describes a train system written in Lingua Franca (LF), a polyglot coordination language for building deterministic reactive systems. The source code is in \texttt{TrainSystem.lf}. The state transition of the model takes an operational approach by using the \texttt{init} and \texttt{next} keywords in UCLID5, while the semantics of LF are specified using a set of axioms. The model shows a flaw in the train system under verification, by exposing that a bad state, ``the train moves while the door is open,'' is reachable. UCLID5 illustrates the flaw by returning a counterexample to the user.
