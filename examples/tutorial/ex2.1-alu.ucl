@@ -45,7 +45,7 @@ module main {
   invariant result_eq_cnt : (cnt == result.value);
 
   control {
-    f = unroll (5);
+    f = bmc (5);
     check;
     print_results;
   }

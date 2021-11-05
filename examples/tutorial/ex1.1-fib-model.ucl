@@ -15,7 +15,7 @@ module main {
 
   // Part 3: Proof script.
   control {
-    unroll (3);
+    bmc (3);
     check;
     print_results;
   }
