@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Moving into Control directory"
+echo "Moving into Fib directory"
 cd Fib
 
 echo "Running uclid on fib.ucl ..."
