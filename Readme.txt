@@ -1,4 +1,4 @@
-## Artifact for TACAS 2022 Submission 178
+## Artifact for TACAS 2022 Submission #177 (Artifact) and #178 (Paper)
 
 #### UCLID5: Multi-Modal Formal Modeling, Verification, and Synthesis
 
@@ -32,3 +32,16 @@ Copy the `packages` and `uclid` directories into the home directory (`~/`).
 3. Running `UCLID5` on the examples:
    - We have provided a self-contained directory - `tool_paper_examples` - with all prebult binaries and examples. This does not require you to perform steps 1 and 2 above.
    - Please enter this directory and refer to Section 2 of `artifact.pdf` for more details
+
+
+---
+
+### Availability statement:
+
+The `UCLID5` tool is publicly available at https://github.com/uclid-org/uclid/tree/master. This repository includes the source code as well as a comprehensive set of tests.
+
+---
+
+### Badges:
+
+We apply for all three badges: Functional, Reusable, Available.

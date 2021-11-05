@@ -1,7 +1,7 @@
 #!/bin/bash
 
-echo "Moving into Keystone directory"
-cd Keystone
+echo "Moving into TrustedAbstractPlatform directory"
+cd TrustedAbstractPlatform
 
 echo "Generating TAP models ..."
 cd modules
