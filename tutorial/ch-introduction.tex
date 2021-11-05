@@ -55,7 +55,7 @@ The third and final part of the \uclid{} module is a set of commands to the \ucl
 
 The proof script is contained within the \keywordbf{control} block. The commands here execute the system for 3 steps and check whether all of the systems properties (in this case, we only have one invariant: \ident{a\_le\_b}) are satisfied for each of these steps. 
 
-The command \proofcmd{unroll} executes the system for 3 steps. This execution generates four \emph{proof obligations}. These proof obligations ask whether the system satisfies the invariant \ident{a\_le\_b} in the initial state and in each of the 3 states reached next. The \proofcmd{check} command \emph{checks} whether these proof obligations are satisfied and the \proofcmd{print\_results} prints out the results of these checks.
+The command \proofcmd{bmc} executes the system for 3 steps. This execution generates four \emph{proof obligations}. These proof obligations ask whether the system satisfies the invariant \ident{a\_le\_b} in the initial state and in each of the 3 states reached next. The \proofcmd{check} command \emph{checks} whether these proof obligations are satisfied and the \proofcmd{print\_results} prints out the results of these checks.
 
 \section{Installing \uclid{}}
 
