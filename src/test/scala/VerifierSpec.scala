@@ -613,4 +613,7 @@ class PrintCexSpec extends AnyFlatSpec {
   "test-bmc-5.ucl" should "print a 6-step CEX" in {
     PrintCexSpec.checkPrintCex("test/test-bmc-5.ucl", 6)
   }
+  "test-k-induction-5.ucl" should "print a 4-step CEX" in {
+    VerifierSpec.expectedFails("./test/test-k-induction-5.ucl", 1)
+  }
 }
