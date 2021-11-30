@@ -85,7 +85,7 @@ java11
 
 ## Compiling uclid5
 
-Run the following command in the root directory of the UCLID5 repository:
+Run the following command in the root directory of the UCLID5 repository (note that it is not necessary to run `sbt update` if you already have the correct dependencies installed as per https://github.com/uclid-org/uclid/blob/master/build.sbt. However, running it will do no harm.):
 
     $ sbt update clean compile "set fork:=true" test
 
