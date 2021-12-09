@@ -599,6 +599,21 @@ object PrintCexSpec {
       }
     }
   }
+  def checkJSONCex (filename : String, n : Int) {
+    UclidMain.enableStringOutput()
+    UclidMain.clearStringOutput()
+    val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
+    val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, l.Identifier("main"))
+    assert (mainModule.isDefined)
+    val config = UclidMain.Config() 
+    val results = UclidMain.execute(mainModule.get, config)
+    val outputString = UclidMain.stringOutput.toString()
+    val lines1 = outputString.split('\n')
+    val check = "FAILED -> v [Step #%d]".format(n-1)
+    assert (lines1.exists(l => l.contains(check)))
+    val lines2 = lines1.filter(l => !l.contains("===="))
+    val checkfilemsg = "Wrote CEX traces to file"
+  }
 }
 class PrintCexSpec extends AnyFlatSpec {
   "test-bmc-0.ucl" should "print a one-step CEX" in {
@@ -612,5 +627,8 @@ class PrintCexSpec extends AnyFlatSpec {
   }
   "test-bmc-5.ucl" should "print a 6-step CEX" in {
     PrintCexSpec.checkPrintCex("test/test-bmc-5.ucl", 6)
+  }
+  "test-cex-json.ucl" should "generate a 3-step JSON CEX" in {
+    PrintCexSpec.checkJSONCex("test/test-bmc-json.ucl", 4)
   }
 }

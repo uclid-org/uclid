@@ -218,6 +218,10 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkNoParams(cmd, filename)
         checkNoResultVar(cmd, filename)
         checkHasArgObj(cmd, filename, context)
+      case "print_cex_json" =>
+        checkNoParams(cmd, filename)
+        checkNoResultVar(cmd, filename)
+        checkHasArgObj(cmd, filename, context)
       case "dump_cex_vcds" =>
         checkNoArgs(cmd, filename)
         checkNoParams(cmd, filename)

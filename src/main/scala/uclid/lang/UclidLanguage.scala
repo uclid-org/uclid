@@ -1471,7 +1471,7 @@ case class GenericProofCommand(
     val objStr = argObj match { case Some(id) => id.toString + "->"; case None => "" }
     resultStr + objStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
   }
-  def isPrintCEX : Boolean = { name == Identifier("print_cex") }
+  def isPrintCEX : Boolean = { name == Identifier("print_cex") || name == Identifier("print_cex_json") }
 
   def modifiesModule : Boolean = { name == Identifier("assign_macro") }
 }

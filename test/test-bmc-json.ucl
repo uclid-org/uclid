@@ -1,0 +1,21 @@
+module main {
+	var i : integer;
+
+
+	init {
+		i = 0;
+	}
+
+	next {	
+		i' = i + 1;
+	}
+
+	property lt3 : i < 3;
+
+	control {
+		v = bmc(5);
+		check;
+        print_results;
+		v.print_cex_json;
+	}
+}
