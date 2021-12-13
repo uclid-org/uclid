@@ -79,6 +79,7 @@ object UclidMain {
       modSetAnalysis: Boolean = false,
       ufToArray: Boolean = false,
       printStackTrace: Boolean = false,
+      noLetify: Boolean=false, // prevents SMTlib interface from letifying
       verbose : Int = 1, // verbosities: 
       // 0: essential: print nothing but results and error messages
       // 1: basic: current default behaviour, includes statuses
@@ -127,6 +128,10 @@ object UclidMain {
       opt[Unit]('M', "mod-set-analysis").action{
         (_, c) => c.copy(modSetAnalysis = true)
       }.text("Infers modifies set automatically.")
+
+      opt[Unit]('L', "do-not-letify").action{
+        (_, c) => c.copy(noLetify = true)
+      }.text("Disable letification in SMTLIB interface (used with external solver)")
 
       opt[Unit]('u', "uf-to-array").action{
         (_, c) => c.copy(ufToArray = true)
@@ -412,7 +417,7 @@ object UclidMain {
     var symbolicSimulator = new SymbolicSimulator(module)
     var solverInterface = if (config.smtSolver.size > 0) {
       logger.debug("args: {}", config.smtSolver)
-      new smt.SMTLIB2Interface(config.smtSolver)
+      new smt.SMTLIB2Interface(config.smtSolver, config.noLetify)
     } else if (config.synthesizer.size > 0) {
       new smt.SynthLibInterface(config.synthesizer, config.sygusFormat)
     } else {
