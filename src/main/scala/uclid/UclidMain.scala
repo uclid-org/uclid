@@ -163,10 +163,13 @@ object UclidMain {
       val mainModule = instantiate(config, modules, mainModuleName)
       mainModule match {
         case Some(m) =>
-          // Split the control block commands to blocks on commands that modify the module
-          val cmdBlocks = splitCommands(m.cmds)
-          // Execute the commands for each block
-          cmdBlocks.foreach(cmdBlock => executeCommands(m, cmdBlock, config, mainModuleName))
+          if(!m.cmds.isEmpty)
+          {
+            // Split the control block commands to blocks on commands that modify the module
+            val cmdBlocks = splitCommands(m.cmds)
+            // Execute the commands for each block
+            cmdBlocks.foreach(cmdBlock => executeCommands(m, cmdBlock, config, mainModuleName))
+          }
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
       }
