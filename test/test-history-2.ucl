@@ -1,0 +1,28 @@
+module main {
+
+	var cpt,oldcpt : integer ;
+	
+	init {
+		cpt=0;
+	}
+  
+	next {
+		cpt'= cpt+1;
+		oldcpt'=cpt;
+	}
+
+// should pass
+	invariant pass0 : (cpt>1) ==> (history(cpt,1)==oldcpt) ;
+// should fail
+	invariant fail0 : (cpt<=1) ==> (history(cpt,1)==oldcpt) ;
+
+
+	control {
+		vobj = induction(2);
+		check;
+		print_results;
+ 		vobj.print_cex(cpt,oldcpt);
+	}
+	
+}
+
