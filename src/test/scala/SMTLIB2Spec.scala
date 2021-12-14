@@ -446,6 +446,9 @@ class SMTLIB2Spec extends AnyFlatSpec {
   "test-history-1.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-history-1.ucl", 0)
   }
+  "test-history-2.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-history-2.ucl", 1)
+  }
   // "test-ltl-0-safe.ucl" should "verify all assertions." in {
   //   SMTLIB2Spec.expectedFails("./test/test-ltl-0-safe.ucl", 0)
   // }
