@@ -887,5 +887,10 @@ class ParserSpec extends AnyFlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
+  "test-no-control-block.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfigWithMSA("test/test-no-control-block.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
 
 }
