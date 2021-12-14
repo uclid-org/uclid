@@ -477,7 +477,7 @@ class SymbolicSimulator (module : Module) {
     frameList += symbolTable
     val simTbl : SimulationTable = ArrayBuffer(frameList)
 
-    if (addAssertions) { addAsserts(0, 0, symbolTable, frameList, simTbl, label, scope, propertyFilter, addAssertToTree _) }
+    if (addAssertions) { addAsserts(0, symbolTable, frameList, simTbl, label, scope, propertyFilter, addAssertToTree _) }
     else { assumeAssertions(symbolTable, frameTbl, 1, scope, propertyFilter, addAssumptionToTree _) }
   }
 
@@ -537,8 +537,8 @@ class SymbolicSimulator (module : Module) {
     val simTbl : SimulationTable = ArrayBuffer(frameList)
 
     if (addAssertions) {
-      addAsserts(1,0, symTab, frameList, simTbl, label, scope, noHyperInvariantFilter(propertyFilter), addAssertsToList _)
-      addAsserts(1,0, symTab, frameList, simTbl, label, scope, HyperInvariantFilter(propertyFilter), addHyperAssertsToList _)
+      addAsserts(1, symTab, frameList, simTbl, label, scope, noHyperInvariantFilter(propertyFilter), addAssertsToList _)
+      addAsserts(1, symTab, frameList, simTbl, label, scope, HyperInvariantFilter(propertyFilter), addHyperAssertsToList _)
     }
     if (addAssumptions) { assumeAssertions(symTab, frameList, 1, scope, assumptionFilter, addAssumesToList _) }
 
@@ -595,8 +595,8 @@ class SymbolicSimulator (module : Module) {
     assumesLength = assumes.length
 
     if (addAssertions) {
-      addAsserts(1,0, currentState, frameList, simTbl, label, scope, noHyperInvariantFilter(propertyFilter), addAssertsToList _)
-      addAsserts(1,0, currentState, frameList, simTbl, label, scope, HyperInvariantFilter(propertyFilter), addHyperAssertsToList _)
+      addAsserts(1, currentState, frameList, simTbl, label, scope, noHyperInvariantFilter(propertyFilter), addAssertsToList _)
+      addAsserts(1, currentState, frameList, simTbl, label, scope, HyperInvariantFilter(propertyFilter), addHyperAssertsToList _)
     }
     if (addAssertionsAsAssumes) { assumeAssertions(currentState, frameList, numPastFrames, scope, assumptionFilter, addAssumesToList _) }
     assumes.takeRight(assumes.length - assumesLength).foreach(expr => assumesLambda += expr)
@@ -1134,7 +1134,7 @@ class SymbolicSimulator (module : Module) {
       val simTbl = ArrayBuffer(frameList)
       // FIXME: simTable
       addModuleAssumptions(currentState, frameList, numPastFrames, scope, addAssumptionToTree _)
-      if (assertProperties) { addAsserts(step,startStep, currentState, frameList, simTbl, label, scope, propertyFilter, addAssertToTree _)  }
+      if (assertProperties) { addAsserts(step+startStep, currentState, frameList, simTbl, label, scope, propertyFilter, addAssertToTree _)  }
       else { assumeAssertions(currentState, frameList, numPastFrames, scope, propertyFilter, addAssumptionToTree _) }
     }
     symbolTable = currentState
@@ -1541,7 +1541,7 @@ class SymbolicSimulator (module : Module) {
   }
 
   /** Add module specifications (properties) to the list of proof obligations */
-  def addAsserts(frameNumber : Int, numberSteps: Int, symbolTable : SymbolTable, frameTbl : FrameTable, simTbl : SimulationTable,
+  def addAsserts(frameNumber : Int, symbolTable : SymbolTable, frameTbl : FrameTable, simTbl : SimulationTable,
                 label : String, scope : Scope, filter : ((Identifier, List[ExprDecorator]) => Boolean),
                 addAssert : (AssertInfo => Unit)) {
 
@@ -1549,8 +1549,8 @@ class SymbolicSimulator (module : Module) {
       val prop = module.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {
         val property = AssertInfo(
-            prop.name, label, simTbl.map(ft => ft.clone()), scope, frameNumber+numberSteps, smt.BooleanLit(true),
-            evaluate(prop.expr, symbolTable, frameTbl, frameNumber+numberSteps, scope), prop.params, prop.expr.position)
+            prop.name, label, simTbl.map(ft => ft.clone()), scope, frameNumber, smt.BooleanLit(true),
+            evaluate(prop.expr, symbolTable, frameTbl, frameNumber, scope), prop.params, prop.expr.position)
         addAssert(property)
       }
     })
