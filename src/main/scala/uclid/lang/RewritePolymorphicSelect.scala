@@ -50,11 +50,9 @@ class RewriteRecordSelectPass extends RewritePass {
   }
 
   override def rewriteLHS(lhs : Lhs, context : Scope) : Option[Lhs] = {
-    UclidMain.println("should we write LHS " + lhs.toString)
     lhs match {
       case LhsRecordSelect(id, fields) => 
         val newFields = fields.map{case i: Identifier => Identifier("_rec_"+i.toString)}
-        UclidMain.println("new fields: " + newFields.toString)
         Some(LhsRecordSelect(id, newFields))
       case _ => Some(lhs)
     }
@@ -62,16 +60,9 @@ class RewriteRecordSelectPass extends RewritePass {
 
   def rewriteRecordFields(id: Identifier, opapp: OperatorApplication, t: Type) : Option[OperatorApplication] = {
     if(t.isRecord)
-    {
-      val newOppApp = Some(OperatorApplication(PolymorphicSelect(Identifier("_rec_"+id.toString)), List(opapp.operands(0))))
-      UclidMain.println("Rewrote record " + opapp.toString + " to " + newOppApp.toString)
-      newOppApp
-    }
+      Some(OperatorApplication(PolymorphicSelect(Identifier("_rec_"+id.toString)), List(opapp.operands(0))))
     else
-    {
-      UclidMain.println("Unable to rewrite record " + opapp.toString + " arg is type " + t.toString)
       Some(opapp)
-    }
   }
 
   // rename record fields
@@ -95,12 +86,15 @@ class RewriteRecordSelectPass extends RewritePass {
               case Some(Scope.LambdaVar(i,t)) => 
                 rewriteRecordFields(id, opapp, t)
               case _ => 
-                UclidMain.println("Unable to rewrite record " + opapp.toString + " arg is " + context.map.get(arg).toString)
                 Some(opapp)
             }
-          case _ => Some(opapp)
+          case opapp2 : OperatorApplication  => 
+              rewriteOperatorApp(opapp2, context)
+          case _ => 
+          Some(opapp)
         }
-      case _ => Some(opapp)
+      case _ => 
+        Some(opapp)
     }
   }
 }
