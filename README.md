@@ -34,39 +34,39 @@ To compile from source, UCLID5 requires all of the above plus:
 - [SBT version 1.0 or greater.](http://www.scala-sbt.org/1.0/docs/Setup.html) 
 
 The following are optional requirements but several CI tests will fail without them:
-- (optional) [CVC4](https://github.com/cvc5/cvc5) version 1.8 is the SyGuS-IF compliant solver used for synthesis tests in the CI. 
+- (optional) [CVC5](https://github.com/cvc5/cvc5) version 0.0.4 is the SyGuS-IF compliant solver used for synthesis tests in the CI. 
 - (optional) [Delphi](https://github.com/polgreen/delphi) is used for verification modulo oracles tests in the CI.
 
 
 ## Installation of prerequisites on Linux
-- For easy install of prerequisites on Linux, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC4/Delphi for use with uclid5. This script will download [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)/[CVC4 1.8](https://github.com/cvc5/cvc5/releases/tag/1.8)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
+- For easy install of prerequisites on Linux, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC5/Delphi for use with uclid5. This script will download [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)/[CVC5 0.0.4](https://github.com/cvc5/cvc5/releases/tag/cvc5-0.0.4)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
 ~~~
     $ source get-z3-linux.sh 
-    $ source get-cvc4-linux.sh 
+    $ source get-cvc5-linux.sh 
     $ source get-delphi-linux.sh
 ~~~
-- These scripts download the binaries for Z3, CVC4 and Delphi respectively and set up your `PATH` and `LD_LIBRARY_PATH` accordingly. 
+- These scripts download the binaries for Z3, CVC5 and Delphi respectively and set up your `PATH` and `LD_LIBRARY_PATH` accordingly. 
 You may wish to permanently add the following lines to your bash_profile:
 ~~~
-    export PATH=$PATH:/path/to/uclid/z3/bin/:/path/to/uclid/cvc4/bin:/path/to/uclid/delphi/bin/
+    export PATH=$PATH:/path/to/uclid/z3/bin/:/path/to/uclid/cvc5/bin:/path/to/uclid/delphi/bin/
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/uclid/z3/bin/
 ~~~
 
-Alternatively, [Z3](https://github.com/Z3Prover/z3), [CVC4](https://github.com/cvc5/cvc5), and [Delphi](https://github.com/polgreen/delphi) can all be built from source, and instructions can be found on their respective git repositories. If you prefer to build Z3 from source, make sure the Z3/Java interface is enabled in your build (currently by passing `--java` to the `mk_make.py` script).
+Alternatively, [Z3](https://github.com/Z3Prover/z3), [CVC5](https://github.com/cvc5/cvc5), and [Delphi](https://github.com/polgreen/delphi) can all be built from source, and instructions can be found on their respective git repositories. If you prefer to build Z3 from source, make sure the Z3/Java interface is enabled in your build (currently by passing `--java` to the `mk_make.py` script).
 
 - Install instructions for SBT are available at http://www.scala-sbt.org/1.0/docs/Setup.html
 - Install instructions for OpenJDK are available at https://openjdk.java.net/install/
 
 ## Installation of prerequisites on MacOS
-- For easy install of prerequisites on macOS, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC4/Delphi for use with uclid5. This script will download [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)/[CVC4 1.8](https://github.com/cvc5/cvc5/releases/tag/1.8)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
+- For easy install of prerequisites on macOS, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC5/Delphi for use with uclid5. This script will download [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)/[CVC5 0.0.4](https://github.com/cvc5/cvc5/releases/tag/cvc5-0.0.4)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
 ~~~
     $ source get-z3-macos.sh 
-    $ source get-cvc4-macos.sh 
+    $ source get-cvc5-macos.sh 
     $ source get-delphi-macos.sh
 ~~~
 - These scripts add the downloaded binaries to your `PATH` and `LD_LIBRARY_PATH` accordingly. You may wish to permanently add the following lines to your bash_profile:
 ~~~
-    export PATH=$PATH:/path/to/uclid/z3/bin/:/path/to/uclid/cvc4/bin:/path/to/uclid/delphi/bin/
+    export PATH=$PATH:/path/to/uclid/z3/bin/:/path/to/uclid/cvc5/bin:/path/to/uclid/delphi/bin/
 ~~~
 - Due to System Integrity Protection, introduced in OS X El Capitan, Java ignores the user set DYLD_LIBRARY_PATH. To fix this issue copy the JNI dynamic link libraries to Java/Library/Extensions and the non-JNI dynamic link libraries to /usr/local/lib as follows (if you build Z3 from source these files are found in the build directory):
 ~~~
@@ -89,7 +89,7 @@ Run the following command in the root directory of the UCLID5 repository (note t
 
     $ sbt update clean compile "set fork:=true" test
 
-If compilation and tests pass (or if the only failing tests are due to CVC4 and Delphi not being found), you can build a universal package.
+If compilation and tests pass (or if the only failing tests are due to CVC5 and Delphi not being found), you can build a universal package.
 
     $ sbt universal:packageBin
 
@@ -107,7 +107,7 @@ Now you can run uclid using the 'uclid' command. For example:
     
  Some useful commands to know:
  - To print the SMT files use the `-g` flag, e.g., `uclid examples/tutorial/ex1.1-fib-model.ucl -g "filename"` will print the SMT file to SMT files with the prefix `filename`.
- - To run UCLID5 with another solver use the `-s` flag, e.g., `uclid examples/tutorial/ex1.1-fib-model.ucl -s "cvc4 --lang smt2 --produce-models"` will use CVC4 as the back-end solver.
+ - To run UCLID5 with another solver use the `-s` flag, e.g., `uclid examples/tutorial/ex1.1-fib-model.ucl -s "cvc5 --lang smt2 --produce-models"` will use CVC5 as the back-end solver.
 
 # Directory Structure
 
