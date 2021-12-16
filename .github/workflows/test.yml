@@ -33,24 +33,24 @@ jobs:
     - name: Print Z3 Version
       run: z3 --version
 
-    - name: Cache CVC4
-      id: cache-cvc4
+    - name: Cache CVC5
+      id: cache-cvc5
       uses: actions/cache@v1
       with:
-        path: cvc4/
-        key: ${{ runner.os }}-cvc4-${{ hashFiles('get-cvc4-linux.sh') }}-1
+        path: cvc5/
+        key: ${{ runner.os }}-cvc5-${{ hashFiles('get-cvc5-linux.sh') }}-1
 
-    - name: Download cvc4
-      if: steps.cache-cvc4.outputs.cache-hit != 'true'
-      run: ./get-cvc4-linux.sh
+    - name: Download cvc5
+      if: steps.cache-cvc5.outputs.cache-hit != 'true'
+      run: ./get-cvc5-linux.sh
  
-    - name: Add CVC4 to Path
+    - name: Add CVC5 to Path
       run: |
-       ls $GITHUB_WORKSPACE/cvc4/bin/
-       echo "$GITHUB_WORKSPACE/cvc4/bin/" >> $GITHUB_PATH
+       ls $GITHUB_WORKSPACE/cvc5/bin/
+       echo "$GITHUB_WORKSPACE/cvc5/bin/" >> $GITHUB_PATH
 
-    - name: Print CVC4 Version
-      run: cvc4 --version
+    - name: Print CVC5 Version
+      run: cvc5 --version
 
     # - name: Cache Delphi
     #   id: cache-delphi
@@ -129,24 +129,24 @@ jobs:
     - name: Print Z3 Version
       run: z3 --version 
 
-    - name: Cache CVC4
-      id: cache-cvc4
+    - name: Cache CVC5
+      id: cache-cvc5
       uses: actions/cache@v1
       with:
-        path: cvc4/
-        key: ${{ runner.os }}-cvc4-${{ hashFiles('get-cvc4-macos.sh') }}-1
+        path: cvc5/
+        key: ${{ runner.os }}-cvc5-${{ hashFiles('get-cvc5-macos.sh') }}-1
     
-    - name: Download cvc4
-      if: steps.cache-cvc4.outputs.cache-hit != 'true'
-      run: ./get-cvc4-macos.sh
+    - name: Download cvc5
+      if: steps.cache-cvc5.outputs.cache-hit != 'true'
+      run: ./get-cvc5-macos.sh
  
-    - name: Add CVC4 to Path
+    - name: Add CVC5 to Path
       run: |
-       ls $GITHUB_WORKSPACE/cvc4/bin/
-       echo "$GITHUB_WORKSPACE/cvc4/bin/" >> $GITHUB_PATH
+       ls $GITHUB_WORKSPACE/cvc5/bin/
+       echo "$GITHUB_WORKSPACE/cvc5/bin/" >> $GITHUB_PATH
 
-    - name: Print CVC4 Version
-      run: cvc4 --version
+    - name: Print CVC5 Version
+      run: cvc5 --version
 
     # - name: Cache delphi
     #   id: cache-delphi

@@ -48,7 +48,7 @@ object SynthesisSpec {
   def expectedFails(filename: String, nFail : Int) : String = {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
-    val config = UclidMain.Config().copy(synthesizer=List("cvc4_wait.sh"), sygusFormat = true)
+    val config = UclidMain.Config().copy(synthesizer=List("cvc5_wait.sh"), sygusFormat = true)
     val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"))
     assert (mainModule.isDefined)
@@ -116,7 +116,7 @@ class SynthesisSpec extends AnyFlatSpec {
   "test-synthesis-grammar-4.ucl" should "not execute correctly." in {
     try {
       val filename = "./test/test-synthesis-grammar-4.ucl"
-      val config = UclidMain.Config().copy(synthesizer=List("cvc4_wait.sh"), sygusFormat = true)
+      val config = UclidMain.Config().copy(synthesizer=List("cvc5_wait.sh"), sygusFormat = true)
       val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
       val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"))
       assert (mainModule.isDefined)
@@ -131,7 +131,7 @@ class SynthesisSpec extends AnyFlatSpec {
   "test-synthesis-grammar-5.ucl" should "not execute correctly." in {
     try {
       val filename = "./test/test-synthesis-grammar-5.ucl"
-      val config = UclidMain.Config().copy(synthesizer=List("cvc4_wait.sh"), sygusFormat = true)
+      val config = UclidMain.Config().copy(synthesizer=List("cvc5_wait.sh"), sygusFormat = true)
       val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
       val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"))
       assert (mainModule.isDefined)
@@ -155,7 +155,7 @@ class SynthesisSpec extends AnyFlatSpec {
   "test-synthesis-grammar-9.ucl" should "not execute correctly." in {
     try {
       val filename = "./test/test-synthesis-grammar-9.ucl"
-      val config = UclidMain.Config().copy(synthesizer=List("cvc4_wait.sh"), sygusFormat = true)
+      val config = UclidMain.Config().copy(synthesizer=List("cvc5_wait.sh"), sygusFormat = true)
       val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
       val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"))
       assert (mainModule.isDefined)
