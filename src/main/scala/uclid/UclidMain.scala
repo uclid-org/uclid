@@ -256,6 +256,8 @@ object UclidMain {
     passManager.addPass(new TypeSynonymFinder())
     // rewrites the type defs to be original type
     passManager.addPass(new TypeSynonymRewriter())
+    // Rename record fields to avoid clashing in scope
+    passManager.addPass(new RewriteRecordSelect())
     // renames local variables to blocks so that they don't clash?
     passManager.addPass(new BlockVariableRenamer())
     // compute the width of bitvector slice operations.

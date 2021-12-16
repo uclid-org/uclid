@@ -1,0 +1,21 @@
+module main {
+  type t = record {
+    x : integer
+  };
+  var x : t;
+
+  procedure foo()
+  	requires true;
+  	ensures x.x==0;
+    modifies x;
+  {
+    x.x = 0;
+  }
+
+  control{
+  	verify(foo);
+  	check;
+  	print_results;
+  }
+}
+

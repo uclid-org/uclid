@@ -40,7 +40,44 @@
 package uclid
 package lang
 
+// this must be run after user defined types are resolved, otherwise we can't tell what is a record and 
+// what is a tuple
+class RewriteRecordSelectPass extends RewritePass {
+
+  override def rewriteRecordType(recordT : RecordType, context : Scope) : Option[RecordType] = { 
+    val newMembers = recordT.members.map{case (i: Identifier, t:Type) => (Identifier("_rec_"+i.toString), t)}
+    Some(RecordType(newMembers))
+  }
+
+  // rename record fields
+  override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
+    opapp.op match {
+      case PolymorphicSelect(id) =>
+        val expr = opapp.operands(0)
+        expr match {
+          case arg : Identifier =>
+            context.map.get(arg) match {
+              case Some(Scope.StateVar(i,t)) => 
+              if(t.isRecord)
+              { 
+                Some(OperatorApplication(PolymorphicSelect(Identifier("_rec_"+id.toString)), List(opapp.operands(0))))
+              }
+              else
+                Some(opapp)
+              case _ => Some(opapp)
+            }
+          case _ => Some(opapp)
+        }
+      case _ => Some(opapp)
+    }
+  }
+}
+
+class RewriteRecordSelect extends ASTRewriter(
+    "RewriteRecordSelect", new RewriteRecordSelectPass())
+
 class RewritePolymorphicSelectPass extends RewritePass {
+
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     opapp.op match {
       case PolymorphicSelect(id) =>
@@ -49,7 +86,8 @@ class RewritePolymorphicSelectPass extends RewritePass {
           case arg : Identifier =>
             context.map.get(arg) match {
               case Some(Scope.ModuleDefinition(_)) => Some(ExternalIdentifier(arg, id))
-              case _ => Some(opapp)
+              case _ =>        
+              Some(opapp)
             }
           case _ => Some(opapp)
         }
