@@ -63,6 +63,7 @@ class RewriteRecordSelectPass extends RewritePass {
     }
   }
 
+  
   def isTypeRecord(t: Type) : Boolean = {
     if(!t.isRecord)
     {
@@ -91,26 +92,6 @@ class RewriteRecordSelectPass extends RewritePass {
     }
   }
 
-  override def rewriteLHS(lhs : Lhs, context : Scope) : Option[Lhs] = {
-    lhs match {
-      case LhsRecordSelect(id, fields) => 
-        val baseId = getBaseIdentifier(id)
-        if(baseId.isDefined)
-        {
-          if(isRecord(baseId.get, context))
-          {
-            val newFields = fields.map{case i: Identifier => Identifier(recordPrefix+i.toString)}
-            Some(LhsRecordSelect(id, newFields))
-          }
-          else
-            Some(lhs)
-        }
-        else
-          Some(lhs)
-      case _ => Some(lhs)
-    }
-  }
-
   def rewriteRecordFields(selectid: Identifier, argid: Identifier, opapp: OperatorApplication, context: Scope) : Option[OperatorApplication] = {   
     if(isRecord(argid, context))
     {
@@ -134,8 +115,33 @@ class RewriteRecordSelectPass extends RewritePass {
     }
   }
 
+ // this code properly identifies record types, based on their type in the context, on the LHS and then rewrites all the fields. 
+  override def rewriteLHS(lhs : Lhs, context : Scope) : Option[Lhs] = {
+    lhs match {
+      case LhsRecordSelect(id, fields) => 
+        val baseId = getBaseIdentifier(id)
+        if(baseId.isDefined)
+        {
+          if(isRecord(baseId.get, context))
+          {
+            val newFields = fields.map{case i: Identifier => Identifier(recordPrefix+i.toString)}
+            Some(LhsRecordSelect(id, newFields))
+          }
+          else
+            Some(lhs)
+        }
+        else
+          Some(lhs)
+      case _ => Some(lhs)
+    }
+  }
 
-  // rename record fields
+
+  // This code renames records on the RHS, but works by looking for select operators where the field names 
+  // are not _1, _2 etc, because then the select cannot be a tuple and must be something that returns a record.
+  // This might need to be fixed when we have finite group selects
+  // This code cannot work like the LHS code, unless there is an easy way to determine the return type of 
+  // a function application.
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     opapp.op match {
       case PolymorphicSelect(id) =>
