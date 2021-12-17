@@ -58,13 +58,6 @@ class RewriteRecordSelectPass extends RewritePass {
     }
   }
 
-  // def rewriteRecordFields(id: Identifier, opapp: OperatorApplication, t: Type) : Option[OperatorApplication] = {
-  //   if(t.isRecord)
-  //     Some(OperatorApplication(PolymorphicSelect(Identifier("_rec_"+id.toString)), List(opapp.operands(0))))
-  //   else
-  //     Some(opapp)
-  // }
-
   def rewriteRecordFields(selectid: Identifier, argid: Identifier, opapp: OperatorApplication, context: Scope) : Option[OperatorApplication] = {
     val isRecord = context.map.get(argid) match {
       case Some(Scope.StateVar(i,t)) => t.isRecord
@@ -73,10 +66,17 @@ class RewriteRecordSelectPass extends RewritePass {
       case Some(Scope.BlockVar(i,t)) => t.isRecord
       case Some(Scope.FunctionArg(i,t)) => t.isRecord
       case Some(Scope.LambdaVar(i,t)) => t.isRecord
+      case Some(Scope.InputVar(i,t)) => t.isRecord
+      case Some(Scope.OutputVar(i,t)) => t.isRecord
+      case Some(Scope.SharedVar(i,t)) => t.isRecord
+      case Some(Scope.ConstantVar(i,t)) => t.isRecord
       case _ => false
     }
+    
     if(isRecord)
+    {
       Some(OperatorApplication(PolymorphicSelect(Identifier("_rec_"+selectid.toString)), List(opapp.operands(0))))
+    }
     else
      Some(opapp)
   }
