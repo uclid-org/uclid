@@ -63,19 +63,32 @@ class RewriteRecordSelectPass extends RewritePass {
     }
   }
 
+  def isTypeRecord(t: Type) : Boolean = {
+    if(!t.isRecord)
+    {
+      if(t.isArray)
+       t.asInstanceOf[ArrayType].outType.isRecord
+      else
+       false
+    }
+    else
+     true
+  }
+
   def isRecord(id: Identifier, context: Scope): Boolean = {
+    UclidMain.printVerbose("is " + context.map.get(id).toString + " a record?")
     context.map.get(id) match {
-      case Some(Scope.StateVar(i,t)) => t.isRecord
-      case Some(Scope.ProcedureInputArg(i,t)) => t.isRecord
-      case Some(Scope.ProcedureOutputArg(i,t)) => t.isRecord
-      case Some(Scope.BlockVar(i,t)) => t.isRecord
-      case Some(Scope.FunctionArg(i,t)) => t.isRecord
-      case Some(Scope.LambdaVar(i,t)) => t.isRecord
-      case Some(Scope.InputVar(i,t)) => t.isRecord
-      case Some(Scope.OutputVar(i,t)) => t.isRecord
-      case Some(Scope.SharedVar(i,t)) => t.isRecord
-      case Some(Scope.ConstantVar(i,t)) => t.isRecord
-      case _ =>  UclidMain.println(context.map.get(id).toString + "is not record " )
+      case Some(Scope.StateVar(i,t)) => isTypeRecord(t)
+      case Some(Scope.ProcedureInputArg(i,t)) => isTypeRecord(t)
+      case Some(Scope.ProcedureOutputArg(i,t)) => isTypeRecord(t)
+      case Some(Scope.BlockVar(i,t)) => isTypeRecord(t)
+      case Some(Scope.FunctionArg(i,t)) => isTypeRecord(t)
+      case Some(Scope.LambdaVar(i,t)) => isTypeRecord(t)
+      case Some(Scope.InputVar(i,t)) => isTypeRecord(t)
+      case Some(Scope.OutputVar(i,t)) => isTypeRecord(t)
+      case Some(Scope.SharedVar(i,t)) => isTypeRecord(t)
+      case Some(Scope.ConstantVar(i,t)) => isTypeRecord(t)
+      case _ =>  UclidMain.printVerbose(context.map.get(id).toString + "is not record " ) 
       false
     }
   }
@@ -102,7 +115,10 @@ class RewriteRecordSelectPass extends RewritePass {
 
   def rewriteRecordFields(selectid: Identifier, argid: Identifier, opapp: OperatorApplication, context: Scope) : Option[OperatorApplication] = {   
     if(isRecord(argid, context))
+    {
+      UclidMain.printVerbose("rewriting record, the original identifier is " + selectid)
       Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+selectid.toString)), List(opapp.operands(0))))
+    }
     else
      Some(opapp)
   }
@@ -128,15 +144,23 @@ class RewriteRecordSelectPass extends RewritePass {
         val expr = opapp.operands(0)
         val newOpApp = expr match {
           case arg : Identifier =>
+            UclidMain.printVerbose("rewriting based on identifier")
             rewriteRecordFields(id, arg, opapp, context)
           case opapp2 : OperatorApplication  => 
           // this is probably a primed var
               val baseId = getBaseIdentifier(opapp2)
               if(baseId.isDefined)
+              {
+                UclidMain.printVerbose("rewriting based on baseID " + baseId.toString)
                 rewriteRecordFields(id, baseId.get, opapp, context)
+              }
               else
+              {
+                UclidMain.printVerbose("didnt get base ID for "+ opapp2.toString)
                 Some(opapp)
+              }
           case _ => 
+          UclidMain.printVerbose("didnt rewrite "+ opapp.toString+ " the operand we were trying to match is " + expr.toString)
           Some(opapp)
         }
         UclidMain.printVerbose("We have rewritten this record select " + opapp.toString + " to "  + newOpApp.toString)
