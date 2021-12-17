@@ -45,12 +45,14 @@ package lang
 // what is a tuple
 class RewriteRecordSelectPass extends RewritePass {
 
-  def hasRecPrefix(field: (Identifier,Type)) = field._1.toString.startsWith("_rec_")
+  def recordPrefix = "_rec_"
+
+  def hasRecPrefix(field: (Identifier,Type)) = field._1.toString.startsWith(recordPrefix)
 
   override def rewriteRecordType(recordT : RecordType, context : Scope) : Option[RecordType] = { 
     if(recordT.members.filter(hasRecPrefix).size!=recordT.members.size)
     {
-      val newMembers = recordT.members.map{case (i: Identifier, t:Type) => (Identifier("_rec_"+i.toString), t)}
+      val newMembers = recordT.members.map{case (i: Identifier, t:Type) => (Identifier(recordPrefix+i.toString), t)}
       UclidMain.printVerbose("we have rewritten this record type " + recordT.toString + " to have members " + newMembers.toString)
       Some(RecordType(newMembers))
     }
@@ -86,7 +88,7 @@ class RewriteRecordSelectPass extends RewritePass {
         {
           if(isRecord(baseId.get, context))
           {
-            val newFields = fields.map{case i: Identifier => Identifier("_rec_"+i.toString)}
+            val newFields = fields.map{case i: Identifier => Identifier(recordPrefix+i.toString)}
             Some(LhsRecordSelect(id, newFields))
           }
           else
@@ -100,7 +102,7 @@ class RewriteRecordSelectPass extends RewritePass {
 
   def rewriteRecordFields(selectid: Identifier, argid: Identifier, opapp: OperatorApplication, context: Scope) : Option[OperatorApplication] = {   
     if(isRecord(argid, context))
-      Some(OperatorApplication(PolymorphicSelect(Identifier("_rec_"+selectid.toString)), List(opapp.operands(0))))
+      Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+selectid.toString)), List(opapp.operands(0))))
     else
      Some(opapp)
   }
