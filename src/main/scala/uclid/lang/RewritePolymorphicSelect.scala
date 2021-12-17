@@ -45,10 +45,20 @@ package lang
 // what is a tuple
 class RewriteRecordSelectPass extends RewritePass {
 
+  def hasRecPrefix(field: (Identifier,Type)) = field._1.toString.startsWith("_rec_")
+
   override def rewriteRecordType(recordT : RecordType, context : Scope) : Option[RecordType] = { 
-    val newMembers = recordT.members.map{case (i: Identifier, t:Type) => (Identifier("_rec_"+i.toString), t)}
-    UclidMain.printVerbose("we have rewritten this record type " + recordT.toString + " to have members " + newMembers.toString)
-    Some(RecordType(newMembers))
+    if(recordT.members.filter(hasRecPrefix).size!=recordT.members.size)
+    {
+      val newMembers = recordT.members.map{case (i: Identifier, t:Type) => (Identifier("_rec_"+i.toString), t)}
+      UclidMain.printVerbose("we have rewritten this record type " + recordT.toString + " to have members " + newMembers.toString)
+      Some(RecordType(newMembers))
+    }
+    else
+    {
+      UclidMain.printVerbose("we have not rewritten this record type " + recordT.toString )
+      Some(recordT)
+    }
   }
 
   def isRecord(id: Identifier, context: Scope): Boolean = {
