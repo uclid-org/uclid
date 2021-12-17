@@ -58,12 +58,42 @@ class RewriteRecordSelectPass extends RewritePass {
     }
   }
 
-  def rewriteRecordFields(id: Identifier, opapp: OperatorApplication, t: Type) : Option[OperatorApplication] = {
-    if(t.isRecord)
-      Some(OperatorApplication(PolymorphicSelect(Identifier("_rec_"+id.toString)), List(opapp.operands(0))))
+  // def rewriteRecordFields(id: Identifier, opapp: OperatorApplication, t: Type) : Option[OperatorApplication] = {
+  //   if(t.isRecord)
+  //     Some(OperatorApplication(PolymorphicSelect(Identifier("_rec_"+id.toString)), List(opapp.operands(0))))
+  //   else
+  //     Some(opapp)
+  // }
+
+  def rewriteRecordFields(selectid: Identifier, argid: Identifier, opapp: OperatorApplication, context: Scope) : Option[OperatorApplication] = {
+    val isRecord = context.map.get(argid) match {
+      case Some(Scope.StateVar(i,t)) => t.isRecord
+      case Some(Scope.ProcedureInputArg(i,t)) => t.isRecord
+      case Some(Scope.ProcedureOutputArg(i,t)) => t.isRecord
+      case Some(Scope.BlockVar(i,t)) => t.isRecord
+      case Some(Scope.FunctionArg(i,t)) => t.isRecord
+      case Some(Scope.LambdaVar(i,t)) => t.isRecord
+      case _ => false
+    }
+    if(isRecord)
+      Some(OperatorApplication(PolymorphicSelect(Identifier("_rec_"+selectid.toString)), List(opapp.operands(0))))
     else
-      Some(opapp)
+     Some(opapp)
   }
+
+  def getBaseIdentifier(expr: Expr) : Option[Identifier] = {
+    expr match{
+      case Identifier(_) => Some(expr.asInstanceOf[Identifier])
+      case ExternalIdentifier(mid, id) => Some(id)
+      case OperatorApplication(op, operands) => 
+        if(operands.size==1)
+          getBaseIdentifier(operands(0))
+        else
+          None
+      case _ => None
+    }
+  }
+
 
   // rename record fields
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
@@ -72,24 +102,16 @@ class RewriteRecordSelectPass extends RewritePass {
         val expr = opapp.operands(0)
         expr match {
           case arg : Identifier =>
-            context.map.get(arg) match {
-              case Some(Scope.StateVar(i,t)) => 
-                rewriteRecordFields(id, opapp, t)
-              case Some(Scope.ProcedureInputArg(i,t)) => 
-                rewriteRecordFields(id, opapp, t)
-              case Some(Scope.ProcedureOutputArg(i,t)) => 
-                rewriteRecordFields(id, opapp, t)
-              case Some(Scope.BlockVar(i,t)) => 
-                rewriteRecordFields(id, opapp, t)
-              case Some(Scope.FunctionArg(i,t)) => 
-                rewriteRecordFields(id, opapp, t)
-              case Some(Scope.LambdaVar(i,t)) => 
-                rewriteRecordFields(id, opapp, t)
-              case _ => 
-                Some(opapp)
-            }
+            rewriteRecordFields(id, arg, opapp, context)
           case opapp2 : OperatorApplication  => 
-              rewriteOperatorApp(opapp2, context)
+          // this is probably a primed var
+              val baseId = getBaseIdentifier(opapp2)
+              if(baseId.isDefined)
+              {
+                newOpApp2 = rewriteRecordFields(id, baseId.get, opapp, context)
+              }
+              else
+                Some(opapp)
           case _ => 
           Some(opapp)
         }
