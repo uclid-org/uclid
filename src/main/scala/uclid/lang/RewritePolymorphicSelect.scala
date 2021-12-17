@@ -108,7 +108,7 @@ class RewriteRecordSelectPass extends RewritePass {
               val baseId = getBaseIdentifier(opapp2)
               if(baseId.isDefined)
               {
-                newOpApp2 = rewriteRecordFields(id, baseId.get, opapp, context)
+                rewriteRecordFields(id, baseId.get, opapp, context)
               }
               else
                 Some(opapp)
