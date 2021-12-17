@@ -76,7 +76,6 @@ class RewriteRecordSelectPass extends RewritePass {
   }
 
   def isRecord(id: Identifier, context: Scope): Boolean = {
-    UclidMain.printVerbose("is " + context.map.get(id).toString + " a record?")
     context.map.get(id) match {
       case Some(Scope.StateVar(i,t)) => isTypeRecord(t)
       case Some(Scope.ProcedureInputArg(i,t)) => isTypeRecord(t)
@@ -88,8 +87,7 @@ class RewriteRecordSelectPass extends RewritePass {
       case Some(Scope.OutputVar(i,t)) => isTypeRecord(t)
       case Some(Scope.SharedVar(i,t)) => isTypeRecord(t)
       case Some(Scope.ConstantVar(i,t)) => isTypeRecord(t)
-      case _ =>  UclidMain.printVerbose(context.map.get(id).toString + "is not record " ) 
-      false
+      case _ =>  false
     }
   }
 
@@ -141,30 +139,16 @@ class RewriteRecordSelectPass extends RewritePass {
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     opapp.op match {
       case PolymorphicSelect(id) =>
-        val expr = opapp.operands(0)
-        val newOpApp = expr match {
-          case arg : Identifier =>
-            UclidMain.printVerbose("rewriting based on identifier")
-            rewriteRecordFields(id, arg, opapp, context)
-          case opapp2 : OperatorApplication  => 
-          // this is probably a primed var
-              val baseId = getBaseIdentifier(opapp2)
-              if(baseId.isDefined)
-              {
-                UclidMain.printVerbose("rewriting based on baseID " + baseId.toString)
-                rewriteRecordFields(id, baseId.get, opapp, context)
-              }
-              else
-              {
-                UclidMain.printVerbose("didnt get base ID for "+ opapp2.toString)
-                Some(opapp)
-              }
-          case _ => 
-          UclidMain.printVerbose("didnt rewrite "+ opapp.toString+ " the operand we were trying to match is " + expr.toString)
-          Some(opapp)
-        }
+      UclidMain.printVerbose("polymorphic select with id " + id.toString)
+      // this is a tuple selector
+      if(id.toString.startsWith("_") && id.toString.substring(1).forall(Character.isDigit))
+        Some(opapp)
+      else
+      {
+        val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
         UclidMain.printVerbose("We have rewritten this record select " + opapp.toString + " to "  + newOpApp.toString)
         newOpApp
+      }
       case _ => 
         Some(opapp)
     }
