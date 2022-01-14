@@ -49,7 +49,7 @@ class ParserSpec extends AnyFlatSpec {
     try {
       val filename = "test/test-type1.ucl"
       val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
-      assert (fileModules.size == 2)
+      assert (fileModules.size == 1)
     }
     catch {
       case p : Utils.ParserErrorList =>
@@ -229,6 +229,24 @@ class ParserSpec extends AnyFlatSpec {
         assert (p.errors.exists(p => p._1.contains("Identifier was not declared modifiable: x")))
         assert (p.errors.exists(p => p._1.contains("Identifier cannot be declared modifiable: z")))
     }
+  }
+  "test-concat-modules-dup-decl.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-concat-modules-dup-decl.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 2)
+        assert (p.errors.exists(p => p._1.contains("Redeclaration of identifier 'x'.")))
+    }
+  }
+  "test-concat-modules.ucl" should "parse successfully" in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfigWithMSA("test/test-concat-modules.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
   }
   "test-mod-set-analysis-0.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(ConfigCons.createConfigWithMSA("test/test-mod-set-analysis-0.ucl"), lang.Identifier("main"))

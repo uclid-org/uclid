@@ -346,8 +346,10 @@ object UclidMain {
         val modules = kv._2
         val combinedModule = modules.foldLeft(Module(id, List.empty, List.empty, List.empty)){
           (acc, module) => {
-            val declsP = (acc.decls ++ module.decls).distinct
-            val cmdsP = (acc.cmds ++ module.cmds).distinct
+            val declsP = (acc.decls ++ module.decls)
+            val cmdsP = (acc.cmds ++ module.cmds)
+            // since the notes are empty, it's okay to remove the duplicates
+            Utils.assert(module.notes.size == 1 && module.notes.head.asInstanceOf[InstanceVarMapAnnotation].iMap.size == 0, "Expected module to initially have empty annotations.")
             val notesP = (acc.notes ++ module.notes).distinct
             Module(id, declsP, cmdsP, notesP)
           }

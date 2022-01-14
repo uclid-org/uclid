@@ -1,0 +1,17 @@
+/* Test that multiple conflicting declarations for the same module results in an error.
+*/
+module main {
+    var x: integer;
+    var x: integer;
+
+}
+
+module main {
+    var x: bv5;
+
+    control {
+        bmc(5);
+        check;
+        print_results;
+    }
+}
