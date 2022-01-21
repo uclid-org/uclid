@@ -15,7 +15,8 @@ echo "Returning to examples directory ..."
 cd ../../
 
 echo "Cloning Boogie TAP models repo ..."
-git clone git@github.com:0tcb/TAP.git
+#git clone git@github.com:0tcb/TAP.git
+git submodule update --init --recursive
 
 echo "Verifying TAP models in Boogie ..."
 cd TAP/AbstractPlatform
