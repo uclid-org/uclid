@@ -12,13 +12,13 @@ echo "Counting TAP module stats ============================================"
 b=$boogie_tap_files
 u=$uclid5_tap_files
 
-# Count #fn
-echo "Boogie #fn: $(grep -r "function" $b | wc -l)";
-echo "UCLID5 #fn: $(grep -r "function" $u | wc -l)";
-
 # Count #pr
 echo "Boogie #pr: $(grep -r "procedure" $b | wc -l)"
 echo "UCLID5 #pr: $(grep -r "procedure" $u | wc -l)"
+
+# Count #fn
+echo "Boogie #fn: $(grep -r "function" $b | wc -l)";
+echo "UCLID5 #fn: $(grep -r "function" $u | wc -l)";
 
 # Count #an
 boogie_reqcnt=$(grep -r "requires" $b | wc -l)
