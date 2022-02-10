@@ -348,8 +348,8 @@ object UclidMain {
           (acc, module) => {
             val declsP = (acc.decls ++ module.decls)
             val cmdsP = (acc.cmds ++ module.cmds)
-            // since the notes are empty, it's okay to remove the duplicates
             Utils.assert(module.notes.size == 1 && module.notes.head.asInstanceOf[InstanceVarMapAnnotation].iMap.size == 0, "Expected module to initially have empty annotations.")
+            // since the notes (list of annotations of the modules) are default values, it's okay to remove the duplicates in the line below
             val notesP = (acc.notes ++ module.notes).distinct
             Module(id, declsP, cmdsP, notesP)
           }
