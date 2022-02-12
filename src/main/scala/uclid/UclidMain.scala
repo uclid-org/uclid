@@ -344,6 +344,9 @@ object UclidMain {
       .map((kv) => {
         val id = kv._1
         val modules = kv._2
+        if (modules.size > 1) {
+          UclidMain.printStatus("Multiple definitions for module " + modules.head.id.toString() + " were found and have been combined.")
+        }
         val combinedModule = modules.foldLeft(Module(id, List.empty, List.empty, List.empty)){
           (acc, module) => {
             val declsP = (acc.decls ++ module.decls)
