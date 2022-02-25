@@ -229,7 +229,6 @@ object UclidMain {
     passManager.addPass(new ModuleSynthFunctionsImportRewriter())
     // automatically compute modifies set
     if (config.modSetAnalysis) {
-        passManager.addPass(new ModSetAnalysis())
         passManager.addPass(new ModSetRewriter())
     }
     // collects external types to the current module (e.g., module.mytype)
