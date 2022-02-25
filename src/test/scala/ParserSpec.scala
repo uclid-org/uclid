@@ -268,6 +268,11 @@ class ParserSpec extends AnyFlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
+  "test-mod-set-analysis-6.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfigWithMSA("test/test-mod-set-analysis-6.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
   "test-mutual-recursion-error.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-mutual-recursion-error.ucl"), lang.Identifier("main"))
