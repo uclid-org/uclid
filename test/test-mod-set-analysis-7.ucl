@@ -1,0 +1,25 @@
+module main {
+    var x, y: integer;
+
+    // Only modifies x and not y
+    // Should not infer that y is modified
+    procedure [noinline] foo()
+        modifies x, y;
+    {
+        havoc x;
+    }
+   
+    // Make sure that the modifies set does not reduce after using mod set analysis
+    // THIS SHOULD FAIL TO VERIFY
+    procedure bar()
+        ensures y == old(y);
+    {
+        call foo();
+    }
+
+    control {
+        v = verify(bar);
+        check;
+        print_results;
+    }
+}
