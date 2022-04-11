@@ -41,7 +41,7 @@ This appendix describes \uclid{}'s grammar.
 
 \end{grammar}
 
-\paratitle{Variable declarations} can refer to inputs, outputs, state variables, symbolic constants, named constant literals, shared variables, or define declarations.
+\paratitle{Variable declarations} can refer to inputs, outputs, state variables, symbolic constants, named constant literals, shared variables, group declarations, or define declarations.
 \begin{grammar}
      <InputsDecl> ::=
        \keywordbf{input} ~ <IdList> `:' <Type> `;'
@@ -64,12 +64,21 @@ This appendix describes \uclid{}'s grammar.
      <DefineDecl> ::= 
        \keywordbf{define} <Id> `(' <IdTypeList> `)' `:' <Type> `=' <Expr>  `;'
 
+     <GroupDecl> ::= 
+       \keywordbf{group}~ <Id> ~`:' <Type> `=' <IdList> `;'
+
 \end{grammar}
 
-\paratitle{Function declarations} refer to uninterpreted functions. 
+\paratitle{Function declarations} refer to uninterpreted functions, synthesis functions or oracle functions. 
 \begin{grammar}
      <FuncDecl> ::= 
        \keywordbf{function} <Id> `(' <IdTypeList> `)' `:' <Type> `;'
+
+     <SynthFuncDecl> ::= 
+       \keywordbf{synthesis} \keywordbf{function} <Id> `(' <IdTypeList> `)' `:' <Type> `;'
+
+     <OracleFuncDecl> ::= 
+       \keywordbf{oracle} \keywordbf{function} <Id> <AnnotationList> `(' <IdTypeList> `)' `:' <Type> `;'
 
 \end{grammar}
 
@@ -77,7 +86,7 @@ This appendix describes \uclid{}'s grammar.
 followed by optional pre-/post-conditions and the list of state variables modified by procedure.
 \begin{grammar}
      <ProcedureDecl> ::=
-       \keywordbf{procedure} <Id> `(' <IdTypeList> ')' <ProcReturnArg>? \\
+       \keywordbf{procedure} <Id> (<AnnotationList>)* `(' <IdTypeList> ')' <ProcReturnArg>? \\
        <RequireExprs> <EnsureExprs> <ModifiesExprs> \\
        <BlkStmt>
 
@@ -199,13 +208,14 @@ assign primed variables only, and are concurrently evaluated.
 \end{grammar}
 
 \section{Expression Grammar}
-Let us turn to \paratitle{expressions}, which may be quantified. 
+Let us turn to \paratitle{expressions}, which may be quantified (include finite forall quantifiers, which expand to a disjunction and quantify over a finite group). 
 \begin{grammar}
     <Expr> ::= <E1>
 
     <E1> ::= <E2>
          \alt `(' \keywordbf{forall} `(' <IdTypeList> `)' `::' E1 `)'
          \alt `(' \keywordbf{exists} `(' <IdTypeList> `)' `::' E1 `)'
+         \alt `(' \keywordbf{finite_forall} `(' <GroupDecl> `)' `::' E1 `)'
 
 \end{grammar}
 
@@ -279,10 +289,10 @@ Strings can only be used as arguments to the \texttt{print} command in the contr
 %%     }
 \end{grammar}
 
-Supported primitive types are Booleans, integers and bit-vectors. Bit-vector types are defined according the regular expression `bv[0-9]+' and the number following `bv' is the width of the bit-vector.
+Supported primitive types are Booleans, integers, single precision floats and bit-vectors. Bit-vector types are defined according the regular expression `bv[0-9]+' and the number following `bv' is the width of the bit-vector.
 
 \begin{grammar}
-    <PrimitiveType> ::= \keywordbf{boolean} | \keywordbf{integer} | <BitVectorType>
+    <PrimitiveType> ::= \keywordbf{boolean} | \keywordbf{integer} | \keywordbf{float} | <BitVectorType>
 \end{grammar}
 
 Enumerated types are defined using the \keywordbf{enum} keyword.
@@ -304,6 +314,7 @@ Array types are defined using square brackets. The list of types within square b
 \begin{grammar}
     <ArrayType> ::= `[' <Type> (`,' <Type>)* `]' <Type>
 \end{grammar}
+
 
 Type synonyms are just identifiers, while external types refer to synonym types defined in a different module.
 \begin{grammar}
@@ -336,7 +347,6 @@ The following is a list of currently accepted commands.
                   `print\_module' \alt
                   `print\_results' \alt
                   `print\_smt2'
-                  `synthesize\_invariant' \alt
                   `unroll' \alt
                   `verify'
 \end{grammar}
@@ -344,6 +354,7 @@ The following is a list of currently accepted commands.
 \section{Miscellaneous Nonterminals} 
 
 \nonterminal{IdList}, \nonterminal{IdTypeList} and \nonterminal{ExprList} are non-empty, comma-separated list of identifiers, identifier/type tuples and expressions respectively.
+\nonterminal{AnnotationList} is a non-empty comma-separated list of strings, used as annotations to indicate, for example, whether a procedure should be inline or not.
 \begin{grammar}
      <IdList> ::= <Id> \alt <Id> `,' <IdList>
 
@@ -352,5 +363,8 @@ The following is a list of currently accepted commands.
 
      <ExprList> ::=  <Expr>
                 \alt <Expr> `,' <ExprList>
+
+     <AnnotationList> ::= `[' <String> (`,' <String>)*`]'          
 \end{grammar}
+
 

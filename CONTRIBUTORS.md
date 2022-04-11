@@ -2,16 +2,17 @@
 
 | Name               | E-mail / username         |
 | ------------------ | ------------------------- |
-| Pramod Subramanyan | pramodsu                  |
 | Sanjit Seshia      | sseshia@eecs.berkeley.edu |
+| Pramod Subramanyan | pramodsu                  |
+| Elizabeth Polgreen | polgreen                  |
 | Pranav Gaddamadugu | d0cd                      |
 | Deepak Sirone      | deepaksirone              |
-| Elizabeth Polgreen | polgreen                  |
-| Rohit Sinha        | rsinha                    |
 | Kevin Cheang       | kkmc                      |
+| Rohit Sinha        | rsinha                    |
 | Kevin Lauefer      | ekiwi                     |
 | Federico Mora      | FedericoAureliano         |
 | Cameron Rasmussen  | CameronRasmussen          |
+| Adwait Godbole     | adwait                    |
 | Shaokai Lin        | lsk567                    |
 | Yatin Manerkar     | ymanerka                  |
 

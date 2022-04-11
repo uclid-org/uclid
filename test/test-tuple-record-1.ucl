@@ -38,6 +38,7 @@ module main {
     assume (n <= 2);
     call set_next_s();
 
+
     // noteToSelf(ReorderingTest)
     assert s'.c1.a == s'.c2.a;
     assert s'.c1.b == s'.c2.b;

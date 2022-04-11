@@ -79,6 +79,7 @@ object UclidMain {
       modSetAnalysis: Boolean = false,
       ufToArray: Boolean = false,
       printStackTrace: Boolean = false,
+      noLetify: Boolean=false, // prevents SMTlib interface from letifying
       verbose : Int = 1, // verbosities: 
       // 0: essential: print nothing but results and error messages
       // 1: basic: current default behaviour, includes statuses
@@ -128,6 +129,10 @@ object UclidMain {
         (_, c) => c.copy(modSetAnalysis = true)
       }.text("Infers modifies set automatically.")
 
+      opt[Unit]('L', "do-not-letify").action{
+        (_, c) => c.copy(noLetify = true)
+      }.text("Disable letification in SMTLIB interface (used with external solver)")
+
       opt[Unit]('u', "uf-to-array").action{
         (_, c) => c.copy(ufToArray = true)
       }.text("Enable conversion from Uninterpreted Functions to Arrays.")
@@ -158,10 +163,13 @@ object UclidMain {
       val mainModule = instantiate(config, modules, mainModuleName)
       mainModule match {
         case Some(m) =>
-          // Split the control block commands to blocks on commands that modify the module
-          val cmdBlocks = splitCommands(m.cmds)
-          // Execute the commands for each block
-          cmdBlocks.foreach(cmdBlock => executeCommands(m, cmdBlock, config, mainModuleName))
+          if(!m.cmds.isEmpty)
+          {
+            // Split the control block commands to blocks on commands that modify the module
+            val cmdBlocks = splitCommands(m.cmds)
+            // Execute the commands for each block
+            cmdBlocks.foreach(cmdBlock => executeCommands(m, cmdBlock, config, mainModuleName))
+          }
         case None    =>
           throw new Utils.ParserError("Unable to find main module", None, None)
       }
@@ -221,7 +229,6 @@ object UclidMain {
     passManager.addPass(new ModuleSynthFunctionsImportRewriter())
     // automatically compute modifies set
     if (config.modSetAnalysis) {
-        passManager.addPass(new ModSetAnalysis())
         passManager.addPass(new ModSetRewriter())
     }
     // collects external types to the current module (e.g., module.mytype)
@@ -330,12 +337,41 @@ object UclidMain {
       (acc, srcFile) => acc ++ parseFile(srcFile.getPath())
     }
 
+    // combine all modules with the same name
+    val combinedParsedModules = parsedModules
+      .groupBy(_.id)
+      .map((kv) => {
+        val id = kv._1
+        val modules = kv._2
+        if (modules.size > 1) {
+          UclidMain.printStatus("Multiple definitions for module " + modules.head.id.toString() + " were found and have been combined.")
+        }
+        val combinedModule = modules.foldLeft(Module(id, List.empty, List.empty, List.empty)){
+          (acc, module) => {
+            val declsP = (acc.decls ++ module.decls)
+            val cmdsP = (acc.cmds ++ module.cmds)
+            Utils.assert(module.notes.size == 1 && module.notes.head.asInstanceOf[InstanceVarMapAnnotation].iMap.size == 0, "Expected module to initially have empty annotations.")
+            // since the notes (list of annotations of the modules) are default values, it's okay to remove the duplicates in the line below
+            val notesP = (acc.notes ++ module.notes).distinct
+            Module(id, declsP, cmdsP, notesP)
+          }
+        }
+        id -> combinedModule
+      })
+      .toMap
+    // restore ordering of modules
+    val combinedParsedModulesP = parsedModules
+      .map(module => module.id)
+      .distinct
+      .map(id => combinedParsedModules.get(id).get)
+      .toList
+
     // now process each module
     val init = (List.empty[Module], Scope.empty)
     // NOTE: The foldLeft/:: combination here reverses the order of modules.
     // The PassManager in instantiate calls run(ms : List[Module]); this version of run uses foldRight.
     // So modules end up being processed in the same order in both PassManagers.
-    val processedModules = parsedModules.foldLeft(init) {
+    val processedModules = combinedParsedModulesP.foldLeft(init) {
       (acc, m) =>
         val modules = acc._1
         val context = acc._2
@@ -412,7 +448,7 @@ object UclidMain {
     var symbolicSimulator = new SymbolicSimulator(module)
     var solverInterface = if (config.smtSolver.size > 0) {
       logger.debug("args: {}", config.smtSolver)
-      new smt.SMTLIB2Interface(config.smtSolver)
+      new smt.SMTLIB2Interface(config.smtSolver, config.noLetify)
     } else if (config.synthesizer.size > 0) {
       new smt.SynthLibInterface(config.synthesizer, config.sygusFormat)
     } else {

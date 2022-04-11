@@ -52,11 +52,24 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   var out     : String = ""
 
   var defineDecls : String = ""
+  var oracleDecls : String = ""
   type DefinesSet = MutableSet[DefineSymbol]
   var addedDefines : DefinesSet = MutableSet.empty
 
   type SynthVarSet = MutableSet[SynthSymbol]
   var synthVariables : SynthVarSet = MutableSet.empty
+
+  override def generateOracleDeclaration(sym: OracleSymbol) = {
+    val (typeName, newTypes) = generateDatatype(sym.typ)
+    Utils.assert(newTypes.size == 0, "No new types are expected here.")
+
+    val inputTypes = generateInputDataTypes(sym.typ)
+    val inputNames = sym.symbolTyp.args.map( a => a._1.toString())
+    val sig =  (inputNames zip inputTypes).map(a => a._2 ).mkString(" ")
+    var cmd = ""
+    cmd = "(declare-oracle-fun %s %s (%s) %s)\n".format(sym, sym.binary,  sig, typeName)
+    oracleDecls += cmd
+  }
 
   override def generateDeclaration(sym: Symbol) = {
     val (typeName, newTypes) = generateDatatype(sym.typ)
@@ -155,6 +168,14 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
         generateDeclaration(s)
       }
     }
+    val oracleSymbols = findOracleSymbols(e)
+    val oracleSymbolsP = oracleSymbols.filter(s => !oracleVariables.contains(s))
+    oracleSymbolsP.foreach {
+      (s) => {
+        oracleVariables += s
+        generateOracleDeclaration(s)
+      }
+    }
 
     val synthSymbols = findSynthSymbols(e)
     val synthSymbolsP = synthSymbols.filter(s => !synthVariables.contains(s))
@@ -192,7 +213,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
           val str = strP.stripLineEnd
           if (str.contains("unsat") || str.startsWith("(")) {
              SolverResult(Some(true), getModel(str))
-          } else if (str.contains("sat") || str.contains("unknown")){
+          } else if (str.contains("sat") || str.contains("unknown") || str.contains("fail")){
             UclidMain.printResult(str);
             SolverResult(Some(false), None)
           } else {
@@ -234,7 +255,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   override def toString() : String = {
     val aexp = "(or " + total.mkString("\t\n") + ")"
     val query = if (sygusSyntax) {
-      synthDeclCommands + "\n" + defineDecls + "\n" + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
+      synthDeclCommands + "\n" + defineDecls + "\n" + oracleDecls +"\n" + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
     } else {
       out + "(assert " + aexp +")\n(check-sat)\n"
     }

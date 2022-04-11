@@ -15,9 +15,11 @@ Types supported by \uclid{} are of the following kinds:
     \item \keyword{boolean}: the Boolean type. This type has two values: \keyword{true} and \keyword{false}.
     \item \keyword{bv\textit{W}}: The family of bit-vector types parameterized by their width ($W$).
     \item \keyword{enum}: enumerated types.
+    \item \keyword{float}: single precision floating point type with an $8$ bit exponent and $23$ bit signficiant and $1$ sign bit.
     \item Tuples and records.
     \item Array types.
     \item Uninterpreted types.
+    \item Groups: A finite group of variables of a single type. Groups are not modifiable once declared, i.e., they are a static size. 
 \end{enumerate}
 
 An enumerated type is used in line~2 of Example~\ref{ex:alu}. This declares a \textit{type synonym}: \codelike{cmd_t} is an alias for the enumerated type consisting of three values: \codelike{add}, \codelike{sub} and \codelike{mov_imm}. The input \codelike{cmd} is then declared to be of type \codelike{cmd_t} on line~6.
@@ -37,11 +39,35 @@ CPU model given later in this tutorial as Example~\ref{ex:cpu-cpu}.
 \begin{lstlisting}[language=uclid,style=uclidstyle]
   function inst2op   (i : word_t) : op_t;
 \end{lstlisting}
+
+Two further types of functions without definitions can be declared in \uclid{} using the
+\codelike{function} declaration. 
+First a synthesis function, declared using the synthesis keyword. Given a SyGuS solver using the command line option \codelike{-y "solver path"},
+\uclid{} will construct
+a SyGuS-IF file that synthesises bodies for any synthesis function in the \uclid{} file
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  synthesis function inst2op   (i : word_t) : op_t;
+\end{lstlisting}
+
+The second function extension is an oracle function, declared using the oracle keyword. An oracle function is declared along with the name of an external executable binary which implements the function. Given an Satisfiability Modulo Theories and Oracles (SMTO) solver using the command line option \codelike{-s "solver path"}, or a Synthesis Modulo Oracles (SyMO) solver using the command line option \codelike{-y "solver path"},
+\uclid{} will construct
+an SMTO/SyMO file for the verification/synthesis query including the oracle function. For more details on Synthesis and Satisfiability Modulo Oracles see \url{https://arxiv.org/abs/2107.13477}.
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  oracle function inst2op  [binaryName] (i : word_t) : op_t;
+\end{lstlisting}
+
  
 {\em Symbolic constants} can be declared using a 
 \codelike{const} declaration, as follows:
 \begin{lstlisting}[language=uclid,style=uclidstyle]
   const w0 : word_t;
+\end{lstlisting}
+
+
+Finally, a useful feature of UCLID is groups. Groups are declared using the keyword \codelike{group}. All members of a group must have the same type, but they can be literals or variables that are already declared and in scope at the point of the group declaration.
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  group MyGroup :  integer = {0, 1, 2, 3};
+  group AnotherGroup: integer = {a, b, c, 7};
 \end{lstlisting}
 
 
@@ -143,6 +169,20 @@ Also worth pointing out are the \keyword{if} statement that appears on line~27, 
 \subsection{Expressions}
 
 The syntax for expressions in \uclid{} is similar to languages like C/C++/Java. Index \codelike{i} of array \codelike{regs} is accessed using the syntax \codelike{regs[i]}. Field \codelike{value} in the record \codelike{result} is accessed as \codelike{result.value}.
+
+\subsection{Quantifiers}
+
+\uclid{} supports universal and existential quantifiers, which can be used in any place where a predicate would be permitted, for instance, in assumptions:
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  assume (forall (ri : robind_t) :: ops[ri] == no_op);
+  assume (exists (i : integer) :: (i > 0) && (i < 11) && numbers[i] != some_int);
+\end{lstlisting}
+\uclid{} Also supports finite universal quantification, where we universally quantify over a finite group type. These quantifiers are expanded to a conjunction before being passed to the underlying SMT solver.
+\begin{lstlisting}[language=uclid,style=uclidstyle]
+  group myGroup : integer = {0, 1, 2, 3};
+  property test : finite_forall (int : integer) in myGroup :: int < 4;
+\end{lstlisting}
+
 
 %-----------------------------------------------------
 \section{An Illustrative Example}

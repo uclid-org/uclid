@@ -186,10 +186,27 @@ object ReplacePolymorphicOperators {
     bvOp.pos = op.pos
     bvOp
   }
+  def toFloat(op : PolymorphicOperator) : FloatArgOperator = {
+    val fltOp = op match {
+      case LTOp() => FPLTOp()
+      case GTOp() => FPGTOp()
+      case LEOp() => FPLEOp()
+      case GEOp() => FPGEOp()
+      case AddOp() => FPAddOp()
+      case SubOp() => FPSubOp()
+      case MulOp() => FPMulOp()
+      case DivOp() => FPDivOp()
+      case UnaryMinusOp() => FPUnaryMinusOp()
+    }
+    fltOp.pos = op.pos
+    fltOp
+  }
+
   def toType(op : PolymorphicOperator, typ : NumericType) = {
     typ match {
       case _ : IntegerType => toInt(op)
       case bvTyp : BitVectorType => toBitvector(op, bvTyp.width)
+      case fltTyp: FloatType => toFloat(op)
     }
   }
   def rewrite(e : Expr, typ : NumericType) : Expr = {
@@ -335,7 +352,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           if (nArgs > 1) {
             checkTypeError(argTypes(0) == argTypes(1),
                 "Arguments to operator '" + opapp.op.toString + "' must be of the same type. Types of expression '" +
-                opapp.toString() + "' are " + argTypes(0).toString() + " and " + argTypes(1).toString(),
+                opapp.toString() + "' are " + opapp.operands(0).toString + ": " + argTypes(0).toString() + " and " + opapp.operands(1).toString + ": " + argTypes(1).toString(),
                 opapp.pos, c.filename)
           }
           checkTypeError(argTypes.forall(_.isNumeric), "Arguments to operator '" + opapp.op.toString + "' must be of a numeric type", opapp.pos, c.filename)
@@ -346,6 +363,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case bv : BitVectorType =>
               polyOpMap.put(polyOp.astNodeId, ReplacePolymorphicOperators.toBitvector(polyOp, bv.width))
               polyResultType(polyOp, bv)
+            case flt: FloatType => 
+              polyOpMap.put(polyOp.astNodeId, ReplacePolymorphicOperators.toFloat(polyOp))
+              polyResultType(polyOp, flt)
             case _ => throw new Utils.UnimplementedException("Unknown operand type to polymorphic operator '" + opapp.op.toString + "'")
           }
         }
@@ -363,6 +383,17 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case IntAddOp() | IntSubOp() | IntMulOp() | IntDivOp() | IntUnaryMinusOp() => new IntegerType()
           }
         }
+        case floatOp: FloatArgOperator => {
+          checkTypeError(argTypes.size == floatOp.arity, "Operator '%s' must have exactly %d argument(s)".format(opapp.op.toString, floatOp.arity), opapp.pos, c.filename)
+          checkTypeError(argTypes.forall(_.isInstanceOf[FloatType]), "Argument(s) to operator '" + opapp.op.toString + "' must be of type float", opapp.pos, c.filename)
+          floatOp match {
+            case FPGTOp() | FPLTOp()| FPGEOp() | FPLEOp()| FPIsNanOp() =>
+              BooleanType()
+            case FPMulOp() | FPSubOp() | FPAddOp() | FPDivOp() | FPUnaryMinusOp()  =>
+              FloatType()
+          }
+        }
+
         case bvOp : BVArgOperator => {
           checkTypeError(argTypes.size == bvOp.arity, "Operator '%s' must have exactly %d argument(s)".format(opapp.op.toString, bvOp.arity), opapp.pos, c.filename)
           checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Argument(s) to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
@@ -641,6 +672,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case _ : BoolLit => BooleanType()
         case _ : IntLit => IntegerType()
         case _ : StringLit => StringType()
+        case _ : FloatLit => FloatType()
         case bv : BitVectorLit => BitVectorType(bv.width)
         case a : ConstArray =>
           val valTyp = typeOf(a.exp, c)

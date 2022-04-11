@@ -116,6 +116,7 @@ abstract trait Context {
   var filePrefix = ""
   var curAssertName = ""
   var curAssertLabel = ""
+  var curAssertPos = ""
 
   /** Flatten a type and add it to the type synonym map. */
   def flatten(typ: Type, synMap: SynonymMap) : (Type, SynonymMap) = {
@@ -144,7 +145,7 @@ abstract trait Context {
       case Some(t) => (t, synMap)
       case None =>
         typ match {
-          case BoolType | IntType | BitVectorType(_) =>
+          case BoolType | IntType | BitVectorType(_) | FltType =>
             (typ, synMap)
           case unintTyp : UninterpretedType =>
             // add to map
@@ -262,7 +263,7 @@ object Context
       case Some(eP) => eP
       case None =>
         val eP = e match {
-          case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) | 
+          case Symbol(_, _) | IntLit(_) | FloatLit(_,_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) | 
             ConstArray(_, _) | SynthSymbol (_, _, _, _, _) | OracleSymbol(_, _, _) =>
             rewrite(e)
           case OperatorApplication(op, operands) =>
@@ -325,7 +326,7 @@ object Context
       case None =>
         val eResult = apply(e)
         val results = e match {
-          case Symbol(_, _) | IntLit(_) | BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) | OracleSymbol(_, _, _) =>
+          case Symbol(_, _) | IntLit(_) | FloatLit(_,_) |  BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) | OracleSymbol(_, _, _) =>
             eResult
           case ConstArray(expr, _) =>
             eResult ++ accumulateOverExpr(expr, apply, memo)
@@ -391,7 +392,7 @@ object Context
 
   def foldOverExpr[T](init : T, f : ((T, Expr) => T), e : Expr) : T = {
     val subResult = e match {
-      case Symbol(_, _) | IntLit(_) | BitVectorLit(_, _) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) | OracleSymbol(_, _, _) =>
+      case Symbol(_, _) | IntLit(_) | FloatLit(_,_) | BitVectorLit(_, _) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) | OracleSymbol(_, _, _) =>
         init
       case OperatorApplication(_, operands) =>
         foldOverExprs(init, f, operands)

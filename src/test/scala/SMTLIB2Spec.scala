@@ -446,6 +446,9 @@ class SMTLIB2Spec extends AnyFlatSpec {
   "test-history-1.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-history-1.ucl", 0)
   }
+  "test-history-2.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-history-2.ucl", 1)
+  }
   // "test-ltl-0-safe.ucl" should "verify all assertions." in {
   //   SMTLIB2Spec.expectedFails("./test/test-ltl-0-safe.ucl", 0)
   // }
@@ -536,5 +539,11 @@ class SMTLIB2Spec extends AnyFlatSpec {
   }
   "test-macro-4.ucl" should "fail to verify 1 assertion." in {
     SMTLIB2Spec.expectedFails("./test/test-macro-4.ucl", 1)
+  }
+  "test-float.ucl" should "fail to verify 6 assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-float.ucl", 6)
+  }
+  "test-float.ucl" should "fail to verify 3 assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-float-2.ucl", 3)
   }
 }

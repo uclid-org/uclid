@@ -49,6 +49,8 @@ object Converter {
         smt.UninterpretedType(id.name)
       case lang.IntegerType() =>
         smt.IntType
+      case lang.FloatType() =>
+        smt.FltType
       case lang.BooleanType() =>
         smt.BoolType
       case lang.StringType() =>
@@ -137,6 +139,17 @@ object Converter {
       case lang.BVLeftShiftBVOp(w) => smt.BVLeftShiftBVOp(w)
       case lang.BVLRightShiftBVOp(w) => smt.BVLRightShiftBVOp(w)
       case lang.BVARightShiftBVOp(w) => smt.BVARightShiftBVOp(w)
+      // float operators
+      case lang.FPAddOp() => smt.FPAddOp()
+      case lang.FPMulOp() => smt.FPMulOp()
+      case lang.FPDivOp() => smt.FPDivOp()
+      case lang.FPSubOp() => smt.FPSubOp()
+      case lang.FPLTOp() => smt.FPLTOp()
+      case lang.FPGTOp() => smt.FPGTOp()
+      case lang.FPLEOp() => smt.FPLEOp()
+      case lang.FPGEOp() => smt.FPGEOp()
+      case lang.FPIsNanOp() => smt.FPIsNanOp()
+      case lang.FPUnaryMinusOp() => smt.FPMinusOp()
       // Boolean operators.
       case lang.ConjunctionOp() => smt.ConjunctionOp
       case lang.DisjunctionOp() => smt.DisjunctionOp
@@ -240,6 +253,7 @@ object Converter {
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
+       case lang.FloatLit(i,f) => smt.FloatLit(i,f)
        case lang.ConstArray(value, arrTyp) =>
          smt.ConstArray(toSMT(value, scope, past), typeToSMT(arrTyp).asInstanceOf[ArrayType])
        case lang.StringLit(_) => throw new Utils.RuntimeError("Strings are not supported in smt.Converter")

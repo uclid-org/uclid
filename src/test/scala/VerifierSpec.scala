@@ -330,6 +330,9 @@ class ProcedureVerifSpec extends AnyFlatSpec {
   "test-mod-set-analysis-5.ucl" should "verify all assertions" in {
     VerifierSpec.expectedFails("./test/test-mod-set-analysis-5.ucl", 0, Some(ConfigCons.createConfigWithMSA("test/test-mod-set-analysis-5.ucl")))
   }
+  "test-mod-set-analysis-7.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-mod-set-analysis-7.ucl", 1, Some(ConfigCons.createConfigWithMSA("test/test-mod-set-analysis-7.ucl")))
+  }
 }
 class InductionVerifSpec extends AnyFlatSpec {
   "test-k-induction-1.ucl" should "verify all assertions." in {
@@ -499,6 +502,9 @@ class LTLVerifSpec extends AnyFlatSpec {
   "test-history-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-history-1.ucl", 0)
   }
+  "test-history-2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-history-2.ucl", 1)
+  }
   // "test-ltl-0-safe.ucl" should "verify all assertions." in {
   //   VerifierSpec.expectedFails("./test/test-ltl-0-safe.ucl", 0)
   // }
@@ -627,6 +633,9 @@ class PrintCexSpec extends AnyFlatSpec {
   }
   "test-bmc-5.ucl" should "print a 6-step CEX" in {
     PrintCexSpec.checkPrintCex("test/test-bmc-5.ucl", 6)
+  }
+  "test-k-induction-5.ucl" should "print a 4-step CEX" in {
+    VerifierSpec.expectedFails("./test/test-k-induction-5.ucl", 1)
   }
   "test-cex-json.ucl" should "generate a 3-step JSON CEX" in {
     PrintCexSpec.checkJSONCex("test/test-bmc-json.ucl", 4)

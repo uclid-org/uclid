@@ -57,6 +57,8 @@ trait SMTLIB2Base {
   var enumLiterals : MutableSet[EnumLit] = MutableSet.empty
   var stack : List[(VarSet, LetMap, MutableSet[EnumLit])] = List.empty
   var typeMap : SynonymMap = SynonymMap.empty
+  var disableLetify : Boolean;
+
 
   var counterId = 0
   def getTypeName(suffix: String) : String = {
@@ -128,6 +130,10 @@ trait SMTLIB2Base {
             ("Int", List.empty)
           case BitVectorType(n) => 
             val typeStr = "(_ BitVec %d)".format(n)
+            typeMap = typeMap.addSynonym(typeStr, t)
+            (typeStr, List.empty)
+          case FltType => 
+            val typeStr = "(_ FloatingPoint 8 24)"
             typeMap = typeMap.addSynonym(typeStr, t)
             (typeStr, List.empty)
           case MapType(inTypes, outType) =>
@@ -271,10 +277,16 @@ trait SMTLIB2Base {
             (value.toString(), memo, false)
           case BitVectorLit(value, width) =>
             ("(_ bv" + value.toString() + " " + width.toString() + ")", memo, false)
+          case FloatLit(integral,fractional) =>
+            if(integral >= 0)
+              ("((_ to_fp 8 24) roundNearestTiesToEven "+integral.toString() + "." + fractional.toString + ")", memo, false)
+            else
+              ("((_ to_fp 8 24) roundNearestTiesToEven (-"+integral.toString() + "." + fractional.toString + "))", memo, false)
+  
           case BooleanLit(value) =>
             (value match { case true => "true"; case false => "false" }, memo, false)
         }
-        val translatedExpr = if (letify && shouldLetify) {
+        val translatedExpr = if (letify && shouldLetify & !disableLetify) {
           TranslatedExpr(memoP.size, exprStr, Some(getLetVariableName()))
         } else {
           TranslatedExpr(memoP.size, exprStr, None)
@@ -285,7 +297,7 @@ trait SMTLIB2Base {
   }
   def translateExpr(e : Expr, shouldLetify : Boolean) : String = {
     val (trExpr, memoP) = translateExpr(e, Map.empty, shouldLetify)
-    val resultString = if (shouldLetify) {
+    val resultString = if (shouldLetify && !disableLetify) {
       if (memoP.size == 0) {
         trExpr.exprString()
       } else {
@@ -339,7 +351,7 @@ class SMTLIB2Model(stringModel : String) extends Model {
   }
 }
 
-class SMTLIB2Interface(args: List[String]) extends Context with SMTLIB2Base {
+class SMTLIB2Interface(args: List[String], var disableLetify: Boolean=false) extends Context with SMTLIB2Base {
   val smtlibInterfaceLogger = Logger(classOf[SMTLIB2Interface])
 
   type NameProviderFn = (String, Option[String]) => String
