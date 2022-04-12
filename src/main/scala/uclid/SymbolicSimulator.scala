@@ -347,7 +347,7 @@ class SymbolicSimulator (module : Module) {
           case "print_cex" =>
             printCEX(proofResults, cmd.args, cmd.argObj)
           case "print_cex_json" =>
-            printCEXJSON(proofResults, cmd.args, cmd.argObj)
+            printCEXJSON(proofResults, cmd.args, cmd.argObj, config)
           case "dump_cex_vcds" =>
             dumpCEXVCDFiles(proofResults)
           case "print_module" =>
@@ -1262,7 +1262,7 @@ class SymbolicSimulator (module : Module) {
     }}
   }
 
-  def printCEXJSON(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier]) {
+  def printCEXJSON(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier], config : UclidMain.Config) {
     def labelMatches(p : AssertInfo) : Boolean = {
       arg match {
         case Some(id) => id.toString == p.label || p.label.startsWith(id.toString + ":")
@@ -1273,13 +1273,17 @@ class SymbolicSimulator (module : Module) {
     val prop_counter : ObjectCounter[String] = new ObjectCounter[String]()
     UclidMain.printStatus("=================================")
     // Get each counterexample trace
-    val jsonobj : JObject = JObject(results.filter(res => labelMatches(res.assert) && res.result.isModelDefined).map{(result) => 
-      ((result.assert.name.split(" ")(1) ++ "__" ++ prop_counter.incrCount(result.assert.name).toString()) 
+    val jsonobj : JObject = JObject(results.filter(res => labelMatches(res.assert) && res.result.isModelDefined).map{(result) => {
+      val prop_name : String = result.assert.name.split("\\s+").mkString("__")
+      ((prop_name ++ "__" ++ prop_counter.incrCount(prop_name).toString()) 
         -> printCEXJSON(result, exprs))
-    })
+    }})
     // Write counterexample trace
     if (jsonobj.values.size > 0) {
-      val filename = "cex.json"
+      val filename : String = config.jsonCEXfile.isEmpty match {
+        case true => "cex.json"
+        case false => (config.jsonCEXfile ++ ".json")
+      }
       val fh  = new File(filename)
       val bw  = new BufferedWriter(new FileWriter(fh))
       bw.write(pretty(render(jsonobj)))
@@ -1324,7 +1328,7 @@ class SymbolicSimulator (module : Module) {
           }
       }
     }}).toList)
-    UclidMain.printStatus("Generated CEX trace of length " + lastFrame.toString())
+    UclidMain.printStatus("Generated CEX trace of length " + (lastFrame + 1).toString())
     UclidMain.printStatus("=================================")
     JObject(List(JField("length", JInt(lastFrame+1)), JField("trace", json_trace)))
   }
