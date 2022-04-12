@@ -170,4 +170,7 @@ class SynthesisSpec extends AnyFlatSpec {
   "test-synthesis-grammar-10.ucl" should "synthesize a solution." in {
     SynthesisSpec.expectedFails("./test/test-synthesis-grammar-10.ucl", 0)
   }
+  "test-synthesis-grammar-11.ucl" should "synthesize a solution." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-grammar-11.ucl", 0)
+  }
 }

@@ -61,6 +61,22 @@ object VerifierSpec {
     assert (results.count((e) => e.result.isUndefined) == 0)
     outputString
   }
+
+  def expectedFailsMultipleFiles(filenames: List[String], nFail : Int, config: Option[UclidMain.Config]=None) : String = {
+    UclidMain.enableStringOutput()
+    UclidMain.clearStringOutput()
+    val compileConfig = if (config.isDefined) config.get else UclidMain.Config(files=filenames.map(f => new File(f)))
+    val modules = UclidMain.compile(compileConfig, lang.Identifier("main"), true)
+    val instantiateConfig = UclidMain.Config()
+    val mainModule = UclidMain.instantiate(instantiateConfig, modules, l.Identifier("main"))
+    assert (mainModule.isDefined)
+    // val config = UclidMain.Config("main", List("/usr/bin/z3", "-in", "-smt2"), List.empty)
+    val results = UclidMain.execute(mainModule.get, instantiateConfig)
+    val outputString = UclidMain.stringOutput.toString()
+    assert (results.count((e) => e.result.isFalse) == nFail)
+    assert (results.count((e) => e.result.isUndefined) == 0)
+    outputString
+  }
 }
 class VerifierSanitySpec extends AnyFlatSpec {
   "test-int-fib.ucl" should "verify all but one assertion." in {
@@ -621,5 +637,17 @@ class PrintCexSpec extends AnyFlatSpec {
   }
   "test-k-induction-5.ucl" should "print a 4-step CEX" in {
     VerifierSpec.expectedFails("./test/test-k-induction-5.ucl", 1)
+  }
+}
+class ModuleConcatSpec extends AnyFlatSpec {
+  "test-concat-modules-w-init-2-fab.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFailsMultipleFiles(List(
+      "test/test-concat-modules-w-init-2-fa.ucl", "test/test-concat-modules-w-init-2-fb.ucl"
+    ), 0)
+  }
+  "test-concat-modules-w-init-2-fba.ucl" should "fail to verify assertion." in {
+    VerifierSpec.expectedFailsMultipleFiles(List(
+      "test/test-concat-modules-w-init-2-fb.ucl", "test/test-concat-modules-w-init-2-fa.ucl"
+    ), 2)
   }
 }

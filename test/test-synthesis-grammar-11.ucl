@@ -1,0 +1,21 @@
+// This test should pass
+module main {
+
+    grammar choice_grammar () : integer = {
+        (start : integer) ::= 0 | 1 | 2;
+    }
+
+    synthesis function choose () : integer
+        grammar choice_grammar();
+    
+    init {}
+    next {}
+
+    property myprop : choose() != 0;
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}
