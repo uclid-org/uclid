@@ -605,7 +605,7 @@ object PrintCexSpec {
       }
     }
   }
-  def checkJSONCex (filename : String, n : Int) {
+  def checkJSONCex (filename : String, n : Int, cex_lens : List[Int]) {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
     val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
@@ -619,6 +619,12 @@ object PrintCexSpec {
     assert (lines1.exists(l => l.contains(check)))
     val lines2 = lines1.filter(l => !l.contains("===="))
     val checkfilemsg = "Wrote CEX traces to file"
+    assert (lines1.exists(l => l.contains(checkfilemsg)))
+    cex_lens.foreach {
+      len =>
+        val checklen = "Generated CEX trace of length %d".format(len)
+        assert (lines1.exists(l => l.contains(checklen)))
+    }
   }
 }
 class PrintCexSpec extends AnyFlatSpec {
@@ -637,7 +643,16 @@ class PrintCexSpec extends AnyFlatSpec {
   "test-k-induction-5.ucl" should "print a 4-step CEX" in {
     VerifierSpec.expectedFails("./test/test-k-induction-5.ucl", 1)
   }
-  "test-cex-json.ucl" should "generate a 3-step JSON CEX" in {
-    PrintCexSpec.checkJSONCex("test/test-bmc-json.ucl", 4)
+  "test-cex-json-bmc.ucl" should "generate a 3 JSON CEX traces" in {
+    PrintCexSpec.checkJSONCex("test/test-cex-json-bmc.ucl", 4, List(3, 4, 5))
+  }
+  "test-cex-json-arrays-1.ucl" should "generate a JSON CEX trace" in {
+    PrintCexSpec.checkJSONCex("test/test-cex-json-arrays-1.ucl", 6, List(1, 2, 3, 4, 5))
+  }
+  "test-cex-json-arrays-2.ucl" should "generate a JSON CEX trace" in {
+    PrintCexSpec.checkJSONCex("test/test-cex-json-arrays-2.ucl", 4, List(3))
+  }
+  "test/test-cex-json-enum.ucl" should "generate a JSON CEX trace" in {
+    PrintCexSpec.checkJSONCex("test/test-cex-json-enum.ucl", 4, List(3))
   }
 }

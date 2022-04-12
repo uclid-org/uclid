@@ -1,0 +1,32 @@
+module main {
+	var fiboarray : [integer]integer;
+	
+    var i : integer;
+
+	init {
+        assume (fiboarray[0] == 0);
+        assume (fiboarray[1] == 1);
+        i = 2;
+	}
+
+
+    procedure fibonext ()
+        modifies i, fiboarray;
+    {
+        fiboarray[i] = fiboarray[i-1] + fiboarray[i-2];
+        i = i + 1;
+    }
+    
+	next {	
+		call fibonext();
+	}
+
+	property r0 : (i == 5) ==> (fiboarray[4] == 4);
+ 
+	control {
+		v = bmc(5);
+		check;
+        print_results;
+		v.print_cex_json(fiboarray);
+	}
+}

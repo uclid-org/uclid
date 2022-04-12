@@ -45,6 +45,8 @@ import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
 
+import org.json4s._
+
 trait SMTLIB2Base {
   val smtlib2BaseLogger = Logger(classOf[SMTLIB2Base])
   
@@ -332,7 +334,7 @@ class SMTLIB2Model(stringModel : String) extends Model {
     throw new Utils.UnimplementedException("evaluate not implemented yet.")
   }
 
-  override def evalAsString(e : Expr)  : String = {
+  override def evalAsString(e : Expr) : String = {
     val definitions = model.functions.filter(fun => fun.asInstanceOf[DefineFun].id.toString() contains e.toString())
     Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
@@ -343,7 +345,10 @@ class SMTLIB2Model(stringModel : String) extends Model {
       case _ =>
         throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
     }
+  }
 
+  override def evalAsJSON(e : Expr) : JValue = {
+    JString(evalAsString(e))
   }
 
   override def toString() : String = {

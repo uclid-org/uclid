@@ -1269,20 +1269,26 @@ class SymbolicSimulator (module : Module) {
         case None => true
       }
     }
+    // One property can have multiple violating cexes, so index them
+    val prop_counter : ObjectCounter[String] = new ObjectCounter[String]()
     UclidMain.printStatus("=================================")
-    val json : JArray = JArray(results.filter(res => labelMatches(res.assert) && res.result.isModelDefined).map((res) => {
-      printCEXJSON(res, exprs)
-    }))
-    if (json.values.size > 0) {
+    // Get each counterexample trace
+    val jsonobj : JObject = JObject(results.filter(res => labelMatches(res.assert) && res.result.isModelDefined).map{(result) => 
+      ((result.assert.name.split(" ")(1) ++ "__" ++ prop_counter.incrCount(result.assert.name).toString()) 
+        -> printCEXJSON(result, exprs))
+    })
+    // Write counterexample trace
+    if (jsonobj.values.size > 0) {
       val filename = "cex.json"
       val fh  = new File(filename)
       val bw  = new BufferedWriter(new FileWriter(fh))
-      bw.write(pretty(render(json)))
+      bw.write(pretty(render(jsonobj)))
       bw.close()
       UclidMain.printStatus("Wrote CEX traces to file: " + filename)
     }
   }
-  def printCEXJSON(res : CheckResult, exprs : List[(Expr, String)]) : JArray = {
+  // Helper utility to print JSON traces for a single property
+  def printCEXJSON(res : CheckResult, exprs : List[(Expr, String)]) : JObject = {
     UclidMain.printStatus("CEX for %s".format(res.assert.toString, res.assert.pos.toString))
     val scope = res.assert.context
     lazy val instVarMap = module.getAnnotation[InstanceVarMapAnnotation]().get
@@ -1308,7 +1314,7 @@ class SymbolicSimulator (module : Module) {
     val simTable = res.assert.frameTable
     Utils.assert(simTable.size >= 1, "Must have at least one trace")
     val lastFrame = res.assert.iter
-    val json : JArray = JArray(((0 to lastFrame).map { case (i) => {
+    val json_trace : JArray = JArray(((0 to lastFrame).map { case (i) => {
       try{
           printFrameJSON(simTable, i, model, exprsToPrint, scope)
       }  catch{
@@ -1320,18 +1326,18 @@ class SymbolicSimulator (module : Module) {
     }}).toList)
     UclidMain.printStatus("Generated CEX trace of length " + lastFrame.toString())
     UclidMain.printStatus("=================================")
-    json
+    JObject(List(JField("length", JInt(lastFrame+1)), JField("trace", json_trace)))
   }
-
+  // Generate the JSON Object for a single frame
   def printFrameJSON(simTable : SimulationTable, frameNumber : Int, m : smt.Model, exprs : List[(Expr, String)], scope : Scope) : JObject = {
     JObject(exprs.map { (e) => {
       try {
-        val exprs = simTable.map(ft => m.evalAsString(evaluate(e._1, ft(frameNumber), ft, frameNumber, scope)))
-        val strings = Utils.join(exprs.map(_.toString()), ", ")
-        (e._2 -> JString(strings)).asInstanceOf[JField]
+        // Generate the best-effort JSON-style counterexample
+        val exprs = simTable.map(ft => m.evalAsJSON(evaluate(e._1, ft(frameNumber), ft, frameNumber, scope)))
+        (e._2 -> JArray(exprs.toList)).asInstanceOf[JField]
       } catch {
         case excp : Utils.UnknownIdentifierException =>
-          (e._2 -> JString("<UNDEF>")).asInstanceOf[JField]
+          (e._2 -> JArray(List(JString("<UNDEF>")))).asInstanceOf[JField]
       }
     }})
   }
