@@ -327,7 +327,6 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     "(" ~> symbol ~ rep1(Type) <~ ")" ^^ { case _ ~ typs => smt.TupleType(typs) } |
     symbol ^^ { sym =>  smt.UninterpretedType(sym.name) }
     
-
   lazy val FunArg : PackratParser[smt.Symbol] =
     "(" ~> symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.name, typ) }
 
@@ -422,6 +421,142 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     "(" ~ KwModel ~> rep(DeclareFun | DefineFun | Expr) <~ ")" ^^ { case exprs => smt.AssignmentModel(exprs) } |
     "(" ~> rep(DefineFun) <~ ")" ^^ { case functions => smt.AssignmentModel(functions) }
 
+
+  /*
+    Now we have parsing to UclidLanguage
+  */
+  lazy val UclidOperator : PackratParser[lang.Operator] = 
+    OpAnd ^^ { _ => lang.ConjunctionOp() } |
+    OpOr ^^ { _ => lang.DisjunctionOp() } |
+    OpNot ^^ { _ => lang.NegationOp() } |
+    OpITE ^^ {_ => lang.ITEOp() } |
+    OpImpl ^^ { _ => lang.ImplicationOp() } |
+    OpEq ^^ { _ => lang.EqualityOp() } | 
+    OpIntGE ^^ { _ => lang.IntGEOp() } |
+    OpIntGT ^^ { _ => lang.IntGTOp() } |
+    OpIntLT ^^ { _ => lang.IntLTOp() } |
+    OpIntLE ^^ { _ => lang.IntLEOp() } |
+    OpIntAdd ^^ { _ => lang.IntAddOp() } |
+    OpIntSub ^^ { _ => lang.IntSubOp() } |
+    OpIntMul ^^ { _ => lang.IntMulOp() } |
+    OpBVAdd ^^ { _ => lang.BVAddOp(0) } |
+    OpBVSub ^^ { _ => lang.BVSubOp(0) } |
+    OpBVMul ^^ { _ => lang.BVMulOp(0) } |
+    OpBVNeg ^^ { _ => lang.BVUnaryMinusOp(0) } |
+    OpBVAnd ^^ { _ => lang.BVAndOp(0) } |
+    OpBVOr ^^ { _ => lang.BVOrOp(0) } |
+    OpBVXor ^^ { _ => lang.BVXorOp(0) } |
+    OpBVNot ^^ { _ => lang.BVNotOp(0) } |
+    OpBVUrem ^^ { _ => lang.BVUremOp(0) } |
+    OpBVSrem ^^ { _ => lang.BVSremOp(0) } |
+    OpBVGTU ^^ { _ => lang.BVGTUOp(0) } | 
+    OpBVGEU ^^ { _ => lang.BVGEUOp(0) } | 
+    OpBVLEU ^^ { _ => lang.BVLEUOp(0) } | 
+    OpBVLTU ^^ { _ => lang.BVLTUOp(0) } | 
+    OpBVGT ^^ { _ => lang.BVGTOp(0) } | 
+    OpBVGT ^^ { _ => lang.BVGEOp(0) } | 
+    OpBVLE ^^ { _ => lang.BVLEOp(0) } | 
+    OpBVLT ^^ { _ => lang.BVLTOp(0) } | 
+    OpConcat ^^ { _ => lang.ConcatOp() }   
+
+  lazy val UclidSymbol : PackratParser[(lang.Identifier, lang.Type)] =
+    symbol ^^ { sym => (lang.Identifier(sym.name), lang.UndefinedType()) }
+
+  lazy val UclidIntegerLit : PackratParser[lang.IntLit] =
+    integerLit ^^ { iLit => lang.IntLit(iLit.value) }
+
+  lazy val UclidBitVectorLit : PackratParser[lang.BitVectorLit] =
+    bitvectorLit ^^ { bvLit => lang.BitVectorLit(bvLit.value, bvLit.numBits) }
+
+  lazy val UclidBoolLit : PackratParser[lang.BoolLit] =
+    KwTrue ^^ { _ => lang.BoolLit(true) } |
+    KwFalse ^^ { _ => lang.BoolLit(false) }
+
+  lazy val UclidType : PackratParser[lang.Type] =
+    KwInt ^^ { _ => lang.IntegerType() } |
+    KwBool ^^ { _ => lang.BooleanType() } |
+    "(" ~ KwBV ~> integerLit <~ ")" ^^ { case i => lang.BitVectorType(i.value.toInt) } |
+    "(" ~ KwUS ~ KwBV ~> integerLit <~ ")" ^^ { case i => lang.BitVectorType(i.value.toInt) } |
+    "(" ~ KwArray ~> UclidType ~ UclidType <~ ")" ^^ { case inType ~ outType => lang.ArrayType(List(inType), outType) } |
+    "(" ~> symbol ~ rep1(UclidType) <~ ")" ^^ { case _ ~ typs => lang.TupleType(typs) } |
+    symbol ^^ { sym =>  lang.UninterpretedType(lang.Identifier(sym.name)) }
+
+  lazy val UclidFunArg : PackratParser[(lang.Identifier, lang.Type)] =
+    "(" ~> symbol ~ UclidType <~ ")" ^^ { case sym ~ typ => (lang.Identifier(sym.name), typ) }
+
+  lazy val UclidFunArgs : PackratParser[List[(lang.Identifier, lang.Type)]] =
+    "(" ~> rep(UclidFunArg) <~ ")"
+
+  lazy val UclidBinding : PackratParser[(lang.Identifier, lang.Type, lang.Expr)] = 
+    "(" ~> UclidSymbol ~ UclidExpr <~ ")" ^^ { case sym ~ expr => (sym._1, sym._2, expr) }
+
+  lazy val UclidBindings : PackratParser[List[(lang.Identifier, lang.Type, lang.Expr)]] = 
+    "(" ~> rep1(UclidBinding) <~ ")"
+
+  // lazy val UclidIdentifier : PackratParser[lang.Expr] = 
+  //   UclidSymbol |
+  //   //TODO: Add support for indexed identifiers in Uclid SMT
+  //   "(" ~ KwUS ~> UclidSymbol ~ rep1(UclidIntegerLit) <~ ")" ^^ { case sym ~ idxs => 
+  //     {
+  //       // val funcType = MapType(idxs.map(a => a.typ), sym.symbolTyp)
+  //       // smt.FunctionApplication(smt.Symbol(sym.id, funcType), idxs) 
+  //       val funcType = lang.MapType(idxs.map(a => a.))
+  //     }
+  //   }
+
+  lazy val UclidExpr : PackratParser[lang.Expr] =
+    UclidBitVectorLit | 
+    UclidBoolLit |
+    UclidIntegerLit |
+    // UclidQualIdentifier |
+    "(" ~> UclidOperator ~ UclidExpr.+ <~ ")" ^^ { case op ~ args => lang.OperatorApplication(op, args)} |
+    "(" ~ KwLambda ~> UclidFunArgs ~ UclidExpr <~ ")" ^^ { case args ~ expr => lang.Lambda(args, expr) } |
+    // "(" ~ KwLet ~> UclidBindings ~ UclidExpr <~ ")" ^^ { case bindings ~ expr => lang.LetTerm(bindings, expr) } |
+    "(" ~ KwForall ~> UclidFunArgs ~ UclidExpr <~ ")" ^^ { case args ~ expr => 
+      {
+        //TODO: Do we want patterns?
+        val op = lang.ForallOp(args, List.empty)
+        lang.OperatorApplication(op, List(expr))  
+      }
+    } |
+    // "(" ~> QualIdentifier ~ Expr.+ <~ ")" ^^ { case q ~ args => 
+    //   {
+    //     val e = q match {
+    //       case s : smt.Symbol => s
+    //       case f : smt.FunctionApplication => f.e.asInstanceOf[smt.Symbol]
+    //     }
+    //     val funcType = MapType(args.map(a => a.typ), e.symbolTyp)
+    //     val sym = smt.Symbol(e.id, funcType)
+    //     smt.FunctionApplication(sym, args) 
+    //   }
+    // } |
+    "(" ~ OpArraySelect ~> UclidExpr ~ rep(UclidExpr) <~ ")" ^^ { 
+      case array ~ indices => lang.OperatorApplication(lang.ArraySelect(indices), List(array))
+    }
+    //  |
+    // // TODO: Remove these array ops, they don't technically belong here; 
+    // "(" ~ OpArrayStore ~> Expr ~ Expr ~ Expr <~ ")" ^^ { case array ~ indices ~ value => smt.ArrayStoreOperation(array, List(indices), value) }
+
+  lazy val UclidDefineFun : PackratParser[lang.DefineDecl] =
+    "(" ~ KwDefFun ~> symbol ~ UclidFunArgs ~ UclidType ~ UclidExpr <~ ")" ^^ {
+      case id ~ args ~ rTyp ~ expr => {
+        // val funcType = lang.MapType(args.map(a => a._2), rTyp)
+        lang.DefineDecl(lang.Identifier(id.name), lang.FunctionSig(args, rTyp), expr)
+      }
+    }
+  
+  // Necessary addition to support Z3 output format
+  lazy val UclidDeclareFun : PackratParser[lang.DeclareFun] = 
+    "(" ~ KwDecFun ~> symbol ~ UclidFunArgs ~ UclidType <~ ")" ^^ {
+      case id ~ args ~ rTyp => {
+        lang.DeclareFun(lang.Identifier(id.name), lang.FunctionSig(args, rTyp))
+      }
+    }
+
+  lazy val UclidAssignmentModel : PackratParser[lang.AssignmentModel] =
+    "(" ~ KwModel ~> rep(UclidDefineFun) <~ ")" ^^ { case exprs => lang.AssignmentModel(exprs) } |
+    "(" ~> rep(UclidDefineFun) <~ ")" ^^ { case functions => lang.AssignmentModel(functions) }
+
   def parseFunction(text: String): DefineFun = {
     val tokens = new PackratReader(new lexical.Scanner(text))
     phrase(DefineFun)(tokens) match {
@@ -435,6 +570,16 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   def parseModel(text : String) : AssignmentModel = {
     val tokens = new PackratReader(new lexical.Scanner(text))
     phrase(AssignmentModel)(tokens) match {
+      case Success(model, _) => model
+      case NoSuccess(msg, next) =>
+        UclidMain.printError(next.pos.toString)
+        throw new Utils.RuntimeError("SExpr model parser error: %s.\nIn: %s".format(msg, text))
+    }
+  }
+
+  def parseModelUclidLang(text : String) : UclidAssignmentModel = {
+    val tokens = new PackratReader(new lexical.Scanner(text))
+    phrase(UclidAssignmentModel)(tokens) match {
       case Success(model, _) => model
       case NoSuccess(msg, next) =>
         UclidMain.printError(next.pos.toString)

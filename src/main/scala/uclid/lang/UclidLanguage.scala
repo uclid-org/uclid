@@ -1350,6 +1350,16 @@ case class MacroDecl(id: Identifier, sig: FunctionSig, body: BlockStmt) extends 
   override def declNames = List(id)
 }
 
+case class DeclareFun(id: Identifier, sig: FunctionSig) extends Decl {
+  override def toString = 
+    "declare %s %s;".format(id.toString, sig.toString)
+  override def declNames: List[Identifier] = List(id)
+}
+case class AssignmentModel(functions: List[DefineDecl]) extends ASTNode {
+  override def toString = 
+    "assignment-model %s;".format(functions.map(a => a.toString).mkString("\n"))
+}
+
 case class ModuleDefinesImportDecl(id: Identifier) extends Decl {
   override def toString = "define * = $s.*; // %s".format(id.toString)
   override def declNames = List.empty
