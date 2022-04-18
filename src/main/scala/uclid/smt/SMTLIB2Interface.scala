@@ -44,6 +44,7 @@ import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
+import uclid.lang.Identifier
 
 import org.json4s._
 import _root_.uclid.lang.Scope
@@ -346,6 +347,8 @@ trait SMTLIB2Base {
 class SMTLIB2Model(stringModel : String) extends Model {
   val model : AssignmentModel = SExprParser.parseModel(stringModel)
 
+  val modelUclid = SExprParser.parseModelUclidLang(stringModel)
+
   override def evaluate(e : Expr) : Expr = {
     throw new Utils.UnimplementedException("evaluate not implemented yet.")
   }
@@ -371,6 +374,16 @@ class SMTLIB2Model(stringModel : String) extends Model {
         JString(e.toString())
       case 1 =>
         JString(definitions(0)._2)
+  // def evalAsUclidString(e : Expr) : (Boolean, String) = {
+  //   val definitions = modelUclid.functions.filter(fun => fun.asInstanceOf[lang.DefineDecl].id.toString() contains e.toString())
+  //   Utils.assert(definitions.size < 2, "More than one definition found!")
+  //   definitions.size match {
+  //     case 0 =>
+  //       (false, e.toString())
+  //     case 1 => {
+  //       val expr : lang.Expr = definitions(0).asInstanceOf[lang.DefineDecl].expr
+  //       (expr.canGenerateCodegenExpr, expr.codegenString)
+  //     }
       case _ =>
         throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
     }
