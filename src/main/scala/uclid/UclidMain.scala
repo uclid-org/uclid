@@ -70,21 +70,25 @@ object UclidMain {
    * @param files List of files that should parsed and analyzed.
    */
   case class Config(
-      mainModuleName : String = "main",
-      smtSolver: List[String] = List.empty,
-      synthesizer: List[String] = List.empty,
-      smtFileGeneration: String = "",
-      sygusFormat: Boolean = true,
-      enumToNumeric: Boolean = false,
-      modSetAnalysis: Boolean = false,
-      ufToArray: Boolean = false,
-      printStackTrace: Boolean = false,
-      noLetify: Boolean=false, // prevents SMTlib interface from letifying
-      verbose : Int = 1, // verbosities: 
-      // 0: essential: print nothing but results and error messages
-      // 1: basic: current default behaviour, includes statuses
-      // 2: stats: includes statistics on time/which properties are being solved
-      // 3: print everything
+      mainModuleName    : String = "main",
+      smtSolver         : List[String] = List.empty,
+      synthesizer       : List[String] = List.empty,
+      smtFileGeneration : String = "",
+      jsonCEXfile       : String = "",
+      sygusFormat       : Boolean = true,
+      enumToNumeric     : Boolean = false,
+      modSetAnalysis    : Boolean = false,
+      ufToArray         : Boolean = false,
+      printStackTrace   : Boolean = false,
+      noLetify          : Boolean = false, // prevents SMTlib interface from letifying
+      /* 
+        verbosities:
+        0: essential: print nothing but results and error messages
+        1: basic: current default behaviour, includes statuses
+        2: stats: includes statistics on time/which properties are being solved
+        3: print everything
+      */
+      verbose           : Int = 1, 
       files : Seq[java.io.File] = Seq(),
       testFixedpoint: Boolean = false
   ) 
@@ -108,6 +112,10 @@ object UclidMain {
       opt[String]('g', "smt-file-generation").action{
         (prefix, c) => c.copy(smtFileGeneration = prefix)
       }.text("File prefix to generate smt files for each assertion.")
+
+      opt[String]('j', "json-cex").valueName("<FilePrefix>").action{
+        (prefix, c) => c.copy(jsonCEXfile = prefix)
+      }.text("File prefix to generate the JSON CEX traces into.")
 
       opt[Unit]('X', "exception-stack-trace").action{
         (_, c) => c.copy(printStackTrace = true)

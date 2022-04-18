@@ -40,6 +40,8 @@
 
 package uclid
 
+import java.io._
+
 import lang._
 import vcd.VCD
 
@@ -51,6 +53,12 @@ import uclid.smt.Z3Interface
 import scala.collection.mutable.{Map => MutableMap}
 import org.scalactic.source.Position
 import scala.util.parsing.input.NoPosition
+
+import org.json4s._
+import org.json4s.JsonDSL._
+import org.json4s.JsonDSL.WithBigDecimal._
+import org.json4s.jackson.JsonMethods._
+import scala.collection.mutable
 
 object UniqueIdGenerator {
   var i : Int = 0;
@@ -338,6 +346,8 @@ class SymbolicSimulator (module : Module) {
             needToPrintResults=false
           case "print_cex" =>
             printCEX(proofResults, cmd.args, cmd.argObj)
+          case "print_cex_json" =>
+            printCEXJSON(proofResults, cmd.args, cmd.argObj, config)
           case "dump_cex_vcds" =>
             dumpCEXVCDFiles(proofResults)
           case "print_module" =>
@@ -1251,6 +1261,91 @@ class SymbolicSimulator (module : Module) {
       }
     }}
   }
+
+  def printCEXJSON(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier], config : UclidMain.Config) {
+    def labelMatches(p : AssertInfo) : Boolean = {
+      arg match {
+        case Some(id) => id.toString == p.label || p.label.startsWith(id.toString + ":")
+        case None => true
+      }
+    }
+    // One property can have multiple violating cexes, so index them
+    val prop_counter : ObjectCounter[String] = new ObjectCounter[String]()
+    UclidMain.printStatus("=================================")
+    // Get each counterexample trace
+    val jsonobj : JObject = JObject(results.filter(res => labelMatches(res.assert) && res.result.isModelDefined).map{(result) => {
+      val prop_name : String = result.assert.name.split("\\s+").mkString("__")
+      ((prop_name ++ "__" ++ prop_counter.incrCount(prop_name).toString()) 
+        -> printCEXJSON(result, exprs))
+    }})
+    // Write counterexample trace
+    if (jsonobj.values.size > 0) {
+      val filename : String = config.jsonCEXfile.isEmpty match {
+        case true => "cex.json"
+        case false => (config.jsonCEXfile ++ ".json")
+      }
+      val fh  = new File(filename)
+      val bw  = new BufferedWriter(new FileWriter(fh))
+      bw.write(pretty(render(jsonobj)))
+      bw.close()
+      UclidMain.printStatus("Wrote CEX traces to file: " + filename)
+    }
+  }
+  // Helper utility to print JSON traces for a single property
+  def printCEXJSON(res : CheckResult, exprs : List[(Expr, String)]) : JObject = {
+    UclidMain.printStatus("CEX for %s".format(res.assert.toString, res.assert.pos.toString))
+    val scope = res.assert.context
+    lazy val instVarMap = module.getAnnotation[InstanceVarMapAnnotation]().get
+
+    val exprsToPrint : List[(Expr, String)] = if (exprs.size == 0) {
+      val vars = ((scope.inputs ++ scope.vars ++ scope.outputs).map { 
+        p => {
+          instVarMap.rMap.get(p.id) match {
+            case Some(str) => (p.id, str)
+            case None => (p.id, p.id.toString)
+          }
+        }
+      })
+      vars.toList.sortWith((l, r) => l._2 < r._2)
+    } else {
+      exprs
+    }
+
+    frameLog.debug("Assertion: {}", res.assert.expr.toString())
+    frameLog.debug("FrameTable: {}", res.assert.frameTable.toString())
+
+    val model = res.result.model.get
+    val simTable = res.assert.frameTable
+    Utils.assert(simTable.size >= 1, "Must have at least one trace")
+    val lastFrame = res.assert.iter
+    val json_trace : JArray = JArray(((0 to lastFrame).map { case (i) => {
+      try{
+          printFrameJSON(simTable, i, model, exprsToPrint, scope)
+      }  catch{
+          case _: Throwable => {
+            UclidMain.printError("error: unable to parse counterexample frame")
+            JString("error: unable to parse counterexample frame")
+          }
+      }
+    }}).toList)
+    UclidMain.printStatus("Generated CEX trace of length " + (lastFrame + 1).toString())
+    UclidMain.printStatus("=================================")
+    JObject(List(JField("length", JInt(lastFrame+1)), JField("trace", json_trace)))
+  }
+  // Generate the JSON Object for a single frame
+  def printFrameJSON(simTable : SimulationTable, frameNumber : Int, m : smt.Model, exprs : List[(Expr, String)], scope : Scope) : JObject = {
+    JObject(exprs.map { (e) => {
+      try {
+        // Generate the best-effort JSON-style counterexample
+        val exprs = simTable.map(ft => m.evalAsJSON(evaluate(e._1, ft(frameNumber), ft, frameNumber, scope)))
+        (e._2 -> JArray(exprs.toList)).asInstanceOf[JField]
+      } catch {
+        case excp : Utils.UnknownIdentifierException =>
+          (e._2 -> JArray(List(JString("<UNDEF>")))).asInstanceOf[JField]
+      }
+    }})
+  }
+
 // this function is unused
   def printSymbolTable(symbolTable : SymbolTable) {
     val keys = symbolTable.keys.toList.sortWith((l, r) => l.name < r.name)

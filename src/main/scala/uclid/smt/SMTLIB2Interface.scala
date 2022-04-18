@@ -45,6 +45,10 @@ import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
 
+import org.json4s._
+import _root_.uclid.lang.Scope
+import _root_.uclid.lang.ExpressionEnvironment
+
 trait SMTLIB2Base {
   val smtlib2BaseLogger = Logger(classOf[SMTLIB2Base])
   
@@ -326,24 +330,36 @@ trait SMTLIB2Base {
 }
 
 class SMTLIB2Model(stringModel : String) extends Model {
-  val model =  SExprParser.parseModel(stringModel)
+  val model : AssignmentModel = SExprParser.parseModel(stringModel)
 
   override def evaluate(e : Expr) : Expr = {
     throw new Utils.UnimplementedException("evaluate not implemented yet.")
   }
 
-  override def evalAsString(e : Expr)  : String = {
-    val definitions = model.functions.filter(fun => fun.asInstanceOf[DefineFun].id.toString() contains e.toString())
+  override def evalAsString(e : Expr) : String = {
+    val definitions = model.functions.filter(fun => fun._1.asInstanceOf[DefineFun].id.toString() contains e.toString())
     Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
       case 0 =>
         e.toString()
       case 1 =>
-        definitions(0).asInstanceOf[DefineFun].e.toString()
+        definitions(0)._1.asInstanceOf[DefineFun].e.toString()
       case _ =>
         throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
     }
+  }
 
+  override def evalAsJSON(e : Expr) : JValue = {
+    val definitions = model.functions.filter(fun => fun._1.asInstanceOf[DefineFun].id.toString() contains e.toString())
+    Utils.assert(definitions.size < 2, "More than one definition found!")
+    definitions.size match {
+      case 0 =>
+        JString(e.toString())
+      case 1 =>
+        JString(definitions(0)._2)
+      case _ =>
+        throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
+    }
   }
 
   override def toString() : String = {

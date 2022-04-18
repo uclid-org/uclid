@@ -49,6 +49,9 @@ import com.microsoft.z3.enumerations.Z3_lbool
 import com.microsoft.z3.enumerations.Z3_decl_kind
 import com.typesafe.scalalogging.Logger
 
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
+
 
 /**
  * Result of solving a Z3 instance.
@@ -58,6 +61,14 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
     interface.exprToZ3(e) match {
       case z3ArrayExpr : z3.ArrayExpr => convertZ3ArrayString(z3ArrayExpr)
       case z3Expr : z3.Expr => model.eval(z3Expr, true).toString
+      case _ => throw new Utils.EvaluationError("Unable to evaluate expression: " + e.toString)
+    }
+  }
+
+  override def evalAsJSON(e : Expr) : JValue = {
+    interface.exprToZ3(e) match {
+      case z3ArrayExpr : z3.ArrayExpr => convertZ3ArrayJSON(z3ArrayExpr)
+      case z3Expr : z3.Expr => JString(model.eval(z3Expr, true).toString)
       case _ => throw new Utils.EvaluationError("Unable to evaluate expression: " + e.toString)
     }
   }
@@ -121,6 +132,62 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
     }}
 
     return output + "-".formatted(s"\n\t%${longest}s : $bottom")
+  }
+
+  def convertZ3ArrayJSON(initExpr : z3.Expr) : JValue = {
+
+    val array : Map[String, String] = Map.empty[String, String]
+    var e    : z3.Expr = model.eval(initExpr, true)
+    var bottom : String = ""
+    var longest : Integer = 1
+    var isNumeral : Boolean = false
+
+
+    while (e.isStore()) {
+      val args : Array[z3.Expr] = e.getArgs()
+      if (!array.contains(args(1).toString)) {
+        array += (args(1).toString -> args(2).toString)
+      }
+      isNumeral = args(1).isNumeral()
+      e = model.eval(args(0), true)
+    }
+
+    if (e.isConstantArray()) {
+      bottom = e.getArgs()(0).toString
+    } else if (e.isAsArray) {
+      var fd : z3.FuncDecl = e.getFuncDecl().getParameters()(0).getFuncDecl()
+      var fint : z3.FuncInterp = null
+    
+      do {
+        fint = model.getFuncInterp(fd)
+
+        for (entry <- fint.getEntries()) {
+          val args : Array[z3.Expr] = entry.getArgs()
+          if (!array.contains(args(0).toString)) {
+            array += (args(0).toString -> entry.getValue().toString)
+          }
+        }
+
+        fd = fint.getElse().getFuncDecl()
+      } while (fint.getElse().getFuncDecl().getDeclKind() == Z3_decl_kind.Z3_OP_UNINTERPRETED)
+
+      bottom = fint.getElse().toString
+    } else {
+      return JString("UCLID is unable to convert this z3 array to string: " + e.toString + "\n").asInstanceOf[JValue]
+    }
+
+    array.foreach{ case (k, v) => {
+        if (!v.contentEquals(bottom) && k.length > longest) {
+            longest = k.length
+        }
+    }}
+ 
+    val sortedArray : ListMap[String,String] = if (isNumeral) 
+        ListMap(array.toSeq.sortWith((x, y) => BigInt(x._1) < BigInt(y._1)):_*) 
+        else ListMap(array.toSeq.sortBy(_._1):_*) 
+    JObject(sortedArray.filter({case (k, v) => !v.contentEquals(bottom)}).map{
+      case (k, v) => (k.toString() -> JString(v.toString()))
+    }.+("-" -> JString(bottom)).toList)
   }
 
   override def evaluate(e : Expr) : Expr = {
