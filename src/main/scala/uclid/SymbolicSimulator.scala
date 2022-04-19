@@ -1498,6 +1498,10 @@ class SymbolicSimulator (module : Module) {
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
       case lambda : Lambda =>
         isStatelessExpr(lambda.e, context + lambda)
+      case QualifiedIdentifier(_, _) | IndexedIdentifier(_, _) | QualifiedIdentifierApplication(_, _) => 
+        throw new Utils.UnimplementedException("ERROR: SMT expr generation for QualifiedIdentifier and IndexedIdentifier is currently not supported")
+      case LetExpr(_, _) => 
+        throw new Utils.UnimplementedException("ERROR: SMT expr generation for LetExpr is currently not supported")
     }
   }
 

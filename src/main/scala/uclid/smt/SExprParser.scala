@@ -307,7 +307,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     OpBVLT ^^ { _ => (smt.BVLTOp(0), OpBVLT) } | 
     OpConcat ^^ { _ => (smt.BVConcatOp(0), OpConcat) }
 
-  def joinWithSpace(fields : String*) : String = "(" ++ fields.mkString(" ") ++ ")"
+  def joinWithSpace (fields : String*) : String = "(" + fields.mkString(" ") + ")"
 
   lazy val Symbol : PackratParser[(smt.Symbol, String)] =
     symbol ^^ { sym => (smt.Symbol(sym.name, smt.UndefinedType), sym.name) } 
@@ -540,11 +540,15 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       case args => (args.map(a => a._1), joinWithSpace(args.map(a => a._2).mkString(" ")))
     }
 
-  // lazy val UclidBinding : PackratParser[(lang.Identifier, lang.Type, lang.Expr)] =
-  //   "(" ~> UclidSymbol ~ UclidExpr <~ ")" ^^ { case sym ~ expr => (sym._1, sym._2, expr) }
+  lazy val UclidBinding : PackratParser[((lang.UIdentifier, lang.Expr), String)] =
+    "(" ~> UclidSymbol ~ UclidExpr <~ ")" ^^ { 
+      case sym ~ expr => ((sym._1, expr._1), joinWithSpace(sym._2, expr._2))
+    }
 
-  // lazy val UclidBindings : PackratParser[List[(lang.Identifier, lang.Type, lang.Expr)]] =
-  //   "(" ~> rep1(UclidBinding) <~ ")"
+  lazy val UclidBindings : PackratParser[(List[(lang.UIdentifier, lang.Expr)], String)] =
+    "(" ~> rep1(UclidBinding) <~ ")" ^^ {
+      case bindings => (bindings.map(a => a._1), joinWithSpace(bindings.map(a => a._2).mkString(" ")))
+    }
 
   lazy val UclidIdentifier : PackratParser[(lang.UIdentifier, String)] =
     UclidSymbol |
@@ -570,7 +574,9 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     "(" ~ KwLambda ~> UclidFunArgs ~ UclidExpr <~ ")" ^^ {
       case args ~ expr => (lang.Lambda(args._1, expr._1), joinWithSpace(KwLambda, args._2, expr._2))
     } |
-    // "(" ~ KwLet ~> UclidBindings ~ UclidExpr <~ ")" ^^ { case bindings ~ expr => lang.LetTerm(bindings, expr) } |
+    "(" ~ KwLet ~> UclidBindings ~ UclidExpr <~ ")" ^^ { 
+      case bindings ~ expr => (lang.LetExpr(bindings._1, expr._1), joinWithSpace(KwLet, bindings._2, expr._2))
+    } |
     "(" ~ KwForall ~> UclidFunArgs ~ UclidExpr <~ ")" ^^ {
       case args ~ expr => {
         //TODO: Do we want patterns?
@@ -617,17 +623,15 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       }
     }
 
-  lazy val UclidAssignmentModel : PackratParser[(lang.AssignmentModel, String)] =
+  lazy val UclidAssignmentModel : PackratParser[lang.AssignmentModel] =
     "(" ~ KwModel ~> rep(UclidDefineFun) <~ ")" ^^ {
-      case exprs => {
-        val hmap = exprs.map(a => (a._1.id, a._2)).toMap
-        (lang.AssignmentModel(exprs.map(a => a._1), hmap), joinWithSpace(KwModel, exprs.map(a => a._2).mkString("\n")))
+      case functions => {
+        lang.AssignmentModel(functions.map(a => (a._1, a._2)))
       }
     } |
     "(" ~> rep(UclidDefineFun) <~ ")" ^^ {
       case functions => {
-        val hmap = functions.map(a => (a._1.id, a._2)).toMap
-        (lang.AssignmentModel(functions.map(a => a._1), hmap), joinWithSpace(functions.map(a => a._2).mkString("\n")))
+        lang.AssignmentModel(functions.map(a => (a._1, a._2)))
       }
     }
 
@@ -654,7 +658,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   def parseModelUclidLang(text : String) : lang.AssignmentModel = {
     val tokens = new PackratReader(new lexical.Scanner(text))
     phrase(UclidAssignmentModel)(tokens) match {
-      case Success(model, _) => model._1
+      case Success(model, _) => model
       case NoSuccess(msg, next) =>
         UclidMain.printError(next.pos.toString)
         throw new Utils.RuntimeError("SExpr model parser error: %s.\nIn: %s".format(msg, text))

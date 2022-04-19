@@ -366,27 +366,24 @@ class SMTLIB2Model(stringModel : String) extends Model {
     }
   }
 
-  override def evalAsJSON(e : Expr) : JValue = {
-    val definitions = model.functions.filter(fun => fun._1.asInstanceOf[DefineFun].id.toString() contains e.toString())
+  def evalAsUclidString(e : Expr) : (Boolean, String) = {
+    val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.toString() contains e.toString())
     Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
       case 0 =>
-        JString(e.toString())
-      case 1 =>
-        JString(definitions(0)._2)
-  // def evalAsUclidString(e : Expr) : (Boolean, String) = {
-  //   val definitions = modelUclid.functions.filter(fun => fun.asInstanceOf[lang.DefineDecl].id.toString() contains e.toString())
-  //   Utils.assert(definitions.size < 2, "More than one definition found!")
-  //   definitions.size match {
-  //     case 0 =>
-  //       (false, e.toString())
-  //     case 1 => {
-  //       val expr : lang.Expr = definitions(0).asInstanceOf[lang.DefineDecl].expr
-  //       (expr.canGenerateCodegenExpr, expr.codegenString)
-  //     }
+        (false, e.toString())
+      case 1 => {
+        val expr : lang.Expr = definitions(0)._1.asInstanceOf[lang.DefineDecl].expr
+        if (expr.canGenerateCodegenExpr) (true, expr.codegenString)
+        else (false, definitions(0)._2)
+      }
       case _ =>
         throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
     }
+  }
+
+  override def evalAsJSON (e : Expr) : JValue = {
+    JString(evalAsUclidString(e)._2)
   }
 
   override def toString() : String = {

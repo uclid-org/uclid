@@ -769,6 +769,12 @@ case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
   override def canGenerateCodegenExpr: Boolean = false
 }
 
+case class LetExpr (ids: List[(UIdentifier, Expr)], e : Expr) extends Expr {
+  override def toString = "(let (" + 
+    ids.map(a => "(" + a._1.toString + " " + a._2.toString + ")").mkString(" ") + ") " +
+    e.toString + ")"
+}
+
 sealed abstract class Lhs(val ident: Identifier) extends ASTNode {
   def isProceduralLhs : Boolean
   override def canGenerateCodegenExpr = false
@@ -1447,9 +1453,9 @@ case class MacroDecl(id: Identifier, sig: FunctionSig, body: BlockStmt) extends 
   override def declNames = List(id)
 }
 
-case class AssignmentModel(functions: List[DefineDecl], rawsmt : Map[Identifier, String]) {
+case class AssignmentModel(functions: List[(DefineDecl, String)]) {
   override def toString = 
-    "assignment-model %s;".format(functions.map(a => a.toString).mkString("\n"))
+    "assignment-model %s;".format(functions.map(a => a._1.toString).mkString("\n"))
 }
 
 case class ModuleDefinesImportDecl(id: Identifier) extends Decl {
