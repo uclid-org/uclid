@@ -46,6 +46,10 @@ import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
 import uclid.lang.Identifier
 
+import org.json4s._
+import _root_.uclid.lang.Scope
+import _root_.uclid.lang.ExpressionEnvironment
+
 trait SMTLIB2Base {
   val smtlib2BaseLogger = Logger(classOf[SMTLIB2Base])
   
@@ -327,7 +331,7 @@ trait SMTLIB2Base {
 }
 
 class SMTLIB2Model(stringModel : String) extends Model {
-  val model =  SExprParser.parseModel(stringModel)
+  val model : AssignmentModel = SExprParser.parseModel(stringModel)
 
   val modelUclid = SExprParser.parseModelUclidLang(stringModel)
 
@@ -335,32 +339,37 @@ class SMTLIB2Model(stringModel : String) extends Model {
     throw new Utils.UnimplementedException("evaluate not implemented yet.")
   }
 
-  override def evalAsString(e : Expr)  : String = {
-    val definitions = model.functions.filter(fun => fun.asInstanceOf[DefineFun].id.toString() contains e.toString())
+  override def evalAsString(e : Expr) : String = {
+    val definitions = model.functions.filter(fun => fun._1.asInstanceOf[DefineFun].id.toString() contains e.toString())
     Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
       case 0 =>
         e.toString()
       case 1 =>
-        definitions(0).asInstanceOf[DefineFun].e.toString()
+        definitions(0)._1.asInstanceOf[DefineFun].e.toString()
       case _ =>
         throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
     }
   }
 
   def evalAsUclidString(e : Expr) : (Boolean, String) = {
-    val definitions = modelUclid.functions.filter(fun => fun.asInstanceOf[lang.DefineDecl].id.toString() contains e.toString())
+    val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.toString() contains e.toString())
     Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
       case 0 =>
         (false, e.toString())
       case 1 => {
-        val expr : lang.Expr = definitions(0).asInstanceOf[lang.DefineDecl].expr
-        (expr.canGenerateCodegenExpr, expr.codegenString)
+        val expr : lang.Expr = definitions(0)._1.asInstanceOf[lang.DefineDecl].expr
+        if (expr.canGenerateCodegenExpr) (true, expr.codegenString)
+        else (false, definitions(0)._2)
       }
       case _ =>
         throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
     }
+  }
+
+  override def evalAsJSON (e : Expr) : JValue = {
+    JString(evalAsUclidString(e)._2)
   }
 
   override def toString() : String = {

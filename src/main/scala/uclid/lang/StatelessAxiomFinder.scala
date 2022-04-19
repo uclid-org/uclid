@@ -122,6 +122,10 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
       case lambda : Lambda =>
         isStatelessExpr(lambda.e, context + lambda)
+      case QualifiedIdentifier(_, _) | IndexedIdentifier(_, _) | QualifiedIdentifierApplication(_, _) => 
+        throw new Utils.UnimplementedException("ERROR: SMT expr generation for QualifiedIdentifier and IndexedIdentifier is currently not supported")
+      case LetExpr(_, _) => 
+        throw new Utils.UnimplementedException("ERROR: SMT expr generation for LetExpr is currently not supported")
     }
   }
   def rewriteIdentifierToExternalId(moduleName : Identifier, id : Identifier, context : Scope) : Expr = {
@@ -184,6 +188,9 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
       case lambda : Lambda =>
         val expP = rewrite(lambda.e, context + lambda)
         Lambda(lambda.ids, expP)
+      case _ : QualifiedIdentifier | _ : IndexedIdentifier | _ : QualifiedIdentifierApplication => throw new Utils.UnimplementedException("ERROR: QualifiedIdentifier and IndexedIdentifier are currently not supported")
+      case _ : LetExpr => 
+        throw new Utils.UnimplementedException("ERROR: SMT expr generation for LetExpr is currently not supported")
     }
   }
   override def applyOnModule(d : TraversalDirection.T, module: Module, in : T, context : Scope) : T = {

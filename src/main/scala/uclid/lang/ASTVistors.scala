@@ -1000,6 +1000,10 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case a : ConstArray => visitConstArray(a, result, context)
       case fapp : FuncApplication => visitFuncApp(fapp, result, context)
       case lambda : Lambda => visitLambda(lambda, result, context)
+      case QualifiedIdentifier(_, _) | IndexedIdentifier(_, _) | QualifiedIdentifierApplication(_, _) => 
+        throw new Utils.UnimplementedException("ERROR: SMT generation for QualifiedIdentifier and IndexedIdentifier is currently not supported")
+      case LetExpr(_, _) => 
+        throw new Utils.UnimplementedException("ERROR: SMT expr generation for LetExpr is currently not supported")
     }
     result = pass.applyOnExpr(TraversalDirection.Up, e, result, context)
     return result
@@ -2139,6 +2143,10 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case a : ConstArray => visitConstArray(a, context)
       case fapp : FuncApplication => visitFuncApp(fapp, context)
       case lambda : Lambda => visitLambda(lambda, context)
+      case QualifiedIdentifier(_, _) | IndexedIdentifier(_, _) | QualifiedIdentifierApplication(_, _) =>
+        throw new Utils.UnimplementedException("ERROR: SMT generation for QualifiedIdentifier and IndexedIdentifier is currently not supported")
+      case LetExpr(_, _) => 
+        throw new Utils.UnimplementedException("ERROR: SMT expr generation for LetExpr is currently not supported")
     }).flatMap(pass.rewriteExpr(_, context))
     return ASTNode.introducePos(setPosition, setFilename, eP, e.position)
   }

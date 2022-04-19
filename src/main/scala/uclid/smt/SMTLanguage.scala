@@ -929,12 +929,12 @@ case class DeclareFun(id : Symbol, args : List[(Symbol)]) extends Expr(id.typ.as
     "(declare-fun %s (%s) %s)".format(id.toString(), argString, id.typ.asInstanceOf[MapType].outType.toString())
   }
 }
-case class AssignmentModel(functions : List[Expr]) extends Hashable {
+case class AssignmentModel(functions : List[(Expr, String)]) extends Hashable {
   override val hashBaseId = 22923
   override val hashId = 315
-  override val hashCode = computeHash(functions.map(fun => fun.toString()))
-  override val md5hashCode = computeMD5Hash(functions)
-  override def toString = Utils.join(functions.map(fun => fun.toString()), " ")
+  override val hashCode = computeHash(functions.map(fun => fun._1.toString()))
+  override val md5hashCode = computeMD5Hash(functions.map(a => a._1))
+  override def toString = Utils.join(functions.map(fun => fun._1.toString()), " ")
 }
 case class OracleSymbol(id: String, symbolTyp: lang.FunctionSig, binary : String) extends Expr (smt.Converter.typeToSMT(symbolTyp.typ)) {
   override val hashId = mix(id.hashCode(), mix(symbolTyp.typ.hashCode(), 317))

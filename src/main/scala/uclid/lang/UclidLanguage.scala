@@ -748,13 +748,15 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class FuncApplication(e: Expr, args: List[Expr]) extends Expr {
   override def toString = e + "(" + Utils.join(args.map(_.toString), ", ") + ")"
-
-  override def canGenerateCodegenExpr: Boolean = false
 }
 case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
   override def toString = "Lambda(" + ids + "). " + e
+}
 
-  override def canGenerateCodegenExpr: Boolean = false
+case class LetExpr (ids: List[(UIdentifier, Expr)], e : Expr) extends Expr {
+  override def toString = "(let (" + 
+    ids.map(a => "(" + a._1.toString + " " + a._2.toString + ")").mkString(" ") + ") " +
+    e.toString + ")"
 }
 
 sealed abstract class Lhs(val ident: Identifier) extends ASTNode {
@@ -1435,9 +1437,9 @@ case class MacroDecl(id: Identifier, sig: FunctionSig, body: BlockStmt) extends 
   override def declNames = List(id)
 }
 
-case class AssignmentModel(functions: List[DefineDecl], rawsmt : Map[Identifier, String]) {
+case class AssignmentModel(functions: List[(DefineDecl, String)]) {
   override def toString = 
-    "assignment-model %s;".format(functions.map(a => a.toString).mkString("\n"))
+    "assignment-model %s;".format(functions.map(a => a._1.toString).mkString("\n"))
 }
 
 case class ModuleDefinesImportDecl(id: Identifier) extends Decl {
@@ -1620,7 +1622,7 @@ case class GenericProofCommand(
     val objStr = argObj match { case Some(id) => id.toString + "->"; case None => "" }
     resultStr + objStr + nameStr + paramStr + argStr + ";" + " // " + position.toString
   }
-  def isPrintCEX : Boolean = { name == Identifier("print_cex") }
+  def isPrintCEX : Boolean = { name == Identifier("print_cex") || name == Identifier("print_cex_json") }
 
   def modifiesModule : Boolean = { name == Identifier("assign_macro") }
 }

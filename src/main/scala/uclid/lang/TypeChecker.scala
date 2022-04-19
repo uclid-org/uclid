@@ -232,6 +232,10 @@ object ReplacePolymorphicOperators {
         FuncApplication(r(expr), rs(args))
       case Lambda(args, expr) =>
         Lambda(args, r(expr))
+      case QualifiedIdentifier(_, _) | IndexedIdentifier(_, _) | QualifiedIdentifierApplication(_, _) => 
+        throw new Utils.UnimplementedException("ERROR: QualifiedIdentifierApplication is currently not supported")
+      case LetExpr(_, _) => 
+        throw new Utils.UnimplementedException("ERROR: SMT expr generation for LetExpr is currently not supported")
     }
   }
 }
@@ -688,6 +692,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case opapp : OperatorApplication => opAppType(opapp)
         case fapp : FuncApplication => funcAppType(fapp)
         case lambda : Lambda => lambdaType(lambda)
+        case QualifiedIdentifier(_, _) | IndexedIdentifier(_, _) | QualifiedIdentifierApplication(_, _) => 
+          throw new Utils.UnimplementedException("ERROR: SMT expr generation for QualifiedIdentifier and IndexedIdentifier is currently not supported")
+        case LetExpr(_, _) => 
+          throw new Utils.UnimplementedException("ERROR: SMT expr generation for LetExpr is currently not supported")
       }
       memo.put(e.astNodeId, typ)
       return typ

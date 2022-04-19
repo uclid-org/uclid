@@ -761,6 +761,12 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
           lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), Some(gId), gArgs, ensures)
       } |
       KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~
+        (KwGrammar ~> Id ) ~ ("(" ~ ")") ~
+        rep(KwEnsures ~> Expr) <~ ";" ^^
+      { case id ~ idtyps ~ rt ~ gId ~ gArgs ~ ensures =>
+          lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), Some(gId), List.empty[Identifier], ensures)
+      } |
+      KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~
         rep(KwEnsures ~> Expr) <~ ";" ^^
       {
         case id ~ idtyps ~ rt ~ ensures =>

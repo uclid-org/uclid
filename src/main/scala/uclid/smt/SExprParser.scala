@@ -271,156 +271,191 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       OpBVGE, OpBVGEU, OpBVLT, OpBVLTU, OpBVLE, OpBVLEU, OpConcat, OpArraySelect, OpArrayStore
   )
 
-  lazy val Operator : PackratParser[smt.Operator] =
-    OpAnd ^^ { _ => smt.ConjunctionOp } |
-    OpOr ^^ { _ => smt.DisjunctionOp } |
-    OpNot ^^ { _ => smt.NegationOp } |
-    OpITE ^^ {_ => smt.ITEOp } |
-    OpImpl ^^ { _ => smt.ImplicationOp } |
-    OpEq ^^ { _ => smt.EqualityOp } |
-    OpIntGE ^^ { _ => smt.IntGEOp } |
-    OpIntGT ^^ { _ => smt.IntGTOp } |
-    OpIntLT ^^ { _ => smt.IntLTOp } |
-    OpIntLE ^^ { _ => smt.IntLEOp } |
-    OpIntAdd ^^ { _ => smt.IntAddOp } |
-    OpIntSub ^^ { _ => smt.IntSubOp } |
-    OpIntMul ^^ { _ => smt.IntMulOp } |
-    OpBVAdd ^^ { _ => smt.BVAddOp(0) } |
-    OpBVSub ^^ { _ => smt.BVSubOp(0) } |
-    OpBVMul ^^ { _ => smt.BVMulOp(0) } |
-    OpBVNeg ^^ { _ => smt.BVMinusOp(0) }|
-    OpBVAnd ^^ { _ => smt.BVAndOp(0) } |
-    OpBVOr ^^ { _ => smt.BVOrOp(0) } |
-    OpBVXor ^^ { _ => smt.BVXorOp(0) } |
-    OpBVNot ^^ { _ => smt.BVNotOp(0) } |
-    OpBVUrem ^^ { _ => smt.BVUremOp(0) } |
-    OpBVSrem ^^ { _ => smt.BVSremOp(0) } |
-    OpBVGTU ^^ { _ => smt.BVGTUOp(0)} | 
-    OpBVGEU ^^ { _ => smt.BVGEUOp(0)} | 
-    OpBVLEU ^^ { _ => smt.BVLEUOp(0)} | 
-    OpBVLTU ^^ { _ => smt.BVLTUOp(0)} | 
-    OpBVGT ^^ { _ => smt.BVGTOp(0)} | 
-    OpBVGT ^^ { _ => smt.BVGEOp(0)} | 
-    OpBVLE ^^ { _ => smt.BVLEOp(0)} | 
-    OpBVLT ^^ { _ => smt.BVLTOp(0)} | 
-    OpConcat ^^ { _ => smt.BVConcatOp(0) }
+  lazy val Operator : PackratParser[(smt.Operator, String)] =
+    OpAnd ^^ { _ => (smt.ConjunctionOp, OpAnd) } |
+    OpOr ^^ { _ => (smt.DisjunctionOp, OpOr) } |
+    OpNot ^^ { _ => (smt.NegationOp, OpNot) } |
+    OpITE ^^ { _ => (smt.ITEOp, OpITE) } |
+    OpImpl ^^ { _ => (smt.ImplicationOp, OpImpl) } |
+    OpEq ^^ { _ => (smt.EqualityOp, OpEq) } |
+    OpIntGE ^^ { _ => (smt.IntGEOp, OpIntGE) } |
+    OpIntGT ^^ { _ => (smt.IntGTOp, OpIntGT) } |
+    OpIntLT ^^ { _ => (smt.IntLTOp, OpIntLT) } |
+    OpIntLE ^^ { _ => (smt.IntLEOp, OpIntLE) } |
+    OpIntAdd ^^ { _ => (smt.IntAddOp, OpIntAdd) } |
+    OpIntSub ^^ { _ => (smt.IntSubOp, OpIntSub) } |
+    OpIntMul ^^ { _ => (smt.IntMulOp, OpIntMul) } |
+    OpBVAdd ^^ { _ => (smt.BVAddOp(0), OpBVAdd) } |
+    OpBVSub ^^ { _ => (smt.BVSubOp(0), OpBVSub) } |
+    OpBVMul ^^ { _ => (smt.BVMulOp(0), OpBVMul) } |
+    OpBVNeg ^^ { _ => (smt.BVMinusOp(0), OpBVNeg) } |
+    OpBVAnd ^^ { _ => (smt.BVAndOp(0), OpBVAnd) } |
+    OpBVOr ^^ { _ => (smt.BVOrOp(0), OpBVOr) } |
+    OpBVXor ^^ { _ => (smt.BVXorOp(0), OpBVXor) } |
+    OpBVNot ^^ { _ => (smt.BVNotOp(0), OpBVNot) } |
+    OpBVUrem ^^ { _ => (smt.BVUremOp(0), OpBVUrem) } |
+    OpBVSrem ^^ { _ => (smt.BVSremOp(0), OpBVSrem) } |
+    OpBVGTU ^^ { _ => (smt.BVGTUOp(0), OpBVGTU) } | 
+    OpBVGEU ^^ { _ => (smt.BVGEUOp(0), OpBVGEU) } | 
+    OpBVLEU ^^ { _ => (smt.BVLEUOp(0), OpBVLEU) } | 
+    OpBVLTU ^^ { _ => (smt.BVLTUOp(0), OpBVLTU) } | 
+    OpBVGT ^^ { _ => (smt.BVGTOp(0), OpBVGT) } | 
+    OpBVGT ^^ { _ => (smt.BVGEOp(0), OpBVGT) } | 
+    OpBVLE ^^ { _ => (smt.BVLEOp(0), OpBVLE) } | 
+    OpBVLT ^^ { _ => (smt.BVLTOp(0), OpBVLT) } | 
+    OpConcat ^^ { _ => (smt.BVConcatOp(0), OpConcat) }
 
-  lazy val Symbol : PackratParser[smt.Symbol] =
-    symbol ^^ { sym => smt.Symbol(sym.name, smt.UndefinedType) } 
+  def joinWithSpace (fields : String*) : String = "(" + fields.mkString(" ") + ")"
 
-  lazy val IntegerLit : PackratParser[smt.IntLit] =
-    integerLit ^^ { iLit => smt.IntLit(iLit.value) }
+  lazy val Symbol : PackratParser[(smt.Symbol, String)] =
+    symbol ^^ { sym => (smt.Symbol(sym.name, smt.UndefinedType), sym.name) } 
 
-  lazy val BitVectorLit : PackratParser[smt.BitVectorLit] =
-    bitvectorLit ^^ { bvLit => smt.BitVectorLit(bvLit.value, bvLit.numBits) }
+  lazy val IntegerLit : PackratParser[(smt.IntLit, String)] =
+    integerLit ^^ { iLit => (smt.IntLit(iLit.value), iLit.chars) }
 
-  lazy val BoolLit : PackratParser[smt.BooleanLit] =
-    KwTrue ^^ { _ => smt.BooleanLit(true) } |
-    KwFalse ^^ { _ => smt.BooleanLit(false) }
+  lazy val BitVectorLit : PackratParser[(smt.BitVectorLit, String)] =
+    bitvectorLit ^^ { bvLit => bvLit.base match {
+        case 2  => (smt.BitVectorLit(bvLit.value, bvLit.numBits), "#b" ++ bvLit.chars) 
+        case 16 => (smt.BitVectorLit(bvLit.value, bvLit.numBits), "#x" ++ bvLit.chars) 
+        case _  => 
+            throw new Utils.RuntimeError("lexical.BitVectorLit has unsupported base!")
+      }
+    }
 
-  lazy val Type : PackratParser[smt.Type] =
-    KwInt ^^ { _ => smt.IntType } |
-    KwBool ^^ { _ => smt.BoolType } |
-    "(" ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
-    "(" ~ KwUS ~ KwBV ~> integerLit <~ ")" ^^ { case i => smt.BitVectorType(i.value.toInt) } |
-    "(" ~ KwArray ~> Type ~ Type <~ ")" ^^ { case inType ~ outType => smt.ArrayType(List(inType), outType) } |
-    "(" ~> symbol ~ rep1(Type) <~ ")" ^^ { case _ ~ typs => smt.TupleType(typs) } |
-    symbol ^^ { sym =>  smt.UninterpretedType(sym.name) }
+  lazy val BoolLit : PackratParser[(smt.BooleanLit, String)] =
+    KwTrue ^^ { _ => (smt.BooleanLit(true), KwTrue) } |
+    KwFalse ^^ { _ => (smt.BooleanLit(false), KwFalse) }
+
+  lazy val Type : PackratParser[(smt.Type, String)] =
+    KwInt ^^ { _ => (smt.IntType, KwInt) } |
+    KwBool ^^ { _ => (smt.BoolType, KwBool) } |
+    "(" ~ KwBV ~> integerLit <~ ")" ^^ { 
+      case i => (smt.BitVectorType(i.value.toInt), joinWithSpace(KwBV, i.chars)) 
+    } |
+    "(" ~ KwUS ~ KwBV ~> integerLit <~ ")" ^^ { 
+      case i => (smt.BitVectorType(i.value.toInt) , joinWithSpace(KwUS, KwBV, i.chars))
+    } |
+    "(" ~ KwArray ~> Type ~ Type <~ ")" ^^ { 
+      case inType ~ outType => (smt.ArrayType(List(inType._1), outType._1), joinWithSpace(KwArray, inType._2, outType._2))
+    } |
+    "(" ~> symbol ~ rep1(Type) <~ ")" ^^ { 
+      case sym ~ typs => (smt.TupleType(typs.map(a => a._1)), joinWithSpace(sym.name, typs.map(a => a._2).mkString(" ")))
+    } |
+    symbol ^^ { sym => (smt.UninterpretedType(sym.name), sym.name) }
     
-  lazy val FunArg : PackratParser[smt.Symbol] =
-    "(" ~> symbol ~ Type <~ ")" ^^ { case sym ~ typ => smt.Symbol(sym.name, typ) }
+  lazy val FunArg : PackratParser[(smt.Symbol, String)] =
+    "(" ~> symbol ~ Type <~ ")" ^^ { case sym ~ typ => (smt.Symbol(sym.name, typ._1), joinWithSpace(sym.name, typ._2)) }
 
-  lazy val FunArgs : PackratParser[List[smt.Symbol]] =
-    "(" ~> rep(FunArg) <~ ")"
+  lazy val FunArgs : PackratParser[(List[smt.Symbol], String)] =
+    "(" ~> rep(FunArg) <~ ")" ^^ { 
+      case args => (args.map(a => a._1), joinWithSpace(args.map(a => a._2).mkString(" "))) 
+    }
 
-  lazy val Binding : PackratParser[(smt.Symbol, smt.Expr)] = 
-    "(" ~> Symbol ~ Expr <~ ")" ^^ { case sym ~ expr => (sym, expr) }
+  lazy val Binding : PackratParser[((smt.Symbol, smt.Expr), String)] = 
+    "(" ~> Symbol ~ Expr <~ ")" ^^ { case sym ~ expr => ((sym._1, expr._1), joinWithSpace(sym._2, expr._2)) }
 
-  lazy val Bindings : PackratParser[List[(smt.Symbol, smt.Expr)]] = 
-    "(" ~> rep1(Binding) <~ ")"
+  lazy val Bindings : PackratParser[(List[(smt.Symbol, smt.Expr)], String)] = 
+    "(" ~> rep1(Binding) <~ ")" ^^ { 
+      case bindings => (bindings.map(b => b._1), joinWithSpace(bindings.map(b => b._2).mkString(" ")))
+    }
 
-  lazy val Identifier : PackratParser[smt.Expr] = 
+  lazy val Identifier : PackratParser[(smt.Expr, String)] = 
     Symbol | 
     //TODO: Add support for indexed identifiers in Uclid SMT
     "(" ~ KwUS ~> Symbol ~ rep1(Symbol|IntegerLit) <~ ")" ^^ { case sym ~ idxs => 
       {
-        val funcType = MapType(idxs.map(a => a.typ), sym.symbolTyp)
-        smt.FunctionApplication(smt.Symbol(sym.id, funcType), idxs) 
+        val funcType = MapType(idxs.map(a => a._1.typ), sym._1.symbolTyp)
+        (smt.FunctionApplication(smt.Symbol(sym._1.id, funcType), idxs.map(a => a._1)), 
+        joinWithSpace(KwUS, sym._2, idxs.map(a => a._2).mkString(" ")))
       }
     }
 
-  lazy val QualIdentifier : PackratParser[smt.Expr] = 
+  lazy val QualIdentifier : PackratParser[(smt.Expr, String)] = 
     Identifier |
     "(" ~ KwAs ~> Identifier ~ Type <~ ")" ^^ { case sym ~ typ => 
       {
-        val e = sym match {
+        val e = sym._1 match {
           case s : smt.Symbol => s
           case f : smt.FunctionApplication => f.e.asInstanceOf[smt.Symbol]
         }
-        smt.Symbol(e.id, typ) 
+        (smt.Symbol(e.id, typ._1), joinWithSpace(KwAs, sym._2, typ._2))
       }
     }
 
 
   
-  lazy val Expr : PackratParser[smt.Expr] =
+  lazy val Expr : PackratParser[(smt.Expr, String)] =
     BitVectorLit | 
     BoolLit |
     IntegerLit |
     QualIdentifier |
-    "(" ~> Operator ~ Expr.+ <~ ")" ^^ { case op ~ args => smt.OperatorApplication(op, args)} |
-    "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => smt.Lambda(args, expr) } |
-    "(" ~ KwLet ~> Bindings ~ Expr <~ ")" ^^ { case bindings ~ expr => smt.LetExpression(bindings, expr) } |
-    "(" ~ KwForall ~> FunArgs ~ Expr <~ ")" ^^ { case args ~ expr => 
-      {
-        //TODO: Do we want patterns?
-        val op = smt.ForallOp(args, List.empty)
-        smt.OperatorApplication(op, List(expr))  
+    "(" ~> Operator ~ Expr.+ <~ ")" ^^ { 
+      case op ~ args => (
+        smt.OperatorApplication(op._1, args.map(a => a._1)), 
+        joinWithSpace(op._2, args.map(a => a._2).mkString(" "))
+      )
+    } |
+    "(" ~ KwLambda ~> FunArgs ~ Expr <~ ")" ^^ { 
+      case args ~ expr => (smt.Lambda(args._1, expr._1), joinWithSpace(KwLambda, args._2, expr._2))
+    } |
+    "(" ~ KwLet ~> Bindings ~ Expr <~ ")" ^^ { 
+      case bindings ~ expr => (smt.LetExpression(bindings._1, expr._1), joinWithSpace(KwLet, bindings._2, expr._2))
+    } |
+    "(" ~ KwForall ~> FunArgs ~ Expr <~ ")" ^^ { 
+      case args ~ expr => {
+        // TODO: Do we want patterns?
+        val op = smt.ForallOp(args._1, List.empty)
+        (smt.OperatorApplication(op, List(expr._1)), joinWithSpace(KwForall, args._2, expr._2))
       }
     } |
-    "(" ~> QualIdentifier ~ Expr.+ <~ ")" ^^ { case q ~ args => 
-      {
-        val e = q match {
+    "(" ~> QualIdentifier ~ Expr.+ <~ ")" ^^ { 
+      case q ~ args => {
+        val e = q._1 match {
           case s : smt.Symbol => s
           case f : smt.FunctionApplication => f.e.asInstanceOf[smt.Symbol]
         }
-        val funcType = MapType(args.map(a => a.typ), e.symbolTyp)
+        val funcType = MapType(args.map(a => a._1.typ), e.symbolTyp)
         val sym = smt.Symbol(e.id, funcType)
-        smt.FunctionApplication(sym, args) 
+        (smt.FunctionApplication(sym, args.map(a => a._1)), joinWithSpace(q._2, args.map(a => a._2).mkString(" ")))
       }
     } |
-    "(" ~ OpArraySelect ~> Expr ~ rep(Expr) <~ ")" ^^ { case array ~ indices => smt.ArraySelectOperation(smt.Symbol(array.toString, smt.ArrayType(Nil, array.typ)), indices) } |
+    "(" ~ OpArraySelect ~> Expr ~ rep(Expr) <~ ")" ^^ { 
+      case array ~ indices => (
+        smt.ArraySelectOperation(smt.Symbol(array._1.toString, smt.ArrayType(Nil, array._1.typ)), indices.map(a => a._1)),
+        joinWithSpace(OpArraySelect, array._2, indices.map(a => a._2).mkString(" "))
+      )
+    } |
     // TODO: Remove these array ops, they don't technically belong here; 
-    "(" ~ OpArrayStore ~> Expr ~ Expr ~ Expr <~ ")" ^^ { case array ~ indices ~ value => smt.ArrayStoreOperation(array, List(indices), value) }
+    "(" ~ OpArrayStore ~> Expr ~ Expr ~ Expr <~ ")" ^^ { 
+      case array ~ indices ~ value => (
+        smt.ArrayStoreOperation(array._1, List(indices._1), value._1),
+        joinWithSpace(OpArrayStore, array._2, indices._2, value._2)
+      )
+    }
 
-    
-    
-
-
-
-  
-  lazy val DefineFun : PackratParser[smt.DefineFun] =
+  lazy val DefineFun : PackratParser[(smt.DefineFun, String)] =
     "(" ~ KwDefFun ~> symbol ~ FunArgs ~ Type ~ Expr <~ ")" ^^ {
       case id ~ args ~ rTyp ~ expr => {
-        val funcType = MapType(args.map(a => a.typ), rTyp)
-        smt.DefineFun(smt.Symbol(id.name, funcType), args, expr)
+        val funcType = MapType(args._1.map(a => a.typ), rTyp._1)
+        (smt.DefineFun(smt.Symbol(id.name, funcType), args._1, expr._1), 
+          joinWithSpace(KwDefFun, id.name, args._2, rTyp._2, expr._2))
       }
     } 
   
   
   // Necessary addition to support Z3 output format
-  lazy val DeclareFun : PackratParser[smt.DeclareFun] = 
+  lazy val DeclareFun : PackratParser[(smt.DeclareFun, String)] = 
     "(" ~ KwDecFun ~> symbol ~ FunArgs ~ Type <~ ")" ^^ {
       case id ~ args ~ rTyp => {
-        val funcType = MapType(args.map(a => a.typ) , rTyp)
-        smt.DeclareFun(smt.Symbol(id.name, funcType), args)
+        val funcType = MapType(args._1.map(a => a.typ) , rTyp._1)
+        (smt.DeclareFun(smt.Symbol(id.name, funcType), args._1), 
+          joinWithSpace(KwDecFun, id.name, args._2, rTyp._2))
       }
     }
 
   lazy val AssignmentModel : PackratParser[smt.AssignmentModel] =
     "(" ~ KwModel ~> rep(DeclareFun | DefineFun | Expr) <~ ")" ^^ { case exprs => smt.AssignmentModel(exprs) } |
     "(" ~> rep(DefineFun) <~ ")" ^^ { case functions => smt.AssignmentModel(functions) }
-
 
   /*
     Now we have parsing to UclidLanguage
@@ -458,8 +493,6 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     OpBVLE ^^ { _ => (lang.BVLEOp(0), OpBVLE) } |
     OpBVLT ^^ { _ => (lang.BVLTOp(0), OpBVLT) } |
     OpConcat ^^ { _ => (lang.ConcatOp(), OpConcat) }
-
-  def joinWithSpace (tokens : String*) : String = "(" + tokens.mkString(" ") + ")"
 
   lazy val UclidSymbol : PackratParser[(lang.UIdentifier, String)] =
     symbol ^^ { sym => (lang.Identifier(sym.name), sym.name) }
@@ -505,11 +538,15 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       case args => (args.map(a => a._1), joinWithSpace(args.map(a => a._2).mkString(" ")))
     }
 
-  // lazy val UclidBinding : PackratParser[(lang.Identifier, lang.Type, lang.Expr)] =
-  //   "(" ~> UclidSymbol ~ UclidExpr <~ ")" ^^ { case sym ~ expr => (sym._1, sym._2, expr) }
+  lazy val UclidBinding : PackratParser[((lang.UIdentifier, lang.Expr), String)] =
+    "(" ~> UclidSymbol ~ UclidExpr <~ ")" ^^ { 
+      case sym ~ expr => ((sym._1, expr._1), joinWithSpace(sym._2, expr._2))
+    }
 
-  // lazy val UclidBindings : PackratParser[List[(lang.Identifier, lang.Type, lang.Expr)]] =
-  //   "(" ~> rep1(UclidBinding) <~ ")"
+  lazy val UclidBindings : PackratParser[(List[(lang.UIdentifier, lang.Expr)], String)] =
+    "(" ~> rep1(UclidBinding) <~ ")" ^^ {
+      case bindings => (bindings.map(a => a._1), joinWithSpace(bindings.map(a => a._2).mkString(" ")))
+    }
 
   lazy val UclidIdentifier : PackratParser[(lang.UIdentifier, String)] =
     UclidSymbol |
@@ -535,7 +572,9 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     "(" ~ KwLambda ~> UclidFunArgs ~ UclidExpr <~ ")" ^^ {
       case args ~ expr => (lang.Lambda(args._1, expr._1), joinWithSpace(KwLambda, args._2, expr._2))
     } |
-    // "(" ~ KwLet ~> UclidBindings ~ UclidExpr <~ ")" ^^ { case bindings ~ expr => lang.LetTerm(bindings, expr) } |
+    "(" ~ KwLet ~> UclidBindings ~ UclidExpr <~ ")" ^^ { 
+      case bindings ~ expr => (lang.LetExpr(bindings._1, expr._1), joinWithSpace(KwLet, bindings._2, expr._2))
+    } |
     "(" ~ KwForall ~> UclidFunArgs ~ UclidExpr <~ ")" ^^ {
       case args ~ expr => {
         //TODO: Do we want patterns?
@@ -582,21 +621,19 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       }
     }
 
-  lazy val UclidAssignmentModel : PackratParser[(lang.AssignmentModel, String)] =
+  lazy val UclidAssignmentModel : PackratParser[lang.AssignmentModel] =
     "(" ~ KwModel ~> rep(UclidDefineFun) <~ ")" ^^ {
-      case exprs => {
-        val hmap = exprs.map(a => (a._1.id, a._2)).toMap
-        (lang.AssignmentModel(exprs.map(a => a._1), hmap), joinWithSpace(KwModel, exprs.map(a => a._2).mkString("\n")))
+      case functions => {
+        lang.AssignmentModel(functions.map(a => (a._1, a._2)))
       }
     } |
     "(" ~> rep(UclidDefineFun) <~ ")" ^^ {
       case functions => {
-        val hmap = functions.map(a => (a._1.id, a._2)).toMap
-        (lang.AssignmentModel(functions.map(a => a._1), hmap), joinWithSpace(functions.map(a => a._2).mkString("\n")))
+        lang.AssignmentModel(functions.map(a => (a._1, a._2)))
       }
     }
 
-  def parseFunction(text: String): DefineFun = {
+  def parseFunction(text: String): (DefineFun, String) = {
     val tokens = new PackratReader(new lexical.Scanner(text))
     phrase(DefineFun)(tokens) match {
       case Success(function, _) =>
@@ -619,7 +656,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   def parseModelUclidLang(text : String) : lang.AssignmentModel = {
     val tokens = new PackratReader(new lexical.Scanner(text))
     phrase(UclidAssignmentModel)(tokens) match {
-      case Success(model, _) => model._1
+      case Success(model, _) => model
       case NoSuccess(msg, next) =>
         UclidMain.printError(next.pos.toString)
         throw new Utils.RuntimeError("SExpr model parser error: %s.\nIn: %s".format(msg, text))

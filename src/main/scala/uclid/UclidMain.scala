@@ -70,21 +70,25 @@ object UclidMain {
    * @param files List of files that should parsed and analyzed.
    */
   case class Config(
-      mainModuleName : String = "main",
-      smtSolver: List[String] = List.empty,
-      synthesizer: List[String] = List.empty,
-      smtFileGeneration: String = "",
-      sygusFormat: Boolean = true,
-      enumToNumeric: Boolean = false,
-      modSetAnalysis: Boolean = false,
-      ufToArray: Boolean = false,
-      printStackTrace: Boolean = false,
-      noLetify: Boolean=false, // prevents SMTlib interface from letifying
-      verbose : Int = 1, // verbosities: 
-      // 0: essential: print nothing but results and error messages
-      // 1: basic: current default behaviour, includes statuses
-      // 2: stats: includes statistics on time/which properties are being solved
-      // 3: print everything
+      mainModuleName    : String = "main",
+      smtSolver         : List[String] = List.empty,
+      synthesizer       : List[String] = List.empty,
+      smtFileGeneration : String = "",
+      jsonCEXfile       : String = "",
+      sygusFormat       : Boolean = true,
+      enumToNumeric     : Boolean = false,
+      modSetAnalysis    : Boolean = false,
+      ufToArray         : Boolean = false,
+      printStackTrace   : Boolean = false,
+      noLetify          : Boolean = false, // prevents SMTlib interface from letifying
+      /* 
+        verbosities:
+        0: essential: print nothing but results and error messages
+        1: basic: current default behaviour, includes statuses
+        2: stats: includes statistics on time/which properties are being solved
+        3: print everything
+      */
+      verbose           : Int = 1, 
       files : Seq[java.io.File] = Seq(),
       testFixedpoint: Boolean = false
   ) 
@@ -108,6 +112,10 @@ object UclidMain {
       opt[String]('g', "smt-file-generation").action{
         (prefix, c) => c.copy(smtFileGeneration = prefix)
       }.text("File prefix to generate smt files for each assertion.")
+
+      opt[String]('j', "json-cex").valueName("<FilePrefix>").action{
+        (prefix, c) => c.copy(jsonCEXfile = prefix)
+      }.text("File prefix to generate the JSON CEX traces into.")
 
       opt[Unit]('X', "exception-stack-trace").action{
         (_, c) => c.copy(printStackTrace = true)
@@ -348,7 +356,24 @@ object UclidMain {
         }
         val combinedModule = modules.foldLeft(Module(id, List.empty, List.empty, List.empty)){
           (acc, module) => {
-            val declsP = (acc.decls ++ module.decls)
+            val declsP = {
+              val nonInitAccDecls = acc.decls.filter(p => !p.isInstanceOf[InitDecl])
+              val initAccDecls = acc.decls.filter(p => p.isInstanceOf[InitDecl]).headOption
+              val nonInitModuleDecls = module.decls.filter(p => !p.isInstanceOf[InitDecl])
+              val initModuleDecls = module.decls.filter(p => p.isInstanceOf[InitDecl]).headOption
+              val newInitDecl = initAccDecls match {
+                case Some(initAcc) => initModuleDecls match {
+                  case Some(initMod) => List(InitDecl(BlockStmt(List[BlockVarsDecl](), 
+                    List(initAcc.asInstanceOf[InitDecl].body, initMod.asInstanceOf[InitDecl].body))))
+                  case None => List(initAcc)
+                }
+                case None => initModuleDecls match {
+                  case Some(initMod) => List(initMod)
+                  case None => List[Decl]()
+                }
+              }
+              newInitDecl ++ nonInitAccDecls ++ nonInitModuleDecls
+            }
             val cmdsP = (acc.cmds ++ module.cmds)
             Utils.assert(module.notes.size == 1 && module.notes.head.asInstanceOf[InstanceVarMapAnnotation].iMap.size == 0, "Expected module to initially have empty annotations.")
             // since the notes (list of annotations of the modules) are default values, it's okay to remove the duplicates in the line below
