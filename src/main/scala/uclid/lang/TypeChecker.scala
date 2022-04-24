@@ -223,11 +223,14 @@ object ReplacePolymorphicOperators {
           case p : PolymorphicOperator => toType(p, typ)
           case ArraySelect(es) => ArraySelect(rs(es))
           case ArrayUpdate(es, e) => ArrayUpdate(rs(es), r(e))
+          case RecordUpdate(id, e) => RecordUpdate(id, r(e))
           case _ => op
         }
         OperatorApplication(opP, rs(operands))
       case ConstArray(exp, typ) =>
         ConstArray(r(exp), typ)
+      case ConstRecord(fs) => 
+        ConstRecord(fs.map(f => (f._1, r(f._2))))
       case FuncApplication(expr, args) =>
         FuncApplication(r(expr), rs(args))
       case Lambda(args, expr) =>
@@ -589,6 +592,15 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           }
           checkTypeError(typeOf(e, c) == arrayType.outType, "Invalid type of update value", e.pos, c.filename)
           arrayType
+        case RecordUpdate(id, e) =>
+          Utils.assert(argTypes.size == 1, "Expected only one argument to record update operator")
+          checkTypeError(argTypes(0).isRecord, "Expected a record here", opapp.operands(0).pos, c.filename)
+          val recordType = argTypes(0).asInstanceOf[lang.RecordType]
+          val recordFieldTypes = recordType.fields
+          checkTypeError(recordFieldTypes.map(a => a._1) contains id, "Invalid field-name in record update operator", id.pos, c.filename)
+          val fieldType = recordFieldTypes.filter(a => (a._1.name == id.name))(0)._2
+          checkTypeError(typeOf(e, c) == fieldType, "Invalid value-type in record update operator", id.pos, c.filename)
+          recordType
         case SelectFromInstance(field) =>
           Utils.assert(argTypes.size == 1, "Select operator must have exactly one operand.")
           val inst= argTypes(0)
@@ -688,6 +700,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               raiseTypeError("Expected an array type", a.typ.pos, c.filename)
               UndefinedType()
           }
+        case r : ConstRecord => 
+          val fieldnames = r.fieldvalues.map(f => f._1.name)
+          checkTypeError(fieldnames.size == fieldnames.toSet.size, "Duplicate field-names in ConstRecord", r.pos, c.filename)
+          new RecordType(r.fieldvalues.map(f => (f._1, typeOf(f._2, c))))
         case r : Tuple => new TupleType(r.values.map(typeOf(_, c)))
         case opapp : OperatorApplication => opAppType(opapp)
         case fapp : FuncApplication => funcAppType(fapp)

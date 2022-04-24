@@ -67,11 +67,14 @@ class TaintNextPass extends RewritePass {
       case FreshLit(_) => None
       case IntLit(_) => None
       case ConstArray(_,_) => None
+      case ConstRecord(_) => None
       case StringLit(_) => None
       case Tuple(_) => None // Not handled
       case OperatorApplication(ArraySelect(_), _) |
            OperatorApplication(ArrayUpdate(_, _), _) =>
-             throw new Utils.UnimplementedException("TODO: Implement tainting for arrays.")
+            throw new Utils.UnimplementedException("TODO: Implement tainting for arrays.")
+      case OperatorApplication(RecordUpdate(_, _), _) =>
+            throw new Utils.UnimplementedException("TODO: Implement tainting for records.")
       case OperatorApplication(_, operands) => {
         val opers = operands.map(expr => generateTaintExpr(expr)).flatten
         if (opers.length > 1)

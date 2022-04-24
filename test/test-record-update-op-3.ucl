@@ -1,0 +1,24 @@
+module main {
+
+    type cache_t = record { valid : boolean, value : integer };
+
+    var notarecord  : [bv4]bv4;
+    var cache1      : cache_t;
+
+    init {
+        cache1 = notarecord[badfield := 2022];
+    }
+
+    next {
+        havoc cache1;
+    }
+
+    invariant trivial1  : cache1.value == 2022;
+
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex_json(cache1);
+    }
+}

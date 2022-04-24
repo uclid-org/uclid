@@ -1,0 +1,19 @@
+module main {
+
+    var sbool : boolean;
+
+    init {
+        if (const_record(valid := true, value := 10).valid) {
+            sbool = true;
+        }
+    }
+
+    invariant trivial : sbool;
+
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex(sbool);
+    }
+}

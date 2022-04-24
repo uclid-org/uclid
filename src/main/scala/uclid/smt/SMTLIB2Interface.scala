@@ -224,6 +224,18 @@ trait SMTLIB2Base {
             assert (newTypes.size == 0)
             val str = "((as const %s) %s)".format(typName, eP.exprString())
             (str, memoP, shouldLetify)
+          case r : ConstRecord =>
+            val productType = r.typ.asInstanceOf[ProductType]
+            val typeName = typeMap.get(r.typ).get.name
+            val mkTupleFn = Context.getMkTupleFunction(typeName)
+            val indexedFields = r.fieldvalues.map(f => (productType.fieldIndex(f._1), f._2)).sortBy(_._1)
+            var memoP = memo
+            val fields = indexedFields.map{ f =>
+              val (value, memoP1) = translateExpr(f._2, memoP, shouldLetify)
+              memoP = memoP1
+              value.exprString()
+            }.mkString(" ")
+            ("(" + mkTupleFn + " " + fields + ")", memoP, shouldLetify)
           case OperatorApplication(RecordUpdateOp(fld), operands) =>
             val productType = operands(0).typ.asInstanceOf[ProductType]
             val typeName = typeMap.get(operands(0).typ).get.name

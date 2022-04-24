@@ -849,6 +849,7 @@ class SymbolicSimulator (module : Module) {
       case smt.BitVectorLit(bv, w) => List()
       case smt.EnumLit(id, eTyp) => List()
       case smt.ConstArray(v, arrTyp) => List()
+      case smt.ConstRecord(fs) => List()
       case smt.MakeTuple(args) => args.flatMap(e => getHyperSelects(e))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
@@ -921,6 +922,7 @@ class SymbolicSimulator (module : Module) {
       case smt.BitVectorLit(bv, w) => List()
       case smt.EnumLit(id, eTyp) => List()
       case smt.ConstArray(v, arrTyp) => List()
+      case smt.ConstRecord(fs) => List()
       case smt.MakeTuple(args) => args.flatMap(e => getHavocs(e))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
@@ -1010,6 +1012,7 @@ class SymbolicSimulator (module : Module) {
       case smt.BitVectorLit(bv, w) => e
       case smt.EnumLit(id, eTyp) => e
       case smt.ConstArray(exp, arrTyp) => smt.ConstArray(_substitute(exp, sym), arrTyp)
+      case smt.ConstRecord(fs) => smt.ConstRecord(fs.map(f => (f._1, _substitute(f._2, sym))))
       case smt.MakeTuple(args) => smt.MakeTuple(args.map(e => _substitute(e, sym)))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
@@ -1482,10 +1485,16 @@ class SymbolicSimulator (module : Module) {
         inds.forall(ind => isStatelessExpr(ind, context)) &&
         args.forall(arg => isStatelessExpr(arg, context)) &&
         isStatelessExpr(value, context)
+      case OperatorApplication(RecordUpdate(ind, value), args) =>
+        isStatelessExpr(ind, context) && 
+        isStatelessExpr(value, context) &&
+        args.forall(arg => isStatelessExpr(arg, context))
       case opapp : OperatorApplication =>
         opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
       case a : ConstArray =>
         isStatelessExpr(a.exp, context)
+      case r: ConstRecord => 
+        r.fieldvalues.forall(f => isStatelessExpr(f._2, context))
       case fapp : FuncApplication =>
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
       case lambda : Lambda =>
@@ -1692,19 +1701,10 @@ class SymbolicSimulator (module : Module) {
       }
     }
 
-    // Helper function to read from a record.
-    def recordSelect(field : String, rec : smt.Expr) = {
-      smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
-    }
-    // Helper function to update a record.
-    def recordUpdate(field : String, rec : smt.Expr, newVal : smt.Expr) = {
-      smt.OperatorApplication(smt.RecordUpdateOp(field), List(rec, newVal))
-    }
-
     def simulateRecordUpdateExpr(st : smt.Expr, fields : List[String], newVal : smt.Expr) : smt.Expr = {
       fields match {
         case hd :: tl =>
-          recordUpdate(hd, st, simulateRecordUpdateExpr(recordSelect(hd, st), tl, newVal))
+          smt.Converter.recordUpdate(hd, st, simulateRecordUpdateExpr(smt.Converter.recordSelect(hd, st), tl, newVal))
         case Nil =>
           newVal
       }
