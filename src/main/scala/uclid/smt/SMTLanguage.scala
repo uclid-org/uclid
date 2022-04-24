@@ -690,6 +690,19 @@ case class Int2BVOp(w : Int) extends BVResultOp(w) {
   }
 }
 
+/*
+  This is provided in addition to RecordUpdateOp to support 
+  Uclid record update expression. 
+  This also specifies the new field value to update the record with.
+*/
+// case class RecordUpdateOperation(e : Expr, fieldid: String, value: Expr) extends Expr(e.typ) {
+//   override val hashId = mix(fieldid.hashCode(), 246)
+//   override val hashCode = computeHash(fieldid, e, value)
+//   override val md5hashCode: Array[Byte] = computeMD5Hash(e, fieldid, value)
+//   override def toString = e.toString + "[" + fieldid + " := " + value.toString + "]"
+//   override val isConstant = e.isConstant && value.isConstant
+// }
+
 // Floating point operators
 // Operators that return bitvectors.
 abstract class FloatResultOp() extends Operator {

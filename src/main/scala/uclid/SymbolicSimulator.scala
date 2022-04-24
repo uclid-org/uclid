@@ -59,6 +59,7 @@ import org.json4s.JsonDSL._
 import org.json4s.JsonDSL.WithBigDecimal._
 import org.json4s.jackson.JsonMethods._
 import scala.collection.mutable
+import ch.qos.logback.core.pattern.Converter
 
 object UniqueIdGenerator {
   var i : Int = 0;
@@ -1482,6 +1483,10 @@ class SymbolicSimulator (module : Module) {
         inds.forall(ind => isStatelessExpr(ind, context)) &&
         args.forall(arg => isStatelessExpr(arg, context)) &&
         isStatelessExpr(value, context)
+      case OperatorApplication(RecordUpdate(ind, value), args) =>
+        isStatelessExpr(ind, context) && 
+        isStatelessExpr(value, context) &&
+        args.forall(arg => isStatelessExpr(arg, context))
       case opapp : OperatorApplication =>
         opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
       case a : ConstArray =>
@@ -1692,19 +1697,10 @@ class SymbolicSimulator (module : Module) {
       }
     }
 
-    // Helper function to read from a record.
-    def recordSelect(field : String, rec : smt.Expr) = {
-      smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
-    }
-    // Helper function to update a record.
-    def recordUpdate(field : String, rec : smt.Expr, newVal : smt.Expr) = {
-      smt.OperatorApplication(smt.RecordUpdateOp(field), List(rec, newVal))
-    }
-
     def simulateRecordUpdateExpr(st : smt.Expr, fields : List[String], newVal : smt.Expr) : smt.Expr = {
       fields match {
         case hd :: tl =>
-          recordUpdate(hd, st, simulateRecordUpdateExpr(recordSelect(hd, st), tl, newVal))
+          smt.Converter.recordUpdate(hd, st, simulateRecordUpdateExpr(smt.Converter.recordSelect(hd, st), tl, newVal))
         case Nil =>
           newVal
       }

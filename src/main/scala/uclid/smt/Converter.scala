@@ -244,6 +244,15 @@ object Converter {
     }
   }
 
+  // Helper function to read from a record.
+  def recordSelect(field : String, rec : smt.Expr) = {
+    smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
+  }
+  // Helper function to update a record.
+  def recordUpdate(field : String, rec : smt.Expr, newVal : smt.Expr) = {
+    smt.OperatorApplication(smt.RecordUpdateOp(field), List(rec, newVal))
+  }
+  
   def _exprToSMT(expr : lang.Expr, scope : lang.Scope, past : Int, idToSMT : ((lang.Identifier, lang.Scope, Int) => smt.Expr)) : smt.Expr = {
     def toSMT(expr : lang.Expr, scope : lang.Scope, past : Int) : smt.Expr = _exprToSMT(expr, scope, past, idToSMT)
     def toSMTs(es : List[lang.Expr], scope : lang.Scope, past : Int) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e, scope, past))
@@ -282,6 +291,10 @@ object Converter {
             val arr = toSMT(args(0), scope, past)
             val data = toSMT(value, scope, past)
             smt.ArrayStoreOperation(arr, toSMTs(index, scope, past), data)
+          case lang.RecordUpdate(fieldid, value) =>
+            val record = toSMT(args(0), scope, past)
+            val data = toSMT(value, scope, past)
+            recordUpdate(fieldid.toString, record, data)
           case _ =>
             val scopeWOpApp = scope + opapp
             val argsInSMT = toSMTs(args, scopeWOpApp, past)

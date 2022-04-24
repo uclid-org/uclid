@@ -106,6 +106,9 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
         inds.forall(ind => isStatelessExpr(ind, context)) &&
         args.forall(arg => isStatelessExpr(arg, context)) &&
         isStatelessExpr(value, context)
+      case OperatorApplication(RecordUpdate(id, expr), args) =>
+        isStatelessExpr(expr, context) &&
+        args.forall(a => isStatelessExpr(a, context))
       case OperatorApplication(FiniteForallOp(_, gId), _) =>
         val opapp = e.asInstanceOf[OperatorApplication]
         isStatelessExpr(gId, context) &&
@@ -175,6 +178,10 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
         val esP = es.map(e => rewrite(e, context))
         val valueP = rewrite(value, context)
         OperatorApplication(ArrayUpdate(indsP, valueP), esP)
+      case OperatorApplication(RecordUpdate(id, expr), es) =>
+        val esP = es.map(e => rewrite(e, context))
+        val exprP = rewrite(expr, context)
+        OperatorApplication(RecordUpdate(id, exprP), esP)
       case opapp : OperatorApplication =>
         val operandsP = opapp.operands.map(arg => rewrite(arg, context + opapp.op))
         OperatorApplication(opapp.op, operandsP)

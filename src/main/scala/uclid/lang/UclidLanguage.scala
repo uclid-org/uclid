@@ -564,6 +564,13 @@ case class ArrayUpdate(indices: List[Expr], value: Expr) extends Operator {
   override def canGenerateCodegenExpr: Boolean = value.canGenerateCodegenExpr && 
     indices.foldLeft(true)((b, e) => b && e.canGenerateCodegenExpr)
 }
+case class RecordUpdate(fieldid: Identifier, value: Expr) extends Operator {
+  override def toString: String = {
+    "[" + fieldid.name + " := " + value.toString() + "]"
+  }
+  override def fixity: Int = Operator.POSTFIX
+  override def canGenerateCodegenExpr: Boolean = value.canGenerateCodegenExpr
+}
 case class GetNextValueOp() extends Operator {
   override def toString = "'"
   override def fixity = Operator.POSTFIX

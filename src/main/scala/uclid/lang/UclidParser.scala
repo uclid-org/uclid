@@ -189,7 +189,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     // lazy val TemporalOpRelease = "R"
 
     lexical.delimiters ++= List("(", ")", ",", "[", "]",
-      "bv", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->",
+      "bv", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->", ":=",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul, OpDiv, OpUDiv,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, 
       OpEQ, OpNE, OpConcat, OpNot, OpMinus, OpPrime, OpBvUrem, OpBvSrem)
@@ -253,6 +253,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val ArrayStoreOp: Parser[ArrayUpdate] =
       ("[" ~> (Expr ~ rep("," ~> Expr) ~ ("->" ~> Expr)) <~ "]") ^^
       {case e ~ es ~ r => ArrayUpdate(e :: es, r)}
+    lazy val RecordStoreOp: Parser[RecordUpdate] =
+      ("[" ~> (Id ~ (":=" ~> Expr)) <~ "]") ^^ 
+      {case id ~ e => RecordUpdate(id, e)}
     lazy val ConstBitVectorSlice: Parser[lang.ConstBitVectorSlice] =
       positioned { ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt) } }
     lazy val VarBitVectorSlice: Parser[lang.VarBitVectorSlice] =
@@ -376,7 +379,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     /** ExpressionSuffixes. */
     lazy val ExprSuffix: PackratParser[Operator] = positioned {
-      ArraySelectOp | ArrayStoreOp | ExtractOp | RecordSelectOp | HyperSelectOp
+      ArraySelectOp | ArrayStoreOp | RecordStoreOp | ExtractOp | RecordSelectOp | HyperSelectOp
     }
     /** E12 = E12 (ExprList) | E12 ExprSuffix | E15 */
     lazy val E12: PackratParser[Expr] = positioned {

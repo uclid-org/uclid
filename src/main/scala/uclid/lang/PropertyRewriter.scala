@@ -257,6 +257,8 @@ class LTLPropertyRewriterPass extends RewritePass {
           case ArrayUpdate(es, m) =>
             val esP = es.map(recurse(_))
             OperatorApplication(ArrayUpdate(esP, recurse(m)), args.map(recurse(_)))
+          case RecordUpdate(id, expr) =>
+            OperatorApplication(RecordUpdate(id, recurse(expr)), args.map(recurse(_)))
           case _ =>
             OperatorApplication(op, args.map(a => recurse(a)))
         }
