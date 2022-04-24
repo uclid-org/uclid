@@ -223,6 +223,7 @@ object ReplacePolymorphicOperators {
           case p : PolymorphicOperator => toType(p, typ)
           case ArraySelect(es) => ArraySelect(rs(es))
           case ArrayUpdate(es, e) => ArrayUpdate(rs(es), r(e))
+          case RecordUpdate(id, e) => RecordUpdate(id, r(e))
           case _ => op
         }
         OperatorApplication(opP, rs(operands))
@@ -591,6 +592,15 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           }
           checkTypeError(typeOf(e, c) == arrayType.outType, "Invalid type of update value", e.pos, c.filename)
           arrayType
+        case RecordUpdate(id, e) =>
+          Utils.assert(argTypes.size == 1, "Expected only one argument to record update operator")
+          checkTypeError(argTypes(0).isRecord, "Expected an array here", opapp.operands(0).pos, c.filename)
+          val recordType = argTypes(0).asInstanceOf[lang.RecordType]
+          val recordFieldTypes = recordType.fields
+          checkTypeError(recordFieldTypes.map(a => a._1) contains id, "Invalid field-name in record update operator", id.pos, c.filename)
+          val fieldType = recordFieldTypes.filter(a => (a._1.name == id.name))(0)._2
+          checkTypeError(typeOf(e, c) == fieldType, "Invalid field-type in record update operator", id.pos, c.filename)
+          recordType
         case SelectFromInstance(field) =>
           Utils.assert(argTypes.size == 1, "Select operator must have exactly one operand.")
           val inst= argTypes(0)

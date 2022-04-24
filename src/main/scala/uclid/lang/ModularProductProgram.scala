@@ -441,8 +441,11 @@ class ModularProductProgramPass extends RewritePass {
                         val newindices = indices.map(getRenamedExpr(_, context, copy))
                         val newVal = getRenamedExpr(value, context, copy)
                         OperatorApplication(ArrayUpdate(newindices,newVal),operands.map(getRenamedExpr(_, context, copy)))
+                    case RecordUpdate(id, expr) =>
+                        val newExpr = getRenamedExpr(expr, context, copy)
+                        OperatorApplication(RecordUpdate(id,newExpr), operands.map(getRenamedExpr(_, context, copy)))
                     case _ => OperatorApplication(op, operands.map(getRenamedExpr(_, context, copy)))
-                    }   
+                }
 
                 case FuncApplication(e, args) => FuncApplication(e, args.map(getRenamedExpr(_, context, copy)))
                 

@@ -113,6 +113,9 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
         inds.forall(ind => isStatelessExpr(ind, context)) &&
         args.forall(arg => isStatelessExpr(arg, context)) &&
         isStatelessExpr(value, context)
+      case OperatorApplication(RecordUpdate(id, expr), args) =>
+        isStatelessExpr(expr, context) &&
+        args.forall(arg => isStatelessExpr(arg, context))
       case opapp : OperatorApplication =>
         opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
       case a : ConstArray =>

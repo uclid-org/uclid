@@ -56,7 +56,6 @@ import scala.util.parsing.input.NoPosition
 
 import org.json4s._
 import org.json4s.JsonDSL._
-import org.json4s.JsonDSL.WithBigDecimal._
 import org.json4s.jackson.JsonMethods._
 import scala.collection.mutable
 
@@ -1275,14 +1274,14 @@ class SymbolicSimulator (module : Module) {
     // Get each counterexample trace
     val jsonobj : JObject = JObject(results.filter(res => labelMatches(res.assert) && res.result.isModelDefined).map{(result) => {
       val prop_name : String = result.assert.name.split("\\s+").mkString("__")
-      ((prop_name ++ "__" ++ prop_counter.incrCount(prop_name).toString()) 
+      ((prop_name + "__" + prop_counter.incrCount(prop_name).toString()) 
         -> printCEXJSON(result, exprs))
     }})
     // Write counterexample trace
     if (jsonobj.values.size > 0) {
       val filename : String = config.jsonCEXfile.isEmpty match {
         case true => "cex.json"
-        case false => (config.jsonCEXfile ++ ".json")
+        case false => (config.jsonCEXfile + ".json")
       }
       val fh  = new File(filename)
       val bw  = new BufferedWriter(new FileWriter(fh))
@@ -1404,7 +1403,7 @@ class SymbolicSimulator (module : Module) {
     exprs.foreach { (e) => {
       try {
         val result = m.evalAsString(evaluate(e._1.id, f, frameTbl, frameNumber, scope))
-        val value = (Try(if (result.toBoolean) BigInt(1) else BigInt(0)).toOption ++ Try(BigInt(result)).toOption).head
+        val value = (Try(if (result.toBoolean) BigInt(1) else BigInt(0)).toOption.++:(Try(BigInt(result)).toOption)).head
         vcd.wireChanged(e._2, value)
       } catch {
         case excp : Utils.UnknownIdentifierException =>
@@ -1482,6 +1481,10 @@ class SymbolicSimulator (module : Module) {
         inds.forall(ind => isStatelessExpr(ind, context)) &&
         args.forall(arg => isStatelessExpr(arg, context)) &&
         isStatelessExpr(value, context)
+      case OperatorApplication(RecordUpdate(ind, value), args) =>
+        isStatelessExpr(ind, context) && 
+        isStatelessExpr(value, context) &&
+        args.forall(arg => isStatelessExpr(arg, context))
       case opapp : OperatorApplication =>
         opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
       case a : ConstArray =>
@@ -1688,19 +1691,10 @@ class SymbolicSimulator (module : Module) {
       }
     }
 
-    // Helper function to read from a record.
-    def recordSelect(field : String, rec : smt.Expr) = {
-      smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
-    }
-    // Helper function to update a record.
-    def recordUpdate(field : String, rec : smt.Expr, newVal : smt.Expr) = {
-      smt.OperatorApplication(smt.RecordUpdateOp(field), List(rec, newVal))
-    }
-
     def simulateRecordUpdateExpr(st : smt.Expr, fields : List[String], newVal : smt.Expr) : smt.Expr = {
       fields match {
         case hd :: tl =>
-          recordUpdate(hd, st, simulateRecordUpdateExpr(recordSelect(hd, st), tl, newVal))
+          smt.Converter.recordUpdate(hd, st, simulateRecordUpdateExpr(smt.Converter.recordSelect(hd, st), tl, newVal))
         case Nil =>
           newVal
       }

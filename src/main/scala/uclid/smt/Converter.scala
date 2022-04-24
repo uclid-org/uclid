@@ -244,67 +244,80 @@ object Converter {
     }
   }
 
+  // Helper function to read from a record.
+  def recordSelect(field : String, rec : smt.Expr) = {
+    smt.OperatorApplication(smt.RecordSelectOp(field), List(rec))
+  }
+  // Helper function to update a record.
+  def recordUpdate(field : String, rec : smt.Expr, newVal : smt.Expr) = {
+    smt.OperatorApplication(smt.RecordUpdateOp(field), List(rec, newVal))
+  }
+  
   def _exprToSMT(expr : lang.Expr, scope : lang.Scope, past : Int, idToSMT : ((lang.Identifier, lang.Scope, Int) => smt.Expr)) : smt.Expr = {
     def toSMT(expr : lang.Expr, scope : lang.Scope, past : Int) : smt.Expr = _exprToSMT(expr, scope, past, idToSMT)
     def toSMTs(es : List[lang.Expr], scope : lang.Scope, past : Int) : List[smt.Expr] = es.map((e : lang.Expr) => toSMT(e, scope, past))
 
-     expr match {
-       case id : lang.Identifier => idToSMT(id, scope, past)
-       case lang.IntLit(n) => smt.IntLit(n)
-       case lang.BoolLit(b) => smt.BooleanLit(b)
-       case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
-       case lang.FloatLit(i,f,e,s) => 
-         smt.FloatLit(i,f,e,s)
-       case lang.ConstArray(value, arrTyp) =>
-         smt.ConstArray(toSMT(value, scope, past), typeToSMT(arrTyp).asInstanceOf[ArrayType])
-       case lang.StringLit(_) => throw new Utils.RuntimeError("Strings are not supported in smt.Converter")
-       case lang.Tuple(args) => smt.MakeTuple(toSMTs(args, scope, past))
-       case opapp : lang.OperatorApplication =>
-         val op = opapp.op
-         val args = opapp.operands
-         op match {
-           case lang.OldOperator() | lang.PastOperator() =>
-             toSMT(args(0), scope, 1)
-           case lang.HistoryOperator() =>
-             toSMT(args(0), scope, args(1).asInstanceOf[lang.IntLit].value.toInt)
-           case lang.GetNextValueOp() =>
-             toSMT(args(0), scope, past)
-           case lang.ConcatOp() =>
-             val scopeWOpApp = scope + opapp
-             val argsInSMT = toSMTs(args, scopeWOpApp, past)
-             Utils.assert(argsInSMT.length == 2, "Bitvector concat must have two arguments.")
-             Utils.assert(argsInSMT.forall(_.typ.isBitVector), "Argument to bitvector concat must be a bitvector.")
-             val width = argsInSMT.foldLeft(0)((acc, ai) => ai.typ.asInstanceOf[BitVectorType].width + acc)
-             smt.OperatorApplication(smt.BVConcatOp(width), argsInSMT)
-           case lang.ArraySelect(index) =>
-             val arr = toSMT(args(0), scope, past)
-             smt.ArraySelectOperation(arr, toSMTs(index, scope, past))
-           case lang.ArrayUpdate(index, value) =>
-             val arr = toSMT(args(0), scope, past)
-             val data = toSMT(value, scope, past)
-             smt.ArrayStoreOperation(arr, toSMTs(index, scope, past), data)
-           case _ =>
-             val scopeWOpApp = scope + opapp
-             val argsInSMT = toSMTs(args, scopeWOpApp, past)
-             smt.OperatorApplication(opToSMT(op, scope + opapp, past, idToSMT), argsInSMT)
-         }
-       case lang.FuncApplication(f,args) => f match {
-         case lang.Identifier(_) =>
-           smt.FunctionApplication(toSMT(f, scope, past), toSMTs(args, scope, past))
-         case lang.Lambda(_,_) =>
-           // FIXME: beta sub
-           throw new Utils.UnimplementedException("Beta reduction is not implemented yet.")
-         case _ =>
+    expr match {
+      case id : lang.Identifier => idToSMT(id, scope, past)
+      case lang.IntLit(n) => smt.IntLit(n)
+      case lang.BoolLit(b) => smt.BooleanLit(b)
+      case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
+      case lang.FloatLit(i,f,e,s) => 
+        smt.FloatLit(i,f,e,s)
+      case lang.ConstArray(value, arrTyp) =>
+        smt.ConstArray(toSMT(value, scope, past), typeToSMT(arrTyp).asInstanceOf[ArrayType])
+      case lang.StringLit(_) => throw new Utils.RuntimeError("Strings are not supported in smt.Converter")
+      case lang.Tuple(args) => smt.MakeTuple(toSMTs(args, scope, past))
+      case opapp : lang.OperatorApplication =>
+        val op = opapp.op
+        val args = opapp.operands
+        op match {
+          case lang.OldOperator() | lang.PastOperator() =>
+            toSMT(args(0), scope, 1)
+          case lang.HistoryOperator() =>
+            toSMT(args(0), scope, args(1).asInstanceOf[lang.IntLit].value.toInt)
+          case lang.GetNextValueOp() =>
+            toSMT(args(0), scope, past)
+          case lang.ConcatOp() =>
+            val scopeWOpApp = scope + opapp
+            val argsInSMT = toSMTs(args, scopeWOpApp, past)
+            Utils.assert(argsInSMT.length == 2, "Bitvector concat must have two arguments.")
+            Utils.assert(argsInSMT.forall(_.typ.isBitVector), "Argument to bitvector concat must be a bitvector.")
+            val width = argsInSMT.foldLeft(0)((acc, ai) => ai.typ.asInstanceOf[BitVectorType].width + acc)
+            smt.OperatorApplication(smt.BVConcatOp(width), argsInSMT)
+          case lang.ArraySelect(index) =>
+            val arr = toSMT(args(0), scope, past)
+            smt.ArraySelectOperation(arr, toSMTs(index, scope, past))
+          case lang.ArrayUpdate(index, value) =>
+            val arr = toSMT(args(0), scope, past)
+            val data = toSMT(value, scope, past)
+            smt.ArrayStoreOperation(arr, toSMTs(index, scope, past), data)
+          case lang.RecordUpdate(fieldid, value) =>
+            val record = toSMT(args(0), scope, past)
+            val data = toSMT(value, scope, past)
+            recordUpdate(fieldid.toString, record, data)
+          case _ =>
+            val scopeWOpApp = scope + opapp
+            val argsInSMT = toSMTs(args, scopeWOpApp, past)
+            smt.OperatorApplication(opToSMT(op, scope + opapp, past, idToSMT), argsInSMT)
+        }
+      case lang.FuncApplication(f,args) => f match {
+        case lang.Identifier(_) =>
+          smt.FunctionApplication(toSMT(f, scope, past), toSMTs(args, scope, past))
+        case lang.Lambda(_,_) =>
+          // FIXME: beta sub
+          throw new Utils.UnimplementedException("Beta reduction is not implemented yet.")
+        case _ =>
            throw new Utils.RuntimeError("Should never get here.")
-       }
-       // Unimplemented operators.
-       case lang.Lambda(_,_) =>
-         throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
-       // Troublesome operators.
-       case lang.FreshLit(_) =>
-         throw new Utils.RuntimeError("Should never get here. FreshLits must have been rewritten by this point.")
-       case lang.ExternalIdentifier(_, _) =>
-         throw new Utils.RuntimeError("Should never get here. ExternalIdentifiers must have been rewritten by this point.")
+      }
+      // Unimplemented operators.
+      case lang.Lambda(_,_) =>
+        throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
+      // Troublesome operators.
+      case lang.FreshLit(_) =>
+        throw new Utils.RuntimeError("Should never get here. FreshLits must have been rewritten by this point.")
+      case lang.ExternalIdentifier(_, _) =>
+        throw new Utils.RuntimeError("Should never get here. ExternalIdentifiers must have been rewritten by this point.")
     }
   }
 

@@ -1121,6 +1121,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
         result = inds.foldLeft(result)((acc, ind) => visitExpr(ind, acc, context))
       case ArrayUpdate(inds, value) =>
         result = inds.foldLeft(visitExpr(value, result, context))((acc, ind) => visitExpr(ind, acc, context))
+      case RecordUpdate(id, expr) =>
+        result = visitIdentifier(id, visitExpr(expr, result, context), context)
       case _ =>
     }
     result = pass.applyOnOperator(TraversalDirection.Up, op, result, context)
@@ -2310,6 +2312,15 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
           case Some(vP) => Some(ArrayUpdate(indsP, vP))
           case None => None
         }
+      case RecordUpdate(id, expr) => {
+        visitIdentifier(id, context) match {
+          case Some(idP) => visitExpr(expr, context) match {
+            case Some(exprP) => Some(RecordUpdate(idP, exprP))
+            case None => None
+          }
+          case None => None
+        }
+      }
       case _ =>
         pass.rewriteOperator(op, context)
     }

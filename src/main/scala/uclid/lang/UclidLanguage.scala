@@ -551,6 +551,12 @@ case class ArrayUpdate(indices: List[Expr], value: Expr) extends Operator {
   }
   override def fixity = Operator.POSTFIX
 }
+case class RecordUpdate(fieldid: Identifier, value: Expr) extends Operator {
+  override def toString: String = {
+    "[" + fieldid.name + " := " + value.toString() + "]"
+  }
+  override def fixity: Int = Operator.POSTFIX
+}
 case class GetNextValueOp() extends Operator {
   override def toString = "'"
   override def fixity = Operator.POSTFIX
