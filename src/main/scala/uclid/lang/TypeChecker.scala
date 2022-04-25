@@ -594,12 +594,12 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           arrayType
         case RecordUpdate(id, e) =>
           Utils.assert(argTypes.size == 1, "Expected only one argument to record update operator")
-          checkTypeError(argTypes(0).isRecord, "Expected an array here", opapp.operands(0).pos, c.filename)
+          checkTypeError(argTypes(0).isRecord, "Expected a record here", opapp.operands(0).pos, c.filename)
           val recordType = argTypes(0).asInstanceOf[lang.RecordType]
           val recordFieldTypes = recordType.fields
           checkTypeError(recordFieldTypes.map(a => a._1) contains id, "Invalid field-name in record update operator", id.pos, c.filename)
           val fieldType = recordFieldTypes.filter(a => (a._1.name == id.name))(0)._2
-          checkTypeError(typeOf(e, c) == fieldType, "Invalid field-type in record update operator", id.pos, c.filename)
+          checkTypeError(typeOf(e, c) == fieldType, "Invalid value-type in record update operator", id.pos, c.filename)
           recordType
         case SelectFromInstance(field) =>
           Utils.assert(argTypes.size == 1, "Select operator must have exactly one operand.")

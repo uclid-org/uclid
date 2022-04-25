@@ -6,19 +6,23 @@ module main {
     var cache1  : cache_t;
 
     init {
-        cache.valid = true;
-        cache.value = 10;
         cache1 = cache[value := 2022];
     }
 
-    next {
-        havoc cache1;
+    procedure write_to_cache1 ()
+        modifies cache1;
+    {
+        cache1 = cache1[value := (cache1.value+1)];
     }
 
-    invariant trivial1  : cache1.value == 2022;
+    next {
+        call () = write_to_cache1();
+    }
+
+    invariant trivial1  : cache1.value < 2024;
 
     control {
-        v = bmc(1);
+        v = bmc(2);
         check;
         print_results;
         v.print_cex_json(cache1);

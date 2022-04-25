@@ -6,16 +6,14 @@ module main {
     var cache1  : cache_t;
 
     init {
-        cache.valid = true;
-        cache.value = 10;
         cache1 = cache[value := 2022];
     }
 
     next {
-        havoc cache1;
+        cache1' = cache[value := 42];
     }
 
-    invariant trivial1  : cache1.value == 2022;
+    invariant trivial1  : cache1.value == 2022 || cache1.value == 42;
 
     control {
         v = bmc(1);

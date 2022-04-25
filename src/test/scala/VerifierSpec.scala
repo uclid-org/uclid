@@ -174,6 +174,22 @@ class BasicVerifierSpec extends AnyFlatSpec {
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
   }
+  "test-record-update-op-1.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-1.ucl", 1)
+  }
+  "test-record-update-op-5.ucl" should "fail to verify 2 assertions." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-5.ucl", 2)
+  }
+  "test-record-update-op-6.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-6.ucl", 0)
+  }
+  "test-record-update-op-7.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-7.ucl", 1)
+  }
+  "test-record-update-op-8.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-8.ucl", 1)
+  }
+
   "test-tuple-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-tuple-record-1.ucl", 0)
   }
@@ -381,6 +397,10 @@ class InductionVerifSpec extends AnyFlatSpec {
   "test-tuple.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-tuple.ucl", 0)
   }
+  "test-record-update-op-9.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-9.ucl", 0)
+  }
+
 }
 class QuantifierVerifSpec extends AnyFlatSpec {
   "test-forall-0.ucl" should "verify all assertions." in {
