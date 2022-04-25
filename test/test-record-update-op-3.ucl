@@ -2,13 +2,11 @@ module main {
 
     type cache_t = record { valid : boolean, value : integer };
 
-    var cache   : cache_t;
-    var cache1  : cache_t;
+    var notarecord  : [bv4]bv4;
+    var cache1      : cache_t;
 
     init {
-        cache.valid = true;
-        cache.value = 10;
-        cache1 = cache[value := 2022];
+        cache1 = notarecord[badfield := 2022];
     }
 
     next {

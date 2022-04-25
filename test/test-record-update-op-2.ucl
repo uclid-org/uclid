@@ -8,7 +8,7 @@ module main {
     init {
         cache.valid = true;
         cache.value = 10;
-        cache1 = cache[value := 2022];
+        cache1 = cache[badfield := 2022];
     }
 
     next {

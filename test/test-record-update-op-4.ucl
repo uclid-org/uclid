@@ -6,9 +6,7 @@ module main {
     var cache1  : cache_t;
 
     init {
-        cache.valid = true;
-        cache.value = 10;
-        cache1 = cache[value := 2022];
+        cache1 = cache[value := 0xDEADBEEFbv32];
     }
 
     next {
