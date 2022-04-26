@@ -229,6 +229,8 @@ object ReplacePolymorphicOperators {
         OperatorApplication(opP, rs(operands))
       case ConstArray(exp, typ) =>
         ConstArray(r(exp), typ)
+      case ConstRecord(fs) => 
+        ConstRecord(fs.map(f => (f._1, r(f._2))))
       case FuncApplication(expr, args) =>
         FuncApplication(r(expr), rs(args))
       case Lambda(args, expr) =>
@@ -700,6 +702,10 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               raiseTypeError("Expected an array type", a.typ.pos, c.filename)
               UndefinedType()
           }
+        case r : ConstRecord => 
+          val fieldnames = r.fieldvalues.map(f => f._1.name)
+          checkTypeError(fieldnames.size == fieldnames.toSet.size, "Duplicate field-names in ConstRecord", r.pos, c.filename)
+          new RecordType(r.fieldvalues.map(f => (f._1, typeOf(f._2, c))))
         case r : Tuple => new TupleType(r.values.map(typeOf(_, c)))
         case opapp : OperatorApplication => opAppType(opapp)
         case fapp : FuncApplication => funcAppType(fapp)

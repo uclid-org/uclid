@@ -428,7 +428,8 @@ class ModularProductProgramPass extends RewritePass {
                     }
                 case ConstArray(_, _) =>
                     throw new Utils.UnimplementedException("Type ConstArray not supported.")
-
+                case ConstRecord(_) => 
+                    throw new Utils.UnimplementedException("Type ConstRecord not supported.")
                 case Tuple(values) => Tuple(values.map(getRenamedExpr(_, context, copy)))
 
                 case OperatorApplication(op, operands) =>  op match {

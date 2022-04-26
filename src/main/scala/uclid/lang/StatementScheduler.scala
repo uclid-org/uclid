@@ -182,6 +182,7 @@ object StatementScheduler {
       case OperatorApplication(ArrayUpdate(inds, exp), exps) => readSets(inds, prime) ++ readSet(exp, prime) ++ readSets(exps, prime)
       case OperatorApplication(_, es) => readSets(es, prime)
       case ConstArray(e, _) => readSet(e, prime)
+      case ConstRecord(fs) => readSets(fs.map(a => a._2), prime)
       case FuncApplication(e, args) => readSet(e, prime) ++ readSets(args, prime)
       case Lambda(_, expr) => readSet(expr, prime)
     }

@@ -67,6 +67,7 @@ class TaintNextPass extends RewritePass {
       case FreshLit(_) => None
       case IntLit(_) => None
       case ConstArray(_,_) => None
+      case ConstRecord(_) => None
       case StringLit(_) => None
       case Tuple(_) => None // Not handled
       case OperatorApplication(ArraySelect(_), _) |

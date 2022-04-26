@@ -647,7 +647,13 @@ case class StringLit(value: String) extends Literal {
 }
 
 case class ConstArray(exp: Expr, typ: Type) extends Expr {
-  override def toString  = "const(%s, %s)".format(exp.toString(), typ.toString())
+  override def toString = "const(%s, %s)".format(exp.toString(), typ.toString())
+}
+
+case class ConstRecord(fieldvalues: List[(Identifier, Expr)]) extends Expr {
+  override def toString = "const_record(%s)".format(
+    fieldvalues.map(a => "%s := %s".format(a._1.toString, a._2.toString)).mkString(", ")
+  )
 }
 
 case class Tuple(values: List[Expr]) extends Expr {

@@ -848,6 +848,7 @@ class SymbolicSimulator (module : Module) {
       case smt.BitVectorLit(bv, w) => List()
       case smt.EnumLit(id, eTyp) => List()
       case smt.ConstArray(v, arrTyp) => List()
+      case smt.ConstRecord(fs) => List()
       case smt.MakeTuple(args) => args.flatMap(e => getHyperSelects(e))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
@@ -920,6 +921,7 @@ class SymbolicSimulator (module : Module) {
       case smt.BitVectorLit(bv, w) => List()
       case smt.EnumLit(id, eTyp) => List()
       case smt.ConstArray(v, arrTyp) => List()
+      case smt.ConstRecord(fs) => List()
       case smt.MakeTuple(args) => args.flatMap(e => getHavocs(e))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
@@ -1009,6 +1011,7 @@ class SymbolicSimulator (module : Module) {
       case smt.BitVectorLit(bv, w) => e
       case smt.EnumLit(id, eTyp) => e
       case smt.ConstArray(exp, arrTyp) => smt.ConstArray(_substitute(exp, sym), arrTyp)
+      case smt.ConstRecord(fs) => smt.ConstRecord(fs.map(f => (f._1, _substitute(f._2, sym))))
       case smt.MakeTuple(args) => smt.MakeTuple(args.map(e => _substitute(e, sym)))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
@@ -1489,6 +1492,8 @@ class SymbolicSimulator (module : Module) {
         opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
       case a : ConstArray =>
         isStatelessExpr(a.exp, context)
+      case r: ConstRecord => 
+        r.fieldvalues.forall(f => isStatelessExpr(f._2, context))
       case fapp : FuncApplication =>
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
       case lambda : Lambda =>

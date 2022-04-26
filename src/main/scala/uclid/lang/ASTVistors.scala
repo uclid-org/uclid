@@ -163,6 +163,7 @@ trait ReadOnlyPass[T] {
   def applyOnBitVectorLit(d : TraversalDirection.T, bv : BitVectorLit, in : T, context : Scope) : T = { in }
   def applyOnFloatLit(d : TraversalDirection.T, flt : FloatLit, in : T, context : Scope) : T = { in }
   def applyOnConstArrayLit(d : TraversalDirection.T, a : ConstArray, in : T, context : Scope) : T = { in }
+  def applyOnConstRecordLit(d : TraversalDirection.T, a : ConstRecord, in : T, context : Scope) : T = { in }
   def applyOnStringLit(d : TraversalDirection.T, string: StringLit, in : T, context : Scope) : T = { in }
   def applyOnTuple(d : TraversalDirection.T, rec : Tuple, in : T, context : Scope) : T = { in }
   def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = { in }
@@ -267,6 +268,7 @@ trait RewritePass {
   def rewriteBitVectorLit(bv : BitVectorLit, ctx : Scope) : Option[BitVectorLit] = { Some(bv) }
   def rewriteFloatLit(flt : FloatLit, ctx : Scope) : Option[FloatLit] = { Some(flt) }
   def rewriteConstArrayLit(a : ConstArray, ctx : Scope) : Option[ConstArray] = { Some(a) }
+  def rewriteConstRecordLit(r : ConstRecord, ctx : Scope) : Option[ConstRecord] = { Some(r) }
   def rewriteNumericLit(n : NumericLit, ctx : Scope) : Option[NumericLit] = { Some(n) }
   def rewriteStringLit(s : StringLit, ctx : Scope) : Option[StringLit] = { Some(s) }
   def rewriteTuple(rec : Tuple, ctx : Scope) : Option[Tuple] = { Some(rec) }
@@ -998,6 +1000,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case rec : Tuple => visitTuple(rec, result, context)
       case opapp : OperatorApplication => visitOperatorApp(opapp, result, context)
       case a : ConstArray => visitConstArray(a, result, context)
+      case r : ConstRecord => visitConstRecord(r, result, context)
       case fapp : FuncApplication => visitFuncApp(fapp, result, context)
       case lambda : Lambda => visitLambda(lambda, result, context)
     }
@@ -1088,6 +1091,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitType(a.typ, result, context)
     result = pass.applyOnConstArrayLit(TraversalDirection.Up, a, result, context)
     return result
+  }
+  def visitConstRecord(r : ConstRecord, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnConstRecordLit(TraversalDirection.Down, r, result, context)
+    result = r.fieldvalues.foldLeft(result)((acc, f) => visitExpr(f._2, acc, context))
+    result = pass.applyOnConstRecordLit(TraversalDirection.Up, r, result, context)
+    result
   }
   def visitTuple(rec : Tuple, in : T, context : Scope) : T = {
     var result : T = in
@@ -2139,6 +2149,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case rec : Tuple => visitTuple(rec, context)
       case opapp : OperatorApplication => visitOperatorApp(opapp, context)
       case a : ConstArray => visitConstArray(a, context)
+      case r : ConstRecord => visitConstRecord(r, context)
       case fapp : FuncApplication => visitFuncApp(fapp, context)
       case lambda : Lambda => visitLambda(lambda, context)
     }).flatMap(pass.rewriteExpr(_, context))
@@ -2197,6 +2208,22 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
         None
     }
     return ASTNode.introducePos(setPosition, setFilename, aP2, a.position)
+  }
+  def visitFieldAssign(f: (Identifier, Expr), context : Scope) : Option[(Identifier, Expr)] = {
+    val idP = visitIdentifier(f._1, context)
+    val exprP = visitExpr(f._2, context)
+    idP match {
+      case Some(iP) => exprP match {
+        case Some(eP) => Some((iP, eP))
+        case _ => None
+      }
+      case _ => None
+    }
+  }
+  def visitConstRecord(r: ConstRecord, context: Scope) : Option[ConstRecord] = {
+    val expsP = r.fieldvalues.map(f => visitFieldAssign(f, context))
+    val rP = pass.rewriteConstRecordLit(ConstRecord(expsP.flatten), context)
+    return ASTNode.introducePos(setPosition, setFilename, rP, r.position)
   }
   def visitNumericLiteral(n : NumericLit, context : Scope) : Option[NumericLit] = {
     val nP1 = n match {
