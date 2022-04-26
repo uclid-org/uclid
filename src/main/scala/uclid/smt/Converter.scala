@@ -265,6 +265,8 @@ object Converter {
       case lang.FloatLit(i,f) => smt.FloatLit(i,f)
       case lang.ConstArray(value, arrTyp) =>
         smt.ConstArray(toSMT(value, scope, past), typeToSMT(arrTyp).asInstanceOf[ArrayType])
+      case lang.ConstRecord(fs) => 
+        smt.ConstRecord(fs.map(f => (f._1.toString, toSMT(f._2, scope, past))))
       case lang.StringLit(_) => throw new Utils.RuntimeError("Strings are not supported in smt.Converter")
       case lang.Tuple(args) => smt.MakeTuple(toSMTs(args, scope, past))
       case opapp : lang.OperatorApplication =>

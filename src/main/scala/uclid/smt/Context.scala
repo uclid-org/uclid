@@ -271,6 +271,9 @@ object Context
           case Symbol(_, _) | IntLit(_) | FloatLit(_,_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) | 
             ConstArray(_, _) | SynthSymbol (_, _, _, _, _) | OracleSymbol(_, _, _) =>
             rewrite(e)
+          case ConstRecord(fs) => 
+            val fsP = fs.map(f => (f._1, rewriteExpr(f._2, rewrite, memo)))
+            rewrite(ConstRecord(fsP))
           case OperatorApplication(op, operands) =>
             val operandsP = operands.map(arg => rewriteExpr(arg, rewrite, memo))
             rewrite(OperatorApplication(op, operandsP))
@@ -335,6 +338,8 @@ object Context
             eResult
           case ConstArray(expr, _) =>
             eResult ++ accumulateOverExpr(expr, apply, memo)
+          case ConstRecord(fs) => 
+            eResult ++ accumulateOverExprs(fs.map(f => f._2), apply, memo)
           case OperatorApplication(_,operands) =>
             eResult ++ accumulateOverExprs(operands, apply, memo)
           case ArraySelectOperation(e, index) =>

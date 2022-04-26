@@ -121,6 +121,8 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
         opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
       case a : ConstArray =>
         isStatelessExpr(a.exp, context)
+      case r : ConstRecord => 
+        r.fieldvalues.forall(f => isStatelessExpr(f._2, context))
       case fapp : FuncApplication =>
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
       case lambda : Lambda =>
@@ -188,6 +190,9 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
       case a : ConstArray =>
         val eP = rewrite(a.exp, context)
         ConstArray(eP, a.typ)
+      case r : ConstRecord =>
+        val fsP = r.fieldvalues.map(f => (f._1, rewrite(f._2, context)))
+        ConstRecord(fsP)
       case fapp : FuncApplication =>
         val eP = rewrite(fapp.e, context)
         val argsP = fapp.args.map(rewrite(_, context))

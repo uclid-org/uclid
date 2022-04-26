@@ -1,0 +1,21 @@
+module main {
+
+    var cache : record {valid : boolean, value : integer};
+
+    init {
+        cache = const_record(valid := true, value := 100);
+    }
+
+    next {
+        havoc cache;
+    }
+
+    invariant trivial : cache.valid;
+
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex(cache);
+    }
+}

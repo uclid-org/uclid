@@ -138,6 +138,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwVar = "var"
     lazy val KwSharedVar = "sharedvar"
     lazy val KwConst = "const"
+    lazy val KwConstRecord = "const_record"
     lazy val KwSkip = "skip"
     lazy val KwCall = "call"
     lazy val KwIf = "if"
@@ -199,7 +200,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwFloat, KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwImport,
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
-      KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
+      KwInstance, KwInput, KwOutput, KwConst, KwConstRecord, KwModule, KwType, KwEnum,
       KwRecord, KwSkip, KwDefine, KwFunction, KwOracle, KwControl, KwInit,
       KwNext, KwLambda, KwModifies, KwProperty, KwDefineAxiom,
       KwForall, KwExists, KwFiniteForall, KwFiniteExists, KwGroup, KwDefault, KwSynthesis, KwGrammar, KwRequires,
@@ -393,14 +394,25 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case (exp ~ typ) => lang.ConstArray(exp, typ)
       }
     }
-    /** E15 = false | true | Number | ConstArray | Id FuncApplication | (Expr) **/
+
+    lazy val RecordFieldAssign : PackratParser[(Identifier, Expr)] = {
+      Id ~ (":=" ~> Expr) ^^ { case id ~ e => (id, e) }
+    }
+    lazy val ConstRecord : PackratParser[lang.ConstRecord] = positioned {
+      KwConstRecord ~ "(" ~> RecordFieldAssign ~ rep("," ~> RecordFieldAssign) <~ ")" ^^ {
+        case a ~ as => lang.ConstRecord(a::as)
+      }
+    }
+
+    /** E15 = false | true | Number | ConstArray | ConstRecord | Id FuncApplication | (Expr) **/
     lazy val E15: PackratParser[Expr] = positioned {
         Literal |
         "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
         KwIf ~> ("(" ~> Expr <~ ")") ~ (KwThen ~> Expr) ~ (KwElse ~> Expr) ^^ {
           case expr ~ thenExpr ~ elseExpr => lang.OperatorApplication(lang.ITEOp(), List(expr, thenExpr, elseExpr))
         } |
-        ConstArray |
+        ConstArray | 
+        ConstRecord |
         KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => Lambda(idtyps, expr) } |
         "(" ~> Expr <~ ")" |
         Id <~ OpPrime ^^ { case id => lang.OperatorApplication(GetNextValueOp(), List(id)) } |

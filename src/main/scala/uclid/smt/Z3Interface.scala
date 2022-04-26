@@ -531,6 +531,9 @@ class Z3Interface() extends Context {
       case BooleanLit(b) => getBoolLit(b)
       case EnumLit(e, typ) => getEnumLit(e, typ)
       case ConstArray(expr, typ) => getConstArray(expr, typ)
+      case r : ConstRecord => 
+        val prodSort = getProductSort(r.typ.asInstanceOf[ProductType])
+        prodSort.mkDecl().apply(typecastAST[z3.Expr](r.fieldvalues.map(f => exprToZ3(f._2))).toSeq : _*)
       case MakeTuple(args) =>
         val tupleSort = getTupleSort(args.map(_.typ))
         tupleSort.mkDecl().apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
