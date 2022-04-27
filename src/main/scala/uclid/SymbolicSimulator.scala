@@ -56,9 +56,11 @@ import scala.util.parsing.input.NoPosition
 
 import org.json4s._
 import org.json4s.JsonDSL._
-import org.json4s.JsonDSL.WithBigDecimal._
+// import org.json4s.JsonDSL.WithBigDecimal._
 import org.json4s.jackson.JsonMethods._
 import scala.collection.mutable
+import uclid.smt.SMTLIB2Interface
+import uclid.smt.Context
 
 object UniqueIdGenerator {
   var i : Int = 0;
@@ -347,7 +349,7 @@ class SymbolicSimulator (module : Module) {
           case "print_cex" =>
             printCEX(proofResults, cmd.args, cmd.argObj)
           case "print_cex_json" =>
-            printCEXJSON(proofResults, cmd.args, cmd.argObj, config)
+            printCEXJSON(proofResults, cmd.args, cmd.argObj, config, solver)
           case "dump_cex_vcds" =>
             dumpCEXVCDFiles(proofResults)
           case "print_module" =>
@@ -1265,32 +1267,39 @@ class SymbolicSimulator (module : Module) {
     }}
   }
 
-  def printCEXJSON(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier], config : UclidMain.Config) {
+  def printCEXJSON(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier], config : UclidMain.Config, solver : Context) {
     def labelMatches(p : AssertInfo) : Boolean = {
       arg match {
         case Some(id) => id.toString == p.label || p.label.startsWith(id.toString + ":")
         case None => true
       }
     }
+    val isSMTLIB2Interface : Boolean = solver.isInstanceOf[SMTLIB2Interface] 
+    if (isSMTLIB2Interface) {
+      ULContext.extractPostTypeMap(solver.asInstanceOf[SMTLIB2Interface].typeMap)
+    }
+
     // One property can have multiple violating cexes, so index them
     val prop_counter : ObjectCounter[String] = new ObjectCounter[String]()
     UclidMain.printStatus("=================================")
     // Get each counterexample trace
     val jsonobj : JObject = JObject(results.filter(res => labelMatches(res.assert) && res.result.isModelDefined).map{(result) => {
       val prop_name : String = result.assert.name.split("\\s+").mkString("__")
-      ((prop_name ++ "__" ++ prop_counter.incrCount(prop_name).toString()) 
+      ((prop_name + "__" + prop_counter.incrCount(prop_name).toString()) 
         -> printCEXJSON(result, exprs))
     }})
     // Write counterexample trace
     if (jsonobj.values.size > 0) {
       val filename : String = config.jsonCEXfile.isEmpty match {
         case true => "cex.json"
-        case false => (config.jsonCEXfile ++ ".json")
+        case false => (config.jsonCEXfile + ".json")
       }
       val fh  = new File(filename)
       val bw  = new BufferedWriter(new FileWriter(fh))
-      bw.write(pretty(render(jsonobj)))
+      val jsonStr = pretty(render(jsonobj))
+      bw.write(jsonStr)
       bw.close()
+      UclidMain.setJSONString(jsonStr)
       UclidMain.printStatus("Wrote CEX traces to file: " + filename)
     }
   }
@@ -1322,10 +1331,10 @@ class SymbolicSimulator (module : Module) {
     Utils.assert(simTable.size >= 1, "Must have at least one trace")
     val lastFrame = res.assert.iter
     val json_trace : JArray = JArray(((0 to lastFrame).map { case (i) => {
-      try{
+      try {
           printFrameJSON(simTable, i, model, exprsToPrint, scope)
-      }  catch{
-          case _: Throwable => {
+      } catch {
+          case _ : Throwable => {
             UclidMain.printError("error: unable to parse counterexample frame")
             JString("error: unable to parse counterexample frame")
           }
@@ -1407,7 +1416,7 @@ class SymbolicSimulator (module : Module) {
     exprs.foreach { (e) => {
       try {
         val result = m.evalAsString(evaluate(e._1.id, f, frameTbl, frameNumber, scope))
-        val value = (Try(if (result.toBoolean) BigInt(1) else BigInt(0)).toOption ++ Try(BigInt(result)).toOption).head
+        val value = (Try(if (result.toBoolean) BigInt(1) else BigInt(0)).toOption.++:(Try(BigInt(result)).toOption)).head
         vcd.wireChanged(e._2, value)
       } catch {
         case excp : Utils.UnknownIdentifierException =>

@@ -1,0 +1,26 @@
+module main {
+
+    type cacheline_t = record { linevalid : boolean, linedata : integer };
+    type cache_t = record { valid : boolean, value : [integer]cacheline_t };
+
+    var cache   : cache_t;
+    var cacheline : cacheline_t;
+    var cache1  : cache_t;
+
+    init {
+        cache1 = cache[value := cache1.value[20 -> cacheline[linedata := 2022]]];
+    }
+
+    next {
+        havoc cache1;
+    }
+
+    invariant trivial1  : cache1.value[20].linedata == 2022;
+
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex_json(cache1);
+    }
+}
