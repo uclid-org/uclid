@@ -607,9 +607,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val UclidDefineFun : PackratParser[(lang.DefineDecl, String)] =
     "(" ~ KwDefFun ~> symbol ~ UclidFunArgs ~ UclidType ~ UclidExpr <~ ")" ^^ {
       case id ~ args ~ rTyp ~ expr => {
-        (lang.DefineDecl(lang.Identifier(id.name), lang.FunctionSig(args._1, rTyp._1), expr._1),
-          joinWithSpace(KwDefFun, id.name, args._2, rTyp._2, expr._2)
-        )
+        (lang.DefineDecl(lang.Identifier(id.name), lang.FunctionSig(args._1, rTyp._1), expr._1), expr._2)
       }
     }
   

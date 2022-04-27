@@ -385,11 +385,18 @@ object Context
     accumulateOverExpr(e, typeFinder _, MutableMap.empty)
   }
 
+  var mirrorTypeMap : SynonymMap = SynonymMap.empty
   def getMkTupleFunction(typeName: String) : String = {
     "_make_" + typeName
   }
   def getFieldName(field: String) : String = {
     "_field_" + field
+  }
+  def stripMkTupleFunction(id: String) : Option[String] = {
+    id.startsWith("_make_") match {
+      case true => Some(id.drop(6))
+      case false => None
+    }
   }
 
   def mergeCounts(m1 : Map[Expr, Int], m2 : Map[Expr, Int]) : Map[Expr, Int] = {

@@ -370,11 +370,12 @@ class SMTLIB2Model(stringModel : String) extends Model {
     definitions.size match {
       case 0 =>
         (false, e.toString())
-      case 1 => {
+      case 1 => 
         val expr : lang.Expr = definitions(0)._1.asInstanceOf[lang.DefineDecl].expr
-        if (expr.canGenerateCodegenExpr) (true, expr.codegenString)
-        else (false, definitions(0)._2)
-      }
+        expr.codegenUclidLang match {
+          case Some(eP) => (true, eP.toString)
+          case None => (false, definitions(0)._2)
+        }
       case _ =>
         throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
     }
