@@ -46,12 +46,67 @@ import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
 import scala.reflect.ClassTag
 import java.util.HashMap
-import uclid.smt.Context
+import uclid.smt.SynonymMap
+import uclid.smt.Converter
 
 object PrettyPrinter
 {
   val indentSeq = "  "
   def indent(n : Int) = indentSeq * n
+}
+
+/**
+ * UclidLang type synonyms map mirroring the typeMap in SMTLIB2Base
+ */
+case class UclidSynonymMap(fwdMap: Map[String, Type], val revMap: Map[Type, SynonymType]) {
+  def addSynonym(name: String, typ: Type) = {
+    UclidSynonymMap(fwdMap + (name -> typ), revMap + (typ -> SynonymType(Identifier(name))))
+  }
+  def get(name: String) : Option[Type] = fwdMap.get(name)
+  def get(typ: Type) : Option[SynonymType] = revMap.get(typ)
+  def contains(name: String) : Boolean = fwdMap.contains(name)
+  def contains(typ: Type) : Boolean = revMap.contains(typ)
+}
+object UclidSynonymMap {
+  def empty = UclidSynonymMap(Map.empty, Map.empty)
+}
+/** 
+ * This is allows types/other contextual information to be propagated
+ * to UclidLang from sources such as counterexamples
+ */
+object ULContext {
+  /** Original synonym map from the input ucl file */
+  var origTypeMap = UclidSynonymMap.empty
+  // * Has side effects, updates origTypeMap
+  def addSynonym(name: String, typ: Type) = {
+    origTypeMap = origTypeMap.addSynonym(name, typ)
+  }
+  /** Post-SMT typeMap reconstructed from SMT query/counterexample */
+  var postTypeMap = UclidSynonymMap.empty
+  // * Has side effects, updates postTypeMap
+  def extractPostTypeMap(typeMap_ : SynonymMap) : Unit = {
+    postTypeMap = UclidSynonymMap(
+      typeMap_.fwdMap.map({
+        case (s, typ) => (s, Converter.smtToType(typ))
+      }),
+      typeMap_.revMap.map({
+        case (typ, s) => (Converter.smtToType(typ), SynonymType(Identifier(s.name)))
+      })
+    )
+  }
+  // Performs smt_synonym_name -> lang.Type -> uclid_synonym_name conversion
+  def smtToLangSynonym(name : String) : Option[Type] = {
+    postTypeMap.get(name) match {
+      case Some(t) => origTypeMap.get(t)
+      case None => None
+    }
+  }
+  def stripMkTupleFunction(id: String) : Option[String] = {
+    id.startsWith("_make_") match {
+      case true => Some(id.drop(6))
+      case false => None
+    }
+  }
 }
 
 /** Singleton that generates unique ids for AST nodes. */
@@ -675,12 +730,12 @@ case class QualifiedIdentifierApplication (qid : QIdentifier, exprs : List[Expr]
         }
         case _ => None
       } else None 
-    case Identifier(name) => Context.stripMkTupleFunction(name) match {
+    case Identifier(name) => ULContext.stripMkTupleFunction(name) match {
       case Some(s) => {
-        val rawtype = Context.mirrorTypeMap.get(s).get.asInstanceOf[smt.ProductType]
+        val rawtype = ULContext.postTypeMap.get(s).get.asInstanceOf[ProductType]
         val exprsOrNone = exprs.map(_.codegenUclidLang)
-        if (exprsOrNone.forall(_.isDefined) && exprsOrNone.size == rawtype.fieldNames.size) {
-          Some(ConstRecord(rawtype.fieldNames.map(Identifier(_)) zip exprsOrNone.flatten))
+        if (exprsOrNone.forall(_.isDefined) && exprsOrNone.size == rawtype.fields.size) {
+          Some(ConstRecord(rawtype.fields.map(_._1) zip exprsOrNone.flatten))
         } else None
       }
       case None => None
@@ -1105,9 +1160,7 @@ case class SynonymType(id: Identifier) extends Type {
     case that: SynonymType => that.id.name == this.id.name
     case _ => false
   }
-  
-  // TODO: create a reverse mapping to the name from the original uclid file
-  // override def canGenerateCodegenExpr: Boolean = true
+  override def codegenUclidLang: Option[Type] = ULContext.smtToLangSynonym(id.name)
 }
 
 case class GroupType(typ : Type) extends Type {
@@ -1467,6 +1520,7 @@ case class ProcedureDecl(
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "type " + id + " = " + typ + "; // " + position.toString
   override def declNames = List(id)
+  ULContext.addSynonym(id.name, typ)
 }
 case class ModuleImportDecl(modId: Identifier) extends Decl {
   override def toString = "import %s;".format(modId.toString())

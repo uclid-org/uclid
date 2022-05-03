@@ -1276,7 +1276,7 @@ class SymbolicSimulator (module : Module) {
     }
     val isSMTLIB2Interface : Boolean = solver.isInstanceOf[SMTLIB2Interface] 
     if (isSMTLIB2Interface) {
-      Context.mirrorTypeMap = solver.asInstanceOf[SMTLIB2Interface].typeMap
+      ULContext.extractPostTypeMap(solver.asInstanceOf[SMTLIB2Interface].typeMap)
     }
 
     // One property can have multiple violating cexes, so index them
