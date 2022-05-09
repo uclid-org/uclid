@@ -186,17 +186,17 @@ object ReplacePolymorphicOperators {
     bvOp.pos = op.pos
     bvOp
   }
-  def toFloat(op : PolymorphicOperator) : FloatArgOperator = {
+  def toFloat(op : PolymorphicOperator, e: Int, s: Int) : FloatArgOperator = {
     val fltOp = op match {
-      case LTOp() => FPLTOp()
-      case GTOp() => FPGTOp()
-      case LEOp() => FPLEOp()
-      case GEOp() => FPGEOp()
-      case AddOp() => FPAddOp()
-      case SubOp() => FPSubOp()
-      case MulOp() => FPMulOp()
-      case DivOp() => FPDivOp()
-      case UnaryMinusOp() => FPUnaryMinusOp()
+      case LTOp() => FPLTOp(e,s)
+      case GTOp() => FPGTOp(e,s)
+      case LEOp() => FPLEOp(e,s)
+      case GEOp() => FPGEOp(e,s)
+      case AddOp() => FPAddOp(e,s)
+      case SubOp() => FPSubOp(e,s)
+      case MulOp() => FPMulOp(e,s)
+      case DivOp() => FPDivOp(e,s)
+      case UnaryMinusOp() => FPUnaryMinusOp(e,s)
     }
     fltOp.pos = op.pos
     fltOp
@@ -206,7 +206,7 @@ object ReplacePolymorphicOperators {
     typ match {
       case _ : IntegerType => toInt(op)
       case bvTyp : BitVectorType => toBitvector(op, bvTyp.width)
-      case fltTyp: FloatType => toFloat(op)
+      case fltTyp: FloatType => toFloat(op, fltTyp.exp, fltTyp.sig)
     }
   }
   def rewrite(e : Expr, typ : NumericType) : Expr = {
@@ -246,6 +246,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
 
   var polyOpMap : MutableMap[IdGenerator.Id, Operator] = MutableMap.empty
   var bvOpMap : MutableMap[IdGenerator.Id, Int] = MutableMap.empty
+  var fpOpMap : MutableMap[IdGenerator.Id, (Int, Int)] = MutableMap.empty
 
   override def reset() = {
     memo.clear()
@@ -363,9 +364,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case bv : BitVectorType =>
               polyOpMap.put(polyOp.astNodeId, ReplacePolymorphicOperators.toBitvector(polyOp, bv.width))
               polyResultType(polyOp, bv)
-            case flt: FloatType => 
-              polyOpMap.put(polyOp.astNodeId, ReplacePolymorphicOperators.toFloat(polyOp))
-              polyResultType(polyOp, flt)
+            case fp: FloatType => 
+              polyOpMap.put(polyOp.astNodeId, ReplacePolymorphicOperators.toFloat(polyOp, fp.exp, fp.sig))
+              polyResultType(polyOp, fp)
             case _ => throw new Utils.UnimplementedException("Unknown operand type to polymorphic operator '" + opapp.op.toString + "'")
           }
         }
@@ -387,10 +388,15 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes.size == floatOp.arity, "Operator '%s' must have exactly %d argument(s)".format(opapp.op.toString, floatOp.arity), opapp.pos, c.filename)
           checkTypeError(argTypes.forall(_.isInstanceOf[FloatType]), "Argument(s) to operator '" + opapp.op.toString + "' must be of type float", opapp.pos, c.filename)
           floatOp match {
-            case FPGTOp() | FPLTOp()| FPGEOp() | FPLEOp()| FPIsNanOp() =>
+            case FPGTOp(_,_) | FPLTOp(_,_)| FPGEOp(_,_) | FPLEOp(_,_)| FPIsNanOp(_,_) =>
+              val e = argTypes(0).asInstanceOf[FloatType].exp
+              val s = argTypes(0).asInstanceOf[FloatType].sig
+              fpOpMap.put(floatOp.astNodeId, (e,s))
               BooleanType()
-            case FPMulOp() | FPSubOp() | FPAddOp() | FPDivOp() | FPUnaryMinusOp()  =>
-              FloatType()
+            case FPMulOp(_,_) | FPSubOp(_,_)  | FPAddOp(_,_)  | FPDivOp(_,_)  | FPUnaryMinusOp(_,_)   =>
+              checkTypeError(floatOp.e != 0, "Invalid exponent width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
+              checkTypeError(floatOp.s != 0, "Invalid significand width argument to '%s' operator".format(opapp.op.toString()), opapp.pos, c.filename)
+              FloatType(floatOp.e, floatOp.s)
           }
         }
 
@@ -672,7 +678,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case _ : BoolLit => BooleanType()
         case _ : IntLit => IntegerType()
         case _ : StringLit => StringType()
-        case _ : FloatLit => FloatType()
+        case fp : FloatLit => FloatType(fp.exp, fp.sig)
         case bv : BitVectorLit => BitVectorType(bv.width)
         case a : ConstArray =>
           val valTyp = typeOf(a.exp, c)
@@ -743,7 +749,9 @@ class PolymorphicTypeRewriterPass extends RewritePass {
             case BVARightShiftBVOp(_) => width.flatMap((w) => Some(BVARightShiftBVOp(w)))
             case BVUremOp(_) => width.flatMap((w) => Some(BVUremOp(w)))
             case BVSremOp(_) => width.flatMap((w) => Some(BVSremOp(w)))
-            case BVUDivOp(_) => width.flatMap((w)=> Some(BVUDivOp(w)))  
+            case BVUDivOp(_) => width.flatMap((w)=> Some(BVUDivOp(w))) 
+            case BVDivOp(_) => width.flatMap((w)=> Some(BVUDivOp(w)))  
+            case BVMulOp(_) => width.flatMap((w)=> Some(BVMulOp(w)))  
             case _ => Some(bv)
           }
           newOp match {
@@ -757,6 +765,36 @@ class PolymorphicTypeRewriterPass extends RewritePass {
           }
         } else {
           Some(bv)
+        }
+      }
+      case fp : FloatArgOperator => {
+        if (fp.e == 0 && fp.s == 0) {
+          val width = typeCheckerPass.fpOpMap.get(fp.astNodeId)
+          // val e = width._1
+          // val s = width._2
+          Utils.assert(width.isDefined, "No exponent and significant sizes available for: " + fp.toString)
+          val newOp = fp match {
+            case FPLTOp(_,_) => width.flatMap((w) => Some(FPLTOp(w._1, w._2)))
+            case FPLEOp(_,_) => width.flatMap((w) => Some(FPLEOp(w._1, w._2)))
+            case FPGTOp(_,_) => width.flatMap((w) => Some(FPGTOp(w._1, w._2)))
+            case FPGEOp(_,_) => width.flatMap((w) => Some(FPGEOp(w._1, w._2)))
+            case FPDivOp(_,_) => width.flatMap((w)=> Some(FPDivOp(w._1, w._2)))  
+            case FPMulOp(_,_) => width.flatMap((w)=> Some(FPMulOp(w._1, w._2))) 
+            case FPIsNanOp(_,_) => width.flatMap((w)=> Some(FPIsNanOp(w._1, w._2))) 
+            case FPUnaryMinusOp(_,_) => width.flatMap((w)=> Some(FPUnaryMinusOp(w._1, w._2))) 
+            case _ => Some(fp)
+          }
+          newOp match {
+            case Some(newOp) =>
+              val opWithPos = newOp
+              opWithPos.pos = fp.pos
+              Some(opWithPos)
+            case None =>
+              // should never get here.
+              None
+          }
+        } else {
+          Some(fp)
         }
       }
       case _ => Some(op)

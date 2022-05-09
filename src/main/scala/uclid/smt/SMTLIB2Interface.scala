@@ -132,8 +132,8 @@ trait SMTLIB2Base {
             val typeStr = "(_ BitVec %d)".format(n)
             typeMap = typeMap.addSynonym(typeStr, t)
             (typeStr, List.empty)
-          case FltType => 
-            val typeStr = "(_ FloatingPoint 8 24)"
+          case FltType(e,s) => 
+            val typeStr = "(_ FloatingPoint "+ e.toString +" "+ s.toString+")"
             typeMap = typeMap.addSynonym(typeStr, t)
             (typeStr, List.empty)
           case MapType(inTypes, outType) =>
@@ -277,11 +277,13 @@ trait SMTLIB2Base {
             (value.toString(), memo, false)
           case BitVectorLit(value, width) =>
             ("(_ bv" + value.toString() + " " + width.toString() + ")", memo, false)
-          case FloatLit(integral,fractional) =>
+          case FloatLit(integral,fractional, exp, sig) =>
+          {
             if(integral >= 0)
-              ("((_ to_fp 8 24) roundNearestTiesToEven "+integral.toString() + "." + fractional.toString + ")", memo, false)
+              ("((_ to_fp "+exp.toString+ " "+ sig.toString+ ") roundNearestTiesToEven "+integral.toString() + "." + fractional.toString + ")", memo, false)
             else
-              ("((_ to_fp 8 24) roundNearestTiesToEven (-"+integral.toString() + "." + fractional.toString + "))", memo, false)
+              ("((_ to_fp "+exp.toString+ " "+ sig.toString+ ") roundNearestTiesToEven (-"+integral.toString() + "." + fractional.toString + "))", memo, false)
+          }
   
           case BooleanLit(value) =>
             (value match { case true => "true"; case false => "false" }, memo, false)
