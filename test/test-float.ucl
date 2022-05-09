@@ -1,31 +1,18 @@
 module main
 {
-  var x : float;
-  var y : float;
-  var z : float;
-  var w : float;
-  var q : float;
-
+  var x : fp5_11; // this should parse
+  var y : single; // this is syntactic sugar for a IEEE single and should 
+  // parse and convert into an FP with the appropriate exponent and significand size
+  var z : double; // this is syntactic sugar for IEEE double
+  var w : half; // this is syntactic sugar for IEEE half
   init {
-    x = 0.0;
-    y = 0.0; // test assign
-    assume(z==w); // test assume
-
+    x = 0.0fp5_11; // should parse
+    y = 0.0single;
+    y = 0.0half;
+    y = 0.0double;
   }
 
-  next {
-    x' = y + 1.0;
-    y' = y - 1.0;
-    assume(q > 0.0);
-    q' = 2.0 *q;
-    assert(isNaN(q));
-    assert(q' < q); // should fail
-  }
-
-  invariant myinv:  x!=y; // should fail induction
-  invariant inv2: z > w; // should fail
-  invariant inv3: w < z;  // should fail
-
+// TODO_leiqi: add some tests for floating point arithmetic
 
   control {
     f = induction;

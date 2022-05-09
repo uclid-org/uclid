@@ -70,9 +70,16 @@ trait UclidTokens extends Tokens {
     override def toString = "0x" + intValue.toString(16) + "bv" + width.toString
   }
 
-    /** The class of float literal tokens. */
-  case class FloatLit(chars: String, base: Int) extends UclidToken {
-    override def toString = chars.toString + "_" + base.toString
+  /** Float types. We only store the width and support standard IEEE floating point types */
+  case class FloatTypeLit(chars: String, sig: Int) extends UclidToken {
+    val exp = chars.toInt
+    override def toString = "fp" + exp.toString + "_" + sig.toString
+  }
+  /** The class of float literal tokens. */
+  /** we store the whole and fractional separately, and output straight to SMT format, as we don't need to manipulate the decimal values **/
+  case class FloatLit(chars: String, frac: String,  exp: Int, sig: Int) extends UclidToken {
+    val integral = BigInt(chars, 10)
+    override def toString = chars.toString + "." + frac.toString + "fp" + exp.toString + "_" + sig.toString
   }
 
   /** The class of string literal tokens. */
@@ -90,6 +97,8 @@ trait UclidTokens extends Tokens {
  *  Most of this code is based on the Scala library's StdLexical.
  *  We can't subclass StdLexical because it uses StdToken while we have more interesting tokens (UclidTokens).
  */
+
+ //TODO_leiqi: add line in here to parse float lit and float type lit!
 class UclidLexical extends Lexical with UclidTokens with Positional {
   override def token: Parser[Token] =
     ( positioned { 'b' ~ 'v' ~> digit.+                                ^^ { case chars => BitVectorTypeLit(chars.mkString("")) } }
