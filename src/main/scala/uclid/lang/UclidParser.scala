@@ -104,6 +104,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     sealed class PositionedString(val str : String) extends Positional
     // TODO_leiqi: somewhere in here you need to add the keywords for double, single and half
+    // Finish!
     lazy val OpAnd = "&&"
     lazy val OpOr = "||"
     lazy val OpBvAnd = "&"
@@ -137,6 +138,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwProcedure = "procedure"
     lazy val KwBoolean = "boolean"
     lazy val KwInteger = "integer"
+    lazy val KwHalf = "half"
+    lazy val KwSingle = "single"
+    lazy val KwDouble = "double"
     lazy val KwEnum = "enum"
     lazy val KwRecord = "record"
     lazy val KwReturns = "returns"
@@ -198,6 +202,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     
 
 // TODO_leiqi: add keywords for single double and half in here
+// finish!
     lexical.delimiters ++= List("(", ")", ",", "[", "]",
       "bv", "fp", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul, OpDiv, OpUDiv,
@@ -206,7 +211,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul, OpDiv, OpUDiv,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvUrem, OpBvSrem, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
-      "false", "true", "bv", "fp", KwProcedure, KwBoolean, KwInteger, KwReturns,
+      "false", "true", "bv", "fp", KwProcedure, KwBoolean, KwInteger, KwHalf, KwSingle, KwDouble , KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwImport,
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
       KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
@@ -279,8 +284,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Integer: PackratParser[lang.IntLit] =
       positioned { integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base))} }
 
+    //TODO_leiqi: change the structure Float into: floatLit ~ floatType
     lazy val Float: PackratParser[lang.FloatLit] =
-      positioned { floatLit ^^ { case floatLit => lang.FloatLit(floatLit.integral, floatLit.frac, floatLit.exp, floatLit.sig) } }
+      positioned {  floatLit ~ KwHalf    ^^ { case floatLit ~ KwHalf   => lang.FloatLit(floatLit.integral, floatLit.frac, 5, 10) } |
+                    floatLit ~ KwSingle  ^^ { case floatLit ~ KwSingle => lang.FloatLit(floatLit.integral, floatLit.frac, 8, 23) } | 
+                    floatLit ~ KwDouble  ^^ { case floatLit ~ KwDouble => lang.FloatLit(floatLit.integral, floatLit.frac, 11,52) } |
+                    floatLit ~ floatType ^^ { case floatLit ~ floatType => lang.FloatLit(floatLit.integral,floatLit.frac,floatType.exp,floatType.sig)}
+                 }
   
     lazy val BitVector: PackratParser[lang.BitVectorLit] =
       positioned { bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) } }
@@ -422,9 +432,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     /** Examples of allowed types are bool | int | [int,int,bool] int **/
     // TODO_leiqi: somewhere in here you need to handle the specific types of single, double and half
+    //finish!
     lazy val PrimitiveType : PackratParser[Type] = positioned {
       KwBoolean ^^ {case _ => BooleanType()}   |
       KwInteger ^^ {case _ => IntegerType()}   |
+      KwHalf    ^^ {case _ => FloatType(5,10)}  |
+      KwSingle  ^^ {case _ => FloatType(8,23)}  |
+      KwDouble  ^^ {case _ => FloatType(11,52)} |
       floatType ^^ {case fltType => FloatType(fltType.exp, fltType.sig)}     |
       bitVectorType ^^ {case bvType => BitVectorType(bvType.width)}
     }
