@@ -1,3 +1,8 @@
+//TODO:
+//example1:fib
+//example2:Newton's method
+//example3:sdv of one group
+//example4:....
 module main
 {
   var x : fp5_10; // this should parse
