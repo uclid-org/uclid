@@ -6,8 +6,8 @@ module main {
   var d: fp5_11;
 
   init {
-    a = 0.0half;
-    b = 1.0half;
+    a = 6half;
+    b = 1half;
     c = 6.0half;
     d = 0.0half;
   }

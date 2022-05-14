@@ -282,25 +282,22 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Bool: PackratParser[BoolLit] =
       positioned { "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) } }
 
+    lazy val Integer: PackratParser[lang.IntLit] =
+      positioned { integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base))} }
+
     //TODO_leiqi: change the structure Float into: floatLit ~ floatType or integer ~ floatType
     //Should we support 4double
     lazy val Float: PackratParser[lang.FloatLit] =
       positioned {  
-                    // integerLit ~ KwHalf    ^^ { case intLit ~ KwHalf   => lang.FloatLit(BigInt(intLit.chars, intLit.base), "0", 5, 11) } |
-                    // integerLit ~ KwSingle  ^^ { case intLit ~ KwSingle => lang.FloatLit(BigInt(intLit.chars, intLit.base), "0", 8, 24) } | 
-                    // integerLit ~ KwDouble  ^^ { case intLit ~ KwDouble => lang.FloatLit(BigInt(intLit.chars, intLit.base), "0", 11,53) } |
-                    // integerLit ~ floatType ^^ { case intLit ~ floatType => lang.FloatLit(BigInt(intLit.chars, intLit.base),"0", floatType.exp,floatType.sig)}
-                    
+                    Integer ~ KwHalf    ^^ { case intLit ~ KwHalf   => lang.FloatLit(intLit.value, "0", 5, 11) } |
+                    Integer ~ KwSingle  ^^ { case intLit ~ KwSingle => lang.FloatLit(intLit.value, "0", 8, 24) } | 
+                    Integer ~ KwDouble  ^^ { case intLit ~ KwDouble => lang.FloatLit(intLit.value, "0", 11,53) } |
+                    Integer ~ floatType ^^ { case intLit ~ floatType => lang.FloatLit(intLit.value,"0", floatType.exp,floatType.sig)} |               
                     floatLit ~ KwHalf    ^^ { case floatLit ~ KwHalf   => lang.FloatLit(floatLit.integral, floatLit.frac, 5, 11) } |
                     floatLit ~ KwSingle  ^^ { case floatLit ~ KwSingle => lang.FloatLit(floatLit.integral, floatLit.frac, 8, 24) } | 
                     floatLit ~ KwDouble  ^^ { case floatLit ~ KwDouble => lang.FloatLit(floatLit.integral, floatLit.frac, 11,53) } |
                     floatLit ~ floatType ^^ { case floatLit ~ floatType => lang.FloatLit(floatLit.integral,floatLit.frac, floatType.exp,floatType.sig)}
                  }
-
-    lazy val Integer: PackratParser[lang.IntLit] =
-      positioned { integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base))} }
-
-    
   
     lazy val BitVector: PackratParser[lang.BitVectorLit] =
       positioned { bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) } }
