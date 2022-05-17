@@ -121,12 +121,13 @@ class ModularProductSpec extends AnyFlatSpec {
         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
         assert (instantiatedModules.size == 1);
     }
+    
 
-    "test-modularproduct-10.ucl" should "parse successfully." in {
-        val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-10.ucl"), lang.Identifier("main"))
-        val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
-        assert (instantiatedModules.size == 1);
-    }
+     "test-modularproduct-10.ucl" should "parse successfully." in {
+         val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-modularproduct-10.ucl"), lang.Identifier("main"))
+         val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+         assert (instantiatedModules.size == 1);
+     }
 
     "test-modularproduct-11-fails.ucl" should "not parse successfully." in {
         try {

@@ -1,8 +1,11 @@
+//Adjustment:
+//double is key word now
+//Change double to Mydouble
 module main
 {
     function getScore (value: integer, y: boolean) : integer;
 
-    procedure double(x: integer) returns (res: integer)
+    procedure Mydouble(x: integer) returns (res: integer)
     ensures ( res == x*2);
     ensures ( (x.1 == x.2) ==> (res.1 == res.2));
     {
@@ -17,8 +20,8 @@ module main
     {
         var xVal, yVal : integer;
         res = 0;
-        call (xVal) = double(getScore(x, true));
-        call (yVal) = double(getScore(y, true));
+        call (xVal) = Mydouble(getScore(x, true));
+        call (yVal) = Mydouble(getScore(y, true));
         if(xVal < yVal)
         {
             res = -1;
