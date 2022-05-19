@@ -7,15 +7,15 @@ module main
   var q : float;
 
   init {
-    x = 0.0;
-    y = 0.0; // test assign
+    x = 0.0float;
+    y = 0.0float; // test assign
     assume(z==w); // test assume
 
   }
 
   next {
-    // x' = y / 1.0;
-    // y' = y / 1.0;
+    // x' = y / 1.0float;
+    // y' = y / 1.0float;
     assert(q' < q); // should fail
   }
 

@@ -50,7 +50,7 @@ import scala.collection.mutable
 /** This is a re-implementation of the Scala libraries StdTokenParsers with StdToken replaced by UclidToken. */
 trait UclidTokenParsers extends TokenParsers {
   type Tokens <: UclidTokens
-  import lexical.{Keyword, IntegerLit, BitVectorTypeLit, BitVectorLit, StringLit, Identifier}
+  import lexical.{Keyword, IntegerLit, BitVectorTypeLit, BitVectorLit, FloatLit, FloatTypeLit, StringLit, Identifier}
 
   protected val keywordCache = mutable.HashMap[String, Parser[String]]()
 
@@ -74,6 +74,15 @@ trait UclidTokenParsers extends TokenParsers {
   def bitvectorLit: Parser[BitVectorLit] =
     elem("bitvector", _.isInstanceOf[BitVectorLit]) ^^ (_.asInstanceOf[BitVectorLit])
 
+
+  /** A parser which matches a float type */
+  def floatType: Parser[FloatTypeLit] =
+    elem("float type", _.isInstanceOf[FloatTypeLit]) ^^ {_.asInstanceOf[FloatTypeLit]}
+
+  /** A parser which matches a bitvector literal */
+  def floatLit: Parser[FloatLit] =
+    elem("float", _.isInstanceOf[FloatLit]) ^^ (_.asInstanceOf[FloatLit])
+
   /** A parser which matches a string literal */
   def stringLit: Parser[String] =
     elem("string literal", _.isInstanceOf[StringLit]) ^^ (_.chars)
@@ -94,7 +103,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     sealed class PositionedString(val str : String) extends Positional
-
+    // TODO_leiqi: somewhere in here you need to add the keywords for double, single and half
+    // Finish!
     lazy val OpAnd = "&&"
     lazy val OpOr = "||"
     lazy val OpBvAnd = "&"
@@ -128,7 +138,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwProcedure = "procedure"
     lazy val KwBoolean = "boolean"
     lazy val KwInteger = "integer"
-    lazy val KwFloat = "float"
+    lazy val KwHalf = "half"
+    lazy val KwSingle = "single"
+    lazy val KwDouble = "double"
     lazy val KwEnum = "enum"
     lazy val KwRecord = "record"
     lazy val KwReturns = "returns"
@@ -187,16 +199,19 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     // lazy val TemporalOpUntil = "U"
     // lazy val TemporalOpWUntil = "W"
     // lazy val TemporalOpRelease = "R"
+    
 
+// TODO_leiqi: add keywords for single double and half in here
+// finish!
     lexical.delimiters ++= List("(", ")", ",", "[", "]",
-      "bv", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->",
+      "bv", "fp", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul, OpDiv, OpUDiv,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, 
       OpEQ, OpNE, OpConcat, OpNot, OpMinus, OpPrime, OpBvUrem, OpBvSrem)
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul, OpDiv, OpUDiv,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvUrem, OpBvSrem, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
-      "false", "true", "bv", KwProcedure, KwBoolean, KwInteger, KwFloat, KwReturns,
+      "false", "true", "bv", "fp", KwProcedure, KwBoolean, KwInteger, KwHalf, KwSingle, KwDouble , KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwImport,
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
       KwInstance, KwInput, KwOutput, KwConst, KwModule, KwType, KwEnum,
@@ -266,12 +281,24 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     /* BEGIN Literals. */
     lazy val Bool: PackratParser[BoolLit] =
       positioned { "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) } }
+
     lazy val Integer: PackratParser[lang.IntLit] =
       positioned { integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base))} }
 
+    //TODO_leiqi: change the structure Float into: floatLit ~ floatType or integer ~ floatType
+    //Should we support 4double
     lazy val Float: PackratParser[lang.FloatLit] =
-        (Integer ~ "." ~ integerLit) ^^  { case f1 ~ "." ~ f2 => 
-        FloatLit(f1.value, f2.chars) }
+      positioned {  
+                    Integer ~ KwHalf    ^^ { case intLit ~ KwHalf   => lang.FloatLit(intLit.value, "0", 5, 11) } |
+                    Integer ~ KwSingle  ^^ { case intLit ~ KwSingle => lang.FloatLit(intLit.value, "0", 8, 24) } | 
+                    Integer ~ KwDouble  ^^ { case intLit ~ KwDouble => lang.FloatLit(intLit.value, "0", 11,53) } |
+                    Integer ~ floatType ^^ { case intLit ~ floatType => lang.FloatLit(intLit.value,"0", floatType.exp,floatType.sig)} |               
+                    floatLit ~ KwHalf    ^^ { case floatLit ~ KwHalf   => lang.FloatLit(floatLit.integral, floatLit.frac, 5, 11) } |
+                    floatLit ~ KwSingle  ^^ { case floatLit ~ KwSingle => lang.FloatLit(floatLit.integral, floatLit.frac, 8, 24) } | 
+                    floatLit ~ KwDouble  ^^ { case floatLit ~ KwDouble => lang.FloatLit(floatLit.integral, floatLit.frac, 11,53) } |
+                    floatLit ~ floatType ^^ { case floatLit ~ floatType => lang.FloatLit(floatLit.integral,floatLit.frac, floatType.exp,floatType.sig)}
+                 }
+  
     lazy val BitVector: PackratParser[lang.BitVectorLit] =
       positioned { bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) } }
     lazy val Number : PackratParser[lang.NumericLit] = positioned (Float | Integer | BitVector)
@@ -411,10 +438,15 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "(" ~> ")" ^^ { case _ => List.empty[Expr] }
 
     /** Examples of allowed types are bool | int | [int,int,bool] int **/
+    // TODO_leiqi: somewhere in here you need to handle the specific types of single, double and half
+    //finish!
     lazy val PrimitiveType : PackratParser[Type] = positioned {
       KwBoolean ^^ {case _ => BooleanType()}   |
       KwInteger ^^ {case _ => IntegerType()}   |
-      KwFloat ^^ {case _ => FloatType()}     |
+      KwHalf    ^^ {case _ => FloatType(5,11)}  |
+      KwSingle  ^^ {case _ => FloatType(8,24)}  |
+      KwDouble  ^^ {case _ => FloatType(11,53)} |
+      floatType ^^ {case fltType => FloatType(fltType.exp, fltType.sig)}     |
       bitVectorType ^^ {case bvType => BitVectorType(bvType.width)}
     }
 

@@ -232,40 +232,40 @@ case class IntDivOp() extends IntArgOperator {
 }
 
 // These operators take float operands and return float results.
-sealed abstract class FloatArgOperator() extends Operator {
+sealed abstract class FloatArgOperator(val e : Int, val s: Int) extends Operator {
   override def fixity = Operator.INFIX
   // default rounding is roundNearestTiesToEven. If we want to support more rounding, we add it here
   val arity = 2
 }
-case class FPLTOp() extends FloatArgOperator() {
+case class FPLTOp(override val e: Int, override val s: Int) extends FloatArgOperator(e,s) {
   override def toString = "<"
 }
-case class FPGTOp() extends FloatArgOperator() {
+case class FPGTOp(override val e: Int, override val s: Int) extends FloatArgOperator(e,s) {
   override def toString = ">"
 }
-case class FPLEOp() extends FloatArgOperator() {
+case class FPLEOp(override val e: Int, override val s: Int) extends FloatArgOperator(e,s) {
   override def toString = "<="
 }
-case class FPGEOp() extends FloatArgOperator() {
+case class FPGEOp(override val e : Int, override val s: Int) extends FloatArgOperator(e,s) {
   override def toString = ">="
 }
-case class FPSubOp() extends FloatArgOperator() {
+case class FPSubOp(override val e : Int, override val s: Int) extends FloatArgOperator(e,s) {
   override def toString = "-"
 }
-case class FPAddOp() extends FloatArgOperator() {
+case class FPAddOp(override val e : Int, override val s: Int) extends FloatArgOperator(e,s) {
   override def toString = "+"
 }
-case class FPMulOp() extends FloatArgOperator() {
+case class FPMulOp(override val e : Int, override val s: Int) extends FloatArgOperator(e,s) {
   override def toString = "*"
 }
-case class FPDivOp() extends FloatArgOperator() {
+case class FPDivOp(override val e : Int, override val s: Int) extends FloatArgOperator(e,s) {
   override def toString = "/"
 }
-case class FPIsNanOp() extends FloatArgOperator() {
+case class FPIsNanOp(override val e : Int, override val s: Int) extends FloatArgOperator(e,s) {
   override def toString = "isNaN"
   override val arity = 1
 }
-case class FPUnaryMinusOp() extends FloatArgOperator() {
+case class FPUnaryMinusOp(override val e : Int, override val s: Int) extends FloatArgOperator(e,s) {
   override def fixity = Operator.PREFIX
   override def toString = "-"
   override val arity = 1
@@ -610,15 +610,15 @@ case class IntLit(value: BigInt) extends NumericLit {
   override def negate = IntLit(-value)
 }
 
-case class FloatLit(integral: BigInt, fractional: String) extends NumericLit {
+case class FloatLit(integral: BigInt, fractional: String, exp: Int, sig: Int) extends NumericLit {
   override def toString = integral.toString + "." + fractional
-  override def typeOf : NumericType = FloatType()
+  override def typeOf : NumericType = FloatType(exp, sig)
   override def to (n : NumericLit) : Seq[NumericLit]  = {
     n match {
       case _ => throw new Utils.RuntimeError("Cannot create range for float literals")
     }
   }
-  override def negate = FloatLit(-integral, fractional)
+  override def negate = FloatLit(-integral, fractional, exp, sig)
 }
 
 case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
@@ -814,10 +814,10 @@ case class IntegerType() extends NumericType {
   override def isInt = true
   override def defaultValue = Some(IntLit(0))
 }
-case class FloatType() extends NumericType {
+case class FloatType(exp: Int, sig: Int) extends NumericType {
   override def toString = "float"
   override def isFloat = true
-  override def defaultValue = Some(FloatLit(0, 0.toString))
+  override def defaultValue = Some(FloatLit(0, 0.toString, exp, sig))
 }
 case class BitVectorType(width: Int) extends NumericType {
   override def toString = "bv" + width.toString

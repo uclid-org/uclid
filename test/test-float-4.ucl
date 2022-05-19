@@ -1,0 +1,26 @@
+//test on *,/,%
+module main {
+  // Part 1: System description.
+  var a, b : fp5_11;
+  var c: fp5_11;
+  var d: fp5_11;
+
+  init {
+    a = 6half;
+    b = 1half;
+    c = 6.0half;
+    d = 0.0half;
+  }
+  next {
+    a', b' = b, a * b;
+    c' = a/b;
+    //d' = a%b;//does not support % on float
+  }
+
+  // Part 3: Proof script.
+  control {
+    bmc (5);
+    check;
+    print_results;
+  }
+}

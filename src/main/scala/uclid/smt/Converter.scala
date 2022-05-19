@@ -49,8 +49,8 @@ object Converter {
         smt.UninterpretedType(id.name)
       case lang.IntegerType() =>
         smt.IntType
-      case lang.FloatType() =>
-        smt.FltType
+      case lang.FloatType(e,s) =>
+        smt.FltType(e,s)
       case lang.BooleanType() =>
         smt.BoolType
       case lang.StringType() =>
@@ -140,16 +140,16 @@ object Converter {
       case lang.BVLRightShiftBVOp(w) => smt.BVLRightShiftBVOp(w)
       case lang.BVARightShiftBVOp(w) => smt.BVARightShiftBVOp(w)
       // float operators
-      case lang.FPAddOp() => smt.FPAddOp()
-      case lang.FPMulOp() => smt.FPMulOp()
-      case lang.FPDivOp() => smt.FPDivOp()
-      case lang.FPSubOp() => smt.FPSubOp()
-      case lang.FPLTOp() => smt.FPLTOp()
-      case lang.FPGTOp() => smt.FPGTOp()
-      case lang.FPLEOp() => smt.FPLEOp()
-      case lang.FPGEOp() => smt.FPGEOp()
-      case lang.FPIsNanOp() => smt.FPIsNanOp()
-      case lang.FPUnaryMinusOp() => smt.FPMinusOp()
+      case lang.FPAddOp(e,s) => smt.FPAddOp(e,s)
+      case lang.FPMulOp(e,s) => smt.FPMulOp(e,s)
+      case lang.FPDivOp(e,s) => smt.FPDivOp(e,s)
+      case lang.FPSubOp(e,s) => smt.FPSubOp(e,s)
+      case lang.FPLTOp(e,s) => smt.FPLTOp(e,s)
+      case lang.FPGTOp(e,s) => smt.FPGTOp(e,s)
+      case lang.FPLEOp(e,s) => smt.FPLEOp(e,s)
+      case lang.FPGEOp(e,s) => smt.FPGEOp(e,s)
+      case lang.FPIsNanOp(e,s) => smt.FPIsNanOp(e,s)
+      case lang.FPUnaryMinusOp(e,s) => smt.FPMinusOp(e,s)
       // Boolean operators.
       case lang.ConjunctionOp() => smt.ConjunctionOp
       case lang.DisjunctionOp() => smt.DisjunctionOp
@@ -253,7 +253,8 @@ object Converter {
        case lang.IntLit(n) => smt.IntLit(n)
        case lang.BoolLit(b) => smt.BooleanLit(b)
        case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
-       case lang.FloatLit(i,f) => smt.FloatLit(i,f)
+       case lang.FloatLit(i,f,e,s) => 
+         smt.FloatLit(i,f,e,s)
        case lang.ConstArray(value, arrTyp) =>
          smt.ConstArray(toSMT(value, scope, past), typeToSMT(arrTyp).asInstanceOf[ArrayType])
        case lang.StringLit(_) => throw new Utils.RuntimeError("Strings are not supported in smt.Converter")
