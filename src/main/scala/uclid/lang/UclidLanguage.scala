@@ -1723,3 +1723,9 @@ case class Module(id: Identifier, decls: List[Decl], var cmds : List[GenericProo
       notes.foldLeft("")((acc, i) => acc + i) +
     "}\n"
 }
+
+//may used for future better improvement
+//this class is used for Error grammer
+// class Error extends ASTNode {
+//   def Error : List[Identifier]
+// }
