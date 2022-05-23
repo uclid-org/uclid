@@ -642,7 +642,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val TypeDecl : PackratParser[lang.TypeDecl] = positioned {
       KwType ~> Id ~ ("=" ~> Type) <~ ";" ^^ { case id ~ t => lang.TypeDecl(id,t) } |
-      KwType ~> Id <~ ";" ^^ { case id => lang.TypeDecl(id, lang.UninterpretedType(id)) }
+      KwType ~> Id ~ ("=" ~> Type) ^^ { case id ~ t => lang.TypeDecl(id,t); throw new Utils.SyntaxError("Loss of ';'", Some(id.pos),null) } |
+      KwType ~> Id <~ ";" ^^ { case id => lang.TypeDecl(id, lang.UninterpretedType(id)) } |
+      KwType ~> Id ^^ { case id=> lang.TypeDecl(id, lang.UninterpretedType(id)); throw new Utils.SyntaxError("Loss of ';'", Some(id.pos),null)}
     }
 
     lazy val ModuleImportDecl : PackratParser[lang.ModuleImportDecl] = positioned {
@@ -655,6 +657,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val VarsDecl : PackratParser[lang.StateVarsDecl] = positioned {
       KwVar ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.StateVarsDecl(ids, typ) }
+      //KwVar ~> IdList ~ ":" ~ Type ^^ { case ids ~ ":" ~ typ => throw new Utils.SyntaxError("Loss of ';'", 1,null)}
     }
     lazy val InputsDecl : PackratParser[lang.InputVarsDecl] = positioned {
       KwInput ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.InputVarsDecl(ids, typ) }

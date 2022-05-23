@@ -1,0 +1,13 @@
+module main
+{
+  type x
+  init {
+  }
+  next {
+  }
+  control {
+    f = induction;
+    check;
+    print_results;
+ }
+}
