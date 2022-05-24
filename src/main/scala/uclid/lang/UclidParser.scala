@@ -656,8 +656,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val VarsDecl : PackratParser[lang.StateVarsDecl] = positioned {
-      KwVar ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.StateVarsDecl(ids, typ) }
-      //KwVar ~> IdList ~ ":" ~ Type ^^ { case ids ~ ":" ~ typ => throw new Utils.SyntaxError("Loss of ';'", 1,null)}
+      KwVar ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.StateVarsDecl(ids, typ) } |
+      KwVar ~> IdList ~ ":" ~ Type ^^ { case ids ~ ":" ~ typ => throw new Utils.SyntaxError("Loss of ';'",Some(ids.head.pos),null)}
     }
     lazy val InputsDecl : PackratParser[lang.InputVarsDecl] = positioned {
       KwInput ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.InputVarsDecl(ids, typ) }

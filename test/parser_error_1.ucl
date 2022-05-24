@@ -1,6 +1,7 @@
 module main
 {
-  type x
+  type x;
+  var z,y : integer
   init {
   }
   next {
