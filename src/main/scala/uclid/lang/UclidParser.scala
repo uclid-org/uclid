@@ -900,8 +900,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( CmdBlock.? ) <~ "}") ^^ {
         case id ~ (decls ~ Some(cs)) => lang.Module(id, decls, cs, Annotation.default)
         case id ~ (decls ~ None) => lang.Module(id, decls, List.empty, Annotation.default)
-      }
-    }
+      } |
+      /*below is Error grammer */
+      //Loss of keyword "module"
+      Id  ^^ {
+        case id => throw new Utils.SyntaxError("cannot find the module", Some(id.pos), null)
+      } 
+    } 
 
     lazy val Model: PackratParser[List[Module]] = rep(Module)
 
