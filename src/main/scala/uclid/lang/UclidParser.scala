@@ -289,13 +289,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     //Should we support 4double
     lazy val Float: PackratParser[lang.FloatLit] =
       positioned {  
-                    Integer ~ KwHalf    ^^ { case intLit ~ KwHalf   => lang.FloatLit(intLit.value, "0", 5, 11) } |
-                    Integer ~ KwSingle  ^^ { case intLit ~ KwSingle => lang.FloatLit(intLit.value, "0", 8, 24) } | 
-                    Integer ~ KwDouble  ^^ { case intLit ~ KwDouble => lang.FloatLit(intLit.value, "0", 11,53) } |
+                    Integer ~ KwHalf    ^^ { case intLit ~ s   => lang.FloatLit(intLit.value, "0", 5, 11)} |
+                    Integer ~ KwSingle  ^^ { case intLit ~ s => lang.FloatLit(intLit.value, "0", 8, 24) } | 
+                    Integer ~ KwDouble  ^^ { case intLit ~ s => lang.FloatLit(intLit.value, "0", 11,53) } |
                     Integer ~ floatType ^^ { case intLit ~ floatType => lang.FloatLit(intLit.value,"0", floatType.exp,floatType.sig)} |               
-                    floatLit ~ KwHalf    ^^ { case floatLit ~ KwHalf   => lang.FloatLit(floatLit.integral, floatLit.frac, 5, 11) } |
-                    floatLit ~ KwSingle  ^^ { case floatLit ~ KwSingle => lang.FloatLit(floatLit.integral, floatLit.frac, 8, 24) } | 
-                    floatLit ~ KwDouble  ^^ { case floatLit ~ KwDouble => lang.FloatLit(floatLit.integral, floatLit.frac, 11,53) } |
+                    floatLit ~ KwHalf    ^^ { case floatLit ~ s   => lang.FloatLit(floatLit.integral, floatLit.frac, 5, 11) } |
+                    floatLit ~ KwSingle  ^^ { case floatLit ~ s => lang.FloatLit(floatLit.integral, floatLit.frac, 8, 24) } | 
+                    floatLit ~ KwDouble  ^^ { case floatLit ~ s => lang.FloatLit(floatLit.integral, floatLit.frac, 11,53) } |
                     floatLit ~ floatType ^^ { case floatLit ~ floatType => lang.FloatLit(floatLit.integral,floatLit.frac, floatType.exp,floatType.sig)}
                  }
   
