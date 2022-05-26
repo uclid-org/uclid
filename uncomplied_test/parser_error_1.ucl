@@ -1,4 +1,4 @@
-module main
+modul main
 {
     var x, y, z : integer;
 

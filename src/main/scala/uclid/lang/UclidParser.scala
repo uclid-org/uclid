@@ -904,7 +904,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       /*below is Error grammer */
       //Loss of keyword "module"
       Id  ^^ {
-        case id => throw new Utils.SyntaxError("cannot find the module", Some(id.pos), null)
+        case id => throw new Utils.SyntaxError("cannot find key word module", Some(id.pos), null)
       } 
     } 
 
