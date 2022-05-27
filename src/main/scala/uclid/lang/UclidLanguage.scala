@@ -45,7 +45,6 @@ import scala.collection.mutable.{Map => MutableMap}
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
 import scala.reflect.ClassTag
-import java.util.HashMap
 import uclid.smt.SynonymMap
 import uclid.smt.Converter
 
@@ -193,9 +192,6 @@ object ASTNode {
  */
 sealed trait ASTNode extends PositionedNode {
   val astNodeId = IdGenerator.newId()
-
-  // def canGenerateCodegenExpr : Boolean = false
-  // def codegenString : String = toString
 }
 
 
@@ -263,7 +259,6 @@ case class DivOp() extends PolymorphicOperator {
 // These are operators with integer operators.
 sealed abstract class IntArgOperator extends Operator {
   override def fixity = Operator.INFIX
-  // override def canGenerateCodegenExpr: Boolean = true
   override def codegenUclidLang: Option[Operator] = Some(this)
 }
 case class IntLTOp() extends IntArgOperator {
@@ -339,7 +334,6 @@ case class FPUnaryMinusOp() extends FloatArgOperator() {
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
   override def fixity = Operator.INFIX
   val arity = 2
-  // override def canGenerateCodegenExpr: Boolean = true
   override def codegenUclidLang: Option[Operator] = Some(this)
 }
 case class BVLTOp(override val w : Int) extends BVArgOperator(w) {
@@ -432,7 +426,6 @@ case class BVSremOp(override val w : Int) extends BVArgOperator(w) {
 sealed abstract class BooleanOperator extends Operator {
   override def fixity = Operator.INFIX
   def isQuantified = false
-  // override def canGenerateCodegenExpr: Boolean = true
   override def codegenUclidLang: Option[Operator] = Some(this)
 }
 case class ConjunctionOp() extends BooleanOperator {
@@ -456,7 +449,6 @@ sealed abstract class QuantifiedBooleanOperator extends BooleanOperator {
   override def fixity = Operator.PREFIX
   override def isQuantified = true
   def variables : List[(Identifier, Type)]
-  // override def canGenerateCodegenExpr: Boolean = false
   override def codegenUclidLang: Option[Operator] = None
 }
 object QuantifiedBooleanOperator {
@@ -494,7 +486,6 @@ sealed abstract class ComparisonOperator() extends Operator {
 }
 case class EqualityOp() extends ComparisonOperator {
   override def toString = "=="
-  // override def canGenerateCodegenExpr: Boolean = true
   override def codegenUclidLang: Option[Operator] = Some(this)
 }
 case class InequalityOp() extends ComparisonOperator {
@@ -586,7 +577,6 @@ case class VarExtractOp(slice : VarBitVectorSlice) extends ExtractOp {
 case class ConcatOp() extends Operator {
   override def toString = "++"
   override def fixity = Operator.INFIX
-  // override def canGenerateCodegenExpr: Boolean = true
   override def codegenUclidLang: Option[Operator] = Some(this)
 }
 sealed abstract class SelectorOperator extends Operator {
@@ -617,7 +607,6 @@ case class ArraySelect(indices: List[Expr]) extends Operator {
     "[" + indexStr + "]"
   }
   override def fixity = Operator.POSTFIX
-  // override def canGenerateCodegenExpr: Boolean = indices.foldLeft(true)((b, e) => b && e.canGenerateCodegenExpr)
   override def codegenUclidLang: Option[Operator] = {
     indices.forall(_.codegenUclidLang.isDefined) match {
       case true => Some(ArraySelect(indices.map(_.codegenUclidLang).flatten))
@@ -631,8 +620,6 @@ case class ArrayUpdate(indices: List[Expr], value: Expr) extends Operator {
     "[" + indexStr + " -> " + value.toString() + "]"
   }
   override def fixity = Operator.POSTFIX
-  // override def canGenerateCodegenExpr: Boolean = value.canGenerateCodegenExpr && 
-  //   indices.foldLeft(true)((b, e) => b && e.canGenerateCodegenExpr)
   override def codegenUclidLang: Option[Operator] = {
     indices.forall(_.codegenUclidLang.isDefined) match {
       case true => value.codegenUclidLang match {
@@ -648,7 +635,7 @@ case class RecordUpdate(fieldid: Identifier, value: Expr) extends Operator {
     "[" + fieldid.name + " := " + value.toString() + "]"
   }
   override def fixity: Int = Operator.POSTFIX
-  // override def canGenerateCodegenExpr: Boolean = value.canGenerateCodegenExpr
+
   override def codegenUclidLang: Option[Operator] = value.codegenUclidLang match {
     case Some(e) => Some(RecordUpdate(fieldid, e))
     case _ => None
@@ -666,16 +653,23 @@ sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
   def isConstant = false
   def isTemporal = false
-  // override def canGenerateCodegenExpr : Boolean = false
-  // override def codegenString : String = toString
+
   def codegenUclidLang : Option[Expr] = None
 }
 
+/**
+ *  Type refinements:
+ *  QIdentifier :> QualifiedIdentifier
+ *      v  
+ *  UIdentifier :> Identifier, ExternalIdentifier, IndexedIdentifier
+ * 
+ *  This type-hierarchy emulates SMTLIB
+ *    and makes SMTLIB -> UclidLang parsing more natural
+ */
 sealed abstract class QIdentifier extends Expr
 sealed abstract class UIdentifier extends QIdentifier
 case class Identifier(name : String) extends UIdentifier {
   override def toString = name.toString
-  // override def canGenerateCodegenExpr : Boolean = Context.stripMkTupleFunction(name).isDefined
 }
 case class ExternalIdentifier(moduleId : Identifier, id : Identifier) extends UIdentifier {
   override def toString = moduleId.toString + "::" + id.toString
@@ -685,39 +679,11 @@ case class IndexedIdentifier (name : String, indices : List[Either[IntLit, Ident
 }
 case class QualifiedIdentifier (f : UIdentifier, typs : Type) extends QIdentifier {
   override def toString = "(as " + f.toString + " " + typs.toString + ")"
-
-  // TODO: This is hardcoded for the ((as const [ArrayType]) [Expr]) syntax seen in  Z3, CVC5 cexes
-  // override def canGenerateCodegenExpr: Boolean = f.toString == "const" && (typs match {
-  //     case ArrayType(inT, outT) =>
-  //       (inT.size == 1) && (inT(0) match {
-  //         case BitVectorType(_) => true
-  //         case _ => false
-  //       })
-  //     case _ => false
-  //   })
-  // override def codegenString: String = (typs match {
-  //   case ArrayType(inT, outT) => typs.toString
-  //   case _ => "CODEGEN::ERROR"
-  // })
 }
 case class QualifiedIdentifierApplication (qid : QIdentifier, exprs : List[Expr]) extends Expr {
   override def toString = "(" + qid.toString + " " + exprs.map(a => a.toString).mkString(" ") + " )"
 
-  // override def canGenerateCodegenExpr: Boolean = qid.canGenerateCodegenExpr && 
-  //   exprs.foldLeft(true)((b, e) => b && e.canGenerateCodegenExpr)
-
-  // override def codegenString = qid match {
-  //   case QualifiedIdentifier(f, typs) => "const(" + exprs(0).codegenString + "," + qid.codegenString + ")"
-  //   case Identifier(name) => Context.stripMkTupleFunction(name) match {
-  //     case Some(s) => {
-  //       val rawtype = Context.mirrorTypeMap.get(s).get.asInstanceOf[smt.ProductType]
-  //       "const_record(" + (rawtype.fieldNames zip exprs.map(_.codegenString)).map(a => (a._1 + " := " + a._2)).mkString(", ") + ")"
-  //     }
-  //     case None => "CODEGEN::ERROR"
-  //   }
-  //   case _ => "CODEGEN::ERROR"
-  // }
-
+  // ! This is hardcoded for the ((as const [ArrayType]) [Expr]) syntax seen in  Z3, CVC5 cexes
   override def codegenUclidLang : Option[Expr] = qid match {
     case QualifiedIdentifier(f, typs) => 
       if (f.toString == "const" && exprs.size == 1) typs match {
@@ -768,7 +734,7 @@ case class BoolLit(value: Boolean) extends Literal {
   // override val hashId = 2201
   override def typeOf: Type = BooleanType()
   // override val md5hashCode = computeMD5Hash(value)
-  // override def canGenerateCodegenExpr: Boolean = true
+
   override def codegenUclidLang : Option[Expr] = Some(this)
 }
 
@@ -782,7 +748,7 @@ case class IntLit(value: BigInt) extends NumericLit {
     }
   }
   override def negate = IntLit(-value)
-  // override def canGenerateCodegenExpr: Boolean = true
+
   override def codegenUclidLang : Option[Expr] = Some(this)
 }
 
@@ -807,7 +773,7 @@ case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
     }
   }
   override def negate = BitVectorLit(-value, width)
-  // override def canGenerateCodegenExpr: Boolean = true
+
   override def codegenUclidLang : Option[Expr] = Some(this)
 }
 
@@ -861,20 +827,6 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
     }
   }
 
-  // override def canGenerateCodegenExpr = op.canGenerateCodegenExpr && 
-  //   operands.foldLeft(true)((b, e) => b && e.canGenerateCodegenExpr)
-  // override def codegenString: String = op match {
-  //   case PolymorphicSelect(_) | RecordSelect(_) | HyperSelect(_) | SelectFromInstance(_) => "CODEGEN::ERROR"
-  //   case ForallOp(_, _) | ExistsOp(_, _) | FiniteForallOp(_, _) | FiniteExistsOp(_, _) => "CODEGEN::ERROR"
-  //   case _ =>
-  //     if (op.fixity == Operator.INFIX) {
-  //       "(" + Utils.join(operands.map(_.codegenString), " " + op.codegenString + " ") + ")"
-  //     } else if (op.fixity == Operator.PREFIX) {
-  //       op.codegenString + "(" + Utils.join(operands.map(_.codegenString), ", ") + ")"
-  //     } else {
-  //       "(" + Utils.join(operands.map(_.codegenString), ", ") + ")" + op.codegenString
-  //     }
-  // }
   override def codegenUclidLang : Option[Expr] = op match {
     case PolymorphicSelect(_) | RecordSelect(_) | HyperSelect(_) | SelectFromInstance(_) | 
       ForallOp(_, _) | ExistsOp(_, _) | FiniteForallOp(_, _) | FiniteExistsOp(_, _) => None
@@ -904,7 +856,6 @@ case class LetExpr (ids: List[(UIdentifier, Expr)], e : Expr) extends Expr {
 
 sealed abstract class Lhs(val ident: Identifier) extends ASTNode {
   def isProceduralLhs : Boolean
-  // override def canGenerateCodegenExpr = false
 }
 case class LhsId(id: Identifier) extends Lhs(id) {
   override def toString = id.toString
@@ -932,9 +883,7 @@ case class LhsVarSliceSelect(id: Identifier, bitslice: VarBitVectorSlice) extend
 }
 
 /** Type decorators for expressions. */
-sealed abstract class ExprDecorator extends ASTNode {
-  // override def canGenerateCodegenExpr: Boolean = false
-}
+sealed abstract class ExprDecorator extends ASTNode
 case class UnknownDecorator(value: String) extends ExprDecorator {
   override def toString = value
 }
@@ -996,8 +945,6 @@ sealed abstract class Type extends PositionedNode {
   def matches (t2 : Type) = (this == t2)
   def defaultValue : Option[Expr] = None
 
-  // def canGenerateCodegenExpr : Boolean = false
-  // def codegenString : String = toString
   def codegenUclidLang : Option[Type] = None
 }
 
@@ -1039,7 +986,6 @@ case class IntegerType() extends NumericType {
   override def toString = "integer"
   override def isInt = true
   override def defaultValue = Some(IntLit(0))
-  // override def canGenerateCodegenExpr: Boolean = true
   override def codegenUclidLang: Option[Type] = Some(this)
 }
 case class FloatType() extends NumericType {
@@ -1054,7 +1000,6 @@ case class BitVectorType(width: Int) extends NumericType {
     return (slice.lo >= 0 && slice.hi < width)
   }
   override def defaultValue = Some(BitVectorLit(0, width))
-  // override def canGenerateCodegenExpr: Boolean = true
   override def codegenUclidLang: Option[Type] = Some(this)
 }
 case class StringType() extends PrimitiveType {
@@ -1145,7 +1090,6 @@ case class ProcedureType(inTypes : List[Type], outTypes: List[Type]) extends Typ
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = "[" + Utils.join(inTypes.map(_.toString), " * ") + "]" + outType.toString
   override def isArray = true
-  // override def canGenerateCodegenExpr: Boolean = true
   override def codegenUclidLang: Option[Type] = {
     val inTypesOrNone = inTypes.map(_.codegenUclidLang)
     if (inTypesOrNone.forall(_.isDefined)) outType.codegenUclidLang match {
