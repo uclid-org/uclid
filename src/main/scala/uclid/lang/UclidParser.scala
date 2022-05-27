@@ -263,13 +263,23 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val HyperSelectOp: Parser[lang.HyperSelect] = positioned {
       "." ~> Integer ^^ { case i => lang.HyperSelect(i.value.toInt) }
     }
-    lazy val ArraySelectOp: Parser[ArraySelect] =
-      ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ {case e ~ es => ArraySelect(e :: es) }
-    lazy val ArrayStoreOp: Parser[ArrayUpdate] =
-      ("[" ~> (Expr ~ rep("," ~> Expr) ~ ("->" ~> Expr)) <~ "]") ^^
-      {case e ~ es ~ r => ArrayUpdate(e :: es, r)}
-    lazy val ConstBitVectorSlice: Parser[lang.ConstBitVectorSlice] =
-      positioned { ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt) } }
+    lazy val ArraySelectOp: Parser[ArraySelect] = positioned {
+      ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ {case e ~ es => ArraySelect(e :: es)}|
+      /*below is Error grammer */
+       "[" ^^ {case _ => throw new Utils.SyntaxError("unpaired '[' ",null,null) } |
+       "]" ^^ {case _ => throw new Utils.SyntaxError("unpaired ']' ",null,null) } 
+    }
+    lazy val ArrayStoreOp: Parser[ArrayUpdate] = positioned {
+      ("[" ~> (Expr ~ rep("," ~> Expr) ~ ("->" ~> Expr)) <~ "]") ^^ {case e ~ es ~ r => ArrayUpdate(e :: es, r)}
+      /*below is Error grammer */
+      //("[" ~> (Expr ~ rep("," ~> Expr) ~ ("->" ~> Expr)) <~ "]") ^^ {case e ~ es ~ r => ArrayUpdate(e :: es, r)} |
+    }
+      
+    lazy val ConstBitVectorSlice: Parser[lang.ConstBitVectorSlice] = positioned { 
+      ("[" ~> Integer ~ ":" ~ Integer <~ "]") ^^ { case x ~ ":" ~ y => lang.ConstBitVectorSlice(x.value.toInt, y.value.toInt) } | 
+      /*below is Error grammer */
+      ("[" ~> Integer) ^^ { case x => throw new Utils.SyntaxError("",Some(x.pos),null) }
+    }
     lazy val VarBitVectorSlice: Parser[lang.VarBitVectorSlice] =
       positioned { ("[" ~> Expr ~ ":" ~ Expr <~ "]") ^^ { case x ~ ":" ~ y => lang.VarBitVectorSlice(x, y) } }
     lazy val ConstExtractOp : Parser[lang.ConstExtractOp] =
@@ -642,8 +652,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val TypeDecl : PackratParser[lang.TypeDecl] = positioned {
       KwType ~> Id ~ ("=" ~> Type) <~ ";" ^^ { case id ~ t => lang.TypeDecl(id,t) } |
-      KwType ~> Id ~ ("=" ~> Type) ^^ { case id ~ t => lang.TypeDecl(id,t); throw new Utils.SyntaxError("Loss of ';'", Some(id.pos),null) } |
       KwType ~> Id <~ ";" ^^ { case id => lang.TypeDecl(id, lang.UninterpretedType(id)) } |
+       /*below is Error grammer */
+      KwType ~> Id ~ ("=" ~> Type) ^^ { case id ~ t => lang.TypeDecl(id,t); throw new Utils.SyntaxError("Loss of ';'", Some(id.pos),null) } |
       KwType ~> Id ^^ { case id=> lang.TypeDecl(id, lang.UninterpretedType(id)); throw new Utils.SyntaxError("Loss of ';'", Some(id.pos),null)}
     }
 
@@ -657,7 +668,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val VarsDecl : PackratParser[lang.StateVarsDecl] = positioned {
       KwVar ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.StateVarsDecl(ids, typ) } |
-      KwVar ~> IdList ~ ":" ~ Type ^^ { case ids ~ ":" ~ typ => throw new Utils.SyntaxError("Bad declear of VarsDecl",Some(ids.head.pos),null)}
+      /*below is Error grammer */
+      KwVar ~> IdList ~ ":" ~ Type ^^ { case ids ~ ":" ~ typ => throw new Utils.SyntaxError("Bad VarsDecl",Some(ids.head.pos),null)} |
+      KwVar ~> IdList ^^ { case ids => throw new Utils.SyntaxError("Bad VarsDecl",Some(ids.head.pos),null) } |
+      KwVar ^^ { case _ => throw new Utils.SyntaxError("Bad VarDecl, please check var in your code!",null,null)}
     }
     lazy val InputsDecl : PackratParser[lang.InputVarsDecl] = positioned {
       KwInput ~> IdList ~ ":" ~ Type <~ ";" ^^ { case ids ~ ":" ~ typ => lang.InputVarsDecl(ids, typ) }
@@ -910,6 +924,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Model: PackratParser[List[Module]] = rep(Module)
 
+    // lazy val Error: PackratParser[lang.Error] = positioned {
+    //   lexical.delimiters ^^ { case d => Error()}
+    // }
     def parseModel(filename : String, text: String): List[Module] = {
       val tokens = new PackratReader(new lexical.Scanner(text))
       phrase(Model)(tokens) match {
