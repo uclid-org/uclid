@@ -45,7 +45,6 @@ import scala.collection.mutable.{Map => MutableMap}
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
 import scala.reflect.ClassTag
-import java.util.HashMap
 
 object PrettyPrinter
 {
@@ -138,6 +137,13 @@ object ASTNode {
 sealed trait ASTNode extends PositionedNode {
   val astNodeId = IdGenerator.newId()
 
+  /**
+   * INFO: canGenerateCodegenExpr tracks whether the UclidLang
+   * can be transformed to valid raw Uclid input
+   * codegenString actually holds the raw uclid input.
+   * 
+   * This is not elegant/necessary and will be fixed in a future commit.
+   */
   def canGenerateCodegenExpr : Boolean = false
   def codegenString : String = toString
 }
@@ -587,6 +593,15 @@ sealed abstract class Expr extends ASTNode {
   override def codegenString : String = toString
 }
 
+/**
+ *  Type refinements:
+ *  QIdentifier :> QualifiedIdentifier
+ *      v  
+ *  UIdentifier :> Identifier, ExternalIdentifier, IndexedIdentifier
+ * 
+ *  This type-hierarchy emulates SMTLIB
+ *    and makes SMTLIB -> UclidLang parsing more natural
+ */
 sealed abstract class QIdentifier extends Expr
 sealed abstract class UIdentifier extends QIdentifier
 case class Identifier(name : String) extends UIdentifier {
