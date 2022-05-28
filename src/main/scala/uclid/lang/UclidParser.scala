@@ -264,10 +264,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "." ~> Integer ^^ { case i => lang.HyperSelect(i.value.toInt) }
     }
     lazy val ArraySelectOp: Parser[ArraySelect] = positioned {
-      ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ {case e ~ es => ArraySelect(e :: es)}|
-      /*below is Error grammer */
-       "[" ^^ {case _ => throw new Utils.SyntaxError("unpaired '[' ",null,null) } |
-       "]" ^^ {case _ => throw new Utils.SyntaxError("unpaired ']' ",null,null) } 
+      ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ {case e ~ es => ArraySelect(e :: es)}
     }
     lazy val ArrayStoreOp: Parser[ArrayUpdate] = positioned {
       ("[" ~> (Expr ~ rep("," ~> Expr) ~ ("->" ~> Expr)) <~ "]") ^^ {case e ~ es ~ r => ArrayUpdate(e :: es, r)}
@@ -839,12 +836,18 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     lazy val InitDecl : PackratParser[lang.InitDecl] = positioned {
       KwInit ~> BlkStmt ^^
-        { case b => lang.InitDecl(b) }
+        { case b => lang.InitDecl(b) } |
+      /*below is Error grammer */ 
+      KwInit ^^
+        { case _ => throw new Utils.SyntaxError("in Init block!",null,null)}
     }
 
     lazy val NextDecl : PackratParser[lang.NextDecl] = positioned {
       KwNext ~> BlkStmt ^^
-        { case b => lang.NextDecl(b) }
+        { case b => lang.NextDecl(b) } |
+      /*below is Error grammer */
+      KwNext ^^ 
+        { case _ => throw new Utils.SyntaxError("Error after keyword next",null,null) }
     }
 
     lazy val SpecDecl: PackratParser[lang.SpecDecl] = positioned {
@@ -922,7 +925,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case id ~ (decls ~ None) => lang.Module(id, decls, List.empty, Annotation.default)
       } |
       /*below is Error grammer */
-      //Loss of keyword "module"
+      KwModule ~> Id ^^{
+        case id => throw new Utils.SyntaxError("Syntax Error in Module",Some(id.pos),null)
+      } |
       Id  ^^ {
         case id => throw new Utils.SyntaxError("cannot find key word module", Some(id.pos), null)
       } 
