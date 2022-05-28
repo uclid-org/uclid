@@ -1,0 +1,46 @@
+module main {
+    var x, y: integer;
+    type cache_t = [integer]boolean;
+    const init_cache: cache_t;
+    var cache: cache_t;
+
+    procedure [inline] update_cache()
+        modifies cache;
+        // infers cache
+    {
+        cache = init_cache;
+    }
+
+    procedure bar()
+        modifies y;
+        // infers x, y
+        // add y
+        // add x and y
+        // add cache
+    {
+        call update_cache();
+        y = 0;
+        x = 0;
+    }
+
+    procedure foo()
+        modifies y;
+        // infers y
+        // modifies cache not injected
+    {
+        y = 0;
+        call bar();
+    }
+
+    next {
+        call foo();
+    }
+
+    invariant test: true;
+
+    control {
+        v = induction;
+        check;
+        print_results;
+    }
+}

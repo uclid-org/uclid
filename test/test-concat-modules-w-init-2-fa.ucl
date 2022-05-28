@@ -1,0 +1,38 @@
+/* 
+    Test where variable declarations, init and next blocks are in different declaring modules.
+    Extended test where the blocks are in different files, and the order of specifying files is important.
+
+    This is the first file; also checkout test/test-concat-modules-w-init-2-fb.ucl
+*/
+module A {
+    var x, y, z: integer;
+
+    init {
+        x = 0;
+    }
+}
+
+module A {
+    next {
+        x' = x;
+        y' = y;
+        z' = z;
+    }
+}
+
+module main {
+    instance a: A();
+    invariant same_x: a.x == 0;
+    invariant same_y: a.y == 0;
+    invariant same_z: a.z == 0;
+    
+    next {
+        next(a);
+    }
+    
+    control {
+        v = induction();
+        check;
+        print_results; 
+    }
+}

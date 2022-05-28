@@ -244,7 +244,28 @@ class ParserSpec extends AnyFlatSpec {
     }
   }
   "test-concat-modules.ucl" should "parse successfully" in {
-    val fileModules = UclidMain.compile(ConfigCons.createConfigWithMSA("test/test-concat-modules.ucl"), lang.Identifier("main"))
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-concat-modules.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-concat-modules-w-init-1.ucl" should "parse successfully" in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-concat-modules-w-init-1.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-concat-modules-w-init-2-fab.ucl" should "parse successfully" in {
+    val fileModules = UclidMain.compile(UclidMain.Config(files=List(
+      new File("test/test-concat-modules-w-init-2-fa.ucl"), new File("test/test-concat-modules-w-init-2-fb.ucl"))
+    ), lang.Identifier("main"))
+    assert (fileModules.size == 2)
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-concat-modules-w-init-2-fba.ucl" should "parse successfully" in {
+    val fileModules = UclidMain.compile(UclidMain.Config(files=List(
+      new File("test/test-concat-modules-w-init-2-fb.ucl"), new File("test/test-concat-modules-w-init-2-fa.ucl"))
+    ), lang.Identifier("main"))
+    assert (fileModules.size == 2)
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
@@ -265,6 +286,11 @@ class ParserSpec extends AnyFlatSpec {
   }
   "test-mod-set-analysis-3.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(ConfigCons.createConfigWithMSA("test/test-mod-set-analysis-3.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-mod-set-analysis-6.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfigWithMSA("test/test-mod-set-analysis-6.ucl"), lang.Identifier("main"))
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }

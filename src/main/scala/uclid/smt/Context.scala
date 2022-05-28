@@ -42,6 +42,8 @@ package smt
 import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.mutable.{Map => MutableMap}
 
+import org.json4s._
+
 case class SynonymMap(fwdMap: Map[String, Type], val revMap: Map[Type, SynonymType]) {
   def addSynonym(name: String, typ: Type) = {
     SynonymMap(fwdMap + (name -> typ), revMap + (typ -> SynonymType(name, typ)))
@@ -72,6 +74,9 @@ abstract class Model {
   }
   def evalAsString(e : Expr) : String = {
     throw new Utils.UnimplementedException("evalAsString not implemented yet.")
+  }
+  def evalAsJSON(e : Expr) : JValue = {
+    throw new Utils.UnimplementedException("evalAsJSON not implemented yet.")
   }
 }
 
