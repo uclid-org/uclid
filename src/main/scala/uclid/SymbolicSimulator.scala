@@ -58,6 +58,8 @@ import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import scala.collection.mutable
+import uclid.smt.SMTLIB2Interface
+import uclid.smt.Context
 
 object UniqueIdGenerator {
   var i : Int = 0;
@@ -346,7 +348,7 @@ class SymbolicSimulator (module : Module) {
           case "print_cex" =>
             printCEX(proofResults, cmd.args, cmd.argObj)
           case "print_cex_json" =>
-            printCEXJSON(proofResults, cmd.args, cmd.argObj, config)
+            printCEXJSON(proofResults, cmd.args, cmd.argObj, config, solver)
           case "dump_cex_vcds" =>
             dumpCEXVCDFiles(proofResults)
           case "print_module" =>
@@ -1264,13 +1266,18 @@ class SymbolicSimulator (module : Module) {
     }}
   }
 
-  def printCEXJSON(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier], config : UclidMain.Config) {
+  def printCEXJSON(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier], config : UclidMain.Config, solver : Context) {
     def labelMatches(p : AssertInfo) : Boolean = {
       arg match {
         case Some(id) => id.toString == p.label || p.label.startsWith(id.toString + ":")
         case None => true
       }
     }
+    val isSMTLIB2Interface : Boolean = solver.isInstanceOf[SMTLIB2Interface] 
+    if (isSMTLIB2Interface) {
+      ULContext.extractPostTypeMap(solver.asInstanceOf[SMTLIB2Interface].typeMap)
+    }
+
     // One property can have multiple violating cexes, so index them
     val prop_counter : ObjectCounter[String] = new ObjectCounter[String]()
     UclidMain.printStatus("=================================")
@@ -1288,8 +1295,10 @@ class SymbolicSimulator (module : Module) {
       }
       val fh  = new File(filename)
       val bw  = new BufferedWriter(new FileWriter(fh))
-      bw.write(pretty(render(jsonobj)))
+      val jsonStr = pretty(render(jsonobj))
+      bw.write(jsonStr)
       bw.close()
+      UclidMain.setJSONString(jsonStr)
       UclidMain.printStatus("Wrote CEX traces to file: " + filename)
     }
   }
@@ -1321,10 +1330,10 @@ class SymbolicSimulator (module : Module) {
     Utils.assert(simTable.size >= 1, "Must have at least one trace")
     val lastFrame = res.assert.iter
     val json_trace : JArray = JArray(((0 to lastFrame).map { case (i) => {
-      try{
+      try {
           printFrameJSON(simTable, i, model, exprsToPrint, scope)
-      }  catch{
-          case _: Throwable => {
+      } catch {
+          case _ : Throwable => {
             UclidMain.printError("error: unable to parse counterexample frame")
             JString("error: unable to parse counterexample frame")
           }

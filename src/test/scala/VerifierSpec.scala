@@ -44,6 +44,9 @@ import org.scalatest.flatspec.AnyFlatSpec
 import java.io.File
 import uclid.{lang => l}
 
+import org.json4s.jackson.JsonMethods._
+import org.json4s.JString
+
 object VerifierSpec {
   def expectedFails(filename: String, nFail : Int, config: Option[UclidMain.Config]=None) : String = {
     UclidMain.enableStringOutput()
@@ -174,11 +177,23 @@ class BasicVerifierSpec extends AnyFlatSpec {
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
   }
-  "test-record-update-op-1.ucl" should "fail to verify 1 assertion." in {
+  "test-record-update-op-1.ucl" should "fail to verify 1 assertion and generates a JSON CEX." in {
     VerifierSpec.expectedFails("./test/test-record-update-op-1.ucl", 1)
+    val json = parse(PrintCexSpec.getJSONString("./test/test-record-update-op-1.ucl"))
+    val str  = ((json \ "property__trivial1__0" \ "trace")(0) \ "cache1")(0)
+    str match {
+      case JString(s) => assert(s.contains("(_tuple_0 true 2022)"))
+      case _ => assert(false)
+    }
   }
-  "test-record-update-op-5.ucl" should "fail to verify 2 assertions." in {
+  "test-record-update-op-5.ucl" should "fail to verify 2 assertions and generates a JSON CEX." in {
     VerifierSpec.expectedFails("./test/test-record-update-op-5.ucl", 2)
+    val json = parse(PrintCexSpec.getJSONString("./test/test-record-update-op-5.ucl"))
+    val str  = ((json \ "property__trivial1__1" \ "trace")(0) \ "cache1")(0)
+    str match {
+      case JString(s) => assert(s.contains("(_tuple_0 false ((as const (Array (_ BitVec 4) (_ BitVec 32))) #x00000000))"))
+      case _ => assert(false)
+    }
   }
   "test-record-update-op-6.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-update-op-6.ucl", 0)
@@ -188,6 +203,9 @@ class BasicVerifierSpec extends AnyFlatSpec {
   }
   "test-record-update-op-8.ucl" should "fail to verify 1 assertion." in {
     VerifierSpec.expectedFails("./test/test-record-update-op-8.ucl", 1)
+  }
+  "test-record-update-op-11.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-11.ucl", 1)
   }
 
   "test-const-record-1.ucl" should "fail to verify 1 assertion." in {
@@ -409,6 +427,9 @@ class InductionVerifSpec extends AnyFlatSpec {
   }
   "test-record-update-op-9.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-record-update-op-9.ucl", 0)
+  }
+  "test-record-update-op-10.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-10.ucl", 0)
   }
   "test-const-record-3.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-const-record-3.ucl", 0)
@@ -689,6 +710,17 @@ object PrintCexSpec {
       case false => s"Wrote CEX traces to file: ${cexfile}.json"
     }
     assert (lines2.exists(l => l.contains(checkfilemsg)))    
+  }
+  def getJSONString (filename : String) : String = {
+    UclidMain.enableStringOutput()
+    UclidMain.clearStringOutput()
+    UclidMain.clearJSONString()
+    val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
+    val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, l.Identifier("main"))
+    assert (mainModule.isDefined)
+    val config = UclidMain.Config() 
+    val results = UclidMain.execute(mainModule.get, config)
+    UclidMain.jsonString.toString()
   }
 }
 class PrintCexSpec extends AnyFlatSpec {

@@ -530,7 +530,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     "(" ~> symbol ~ rep1(UclidType) <~ ")" ^^ {
       case sym ~ typs => (lang.TupleType(typs.map(a => a._1)), joinWithSpace(sym.name, typs.map(a => a._2).mkString(" ")))
     } |
-    symbol ^^ { sym =>  (lang.UninterpretedType(lang.Identifier(sym.name)), sym.name) }
+    symbol ^^ { sym =>  (lang.SynonymType(lang.Identifier(sym.name)), sym.name) }
 
   lazy val UclidFunArg : PackratParser[((lang.Identifier, lang.Type), String)] =
     "(" ~> symbol ~ UclidType <~ ")" ^^ { case sym ~ typ => ((lang.Identifier(sym.name), typ._1), joinWithSpace(sym.name, typ._2)) }
@@ -607,9 +607,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val UclidDefineFun : PackratParser[(lang.DefineDecl, String)] =
     "(" ~ KwDefFun ~> symbol ~ UclidFunArgs ~ UclidType ~ UclidExpr <~ ")" ^^ {
       case id ~ args ~ rTyp ~ expr => {
-        (lang.DefineDecl(lang.Identifier(id.name), lang.FunctionSig(args._1, rTyp._1), expr._1),
-          joinWithSpace(KwDefFun, id.name, args._2, rTyp._2, expr._2)
-        )
+        (lang.DefineDecl(lang.Identifier(id.name), lang.FunctionSig(args._1, rTyp._1), expr._1), expr._2)
       }
     }
   
@@ -624,9 +622,9 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     }
 
   lazy val UclidAssignmentModel : PackratParser[lang.AssignmentModel] =
-    "(" ~ KwModel ~> rep(UclidDefineFun) <~ ")" ^^ {
+    "(" ~ KwModel ~> rep(UclidDefineFun | UclidDeclareFun | UclidExpr) <~ ")" ^^ {
       case functions => {
-        lang.AssignmentModel(functions.map(a => (a._1, a._2)))
+        lang.AssignmentModel(functions.filter(a => a._1.isInstanceOf[lang.DefineDecl]).map(a => (a._1.asInstanceOf[lang.DefineDecl], a._2)))
       }
     } |
     "(" ~> rep(UclidDefineFun) <~ ")" ^^ {
@@ -661,7 +659,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       case Success(model, _) => model
       case NoSuccess(msg, next) =>
         UclidMain.printError(next.pos.toString)
-        throw new Utils.RuntimeError("SExpr model parser error: %s.\nIn: %s".format(msg, text))
+        throw new Utils.RuntimeError("SExpr model parser error: %s.\nIn: %s at: %s".format(msg, text, next.pos.toString))
     }
   }
 }
