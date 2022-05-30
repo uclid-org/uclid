@@ -177,23 +177,11 @@ class BasicVerifierSpec extends AnyFlatSpec {
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
   }
-  "test-record-update-op-1.ucl" should "fail to verify 1 assertion and generates a JSON CEX." in {
+  "test-record-update-op-1.ucl" should "fail to verify 1 assertion." in {
     VerifierSpec.expectedFails("./test/test-record-update-op-1.ucl", 1)
-    val json = parse(PrintCexSpec.getJSONString("./test/test-record-update-op-1.ucl"))
-    val str  = ((json \ "property__trivial1__0" \ "trace")(0) \ "cache1")(0)
-    str match {
-      case JString(s) => assert(s.contains("(_tuple_0 true 2022)"))
-      case _ => assert(false)
-    }
   }
-  "test-record-update-op-5.ucl" should "fail to verify 2 assertions and generates a JSON CEX." in {
+  "test-record-update-op-5.ucl" should "fail to verify 2 assertions." in {
     VerifierSpec.expectedFails("./test/test-record-update-op-5.ucl", 2)
-    val json = parse(PrintCexSpec.getJSONString("./test/test-record-update-op-5.ucl"))
-    val str  = ((json \ "property__trivial1__1" \ "trace")(0) \ "cache1")(0)
-    str match {
-      case JString(s) => assert(s.contains("(_tuple_0 false ((as const (Array (_ BitVec 4) (_ BitVec 32))) #x00000000))"))
-      case _ => assert(false)
-    }
   }
   "test-record-update-op-6.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-update-op-6.ucl", 0)
@@ -693,7 +681,7 @@ object PrintCexSpec {
     )
     val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, l.Identifier("main"))
     assert (mainModule.isDefined)
-    val config = UclidMain.Config(jsonCEXfile=cexfile)
+    val config = UclidMain.Config(smtSolver=List("z3", "-in"), jsonCEXfile=cexfile)
     val results = UclidMain.execute(mainModule.get, config)
     val outputString = UclidMain.stringOutput.toString()
     val lines1 = outputString.split('\n')
@@ -711,14 +699,14 @@ object PrintCexSpec {
     }
     assert (lines2.exists(l => l.contains(checkfilemsg)))    
   }
-  def getJSONString (filename : String) : String = {
+  def checkSExprToUclidLang (filename : String) : String = {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
     UclidMain.clearJSONString()
     val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
     val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, l.Identifier("main"))
     assert (mainModule.isDefined)
-    val config = UclidMain.Config() 
+    val config = UclidMain.Config(smtSolver=List("z3", "-in"))
     val results = UclidMain.execute(mainModule.get, config)
     UclidMain.jsonString.toString()
   }
@@ -756,6 +744,72 @@ class PrintCexSpec extends AnyFlatSpec {
   }
   "test/test-cex-json-record.ucl" should "generate a JSON CEX trace" in {
     PrintCexSpec.checkJSONCex("test/test-cex-json-record.ucl", 3, List(1, 2))
+  }
+  "test-sexpr-uclid-lang-records-1.ucl" should "generate UclidLang JSON cex" in {
+    val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-records-1.ucl"))
+    val str0 = ((json \ "property__trivial__0" \ "trace")(0) \ "cache1")(0)
+    str0 match {
+      case JString(s) => assert(s.contains("update-field _field_value"))
+      case _ => assert(false)
+    }
+    val str1 = ((json \ "property__trivial__0" \ "trace")(1) \ "cache1")(0)
+    str1 match {
+      case JString(s) => assert(s.equals("const_record(valid := false, value := 0)"))
+      case _ => assert(false)
+    }
+  }
+  "test-sexpr-uclid-lang-records-2.ucl" should "generate UclidLang JSON cex" in {
+    val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-records-2.ucl"))
+    val str0 = ((json \ "property__trivial__1" \ "trace")(0) \ "cache1")(0)
+    str0 match {
+      case JString(s) => assert(s.contains("update-field _field_value")) 
+      case _ => assert(false)
+    }
+    val str1 = ((json \ "property__trivial__1" \ "trace")(1) \ "cache1")(0)
+    str1 match {
+      case JString(s) => assert(s.equals("const_record(valid := false, value := const(0bv32, [bv4]bv32))"))
+      case _ => assert(false)
+    }
+  }
+  "test-sexpr-uclid-lang-arrays-1.ucl" should "generate UclidLang JSON cex" in {
+    val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-arrays-1.ucl"))
+    val str0 = ((json \ "property__trivial__1" \ "trace")(1) \ "database")(0)
+    str0 match {
+      case JString(s) => assert(s.equals("(const(3, [integer]integer))[2 -> 4]"))
+      case _ => assert(false)
+    }
+  }
+  "test-sexpr-uclid-lang-enums-1.ucl" should "generate UclidLang JSON cex" in {
+    val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-enums-1.ucl"))
+    val str0 = ((json \ "property__trivial__0" \ "trace")(2) \ "color")(0)
+    str0 match {
+      case JString(s) => assert(s.equals("YELLOW"))
+      case _ => assert(false)
+    }
+  }
+  "test-sexpr-uclid-lang-mixed-1.ucl" should "generate UclidLang JSON cex" in {
+    val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-mixed-1.ucl"))
+    val str0 = ((json \ "property__trivial__1" \ "trace")(1) \ "database")(0)
+    str0 match {
+      case JString(s) => assert(s.equals("(const(const_record(uid := 2, color := false), [integer]utype_t))[2 -> const_record(uid := 3, color := false)]"))
+      case _ => assert(false)
+    }
+  }
+  "test-sexpr-uclid-lang-mixed-2.ucl" should "generate UclidLang JSON cex" in {
+    val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-mixed-2.ucl"))
+    val str0 = ((json \ "property__trivial__1" \ "trace")(1) \ "database")(0)
+    str0 match {
+      case JString(s) => assert(s.equals("(const(BLUE, [integer]color_t))[2 -> RED]"))
+      case _ => assert(false)
+    }
+  }
+  "test-sexpr-uclid-lang-mixed-3.ucl" should "generate UclidLang JSON cex" in {
+    val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-mixed-3.ucl"))
+    val str0 = ((json \ "property__trivial__1" \ "trace")(1) \ "database")(0)
+    str0 match {
+      case JString(s) => assert(s.equals("(const(const_record(uid := 2, color := RED), [integer]utype_t))[2 -> const_record(uid := 3, color := RED)]"))
+      case _ => assert(false)
+    }
   }
 }
 class ModuleConcatSpec extends AnyFlatSpec {
