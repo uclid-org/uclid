@@ -250,8 +250,6 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val KwPar = "par"
   lazy val KwDefFun = "define-fun"
 
-  lazy val KwUpdateField = "update-field" // for record update, not in SMTLIB, but used by solvers
-
   // Need to add to deal with Z3 output
   lazy val KwDecFun = "declare-fun"
   
