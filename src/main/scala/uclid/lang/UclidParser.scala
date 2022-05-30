@@ -103,8 +103,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     sealed class PositionedString(val str : String) extends Positional
-    // TODO_leiqi: somewhere in here you need to add the keywords for double, single and half
-    // Finish!
     lazy val OpAnd = "&&"
     lazy val OpOr = "||"
     lazy val OpBvAnd = "&"
@@ -322,8 +320,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       CommaSeparatedExprList ~ rep(";" ~> CommaSeparatedExprList) ^^ {
         case l ~ ls => l :: ls
       }
-  lazy val Pattern : PackratParser[(lang.Identifier, List[List[lang.Expr]])] =
-    Id ~ ("[" ~> PatternList <~ "]") ^^ { case id ~ pats => (id, pats) }
+    lazy val Pattern : PackratParser[(lang.Identifier, List[List[lang.Expr]])] =
+      Id ~ ("[" ~> PatternList <~ "]") ^^ { case id ~ pats => (id, pats) }
 
     lazy val E1: PackratParser[Expr] =
       KwForall ~> IdTypeList ~ Pattern.? ~ ("::" ~> E1) ^^ {
@@ -339,7 +337,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
               }
           }
         }
-      } |
+      } |  
       KwExists ~> IdTypeList ~ Pattern.? ~ ("::" ~> E1) ^^ {
           case ids ~ pat ~ expr => {
             pat match {
@@ -364,13 +362,41 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
           OperatorApplication(FiniteExistsOp(id, groupId), List(expr))
         }
       } |
-      E3
+      E3|
+      /*below is Error grammer */
+      KwForall ~> IdTypeList ^^ {
+        case ids => throw new Utils.SyntaxError("Syntax Error on Forall grammer",Some(ids.head._1.pos),null)
+      }|
+      KwForall ^^{
+        case _ => throw new Utils.SyntaxError("Syntax Error on Forall grammer",null,null)
+      }|
+      KwExists ~> IdTypeList ^^ {
+        case ids => throw new Utils.SyntaxError("Syntax Error on Exists grammer",Some(ids.head._1.pos),null)
+      }|
+      KwExists ^^ {
+        case ids => throw new Utils.SyntaxError("Syntax Error on Exists grammer",null,null)
+      }|
+      KwFiniteExists ~ "(" ~> (IdType <~ ")") ^^ {
+        case id => throw new Utils.SyntaxError("Syntax Error on FiniteForall",Some(id._1.pos),null)
+      }|
+      KwFiniteExists ^^ {
+        case id => throw new Utils.SyntaxError("Syntax Error on FiniteForall",null,null)
+      }|
+      KwFiniteExists ~ "(" ~> (IdType <~ ")") ^^ {
+        case id => throw new Utils.SyntaxError("Syntax Error on FiniteExists",Some(id._1.pos),null)
+      }|
+      KwFiniteExists^^ {
+        case id => throw new Utils.SyntaxError("Syntax Error on FiniteExists",null,null)
+      }
+
 
     /** E3 = E4 OpEquiv E3 | E4  **/
     lazy val E3: PackratParser[Expr] = positioned { E4 ~ OpBiImpl ~ E3 ^^ ast_binary | E4 }
     /** E4 = E5 OpImpl E4 | E5  **/
     lazy val E4: PackratParser[Expr] = positioned { E5 ~ OpImpl ~ E4 ^^ ast_binary | E5 }
     /** E5 = E6 <Bool_Or_Bv_Op> E5 | E6 **/
+
+    //todo: more Error grammer
     lazy val E5: PackratParser[Expr] = positioned {
         E6 ~ OpAnd ~ E5 ^^ ast_binary   |
         E6 ~ OpOr ~ E5 ^^ ast_binary    |
@@ -445,8 +471,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "(" ~> ")" ^^ { case _ => List.empty[Expr] }
 
     /** Examples of allowed types are bool | int | [int,int,bool] int **/
-    // TODO_leiqi: somewhere in here you need to handle the specific types of single, double and half
-    //finish!
     lazy val PrimitiveType : PackratParser[Type] = positioned {
       KwBoolean ^^ {case _ => BooleanType()}   |
       KwInteger ^^ {case _ => IntegerType()}   |
@@ -839,7 +863,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case b => lang.InitDecl(b) } |
       /*below is Error grammer */ 
       KwInit ^^
-        { case _ => throw new Utils.SyntaxError("in Init block!",null,null)}
+        { case _ => throw new Utils.SyntaxError("Syntax Error in Init block!",null,null)}
     }
 
     lazy val NextDecl : PackratParser[lang.NextDecl] = positioned {
