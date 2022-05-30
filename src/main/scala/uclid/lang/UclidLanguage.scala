@@ -93,6 +93,13 @@ object ULContext {
       })
     )
   }
+  def checkEnum(id : Identifier) : Boolean  = {
+    val enumTypes = origTypeMap.fwdMap.map(_._2) flatMap {
+      case e : EnumType => Some(e)
+      case _ => None
+    }
+    enumTypes.exists(e => e.ids.contains(id))
+  }
   // Performs smt_synonym_name -> lang.Type -> uclid_synonym_name conversion
   def smtToLangSynonym(name : String) : Option[Type] = {
     postTypeMap.get(name) match {
@@ -192,16 +199,6 @@ object ASTNode {
  */
 sealed trait ASTNode extends PositionedNode {
   val astNodeId = IdGenerator.newId()
-
-  /**
-   * INFO: canGenerateCodegenExpr tracks whether the UclidLang
-   * can be transformed to valid raw Uclid input
-   * codegenString actually holds the raw uclid input.
-   * 
-   * This is not elegant/necessary and will be fixed in a future commit.
-   */
-  def canGenerateCodegenExpr : Boolean = false
-  def codegenString : String = toString
 }
 
 
@@ -680,6 +677,11 @@ sealed abstract class QIdentifier extends Expr
 sealed abstract class UIdentifier extends QIdentifier
 case class Identifier(name : String) extends UIdentifier {
   override def toString = name.toString
+  override def codegenUclidLang: Option[Expr] =
+    ULContext.checkEnum(Identifier(name)) match {
+      case true => Some(this)
+      case false => None
+    }
 }
 case class ExternalIdentifier(moduleId : Identifier, id : Identifier) extends UIdentifier {
   override def toString = moduleId.toString + "::" + id.toString
@@ -853,13 +855,9 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class FuncApplication(e: Expr, args: List[Expr]) extends Expr {
   override def toString = e + "(" + Utils.join(args.map(_.toString), ", ") + ")"
-
-  override def canGenerateCodegenExpr: Boolean = false
 }
 case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
   override def toString = "Lambda(" + ids + "). " + e
-
-  override def canGenerateCodegenExpr: Boolean = false
 }
 
 case class LetExpr (ids: List[(UIdentifier, Expr)], e : Expr) extends Expr {
@@ -870,7 +868,6 @@ case class LetExpr (ids: List[(UIdentifier, Expr)], e : Expr) extends Expr {
 
 sealed abstract class Lhs(val ident: Identifier) extends ASTNode {
   def isProceduralLhs : Boolean
-  override def canGenerateCodegenExpr = false
 }
 case class LhsId(id: Identifier) extends Lhs(id) {
   override def toString = id.toString
@@ -898,9 +895,7 @@ case class LhsVarSliceSelect(id: Identifier, bitslice: VarBitVectorSlice) extend
 }
 
 /** Type decorators for expressions. */
-sealed abstract class ExprDecorator extends ASTNode {
-  override def canGenerateCodegenExpr: Boolean = false
-}
+sealed abstract class ExprDecorator extends ASTNode
 case class UnknownDecorator(value: String) extends ExprDecorator {
   override def toString = value
 }
