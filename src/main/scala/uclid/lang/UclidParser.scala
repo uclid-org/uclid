@@ -199,8 +199,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     // lazy val TemporalOpRelease = "R"
     
 
-// TODO_leiqi: add keywords for single double and half in here
-// finish!
     lexical.delimiters ++= List("(", ")", ",", "[", "]",
       "bv", "fp", "{", "}", ";", "=", ":", "::", ".", "*", "::=", "->",
       OpAnd, OpOr, OpBvAnd, OpBvOr, OpBvXor, OpBvNot, OpAdd, OpSub, OpMul, OpDiv, OpUDiv,
@@ -290,8 +288,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Integer: PackratParser[lang.IntLit] =
       positioned { integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base))} }
 
-    //TODO_leiqi: change the structure Float into: floatLit ~ floatType or integer ~ floatType
-    //Should we support 4double
     lazy val Float: PackratParser[lang.FloatLit] =
       positioned {  
                     Integer ~ KwHalf    ^^ { case intLit ~ s   => lang.FloatLit(intLit.value, "0", 5, 11) } |
@@ -389,50 +385,93 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case id => throw new Utils.SyntaxError("Syntax Error on FiniteExists",null,null)
       }
 
-
     /** E3 = E4 OpEquiv E3 | E4  **/
-    lazy val E3: PackratParser[Expr] = positioned { E4 ~ OpBiImpl ~ E3 ^^ ast_binary | E4 }
+    lazy val E3: PackratParser[Expr] = positioned { 
+        E4 ~ OpBiImpl ~ E3 ^^ ast_binary |
+        E4 |
+        /*below is Error grammer */
+        E4 ~ OpBiImpl ^^ { case _ =>throw new Utils.SyntaxError("Syntax Error on <==>",null,null)}
+    }
     /** E4 = E5 OpImpl E4 | E5  **/
-    lazy val E4: PackratParser[Expr] = positioned { E5 ~ OpImpl ~ E4 ^^ ast_binary | E5 }
+    lazy val E4: PackratParser[Expr] = positioned { 
+      E5 ~ OpImpl ~ E4 ^^ ast_binary | 
+      E5 |
+      /*below is Error grammer */
+      E5 ~ OpImpl ^^ { case _ =>throw new Utils.SyntaxError("Syntax Error on ==>",null,null)} 
+    }
     /** E5 = E6 <Bool_Or_Bv_Op> E5 | E6 **/
 
-    //todo: more Error grammer
     lazy val E5: PackratParser[Expr] = positioned {
-        E6 ~ OpAnd ~ E5 ^^ ast_binary   |
-        E6 ~ OpOr ~ E5 ^^ ast_binary    |
-        E6 ~ OpBvAnd ~ E5 ^^ ast_binary |
-        E6 ~ OpBvOr ~ E5 ^^ ast_binary  |
-        E6 ~ OpBvXor ~ E5 ^^ ast_binary |
-        E6 ~ OpBvUrem ~ E5 ^^ ast_binary |
-        E6 ~ OpBvSrem ~ E5 ^^ ast_binary |
-        E6
+      E6 ~ OpAnd ~ E5 ^^ ast_binary   |
+      E6 ~ OpOr ~ E5 ^^ ast_binary    |
+      E6 ~ OpBvAnd ~ E5 ^^ ast_binary |
+      E6 ~ OpBvOr ~ E5 ^^ ast_binary  |
+      E6 ~ OpBvXor ~ E5 ^^ ast_binary |
+      E6 ~ OpBvUrem ~ E5 ^^ ast_binary |
+      E6 ~ OpBvSrem ~ E5 ^^ ast_binary |
+      E6 |
+        /*below is Error grammer */
+      E6 ~ OpAnd ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on &&",null,null)}|
+      E6 ~ OpOr ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on ||",null,null)}|
+      E6 ~ OpBvAnd ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on &",null,null)}|
+      E6 ~ OpBvOr ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on |",null,null)}|
+      E6 ~ OpBvXor ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on ^",null,null)}|
+      E6 ~ OpBvUrem ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on %_u",null,null)}|
+      E6 ~ OpBvSrem ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on %",null,null)}
     }
     /** E6 = E7 OpRel E7 | E7  **/
     lazy val E6: PackratParser[Expr] = positioned { 
-        E7 ~ LLOp ~ E7 ~ LLOp ~ E7 ^^ {
-          case e1 ~ o1 ~ e2 ~ o2 ~ e3 => {
-            OperatorApplication(lang.ConjunctionOp(),
-                List(OperatorApplication(o1, List(e1, e2)),
-                     OperatorApplication(o2, List(e2, e3))))
-          }
-        } |
-        E7 ~ RelOp ~ E7 ^^ ast_binary |
-        E7
+      E7 ~ LLOp ~ E7 ~ LLOp ~ E7 ^^ {
+        case e1 ~ o1 ~ e2 ~ o2 ~ e3 => {
+          OperatorApplication(lang.ConjunctionOp(),
+              List(OperatorApplication(o1, List(e1, e2)),
+                    OperatorApplication(o2, List(e2, e3))))
+        }
+      } |
+      E7 ~ RelOp ~ E7 ^^ ast_binary |
+      E7 |
+      /*below is Error grammer */
+      E7 ~ RelOp ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on relation operation",null,null)}
     }
     /** E7 = E8 OpConcat E7 | E8 **/
-    lazy val E7: PackratParser[Expr] = positioned ( E8 ~ OpConcat ~ E7 ^^ ast_binary | E8 )
+    lazy val E7: PackratParser[Expr] = positioned { 
+      E8 ~ OpConcat ~ E7 ^^ ast_binary | 
+      E8 |
+      /*below is Error grammer */
+      E8 ~ OpConcat ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on ++",null,null)}
+    }
     /** E8 = E9 OpAdd E8 | E9 **/
-    lazy val E8: PackratParser[Expr] = positioned ( E9 ~ OpAdd ~ E8 ^^ ast_binary | E9 )
+    lazy val E8: PackratParser[Expr] = positioned { 
+      E9 ~ OpAdd ~ E8 ^^ ast_binary | 
+      E9 |
+      /*below is Error grammer */
+      E9 ~ OpAdd ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on +",null,null)}
+    }
     /** E9 = E9 OpSub E10 | E10 **/
-    lazy val E9: PackratParser[Expr] = positioned ( E9 ~ OpSub ~ E10 ^^ ast_binary | E10 )
+    lazy val E9: PackratParser[Expr] = positioned { 
+      E9 ~ OpSub ~ E10 ^^ ast_binary | 
+      E10 |
+      /*below is Error grammer */
+      E9 ~ OpSub ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on -",null,null)}
+    }
     /** E10 = E10 OpMul E11 | E10 OpDiv E11 | E10 OpUDiv E11 | E11 **/
-    lazy val E10: PackratParser[Expr] = E10 ~ OpMul ~ E11 ^^ ast_binary | E10 ~ OpDiv ~ E11 ^^ ast_binary  | E10 ~ OpUDiv ~ E11 ^^ ast_binary  | E11
+    lazy val E10: PackratParser[Expr] = positioned {
+      E10 ~ OpMul ~ E11 ^^ ast_binary | 
+      E10 ~ OpDiv ~ E11 ^^ ast_binary | 
+      E10 ~ OpUDiv ~ E11 ^^ ast_binary | 
+      E11 |
+      /*below is Error grammer */
+      E10 ~ OpMul ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on *",null,null)} |
+      E10 ~ OpDiv ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on /",null,null)} |
+      E10 ~ OpUDiv ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on /_u",null,null) }
+    }
+      
     /** E11 = UnOp E12 | E12 **/
     lazy val E11: PackratParser[Expr] = positioned {
-        OpNeg ~> E12 ^^ { case e => OperatorApplication(UnaryMinusOp(), List(e)) } |
-        OpNot ~> E12 ^^ { case e => OperatorApplication(NegationOp(), List(e)) } |
-        OpBvNot ~> E12 ^^ { case e => OperatorApplication(BVNotOp(0), List(e)) } |
-        E12
+      OpNeg ~> E12 ^^ { case e => OperatorApplication(UnaryMinusOp(), List(e)) } |
+      OpNot ~> E12 ^^ { case e => OperatorApplication(NegationOp(), List(e)) } |
+      OpBvNot ~> E12 ^^ { case e => OperatorApplication(BVNotOp(0), List(e)) } |
+      E12
     }
     /** ExpressionSuffixes. */
     lazy val ExprSuffix: PackratParser[Operator] = positioned {
@@ -452,16 +491,21 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
     /** E15 = false | true | Number | ConstArray | Id FuncApplication | (Expr) **/
     lazy val E15: PackratParser[Expr] = positioned {
-        Literal |
-        "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
-        KwIf ~> ("(" ~> Expr <~ ")") ~ (KwThen ~> Expr) ~ (KwElse ~> Expr) ^^ {
-          case expr ~ thenExpr ~ elseExpr => lang.OperatorApplication(lang.ITEOp(), List(expr, thenExpr, elseExpr))
-        } |
-        ConstArray |
-        KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => Lambda(idtyps, expr) } |
-        "(" ~> Expr <~ ")" |
-        Id <~ OpPrime ^^ { case id => lang.OperatorApplication(GetNextValueOp(), List(id)) } |
-        Id
+      Literal |
+      "{" ~> Expr ~ rep("," ~> Expr) <~ "}" ^^ {case e ~ es => Tuple(e::es)} |
+      KwIf ~> ("(" ~> Expr <~ ")") ~ (KwThen ~> Expr) ~ (KwElse ~> Expr) ^^ {
+        case expr ~ thenExpr ~ elseExpr => lang.OperatorApplication(lang.ITEOp(), List(expr, thenExpr, elseExpr))
+      } |
+      ConstArray |
+      KwLambda ~> (IdTypeList) ~ ("." ~> Expr) ^^ { case idtyps ~ expr => Lambda(idtyps, expr) } |
+      "(" ~> Expr <~ ")" |
+      Id <~ OpPrime ^^ { case id => lang.OperatorApplication(GetNextValueOp(), List(id)) } |
+      Id |
+      /*below is Error grammer */
+      "{" ~> Expr ~ rep("," ~> Expr) ^^ { case _ => throw new Utils.SyntaxError("Miss paired of }",null,null)} |
+      "(" ~> Expr ^^ { case _ => throw new Utils.SyntaxError("Miss paired of )",null,null)}|
+      "{" ^^ { case _ => throw new Utils.SyntaxError("Miss paired of {",null,null)}|
+      "(" ^^ { case _ => throw new Utils.SyntaxError("Miss paired of (",null,null)}
     }
 
     /** Expr = E1 (Used to be TemporalExpr0) **/
@@ -477,16 +521,23 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwHalf    ^^ {case _ => FloatType(5,11)}  |
       KwSingle  ^^ {case _ => FloatType(8,24)}  |
       KwDouble  ^^ {case _ => FloatType(11,53)} |
-      floatType ^^ {case fltType => FloatType(fltType.exp, fltType.sig)}     |
+      floatType ^^ {case fltType => FloatType(fltType.exp, fltType.sig)} |
       bitVectorType ^^ {case bvType => BitVectorType(bvType.width)}
     }
 
+
     lazy val EnumType : PackratParser[lang.EnumType] = positioned {
-      KwEnum ~> ("{" ~> Id) ~ rep("," ~> Id) <~ "}" ^^ { case id ~ ids => lang.EnumType(id::ids) }
+      KwEnum ~> ("{" ~> Id) ~ rep("," ~> Id) <~ "}" ^^ { case id ~ ids => lang.EnumType(id::ids) } |
+      /*below is Error grammer */
+      KwEnum ~> ("{" ~> Id) ~ rep("," ~> Id) ^^ { case id ~ ids => throw new Utils.SyntaxError("Loss of '}'",Some(ids.head.pos),null)}|
+      KwEnum ^^ { case _ => throw new Utils.SyntaxError("Syntax Error After enum",null,null)}
     }
     lazy val TupleType : PackratParser[lang.TupleType] = positioned {
-      ("{" ~> Type ~ rep("," ~> Type) <~ "}") ^^ { case t ~ ts => lang.TupleType(t :: ts) }
+      ("{" ~> Type ~ rep("," ~> Type) <~ "}") ^^ { case t ~ ts => lang.TupleType(t :: ts) } |
+      /*below is Error grammer */
+      "{" ~> Type ~ rep("," ~> Type) ^^ { case t ~ ts => throw new Utils.SyntaxError("Loss of '}'",Some(t.pos),null) }
     }
+
     lazy val RecordType : PackratParser[lang.RecordType] = positioned {
       KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) <~ "}" ^^ { case id ~ ids => lang.RecordType(id::ids) }
     }
