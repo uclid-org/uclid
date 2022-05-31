@@ -106,6 +106,9 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
         inds.forall(ind => isStatelessExpr(ind, context)) &&
         args.forall(arg => isStatelessExpr(arg, context)) &&
         isStatelessExpr(value, context)
+      case OperatorApplication(RecordUpdate(id, expr), args) =>
+        isStatelessExpr(expr, context) &&
+        args.forall(a => isStatelessExpr(a, context))
       case OperatorApplication(FiniteForallOp(_, gId), _) =>
         val opapp = e.asInstanceOf[OperatorApplication]
         isStatelessExpr(gId, context) &&
@@ -118,6 +121,8 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
         opapp.operands.forall(arg => isStatelessExpr(arg, context + opapp.op))
       case a : ConstArray =>
         isStatelessExpr(a.exp, context)
+      case r : ConstRecord => 
+        r.fieldvalues.forall(f => isStatelessExpr(f._2, context))
       case fapp : FuncApplication =>
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
       case lambda : Lambda =>
@@ -171,12 +176,19 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
         val esP = es.map(e => rewrite(e, context))
         val valueP = rewrite(value, context)
         OperatorApplication(ArrayUpdate(indsP, valueP), esP)
+      case OperatorApplication(RecordUpdate(id, expr), es) =>
+        val esP = es.map(e => rewrite(e, context))
+        val exprP = rewrite(expr, context)
+        OperatorApplication(RecordUpdate(id, exprP), esP)
       case opapp : OperatorApplication =>
         val operandsP = opapp.operands.map(arg => rewrite(arg, context + opapp.op))
         OperatorApplication(opapp.op, operandsP)
       case a : ConstArray =>
         val eP = rewrite(a.exp, context)
         ConstArray(eP, a.typ)
+      case r : ConstRecord =>
+        val fsP = r.fieldvalues.map(f => (f._1, rewrite(f._2, context)))
+        ConstRecord(fsP)
       case fapp : FuncApplication =>
         val eP = rewrite(fapp.e, context)
         val argsP = fapp.args.map(rewrite(_, context))
