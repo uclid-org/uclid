@@ -539,7 +539,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val RecordType : PackratParser[lang.RecordType] = positioned {
-      KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) <~ "}" ^^ { case id ~ ids => lang.RecordType(id::ids) }
+      KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) <~ "}" ^^ { case id ~ ids => lang.RecordType(id::ids) } |
+      /*below is Error grammer */
+      KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) ^^ { case id ~ ids => throw new Utils.SyntaxError("Loss of }",Some(ids.head._1.pos),null) } |
+      KwRecord ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after record",null,null) }
     }
     lazy val MapType : PackratParser[lang.MapType] = positioned {
       PrimitiveType ~ rep ("*" ~> PrimitiveType) ~ ("->" ~> Type) ^^ { case t ~ ts ~ rt => lang.MapType(t :: ts, rt)}
@@ -548,7 +551,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       ("[") ~> Type ~ (rep ("," ~> Type) <~ "]") ~ Type ^^ { case t ~ ts ~ rt => lang.ArrayType(t :: ts, rt)}
     }
     lazy val GroupType : PackratParser[lang.GroupType] = positioned {
-      KwGroup ~ "(" ~> Type <~ ")" ^^ { case t => lang.GroupType(t)}
+      KwGroup ~ "(" ~> Type <~ ")" ^^ { case t => lang.GroupType(t)} |
+      /*below is Error grammer */
+      KwGroup ~ "(" ~> Type        ^^ { case t => throw new Utils.SyntaxError("Loss of )",Some(t.pos),null)} |
+      KwGroup ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword group",null,null) }
     }
     lazy val SynonymType : PackratParser[lang.SynonymType] = positioned ( Id ^^ { case id => lang.SynonymType(id) } )
     lazy val ExternalType : PackratParser[lang.ExternalType] = positioned {
@@ -581,7 +587,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "(" ~> ")" ^^ { case _ => List.empty[Lhs] }
 
     lazy val RangeLit: PackratParser[(NumericLit,NumericLit)] =
-      KwRange ~> ("(" ~> Number ~ ("," ~> Number) <~ ")") ^^ { case x ~ y => (x,y) }
+      KwRange ~> ("(" ~> Number ~ ("," ~> Number) <~ ")") ^^ { case x ~ y => (x,y) } |
+      /*below is Error grammer */
+      KwRange ^^ {throw new Utils.SyntaxError("Syntax Error after keyword range",null,null)}
 
     lazy val RangeExpr : PackratParser[(Expr, Expr)] =
       KwRange ~> ("(" ~> Expr ~ ("," ~> Expr) <~ ")") ^^ { case x ~ y => (x, y) }
@@ -592,11 +600,21 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val BlockVarsDecl : PackratParser[lang.BlockVarsDecl] = positioned {
       KwVar ~> IdList ~ (":" ~> Type) <~ ";" ^^ {
         case ids ~ typ => lang.BlockVarsDecl(ids, typ)
-      }
+      } |
+      /*below is Error grammer */
+      KwVar ~> IdList ^^ {
+        case ids => throw new Utils.SyntaxError("Syntax Error on variable declaration",Some(ids.head.pos),null)
+      } |
+      KwVar ^^ {
+        case _ => throw new Utils.SyntaxError("Syntax Error on variable declaration",null,null)
+      } 
     }
 
     lazy val Invariant : PackratParser[lang.Expr] = positioned {
-      KwInvariant ~> Expr <~ ";"
+      KwInvariant ~> Expr <~ ";" |
+      /*below is Error grammer */
+      KwInvariant ~> Expr ^^ { case e  => throw new Utils.SyntaxError("Syntax Error after invariant",Some(e.pos),null) } |
+      KwInvariant ^^ {case _  => throw new Utils.SyntaxError("Syntax Error after invariant",null,null)}
     }
 
     lazy val Statement: PackratParser[Statement] = positioned {
@@ -635,9 +653,24 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwWhile ~> ("(" ~> Expr <~ ")") ~ rep(Invariant) ~ BlkStmt ^^
         { case expr ~ invs ~ body => WhileStmt(expr, body, invs) } |
       BlkStmt |
-      ";" ^^ { case _ => SkipStmt() }
+      ";" ^^ { case _ => SkipStmt() } |
+      /*below is Error grammer */
+      KwSkip ^^ { case _ => throw new Utils.SyntaxError("Loss of ';' after keyword skip",null,null) } |
+      KwAssert ~> Expr ^^ { case e => throw new Utils.SyntaxError("Loss of ';'",Some(e.pos),null) } |
+      KwAssert ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword assert",null,null) } |
+      KwAssume ~> Expr ^^ { case e => throw new Utils.SyntaxError("Loss of ';'",Some(e.pos),null) } |
+      KwAssume ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword assume",null,null) } |
+      KwHavoc ~> Id ^^ { case id => throw new Utils.SyntaxError("Loss of ';'",Some(id.pos),null) } |
+      KwHavoc ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword havoc",null,null)} |
+      Lhs ~ "=" ~ Expr  ^^ { case l ~ "=" ~ e => throw new Utils.SyntaxError("Loss of ';'",Some(e.pos),null)  }|
+      Lhs ^^ { case l => throw new Utils.SyntaxError("Syntax Error in Assign Experssion",null,null)} |
+      KwCall ^^{ case _ => throw new Utils.SyntaxError("Syntax Error After keyword call",null,null)} |
+      KwIf ^^ { case _ => throw new Utils.SyntaxError("Syntax Error After keyword if",null,null)} |
+      KwCase ^^ { case _ => throw new Utils.SyntaxError("Syntax Error After keyword case",null,null)} |
+      KwFor ^^ { case _ => throw new Utils.SyntaxError("Syntax Error After keyword For",null,null) } |
+      KwWhile ^^ { case _ => throw new Utils.SyntaxError("Syntax Error After keyword While",null,null)}
     }
-
+    
     lazy val CaseBlockStmt: PackratParser[(Expr, Statement)] =
       (Expr ~ ":" ~ BlkStmt) ^^ { case e ~ ":" ~ ss => (e,ss) } |
       (KwDefault ~ ":" ~> BlkStmt) ^^ { case ss => (BoolLit(true), ss) }
