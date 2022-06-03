@@ -264,9 +264,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       ("[" ~> Expr ~ rep("," ~> Expr) <~ "]") ^^ {case e ~ es => ArraySelect(e :: es)}
     }
     lazy val ArrayStoreOp: Parser[ArrayUpdate] = positioned {
-      ("[" ~> (Expr ~ rep("," ~> Expr) ~ ("->" ~> Expr)) <~ "]") ^^ {case e ~ es ~ r => ArrayUpdate(e :: es, r)}
-      /*below is Error grammer */
-      //("[" ~> (Expr ~ rep("," ~> Expr) ~ ("->" ~> Expr)) <~ "]") ^^ {case e ~ es ~ r => ArrayUpdate(e :: es, r)} |
+      ("[" ~> (Expr ~ rep("," ~> Expr) ~ ("->" ~> Expr)) <~ "]") ^^ {case e ~ es ~ r => ArrayUpdate(e :: es, r)} 
     }
       
     lazy val ConstBitVectorSlice: Parser[lang.ConstBitVectorSlice] = positioned { 
@@ -398,7 +396,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       E5 ~ OpImpl ~ E4 ^^ ast_binary | 
       E5 |
       /*below is Error grammer */
-      E5 ~ OpImpl ^^ { case _ =>throw new Utils.SyntaxError("Syntax Error on ==>",null,null)} 
+      E5 ~ OpImpl ^^ { case e ~ s =>throw new Utils.SyntaxError("Syntax Error on ==>",Some(e.pos),null)} 
     }
     /** E5 = E6 <Bool_Or_Bv_Op> E5 | E6 **/
 
@@ -412,13 +410,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       E6 ~ OpBvSrem ~ E5 ^^ ast_binary |
       E6 |
         /*below is Error grammer */
-      E6 ~ OpAnd ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on &&",null,null)}|
-      E6 ~ OpOr ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on ||",null,null)}|
-      E6 ~ OpBvAnd ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on &",null,null)}|
-      E6 ~ OpBvOr ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on |",null,null)}|
-      E6 ~ OpBvXor ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on ^",null,null)}|
-      E6 ~ OpBvUrem ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on %_u",null,null)}|
-      E6 ~ OpBvSrem ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on %",null,null)}
+      E6 ~ OpAnd ^^ { case e ~ s => throw new Utils.SyntaxError("Syntax Error on &&",Some(e.pos),null)}|
+      E6 ~ OpOr ^^ { case e ~ s => throw new Utils.SyntaxError("Syntax Error on ||",Some(e.pos),null)}|
+      E6 ~ OpBvAnd ^^ { case e ~ s => throw new Utils.SyntaxError("Syntax Error on &",Some(e.pos),null)}|
+      E6 ~ OpBvOr ^^ { case e ~ s => throw new Utils.SyntaxError("Syntax Error on |",Some(e.pos),null)}|
+      E6 ~ OpBvXor ^^ { case e ~ s => throw new Utils.SyntaxError("Syntax Error on ^",Some(e.pos),null)}|
+      E6 ~ OpBvUrem ^^ { case e ~ s => throw new Utils.SyntaxError("Syntax Error on %_u",Some(e.pos),null)}|
+      E6 ~ OpBvSrem ^^ { case e ~ s => throw new Utils.SyntaxError("Syntax Error on %",Some(e.pos),null)}
     }
     /** E6 = E7 OpRel E7 | E7  **/
     lazy val E6: PackratParser[Expr] = positioned { 
@@ -432,28 +430,28 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       E7 ~ RelOp ~ E7 ^^ ast_binary |
       E7 |
       /*below is Error grammer */
-      E7 ~ RelOp ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on relation operation",null,null)}
+      E7 ~ RelOp ^^ { case e ~ s => throw new Utils.SyntaxError("Syntax Error on relation operation",Some(e.pos),null)}
     }
     /** E7 = E8 OpConcat E7 | E8 **/
     lazy val E7: PackratParser[Expr] = positioned { 
       E8 ~ OpConcat ~ E7 ^^ ast_binary | 
       E8 |
       /*below is Error grammer */
-      E8 ~ OpConcat ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on ++",null,null)}
+      E8 ~ OpConcat ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on ++",Some(e.pos),null)}
     }
     /** E8 = E9 OpAdd E8 | E9 **/
     lazy val E8: PackratParser[Expr] = positioned { 
       E9 ~ OpAdd ~ E8 ^^ ast_binary | 
       E9 |
       /*below is Error grammer */
-      E9 ~ OpAdd ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on +",null,null)}
+      E9 ~ OpAdd ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on +",Some(e.pos),null)}
     }
     /** E9 = E9 OpSub E10 | E10 **/
     lazy val E9: PackratParser[Expr] = positioned { 
       E9 ~ OpSub ~ E10 ^^ ast_binary | 
       E10 |
       /*below is Error grammer */
-      E9 ~ OpSub ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on -",null,null)}
+      E9 ~ OpSub ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on -",Some(e.pos),null)}
     }
     /** E10 = E10 OpMul E11 | E10 OpDiv E11 | E10 OpUDiv E11 | E11 **/
     lazy val E10: PackratParser[Expr] = positioned {
@@ -462,9 +460,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       E10 ~ OpUDiv ~ E11 ^^ ast_binary | 
       E11 |
       /*below is Error grammer */
-      E10 ~ OpMul ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on *",null,null)} |
-      E10 ~ OpDiv ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on /",null,null)} |
-      E10 ~ OpUDiv ^^ { case _ => throw new Utils.SyntaxError("Syntax Error on /_u",null,null) }
+      E10 ~ OpMul ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on *",Some(e.pos),null)} |
+      E10 ~ OpDiv ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on /",Some(e.pos),null)} |
+      E10 ~ OpUDiv ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on /_u",Some(e.pos),null) }
     }
       
     /** E11 = UnOp E12 | E12 **/
@@ -624,8 +622,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Invariant : PackratParser[lang.Expr] = positioned {
       KwInvariant ~> Expr <~ ";" |
       /*below is Error grammer */
-      KwInvariant ~> Expr ^^ { case e  => throw new Utils.SyntaxError("Syntax Error after invariant",Some(e.pos),null) } |
-      KwInvariant ^^ {case _  => throw new Utils.SyntaxError("Syntax Error after invariant",null,null)}
+      KwInvariant ~> Expr ^^ { case e  => throw new Utils.SyntaxError("Syntax Error after keyword invariant",Some(e.pos),null) }
     }
 
     lazy val Statement: PackratParser[Statement] = positioned {
@@ -670,7 +667,6 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwAssert ~> Expr ^^ { case e => throw new Utils.SyntaxError("Loss of ';'",Some(e.pos),null) } |
       KwAssert ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword assert",null,null) } |
       KwAssume ~> Expr ^^ { case e => throw new Utils.SyntaxError("Loss of ';'",Some(e.pos),null) } |
-      KwAssume ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword assume",null,null) } |
       KwHavoc ~> Id ^^ { case id => throw new Utils.SyntaxError("Loss of ';'",Some(id.pos),null) } |
       KwHavoc ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword havoc",null,null)} |
       Lhs ~ "=" ~ Expr  ^^ { case l ~ "=" ~ e => throw new Utils.SyntaxError("Loss of ';'",Some(e.pos),null)  }|
@@ -953,7 +949,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val ParameterTerm: PackratParser[lang.ParameterTerm] = positioned {
-      KwParameter ~> Type ^^ { case typ => lang.ParameterTerm(typ) }
+      KwParameter ~> Type ^^ { case typ => lang.ParameterTerm(typ) } |
+      /*below is Error grammer */
+      KwParameter ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword parameter",null,null) }
     }
 
     lazy val GrammarTerm : PackratParser[lang.GrammarTerm] = positioned {
@@ -973,8 +971,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val GrammarDecl : PackratParser[lang.GrammarDecl] = positioned {
       KwGrammar ~> Id ~ IdTypeList ~ (":" ~> Type) ~ ("=" ~ "{" ~> rep(NonTerminal) <~ "}") ^^ {
         case id ~ argTypes ~ retType ~ nonterminals => lang.GrammarDecl(id, lang.FunctionSig(argTypes, retType), nonterminals)
+      } |
+      /*below is Error grammer */
+      KwGrammar ~> Id ^^ {
+        case id => throw new Utils.SyntaxError("",Some(id.pos),null)
       }
-
     }
     lazy val SynthFuncDecl : PackratParser[lang.SynthesisFunctionDecl] = positioned {
       KwSynthesis ~ KwFunction ~> Id ~ IdTypeList ~ (":" ~> Type) ~
@@ -994,6 +995,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       {
         case id ~ idtyps ~ rt ~ ensures =>
           lang.SynthesisFunctionDecl(id, lang.FunctionSig(idtyps, rt), None, List.empty, ensures)
+      } |
+      /*below is Error grammer */
+      KwSynthesis ~ KwFunction ~> Id ^^
+      {
+        case id => throw new Utils.SyntaxError("",Some(id.pos),null)
       }
     }
     lazy val DefineDecl : PackratParser[lang.DefineDecl] = positioned {
@@ -1002,14 +1008,26 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case id ~ idTypeList ~ retType ~ expr => {
           lang.DefineDecl(id, FunctionSig(idTypeList, retType), expr)
         }
+      }|
+      /*below is Error grammer */
+      KwDefine ~> Id ^^
+      {
+        case id => throw new Utils.SyntaxError("",Some(id.pos),null)
       }
     }
     lazy val MacroDecl : PackratParser[lang.MacroDecl] = positioned {
       KwMacro ~> Id ~ BlkStmt ^^
-        { case id ~ b => lang.MacroDecl(id, FunctionSig(List(), new UndefinedType()), b) }
+        { case id ~ b => lang.MacroDecl(id, FunctionSig(List(), new UndefinedType()), b) }|
+      /*below is Error grammer */
+      KwMacro ~> Id ^^
+        {
+          case id => throw new Utils.SyntaxError("",Some(id.pos),null)
+        }
     }
     lazy val ModuleDefsImportDecl : PackratParser[lang.ModuleDefinesImportDecl] = positioned {
-      KwDefine ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleDefinesImportDecl(id) }
+      KwDefine ~ "*" ~ "=" ~> Id <~ "." ~ "*" ~ ";" ^^ { case id => lang.ModuleDefinesImportDecl(id) } |
+      /*below is Error grammer */
+      KwDefine ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword define",null,null)}
     }
     lazy val InitDecl : PackratParser[lang.InitDecl] = positioned {
       KwInit ~> BlkStmt ^^
@@ -1035,7 +1053,14 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       } |
       (KwHyperInvariant) ~> ("[" ~> Integer <~ "]") ~ Id ~ (":" ~> Expr) <~ ";" ^^ {
         case k ~ id ~ expr => lang.SpecDecl(id, expr, List(lang.HyperpropertyDecorator(k.value.toInt)))
-      }
+      } |
+      /*below is Error grammer */
+      KwInvariant ~> ("[" ~> rep(Expr) <~ "]").? ~ Id ^^ {
+        case decOption ~ id => throw new Utils.SyntaxError("Syntax Error in invariant Expression",Some(id.pos),null)
+      } |
+      KwInvariant ^^ {case _  => throw new Utils.SyntaxError("Syntax Error after invariant",null,null)} |
+      KwProperty ^^ {case _  => throw new Utils.SyntaxError("Syntax Error after property",null,null)} |
+      KwHyperInvariant ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after hyperinvariant",null,null)}
     }
 
     lazy val AxiomDecl: PackratParser[lang.AxiomDecl] = positioned {
@@ -1048,7 +1073,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       (KwHyperAxiom) ~> ("[" ~> Integer <~ "]") ~ Id ~ (":" ~> Expr) <~ ";" ^^ {
         case k ~ id ~ exp =>
           lang.AxiomDecl(Some(id), exp, List(lang.HyperpropertyDecorator(k.value.toInt)))
-      }
+      } |
+      /*below is Error grammer */
+      KwAssume ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword assume",null,null) } |
+      KwDefineAxiom ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword axiom",null,null)} |
+      KwHyperAxiom ^^ { case _ => throw new Utils.SyntaxError("Syntax Error after keyword hyperaxiom",null,null)}
     }
 
     lazy val GroupDecl : PackratParser[lang.GroupDecl] = positioned {
@@ -1057,6 +1086,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case id ~ gType ~ gElems => {
           lang.GroupDecl(id, lang.GroupType(gType), gElems)
         }
+      } |
+      /*below is Error grammer */
+      KwGroup ~> Id ^^
+      {
+        case id => throw new Utils.SyntaxError("",Some(id.pos),null)
       }
     }
 
