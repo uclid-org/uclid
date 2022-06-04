@@ -18,5 +18,6 @@ module main {
     v = unroll(0);
     check;
     print_results;
+v.print_cex(factor1);
   }
 }
