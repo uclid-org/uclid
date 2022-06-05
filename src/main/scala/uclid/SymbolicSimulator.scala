@@ -254,14 +254,13 @@ class SymbolicSimulator (module : Module) {
             check(solver, config, cmd);
             needToPrintResults=true
           case "bmc" =>
-          // do the LTL properties
+          // do the LTL properties only if they exist
             assertionTree.startVerificationScope()
-
-            if(hasNonLTLprop(module.properties))
+            if(hasLTLprop(module.properties))
               prove(false, hasHyperInvariant(module.properties), cmd)
 
-            if(hasLTLprop(module.properties))
-              prove(true, hasHyperInvariant(module.properties), cmd)
+            // do the non LTL assertions
+            prove(true, hasHyperInvariant(module.properties), cmd)
 
             check(solver, config, cmd);
             needToPrintResults=true
