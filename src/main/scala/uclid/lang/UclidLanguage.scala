@@ -93,12 +93,19 @@ object ULContext {
       })
     )
   }
-  def checkEnum(id : Identifier) : Boolean  = {
+  def checkEnum(id : Identifier) : Boolean = {
     val enumTypes = origTypeMap.fwdMap.map(_._2) flatMap {
       case e : EnumType => Some(e)
       case _ => None
     }
     enumTypes.exists(e => e.ids.contains(id))
+  }
+  def checkField(id : Identifier) : Boolean = {
+    val recordTypes = origTypeMap.fwdMap.map(_._2) flatMap {
+      case r : RecordType => Some(r)
+      case _ => None
+    }
+    recordTypes.exists(r => r.fields.map(_._1).contains(id))
   }
   // Performs smt_synonym_name -> lang.Type -> uclid_synonym_name conversion
   def smtToLangSynonym(name : String) : Option[Type] = {
@@ -110,6 +117,12 @@ object ULContext {
   def stripMkTupleFunction(id: String) : Option[String] = {
     id.startsWith("_make_") match {
       case true => Some(id.drop(6))
+      case false => None
+    }
+  }
+  def stripFieldName(field: String) : Option[String] = {
+    field.startsWith("_field_") match {
+      case true => Some(field.drop(7))
       case false => None
     }
   }
@@ -643,9 +656,12 @@ case class RecordUpdate(fieldid: Identifier, value: Expr) extends Operator {
   }
   override def fixity: Int = Operator.POSTFIX
 
-  override def codegenUclidLang: Option[Operator] = value.codegenUclidLang match {
-    case Some(e) => Some(RecordUpdate(fieldid, e))
-    case _ => None
+  override def codegenUclidLang: Option[Operator] = fieldid.codegenUclidLang match {
+    case Some(f) => value.codegenUclidLang match {
+      case Some(e) => Some(RecordUpdate(fieldid, e))
+      case _ => None
+    }
+    case None => None
   }
 }
 case class GetNextValueOp() extends Operator {
@@ -677,10 +693,23 @@ sealed abstract class QIdentifier extends Expr
 sealed abstract class UIdentifier extends QIdentifier
 case class Identifier(name : String) extends UIdentifier {
   override def toString = name.toString
+
+  /**
+    * Checks whether the identifier matches either an
+    * Enum element name or a Record field name
+    *
+    * @return
+    */
   override def codegenUclidLang: Option[Expr] =
-    ULContext.checkEnum(Identifier(name)) match {
+    ULContext.checkEnum(this) match {
       case true => Some(this)
-      case false => None
+      case false => ULContext.stripFieldName(name) match {
+        case Some(s) => ULContext.checkField(Identifier(s)) match {
+          case true => Some(Identifier(s))
+          case false => None
+        }
+        case None => None
+      }
     }
 }
 case class ExternalIdentifier(moduleId : Identifier, id : Identifier) extends UIdentifier {

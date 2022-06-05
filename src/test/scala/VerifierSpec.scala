@@ -811,6 +811,14 @@ class PrintCexSpec extends AnyFlatSpec {
       case _ => assert(false)
     }
   }
+  "test-sexpr-uclid-lang-uninterp-type.ucl" should "fail to generate UclidLang JSON because we do not catch solver-specific uninterpreted-type values" in {
+    val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-uninterp-type.ucl"))
+    val str0 = ((json \ "property__trivial__1" \ "trace")(1) \ "database")(0)
+    str0 match {
+      case JString(s) => assert(s.equals("(store ((as const (Array Int utype_t)) utype_t!val!0) 2 utype_t!val!1)"))
+      case _ => assert(false)
+    }
+  }
 }
 class ModuleConcatSpec extends AnyFlatSpec {
   "test-concat-modules-w-init-2-fab.ucl" should "verify all assertions." in {

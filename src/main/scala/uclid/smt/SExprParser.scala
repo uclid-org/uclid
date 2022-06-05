@@ -262,7 +262,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       // General reserved
       KwBang, KwUS, KwAs, KwBINARY, KwDECIMAL, KwExists, KwHEXADECIMAL, 
       KwForall, KwLet, KwMatch, KwNUMERAL, KwPar, KwSTRING, KwDefFun,
-      KwDecFun,
+      KwUpdateField, KwDecFun,
     
       
       // For UCLID
@@ -496,7 +496,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     OpBVLT ^^ { _ => (lang.BVLTOp(0), OpBVLT) } |
     OpConcat ^^ { _ => (lang.ConcatOp(), OpConcat) }
 
-  lazy val UclidSymbol : PackratParser[(lang.UIdentifier, String)] =
+  lazy val UclidSymbol : PackratParser[(lang.Identifier, String)] =
     symbol ^^ { sym => (lang.Identifier(sym.name), sym.name) }
 
   lazy val UclidIntegerLit : PackratParser[(lang.IntLit, String)] =
@@ -583,6 +583,12 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
         val op = lang.ForallOp(args._1, List.empty)
         (lang.OperatorApplication(op, List(expr._1)), joinWithSpace(KwForall, args._2, expr._2))
       }
+    } |
+    "(" ~ KwUpdateField ~> UclidSymbol ~ UclidExpr ~ UclidExpr <~ ")" ^^ {
+      case field ~ record ~ value => (
+        lang.OperatorApplication(lang.RecordUpdate(field._1, value._1), List(record._1)),
+        joinWithSpace(KwUpdateField, field._2, record._2, value._2)
+      )
     } |
     "(" ~> UclidQualIdentifier ~ UclidExpr.+ <~ ")" ^^ { case q ~ args =>
       {
