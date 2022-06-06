@@ -174,6 +174,32 @@ class BasicVerifierSpec extends AnyFlatSpec {
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
   }
+  "test-record-update-op-1.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-1.ucl", 1)
+  }
+  "test-record-update-op-5.ucl" should "fail to verify 2 assertions." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-5.ucl", 2)
+  }
+  "test-record-update-op-6.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-6.ucl", 0)
+  }
+  "test-record-update-op-7.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-7.ucl", 1)
+  }
+  "test-record-update-op-8.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-8.ucl", 1)
+  }
+
+  "test-const-record-1.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-const-record-1.ucl", 1)
+  }
+  "test-const-record-4.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-const-record-4.ucl", 0)
+  }
+  "test-const-record-6.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-const-record-6.ucl", 1)
+  }
+
   "test-tuple-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-tuple-record-1.ucl", 0)
   }
@@ -381,6 +407,16 @@ class InductionVerifSpec extends AnyFlatSpec {
   "test-tuple.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-tuple.ucl", 0)
   }
+  "test-record-update-op-9.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-record-update-op-9.ucl", 0)
+  }
+  "test-const-record-3.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-const-record-3.ucl", 0)
+  }
+  "test-const-record-7.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-const-record-7.ucl", 0)
+  }
+
 }
 class QuantifierVerifSpec extends AnyFlatSpec {
   "test-forall-0.ucl" should "verify all assertions." in {
@@ -589,6 +625,12 @@ class HyperPropertySpec extends AnyFlatSpec {
   "test-hyperproperty-4.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-hyperproperty-4.ucl", 0)
   }
+  "test-hyperproperty-6.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-hyperproperty-6.ucl", 0)
+  }
+  "test-hyperproperty-7.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-hyperproperty-7.ucl", 0)
+  }
 }
 
 object PrintCexSpec {
@@ -646,7 +688,10 @@ object PrintCexSpec {
       case true  => "Wrote CEX traces to file: cex.json"
       case false => s"Wrote CEX traces to file: ${cexfile}.json"
     }
-    assert (lines2.exists(l => l.contains(checkfilemsg)))    
+    assert (lines2.exists(l => l.contains(checkfilemsg)))
+    // Cleanup generated file
+    val actual_cexfile = if (cexfile.isEmpty()) "cex.json" else s"${cexfile}.json"
+    new File(actual_cexfile).delete()
   }
 }
 class PrintCexSpec extends AnyFlatSpec {

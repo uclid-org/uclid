@@ -44,6 +44,24 @@ import com.typesafe.scalalogging.Logger
 
 class VerificationExpressionCheckerPass extends ReadOnlyPass[List[ModuleError]]
 {
+
+// checks if the expr refers to an identifier eventually
+  def BaseIsIdentifier (expr: Expr) : Boolean  = {
+    expr match {
+      case Identifier(_) => true
+      case OperatorApplication(op, operands) => 
+        op match {
+          case PolymorphicSelect(_) => BaseIsIdentifier(operands(0))
+          case RecordSelect(_) => BaseIsIdentifier(operands(0))
+          case ArraySelect(_) => BaseIsIdentifier(operands(0))
+          case SelectFromInstance(_) => true
+          case _ => false
+        }
+      case _ => false
+    }
+  }
+
+
   lazy val logger = Logger(classOf[VerificationExpressionCheckerPass])
   type T = List[ModuleError]
   override def applyOnOperatorApp(d : TraversalDirection.T, opapp : OperatorApplication, in : T, context : Scope) : T = {
@@ -54,7 +72,7 @@ class VerificationExpressionCheckerPass extends ReadOnlyPass[List[ModuleError]]
           case GetNextValueOp() =>
             ModuleError("Primed variables are not allowed in module-level assertions/assumptions", opapp.position) :: in
           case HyperSelect(_) =>
-            if(!opapp.operands(0).isInstanceOf[Identifier]) {
+            if(!BaseIsIdentifier(opapp.operands(0))) {
               ModuleError("Trace select can only be applied on an identifier", opapp.position) :: in
             } else if (!context.environment.inHyperproperty) {
               ModuleError("Trace select can only be used in a verification expression", opapp.position) :: in
