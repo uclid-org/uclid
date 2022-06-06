@@ -1712,8 +1712,13 @@ case class Module(id: Identifier, decls: List[Decl], var cmds : List[GenericProo
     "}\n"
 }
 
-//may used for future better improvement
-//this class is used for Error grammer
-// class Error extends ASTNode {
-//   def Error : List[Identifier]
-// }
+//below is used for Syntax Error
+sealed abstract class ErrorNode extends ASTNode{
+  val name : String
+}
+case class SingleKw(N: String) extends ErrorNode{
+  override val name = N
+}
+case class ErrorMessage(N: String) extends ErrorNode{
+  override val name = N
+}

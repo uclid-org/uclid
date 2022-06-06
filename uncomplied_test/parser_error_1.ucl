@@ -1,5 +1,6 @@
-modul main
+module ++
 {
+    type ++ :
     var x, y, z : integer;
 
     init {
