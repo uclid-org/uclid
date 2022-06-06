@@ -1018,5 +1018,49 @@ class ParserSpec extends AnyFlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
-
+  "parser_error_1.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "parser_error_2.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "parser_error_3.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "parser_error_4.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "parser_error_5.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
 }
