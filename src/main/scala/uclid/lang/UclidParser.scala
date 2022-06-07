@@ -646,7 +646,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwAssume ~> Expr ^^ { case e => throw new Utils.SyntaxError("Loss of ';'",Some(e.pos),null) } |
       KwHavoc ~> Id ^^ { case id => throw new Utils.SyntaxError("Loss of ';'",Some(id.pos),null) } |
       Lhs ~ "=" ~ Expr  ^^ { case l ~ "=" ~ e => throw new Utils.SyntaxError("Loss of ';'",Some(e.pos),null)  }|
-      Lhs ^^ { case l => throw new Utils.SyntaxError("Syntax Error in Assign Experssion",null,null)}
+      Lhs ^^ { case l => throw new Utils.SyntaxError("Syntax Error after '=' ",Some(l.pos),null)}
     }
     
     lazy val CaseBlockStmt: PackratParser[(Expr, Statement)] =
