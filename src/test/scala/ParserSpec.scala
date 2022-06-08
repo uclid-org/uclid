@@ -1063,4 +1063,13 @@ class ParserSpec extends AnyFlatSpec {
       case _: Throwable => assert (false)
     }
   }
+  "parser_error_6.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
 }

@@ -188,6 +188,9 @@ object UclidMain {
         UclidMain.printError("Error: " + e.getMessage() + ".")
         if(config.printStackTrace) { e.printStackTrace() }
         System.exit(1)
+      case (syn : Utils.SyntaxError) =>
+        UclidMain.printError("%s error on %s: %s.\n%s".format(syn.errorName, syn.positionStr, syn.getMessage, syn.shortStr))
+        System.exit(1)
       case (p : Utils.ParserError) =>
         UclidMain.printError("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
         if(config.printStackTrace) { p.printStackTrace() }
