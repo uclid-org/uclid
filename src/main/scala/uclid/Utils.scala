@@ -80,6 +80,10 @@ object Utils {
       case Some(p) => p.longString
       case _ => ""
     }
+    lazy val shortStr = pos match {
+      case Some(p) => p.longString.substring(0,p.longString.indexOf('\n'))
+      case _ => ""
+    }
   }
   class TypeError(msg: String, pos: Option[Position], filename: Option[String]) extends ParserError(msg, pos, filename) {
     override def equals(that: Any) : Boolean = {
