@@ -697,7 +697,10 @@ object PrintCexSpec {
       case true  => "Wrote CEX traces to file: cex.json"
       case false => s"Wrote CEX traces to file: ${cexfile}.json"
     }
-    assert (lines2.exists(l => l.contains(checkfilemsg)))    
+    assert (lines2.exists(l => l.contains(checkfilemsg)))
+    // Cleanup generated file
+    val actual_cexfile = if (cexfile.isEmpty()) "cex.json" else s"${cexfile}.json"
+    new File(actual_cexfile).delete()
   }
   def checkSExprToUclidLang (filename : String) : String = {
     UclidMain.enableStringOutput()
