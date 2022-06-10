@@ -105,7 +105,7 @@ class SExprLexical extends Lexical with SExprTokens {
 
   def hexDigit : Parser[Char] = elem("hexDigit", ((ch) => ch.isDigit || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')))
   def bit : Parser[Char] = elem("bit", ((ch) => ch == '0' || ch == '1'))
-  val specialChars = "_+-*&|!~<>=/%?.$^@"
+  val specialChars = "_+-*&|!~<>=/%?.$^@#"
   def specialChar : Parser[Char] = elem("specialChar", ((ch) => specialChars.contains(ch)))
   def symbolStartChar: Parser[Char] = letter | specialChar
   def symbolChar: Parser[Char] = letter | specialChar | digit
@@ -456,6 +456,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
 
   lazy val AssignmentModel : PackratParser[smt.AssignmentModel] =
     "(" ~ KwModel ~> rep(DeclareFun | DefineFun | Expr) <~ ")" ^^ { case exprs => smt.AssignmentModel(exprs) } |
+    "(" ~> rep(DeclareFun | DefineFun | Expr) <~ ")" ^^ { case exprs => smt.AssignmentModel(exprs) } |
     "(" ~> rep(DefineFun) <~ ")" ^^ { case functions => smt.AssignmentModel(functions) }
 
   def parseFunction(text: String): (DefineFun, String) = {

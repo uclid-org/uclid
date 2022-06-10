@@ -845,6 +845,13 @@ case class ConstArray(expr : Expr, arrTyp: ArrayType) extends Expr (arrTyp) {
   override val md5hashCode = computeMD5Hash(expr, arrTyp)
   override def toString = "(const %s %s)".format(expr.toString, arrTyp.toString)
 }
+case class ConstRecord(fieldvalues : List[(String, Expr)]) extends Expr (RecordType(fieldvalues.map(a => (a._1, a._2.typ)))) {
+  override val hashId: Int = 316
+  override val hashCode = computeHash(fieldvalues)
+  override val md5hashCode: Array[Byte] = computeMD5Hash(fieldvalues)
+  override def toString = "const-record [" + Utils.join(fieldvalues.map(f => f._1 + " := " + f._2.toString), ", ") + "]"
+  override val isConstant: Boolean = fieldvalues.forall(p => p._2.isConstant)
+}
 // Tuple creation.
 case class MakeTuple(args: List[Expr]) extends Expr (TupleType(args.map(_.typ))) {
   override val hashId = 306

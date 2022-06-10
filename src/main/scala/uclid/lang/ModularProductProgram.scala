@@ -428,7 +428,8 @@ class ModularProductProgramPass extends RewritePass {
                     }
                 case ConstArray(_, _) =>
                     throw new Utils.UnimplementedException("Type ConstArray not supported.")
-
+                case ConstRecord(_) => 
+                    throw new Utils.UnimplementedException("Type ConstRecord not supported.")
                 case Tuple(values) => Tuple(values.map(getRenamedExpr(_, context, copy)))
 
                 case OperatorApplication(op, operands) =>  op match {
@@ -441,8 +442,11 @@ class ModularProductProgramPass extends RewritePass {
                         val newindices = indices.map(getRenamedExpr(_, context, copy))
                         val newVal = getRenamedExpr(value, context, copy)
                         OperatorApplication(ArrayUpdate(newindices,newVal),operands.map(getRenamedExpr(_, context, copy)))
+                    case RecordUpdate(id, expr) =>
+                        val newExpr = getRenamedExpr(expr, context, copy)
+                        OperatorApplication(RecordUpdate(id,newExpr), operands.map(getRenamedExpr(_, context, copy)))
                     case _ => OperatorApplication(op, operands.map(getRenamedExpr(_, context, copy)))
-                    }   
+                }
 
                 case FuncApplication(e, args) => FuncApplication(e, args.map(getRenamedExpr(_, context, copy)))
                 

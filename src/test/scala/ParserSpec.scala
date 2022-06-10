@@ -623,6 +623,88 @@ class ParserSpec extends AnyFlatSpec {
     assert (instantiatedModules.size == 1)
   }
 
+  "test-record-update-op-1.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-record-update-op-1.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-record-update-op-2.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-record-update-op-2.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors(0).getMessage().contains("Invalid field-name in record update operator"))
+      case _ : Throwable => assert(false);
+    }
+  }
+  "test-record-update-op-3.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-record-update-op-3.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors(0).getMessage().contains("Expected a record here"))
+      case _ : Throwable => assert(false);
+    }
+  }
+  "test-record-update-op-4.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-record-update-op-4.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors(0).getMessage().contains("Invalid value-type in record update operator"))
+      case _ : Throwable => assert(false);
+    }
+  }
+  "test-record-update-op-5.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-record-update-op-5.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-record-update-op-8.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-record-update-op-8.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+
+  "test-const-record-1.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-const-record-1.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-const-record-2.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-const-record-2.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+        case p : Utils.ParserErrorList =>
+          assert (p.errors.size == 1)
+          assert (p.errors(0)._1.contains("expected type 'record {valid : boolean, value : integer}' but received type 'record {value : integer, valid : boolean}'"))
+        case _ : Throwable => assert(false);
+    }
+  }
+  "test-const-record-4.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-const-record-4.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-const-record-5.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-const-record-5.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors(0).getMessage().contains("Duplicate field-names in ConstRecord"))
+      case _ : Throwable => assert(false);
+    }
+  }
+
   "recorderror.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(ConfigCons.createConfig("test/recorderror.ucl"), lang.Identifier("main"))
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
@@ -936,5 +1018,58 @@ class ParserSpec extends AnyFlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
-
+  "parser_error_1.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "parser_error_2.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "parser_error_3.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "parser_error_4.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "parser_error_5.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
+  "parser_error_6.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-group-parse-0.ucl"), lang.Identifier("main"))
+      assert (false)
+    } catch {
+      case p : Utils.TypeErrorList => assert (true)
+      case _: Throwable => assert (false)
+    }
+  }
 }
