@@ -1,0 +1,34 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-enum-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 0
+//We have error on line 13
+//We have error on line 17
+//We have error on line 14
+	
+  type id_t = enum { privileged, unprivileged, invalid };
+  type syscall_t = enum { setresuid, setfsuid, noop };
+  
+  input invocation : syscall_t;
+  input operand_ruid, operand_euid, operand_suid, operand_fsuid : id_t;
+  
+  var systemcall : syscall_t;
+  
+  init {
+    systemcall = noop;
+  }
+  
+	
+	
+    assert (systemcall != setresuid);
+    assert (operand_ruid == privileged   || 
+	
+            operand_ruid == invalid);
+  }
+  
+  control {
+    unroll (5);
+    check;
+    print_results;
+  }
+}

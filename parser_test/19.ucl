@@ -1,0 +1,39 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-while-0.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 23
+//We have error on line 3
+module main
+{
+  var n : integer;
+	
+  init {
+    n = 0;
+  }
+
+  next {
+    call (n') = add10(n);
+  }
+
+  procedure add10(x : integer)
+    returns (y : integer)
+    ensures (y == x + 10);
+  {
+    var i : integer;
+    i = 0;
+    y = x;
+    while (i < 10)
+      invariant (y == x + i);
+    {
+      y = y + 1;
+	i= i i+1;
+    }
+  }
+
+  control {
+    v = verify(add10);
+    check;
+    print_results;
+    // v.print_cex(x, y, i);
+  }
+}

@@ -535,7 +535,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val RecordType : PackratParser[lang.RecordType] = positioned {
       KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) <~ "}" ^^ { case id ~ ids => lang.RecordType(id::ids) } |
       /*below is Error grammer */
-      KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) ^^ { case id ~ ids => throw new Utils.SyntaxError("Loss of }",Some(ids.head._1.pos),ids.head._1.filename) } |
+      KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) ^^ { case id ~ ids => throw new Utils.SyntaxError("unpaired '{' in Record block",null,null) } |
       SingleKwRecord ^^ { case s => throw new Utils.SyntaxError("Syntax Error after keyword "+s.name,Some(s.pos),s.filename) }
     }
     lazy val MapType : PackratParser[lang.MapType] = positioned {
@@ -653,10 +653,16 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       (Expr ~ ":" ~ BlkStmt) ^^ { case e ~ ":" ~ ss => (e,ss) } |
       (KwDefault ~ ":" ~> BlkStmt) ^^ { case ss => (BoolLit(true), ss) }
 
-    lazy val BlkStmt: PackratParser[lang.BlockStmt] =
+    lazy val BlkStmt: PackratParser[lang.BlockStmt] = positioned{
       "{" ~> rep (BlockVarsDecl) ~ rep (Statement) <~ "}" ^^ {
         case vars ~ stmts => lang.BlockStmt(vars, stmts)
+      } |
+      /*below is Error grammer */
+      "{" ~> rep (BlockVarsDecl) ~ rep (Statement) ^^ {
+        case vars ~ stmts => throw new Utils.SyntaxError("unpaird '{' ",null,null)
       }
+    }
+      
 
     lazy val OptionalExpr : PackratParser[Option[lang.Expr]] =
       "(" ~ ")" ^^ { case _ => None } |
@@ -1092,6 +1098,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val CmdBlock : PackratParser[List[GenericProofCommand]] = KwControl ~ "{" ~> rep(Cmd) <~ "}"
     
     lazy val ErrorCmdBlock : PackratParser[lang.ErrorMessage] = positioned{
+      SingleKwControl ~ "{" ~ rep(Cmd) ^^ { case kw ~ string ~ cmd => throw new Utils.SyntaxError("Unpaired '{'",Some(kw.pos),kw.filename)} |
+      SingleKwControl ~ "{" ^^ { case s ~ string => throw new Utils.SyntaxError("Unpaired '{'",Some(s.pos),s.filename)} |
       SingleKwControl ^^ { case s => throw new Utils.SyntaxError("Syntax Error in control block",Some(s.pos),s.filename)}
     }
     
@@ -1101,8 +1109,19 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case id ~ (decls ~ None) => lang.Module(id, decls, List.empty, Annotation.default)
       }|
       /*below is Error grammer */
+      KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( CmdBlock.? )) ^^ {
+        case id ~ (decls ~ Some(cs)) => throw new Utils.SyntaxError("unpaired '{'",Some(id.pos),id.filename)
+        case id ~ (decls ~ None) => throw new Utils.SyntaxError("unpaired '{' in module",Some(id.pos),id.filename)
+      }|
+      KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( ErrorCmdBlock.? ) <~ "}") ^^ {
+        case id ~ (decls ~ Some(cs)) => throw new Utils.SyntaxError("unpaired '{'",Some(id.pos),id.filename)
+        case id ~ (decls ~ None) => throw new Utils.SyntaxError("unpaired '{'",Some(id.pos),id.filename)
+      }|
+      KwModule ~ Id ~ "{" ^^{
+        case str1 ~ id ~ str2 => throw new Utils.SyntaxError("loss of '{'",Some(id.pos),id.filename)
+      }|
       KwModule ~> Id ^^{
-        case id => throw new Utils.SyntaxError("Syntax Error in Module",Some(id.pos),id.filename)
+        case id => throw new Utils.SyntaxError("loss of '{'",Some(id.pos),id.filename)
       } |
       Id  ^^ {
         case id => throw new Utils.SyntaxError("cannot find key word module", Some(id.pos), id.filename)
@@ -1111,6 +1130,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case s =>  throw new Utils.SyntaxError("Syntax Error after keyword "+s.name,Some(s.pos),s.filename)
       } 
     }
+
+    //below is SingleKw
     //should make singleKw different type
     lazy val SingleKwControl : PackratParser[lang.SingleKw] = positioned{
       KwControl ^^ { case _ => lang.SingleKw("control")}
