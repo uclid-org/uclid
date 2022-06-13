@@ -1,0 +1,33 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-typechecker-4.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 24
+//We have error on line 13
+// Test that a for loop with invalid ranges results in a compiler error.
+
+module main {
+  var a : integer;
+  var b : integer;
+
+  init {
+    a = 0;
+    b = 1;
+    for i in range(10, 1)  {
+      a = a + 1;
+    }
+    for i in range(1bv8, 10bv16)  {
+	a=a+1; } 
+    }
+    for i in range(10bv8, 0bv8)  {
+      a = a + 1;
+    }
+  }
+  next {
+    a' = a + 1;
+  }
+
+  control {
+	initialize; a 
+  	simulate (5);
+  }
+}
