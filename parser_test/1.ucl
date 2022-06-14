@@ -1,0 +1,29 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//we have Syntax Error on line5
+//we have Syntax Error on line1
+//we have Syntax Error on line18
+//we have Syntax Error on line22
+module main {
+	//Part1:System } description.
+  var a, b : integer;
+
+  init {
+	a 3: =0;
+    b = 1;
+  }
+  next {
+    a, b = b, a + b;
+  }
+
+  // Part 2: System specification.
+  invariant a_le_b: a <= b;
+
+  // Part 3: Proof script.
+  control {
+    f = induction (1);
+	check; next 
+    print_results;
+    f.print_smt2;
+  }
+	} 

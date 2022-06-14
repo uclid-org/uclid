@@ -1,0 +1,21 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//we have Syntax Error on line2
+//we have Syntax Error on line0
+	modulemain { 
+{
+	varn } :integer;
+  init {
+    n = 0;
+  }
+  next {
+    n' = n + 1;
+  }
+  invariant prop_eq: n != 3;
+  control {
+    v = bmc[properties=[prop_eq]](5);
+    check;
+    print_results;
+    v.print_cex(n);
+  }
+}

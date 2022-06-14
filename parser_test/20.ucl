@@ -1,0 +1,32 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//we have Syntax Error on line23
+//we have Syntax Error on line1
+//we have Syntax Error on line21
+module main {
+	typeid_t=enum{privileged,unprivileged,invalid}; : 
+  type syscall_t = enum { setresuid, setfsuid, noop };
+  
+  input invocation : syscall_t;
+  input operand_ruid, operand_euid, operand_suid, operand_fsuid : id_t;
+  
+  var systemcall : syscall_t;
+  
+  init {
+    systemcall = noop;
+  }
+  
+  next {
+    assert (systemcall == noop);
+    assert (systemcall != setresuid);
+    assert (operand_ruid == privileged   || 
+            operand_ruid == unprivileged ||
+            operand_ruid == invalid);
+  }
+  
+	control{ syscall_t; 
+    unroll (5);
+	check; syscall_t 
+    print_results;
+  }
+}

@@ -1,0 +1,24 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//we have Syntax Error on line15
+//we have Syntax Error on line3
+module main {
+    var x : integer;
+    var y : integer;
+	
+    macro foo {
+        x = 0;
+    }
+
+    init {
+        y = 2;
+        foo;
+        bar;
+    }
+    
+    control {
+	unroll(0); check; 
+        check;
+        print_results;
+    }
+}

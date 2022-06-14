@@ -1,0 +1,29 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+module main {
+	
+  procedure fib(x: integer, y: integer) returns (z:integer, w:integer) { 
+    z, w = y, x + y;
+  }
+
+  init {
+    a = 0b0; // binary literal
+    b = 0x1; // hexadecimal literal
+  }
+
+  next {
+    call (a', b') = fib(a, b);
+    assert (a' <= b');
+    assert (a' <  b');
+    // These weird assertions are to check the +/- arithmetic operators.
+    assert (a' + b' <= b' + b');
+    assert (a' - a' <= b' - a');
+  }
+
+	
+  	v = unroll (3);
+  	check;
+  	print_results;
+    v.print_cex(a, b);
+	
+}
