@@ -1,6 +1,11 @@
-//we gather 1 Syntax Error
+//we gather 3 Syntax Error
 //Error_Type is less words
-module main
+//src file is <_io.TextIOWrapper name='test/test-ltl-0-safe.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 10
+//We have error on line 17
+//We have error on line 0
+//We have error on line 18
+	
 {
   input a, b : integer;
   var inited : boolean;
@@ -10,15 +15,15 @@ module main
     inited = false;
   }
   next {
-	inited' = true;    
+	
     sum' = a + b;
-	
+  }
   
-	
+  property[LTL] p1 : G(inited ==> (sum == a + b));
   property dummy: true;
   // This property is obviously not satisfied, but we 
-  // won't include it in the call to the 'bmc' command below.
-  // property[LTL] p2 : G(false);
+	
+	
   
   
   control {

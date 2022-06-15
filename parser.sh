@@ -14,6 +14,7 @@ cd ..
 for file in $dir
 do
   filename=$(basename "$file" .ucl)
+  echo $'\n'
   echo uclid "parser_test/"$filename.ucl
   uclid "parser_test/"$filename.ucl
 done

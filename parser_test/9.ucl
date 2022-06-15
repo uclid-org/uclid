@@ -1,8 +1,11 @@
-//we gather 2 Syntax Error
-//Error_Type is less words
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-while-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 2
+//We have error on line 39
 
 module main
-{
+	{ modifies 
   var numbers: [integer]integer;
   var tail : integer;
 
@@ -19,7 +22,7 @@ module main
     call (value_found') = search();
   }
 
-	
+  procedure push()
     modifies numbers, tail;
   {
     numbers[tail] = push_value;
@@ -28,7 +31,7 @@ module main
 
   procedure search()
     returns (found : boolean)
-	
+    requires (tail >= 0);
     ensures (exists (idx : integer) :: idx >= 0 && idx < tail && numbers[idx] == search_value) <==> found;
   {
     var i : integer;
@@ -39,13 +42,13 @@ module main
       invariant (i >= 0 && i <= tail);
       invariant (exists (idx : integer) :: idx >= 0 && idx < i && numbers[idx] == search_value) <==> found;
     {
-      if (numbers[i] == search_value) {
+	if(numbers[i]== search_value){
         found = false;
       }
       i = i + 1;
     }
   }
-	
+
   control {
     v = verify(search);
     check;

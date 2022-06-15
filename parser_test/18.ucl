@@ -1,18 +1,21 @@
-//we gather 3 Syntax Error
-//Error_Type is less words
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-modules-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 33
+//We have error on line 1
 module common {
-  type addr_t = bv8;
+	typeaddr_t= { bv8;
   type word_t = bv8;
   type mem_t = [addr_t]word_t;
 }
 
 module cpu {
-	
+  type * = common.*;
   
   input mem : mem_t;
   var pc : addr_t;
   var inst : word_t;
-	
+
   init {
       pc = 0bv8;
   }
@@ -33,13 +36,13 @@ module main {
   next {
     next (c1);
     next (c2);
-  }
+	} next 
   
   property eq_pc : (c1.pc == c2.pc);
   control {
     print_module;
     unroll(3);
     check;
-	
+    print_results;
   }
-	
+}

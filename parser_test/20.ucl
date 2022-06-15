@@ -1,10 +1,12 @@
-//we gather 2 Syntax Error
-//Error Type is More words
-//we have Syntax Error on line23
-//we have Syntax Error on line1
-//we have Syntax Error on line21
-module main {
-	typeid_t=enum{privileged,unprivileged,invalid}; : 
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-enum-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 0
+//We have error on line 13
+//We have error on line 17
+//We have error on line 14
+	
+  type id_t = enum { privileged, unprivileged, invalid };
   type syscall_t = enum { setresuid, setfsuid, noop };
   
   input invocation : syscall_t;
@@ -16,17 +18,17 @@ module main {
     systemcall = noop;
   }
   
-  next {
-    assert (systemcall == noop);
+	
+	
     assert (systemcall != setresuid);
     assert (operand_ruid == privileged   || 
-            operand_ruid == unprivileged ||
+	
             operand_ruid == invalid);
   }
   
-	control{ syscall_t; 
+  control {
     unroll (5);
-	check; syscall_t 
+    check;
     print_results;
   }
 }

@@ -1,11 +1,13 @@
-//we gather 1 Syntax Error
+//we gather 2 Syntax Error
 //Error Type is More words
-//we have Syntax Error on line15
-//we have Syntax Error on line3
+//src file is <_io.TextIOWrapper name='test/test-macro-5-fails.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 15
+//We have error on line 16
+//We have error on line 19
 module main {
     var x : integer;
     var y : integer;
-	
+
     macro foo {
         x = 0;
     }
@@ -17,8 +19,8 @@ module main {
     }
     
     control {
-	unroll(0); check; 
-        check;
+	unroll(0); { 
+	check; foo; 
         print_results;
     }
-}
+	} x 

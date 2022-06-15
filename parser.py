@@ -7,7 +7,7 @@ from random import random
 
 # assign directory
 src_directory = 'test'
-dst_directory = 'parser_'
+dst_directory = 'parser_test/'
 
 # global setting
 src_file_num = 100
@@ -46,6 +46,9 @@ def error_0(srcfile,dstfile):
         error_line = int(random()*max_line)
         error_lines.append(error_line)
     
+    for error_line in error_lines:
+        dstfile.write("//We have error on line "+str(error_line)+"\n")
+
     for count, line in enumerate(src_content):
         if(count in error_lines):
             #gather error element
@@ -75,7 +78,10 @@ def error_1(srcfile,dstfile):
     for i in range(0,error_number+1):
         error_line = int(random()*max_line)
         error_lines.append(error_line)
-    
+
+    for error_line in error_lines:
+        dstfile.write("//We have error on line "+str(error_line)+"\n")
+
     for count, line in enumerate(src_content):
         if(count in error_lines):
             #gather error element
@@ -124,7 +130,7 @@ def main():
 
         
         srcfile = open(srcfilename, "r")
-        dstfilename = dst_directory + str(srcfilename)
+        dstfilename = dst_directory + str(i)+".ucl"
         dstfile = open(dstfilename, "w")
 
         dstfile.write("//we gather "+str(error_number)+" Syntax Error\n")
@@ -132,6 +138,7 @@ def main():
             dstfile.write("//Error Type is More words\n")
         if(error_type==1):
             dstfile.write("//Error_Type is less words\n")
+        dstfile.write("//src file is "+str(srcfile)+"\n")
 
         #modify the dstfile
         modify_file(srcfile,dstfile)

@@ -1,10 +1,13 @@
-//we gather 2 Syntax Error
+//we gather 1 Syntax Error
 //Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-if-star.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 1
+//We have error on line 28
 module main {
-  var x : integer;
+	
   var y : integer;
   var n : integer;
-	
+  
   init {
     x = 0;
     y = 0;
@@ -13,7 +16,7 @@ module main {
   
   next {
     // noteToSelf(ReorderingTest)
-	
+    if (*) {
       x' = x + 1;
     } else {
       y' = y + 1;
@@ -25,10 +28,10 @@ module main {
   property eq_nxy : (n == (x + y));
   property le_xn  : (x <= n);
   property le_yn  : (y <= n);
-	
+
   control {
     unroll(3);
-    check;
+	
     print_results;
   }
 }
