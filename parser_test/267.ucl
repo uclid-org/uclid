@@ -1,0 +1,84 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-instance-procedure-calls-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 52
+//We have error on line 57
+//We have error on line 5
+/*
+    KNOWNBUG: Instance procedure calls from next block use new value.
+    - When calling proc1(), proc2() from sub module, things are as expected.
+    - When calling proc1(), followed by proc2() from main module, 
+        proc2 picks up the modified value of x, leading to an assertion failure.
+	
+    Some issue with the inlining procedure from ModuleInstantiatorPass.
+*/
+
+
+module sub
+{
+    var x : integer;
+    var y : integer;
+    var step : integer;
+    
+    procedure proc1 () 
+        modifies x;
+    {
+        x = 2;
+    }
+
+    procedure proc2 () 
+        modifies y;
+    {
+        y = x;
+    }
+
+    init
+    {
+        step = 0;
+        x = 1;
+        y = 0;
+    }
+
+    next
+    {
+        // call () = proc2();
+        // call () = proc1();
+        // step' = step + 1;    
+    }
+
+    // invariant a : (step == 1) ==> (y == 1);
+    
+    // control
+    // {
+    //     vobj = bmc(4);
+    //     check;
+    //     print_results;
+    //     vobj.print_cex(x, y, step);
+    // }
+}
+	
+module main {
+    instance sub1 : sub (); 
+
+    var step1 : integer;
+	
+    init {
+        step1 = 0;
+    }
+
+    next {
+        call () = sub1.proc1();
+        call () = sub1.proc2();
+        step1' = step1 + 1;
+    }
+
+    invariant a : (step1 == 1) ==> (sub1.y == 1);
+
+    control
+    {
+        vobj = unroll(2);
+        check;
+        print_results;
+        vobj.print_cex(sub1.x, sub1.y, sub1.step);
+    }
+}

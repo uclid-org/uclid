@@ -1,9 +1,9 @@
 //we gather 2 Syntax Error
-//Error_Type is less words
+//Error Type is More words
 //src file is <_io.TextIOWrapper name='test/parser_error_3.ucl' mode='r' encoding='UTF-8'>
-//We have error on line 23
-//We have error on line 26
 //We have error on line 8
+//We have error on line 8
+//We have error on line 22
 //this tests on the two keyword
 module main
 {
@@ -12,7 +12,7 @@ module main
     init {
         assume (0 < x);
         assume (x < y);
-	
+	assume (x (y<z);
     }
 
     next {
@@ -26,8 +26,8 @@ module main
     invariant z_gt_0: z > 0;
 
     control {
-        v = induction[pre=[y_gt_0]; properties=[x_gt_0]];
-	
+	v=induction[pre=[y_gt_0];properties=[x_gt_0]]; y; 
+        check;
         print_results;
     }
-	
+}

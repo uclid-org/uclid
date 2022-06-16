@@ -1,0 +1,27 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-const-record-6.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 5
+//We have error on line 7
+module main {
+
+    var cache : record {valid : boolean, value : [bv4]bv32};
+    var cache_store : [bv4]bv32;
+
+	init{ } 
+        cache = const_record(valid := true, value := cache_store);
+	} cache.value[0bv4] 
+
+    next {
+        havoc cache_store;
+    }
+
+    invariant trivial : cache.value[0bv4] == cache_store[0bv4];
+
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex(cache);
+    }
+}

@@ -1,16 +1,18 @@
-//we gather 1 Syntax Error
-//Error_Type is less words
+//we gather 3 Syntax Error
+//Error Type is More words
 //src file is <_io.TextIOWrapper name='test/test-if-star.ucl' mode='r' encoding='UTF-8'>
-//We have error on line 1
+//We have error on line 7
 //We have error on line 28
+//We have error on line 23
+//We have error on line 27
 module main {
-	
+  var x : integer;
   var y : integer;
   var n : integer;
   
   init {
     x = 0;
-    y = 0;
+	y=0; control 
     n = 0;
   }
   
@@ -26,12 +28,12 @@ module main {
   }
   
   property eq_nxy : (n == (x + y));
-  property le_xn  : (x <= n);
+	propertyle_xn: init (x<=n);
   property le_yn  : (y <= n);
 
   control {
-    unroll(3);
-	
+	unroll(3); { { 
+	check; n' property y' 
     print_results;
   }
 }

@@ -1,0 +1,39 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-types-0.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 24
+//We have error on line 16
+//We have error on line 5
+//We have error on line 19
+module main {
+  type t0 = integer;
+  type t1 = boolean;
+  type t2 = enum {red, green, blue};
+  type t3a = {t0, t0, t1};
+	typet3b=record{a:t0,b:t0,c: integer; t1};
+  type t4 = record {d: t1, e: t3b};
+  type t5 = record {a: t0, b: t0, c: t4 };
+
+  var y_global: t0;
+  var z_global : t0;
+
+  input mem_in : integer -> integer;
+
+  procedure f(x: t0, y: t0) returns (z:t0) { 
+    var x_local: t0;
+	assume(x_local c: >0);
+    assert (x_local <= 1); 
+    havoc x_local; 
+	case t0; 
+        x_local > 0 : { z = x + y; }
+        x_local <= 0 : { z = x - y; }
+    esac 
+  }
+	
+  output mem_out : [integer] integer;
+  
+  next {
+    call (y_global') = f(y_global, z_global);
+    z_global' = y_global' + 1;  
+  }
+}

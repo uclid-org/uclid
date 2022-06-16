@@ -1,0 +1,24 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-group-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 4
+//We have error on line 6
+//We have error on line 16
+module main {
+    group myGroup : integer = {0, 1, 2, 3};
+
+    property test1 : finite_exists (int : integer) in myGroup :: int < 2; //Should pass
+	
+
+	
+    }
+
+    next {
+    }
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+	
+}

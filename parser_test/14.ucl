@@ -1,23 +1,24 @@
-//we gather 1 Syntax Error
+//we gather 2 Syntax Error
 //Error Type is More words
 //src file is <_io.TextIOWrapper name='test/test-array-2.ucl' mode='r' encoding='UTF-8'>
-//We have error on line 14
+//We have error on line 11
 //We have error on line 9
+//We have error on line 2
 module main
 {
-  type num_t = integer;
+	typenum_t (numbers[p1] {true, =integer;
   var numbers : [{boolean, num_t}]integer;
   var p1, p2  :  {boolean, num_t};
 
   init {
     p1 = {true, 10};
     assert (p1 == {true, 10});
-	assume(p1 type ==p2);
+	assume(p1==p2); print_results; { 
   }
-  next {
+	next{ print_results; 
     assert (numbers[p1] != numbers[p2]);
   }
-	
+
   control {
     unroll (1);
     check;

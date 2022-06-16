@@ -1,0 +1,77 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-while-3.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 29
+//We have error on line 7
+//We have error on line 28
+//We have error on line 58
+module main
+{
+  type cmd_t = record { 
+      valid : boolean,
+      value : integer
+  };
+
+	
+  var tail           : integer;
+  var initialized    : boolean;
+
+  input push_cmd     : cmd_t;
+  input search_cmd   : cmd_t;
+  output value_found : boolean;
+
+  init {
+    tail = 0;
+    initialized = false;
+  }
+
+  next {
+    initialized' = true;
+
+    if (push_cmd.valid) {
+      call push();
+    }
+    // call (value_found') = search();
+  }
+	
+	
+
+  procedure push()
+    requires push_cmd.valid;
+    ensures numbers[old(tail)] == push_cmd.value;
+    ensures tail == old(tail) + 1;
+    modifies numbers, tail;
+  {
+    numbers[tail] = push_cmd.value;
+    tail = tail + 1;
+  }
+
+  procedure search()
+    returns (found : boolean)
+    requires (tail >= 0);
+    ensures (exists (idx : integer) :: idx >= 0 && idx < tail && numbers[idx] == search_cmd.value) <==> found;
+  {
+    var i : integer;
+
+    i = 0;
+    found = false;
+    while (i < tail)
+      invariant (i >= 0 && i <= tail);
+      invariant (exists (idx : integer) :: idx >= 0 && idx < i && numbers[idx] == search_cmd.value) <==> found;
+    {
+      if (numbers[i] == search_cmd.value) {
+        found = true;
+      }
+      i = i + 1;
+	
+  }
+
+  control {
+    // print_module;
+    v1 = verify(push);
+	v2 = unroll(1);
+	check;
+	print_results;
+	// v2.print_cex(push_cmd.valid, push_cmd.value, tail, numbers);
+  }
+}

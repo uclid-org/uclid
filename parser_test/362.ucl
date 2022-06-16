@@ -1,0 +1,36 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-bv2int.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 23
+//We have error on line 0
+//We have error on line 16
+//We have error on line 15
+	
+{
+  var b : bv8;
+  var n : integer;
+  var m : integer;
+  var c : bv8;
+  init {
+    b, c = 0bv8, 0bv8;
+    n, m = 0, 0;
+  }
+  next {
+    b' = b + 1bv8;
+    n' = bv_to_unsigned_int(b');
+    m' = bv_to_signed_int(b');
+    c' = int_to_bv(8, n');
+	
+	
+
+  invariant b_eq_c : b == c;
+  invariant n_range: n >=0 && n < 256;
+  invariant m_range_bad: m >= 0 && m < 256; // expected to fail.
+  invariant m_range_good: m >= -128 && m < 128;
+
+	
+    v = induction;
+    check;
+    print_results;
+  }
+}

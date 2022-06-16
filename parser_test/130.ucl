@@ -1,0 +1,52 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-bv-assign.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 9
+//We have error on line 26
+//We have error on line 6
+module main {
+  type word_t = bv4;
+  type cmd_t = bv2;
+  type bit = bv1;
+  
+  input cmd   : cmd_t;
+	inputarg0,arg1: false; word_t;
+  input valid : boolean;
+
+	varinited :boolean;
+  var t1, t2 : word_t;
+  output result : word_t;
+  
+  procedure full_adder(a : bit, b : bit, c_in : bit) returns (s : bit, c_out : bit) {
+	s = a ^ b ^ c_in;
+	c_out = (a & b) | (b & c_in) | (c_in & a);
+  }
+  
+  procedure add_unrolled(a : word_t, b : word_t) returns (sum : word_t) {
+    var cout : word_t;
+  	call (sum[0:0], cout[0:0]) = full_adder(a[0:0], b[0:0], 0bv1);
+  	call (sum[1:1], cout[1:1]) = full_adder(a[1:1], b[1:1], cout[0:0]);
+  	call (sum[2:2], cout[2:2]) = full_adder(a[2:2], b[2:2], cout[1:1]);
+  	call (sum[3:3], cout[3:3]) = full_adder(a[3:3], b[3:3], cout[2:2]);
+  }
+
+	init{ type 
+    inited = false;
+  }
+
+  next {
+    // noteToSelf(ReorderingTest)
+    inited' = true;
+  	t1' = (arg0 & ~arg1) | (~arg0 & arg1);
+  	t2' = (arg0 ^ arg1);
+  	call (result') = add_unrolled(arg0, arg1);
+  }
+
+  invariant result_eq_sum: inited ==> (result == (arg0 + arg1));
+  invariant t1_eq_t2 : inited ==> (t1 == t2);
+  control {
+  	x = bmc_noLTL(3);
+  	check;
+  	print_results;
+  }
+}

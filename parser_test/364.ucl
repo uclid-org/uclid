@@ -1,0 +1,38 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-cex-json-arrays-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 16
+//We have error on line 8
+module main {
+	var regFile : [bv5]bv32;
+	
+    input   wr_addr_in : bv5;
+    input   wr_data_in : bv32;
+
+    input   rd_addr_in : bv5;
+    output  rd_data_out : bv32;
+	
+	init {
+        assume (forall (i : bv5) :: regFile[i] == 0bv32);
+	}
+
+    procedure write_regFile (addr : bv5, data : bv32) 
+        modifies regFile;
+    {
+	regFile[addr]=data; check; 
+    }
+
+	next {	
+		rd_data_out' = regFile[rd_addr_in];
+        call write_regFile(wr_addr_in, wr_data_in);
+	}
+
+	property r0 : regFile[0bv5] == 0bv32;
+ 
+	control {
+		v = bmc(5);
+		check;
+        print_results;
+		v.print_cex_json(regFile);
+	}
+}

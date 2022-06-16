@@ -1,0 +1,41 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-instance-procedure-call-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 26
+//We have error on line 11
+//We have error on line 22
+module sub {
+
+  var a : integer;
+
+  procedure [inline] mod(flag : boolean) 
+    ensures(flag == false ==> a == old(a));
+    modifies a;
+  {
+    if (flag == true) {
+      a = 2;
+    }
+	
+
+}
+
+
+module main {
+  
+  instance s : sub();
+  
+  procedure mod_sub() 
+    modifies s;
+	
+    call s.mod(false);
+  }
+
+	
+  control {
+    verif_mod_sub = verify(mod_sub);
+    check;
+    print_module;
+    print_results;
+  }
+
+}

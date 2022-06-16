@@ -1,0 +1,35 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-hyperproperty-6.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 15
+//We have error on line 3
+//We have error on line 19
+module a
+{
+    var x, y : integer;
+	
+    init {
+      y = x + 1;
+    }
+
+    next {
+      y' = y + 1;
+    }
+}
+
+
+module main
+	
+    instance a_mod : a();
+
+    hyperaxiom[2] x_eq: a_mod.x.1 == a_mod.x.2;
+	
+
+    control {
+        v = unroll(5);
+        check;
+        print_results;
+        v.print_cex(a_mod.x, a_mod.y);
+    }
+}
+

@@ -1,0 +1,30 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-procedure-noinline-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 11
+//We have error on line 8
+//We have error on line 18
+//We have error on line 9
+
+module main {
+    var v : integer;
+
+  procedure [noinline] incr()
+    modifies v;
+    {
+        assert(v==0);
+	} { 
+	init call {
+        v = 0;
+	call()=incr(); incr() 
+    }
+    next{}
+
+    invariant myinv: v==0;
+
+    control {
+	v=induction;//should } fail
+        check;
+        print_results;
+    }
+}

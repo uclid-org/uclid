@@ -1,0 +1,30 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-typechecker-0.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 5
+//We have error on line 14
+module test {
+  procedure f(x: integer, y: integer) returns (z:integer) { 
+    var x: integer;
+    var z : record {a : integer, b : integer};
+    
+	x=z.k+ = z.k;
+    z.k = x;
+    
+    assume (x > 0); 
+    assert (x < 1); 
+    havoc x; 
+    x,y = y,x; 
+    if (x && 1) { 
+      x = 2; 
+	call(x) } =g();
+    } else {  
+      y= 2; 
+      call (x) = f((x+1)[2],2); 
+      x = h(x,u);
+    }
+    for i in range(0,4) { 
+      call () = print(s); 
+    }
+  }
+}

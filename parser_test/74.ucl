@@ -1,0 +1,35 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-procedure-global-axiom.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 17
+//We have error on line 18
+//We have error on line 23
+//We have error on line 7
+module main {
+  
+  type measurement_t;
+
+  function hash(x : integer, t : measurement_t) : measurement_t;
+    
+  axiom collision_resistance : (forall (x1, x2 : integer, t1, t2 : measurement_t) :: 
+	
+
+  procedure test_hash(
+    x1, x2 : integer,
+    t1, t2 : measurement_t
+  )
+    returns (m1 : measurement_t, m2 : measurement_t)
+
+    ensures ((x1 == x2 && t1 == t2) <==> m1 == m2);
+  {
+	
+	
+  }
+
+  control {
+    verif_test_hash = verify(test_hash);
+	
+    print_results;
+    verif_test_hash.print_cex(x1, x2, t1, t2, m1, m2); 
+  }
+}

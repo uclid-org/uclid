@@ -1,0 +1,40 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-multiple-writes.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 16
+//We have error on line 29
+module main {
+  var a, b, c, d : integer;
+  procedure fib(x: integer, y: integer) returns (z:integer, w:integer) { 
+    z, w = y, x + y;
+  }
+
+  init {
+    a = 0b0; // binary literal
+    b = 0x1; // hexadecimal literal
+  }
+
+  next {
+    call (a', b') = fib(a, b);
+    a' = a + 1;
+    if (*) {
+      c' = 0;
+	
+      d' = 1;
+    } else {
+      c' = 1;
+    }
+    assert (a' <= b');
+    assert (a' <  b');
+    // These weird assertions are to check the +/- arithmetic operators.
+    assert (a' + b' <= b' + b');
+    assert (a' - a' <= b' - a');
+  }
+
+  control {
+	
+  	unroll (3);
+  	check;
+  	print_results;
+  }
+}

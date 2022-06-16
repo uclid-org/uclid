@@ -1,0 +1,52 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-procedure-old-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 39
+//We have error on line 16
+//We have error on line 1
+module main {
+	
+  var a : integer;
+
+  // Remove [inline] to see varying teest behavior
+  procedure two(flag : boolean) 
+    ensures (flag == false ==> a == old(a));
+    modifies a;
+  {
+    if (flag != false) {
+      a = 2;
+    }
+  }
+
+  procedure three(flag : boolean) 
+    modifies a;
+	
+    if (a == 1) {
+      a = -1;
+    } else {
+      if (a == 0) {
+        a = 1;
+      } else {
+        a = 0;
+      }
+    }
+  }
+
+  procedure one() 
+    modifies a;
+  {
+    a = 1;
+    call two(false);
+    call three(false);
+    assert(false);
+  }
+
+  control {
+    verif_one = verify(one);
+	
+    check;
+    print_results;
+    verif_one.print_cex;
+  }
+
+}

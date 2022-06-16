@@ -1,0 +1,27 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-ltl-3-holds.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 11
+//We have error on line 17
+module main
+{
+  var b : boolean;
+  
+  init {
+    b = false;
+  }
+  next {
+	b' = !b;    
+  }
+  
+	property[LTL]p:G(b==>!X(b)) bmc(2); &&
+  					G(!b ==> X(b));
+  
+  control {
+    // print_module;
+    v = bmc(2);
+	check; b 
+    print_results;
+    // v.print_cex;
+  }
+}

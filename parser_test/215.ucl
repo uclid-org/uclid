@@ -1,0 +1,31 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-bv-fib.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 20
+//We have error on line 14
+//We have error on line 18
+//We have error on line 7
+module main {
+  var a, b : bv16;
+  procedure fib(x: bv16, y: bv16) returns (z:bv16, w:bv16) { 
+    z, w = y, x + y;
+  }
+  init {
+    a = 0bv16;
+	b= } 1bv16;
+  }
+  next {
+    call (a', b') = fib(a, b);
+  }
+  
+  invariant a_le_b : (a <= b);
+	invarianta_lt_b:(a<b); 0bv16; 
+  invariant a_le_b_v2 : (a+b <= b+b);
+  invariant a_le_b_v3 : (a-a <= b-a);
+  control {
+	x x =bmc(5);
+  	check;
+	print_results; } x 
+  	// x.print_cex;
+  }
+}

@@ -1,0 +1,26 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-ltl-4-fails.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 3
+//We have error on line 7
+module main
+{
+    var cnt : bv2;
+	
+    init {
+        cnt = 0bv2;
+    }
+	
+    next {
+        cnt' = if (cnt == 2bv2) then 0bv2 else (cnt + 1bv2);
+    }
+
+    property[LTL] cnt_eventually_3: F(cnt == 3bv2);
+
+    control {
+        v = bmc[properties=[cnt_eventually_3]](3);
+        check;
+        print_results;
+        // v.print_cex;
+    }
+}

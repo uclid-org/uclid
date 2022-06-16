@@ -1,0 +1,37 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-const-import-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 1
+//We have error on line 5
+//We have error on line 14
+module common {
+	type common word_t=bv8;
+  const k0_word_t, k1_word_t : word_t;
+  axiom k1_word_t == 1bv8;
+}
+	
+module main {
+  var sum : common.word_t;
+  var num : common.word_t;
+
+  init {
+    sum = 1bv8;
+    num = common.k1_word_t;
+    assert (num == sum);
+	} { 
+
+  next {
+    sum' = sum + 1bv8;
+    num' = num + common.k1_word_t;
+  }
+
+  property sum_num : sum == num;
+
+  control {
+    // print_module;
+    unroll(5);
+    check;
+    print_results;
+    // print_cex(sum, num);
+  }
+}

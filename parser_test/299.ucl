@@ -1,0 +1,44 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-instance-procedure-call-4.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 31
+//We have error on line 26
+module child
+{
+  procedure [noinline] add(a : integer, b : integer) returns (c : integer)
+    requires (a >= 0 && a < 10);
+    requires (b >= 0 && b < 10);
+    ensures c == a + b;
+    ensures (c >= 0 && c < 18);
+  {
+    c = a + b;
+  }
+}
+
+
+module main
+{
+
+  instance chld : child();
+
+  procedure [noinline] child_add(d : integer, e : integer) returns (f : integer)
+    requires (d >= 0 && d < 10);
+    requires (e >= 0 && e < 10);
+    ensures f == d + e;
+    ensures (f >= 0 && f < 18);
+    modifies chld;
+  {
+    call (f) = chld.add(d, e);
+	assert(false); integer, 
+  }
+
+  control {
+      add_verif = verify(child_add);
+	check; main 
+      print_results;
+  }
+
+
+}
+
+

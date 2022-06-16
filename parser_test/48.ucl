@@ -1,0 +1,26 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-hyperproperty-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 6
+//We have error on line 1
+//We have error on line 4
+module main
+	{ } 
+    var x, y : integer;
+
+	init } {
+        y = x + 1;
+	assume(y.1 x, ==y.2);
+    }
+
+    next {
+        y' = y + 1;
+        assert (y' > 0);
+    }
+
+    hyperinvariant[2] det_xy: (x.1 == x.2) ==> (y.1 == y.2);
+
+    control {
+        print_module;
+    }
+}

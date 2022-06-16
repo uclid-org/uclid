@@ -1,21 +1,21 @@
 //we gather 2 Syntax Error
-//Error Type is More words
+//Error_Type is less words
 //src file is <_io.TextIOWrapper name='test/test-group-parse-0.ucl' mode='r' encoding='UTF-8'>
-//We have error on line 6
-//We have error on line 2
+//We have error on line 8
+//We have error on line 19
 //We have error on line 11
 module main {
     group myGroup : integer = {0, 1, 2, 3};
-	
+
     var hello : boolean;
 
     axiom test1 : finite_forall (int : integer) in myGroup :: int < hello; // Should throw a type error.
-	
+
     init {
-    }
+	
 
     next {
-	} hello 
+	
 
     property acyclic : false;
 
@@ -23,5 +23,5 @@ module main {
         v = unroll(0);
         check;
         print_results;
-    }
+	
 }

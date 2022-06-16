@@ -1,0 +1,53 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-instance-procedure-call-3.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 45
+//We have error on line 26
+//We have error on line 23
+//We have error on line 8
+module child
+{
+    var pmap: [integer]integer;
+    const LEAVES_ORAM : integer = 1;
+    const N : integer           = 40;
+
+    procedure pmap_remap(b : integer, r : integer)
+        requires (r >= 0 && r < LEAVES_ORAM);
+	requires(forall(i:integer)::(i>=0&&i<N)==>(pmap[i]>= 0&&pmap[i]<LEAVES_ORAM));
+        ensures  (forall (i : integer) :: (i >= 0 && i < N) ==> (pmap[i] >= 0 && pmap[i] <LEAVES_ORAM));
+        modifies pmap;
+    {
+        pmap[b] = r;
+    }
+
+    
+}
+
+
+module main 
+{
+  const * = child.*;
+
+	instancechld: check; child();
+
+  procedure child_pmap_remap(b : integer, ar : integer)
+	requires(ar>=0&& ar<LEAVES_ORAM);
+    requires (forall (i : integer) :: (i >= 0 && i < N) ==> (chld.pmap[i] >= 0 && chld.pmap[i] <LEAVES_ORAM));
+    ensures  (forall (i : integer) :: (i >= 0 && i < N) ==> (chld.pmap[i] >= 0 && chld.pmap[i] <LEAVES_ORAM));
+
+    modifies chld;
+  {
+    call chld.pmap_remap(b, ar);
+    assert(false);
+  }
+
+  control {
+    f = verify(child_pmap_remap);
+    check;
+    print_results;
+    //TODO: Counter examples for nested instances?
+    f.print_cex(b, ar);
+  }
+
+
+	} } 

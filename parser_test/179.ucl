@@ -1,0 +1,72 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-procedure-checker-4.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 53
+//We have error on line 57
+module traffic_light
+{
+  type light_t = enum { red, yellow, green };
+  var step : integer;
+  output light : light_t;
+
+  procedure next_light()
+    modifies light;
+    modifies step;
+  {
+    if (step == 0) {
+      case
+	    (light == green) : {
+	      light = yellow;
+	    }
+	    (light == yellow) : {
+	      light = red;
+	      step = 2;
+	    }
+	    (light == red) : {
+	      light = green;
+	      step = 1;
+	    }
+	  esac
+    } else {
+      step = step - 1;
+    }
+  }
+
+  next {
+    call next_light();
+  }
+}
+
+module main
+{
+  type light_t = traffic_light.light_t;
+
+  instance light1 : traffic_light();
+  instance light2 : traffic_light();
+
+  var cnt : integer;
+
+  init {
+    assume (light1.light == red   && light1.step == 2);
+    assume (light2.light == green && light2.step == 1);
+    cnt = 0;
+  }
+
+  next {
+    next (light1);
+    next (light2);
+    cnt' = cnt + 1;
+	
+
+  invariant atleast_one_red    : (light1.light == red) || (light2.light == red);
+  invariant steps_non_negative : (light1.step >= 0) && (light2.step >= 0);
+	
+  invariant steps12            : (light1.step - light2.step) <= 1 &&
+                                 (light2.step - light1.step) <= 1;
+  control {
+    v = induction(4);
+    check;
+    print_results;
+    // v.print_cex(light1.light, light1.step, light2.light, light2.step);
+  }
+}

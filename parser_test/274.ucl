@@ -1,0 +1,25 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-assert-3.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 5
+//We have error on line 8
+//We have error on line 16
+module main
+{
+  var flag : boolean;
+  
+  init { flag = true; }
+	
+    if (flag) {
+      skip;
+	
+      assert (false);
+    }
+  }
+  
+  control {
+    unroll(5);
+    check;
+	
+  }
+}

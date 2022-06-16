@@ -1,0 +1,27 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-array-record.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 15
+//We have error on line 4
+//We have error on line 19
+module main
+{
+  type rec_0 = record {
+    a : integer
+	
+  type rec_1 = record {
+    b : [integer]rec_0
+  };
+  type rec_2 = record {
+    c : [integer]rec_1
+  };
+
+  var d : [integer]rec_2;
+  var e : [integer]rec_0;
+
+	
+    assume d[0].c[0].b[0].a == 1;
+    assume e[0].a == 10;
+  }
+	
+

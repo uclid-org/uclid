@@ -1,0 +1,37 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-smtlib-consts.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 11
+//We have error on line 24
+module incr
+{
+    var q : bv4;
+    var p : [bv4]bv4;
+    next {
+        p' = p[q -> q];
+        q' = p[q+1bv4];
+    }
+}
+
+module main
+	{ } 
+    instance i1 : incr();
+    instance i2 : incr();
+
+    init {
+        assume (i1.p == i2.p);
+        assume (i1.q == i2.q);
+    }
+    next {
+        next (i1);
+        next (i2);
+    }
+    invariant ps_eq: (forall (i : bv4) :: i1.p[i] == i2.p[i]);
+	invariantqs_eq: : i1.q==i2.q;
+
+    control {
+        induction;
+        check;
+        print_results;
+    }
+}

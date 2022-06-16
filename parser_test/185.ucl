@@ -1,0 +1,30 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-unsigned-comparators-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 19
+//We have error on line 4
+//We have error on line 1
+module main {
+	varx,y,z } :bv4;
+
+    init {
+	x= (x 15bv4;
+        y = 0bv4;
+        z = y;
+    }
+
+    next {
+        assert (y >    x && y >=   x);  // Signed less than
+        assert (x <    y && x <=   y);  // Signed greater than
+        assert (y >=   z && y <=   z);  // Signed equal to case for LE & GE
+        assert (y <_u  x && y <=_u x);  // Unsigned less than
+        assert (x >_u  y && x >=_u y);  // Unsigned greater than
+        assert (y >=_u z && y <=_u z);  // Unsigned equal to case
+    }
+
+    control {
+	v= control unroll(1);
+        check;
+        print_results;
+    }
+}

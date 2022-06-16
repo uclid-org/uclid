@@ -1,0 +1,30 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-ltl-2-fails.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 14
+//We have error on line 2
+//We have error on line 11
+//We have error on line 20
+module main {
+  var state : boolean;
+	
+  init {
+    state = false;
+  }
+  
+  next {
+    if (*) {
+	  state' = !state;
+	}
+	
+  
+  property[LTL] ss : G(F(state));
+	
+  control {
+    //print_module;
+    v = bmc(4);
+    check;
+    print_results;
+	
+  } 
+}

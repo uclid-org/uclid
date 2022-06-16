@@ -1,0 +1,17 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-axiom-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 11
+//We have error on line 2
+module main
+{
+	constr1 check; :bv8;
+  axiom r1_assumed_zero: r1 == 0bv8;
+  property r1_is_zero: r1 == 0bv8;
+
+  control {
+    f = unroll(3);
+    check;
+    print_results;
+  }
+	} } 

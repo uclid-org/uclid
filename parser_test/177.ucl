@@ -1,0 +1,74 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-func-import-3.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 61
+//We have error on line 17
+//We have error on line 52
+module common {
+  type number_t;
+  function zero() : number_t;
+}
+
+module beezee {
+  
+  function * = common.*;
+
+
+  type number_t = common.number_t;
+
+  input z_prime : number_t;
+  var b : number_t;
+  var z : number_t;
+  
+  function le(x : number_t, y : number_t) : boolean;
+	
+
+  //axiom (forall (z : number_t) :: (z == zero()) ==> le_b(z));
+  // Redefined the above axiom as a stateless axiom
+  axiom (forall (x : number_t, y : number_t) :: (x == zero()) ==> le(x, y));
+
+  init {
+    z = zero();
+  }
+  next {
+    if (le_b(z_prime)) {
+      z' = z_prime;
+    }
+  }  
+}
+
+module main {
+
+  function * = beezee.*;
+
+  type number_t = common.number_t;
+
+  input z_p : beezee.number_t;
+
+  instance bz1 : beezee(z_prime : (z_p));
+  instance bz2 : beezee(z_prime : (z_p));
+
+
+  init {
+    assume (bz1.b == bz2.b);
+  }
+
+  next {
+    next (bz1);
+    next (bz2);
+	
+
+  invariant z_eq : (bz1.z == bz2.z);
+  invariant b_eq : (bz1.b == bz2.b);
+  invariant z_le_b1 : (bz1.z == zero()) ==> le(bz1.z, bz1.b);
+  invariant z_le_b2 : (bz2.z == zero()) ==> le(bz2.z, bz2.b);
+
+  control {
+    print_module;
+	
+    check;
+    print_results;
+    v.print_cex;
+  }
+}
+

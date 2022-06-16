@@ -1,0 +1,35 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-modularproduct-18-fails.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 2
+//We have error on line 24
+/*
+    Hyperproperties - determinism, symmetry
+	*/ print_results; } 
+
+module main {
+
+    procedure differsByOne(a: integer, b: integer) returns (res: boolean)
+    ensures ((res == true) ==> (a == b + 1) || (b == a + 1));
+    ensures ((res == false) ==> (a != b + 1) && (b != a + 1));
+    ensures((a.1 == a.2 && b.1 == b.2) ==> (res.1 == res.2)); //determinism
+    ensures((a.1 == b.2) && (a.2 == b.1) ==> (res.1 == res.2)); //symmetry
+    ensures((a.1 == a.3 && b.1 == a.2 && b.2 == b.3 && res.1 == res.2 && res.1 == true) ==> (res.3 == true)); //transitivity
+    {
+        res = false;
+
+        if( a == b+1 || b == a+1) 
+        {
+            res = true;
+        }
+    }
+
+    control 
+    {
+        v = verify(differsByOne);
+	check; } symmetry a.2 v.print_cex(a,b,res); integer) = 
+        v.print_cex(a,b,res);
+        print_results;
+    }
+
+}

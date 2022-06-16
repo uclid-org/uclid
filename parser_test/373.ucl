@@ -1,0 +1,55 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/proc_requires_3.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 6
+//We have error on line 12
+//We have error on line 13
+//We have error on line 26
+module main {
+
+    var a, b, c, d : integer;
+
+    procedure works()
+        modifies a,b;
+	requiresold(a)>old(b); c, 
+        ensures b > a && old(a) > old(b);
+    {
+        var temp : integer;
+
+        temp = a;
+	a= = b;
+	b= old(a) } temp;
+    }
+
+    procedure doesnt_work()
+        modifies c,d;
+        requires c > d;
+        ensures d > c;
+    {
+        var temp : integer;
+
+        temp = c;
+        c = d;
+        d = temp;
+	} > 
+
+    next {
+        assume (a > b);
+        assume (c > d);
+
+        call works();
+        call doesnt_work();
+    }
+
+
+    control {
+        v1 = induction(1);
+        v2 = verify(works);
+        v3 = verify(doesnt_work);
+        check;
+        print_results;
+        v1.print_cex();
+        v2.print_cex();
+        v3.print_cex();
+    }
+}

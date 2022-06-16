@@ -1,0 +1,56 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-instance-procedure-call-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 13
+//We have error on line 37
+//We have error on line 29
+module child
+{
+  var tail          : integer;
+  var initialized   : boolean;
+  input push_cmd    : boolean;
+
+  
+  
+  
+  procedure [noinline] push()
+    requires push_cmd;
+    ensures tail == old(tail) + 2;
+    modifies tail;
+	
+    tail = tail + 1;
+  }
+}
+
+module main {
+
+  var t         : integer;
+  var initial  : boolean;
+  var push_cmd     : boolean;
+
+  instance chld : child(push_cmd : (push_cmd));
+
+  init {
+    t = 0;
+    initial = false;
+	
+  }
+
+  next {
+    initial' = true;
+    if (push_cmd) {
+      call chld.push();
+    }
+	
+
+  //invariant push_affects_tail: child.initialized ==> (child.push_cmd ==> (child.tail == past(child.tail) + 1));
+
+
+  control {
+    print_module;
+    //v2 = unroll(2);
+    //check;
+    //print_results;
+  }
+}
+

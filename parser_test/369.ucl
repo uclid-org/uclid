@@ -1,0 +1,44 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-distinct-op.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 0
+//We have error on line 17
+	
+{
+  type color_t = enum { red, blue, green };
+  output light : color_t;
+  next {
+    case
+      (light == red)   : { light' = blue; }
+      (light == blue)  : { light' = green; }
+      (light == green) : { light' = red; }
+    esac
+  }
+}
+
+module main
+{
+  var l1, l2, l3 : led.color_t;
+
+	
+  instance led2 : led(light : (l2));
+  instance led3 : led(light : (l3));
+
+  init {
+    assume distinct(l1, l2, l3);
+  }
+
+  next {
+    next (led1);
+    next (led2);
+    next (led3);
+  }
+
+  invariant neq : distinct(l1, l2, l3);
+
+  control {
+    v = unroll(10);
+    check;
+    print_results;
+  }
+}

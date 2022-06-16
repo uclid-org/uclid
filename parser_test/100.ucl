@@ -1,0 +1,30 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-synthesis-grammar-8.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 22
+//We have error on line 15
+// This test should return unknown
+module main {
+
+    type I = enum {a, b, c};
+    type J = record { valid : boolean, value : bv8 };
+    
+    define test(i : I) : boolean = (i == a);
+    
+    grammar synth_grammar (i : I) : boolean = {
+        (cond : boolean) ::= test(i);
+    }
+
+    synthesis function choose (i : I) : boolean
+        grammar synth_grammar(i);
+    
+	
+    next {}
+
+    property always_positive: choose(a) && choose(b);
+
+    control {
+        v = unroll(0);
+	
+    }
+}

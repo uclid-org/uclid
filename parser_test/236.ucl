@@ -1,0 +1,32 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-primed-variables-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 7
+//We have error on line 22
+//We have error on line 9
+//We have error on line 11
+module main {
+  var a : integer;
+  
+  init {
+    a = 0;
+  }
+  
+	
+    modifies a;
+	
+    a = a + 1;
+	
+  }
+  next {
+    call set_a();
+    assert (a < a');
+  }
+  
+  control {
+    // print_module;
+    unroll(3);
+    check;
+	
+  }
+}

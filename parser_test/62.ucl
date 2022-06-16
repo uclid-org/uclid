@@ -1,0 +1,34 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-syntax-errors-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 16
+//We have error on line 17
+//We have error on line 17
+module main
+{
+  var a : integer;
+  var b : integer;
+  var z : boolean;
+  var z1 : boolean;
+  var z2 : boolean;
+  init {
+    a = 0;
+    b = 0;
+    z = true;
+  }
+  next {
+    a' = a + 1;
+    b' = b + 2;
+  }
+	property z global_z:z;
+	property { x0:z.z1||z2;
+  property x1 : z1.a > b;
+  property x2 : z2.b > 0;
+  control {
+    initialize;
+    simulate(4);
+    check;
+    print_results;
+    print_cex(a, b, z, z1, z2);
+  }
+}

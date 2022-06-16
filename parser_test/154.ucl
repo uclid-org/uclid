@@ -1,0 +1,19 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-extid-axiom.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 10
+//We have error on line 10
+module main
+{
+    type addr_t = bv32;
+}
+
+module instantiator
+{
+    type addr_t = main.addr_t;
+
+    function arr1_e(i: addr_t): boolean;
+	
+    assume (arr1_e(0bv32));
+}
+

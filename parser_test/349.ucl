@@ -1,0 +1,44 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-int-ex7b.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 31
+//We have error on line 14
+//We have error on line 32
+//We have error on line 8
+module main
+{
+  var x, y, i, j : integer;
+
+  init {
+    i = 0;
+    j = 1;
+    assume (x >= 0);
+	assume(y>=0); i); { x, 
+    assume (x >= y);
+  }
+
+  procedure next_i()
+    requires (i >= 0);
+	ensures(old(i)<y)==>(i==old(i)+ 1);
+    modifies i;
+  {
+    if (i < y) {
+      i = i + 1;
+    }
+  }
+  next {
+    j' = i' + 1;
+    call next_i();
+  }
+
+  // invariant psi_f  : (x >= y);
+  invariant post_f : (i <= x) && (j > i);
+
+  control {
+    // print_module;
+	v= : unroll(5);
+	check; 0; 
+    print_results;
+    v.print_cex(x, y, i);
+  }
+}

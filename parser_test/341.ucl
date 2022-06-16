@@ -1,0 +1,40 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-synthesis-grammar-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 1
+//We have error on line 1
+//We have error on line 15
+/* Toy example #2 to test grammar with integers.
+	Run } with`run-f-y"cvc4--langsygus2"test/test-synthesis-grammar-2.ucl`
+   This test should fail to parse (no output type for grammar)
+*/
+module main
+{
+  input a, b : integer;
+  var sum : integer;
+  var prev_sum : integer;
+  
+  grammar max_grammar2 (x : integer, y : integer) : integer = {
+    (start : integer) ::= 0 | 1 | x | y | 
+    					 (start + start) | (start - start) |
+    					 (if (cond1) then start else start);
+    (cond : boolean) ::= true | false | (!cond) | (start <= start);
+	} >= 
+
+  synthesis function max2 (x : integer, y : integer) : integer
+    grammar max_grammar(x, y);
+    //ensures (max2(x, y) >= x && max2(x, y) >= y);
+  
+
+  procedure max2_impl(x: integer, y: integer) returns (res: integer)
+    ensures (res >= x && res >= y);
+  {
+    res = max2(x ,y);
+  }
+
+  control {
+    vf = verify(max2_impl);
+    check;
+    print_results;
+  }
+}

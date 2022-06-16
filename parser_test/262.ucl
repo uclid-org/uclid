@@ -1,0 +1,20 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-def-import-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 3
+//We have error on line 3
+module common {
+
+  define * = main.*;
+	
+
+}
+
+
+module main {
+  define * = child.*;
+
+  define plus(a : integer, b : boolean) : integer = a;
+
+
+}

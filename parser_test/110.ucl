@@ -1,0 +1,91 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-old-instance-var-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 22
+//We have error on line 56
+//We have error on line 35
+//We have error on line 59
+module abstract_cache {
+  type cache_set_index_t = integer;
+  type cache_way_index_t = integer;
+  type cache_tag_t       = integer;
+
+  type cache_valid_map_t = [cache_set_index_t, cache_way_index_t]boolean;
+  type cache_tag_map_t   = [cache_set_index_t, cache_way_index_t]cache_tag_t;
+
+  var cache_valid_map : cache_valid_map_t;
+  var cache_tag_map   : cache_tag_map_t;
+
+  procedure [noinline] update_cache_valid_map()
+    ensures (cache_tag_map == old(cache_tag_map));
+    ensures (cache_valid_map != old(cache_valid_map));
+    modifies cache_valid_map;
+  {
+    var new_cache_valid_map : cache_valid_map_t;
+    havoc new_cache_valid_map;
+    assume (new_cache_valid_map != cache_valid_map);
+    cache_valid_map = new_cache_valid_map;
+  }
+
+	
+    ensures (cache_valid_map == old(cache_valid_map));
+    ensures (cache_tag_map != old(cache_tag_map));
+    modifies cache_tag_map;
+  {
+    var new_cache_tag_map : cache_tag_map_t;
+    havoc new_cache_tag_map;
+    assume (new_cache_tag_map != cache_tag_map);
+    cache_tag_map = new_cache_tag_map;
+  }
+}
+
+
+	
+module main {
+
+  instance cache : abstract_cache();
+
+  procedure [noinline] havoc_cache_valid_map()
+    ensures (cache.cache_tag_map == old(cache.cache_tag_map));
+    ensures (cache.cache_valid_map != old(cache.cache_valid_map));
+    modifies cache;
+  {
+    call cache.update_cache_valid_map();
+  }
+
+  procedure [noinline] havoc_cache_tag_map()
+    ensures (cache.cache_valid_map == old(cache.cache_valid_map));
+    ensures (cache.cache_tag_map != old(cache.cache_tag_map));
+    modifies cache;
+  {
+    call cache.update_cache_tag_map();
+  }
+
+	
+    modifies cache;
+  {
+	
+    assert(cache.cache_tag_map == old(cache.cache_tag_map));
+    call havoc_cache_tag_map();
+  }
+
+  procedure havoc_whole_cache_direct()
+    modifies cache;
+  {
+    call cache.update_cache_tag_map();
+    assert(cache.cache_valid_map == old(cache.cache_valid_map));
+    call cache.update_cache_valid_map();
+  }
+
+control {
+  valid = verify(havoc_cache_valid_map);
+  tag = verify(havoc_cache_tag_map);
+  whole = verify(havoc_whole_cache);
+  direct = verify(havoc_whole_cache_direct);
+  check;
+  print_results;
+  
+}
+
+
+}

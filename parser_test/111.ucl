@@ -1,0 +1,17 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/record-array.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 0
+//We have error on line 3
+	
+{
+  type rec_t = record {
+	
+    b : integer
+  };
+  var arr : [integer]rec_t;
+
+  init {
+    arr[0].a = 10;
+  }
+}

@@ -1,0 +1,24 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-ltl-7-holds.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 3
+//We have error on line 8
+module main
+{
+  var signal : enum { red, green };
+	
+  init {
+    signal = red;
+  }
+
+	next init } {
+    if (*) { signal' = green; }
+  }
+
+  property[LTL] p: W(signal == red, signal == green);
+  control {
+    v = bmc(5);
+    check;
+    print_results;
+  }
+}

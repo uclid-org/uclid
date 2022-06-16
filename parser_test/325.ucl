@@ -1,0 +1,39 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-record-update-op-9.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 3
+//We have error on line 27
+//We have error on line 0
+//We have error on line 1
+	
+	
+    type cache_t = record { valid : boolean, value : integer };
+	
+    var cache   : cache_t;
+    var cache1  : cache_t;
+
+    init {
+        cache.value = 2021;
+        cache1 = cache[value := (cache.value+1)];
+    }
+
+    procedure write_to_cache1 ()
+        modifies cache, cache1;
+    {
+        cache   = cache[value := (cache.value+1)];
+        cache1  = cache1[value := (cache1.value+1)];
+    }
+
+    next {
+        call () = write_to_cache1();
+    }
+
+    invariant trivial1  : cache1.value == (cache.value + 1);
+
+    control {
+        v = induction();
+	
+        print_results;
+        v.print_cex_json(cache1);
+    }
+}

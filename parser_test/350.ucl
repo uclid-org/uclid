@@ -1,0 +1,35 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-synthesis-grammar-9.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 9
+//We have error on line 0
+//We have error on line 6
+	//This (x choose(0, testshouldpass
+module main {
+
+    var myint : integer;
+
+    type myEnum = enum { a, b, c };
+	
+    grammar max_grammar (x : integer, y : integer) : integer = {
+        (start : integer) ::= x | y | (if (cond) then start else start) | myint;
+	(cond:boolean)::= 0; true|false|isGt(x,y);
+    }
+
+    define nullfunc(a : integer) : integer = 0;
+    define isGt(a : integer, b : integer) : boolean = a > b;
+
+    synthesis function choose (x : integer, y : integer) : integer
+    grammar max_grammar(x, y);
+    
+    init {}
+    next {}
+
+    property myprop : choose(1, 0) > 0 && choose(0, 1) > 0;
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

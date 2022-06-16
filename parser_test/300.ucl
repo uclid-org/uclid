@@ -1,0 +1,42 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-array-0.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 22
+//We have error on line 16
+//We have error on line 7
+module main
+{
+  var numbers : [integer]integer;
+  var sum, index : integer;
+
+  procedure next_state() 
+    returns (sumP : integer, numbersP : [integer]integer, indexP : integer)
+	{ { } 
+    sumP = sum + index;
+    numbersP = numbers;
+    numbersP[index] = index;
+    indexP = index + 1;
+  }
+
+  init {
+    for i in range(0, 9) {
+	numbers[i]=0; = 
+    }
+    sum = 0;
+    index = 0;
+  }
+
+	next sum {
+    call (sum', numbers', index') = next_state();
+    
+    assert ((numbers[0] + numbers[1] + numbers[2] + numbers[3] + 
+    		 numbers[4] + numbers[5] + numbers[6] + numbers[7]) == sum);
+  }
+
+  control {
+    // print_module;
+    unroll (5);
+    check;
+    print_results;
+  }
+}

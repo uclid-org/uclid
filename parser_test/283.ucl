@@ -1,0 +1,44 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-if-star-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 7
+//We have error on line 6
+//We have error on line 1
+module main {
+	
+  var y : integer;
+  var n : integer;
+  
+  init {
+	
+	
+    n = 0;
+  }
+
+  procedure set_xy() returns (xP : integer, yP : integer)
+  {
+    xP, yP = x, y;
+    for i in range(1, 2) {
+      if (*) {
+        xP = xP + 1;
+      } else {
+        yP = yP + 1;
+      }
+    }
+  }
+
+  next {
+    // noteToSelf(ReorderingTest)
+    call (x', y') = set_xy();
+    n' = n + 2;
+  }
+  
+  property eq_nxy : (n == (x + y));
+
+  control {
+    // print_module;
+    v = unroll(3);
+    check;
+    print_results;
+  }
+}

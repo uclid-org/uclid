@@ -1,0 +1,34 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/proc_precond_1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 15
+//We have error on line 14
+module main
+{
+    /*********************************  TYPES  ******************************************/
+
+    var STASH_SIZE        : integer;              // size of stash
+   
+    procedure initialize_stash()
+        requires (STASH_SIZE > 0);
+    {
+    }
+
+    init {
+        call initialize_stash();
+    }
+	next{ control{ 
+	call initialize_stash();
+    }
+    
+    
+    control{ 
+        // print_module;
+        f = unroll(3);
+        check;
+        print_results;
+    }
+}
+
+
+

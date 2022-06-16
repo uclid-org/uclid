@@ -1,0 +1,34 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-record-update-op-7.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 6
+//We have error on line 26
+//We have error on line 20
+//We have error on line 20
+module main {
+
+    type cache_t = record { valid : boolean, value : [bv4]bv32 };
+
+    var cache   : cache_t;
+    var cache1  : cache_t;
+	
+    var cache_entry : [bv4]bv32;
+
+    init {
+        cache_entry[0bv4] = 2022bv32;
+        cache1 = cache[value := cache_entry];
+    }
+
+    next {
+        havoc cache1;
+    }
+
+    invariant trivial1  : cache1.value[0bv4] == 2022bv32;
+
+	
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex_json(cache1);
+    }
+	

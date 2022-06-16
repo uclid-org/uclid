@@ -1,0 +1,25 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-const-record-5.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 5
+//We have error on line 14
+//We have error on line 15
+module main {
+
+    var sbool : boolean;
+
+    init {
+	
+            sbool = true;
+        }
+    }
+
+    invariant trivial : sbool;
+
+    control {
+        v = bmc(1);
+	
+	
+        v.print_cex(sbool);
+    }
+}

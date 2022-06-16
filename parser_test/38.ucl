@@ -1,0 +1,29 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-synthesis-11.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 10
+//We have error on line 22
+//We have error on line 6
+module main {
+   
+    type myrec = record {
+        anint : integer,
+        abool : boolean
+    };
+	
+    var rec1 : myrec;
+	synthesis function myfun (x : integer) : boolean;
+
+	init{} 
+
+    next {}
+
+    property myprop : myfun(rec1.anint);
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+
+	} } 

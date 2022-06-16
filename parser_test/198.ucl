@@ -1,0 +1,28 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-scheduler-0.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 8
+//We have error on line 13
+module main
+{
+  var a, b : integer;
+
+  init {
+    a = 0;
+    b = a + 1;
+  }
+	
+  next {
+    b' = a' + 1;
+    a' = a + 1;
+  }
+	
+  invariant a_le_b: a <= b;
+
+  control {
+    // print_module;
+    v = unroll(5);
+    check;
+    print_results;
+  }
+}

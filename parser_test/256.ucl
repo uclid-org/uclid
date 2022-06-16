@@ -1,0 +1,23 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-concat-modules-dup-decl.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 5
+//We have error on line 13
+//We have error on line 12
+/* Test that multiple conflicting declarations for the same module results in an error.
+*/
+module main {
+    var x: integer;
+    var x: integer;
+	
+}
+
+module main {
+    var x: bv5;
+
+    control {
+	bmc(5); check; 
+	check; bmc(5); } 
+        print_results;
+    }
+}

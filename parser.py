@@ -10,7 +10,7 @@ src_directory = 'test'
 dst_directory = 'parser_test/'
 
 # global setting
-src_file_num = 100
+src_file_num = 500
 max_error = 3
 max_error_type = 2
 error_type = 2
@@ -27,10 +27,15 @@ def randomword(src_content):
         wordlist = list(line.split())
         if(count==random_line):
             random_column = int(random()*len(wordlist))
+            more_word = int(random()*10)
+            if(more_word>2):
+                ret = " "
+            else:
+                ret = randomword(src_content)
             if(len(wordlist)!=0):
-                return " "+wordlist[random_column]+" "
+                return ret + wordlist[random_column] + " "
             else :
-                return " "
+                return ret
         count = count + 1
     
 #have appendex error on one line
@@ -93,6 +98,9 @@ def error_1(srcfile,dstfile):
             for word in wordlist:
                 if(cnt==error_column):
                     word = word + randomword(src_content)
+                    conti = int(random()*10)
+                    if(conti>7):
+                        error_column = error_column + 1
                 cnt = cnt + 1
             this_line = this_line + "\n"
             dstfile.write(this_line)

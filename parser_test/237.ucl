@@ -1,0 +1,41 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-modules-3.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 9
+//We have error on line 5
+//We have error on line 13
+module incr
+{
+  input x : integer;
+  output y : integer;
+  var c : integer;
+	
+  init {
+    c = 0;
+  }
+	
+  next {
+    c' = c + 1;
+    y' = x + c';
+	} next 
+}
+
+module main
+{
+  var a, b : integer;
+  
+  instance incr1 : incr(x : (a), y: (b'));
+  
+  init {
+    a = 0;
+    b = 0;
+  }
+
+  next {
+    a' = a + 1;
+    next (incr1);
+  }
+  
+  invariant b_prop: (b >= 0 && b >= a);
+}
+    

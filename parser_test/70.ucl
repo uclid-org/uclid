@@ -1,0 +1,30 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-mod-set-analysis-7.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 4
+//We have error on line 14
+module main {
+    var x, y: integer;
+
+    // Only modifies x and not y
+	
+    procedure [noinline] foo()
+        modifies x, y;
+    {
+        havoc x;
+    }
+   
+    // Make sure that the modifies set does not reduce after using mod set analysis
+    // THIS SHOULD FAIL TO VERIFY
+    procedure bar()
+	
+    {
+        call foo();
+    }
+
+    control {
+        v = verify(bar);
+        check;
+        print_results;
+    }
+}

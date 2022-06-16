@@ -1,10 +1,10 @@
 //we gather 1 Syntax Error
-//Error Type is More words
+//Error_Type is less words
 //src file is <_io.TextIOWrapper name='test/test-modules-1.ucl' mode='r' encoding='UTF-8'>
-//We have error on line 33
-//We have error on line 1
+//We have error on line 42
+//We have error on line 13
 module common {
-	typeaddr_t= { bv8;
+  type addr_t = bv8;
   type word_t = bv8;
   type mem_t = [addr_t]word_t;
 }
@@ -16,7 +16,7 @@ module cpu {
   var pc : addr_t;
   var inst : word_t;
 
-  init {
+	
       pc = 0bv8;
   }
 
@@ -36,7 +36,7 @@ module main {
   next {
     next (c1);
     next (c2);
-	} next 
+  }
   
   property eq_pc : (c1.pc == c2.pc);
   control {
@@ -45,4 +45,4 @@ module main {
     check;
     print_results;
   }
-}
+	

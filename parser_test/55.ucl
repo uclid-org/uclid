@@ -1,0 +1,27 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-synthesis-grammar-11.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 6
+//We have error on line 18
+//We have error on line 4
+// This test should pass
+module main {
+
+    grammar choice_grammar () : integer = {
+	
+    }
+	
+    synthesis function choose () : integer
+        grammar choice_grammar();
+    
+    init {}
+    next {}
+
+    property myprop : choose() != 0;
+
+    control {
+        v = unroll(0);
+        check;
+	
+    }
+}

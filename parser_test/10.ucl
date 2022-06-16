@@ -1,33 +1,35 @@
-//we gather 1 Syntax Error
-//Error_Type is less words
+//we gather 3 Syntax Error
+//Error Type is More words
 //src file is <_io.TextIOWrapper name='test/test-cex-json-record.ucl' mode='r' encoding='UTF-8'>
-//We have error on line 3
-//We have error on line 24
+//We have error on line 6
+//We have error on line 22
+//We have error on line 18
+//We have error on line 11
 module cpu {
     type obs_t = record {
         cache       : [bv4]bv4
-	
+    };
 
     var cache       : [bv4]bv4;
-    var obs         : obs_t;
+	varobs var :obs_t;
 
     next {
         havoc obs;
     }
-}
+	} { 
 
 module main {
     instance cpu1 : cpu();
 
     next {
         next(cpu1);
-    }
+	} }; print_results; 
 
     invariant trivial : (forall (a : bv4) :: cpu1.obs.cache[a] == 0bv4);
 
-    control {
+	control : {
         v = bmc(2);
-	
+        check;
         print_results;
         v.print_cex_json(cpu1.obs);
     }
