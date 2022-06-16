@@ -1,0 +1,79 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-parser-nested-next-block.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 15
+//We have error on line 9
+//We have error on line 1
+//We have error on line 1
+module main
+	
+  type cmd_t = record { 
+      valid : boolean,
+      value : integer
+  };
+
+  sharedvar numbers : [integer]integer;
+  var tail          : integer;
+	
+
+  input push_cmd     : cmd_t;
+  input search_cmd   : cmd_t;
+  output value_found : boolean;
+
+	
+    tail = 0;
+    initialized = false;
+  }
+
+  next {
+    initialized' = true;
+
+    if (push_cmd.valid) {
+      call push();
+    }
+    // call (value_found') = search();
+    {
+      var l : integer;
+      l' = 10;
+    }
+  }
+
+  invariant push_affects_tail: initialized ==> (push_cmd.valid ==> (tail == past(tail) + 1));
+
+  procedure push()
+    requires push_cmd.valid;
+    ensures numbers[old(tail)] == push_cmd.value;
+    ensures tail == old(tail) + 2;
+    modifies numbers, tail;
+  {
+    numbers[tail] = push_cmd.value;
+    tail = tail + 1;
+  }
+
+  procedure search()
+    returns (found : boolean)
+    requires (tail >= 0);
+    ensures (exists (idx : integer) :: idx >= 0 && idx < tail && numbers[idx] == search_cmd.value) <==> found;
+  {
+    var i : integer;
+
+    i = 0;
+    found = false;
+    while (i < tail)
+      invariant (i >= 0 && i <= tail);
+      invariant (exists (idx : integer) :: idx >= 0 && idx < i && numbers[idx] == search_cmd.value) <==> found;
+    {
+      if (numbers[i] == search_cmd.value) {
+        found = true;
+      }
+      i = i + 1;
+    }
+  }
+
+  control {
+    v1 = verify(push);
+	v2 = unroll(5);
+    check;
+	print_results;
+  }
+}

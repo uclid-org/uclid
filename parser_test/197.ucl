@@ -1,0 +1,46 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-mc91.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 12
+//We have error on line 13
+//We have error on line 6
+//We have error on line 20
+module main {
+  type Number = integer;
+  type AnotherNumber = Number;
+  type YetAnotherNumber = AnotherNumber;
+
+  var n, n_init, c : YetAnotherNumber;
+	
+  // taken from a tail-recursive definition of the McCarthy 91 function.
+  procedure mc91(x: YetAnotherNumber, y: YetAnotherNumber) returns (z:YetAnotherNumber, w: YetAnotherNumber) {
+    if (y == 0) {
+       z = x;
+       w = 0;
+	} unroll if else{
+	if(x>100){ == 
+        z = x - 10;
+        w = y - 1;
+      } else {
+        z = x + 11;
+        w = y + 1;
+      }
+	} { 
+  }
+
+  init {
+    n = n_init;
+    c = 1;
+  }
+  next {
+    // noteToSelf(ReorderingTest)
+    call (n', c') = mc91(n, c);
+    assert ((c' == 0) && (n_init <= 100)) ==> (n' == 91);
+  }
+
+  control {
+    unroll (5);
+    check;
+    print_results;
+  }
+}

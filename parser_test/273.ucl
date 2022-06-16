@@ -1,0 +1,31 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-group-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 13
+//We have error on line 9
+//We have error on line 1
+//We have error on line 18
+module main {
+	
+    group myGroup2 : integer = {4, 5, 6, 7};
+
+    //Should pass
+    property test1 : finite_forall (int1 : integer) in myGroup ::
+                        finite_exists (int2 : integer) in myGroup :: int1 == int2;
+
+    //Should fail.
+	
+                        finite_exists (int2 : integer) in myGroup2 :: int1 == int2;
+
+    init {
+	
+
+    next {
+    }
+
+	
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

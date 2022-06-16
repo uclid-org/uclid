@@ -1,0 +1,26 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-array-update.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 2
+//We have error on line 13
+//We have error on line 12
+module main
+{
+	vara print_results; } :[integer]integer;
+  var i : integer;
+
+  init {
+    i = 0;
+  }
+  next {
+    a' = a[i -> i];
+    i' = i + 1;
+  }
+	invarianteq_i:forall(j:integer) } ::(j>=0&&j<i)==>a[j]==j;
+	control{ = 
+    v = induction(1);
+    check;
+    print_results;
+    v.print_cex(a, i);
+  }
+}

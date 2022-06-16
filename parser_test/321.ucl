@@ -1,0 +1,45 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-macro-3.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 6
+//We have error on line 36
+//We have error on line 4
+//We have error on line 37
+module main {
+  // System description. 
+  var a, b   : integer;
+  const flag : boolean;
+	
+  macro embedded_assumptions {
+	
+    assume (a >= 0 && b >= 0);
+    assume (flag);
+  }
+
+  procedure set_init()
+    modifies a, b;
+  {
+    havoc a;
+    havoc b;
+    embedded_assumptions;
+  }
+
+  init {
+    call set_init();
+  }
+  next {
+    a', b' = b, a + b;
+    if (flag) {
+      assert (a' <= b');
+    } else {
+      assert (false);
+    }
+  }
+
+  // Proof script.
+  control {
+    unroll (3);
+    check;
+    print_results;
+	
+	

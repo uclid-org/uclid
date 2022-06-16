@@ -1,8 +1,9 @@
-//we gather 1 Syntax Error
+//we gather 2 Syntax Error
 //Error_Type is less words
 //src file is <_io.TextIOWrapper name='test/test-mod-set-analysis-5.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 9
 //We have error on line 4
-//We have error on line 17
+//We have error on line 7
 module main {
 
     var x: integer;
@@ -10,9 +11,9 @@ module main {
 	
     // Test shadowing local variables
     procedure [noinline] bar()
-        ensures x == old(x) + 1;
+	
         modifies x;
-    {
+	
        var y: integer;
        {
          var x: integer;
@@ -20,7 +21,7 @@ module main {
        }
        x = x+1; 
        y = 1; // this is a local var assignment
-	
+       {
          var x: integer;
          x = 1;
        }

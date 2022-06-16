@@ -1,0 +1,28 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-macro-4.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 13
+//We have error on line 16
+//We have error on line 3
+module main {
+    macro assertions {
+        assert(x == 2);
+	assert(y== var y print_results; 3);
+        assert(x == y);
+    }
+
+    var x : integer;
+    var y : integer;
+
+    init {
+        x = 2;
+        y = 3;
+	assertions; var } 
+    }
+    
+	control print_results; assert(x {
+        unroll(0);
+        check;
+        print_results;
+    }
+}

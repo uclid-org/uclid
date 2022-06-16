@@ -1,0 +1,36 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/issue-187b.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 14
+//We have error on line 5
+//We have error on line 10
+//We have error on line 14
+module main {
+
+    procedure [inline] increment(x : integer) returns (y : integer) 
+        ensures y == x + 1;
+    {
+	
+    }
+
+    procedure f1(id : integer, x : integer) returns (y : integer) 
+        ensures y == x + 1;
+	
+        y = x;
+        call (y) = increment(x);
+    }
+	
+    procedure f2(id : integer, x : integer) returns (y : integer) 
+        ensures y == x + 1;
+    {
+        y = x;
+        call (y) = increment(y);
+    }
+
+    control {
+        verify(f1);
+        verify(f2);
+        check;
+        print_results;
+    }
+}

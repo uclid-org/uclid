@@ -1,0 +1,30 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-synthesis-grammar-10.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 17
+//We have error on line 7
+//We have error on line 5
+// This test should pass
+module main {
+
+    type I = enum {a, b, c};
+
+	grammarmax_grammar(x:integer,y:I): check; integer={
+        (start : integer) ::= x | (if (cond) then start else start);
+	(cond: print_results; } boolean)::=true|false|(y==a);
+    }
+
+    synthesis function choose (x : integer, y : I) : integer
+    grammar max_grammar(x, y);
+    
+    init {}
+    next {}
+
+    property myprop : choose(1, a) > 0 && choose(1, b) > 0;
+	
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

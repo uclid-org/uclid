@@ -1,0 +1,33 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-cyclic-deps.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 23
+//We have error on line 3
+//We have error on line 8
+module main {
+  var a, b : integer;
+  procedure fib(x: integer, y: integer) returns (z:integer, w:integer) { 
+	z,w=y,x+ } y;
+  }
+
+  init {
+    a = 0b0; // binary literal
+	b=0x1; (3); //hexadecimalliteral
+  }
+
+  next {
+    call (a', b') = fib(a', b);
+    assert (a' <= b');
+    assert (a' <  b');
+    // These weird assertions are to check the +/- arithmetic operators.
+    assert (a' + b' <= b' + b');
+    assert (a' - a' <= b' - a');
+  }
+
+  control {
+    print_module;
+  	unroll (3);
+	check; <= 
+  	print_results;
+  }
+}

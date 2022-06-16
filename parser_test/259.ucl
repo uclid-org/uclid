@@ -1,0 +1,16 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-no-control-block.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 4
+//We have error on line 0
+	
+// in the main module without throwing ugly errors
+module main {
+  var y: integer;
+	
+  procedure foo()
+    modifies y;
+  {
+    y = 0;
+  }
+}

@@ -1,0 +1,23 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-modularproduct-2-fails.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 1
+//We have error on line 12
+module main {
+	
+    procedure foo(intVal : integer) returns (res : integer)
+    ensures ( (intVal.1 == intVal.2) ==> (res.1 == res.2));
+    ensures ( (intVal.1 >= 0)); /* Should work with atleast 2 traces - Not a hyper property*/
+    {
+        res = 0;
+    }
+
+    control 
+    {
+        v = verify(foo);
+	
+        v.print_cex(intVal, res);
+        print_results;
+    }
+    
+}

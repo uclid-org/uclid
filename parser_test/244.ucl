@@ -1,0 +1,17 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-oracle-function-3.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 6
+//We have error on line 3
+module main {
+  var factor1: integer;
+  var factor2: integer;
+	
+
+// should not parse
+	
+
+  axiom isPrime(factor1) && isPrime(factor2) && isPrime(factor3);
+  
+
+}

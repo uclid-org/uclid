@@ -1,0 +1,31 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-const-import-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 18
+//We have error on line 12
+module cpu {
+  const sup_range_lo : bv8;
+  const sup_range_hi : bv8;
+}
+  
+module main {
+  instance cpu_i_1 : cpu();
+  instance cpu_i_2 : cpu();
+
+  init {
+    assume (cpu_i_1.sup_range_lo < cpu_i_1.sup_range_hi);
+    assume (cpu_i_1.sup_range_hi < cpu_i_2.sup_range_lo);
+	
+
+  next {
+  }
+  
+  invariant should_fail : false;
+	
+  control {
+    //print_module;
+    unroll(3);
+    check;
+    print_results;
+  }
+}

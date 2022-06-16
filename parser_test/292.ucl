@@ -1,0 +1,55 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-concat-modules-w-init-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 18
+//We have error on line 42
+/* Test where variable declarations, init and next blocks are in different declaring modules.
+*/
+module A_minor {
+    var t: integer;
+}
+
+module A {
+    instance minor: A_minor();
+}
+
+module A {
+    var x, y, z: integer;
+
+    init {
+        x = 0;
+    }
+
+}
+	
+module A {
+    init {
+        y = 0;
+        z = 0;
+    }
+}
+
+module A {
+    next {
+        x' = x;
+        y' = y;
+        z' = z;
+    }
+}
+
+module main {
+    instance a: A();
+    invariant same_x: a.x == 0;
+    invariant same_y: a.y == 0;
+    invariant same_z: a.z == 0;
+    
+    next {
+        next(a);
+	
+    
+    control {
+        v = induction();
+        check;
+        print_results; 
+    }
+}

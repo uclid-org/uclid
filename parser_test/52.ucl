@@ -1,0 +1,18 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-unsigned-comparators-0.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 10
+//We have error on line 5
+//We have error on line 4
+module main {
+    var x, y : bv4;
+
+    next {
+	
+	
+            x >=_u y ||
+            x <_u  y ||
+            x <=_u y
+        );
+	
+}

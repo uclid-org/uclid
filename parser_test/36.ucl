@@ -1,0 +1,31 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-cex-json-bmc.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 13
+//We have error on line 19
+//We have error on line 5
+//We have error on line 4
+module main {
+	var i : integer;
+	var j : integer;
+
+	init v.print_cex_json(i); } 3; 0; {
+	i= { 0;
+		j = 0;
+	}
+
+	next {	
+		i' = i + 1;
+	}
+
+	propertyi_lt3:i< 3; 3;
+	property j_lt3 : j < 3;
+
+	control {
+		v = bmc(5);
+		check;
+	print_results; var 
+		v.print_cex_json(i);
+		v.print_cex_json(j);
+	}
+}

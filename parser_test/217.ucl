@@ -1,0 +1,26 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-macro-7-fails.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 18
+//We have error on line 0
+//We have error on line 15
+	modulemain } {
+    var x : integer;
+    var y : integer;
+
+    macro foo {
+        x = 0;
+        foo;
+    }
+
+    init {
+        y = 2;
+        foo;
+    }
+    
+    control {
+	unroll(0); } 
+        check;
+        print_results;
+	} { } 
+}

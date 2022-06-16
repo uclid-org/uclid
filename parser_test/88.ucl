@@ -1,0 +1,40 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-block-var.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 5
+//We have error on line 0
+//We have error on line 21
+//We have error on line 18
+	
+{
+  var x, y : integer;
+  init {
+    x = 0;
+	
+  }
+  procedure do_something()
+    modifies x, y;
+  {
+    {
+      var z : integer;
+      z = 1;
+      x, y = x+y, y+z;
+    }
+  }
+  
+  next {
+	
+  }
+  
+	
+  invariant y_ge_0: y >= 0;
+  invariant x_le_y: x <= y;
+  
+  control {
+    v = unroll(4);
+    check;
+    print_results;
+    v.print_cex(x, y);
+  }
+}
+

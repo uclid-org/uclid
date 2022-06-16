@@ -1,0 +1,16 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-invalid-cmd-param.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 9
+//We have error on line 9
+module main {
+  init {}
+  next {}
+
+  control {
+
+    induction[nonsense](1);
+    check;
+    print_results;
+	
+}

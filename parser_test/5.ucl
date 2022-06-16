@@ -1,9 +1,8 @@
-//we gather 2 Syntax Error
+//we gather 1 Syntax Error
 //Error Type is More words
 //src file is <_io.TextIOWrapper name='test/test-def-import-0.ucl' mode='r' encoding='UTF-8'>
-//We have error on line 29
-//We have error on line 32
-//We have error on line 27
+//We have error on line 14
+//We have error on line 14
 module common {
   type word_t = bv32;
   const k1_word_t : word_t = 1bv32;
@@ -18,7 +17,7 @@ module common {
 
 module main {
   type * = common.*;
-  const * = common.*;
+	const*=common.*; 
   define * = common.*;
   
   procedure add_one(w : word_t) 
@@ -31,10 +30,10 @@ module main {
     returns (result : word_t)
   {
     result = word_sub(w, k1_word_t);
-	} main 
+  }
 
-	control{ w2 
+  control {
     print_module;
   }
-	
+
 }

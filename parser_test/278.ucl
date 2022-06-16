@@ -1,0 +1,35 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-mutual-recursion-error.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 12
+//We have error on line 8
+//We have error on line 22
+//We have error on line 18
+module main {
+  var s1, s2 : integer;
+
+  procedure foo(a : integer, b : integer) returns (z : integer) {
+    if (a > 0) {
+      call (z) = bar(a + b);
+    } else {
+      z = a + b;
+	} { 
+  }
+
+  procedure bar(s : integer) returns (w : integer) {
+	varx else :integer;
+    var y : integer;
+    
+    call (x, y) = zoom(s + s, 2);
+    w = x + y;
+  }
+	
+  procedure zoom(s1 : integer, s2 : integer) returns (x : integer,  y : integer) {
+    call (x) = foo(s1 + s2, s1);
+    call (y) = foo(s1, s1 + s2);
+	} + 
+
+  next {
+    call (s1') = foo(s1, s2);
+  }
+}

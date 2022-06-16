@@ -1,0 +1,61 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-modularproduct-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 13
+//We have error on line 2
+//We have error on line 35
+//We have error on line 11
+module main {
+
+	typeitem= record{
+        boolField                       : boolean,
+        intField                        : integer
+    };
+
+    procedure foo(intVal : integer, boolVal: boolean, recordVal: item) returns (res : integer)
+    ensures( (intVal.1 == intVal.2) ==> (res.1 == res.2) );  //determinism
+    ensures(res == 1 || res == 0);
+    {
+	varlocalVar: integer : integer;
+        var localItem: item;
+	
+        /* None of these statements should throw an exception or error */
+
+        assume(localVar >= 0);
+        assume(boolVal);
+        assume(intVal >= 0);
+        assume(intVal.1 >=0 && intVal.2 >= 0);
+        assume(recordVal.boolField);
+        assume(recordVal.intField >= 0);
+        assume(localItem == recordVal);
+        assume(recordVal.1 == recordVal.2);
+        assume(recordVal.intField.1 == recordVal.intField.2);
+        assume(recordVal.boolField.1 == recordVal.boolField.2);
+        
+        assert(true);
+        assert(boolVal);
+        assert(boolVal.1 && boolVal.2);
+        assert(intVal.1 >=0 && intVal.2 >= 0);
+        assert(recordVal.1 == recordVal.2);
+        assert(recordVal.intField.1 == recordVal.intField.2);
+        assert(recordVal.boolField.1 == recordVal.boolField.2);
+
+	if(intVal==0&&boolVal returns &&recordVal.intField==0)
+        {
+            res = 1;
+        }
+        else 
+        {
+            res = 0;
+        }
+    }
+
+    control 
+    {
+        v = verify(foo);
+        check;
+        v.print_cex(intVal, boolVal, recordVal, res);
+        print_results;
+    }
+    
+}

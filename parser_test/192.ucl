@@ -1,0 +1,114 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-define-recursive.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 27
+//We have error on line 102
+//We have error on line 58
+//We have error on line 104
+module common {
+ type op_t = enum {push, pop, nop};
+
+ const c0 : [integer]integer;
+}
+
+
+module queue
+{
+  type op_t = common.op_t;
+
+  var contents : [integer]integer;
+  var head, tail: integer;
+  var inited : boolean;
+ 
+
+  output first: integer;
+  output contains_data: boolean;
+
+  input op : op_t;
+  input data : integer;
+
+  define is_empty() : boolean = (head == tail);
+  define in_queue(v : integer) : boolean = 
+  	(exists (i : integer) :: (i >= head && i < tail && contents[i] == v));
+  define contains(v : integer) : boolean =
+    is_empty() && in_queue(v);
+	
+  define relation1(a : integer) : boolean = relation2(a);
+  define relation2(b : integer) : boolean = relation1(b);
+
+  init {
+    inited = false;
+    head = 0;
+    tail = 0; 
+    first = contents[head];
+    contains_data = false;
+  }
+
+  procedure _push()
+    modifies contents, tail;
+  {
+    contents[tail] = data;
+    tail = tail+1;
+  }
+
+  procedure _pop()
+    modifies head;
+  {
+    head = head+1;
+  }
+
+  next {
+    inited' = true;
+    first' = contents[head];
+    contains_data' = contains(data);
+    case
+	(op == push) : {
+	
+    }
+	(op == pop) : {
+      if (!is_empty()) {
+	    call _pop();
+      }
+	}
+	(op == nop) : { } /* no change */
+    esac;
+  }
+
+  const pushed_data : integer;
+  invariant[LTL] head_le_tail : head <= tail;
+  invariant[LTL] queue_inserts : G((inited && op == push && data == pushed_data && X(op != pop)) 
+  									  ==> X(in_queue(pushed_data)));
+  invariant[LTL] push_eventually_pops :
+  	G(F(op == pop)) ==> // assume a pop will always happen.
+  	G((inited && op == push && data == pushed_data) ==>
+  	  F(op == pop && first == pushed_data));
+}
+
+module main
+{
+  type op_t = common.op_t;
+
+  var op : op_t;
+  var data : integer;
+
+  var step : integer;
+  
+  instance queue_i : queue(op : (op), data : (data));
+
+  init {
+    op' = nop;
+    data' = 0; 
+    step' = 0;
+  }
+  
+  next {
+    case
+	(step == 0) || (step == 1) : { op' = push; }
+	(step == 2) || (step == 3) : { op' = pop; }
+	default : { op' = nop; }
+    esac
+	
+    data' = data+1;
+	
+  }
+}

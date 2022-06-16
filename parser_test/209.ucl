@@ -1,0 +1,28 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-oracle-function-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 21
+//We have error on line 7
+module main {
+  var factor1: integer;
+  var factor2: integer;
+  var factor3: integer;
+
+// should parse
+  oracle function [isprime] isPrime(x: integer) : boolean;
+	
+  axiom isPrime(factor1) && isPrime(factor2) && isPrime(factor3);
+  init{}
+  next{}
+
+  
+// this finds prime factors of 76 (invariant fails if prime factors are found)
+  invariant find_factors : (factor1*factor3)*factor2!=76;
+
+  control {
+    v = unroll(0);
+    check;
+    print_results;
+v.print_cex(factor1);
+	
+}

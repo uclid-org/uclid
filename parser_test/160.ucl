@@ -1,0 +1,56 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-module-import-0.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 18
+//We have error on line 16
+//We have error on line 1
+//We have error on line 31
+module common {
+	
+}
+
+module module1 {
+    import common;
+
+    var x: integer;
+
+    define bar(x: T): T = x;
+
+    function gar(x: T): T;
+
+    procedure zar(x: T) returns (res: T) {
+        res = x + 1;
+    }
+	
+
+	
+module main {
+    import module1;
+
+    procedure foo()
+        modifies x;
+        ensures x == old(x) + 1;
+    {
+        var z: T;
+        z = gar(x);
+        call (x) = zar(bar(x));
+    }
+
+	
+
+    init {
+        x = 1;
+    }
+
+    next {
+        x' = x + 1;
+    }
+
+    control {
+        v = verify(foo);
+        u = unroll(5);
+        check;
+        print_results;
+        u.print_cex();
+    }
+}

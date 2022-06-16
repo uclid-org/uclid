@@ -1,0 +1,19 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-concat-modules-w-init-2-fb.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 10
+//We have error on line 7
+/* 
+    Test where variable declarations, init and next blocks are in different declaring modules.
+    Extended test where the blocks are in different files, and the order of specifying files is important.
+
+    This is the second file; also checkout test/test-concat-modules-w-init-2-fa.ucl
+*/
+
+	
+
+    init {
+	
+        z = x;
+    }
+}

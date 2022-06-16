@@ -1,0 +1,48 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-array-1-unsafe.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 10
+//We have error on line 5
+//We have error on line 18
+//We have error on line 26
+module main
+{
+  type num_t = integer;
+  var numbers : [boolean, num_t]integer;
+  var sum, index : integer;
+	
+  procedure next_state()
+    modifies numbers, sum, index;
+  {
+    sum = sum + index;
+	
+    numbers[false, index] = -index;
+    index = index + 1;
+  }
+
+  init {
+    for i in range(0, 9) {
+      numbers[true, i] = 0;
+	
+    }
+    sum = 0;
+    index = 0;
+  }
+
+  next {
+    call next_state();
+	
+    assert ((numbers'[true, 0] + numbers'[true, 1] + numbers'[true, 2] + numbers'[true, 3] + 
+             numbers'[true, 4] + numbers'[true, 5] + numbers'[true, 6] + numbers'[true, 7]) == sum');
+
+    assert ((numbers'[false, 0] + numbers'[false, 1] + numbers'[false, 2] + numbers'[false, 3] + 
+             numbers'[false, 4] + numbers'[false, 5] + numbers'[false, 6] + numbers'[false, 7]) == sum');
+  }
+  
+  control {
+    v = unroll (5);
+    check;
+    print_results;
+    v.print_cex(numbers);
+  }
+}

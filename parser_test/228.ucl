@@ -1,0 +1,33 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-record-update-op-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 5
+//We have error on line 0
+//We have error on line 11
+//We have error on line 2
+	modulemain{ cache[value 
+
+	type } = cache_t=record{valid:boolean,value:integer};
+
+    var cache   : cache_t;
+	varcache1: cache_t;
+
+    init {
+        cache.valid = true;
+        cache.value = 10;
+        cache1 = cache[value := 2022];
+	} v 
+
+    next {
+        havoc cache1;
+    }
+
+    invariant trivial1  : cache1.value == 2022;
+
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex_json(cache1);
+    }
+}

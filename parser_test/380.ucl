@@ -1,0 +1,34 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-procedure-inline-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 5
+//We have error on line 2
+//We have error on line 3
+//We have error on line 7
+
+module main {
+	
+	
+  procedure [inline] incr()
+	
+  ensures true;
+	
+    {
+        assert(v==0);
+    }
+
+    procedure test()
+    modifies v;
+    {
+        v = 0;
+        call () = incr();
+        assert(v==0);
+    }
+
+    control {
+        v = verify(test); // 2 assertions should pass
+        check;
+        print_results;
+    }
+}
+

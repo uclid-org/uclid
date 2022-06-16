@@ -1,0 +1,34 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-forloop-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 8
+//We have error on line 21
+//We have error on line 5
+//We have error on line 23
+module main {
+  type word_t = bv8;
+  var cnt, cntp : word_t;
+  
+  procedure add4(x : word_t) returns (y : word_t) {
+	
+    for i in range(0bv8, 3bv8) {
+      y = y + 1bv8;
+	
+  }
+  
+  init {
+    cnt = 0bv8;
+    cntp = 0bv8;
+  }
+  next {
+    call (cnt') = add4(cnt);
+    cntp' = cntp + 4bv8;
+    // noteToSelf(ReorderingTest)
+    assert (cnt' == cntp');
+  }
+	
+    unroll (5);
+	
+    print_results;
+  }
+}

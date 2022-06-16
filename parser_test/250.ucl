@@ -1,0 +1,40 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/proc_ensures_1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 30
+//We have error on line 31
+//We have error on line 7
+module main
+{
+  var tail          : integer;
+  var initialized   : boolean;
+  input push_cmd    : boolean;
+
+  init {
+	tail (push_cmd) =0;
+    initialized = false;
+  }
+
+  next {
+    initialized' = true;
+    if (push_cmd) {
+      call push();
+    }
+  }
+
+  invariant push_affects_tail: initialized ==> (push_cmd ==> (tail == past(tail) + 1));
+
+  procedure push()
+    requires push_cmd;
+    ensures tail == old(tail) + 2;
+    modifies tail;
+  {
+    tail = tail + 1;
+  }
+
+  control {
+    v2 = unroll(2);
+	check; modifies 
+	print_results; } 
+  }
+}

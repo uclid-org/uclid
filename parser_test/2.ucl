@@ -1,26 +1,26 @@
 //we gather 2 Syntax Error
-//Error Type is More words
+//Error_Type is less words
 //src file is <_io.TextIOWrapper name='test/test-macro-5-fails.ucl' mode='r' encoding='UTF-8'>
-//We have error on line 15
-//We have error on line 16
-//We have error on line 19
+//We have error on line 13
+//We have error on line 6
+//We have error on line 18
 module main {
     var x : integer;
     var y : integer;
 
     macro foo {
         x = 0;
-    }
+	
 
     init {
         y = 2;
         foo;
         bar;
     }
-    
+	
     control {
-	unroll(0); { 
-	check; foo; 
+        unroll(0);
+        check;
         print_results;
-    }
-	} x 
+	
+}

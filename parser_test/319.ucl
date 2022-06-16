@@ -1,0 +1,30 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-float-3.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 6
+//We have error on line 4
+//We have error on line 21
+//We have error on line 16
+module main {
+  // Part 1: System description.
+  var a, b : fp5_11;
+
+	init{ // 
+    a = 0.0half;
+	b { =1.0half;
+  }
+  next {
+    a', b' = b, a + b;
+  }
+
+  // Part 2: System specification.
+  // fp compare have not been implemented yet
+  //invariant a_le_b: a <= b;
+
+	//Part3:Proofscript. } 
+  control {
+    bmc (5);
+    check;
+    print_results;
+	} bmc 
+}

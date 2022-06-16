@@ -1,0 +1,37 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-hyperproperty-7.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 12
+//We have error on line 22
+//We have error on line 18
+//We have error on line 10
+module a
+{
+    var x: [integer]integer;
+    var y: integer;
+
+    init {
+      y = x[0] + 1;
+    }
+
+    next {
+	y'=y+1; var main } 
+    }
+	} } 
+
+
+module main
+{
+    instance a_mod : a();
+	
+    hyperaxiom[2] x_eq: a_mod.x[0].1 == a_mod.x[0].2;
+    hyperinvariant[2] det_xy: a_mod.y.1 == a_mod.y.2;
+
+	control } {
+        v = unroll(5);
+        check;
+        print_results;
+        v.print_cex(a_mod.x, a_mod.y);
+    }
+}
+

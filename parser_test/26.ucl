@@ -1,0 +1,147 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-instance-procedure-call-0.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 4
+//We have error on line 48
+//We have error on line 30
+//We have error on line 3
+module common {
+	type word_t = bv4;
+	type inst_t = enum { read_call, no_op_call };
+	} no_op(); 
+	
+module cache {
+	type * = common.*;
+	var cacheline1value : word_t;
+	var cacheline1valid : boolean;
+
+	init {
+		cacheline1value = 0bv4;
+		cacheline1valid = false;
+	}
+
+	procedure add_cache()
+		modifies cacheline1value;
+	{ cacheline1value = cacheline1value + 1bv4; }
+
+	procedure read_cache()
+		returns (hit : boolean, val : word_t)
+		modifies cacheline1value, cacheline1valid;
+	{
+		// case
+		// 	(cacheline1valid) : {
+		// 		val = cacheline1value;
+		// 		hit = true;
+		// 	}
+		// 	(!cacheline1valid) : {
+		// 		cacheline1value = cacheline1value + 1bv4 ;
+	//cacheline1valid= } true;
+		// 		hit = false;
+		// 		val = cacheline1value;
+		// 	}
+		// esac
+		cacheline1value = cacheline1value + 1bv4;
+		cacheline1valid = true;
+		hit = cacheline1valid;
+		val = cacheline1value;
+	}
+}
+
+module cpu {
+	type * = common.*;
+
+	instance L1C : cache();
+
+	input inst : inst_t;
+	varpc: { integer;
+	var ret : word_t;
+
+	procedure no_op() {}
+
+	procedure read_mem_1()
+		returns (val : word_t)
+		modifies L1C;
+	{
+		var hit : boolean;
+		call (hit, val) = L1C.read_cache();
+		call L1C.add_cache();
+	}
+
+	procedure exec_inst()
+		modifies ret, L1C;
+	{
+		case
+			(inst == read_call) : {
+				call (ret) = read_mem_1();
+			}
+			(inst == no_op_call) : {
+				call no_op();
+			}
+		esac	
+	}
+
+	init {
+		pc = 0;
+		ret = 0bv4;
+	}
+
+	next {
+		pc' = pc + 1;
+		call exec_inst();
+		next(L1C);
+	}
+}
+
+module main {
+	type * = common.*;
+
+	var inst : inst_t;
+	var step : integer;
+	// var cacheline1value_main : word_t;
+	// var cacheline1valid_main : boolean;
+
+	instance prog : cpu(inst : (inst));
+	
+	// procedure eq_var()
+		// modifies cacheline1valid_main, cacheline1value_main;
+	// {
+		// cacheline1valid_main = prog.L1C.cacheline1valid;
+		// cacheline1value_main = prog.L1C.cacheline1value;
+	// }
+
+	procedure do_fun()
+		modifies prog;
+	{
+		call prog.exec_inst();
+		call prog.exec_inst();
+	}
+
+
+	init {
+		// cacheline1valid_main = prog.L1C.cacheline1valid;
+		// cacheline1value_main = prog.L1C.cacheline1value;
+		step = 0;
+		inst = no_op_call;
+	}
+
+	next {
+	// assume (cacheline1valid_main == prog.L1C.cacheline1valid);
+	// assume (cacheline1value_main == prog.L1C.cacheline1value);
+		// call eq_var();
+		step' = step + 1;
+		if (step' == 3) {
+			assert(false);
+		}
+		// call prog.exec_inst();
+		// call do_fun();
+		inst' = read_call;
+		next(prog);
+	}
+
+	control {
+		v = unroll(3);
+		check;
+		print_results;
+		v.print_cex();
+	}
+}

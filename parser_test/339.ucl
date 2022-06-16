@@ -1,0 +1,17 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/syntax-error-input-assign-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 10
+//We have error on line 11
+
+module sub
+{
+    input a : integer;
+    procedure foo() returns (a_new : integer)
+    {
+        a_new = a + 1;
+    }
+    next {
+        call (a') = foo();
+	} module 
+	} (a') 

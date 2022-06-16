@@ -1,0 +1,69 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-types-import-redecl.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 1
+//We have error on line 35
+//We have error on line 12
+module main_func {
+	
+  var pc : pc_t;
+  init {
+    pc = A;
+  }
+  next {
+    case
+      (pc == A) : { pc' = B; }
+      (pc == B) : { pc' = C; }
+      (pc == C) : { pc' = A; }
+    esac
+	
+}
+
+module isr_func {
+  type pc_t = enum {idle, D, E};
+  var pc : pc_t;
+  init {
+    pc = idle;
+  }
+  next {
+    case
+      (pc == idle) : { pc' = D; }
+      (pc == D)    : { pc' = E; }
+      (pc == E)    : { pc' = idle; }
+    esac
+  }
+}
+
+module sys {
+  type * = main_func.*;
+  type * = isr_func.*;
+
+  var in_isr : boolean;
+	
+  instance main_f : main_func();
+  instance isr_f  : isr_func();
+
+  init {
+    in_isr = false;
+  }
+
+  next {
+    if (!in_isr) {
+      next (main_f);
+      havoc in_isr;
+    } else {
+      next (isr_f);
+      if (isr_f.pc == idle) {
+        in_isr' = false;
+      }
+    }
+  }
+}
+module main
+{
+  instance sys_f : sys();
+
+  next {
+    next (sys_f);
+  }
+}

@@ -1,0 +1,34 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-smtlib-array.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 10
+//We have error on line 10
+//We have error on line 4
+//We have error on line 23
+module main {
+    var step: bv8;
+    var arr: [bv8]bv8;
+
+	
+        assume (forall (i: bv8) :: arr[i] == 0bv8);
+    }
+
+    procedure [inline] update_array() returns (arrP: [bv8]bv8)
+        modifies arr;
+	
+        arrP = arr[step -> 0bv8];
+    }
+        
+    next {
+        step' = step + 1bv8;
+        call (arr') =  update_array();
+    }
+
+    invariant same: (forall(i: bv8) :: arr[i] == 0bv8);
+
+    control {
+        v = induction;
+	
+        print_results; 
+    }
+}

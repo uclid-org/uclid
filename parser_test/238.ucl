@@ -1,0 +1,46 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-procedure-postcondition-3.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 2
+//We have error on line 23
+//We have error on line 36
+module main
+{
+	
+  var initialized    : boolean;
+
+  input push_valid   : boolean;
+  output value_found : boolean;
+
+  init {
+    tail = 0;
+    initialized = false;
+  }
+
+  next {
+    initialized' = true;
+
+    if (push_valid) {
+      call push();
+    }
+  }
+
+  invariant push_affects_tail: initialized ==> (push_valid ==> (tail == past(tail) + 1));
+
+	
+    requires push_valid;
+    ensures tail == old(tail) + 1;
+    modifies tail;
+  {
+    tail = tail + 1;
+  }
+
+  control {
+    v1 = verify(push);
+	v2 = unroll(4);
+	check;
+	print_results;
+	
+  }
+}
+

@@ -1,0 +1,35 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-forloop-macro-iterates.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 13
+//We have error on line 27
+module main {
+	
+	define start() : bv4 = 0bv4;
+	define end() : bv4 = 2bv4;
+	var k : bv4;
+
+	procedure proc()
+		modifies k;
+	{
+		for (i : bv4) in range(start(), end()) {
+			k = i;	
+		} 
+	}
+	
+	init {
+		k = 0bv4;
+	}
+	
+	next {
+		call proc();
+	}
+
+	invariant test : (k != 3bv4);
+
+	control {
+		v = unroll(1);
+		check;
+	
+	}	
+}

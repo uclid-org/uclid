@@ -1,0 +1,18 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/ltl-toy-0.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 2
+//We have error on line 6
+//We have error on line 11
+module main
+{
+	
+  init { x = true; }
+  next { }
+  invariant[LTL] x_true: G(x);
+	
+    v = bmc_LTL(5);
+    check;
+    print_results;
+  }
+	

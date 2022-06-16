@@ -1,0 +1,26 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-bv-sign-ext-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 9
+//We have error on line 19
+//We have error on line 7
+module main
+{
+  var a : bv8;
+  var b : bv16;
+
+  init {
+    a = 255bv8;
+	
+  }
+	
+    a' = a - 1bv8;
+    b' = b + 1bv16;
+  }
+  invariant z: (bv_sign_extend(8, a) + b) == 0bv16;
+  control {
+    v = unroll(8);
+    check;
+    print_results;
+  }
+	

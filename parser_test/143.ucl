@@ -1,0 +1,25 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/havoc_ordering.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 16
+//We have error on line 17
+module main
+{
+    var i : integer;
+
+    init {
+        i = 0;
+    }
+
+    next {
+        havoc i;
+        assert (i != 10);
+    }
+
+    control {
+        // print_module;
+        v = unroll(1);
+	
+	
+    }
+}

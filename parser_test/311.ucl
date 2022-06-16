@@ -1,0 +1,34 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-array-record-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 20
+//We have error on line 8
+//We have error on line 11
+module main {
+
+    type rec_t = record {
+        b : boolean,
+        a : bv2
+    };
+
+    type arr_t = record {
+	
+        b : boolean
+    };
+	
+    var one : [bv3]rec_t;
+    var two : boolean;
+    var three : arr_t;
+
+    next {
+        two' = (one[1bv3]).b || ((three.a)[2bv3]).b ||
+                one[1bv3].b  ||  three.a[2bv3].b;
+    }
+	
+    control {
+        v = unroll(1);
+        check;
+        print_results;
+    }
+
+}

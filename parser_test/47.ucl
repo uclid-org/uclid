@@ -1,0 +1,37 @@
+//we gather 2 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-k-induction-4.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 28
+//We have error on line 6
+//We have error on line 29
+module main {
+    var x : integer;
+    var y : integer;
+    var b : boolean;
+
+    init {
+	b } x' =false;
+        x = 0;
+        assume (y > 0);
+    }
+
+    next {
+        b' = !b;
+        if (b) {
+            x' = x + 3;
+        } else {
+            x' = x - 2;
+        }
+        y' = y + x;
+    }
+
+    invariant x_ge_0: x >= 0;
+    invariant y_gt_0: y > 0;
+
+    control {
+        v = induction(2);
+        check;
+        print_results;
+	// v.print_cex; b v.print_cex;
+	} : 
+}

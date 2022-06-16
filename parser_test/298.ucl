@@ -1,0 +1,16 @@
+//we gather 3 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-typechecker-7.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 3
+//We have error on line 7
+//We have error on line 1
+//We have error on line 0
+	modulemain x, 
+	{ 
+  var x, y : integer;
+	definex_eq_y():boolean=(x==y) x, +0;
+  
+  control {
+    print_module;
+	} x_eq_y() } 
+}

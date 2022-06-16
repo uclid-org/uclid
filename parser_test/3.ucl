@@ -1,12 +1,11 @@
-//we gather 3 Syntax Error
-//Error Type is More words
+//we gather 2 Syntax Error
+//Error_Type is less words
 //src file is <_io.TextIOWrapper name='test/test-procedure-postcondition-4.ucl' mode='r' encoding='UTF-8'>
-//We have error on line 17
-//We have error on line 1
-//We have error on line 25
+//We have error on line 13
+//We have error on line 9
 //We have error on line 7
 module main
-	{ main 
+{
   var tail           : integer;
   var initialized    : boolean;
 
@@ -14,15 +13,15 @@ module main
   output value_found : boolean;
 	
   init {
-    tail = 0;
+	
     initialized = false;
   }
 
-  next {
+	
     initialized' = true;
 
     if (push_valid) {
-	callpush(); 
+      call push();
     }
   }
 
@@ -30,7 +29,7 @@ module main
 
   procedure push()
     requires push_valid;
-	ensurestail==old(tail)+1; 
+    ensures tail == old(tail) + 1;
     modifies tail;
   {
     tail = tail + 1;

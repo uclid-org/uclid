@@ -1,0 +1,26 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-bv-zero-ext-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 17
+//We have error on line 11
+module main
+{
+  var a : bv8;
+  var b : bv16;
+
+  init {
+    a = 255bv8;
+    b = -255bv16;
+  }
+  next {
+    a' = a - 1bv8;
+	
+  }
+  invariant z: (bv_zero_extend(8, a) + b) == 0bv16;
+  control {
+    v = unroll(8);
+    check;
+	
+    v.print_cex(a, b);
+  }
+}

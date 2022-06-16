@@ -1,0 +1,25 @@
+//we gather 2 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-mod-set-analysis-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 0
+//We have error on line 13
+//We have error on line 18
+	
+    var x: integer;
+
+    // bar should be infered to modify x
+    procedure bar() {
+       x = 0; 
+    }
+
+    // foo should be infered to modify x
+    procedure foo() {
+        call bar();
+    }
+
+	
+        v = verify(foo);
+        check;
+        print_results;
+    }
+	

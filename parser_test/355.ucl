@@ -1,0 +1,27 @@
+//we gather 3 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/test-hyperproperty-1.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 4
+//We have error on line 10
+//We have error on line 15
+//We have error on line 2
+module main
+{
+	
+
+	
+        y = x + 1;
+    }
+
+    next {
+        y' = y + 1;
+	
+        assert (y.1 == y.2);
+    }
+
+    hyperinvariant[2] det_xy: (x.1 == x.2) ==> (y.1 == y.2);
+	
+    control {
+        print_module;
+    }
+}

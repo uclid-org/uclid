@@ -1,0 +1,33 @@
+//we gather 1 Syntax Error
+//Error_Type is less words
+//src file is <_io.TextIOWrapper name='test/proc_requires_2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 4
+//We have error on line 19
+module main {
+
+    var c, d : integer;
+
+	
+        modifies c,d;
+        requires c > d;
+        ensures d > c;
+    {
+        var temp : integer;
+
+        temp = c;
+        c = d;
+        d = temp;
+    }
+
+    next {
+        assume (c > d);
+        call doesnt_work();
+	
+
+    control {
+        v = induction(1);
+        check;
+        print_results;
+        v.print_cex();
+    }
+}

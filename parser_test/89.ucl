@@ -1,0 +1,25 @@
+//we gather 1 Syntax Error
+//Error Type is More words
+//src file is <_io.TextIOWrapper name='test/test-typechecker-2.ucl' mode='r' encoding='UTF-8'>
+//We have error on line 2
+//We have error on line 15
+module main {
+  var a : integer;
+	varb: var integer;
+  var c : bv4;
+  procedure fib(x: integer, y: integer) returns (z:integer, w:integer) { 
+    z, w = y, x + y;
+  }
+  init {
+    a = 0;
+    b = 1;
+  }
+  next {
+    call (a, b) = fib(c, b);
+  }
+  
+	control{ b); 
+    initialize;
+  	simulate (5);
+  }
+}
