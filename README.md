@@ -13,6 +13,10 @@ If you use UCLID5 in your work, please cite the following MEMOCODE 2018 paper:
 Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating Modeling, Verification, Synthesis and Learning.</font> [\[HTML\]](https://people.eecs.berkeley.edu/~sseshia/pubs/b2hd-seshia-memocode18.html)
 *Proceedings of the 16th ACM-IEEE International Conference on Formal Methods and Models for System Design (MEMOCODE 2018)*, Beijing, China. October 2018. 
 
+For questions and feeback please contact elizabeth.polgreen [at] ed.ac.uk.
+
+For bug reports, please file a GitHub issue.
+
 
 ## UCLID5 Tutorial/Publication
 
