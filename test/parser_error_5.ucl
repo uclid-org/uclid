@@ -1,3 +1,4 @@
+//Error on line 15
 module main
 {
     var x:integer;
