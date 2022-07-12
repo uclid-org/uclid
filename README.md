@@ -11,7 +11,7 @@ Randal E. Bryant, Shuvendu K. Lahiri, and Sanjit A. Seshia. <font color="blue">M
 If you use UCLID5 in your work, please cite the following MEMOCODE 2018 paper:
 
 Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating Modeling, Verification, Synthesis and Learning.</font> [\[HTML\]](https://people.eecs.berkeley.edu/~sseshia/pubs/b2hd-seshia-memocode18.html)
-*Proceedings of the 16th ACM-IEEE International Conference on Formal Methods and Models for System Design (MEMOCODE 2018)*, Beijing, China. October 2018. 
+*Proceedings of the 16th ACM-IEEE International Conference on Formal Methods and Models for System Design (MEMOCODE 2018)*, Beijing, China. October 2018.
 
 For questions and feeback please contact elizabeth.polgreen [at] ed.ac.uk.
 
@@ -35,25 +35,25 @@ To use the prebuilt binaries, UCLID5 requires:
 - [OpenJDK](https://openjdk.java.net/) version 8,9,10 or 11
 
 To compile from source, UCLID5 requires all of the above plus:
-- [SBT version 1.0 or greater.](http://www.scala-sbt.org/1.0/docs/Setup.html) 
+- [SBT version 1.0 or greater.](https://www.scala-sbt.org/download.html)
 
 The following are optional requirements but several CI tests will fail without them:
-- (optional) [CVC5](https://github.com/cvc5/cvc5) version 0.0.4 is the SyGuS-IF compliant solver used for synthesis tests in the CI. 
+- (optional) [CVC5](https://github.com/cvc5/cvc5) version 0.0.4 is the SyGuS-IF compliant solver used for synthesis tests in the CI.
 - (optional) [Delphi](https://github.com/polgreen/delphi) is used for verification modulo oracles tests in the CI.
 
 
 ## Installation of prerequisites on Linux
 - For easy install of prerequisites on Linux, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC5/Delphi for use with uclid5. This script will download [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)/[CVC5 0.0.4](https://github.com/cvc5/cvc5/releases/tag/cvc5-0.0.4)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
 ~~~
-    $ source get-z3-linux.sh 
-    $ source get-cvc5-linux.sh 
+    $ source get-z3-linux.sh
+    $ source get-cvc5-linux.sh
     $ source get-delphi-linux.sh
 ~~~
-- These scripts download the binaries for Z3, CVC5 and Delphi respectively and set up your `PATH` and `LD_LIBRARY_PATH` accordingly. 
+- These scripts download the binaries for Z3, CVC5 and Delphi respectively and set up your `PATH` and `LD_LIBRARY_PATH` accordingly.
 You may wish to permanently add the following lines to your bash_profile:
 ~~~
-    export PATH=$PATH:/path/to/uclid/z3/bin/:/path/to/uclid/cvc5/bin:/path/to/uclid/delphi/bin/
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/uclid/z3/bin/
+    export PATH=$PATH:/path/to/uclid/z3/bin:/path/to/uclid/cvc5/bin:/path/to/uclid/delphi/bin:/path/to/uclid/oracles
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/uclid/z3/bin
 ~~~
 
 Alternatively, [Z3](https://github.com/Z3Prover/z3), [CVC5](https://github.com/cvc5/cvc5), and [Delphi](https://github.com/polgreen/delphi) can all be built from source, and instructions can be found on their respective git repositories. If you prefer to build Z3 from source, make sure the Z3/Java interface is enabled in your build (currently by passing `--java` to the `mk_make.py` script).
@@ -64,13 +64,13 @@ Alternatively, [Z3](https://github.com/Z3Prover/z3), [CVC5](https://github.com/c
 ## Installation of prerequisites on MacOS
 - For easy install of prerequisites on macOS, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC5/Delphi for use with uclid5. This script will download [Z3 version 4.8.8.](https://github.com/Z3Prover/z3/releases/tag/z3-4.8.8)/[CVC5 0.0.4](https://github.com/cvc5/cvc5/releases/tag/cvc5-0.0.4)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
 ~~~
-    $ source get-z3-macos.sh 
-    $ source get-cvc5-macos.sh 
+    $ source get-z3-macos.sh
+    $ source get-cvc5-macos.sh
     $ source get-delphi-macos.sh
 ~~~
 - These scripts add the downloaded binaries to your `PATH` and `LD_LIBRARY_PATH` accordingly. You may wish to permanently add the following lines to your bash_profile:
 ~~~
-    export PATH=$PATH:/path/to/uclid/z3/bin/:/path/to/uclid/cvc5/bin:/path/to/uclid/delphi/bin/
+    export PATH=$PATH:/path/to/uclid/z3/bin:/path/to/uclid/cvc5/bin:/path/to/uclid/delphi/bin:/path/to/uclid/oracles
 ~~~
 - Due to System Integrity Protection, introduced in OS X El Capitan, Java ignores the user set DYLD_LIBRARY_PATH. To fix this issue copy the JNI dynamic link libraries to Java/Library/Extensions and the non-JNI dynamic link libraries to /usr/local/lib as follows (if you build Z3 from source these files are found in the build directory):
 ~~~
@@ -79,7 +79,7 @@ Alternatively, [Z3](https://github.com/Z3Prover/z3), [CVC5](https://github.com/c
 ~~~
 
 - To install SBT run `brew install sbt`
-- To install openJDK run `brew install openjdk@11`. If this does not work, you may need to run 
+- To install openJDK run `brew install openjdk@11`. If this does not work, you may need to run
 - Make sure Java 11 is the default by adding the following lines to your dotfiles. For `bash` this is usually `.bash_profile` and for `zsh` this is usually `.zshrc`.
 ```
 export JAVA_11_HOME=$(/usr/libexec/java_home -v11)
@@ -108,7 +108,7 @@ This will create uclid/target/universal/uclid-0.9.5.zip, which contains the ucli
 Now you can run uclid using the 'uclid' command. For example:
 
     $ uclid examples/tutorial/ex1.1-fib-model.ucl
-    
+
  Some useful commands to know:
  - To print the SMT files use the `-g` flag, e.g., `uclid examples/tutorial/ex1.1-fib-model.ucl -g "filename"` will print the SMT file to SMT files with the prefix `filename`.
  - To run UCLID5 with another solver use the `-s` flag, e.g., `uclid examples/tutorial/ex1.1-fib-model.ucl -s "cvc5 --lang smt2 --produce-models"` will use CVC5 as the back-end solver.
@@ -123,7 +123,7 @@ This repository consists of the following sub-directories.
  - src/test/scala: uclid5 test suite.
  - test: test programs for uclid5.
  - tutorial: uclid5 tutorial (with LaTeX source)
- - vim: vim syntax highlighting for uclid5. 
+ - vim: vim syntax highlighting for uclid5.
 
 # Related Tools
 
