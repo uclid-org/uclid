@@ -257,7 +257,7 @@ on embedded (cyber-physical) systems by Lee and Seshia~\cite{leeseshia-16}.
 The example in Figure~\ref{fig:fib-induction-synth} uses synthesis to strengthen the invariant for the Fibonacci example we have seen before. When run with the command line option \codelike{-y "cvc4 --lang sygus"} (or another SyGuS solver), \uclid{} will return the correct body for the synthesis function so that the verification condition passes.
 
 \begin{uclidlisting}[htbp]
-    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/fib2safety-synth.ucl}
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/fib2safety-synth.ucl}
     \caption{\uclid{} Fibonacci model using \codelike{synthesis function}}
     \label{ex:fib-induction-synth}
 \end{uclidlisting}

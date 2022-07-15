@@ -289,10 +289,10 @@ Strings can only be used as arguments to the \texttt{print} command in the contr
 %%     }
 \end{grammar}
 
-Supported primitive types are Booleans, integers, single precision floats and bit-vectors. Bit-vector types are defined according the regular expression `bv[0-9]+' and the number following `bv' is the width of the bit-vector.
+Supported primitive types are Booleans, integers, floats and bit-vectors. Bit-vector types are defined according the regular expression `bv[0-9]+' and the number following `bv' is the width of the bit-vector.
 
 \begin{grammar}
-    <PrimitiveType> ::= \keywordbf{boolean} | \keywordbf{integer} | \keywordbf{float} | <BitVectorType>
+    <PrimitiveType> ::= \keywordbf{boolean} | \keywordbf{integer} | <FloatType> | <BitVectorType>
 \end{grammar}
 
 Enumerated types are defined using the \keywordbf{enum} keyword.
