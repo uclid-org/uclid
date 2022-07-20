@@ -15,7 +15,11 @@ Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating 
 
 For questions and feeback please contact elizabeth.polgreen [at] ed.ac.uk.
 
-For bug reports, please file a GitHub issue.
+
+## Contact us
+
+For bug reports, first preference is for you to file a GitHub issue. For help using UCLID5 in your work, please email uclid@lists.eecs.berkeley.edu
+
 
 
 ## UCLID5 Tutorial/Publication
