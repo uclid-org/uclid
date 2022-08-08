@@ -73,6 +73,7 @@ object UclidSynonymMap {
  * This is allows types/other contextual information to be propagated
  * to UclidLang from sources such as counterexamples
  */
+
 object ULContext {
   /** Original synonym map from the input ucl file */
   var origTypeMap = UclidSynonymMap.empty
@@ -125,6 +126,11 @@ object ULContext {
       case true => Some(field.drop(7))
       case false => None
     }
+  }
+  //Leiqi
+  def getUninterpreted(name: String) : Option[Identifier] = {
+    addSynonym(name,UninterpretedType(Identifier(name)))
+    return Some(Identifier(name))
   }
 }
 
@@ -700,13 +706,14 @@ case class Identifier(name : String) extends UIdentifier {
     *
     * @return
     */
+  
   override def codegenUclidLang: Option[Expr] =
     ULContext.checkEnum(this) match {
       case true => Some(this)
       case false => ULContext.stripFieldName(name) match {
         case Some(s) => ULContext.checkField(Identifier(s)) match {
           case true => Some(Identifier(s))
-          case false => None
+          case false => ULContext.getUninterpreted(s)
         }
         case None => None
       }
@@ -1010,8 +1017,9 @@ case class UndefinedType() extends Type {
 /**
  *  Uninterpreted types.
  */
+
 case class UninterpretedType(name: Identifier) extends Type {
-  override def toString = name.toString
+  override def toString = "UninterpretedType"
   override def isUninterpreted = true
 }
 /**
