@@ -44,6 +44,7 @@ import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
+import uclid.lang.Identifier
 
 import org.json4s._
 import _root_.uclid.lang.Scope
@@ -346,6 +347,8 @@ trait SMTLIB2Base {
 class SMTLIB2Model(stringModel : String) extends Model {
   val model : AssignmentModel = SExprParser.parseModel(stringModel)
 
+  val modelUclid = SExprParser.parseModelUclidLang(stringModel)
+
   override def evaluate(e : Expr) : Expr = {
     throw new Utils.UnimplementedException("evaluate not implemented yet.")
   }
@@ -363,14 +366,36 @@ class SMTLIB2Model(stringModel : String) extends Model {
     }
   }
 
-  override def evalAsJSON(e : Expr) : JValue = {
-    val definitions = model.functions.filter(fun => fun._1.asInstanceOf[DefineFun].id.toString() contains e.toString())
+
+  /**
+    * This does best effort parsing from a UclidDefine body expr.
+    *   to a "synthesizable" UclidExpr.
+    *
+    * On failure returns None.
+    */
+  def evalAsUclid (e : Expr) : Option[lang.Expr] = {
+    val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.toString() contains e.toString())
     Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
-      case 0 =>
-        JString(e.toString())
-      case 1 =>
-        JString(definitions(0)._2)
+      case 0 => None
+      case 1 => definitions(0)._1.asInstanceOf[lang.DefineDecl].expr.codegenUclidLang
+      case _ => throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
+    }
+  }
+
+  /**
+    * This tries a to generate a valid raw uclid string.
+    *   If that fails, it returns the SMTLIB string.
+    */
+  override def evalAsJSON (e : Expr) : JValue = {
+    val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.toString() contains e.toString())
+    Utils.assert(definitions.size < 2, "More than one definition found!")
+    definitions.size match {
+      case 0 => JString(e.toString())
+      case 1 => evalAsUclid(e) match {
+          case Some(eP) => JString(eP.toString)
+          case None => JString(definitions(0)._2)
+        }
       case _ =>
         throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
     }

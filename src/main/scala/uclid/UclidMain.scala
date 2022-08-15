@@ -554,6 +554,12 @@ object UclidMain {
     stringOutput.clear()
   }
 
+  var jsonString : StringBuilder = new StringBuilder()
+  def clearJSONString () = jsonString.clear()
+  def setJSONString (str : String) {
+    jsonString ++= str
+  }
+
 
   def printVerbose(str : String) {
     if(mainVerbosity>=4)

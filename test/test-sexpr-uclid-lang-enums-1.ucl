@@ -1,0 +1,31 @@
+module main {
+
+    type color_t = enum { BLUE, RED, YELLOW };
+
+    var color : color_t;
+
+    init {
+        color = BLUE;
+    }
+
+    next {
+        if (color == BLUE) {
+            color' = RED;
+        } else {
+            if (color == RED) {
+                color' = YELLOW;
+            } else {
+                color' = BLUE;
+            }
+        }
+    }
+
+    invariant trivial : color != YELLOW;
+
+    control {
+        v = bmc(2);
+        check;
+        print_results;
+        v.print_cex_json(color);
+    }
+}

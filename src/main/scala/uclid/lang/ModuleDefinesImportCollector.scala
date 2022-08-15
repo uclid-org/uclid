@@ -126,6 +126,10 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
         isStatelessExpr(fapp.e, context) && fapp.args.forall(a => isStatelessExpr(a, context))
       case lambda : Lambda =>
         isStatelessExpr(lambda.e, context + lambda)
+      case _ : QualifiedIdentifier | _ : IndexedIdentifier | _ : QualifiedIdentifierApplication => 
+        throw new Utils.UnimplementedException("ERROR: Module defines import for QualifiedIdentifier and IndexedIdentifier is currently not supported")
+      case _ : LetExpr => 
+        throw new Utils.UnimplementedException("ERROR: SMT expr generation for LetExpr is currently not supported")
     }
   }
   

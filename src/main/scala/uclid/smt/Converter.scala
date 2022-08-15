@@ -320,6 +320,10 @@ object Converter {
         throw new Utils.RuntimeError("Should never get here. FreshLits must have been rewritten by this point.")
       case lang.ExternalIdentifier(_, _) =>
         throw new Utils.RuntimeError("Should never get here. ExternalIdentifiers must have been rewritten by this point.")
+      case lang.QualifiedIdentifierApplication(_, _) | lang.QualifiedIdentifier(_, _) | lang.IndexedIdentifier(_, _) => 
+        throw new Utils.RuntimeError("ERROR: Qualified and Indexed Identifiers are currently not supported")
+      case lang.LetExpr(_, _) =>
+        throw new Utils.UnimplementedException("ERROR: SMT expr generation for QualifiedIdentifier and IndexedIdentifier is currently not supported")
     }
   }
 

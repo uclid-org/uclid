@@ -253,14 +253,14 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   // Need to add to deal with Z3 output
   lazy val KwDecFun = "declare-fun"
   
-
+  lazy val KwUpdateField = "update-field" // for record update, not in SMTLIB, but used by solvers
 
   lexical.delimiters += ("(", ")")
   lexical.reserved += (
       // General reserved
       KwBang, KwUS, KwAs, KwBINARY, KwDECIMAL, KwExists, KwHEXADECIMAL, 
       KwForall, KwLet, KwMatch, KwNUMERAL, KwPar, KwSTRING, KwDefFun,
-      KwDecFun,
+      KwUpdateField, KwDecFun,
     
       
       // For UCLID
@@ -305,7 +305,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     OpBVLT ^^ { _ => (smt.BVLTOp(0), OpBVLT) } | 
     OpConcat ^^ { _ => (smt.BVConcatOp(0), OpConcat) }
 
-  def joinWithSpace(fields : String*) : String = "(" ++ fields.mkString(" ") ++ ")"
+  def joinWithSpace (fields : String*) : String = "(" + fields.mkString(" ") + ")"
 
   lazy val Symbol : PackratParser[(smt.Symbol, String)] =
     symbol ^^ { sym => (smt.Symbol(sym.name, smt.UndefinedType), sym.name) } 
@@ -343,7 +343,6 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     } |
     symbol ^^ { sym => (smt.UninterpretedType(sym.name), sym.name) }
     
-
   lazy val FunArg : PackratParser[(smt.Symbol, String)] =
     "(" ~> symbol ~ Type <~ ")" ^^ { case sym ~ typ => (smt.Symbol(sym.name, typ._1), joinWithSpace(sym.name, typ._2)) }
 
@@ -459,6 +458,186 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     "(" ~> rep(DeclareFun | DefineFun | Expr) <~ ")" ^^ { case exprs => smt.AssignmentModel(exprs) } |
     "(" ~> rep(DefineFun) <~ ")" ^^ { case functions => smt.AssignmentModel(functions) }
 
+  /*
+    Now we have parsing to UclidLanguage
+  */
+  lazy val UclidOperator : PackratParser[(lang.Operator, String)] =
+    OpAnd ^^ { _ => (lang.ConjunctionOp(), OpAnd) } |
+    OpOr ^^ { _ => (lang.DisjunctionOp(), OpOr) } |
+    OpNot ^^ { _ => (lang.NegationOp(), OpNot) } |
+    OpITE ^^ { _ => (lang.ITEOp(), OpITE) } |
+    OpImpl ^^ { _ => (lang.ImplicationOp(), OpImpl) } |
+    OpEq ^^ { _ => (lang.EqualityOp(), OpEq) } |
+    OpIntGE ^^ { _ => (lang.IntGEOp(), OpIntGE) } |
+    OpIntGT ^^ { _ => (lang.IntGTOp(), OpIntGT) } |
+    OpIntLT ^^ { _ => (lang.IntLTOp(), OpIntLT) } |
+    OpIntLE ^^ { _ => (lang.IntLEOp(), OpIntLE) } |
+    OpIntAdd ^^ { _ => (lang.IntAddOp(), OpIntAdd) } |
+    OpIntSub ^^ { _ => (lang.IntSubOp(), OpIntSub) } |
+    OpIntMul ^^ { _ => (lang.IntMulOp(), OpIntMul) } |
+    OpBVAdd ^^ { _ => (lang.BVAddOp(0), OpBVAdd) } |
+    OpBVSub ^^ { _ => (lang.BVSubOp(0), OpBVSub) } |
+    OpBVMul ^^ { _ => (lang.BVMulOp(0), OpBVMul) } |
+    OpBVNeg ^^ { _ => (lang.BVUnaryMinusOp(0), OpBVNeg) } |
+    OpBVAnd ^^ { _ => (lang.BVAndOp(0), OpBVAnd) } |
+    OpBVOr ^^ { _ => (lang.BVOrOp(0), OpBVOr) } |
+    OpBVXor ^^ { _ => (lang.BVXorOp(0), OpBVXor) } |
+    OpBVNot ^^ { _ => (lang.BVNotOp(0), OpBVNot) } |
+    OpBVUrem ^^ { _ => (lang.BVUremOp(0), OpBVUrem) } |
+    OpBVSrem ^^ { _ => (lang.BVSremOp(0), OpBVSrem) } |
+    OpBVGTU ^^ { _ => (lang.BVGTUOp(0), OpBVGTU) } |
+    OpBVGEU ^^ { _ => (lang.BVGEUOp(0), OpBVGEU) } |
+    OpBVLEU ^^ { _ => (lang.BVLEUOp(0), OpBVLEU) } |
+    OpBVLTU ^^ { _ => (lang.BVLTUOp(0), OpBVLTU) } |
+    OpBVGT ^^ { _ => (lang.BVGTOp(0), OpBVGT) } |
+    OpBVGT ^^ { _ => (lang.BVGEOp(0), OpBVGT) } |
+    OpBVLE ^^ { _ => (lang.BVLEOp(0), OpBVLE) } |
+    OpBVLT ^^ { _ => (lang.BVLTOp(0), OpBVLT) } |
+    OpConcat ^^ { _ => (lang.ConcatOp(), OpConcat) }
+
+  lazy val UclidSymbol : PackratParser[(lang.Identifier, String)] =
+    symbol ^^ { sym => (lang.Identifier(sym.name), sym.name) }
+
+  lazy val UclidIntegerLit : PackratParser[(lang.IntLit, String)] =
+    integerLit ^^ { iLit => (lang.IntLit(iLit.value), iLit.chars) }
+
+  lazy val UclidBitVectorLit : PackratParser[(lang.BitVectorLit, String)] =
+    bitvectorLit ^^ { bvLit => (lang.BitVectorLit(bvLit.value, bvLit.numBits),
+        bvLit.base match {
+          case 2  => "#b" + bvLit.chars
+          case 16 => "#b" + bvLit.chars
+          case _  => throw new Utils.RuntimeError("lexical.BitVectorLit has unsupported base!")
+        }
+      )
+    }
+
+  lazy val UclidBoolLit : PackratParser[(lang.BoolLit, String)] =
+    KwTrue ^^ { _ => (lang.BoolLit(true), KwTrue) } |
+    KwFalse ^^ { _ => (lang.BoolLit(false), KwFalse) }
+
+  lazy val UclidType : PackratParser[(lang.Type, String)] =
+    KwInt ^^ { _ => (lang.IntegerType(), KwInt) } |
+    KwBool ^^ { _ => (lang.BooleanType(), KwBool) } |
+    "(" ~ KwBV ~> integerLit <~ ")" ^^ {
+      case i => (lang.BitVectorType(i.value.toInt), joinWithSpace(KwBV, i.chars)) } |
+    "(" ~ KwUS ~ KwBV ~> integerLit <~ ")" ^^ {
+      case i => (lang.BitVectorType(i.value.toInt), joinWithSpace(KwUS, KwBV, i.chars))
+    } |
+    "(" ~ KwArray ~> UclidType ~ UclidType <~ ")" ^^ {
+      case inType ~ outType => (lang.ArrayType(List(inType._1), outType._1), joinWithSpace(KwArray, inType._2, outType._2))
+    } |
+    "(" ~> symbol ~ rep1(UclidType) <~ ")" ^^ {
+      case sym ~ typs => (lang.TupleType(typs.map(a => a._1)), joinWithSpace(sym.name, typs.map(a => a._2).mkString(" ")))
+    } |
+    symbol ^^ { sym =>  (lang.SynonymType(lang.Identifier(sym.name)), sym.name) }
+
+  lazy val UclidFunArg : PackratParser[((lang.Identifier, lang.Type), String)] =
+    "(" ~> symbol ~ UclidType <~ ")" ^^ { case sym ~ typ => ((lang.Identifier(sym.name), typ._1), joinWithSpace(sym.name, typ._2)) }
+
+  lazy val UclidFunArgs : PackratParser[(List[(lang.Identifier, lang.Type)], String)] =
+    "(" ~> rep(UclidFunArg) <~ ")" ^^ {
+      case args => (args.map(a => a._1), joinWithSpace(args.map(a => a._2).mkString(" ")))
+    }
+
+  lazy val UclidBinding : PackratParser[((lang.UIdentifier, lang.Expr), String)] =
+    "(" ~> UclidSymbol ~ UclidExpr <~ ")" ^^ { 
+      case sym ~ expr => ((sym._1, expr._1), joinWithSpace(sym._2, expr._2))
+    }
+
+  lazy val UclidBindings : PackratParser[(List[(lang.UIdentifier, lang.Expr)], String)] =
+    "(" ~> rep1(UclidBinding) <~ ")" ^^ {
+      case bindings => (bindings.map(a => a._1), joinWithSpace(bindings.map(a => a._2).mkString(" ")))
+    }
+
+  lazy val UclidIdentifier : PackratParser[(lang.UIdentifier, String)] =
+    UclidSymbol |
+    "(" ~ KwUS ~> UclidSymbol ~ rep1(UclidSymbol|UclidIntegerLit) <~ ")" ^^ { case sym ~ idxs =>
+      (lang.IndexedIdentifier(sym._1.toString, idxs.map(a => a._1.asInstanceOf[Either[lang.IntLit, lang.Identifier]])),
+        joinWithSpace(KwUS, sym._2, idxs.map(a => a._2).mkString(" ")))
+    }
+
+  lazy val UclidQualIdentifier : PackratParser[(lang.QIdentifier, String)] =
+    UclidIdentifier |
+    "(" ~ KwAs ~> UclidIdentifier ~ UclidType <~ ")" ^^ { case sym ~ typ =>
+      (lang.QualifiedIdentifier(sym._1, typ._1), joinWithSpace(KwAs, sym._2, typ._2))
+    }
+
+  lazy val UclidExpr : PackratParser[(lang.Expr, String)] =
+    UclidBitVectorLit |
+    UclidBoolLit |
+    UclidIntegerLit |
+    UclidQualIdentifier |
+    "(" ~> UclidOperator ~ UclidExpr.+ <~ ")" ^^ {
+      case op ~ args => (lang.OperatorApplication(op._1, args.map(a => a._1)), joinWithSpace(op._2, args.map(a => a._2).mkString(" ")))
+    } |
+    "(" ~ KwLambda ~> UclidFunArgs ~ UclidExpr <~ ")" ^^ {
+      case args ~ expr => (lang.Lambda(args._1, expr._1), joinWithSpace(KwLambda, args._2, expr._2))
+    } |
+    "(" ~ KwLet ~> UclidBindings ~ UclidExpr <~ ")" ^^ { 
+      case bindings ~ expr => (lang.LetExpr(bindings._1, expr._1), joinWithSpace(KwLet, bindings._2, expr._2))
+    } |
+    "(" ~ KwForall ~> UclidFunArgs ~ UclidExpr <~ ")" ^^ {
+      case args ~ expr => {
+        //TODO: Do we want patterns?
+        val op = lang.ForallOp(args._1, List.empty)
+        (lang.OperatorApplication(op, List(expr._1)), joinWithSpace(KwForall, args._2, expr._2))
+      }
+    } |
+    "(" ~ KwUpdateField ~> UclidSymbol ~ UclidExpr ~ UclidExpr <~ ")" ^^ {
+      case field ~ record ~ value => (
+        lang.OperatorApplication(lang.RecordUpdate(field._1, value._1), List(record._1)),
+        joinWithSpace(KwUpdateField, field._2, record._2, value._2)
+      )
+    } |
+    "(" ~> UclidQualIdentifier ~ UclidExpr.+ <~ ")" ^^ { case q ~ args =>
+      {
+        (lang.QualifiedIdentifierApplication(q._1, args.map(a => a._1)), joinWithSpace(q._2, args.map(a => a._2).mkString(" ")))
+      }
+    } |
+    "(" ~ OpArraySelect ~> UclidExpr ~ rep(UclidExpr) <~ ")" ^^ {
+      case array ~ indices => (
+        lang.OperatorApplication(lang.ArraySelect(indices.map(a => a._1)), List(array._1)),
+        joinWithSpace(OpArraySelect, array._2, indices.map(a => a._2).mkString(" "))
+      )
+    } |
+    // TODO: Remove these array ops, they don't technically belong here,
+    // ! Why?
+    "(" ~ OpArrayStore ~> UclidExpr ~ UclidExpr ~ UclidExpr <~ ")" ^^ {
+      case array ~ indices ~ value => (
+        lang.OperatorApplication(lang.ArrayUpdate(List(indices._1), value._1), List(array._1)),
+        joinWithSpace(OpArrayStore, array._2, indices._2, value._2)
+      )
+    }
+
+  lazy val UclidDefineFun : PackratParser[(lang.DefineDecl, String)] =
+    "(" ~ KwDefFun ~> symbol ~ UclidFunArgs ~ UclidType ~ UclidExpr <~ ")" ^^ {
+      case id ~ args ~ rTyp ~ expr => {
+        (lang.DefineDecl(lang.Identifier(id.name), lang.FunctionSig(args._1, rTyp._1), expr._1), expr._2)
+      }
+    }
+  
+  // Necessary addition to support Z3 output format
+  lazy val UclidDeclareFun : PackratParser[(lang.FunctionDecl, String)] =
+    "(" ~ KwDecFun ~> symbol ~ UclidFunArgs ~ UclidType <~ ")" ^^ {
+      case id ~ args ~ rTyp => {
+        (lang.FunctionDecl(lang.Identifier(id.name), lang.FunctionSig(args._1, rTyp._1)),
+          joinWithSpace(KwDecFun, id.name, args._2, rTyp._2)
+        )
+      }
+    }
+
+  lazy val UclidAssignmentModel : PackratParser[lang.AssignmentModel] =
+    "(" ~ KwModel ~> rep(UclidDefineFun | UclidDeclareFun | UclidExpr) <~ ")" ^^ {
+      case functions => {
+        lang.AssignmentModel(functions.filter(a => a._1.isInstanceOf[lang.DefineDecl]).map(a => (a._1.asInstanceOf[lang.DefineDecl], a._2)))
+      }
+    } |
+    "(" ~> rep(UclidDefineFun) <~ ")" ^^ {
+      case functions => {
+        lang.AssignmentModel(functions.map(a => (a._1, a._2)))
+      }
+    }
+
   def parseFunction(text: String): (DefineFun, String) = {
     val tokens = new PackratReader(new lexical.Scanner(text))
     phrase(DefineFun)(tokens) match {
@@ -476,6 +655,16 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       case NoSuccess(msg, next) =>
         UclidMain.printError(next.pos.toString)
         throw new Utils.RuntimeError("SExpr model parser error: %s.\nIn: %s".format(msg, text))
+    }
+  }
+
+  def parseModelUclidLang(text : String) : lang.AssignmentModel = {
+    val tokens = new PackratReader(new lexical.Scanner(text))
+    phrase(UclidAssignmentModel)(tokens) match {
+      case Success(model, _) => model
+      case NoSuccess(msg, next) =>
+        UclidMain.printError(next.pos.toString)
+        throw new Utils.RuntimeError("SExpr model parser error: %s.\nIn: %s at: %s".format(msg, text, next.pos.toString))
     }
   }
 }

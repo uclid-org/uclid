@@ -45,11 +45,87 @@ import scala.collection.mutable.{Map => MutableMap}
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
 import scala.reflect.ClassTag
+import uclid.smt.SynonymMap
+import uclid.smt.Converter
 
 object PrettyPrinter
 {
   val indentSeq = "  "
   def indent(n : Int) = indentSeq * n
+}
+
+/**
+ * UclidLang type synonyms map mirroring the typeMap in SMTLIB2Base
+ */
+case class UclidSynonymMap(fwdMap: Map[String, Type], val revMap: Map[Type, SynonymType]) {
+  def addSynonym(name: String, typ: Type) = {
+    UclidSynonymMap(fwdMap + (name -> typ), revMap + (typ -> SynonymType(Identifier(name))))
+  }
+  def get(name: String) : Option[Type] = fwdMap.get(name)
+  def get(typ: Type) : Option[SynonymType] = revMap.get(typ)
+  def contains(name: String) : Boolean = fwdMap.contains(name)
+  def contains(typ: Type) : Boolean = revMap.contains(typ)
+}
+object UclidSynonymMap {
+  def empty = UclidSynonymMap(Map.empty, Map.empty)
+}
+/** 
+ * This is allows types/other contextual information to be propagated
+ * to UclidLang from sources such as counterexamples
+ */
+object ULContext {
+  /** Original synonym map from the input ucl file */
+  var origTypeMap = UclidSynonymMap.empty
+  // * Has side effects, updates origTypeMap
+  def addSynonym(name: String, typ: Type) = {
+    origTypeMap = origTypeMap.addSynonym(name, typ)
+  }
+  /** Post-SMT typeMap reconstructed from SMT query/counterexample */
+  var postTypeMap = UclidSynonymMap.empty
+  // * Has side effects, updates postTypeMap
+  def extractPostTypeMap(typeMap_ : SynonymMap) : Unit = {
+    postTypeMap = UclidSynonymMap(
+      typeMap_.fwdMap.map({
+        case (s, typ) => (s, Converter.smtToType(typ))
+      }),
+      typeMap_.revMap.map({
+        case (typ, s) => (Converter.smtToType(typ), SynonymType(Identifier(s.name)))
+      })
+    )
+  }
+  def checkEnum(id : Identifier) : Boolean = {
+    val enumTypes = origTypeMap.fwdMap.map(_._2) flatMap {
+      case e : EnumType => Some(e)
+      case _ => None
+    }
+    enumTypes.exists(e => e.ids.contains(id))
+  }
+  def checkField(id : Identifier) : Boolean = {
+    val recordTypes = origTypeMap.fwdMap.map(_._2) flatMap {
+      case r : RecordType => Some(r)
+      case _ => None
+    }
+    recordTypes.exists(r => r.fields.map(_._1).contains(id))
+  }
+  // Performs smt_synonym_name -> lang.Type -> uclid_synonym_name conversion
+  def smtToLangSynonym(name : String) : Option[Type] = {
+    postTypeMap.get(name) match {
+      case Some(t) => origTypeMap.get(t)
+      case None => None
+    }
+  }
+  def stripMkTupleFunction(id: String) : Option[String] = {
+    id.startsWith("_make_") match {
+      case true => Some(id.drop(6))
+      case false => None
+    }
+  }
+  def stripFieldName(field: String) : Option[String] = {
+    field.startsWith("_field_") match {
+      case true => Some(field.drop(7))
+      case false => None
+    }
+  }
 }
 
 /** Singleton that generates unique ids for AST nodes. */
@@ -162,6 +238,8 @@ sealed trait Operator extends ASTNode {
   def fixity : Int
   def isPolymorphic = false
   def isTemporal = false
+
+  def codegenUclidLang : Option[Operator] = None
 }
 // This is the polymorphic operator type. Typerchecker.rewrite converts these operators
 // to either the integer or bitvector versions.
@@ -201,6 +279,7 @@ case class DivOp() extends PolymorphicOperator {
 // These are operators with integer operators.
 sealed abstract class IntArgOperator extends Operator {
   override def fixity = Operator.INFIX
+  override def codegenUclidLang: Option[Operator] = Some(this)
 }
 case class IntLTOp() extends IntArgOperator {
   override def toString = "<"
@@ -275,6 +354,7 @@ case class FPUnaryMinusOp(override val e : Int, override val s: Int) extends Flo
 sealed abstract class BVArgOperator(val w : Int) extends Operator {
   override def fixity = Operator.INFIX
   val arity = 2
+  override def codegenUclidLang: Option[Operator] = Some(this)
 }
 case class BVLTOp(override val w : Int) extends BVArgOperator(w) {
   override def toString = "<" 
@@ -366,6 +446,7 @@ case class BVSremOp(override val w : Int) extends BVArgOperator(w) {
 sealed abstract class BooleanOperator extends Operator {
   override def fixity = Operator.INFIX
   def isQuantified = false
+  override def codegenUclidLang: Option[Operator] = Some(this)
 }
 case class ConjunctionOp() extends BooleanOperator {
   override def toString = "&&"
@@ -388,6 +469,7 @@ sealed abstract class QuantifiedBooleanOperator extends BooleanOperator {
   override def fixity = Operator.PREFIX
   override def isQuantified = true
   def variables : List[(Identifier, Type)]
+  override def codegenUclidLang: Option[Operator] = None
 }
 object QuantifiedBooleanOperator {
   def toString(quantifier: String, vs: List[(Identifier, Type)], patterns: List[List[Expr]]) = {
@@ -424,6 +506,7 @@ sealed abstract class ComparisonOperator() extends Operator {
 }
 case class EqualityOp() extends ComparisonOperator {
   override def toString = "=="
+  override def codegenUclidLang: Option[Operator] = Some(this)
 }
 case class InequalityOp() extends ComparisonOperator {
   override def toString = "!="
@@ -514,6 +597,7 @@ case class VarExtractOp(slice : VarBitVectorSlice) extends ExtractOp {
 case class ConcatOp() extends Operator {
   override def toString = "++"
   override def fixity = Operator.INFIX
+  override def codegenUclidLang: Option[Operator] = Some(this)
 }
 sealed abstract class SelectorOperator extends Operator {
   val ident : Identifier
@@ -543,6 +627,12 @@ case class ArraySelect(indices: List[Expr]) extends Operator {
     "[" + indexStr + "]"
   }
   override def fixity = Operator.POSTFIX
+  override def codegenUclidLang: Option[Operator] = {
+    indices.forall(_.codegenUclidLang.isDefined) match {
+      case true => Some(ArraySelect(indices.map(_.codegenUclidLang).flatten))
+      case false => None
+    }
+  }
 }
 case class ArrayUpdate(indices: List[Expr], value: Expr) extends Operator {
   override def toString: String = {
@@ -550,12 +640,29 @@ case class ArrayUpdate(indices: List[Expr], value: Expr) extends Operator {
     "[" + indexStr + " -> " + value.toString() + "]"
   }
   override def fixity = Operator.POSTFIX
+  override def codegenUclidLang: Option[Operator] = {
+    indices.forall(_.codegenUclidLang.isDefined) match {
+      case true => value.codegenUclidLang match {
+        case Some(e) => Some(ArrayUpdate(indices.map(_.codegenUclidLang).flatten, e))
+        case None => None
+      }
+      case false => None
+    }
+  }
 }
 case class RecordUpdate(fieldid: Identifier, value: Expr) extends Operator {
   override def toString: String = {
     "[" + fieldid.name + " := " + value.toString() + "]"
   }
   override def fixity: Int = Operator.POSTFIX
+
+  override def codegenUclidLang: Option[Operator] = fieldid.codegenUclidLang match {
+    case Some(f) => value.codegenUclidLang match {
+      case Some(e) => Some(RecordUpdate(fieldid, e))
+      case _ => None
+    }
+    case None => None
+  }
 }
 case class GetNextValueOp() extends Operator {
   override def toString = "'"
@@ -569,15 +676,81 @@ sealed abstract class Expr extends ASTNode {
   /** Is this value a statically-defined constant? */
   def isConstant = false
   def isTemporal = false
-}
-sealed abstract class PossiblyTemporalExpr extends Expr
 
-case class Identifier(name : String) extends Expr {
-  override def toString = name.toString
+  def codegenUclidLang : Option[Expr] = None
 }
-case class ExternalIdentifier(moduleId : Identifier, id : Identifier) extends Expr {
+
+/**
+ *  Type refinements:
+ *  QIdentifier :> QualifiedIdentifier
+ *      v  
+ *  UIdentifier :> Identifier, ExternalIdentifier, IndexedIdentifier
+ * 
+ *  This type-hierarchy emulates SMTLIB
+ *    and makes SMTLIB -> UclidLang parsing more natural
+ */
+sealed abstract class QIdentifier extends Expr
+sealed abstract class UIdentifier extends QIdentifier
+case class Identifier(name : String) extends UIdentifier {
+  override def toString = name.toString
+
+  /**
+    * Checks whether the identifier matches either an
+    * Enum element name or a Record field name
+    *
+    * @return
+    */
+  override def codegenUclidLang: Option[Expr] =
+    ULContext.checkEnum(this) match {
+      case true => Some(this)
+      case false => ULContext.stripFieldName(name) match {
+        case Some(s) => ULContext.checkField(Identifier(s)) match {
+          case true => Some(Identifier(s))
+          case false => None
+        }
+        case None => None
+      }
+    }
+}
+case class ExternalIdentifier(moduleId : Identifier, id : Identifier) extends UIdentifier {
   override def toString = moduleId.toString + "::" + id.toString
 }
+case class IndexedIdentifier (name : String, indices : List[Either[IntLit, Identifier]]) extends UIdentifier {
+  override def toString = "(_ " + name.toString + " " + indices.map(a => a.toString).mkString(" ") + ")"
+}
+case class QualifiedIdentifier (f : UIdentifier, typs : Type) extends QIdentifier {
+  override def toString = "(as " + f.toString + " " + typs.toString + ")"
+}
+case class QualifiedIdentifierApplication (qid : QIdentifier, exprs : List[Expr]) extends Expr {
+  override def toString = "(" + qid.toString + " " + exprs.map(a => a.toString).mkString(" ") + " )"
+
+  // ! This is hardcoded for the ((as const [ArrayType]) [Expr]) syntax seen in  Z3, CVC5 cexes
+  override def codegenUclidLang : Option[Expr] = qid match {
+    case QualifiedIdentifier(f, typs) => 
+      if (f.toString == "const" && exprs.size == 1) typs match {
+        case at : ArrayType => at.codegenUclidLang match {
+          case Some(a) => exprs(0).codegenUclidLang match {
+            case Some(e) => Some(ConstArray(e, a))
+            case None => None
+          }
+          case None => None
+        }
+        case _ => None
+      } else None 
+    case Identifier(name) => ULContext.stripMkTupleFunction(name) match {
+      case Some(s) => {
+        val rawtype = ULContext.postTypeMap.get(s).get.asInstanceOf[ProductType]
+        val exprsOrNone = exprs.map(_.codegenUclidLang)
+        if (exprsOrNone.forall(_.isDefined) && exprsOrNone.size == rawtype.fields.size) {
+          Some(ConstRecord(rawtype.fields.map(_._1) zip exprsOrNone.flatten))
+        } else None
+      }
+      case None => None
+    }
+    case _ => None
+  }
+}
+
 sealed abstract class Literal extends Expr {
   /** All literals are constants. */
   override def isConstant = true
@@ -602,6 +775,8 @@ case class BoolLit(value: Boolean) extends Literal {
   // override val hashId = 2201
   override def typeOf: Type = BooleanType()
   // override val md5hashCode = computeMD5Hash(value)
+
+  override def codegenUclidLang : Option[Expr] = Some(this)
 }
 
 case class IntLit(value: BigInt) extends NumericLit {
@@ -614,6 +789,8 @@ case class IntLit(value: BigInt) extends NumericLit {
     }
   }
   override def negate = IntLit(-value)
+
+  override def codegenUclidLang : Option[Expr] = Some(this)
 }
 
 case class FloatLit(integral: BigInt, fractional: String, exp: Int, sig: Int) extends NumericLit {
@@ -637,6 +814,8 @@ case class BitVectorLit(value: BigInt, width: Int) extends NumericLit {
     }
   }
   override def negate = BitVectorLit(-value, width)
+
+  override def codegenUclidLang : Option[Expr] = Some(this)
 }
 
 case class StringLit(value: String) extends Literal {
@@ -661,6 +840,8 @@ case class Tuple(values: List[Expr]) extends Expr {
   // FIXME: We should not have temporal values inside of a tuple.
   override def isTemporal = false
 }
+
+sealed abstract class PossiblyTemporalExpr extends Expr
 //for symbols interpreted by underlying Theory solvers
 case class OperatorApplication(op: Operator, operands: List[Expr]) extends PossiblyTemporalExpr {
   override def isConstant = operands.forall(_.isConstant)
@@ -686,6 +867,18 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
         }
     }
   }
+
+  override def codegenUclidLang : Option[Expr] = op match {
+    case PolymorphicSelect(_) | RecordSelect(_) | HyperSelect(_) | SelectFromInstance(_) | 
+      ForallOp(_, _) | ExistsOp(_, _) | FiniteForallOp(_, _) | FiniteExistsOp(_, _) => None
+    case _ => op.codegenUclidLang match {
+      case Some(o) =>
+        val opsOrNone = operands.map(_.codegenUclidLang)
+        if (opsOrNone.forall(_.isDefined)) Some(OperatorApplication(o, opsOrNone.flatten))
+        else None
+      case None => None
+    }
+  }
   override def isTemporal = op.isTemporal || operands.exists(_.isTemporal)
 }
 //for uninterpreted function symbols or anonymous functions defined by Lambda expressions
@@ -694,6 +887,12 @@ case class FuncApplication(e: Expr, args: List[Expr]) extends Expr {
 }
 case class Lambda(ids: List[(Identifier,Type)], e: Expr) extends Expr {
   override def toString = "Lambda(" + ids + "). " + e
+}
+
+case class LetExpr (ids: List[(UIdentifier, Expr)], e : Expr) extends Expr {
+  override def toString = "(let (" + 
+    ids.map(a => "(" + a._1.toString + " " + a._2.toString + ")").mkString(" ") + ") " +
+    e.toString + ")"
 }
 
 sealed abstract class Lhs(val ident: Identifier) extends ASTNode {
@@ -786,6 +985,8 @@ sealed abstract class Type extends PositionedNode {
   def ids = List.empty[Identifier]
   def matches (t2 : Type) = (this == t2)
   def defaultValue : Option[Expr] = None
+
+  def codegenUclidLang : Option[Type] = None
 }
 
 /**
@@ -820,11 +1021,13 @@ case class BooleanType() extends PrimitiveType {
   override def toString = "boolean"
   override def isBool = true
   override def defaultValue = Some(BoolLit(false))
+  override def codegenUclidLang: Option[Type] = Some(this)
 }
 case class IntegerType() extends NumericType {
   override def toString = "integer"
   override def isInt = true
   override def defaultValue = Some(IntLit(0))
+  override def codegenUclidLang: Option[Type] = Some(this)
 }
 case class FloatType(exp: Int, sig: Int) extends NumericType {
   override def toString = "float"
@@ -838,6 +1041,7 @@ case class BitVectorType(width: Int) extends NumericType {
     return (slice.lo >= 0 && slice.hi < width)
   }
   override def defaultValue = Some(BitVectorLit(0, width))
+  override def codegenUclidLang: Option[Type] = Some(this)
 }
 case class StringType() extends PrimitiveType {
   override def toString = "string"
@@ -927,6 +1131,13 @@ case class ProcedureType(inTypes : List[Type], outTypes: List[Type]) extends Typ
 case class ArrayType(inTypes: List[Type], outType: Type) extends Type {
   override def toString = "[" + Utils.join(inTypes.map(_.toString), " * ") + "]" + outType.toString
   override def isArray = true
+  override def codegenUclidLang: Option[Type] = {
+    val inTypesOrNone = inTypes.map(_.codegenUclidLang)
+    if (inTypesOrNone.forall(_.isDefined)) outType.codegenUclidLang match {
+      case Some(ot) => Some(ArrayType(inTypesOrNone.flatten, ot))
+      case None => None 
+    } else { None }
+  }
 }
 case class SynonymType(id: Identifier) extends Type {
   override def toString = id.toString
@@ -934,6 +1145,7 @@ case class SynonymType(id: Identifier) extends Type {
     case that: SynonymType => that.id.name == this.id.name
     case _ => false
   }
+  override def codegenUclidLang: Option[Type] = ULContext.smtToLangSynonym(id.name)
 }
 
 case class GroupType(typ : Type) extends Type {
@@ -1293,6 +1505,7 @@ case class ProcedureDecl(
 case class TypeDecl(id: Identifier, typ: Type) extends Decl {
   override def toString = "type " + id + " = " + typ + "; // " + position.toString
   override def declNames = List(id)
+  ULContext.addSynonym(id.name, typ)
 }
 case class ModuleImportDecl(modId: Identifier) extends Decl {
   override def toString = "import %s;".format(modId.toString())
@@ -1360,6 +1573,11 @@ case class MacroDecl(id: Identifier, sig: FunctionSig, body: BlockStmt) extends 
     "macro " + id + "// " + position.toString + "\n" +
     Utils.join(body.toLines.map(PrettyPrinter.indent(2) + _), "\n")
   override def declNames = List(id)
+}
+
+case class AssignmentModel(functions: List[(DefineDecl, String)]) {
+  override def toString = 
+    "assignment-model %s;".format(functions.map(a => a._1.toString).mkString("\n"))
 }
 
 case class ModuleDefinesImportDecl(id: Identifier) extends Decl {
