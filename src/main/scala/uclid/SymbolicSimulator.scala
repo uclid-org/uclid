@@ -1483,6 +1483,8 @@ class SymbolicSimulator (module : Module) {
     e match {
       case id : Identifier =>
         isStatelessExpression(id, context)
+      case unit: UninterpretedTypeLiteral =>
+        isStatelessExpression(unit.toIdentifier, context)
       case ei : ExternalIdentifier =>
         true
       case lit : Literal =>

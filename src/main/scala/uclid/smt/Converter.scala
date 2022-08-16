@@ -259,6 +259,7 @@ object Converter {
 
     expr match {
       case id : lang.Identifier => idToSMT(id, scope, past)
+      case unit : lang.UninterpretedTypeLiteral => idToSMT(unit.toIdentifier, scope, past)
       case lang.IntLit(n) => smt.IntLit(n)
       case lang.BoolLit(b) => smt.BooleanLit(b)
       case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)

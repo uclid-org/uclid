@@ -93,6 +93,8 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
     e match {
       case id : Identifier =>
         isStatelessExpression(id, context)
+      case unit: UninterpretedTypeLiteral =>
+        isStatelessExpression(unit.toIdentifier, context)
       case _ : ExternalIdentifier =>
         true
       case _ : Literal =>
@@ -164,6 +166,8 @@ class StatelessAxiomFinderPass(mainModuleName: Identifier)
     e match {
       case id : Identifier =>
         rewriteIdentifierToExternalId(moduleName, id, context)
+      case unit: UninterpretedTypeLiteral =>
+        rewriteIdentifierToExternalId(moduleName, unit.toIdentifier, context)
       case ei : ExternalIdentifier =>
         ei
       case lit : Literal =>
