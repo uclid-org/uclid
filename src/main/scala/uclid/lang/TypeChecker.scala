@@ -215,6 +215,7 @@ object ReplacePolymorphicOperators {
 
     e match {
       case _ : Identifier => e
+      case _ : UninterpretedTypeLiteral => e
       case _ : ExternalIdentifier => e
       case _ : Literal => e
       case Tuple(es) => Tuple(es.map(r(_)))
@@ -694,6 +695,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case _ : BoolLit => BooleanType()
         case _ : IntLit => IntegerType()
         case _ : StringLit => StringType()
+        case unLit : UninterpretedTypeLiteral => unLit.typeOf
         case fp : FloatLit => FloatType(fp.exp, fp.sig)
         case bv : BitVectorLit => BitVectorType(bv.width)
         case a : ConstArray =>

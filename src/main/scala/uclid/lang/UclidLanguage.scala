@@ -107,6 +107,18 @@ object ULContext {
     }
     recordTypes.exists(r => r.fields.map(_._1).contains(id))
   }
+  def checkUninterpretedField(id : Identifier) : Boolean = {
+    val uninterpretedTypes = origTypeMap.fwdMap.map(_._2) flatMap {
+      case r : UninterpretedType => Some(r)
+      case _ => None
+    }
+    val identifierName = id.toString() // utype!val!0
+    val index = identifierName.indexOf("!") // 6
+    val typeName = identifierName.substring(0,index) //utype
+    val tempIdentifier = Identifier(typeName) // identifer named "utype"
+    uninterpretedTypes.exists(r => r.name.equals(tempIdentifier))
+   }
+
   // Performs smt_synonym_name -> lang.Type -> uclid_synonym_name conversion
   def smtToLangSynonym(name : String) : Option[Type] = {
     postTypeMap.get(name) match {
@@ -708,7 +720,10 @@ case class Identifier(name : String) extends UIdentifier {
           case true => Some(Identifier(s))
           case false => None
         }
-        case None => None
+        case None =>ULContext.checkUninterpretedField(this) match{
+          case true => Some(UninterpretedTypeLiteral(this.toString))
+          case false => None
+        }
       }
     }
 }
@@ -827,6 +842,16 @@ case class StringLit(value: String) extends Literal {
 
 case class ConstArray(exp: Expr, typ: Type) extends Expr {
   override def toString = "const(%s, %s)".format(exp.toString(), typ.toString())
+}
+
+case class UninterpretedTypeLiteral(value : String) extends Expr{
+  override def toString = value
+  def toIdentifier = Identifier(value)
+  def typeOf: UninterpretedType = {
+    val index = value.indexOf("!") // 6
+    val typeName = value.substring(0,index) //utype
+    return UninterpretedType(Identifier(typeName))     // identifer named "utype"
+  }
 }
 
 case class ConstRecord(fieldvalues: List[(Identifier, Expr)]) extends Expr {

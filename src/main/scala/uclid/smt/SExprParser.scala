@@ -636,6 +636,12 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       case functions => {
         lang.AssignmentModel(functions.map(a => (a._1, a._2)))
       }
+    } |
+    //add this rule to parser mixed up functions
+    "(" ~> rep(UclidDefineFun | UclidDeclareFun | UclidExpr) <~ ")" ^^ {
+      case functions => {
+        lang.AssignmentModel(functions.filter(a => a._1.isInstanceOf[lang.DefineDecl]).map(a => (a._1.asInstanceOf[lang.DefineDecl], a._2)))
+      }
     }
 
   def parseFunction(text: String): (DefineFun, String) = {

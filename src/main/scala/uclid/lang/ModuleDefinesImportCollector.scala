@@ -100,6 +100,8 @@ class ModuleDefinesImportCollectorPass extends ReadOnlyPass[List[Decl]] {
     e match {
       case id : Identifier =>
         isStatelessIdentifier(id, context)
+      case unit : UninterpretedTypeLiteral =>
+        isStatelessIdentifier(unit.toIdentifier, context)
       case _ : ExternalIdentifier =>
         true
       case _ : Literal =>

@@ -402,7 +402,7 @@ object Context
 
   def foldOverExpr[T](init : T, f : ((T, Expr) => T), e : Expr) : T = {
     val subResult = e match {
-      case Symbol(_, _) | IntLit(_) | FloatLit(_,_,_,_) | BitVectorLit(_, _) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) | OracleSymbol(_, _, _) =>
+      case Symbol(_, _) | IntLit(_) | FloatLit(_,_,_,_) | BitVectorLit(_, _) | BooleanLit(_) | EnumLit(_, _) |SynthSymbol(_, _, _, _, _) | OracleSymbol(_, _, _) =>
         init
       case OperatorApplication(_, operands) =>
         foldOverExprs(init, f, operands)

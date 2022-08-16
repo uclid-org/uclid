@@ -814,14 +814,53 @@ class PrintCexSpec extends AnyFlatSpec {
       case _ => assert(false)
     }
   }
-  "test-sexpr-uclid-lang-uninterp-type.ucl" should "fail to generate UclidLang JSON because we do not catch solver-specific uninterpreted-type values" in {
+  "test-sexpr-uclid-lang-uninterp-type.ucl" should "generate UclidLang JSON cex" in {
     val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-uninterp-type.ucl"))
     val str0 = ((json \ "property__trivial__1" \ "trace")(1) \ "database")(0)
     str0 match {
-      case JString(s) => assert(s.equals("(store ((as const (Array Int utype_t)) utype_t!val!0) 2 utype_t!val!1)"))
+      case JString(s) => assert(s.equals("(const(utype_t!val!0, [integer]utype_t))[2 -> utype_t!val!1]"))
       case _ => assert(false)
     }
   }
+  
+  "test-sexpr-uclid-lang-uninterp-type-2.ucl" should "generate UclidLang JSON cex" in {
+    val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-uninterp-type-2.ucl"))
+    val str0 = ((json \ "property__a_equal_b__0" \ "trace")(0) \ "a")(0)
+    str0 match {
+      case JString(s) => assert(s.equals("ValueSpace!val!0"))
+      case _ => assert(false)
+    }
+    val str1 = ((json \ "property__a_equal_b__0" \ "trace")(0) \ "b")(0)
+    str1 match {
+      case JString(s) => assert(s.equals("ValueSpace!val!1"))
+      case _ => assert(false)
+    }
+  }
+  
+  "test-sexpr-uclid-lang-uninterp-type-3.ucl" should "generate UclidLang JSON cex" in {
+    val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-uninterp-type-3.ucl"))
+    val str0 = ((json \ "property__trivial__0" \ "trace")(0) \ "database_1")(0)
+    str0 match {
+      case JString(s) => assert(s.contains("const(UndefineType!val!"))
+      case _ => assert(false)
+    }
+     val str1 = ((json \ "property__trivial__1" \ "trace")(1) \ "database_1")(0)
+     str1 match {
+       case JString(s) => assert(s.contains("const(UndefineType!val!"))
+       case _ => assert(false)
+    }
+  }
+  
+  "test-sexpr-uclid-lang-uninterp-type-4.ucl" should "generate UclidLang JSON cex" in {
+    val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-uninterp-type-4.ucl"))
+    val str0 = ((json \ "property__graph__0" \ "trace")(0) \ "map")(0)
+    str0 match {
+      case JString(s) => assert(s.contains("(let (("))
+      case _ => assert(false)
+    }
+  }  
+
+  
 }
 class ModuleConcatSpec extends AnyFlatSpec {
   "test-concat-modules-w-init-2-fab.ucl" should "verify all assertions." in {

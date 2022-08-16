@@ -995,6 +995,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnExpr(TraversalDirection.Down, e, result, context)
     result = e match {
       case i : Identifier => visitIdentifier(i, result, context)
+      case unit : UninterpretedTypeLiteral => visitIdentifier(unit.toIdentifier, result, context)
       case ei : ExternalIdentifier => visitExternalIdentifier(ei, result, context)
       case lit : Literal => visitLiteral(lit, result, context)
       case rec : Tuple => visitTuple(rec, result, context)
@@ -2148,6 +2149,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitExpr(e : Expr, context : Scope) : Option[Expr] = {
     val eP = (e match {
       case i : Identifier => visitIdentifier(i, context)
+      case uni: UninterpretedTypeLiteral => visitIdentifier(Identifier(uni.toString),context)
       case eId : ExternalIdentifier => visitExternalIdentifier(eId, context)
       case lit : Literal => visitLiteral(lit, context)
       case rec : Tuple => visitTuple(rec, context)
