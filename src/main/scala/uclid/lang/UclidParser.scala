@@ -66,6 +66,10 @@ trait UclidTokenParsers extends TokenParsers {
   def integerLit: Parser[IntegerLit] =
     elem("integer", _.isInstanceOf[IntegerLit]) ^^ (_.asInstanceOf[IntegerLit])
 
+  /** A parser which matches a real literal */
+  def realLit: Parser[IntegerLit] =
+    elem("real", _.isInstanceOf[RealLit]) ^^ (_.asInstanceOf[RealLit])
+
   /** A parser which matches a bitvector type */
   def bitVectorType: Parser[BitVectorTypeLit] =
     elem("bitvector type", _.isInstanceOf[BitVectorTypeLit]) ^^ {_.asInstanceOf[BitVectorTypeLit]}
@@ -136,6 +140,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwProcedure = "procedure"
     lazy val KwBoolean = "boolean"
     lazy val KwInteger = "integer"
+    lazy val KwReal = "real"
     lazy val KwHalf = "half"
     lazy val KwSingle = "single"
     lazy val KwDouble = "double"
@@ -208,7 +213,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lexical.reserved += (OpAnd, OpOr, OpAdd, OpSub, OpMul, OpDiv, OpUDiv,
       OpBiImpl, OpImpl, OpLT, OpGT, OpLE, OpGE, OpULT, OpUGT, OpULE, OpUGE, OpEQ, OpNE,
       OpBvAnd, OpBvOr, OpBvXor, OpBvUrem, OpBvSrem, OpBvNot, OpConcat, OpNot, OpMinus, OpPrime,
-      "false", "true", "bv", "fp", KwProcedure, KwBoolean, KwInteger, KwHalf, KwSingle, KwDouble , KwReturns,
+      "false", "true", "bv", "fp", KwProcedure, KwBoolean, KwInteger, KwReal, KwHalf, KwSingle, KwDouble , KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwImport,
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
       KwInstance, KwInput, KwOutput, KwConst, KwConstRecord, KwModule, KwType, KwEnum,
@@ -284,6 +289,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       positioned { "false" ^^ { _ => BoolLit(false) } | "true" ^^ { _ => BoolLit(true) } }
     lazy val Integer: PackratParser[lang.IntLit] =
       positioned { integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base))} }
+    lazy val Real: PackratParser[lang.RealLit] =
+      positioned { realLit ^^ { case realLit => lang.RealLit(realLit.integral, realLit.frac)} }
     lazy val Float: PackratParser[lang.FloatLit] =
       positioned { 
                     Integer ~ KwHalf    ^^ { case intLit ~ s   => lang.FloatLit(intLit.value, "0", 5, 11) } |
@@ -478,6 +485,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val PrimitiveType : PackratParser[Type] = positioned {
       KwBoolean ^^ {case _ => BooleanType()}   |
       KwInteger ^^ {case _ => IntegerType()}   |
+      KwReal    ^^ {case _ => RealType()}   |
       KwHalf    ^^ {case _ => FloatType(5,11)}  |
       KwSingle  ^^ {case _ => FloatType(8,24)}  |
       KwDouble  ^^ {case _ => FloatType(11,53)} |
