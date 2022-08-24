@@ -793,6 +793,17 @@ case class IntLit(value: BigInt) extends NumericLit {
   override def codegenUclidLang : Option[Expr] = Some(this)
 }
 
+case class RealLit(integral: BigInt, fractional: String) extends NumericLit {
+  override def toString = integral.toString + "." + fractional
+  override def typeOf : NumericType = RealType()
+  override def to (n : NumericLit) : Seq[NumericLit]  = {
+    n match {
+      case _ => throw new Utils.RuntimeError("Cannot create range for real literals")
+    }
+  }
+  override def negate = RealLit(-integral, fractional)
+}
+
 case class FloatLit(integral: BigInt, fractional: String, exp: Int, sig: Int) extends NumericLit {
   override def toString = integral.toString + "." + fractional
   override def typeOf : NumericType = FloatType(exp, sig)
@@ -1027,6 +1038,12 @@ case class IntegerType() extends NumericType {
   override def toString = "integer"
   override def isInt = true
   override def defaultValue = Some(IntLit(0))
+  override def codegenUclidLang: Option[Type] = Some(this)
+}
+case class RealType() extends NumericType {
+  override def toString = "real"
+  override def isReal = true
+  override def defaultValue = Some(RealLit(0))
   override def codegenUclidLang: Option[Type] = Some(this)
 }
 case class FloatType(exp: Int, sig: Int) extends NumericType {

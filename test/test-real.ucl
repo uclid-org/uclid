@@ -1,0 +1,23 @@
+module main {
+  // Part 1: System description.
+  var a, b : real;
+
+  init {
+    a = 0.0real;
+    b = 1.0real;
+  }
+  next {
+    a', b' = b, a + b;
+  }
+
+  // Part 2: System specification.
+  // fp compare have not been implemented yet
+  //invariant a_le_b: a <= b;
+
+  // Part 3: Proof script.
+  control {
+    bmc (5);
+    check;
+    print_results;
+  }
+}
