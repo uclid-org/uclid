@@ -15,7 +15,7 @@ module main {
         havoc cache1;
     }
 
-    invariant trivial  : cache1.value == 2022;
+    invariant trivial  : cache1.value == 2022 && cache1.value < 2;
 
     control {
         v = bmc(1);

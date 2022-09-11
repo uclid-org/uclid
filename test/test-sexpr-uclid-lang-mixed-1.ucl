@@ -7,6 +7,7 @@ module main {
 
     init {
         assume(database[0] == database[1]);
+        assume(database[0].uid == 2);
     }
 
     invariant trivial : database[0] == database[2];
