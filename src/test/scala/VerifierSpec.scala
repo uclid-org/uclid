@@ -761,7 +761,7 @@ class PrintCexSpec extends AnyFlatSpec {
       case JString(s) => assert(s.contains("update-field _field_value"))
       case _ => assert(false)
     }
-    val str1 = ((json \ "property__trivial__0" \ "trace")(1) \ "cache1")(0)
+    val str1 = ((json \ "property__trivial__1" \ "trace")(1) \ "cache1")(0)
     str1 match {
       case JString(s) => assert(s.equals("const_record(valid := false, value := 0)"))
       case _ => assert(false)
