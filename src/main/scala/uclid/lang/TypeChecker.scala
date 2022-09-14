@@ -201,6 +201,21 @@ object ReplacePolymorphicOperators {
     fltOp.pos = op.pos
     fltOp
   }
+  def toReal(op : PolymorphicOperator) : RealArgOperator = {
+    val rlOp = op match {
+      case LTOp() => RealLTOp()
+      case GTOp() => RealGTOp()
+      case LEOp() => RealLEOp()
+      case GEOp() => RealGEOp()
+      case AddOp() => RealAddOp()
+      case SubOp() => RealSubOp()
+      case MulOp() => RealMulOp()
+      case DivOp() => RealDivOp()
+      case UnaryMinusOp() => RealUnaryMinusOp()
+    }
+    rlOp.pos = op.pos
+    rlOp
+  }
 
   def toType(op : PolymorphicOperator, typ : NumericType) = {
     typ match {
@@ -375,6 +390,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case fp: FloatType => 
               polyOpMap.put(polyOp.astNodeId, ReplacePolymorphicOperators.toFloat(polyOp, fp.exp, fp.sig))
               polyResultType(polyOp, fp)
+            case rl: RealType => 
+              polyOpMap.put(polyOp.astNodeId, ReplacePolymorphicOperators.toReal(polyOp))
+              polyResultType(polyOp, rl)
             case _ => throw new Utils.UnimplementedException("Unknown operand type to polymorphic operator '" + opapp.op.toString + "'")
           }
         }
@@ -697,6 +715,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case _ : StringLit => StringType()
         case unLit : UninterpretedTypeLiteral => unLit.typeOf
         case fp : FloatLit => FloatType(fp.exp, fp.sig)
+        case rl : RealLit => RealType()
         case bv : BitVectorLit => BitVectorType(bv.width)
         case a : ConstArray =>
           val valTyp = typeOf(a.exp, c)

@@ -45,6 +45,7 @@ sealed trait Type extends Hashable {
   override val hashBaseId = 22575 // Random number. Not super important, must just be unique for each abstract base class.
   def isBool = false
   def isInt = false
+  def isReal = false
   def isBitVector = false
   def isTuple = false
   def isRecord = false
@@ -93,6 +94,15 @@ case class BitVectorType(width: Int) extends Type
   override def toString = "(_ BitVec " + (width.toString) + ")"
   override def isBitVector = true
   override val typeNamePrefix = "bv" + width.toString()
+}
+// The real type.
+case object RealType extends Type {
+  override val hashId = 104
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "Real"
+  override def isReal = true
+  override val typeNamePrefix = "real"
 }
 // The float type.
 case class FltType(exp: Int, sig: Int) extends Type
@@ -766,7 +776,65 @@ case class FPMinusOp(e: Int, s : Int) extends FloatResultOp(e,s) {
   override def typeCheck(args: List[Expr]) : Unit  = { checkNumArgs(args, 1); checkAllArgTypes(args, FltType(e,s)) }
 }
 
+// Operators that return reals.
+abstract class RealResultOp extends Operator {
+  override def resultType(args: List[Expr]) : Type = { RealType }
+  override def typeCheck(args: List[Expr]) : Unit = { checkAllArgTypes(args, RealType) }
+}
+object RealAddOp extends RealResultOp {
+  override val hashId = 270
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "+"
+}
+object RealSubOp extends RealResultOp {
+  override val hashId = 271
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "-"
+}
+object RealMulOp extends RealResultOp {
+  override val hashId = 272
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "*"
+}
+object RealDivOp extends RealResultOp {
+  override val hashId = 273
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "div"
+}
 
+// Real comparison.
+case object RealLTOp extends BoolResultOp {
+  override val hashId = 274
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "<"
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, RealType) }
+}
+case object RealLEOp extends BoolResultOp {
+  override val hashId = 275
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = "<="
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, RealType) }
+}
+case object RealGTOp extends BoolResultOp {
+  override val hashId = 276
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = ">"
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, RealType) }
+}
+case object RealGEOp extends BoolResultOp {
+  override val hashId = 277
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash
+  override def toString = ">="
+  override def typeCheck(args: List[Expr]) : Unit = { checkNumArgs(args, 2); checkAllArgTypes(args, RealType) }
+}
 
 // Expressions
 abstract class Expr(val typ: Type) extends Hashable {

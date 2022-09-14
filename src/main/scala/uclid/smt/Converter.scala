@@ -112,6 +112,16 @@ object Converter {
       case lang.IntMulOp() => smt.IntMulOp
       case lang.IntDivOp() => smt.IntDivOp
       case lang.IntUnaryMinusOp() => smt.IntSubOp
+      // Real operators.
+      case lang.RealLTOp() => smt.RealLTOp
+      case lang.RealLEOp() => smt.RealLEOp
+      case lang.RealGTOp() => smt.RealGTOp
+      case lang.RealGEOp() => smt.RealGEOp
+      case lang.RealAddOp() => smt.RealAddOp
+      case lang.RealSubOp() => smt.RealSubOp
+      case lang.RealMulOp() => smt.RealMulOp
+      case lang.RealDivOp() => smt.RealDivOp
+      case lang.RealUnaryMinusOp() => smt.RealSubOp
       // Bitvector operators.
       case lang.BVLTOp(w) => smt.BVLTOp(w)
       case lang.BVLEOp(w) => smt.BVLEOp(w)

@@ -58,12 +58,6 @@ trait UclidTokens extends Tokens {
     override def toString = chars.toString + "_" + base.toString
   }
 
-  /** The class of real literal tokens. */
-  /** we store the whole and fractional separately, and output straight to SMT format, as we don't need to manipulate the decimal values **/
-  case class RealLit(chars: String, frac: String) extends UclidToken {
-    override def toString = chars.toString + "." + frac.toString + "real"
-  }
-
   /** Bitvector types. */
   case class BitVectorTypeLit(chars: String) extends UclidToken {
     val width = chars.toInt
@@ -121,8 +115,7 @@ class UclidLexical extends Lexical with UclidTokens with Positional {
     | positioned { '0' ~ 'b' ~ bit ~ rep( bit ) ~ 'b' ~ 'v' ~ digit ~ rep(digit) ^^ { case ('0' ~ 'b' ~ b ~ rb ~ 'b' ~ 'v' ~ d ~ rd) => BitVectorLit(b :: rb mkString "", 2, (d :: rd mkString "").toInt) } }
     | positioned { '0' ~ 'x' ~> rep1( hexDigit )                       ^^ { case hits => IntegerLit(hits.mkString, 16) } }
     | positioned { '0' ~ 'b' ~> rep1( bit )                            ^^ { case bits => IntegerLit(bits.mkString, 2) } }
-    | positioned { digit ~ rep(digit) ~ '.' ~ digit ~ rep(digit) ^^ { case (f1 ~ r1 ~ '.' ~ f2 ~ r2) => FloatLit(f1 :: r1 mkString, f2 :: r2 mkString,11,52) } }
-    | positioned { digit ~ rep(digit) ~ '.' ~ digit ~ rep(digit) ~ 'r' ~ 'e' ~ 'a' ~ 'l' ^^ { case (f1 ~ r1 ~ '.' ~ f2 ~ r2 ~ 'r' ~ 'e' ~ 'a' ~ 'l') => RealLit(f1 :: r1 mkString, f2 :: r2 mkString) } }
+    | positioned { digit ~ rep(digit) ~ '.' ~ digit ~ rep(digit) ^^ { case (f1 ~ r1 ~ '.' ~ f2 ~ r2) => FloatLit(f1 :: r1 mkString, f2 :: r2 mkString,11,52) } }    
     | positioned { digit ~ rep( digit )                                ^^ { case first ~ rest => IntegerLit(first :: rest mkString "", 10)} }
     | positioned { '\"' ~> rep( chrExcept('\"', '\n', EofCh) ) <~ '\"' ^^ { case chars => StringLit(chars mkString "") } }
     | EofCh                                               ^^^ EOF

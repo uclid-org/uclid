@@ -67,7 +67,7 @@ trait UclidTokenParsers extends TokenParsers {
     elem("integer", _.isInstanceOf[IntegerLit]) ^^ (_.asInstanceOf[IntegerLit])
 
   /** A parser which matches a real literal */
-  def realLit: Parser[IntegerLit] =
+  def realLit: Parser[RealLit] =
     elem("real", _.isInstanceOf[RealLit]) ^^ (_.asInstanceOf[RealLit])
 
   /** A parser which matches a bitvector type */
@@ -83,7 +83,7 @@ trait UclidTokenParsers extends TokenParsers {
   def floatType: Parser[FloatTypeLit] =
     elem("float type", _.isInstanceOf[FloatTypeLit]) ^^ {_.asInstanceOf[FloatTypeLit]}
 
-  /** A parser which matches a bitvector literal */
+  /** A parser which matches a float literal */
   def floatLit: Parser[FloatLit] =
     elem("float", _.isInstanceOf[FloatLit]) ^^ (_.asInstanceOf[FloatLit])
 
@@ -290,7 +290,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Integer: PackratParser[lang.IntLit] =
       positioned { integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base))} }
     lazy val Real: PackratParser[lang.RealLit] =
-      positioned { realLit ^^ { case realLit => lang.RealLit(realLit.integral, realLit.frac)} }
+      positioned { floatLit ~ KwReal ^^ { case floatLit ~ s => lang.RealLit(floatLit.integral, floatLit.frac)} }
     lazy val Float: PackratParser[lang.FloatLit] =
       positioned { 
                     Integer ~ KwHalf    ^^ { case intLit ~ s   => lang.FloatLit(intLit.value, "0", 5, 11) } |
@@ -304,7 +304,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
                  }
     lazy val BitVector: PackratParser[lang.BitVectorLit] =
       positioned { bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) } }
-    lazy val Number : PackratParser[lang.NumericLit] = positioned (Float | Integer | BitVector)
+    lazy val Number : PackratParser[lang.NumericLit] = positioned (Float | Integer | BitVector | Real)
     lazy val String  : PackratParser[lang.StringLit] = positioned {
       stringLit ^^ { case stringLit => lang.StringLit(stringLit) }
     }

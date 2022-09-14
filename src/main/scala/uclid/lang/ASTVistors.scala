@@ -129,6 +129,7 @@ trait ReadOnlyPass[T] {
   def applyOnSynonymType(d : TraversalDirection.T, synT : SynonymType, in : T, context : Scope) : T = { in }
   def applyOnGroupType(d : TraversalDirection.T, groupT : GroupType, in : T, context : Scope) : T = { in }
   def applyOnFloatType(d : TraversalDirection.T, floatT : FloatType, in : T, context : Scope) : T = { in }
+  def applyOnRealType(d : TraversalDirection.T, realT : RealType, in : T, context : Scope) : T = { in }
   def applyOnExternalType(d : TraversalDirection.T, extT : ExternalType, in : T, context : Scope) : T = { in }
   def applyOnModuleInstanceType(d : TraversalDirection.T, instT : ModuleInstanceType, in : T, context : Scope) : T = { in }
   def applyOnModuleType(d : TraversalDirection.T, modT : ModuleType, in : T, context : Scope) : T = { in }
@@ -162,6 +163,7 @@ trait ReadOnlyPass[T] {
   def applyOnIntLit(d : TraversalDirection.T, i : IntLit, in : T, context : Scope) : T = { in }
   def applyOnBitVectorLit(d : TraversalDirection.T, bv : BitVectorLit, in : T, context : Scope) : T = { in }
   def applyOnFloatLit(d : TraversalDirection.T, flt : FloatLit, in : T, context : Scope) : T = { in }
+  def applyOnRealLit(d : TraversalDirection.T, rl : RealLit, in : T, context : Scope) : T = { in }
   def applyOnConstArrayLit(d : TraversalDirection.T, a : ConstArray, in : T, context : Scope) : T = { in }
   def applyOnConstRecordLit(d : TraversalDirection.T, a : ConstRecord, in : T, context : Scope) : T = { in }
   def applyOnStringLit(d : TraversalDirection.T, string: StringLit, in : T, context : Scope) : T = { in }
@@ -235,6 +237,7 @@ trait RewritePass {
   def rewriteSynonymType(synT : SynonymType, context : Scope) : Option[Type] = { Some(synT)  }
   def rewriteGroupType(groupT : GroupType, context : Scope) : Option[Type] = { Some(groupT) }
   def rewriteFloatType(floatT : FloatType, context : Scope) : Option[Type] = { Some(floatT) }
+  def rewriteRealType(realT : RealType, context : Scope) : Option[Type] = { Some(realT) }
   def rewriteExternalType(extT : ExternalType, context : Scope) : Option[Type] = { Some(extT) }
   def rewriteModuleInstanceType(instT : ModuleInstanceType, context : Scope) : Option[ModuleInstanceType] = { Some(instT)  }
   def rewriteModuleType(modT : ModuleType, context : Scope) : Option[ModuleType] = { Some(modT)  }
@@ -267,6 +270,7 @@ trait RewritePass {
   def rewriteIntLit(i : IntLit, ctx : Scope) : Option[IntLit] = { Some(i) }
   def rewriteBitVectorLit(bv : BitVectorLit, ctx : Scope) : Option[BitVectorLit] = { Some(bv) }
   def rewriteFloatLit(flt : FloatLit, ctx : Scope) : Option[FloatLit] = { Some(flt) }
+  def rewriteRealLit(rl : RealLit, ctx : Scope) : Option[RealLit] = { Some(rl) }
   def rewriteConstArrayLit(a : ConstArray, ctx : Scope) : Option[ConstArray] = { Some(a) }
   def rewriteConstRecordLit(r : ConstRecord, ctx : Scope) : Option[ConstRecord] = { Some(r) }
   def rewriteNumericLit(n : NumericLit, ctx : Scope) : Option[NumericLit] = { Some(n) }
@@ -647,6 +651,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case modT : ModuleType => visitModuleType(modT, result, context)
       case groupT : GroupType => visitGroupType(groupT, result, context)
       case floatT: FloatType => visitFloatType(floatT, result, context)
+      case realT: RealType => visitRealType(realT, result, context)
     }
     result = pass.applyOnType(TraversalDirection.Up, typ, result, context)
     return result
@@ -752,6 +757,13 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result: T  = in
     result = pass.applyOnFloatType(TraversalDirection.Down, floatT, result, context)
     result = pass.applyOnFloatType(TraversalDirection.Up, floatT, result, context)
+    return result
+  }
+
+  def visitRealType(realT : RealType, in: T, context: Scope): T  = {
+    var result: T  = in
+    result = pass.applyOnRealType(TraversalDirection.Down, realT, result, context)
+    result = pass.applyOnRealType(TraversalDirection.Up, realT, result, context)
     return result
   }
 
@@ -1067,6 +1079,9 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case flt: FloatLit => 
         result = pass.applyOnFloatLit(TraversalDirection.Down, flt, result, context)
         result = pass.applyOnFloatLit(TraversalDirection.Up, flt, result, context)
+      case rl: RealLit => 
+        result = pass.applyOnRealLit(TraversalDirection.Down, rl, result, context)
+        result = pass.applyOnRealLit(TraversalDirection.Up, rl, result, context)
     }
     result = pass.applyOnNumericLit(TraversalDirection.Up, n, result, context)
     return result
@@ -1715,6 +1730,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case modT : ModuleType => visitModuleType(modT, context)
       case groupT : GroupType => visitGroupType(groupT, context)
       case floatT : FloatType => visitFloatType(floatT, context)
+      case realT : RealType => visitRealType(realT, context)
     }).flatMap(pass.rewriteType(_, context))
     return ASTNode.introducePos(setPosition, setFilename, typP, typ.position)
   }
@@ -1813,6 +1829,12 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val floatTP = pass.rewriteFloatType(floatT, context)
     return ASTNode.introducePos(setPosition, setFilename, floatTP, floatT.position)
   }
+
+  def visitRealType(realT : RealType, context : Scope) : Option[Type] = {
+    val realTP = pass.rewriteRealType(realT, context)
+    return ASTNode.introducePos(setPosition, setFilename, realTP, realT.position)
+  }
+
   def visitExternalType(extT : ExternalType, context : Scope) : Option[Type] = {
     val moduleIdP = visitIdentifier(extT.moduleId, context)
     val typeIdP = visitIdentifier(extT.typeId, context)
@@ -2240,6 +2262,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case bv : BitVectorLit => visitBitVectorLiteral(bv, context)
       case i : IntLit => visitIntLiteral(i, context)
       case flt: FloatLit => visitFloatLiteral(flt, context)
+      case rl: RealLit => visitRealLiteral(rl, context)
     }
     val nP2 = nP1.flatMap(pass.rewriteNumericLit(_, context))
     return ASTNode.introducePos(setPosition, setFilename, nP2, n.position)
@@ -2258,6 +2281,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitFloatLiteral(flt : FloatLit, context : Scope) : Option[FloatLit] = {
     val fltP = pass.rewriteFloatLit(flt, context)
     return ASTNode.introducePos(setPosition, setFilename, fltP, flt.position)
+  }
+
+  def visitRealLiteral(rl : RealLit, context : Scope) : Option[RealLit] = {
+    val rlP = pass.rewriteRealLit(rl, context)
+    return ASTNode.introducePos(setPosition, setFilename, rlP, rl.position)
   }
 
   def visitTuple(rec : Tuple, context : Scope) : Option[Tuple] = {
