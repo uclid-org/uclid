@@ -4,10 +4,10 @@ module main {
 
   init {
     a = 0.0real;
-    b = 1.0real;
+    b = 1.1real;
   }
   next {
-    a', b' = b, a + b;
+    // a', b' = b, a + b;
   }
 
   // Part 2: System specification.

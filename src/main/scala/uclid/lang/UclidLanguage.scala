@@ -310,6 +310,40 @@ case class IntDivOp() extends IntArgOperator {
   override def toString = "/"
 }
 
+// These are operators with real operators.
+sealed abstract class RealArgOperator extends Operator {
+  override def fixity = Operator.INFIX
+  override def codegenUclidLang: Option[Operator] = Some(this)
+}
+case class RealLTOp() extends RealArgOperator {
+  override def toString = "<"
+}
+case class RealLEOp() extends RealArgOperator {
+  override def toString = "<="
+}
+case class RealGTOp() extends RealArgOperator {
+  override def toString = ">"
+}
+case class RealGEOp() extends RealArgOperator {
+  override def toString = ">="
+}
+case class RealAddOp() extends RealArgOperator {
+  override def toString ="+"
+}
+case class RealSubOp() extends RealArgOperator {
+  override def toString = "-"
+}
+case class RealMulOp() extends RealArgOperator {
+  override def toString = "*"
+}
+case class RealUnaryMinusOp() extends RealArgOperator {
+  override def toString = "-"
+  override def fixity = Operator.PREFIX
+}
+case class RealDivOp() extends RealArgOperator {
+  override def toString = "/"
+}
+
 // These operators take float operands and return float results.
 sealed abstract class FloatArgOperator(val e : Int, val s: Int) extends Operator {
   override def fixity = Operator.INFIX
@@ -1042,8 +1076,8 @@ case class IntegerType() extends NumericType {
 }
 case class RealType() extends NumericType {
   override def toString = "real"
-  override def isReal = true
-  override def defaultValue = Some(RealLit(0))
+  def isReal = true
+  override def defaultValue = Some(RealLit(0, 0.toString))
   override def codegenUclidLang: Option[Type] = Some(this)
 }
 case class FloatType(exp: Int, sig: Int) extends NumericType {
