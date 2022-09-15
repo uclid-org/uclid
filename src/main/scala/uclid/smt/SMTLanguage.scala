@@ -803,7 +803,7 @@ object RealDivOp extends RealResultOp {
   override val hashId = 273
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash
-  override def toString = "div"
+  override def toString = "/"
 }
 
 // Real comparison.
@@ -876,6 +876,13 @@ case class EnumLit(id : String, eTyp : EnumType) extends Literal (eTyp) {
   override val hashCode = computeHash
   override val md5hashCode = computeMD5Hash(id, eTyp)
   override def toString  = id.toString
+}
+
+case class RealLit(integral: BigInt, fractional: String) extends Literal (RealType) {
+  override val hashId = mix(mix(integral.hashCode(), fractional.hashCode()), 304)
+  override val hashCode = computeHash
+  override val md5hashCode = computeMD5Hash(integral, fractional)
+  override def toString = integral.toString + "." + fractional
 }
 
 case class FloatLit(integral: BigInt, fractional: String, exp: Int, sig: Int) extends Literal (FltType.t(List(exp, sig))){

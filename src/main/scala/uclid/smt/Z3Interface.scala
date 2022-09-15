@@ -262,6 +262,7 @@ class Z3Interface() extends Context {
   val getUninterpretedSort = new Memo[String, z3.UninterpretedSort]((name) => ctx.mkUninterpretedSort(name))
   lazy val boolSort = ctx.mkBoolSort()
   lazy val intSort = ctx.mkIntSort()
+  lazy val realSort = ctx.mkRealSort()
   val getBitVectorSort = new Memo[Int, z3.BitVecSort]((w : Int) => ctx.mkBitVecSort(w))
   val getTupleSort = new Memo[List[Type], z3.TupleSort]((types : List[Type]) => {
     ctx.mkTupleSort(
@@ -330,6 +331,9 @@ class Z3Interface() extends Context {
   /** Create an integer literal. */
   val getIntLit = new Memo[BigInt, z3.IntExpr](i => ctx.mkInt(i.toString))
 
+  /** Create a real literal. */
+  val getRealLit = new Memo[(BigInt, String), z3.RealExpr]((rl) => ctx.mkReal(rl._1.toString + "." + rl._2))
+
   /** Create a bitvector literal. */
   val getBitVectorLit = new Memo[(BigInt, Int), z3.BitVecExpr]((arg) => ctx.mkBV(arg._1.toString, arg._2))
 
@@ -355,6 +359,7 @@ class Z3Interface() extends Context {
       case UninterpretedType(name) => VarSort(getUninterpretedSort(name))
       case BoolType => VarSort(boolSort)
       case IntType => VarSort(intSort)
+      case RealType => VarSort(realSort)
       case BitVectorType(w) => VarSort(getBitVectorSort(w))
       case TupleType(ts) => VarSort(getTupleSort(ts))
       case RecordType(rs) => VarSort(getRecordSort(rs))
@@ -418,6 +423,19 @@ class Z3Interface() extends Context {
         }
       case IntMulOp               => ctx.mkMul (arithArgs : _*)
       case IntDivOp               => ctx.mkDiv (arithArgs(0), arithArgs(1))
+      case RealLTOp               => ctx.mkLt (arithArgs(0), arithArgs(1))
+      case RealLEOp               => ctx.mkLe (arithArgs(0), arithArgs(1))
+      case RealGTOp               => ctx.mkGt (arithArgs(0), arithArgs(1))
+      case RealGEOp               => ctx.mkGe (arithArgs(0), arithArgs(1))
+      case RealAddOp              => ctx.mkAdd (arithArgs : _*)
+      case RealSubOp              =>
+        if (args.size == 1) {
+          ctx.mkUnaryMinus(arithArgs(0))
+        } else {
+          ctx.mkSub (arithArgs: _*)
+        }
+      case RealMulOp              => ctx.mkMul (arithArgs : _*)
+      case RealDivOp              => ctx.mkDiv (arithArgs(0), arithArgs(1))
       case BVLTOp(_)              => ctx.mkBVSLT(bvArgs(0), bvArgs(1))
       case BVLEOp(_)              => ctx.mkBVSLE(bvArgs(0), bvArgs(1))
       case BVGTOp(_)              => ctx.mkBVSGT(bvArgs(0), bvArgs(1))
@@ -527,6 +545,7 @@ class Z3Interface() extends Context {
       case Lambda(_,_) =>
         throw new Utils.RuntimeError("Lambdas in assertions should have been beta-reduced.")
       case IntLit(i) => getIntLit(i)
+      case RealLit(i,f) => getRealLit(i,f)
       case BitVectorLit(bv,w) => getBitVectorLit(bv, w)
       case BooleanLit(b) => getBoolLit(b)
       case EnumLit(e, typ) => getEnumLit(e, typ)

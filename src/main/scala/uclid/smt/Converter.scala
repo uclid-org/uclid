@@ -51,6 +51,8 @@ object Converter {
         smt.IntType
       case lang.FloatType(e,s) =>
         smt.FltType(e,s)
+      case lang.RealType() =>
+        smt.RealType
       case lang.BooleanType() =>
         smt.BoolType
       case lang.StringType() =>
@@ -274,6 +276,7 @@ object Converter {
       case lang.BitVectorLit(bv, w) => smt.BitVectorLit(bv, w)
       case lang.FloatLit(i,f,e,s) => 
         smt.FloatLit(i,f,e,s)
+      case lang.RealLit(i,f) => smt.RealLit(i,f)
       case lang.ConstArray(value, arrTyp) =>
         smt.ConstArray(toSMT(value, scope, past), typeToSMT(arrTyp).asInstanceOf[ArrayType])
       case lang.ConstRecord(fs) => 
