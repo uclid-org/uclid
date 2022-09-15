@@ -425,6 +425,20 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               FloatType(floatOp.e, floatOp.s)
           }
         }
+        case realOp : RealArgOperator => {
+          def numArgs(op : RealArgOperator) : Int = {
+            op match {
+              case RealUnaryMinusOp() => 1
+              case _ => 2
+            }
+          }
+          checkTypeError(argTypes.size == numArgs(realOp), "Operator '" + opapp.op.toString + "' must have two arguments", opapp.pos, c.filename)
+          checkTypeError(argTypes.forall(_.isInstanceOf[RealType]), "Arguments to operator '" + opapp.op.toString + "' must be of type Real", opapp.pos, c.filename)
+          realOp match {
+            case RealLTOp() | RealLEOp() | RealGTOp() | RealGEOp() => new BooleanType()
+            case RealAddOp() | RealSubOp() | RealMulOp() | RealDivOp() | RealUnaryMinusOp() => new RealType()
+          }
+        }
 
         case bvOp : BVArgOperator => {
           checkTypeError(argTypes.size == bvOp.arity, "Operator '%s' must have exactly %d argument(s)".format(opapp.op.toString, bvOp.arity), opapp.pos, c.filename)
