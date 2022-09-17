@@ -11,7 +11,7 @@ module main {
   }
 
   // Part 2: System specification.
-  invariant a_le_b: a <= b;
+  invariant a_le_b: a > b; // Expect SAT.
 
   // Part 3: Proof script.
   control {

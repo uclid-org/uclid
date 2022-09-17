@@ -548,12 +548,15 @@ class SMTLIB2Spec extends AnyFlatSpec {
   //   SMTLIB2Spec.expectedFails("./test/test-float-2.ucl",1)
   // }
   "test-float-3.ucl" should "verify all assertions." in{
-    SMTLIB2Spec.expectedFails("./test/test-float-3.ucl",0)
+    SMTLIB2Spec.expectedFails("./test/test-float-3.ucl", 0)
   }
   "test-float-4.ucl" should "verify all assertions." in{
-    SMTLIB2Spec.expectedFails("./test/test-float-4.ucl",0)
+    SMTLIB2Spec.expectedFails("./test/test-float-4.ucl", 0)
   }
   "test-real-1.ucl" should "verify all assertions." in{
-    SMTLIB2Spec.expectedFails("./test/test-real-1.ucl",0)
+    SMTLIB2Spec.expectedFails("./test/test-real-1.ucl", 0)
+  }
+  "test-real-1.ucl" should "fail to verify 3 assertions." in{
+    SMTLIB2Spec.expectedFails("./test/test-real-2.ucl", 3)
   }
 }

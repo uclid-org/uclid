@@ -50,7 +50,7 @@ import scala.collection.mutable
 /** This is a re-implementation of the Scala libraries StdTokenParsers with StdToken replaced by UclidToken. */
 trait UclidTokenParsers extends TokenParsers {
   type Tokens <: UclidTokens
-  import lexical.{Keyword, IntegerLit, BitVectorTypeLit, BitVectorLit, FloatLit, FloatTypeLit, StringLit, Identifier}
+  import lexical.{Keyword, IntegerLit, RealLit, BitVectorTypeLit, BitVectorLit, FloatTypeLit, StringLit, Identifier}
 
   protected val keywordCache = mutable.HashMap[String, Parser[String]]()
 
@@ -82,10 +82,6 @@ trait UclidTokenParsers extends TokenParsers {
   /** A parser which matches a float type */
   def floatType: Parser[FloatTypeLit] =
     elem("float type", _.isInstanceOf[FloatTypeLit]) ^^ {_.asInstanceOf[FloatTypeLit]}
-
-  /** A parser which matches a float literal */
-  def floatLit: Parser[FloatLit] =
-    elem("float", _.isInstanceOf[FloatLit]) ^^ (_.asInstanceOf[FloatLit])
 
   /** A parser which matches a string literal */
   def stringLit: Parser[String] =
@@ -290,17 +286,17 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val Integer: PackratParser[lang.IntLit] =
       positioned { integerLit ^^ { case intLit => IntLit(BigInt(intLit.chars, intLit.base))} }
     lazy val Real: PackratParser[lang.RealLit] =
-      positioned { floatLit ~ KwReal ^^ { case floatLit ~ s => lang.RealLit(floatLit.integral, floatLit.frac)} }
+      positioned { realLit ^^ { case realLit => lang.RealLit(realLit.integral, realLit.frac)} }
     lazy val Float: PackratParser[lang.FloatLit] =
       positioned { 
                     Integer ~ KwHalf    ^^ { case intLit ~ s   => lang.FloatLit(intLit.value, "0", 5, 11) } |
                     Integer ~ KwSingle  ^^ { case intLit ~ s => lang.FloatLit(intLit.value, "0", 8, 24) } | 
                     Integer ~ KwDouble  ^^ { case intLit ~ s => lang.FloatLit(intLit.value, "0", 11,53) } |
                     Integer ~ floatType ^^ { case intLit ~ floatType => lang.FloatLit(intLit.value,"0", floatType.exp,floatType.sig)} |               
-                    floatLit ~ KwHalf    ^^ { case floatLit ~ s   => lang.FloatLit(floatLit.integral, floatLit.frac, 5, 11) } |
-                    floatLit ~ KwSingle  ^^ { case floatLit ~ s => lang.FloatLit(floatLit.integral, floatLit.frac, 8, 24) } | 
-                    floatLit ~ KwDouble  ^^ { case floatLit ~ s => lang.FloatLit(floatLit.integral, floatLit.frac, 11,53) } |
-                    floatLit ~ floatType ^^ { case floatLit ~ floatType => lang.FloatLit(floatLit.integral,floatLit.frac, floatType.exp,floatType.sig)}
+                    realLit ~ KwHalf    ^^ { case realLit ~ s   => lang.FloatLit(realLit.integral, realLit.frac, 5, 11) } |
+                    realLit ~ KwSingle  ^^ { case realLit ~ s => lang.FloatLit(realLit.integral, realLit.frac, 8, 24) } | 
+                    realLit ~ KwDouble  ^^ { case realLit ~ s => lang.FloatLit(realLit.integral, realLit.frac, 11,53) } |
+                    realLit ~ floatType ^^ { case realLit ~ floatType => lang.FloatLit(realLit.integral,realLit.frac, floatType.exp,floatType.sig)}
                  }
     lazy val BitVector: PackratParser[lang.BitVectorLit] =
       positioned { bitvectorLit ^^ { case bvLit => lang.BitVectorLit(bvLit.intValue, bvLit.width) } }
