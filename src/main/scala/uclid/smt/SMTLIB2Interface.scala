@@ -133,6 +133,9 @@ trait SMTLIB2Base {
           case IntType =>
             typeMap = typeMap.addSynonym("Int", t)
             ("Int", List.empty)
+          case RealType =>
+            typeMap = typeMap.addSynonym("Real", t)
+            ("Real", List.empty)
           case BitVectorType(n) => 
             val typeStr = "(_ BitVec %d)".format(n)
             typeMap = typeMap.addSynonym(typeStr, t)
@@ -292,6 +295,8 @@ trait SMTLIB2Base {
             throw new Utils.AssertionError("Lambdas in should have been beta-reduced by now.")
           case IntLit(value) =>
             (value.toString(), memo, false)
+          case RealLit(i, f) =>
+            (i.toString()+"."+f, memo, false)
           case BitVectorLit(value, width) =>
             ("(_ bv" + value.toString() + " " + width.toString() + ")", memo, false)
           case FloatLit(integral,fractional, exp, sig) =>

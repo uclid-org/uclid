@@ -268,7 +268,7 @@ object Context
       case Some(eP) => eP
       case None =>
         val eP = e match {
-          case Symbol(_, _) | IntLit(_) | FloatLit(_,_,_,_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) | 
+          case Symbol(_, _) | IntLit(_) | RealLit(_,_) | FloatLit(_,_,_,_) | BitVectorLit(_, _) | BooleanLit(_) | BooleanLit(_) | EnumLit(_, _) | 
             ConstArray(_, _) | SynthSymbol (_, _, _, _, _) | OracleSymbol(_, _, _) =>
             rewrite(e)
           case ConstRecord(fs) => 
@@ -334,7 +334,7 @@ object Context
       case None =>
         val eResult = apply(e)
         val results = e match {
-          case Symbol(_, _) | IntLit(_) | FloatLit(_,_,_,_) |  BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) | OracleSymbol(_, _, _) =>
+          case Symbol(_, _) | IntLit(_) | RealLit(_,_) | FloatLit(_,_,_,_) |  BitVectorLit(_,_) | BooleanLit(_) | EnumLit(_, _) | SynthSymbol(_, _, _, _, _) | OracleSymbol(_, _, _) =>
             eResult
           case ConstArray(expr, _) =>
             eResult ++ accumulateOverExpr(expr, apply, memo)
