@@ -150,7 +150,7 @@ abstract trait Context {
       case Some(t) => (t, synMap)
       case None =>
         typ match {
-          case BoolType | IntType | BitVectorType(_) | FltType(_,_) =>
+          case BoolType | IntType | RealType | BitVectorType(_) | FltType(_,_) =>
             (typ, synMap)
           case unintTyp : UninterpretedType =>
             // add to map
