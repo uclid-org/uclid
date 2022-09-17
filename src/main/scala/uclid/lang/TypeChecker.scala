@@ -220,6 +220,7 @@ object ReplacePolymorphicOperators {
   def toType(op : PolymorphicOperator, typ : NumericType) = {
     typ match {
       case _ : IntegerType => toInt(op)
+      case rlTyp : RealType => toReal(op)
       case bvTyp : BitVectorType => toBitvector(op, bvTyp.width)
       case fltTyp: FloatType => toFloat(op, fltTyp.exp, fltTyp.sig)
     }

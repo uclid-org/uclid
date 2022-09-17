@@ -307,6 +307,7 @@ class Z3Interface() extends Context {
       case UninterpretedType(n) => getUninterpretedSort(n)
       case BoolType             => boolSort
       case IntType              => intSort
+      case RealType             => realSort
       case BitVectorType(w)     => getBitVectorSort(w)
       case TupleType(ts)        => getTupleSort(ts)
       case RecordType(rs)       => getRecordSort(rs)
