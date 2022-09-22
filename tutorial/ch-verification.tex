@@ -254,7 +254,7 @@ on embedded (cyber-physical) systems by Lee and Seshia~\cite{leeseshia-16}.
 
 \uclid{} has full support for Syntax-Guided Synthesis across all verification modes. If a synthesis function is inserted into the \uclid model, and the control block contains a verification command as per usual, \uclid{} will construct a synthesis query that searches for a body to any synthesis functions in the model. 
 
-The example in Figure~\ref{fig:fib-induction-synth} uses synthesis to strengthen the invariant for the Fibonacci example we have seen before. When run with the command line option \codelike{-y "cvc4 --lang sygus"} (or another SyGuS solver), \uclid{} will return the correct body for the synthesis function so that the verification condition passes.
+The example in Figure~\ref{fig:fib-induction-synth} uses synthesis to strengthen the invariant for the Fibonacci example we have seen before. When run with the command line option \codelike{-y "cvc5 --lang=sygus2"} (or another SyGuS solver), \uclid{} will return the correct body for the synthesis function so that the verification condition passes.
 
 \begin{uclidlisting}[htbp]
     \lstinputlisting[language=uclid,style=uclidstyle]{../examples/fib2safety-synth.ucl}
