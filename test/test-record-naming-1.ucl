@@ -1,0 +1,15 @@
+//this is test for
+// x.x
+module main {
+  type t = record {
+    x : integer
+  };
+  var x : t;
+
+  procedure foo()
+    modifies x;
+  {
+    if (x.x == x.x) {
+    }
+  }
+}

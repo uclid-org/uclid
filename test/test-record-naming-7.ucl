@@ -1,0 +1,53 @@
+// instance.varibale.record.record
+module incr
+{ 
+  type t2 = record{incr1:integer};
+  type t1 = record{incr1:t2};
+  input x : integer;
+  output y : integer;
+  var c : integer;
+  var value1 : t1;
+  var value2: integer;
+  
+  init {
+    c = 0;
+    value1.incr1.incr1 = 4;
+    value2 = 10;
+  }
+  
+  next {
+    c' = c + 1;
+    y' = x + c';
+  }
+}
+
+module main
+{
+  var a, b, q : integer;
+  var inited : boolean;
+  
+  instance incr1 : incr(x : (a'), y: (b));
+  
+  init {
+    a = 0;
+    b = 0;
+    inited = false;
+  }
+
+  next {
+    inited' = true;
+    q' = b' + 1;
+    next (incr1);
+    a' = a + 1;
+  }
+
+  invariant b_prop: inited ==> (b > 1 && b > a && q > b);
+  invariant testMy1: (incr1.value1.incr1.incr1 != 10);
+  invariant testMy2: (incr1.value2!=5);
+  control {
+    // print_module;
+    v = unroll(5);
+    check;
+    print_results;
+  }
+}

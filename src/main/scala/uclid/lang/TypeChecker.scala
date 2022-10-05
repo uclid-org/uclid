@@ -361,7 +361,9 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         case AddOp() | SubOp() | MulOp() | DivOp() | UnaryMinusOp() => argType
       }
     }
+    //leiqi:
     def opAppType(opapp : OperatorApplication) : Type = {
+      //I am stuck here
       val argTypes = opapp.operands.map(typeOf(_, c + opapp))
       logger.debug("opAppType: {}", opapp.toString())
       opapp.op match {
@@ -440,7 +442,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case RealAddOp() | RealSubOp() | RealMulOp() | RealDivOp() | RealUnaryMinusOp() => new RealType()
           }
         }
-
         case bvOp : BVArgOperator => {
           checkTypeError(argTypes.size == bvOp.arity, "Operator '%s' must have exactly %d argument(s)".format(opapp.op.toString, bvOp.arity), opapp.pos, c.filename)
           checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Argument(s) to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
@@ -559,6 +560,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Arguments to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
           new BitVectorType(argTypes(0).asInstanceOf[BitVectorType].width + argTypes(1).asInstanceOf[BitVectorType].width)
         }
+        //leiqi: so, x.x does not match up with recordType here
         case PolymorphicSelect(field) =>
           Utils.assert(argTypes.size == 1, "Select operator must have exactly one operand.")
           argTypes(0) match {
@@ -586,6 +588,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               polyOpMap.put(opapp.op.astNodeId, selectFromInstance)
               fldT.get
             case _ =>
+            //Leiqi:
+            //in this place, we got print undefineType()
+            //  print("Our opapp is "+opapp+"\n")
+            //  print("Our opapp[0] is "+opapp.operands(0)+" and its type is "+argTypes(0)+"\n")
+             // print(typeOf(_, c + opapp)+"\n")
               checkTypeError(false, "Argument to select operator must be of type record or instance", opapp.pos, c.filename)
               new UndefinedType()
           }
@@ -707,9 +714,15 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     if (cachedType.isEmpty) {
       val typ = e match {
         case i : Identifier =>
+        //leiqi:
+        //then we match x as an identifier 
+        //  print("We get Identifier "+i+"\n")
+        //  print("And its type is "+c.typeOf(i)+"\n")
           val knownId = c.typeOf(i).isDefined
+          //it is a define identifier but x's type is undefined
           checkTypeError(knownId, "Unknown identifier: %s".format(i.name), i.pos, c.filename)
           (c.typeOf(i).get)
+
         case eId : ExternalIdentifier =>
           val mId = eId.moduleId
           val fId = eId.id
