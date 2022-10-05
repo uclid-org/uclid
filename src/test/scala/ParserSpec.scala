@@ -694,7 +694,7 @@ class ParserSpec extends AnyFlatSpec {
     } catch {
         case p : Utils.ParserErrorList =>
           assert (p.errors.size == 1)
-          assert (p.errors(0)._1.contains("expected type 'record {valid : boolean, value : integer}' but received type 'record {value : integer, valid : boolean}'"))
+          assert (p.errors(0)._1.contains("expected type 'record {_rec_valid : boolean, _rec_value : integer}' but received type 'record {_rec_value : integer, _rec_valid : boolean}'"))
         case _ : Throwable => assert(false);
     }
   }

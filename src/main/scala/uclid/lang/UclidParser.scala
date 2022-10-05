@@ -429,6 +429,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       E12
     }
 
+    //leiqi: this can be right_handside
+    //goto check ExprSuffix
     /** ExpressionSuffixes. */
     lazy val ExprSuffix: PackratParser[Operator] = positioned {
       ArraySelectOp | ArrayStoreOp | RecordStoreOp | ExtractOp | RecordSelectOp | HyperSelectOp

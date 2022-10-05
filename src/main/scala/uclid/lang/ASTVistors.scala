@@ -2252,6 +2252,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case _ => None
     }
   }
+  //Leiqi: when we visit the Const Record
+  //we should rewrite ConstRecord as well
   def visitConstRecord(r: ConstRecord, context: Scope) : Option[ConstRecord] = {
     val expsP = r.fieldvalues.map(f => visitFieldAssign(f, context))
     val rP = pass.rewriteConstRecordLit(ConstRecord(expsP.flatten), context)

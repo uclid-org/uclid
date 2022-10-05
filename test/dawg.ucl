@@ -1,0 +1,109 @@
+module dawg {
+
+    type userRequest_t : record {
+        valid: boolean,
+        memoryOperationType: boolean,
+        address: [bv6] boolean, // 64 bits address
+        data: bv64
+    };
+
+    type osRequest_t : record{
+        valid: boolean,
+        new: boolean,
+        domain_id: [bv3] boolean,
+        hitmap: [bv3] boolean,  
+        fillmap: [bv3] boolean
+    };
+
+    type userResponse_t : record{
+        valid: boolean,
+        memoryOperationType: boolean,
+        address: [bv6] boolean, // 64 bits address
+        data: bv64
+    };
+
+    //we need to map 64 bits address
+    type cache_data_t: record{
+        tag: [bv3][bv5] [bv6] boolean;//we have 8ways 32lines 59bits tag
+        data: [bv3][bv5] [bv6] boolean; //we have 8ways 32lines 64bits data?
+    };
+
+    type metadata_t : record{
+        data: [bv5][bv3] boolean; // we have 32 lines, so the we have 32 metadata and each metadata is 8 bits boolean
+    }
+
+    //input:
+    input userRequest: userRequest_t;
+    input osRequest: osRequest_t;
+    
+    input memData: bv64;
+
+    //output:
+    output userResponse : userResponse_t;
+
+    var cache_data: cache_data_t;  // this N-way direct-mapped cache
+    
+	var metadata: metadata_t;
+
+    var domain_id: [bv3] boolean;
+    var policy_fillmap: [bv3] boolean;
+    var policy_hitmap: [bv3] boolean;
+    
+    //this part is virtual data
+    var v_plru_mask: metadata_t;
+    var v_plru_policy: metadata_t;
+    var v_replacement_policy: metadata_t;
+    var v_tag: bv59;
+
+   
+    init {
+        
+    }
+
+	Next {
+
+        if(osRequest.valid){
+            //if a new domain is coming
+            if(osRequest.new){
+                domain_id' = osRequest.domain_id;
+                policy_fillmap' = osRequest.fillmap;
+                policy_hitmap' = osRequest.hitmap;
+
+                //maybe I should write a procedure:
+                for i in range(0bv3, 7bv3) {
+                    if(osRequest.hitmap[i]){
+                        for k1 in range(0bv6,64bv6){
+                            cache_data.data[i][j][k1] = 0;
+                        }
+                        for k2 in range(0bv6,59bv6){
+                            cache_data.tag[i][j][k2] = 0;
+                        }
+                    }
+                }
+            }
+        }
+        
+        if(userRequest.valid){
+
+            // write
+            if(userRequest.memoryOperationType){
+                //we need to get the tag and direct
+                userRequest.address
+                //the first 59 bits is tag
+                //the last  5 bits is direct
+
+                userRequest.data
+            }
+            // read
+            else {
+
+            }   
+        }
+    }
+
+    control{
+
+    }
+
+}
+

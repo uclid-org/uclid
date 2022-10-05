@@ -1,0 +1,14 @@
+//normal record
+module main {
+  type t = record {
+    x1 : integer
+  };
+  var x2 : t;
+
+  procedure foo()
+    modifies x2;
+  {
+    if (x2.x1 == x2.x1) {
+    }
+  }
+}

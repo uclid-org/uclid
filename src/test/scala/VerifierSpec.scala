@@ -758,12 +758,12 @@ class PrintCexSpec extends AnyFlatSpec {
     val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-records-1.ucl"))
     val str0 = ((json \ "property__trivial__0" \ "trace")(0) \ "cache1")(0)
     str0 match {
-      case JString(s) => assert(s.contains("update-field _field_value"))
+      case JString(s) => assert(s.contains("update-field _field__rec_valid"))
       case _ => assert(false)
     }
     val str1 = ((json \ "property__trivial__1" \ "trace")(1) \ "cache1")(0)
     str1 match {
-      case JString(s) => assert(s.equals("const_record(valid := false, value := 0)"))
+      case JString(s) => assert(s.equals("const_record(_rec_valid := false, _rec_value := 0)"))
       case _ => assert(false)
     }
   }
@@ -771,12 +771,12 @@ class PrintCexSpec extends AnyFlatSpec {
     val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-records-2.ucl"))
     val str0 = ((json \ "property__trivial__1" \ "trace")(0) \ "cache1")(0)
     str0 match {
-      case JString(s) => assert(s.contains("update-field _field_value")) 
+      case JString(s) => assert(s.contains("update-field _field__rec_value")) 
       case _ => assert(false)
     }
     val str1 = ((json \ "property__trivial__1" \ "trace")(1) \ "cache1")(0)
     str1 match {
-      case JString(s) => assert(s.equals("const_record(valid := false, value := const(0bv32, [bv4]bv32))"))
+      case JString(s) => assert(s.equals("const_record(_rec_valid := false, _rec_value := const(0bv32, [bv4]bv32))"))
       case _ => assert(false)
     }
   }
@@ -800,7 +800,7 @@ class PrintCexSpec extends AnyFlatSpec {
     val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-mixed-1.ucl"))
     val str0 = ((json \ "property__trivial__1" \ "trace")(1) \ "database")(0)
     str0 match {
-      case JString(s) => assert(s.equals("(const(const_record(uid := 2, color := false), [integer]utype_t))[2 -> const_record(uid := 3, color := false)]"))
+      case JString(s) => assert(s.equals("(const(const_record(_rec_uid := 2, _rec_color := false), [integer]utype_t))[2 -> const_record(_rec_uid := 3, _rec_color := false)]"))
       case _ => assert(false)
     }
   }
@@ -816,7 +816,7 @@ class PrintCexSpec extends AnyFlatSpec {
     val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-mixed-3.ucl"))
     val str0 = ((json \ "property__trivial__1" \ "trace")(1) \ "database")(0)
     str0 match {
-      case JString(s) => assert(s.equals("(const(const_record(uid := 2, color := RED), [integer]utype_t))[2 -> const_record(uid := 3, color := RED)]"))
+      case JString(s) => assert(s.equals("(const(const_record(_rec_uid := 2, _rec_color := RED), [integer]utype_t))[2 -> const_record(_rec_uid := 3, _rec_color := RED)]"))
       case _ => assert(false)
     }
   }
@@ -866,7 +866,33 @@ class PrintCexSpec extends AnyFlatSpec {
     }
   }  
 
+  "test-record-naming-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-1.ucl", 0)
+  }
   
+  "test-record-naming-2.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-2.ucl", 0)
+  }
+
+  "test-record-naming-3.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+  }
+  
+  "test-record-naming-4.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+  }
+  "test-record-naming-5.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+  }
+  "test-record-naming-6.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+  }
+  "test-record-naming-7.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+  }
+  "test-record-naming-8.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+  }
 }
 class ModuleConcatSpec extends AnyFlatSpec {
   "test-concat-modules-w-init-2-fab.ucl" should "verify all assertions." in {
@@ -880,3 +906,4 @@ class ModuleConcatSpec extends AnyFlatSpec {
     ), 2)
   }
 }
+
