@@ -259,22 +259,23 @@ class SymbolicSimulator (module : Module) {
           // do the LTL properties
             assertionTree.startVerificationScope()
             var simulationDone=false;
-            // we do LTL properties
+
+            // do LTL properties
             if(hasLTLprop(module.properties))
             {
               prove(true, hasHyperInvariant(module.properties), cmd)
               simulationDone=true;
             }
 
-            // and nonLTL globalproperties e.g., invariants
+            // do nonLTL globalproperties e.g., invariants
             if(hasNonLTLprop(module.properties))
             {
               prove(false, hasHyperInvariant(module.properties), cmd) 
               simulationDone=true;
             }
             
-            // but even if we didn't have LLT or nonLTL properties, we might still have
-            // inline assertions, so we should still run the symbolic simulator
+            // but even if we didn't have LTL or nonLTL global properties, we might still have
+            // inline assertions, so we must run the symbolic simulator
             // to check those
             if(!simulationDone)
               prove(false, hasHyperInvariant(module.properties), cmd) 
