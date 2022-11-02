@@ -564,6 +564,9 @@ class ModuleVerifSpec extends AnyFlatSpec {
   "test-macro-4.ucl" should "fail to verify 1 assertion." in {
     VerifierSpec.expectedFails("./test/test-macro-4.ucl", 1)
   }
+  "test-bmc-4.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-bmc-4.ucl", 1)
+  }
 }
 class LTLVerifSpec extends AnyFlatSpec {
   "test-history-1.ucl" should "verify all assertions." in {
