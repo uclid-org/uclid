@@ -1,0 +1,85 @@
+module main {
+
+    type userRequest_t = record {
+        valid: boolean,
+        memoryOperationType: boolean,
+        address: bv64,
+        data: bv64
+    };
+
+    type osRequest_t = record{
+        valid: boolean,
+        new: boolean,
+        domain_id: bv8,
+        hitmap: bv8,  
+        fillmap: bv8
+    };
+
+    type userResponse_t = record{
+        valid: boolean,
+        memoryOperationType: boolean,
+        address: bv64, // 64 bits address
+        data: bv64
+    };
+
+    //input:
+    input userRequest: userRequest_t;
+    input osRequest: osRequest_t;
+    input memData: bv64;
+
+    //output:
+    output userResponse : userResponse_t;
+
+    // but we support varbits slice
+    var cache_data: [bv8] bv64;  // this 8-way * 32-direction direct-mapped cache
+    var cache_tag: [bv8] bv59;
+    
+	var metadata: [bv5]bv8;
+
+    var domain_id: bv8;
+    var policy_fillmap: bv8;
+    var policy_hitmap: bv8;
+    
+    //this part is virtual data
+    var v_plru_mask: [bv5]bv8;
+    var v_plru_policy: [bv5]bv8;
+    var v_replacement_policy: [bv5]bv8;
+    var v_tag: bv59;
+
+   
+    init {
+        
+    }
+
+	next {
+
+        if(osRequest.valid){
+            //if a new domain is coming
+            if(osRequest.new){
+                domain_id' = osRequest.domain_id;
+                policy_fillmap' = osRequest.fillmap;
+                policy_hitmap' = osRequest.hitmap;
+
+            }
+        }
+        
+        if(userRequest.valid){
+
+            // write
+            if(userRequest.memoryOperationType){
+
+                //userRequest.data
+            }
+            // read
+            else {
+
+            }   
+        }
+    }
+
+    control{
+
+    }
+
+}
+
