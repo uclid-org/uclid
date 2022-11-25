@@ -1,1 +1,29 @@
-//record.record.record
+//var.record.record.record
+module main {
+  type t1 = record {
+    x : integer
+  };
+  type t2 = record{
+    x : t1
+  };
+  type t3 = record{
+    x : t2
+  };
+
+  var x : t3;
+
+  procedure foo()
+    modifies x;
+  {
+    x.x.x.x = 6;
+  }
+  
+  init{
+    
+  }
+  invariant MyCheck:(x.x.x.x != 8);
+  control {
+    check;
+    print_results;
+  }
+}

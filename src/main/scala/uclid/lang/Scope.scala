@@ -81,9 +81,6 @@ object Scope {
   case class VerifResultVar(vId : Identifier, cmd : GenericProofCommand) extends ReadOnlyNamedExpression(vId, UndefinedType())
 
   type IdentifierMap = Map[Identifier, NamedExpression]
-  //leiqi:
-  //So, we just add this to the end of the map?
-  //  
   def addToMap(map : Scope.IdentifierMap, expr: Scope.NamedExpression) : Scope.IdentifierMap = {
     map + (expr.id -> expr)
   }
@@ -183,9 +180,6 @@ case class AxiomEnvironment(axiom: lang.AxiomDecl) extends ExpressionEnvironment
     ExprDecorator.isHyperproperty(axiom.params)
   }
 }
-//Leiqi:
-//we may need to conside about the scope
-// inside the Scope. there is a lots of id
 case class Scope (
     map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], 
     cmd : Option[GenericProofCommand],
@@ -394,7 +388,6 @@ case class Scope (
     }
   }
   /** Add this field to a context. */
-  //leiqi: how about when we add a new
   def addSelectorField(id : Identifier) : Scope = {
     Scope(map + (id -> Scope.SelectorField(id)), module, procedure, cmd, environment, Some(this))
   }
@@ -413,16 +406,8 @@ case class Scope (
     }
     Scope(mapP, module, procedure, Some(command), environment, parent)
   }
-  
-  //Leiqi:
-  //So, this function cannot get back a correct type of x
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {
-    //leiqi: this is for testing
-    //print("we try to find the type of "+id+" and map of it is "+map.get(id)+"\n")
-    //we get the id's experssion and flatMap them
-    //print("After we flatMap them:"+Some())
-    //print(map+"\n")
     map.get(id).flatMap((e) => Some(e.typ))
   }
 
