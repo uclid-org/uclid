@@ -253,10 +253,9 @@ object UclidMain {
     // gives types to the instances
     passManager.addPass(new InstanceModuleTypeRewriter())
     // Replace a.b with the appropriate external identifier
-  
-    passManager.addPass(new RewriteRecordSelect())
-
     passManager.addPass(new RewritePolymorphicSelect())
+    // Rename varibale name in Record
+    passManager.addPass(new RewriteRecordSelect())
     // Replaces constant lits with actual literal value
     passManager.addPass(new ConstantLitRewriter())
     // checks for invalid statements in macros and incorrect usage

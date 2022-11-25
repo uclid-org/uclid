@@ -180,6 +180,7 @@ case class AxiomEnvironment(axiom: lang.AxiomDecl) extends ExpressionEnvironment
     ExprDecorator.isHyperproperty(axiom.params)
   }
 }
+
 case class Scope (
     map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], 
     cmd : Option[GenericProofCommand],
@@ -257,8 +258,7 @@ case class Scope (
           Scope.addToMap(mapAcc, Scope.Instance(instD))
         case ProcedureDecl(id, sig, _, _, _, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
         case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
-        case StateVarsDecl(ids, typ) => 
-        ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.StateVar(id, typ)))
+        case StateVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.StateVar(id, typ)))
         case InputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.InputVar(id, typ)))
         case OutputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.OutputVar(id, typ)))
         case SharedVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.SharedVar(id, typ)))

@@ -362,7 +362,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
       }
     }
     def opAppType(opapp : OperatorApplication) : Type = {
-      //I am stuck here
       val argTypes = opapp.operands.map(typeOf(_, c + opapp))
       logger.debug("opAppType: {}", opapp.toString())
       opapp.op match {
@@ -441,6 +440,7 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
             case RealAddOp() | RealSubOp() | RealMulOp() | RealDivOp() | RealUnaryMinusOp() => new RealType()
           }
         }
+
         case bvOp : BVArgOperator => {
           checkTypeError(argTypes.size == bvOp.arity, "Operator '%s' must have exactly %d argument(s)".format(opapp.op.toString, bvOp.arity), opapp.pos, c.filename)
           checkTypeError(argTypes.forall(_.isInstanceOf[BitVectorType]), "Argument(s) to operator '" + opapp.op.toString + "' must be of type BitVector", opapp.pos, c.filename)
@@ -710,7 +710,6 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
           val knownId = c.typeOf(i).isDefined
           checkTypeError(knownId, "Unknown identifier: %s".format(i.name), i.pos, c.filename)
           (c.typeOf(i).get)
-
         case eId : ExternalIdentifier =>
           val mId = eId.moduleId
           val fId = eId.id
