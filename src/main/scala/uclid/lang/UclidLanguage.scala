@@ -911,10 +911,6 @@ case class Tuple(values: List[Expr]) extends Expr {
   override def isTemporal = false
 }
 
-//leiqi:
-//Here we define OperatorApplication
-//We need to do something on this:
-//
 sealed abstract class PossiblyTemporalExpr extends Expr
 //for symbols interpreted by underlying Theory solvers
 case class OperatorApplication(op: Operator, operands: List[Expr]) extends PossiblyTemporalExpr {

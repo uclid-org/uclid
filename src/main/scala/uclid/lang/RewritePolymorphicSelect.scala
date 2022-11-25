@@ -43,82 +43,44 @@ package lang
 
 
 class RewritePolymorphicSelectPass extends RewritePass {
-  lazy val print_flag = false
   def recordPrefix = "_rec_"
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
-    
-    if(print_flag) print("\n\n\nwe loop over opapp "+opapp+"\n")
-    if(print_flag) print("and its operant type is "+opapp.op+"\n")
+    UclidMain.printDetailedStats("Try to rewrite "+opapp+"\n")
     opapp.op match {
       //[linedata := 2022]
       case RecordUpdate(id,e)=>
         {
-          if(print_flag) print("we catch the record update operator\n")
-          val newOpApp = Some(
-            OperatorApplication(
-              RecordUpdate(Identifier(recordPrefix+id.toString),e),
-              List(opapp.operands(0))
-            )
-          )
-          if(print_flag) print("it is rewrited to "+newOpApp+"\n")
+          val newOpApp = Some(OperatorApplication(RecordUpdate(Identifier(recordPrefix+id.toString),e),List(opapp.operands(0))))
+          UclidMain.printDetailedStats("it is rewriten to "+opapp+"\n")
           newOpApp
         }
         // (__).(___)
       case PolymorphicSelect(id) =>
-        val expr = opapp.operands(0)
-        if(print_flag) print("So, the expr is "+expr+"\n")          
+        val expr = opapp.operands(0)    
         expr match {
           // x.x
           case arg : Identifier =>
-            if(print_flag) print("arg is an Identifier"+context.map.get(arg)+"\n")
             context.map.get(arg) match {
               case Some(Scope.ModuleDefinition(_)) =>
                 Some(ExternalIdentifier(arg, id))
-                //Some(ProcedureOutputArg(pn,rec1))
-              case Some(Scope.ProcedureInputArg(_,_)) | Some(Scope.StateVar(_,_)) | Some(Scope.ProcedureOutputArg(_,_))|
-              Some(Scope.BlockVar(_,_)) | Some(Scope.FunctionArg(_,_)) | Some(Scope.LambdaVar(_,_))|
-              Some(Scope.InputVar(_,_)) | Some(Scope.OutputVar(_,_)) | Some(Scope.SharedVar(_,_)) |
-              Some(Scope.ConstantVar(_,_))
-               => 
-                if(id.toString.startsWith("_") && id.toString.substring(1).forall(Character.isDigit))
-                  Some(opapp)
-                else{
+              case _ =>
+              {
+                if(isVarState(arg,id,context)){
                   val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
-                  if(print_flag) print("it is rewrited to "+newOpApp+"\n")
+                  UclidMain.printDetailedStats("it is rewriten to "+opapp+"\n")
                   newOpApp
                 }
-              case _ =>
-                Some(opapp)
+                else{
+                  Some(opapp)
+                }
+              }
+                
             }
           // (x.x).x
           case subopp: OperatorApplication =>{
-            // val subexpr = GetSuboppType(subopp,context)
-            // if(print_flag) print("we caculate the subexpr is "+ subexpr+" !!!!!!\n")
-            // subexpr match{
-            //   case arg : Identifier =>
-            //   if(print_flag) print("And we find subexpr's type is "+context.map.get(arg)+"\n")
-            //   context.map.get(arg) match {
-            //   case Some(Scope.ProcedureInputArg(_,_)) | Some(Scope.StateVar(_,_)) | Some(Scope.ProcedureOutputArg(_,_))|
-            //   Some(Scope.BlockVar(_,_)) | Some(Scope.FunctionArg(_,_)) | Some(Scope.LambdaVar(_,_))|
-            //   Some(Scope.InputVar(_,_)) | Some(Scope.OutputVar(_,_)) | Some(Scope.SharedVar(_,_)) |
-            //   Some(Scope.ConstantVar(_,_))
-            //    => 
-            //     if(id.toString.startsWith("_") && id.toString.substring(1).forall(Character.isDigit))
-            //       Some(opapp)
-            //     else{
-            //       val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
-            //       if(print_flag) print("it is rewrited to "+newOpApp+"\n")
-            //       newOpApp
-            //     }
-            //   case _ =>
-            //     if(print_flag) print("So, the context is "+context.map+"\n")
-            //     Some(opapp)
-            //   }
-            //   case _ => Some(opapp)
-            // }
             if(RewriterAble(subopp,context)){
               val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
-              if(print_flag) print("it is rewrited to "+newOpApp+"\n")
+              UclidMain.printDetailedStats("it is rewriten to "+opapp+"\n")
               newOpApp
             }
             else
@@ -128,12 +90,11 @@ class RewritePolymorphicSelectPass extends RewritePass {
           case ConstRecord(_) | ExternalIdentifier(_,_) |FuncApplication(_,_)=>
           {
             val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
-            if(print_flag) print("it is rewrited to "+newOpApp+"\n")
+            UclidMain.printDetailedStats("it is rewriten to "+opapp+"\n")
             newOpApp
           }
           //common.random().x
           case _ =>
-          if(print_flag) print("So, the subexpr is not included in rule: "+expr+"\n")
           Some(opapp)
         }
       case _ => Some(opapp)
@@ -145,107 +106,19 @@ class RewritePolymorphicSelectPass extends RewritePass {
       case PolymorphicSelect(id) =>
         val expr = opapp.operands(0)
         expr match {
-          case arg : Identifier =>
-            { 
-              if(print_flag) print("So, its type is: "+context.map.get(arg)+"\n")
-              context.map.get(arg) match 
-              {
-              case Some(Scope.ProcedureInputArg(_,_)) | Some(Scope.StateVar(_,_)) | Some(Scope.ProcedureOutputArg(_,_))|
-              Some(Scope.BlockVar(_,_)) | Some(Scope.FunctionArg(_,_)) | Some(Scope.LambdaVar(_,_))|
-              Some(Scope.InputVar(_,_)) | Some(Scope.OutputVar(_,_)) | Some(Scope.SharedVar(_,_)) |
-              Some(Scope.ConstantVar(_,_)) | Some(Scope.SelectorField(_))  => true
-              case Some(module:Scope.ModuleDefinition) => {
-                val match_var = Identifier(id.toString)
-                    lazy val vars : List[Identifier] =
-                    module.mod.decls.collect { case vars : StateVarsDecl => vars }.flatMap(v => v.ids.map(id => id))
-                    vars.contains(id)
-              }
-              case Some(Scope.Instance(instD)) => {
-                //we should do much more work on InstD
-                if(print_flag) print("So, we find this is a Instance? "+instD.moduleId+"\n")
-                context.map.get(instD.moduleId) match{
-                  case Some(model:Scope.ModuleDefinition) =>
-                  {
-                    //we are going to find if this is a declare inside model
-                    val match_var = Identifier(id.toString)
-
-                    //this part can be added in the future
-                    lazy val vars : List[Identifier] =
-                    model.mod.decls.collect { case vars : StateVarsDecl=> vars }.flatMap(v => v.ids.map(id => id))
-                    vars.contains(id)
-                  }
-                  case _ => false
-                }
-              }
-              case _ => false
-              }
-            }
+          case arg : Identifier => isVarState(arg,id,context)||isVarInModule(id,arg,context)
           case subopp: OperatorApplication =>{
             if(RewriterAble(subopp,context))
-            {
               true
-            }
             else
             {
-              val instance = GetSuboppType(subopp,context);
-              instance match{
-                case arg : Identifier =>
-                { 
-                  if(print_flag) print("So, its type is: "+context.map.get(arg)+"\n")
-                  context.map.get(arg) match 
-                  {
-                    case Some(Scope.ProcedureInputArg(_,_)) | Some(Scope.StateVar(_,_)) | Some(Scope.ProcedureOutputArg(_,_))|
-                    Some(Scope.BlockVar(_,_)) | Some(Scope.FunctionArg(_,_)) | Some(Scope.LambdaVar(_,_))|
-                    Some(Scope.InputVar(_,_)) | Some(Scope.OutputVar(_,_)) | Some(Scope.SharedVar(_,_)) |
-                    Some(Scope.ConstantVar(_,_)) | Some(Scope.SelectorField(_))  => true
-                    case Some(module:Scope.ModuleDefinition) => {
-                      val match_var = Identifier(id.toString)
-                      lazy val vars : List[Identifier] =
-                      module.mod.decls.collect { case vars : StateVarsDecl => vars }.flatMap(v => v.ids.map(id => id))
-                      vars.contains(id)
-                    }
-                    case Some(Scope.Instance(instD)) => {
-                  //we should do much more work on InstD
-                      if(print_flag) print("So, we find this is a Instance? "+instD.moduleId+"\n")
-                      context.map.get(instD.moduleId) match
-                      {
-                      case Some(model:Scope.ModuleDefinition) =>
-                      {
-                      //we are going to find if this is a declare inside model
-                      val match_var = Identifier(id.toString)
-
-                      //this part can be added in the future
-                      lazy val vars : List[Identifier] =
-                      model.mod.decls.collect { case vars : StateVarsDecl=> vars }.flatMap(v => v.ids.map(id => id))
-                      vars.contains(id)
-                      }
-                      case _ => false
-                      }
-                    }
-                    case _ => false
-                  }
-                }
+              val LastInstance = getLastInstance(subopp,context);
+              LastInstance match{
+                case mid : Identifier => isVarInModule(id,mid,context)
                 case _ => false
               }
             }
           }
-          case _ => false
-        }
-      case GetNextValueOp() =>  
-        val expr = opapp.operands(0)     
-        expr match {
-          case arg : Identifier =>
-            context.map.get(arg) match {
-              case Some(Scope.ModuleDefinition(_)) =>
-                false
-              case Some(Scope.Instance(t)) =>
-                false
-              case _ => 
-                true
-            }
-          case subopp: OperatorApplication =>
-            RewriterAble(subopp,context)
-          //here we should
           case _ => false
         }
       //such as:
@@ -253,14 +126,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
       case _ => {
         val expr = opapp.operands(0)
         expr match {
-          case arg : Identifier =>
-            context.map.get(arg) match {
-              case Some(Scope.ProcedureInputArg(_,_)) | Some(Scope.StateVar(_,_)) | Some(Scope.ProcedureOutputArg(_,_))|
-              Some(Scope.BlockVar(_,_)) | Some(Scope.FunctionArg(_,_)) | Some(Scope.LambdaVar(_,_))|
-              Some(Scope.InputVar(_,_)) | Some(Scope.OutputVar(_,_)) | Some(Scope.SharedVar(_,_)) |
-              Some(Scope.ConstantVar(_,_)) | Some(Scope.ModuleDefinition(_)) => true
-              case _ => false
-            }
+          case arg : Identifier => isVarState(arg,Identifier(""),context)
           case subopp: OperatorApplication =>
             RewriterAble(subopp,context)
           case _ => false
@@ -269,7 +135,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
     }
   }
 
-  def CheckIdDecl(decls:List[Decl],id:Identifier): Option[Identifier] ={
+  def checkIdDecl(decls:List[Decl],id:Identifier): Option[Identifier] ={
     decls match{
       case decl::otherdecls =>{
         decl match{
@@ -278,7 +144,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
             Some(inst.moduleId)
           }
           else{
-            CheckIdDecl(otherdecls,id)
+            checkIdDecl(otherdecls,id)
           }
           case vardecl : StateVarsDecl =>
           if(vardecl.ids.head == id){
@@ -286,17 +152,15 @@ class RewritePolymorphicSelectPass extends RewritePass {
           }
             
           else{
-            CheckIdDecl(otherdecls,id)
+            checkIdDecl(otherdecls,id)
           }
-          case _ => CheckIdDecl(otherdecls,id)
+          case _ => checkIdDecl(otherdecls,id)
         }
       }
       case List() => None
     }
   }
-  //we are considering the subopp's type
-  def GetSuboppType(opapp : OperatorApplication, context:Scope): Expr ={
-    if(print_flag) print("We are trying to get the type of "+opapp+"\n")
+  def getLastInstance(opapp : OperatorApplication, context:Scope): Expr ={
     opapp.op match {
       case PolymorphicSelect(id) =>{
         opapp.operands(0) match {
@@ -304,68 +168,57 @@ class RewritePolymorphicSelectPass extends RewritePass {
             { 
               context.map.get(arg) match 
               {
-              case Some(Scope.ProcedureInputArg(_,_)) | Some(Scope.StateVar(_,_)) | Some(Scope.ProcedureOutputArg(_,_))|
-              Some(Scope.BlockVar(_,_)) | Some(Scope.FunctionArg(_,_)) | Some(Scope.LambdaVar(_,_))|
-              Some(Scope.InputVar(_,_)) | Some(Scope.OutputVar(_,_)) | Some(Scope.SharedVar(_,_)) |
-              Some(Scope.ConstantVar(_,_)) | Some(Scope.SelectorField(_))  => arg
               case Some(module:Scope.ModuleDefinition) => {
-                CheckIdDecl(module.mod.decls,id) match{
+                checkIdDecl(module.mod.decls,id) match{
                     case Some(ident) => ident
                     case _ => opapp
                   }
               }
               case Some(Scope.Instance(instD)) => {
-                //we should do much more work on InstD
                 context.map.get(instD.moduleId) match{
                   case Some(module:Scope.ModuleDefinition) =>
                   {
                   
-                     CheckIdDecl(module.mod.decls,id) match{
+                     checkIdDecl(module.mod.decls,id) match{
                       case Some(ident) => ident
                       case _ => opapp
                     }
                   }
-                  case _ => arg
+                  case _ => opapp
                 }
               }
-              case _ => arg
+              case _ => opapp
               }
             }
           case subopp: OperatorApplication =>{
-            val expr = GetSuboppType(subopp,context);
+            val expr = getLastInstance(subopp,context);
             expr match{
               case arg : Identifier =>
             { 
               context.map.get(arg) match 
               {
-              case Some(Scope.ProcedureInputArg(_,_)) | Some(Scope.StateVar(_,_)) | Some(Scope.ProcedureOutputArg(_,_))|
-              Some(Scope.BlockVar(_,_)) | Some(Scope.FunctionArg(_,_)) | Some(Scope.LambdaVar(_,_))|
-              Some(Scope.InputVar(_,_)) | Some(Scope.OutputVar(_,_)) | Some(Scope.SharedVar(_,_)) |
-              Some(Scope.ConstantVar(_,_)) | Some(Scope.SelectorField(_))  => arg
-              case Some(module:Scope.ModuleDefinition) => {
-                  CheckIdDecl(module.mod.decls,id) match{
+                case Some(module:Scope.ModuleDefinition) => {
+                  checkIdDecl(module.mod.decls,id) match{
                     case Some(ident) => ident
                     case _ => opapp
                   }
-              }
-              case Some(Scope.Instance(instD)) => {
-                //we should do much more work on InstD
-                if(print_flag) print("So, we find this is a Instance? "+instD.moduleId+"\n")
-                context.map.get(instD.moduleId) match{
-                  case Some(module:Scope.ModuleDefinition) =>
-                  {
-                    CheckIdDecl(module.mod.decls,id) match{
-                      case Some(ident) => ident
-                      case _ => opapp
-                    }
-                  }
-                  case _ => arg
                 }
-              }
-              case _ => arg
+                case Some(Scope.Instance(instD)) => {
+                  context.map.get(instD.moduleId) match{
+                    case Some(module:Scope.ModuleDefinition) =>
+                    {
+                      checkIdDecl(module.mod.decls,id) match{
+                        case Some(ident) => ident
+                        case _ => opapp
+                      }
+                    }
+                    case _ => opapp
+                  }
+                }
+                case _ => opapp
               }
             }
-              case _ => expr
+              case _ => opapp
             }
           }
           case _ => opapp
@@ -375,21 +228,62 @@ class RewritePolymorphicSelectPass extends RewritePass {
         val expr = opapp.operands(0)     
         expr match {
           case subopp: OperatorApplication =>
-            GetSuboppType(subopp,context)
-          //here we should
-          case _ => expr
+            getLastInstance(subopp,context)
+          case _ => opapp
         }
       case _ => opapp
     }
   }
 
-
-  // this code properly identifies record types, based on their type in the context, on the LHS and then rewrites all the fields. 
+  def isVarInModule(id:Identifier,mid:Identifier,context:Scope): Boolean ={
+    val IdentifierType = context.map.get(mid)
+    IdentifierType match 
+    {
+      //if (module.var).,then it is okey
+      case Some(module:Scope.ModuleDefinition) => {
+           val match_var = Identifier(id.toString)
+           lazy val vars : List[Identifier] =
+          module.mod.decls.collect { case vars : StateVarsDecl => vars }.flatMap(v => v.ids.map(id => id))
+          vars.contains(id)
+        }
+        //if (instance.var).,then it is okey
+      case Some(Scope.Instance(instD)) => {
+          context.map.get(instD.moduleId) match{
+            case Some(model:Scope.ModuleDefinition) =>
+            {
+              val match_var = Identifier(id.toString)
+              lazy val vars : List[Identifier] =
+               model.mod.decls.collect { case vars : StateVarsDecl=> vars }.flatMap(v => v.ids.map(id => id))
+              vars.contains(id)
+             }
+             case _ => false
+           }
+         }
+      case _ => false        
+    }
+  }
+  
+  def isVarState(arg: Identifier,id:Identifier,context:Scope): Boolean = {
+    UclidMain.printDetailedStats("We are going to check "+arg+"\n")
+    UclidMain.printDetailedStats("its type is "+context.map.get(arg)+"\n")
+    context.map.get(arg) match{
+      case  Some(Scope.ProcedureInputArg(_,_)) | Some(Scope.StateVar(_,_)) | Some(Scope.ProcedureOutputArg(_,_))|
+            Some(Scope.BlockVar(_,_)) | Some(Scope.FunctionArg(_,_)) | Some(Scope.LambdaVar(_,_))|
+            Some(Scope.InputVar(_,_)) | Some(Scope.OutputVar(_,_)) | Some(Scope.SharedVar(_,_)) |
+            Some(Scope.ConstantVar(_,_)) | Some(Scope.SelectorField(_))
+              =>{
+                if(id.toString.startsWith("_") && id.toString.substring(1).forall(Character.isDigit))
+                  false
+                else
+                  true
+              }
+      case _ => false
+    }
+  }
+  
   override def rewriteLHS(lhs : Lhs, context : Scope) : Option[Lhs] = {
-    //print("we are going to rewriting the left hand side and its scope is "+context.map+"\n")
     lhs match {
       case LhsRecordSelect(id, fields) =>
-        if(print_flag) print("This is rewrited in the LHS\n")
         val newFields = fields.map{case i: Identifier => 
         if(i.toString.startsWith("_") && i.toString.substring(1).forall(Character.isDigit))
           Identifier(i.toString)
@@ -401,10 +295,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
   }
 
   override def rewriteConstRecordLit(cr:ConstRecord, context : Scope) : Option[ConstRecord]={
-    if(print_flag) print("we are trying to rewrite ConstRecord+\n")
-    if(print_flag) print("And the constRecord is "+cr+"\n")
     val new_field = cr.fieldvalues.map{case (id:Identifier,expr:Expr)=>(Identifier(recordPrefix+id.toString),expr)}
-    if(print_flag) print("After mapping, the result is "+new_field+"\n")
     Some(ConstRecord(new_field))
   }
 }

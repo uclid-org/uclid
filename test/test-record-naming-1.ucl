@@ -1,5 +1,4 @@
-//this is test for
-// x.x
+//var.record
 module main {
   type t = record {
     x : integer

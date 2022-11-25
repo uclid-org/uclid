@@ -253,8 +253,7 @@ object UclidMain {
     // gives types to the instances
     passManager.addPass(new InstanceModuleTypeRewriter())
     // Replace a.b with the appropriate external identifier
-    
-    //Leiqi: firstly rewrite all the
+  
     passManager.addPass(new RewriteRecordSelect())
 
     passManager.addPass(new RewritePolymorphicSelect())
