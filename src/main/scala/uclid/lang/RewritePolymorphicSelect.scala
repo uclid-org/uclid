@@ -47,18 +47,15 @@ class RewritePolymorphicSelectPass extends RewritePass {
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
     UclidMain.printDetailedStats("Try to rewrite "+opapp+"\n")
     opapp.op match {
-      //[linedata := 2022]
       case RecordUpdate(id,e)=>
         {
           val newOpApp = Some(OperatorApplication(RecordUpdate(Identifier(recordPrefix+id.toString),e),List(opapp.operands(0))))
           UclidMain.printDetailedStats("it is rewriten to "+opapp+"\n")
           newOpApp
         }
-        // (__).(___)
       case PolymorphicSelect(id) =>
         val expr = opapp.operands(0)    
         expr match {
-          // x.x
           case arg : Identifier =>
             context.map.get(arg) match {
               case Some(Scope.ModuleDefinition(_)) =>
@@ -76,9 +73,8 @@ class RewritePolymorphicSelectPass extends RewritePass {
               }
                 
             }
-          // (x.x).x
           case subopp: OperatorApplication =>{
-            if(RewriterAble(subopp,context)){
+            if(IsRewritable(subopp,context)){
               val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
               UclidMain.printDetailedStats("it is rewriten to "+opapp+"\n")
               newOpApp
@@ -86,14 +82,12 @@ class RewritePolymorphicSelectPass extends RewritePass {
             else
               Some(opapp)
           }
-          // ConstRecord{ ...}.x
           case ConstRecord(_) | ExternalIdentifier(_,_) |FuncApplication(_,_)=>
           {
             val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
             UclidMain.printDetailedStats("it is rewriten to "+opapp+"\n")
             newOpApp
           }
-          //common.random().x
           case _ =>
           Some(opapp)
         }
@@ -101,14 +95,14 @@ class RewritePolymorphicSelectPass extends RewritePass {
     }
   }
 
-  def RewriterAble(opapp : OperatorApplication, context:Scope): Boolean = {
+  def IsRewritable(opapp : OperatorApplication, context:Scope): Boolean = {
     opapp.op match {
       case PolymorphicSelect(id) =>
         val expr = opapp.operands(0)
         expr match {
           case arg : Identifier => isVarState(arg,id,context)||isVarInModule(id,arg,context)
           case subopp: OperatorApplication =>{
-            if(RewriterAble(subopp,context))
+            if(IsRewritable(subopp,context))
               true
             else
             {
@@ -121,20 +115,20 @@ class RewritePolymorphicSelectPass extends RewritePass {
           }
           case _ => false
         }
-      //such as:
-      // cache[0]
       case _ => {
         val expr = opapp.operands(0)
         expr match {
           case arg : Identifier => isVarState(arg,Identifier(""),context)
           case subopp: OperatorApplication =>
-            RewriterAble(subopp,context)
+            IsRewritable(subopp,context)
           case _ => false
         }  
       }
     }
   }
 
+  // input: list of Decl in a external module 
+  // output: return this identifier if it is a InstanceDecl, VarsDecl  
   def checkIdDecl(decls:List[Decl],id:Identifier): Option[Identifier] ={
     decls match{
       case decl::otherdecls =>{
@@ -160,6 +154,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
       case List() => None
     }
   }
+
   def getLastInstance(opapp : OperatorApplication, context:Scope): Expr ={
     opapp.op match {
       case PolymorphicSelect(id) =>{
@@ -239,14 +234,12 @@ class RewritePolymorphicSelectPass extends RewritePass {
     val IdentifierType = context.map.get(mid)
     IdentifierType match 
     {
-      //if (module.var).,then it is okey
       case Some(module:Scope.ModuleDefinition) => {
            val match_var = Identifier(id.toString)
            lazy val vars : List[Identifier] =
           module.mod.decls.collect { case vars : StateVarsDecl => vars }.flatMap(v => v.ids.map(id => id))
           vars.contains(id)
         }
-        //if (instance.var).,then it is okey
       case Some(Scope.Instance(instD)) => {
           context.map.get(instD.moduleId) match{
             case Some(model:Scope.ModuleDefinition) =>
@@ -254,6 +247,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
               val match_var = Identifier(id.toString)
               lazy val vars : List[Identifier] =
                model.mod.decls.collect { case vars : StateVarsDecl=> vars }.flatMap(v => v.ids.map(id => id))
+              //if instance.var, then variable is in module
               vars.contains(id)
              }
              case _ => false
@@ -302,80 +296,3 @@ class RewritePolymorphicSelectPass extends RewritePass {
 
 class RewritePolymorphicSelect extends ASTRewriter(
     "RewritePolymorphicSelect", new RewritePolymorphicSelectPass())
-
-
-class RewriteRecordSelectPass extends RewritePass {
-
-  def recordPrefix = "_rec_"
-
-  def hasRecPrefix(field: (Identifier,Type)) = field._1.toString.startsWith(recordPrefix)
-
-  override def rewriteRecordType(recordT : RecordType, context : Scope) : Option[RecordType] = { 
-    if(recordT.members.filter(hasRecPrefix).size!=recordT.members.size)
-    {
-      val newMembers = recordT.members.map{case (i: Identifier, t:Type) => (Identifier(recordPrefix+i.toString), t)}
-      //print("we have rewritten this record type " + recordT.toString + " to have members " + newMembers.toString)
-      Some(RecordType(newMembers))
-    }
-    else
-    {
-      UclidMain.printVerbose("we have not rewritten this record type " + recordT.toString )
-      Some(recordT)
-    }
-  }
-
-
-  def isTypeRecord(t: Type) : Boolean = {
-    if(!t.isRecord)
-    {
-      if(t.isArray)
-       t.asInstanceOf[ArrayType].outType.isRecord
-      else
-       false
-    }
-    else
-     true
-  }
-
-  def isRecord(id: Identifier, context: Scope): Boolean = {
-    context.map.get(id) match {
-      case Some(Scope.StateVar(i,t)) => isTypeRecord(t)
-      case Some(Scope.ProcedureInputArg(i,t)) => isTypeRecord(t)
-      case Some(Scope.ProcedureOutputArg(i,t)) => isTypeRecord(t)
-      case Some(Scope.BlockVar(i,t)) => isTypeRecord(t)
-      case Some(Scope.FunctionArg(i,t)) => isTypeRecord(t)
-      case Some(Scope.LambdaVar(i,t)) => isTypeRecord(t)
-      case Some(Scope.InputVar(i,t)) => isTypeRecord(t)
-      case Some(Scope.OutputVar(i,t)) => isTypeRecord(t)
-      case Some(Scope.SharedVar(i,t)) => isTypeRecord(t)
-      case Some(Scope.ConstantVar(i,t)) => isTypeRecord(t)
-      case _ =>  false
-    }
-  }
-
-  def rewriteRecordFields(selectid: Identifier, argid: Identifier, opapp: OperatorApplication, context: Scope) : Option[OperatorApplication] = {   
-    if(isRecord(argid, context))
-    {
-      UclidMain.printVerbose("rewriting record, the original identifier is " + selectid)
-      Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+selectid.toString)), List(opapp.operands(0))))
-    }
-    else
-     Some(opapp)
-  }
-
-  def getBaseIdentifier(expr: Expr) : Option[Identifier] = {
-    expr match{
-      case Identifier(_) => Some(expr.asInstanceOf[Identifier])
-      case ExternalIdentifier(mid, id) => Some(id)
-      case OperatorApplication(op, operands) => 
-        if(operands.size==1)
-          getBaseIdentifier(operands(0))
-        else
-          None
-      case _ => None
-    }
-  }
-}
-
-class RewriteRecordSelect extends ASTRewriter(
-    "RewriteRecordSelect", new RewriteRecordSelectPass())

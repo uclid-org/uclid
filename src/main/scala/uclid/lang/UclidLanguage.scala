@@ -1190,8 +1190,7 @@ case class RecordType(members : List[(Identifier,Type)]) extends ProductType {
       case tup : TupleType =>
           fields.size == tup.fieldTypes.size &&
           (fields.map(_._2) zip tup.fieldTypes).forall( tpair => tpair._1.matches(tpair._2))
-      case _ => 
-      this == t2
+      case _ => this == t2
     }
   }
 }
