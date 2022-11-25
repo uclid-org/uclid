@@ -127,11 +127,11 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
         else ListMap(array.toSeq.sortBy(_._1):_*) 
     sortedArray.foreach{ case (k,v) => {
       if (!v.contentEquals(bottom)) {
-        output += k.formatted(s"\n\t%${longest}s : $v")
+        output += s"\n\t$k : $v"
       }
     }}
 
-    return output + "-".formatted(s"\n\t%${longest}s : $bottom")
+    return output + s"\n\t- : $bottom"
   }
 
   def convertZ3ArrayJSON(initExpr : z3.Expr) : JValue = {
