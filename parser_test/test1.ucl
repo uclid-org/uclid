@@ -1,6 +1,0 @@
-module test{
-    type cache_data_t = record{
-        tag: [bv3][bv5] [bv6] boolean;//we have 8ways 32lines 59bits tag
-        data: [bv3][bv5] [bv6] boolean; //we have 8ways 32lines 64bits data?
-    };
-}
