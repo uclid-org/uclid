@@ -1038,6 +1038,13 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       E10 ~ OpMul ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on *",Some(e.pos),e.filename)} |
       E10 ~ OpDiv ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on /",Some(e.pos),e.filename)} |
       E10 ~ OpUDiv ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on /_u",Some(e.pos),e.filename) }
+    }
+
+    lazy val Error_E15: PackratParser[Expr] = positioned {
+        KwIf ~> ("(" ~> Expr <~ ")") ^^ {
+          case expr => throw new Utils.SyntaxError("Syntax Error after",Some(expr.pos),expr.filename)
+        } 
+
     }   
     
     lazy val Error_RecordType : PackratParser[lang.RecordType] = positioned {
@@ -1075,8 +1082,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val Error_BlkStmt: PackratParser[lang.BlockStmt] = positioned{
-      SingleBlock ~ rep (BlockVarsDecl) ~ rep ((Statement|Error_Statement)) ^^ {
-        case b ~ vars ~ stmts => throw new Utils.SyntaxError("unpaird '{' ",Some(b.pos),b.filename)
+      SingleBlock ~ rep (BlockVarsDecl) ~ rep ((Statement)) ^^ {
+        case b ~ vars ~ stmts => throw new Utils.SyntaxError("Syntax Error in the Block",Some(b.pos),b.filename)
       }
     }
 

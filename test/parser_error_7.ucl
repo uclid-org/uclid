@@ -1,0 +1,28 @@
+module main {
+    var counter:integer;
+
+    init{
+
+    }
+
+    next {
+
+        if (counter == 1) {
+            // first cycle input
+        } 
+        else (counter == 2) {
+            // second cycle input
+        }
+    }
+
+    property my_prop: (counter < 4);
+    
+    control {
+        v = unroll(5);
+        check;
+        print_results();
+        v.print_cex(
+            // specify certain variables e.g. dawg_i.hitmap
+        );
+    }
+}
