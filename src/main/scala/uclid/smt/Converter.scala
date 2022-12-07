@@ -405,8 +405,8 @@ object Converter {
 
   /** Convert a Uclid NonTerminal to SMT/SyGuS Nonterminal
    *
-   *  @nt Uclid Nonterminal to convert
-   *  @scope context used for type information
+   *  @param nt Uclid Nonterminal to convert
+   *  @param scope context used for type information
    */
   def nonTerminalToSyGuS2(nt: lang.NonTerminal, fTyp : lang.FunctionSig,  ntsIds : List[(lang.Identifier, lang.Type)], scope: lang.Scope): smt.NonTerminal = {
     smt.NonTerminal(nt.id.name, typeToSMT(nt.typ), nt.terms.map(grammarTermToSyGuS2(_, fTyp, ntsIds, scope)))
@@ -414,8 +414,8 @@ object Converter {
 
   /** Convert a Uclid GrammarTerm to SMT/SyGuS GrammarTerm
    *
-   *  @gt Uclid GrammarTerm to convert
-   *  @scope context used for type information
+   *  @param gt Uclid GrammarTerm to convert
+   *  @param scope context used for type information
    */
   def grammarTermToSyGuS2(gt: lang.GrammarTerm, fTyp : lang.FunctionSig, ntsIds : List[(lang.Identifier, lang.Type)],  scope: lang.Scope): smt.GrammarTerm = {
     def idToSMT(id : lang.Identifier, scope : lang.Scope, past : Int) : smt.Expr = {

@@ -136,8 +136,8 @@ class SymbolicSimulator (module : Module) {
 
   /** Helper that converts a scope grammar to GrammarSymbol
    *
-   *  @grammar the scope grammar to convert
-   *  @scope current context
+   *  grammar the scope grammar to convert
+   *  scope current context
    */
   def grammarToGrammarSymbol(gSym: lang.Identifier, typ : lang.FunctionSig, scope: lang.Scope): smt.GrammarSymbol = {
     val getgrammar = scope.get(gSym)
