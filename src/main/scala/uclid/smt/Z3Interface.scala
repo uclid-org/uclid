@@ -264,6 +264,7 @@ class Z3Interface() extends Context {
   lazy val intSort = ctx.mkIntSort()
   lazy val realSort = ctx.mkRealSort()
   val getBitVectorSort = new Memo[Int, z3.BitVecSort]((w : Int) => ctx.mkBitVecSort(w))
+  val getFltSort = new Memo[(Int, Int), z3.FPSort]( (e: (Int, Int)) => ctx.mkFPSort(e._1,e._2))
   val getTupleSort = new Memo[List[Type], z3.TupleSort]((types : List[Type]) => {
     ctx.mkTupleSort(
         getTupleName(), getTupleFieldNames(types.size),
@@ -309,6 +310,7 @@ class Z3Interface() extends Context {
       case IntType              => intSort
       case RealType             => realSort
       case BitVectorType(w)     => getBitVectorSort(w)
+      case FltType(e,s)         => getFltSort((e,s))
       case TupleType(ts)        => getTupleSort(ts)
       case RecordType(rs)       => getRecordSort(rs)
       case ArrayType(rs, d)     => getArraySort(rs, d)
@@ -362,6 +364,7 @@ class Z3Interface() extends Context {
       case IntType => VarSort(intSort)
       case RealType => VarSort(realSort)
       case BitVectorType(w) => VarSort(getBitVectorSort(w))
+      case FltType(e,s) => VarSort(getFltSort((e,s)))
       case TupleType(ts) => VarSort(getTupleSort(ts))
       case RecordType(rs) => VarSort(getRecordSort(rs))
       case MapType(ins, out) => MapSort(ins, out)
