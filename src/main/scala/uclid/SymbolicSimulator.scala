@@ -363,10 +363,7 @@ class SymbolicSimulator (module : Module) {
           case "print_cex" =>
             printCEX(proofResults, cmd.args, cmd.argObj)
           case "print_cex_json" =>
-            if (!config.smtSolver.isEmpty)
-              printCEXJSON(proofResults, cmd.args, cmd.argObj, config, solver)
-            else
-              UclidMain.printError("print_cex_json works only with SMTLIB2Interface, skipping this command.")
+            printCEXJSON(proofResults, cmd.args, cmd.argObj, config, solver)
           case "dump_cex_vcds" =>
             dumpCEXVCDFiles(proofResults)
           case "print_module" =>
