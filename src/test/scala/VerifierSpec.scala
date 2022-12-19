@@ -183,6 +183,9 @@ class BasicVerifierSpec extends AnyFlatSpec {
   "test-record-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-1.ucl", 0)
   }
+  "test-record-array.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-array-record.ucl", 0)
+  }
   "test-record-update-op-1.ucl" should "fail to verify 1 assertion." in {
     VerifierSpec.expectedFails("./test/test-record-update-op-1.ucl", 1)
   }
