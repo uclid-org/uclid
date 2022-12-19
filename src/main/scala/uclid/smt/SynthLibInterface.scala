@@ -42,7 +42,28 @@ package smt
 
 import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.mutable.{Set => MutableSet}
+
 import com.typesafe.scalalogging.Logger
+
+class SYNTLIBModel(stringModel : String) extends SMTLIB2Model(stringModel) {
+
+  def stripPrefix(s : String) : String = {
+    if (s.startsWith("synth_")) {
+      s.substring(6)
+    } else {
+      s
+    }
+  }
+
+  def SynthFunToString(f: lang.DefineDecl) : String = {
+    "define %s %s = %s;".format(stripPrefix(f.id.toString), f.sig.toString, f.expr.toString)
+  }
+
+  def printAllFunctions() : Unit = {
+    modelUclid.functions.foreach(fun => UclidMain.println(SynthFunToString(fun._1.asInstanceOf[lang.DefineDecl]) + "\n"))
+  }
+}
+
 
 class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLIB2Interface(args) {
   val synthliblogger = Logger(classOf[SynthLibInterface])
@@ -232,8 +253,10 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   }
 
   def getModel(str : String) : Option[Model] = {
-    UclidMain.printStatus(str)
-    None
+    UclidMain.printResult("\nSYNTHESIS RESULT:\n")
+    val model = new SYNTLIBModel(str)
+    model.printAllFunctions()
+    Some(model)
   }
 
   override def finish() {
@@ -262,3 +285,4 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     "(set-logic ALL)\n" + query
   }
 }
+
