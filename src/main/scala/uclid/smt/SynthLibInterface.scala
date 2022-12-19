@@ -222,7 +222,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   }
 
   override def checkSynth() : SolverResult = {
-    val query = toString()
+    val query = queryString()
     UclidMain.printStats(f"Starting solver")
     val start = System.nanoTime()
     writeCommand(query)
@@ -275,14 +275,19 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
     astack = astack.tail
   }
 
-  override def toString() : String = {
+  def queryString(): String = {
     val aexp = "(or " + total.mkString("\t\n") + ")"
     val query = if (sygusSyntax) {
-      synthDeclCommands + "\n" + defineDecls + "\n" + oracleDecls +"\n" + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
+      defineDecls + "\n" + oracleDecls +"\n" + out + "(constraint (not " + aexp +"))\n(check-synth)\n"
     } else {
       out + "(assert " + aexp +")\n(check-sat)\n"
     }
-    "(set-logic ALL)\n" + query
+    query
+
+  }
+
+  override def toString() : String = {
+    "(set-logic ALL)\n" + synthDeclCommands + "\n" + queryString()
   }
 }
 
