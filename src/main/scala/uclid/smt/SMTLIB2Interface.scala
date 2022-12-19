@@ -63,6 +63,7 @@ trait SMTLIB2Base {
   var stack : List[(VarSet, LetMap, MutableSet[EnumLit])] = List.empty
   var typeMap : SynonymMap = SynonymMap.empty
   var disableLetify : Boolean;
+  var firstCommand: Boolean = true;
 
 
   var counterId = 0
@@ -454,6 +455,12 @@ class SMTLIB2Interface(args: List[String], var disableLetify: Boolean=false) ext
 
 
   def writeCommand(str : String) {
+    if(firstCommand)
+    {
+      firstCommand = false
+      solverProcess.writeInput("(set-logic ALL)\n")
+    }
+
     solverProcess.writeInput(str + "\n")
   }
 
