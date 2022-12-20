@@ -1184,12 +1184,21 @@ class SymbolicSimulator (module : Module) {
     val failCount = assertionResults.count((p) => labelMatches(p.assert) && p.result.isFalse)
     val undetCount = assertionResults.count((p) => labelMatches(p.assert) && p.result.isUndefined)
 
-    if(!config.smtFileGeneration.isEmpty)
+    if(!config.smtFileGeneration.isEmpty && config.synthesizer.isEmpty)
     {
       UclidMain.printStatus("Printed SMTlib file(s) for %d assertions".format(undetCount))
       return
     }
+    else if(!config.synthesizer.isEmpty && !config.smtFileGeneration.isEmpty)
+    {
+      UclidMain.printStatus("Printed synthesis file for %d assertions".format(undetCount))
+      return
+    }
 
+    // synthesis results are printed from inside the SynthLibInterface
+    if(!config.synthesizer.isEmpty)
+      return
+    
     Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
     UclidMain.printResult("%d assertions passed.".format(passCount))
     UclidMain.printResult("%d assertions failed.".format(failCount))
