@@ -150,7 +150,7 @@ class SynthesisSpec extends AnyFlatSpec {
     SynthesisSpec.expectedFails("./test/test-synthesis-grammar-7.ucl", 0)
   }
   "test-synthesis-grammar-8.ucl" should "return unknown." in {
-    SynthesisSpec.expectedFails("./test/test-synthesis-grammar-8.ucl", 0)
+    SynthesisSpec.expectedFails("./test/test-synthesis-grammar-8.ucl", 1)
   }
   "test-synthesis-grammar-9.ucl" should "not execute correctly." in {
     try {
