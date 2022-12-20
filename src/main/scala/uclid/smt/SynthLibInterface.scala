@@ -235,7 +235,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
           if (str.contains("unsat") || str.startsWith("(")) {
              SolverResult(Some(true), getModel(str))
           } else if (str.contains("sat") || str.contains("unknown") || str.contains("fail")){
-            UclidMain.printResult(str);
+            UclidMain.printResult("SYNTHESIS RESULT: UNKNOWN or NO SOLUTION");
             SolverResult(Some(false), None)
           } else {
             throw new Utils.AssertionError("Unexpected result from SMT solver: " + str.toString())
