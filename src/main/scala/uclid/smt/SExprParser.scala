@@ -194,6 +194,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val OpITE = "ite"
   lazy val OpImpl = "=>"
   lazy val OpEq = "="
+  lazy val OpEnumEq = "is"
   lazy val OpIntGT = ">"
   lazy val OpIntLT = "<"
   lazy val OpIntGE = ">="
@@ -265,7 +266,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       
       // For UCLID
       KwFalse,  KwTrue, KwModel, KwInt, KwBool, KwBV, KwArray, KwLambda,
-      OpAnd, OpOr, OpNot, OpITE, OpImpl, OpEq, OpIntGE, OpIntGT, OpIntLT,
+      OpAnd, OpOr, OpNot, OpITE, OpImpl, OpEq, OpIntGE, OpIntGT, OpIntLT, OpEnumEq,
       OpIntLE, OpIntAdd, OpIntSub, OpIntMul, OpBVAdd, OpBVSub, OpBVMul, OpBVNeg, 
       OpBVAnd, OpBVOr, OpBVXor, OpBVNot, OpBVUrem, OpBVSrem, OpBVGT, OpBVGTU, 
       OpBVGE, OpBVGEU, OpBVLT, OpBVLTU, OpBVLE, OpBVLEU, OpConcat, OpArraySelect, OpArrayStore
@@ -430,6 +431,12 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       case array ~ indices ~ value => (
         smt.ArrayStoreOperation(array._1, List(indices._1), value._1),
         joinWithSpace(OpArrayStore, array._2, indices._2, value._2)
+      )
+    } |
+    "(" ~ "(" ~ KwUS ~ OpEnumEq ~> Expr ~ ")" ~ Expr <~ ")" ^^ { 
+      case enum1 ~ ")" ~ enum2 => (
+        smt.OperatorApplication(smt.EqualityOp, List(enum1._1, enum2._1)),
+        joinWithSpace(OpEnumEq, enum1._2, enum2._2)
       )
     }
 
@@ -606,6 +613,12 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
       case array ~ indices ~ value => (
         lang.OperatorApplication(lang.ArrayUpdate(List(indices._1), value._1), List(array._1)),
         joinWithSpace(OpArrayStore, array._2, indices._2, value._2)
+      )
+    } | 
+    "(" ~ "(" ~ KwUS ~ OpEnumEq ~> UclidExpr ~ ")" ~ UclidExpr <~ ")" ^^ { 
+      case enum1 ~ ")" ~ enum2 => (
+        lang.OperatorApplication(lang.EqualityOp(), List(enum1._1, enum2._1)),
+        joinWithSpace(OpEnumEq, enum1._2, enum2._2)
       )
     }
 
