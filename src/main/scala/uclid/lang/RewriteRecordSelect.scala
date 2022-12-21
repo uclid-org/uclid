@@ -15,7 +15,7 @@ class RewriteRecordSelectPass extends RewritePass {
     }
     else
     {
-      UclidMain.printVerbose("we have not rewritten this record type " + recordT.toString )
+      UclidMain.printDebugRewriteRecord("we have not rewritten this record type " + recordT.toString )
       Some(recordT)
     }
   }

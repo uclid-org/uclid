@@ -56,6 +56,8 @@ object UclidMain {
 
   var mainVerbosity: Int = 1;
 
+  var debugReWriteRecord: Boolean = false;
+
   def main(args: Array[String]) {
     parseOptions(args) match {
       case None =>
@@ -605,5 +607,10 @@ object UclidMain {
     } else {
       Console.println(str)
     }
+  }
+
+  def printDebugRewriteRecord(str: String){
+    if(debugReWriteRecord)
+      println(str)
   }
 }
