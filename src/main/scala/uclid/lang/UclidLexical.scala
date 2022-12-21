@@ -98,6 +98,12 @@ trait UclidTokens extends Tokens {
  *  We can't subclass StdLexical because it uses StdToken while we have more interesting tokens (UclidTokens).
  */
 
+ //TODO_leiqi: add line in here to parse float lit and float type lit!
+//finish!
+//when we make tokens, we does not care about the type of 3.5
+//like 3.5double 3.5float 3.5half
+//those can be seem as floatlist + floatType
+//we can do this in Parser, which can make the code much readable
 class UclidLexical extends Lexical with UclidTokens with Positional {
   
   override def token: Parser[Token] =
