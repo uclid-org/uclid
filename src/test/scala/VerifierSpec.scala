@@ -828,7 +828,6 @@ class PrintCexSpec extends AnyFlatSpec {
       case _ => assert(false)
     }
   }
-  
   "test-sexpr-uclid-lang-uninterp-type-2.ucl" should "generate UclidLang JSON cex" in {
     val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-uninterp-type-2.ucl"))
     val str0 = ((json \ "property__a_equal_b__0" \ "trace")(0) \ "a")(0)
@@ -842,7 +841,6 @@ class PrintCexSpec extends AnyFlatSpec {
       case _ => assert(false)
     }
   }
-  
   "test-sexpr-uclid-lang-uninterp-type-3.ucl" should "generate UclidLang JSON cex" in {
     val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-uninterp-type-3.ucl"))
     val str0 = ((json \ "property__trivial__0" \ "trace")(0) \ "database_1")(0)
@@ -856,7 +854,6 @@ class PrintCexSpec extends AnyFlatSpec {
        case _ => assert(false)
     }
   }
-  
   "test-sexpr-uclid-lang-uninterp-type-4.ucl" should "generate UclidLang JSON cex" in {
     val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-uninterp-type-4.ucl"))
     val str0 = ((json \ "property__graph__0" \ "trace")(0) \ "map")(0)
@@ -865,39 +862,51 @@ class PrintCexSpec extends AnyFlatSpec {
       case _ => assert(false)
     }
   }  
-
   "test-record-naming-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-naming-1.ucl", 0)
   }
-  
   "test-record-naming-2.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-naming-2.ucl", 0)
   }
-
   "test-record-naming-3.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
-  }
-  
+  } 
   "test-record-naming-4.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+    VerifierSpec.expectedFails("./test/test-record-naming-4.ucl", 0)
   }
   "test-record-naming-5.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+    VerifierSpec.expectedFails("./test/test-record-naming-5.ucl", 0)
   }
   "test-record-naming-6.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+    VerifierSpec.expectedFails("./test/test-record-naming-6.ucl", 0)
   }
   "test-record-naming-7.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+    VerifierSpec.expectedFails("./test/test-record-naming-7.ucl", 0)
   }
   "test-record-naming-8.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+    VerifierSpec.expectedFails("./test/test-record-naming-8.ucl", 0)
   }
   "test-record-naming-9.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+    VerifierSpec.expectedFails("./test/test-record-naming-9.ucl", 0)
   }
-  "test-record-naming-10.ucl" should "verify successfully." in {
-    VerifierSpec.expectedFails("./test/test-record-naming-3.ucl", 0)
+  "test-record-naming-10.ucl" should "fail to verify assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-10.ucl", 6)
+  }
+  "test-record-naming-11.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-record-naming-11.ucl"), lang.Identifier("main"))
+      assert (false);
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 1)
+    }
+  }
+  "test-record-naming-12.ucl" should "fail to verify assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-12.ucl", 1)
+  }
+  "test-record-naming-13.ucl" should "fail to verify assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-13.ucl", 5)
   }
 }
 class ModuleConcatSpec extends AnyFlatSpec {

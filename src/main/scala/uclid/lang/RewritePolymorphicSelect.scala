@@ -50,7 +50,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
       case RecordUpdate(id,e)=>
         {
           val newOpApp = Some(OperatorApplication(RecordUpdate(Identifier(recordPrefix+id.toString),e),List(opapp.operands(0))))
-          UclidMain.printDebugRewriteRecord("it is rewriten to "+opapp+"\n")
+          UclidMain.printDebugRewriteRecord("it is rewriten to "+newOpApp+"\n")
           newOpApp
         }
       case PolymorphicSelect(id) =>
@@ -64,7 +64,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
               {
                 if(isVarState(arg,id,context)){
                   val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
-                  UclidMain.printDebugRewriteRecord("it is rewriten to "+opapp+"\n")
+                  UclidMain.printDebugRewriteRecord("it is rewriten to "+newOpApp+"\n")
                   newOpApp
                 }
                 else{
@@ -76,7 +76,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
           case subopp: OperatorApplication =>{
             if(IsRewritable(subopp,context)){
               val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
-              UclidMain.printDebugRewriteRecord("it is rewriten to "+opapp+"\n")
+              UclidMain.printDebugRewriteRecord("it is rewriten to "+newOpApp+"\n")
               newOpApp
             }
             else
@@ -85,7 +85,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
           case ConstRecord(_) | ExternalIdentifier(_,_) |FuncApplication(_,_)=>
           {
             val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
-            UclidMain.printDebugRewriteRecord("it is rewriten to "+opapp+"\n")
+            UclidMain.printDebugRewriteRecord("it is rewriten to "+newOpApp+"\n")
             newOpApp
           }
           case _ =>

@@ -17,12 +17,12 @@ module sub {
 
 module main {
   
-  instance s : sub();
+  instance s1 : sub();
   
   procedure mod_sub() 
-    modifies s;
+    modifies s1;
   {
-    call s.mod(false);
+    call s1.mod(false);
   }
 
     init {
@@ -31,7 +31,7 @@ module main {
     next {
 
     }
-  invariant myCheck: (s.b.s != 1000);
+  invariant myCheck: (s1.b.s != 1000);
 
   control {
     verif_mod_sub = verify(mod_sub);

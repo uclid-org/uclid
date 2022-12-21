@@ -26,7 +26,7 @@ module main
   var a, b, q : integer;
   var inited : boolean;
   
-  instance incr1 : incr(x : (a'), y: (b));
+  instance i1 : incr(x : (a'), y: (b));
   
   init {
     a = 0;
@@ -37,13 +37,13 @@ module main
   next {
     inited' = true;
     q' = b' + 1;
-    next (incr1);
+    next (i1);
     a' = a + 1;
   }
 
   invariant b_prop: inited ==> (b > 1 && b > a && q > b);
-  invariant testMy1: (incr1.value1.incr1.incr1 != 10);
-  invariant testMy2: (incr1.value2!=5);
+  invariant testMy1: (i1.value1.incr1.incr1 != 10);
+  invariant testMy2: (i1.value2!=5);
   control {
     // print_module;
     v = unroll(5);
