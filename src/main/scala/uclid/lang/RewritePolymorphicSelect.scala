@@ -45,12 +45,12 @@ package lang
 class RewritePolymorphicSelectPass extends RewritePass {
   def recordPrefix = "_rec_"
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
-    UclidMain.printDetailedStats("Try to rewrite "+opapp+"\n")
+    UclidMain.printDebugRewriteRecord("Try to rewrite "+opapp+"\n")
     opapp.op match {
       case RecordUpdate(id,e)=>
         {
           val newOpApp = Some(OperatorApplication(RecordUpdate(Identifier(recordPrefix+id.toString),e),List(opapp.operands(0))))
-          UclidMain.printDetailedStats("it is rewriten to "+opapp+"\n")
+          UclidMain.printDebugRewriteRecord("it is rewriten to "+opapp+"\n")
           newOpApp
         }
       case PolymorphicSelect(id) =>
@@ -64,7 +64,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
               {
                 if(isVarState(arg,id,context)){
                   val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
-                  UclidMain.printDetailedStats("it is rewriten to "+opapp+"\n")
+                  UclidMain.printDebugRewriteRecord("it is rewriten to "+opapp+"\n")
                   newOpApp
                 }
                 else{
@@ -76,7 +76,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
           case subopp: OperatorApplication =>{
             if(IsRewritable(subopp,context)){
               val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
-              UclidMain.printDetailedStats("it is rewriten to "+opapp+"\n")
+              UclidMain.printDebugRewriteRecord("it is rewriten to "+opapp+"\n")
               newOpApp
             }
             else
@@ -85,7 +85,7 @@ class RewritePolymorphicSelectPass extends RewritePass {
           case ConstRecord(_) | ExternalIdentifier(_,_) |FuncApplication(_,_)=>
           {
             val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
-            UclidMain.printDetailedStats("it is rewriten to "+opapp+"\n")
+            UclidMain.printDebugRewriteRecord("it is rewriten to "+opapp+"\n")
             newOpApp
           }
           case _ =>
@@ -258,8 +258,8 @@ class RewritePolymorphicSelectPass extends RewritePass {
   }
   
   def isVarState(arg: Identifier,id:Identifier,context:Scope): Boolean = {
-    UclidMain.printDetailedStats("We are going to check "+arg+"\n")
-    UclidMain.printDetailedStats("its type is "+context.map.get(arg)+"\n")
+    UclidMain.printDebugRewriteRecord("We are going to check "+arg+"\n")
+    UclidMain.printDebugRewriteRecord("its type is "+context.map.get(arg)+"\n")
     context.map.get(arg) match{
       case  Some(Scope.ProcedureInputArg(_,_)) | Some(Scope.StateVar(_,_)) | Some(Scope.ProcedureOutputArg(_,_))|
             Some(Scope.BlockVar(_,_)) | Some(Scope.FunctionArg(_,_)) | Some(Scope.LambdaVar(_,_))|
