@@ -54,7 +54,7 @@ module main {
   }
 
   procedure [noinline] update_a()
-    ensures(a == a+1);
+    ensures(a == old(a)+1);
     ensures(b == old(b));
     modifies a;
     modifies b;
