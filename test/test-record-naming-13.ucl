@@ -1,0 +1,36 @@
+module main {
+  // Part 1: System description.
+    type MyComplex = record{
+        realNum: real,
+        virtualNum: real
+    };
+
+    var realNum, virtualNum : MyComplex;
+
+    procedure caculateReal(num1:MyComplex,num2:MyComplex)
+    returns (result: MyComplex)
+    {
+        result.realNum = num1.realNum+num2.realNum;
+    }
+
+    init {
+        realNum = const_record(realNum := 0.0, virtualNum := 0.0);
+        virtualNum = const_record(realNum := 1.0, virtualNum := 1.0);
+    }
+    next {
+        //(realNum.realNum)' = virtualNum.realNum;
+        call (realNum') = caculateReal(realNum,virtualNum);
+        //(virtualNum.realNum)'= virtualNum.realNum + realNum.realNum;
+        //(virtualNum.virtualNum)'=virtualNum.virtualNum + realNum.virtualNum;
+    }
+
+  // Part 2: System specification.
+    invariant a_le_b: realNum.realNum > virtualNum.realNum;
+    invariant a_le_b_2: realNum.virtualNum > virtualNum.virtualNum;
+
+    // Part 3: Proof script.
+    control {
+        v = bmc(2);
+        check;
+    }
+}

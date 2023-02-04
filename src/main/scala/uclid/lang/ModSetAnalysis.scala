@@ -60,8 +60,8 @@ class ModSetRewriterPass() extends RewritePass {
     }
 
     /** Returns the modified variables in a statement
-     *  @stmt The statement whose write set is being inferred.
-     *  @modSetMap The modifies set map inferred by the ModSetAnalysis pass. Should contain a map from procedures to thier inferred modifies sets.
+     *  @param stmt The statement whose write set is being inferred.
+     *  @param modSetMap The modifies set map inferred by the ModSetAnalysis pass. Should contain a map from procedures to thier inferred modifies sets.
      */
     def getStmtModSet(stmt: Statement, modSetMap: Map[Identifier, Set[ModifiableEntity]], varIdSet: Set[Identifier], locVarIdSet: Set[Identifier]): Set[ModifiableEntity] = stmt match {
       case BlockStmt(vars, stmts) => {

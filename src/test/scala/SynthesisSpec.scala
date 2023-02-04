@@ -77,12 +77,13 @@ class SynthesisSpec extends AnyFlatSpec {
   "test-synthesis-4.ucl" should "verify all assertions." in {
     SynthesisSpec.expectedFails("./test/test-synthesis-4.ucl", 0)
   }
-//   "test-synthesis-5.ucl" should "verify all assertions." in {
-//     SynthesisSpec.expectedFails("./test/test-synthesis-5.ucl", 0)
-//   }
+  "test-synthesis-5.ucl" should "verify all assertions." in {
+    SynthesisSpec.expectedFails("./test/test-synthesis-5.ucl", 0)
+  }
   "test-synthesis-6.ucl" should "verify all assertions." in {
     SynthesisSpec.expectedFails("./test/test-synthesis-6.ucl", 0)
   }
+  // commented out because the synthesis solver times out
   // "test-synthesis-7.ucl" should "verify all assertions." in {
   //   SynthesisSpec.expectedFails("./test/test-synthesis-7.ucl", 0)
   // }
@@ -150,7 +151,7 @@ class SynthesisSpec extends AnyFlatSpec {
     SynthesisSpec.expectedFails("./test/test-synthesis-grammar-7.ucl", 0)
   }
   "test-synthesis-grammar-8.ucl" should "return unknown." in {
-    SynthesisSpec.expectedFails("./test/test-synthesis-grammar-8.ucl", 0)
+    SynthesisSpec.expectedFails("./test/test-synthesis-grammar-8.ucl", 1)
   }
   "test-synthesis-grammar-9.ucl" should "not execute correctly." in {
     try {

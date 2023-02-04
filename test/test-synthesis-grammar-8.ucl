@@ -1,4 +1,4 @@
-// This test should return unknown
+// This test should return fail
 module main {
 
     type I = enum {a, b, c};

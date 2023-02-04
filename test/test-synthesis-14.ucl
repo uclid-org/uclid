@@ -12,7 +12,7 @@ module main {
     synthesis function * = synthfun.*;
 
     grammar zero_grammar (x : integer) : boolean = {
-        (start : integer) ::= x | (if (cond) then btype else btype);
+        (start : boolean) ::= (if (cond) then btype else btype);
         (cond : boolean) ::= (x == 0);
         (btype : boolean) ::= true | false;
     }

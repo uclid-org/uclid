@@ -1,0 +1,25 @@
+//records that contain tuples
+//varibale.const_record
+module main {
+
+    var cache : record {valid : boolean, cache : [bv4]bv32};
+    var cache_store : [bv4]bv32;
+
+    init {
+        cache = const_record(valid := true, cache := cache_store);
+    }
+
+    next {
+        havoc cache_store;
+        cache' = const_record(valid := true, cache := cache_store');
+    }
+
+    invariant trivial : cache.cache[0bv4] == cache_store[0bv4];
+
+    control {
+        v = induction;
+        check;
+        print_results;
+        v.print_cex(cache);
+    }
+}

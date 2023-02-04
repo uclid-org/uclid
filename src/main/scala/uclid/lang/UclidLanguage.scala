@@ -925,6 +925,8 @@ case class OperatorApplication(op: Operator, operands: List[Expr]) extends Possi
         operands(0).toString + "." + i.toString
       case SelectFromInstance(f) =>
         operands(0).toString + "." + f.toString
+      case ITEOp() =>
+        "if(" + operands(0).toString + ") then {" + operands(1).toString + "} else {" + operands(2).toString + "}"
       case ForallOp(_, _) | ExistsOp(_, _) | FiniteForallOp(_, _) | FiniteExistsOp(_, _) =>
         "(" + op.toString + operands(0).toString + ")"
       case _ =>

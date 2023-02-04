@@ -1,0 +1,43 @@
+//instance.varibale.record
+module sub {
+  var b : record{s: integer};
+  var a : integer;
+
+  procedure [inline] mod(flag : boolean) 
+    ensures(flag == false ==> a == old(a));
+    modifies a;
+  {
+    if (flag == true) {
+      a = 2;
+    }
+  }
+
+}
+
+
+module main {
+  
+  instance s1 : sub();
+  
+  procedure mod_sub() 
+    modifies s1;
+  {
+    call s1.mod(false);
+  }
+
+    init {
+    }
+
+    next {
+
+    }
+  invariant myCheck: (s1.b.s != 1000);
+
+  control {
+    verif_mod_sub = verify(mod_sub);
+    check;
+    print_module;
+    print_results;
+  }
+
+}

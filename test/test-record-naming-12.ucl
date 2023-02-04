@@ -1,0 +1,24 @@
+module main
+{
+  type num_t = record{
+    p1: boolean,
+    p2: integer
+  };
+  
+  var numbers : [integer]integer;
+  var p1, p2  :  num_t;
+
+  init {
+    assume( p1 == const_record(p1 := true, p2 := 10));
+    assume (p1 == p2);
+  }
+  next {
+    assert (numbers[p1.p2] != numbers[p2.p2]);
+  }
+
+  control {
+    unroll (1);
+    check;
+    print_results;
+  }
+}

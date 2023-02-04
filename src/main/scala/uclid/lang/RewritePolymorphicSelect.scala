@@ -40,21 +40,257 @@
 package uclid
 package lang
 
+
+
 class RewritePolymorphicSelectPass extends RewritePass {
+  def recordPrefix = "_rec_"
   override def rewriteOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
+    UclidMain.printDebugRewriteRecord("Try to rewrite "+opapp+"\n")
+    opapp.op match {
+      case RecordUpdate(id,e)=>
+        {
+          val newOpApp = Some(OperatorApplication(RecordUpdate(Identifier(recordPrefix+id.toString),e),List(opapp.operands(0))))
+          UclidMain.printDebugRewriteRecord("it is rewriten to "+newOpApp+"\n")
+          newOpApp
+        }
+      case PolymorphicSelect(id) =>
+        val expr = opapp.operands(0)    
+        expr match {
+          case arg : Identifier =>
+            context.map.get(arg) match {
+              case Some(Scope.ModuleDefinition(_)) =>
+                Some(ExternalIdentifier(arg, id))
+              case _ =>
+              {
+                if(isVarState(arg,id,context)){
+                  val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
+                  UclidMain.printDebugRewriteRecord("it is rewriten to "+newOpApp+"\n")
+                  newOpApp
+                }
+                else{
+                  Some(opapp)
+                }
+              }
+                
+            }
+          case subopp: OperatorApplication =>{
+            if(IsRewritable(subopp,context)){
+              val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
+              UclidMain.printDebugRewriteRecord("it is rewriten to "+newOpApp+"\n")
+              newOpApp
+            }
+            else
+              Some(opapp)
+          }
+          case ConstRecord(_) | ExternalIdentifier(_,_) |FuncApplication(_,_)=>
+          {
+            val newOpApp = Some(OperatorApplication(PolymorphicSelect(Identifier(recordPrefix+id.toString)), List(opapp.operands(0))))
+            UclidMain.printDebugRewriteRecord("it is rewriten to "+newOpApp+"\n")
+            newOpApp
+          }
+          case _ =>
+          Some(opapp)
+        }
+      case _ => Some(opapp)
+    }
+  }
+
+  def IsRewritable(opapp : OperatorApplication, context:Scope): Boolean = {
     opapp.op match {
       case PolymorphicSelect(id) =>
         val expr = opapp.operands(0)
         expr match {
-          case arg : Identifier =>
-            context.map.get(arg) match {
-              case Some(Scope.ModuleDefinition(_)) => Some(ExternalIdentifier(arg, id))
-              case _ => Some(opapp)
+          case arg : Identifier => isVarState(arg,id,context)||isVarInModule(id,arg,context)
+          case subopp: OperatorApplication =>{
+            if(IsRewritable(subopp,context))
+              true
+            else
+            {
+              val LastInstance = getLastInstance(subopp,context);
+              LastInstance match{
+                case mid : Identifier => isVarInModule(id,mid,context)
+                case _ => false
+              }
             }
-          case _ => Some(opapp)
+          }
+          case _ => false
         }
-      case _ => Some(opapp)
+      case _ => {
+        val expr = opapp.operands(0)
+        expr match {
+          case arg : Identifier => isVarState(arg,Identifier(""),context)
+          case subopp: OperatorApplication =>
+            IsRewritable(subopp,context)
+          case _ => false
+        }  
+      }
     }
+  }
+
+  // input: list of Decl in a external module 
+  // output: return this identifier if it is a InstanceDecl, VarsDecl  
+  def checkIdDecl(decls:List[Decl],id:Identifier): Option[Identifier] ={
+    decls match{
+      case decl::otherdecls =>{
+        decl match{
+          case inst : InstanceDecl =>
+          if(inst.instanceId == id){
+            Some(inst.moduleId)
+          }
+          else{
+            checkIdDecl(otherdecls,id)
+          }
+          case vardecl : StateVarsDecl =>
+          if(vardecl.ids.head == id){
+            Some(vardecl.ids.head)
+          }
+            
+          else{
+            checkIdDecl(otherdecls,id)
+          }
+          case _ => checkIdDecl(otherdecls,id)
+        }
+      }
+      case List() => None
+    }
+  }
+
+  def getLastInstance(opapp : OperatorApplication, context:Scope): Expr ={
+    opapp.op match {
+      case PolymorphicSelect(id) =>{
+        opapp.operands(0) match {
+          case arg : Identifier =>
+            { 
+              context.map.get(arg) match 
+              {
+              case Some(module:Scope.ModuleDefinition) => {
+                checkIdDecl(module.mod.decls,id) match{
+                    case Some(ident) => ident
+                    case _ => opapp
+                  }
+              }
+              case Some(Scope.Instance(instD)) => {
+                context.map.get(instD.moduleId) match{
+                  case Some(module:Scope.ModuleDefinition) =>
+                  {
+                  
+                     checkIdDecl(module.mod.decls,id) match{
+                      case Some(ident) => ident
+                      case _ => opapp
+                    }
+                  }
+                  case _ => opapp
+                }
+              }
+              case _ => opapp
+              }
+            }
+          case subopp: OperatorApplication =>{
+            val expr = getLastInstance(subopp,context);
+            expr match{
+              case arg : Identifier =>
+            { 
+              context.map.get(arg) match 
+              {
+                case Some(module:Scope.ModuleDefinition) => {
+                  checkIdDecl(module.mod.decls,id) match{
+                    case Some(ident) => ident
+                    case _ => opapp
+                  }
+                }
+                case Some(Scope.Instance(instD)) => {
+                  context.map.get(instD.moduleId) match{
+                    case Some(module:Scope.ModuleDefinition) =>
+                    {
+                      checkIdDecl(module.mod.decls,id) match{
+                        case Some(ident) => ident
+                        case _ => opapp
+                      }
+                    }
+                    case _ => opapp
+                  }
+                }
+                case _ => opapp
+              }
+            }
+              case _ => opapp
+            }
+          }
+          case _ => opapp
+        }
+      }
+      case GetNextValueOp() =>  
+        val expr = opapp.operands(0)     
+        expr match {
+          case subopp: OperatorApplication =>
+            getLastInstance(subopp,context)
+          case _ => opapp
+        }
+      case _ => opapp
+    }
+  }
+
+  def isVarInModule(id:Identifier,mid:Identifier,context:Scope): Boolean ={
+    val IdentifierType = context.map.get(mid)
+    IdentifierType match 
+    {
+      case Some(module:Scope.ModuleDefinition) => {
+           val match_var = Identifier(id.toString)
+           lazy val vars : List[Identifier] =
+          module.mod.decls.collect { case vars : StateVarsDecl => vars }.flatMap(v => v.ids.map(id => id))
+          vars.contains(id)
+        }
+      case Some(Scope.Instance(instD)) => {
+          context.map.get(instD.moduleId) match{
+            case Some(model:Scope.ModuleDefinition) =>
+            {
+              val match_var = Identifier(id.toString)
+              lazy val vars : List[Identifier] =
+               model.mod.decls.collect { case vars : StateVarsDecl=> vars }.flatMap(v => v.ids.map(id => id))
+              //if instance.var, then variable is in module
+              vars.contains(id)
+             }
+             case _ => false
+           }
+         }
+      case _ => false        
+    }
+  }
+  
+  def isVarState(arg: Identifier,id:Identifier,context:Scope): Boolean = {
+    UclidMain.printDebugRewriteRecord("We are going to check "+arg+"\n")
+    UclidMain.printDebugRewriteRecord("its type is "+context.map.get(arg)+"\n")
+    context.map.get(arg) match{
+      case  Some(Scope.ProcedureInputArg(_,_)) | Some(Scope.StateVar(_,_)) | Some(Scope.ProcedureOutputArg(_,_))|
+            Some(Scope.BlockVar(_,_)) | Some(Scope.FunctionArg(_,_)) | Some(Scope.LambdaVar(_,_))|
+            Some(Scope.InputVar(_,_)) | Some(Scope.OutputVar(_,_)) | Some(Scope.SharedVar(_,_)) |
+            Some(Scope.ConstantVar(_,_)) | Some(Scope.SelectorField(_))
+              =>{
+                if(id.toString.startsWith("_") && id.toString.substring(1).forall(Character.isDigit))
+                  false
+                else
+                  true
+              }
+      case _ => false
+    }
+  }
+  
+  override def rewriteLHS(lhs : Lhs, context : Scope) : Option[Lhs] = {
+    lhs match {
+      case LhsRecordSelect(id, fields) =>
+        val newFields = fields.map{case i: Identifier => 
+        if(i.toString.startsWith("_") && i.toString.substring(1).forall(Character.isDigit))
+          Identifier(i.toString)
+        else
+          Identifier(recordPrefix+i.toString)}
+        Some(LhsRecordSelect(id, newFields))          
+      case _ => Some(lhs)
+    }
+  }
+
+  override def rewriteConstRecordLit(cr:ConstRecord, context : Scope) : Option[ConstRecord]={
+    val new_field = cr.fieldvalues.map{case (id:Identifier,expr:Expr)=>(Identifier(recordPrefix+id.toString),expr)}
+    Some(ConstRecord(new_field))
   }
 }
 

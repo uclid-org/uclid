@@ -136,8 +136,8 @@ class SymbolicSimulator (module : Module) {
 
   /** Helper that converts a scope grammar to GrammarSymbol
    *
-   *  @grammar the scope grammar to convert
-   *  @scope current context
+   *  grammar the scope grammar to convert
+   *  scope current context
    */
   def grammarToGrammarSymbol(gSym: lang.Identifier, typ : lang.FunctionSig, scope: lang.Scope): smt.GrammarSymbol = {
     val getgrammar = scope.get(gSym)
@@ -258,12 +258,27 @@ class SymbolicSimulator (module : Module) {
           case "bmc" =>
           // do the LTL properties
             assertionTree.startVerificationScope()
+            var simulationDone=false;
 
-            if(hasNonLTLprop(module.properties))
-              prove(false, hasHyperInvariant(module.properties), cmd)
-
+            // do LTL properties
             if(hasLTLprop(module.properties))
+            {
               prove(true, hasHyperInvariant(module.properties), cmd)
+              simulationDone=true;
+            }
+
+            // do nonLTL globalproperties e.g., invariants
+            if(hasNonLTLprop(module.properties))
+            {
+              prove(false, hasHyperInvariant(module.properties), cmd) 
+              simulationDone=true;
+            }
+            
+            // but even if we didn't have LTL or nonLTL global properties, we might still have
+            // inline assertions, so we must run the symbolic simulator
+            // to check those
+            if(!simulationDone)
+              prove(false, hasHyperInvariant(module.properties), cmd) 
 
             check(solver, config, cmd);
             needToPrintResults=true
@@ -1169,12 +1184,21 @@ class SymbolicSimulator (module : Module) {
     val failCount = assertionResults.count((p) => labelMatches(p.assert) && p.result.isFalse)
     val undetCount = assertionResults.count((p) => labelMatches(p.assert) && p.result.isUndefined)
 
-    if(!config.smtFileGeneration.isEmpty)
+    if(!config.smtFileGeneration.isEmpty && config.synthesizer.isEmpty)
     {
       UclidMain.printStatus("Printed SMTlib file(s) for %d assertions".format(undetCount))
       return
     }
+    else if(!config.synthesizer.isEmpty && !config.smtFileGeneration.isEmpty)
+    {
+      UclidMain.printStatus("Printed synthesis file for %d assertions".format(undetCount))
+      return
+    }
 
+    // synthesis results are printed from inside the SynthLibInterface
+    if(!config.synthesizer.isEmpty)
+      return
+    
     Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
     UclidMain.printResult("%d assertions passed.".format(passCount))
     UclidMain.printResult("%d assertions failed.".format(failCount))

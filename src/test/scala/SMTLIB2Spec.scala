@@ -540,6 +540,9 @@ class SMTLIB2Spec extends AnyFlatSpec {
   "test-macro-4.ucl" should "fail to verify 1 assertion." in {
     SMTLIB2Spec.expectedFails("./test/test-macro-4.ucl", 1)
   }
+  "test-bmc-4.ucl" should "fail to verify 1 assertion." in {
+    SMTLIB2Spec.expectedFails("./test/test-bmc-4.ucl", 1)
+  }
   // those two case should not parser but I just do not know how to show those Errors are expected errors!
   // "test-float.ucl" should "fail to verify 2 assertion." in {
   //   SMTLIB2Spec.expectedFails("./test/test-float.ucl", 2)

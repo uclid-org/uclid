@@ -56,6 +56,8 @@ object UclidMain {
 
   var mainVerbosity: Int = 1;
 
+  var debugReWriteRecord: Boolean = false;
+
   def main(args: Array[String]) {
     parseOptions(args) match {
       case None =>
@@ -252,6 +254,8 @@ object UclidMain {
     passManager.addPass(new InstanceModuleNameChecker())
     // gives types to the instances
     passManager.addPass(new InstanceModuleTypeRewriter())
+    // Rename varibale name in Record
+    passManager.addPass(new RewriteRecordSelect())
     // Replace a.b with the appropriate external identifier
     passManager.addPass(new RewritePolymorphicSelect())
     // Replaces constant lits with actual literal value
@@ -603,5 +607,10 @@ object UclidMain {
     } else {
       Console.println(str)
     }
+  }
+
+  def printDebugRewriteRecord(str: String){
+    if(debugReWriteRecord)
+      println(str)
   }
 }

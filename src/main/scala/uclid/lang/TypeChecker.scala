@@ -874,8 +874,8 @@ class PolymorphicGrammarTypeRewriterPass extends RewritePass {
   var typeMap: MutableMap[GrammarTerm, Type] = MutableMap.empty
 
   /** Returns the type for a grammar term
-   *  @term The grammar term
-   *  @ctx  Context of the current AST visit
+   *  @param term The grammar term
+   *  @param ctx  Context of the current AST visit
    */
   def getTermType(term: GrammarTerm, ctx: Scope): Type = {
     // Try to find type from the memoized type map
@@ -894,7 +894,7 @@ class PolymorphicGrammarTypeRewriterPass extends RewritePass {
 
   /** Infers the type of the operator application term
    *
-   *  @opAppTerm The operator application term whose operator is polymorphic
+   *  @param opAppTerm The operator application term whose operator is polymorphic
    */
   def getReifiedOpType(opAppTerm: OpAppTerm): Option[Type] = {
     Utils.assert(opAppTerm.op.isPolymorphic, "Cannot get reified op type of a non polymorphic operator " + opAppTerm.op + ".")
@@ -908,7 +908,7 @@ class PolymorphicGrammarTypeRewriterPass extends RewritePass {
    *
    *  TODO(kkmc): Add BVSignExtOp and BVZeroExtOp
    *
-   *  @opAppTerm The operator application term to infer the type for
+   *  @param param opAppTerm The operator application term to infer the type for
    */
   def getOpAppTermType(opAppTerm: OpAppTerm): Type = {
     Utils.assert(!opAppTerm.op.isPolymorphic, "Cannot infer type of polymorphic operator " + opAppTerm.op.toString + ".")
@@ -926,7 +926,7 @@ class PolymorphicGrammarTypeRewriterPass extends RewritePass {
 
   /** Computes the reified operator for the given OpAppTerm
    *
-   *  @opAppTerm Operator application term
+   *  @param opAppTerm Operator application term
    */
   def getReifiedOp(opAppTerm: OpAppTerm): Option[Operator] = {
     // Return None if the operator is already reified reifify the operator
@@ -942,8 +942,8 @@ class PolymorphicGrammarTypeRewriterPass extends RewritePass {
 
   /** Update type map with function application type
    *
-   *  @funcAppTerm the function application whose type needs to be memoized
-   *  @ctx the current context
+   *  @param funcAppTerm the function application whose type needs to be memoized
+   *  @param ctx the current context
    */
   override def rewriteFuncAppTerm(funcAppTerm : FuncAppTerm, ctx : Scope) : Option[FuncAppTerm] = {
     val typ = ctx.typeOf(funcAppTerm.id).get
@@ -953,8 +953,8 @@ class PolymorphicGrammarTypeRewriterPass extends RewritePass {
 
   /** Rewrite the operator application with the reified type and update the type map
    *
-   *  @opAppTerm the operator application whose operator needs to be reified
-   *  @ctx the current context
+   *  @param opAppTerm the operator application whose operator needs to be reified
+   *  @param ctx the current context
    */
   override def rewriteOpAppTerm(opAppTerm : OpAppTerm, ctx : Scope) : Option[OpAppTerm] = {
     val reifiedOpOpt = getReifiedOp(opAppTerm)
@@ -971,8 +971,8 @@ class PolymorphicGrammarTypeRewriterPass extends RewritePass {
 
   /** Update type map with function application type
    *
-   *  @defineAppTerm the define-macro application whose type needs to be memoized
-   *  @ctx the current context
+   *  @param defineAppTerm the define-macro application whose type needs to be memoized
+   *  @param ctx the current context
    */
   override def rewriteDefineAppTerm(defineAppTerm : DefineAppTerm, ctx : Scope) : Option[DefineAppTerm] = {
     val typ = ctx.typeOf(defineAppTerm.id).get
@@ -982,8 +982,8 @@ class PolymorphicGrammarTypeRewriterPass extends RewritePass {
 
   /** Update type map with the literal term type
    *
-   *  @litTerm the term whose type needs to be memoized
-   *  @ctx the current context
+   *  @param litTerm the term whose type needs to be memoized
+   *  @param ctx the current context
    */
   override def rewriteLiteralTerm(litTerm : LiteralTerm, ctx : Scope) : Option[LiteralTerm] = {
     typeMap += (litTerm -> litTerm.lit.typeOf)
@@ -992,8 +992,8 @@ class PolymorphicGrammarTypeRewriterPass extends RewritePass {
 
   /** Update type map with the symbol term type
    *
-   *  @symTerm the term whose type needs to be memoized
-   *  @ctx the current context
+   *  @param symTerm the term whose type needs to be memoized
+   *  @param ctx the current context
    */
   override def rewriteSymbolTerm(symTerm : SymbolTerm, ctx : Scope) : Option[SymbolTerm] = {
     val typ = getTermType(symTerm, ctx)
@@ -1003,8 +1003,8 @@ class PolymorphicGrammarTypeRewriterPass extends RewritePass {
 
   /** Update type map with the constant term type
    *
-   *  @constTerm the term whose type needs to be memoized
-   *  @ctx the current context
+   *  @param constTerm the term whose type needs to be memoized
+   *  @param ctx the current context
    */
   override def rewriteConstantTerm(constTerm : ConstantTerm, ctx : Scope) : Option[ConstantTerm] = {
     typeMap += (constTerm -> constTerm.typ)

@@ -6,7 +6,7 @@
 # This will download cvc5 version 0.0.4 and add it to your path
 #
 
-wget https://github.com/cvc5/cvc5/releases/download/cvc5-0.0.4/cvc5-macOS
+wget https://github.com/cvc5/cvc5/releases/download/cvc5-1.0.3/cvc5-macOS
 mkdir -p cvc5/bin/
 mv cvc5-macOS cvc5/bin/cvc5
 chmod 755 cvc5/bin/cvc5
