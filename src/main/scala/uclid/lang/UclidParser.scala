@@ -1038,10 +1038,16 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       E10 ~ OpMul ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on *",Some(e.pos),e.filename)} |
       E10 ~ OpDiv ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on /",Some(e.pos),e.filename)} |
       E10 ~ OpUDiv ^^ { case e~s => throw new Utils.SyntaxError("Syntax Error on /_u",Some(e.pos),e.filename) }
+    }
+
+    lazy val Error_E15: PackratParser[Expr] = positioned {
+        KwIf ~> ("(" ~> Expr <~ ")") ^^ {
+          case expr => throw new Utils.SyntaxError("Syntax Error after",Some(expr.pos),expr.filename)
+        } 
+
     }   
     
     lazy val Error_RecordType : PackratParser[lang.RecordType] = positioned {
-      KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) ^^ { case id ~ ids => throw new Utils.SyntaxError("unpaired '{' in Record block",null,null) } |
       SingleKwRecord ^^ { case s => throw new Utils.SyntaxError("Syntax Error after keyword "+s.name,Some(s.pos),s.filename) }
     }
 
@@ -1068,16 +1074,16 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Error_Statement: PackratParser[Statement] = positioned {
       SingleKwStatement ^^ { case s => throw new Utils.SyntaxError("Syntax Error after keyword "+s.name,Some(s.pos),s.filename) } |
-      KwAssert ~> Expr ^^ { case e => throw new Utils.SyntaxError("Syntax Error in Expression",Some(e.pos),e.filename) } |
-      KwAssume ~> Expr ^^ { case e => throw new Utils.SyntaxError("Syntax Error in Expression",Some(e.pos),e.filename) } |
-      KwHavoc ~> Id ^^ { case id => throw new Utils.SyntaxError("Syntax Error in Expression",Some(id.pos),id.filename) } |
-      Lhs ~ "=" ~ Expr  ^^ { case l ~ "=" ~ e => throw new Utils.SyntaxError("Syntax Error in Expression",Some(e.pos),e.filename)  }|
-      Lhs ^^ { case l => throw new Utils.SyntaxError("Syntax Error in Expression",Some(l.pos),l.filename)}
+      KwAssert ~> Expr ^^ { case e => throw new Utils.SyntaxError("Syntax Error in Expression In Assert Expersion",Some(e.pos),e.filename) } |
+      KwAssume ~> Expr ^^ { case e => throw new Utils.SyntaxError("Syntax Error in Expression In Assume Expersion",Some(e.pos),e.filename) } |
+      KwHavoc ~> Id ^^ { case id => throw new Utils.SyntaxError("Syntax Error in Expression In Havoc Expersion",Some(id.pos),id.filename) } |
+      Lhs ~ "=" ~ Expr  ^^ { case l ~ "=" ~ e => throw new Utils.SyntaxError("Syntax Error in Assign Expression",Some(e.pos),e.filename)  }|
+      Lhs ^^ { case l => throw new Utils.SyntaxError("Syntax Error in Lhs Expression",Some(l.pos),l.filename)}
     }
 
     lazy val Error_BlkStmt: PackratParser[lang.BlockStmt] = positioned{
-      SingleBlock ~ rep (BlockVarsDecl) ~ rep ((Statement|Error_Statement)) ^^ {
-        case b ~ vars ~ stmts => throw new Utils.SyntaxError("unpaird '{' ",Some(b.pos),b.filename)
+      SingleBlock ~ rep (BlockVarsDecl) ~ rep ((Statement)) ^^ {
+        case b ~ vars ~ stmts => throw new Utils.SyntaxError("Syntax Error in the Block",Some(b.pos),b.filename)
       }
     }
 
@@ -1115,7 +1121,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Error_TypeDecl : PackratParser[lang.TypeDecl] = positioned {
       KwType ~> Id ~ ("=" ~> Type) ^^ { case id ~ t =>throw new Utils.SyntaxError("Loss of ';'", Some(id.pos),id.filename) } |
-      KwType ~> Id ^^ { case id=>throw new Utils.SyntaxError("Loss of ';'", Some(id.pos),id.filename)}
+      KwType ~> Id ^^ { case id=>throw new Utils.SyntaxError("Syntax Error in Type declaration", Some(id.pos),id.filename)}
     }
     
     lazy val Error_ModuleImportDecl : PackratParser[lang.ModuleImportDecl] = positioned {
