@@ -1,0 +1,7 @@
+name: Build on Ubuntu
+description: Build UCLID5 and intall Z3 on Ubuntu
+runs:
+  using: "composite"
+  steps: 
+    - run: .github/actions/build-uclid-linux/build.sh
+      shell: bash
