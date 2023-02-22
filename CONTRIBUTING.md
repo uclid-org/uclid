@@ -22,13 +22,14 @@ UCLID5 is a relatively new tool and we welcome new contributors who want to get 
 2. Please don’t leave commented out code in the code base if you can avoid it. If it really must stay, add a comment to it saying why it must stay, what it was for and why it was commented out.
 
 ## Pull requests:
-1. Each new feature or bug fix should be done on a new branch 
-2. Create a separate PR for each new feature or bug fix. 
-3. Where possible break down large new features into separate PRs. 
-4. Every PR for a new feature should include a set of regression tests that fully test the feature
-5. Every PR for a bug fix should include a regression test that tests the fix
-6. When you get feedback on a PR, push the changes to the same branch so they appear in the same PR.
-7. Write good commit messages: https://blogs.gnome.org/danni/2011/10/25/a-guide-to-writing-git-commit-messages/
+1. If you are an external contributor, please fork the UCLID repository 
+2. Each new feature or bug fix should be done on a new branch on your fork
+3. Create a separate PR against the uclid-org/uclid master branch for each new feature or bug fix. 
+4. Where possible break down large new features into separate PRs. 
+5. Every PR for a new feature should include a set of regression tests that fully test the feature
+6. Every PR for a bug fix should include a regression test that tests the fix
+7. When you get feedback on a PR, push the changes to the same branch so they appear in the same PR.
+8. Write good commit messages: https://blogs.gnome.org/danni/2011/10/25/a-guide-to-writing-git-commit-messages/
 Every commit should have a meaningful commit message, which is less than 72 characters long. If you need more than that, the commit should have a short heading commit message followed by a longer description on a new line. 
 8. Tidy up your commit history before you PR: use interactive rebase to squash together messy commits into a single meaningful commit with a good commit message. e.g., these two commits should be squashed into one:
 ~~~
