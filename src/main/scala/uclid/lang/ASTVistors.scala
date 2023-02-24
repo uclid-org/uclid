@@ -1241,7 +1241,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val id = visitIdentifier(module.id, context)
     val decls = module.decls.map(visitDecl(_, context)).flatten
     val initR : (List[Option[GenericProofCommand]], Scope) = (List.empty, initContext)
-    val cmds = module.cmds.foldRight(initR)((cmd, acc) => (visitCommand(cmd, acc._2) :: acc._1, acc._2 + cmd))._1.flatten
+    val cmds = module.cmds.foldRight(initR)((cmd, acc) => (visitCommand(cmd, context) :: acc._1, acc._2 + cmd))._1.flatten
     val notes = module.notes.map(note => visitNote(note, context)).flatten
     val moduleIn = id.flatMap((i) => Some(Module(i, decls, cmds, notes)))
     val moduleP = moduleIn.flatMap((m) => pass.rewriteModule(m, initContext))

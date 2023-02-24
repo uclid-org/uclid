@@ -1,0 +1,31 @@
+module ins{
+    type cache_t = record { valid : boolean, value : integer };
+    type cache_t2 = record { valid: boolean, value: integer }; 
+    var cache   : cache_t;
+    procedure test(value: integer){
+        
+    }
+    init {
+        cache.valid = true;
+        cache.value = 10;
+        call test(cache.value);
+    }
+    next { }
+    invariant trivial1  : cache.value == 20;
+}
+module main {
+    instance dawg: ins();
+
+    init{
+
+    }
+    next{
+
+    }
+    control {
+        v = unroll(1);
+        check;
+        print_results;
+        v.print_cex_json(dawg.cache);
+    }
+}
