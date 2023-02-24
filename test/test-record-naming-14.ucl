@@ -1,0 +1,30 @@
+module main {
+    type cache_t = record { valid : boolean, value : integer };
+    var cache   : cache_t;
+    init {
+        // cache.valid = true;
+        // cache.value = 10;
+    }
+    next { }
+    invariant trivial1  : cache.value == 20;
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        //now time bugs this:
+        //cache.value's scope is empty??? but why?
+        v.print_cex_json(cache.value);
+        //v.print_cex_json(value);
+    }
+}
+
+/*
+
+We are going to check cache
+
+its type is None
+
+its Context is Scope(Map(),None,None,Some(v->print_cex_json((cache.value,cache.value)); // test/test-record-naming-14.ucl, line 16),ModuleEnvironment,None)
+
+
+*/

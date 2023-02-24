@@ -914,6 +914,15 @@ class PrintCexSpec extends AnyFlatSpec {
   "test-record-naming-13.ucl" should "fail to verify assertion." in {
     VerifierSpec.expectedFails("./test/test-record-naming-13.ucl", 5)
   }
+  "test-record-naming-14.ucl" should "fail to verify assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-14.ucl", 2)
+  }
+  "test-record-naming-15.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-15.ucl", 0)
+  }
+  "test-record-naming-16.ucl" should "fail to verify assertion." in {
+    VerifierSpec.expectedFails("./test/test-record-naming-16.ucl", 2)
+  }
 }
 class ModuleConcatSpec extends AnyFlatSpec {
   "test-concat-modules-w-init-2-fab.ucl" should "verify all assertions." in {

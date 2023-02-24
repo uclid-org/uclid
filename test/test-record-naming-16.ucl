@@ -1,0 +1,38 @@
+module common{    
+    type cache_t = record { valid : boolean, value : integer };
+    type cache_t2 = record { valid: boolean, value: integer }; 
+}
+
+module ins{
+    type * = common.*;
+    var cache   : cache_t;
+    procedure test(value: integer){
+        
+    }
+    init {
+        cache.valid = true;
+        cache.value = 10;
+        call test(cache.value);
+    }
+    next { }
+    invariant trivial1  : cache.value == 20;
+}
+
+module main {
+    //type * = common.*;
+    instance i1: ins();
+
+    init{
+
+    }
+    next{
+        next(i1);
+    }
+    invariant trivial1  : i1.cache.value == 20;
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex_json(i1.cache.value);
+    }
+}
