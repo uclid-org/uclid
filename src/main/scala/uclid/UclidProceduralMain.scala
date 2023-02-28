@@ -155,8 +155,10 @@ object UclidProceduralMain {
     }
   }
 
-  def buildModule (mainModuleName: Identifier, decls: List[Decl], cmds : List[GenericProofCommand]) = {
-    Module(mainModuleName, decls, cmds, Annotation.default)
+  def buildModule (mainModuleName: Identifier, decls: List[Decl], cmds : List[GenericProofCommand]) : Module = {
+    val m = Module(mainModuleName, decls, cmds, Annotation.default)
+    print(m.toString)
+    m
   }
 
   /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
