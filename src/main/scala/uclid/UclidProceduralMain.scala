@@ -51,7 +51,7 @@ import com.typesafe.scalalogging.Logger
  *
  */
 object UclidProceduralMain {
-  val logger = Logger("uclid.UclidProceduralMain")
+  val logger = Logger("uclid.UclidProceduralMain", logfile = "uclid.log")
 
   var mainVerbosity: Int = 1;
 
@@ -155,9 +155,52 @@ object UclidProceduralMain {
     }
   }
 
+  def getProceduralModuleString (pconfig : ProceduralConfig, decls : List[Decl], cmds : List[GenericProofCommand]) = {
+    val config = buildConfig(pconfig)
+    try {
+      val mainModuleName = Identifier(pconfig.mainModuleName)
+      val modules = compile(config, mainModuleName, decls, cmds)
+      Module(mainModuleName, decls, cmds, Annotation.default).toString()
+    }
+    catch  {
+      case (e : java.io.FileNotFoundException) =>
+        UclidMain.printError("Error: " + e.getMessage() + ".")
+        if(config.printStackTrace) { e.printStackTrace() }
+        System.exit(1)
+      case (syn : Utils.SyntaxError) =>
+        UclidMain.printError("%s error on %s: %s.\n%s".format(syn.errorName, syn.positionStr, syn.getMessage, syn.shortStr))
+        System.exit(1)
+      case (p : Utils.ParserError) =>
+        UclidMain.printError("%s error %s: %s.\n%s".format(p.errorName, p.positionStr, p.getMessage, p.fullStr))
+        if(config.printStackTrace) { p.printStackTrace() }
+        System.exit(1)
+      case (typeErrors : Utils.TypeErrorList) =>
+        typeErrors.errors.foreach {
+          (p) => {
+            UclidMain.printError("Type error at %s: %s.\n%s".format(p.positionStr, p.getMessage, p.fullStr))
+          }
+        }
+        UclidMain.printError("Parsing failed. %d errors found.".format(typeErrors.errors.size))
+        if(config.printStackTrace) { typeErrors.printStackTrace() }
+        System.exit(1)
+      case (ps : Utils.ParserErrorList) =>
+        ps.errors.foreach {
+          (err) => {
+            UclidMain.printError("Error at " + err._2.toString + ": " + err._1 + ".\n" + err._2.pos.longString)
+          }
+        }
+        UclidMain.printError("Parsing failed. " + ps.errors.size.toString + " errors found.")
+        if(config.printStackTrace) { ps.printStackTrace() }
+        System.exit(1)
+      case(a : Utils.AssertionError) =>
+        UclidMain.printError("[Assertion Failure]: " + a.getMessage)
+        if(config.printStackTrace) { a.printStackTrace() }
+        System.exit(2)
+    }
+  }
+
   def buildModule (mainModuleName: Identifier, decls: List[Decl], cmds : List[GenericProofCommand]) : Module = {
     val m = Module(mainModuleName, decls, cmds, Annotation.default)
-    print(m.toString)
     m
   }
 
