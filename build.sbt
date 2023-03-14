@@ -18,4 +18,9 @@ libraryDependencies += "org.json4s" %% "json4s-jackson" % "4.0.3"
 // do not require tests before building a fat JAR
 test in assembly := {}
 
+assemblyMergeStrategy in assembly := {
+ case PathList("META-INF", _*) => MergeStrategy.discard
+ case _                        => MergeStrategy.first
+}
+assemblyJarName in assembly := "uclid-fatjar-0.9.5.jar"
 enablePlugins(JavaAppPackaging)
