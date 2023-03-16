@@ -51,7 +51,7 @@ import com.typesafe.scalalogging.Logger
  *
  */
 object UclidProceduralMain {
-  val logger = Logger("uclid.UclidProceduralMain", logfile = "uclid.log")
+  val logger = Logger("uclid.UclidProceduralMain")
 
   var mainVerbosity: Int = 1;
 
@@ -98,8 +98,9 @@ object UclidProceduralMain {
 
   /** This version of 'main' does all the real work.
    */
-  def solveProcedural(pconfig : ProceduralConfig, decls : List[Decl], cmds : List[GenericProofCommand]) {
+  def solveProcedural(pconfig : ProceduralConfig, decls : List[Decl], cmds : List[GenericProofCommand]) : String = {
     val config = buildConfig(pconfig)
+    UclidMain.enableStringOutput()
     try {
       val mainModuleName = Identifier(pconfig.mainModuleName)
       val modules = compile(config, mainModuleName, decls, cmds)
@@ -153,6 +154,7 @@ object UclidProceduralMain {
         if(config.printStackTrace) { a.printStackTrace() }
         System.exit(2)
     }
+    UclidMain.stringOutput.toString()
   }
 
   def getProceduralModuleString (pconfig : ProceduralConfig, decls : List[Decl], cmds : List[GenericProofCommand]) = {
