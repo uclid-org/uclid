@@ -158,7 +158,7 @@ For example, if the following macro definitions are at the module level,
 \end{lstlisting}
 we may alternatively write the for loop in \codelike{set\_init\_state} in the following way:
 \begin{lstlisting}[language=uclid,style=uclidstyle]
-  for (i : bv3) in (begin(), end()) { regs[i] = 1bv8; }
+  for (i : bv3) in range(begin(), end()) { regs[i] = 1bv8; }
 \end{lstlisting}
 
 \subsection{If and Case Statements}
