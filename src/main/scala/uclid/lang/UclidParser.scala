@@ -1077,7 +1077,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Error_BlkStmt: PackratParser[lang.BlockStmt] = positioned{
       SingleBlock ~ rep (BlockVarsDecl) ~ rep ((Statement|Error_Statement)) ^^ {
-        case b ~ vars ~ stmts => throw new Utils.SyntaxError("unpaird '{' ",Some(b.pos),b.filename)
+        case b ~ vars ~ stmts => throw new Utils.SyntaxError("unpaired '{' ",Some(b.pos),b.filename)
       }
     }
 
