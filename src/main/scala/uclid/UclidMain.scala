@@ -47,6 +47,7 @@ import scala.collection.immutable._
 import lang.{Identifier, Module,  _}
 import uclid.Utils.ParserErrorList
 import com.typesafe.scalalogging.Logger
+import java.io.{File, FileWriter}
 
 /** This is the main class for Uclid.
  *
@@ -83,6 +84,7 @@ object UclidMain {
       ufToArray         : Boolean = false,
       printStackTrace   : Boolean = false,
       noLetify          : Boolean = false, // prevents SMTlib interface from letifying
+      smokeNum         : Int = -1,
       /* 
         verbosities:
         0: essential: print nothing but results and error messages
@@ -151,12 +153,16 @@ object UclidMain {
         ( x, c) => {c.copy(verbose = x)}
       }.text("verbosity level (0-4)")
 
+      opt[Int]('z', "smoke").action {
+        ( x, c) => {c.copy(smokeNum = x)}
+      }.text("Insert a false assertion at specified line.")
+
       help("help").text("prints this usage text")
 
       arg[java.io.File]("<file> ...").unbounded().required().action {
         (x, c) => c.copy(files = c.files :+ x)
       }.text("List of files to analyze.")
-      
+
       // override def renderingMode = scopt.RenderingMode.OneColumn
     }
     val config = parser.parse(args, Config())
@@ -339,17 +345,52 @@ object UclidMain {
     val passManager = createCompilePassManager(config, test, mainModuleName)
 
     val filenameAdderPass = new AddFilenameRewriter(None)
+    
     // Helper function to parse a single file.
-    def parseFile(srcFile : String) : List[Module] = {
+    def parseFile(srcFile : String, smokeNum : Int) : List[Module] = {
+      
+      /* Begin naïve smoke test insertion */
+      
+      if (smokeNum > 0) {
+        val smokeLine = "assert (false);"
+        val smokeFile = scala.io.Source.fromFile(srcFile)
+        val lines = smokeFile.getLines.toList
+        smokeFile.close()
+
+        val updatedLines = lines.zipWithIndex.flatMap { case (line, index) =>
+          if (index == smokeNum - 1) {
+            List(smokeLine, line) // Insert the new line before the current line
+          } else {
+            List(line)
+          }
+        }
+
+        /* 
+        val updatedLines = lines.map { line =>
+          if (line == targetLine) replace else line
+        } 
+        */
+        
+        val writer = new FileWriter(new File(srcFile))
+        updatedLines.foreach { line =>
+          writer.write(line + "\n")
+        }
+        writer.close()
+
+      }
+
+      /* End naïve smoke test insertion */
+      
       val file = scala.io.Source.fromFile(srcFile)
-      // TODO: parse line by line instead of loading the complete file into a string
+
       val modules = UclidParser.parseModel(srcFile, file.mkString)
       file.close()
       filenameAdderPass.setFilename(srcFile)
       modules.map(m => filenameAdderPass.visit(m, Scope.empty)).flatten
     }
+
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
-      (acc, srcFile) => acc ++ parseFile(srcFile.getPath())
+      (acc, srcFile) => acc ++ parseFile(srcFile.getPath(), config.smokeNum)
     }
 
     // combine all modules with the same name
