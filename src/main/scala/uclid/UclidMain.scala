@@ -84,7 +84,7 @@ object UclidMain {
       ufToArray         : Boolean = false,
       printStackTrace   : Boolean = false,
       noLetify          : Boolean = false, // prevents SMTlib interface from letifying
-      smokeNum         : Int = -1,
+      smokeNum          : Int = -1,
       /* 
         verbosities:
         0: essential: print nothing but results and error messages
@@ -314,6 +314,11 @@ object UclidMain {
     // checks module instancs are instantiated correctly
     passManager.addPass(new ModuleInstanceChecker())
     passManager.addPass(new CaseEliminator())
+    
+    // adds an assert false to test unreachable code
+    if (smokeNum > 0) {
+      passManager.addPass(new SmokeInserter())
+    }
     passManager.addPass(new ForLoopUnroller())
     // hyperproperties for procedures
     passManager.addPass(new ModularProductProgram())
@@ -347,10 +352,11 @@ object UclidMain {
     val filenameAdderPass = new AddFilenameRewriter(None)
     
     // Helper function to parse a single file.
-    def parseFile(srcFile : String, smokeNum : Int) : List[Module] = {
+    def parseFile(srcFile : String) : List[Module] = {
       
       /* Begin naïve smoke test insertion */
       
+      /* 
       if (smokeNum > 0) {
         val smokeLine = "assert (false);"
         val smokeFile = scala.io.Source.fromFile(srcFile)
@@ -378,6 +384,7 @@ object UclidMain {
         writer.close()
 
       }
+      */
 
       /* End naïve smoke test insertion */
       
@@ -390,7 +397,7 @@ object UclidMain {
     }
 
     val parsedModules = srcFiles.foldLeft(List.empty[Module]) {
-      (acc, srcFile) => acc ++ parseFile(srcFile.getPath(), config.smokeNum)
+      (acc, srcFile) => acc ++ parseFile(srcFile.getPath())
     }
 
     // combine all modules with the same name
