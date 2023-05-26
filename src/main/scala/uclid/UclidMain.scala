@@ -58,6 +58,8 @@ object UclidMain {
 
   var debugReWriteRecord: Boolean = false;
 
+  var debugAssert: Boolean = true;
+
   def main(args: Array[String]) {
     parseOptions(args) match {
       case None =>
@@ -514,6 +516,7 @@ object UclidMain {
     var previousModifiesModule = cmds(0).modifiesModule
     var modifyCmdCount = 0
     cmds.foreach(cmd => {
+      printDebugAssert(cmd.toString)
       cmd.name match {
         case Identifier("assign_macro") =>
           val newMacroBody = cmd.macroBody match {
@@ -611,6 +614,11 @@ object UclidMain {
 
   def printDebugRewriteRecord(str: String){
     if(debugReWriteRecord)
+      println(str)
+  }
+
+  def printDebugAssert(str: String){
+    if(debugAssert)
       println(str)
   }
 }
