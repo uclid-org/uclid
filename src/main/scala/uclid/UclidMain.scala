@@ -516,7 +516,6 @@ object UclidMain {
     var previousModifiesModule = cmds(0).modifiesModule
     var modifyCmdCount = 0
     cmds.foreach(cmd => {
-      printDebugAssert(cmd.toString)
       cmd.name match {
         case Identifier("assign_macro") =>
           val newMacroBody = cmd.macroBody match {

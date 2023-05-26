@@ -1228,6 +1228,8 @@ class SymbolicSimulator (module : Module) {
     }
   }
 
+  //Leiqi:
+  //May start with here
   def printCEX(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier]) {
     def labelMatches(p : AssertInfo) : Boolean = {
       arg match {
@@ -1242,6 +1244,8 @@ class SymbolicSimulator (module : Module) {
     })
   }
 
+  //Leiqi:
+  //So, we should know here
   def printCEX(res : CheckResult, exprs : List[(Expr, String)]) {
     UclidMain.printStatus("CEX for %s".format(res.assert.toString, res.assert.pos.toString))
     val scope = res.assert.context
@@ -1267,6 +1271,8 @@ class SymbolicSimulator (module : Module) {
     val model = res.result.model.get
     val simTable = res.assert.frameTable
     Utils.assert(simTable.size >= 1, "Must have at least one trace")
+
+    UclidMain.printDebugAssert("We print the Cex: "+simTable.toString)
     val lastFrame = res.assert.iter
     (0 to lastFrame).foreach{ case (i) => {
       UclidMain.printStatus("=================================")
@@ -1793,6 +1799,7 @@ class SymbolicSimulator (module : Module) {
           case None => "assertion"
           case Some(i) => i.toString()
         }
+        
         val assertExpr = evaluate(e,symbolTable, frameTable, frameNumber, scope)
         val assert = AssertInfo(
                 assertionName, label, simTable.clone(),
