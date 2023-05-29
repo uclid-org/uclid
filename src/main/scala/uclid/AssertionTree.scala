@@ -43,6 +43,8 @@ import uclid.lang._
 import com.typesafe.scalalogging.Logger
 import scala.collection.mutable.ListBuffer
 
+//Leiqi:
+//So, all the assert information contains inside.
 case class AssertInfo(
     name : String, label : String,
     frameTable : SymbolicSimulator.SimulationTable,
@@ -60,6 +62,8 @@ case class AssertInfo(
   }
 }
 
+//Leiqi:
+//Check Result contains AssertInfo and Solver Rsult??
 case class CheckResult(assert : AssertInfo, result : smt.SolverResult)
 
 class AssertionTree {

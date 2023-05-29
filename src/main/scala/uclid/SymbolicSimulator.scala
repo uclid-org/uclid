@@ -1227,9 +1227,6 @@ class SymbolicSimulator (module : Module) {
       }
     }
   }
-
-  //Leiqi:
-  //May start with here
   def printCEX(results : List[CheckResult], exprs : List[(Expr, String)], arg : Option[Identifier]) {
     def labelMatches(p : AssertInfo) : Boolean = {
       arg match {
@@ -1243,9 +1240,6 @@ class SymbolicSimulator (module : Module) {
       }
     })
   }
-
-  //Leiqi:
-  //So, we should know here
   def printCEX(res : CheckResult, exprs : List[(Expr, String)]) {
     UclidMain.printStatus("CEX for %s".format(res.assert.toString, res.assert.pos.toString))
     val scope = res.assert.context
@@ -1271,8 +1265,6 @@ class SymbolicSimulator (module : Module) {
     val model = res.result.model.get
     val simTable = res.assert.frameTable
     Utils.assert(simTable.size >= 1, "Must have at least one trace")
-
-    UclidMain.printDebugAssert("We print the Cex: "+simTable.toString)
     val lastFrame = res.assert.iter
     (0 to lastFrame).foreach{ case (i) => {
       UclidMain.printStatus("=================================")
@@ -1286,11 +1278,15 @@ class SymbolicSimulator (module : Module) {
     }}
   }
 
+  //Leiqi:
+  //So, the printFrame gives the incorrect result???
+  //In this place, the SimTable contains two same identifer name.
   def printFrame(simTable : SimulationTable, frameNumber : Int, m : smt.Model, exprs : List[(Expr, String)], scope : Scope) {
+    UclidMain.printDebugAssert("We print the Simtable: "+simTable.toString)
     exprs.foreach { (e) => {
       try {
-        val exprs = simTable.map(ft => m.evalAsString(evaluate(e._1, ft(frameNumber), ft, frameNumber, scope)))
-        val strings = Utils.join(exprs.map(_.toString()), ", ")
+        val expr = simTable.map(ft => m.evalAsString(evaluate(e._1, ft(frameNumber), ft, frameNumber, scope)))
+        val strings = Utils.join(expr.map(_.toString()), ", ")
         UclidMain.printStatus("  " + e._2 + " : " + strings)
       } catch {
         case excp : Utils.UnknownIdentifierException =>
@@ -1917,6 +1913,7 @@ class SymbolicSimulator (module : Module) {
     return stmts.foldLeft(Set.empty[Identifier]){(acc,s) => acc ++ writeSet(s)}
   }
 
+  // Leiqi: they call this function
   def evaluate(e: Expr, symbolTable: SymbolTable, frameTable : FrameTable, frameNumber : Int, scope : Scope) : smt.Expr = {
     frameLog.debug("expr: %s".format(e.toString()))
     frameLog.debug("symbolTable: %s".format(symbolTable.toString()))
