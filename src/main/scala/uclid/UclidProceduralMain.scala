@@ -101,6 +101,7 @@ object UclidProceduralMain {
   def solveProcedural(pconfig : ProceduralConfig, decls : List[Decl], cmds : List[GenericProofCommand]) : String = {
     val config = buildConfig(pconfig)
     UclidMain.enableStringOutput()
+    UclidMain.clearStringOutput()
     try {
       val mainModuleName = Identifier(pconfig.mainModuleName)
       val modules = compile(config, mainModuleName, decls, cmds)
