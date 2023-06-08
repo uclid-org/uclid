@@ -33,34 +33,28 @@
  *
  * Author : Alejandro Sanchez Ocegueda
  * 
- * Inserts an 'assert false' statement at the end of each basic block.
- * Sanity check for unreachable code.
+ * Removes all assertions and invariants in preparation for smoke testing.
  * 
  */
 
 package uclid
 package lang
 
-class SmokeInsertPass() extends RewritePass {
-  
-  var smokeCount = 0
-  override def rewriteBlock(st : BlockStmt, ctx : Scope) : Option[Statement] = {
+class SmokeRemovePass extends RewritePass {
 
-    if (st.stmts.length > 0) {
-      var assertFalse = AssertStmt(BoolLit(false), Some(Identifier(s"Smoke signal ${smokeCount}")))
-      assertFalse.setPos(st.stmts(st.stmts.length-1).pos)
-      val newstmts = assertFalse :: st.stmts
-      smokeCount += 1
-      Some(BlockStmt(st.vars, newstmts))
-    } else {
-      Some(st)
+  // Removes properties and invariants
+  override def rewriteSpec(spec : SpecDecl, ctx : Scope) : Option[SpecDecl] = {
+     None 
     }
 
-  } 
-    
+  // Removes assert statements
+  override def rewriteAssert(st : AssertStmt, ctx : Scope) : Option[Statement] = {
+    None
+  }
+
 }
 
 
-class SmokeInserter() extends ASTRewriter(
-  "SmokerInserter", new SmokeInsertPass()
+class SmokeRemover() extends ASTRewriter(
+  "SmokerRemover", new SmokeRemovePass()
 )
