@@ -361,9 +361,11 @@ class SymbolicSimulator (module : Module) {
             printResults(proofResults, cmd.argObj, config)
             needToPrintResults=false
           case "print_cex" =>
-            printCEX(proofResults, cmd.args, cmd.argObj)
+            if (!config.smoke) {
+              printCEX(proofResults, cmd.args, cmd.argObj)
+            }
           case "print_cex_json" =>
-            if (!config.smtSolver.isEmpty)
+            if (!config.smtSolver.isEmpty && !config.smoke)
               printCEXJSON(proofResults, cmd.args, cmd.argObj, config, solver)
             else
               UclidMain.printError("print_cex_json works only with SMTLIB2Interface, skipping this command.")
@@ -1200,18 +1202,28 @@ class SymbolicSimulator (module : Module) {
       return
     
     Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
-    UclidMain.printResult("%d assertions passed.".format(passCount))
-    UclidMain.printResult("%d assertions failed.".format(failCount))
-    UclidMain.printResult("%d assertions indeterminate.".format(undetCount))
+
+    if (config.smoke) {
+      UclidMain.printResult("%d smoke tests run.".format(assertionResults.size))
+      UclidMain.printResult("%d warnings.".format(passCount))
+    } else {
+      UclidMain.printResult("%d assertions passed.".format(passCount))
+      UclidMain.printResult("%d assertions failed.".format(failCount))
+      UclidMain.printResult("%d assertions indeterminate.".format(undetCount))
+    }
 
     if (config.verbose > 0) {
       assertionResults.foreach{ (p) =>
         if (p.result.isTrue) {
-          UclidMain.printStatus("  PASSED -> " + p.assert.toString)
+          if (config.smoke) {
+            UclidMain.printStatus("  WARNING -> " + p.assert.toString)
+          } else {
+            UclidMain.printStatus("  PASSED -> " + p.assert.toString)
+          }
         }
       }
     }
-    if (failCount > 0) {
+    if (failCount > 0 && !config.smoke) {
       assertionResults.foreach{ (p) =>
         if (p.result.isFalse) {
           UclidMain.printStatus("  FAILED -> " + p.assert.toString)

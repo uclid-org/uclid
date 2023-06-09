@@ -155,7 +155,7 @@ object UclidMain {
         ( x, c) => {c.copy(verbose = x)}
       }.text("verbosity level (0-4)")
 
-      opt[Unit]('z', "smoke").action{
+      opt[Unit]("smoke").action{
         (_, c) => c.copy(smoke = true)
       }.text("Smoke test for unreachable code")
 
@@ -232,6 +232,13 @@ object UclidMain {
 
   def createCompilePassManager(config: Config, test: Boolean, mainModuleName: lang.Identifier, recompile : Boolean = false) = {
     val passManager = new PassManager("compile")
+
+    // test unreachable code
+    if (config.smoke) {
+      passManager.addPass(new SmokeRemover())
+      passManager.addPass(new SmokeInserter())
+    }
+
     // adds init and next to every module
     passManager.addPass(new ModuleCanonicalizer())
     // introduces LTL operators (which were parsed as function applications)
@@ -316,12 +323,6 @@ object UclidMain {
     // checks module instancs are instantiated correctly
     passManager.addPass(new ModuleInstanceChecker())
     passManager.addPass(new CaseEliminator())
-    
-    // test unreachable code
-    if (config.smoke) {
-      passManager.addPass(new SmokeRemover())
-      passManager.addPass(new SmokeInserter())
-    }
 
     passManager.addPass(new ForLoopUnroller())
     // hyperproperties for procedures

@@ -43,13 +43,13 @@ package lang
 
 class SmokeInsertPass() extends RewritePass {
   
-  var smokeCount = 0
+  var smokeCount = 1
   override def rewriteBlock(st : BlockStmt, ctx : Scope) : Option[Statement] = {
 
     if (st.stmts.length > 0) {
       var assertFalse = AssertStmt(BoolLit(false), Some(Identifier(s"Smoke signal ${smokeCount}")))
       assertFalse.setPos(st.stmts(st.stmts.length-1).pos)
-      val newstmts = assertFalse :: st.stmts
+      val newstmts = st.stmts :+ assertFalse 
       smokeCount += 1
       Some(BlockStmt(st.vars, newstmts))
     } else {
