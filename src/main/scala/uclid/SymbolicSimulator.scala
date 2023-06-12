@@ -1206,6 +1206,7 @@ class SymbolicSimulator (module : Module) {
     if (config.smoke) {
       UclidMain.printResult("%d smoke tests run.".format(assertionResults.size))
       UclidMain.printResult("%d warnings.".format(passCount))
+      UclidMain.printResult("%d tests indeterminate.".format(undetCount))
     } else {
       UclidMain.printResult("%d assertions passed.".format(passCount))
       UclidMain.printResult("%d assertions failed.".format(failCount))

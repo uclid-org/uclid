@@ -233,12 +233,6 @@ object UclidMain {
   def createCompilePassManager(config: Config, test: Boolean, mainModuleName: lang.Identifier, recompile : Boolean = false) = {
     val passManager = new PassManager("compile")
 
-    // test unreachable code
-    if (config.smoke) {
-      passManager.addPass(new SmokeRemover())
-      passManager.addPass(new SmokeInserter())
-    }
-
     // adds init and next to every module
     passManager.addPass(new ModuleCanonicalizer())
     // introduces LTL operators (which were parsed as function applications)
@@ -452,6 +446,12 @@ object UclidMain {
     passManager.addPass(new ModuleEliminator(mainModuleName))
     // Expands (grounds) finite_forall and finite_exists quantifiers
     passManager.addPass(new FiniteQuantsExpander())
+    // test unreachable code
+    if (config.smoke) {
+      passManager.addPass(new SmokeAnalyzer())
+      passManager.addPass(new SmokeRemover())
+      passManager.addPass(new SmokeInserter())
+    }
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
     passManager.addPass(new Optimizer())

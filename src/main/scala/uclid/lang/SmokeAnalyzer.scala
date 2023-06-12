@@ -33,29 +33,30 @@
  *
  * Author : Alejandro Sanchez Ocegueda
  * 
- * Removes all assertions and specifications (invariants, properties, etc.) in preparation for smoke testing.
- * This is done to make the smoke tests more efficient, as they need only test reachability of code.
+ * Smoke testing in conjunction with LTL is not supported.
+ * The analyzer throws an error if this is attempted.
  * 
  */
 
 package uclid
 package lang
 
-class SmokeRemovePass extends RewritePass {
-  
-  // Removes properties and invariants.
-  override def rewriteSpec(spec : SpecDecl, ctx : Scope) : Option[SpecDecl] = {
-    None
-  }
-  
-  // Removes assert statements.
-  override def rewriteAssert(st : AssertStmt, ctx : Scope) : Option[Statement] = {
-    None
+class SmokeAnalyzePass extends RewritePass {
+
+  // Check for LTL properties and throw an error if there are any.
+  override def rewriteModule(module: Module, ctx: Scope): Option[Module] = {
+    val moduleSpecs = module.decls.collect{ case spec : SpecDecl => spec }
+    val ltlSpecs = moduleSpecs.filter(s => s.params.exists(d => d == LTLExprDecorator))
+    if (ltlSpecs.size == 0) {
+      Some(module)
+    } else {
+      throw new Utils.RuntimeError(s"Smoke testing in the presence of LTL specifications is currently not supported. This support will be added in the next UCLID release.")
+    }
   }
 
 }
 
 
-class SmokeRemover() extends ASTRewriter(
-  "SmokerRemover", new SmokeRemovePass()
+class SmokeAnalyzer() extends ASTRewriter(
+  "SmokeAnalyzer", new SmokeAnalyzePass()
 )
