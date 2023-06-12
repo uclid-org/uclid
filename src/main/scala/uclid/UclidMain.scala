@@ -157,7 +157,7 @@ object UclidMain {
 
       opt[Unit]("smoke").action{
         (_, c) => c.copy(smoke = true)
-      }.text("Smoke test for unreachable code")
+      }.text("Smoke test for unreachable code.")
 
       help("help").text("prints this usage text")
 

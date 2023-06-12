@@ -33,7 +33,8 @@
  *
  * Author : Alejandro Sanchez Ocegueda
  * 
- * Removes all assertions and invariants in preparation for smoke testing.
+ * Removes all assertions and specifications (invariants, properties, etc.) in preparation for smoke testing.
+ * This is done to make the smoke tests more efficient, as they need only test reachability of code.
  * 
  */
 
