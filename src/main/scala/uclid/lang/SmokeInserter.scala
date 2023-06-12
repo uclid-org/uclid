@@ -33,8 +33,9 @@
  *
  * Author : Alejandro Sanchez Ocegueda
  * 
- * Inserts an 'assert false' statement at the end of each basic block.
- * Sanity check for unreachable code.
+ * Inserts an 'assert false' statement at the end of each (nonempty) basic block.
+ * This is a sanity check for unreachable code.
+ * Note: Smoke testing should not be used with LTL properties yet.
  * 
  */
 
