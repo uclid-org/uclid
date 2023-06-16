@@ -47,8 +47,6 @@ import scala.collection.immutable._
 import lang.{Identifier, Module,  _}
 import uclid.Utils.ParserErrorList
 import com.typesafe.scalalogging.Logger
-import java.io.{File, FileWriter}
-import uclid.lang.SmokeInserter
 
 /** This is the main class for Uclid.
  *
@@ -233,6 +231,12 @@ object UclidMain {
   def createCompilePassManager(config: Config, test: Boolean, mainModuleName: lang.Identifier, recompile : Boolean = false) = {
     val passManager = new PassManager("compile")
 
+    // test unreachable code
+    if (config.smoke) {
+      passManager.addPass(new SmokeAnalyzer())
+      passManager.addPass(new SmokeRemover())
+      passManager.addPass(new SmokeInserter())
+    }
     // adds init and next to every module
     passManager.addPass(new ModuleCanonicalizer())
     // introduces LTL operators (which were parsed as function applications)
@@ -346,15 +350,15 @@ object UclidMain {
     type NameCountMap = Map[Identifier, Int]
     val srcFiles : Seq[java.io.File] = config.files
     var nameCnt : NameCountMap = Map().withDefaultValue(0)
-    val passManager = createCompilePassManager(config, test, mainModuleName, false)
+    val passManager = createCompilePassManager(config, test, mainModuleName)
 
     val filenameAdderPass = new AddFilenameRewriter(None)
     
     // Helper function to parse a single file.
     def parseFile(srcFile : String) : List[Module] = {
     
-      
       val file = scala.io.Source.fromFile(srcFile)
+      // TODO: parse line by line instead of loading the complete file into a string
 
       val modules = UclidParser.parseModel(srcFile, file.mkString)
       file.close()
@@ -446,12 +450,6 @@ object UclidMain {
     passManager.addPass(new ModuleEliminator(mainModuleName))
     // Expands (grounds) finite_forall and finite_exists quantifiers
     passManager.addPass(new FiniteQuantsExpander())
-    // test unreachable code
-    if (config.smoke) {
-      passManager.addPass(new SmokeAnalyzer())
-      passManager.addPass(new SmokeRemover())
-      passManager.addPass(new SmokeInserter())
-    }
     passManager.addPass(new LTLOperatorRewriter())
     passManager.addPass(new LTLPropertyRewriter())
     passManager.addPass(new Optimizer())
