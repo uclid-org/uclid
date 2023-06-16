@@ -33,7 +33,7 @@
  *
  * Author : Alejandro Sanchez Ocegueda
  * 
- * Smoke testing in conjunction with LTL is not supported.
+ * Smoke testing in conjunction with LTL is currently not supported.
  * The analyzer throws an error if this is attempted.
  * 
  */
@@ -41,10 +41,11 @@
 package uclid
 package lang
 
-class SmokeAnalyzePass extends RewritePass {
+class SmokeAnalyzer() extends ASTAnalysis {
 
-  // Check for LTL properties and throw an error if there are any.
-  override def rewriteModule(module: Module, ctx: Scope): Option[Module] = {
+  override def passName = "SmokeAnalyzer"
+  override def reset() = { }
+  override def visit(module: Module, context: Scope): Option[Module] = {
     val moduleSpecs = module.decls.collect{ case spec : SpecDecl => spec }
     val ltlSpecs = moduleSpecs.filter(s => s.params.exists(d => d == LTLExprDecorator))
     if (ltlSpecs.size == 0) {
@@ -53,10 +54,4 @@ class SmokeAnalyzePass extends RewritePass {
       throw new Utils.RuntimeError(s"Smoke testing in the presence of LTL specifications is currently not supported. This support will be added in the next UCLID release.")
     }
   }
-
 }
-
-
-class SmokeAnalyzer() extends ASTRewriter(
-  "SmokeAnalyzer", new SmokeAnalyzePass()
-)
