@@ -1204,9 +1204,47 @@ class SymbolicSimulator (module : Module) {
     Utils.assert(passCount + failCount + undetCount == assertionResults.size, "Unexpected assertion count.")
 
     if (config.smoke) {
+
+      var reachableLines : List[Int] = Nil
+      var unreachableLines : List[Int] = Nil
+      var undeterminedLines : List[Int] = Nil
+
+      assertionResults.foreach { (p) =>
+        if (p.result.isTrue) {
+          unreachableLines = p.assert.pos.pos.line +: unreachableLines
+        } else if (p.result.isFalse) {
+          reachableLines = p.assert.pos.pos.line +: reachableLines
+        } else {
+          undeterminedLines = p.assert.pos.pos.line +: undeterminedLines
+        }
+      }
+
+      var reachableSet : Set[Int] = reachableLines.toSet
+      var unreachableSet : Set[Int] = unreachableLines.toSet
+      var undeterminedSet : Set[Int] = undeterminedLines.toSet
+
+      unreachableSet = unreachableSet.diff(reachableSet)
+      undeterminedSet = undeterminedSet.diff(reachableSet)
+      undeterminedSet = undeterminedSet.diff(unreachableSet)
+      reachableSet = reachableSet.diff(unreachableSet)
+      reachableSet = reachableSet.diff(undeterminedSet)
+
+      reachableLines = reachableSet.toList.sorted
+      unreachableLines = unreachableSet.toList.sorted
+      undeterminedLines = undeterminedSet.toList.sorted
+
       UclidMain.printResult("%d smoke tests run.".format(assertionResults.size))
-      UclidMain.printResult("%d warnings.".format(passCount))
-      UclidMain.printResult("%d tests indeterminate.".format(undetCount))
+      UclidMain.printResult("%d code blocks tested.".format(reachableSet.size + unreachableSet.size + undeterminedSet.size))
+      UclidMain.printResult("%d warnings.".format(unreachableSet.size))
+      UclidMain.printResult("%d tests inconclusive.".format(undeterminedSet.size))
+
+      unreachableLines.foreach { (l) =>
+        UclidMain.printStatus(" WARNING -> code block ending at line %d is never run.".format(l))
+      }
+      undeterminedLines.foreach { (l) =>
+        UclidMain.printStatus(" WARNING -> line %d's reachability is inconclusive.".format(l))
+      }
+
     } else {
       UclidMain.printResult("%d assertions passed.".format(passCount))
       UclidMain.printResult("%d assertions failed.".format(failCount))
@@ -1214,11 +1252,10 @@ class SymbolicSimulator (module : Module) {
     }
 
     if (config.verbose > 0) {
-      assertionResults.foreach{ (p) =>
-        if (p.result.isTrue) {
-          if (config.smoke) {
-            UclidMain.printStatus("  WARNING -> " + p.assert.toString)
-          } else {
+
+      if (!config.smoke) {
+        assertionResults.foreach{ (p) =>
+          if (p.result.isTrue) {
             UclidMain.printStatus("  PASSED -> " + p.assert.toString)
           }
         }
