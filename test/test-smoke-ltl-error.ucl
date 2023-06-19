@@ -1,0 +1,30 @@
+// TODO
+/* Check that the error message for LTL is correctly thrown */
+
+module main {
+
+  var prop : boolean;
+
+  init {
+    prop = true;
+  }
+
+
+  next {
+    prop' = true;
+  }
+
+  property[LTL] always_true : G(prop == true);
+
+  control {
+    v = bmc(3);
+    check;
+    print_results;
+  }
+
+
+}
+
+
+
+
