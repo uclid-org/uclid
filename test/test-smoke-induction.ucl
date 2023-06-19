@@ -1,0 +1,42 @@
+/* Essentially the same as test 1, but with induction. */
+
+module main {
+  var a : integer;  
+  var safety : boolean;
+
+  init {
+    a = 0;
+    safety = true;
+  }
+
+  next {
+
+    case
+    (a > 0) : {
+      a' = a + 1;
+      safety' = true;
+    }
+    
+(a < 0) : {
+       a' = a - 1;
+       safety' = false;
+
+     }
+    esac 
+
+  }
+  
+  invariant safe: safety == true;
+
+  control {
+    v = induction;
+    check;
+    //v.print_cex(a);
+    print_results;
+  }
+
+}
+
+
+
+

@@ -1,0 +1,49 @@
+/* Test that smoke testing works with multiple modules */
+
+module helper {
+  
+  var a : boolean;
+
+  init {
+    a = true;
+  }
+
+  next {
+
+    if (true) {
+      a' = true;
+    }
+
+    else {
+      a' = false;
+    }
+ 
+  }
+
+
+}
+
+module main {
+  instance helper1 : helper();
+  instance helper2 : helper();
+
+  init {
+    assume (helper1.a == helper2.a);   
+  }  
+
+  next {
+    next (helper1);
+    next (helper2);
+  }
+
+  property same : helper1.a == helper2.a;
+  invariant safe : helper1.a == true;
+  control {
+    v = induction;
+    check;
+    print_results;
+    v.print_cex(helper1.a, helper2.a);
+  }
+
+}
+
