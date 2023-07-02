@@ -559,8 +559,14 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val UclidIdentifier : PackratParser[(lang.UIdentifier, String)] =
     UclidSymbol |
     "(" ~ KwUS ~> UclidSymbol ~ rep1(UclidSymbol|UclidIntegerLit) <~ ")" ^^ { case sym ~ idxs =>
-      (lang.IndexedIdentifier(sym._1.toString, idxs.map(a => a._1.asInstanceOf[Either[lang.IntLit, lang.Identifier]])),
-        joinWithSpace(KwUS, sym._2, idxs.map(a => a._2).mkString(" ")))
+      (lang.IndexedIdentifier(sym._1.toString, idxs.map(a => a._1 match {
+        case s : lang.Identifier => Right(s)
+        case i : lang.IntLit => Left(i)
+        case _ => throw new Utils.RuntimeError(s"UclidIdentifier ${a._1} has unsupported type!")
+      }
+      // .toRight()
+      // asInstanceOf[Either[lang.IntLit, lang.Identifier]]
+      )), joinWithSpace(KwUS, sym._2, idxs.map(a => a._2).mkString(" ")))
     }
 
   lazy val UclidQualIdentifier : PackratParser[(lang.QIdentifier, String)] =
