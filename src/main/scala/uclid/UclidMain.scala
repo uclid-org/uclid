@@ -486,10 +486,15 @@ object UclidMain {
     } else {
       new smt.Z3Interface()
     }
-    solverInterface.filePrefix = config.smtFileGeneration
-    val result = symbolicSimulator.execute(solverInterface, config)
-    solverInterface.finish()
+    // ani add
+    var concreteSimulator = ConcreteSimulator
+    val result = concreteSimulator.execute(module, config)
     return result
+    // -----------------------------------
+    // solverInterface.filePrefix = config.smtFileGeneration
+    // val result = symbolicSimulator.execute(solverInterface, config)
+    // solverInterface.finish()
+    // return result
   }
 
   /** Splits a list of proof commands into blocks based on whether they modify the module */
