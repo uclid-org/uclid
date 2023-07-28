@@ -58,6 +58,8 @@ object ConcreteSimulator {
 
         val preinit = collection.mutable.Map[Identifier, ConcreteValue](
             module.vars.map(v => (v._1, ConcreteUndef())): _*)
+
+        // TODO: Create context for each block stmt (LEIQI)
         
         
         println("Simulating init block")
@@ -117,15 +119,50 @@ object ConcreteSimulator {
                 }
             }
 
+            // TODO: NOT YET FULLY IMPLEMENTED (LEIQI)
             case BlockStmt(vars, stmts) => {
                 stmts.foldLeft(assn)((a, stmt) => simulate_stmt(a, stmt))
+            }
+            
+            case SkipStmt() => {
+                throw new NotImplementedError(s"SkipStmt not implemented")
+            }
+            case AssertStmt(e, id) => {
+                throw new NotImplementedError(s"AssertStmt not implemented")
+            }
+            case AssumeStmt(e, id) => {
+                throw new NotImplementedError(s"AssumeStmt not implemented")
+            }
+            case HavocStmt(havocable) => {
+                throw new NotImplementedError(s"HavocStmt not implemented")
+            }
+            case IfElseStmt(cond, ifblock) => {
+                throw new NotImplementedError(s"IfElseStmt not implemented")
+            }
+            case ForStmt(id, typ, range, body) => {
+                throw new NotImplementedError(s"ForStmt not implemented")
+            }
+            case WhileStmt(cond, body, invariants) => {
+                throw new NotImplementedError(s"WhileStmt not implemented")
+            }
+            case CaseStmt(body) => {
+                throw new NotImplementedError(s"CaseStmt not implemented")
+            }
+            case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => {
+                throw new NotImplementedError(s"ProcedureCallStmt not implemented")
+            }
+            case MacroCallStmt(id) => {
+                throw new NotImplementedError(s"MacroCallStmt not implemented")
+            }
+            case ModuleCallStmt(id) => {
+                throw new NotImplementedError(s"ModuleCallStmt not implemented")
             }
         }
     }
 
     def update_lhs (assn: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         lhs: Lhs, v: ConcreteValue) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {  
-
+        // TODO: More updates to LHS (Adwait)
         lhs match {
             case LhsId(id) => {
                 assn(id) = v
@@ -142,6 +179,13 @@ object ConcreteSimulator {
         expr match {
             case a : Identifier => assn(a)
             case BoolLit(b) => ConcreteBool(b)
+            // TODO
+            // case class ConcreteInt 
+            // case class ConcreteBV 
+            // case class ConcreteArray 
+            // additiion / subtract  (Look at OperatorApplication)
+            // case class OperatorApplication(op: Operator, operands: List[Expr])
+                // do a case match on the op
             case _ => throw new NotImplementedError(s"Expression evaluation for ${expr}")
         }
     }
