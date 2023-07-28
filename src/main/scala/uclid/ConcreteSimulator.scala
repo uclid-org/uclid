@@ -13,7 +13,9 @@ sealed abstract class ConcreteValue
 
 case class ConcreteUndef () extends ConcreteValue
 case class ConcreteBool (value: Boolean) extends ConcreteValue
-case class ConcreteInt (value: List[Int]) extends ConcreteValue 
+//Leiqi:
+//I change the definition of ConcreteInt as Uclid5 define int as BigInt
+case class ConcreteInt (value: BigInt) extends ConcreteValue 
 case class ConcreteBV (value: BigInt, width: Int) extends ConcreteValue
 case class ConcreteArray (value: Map[ConcreteValue, ConcreteValue]) extends ConcreteValue
 // case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends ConcreteValue
@@ -34,10 +36,10 @@ object ConcreteSimulator {
     execute executes one step in the system
 
     Input:
-        List[assn]
+        List[context]
         List[Commands]
     Output:
-        List[assn]
+        List[context]
 
     */ 
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
@@ -83,12 +85,12 @@ object ConcreteSimulator {
         println("Simulate next block")
         println(module.next.get.getClass)
         
-        // val assn : scala.collection.mutable.Map[Identifier, ConcreteValue] = Map.empty
+        // val context : scala.collection.mutable.Map[Identifier, ConcreteValue] = Map.empty
         // println("preinit")
         // pretty_print(preinit)
         // println("postinit")
         // pretty_print(postinit)
-        // initialize(assn)
+        // initialize(context)
         
         // need to access the variables in the 
         // 
@@ -101,27 +103,31 @@ object ConcreteSimulator {
         return List()
     }
 
-    def initialize (assn: scala.collection.mutable.Map[Identifier, ConcreteValue], 
+    def initialize (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         stmt: Statement) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
-        simulate_stmt(assn, stmt)
+        simulate_stmt(context, stmt)
     }
 
-    def simulate_stmt (assn: scala.collection.mutable.Map[Identifier, ConcreteValue], 
+    def simulate_stmt (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         stmt: Statement) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
         
         stmt match {
             case AssignStmt(lhss, rhss) => {
-                val rhseval = rhss.map(rhs => evaluate_expr(assn, rhs))
+                val rhseval = rhss.map(rhs => evaluate_expr(context, rhs))
                 if (rhseval.size == 1) {
-                    lhss.foldLeft(assn)((a, l) => update_lhs(a, l, rhseval(0)))
+                    lhss.foldLeft(context)((a, l) => update_lhs(a, l, rhseval(0)))
                 } else {
                     throw new NotImplementedError(s"RHS must be singleton")
                 }
             }
 
-            // TODO: NOT YET FULLY IMPLEMENTED (LEIQI)
             case BlockStmt(vars, stmts) => {
-                stmts.foldLeft(assn)((a, stmt) => simulate_stmt(a, stmt))
+                //before entering block, create a new context
+                var localContext = extendContext(context,vars);
+                stmts.foldLeft(context)((a, stmt) => simulate_stmt(context, stmt))
+                var newContext = mergeContext(context,localContext,vars);
+                simulate_stmt(newContext,stmt)
+                //when we left the block, create a correct context
             }
             
             case SkipStmt() => {
@@ -136,7 +142,7 @@ object ConcreteSimulator {
             case HavocStmt(havocable) => {
                 throw new NotImplementedError(s"HavocStmt not implemented")
             }
-            case IfElseStmt(cond, ifblock) => {
+            case IfElseStmt(cond, ifblock, elseblock) => {
                 throw new NotImplementedError(s"IfElseStmt not implemented")
             }
             case ForStmt(id, typ, range, body) => {
@@ -160,25 +166,29 @@ object ConcreteSimulator {
         }
     }
 
-    def update_lhs (assn: scala.collection.mutable.Map[Identifier, ConcreteValue], 
+    def update_lhs (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         lhs: Lhs, v: ConcreteValue) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {  
         // TODO: More updates to LHS (Adwait)
         lhs match {
             case LhsId(id) => {
-                assn(id) = v
-                assn
+                context(id) = v
+                context
             }
             case _ => throw new NotImplementedError(s"LHS Update for ${lhs}")
         }
     }
 
 
-    def evaluate_expr (assn: scala.collection.mutable.Map[Identifier, ConcreteValue], 
+    def evaluate_expr (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         expr: lang.Expr) : ConcreteValue = {
         
         expr match {
-            case a : Identifier => assn(a)
+            case a : Identifier => context(a)
             case BoolLit(b) => ConcreteBool(b)
+            
+            //Leiqi:
+            //We define a ConcreteInt contains a "list[Int]"
+            //Uclidr5 define a IntLit contains a "BigInt"
             case IntLit(b) => ConcreteInt(b)
             // case RealLit(a,b) => 
             // case FloatLit(a,b,c,d) =>
@@ -338,32 +348,110 @@ object ConcreteSimulator {
             // additiion / subtract  (Look at OperatorApplication)
             // case class OperatorApplication(op: Operator, operands: List[Expr])
                 // do a case match on the op
+
+            case OperatorApplication(op:Operator, operands:List[Expr])=>{
+                //println("We are going to do an opperation on"operands.toString);
+                
+                val operand_0 = evaluate_expr(context,operands.head);
+                val operand_1 = evaluate_expr(context,operands.tail.head);
+                   
+                operand_0 match{
+                    case ConcreteInt(int_0) => {
+                        operand_1 match{
+                            case ConcreteInt(int_1) => {
+                                op match{
+                                    case IntAddOp()=> ConcreteInt(int_0+int_1)
+                                    //TODO: add other operator
+                                    case _ => throw new NotImplementedError("Not implements the Operator"+op.toString)
+                                }
+                            }
+                            case _ =>{
+                                throw new NotImplementedError("Does not support this type yet")
+                            }
+                        }
+                    }
+                    case _ => {
+                        throw new NotImplementedError("Does not support this type yet")
+                    }
+                }
+            }
             case _ => throw new NotImplementedError(s"Expression evaluation for ${expr}")
         }
     }
 
-    def pretty_print(assn: scala.collection.mutable.Map[Identifier, ConcreteValue]) : Unit = {
-        for (a <- assn) {
+    def pretty_print(context: scala.collection.mutable.Map[Identifier, ConcreteValue]) : Unit = {
+        for (a <- context) {
             println(a)
         }   
     }
 
-    // assn(Id("n")) = ConcreteInt(assn(Id("n")).value + 1)
+
+    def extendContext (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
+        vars: List[BlockVarsDecl]) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
+        //Leiqi:
+        //initilze those variables here????
+            
+
+        val newContext = collection.mutable.Map[Identifier, ConcreteValue]();
+        
+        vars.foreach(
+            vardecl =>
+            {
+                vardecl.ids.foreach(
+                    id => {
+                        newContext+= (id -> ConcreteUndef())
+                    }
+                )
+            }
+        );
+        //Leiqi:
+        //there might be some bugs
+        context.++(newContext)
+    }
+    
+    def mergeContext (
+        original: scala.collection.mutable.Map[Identifier, ConcreteValue],
+        newContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
+        vars: List[BlockVarsDecl]) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
+        
+        //those variables is local variables, should not be updated into the original context
+        vars.foreach(
+            vardecl =>
+            {
+                vardecl.ids.foreach(
+                    id => {
+                        newContext.-(id);
+                        original.get(id) match{
+                            case value: ConcreteValue =>{
+                                newContext += (id->value)
+                            }
+                            case _  => {
+                                
+                            }
+                        }
+                    }
+                )
+            }
+        );
+        //so, the newContext does not contain local varibales now
+        newContext
+    }
+    // context(Id("n")) = ConcreteInt(context(Id("n")).value + 1)
 
     /**
     executeOneStep is responsible for taking in a current assignment and a command to find out the next assignment for the variables
 
     Input:
-        assn
+        context
         stmt
     Output:
-        assn
+        context
     */ 
-    // def executeOneStep (assn: ConcreteAssignment, stmt: Statement) : Assignment = {}
+    // def executeOneStep (context: ConcreteAssignment, stmt: Statement) : Assignment = {}
             // check the type of assignment
             
             // execute statement
-            // assn(Id("n")) = ConcreteInt(assn(Id("n")).value + 1)
+            // context(Id("n")) = ConcreteInt(context(Id("n")).value + 1)
 
 
     //     return Assignment
