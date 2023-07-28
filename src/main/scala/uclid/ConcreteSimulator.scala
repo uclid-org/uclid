@@ -179,9 +179,161 @@ object ConcreteSimulator {
         expr match {
             case a : Identifier => assn(a)
             case BoolLit(b) => ConcreteBool(b)
-            // TODO
-            // case class ConcreteInt 
-            // case class ConcreteBV 
+            case IntLit(b) => ConcreteInt(b)
+            // case RealLit(a,b) => 
+            // case FloatLit(a,b,c,d) =>
+            // case BitVectorLit(a,b) => 
+            // case StringLit(a) =>
+            // case EnumLit????
+            // case NumericLit??
+            // case FreshLit??
+            // case ConstArray
+            // case UninterpretedTypeLiteral
+            // case ConstRecord
+            // case Tuple
+
+            // case PolymorphicSelect
+            // case RecordSelect
+            // case HyperSelect
+            // case SelectFromInstance
+            // case ITEOp
+            // case ForallOp
+
+            // // PolymorphicOperator
+            // case LTOp()
+            // case LEOp()
+            // case GTOp()
+            // case GEOp()
+            // case AddOp()
+            // case SubOp()
+            // case MulOp()
+            // case UnaryMinusOp()
+            // case DivOp()
+
+            // // IntArgOperator
+            // case IntLTOp()
+            // case IntLEOp()
+            // case IntGEOp()
+            // case IntGTOp()
+            // case IntAddOp()
+            // case IntSubOp()
+            // case IntMulOp()
+            // case IntUnaryMinusOp()
+            // case IntDivOp()
+
+            // // RealArgOperator
+            // case RealLTOp()
+            // case RealLEOp()
+            // case RealGTOp()
+            // case RealGEOp()
+            // case RealAddOp()
+            // case RealSubOp()
+            // case RealMulOp()
+            // case RealUnaryMinusOp()
+            // case RealDivOp()
+
+            // // FloatArgOperator
+            // case FPLTOp(e,s)
+            // case FPGTOp(e,s) 
+            // case FPLEOp(e,s)
+            // case FPGEOp(e,s)
+            // case FPSubOp(e,s)
+            // case FPAddOp(e,s)
+            // case FPMulOp(e,s)
+            // case FPDivOp(e,s)
+            // case FPIsNanOp(e,s)
+            // case FPUnaryMinusOp(e,s)
+
+            // // BVArgOperator
+            // case BVLTOp(w)
+            // case BVLEOp(w) 
+            // case BVGTOp(w) 
+            // case BVGEOp(w) 
+            // case BVLTUOp(w) 
+            // case BVLEUOp(w) 
+            // case BVGTUOp(w) 
+            // case BVGEUOp(w) 
+            // case BVAddOp(w) 
+            // case BVSubOp(w) 
+            // case BVMulOp(w) 
+            // case BVDivOp(w) 
+            // case BVUDivOp(w) 
+            // case BVAndOp(w) 
+            // case BVOrOp(w) 
+            // case BVXorOp(w) 
+            // case BVNotOp(w) 
+            // case BVUnaryMinusOp(w) 
+            // case BVSignExtOp(w,e) 
+            // case BVZeroExtOp(w,e) 
+            // case BVLeftShiftBVOp(w) 
+            // case BVLRightShiftBVOp(w) 
+            // case BVARightShiftBVOp(w) 
+            // case BVUremOp(w) 
+            // case BVSremOp(w) 
+
+            // // BooleanOperator
+            // case ConjunctionOp()
+            // case DisjunctionOp()
+            // case IffOp()
+            // case ImplicationOp()
+            // case NegationOp()
+
+            // // QuantifiedBooleanOperator??
+
+            // case ForallOp(vs, patterns) 
+            // case ExistsOp(vs, patterns) 
+            // case FiniteForallOp(id, groupId) 
+            // case FiniteExistsOp(id, groupId) 
+
+            // // inequality operator
+            // case EqualityOp()
+            // case InequalityOp()
+            
+            // // BV2Int and Int2BV
+            // case BV2SignedIntOp()
+            // case BV2UnsignedIntOp()
+
+            // // Int2BV
+            // case Int2BVOp()
+
+            // // LTL Operators
+            // case GloballyTemporalOp()
+            // case NextTemporalOp()
+            // case UntilTemporalOp()
+            // case FinallyTemporalOp()
+            // case ReleaseTemporalOp()
+            // case WUntilTemporalOp()
+
+            // // Old Operator
+            // case OldOperator()
+            // case PastOperator()
+            // case HistoryOperator()
+
+            // // ITE operator
+            // case ITEOp()
+
+            // // BitVectorSlice
+            // case ConstBitVectorSlice(hi,lo)
+            // case VarBitVectorSlice(hi, lo, wd)
+
+            // // ExtractOp
+            // case ConstExtractOp(slice)
+            // case VarExtractOp(slice)
+            // case ConcatOp()
+
+            // // SelectorOperator
+            // case PolymorphicSelect(id)
+            // case RecordSelect(id)
+            // case SelectFromInstance(varId)
+            // case HyperSelect(i)
+            // case ArraySelect(indices)
+            // case ArrayUpdate(indices,value)
+            // case RecordUpdate(fieldid, value)
+            // case GetNextValueOp()
+            // case DistinctOp()
+
+
+
             // case class ConcreteArray 
             // additiion / subtract  (Look at OperatorApplication)
             // case class OperatorApplication(op: Operator, operands: List[Expr])
