@@ -12,7 +12,7 @@ libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2" withSources()
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.2"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
-libraryDependencies += "com.github.scopt" %% "scopt" % "3.7.1"
+libraryDependencies += "com.github.scopt" %% "scopt" % "4.1.0"
 libraryDependencies += "org.json4s" %% "json4s-jackson" % "4.0.3"
 
 // do not require tests before building a fat JAR
