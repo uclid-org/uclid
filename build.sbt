@@ -7,7 +7,7 @@ scalacOptions += "-feature"
 scalacOptions += "-unchecked"
 scalacOptions += "-deprecation"
 
-libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2" withSources()
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.2"
