@@ -16,6 +16,6 @@ libraryDependencies += "com.github.scopt" %% "scopt" % "3.7.1"
 libraryDependencies += "org.json4s" %% "json4s-jackson" % "4.0.3"
 
 // do not require tests before building a fat JAR
-test in assembly := {}
+(assembly / test) := {}
 
 enablePlugins(JavaAppPackaging)
