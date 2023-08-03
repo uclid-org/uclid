@@ -53,8 +53,6 @@ object ConcreteSimulator {
         // val test_bool = ConcreteBool(false)
 
         // val test_int = ConcreteInt(3)
-        
-        println("helloo")
 
         // println(module.vars)
 
@@ -71,14 +69,14 @@ object ConcreteSimulator {
             case None => preinit
         }
 
-        println("postinit")
+        println("After initialize")
         pretty_print(postinit)
 
         val next_stmt = module.next match {
             case Some(next) => simulate_stmt(postinit, next.body)
         }
 
-        println("after statement")
+        println("After next")
         pretty_print(next_stmt)
         // check that none of the values are ConcreteUndef
 
@@ -113,6 +111,7 @@ object ConcreteSimulator {
         
         stmt match {
             case AssignStmt(lhss, rhss) => {
+                println("looking at assign stmt")
                 val rhseval = rhss.map(rhs => evaluate_expr(context, rhs))
                 if (rhseval.size == 1) {
                     lhss.foldLeft(context)((a, l) => update_lhs(a, l, rhseval(0)))
@@ -122,11 +121,16 @@ object ConcreteSimulator {
             }
 
             case BlockStmt(vars, stmts) => {
+                println("looking at block stmt")
                 //before entering block, create a new context
-                var localContext = extendContext(context,vars);
-                stmts.foldLeft(context)((a, stmt) => simulate_stmt(context, stmt))
-                var newContext = mergeContext(context,localContext,vars);
-                simulate_stmt(newContext,stmt)
+
+                var localContext = extendContext(context,vars)
+                println("local context: ", localContext)
+                localContext = stmts.foldLeft(localContext)((a, stmt) => simulate_stmt(a, stmt))
+                var newContext = mergeContext(context,localContext,vars)
+                println("new context: ", newContext)
+                newContext
+                //simulate_stmt(newContext,stmt)
                 //when we left the block, create a correct context
             }
             
@@ -143,15 +147,60 @@ object ConcreteSimulator {
                 throw new NotImplementedError(s"HavocStmt not implemented")
             }
             case IfElseStmt(cond, ifblock, elseblock) => {
-                throw new NotImplementedError(s"IfElseStmt not implemented")
+                evaluate_expr(context,cond) match {
+                    case ConcreteBool(b) => {
+                        println(b)
+                        if (b) {
+                            simulate_stmt(context, ifblock)
+                        } else {
+                            simulate_stmt(context, elseblock)
+                        }
+                    };
+                    // case _ => NotImplementedError("if else evaluates to non-boolean")
+                }
             }
             case ForStmt(id, typ, range, body) => {
-                throw new NotImplementedError(s"ForStmt not implemented")
+                // id: Identifier, typ : Type, range: (Expr,Expr), body: Statement
+                // for( a <- 1 to 10){
+                //     println( "Value of a: " + a );
+                // }
+
+                // these are ConcreteValues as the bounds
+                var low = evaluate_expr(context, range._1)
+                var high = evaluate_expr(context, range._2)
+                
+                // id can be int, bv, float
+                typ match {
+                    case IntegerType() => {
+                        val low_ = low match {
+                            case l: ConcreteInt => l.value
+                            // case _ => throw new 
+                        }                        
+                        val high_ = high match {
+                            case h : ConcreteInt => h.value
+                        }
+                        (low_ to high_).foldLeft(context)((con_, it) => {
+                            val newcon_ = simulate_stmt(con_.+(id -> ConcreteInt(it)), body)
+                            newcon_.-(id)
+                            newcon_
+                        })
+                    }
+                }
+                // for (id <- range._1 to range._2) {
+                // simulate_stmt(body)
+                // }
+                // throw new NotImplementedError(s"ForStmt not implemented")
             }
             case WhileStmt(cond, body, invariants) => {
+                // cond: Expr, body: Statement, invariants: List[Expr]
+                // not sure what the difference is between cond and invariants but every loop through we keep checking the cond
+                // if the cond holds then simulate_stmt on body
                 throw new NotImplementedError(s"WhileStmt not implemented")
             }
             case CaseStmt(body) => {
+
+                // body: List[(Expr,Statement)]
+                // since it is a list of expr with statements, we go through the list, evaluate_expr and once it is true, simulate_stmt
                 throw new NotImplementedError(s"CaseStmt not implemented")
             }
             case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => {
@@ -357,18 +406,53 @@ object ConcreteSimulator {
                    
                 operand_0 match{
                     case ConcreteInt(int_0) => {
-                        operand_1 match{
+                        operand_1 match {
                             case ConcreteInt(int_1) => {
                                 op match{
                                     case IntAddOp()=> ConcreteInt(int_0+int_1)
+                                    case IntSubOp() => ConcreteInt(int_0-int_1)
+                                    case IntMulOp() => ConcreteInt(int_0*int_1)
+                                    case IntDivOp() => ConcreteInt(int_0/int_1)
+                                    case IntUnaryMinusOp() => ConcreteInt(int_0-int_0-int_0)
+                                    case IntLTOp() => {
+                                        if (int_0 < int_1) {
+                                            return ConcreteBool(true)
+                                        } else {
+                                            return ConcreteBool(false)
+                                        }
+                                    }
+                                    case IntLEOp() => {
+                                        if (int_0 <= int_1) {
+                                            return ConcreteBool(true)
+                                        } else {
+                                            return ConcreteBool(false)
+                                        }
+                                    }
+                                    case IntGEOp() => {
+                                        if (int_0 >= int_1) {
+                                            return ConcreteBool(true)
+                                        } else {
+                                            return ConcreteBool(false)
+                                        }
+                                    }
+                                    case IntGTOp() => {
+                                        if (int_0 > int_1) {
+                                            return ConcreteBool(true)
+                                        } else {
+                                            return ConcreteBool(false)
+                                        }
+                                    }
+
                                     //TODO: add other operator
                                     case _ => throw new NotImplementedError("Not implements the Operator"+op.toString)
-                                }
+                                    case _ =>{
+                                        throw new NotImplementedError("Does not support this type yet")
+                                    }   
+                                 }
                             }
-                            case _ =>{
-                                throw new NotImplementedError("Does not support this type yet")
-                            }
+
                         }
+                        
                     }
                     case _ => {
                         throw new NotImplementedError("Does not support this type yet")

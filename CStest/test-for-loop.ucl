@@ -1,0 +1,21 @@
+module main
+{
+    var a : integer;
+    init {
+        a = 0;
+        for (b: integer) in range(3, 4) {
+            a = a + b;
+        }
+    }
+    next {
+        a' = a;
+    }
+    property jump_a: a!=3;
+
+    control {
+        v = bmc(5);
+        check;
+        print_results;
+        //v.print_cex(n);
+    }
+}
