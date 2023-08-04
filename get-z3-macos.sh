@@ -14,7 +14,7 @@ VERSION=4.11.2
 
 mac_arch=$(uname -m)
 
-if [ $mac_arch="arm64" ]; then
+if [ "$mac_arch" = "arm64" ]; then
     FILE_TO_GET="z3-$VERSION-arm64-osx-11.0"
 else
     FILE_TO_GET="z3-$VERSION-x64-osx-10.16"
