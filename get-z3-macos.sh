@@ -23,7 +23,8 @@ fi
 echo $FILE_TO_GET
 
 wget https://github.com/Z3Prover/z3/releases/download/z3-$VERSION/$FILE_TO_GET.zip
-unzip $FILE_TO_GET
+unzip $FILE_TO_GET.zip
+rm $FILE_TO_GET.zip
 
 # rename folder to a generic name to make it easier to upgrade z3 versions
 rm -rf z3/

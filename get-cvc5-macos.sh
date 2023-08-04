@@ -15,10 +15,11 @@ else
 fi
 
 wget https://github.com/cvc5/cvc5/releases/download/cvc5-1.0.3/$FILE_TO_GET
+
 mkdir -p cvc5/bin/
 mv $FILE_TO_GET cvc5/bin/cvc5
 chmod 755 cvc5/bin/cvc5
-cp cvc5_wait.sh cvc5/bin/cvc5_wait.sh
+mv cvc5_wait.sh cvc5/bin/cvc5_wait.sh
 export PATH=$PATH:$PWD/cvc5/bin
 cvc5 --version
 
