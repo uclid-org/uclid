@@ -235,7 +235,7 @@ object ConcreteSimulator {
             case IntLit(b) => ConcreteInt(b)
             // case RealLit(a,b) => 
             // case FloatLit(a,b,c,d) =>
-            // case BitVectorLit(a,b) => 
+            case BitVectorLit(a,b) => ConcreteBV(a,b)
             // case StringLit(a) =>
             // case EnumLit????
             // case NumericLit??
@@ -263,17 +263,6 @@ object ConcreteSimulator {
             // case UnaryMinusOp()
             // case DivOp()
 
-            // // IntArgOperator
-            // case IntLTOp()
-            // case IntLEOp()
-            // case IntGEOp()
-            // case IntGTOp()
-            // case IntAddOp()
-            // case IntSubOp()
-            // case IntMulOp()
-            // case IntUnaryMinusOp()
-            // case IntDivOp()
-
             // // RealArgOperator
             // case RealLTOp()
             // case RealLEOp()
@@ -296,33 +285,6 @@ object ConcreteSimulator {
             // case FPDivOp(e,s)
             // case FPIsNanOp(e,s)
             // case FPUnaryMinusOp(e,s)
-
-            // // BVArgOperator
-            // case BVLTOp(w)
-            // case BVLEOp(w) 
-            // case BVGTOp(w) 
-            // case BVGEOp(w) 
-            // case BVLTUOp(w) 
-            // case BVLEUOp(w) 
-            // case BVGTUOp(w) 
-            // case BVGEUOp(w) 
-            // case BVAddOp(w) 
-            // case BVSubOp(w) 
-            // case BVMulOp(w) 
-            // case BVDivOp(w) 
-            // case BVUDivOp(w) 
-            // case BVAndOp(w) 
-            // case BVOrOp(w) 
-            // case BVXorOp(w) 
-            // case BVNotOp(w) 
-            // case BVUnaryMinusOp(w) 
-            // case BVSignExtOp(w,e) 
-            // case BVZeroExtOp(w,e) 
-            // case BVLeftShiftBVOp(w) 
-            // case BVLRightShiftBVOp(w) 
-            // case BVARightShiftBVOp(w) 
-            // case BVUremOp(w) 
-            // case BVSremOp(w) 
 
             // // BooleanOperator
             // case ConjunctionOp()
@@ -365,9 +327,7 @@ object ConcreteSimulator {
             // // ITE operator
             // case ITEOp()
 
-            // // BitVectorSlice
-            // case ConstBitVectorSlice(hi,lo)
-            // case VarBitVectorSlice(hi, lo, wd)
+            
 
             // // ExtractOp
             // case ConstExtractOp(slice)
@@ -404,6 +364,9 @@ object ConcreteSimulator {
                                 case _ => throw new NotImplementedError("Not implements the Operator"+op.toString) 
                             }
                         }
+                        case ConcreteBV(int_0,length) => {
+                            throw new NotImplementedError("Not implements unary operation for BV")
+                        }
                         case _ => throw new NotImplementedError("Should not entry this line"+op.toString) 
                     }            
                 }
@@ -427,14 +390,54 @@ object ConcreteSimulator {
                                 }
                                 case _ => throw new NotImplementedError("Should not entry this line"+op.toString) 
                             }
-                            
-                    }
-                    //TODO:
-                    //Add more type here
-                    case _ => {
+                        }    
+                        case ConcreteBV(int_0, length) =>{
+                            operand_1 match{
+                                case ConcreteBV(int_1, length) =>{
+                                    op match{
+                                        case BVAddOp(w)=> ConcreteBV(int_0+int_1,w)
+                                        case BVSubOp(w) => ConcreteBV(int_0-int_1,w)
+                                        // // BVArgOperator
+                                        // case BVLTOp(w)
+                                        // case BVLEOp(w) 
+                                        // case BVGTOp(w) 
+                                        // case BVGEOp(w) 
+                                        // case BVLTUOp(w) 
+                                        // case BVLEUOp(w) 
+                                        // case BVGTUOp(w) 
+                                        // case BVGEUOp(w) 
+                                        // case BVAddOp(w) 
+                                        // case BVSubOp(w) 
+                                        // case BVMulOp(w) 
+                                        // case BVDivOp(w) 
+                                        // case BVUDivOp(w) 
+                                        // case BVAndOp(w) 
+                                        // case BVOrOp(w) 
+                                        // case BVXorOp(w) 
+                                        // case BVNotOp(w) 
+                                        // case BVUnaryMinusOp(w) 
+                                        // case BVSignExtOp(w,e) 
+                                        // case BVZeroExtOp(w,e) 
+                                        // case BVLeftShiftBVOp(w) 
+                                        // case BVLRightShiftBVOp(w) 
+                                        // case BVARightShiftBVOp(w) 
+                                        // case BVUremOp(w) 
+                                        // case BVSremOp(w) 
+                                        // More operation
+                                        // // BitVectorSlice
+                                        // case ConstBitVectorSlice(hi,lo)
+                                        // case VarBitVectorSlice(hi, lo, wd)
+                                        case _ => throw new NotImplementedError("Not implements the Operator for BV"+op.toString) 
+                                    }
+                                }
+                            }
+                        }
+                        //TODO:
+                        //Add more type here
+                        case _ => {
                         throw new NotImplementedError("Does not support this type yet")
+                        }
                     }
-                }
                 }
                 
             }

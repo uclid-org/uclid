@@ -1,0 +1,23 @@
+module main
+{
+    var a : bv4;
+    init {
+        a = 0bv4;
+        {
+            var b : bv4;
+            b = 10bv4;
+            a = 16bv4-b;
+        }
+    }
+    next {
+        a' = a + 1bv4;
+    }
+    property jump_a: a!=3bv4;
+
+    control {
+        v = bmc(5);
+        check;
+        print_results;
+        //v.print_cex(n);
+    }
+}
