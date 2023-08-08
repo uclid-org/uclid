@@ -80,8 +80,8 @@ object ConcreteSimulator {
         pretty_print(next_stmt)
         // check that none of the values are ConcreteUndef
 
-        println("Simulate next block")
-        println(module.next.get.getClass)
+        // println("Simulate next block")
+        // println(module.next.get.getClass)
         
         // val context : scala.collection.mutable.Map[Identifier, ConcreteValue] = Map.empty
         // println("preinit")
@@ -111,7 +111,7 @@ object ConcreteSimulator {
         
         stmt match {
             case AssignStmt(lhss, rhss) => {
-                println("looking at assign stmt")
+                // println("looking at assign stmt")
                 val rhseval = rhss.map(rhs => evaluate_expr(context, rhs))
                 if (rhseval.size == 1) {
                     lhss.foldLeft(context)((a, l) => update_lhs(a, l, rhseval(0)))
@@ -121,14 +121,14 @@ object ConcreteSimulator {
             }
 
             case BlockStmt(vars, stmts) => {
-                println("looking at block stmt")
+                // println("looking at block stmt")
                 //before entering block, create a new context
 
                 var localContext = extendContext(context,vars)
-                println("local context: ", localContext)
+                // println("local context: ", localContext)
                 localContext = stmts.foldLeft(localContext)((a, stmt) => simulate_stmt(a, stmt))
                 var newContext = mergeContext(context,localContext,vars)
-                println("new context: ", newContext)
+                // println("new context: ", newContext)
                 newContext
                 //simulate_stmt(newContext,stmt)
                 //when we left the block, create a correct context
@@ -149,7 +149,6 @@ object ConcreteSimulator {
             case IfElseStmt(cond, ifblock, elseblock) => {
                 evaluate_expr(context,cond) match {
                     case ConcreteBool(b) => {
-                        println(b)
                         if (b) {
                             simulate_stmt(context, ifblock)
                         } else {
@@ -160,11 +159,6 @@ object ConcreteSimulator {
                 }
             }
             case ForStmt(id, typ, range, body) => {
-                // id: Identifier, typ : Type, range: (Expr,Expr), body: Statement
-                // for( a <- 1 to 10){
-                //     println( "Value of a: " + a );
-                // }
-
                 // these are ConcreteValues as the bounds
                 var low = evaluate_expr(context, range._1)
                 var high = evaluate_expr(context, range._2)

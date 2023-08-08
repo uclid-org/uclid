@@ -5,11 +5,13 @@ module main
         a = 0;
         if (a < 1) {
             a = 1;
-        }
+        } 
     }
     next {
         if (a < 1) {
-            a' = 1;
+            a' = 0;
+        } else {
+            a' = 2;
         }
     }
     property jump_a: a!=3;
