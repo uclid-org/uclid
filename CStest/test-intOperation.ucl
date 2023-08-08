@@ -1,0 +1,29 @@
+module main
+{
+    var a : integer;
+    var test: boolean;
+    init {
+        a = 0;
+        {
+            var b : integer;
+            b = 1000;
+            a = -b;
+            a = a * 100;
+            a = a - 40;
+            a = a / 100;
+            a = b * 30;
+            test = a > b;
+        }
+    }
+    next {
+        a' = a + 1;
+    }
+    property jump_a: a!=3;
+
+    control {
+        v = bmc(5);
+        check;
+        print_results;
+        //v.print_cex(n);
+    }
+}

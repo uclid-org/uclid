@@ -393,65 +393,50 @@ object ConcreteSimulator {
                 // do a case match on the op
 
             case OperatorApplication(op:Operator, operands:List[Expr])=>{
-                //println("We are going to do an opperation on"operands.toString);
-                
+
                 val operand_0 = evaluate_expr(context,operands.head);
-                val operand_1 = evaluate_expr(context,operands.tail.head);
-                   
-                operand_0 match{
-                    case ConcreteInt(int_0) => {
-                        operand_1 match {
-                            case ConcreteInt(int_1) => {
-                                op match{
-                                    case IntAddOp()=> ConcreteInt(int_0+int_1)
-                                    case IntSubOp() => ConcreteInt(int_0-int_1)
-                                    case IntMulOp() => ConcreteInt(int_0*int_1)
-                                    case IntDivOp() => ConcreteInt(int_0/int_1)
-                                    case IntUnaryMinusOp() => ConcreteInt(int_0-int_0-int_0)
-                                    case IntLTOp() => {
-                                        if (int_0 < int_1) {
-                                            return ConcreteBool(true)
-                                        } else {
-                                            return ConcreteBool(false)
-                                        }
-                                    }
-                                    case IntLEOp() => {
-                                        if (int_0 <= int_1) {
-                                            return ConcreteBool(true)
-                                        } else {
-                                            return ConcreteBool(false)
-                                        }
-                                    }
-                                    case IntGEOp() => {
-                                        if (int_0 >= int_1) {
-                                            return ConcreteBool(true)
-                                        } else {
-                                            return ConcreteBool(false)
-                                        }
-                                    }
-                                    case IntGTOp() => {
-                                        if (int_0 > int_1) {
-                                            return ConcreteBool(true)
-                                        } else {
-                                            return ConcreteBool(false)
-                                        }
-                                    }
-
-                                    //TODO: add other operator
-                                    case _ => throw new NotImplementedError("Not implements the Operator"+op.toString)
-                                    case _ =>{
-                                        throw new NotImplementedError("Does not support this type yet")
-                                    }   
-                                 }
+                //if this is binary operation
+                if(operands.tail.size==0){
+                    operand_0 match{
+                        case ConcreteInt(int_0) => {
+                            op match{
+                                case IntUnaryMinusOp() => ConcreteInt(-int_0)
+                                case _ => throw new NotImplementedError("Not implements the Operator"+op.toString) 
                             }
-
                         }
-                        
+                        case _ => throw new NotImplementedError("Should not entry this line"+op.toString) 
+                    }            
+                }
+                else{
+                    val operand_1 = evaluate_expr(context,operands.tail.head);
+                    operand_0 match{
+                        case ConcreteInt(int_0) => {
+                            operand_1 match{
+                                case ConcreteInt(int_1) =>{
+                                    op match{
+                                        case IntAddOp()=> ConcreteInt(int_0+int_1)
+                                        case IntSubOp() => ConcreteInt(int_0-int_1)
+                                        case IntMulOp() => ConcreteInt(int_0*int_1)
+                                        case IntDivOp() => ConcreteInt(int_0/int_1)
+                                        case IntLTOp() => ConcreteBool(int_0 < int_1)
+                                        case IntLEOp() => ConcreteBool(int_0 <= int_1)
+                                        case IntGEOp() => ConcreteBool(int_0 >= int_1)
+                                        case IntGTOp() => ConcreteBool(int_0 > int_1)
+                                        case _ => throw new NotImplementedError("Not implements the Operator"+op.toString) 
+                                    }
+                                }
+                                case _ => throw new NotImplementedError("Should not entry this line"+op.toString) 
+                            }
+                            
                     }
+                    //TODO:
+                    //Add more type here
                     case _ => {
                         throw new NotImplementedError("Does not support this type yet")
                     }
                 }
+                }
+                
             }
             case _ => throw new NotImplementedError(s"Expression evaluation for ${expr}")
         }
