@@ -47,8 +47,17 @@ class SmokeInsertPass() extends RewritePass {
   var smokeCount = 1
   override def rewriteBlock(st : BlockStmt, ctx : Scope) : Option[Statement] = {
 
-    if (st.stmts.length > 0) {
-      var assertFalse = AssertStmt(BoolLit(false), Some(Identifier(s"Smoke signal ${smokeCount}")))
+    if (st.stmts.length == 1) {
+      val line = st.stmts(0).pos.line
+      var assertFalse = AssertStmt(BoolLit(false), Some(Identifier(s"line %d".format(line))))
+      assertFalse.setPos(st.stmts(0).pos)
+      val newstmts = st.stmts :+ assertFalse 
+      smokeCount += 1
+      Some(BlockStmt(st.vars, newstmts))
+    } else if (st.stmts.length > 1) {
+      val topLine = st.stmts(0).pos.line
+      val bottomLine = st.stmts(st.stmts.length-1).pos.line
+      var assertFalse = AssertStmt(BoolLit(false), Some(Identifier(s"lines %d-%d".format(topLine, bottomLine))))
       assertFalse.setPos(st.stmts(st.stmts.length-1).pos)
       val newstmts = st.stmts :+ assertFalse 
       smokeCount += 1

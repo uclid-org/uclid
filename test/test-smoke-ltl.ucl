@@ -1,17 +1,20 @@
-// TODO
-/* Check that the error message for LTL is correctly thrown */
+/* Check that smoke testing works properly in the presence of LTL. */
 
 module main {
 
   var prop : boolean;
-
   init {
     prop = true;
   }
 
 
   next {
-    prop' = true;
+    if (prop == false) {
+      prop' = false;
+    }
+    else {
+      prop' = true;
+    }
   }
 
   property[LTL] always_true : G(prop == true);
@@ -21,7 +24,6 @@ module main {
     check;
     print_results;
   }
-
 
 }
 

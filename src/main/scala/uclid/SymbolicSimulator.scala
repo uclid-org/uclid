@@ -1205,23 +1205,23 @@ class SymbolicSimulator (module : Module) {
 
     if (config.smoke) {
 
-      var reachableLines : List[Int] = Nil
-      var unreachableLines : List[Int] = Nil
-      var undeterminedLines : List[Int] = Nil
+      var reachableLines : List[String] = Nil
+      var unreachableLines : List[String] = Nil
+      var undeterminedLines : List[String] = Nil
 
       assertionResults.foreach { (p) =>
         if (p.result.isTrue) {
-          unreachableLines = p.assert.pos.pos.line +: unreachableLines
+          unreachableLines = p.assert.name +: unreachableLines
         } else if (p.result.isFalse) {
-          reachableLines = p.assert.pos.pos.line +: reachableLines
+          reachableLines = p.assert.name +: reachableLines
         } else {
-          undeterminedLines = p.assert.pos.pos.line +: undeterminedLines
+          undeterminedLines = p.assert.name +: undeterminedLines
         }
       }
 
-      var reachableSet : Set[Int] = reachableLines.toSet
-      var unreachableSet : Set[Int] = unreachableLines.toSet
-      var undeterminedSet : Set[Int] = undeterminedLines.toSet
+      var reachableSet : Set[String] = reachableLines.toSet
+      var unreachableSet : Set[String] = unreachableLines.toSet
+      var undeterminedSet : Set[String] = undeterminedLines.toSet
 
       unreachableSet = unreachableSet.diff(reachableSet)
       undeterminedSet = undeterminedSet.diff(reachableSet)
@@ -1239,10 +1239,14 @@ class SymbolicSimulator (module : Module) {
       UclidMain.printResult("%d tests inconclusive.".format(undeterminedSet.size))
 
       unreachableLines.foreach { (l) =>
-        UclidMain.printStatus(" WARNING -> code block ending at line %d is never run.".format(l))
+        if (l.contains("-")) {
+          UclidMain.printStatus(" WARNING -> %s are never run.".format(l))
+        } else {
+          UclidMain.printStatus(" WARNING -> %s is never run.".format(l))
+        }
       }
       undeterminedLines.foreach { (l) =>
-        UclidMain.printStatus(" WARNING -> line %d's reachability is inconclusive.".format(l))
+        UclidMain.printStatus(" WARNING -> %s's reachability is inconclusive.".format(l))
       }
 
     } else {
@@ -1269,7 +1273,7 @@ class SymbolicSimulator (module : Module) {
         }
       }
     }
-    if (undetCount > 0) {
+    if (undetCount > 0 && !config.smoke) {
       assertionResults.foreach{ (p) =>
         if (p.result.isUndefined) {
           UclidMain.printStatus("  UNDEF -> " + p.assert.toString)

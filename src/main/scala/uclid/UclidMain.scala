@@ -233,14 +233,15 @@ object UclidMain {
 
     // test unreachable code
     if (config.smoke) {
-      passManager.addPass(new SmokeAnalyzer())
       passManager.addPass(new SmokeRemover())
       passManager.addPass(new SmokeInserter())
     }
     // adds init and next to every module
     passManager.addPass(new ModuleCanonicalizer())
     // introduces LTL operators (which were parsed as function applications)
-    passManager.addPass(new LTLOperatorIntroducer())
+    if (!config.smoke) {
+      passManager.addPass(new LTLOperatorIntroducer())
+    }
     // imports all declarations except init and next declarations into module
     passManager.addPass(new ModuleImportRewriter())
     // imports types into module
@@ -450,8 +451,10 @@ object UclidMain {
     passManager.addPass(new ModuleEliminator(mainModuleName))
     // Expands (grounds) finite_forall and finite_exists quantifiers
     passManager.addPass(new FiniteQuantsExpander())
-    passManager.addPass(new LTLOperatorRewriter())
-    passManager.addPass(new LTLPropertyRewriter())
+    if (!config.smoke) {
+      passManager.addPass(new LTLOperatorRewriter())
+      passManager.addPass(new LTLPropertyRewriter())
+    }
     passManager.addPass(new Optimizer())
     // optimisation, has previously been called
     passManager.addPass(new ModuleCleaner())
