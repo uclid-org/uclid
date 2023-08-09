@@ -365,7 +365,20 @@ object ConcreteSimulator {
                             }
                         }
                         case ConcreteBV(int_0,length) => {
-                            throw new NotImplementedError("Not implements unary operation for BV")
+                            op match{
+                                
+                                case BVNotOp(w) => ConcreteBV((~int_0) & ((1 << length) - 1), length)
+                                case BVUnaryMinusOp(w) => ConcreteBV(-int_0, length)
+                                //Leiqi:
+                                //Uclid5:
+                                //Does not define Leftshift??
+                                case BVLeftShiftBVOp(w) => ConcreteBV((int_0<<w) & ((1 << length) - 1), length)
+                                case BVLRightShiftBVOp(w) => ConcreteBV((int_0>>w) & ((1 << length) - 1), length)
+                                // case BVARightShiftBVOp(w) 
+
+                                case _ => throw new NotImplementedError("Not implements unary operation for BV")
+                            }
+                            
                         }
                         case _ => throw new NotImplementedError("Should not entry this line"+op.toString) 
                     }            
@@ -394,33 +407,32 @@ object ConcreteSimulator {
                         case ConcreteBV(int_0, length) =>{
                             operand_1 match{
                                 case ConcreteBV(int_1, length) =>{
+                                    val unint_0 = (~int_0) & ((1 << length) - 1)
+                                    val unint_1 = (~int_0) & ((1 << length) - 1)
                                     op match{
-                                        case BVAddOp(w)=> ConcreteBV(int_0+int_1,w)
-                                        case BVSubOp(w) => ConcreteBV(int_0-int_1,w)
-                                        // // BVArgOperator
-                                        // case BVLTOp(w)
-                                        // case BVLEOp(w) 
-                                        // case BVGTOp(w) 
-                                        // case BVGEOp(w) 
-                                        // case BVLTUOp(w) 
-                                        // case BVLEUOp(w) 
-                                        // case BVGTUOp(w) 
-                                        // case BVGEUOp(w) 
-                                        // case BVAddOp(w) 
-                                        // case BVSubOp(w) 
-                                        // case BVMulOp(w) 
-                                        // case BVDivOp(w) 
-                                        // case BVUDivOp(w) 
-                                        // case BVAndOp(w) 
-                                        // case BVOrOp(w) 
-                                        // case BVXorOp(w) 
-                                        // case BVNotOp(w) 
-                                        // case BVUnaryMinusOp(w) 
+                                        
+                                        case BVLTOp(w) => ConcreteBool(int_0 < int_1)
+                                        case BVLEOp(w) => ConcreteBool(int_0 <= int_1)
+                                        case BVGTOp(w) => ConcreteBool(int_0 > int_1)
+                                        case BVGEOp(w) => ConcreteBool(int_0 >= int_1)
+                                        
+                                        case BVLTUOp(w) => ConcreteBool(unint_0 < unint_1)
+                                        case BVLEUOp(w) => ConcreteBool(unint_0 <= unint_1)
+                                        case BVGTUOp(w) => ConcreteBool(unint_0 > unint_1)
+                                        case BVGEUOp(w) => ConcreteBool(unint_0 >= unint_1)
+
+                                        case BVAddOp(w) => ConcreteBV(int_0 + int_1,w)
+                                        case BVSubOp(w) => ConcreteBV(int_0 - int_1,w) 
+                                        case BVMulOp(w) => ConcreteBV(int_0 * int_1,w)
+                                        case BVDivOp(w) => ConcreteBV(int_0 / int_1,w)
+                                        case BVUDivOp(w) => ConcreteBV(unint_0 / unint_1,w)
+                                        case BVAndOp(w) => ConcreteBV(int_0 & int_1,w)
+                                        case BVOrOp(w)  => ConcreteBV(int_0 | int_1,w)
+                                        case BVXorOp(w) => ConcreteBV(int_0 ^ int_1,w)
+                                         
                                         // case BVSignExtOp(w,e) 
                                         // case BVZeroExtOp(w,e) 
-                                        // case BVLeftShiftBVOp(w) 
-                                        // case BVLRightShiftBVOp(w) 
-                                        // case BVARightShiftBVOp(w) 
+                                       
                                         // case BVUremOp(w) 
                                         // case BVSremOp(w) 
                                         // More operation
