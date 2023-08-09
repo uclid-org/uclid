@@ -1,6 +1,4 @@
-/* The program has a bug that makes the proof pass when it should not. 
-   When run with the --smoke option, the smoke test should signal that the two blocks specified in the case statements are unreachable.
-*/
+/* This program shows the correct implementation of the buggy program in test-smoke-bmc.ucl */
 
 module main {
   var a : integer;
@@ -13,7 +11,7 @@ module main {
 
   next {
     case  
-    (a > 0) : {
+    (a >= 0) : {
       a' = a - 1;
       safe_var' = true;
     }
