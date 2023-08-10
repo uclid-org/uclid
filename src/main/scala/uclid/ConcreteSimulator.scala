@@ -361,22 +361,23 @@ object ConcreteSimulator {
                         case ConcreteInt(int_0) => {
                             op match{
                                 case IntUnaryMinusOp() => ConcreteInt(-int_0)
+                                case ConcatOp() => throw new NotImplementedError("Have not emplement ++ by now")
                                 case _ => throw new NotImplementedError("Not implements the Operator"+op.toString) 
                             }
                         }
                         case ConcreteBV(int_0,length) => {
                             op match{
-                                
+                                case ConcatOp() => {
+                                    throw new NotImplementedError("Have not emplement ++ by now")
+                                }
                                 case BVNotOp(w) => ConcreteBV((~int_0) & ((1 << length) - 1), length)
                                 case BVUnaryMinusOp(w) => ConcreteBV(-int_0, length)
-                                //Leiqi:
-                                //Uclid5:
-                                //Does not define Leftshift??
                                 case BVLeftShiftBVOp(w) => ConcreteBV((int_0<<w) & ((1 << length) - 1), length)
                                 case BVLRightShiftBVOp(w) => ConcreteBV((int_0>>w) & ((1 << length) - 1), length)
-                                // case BVARightShiftBVOp(w) 
-
-                                case _ => throw new NotImplementedError("Not implements unary operation for BV")
+                                case BVARightShiftBVOp(w) => ConcreteBV((int_0>>w) & ((1 << length) - 1) | (((1 << length) - 1)<<w & ((1 << length) - 1)), length)
+                                // case ConstBitVectorSlice(hi,lo) => ConcreteBV((int_0&((1 << (hi-lo)) - 1))>>lo, length)
+                                // case VarBitVectorSlice(hi, lo, wd)
+                                case _ => throw new NotImplementedError("Not implements unary operation "+op.toString+" for BV\n")
                             }
                             
                         }
@@ -415,30 +416,26 @@ object ConcreteSimulator {
                                         case BVLEOp(w) => ConcreteBool(int_0 <= int_1)
                                         case BVGTOp(w) => ConcreteBool(int_0 > int_1)
                                         case BVGEOp(w) => ConcreteBool(int_0 >= int_1)
-                                        
-                                        case BVLTUOp(w) => ConcreteBool(unint_0 < unint_1)
-                                        case BVLEUOp(w) => ConcreteBool(unint_0 <= unint_1)
-                                        case BVGTUOp(w) => ConcreteBool(unint_0 > unint_1)
-                                        case BVGEUOp(w) => ConcreteBool(unint_0 >= unint_1)
-
                                         case BVAddOp(w) => ConcreteBV(int_0 + int_1,w)
                                         case BVSubOp(w) => ConcreteBV(int_0 - int_1,w) 
                                         case BVMulOp(w) => ConcreteBV(int_0 * int_1,w)
                                         case BVDivOp(w) => ConcreteBV(int_0 / int_1,w)
-                                        case BVUDivOp(w) => ConcreteBV(unint_0 / unint_1,w)
                                         case BVAndOp(w) => ConcreteBV(int_0 & int_1,w)
                                         case BVOrOp(w)  => ConcreteBV(int_0 | int_1,w)
                                         case BVXorOp(w) => ConcreteBV(int_0 ^ int_1,w)
-                                         
+                                        case BVSremOp(w) => ConcreteBV(int_0 % int_1,w)
+
+                                        case BVLTUOp(w) => ConcreteBool(unint_0 < unint_1)
+                                        case BVLEUOp(w) => ConcreteBool(unint_0 <= unint_1)
+                                        case BVGTUOp(w) => ConcreteBool(unint_0 > unint_1)
+                                        case BVGEUOp(w) => ConcreteBool(unint_0 >= unint_1)
+                                        case BVUremOp(w) => ConcreteBV(unint_0 % unint_1,w)
+                                        case BVUDivOp(w) => ConcreteBV(unint_0 / unint_1,w)
+     
+                                        //Those operations do not exist in parser??
                                         // case BVSignExtOp(w,e) 
                                         // case BVZeroExtOp(w,e) 
-                                       
-                                        // case BVUremOp(w) 
-                                        // case BVSremOp(w) 
-                                        // More operation
-                                        // // BitVectorSlice
-                                        // case ConstBitVectorSlice(hi,lo)
-                                        // case VarBitVectorSlice(hi, lo, wd)
+                                    
                                         case _ => throw new NotImplementedError("Not implements the Operator for BV"+op.toString) 
                                     }
                                 }
