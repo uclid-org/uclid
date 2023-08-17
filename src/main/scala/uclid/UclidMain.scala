@@ -308,7 +308,7 @@ object UclidMain {
     // checks module instancs are instantiated correctly
     passManager.addPass(new ModuleInstanceChecker())
     passManager.addPass(new CaseEliminator())
-    passManager.addPass(new ForLoopUnroller())
+    // passManager.addPass(new ForLoopUnroller())
     // hyperproperties for procedures
     passManager.addPass(new ModularProductProgram())
     // passManager.addPass(new WhileLoopRewriter())

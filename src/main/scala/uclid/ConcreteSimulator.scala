@@ -136,7 +136,7 @@ object ConcreteSimulator {
             }
             
             case SkipStmt() => {
-                throw new NotImplementedError(s"SkipStmt not implemented")
+                context
             }
             case AssertStmt(e, id) => {
                 throw new NotImplementedError(s"AssertStmt not implemented")
@@ -156,6 +156,7 @@ object ConcreteSimulator {
             }
             case ForStmt(id, typ, range, body) => {
                 // these are ConcreteValues as the bounds
+                println("in for loop")
                 var low = evaluate_expr(context, range._1)
                 var high = evaluate_expr(context, range._2)
                 
@@ -199,7 +200,8 @@ object ConcreteSimulator {
 
                 // body: List[(Expr,Statement)]
                 // since it is a list of expr with statements, we go through the list, evaluate_expr and once it is true, simulate_stmt
-                throw new NotImplementedError(s"CaseStmt not implemented")
+                println("in case...")
+                context
             }
             case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => {
                 throw new NotImplementedError(s"ProcedureCallStmt not implemented")
@@ -239,7 +241,7 @@ object ConcreteSimulator {
             }
             case _ => throw new NotImplementedError(s"LHS Update for ${lhs}")
         }
-    }
+        }
 
 
     def evaluate_expr (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
@@ -479,8 +481,6 @@ object ConcreteSimulator {
             println(a)
         }   
     }
-
-
     def extendContext (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         vars: List[BlockVarsDecl]) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
         //Leiqi:
