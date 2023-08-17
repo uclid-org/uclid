@@ -311,7 +311,7 @@ object UclidMain {
     passManager.addPass(new ForLoopUnroller())
     // hyperproperties for procedures
     passManager.addPass(new ModularProductProgram())
-    passManager.addPass(new WhileLoopRewriter())
+    // passManager.addPass(new WhileLoopRewriter())
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())

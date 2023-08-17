@@ -1,0 +1,24 @@
+module main
+{
+    var a : integer;
+    var b : integer;
+    init {
+        a = 0; 
+        b = 0;
+        while (a < 3) {
+            a = a + 1;
+            b = b + 1;
+        }
+    }
+    next {
+        b' = 0;
+    }
+
+
+    control {
+        v = bmc(5);
+        check;
+        print_results;
+        //v.print_cex(n);
+    }
+}

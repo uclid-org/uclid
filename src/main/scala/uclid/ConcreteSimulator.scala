@@ -45,6 +45,7 @@ object ConcreteSimulator {
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
         // End goal
         UclidMain.printVerbose("HELLO IN EXECUTE")
+        println(module)
         
         // create a new variable for ConcreteBool with a value and then try to print that
 
@@ -147,15 +148,10 @@ object ConcreteSimulator {
                 throw new NotImplementedError(s"HavocStmt not implemented")
             }
             case IfElseStmt(cond, ifblock, elseblock) => {
-                evaluate_expr(context,cond) match {
-                    case ConcreteBool(b) => {
-                        if (b) {
-                            simulate_stmt(context, ifblock)
-                        } else {
-                            simulate_stmt(context, elseblock)
-                        }
-                    };
-                    // case _ => NotImplementedError("if else evaluates to non-boolean")
+                if (evaluateBoolExpr(context, cond)) {
+                    simulate_stmt(context, ifblock)
+                } else {
+                    simulate_stmt(context, elseblock)
                 }
             }
             case ForStmt(id, typ, range, body) => {
@@ -189,7 +185,15 @@ object ConcreteSimulator {
                 // cond: Expr, body: Statement, invariants: List[Expr]
                 // not sure what the difference is between cond and invariants but every loop through we keep checking the cond
                 // if the cond holds then simulate_stmt on body
-                throw new NotImplementedError(s"WhileStmt not implemented")
+                if (evaluateBoolExpr(context, cond)) {
+                    var newContext = simulate_stmt(context, body)
+                    while (evaluateBoolExpr(newContext, cond)) {
+                        newContext = simulate_stmt(newContext, body)
+                    }
+                    newContext
+                } else {
+                    context
+                }
             }
             case CaseStmt(body) => {
 
@@ -208,6 +212,22 @@ object ConcreteSimulator {
             }
         }
     }
+
+    """
+    Evaluates a condition (Expr) in a context and returns a boolean if the cond is held or not.
+    """
+    def evaluateBoolExpr(context: scala.collection.mutable.Map[Identifier, ConcreteValue],
+        cond: Expr) : Boolean = {
+            evaluate_expr(context,cond) match {
+                case ConcreteBool(b) => {
+                    if (b) {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+            }
+        }
 
     def update_lhs (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         lhs: Lhs, v: ConcreteValue) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {  
