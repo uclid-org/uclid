@@ -1,0 +1,42 @@
+module main
+{
+    var a : integer;
+    var b : integer;
+    var zero: integer;
+    var add: integer;
+    var sub: integer;
+    var mul: integer;
+    var div: integer;
+    var compare_1: boolean;
+    var compare_2: boolean;
+    var compare_3: boolean;
+    var compare_4: boolean;
+    init {
+        zero = 0;
+        a = 9;
+        b = 7;
+        add = a + b;
+        sub = a - b;
+        div = a / b;
+        mul = a * b;
+
+        //we test the compare below
+        b = 9;
+        compare_1 = a < b;
+        compare_2 = a <= b;
+        compare_3 = a > b;
+        compare_4 = a >= b;
+        
+    }
+    next {
+        a' = a + 1;
+    }
+    property jump_a: a!=3;
+
+    control {
+        v = bmc(5);
+        check;
+        print_results;
+        //v.print_cex(n);
+    }
+}

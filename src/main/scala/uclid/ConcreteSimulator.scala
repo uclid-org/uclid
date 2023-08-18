@@ -45,7 +45,7 @@ object ConcreteSimulator {
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
         // End goal
         UclidMain.printVerbose("HELLO IN EXECUTE")
-        println(module)
+        //println(module)
         
         // create a new variable for ConcreteBool with a value and then try to print that
 
@@ -77,7 +77,7 @@ object ConcreteSimulator {
             case Some(next) => simulate_stmt(postinit, next.body)
         }
 
-        println("After next")
+        println("\n\n\nAfter next")
         pretty_print(next_stmt)
         // check that none of the values are ConcreteUndef
 
@@ -389,14 +389,13 @@ object ConcreteSimulator {
                         }
                         case ConcreteBV(int_0,length) => {
                             op match{
-                                case ConcatOp() => {
-                                    throw new NotImplementedError("Have not emplement ++ by now")
-                                }
+                                case ConcatOp() => throw new NotImplementedError("Have not emplement ++ by now")
                                 case BVNotOp(w) => ConcreteBV((~int_0) & ((1 << length) - 1), length)
-                                case BVUnaryMinusOp(w) => ConcreteBV(-int_0, length)
+                                case BVUnaryMinusOp(w) => ConcreteBV((-int_0)& ((1 << length) - 1), length)
                                 case BVLeftShiftBVOp(w) => ConcreteBV((int_0<<w) & ((1 << length) - 1), length)
                                 case BVLRightShiftBVOp(w) => ConcreteBV((int_0>>w) & ((1 << length) - 1), length)
                                 case BVARightShiftBVOp(w) => ConcreteBV((int_0>>w) & ((1 << length) - 1) | (((1 << length) - 1)<<w & ((1 << length) - 1)), length)
+                                case ConstExtractOp(slide) => ConcreteBV((int_0&((1 << (slide.hi+1) - 1)))>>slide.lo, slide.hi-slide.lo+1)
                                 // case ConstBitVectorSlice(hi,lo) => ConcreteBV((int_0&((1 << (hi-lo)) - 1))>>lo, length)
                                 // case VarBitVectorSlice(hi, lo, wd)
                                 case _ => throw new NotImplementedError("Not implements unary operation "+op.toString+" for BV\n")
@@ -438,14 +437,14 @@ object ConcreteSimulator {
                                         case BVLEOp(w) => ConcreteBool(int_0 <= int_1)
                                         case BVGTOp(w) => ConcreteBool(int_0 > int_1)
                                         case BVGEOp(w) => ConcreteBool(int_0 >= int_1)
-                                        case BVAddOp(w) => ConcreteBV(int_0 + int_1,w)
-                                        case BVSubOp(w) => ConcreteBV(int_0 - int_1,w) 
-                                        case BVMulOp(w) => ConcreteBV(int_0 * int_1,w)
-                                        case BVDivOp(w) => ConcreteBV(int_0 / int_1,w)
-                                        case BVAndOp(w) => ConcreteBV(int_0 & int_1,w)
-                                        case BVOrOp(w)  => ConcreteBV(int_0 | int_1,w)
-                                        case BVXorOp(w) => ConcreteBV(int_0 ^ int_1,w)
-                                        case BVSremOp(w) => ConcreteBV(int_0 % int_1,w)
+                                        case BVAddOp(w) => ConcreteBV((int_0 + int_1) & ((1 << length) - 1),w)
+                                        case BVSubOp(w) => ConcreteBV((int_0 - int_1) & ((1 << length) - 1),w) 
+                                        case BVMulOp(w) => ConcreteBV((int_0 * int_1) & ((1 << length) - 1),w)
+                                        case BVDivOp(w) => ConcreteBV((int_0 / int_1) & ((1 << length) - 1),w)
+                                        case BVAndOp(w) => ConcreteBV((int_0 & int_1) & ((1 << length) - 1),w)
+                                        case BVOrOp(w)  => ConcreteBV((int_0 | int_1) & ((1 << length) - 1),w)
+                                        case BVXorOp(w) => ConcreteBV((int_0 ^ int_1) & ((1 << length) - 1),w)
+                                        case BVSremOp(w) => ConcreteBV((int_0 % int_1) & ((1 << length) - 1),w)
 
                                         case BVLTUOp(w) => ConcreteBool(unint_0 < unint_1)
                                         case BVLEUOp(w) => ConcreteBool(unint_0 <= unint_1)
