@@ -1,0 +1,54 @@
+module main
+{
+    var a : bv4;
+    var b : bv4;
+    var normalAdd: bv4;
+    var overFlowAdd: bv4;
+    var notOp: bv4;
+    var unaryMinus: bv4;
+    var unaryMinus2: bv4;
+    var leftShift: bv4;
+    var slideNumber: bv2;
+    init {
+        //normalAdd: should be 2
+        a = 1bv4;
+        b = 1bv4;
+        normalAdd = a +_u b;
+
+
+        //overflowAd: should be 0
+        a = 15bv4;
+        b = 1bv4;
+        overFlowAdd = a +_u b;
+
+        //a: 0010 1
+        //~a: 1101 13？
+        a = 2bv4;
+        notOp = ~a;
+
+        //a: 0010
+        //unaryMinus : -2
+        a = 2bv4;
+        unaryMinus = -a;
+        
+        //a: -16
+        //unaryMinus2: 0
+        a = -16bv4; 
+        unaryMinus2 = -a;
+
+        //a: 0100
+        //slide: 01
+        a = 8bv4;
+        slideNumber = a[3:2];
+    }
+    next {
+
+    }
+
+    control {
+        v = bmc(5);
+        check;
+        print_results;
+        //v.print_cex(n);
+    }
+}
