@@ -477,24 +477,33 @@ object UclidMain {
    */
   def execute(module : Module, config : Config) : List[CheckResult] = {
     UclidMain.printVerbose("Begining execution")
-    var symbolicSimulator = new SymbolicSimulator(module)
-    var solverInterface = if (config.smtSolver.size > 0) {
-      logger.debug("args: {}", config.smtSolver)
-      new smt.SMTLIB2Interface(config.smtSolver, config.noLetify)
-    } else if (config.synthesizer.size > 0) {
-      new smt.SynthLibInterface(config.synthesizer, config.sygusFormat)
+    var isConcrete = module.cmds.exists(p => p.name.toString == "concrete")   
+    if (isConcrete) {
+      UclidMain.printVerbose("Starting Concrete Simulation")
+      var concreteSimulator = ConcreteSimulator
+      val result = concreteSimulator.execute(module, config)
+      return result
     } else {
-      new smt.Z3Interface()
+      UclidMain.printVerbose("Starting Symbolic Simulation")
+      var symbolicSimulator = new SymbolicSimulator(module)
+      var solverInterface = if (config.smtSolver.size > 0) {
+            logger.debug("args: {}", config.smtSolver)
+            new smt.SMTLIB2Interface(config.smtSolver, config.noLetify)
+          } else if (config.synthesizer.size > 0) {
+            new smt.SynthLibInterface(config.synthesizer, config.sygusFormat)
+          } else {
+            new smt.Z3Interface()
+        }
+        
+      solverInterface.filePrefix = config.smtFileGeneration
+      val result = symbolicSimulator.execute(solverInterface, config)
+      solverInterface.finish()
+      return result
     }
-    // ani add
-    var concreteSimulator = ConcreteSimulator
-    val result = concreteSimulator.execute(module, config)
-    return result
-    // -----------------------------------
-    // solverInterface.filePrefix = config.smtFileGeneration
-    // val result = symbolicSimulator.execute(solverInterface, config)
-    // solverInterface.finish()
-    // return result
+    
+    
+    
+    
   }
 
   /** Splits a list of proof commands into blocks based on whether they modify the module */

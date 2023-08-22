@@ -72,9 +72,36 @@ object ConcreteSimulator {
 
         println("After initialize")
         pretty_print(postinit)
+        
+        var cntInt = 0
+        
+        module.cmds.foreach {
+            cmd => cmd.name.toString match {
+                case "concrete" => {
+                    val cntLit = cmd.args(0)
+                    // Utils.checkParsingError(cntLit._1.isInstanceOf[IntLit], "'%s' command expects a constant integer argument".format(cmd.name.toString), cmd.pos, filename)
+                    val cnt = cntLit._1.asInstanceOf[IntLit].value
+                    cntInt = cnt.intValue()
+                }
 
+                case _ => {
+                    
+                }
+
+            }
+                
+        }
+        println(cntInt)
+        
         val next_stmt = module.next match {
-            case Some(next) => simulate_stmt(postinit, next.body)
+            case Some(next) => 
+            {
+                var newContext = postinit
+                for (a <- 1 to cntInt) {
+                    newContext = simulate_stmt(newContext, next.body)
+                }
+                newContext
+            }
         }
 
         println("\n\n\nAfter next")
