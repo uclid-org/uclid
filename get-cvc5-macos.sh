@@ -3,7 +3,7 @@
 #
 # Run the following command: source get-cvc5-macos.sh from your bash prompt.
 #
-# This will download cvc5 version 0.0.4 and add it to your path
+# This will download cvc5 version 1.0.3 and add it to your path
 #
 
 mac_arch=$(uname -m)
