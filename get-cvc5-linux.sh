@@ -3,7 +3,7 @@
 #
 # Run the following command: source get-cvc5-linux.sh from your bash prompt.
 #
-# This will download cvc5 version 0.0.4 and add it to your path
+# This will download cvc5 version 1.0.3 and add it to your path
 #
 
 wget https://github.com/cvc5/cvc5/releases/download/cvc5-1.0.3/cvc5-Linux
