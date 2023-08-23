@@ -1,0 +1,29 @@
+module main
+{
+    var a : boolean;
+    var b : boolean;
+    var conj: boolean;
+    var disj: boolean;
+    var iff: boolean;
+    var imp: boolean;
+    var negation: boolean;
+    init {
+        a = true;
+        b = false;
+        conj = a && b;
+        disj = a || b;
+        iff = a <==> b;
+        imp = b ==> a;
+        negation = !a;
+    }
+    next {
+
+    }
+
+    control {
+        v = concrete(5);
+        check;
+        print_results;
+        //v.print_cex(n);
+    }
+}

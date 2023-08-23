@@ -277,10 +277,6 @@ object ConcreteSimulator {
         expr match {
             case a : Identifier => context(a)
             case BoolLit(b) => ConcreteBool(b)
-            
-            //Leiqi:
-            //We define a ConcreteInt contains a "list[Int]"
-            //Uclidr5 define a IntLit contains a "BigInt"
             case IntLit(b) => ConcreteInt(b)
             // case RealLit(a,b) => 
             // case FloatLit(a,b,c,d) =>
@@ -334,13 +330,6 @@ object ConcreteSimulator {
             // case FPDivOp(e,s)
             // case FPIsNanOp(e,s)
             // case FPUnaryMinusOp(e,s)
-
-            // // BooleanOperator
-            // case ConjunctionOp()
-            // case DisjunctionOp()
-            // case IffOp()
-            // case ImplicationOp()
-            // case NegationOp()
 
             // // QuantifiedBooleanOperator??
 
@@ -400,13 +389,22 @@ object ConcreteSimulator {
             // additiion / subtract  (Look at OperatorApplication)
             // case class OperatorApplication(op: Operator, operands: List[Expr])
                 // do a case match on the op
-
+            
+            
+            // case NegationOp()
             case OperatorApplication(op:Operator, operands:List[Expr])=>{
 
                 val operand_0 = evaluate_expr(context,operands.head);
                 //if this is binary operation
                 if(operands.tail.size==0){
                     operand_0 match{
+                        case ConcreteBool(bool_0) => {
+                            op match{
+                                case NegationOp() => ConcreteBool(!bool_0)
+                                case _ => throw new NotImplementedError("Not implements the Operator for ConcreteBool"+op.toString) 
+                            }
+                        }
+
                         case ConcreteInt(int_0) => {
                             op match{
                                 case IntUnaryMinusOp() => ConcreteInt(-int_0)
@@ -429,12 +427,27 @@ object ConcreteSimulator {
                             }
                             
                         }
+                        
                         case _ => throw new NotImplementedError("Should not entry this line"+op.toString) 
                     }            
                 }
                 else{
                     val operand_1 = evaluate_expr(context,operands.tail.head);
                     operand_0 match{
+                        case ConcreteBool(bool_0) =>{
+                            operand_1 match{
+                                case ConcreteBool(bool_1) => {
+                                    op match{
+                                        case ConjunctionOp() => ConcreteBool(bool_0&&bool_1)
+                                        case DisjunctionOp() => ConcreteBool(bool_0||bool_1)
+                                        case IffOp() => ConcreteBool(bool_0 == bool_1)
+                                        case ImplicationOp() => ConcreteBool(!bool_0 || bool_1)
+                                        case _ => throw new NotImplementedError("Not implements the Operator for Bool"+op.toString) 
+                                    }
+                                }
+                                case _ => throw new NotImplementedError("Should not reach here")
+                            }
+                        }
                         case ConcreteInt(int_0) => {
                             operand_1 match{
                                 case ConcreteInt(int_1) =>{
@@ -489,8 +502,6 @@ object ConcreteSimulator {
                                 }
                             }
                         }
-                        //TODO:
-                        //Add more type here
                         case _ => {
                         throw new NotImplementedError("Does not support this type yet")
                         }
