@@ -105,7 +105,7 @@ java11
 ~~~
     export PATH=$PATH:/path/to/uclid/z3/bin:/path/to/uclid/cvc5/bin:/path/to/uclid/delphi/bin:/path/to/uclid/oracles
 ~~~
-- Due to System Integrity Protection, introduced in OS X El Capitan, Java ignores the user set DYLD_LIBRARY_PATH. To fix this issue copy the JNI dynamic link libraries to Java/Library/Extensions and the non-JNI dynamic link libraries to /usr/local/lib as follows (if you build Z3 from source these files are found in the build directory):
+- Due to System Integrity Protection, introduced in OS X El Capitan, Java ignores the user set DYLD_LIBRARY_PATH. Depending on the version of MacOS you are using, you may need to fix this issue by copying the JNI dynamic link libraries to Java/Library/Extensions and the non-JNI dynamic link libraries to /usr/local/lib as follows (if you build Z3 from source these files are found in the build directory):
 ~~~
     cp /path/to/uclid/z3/bin/libz3.dylib /usr/local/lib
     cp /path/to/uclid/z3/bin/libz3java.dylib /Library/Java/Extensions
@@ -130,6 +130,7 @@ This will create uclid/target/universal/uclid-0.9.5.zip, which contains the ucli
     $ unzip uclid-0.9.5.zip
     $ cd uclid-0.9.5
     $ export PATH=$PATH:$PWD/bin
+
 
 ## Running UCLID
 
