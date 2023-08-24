@@ -60,8 +60,8 @@ The following are optional requirements but several CI tests will fail without t
 - For easy install of prerequisite solvers on Linux, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC5/Delphi for use with uclid5. This script will download [Z3 version 4.12.2.](https://github.com/Z3Prover/z3/releases/tag/z3-4.12.1)/[CVC5 1.0.3](https://github.com/cvc5/cvc5/releases/tag/cvc5-1.0.3)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
 ~~~
     $ source get-z3-linux.sh
-    $ source get-cvc5-linux.sh
-    $ source get-delphi-linux.sh
+    $ source get-cvc5-linux.sh #(optional but some CI synthesis tests will fail without CVC5)
+    $ source get-delphi-linux.sh #(optional but some CI synthesis tests will fail without Delphi)
 ~~~
 - These scripts download the binaries for Z3, CVC5 and Delphi respectively and set up your `PATH` and `LD_LIBRARY_PATH` accordingly.
 You may wish to permanently add the following lines to your bash_profile:
@@ -94,12 +94,12 @@ java11
 ### SBT (only required to build from source)
 -  `brew install sbt`
 
-#### Installing solvers
+#### External solvers
 - For easy install of prerequisites on macOS, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC5/Delphi for use with uclid5. This script will download [Z3 version 4.12.2.](https://github.com/Z3Prover/z3/releases/tag/z3-4.12.1)/[CVC5 1.0.3](https://github.com/cvc5/cvc5/releases/tag/cvc5-1.0.3)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
 ~~~
     $ source get-z3-macos.sh
-    $ source get-cvc5-macos.sh (optional but some CI synthesis tests will fail without CVC5)
-    $ source get-delphi-macos.sh (optional but some CI synthesis tests will fail without Delphi)
+    $ source get-cvc5-macos.sh #(optional but some CI synthesis tests will fail without CVC5)
+    $ source get-delphi-macos.sh #(optional but some CI synthesis tests will fail without Delphi)
 ~~~
 - These scripts add the downloaded binaries to your `PATH` and `LD_LIBRARY_PATH` accordingly. You may wish to permanently add the following lines to your bash_profile:
 ~~~
