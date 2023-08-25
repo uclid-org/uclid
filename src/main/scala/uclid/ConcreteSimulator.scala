@@ -17,7 +17,7 @@ case class ConcreteBool (value: Boolean) extends ConcreteValue
 //I change the definition of ConcreteInt as Uclid5 define int as BigInt
 case class ConcreteInt (value: BigInt) extends ConcreteValue 
 case class ConcreteBV (value: BigInt, width: Int) extends ConcreteValue
-case class ConcreteArray (value: Map[ConcreteValue, ConcreteValue]) extends ConcreteValue
+case class ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue]) extends ConcreteValue
 // case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends ConcreteValue
 
 
@@ -266,7 +266,33 @@ object ConcreteSimulator {
                 context(id) = v
                 context
             }
-            case _ => throw new NotImplementedError(s"LHS Update for ${lhs}")
+            case LhsArraySelect(id,indices)=>{
+
+                //so, we should alway make sure the indeces correct first
+                //But the simulator does not have list?
+                //What should we do?
+
+                //So, we need to grab the original map first
+                // var newValue = ConcreteArray(Map(indices,v));
+                // if(context.contains(id)){
+                //     context(id) match{
+                //         case ConcreteArray(value) => {
+                //             var indiceMap = value;
+                //             indiceMap.update(indices,v)
+                //             newValue = ConcreteArray(indiceMap)
+                            
+                //         }
+                //         case _ => throw new NotImplementedError("Should not touch this part")
+                //     }
+                // }
+                // context(id) = newValue;
+                context
+                //ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue])
+            }
+            case _ => {
+                throw new NotImplementedError(s"LHS Update for ${lhs}")
+            }
+            
         }
         }
 
@@ -536,8 +562,6 @@ object ConcreteSimulator {
                 )
             }
         );
-        //Leiqi:
-        //there might be some bugs
         context.++(newContext)
     }
     
