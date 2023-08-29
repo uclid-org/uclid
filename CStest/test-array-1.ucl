@@ -3,9 +3,11 @@ module main
   type num_t = integer;
   var numbers : [boolean, num_t]integer;
   var zero : integer;
+  var read: integer;
   init {
     
     numbers[true,0] = 0;
+    read = numbers[true,0];
   }
 
   next {

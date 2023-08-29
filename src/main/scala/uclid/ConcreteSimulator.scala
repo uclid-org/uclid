@@ -267,6 +267,11 @@ object ConcreteSimulator {
                 context
             }
             case LhsArraySelect(id,indices)=>{
+                //TODO:
+                //We should exvalute the indices firstly
+                //
+
+
 
                 //so, we should alway make sure the indeces correct first
                 //But the simulator does not have list?
@@ -421,7 +426,7 @@ object ConcreteSimulator {
             case OperatorApplication(op:Operator, operands:List[Expr])=>{
 
                 val operand_0 = evaluate_expr(context,operands.head);
-                //if this is binary operation
+                //if this is not binary operation
                 if(operands.tail.size==0){
                     operand_0 match{
                         case ConcreteBool(bool_0) => {
