@@ -7,8 +7,10 @@ module main {
     v2 : r
   };
   var a : r2;
+  var test: integer;
   init {
-    a.v2.v1 = 0;
+    a.v2.v1 = 3;
+    test = a.v2.v1;
   }
   
   next {

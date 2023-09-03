@@ -13,12 +13,10 @@ sealed abstract class ConcreteValue
 
 case class ConcreteUndef () extends ConcreteValue
 case class ConcreteBool (value: Boolean) extends ConcreteValue
-//Leiqi:
-//I change the definition of ConcreteInt as Uclid5 define int as BigInt
 case class ConcreteInt (value: BigInt) extends ConcreteValue 
 case class ConcreteBV (value: BigInt, width: Int) extends ConcreteValue
 case class ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue]) extends ConcreteValue
-// case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends ConcreteValue
+case class ConcreteRecord (value: Map[Identifier,ConcreteValue]) extends ConcreteValue
 
 
 // class ConcreteAssignment () {
@@ -45,23 +43,9 @@ object ConcreteSimulator {
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
         // End goal
         UclidMain.printVerbose("HELLO IN EXECUTE")
-        //println(module)
-        
-        // create a new variable for ConcreteBool with a value and then try to print that
-
-        // var - mutable, open to reassignment
-        // val - immutable, cannot reassign
-        // val test_bool = ConcreteBool(false)
-
-        // val test_int = ConcreteInt(3)
-
-        // println(module.vars)
 
         val preinit = collection.mutable.Map[Identifier, ConcreteValue](
-            module.vars.map(v => (v._1, ConcreteUndef())): _*)
-
-        // TODO: Create context for each block stmt (LEIQI)
-        
+            module.vars.map(v => (v._1, ConcreteUndef())): _*)        
         
         println("Simulating init block")
         // result of applying init block to preinit
@@ -91,7 +75,7 @@ object ConcreteSimulator {
             }
                 
         }
-        println(cntInt)
+        println("Unroll for "+cntInt)
         
         val next_stmt = module.next match {
             case Some(next) => 
@@ -106,26 +90,7 @@ object ConcreteSimulator {
 
         println("\n\n\nAfter next")
         pretty_print(next_stmt)
-        // check that none of the values are ConcreteUndef
 
-        // println("Simulate next block")
-        // println(module.next.get.getClass)
-        
-        // val context : scala.collection.mutable.Map[Identifier, ConcreteValue] = Map.empty
-        // println("preinit")
-        // pretty_print(preinit)
-        // println("postinit")
-        // pretty_print(postinit)
-        // initialize(context)
-        
-        // need to access the variables in the 
-        // 
-
-        // Define initial assignment
-        // val init_assignment = initialize()
-
-        // // Simulate
-        // simulate_helper(init_assignment, stmt)
         return List()
     }
 
@@ -291,8 +256,13 @@ object ConcreteSimulator {
                 //     }
                 // }
                 // context(id) = newValue;
+                throw new NotImplementedError(s"On working ${lhs}")
                 context
                 //ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue])
+            }
+            case LhsRecordSelect(id,fieldid)=>{
+                context(id) = updateRecordValue(fieldid,v,context(id))
+                context     
             }
             case _ => {
                 throw new NotImplementedError(s"LHS Update for ${lhs}")
@@ -435,7 +405,6 @@ object ConcreteSimulator {
                                 case _ => throw new NotImplementedError("Not implements the Operator for ConcreteBool"+op.toString) 
                             }
                         }
-
                         case ConcreteInt(int_0) => {
                             op match{
                                 case IntUnaryMinusOp() => ConcreteInt(-int_0)
@@ -458,8 +427,18 @@ object ConcreteSimulator {
                             }
                             
                         }
-                        
-                        case _ => throw new NotImplementedError("Should not entry this line"+op.toString) 
+                        case ConcreteRecord(valuemap) => {
+                            op match{
+                                case RecordSelect(id) =>{
+                                    if(valuemap.contains(id))
+                                        valuemap(id)
+                                    else
+                                        ConcreteUndef()
+                                }
+                                case _ => throw new NotImplementedError("Not implements unary operation for ConcreteRecord"+"op: "+op + "operands: "+ operands+ "operand_0"+ operand_0)
+                            }
+                        }
+                        case _ => throw new NotImplementedError("Not implements unary operation "+"op: "+op + "operands: "+ operands+ "operand_0"+ operand_0) 
                     }            
                 }
                 else{
@@ -569,7 +548,6 @@ object ConcreteSimulator {
         );
         context.++(newContext)
     }
-    
     def mergeContext (
         original: scala.collection.mutable.Map[Identifier, ConcreteValue],
         newContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
@@ -596,6 +574,30 @@ object ConcreteSimulator {
         );
         //so, the newContext does not contain local varibales now
         newContext
+    }
+    def updateRecordValue(fields: List[Identifier],value: ConcreteValue,recordValue: ConcreteValue): ConcreteRecord = {
+        if(fields.size == 1){
+            recordValue match{
+                case ConcreteUndef() => ConcreteRecord(Map(fields.head->value))
+                case ConcreteRecord(map) => {
+                    map(fields.head) = value;
+                    ConcreteRecord(map)
+                }
+                
+                case _ => throw new NotImplementedError(s"Should not touch here")
+            }
+        }
+        else{
+            // now, we have one recordValue and we have not touch the end of the Record
+            recordValue match{
+                case ConcreteUndef() => ConcreteRecord(Map(fields.head->updateRecordValue(fields.tail,value,ConcreteUndef())))
+                case ConcreteRecord(map) => {
+                    map(fields.head) = updateRecordValue(fields.tail,value,map(fields.head));
+                    ConcreteRecord(map)
+                }
+                case _ => throw new NotImplementedError(s"Should not touch here")
+            }
+        }
     }
     // context(Id("n")) = ConcreteInt(context(Id("n")).value + 1)
 

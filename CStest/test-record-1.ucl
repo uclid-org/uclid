@@ -4,8 +4,11 @@ module main {
     r1 : integer
   };
   var a : t;
+  var n : integer;
   init {
     a.r1 = 0;
+    n = a.r1;
+    a.r1 = 100;
   }
   
   next {

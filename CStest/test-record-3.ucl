@@ -5,10 +5,12 @@ module main {
     r2 : integer
   };
   var a : t;
+  var test: integer;
   init {
     a.r1 = 0;
     a.r2 = 1;
     a.r1 = 100;
+    test = a.r2;
   }
   
   next {
