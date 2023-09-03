@@ -1,0 +1,24 @@
+//var.record
+module main {
+  type t = record {
+    r1 : integer,
+    r2 : integer
+  };
+  var a : t;
+  init {
+    a.r1 = 0;
+    a.r2 = 1;
+    a.r1 = 100;
+  }
+  
+  next {
+  }
+  
+  property jump_r1: a.r1!=3;
+
+  control {
+    v = concrete(5);
+    check;
+    print_results;
+  }
+}
