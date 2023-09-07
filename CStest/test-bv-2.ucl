@@ -46,7 +46,7 @@ module main
     }
 
     control {
-        v = bmc(5);
+        v = concrete(5);
         check;
         print_results;
         //v.print_cex(n);

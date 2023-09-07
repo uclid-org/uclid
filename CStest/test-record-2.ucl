@@ -1,0 +1,25 @@
+//var.record
+module main {
+  type r = record {
+    v1 : integer
+  };
+  type r2 = record{
+    v2 : r
+  };
+  var a : r2;
+  var test: integer;
+  init {
+    a.v2.v1 = 3;
+    test = a.v2.v1;
+  }
+  
+  next {
+  }
+  
+
+  control {
+    v = concrete(5);
+    check;
+    print_results;
+  }
+}
