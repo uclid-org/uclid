@@ -17,7 +17,8 @@ case class ConcreteBool (value: Boolean) extends ConcreteValue
 //I change the definition of ConcreteInt as Uclid5 define int as BigInt
 case class ConcreteInt (value: BigInt) extends ConcreteValue 
 case class ConcreteBV (value: BigInt, width: Int) extends ConcreteValue
-case class ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue]) extends ConcreteValue
+case class ConcreteArray (value: scala.collection.mutable.Map[List[ConcreteValue], ConcreteValue]) extends ConcreteValue
+
 // case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends ConcreteValue
 
 
@@ -58,7 +59,20 @@ object ConcreteSimulator {
         // println(module.vars)
 
         val preinit = collection.mutable.Map[Identifier, ConcreteValue](
-            module.vars.map(v => (v._1, ConcreteUndef())): _*)
+            module.vars.map(v => v._2 match {
+                case IntegerType() => {
+                    (v._1, ConcreteUndef())
+                }
+                case BooleanType() => {
+                    (v._1, ConcreteUndef())
+                }
+                //... fill in
+                case ArrayType(inType, outType) => {
+                    // TODO: outType could be complex type like another array or record
+                    (v._1, ConcreteArray(scala.collection.mutable.Map[List[ConcreteValue], ConcreteValue]().withDefaultValue(ConcreteUndef())))
+                }
+            }) : _*)
+
 
         // TODO: Create context for each block stmt (LEIQI)
         
@@ -269,6 +283,24 @@ object ConcreteSimulator {
             case LhsArraySelect(id,indices)=>{
                 //TODO:
                 //We should exvalute the indices firstly
+                context(id) match {
+                    case ca:ConcreteArray => {
+                        val eval_indices = indices.map(a => evaluate_expr(context,a)) // list of concrete expr
+                        var old_map = ca.value // old array 
+                        old_map(eval_indices) = v
+                        val new_arr = ConcreteArray(old_map)
+
+                        // id is a key into context
+
+                        context(id) = new_arr
+                        context
+                    }
+                    case _ => {
+                        throw new Error("attempting to do array select on a non-array object")
+                        
+                    }
+                }
+                
                 //
 
 

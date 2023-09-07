@@ -1,0 +1,20 @@
+module main
+{
+  type num_t = integer;
+  var numbers : [boolean]integer;
+  var zero : integer;
+  var read: integer;
+  init {
+    numbers[true] = 0;
+  }
+
+  next {
+  }
+  
+  control {
+    v = concrete (5);
+    check;
+    print_results;
+    v.print_cex(numbers);
+  }
+}
