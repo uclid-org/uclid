@@ -580,8 +580,9 @@ object ConcreteSimulator {
             recordValue match{
                 case ConcreteUndef() => ConcreteRecord(Map(fields.head->value))
                 case ConcreteRecord(map) => {
-                    map(fields.head) = value;
-                    ConcreteRecord(map)
+                    var newMap = map;
+                    newMap(fields.head) = value;
+                    ConcreteRecord(newMap)
                 }
                 
                 case _ => throw new NotImplementedError(s"Should not touch here")
@@ -592,8 +593,9 @@ object ConcreteSimulator {
             recordValue match{
                 case ConcreteUndef() => ConcreteRecord(Map(fields.head->updateRecordValue(fields.tail,value,ConcreteUndef())))
                 case ConcreteRecord(map) => {
-                    map(fields.head) = updateRecordValue(fields.tail,value,map(fields.head));
-                    ConcreteRecord(map)
+                    var newMap = map;
+                    newMap(fields.head) = updateRecordValue(fields.tail,value,map(fields.head));
+                    ConcreteRecord(newMap)
                 }
                 case _ => throw new NotImplementedError(s"Should not touch here")
             }
