@@ -6,6 +6,7 @@ module main
   var read: integer;
   init {
     numbers[true] = 0;
+    zero = numbers[true];
   }
 
   next {

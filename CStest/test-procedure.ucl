@@ -1,0 +1,29 @@
+module main
+{
+  type num_t = integer;
+  var numbers : [boolean, num_t]integer;
+  var zero : integer;
+  var read: integer;
+
+  procedure f()
+    modifies numbers;
+    {
+        numbers[true, 0] = numbers[true, 0] + 1;
+    }
+
+  init {
+    numbers[true, 0] = 1;
+    read = numbers[true,0];
+  }
+
+  next {
+    call f();
+  }
+  
+  control {
+    v = concrete (5);
+    check;
+    print_results;
+    v.print_cex(numbers);
+  }
+}

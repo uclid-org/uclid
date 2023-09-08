@@ -1,0 +1,20 @@
+module main
+{
+  var rom : [bv4]bv8;
+
+
+  init {
+    rom[1bv4] = 2bv8;
+  }
+
+  next {
+      rom' = rom[0bv4->rom[1bv4]];
+  }
+
+  control {
+    v = concrete(5);
+    check;
+    print_results;
+    //v.print_cex(n);
+  }
+}

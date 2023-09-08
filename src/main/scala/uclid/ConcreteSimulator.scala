@@ -290,7 +290,7 @@ object ConcreteSimulator {
                 //     }
                 // }
                 // context(id) = newValue;
-                throw new NotImplementedError(s"On working ${lhs}")
+                // throw new NotImplementedError(s"On working ${lhs}")
                 context
                 //ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue])
             }
@@ -460,6 +460,24 @@ object ConcreteSimulator {
                                 case _ => throw new NotImplementedError("Not implements unary operation "+op.toString+" for BV\n")
                             }
                             
+                        }
+                        case ConcreteArray(valuemap) => {
+                            op match {
+                                case ArraySelect(indices) => {
+                                    val eval_indices = indices.map(a => evaluate_expr(context,a)) // list of concrete expr
+                                    valuemap(eval_indices)
+                                }
+                                case ArrayUpdate(indices, value) => {
+                                    val eval_value = evaluate_expr(context, value)
+                                    val eval_indices = indices.map(a => evaluate_expr(context,a)) // list of concrete expr
+                                    var old_map = valuemap // old array 
+                                    old_map(eval_indices) = eval_value
+                                    ConcreteArray(old_map)   
+                                    
+                                }
+                                // TODO: Any additional unary array operators should be handled here
+                                case _ => throw new NotImplementedError("Not implements unary operation for ConcreteArray "+"op: "+op + "operands: "+ operands+ "operand_0"+ operand_0)
+                            }
                         }
                         case ConcreteRecord(valuemap) => {
                             op match{
