@@ -57,6 +57,13 @@ object ConcreteSimulator {
                     // TODO: outType could be complex type like another array or record
                     (v._1, ConcreteArray(scala.collection.mutable.Map[List[ConcreteValue], ConcreteValue]().withDefaultValue(ConcreteUndef())))
                 }
+                case RecordType(members) => {
+                    val RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
+                    for(member<-members){
+                        RecordMap(member._1)=ConcreteUndef();
+                    }
+                    (v._1, ConcreteRecord(RecordMap))
+                }
             }) : _*)
 
 
