@@ -1,47 +1,34 @@
 package uclid
 
 import scala.util.parsing.combinator._
-// changed this from immutable to mutable
 import scala.collection.mutable._
 import lang.{Identifier, Module,  _}
 import uclid.Utils.ParserErrorList
 import com.typesafe.scalalogging.Logger
 
-
-
 sealed abstract class ConcreteValue
-
 case class ConcreteUndef () extends ConcreteValue
-case class ConcreteBool (value: Boolean) extends ConcreteValue
-case class ConcreteInt (value: BigInt) extends ConcreteValue 
-case class ConcreteBV (value: BigInt, width: Int) extends ConcreteValue
-case class ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue]) extends ConcreteValue
-case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends ConcreteValue
-
-
-// class ConcreteAssignment () {
-//     // assignment is a map between identifier and the value that it takes on
-//     // identifier is going to be a extension of the ConcreteValue?
-//     val assignment : Map[Identifier, ConcreteValue] = Map()
-
-//     // do we need to define the bool symbols here like it is done in Symbolic Simulator
-// }
+case class ConcreteBool (value: Boolean) extends ConcreteValue{
+    override def toString = value.toString
+} 
+case class ConcreteInt (value: BigInt) extends ConcreteValue{
+    override def toString = value.toString
+} 
+case class ConcreteBV (value: BigInt, width: Int) extends ConcreteValue{
+    override def toString = value.toString+"bv"+width.toString
+} 
+case class ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue]) extends ConcreteValue{
+    override def toString = value.toString
+} 
+case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends ConcreteValue{
+    override def toString = value.toString
+} 
 
 object ConcreteSimulator {
-
-    
-    /**
-    execute executes one step in the system
-
-    Input:
-        List[context]
-        List[Commands]
-    Output:
-        List[context]
-
-    */ 
+    var isPrintDebug: Boolean = false;
+    var isPrintResult: Boolean = true;
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
-        // End goal
+
         UclidMain.printVerbose("HELLO IN EXECUTE")
 
         val preinit = collection.mutable.Map[Identifier, ConcreteValue](
@@ -66,19 +53,13 @@ object ConcreteSimulator {
                 }
             }) : _*)
 
-
-        // TODO: Create context for each block stmt (LEIQI)
-        
-        
-        println("Simulating init block")
-        // result of applying init block to preinit
         val postinit = module.init match {
             case Some(init) => initialize(preinit, init.body)
             case None => preinit
         }
 
-        println("After initialize")
-        pretty_print(postinit)
+        printResult("Context after Simulating init block:")
+        printContext(postinit,module)
         
         var cntInt = 0
         
@@ -86,20 +67,13 @@ object ConcreteSimulator {
             cmd => cmd.name.toString match {
                 case "concrete" => {
                     val cntLit = cmd.args(0)
-                    // Utils.checkParsingError(cntLit._1.isInstanceOf[IntLit], "'%s' command expects a constant integer argument".format(cmd.name.toString), cmd.pos, filename)
                     val cnt = cntLit._1.asInstanceOf[IntLit].value
                     cntInt = cnt.intValue()
                 }
-
-                case _ => {
-                    
-                }
-
+                case _ => {}
             }
-                
         }
-        println("Unroll for "+cntInt)
-        
+        printDebug("Unroll for "+cntInt)
         val next_stmt = module.next match {
             case Some(next) => 
             {
@@ -111,23 +85,19 @@ object ConcreteSimulator {
             }
         }
 
-        println("\n\n\nAfter next")
-        pretty_print(next_stmt)
+        printResult("\n\n\nContex after simulating the next block")
+        printContext(next_stmt,module)
 
-        return List()
-    }
-
+        return List()}
     def initialize (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         stmt: Statement) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
-        simulate_stmt(context, stmt)
-    }
+        simulate_stmt(context, stmt)}
 
     def simulate_stmt (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         stmt: Statement) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
         
         stmt match {
             case AssignStmt(lhss, rhss) => {
-                // println("looking at assign stmt")
                 val rhseval = rhss.map(rhs => evaluate_expr(context, rhs))
                 if (rhseval.size == 1) {
                     lhss.foldLeft(context)((a, l) => update_lhs(a, l, rhseval(0)))
@@ -137,17 +107,10 @@ object ConcreteSimulator {
             }
 
             case BlockStmt(vars, stmts) => {
-                // println("looking at block stmt")
-                //before entering block, create a new context
-
                 var localContext = extendContext(context,vars)
-                // println("local context: ", localContext)
                 localContext = stmts.foldLeft(localContext)((a, stmt) => simulate_stmt(a, stmt))
                 var newContext = mergeContext(context,localContext,vars)
-                // println("new context: ", newContext)
                 newContext
-                //simulate_stmt(newContext,stmt)
-                //when we left the block, create a correct context
             }
             
             case SkipStmt() => {
@@ -170,17 +133,13 @@ object ConcreteSimulator {
                 }
             }
             case ForStmt(id, typ, range, body) => {
-                // these are ConcreteValues as the bounds
                 println("in for loop")
                 var low = evaluate_expr(context, range._1)
                 var high = evaluate_expr(context, range._2)
-                
-                // id can be int, bv, float
                 typ match {
                     case IntegerType() => {
                         val low_ = low match {
                             case l: ConcreteInt => l.value
-                            // case _ => throw new 
                         }                        
                         val high_ = high match {
                             case h : ConcreteInt => h.value
@@ -192,10 +151,6 @@ object ConcreteSimulator {
                         })
                     }
                 }
-                // for (id <- range._1 to range._2) {
-                // simulate_stmt(body)
-                // }
-                // throw new NotImplementedError(s"ForStmt not implemented")
             }
             case WhileStmt(cond, body, invariants) => {
                 // cond: Expr, body: Statement, invariants: List[Expr]
@@ -212,10 +167,7 @@ object ConcreteSimulator {
                 }
             }
             case CaseStmt(body) => {
-
-                // body: List[(Expr,Statement)]
-                // since it is a list of expr with statements, we go through the list, evaluate_expr and once it is true, simulate_stmt
-                println("in case...")
+                printDebug("in case...")
                 context
             }
             case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => {
@@ -227,12 +179,7 @@ object ConcreteSimulator {
             case ModuleCallStmt(id) => {
                 throw new NotImplementedError(s"ModuleCallStmt not implemented")
             }
-        }
-    }
-
-    """
-    Evaluates a condition (Expr) in a context and returns a boolean if the cond is held or not.
-    """
+        }}
     def evaluateBoolExpr(context: scala.collection.mutable.Map[Identifier, ConcreteValue],
         cond: Expr) : Boolean = {
             evaluate_expr(context,cond) match {
@@ -255,17 +202,12 @@ object ConcreteSimulator {
                 context
             }
             case LhsArraySelect(id,indices)=>{
-                //TODO:
-                //We should exvalute the indices firstly
                 context(id) match {
                     case ca:ConcreteArray => {
                         val eval_indices = indices.map(a => evaluate_expr(context,a)) // list of concrete expr
                         var old_map = ca.value // old array 
                         old_map(eval_indices) = v
                         val new_arr = ConcreteArray(old_map)
-
-                        // id is a key into context
-
                         context(id) = new_arr
                         context
                     }
@@ -274,32 +216,7 @@ object ConcreteSimulator {
                         
                     }
                 }
-                
-                //
-
-
-
-                //so, we should alway make sure the indeces correct first
-                //But the simulator does not have list?
-                //What should we do?
-
-                //So, we need to grab the original map first
-                // var newValue = ConcreteArray(Map(indices,v));
-                // if(context.contains(id)){
-                //     context(id) match{
-                //         case ConcreteArray(value) => {
-                //             var indiceMap = value;
-                //             indiceMap.update(indices,v)
-                //             newValue = ConcreteArray(indiceMap)
-                            
-                //         }
-                //         case _ => throw new NotImplementedError("Should not touch this part")
-                //     }
-                // }
-                // context(id) = newValue;
-                // throw new NotImplementedError(s"On working ${lhs}")
                 context
-                //ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue])
             }
             case LhsRecordSelect(id,fieldid)=>{
                 context(id) = updateRecordValue(fieldid,v,context(id))
@@ -320,122 +237,8 @@ object ConcreteSimulator {
             case a : Identifier => context(a)
             case BoolLit(b) => ConcreteBool(b)
             case IntLit(b) => ConcreteInt(b)
-            // case RealLit(a,b) => 
-            // case FloatLit(a,b,c,d) =>
             case BitVectorLit(a,b) => ConcreteBV(a,b)
-            // case StringLit(a) =>
-            // case EnumLit????
-            // case NumericLit??
-            // case FreshLit??
-            // case ConstArray
-            // case UninterpretedTypeLiteral
-            // case ConstRecord
-            // case Tuple
-
-            // case PolymorphicSelect
-            // case RecordSelect
-            // case HyperSelect
-            // case SelectFromInstance
-            // case ITEOp
-            // case ForallOp
-
-            // // PolymorphicOperator
-            // case LTOp()
-            // case LEOp()
-            // case GTOp()
-            // case GEOp()
-            // case AddOp()
-            // case SubOp()
-            // case MulOp()
-            // case UnaryMinusOp()
-            // case DivOp()
-
-            // // RealArgOperator
-            // case RealLTOp()
-            // case RealLEOp()
-            // case RealGTOp()
-            // case RealGEOp()
-            // case RealAddOp()
-            // case RealSubOp()
-            // case RealMulOp()
-            // case RealUnaryMinusOp()
-            // case RealDivOp()
-
-            // // FloatArgOperator
-            // case FPLTOp(e,s)
-            // case FPGTOp(e,s) 
-            // case FPLEOp(e,s)
-            // case FPGEOp(e,s)
-            // case FPSubOp(e,s)
-            // case FPAddOp(e,s)
-            // case FPMulOp(e,s)
-            // case FPDivOp(e,s)
-            // case FPIsNanOp(e,s)
-            // case FPUnaryMinusOp(e,s)
-
-            // // QuantifiedBooleanOperator??
-
-            // case ForallOp(vs, patterns) 
-            // case ExistsOp(vs, patterns) 
-            // case FiniteForallOp(id, groupId) 
-            // case FiniteExistsOp(id, groupId) 
-
-            // // inequality operator
-            // case EqualityOp()
-            // case InequalityOp()
-            
-            // // BV2Int and Int2BV
-            // case BV2SignedIntOp()
-            // case BV2UnsignedIntOp()
-
-            // // Int2BV
-            // case Int2BVOp()
-
-            // // LTL Operators
-            // case GloballyTemporalOp()
-            // case NextTemporalOp()
-            // case UntilTemporalOp()
-            // case FinallyTemporalOp()
-            // case ReleaseTemporalOp()
-            // case WUntilTemporalOp()
-
-            // // Old Operator
-            // case OldOperator()
-            // case PastOperator()
-            // case HistoryOperator()
-
-            // // ITE operator
-            // case ITEOp()
-
-            
-
-            // // ExtractOp
-            // case ConstExtractOp(slice)
-            // case VarExtractOp(slice)
-            // case ConcatOp()
-
-            // // SelectorOperator
-            // case PolymorphicSelect(id)
-            // case RecordSelect(id)
-            // case SelectFromInstance(varId)
-            // case HyperSelect(i)
-            // case ArraySelect(indices)
-            // case ArrayUpdate(indices,value)
-            // case RecordUpdate(fieldid, value)
-            // case GetNextValueOp()
-            // case DistinctOp()
-
-
-
-            // case class ConcreteArray 
-            // additiion / subtract  (Look at OperatorApplication)
-            // case class OperatorApplication(op: Operator, operands: List[Expr])
-                // do a case match on the op
-            
-            
-            // case NegationOp()
             case OperatorApplication(op:Operator, operands:List[Expr])=>{
-
                 val operand_0 = evaluate_expr(context,operands.head);
                 //if this is not binary operation
                 if(operands.tail.size==0){
@@ -561,11 +364,6 @@ object ConcreteSimulator {
                                         case BVGEUOp(w) => ConcreteBool(unint_0 >= unint_1)
                                         case BVUremOp(w) => ConcreteBV(unint_0 % unint_1,w)
                                         case BVUDivOp(w) => ConcreteBV(unint_0 / unint_1,w)
-     
-                                        //Those operations do not exist in parser??
-                                        // case BVSignExtOp(w,e) 
-                                        // case BVZeroExtOp(w,e) 
-                                    
                                         case _ => throw new NotImplementedError("Not implements the Operator for BV"+op.toString) 
                                     }
                                 }
@@ -579,20 +377,9 @@ object ConcreteSimulator {
                 
             }
             case _ => throw new NotImplementedError(s"Expression evaluation for ${expr}")
-        }
-    }
-
-    def pretty_print(context: scala.collection.mutable.Map[Identifier, ConcreteValue]) : Unit = {
-        for (a <- context) {
-            println(a)
-        }   
-    }
+        }}
     def extendContext (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         vars: List[BlockVarsDecl]) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
-        //Leiqi:
-        //initilze those variables here????
-            
-
         val newContext = collection.mutable.Map[Identifier, ConcreteValue]();
         
         vars.foreach(
@@ -605,14 +392,11 @@ object ConcreteSimulator {
                 )
             }
         );
-        context.++(newContext)
-    }
+        context.++(newContext)}
     def mergeContext (
         original: scala.collection.mutable.Map[Identifier, ConcreteValue],
         newContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
         vars: List[BlockVarsDecl]) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
-        
-        //those variables is local variables, should not be updated into the original context
         vars.foreach(
             vardecl =>
             {
@@ -632,8 +416,7 @@ object ConcreteSimulator {
             }
         );
         //so, the newContext does not contain local varibales now
-        newContext
-    }
+        newContext}
     def updateRecordValue(fields: List[Identifier],value: ConcreteValue,recordValue: ConcreteValue): ConcreteRecord = {
         if(fields.size == 1){
             recordValue match{
@@ -658,26 +441,19 @@ object ConcreteSimulator {
                 }
                 case _ => throw new NotImplementedError(s"Should not touch here")
             }
+        }}
+
+    
+    def printDebug(str: String){
+        if(isPrintDebug)
+            println(str)}
+
+    def printResult(str: String){
+        if(isPrintResult)
+            println(str)}
+    def printContext(context: scala.collection.mutable.Map[Identifier, ConcreteValue],module: Module) : Unit = {
+        for (variable <- module.vars){
+            println(variable._1+":  "+context(variable._1).toString)
         }
     }
-    // context(Id("n")) = ConcreteInt(context(Id("n")).value + 1)
-
-    /**
-    executeOneStep is responsible for taking in a current assignment and a command to find out the next assignment for the variables
-
-    Input:
-        context
-        stmt
-    Output:
-        context
-    */ 
-    // def executeOneStep (context: ConcreteAssignment, stmt: Statement) : Assignment = {}
-            // check the type of assignment
-            
-            // execute statement
-            // context(Id("n")) = ConcreteInt(context(Id("n")).value + 1)
-
-
-    //     return Assignment
-
 }
