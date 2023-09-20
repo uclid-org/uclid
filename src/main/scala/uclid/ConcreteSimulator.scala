@@ -39,6 +39,9 @@ object ConcreteSimulator {
                 case BooleanType() => {
                     (v._1, ConcreteUndef())
                 }
+                case BitVectorType(w) => {
+                    (v._1, ConcreteUndef())
+                }
                 //... fill in
                 case ArrayType(inType, outType) => {
                     // TODO: outType could be complex type like another array or record

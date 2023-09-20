@@ -13,13 +13,13 @@ module main
         //normalAdd: should be 2
         a = 1bv4;
         b = 1bv4;
-        normalAdd = a +_u b;
+        normalAdd = a + b;
 
 
         //overflowAd: should be 0
         a = 15bv4;
         b = 1bv4;
-        overFlowAdd = a +_u b;
+        overFlowAdd = a + b;
 
         //a: 0010 1
         //~a: 1101 13？
