@@ -27,6 +27,7 @@ case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends Concre
 object ConcreteSimulator {
     var isPrintDebug: Boolean = false;
     var isPrintResult: Boolean = true;
+    var terminate: Boolean = false;
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
 
         UclidMain.printVerbose("HELLO IN EXECUTE")
@@ -61,6 +62,9 @@ object ConcreteSimulator {
             case None => preinit
         }
 
+        if (terminate) {
+            printResult("Terminated Early")
+        }
         printResult("Context after Simulating init block:")
         printContext(postinit,module)
         
@@ -76,19 +80,32 @@ object ConcreteSimulator {
                 case _ => {}
             }
         }
-        printDebug("Unroll for "+cntInt)
+        printDebug("Running Concrete Simulation for "+cntInt+ " steps")
+        var terminate_printed = false
         val next_stmt = module.next match {
             case Some(next) => 
             {
                 var newContext = postinit
                 for (a <- 1 to cntInt) {
-                    newContext = simulate_stmt(newContext, next.body)
+                    if (!terminate) {
+                        newContext = simulate_stmt(newContext, next.body)   
+                    } else {
+                        if (!terminate_printed) {
+                            printResult(s"Failed on iteration ${a-1}")
+                            terminate_printed = true
+                        } 
+                    }
+                    
+                    
                 }
                 newContext
             }
         }
 
-        printResult("\n\n\nContex after simulating the next block")
+        if (terminate) {
+            printResult("Early Terminate")
+        }
+        printResult("\n\n\nContext after simulating the next block")
         printContext(next_stmt,module)
 
         return List()}
@@ -120,7 +137,11 @@ object ConcreteSimulator {
                 context
             }
             case AssertStmt(e, id) => {
-                throw new NotImplementedError(s"AssertStmt not implemented")
+                if (!evaluateBoolExpr(context, e)){ 
+                    terminate = true
+                    printResult("failed assert statement")
+                }
+                context
             }
             case AssumeStmt(e, id) => {
                 throw new NotImplementedError(s"AssumeStmt not implemented")
