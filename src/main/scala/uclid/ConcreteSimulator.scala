@@ -29,6 +29,12 @@ object ConcreteSimulator {
     var needToPrintResults = false;
     var isPrintResult: Boolean = true;
     var terminate: Boolean = false;
+    var trace = Map[BigInt,scala.collection.mutable.Map[Identifier, ConcreteValue]]();
+    var passCount: Int = 0;
+    var failCount: Int = 0;
+    var undetCount: Int = 0;
+    var cntInt:Int = 0;
+    var terminateInt: Int = 0;
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
 
         UclidMain.printVerbose("HELLO IN EXECUTE")
@@ -66,10 +72,8 @@ object ConcreteSimulator {
         if (terminate) {
             printResult("Terminated Early")
         }
-        printResult("Context after Simulating init block:")
-        printContext(postinit,module)
+        trace(0) = postinit;  
         
-        var cntInt = 0
         
         module.cmds.foreach {
             cmd => cmd.name.toString match {
@@ -77,6 +81,7 @@ object ConcreteSimulator {
                     val cntLit = cmd.args(0)
                     val cnt = cntLit._1.asInstanceOf[IntLit].value
                     cntInt = cnt.intValue()
+                    terminateInt = cntInt;
                     needToPrintResults = true
                 }
                 case _ => {}
@@ -90,10 +95,12 @@ object ConcreteSimulator {
                 var newContext = postinit
                 for (a <- 1 to cntInt) {
                     if (!terminate) {
-                        newContext = simulate_stmt(newContext, next.body)   
+                        newContext = simulate_stmt(newContext, next.body)
+                        trace(a) = newContext   
                     } else {
+                        terminateInt = a;
                         if (!terminate_printed) {
-                            printResult(s"Failed on iteration ${a-1}")
+                            printDebug(s"Failed on iteration ${a-1}")
                             terminate_printed = true
                         } 
                     }
@@ -103,12 +110,19 @@ object ConcreteSimulator {
                 newContext
             }
         }
-
-        if (terminate) {
-            printResult("Early Terminate")
+        if(needToPrintResults){
+            UclidMain.printResult("%d assertions passed.".format(passCount))
+            UclidMain.printResult("%d assertions failed.".format(failCount))
+            UclidMain.printResult("%d assertions indeterminate.".format(undetCount))
         }
-        printResult("\n\n\nContext after simulating the next block")
-        printContext(next_stmt,module)
+        
+        module.cmds.foreach{
+            cmd => cmd.name.toString match {
+                case "print_concrete_trace" =>
+                    printConcretetTrace(trace, cmd.args, cmd.argObj)
+                case _ => {}
+            }
+        }
 
         return List()}
     def initialize (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
@@ -140,8 +154,11 @@ object ConcreteSimulator {
             }
             case AssertStmt(e, id) => {
                 if (!evaluateBoolExpr(context, e)){ 
+                    failCount = failCount+1;
                     terminate = true
                     printResult("failed assert statement")
+                }else{
+                    passCount = passCount+1;
                 }
                 context
             }
@@ -358,6 +375,8 @@ object ConcreteSimulator {
                                         case IntLEOp() => ConcreteBool(int_0 <= int_1)
                                         case IntGEOp() => ConcreteBool(int_0 >= int_1)
                                         case IntGTOp() => ConcreteBool(int_0 > int_1)
+                                        case InequalityOp() => ConcreteBool(int_0 != int_1)
+                                        case EqualityOp() => ConcreteBool(int_0 == int_1)
                                         case _ => throw new NotImplementedError("Not implements the Operator"+op.toString) 
                                     }
                                 }
@@ -477,9 +496,21 @@ object ConcreteSimulator {
     def printResult(str: String){
         if(isPrintResult)
             println(str)}
-    def printContext(context: scala.collection.mutable.Map[Identifier, ConcreteValue],module: Module) : Unit = {
-        for (variable <- module.vars){
-            println(variable._1+":  "+context(variable._1).toString)
+    def printContext(context: scala.collection.mutable.Map[Identifier, ConcreteValue],vars: List[(Expr, String)]) : Unit = {
+        for (variable <- vars){
+            println(variable._1+":  "+evaluate_expr(context,variable._1).toString)
+        }
+    }
+    def printConcretetTrace(trace:Map[BigInt,scala.collection.mutable.Map[Identifier, ConcreteValue]],exprs : List[(Expr, String)], arg : Option[Identifier]){
+        UclidMain.printStatus("Generated Trace of length " + (terminateInt).toString())
+        UclidMain.printStatus("=================================")
+        for (a <- 0 to terminateInt) {
+            if(a<terminateInt){
+                UclidMain.printStatus("=================================")
+                UclidMain.printStatus("Step # "+a.toString)
+                printContext(trace(a),exprs)
+                UclidMain.printStatus("=================================")
+            }
         }
     }
 }

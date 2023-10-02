@@ -6,13 +6,13 @@ module main
     }
     next {
         a' = a + 1;
+        assert(a !=3);
     }
-    property jump_a: a!=3;
+    //property jump_a: a!=300;
 
     control {
         v = concrete(5);
         check;
-        print_results;
-        //v.print_cex(n);
+        v.print_concrete_trace(a);
     }
 }
