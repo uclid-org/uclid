@@ -26,6 +26,7 @@ case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends Concre
 
 object ConcreteSimulator {
     var isPrintDebug: Boolean = false;
+    var needToPrintResults = false;
     var isPrintResult: Boolean = true;
     var terminate: Boolean = false;
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
@@ -76,6 +77,7 @@ object ConcreteSimulator {
                     val cntLit = cmd.args(0)
                     val cnt = cntLit._1.asInstanceOf[IntLit].value
                     cntInt = cnt.intValue()
+                    needToPrintResults = true
                 }
                 case _ => {}
             }
