@@ -1,23 +1,22 @@
 module main
 {
     var a : integer;
+    var b : integer;
     init {
         a = 0;
-        {
-            var b : integer;
-            b = 1000;
-            a = b;
-        }
+        b = 3;
     }
     next {
         a' = a + 1;
+        b' = b + 2;
     }
     property jump_a: a!=3;
+    property jump_b: b!=5;
 
     control {
-        v = concrete(5);
+        v = bmc(5);
         check;
         print_results;
-        //v.print_cex(n);
+        v.print_cex_json();
     }
 }

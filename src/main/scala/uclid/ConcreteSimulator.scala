@@ -5,6 +5,9 @@ import scala.collection.mutable._
 import lang.{Identifier, Module,  _}
 import uclid.Utils.ParserErrorList
 import com.typesafe.scalalogging.Logger
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
+import scala.io.Source
 
 sealed abstract class ConcreteValue
 case class ConcreteUndef () extends ConcreteValue
@@ -38,6 +41,69 @@ object ConcreteSimulator {
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
 
         UclidMain.printVerbose("HELLO IN EXECUTE")
+        val jsonString: String = Source.fromFile("cex.json").mkString
+
+        // Parse JSON into case class
+        implicit val formats: DefaultFormats.type = DefaultFormats
+        
+        // Parse JSON into a JValue, provided by the json4s class
+        val json: JValue = parse(jsonString)
+
+        def parseArray(array: List[JValue]): List[String] = {
+            array.collect {
+                case JString(value) => value
+                }
+            }
+
+        def parseTrace(trace: JValue): Unit = trace match {
+            case JString(errorMessage) =>
+                println(s"Error Message: $errorMessage")
+            case JArray(fields) =>
+                fields.foreach {
+                    case JObject(item) =>
+                        val myMap: collection.mutable.Map[String, ConcreteInt] = collection.mutable.Map()
+                        item.foreach {
+                            listItem => {
+                                var varName = listItem._1
+                                listItem._2 match {
+                                    case JArray(list) =>
+                                        list.foreach {
+                                            it =>
+                                            it match {
+                                                case JString(value) =>
+                                                    var varValue = ConcreteInt(BigInt(value))
+                                                    myMap += (varName -> varValue)
+                                            }
+                                        }
+                                }
+                                
+                            }
+                            
+                        }
+                        println("Final Map: " + myMap)
+                    
+                    case _ => println("invalid obj format")
+                }
+
+            case _ =>
+                println("Invalid trace format")
+            }
+
+        val properties: Map[String, JValue] = json.extract[Map[String, JValue]]
+
+        properties.foreach {
+            case (propertyName, propertyJson) =>
+                val length: Int = (propertyJson \ "length").extract[Int]
+                val trace: JValue = (propertyJson \ "trace").extract[JValue]
+
+                println(s"Property Name: $propertyName")
+                println(s"Length: $length")
+                println("Trace: ")
+                parseTrace(trace)
+                println()
+        }
+
+        // println(s"properties: ${properties}")
 
         val preinit = collection.mutable.Map[Identifier, ConcreteValue](
             module.vars.map(v => v._2 match {
