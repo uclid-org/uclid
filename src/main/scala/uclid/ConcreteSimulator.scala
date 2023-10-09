@@ -38,6 +38,10 @@ object ConcreteSimulator {
     var undetCount: Int = 0;
     var cntInt:Int = 0;
     var terminateInt: Int = 0;
+    //var properties module.properties???
+    // module properties.
+    //lazy val properties : List[SpecDecl] = decls.collect{ case spec : SpecDecl => spec }
+    //case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
 
         UclidMain.printVerbose("HELLO IN EXECUTE")
@@ -57,7 +61,7 @@ object ConcreteSimulator {
 
         def parseTrace(trace: JValue): Unit = trace match {
             case JString(errorMessage) =>
-                println(s"Error Message: $errorMessage")
+                printDebug(s"Error Message: $errorMessage")
             case JArray(fields) =>
                 fields.foreach {
                     case JObject(item) =>
@@ -80,13 +84,13 @@ object ConcreteSimulator {
                             }
                             
                         }
-                        println("Final Map: " + myMap)
+                        printDebug("Final Map: " + myMap)
                     
-                    case _ => println("invalid obj format")
+                    case _ => printDebug("invalid obj format")
                 }
 
             case _ =>
-                println("Invalid trace format")
+                printDebug("Invalid trace format")
             }
 
         val properties: Map[String, JValue] = json.extract[Map[String, JValue]]
@@ -96,11 +100,11 @@ object ConcreteSimulator {
                 val length: Int = (propertyJson \ "length").extract[Int]
                 val trace: JValue = (propertyJson \ "trace").extract[JValue]
 
-                println(s"Property Name: $propertyName")
-                println(s"Length: $length")
-                println("Trace: ")
+                printDebug(s"Property Name: $propertyName")
+                printDebug(s"Length: $length")
+                printDebug("Trace: ")
                 parseTrace(trace)
-                println()
+                printDebug("")
         }
 
         // println(s"properties: ${properties}")
@@ -565,8 +569,7 @@ object ConcreteSimulator {
     def printContext(context: scala.collection.mutable.Map[Identifier, ConcreteValue],vars: List[(Expr, String)]) : Unit = {
         for (variable <- vars){
             println(variable._1+":  "+evaluate_expr(context,variable._1).toString)
-        }
-    }
+        }}
     def printConcretetTrace(trace:Map[BigInt,scala.collection.mutable.Map[Identifier, ConcreteValue]],exprs : List[(Expr, String)], arg : Option[Identifier]){
         UclidMain.printStatus("Generated Trace of length " + (terminateInt).toString())
         UclidMain.printStatus("=================================")
@@ -577,6 +580,5 @@ object ConcreteSimulator {
                 printContext(trace(a),exprs)
                 UclidMain.printStatus("=================================")
             }
-        }
-    }
+        }}
 }
