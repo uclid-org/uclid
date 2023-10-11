@@ -31,9 +31,14 @@ case class ConcreteEnum (ids:List[Identifier],value:BigInt) extends ConcreteValu
 }
 
 object ConcreteSimulator {
-    var isPrintDebug: Boolean = false;
-    var needToPrintResults = false;
     var isPrintResult: Boolean = true;
+    var isPrintDebug: Boolean = false;
+
+
+    var needToPrintResults = false;
+    var needToPrintTrace = false;
+    
+    
     var terminate: Boolean = false;
     var trace = Map[BigInt,scala.collection.mutable.Map[Identifier, ConcreteValue]]();
     var passCount: Int = 0;
@@ -41,119 +46,12 @@ object ConcreteSimulator {
     var undetCount: Int = 0;
     var cntInt:Int = 0;
     var terminateInt: Int = 0;
-    //var properties module.properties???
-    // module properties.
-    //lazy val properties : List[SpecDecl] = decls.collect{ case spec : SpecDecl => spec }
-    //case class SpecDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
+    
+    //TODO:
+    //Leiqi add property
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
-
+        var printTraceCmd=module.cmds(0);
         UclidMain.printVerbose("HELLO IN EXECUTE")
-        val jsonString: String = Source.fromFile("cex.json").mkString
-
-        // Parse JSON into case class
-        implicit val formats: DefaultFormats.type = DefaultFormats
-        
-        // Parse JSON into a JValue, provided by the json4s class
-        val json: JValue = parse(jsonString)
-
-        def parseArray(array: List[JValue]): List[String] = {
-            array.collect {
-                case JString(value) => value
-                }
-            }
-
-        def parseTrace(trace: JValue): Unit = trace match {
-            case JString(errorMessage) =>
-                printDebug(s"Error Message: $errorMessage")
-            case JArray(fields) =>
-                fields.foreach {
-                    case JObject(item) =>
-                        val myMap: collection.mutable.Map[String, ConcreteInt] = collection.mutable.Map()
-                        item.foreach {
-                            listItem => {
-                                var varName = listItem._1
-                                listItem._2 match {
-                                    case JArray(list) =>
-                                        list.foreach {
-                                            it =>
-                                            it match {
-                                                case JString(value) =>
-                                                    var varValue = ConcreteInt(BigInt(value))
-                                                    myMap += (varName -> varValue)
-                                            }
-                                        }
-                                }
-                                
-                            }
-                            
-                        }
-                        printDebug("Final Map: " + myMap)
-                    
-                    case _ => printDebug("invalid obj format")
-                }
-
-            case _ =>
-                printDebug("Invalid trace format")
-            }
-
-        val properties: Map[String, JValue] = json.extract[Map[String, JValue]]
-        properties.foreach {
-            case (propertyName, propertyJson) =>
-                val length: Int = (propertyJson \ "length").extract[Int]
-                val trace: JValue = (propertyJson \ "trace").extract[JValue]
-
-                printDebug(s"Property Name: $propertyName")
-                printDebug(s"Length: $length")
-                printDebug("Trace: ")
-                parseTrace(trace)
-                printDebug("")
-        }
-
-
-        //Leiqi: We started with a empty context
-        //Read from json file and get a context
-        //Read from enum
-        val emptyContext = collection.mutable.Map[Identifier, ConcreteValue]()
-        val varContext = collection.mutable.Map[Identifier, ConcreteValue](
-            module.vars.map(v => v._2 match {
-                case IntegerType() => {
-                    (v._1, ConcreteUndef())
-                }
-                case BooleanType() => {
-                    (v._1, ConcreteUndef())
-                }
-                case BitVectorType(w) => {
-                    (v._1, ConcreteUndef())
-                }
-                //... fill in
-                case ArrayType(inType, outType) => {
-                    // TODO: outType could be complex type like another array or record
-                    (v._1, ConcreteArray(scala.collection.mutable.Map[List[ConcreteValue], ConcreteValue]().withDefaultValue(ConcreteUndef())))
-                }
-                case RecordType(members) => {
-                    val RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
-                    for(member<-members){
-                        RecordMap(member._1)=ConcreteUndef();
-                    }
-                    (v._1, ConcreteRecord(RecordMap))
-                }
-                case EnumType(ids) => {
-                    (v._1,ConcreteEnum(ids,-1))
-                }   
-                case _ => {
-                    throw new NotImplementedError(v.toString+" has not been support yet!")
-                }
-            }) : _*)
-        val preInitContext = varContext
-        val postInitContext = module.init match {
-            case Some(init) => initialize(preInitContext, init.body)
-            case None => preInitContext
-        }
-        if (terminate) {
-            printResult("Terminated Early")
-        }
-
-        trace(0) = postInitContext;  
         
         module.cmds.foreach {
             cmd => cmd.name.toString match {
@@ -164,9 +62,26 @@ object ConcreteSimulator {
                     terminateInt = cntInt;
                     needToPrintResults = true
                 }
+                case "print_concrete_trace" =>{
+                    needToPrintTrace = true;
+                    printTraceCmd = cmd;
+                }
                 case _ => {}
             }
         }
+
+        val emptyContext = collection.mutable.Map[Identifier, ConcreteValue]()
+        var varContext = extendContextVar(emptyContext,module.vars)
+        varContext = extendContextJson(varContext)
+        // add enum into the context
+        val preInitContext = varContext
+        val postInitContext = module.init match {
+            case Some(init) => initialize(preInitContext, init.body)
+            case None => preInitContext
+        }
+        if (terminate) printResult("Terminated Early")
+
+        trace(0) = postInitContext;  
         printDebug("Running Concrete Simulation for "+cntInt+ " steps")
         var terminate_printed = false
         val next_stmt = module.next match {
@@ -188,21 +103,18 @@ object ConcreteSimulator {
                 }
                 newContext
             }
+            case _ => {}
         }
         if(needToPrintResults){
             UclidMain.printResult("%d assertions passed.".format(passCount))
             UclidMain.printResult("%d assertions failed.".format(failCount))
             UclidMain.printResult("%d assertions indeterminate.".format(undetCount))
-        }
-        
-        module.cmds.foreach{
-            cmd => cmd.name.toString match {
-                case "print_concrete_trace" =>
-                    printConcretetTrace(trace, cmd.args, cmd.argObj)
-                case _ => {}
+
+            if(needToPrintTrace){
+                printConcretetTrace(trace, printTraceCmd.args, printTraceCmd.argObj)
             }
         }
-
+        
         return List()}
 
 
@@ -223,9 +135,10 @@ object ConcreteSimulator {
             }
 
             case BlockStmt(vars, stmts) => {
-                var localContext = extendContext(context,vars)
+                val flatVars : List[(Identifier, Type)] = vars.flatMap(v => v.ids.map(id => (id, v.typ)))
+                var localContext = extendContextVar(context,flatVars)
                 localContext = stmts.foldLeft(localContext)((a, stmt) => simulate_stmt(a, stmt))
-                var newContext = mergeContext(context,localContext,vars)
+                var newContext = cutContextVar(localContext,flatVars,context)
                 newContext
             }
             
@@ -503,53 +416,114 @@ object ConcreteSimulator {
             }
             case _ => throw new NotImplementedError(s"Expression evaluation for ${expr}")
         }}
-    /**
-    * return a context
-    * with vars added into Context
-    **/
-    def extendContext (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
-        vars: List[BlockVarsDecl]) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
-        val newContext = collection.mutable.Map[Identifier, ConcreteValue]();
-        
-        vars.foreach(
-            vardecl =>
-            {
-                vardecl.ids.foreach(
-                    id => {
-                        newContext+= (id -> ConcreteUndef())
+    def extendContextVar (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
+        vars: List[(Identifier, Type)]) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
+        val newContext = collection.mutable.Map[Identifier, ConcreteValue](
+            vars.map(v => v._2 match {
+                case IntegerType() => {
+                    (v._1, ConcreteUndef())
+                }
+                case BooleanType() => {
+                    (v._1, ConcreteUndef())
+                }
+                case BitVectorType(w) => {
+                    (v._1, ConcreteUndef())
+                }
+                //... fill in
+                case ArrayType(inType, outType) => {
+                    // TODO: outType could be complex type like another array or record
+                    (v._1, ConcreteArray(scala.collection.mutable.Map[List[ConcreteValue], ConcreteValue]().withDefaultValue(ConcreteUndef())))
+                }
+                case RecordType(members) => {
+                    val RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
+                    for(member<-members){
+                        RecordMap(member._1)=ConcreteUndef();
                     }
-                )
-            }
-        );
+                    (v._1, ConcreteRecord(RecordMap))
+                }
+                case EnumType(ids) => {
+                    (v._1,ConcreteEnum(ids,-1))
+                }   
+                case _ => {
+                    throw new NotImplementedError(v.toString+" has not been support yet!")
+                }
+            }) : _*)
+            
         context.++(newContext)
+        }
+    def extendContextJson(context: scala.collection.mutable.Map[Identifier, ConcreteValue]): scala.collection.mutable.Map[Identifier, ConcreteValue] = {
+        val jsonString: String = Source.fromFile("cex.json").mkString
+
+        // Parse JSON into case class
+        implicit val formats: DefaultFormats.type = DefaultFormats
         
-    }
-    /**
-    * return a context
-    * Remove @vars from newContext
-    */
-    def mergeContext (
-        oldContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
-        newContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
-        vars: List[BlockVarsDecl]) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
-        vars.foreach(
-            vardecl =>
-            {
-                vardecl.ids.foreach(
-                    id => {
-                        newContext.-(id);
-                        oldContext.get(id) match{
-                            case value: ConcreteValue =>{
-                                newContext += (id->value)
-                            }
-                            case _  => {
+        // Parse JSON into a JValue, provided by the json4s class
+        val json: JValue = parse(jsonString)
+
+        def parseArray(array: List[JValue]): List[String] = {
+            array.collect {
+                case JString(value) => value
+                }
+            }
+
+        def parseTrace(trace: JValue): Unit = trace match {
+            case JString(errorMessage) =>
+                printDebug(s"Error Message: $errorMessage")
+            case JArray(fields) =>
+                fields.foreach {
+                    case JObject(item) =>
+                        val myMap: collection.mutable.Map[String, ConcreteInt] = collection.mutable.Map()
+                        item.foreach {
+                            listItem => {
+                                var varName = listItem._1
+                                listItem._2 match {
+                                    case JArray(list) =>
+                                        list.foreach {
+                                            it =>
+                                            it match {
+                                                case JString(value) =>
+                                                    var varValue = ConcreteInt(BigInt(value))
+                                                    myMap += (varName -> varValue)
+                                            }
+                                        }
+                                }
                                 
                             }
+                            
                         }
-                    }
-                )
+                        printDebug("Final Map: " + myMap)
+                    
+                    case _ => printDebug("invalid obj format")
+                }
+
+            case _ =>
+                printDebug("Invalid trace format")
             }
-        );
+
+        val properties: Map[String, JValue] = json.extract[Map[String, JValue]]
+        properties.foreach {
+            case (propertyName, propertyJson) =>
+                val length: Int = (propertyJson \ "length").extract[Int]
+                val trace: JValue = (propertyJson \ "trace").extract[JValue]
+
+                printDebug(s"Property Name: $propertyName")
+                printDebug(s"Length: $length")
+                printDebug("Trace: ")
+                parseTrace(trace)
+                printDebug("")
+        }
+        context}
+    def cutContextVar (
+        newContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
+        vars: List[(Identifier, Type)],
+        oldContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
+        ) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
+        for (id <-vars ){
+            newContext.-(id._1);
+            if(oldContext.contains(id._1)){
+                newContext += (id._1->oldContext(id._1))
+            }
+        };
         //so, the newContext does not contain local varibales now
         newContext}
     def updateRecordValue(fields: List[Identifier],value: ConcreteValue,recordValue: ConcreteValue): ConcreteRecord = {

@@ -1,0 +1,20 @@
+module main {
+  type syscall_t = enum { setresuid, setfsuid, noop };
+  
+  
+  var systemcall : syscall_t;
+  
+  init {
+    systemcall = noop;
+  }
+  
+  next {
+
+  }
+  
+  control {
+    concrete(5);
+    check;
+    print_results;
+  }
+}

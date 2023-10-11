@@ -18,6 +18,7 @@ module main
         v = concrete(5);
         check;
         print_results;
+        v.print_concrete_trace(a);
         //v.print_cex(n);
     }
 }
