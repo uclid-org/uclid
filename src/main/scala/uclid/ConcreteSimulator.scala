@@ -26,6 +26,9 @@ case class ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue]) extend
 case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends ConcreteValue{
     override def toString = value.toString
 } 
+case class ConcreteEnum (ids:List[Identifier],value:BigInt) extends ConcreteValue{
+    override def toString = value.toString
+}
 
 object ConcreteSimulator {
     var isPrintDebug: Boolean = false;
@@ -94,7 +97,6 @@ object ConcreteSimulator {
             }
 
         val properties: Map[String, JValue] = json.extract[Map[String, JValue]]
-
         properties.foreach {
             case (propertyName, propertyJson) =>
                 val length: Int = (propertyJson \ "length").extract[Int]
@@ -107,9 +109,12 @@ object ConcreteSimulator {
                 printDebug("")
         }
 
-        // println(s"properties: ${properties}")
 
-        val preinit = collection.mutable.Map[Identifier, ConcreteValue](
+        //Leiqi: We started with a empty context
+        //Read from json file and get a context
+        //Read from enum
+        val emptyContext = collection.mutable.Map[Identifier, ConcreteValue]()
+        val varContext = collection.mutable.Map[Identifier, ConcreteValue](
             module.vars.map(v => v._2 match {
                 case IntegerType() => {
                     (v._1, ConcreteUndef())
@@ -132,18 +137,23 @@ object ConcreteSimulator {
                     }
                     (v._1, ConcreteRecord(RecordMap))
                 }
+                case EnumType(ids) => {
+                    (v._1,ConcreteEnum(ids,-1))
+                }   
+                case _ => {
+                    throw new NotImplementedError(v.toString+" has not been support yet!")
+                }
             }) : _*)
-
-        val postinit = module.init match {
-            case Some(init) => initialize(preinit, init.body)
-            case None => preinit
+        val preInitContext = varContext
+        val postInitContext = module.init match {
+            case Some(init) => initialize(preInitContext, init.body)
+            case None => preInitContext
         }
-
         if (terminate) {
             printResult("Terminated Early")
         }
-        trace(0) = postinit;  
-        
+
+        trace(0) = postInitContext;  
         
         module.cmds.foreach {
             cmd => cmd.name.toString match {
@@ -162,7 +172,7 @@ object ConcreteSimulator {
         val next_stmt = module.next match {
             case Some(next) => 
             {
-                var newContext = postinit
+                var newContext = postInitContext
                 for (a <- 1 to cntInt) {
                     if (!terminate) {
                         newContext = simulate_stmt(newContext, next.body)
@@ -174,7 +184,6 @@ object ConcreteSimulator {
                             terminate_printed = true
                         } 
                     }
-                    
                     
                 }
                 newContext
@@ -195,13 +204,14 @@ object ConcreteSimulator {
         }
 
         return List()}
+
+
     def initialize (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         stmt: Statement) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
         simulate_stmt(context, stmt)}
 
     def simulate_stmt (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         stmt: Statement) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
-        
         stmt match {
             case AssignStmt(lhss, rhss) => {
                 val rhseval = rhss.map(rhs => evaluate_expr(context, rhs))
@@ -493,6 +503,10 @@ object ConcreteSimulator {
             }
             case _ => throw new NotImplementedError(s"Expression evaluation for ${expr}")
         }}
+    /**
+    * return a context
+    * with vars added into Context
+    **/
     def extendContext (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         vars: List[BlockVarsDecl]) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
         val newContext = collection.mutable.Map[Identifier, ConcreteValue]();
@@ -507,9 +521,15 @@ object ConcreteSimulator {
                 )
             }
         );
-        context.++(newContext)}
+        context.++(newContext)
+        
+    }
+    /**
+    * return a context
+    * Remove @vars from newContext
+    */
     def mergeContext (
-        original: scala.collection.mutable.Map[Identifier, ConcreteValue],
+        oldContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
         newContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
         vars: List[BlockVarsDecl]) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
         vars.foreach(
@@ -518,7 +538,7 @@ object ConcreteSimulator {
                 vardecl.ids.foreach(
                     id => {
                         newContext.-(id);
-                        original.get(id) match{
+                        oldContext.get(id) match{
                             case value: ConcreteValue =>{
                                 newContext += (id->value)
                             }
