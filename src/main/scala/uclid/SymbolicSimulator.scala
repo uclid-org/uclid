@@ -48,7 +48,7 @@ import vcd.VCD
 import scala.util.Try
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import com.typesafe.scalalogging.Logger
-import uclid.smt.Z3Interface
+import smt.Z3Interface
 
 import scala.collection.mutable.{Map => MutableMap}
 import org.scalactic.source.Position
@@ -58,8 +58,8 @@ import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import scala.collection.mutable
-import uclid.smt.SMTLIB2Interface
-import uclid.smt.Context
+import smt.SMTLIB2Interface
+import smt.Context
 
 object UniqueIdGenerator {
   var i : Int = 0;
