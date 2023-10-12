@@ -6,9 +6,9 @@ module main
     }
     next {
         a' = a + 1;
-        assert(a !=3);
+    //    assert(a !=3);
     }
-    //property jump_a: a!=300;
+    property jump_a: a!=3;
 
     control {
         v = concrete(5);

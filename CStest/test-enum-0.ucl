@@ -1,11 +1,9 @@
 module main {
-  type syscall_t = enum { setresuid, setfsuid, noop };
-  
-  
-  var systemcall : syscall_t;
-  
+  var systemcall : enum { setresuid, setfsuid, noop };
+  var a: integer;
   init {
     systemcall = noop;
+    a = 0;
   }
   
   next {
@@ -13,8 +11,9 @@ module main {
   }
   
   control {
+    //v = bmc(5);
     concrete(5);
     check;
-    print_results;
+    //print_results;
   }
 }

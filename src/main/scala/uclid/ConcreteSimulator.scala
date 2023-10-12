@@ -26,19 +26,20 @@ case class ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue]) extend
 case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends ConcreteValue{
     override def toString = value.toString
 } 
-case class ConcreteEnum (ids:List[Identifier],value:BigInt) extends ConcreteValue{
-    override def toString = value.toString
+case class ConcreteEnum (ids:List[Identifier],value:Int) extends ConcreteValue{
+    override def toString = {
+        if(value>0)
+            ids(value).toString
+        else
+            "undefined"
+    }
 }
 
 object ConcreteSimulator {
     var isPrintResult: Boolean = true;
     var isPrintDebug: Boolean = false;
-
-
     var needToPrintResults = false;
     var needToPrintTrace = false;
-    
-    
     var terminate: Boolean = false;
     var trace = Map[BigInt,scala.collection.mutable.Map[Identifier, ConcreteValue]]();
     var passCount: Int = 0;
@@ -47,10 +48,9 @@ object ConcreteSimulator {
     var cntInt:Int = 0;
     var terminateInt: Int = 0;
     
-    //TODO:
-    //Leiqi add property
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
-        var printTraceCmd=module.cmds(0);
+        var printTraceCmd = module.cmds(0);
+        lazy val properties = module.properties;
         UclidMain.printVerbose("HELLO IN EXECUTE")
         
         module.cmds.foreach {
@@ -73,14 +73,14 @@ object ConcreteSimulator {
         val emptyContext = collection.mutable.Map[Identifier, ConcreteValue]()
         var varContext = extendContextVar(emptyContext,module.vars)
         varContext = extendContextJson(varContext)
-        // add enum into the context
         val preInitContext = varContext
         val postInitContext = module.init match {
             case Some(init) => initialize(preInitContext, init.body)
             case None => preInitContext
         }
-        if (terminate) printResult("Terminated Early")
+        checkProperties(properties,postInitContext);
 
+        if (terminate) printResult("Terminated Early")
         trace(0) = postInitContext;  
         printDebug("Running Concrete Simulation for "+cntInt+ " steps")
         var terminate_printed = false
@@ -91,6 +91,7 @@ object ConcreteSimulator {
                 for (a <- 1 to cntInt) {
                     if (!terminate) {
                         newContext = simulate_stmt(newContext, next.body)
+                        checkProperties(properties,newContext)
                         trace(a) = newContext   
                     } else {
                         terminateInt = a;
@@ -105,6 +106,7 @@ object ConcreteSimulator {
             }
             case _ => {}
         }
+        
         if(needToPrintResults){
             UclidMain.printResult("%d assertions passed.".format(passCount))
             UclidMain.printResult("%d assertions failed.".format(failCount))
@@ -418,6 +420,8 @@ object ConcreteSimulator {
         }}
     def extendContextVar (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         vars: List[(Identifier, Type)]) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
+        var returnContext = context;
+        var enumContext = collection.mutable.Map[Identifier, ConcreteValue]();
         val newContext = collection.mutable.Map[Identifier, ConcreteValue](
             vars.map(v => v._2 match {
                 case IntegerType() => {
@@ -442,6 +446,9 @@ object ConcreteSimulator {
                     (v._1, ConcreteRecord(RecordMap))
                 }
                 case EnumType(ids) => {
+                    for((id,i)<-ids.view.zipWithIndex){
+                        enumContext(id)=ConcreteEnum(ids,i)
+                    };
                     (v._1,ConcreteEnum(ids,-1))
                 }   
                 case _ => {
@@ -449,7 +456,9 @@ object ConcreteSimulator {
                 }
             }) : _*)
             
-        context.++(newContext)
+        returnContext = returnContext.++(newContext);
+        returnContext = returnContext.++(enumContext);
+        returnContext
         }
     def extendContextJson(context: scala.collection.mutable.Map[Identifier, ConcreteValue]): scala.collection.mutable.Map[Identifier, ConcreteValue] = {
         val jsonString: String = Source.fromFile("cex.json").mkString
@@ -553,6 +562,16 @@ object ConcreteSimulator {
         }}
 
     
+    def checkProperties(properties: List[SpecDecl],context:scala.collection.mutable.Map[Identifier, ConcreteValue]){
+        for(property <- properties){
+            if (!evaluateBoolExpr(context, property.expr)){ 
+                    failCount = failCount+1;
+                    terminate = true
+                    printResult("failed assert statement")
+                }else{
+                    passCount = passCount+1;
+                }
+        }}
     def printDebug(str: String){
         if(isPrintDebug)
             println(str)}
@@ -561,6 +580,12 @@ object ConcreteSimulator {
         if(isPrintResult)
             println(str)}
     def printContext(context: scala.collection.mutable.Map[Identifier, ConcreteValue],vars: List[(Expr, String)]) : Unit = {
+        printDebug("Print Context")
+        if(vars.isEmpty){
+            for((key,value)<-context){
+                println(key.toString+": "+value.toString)
+            }
+        }
         for (variable <- vars){
             println(variable._1+":  "+evaluate_expr(context,variable._1).toString)
         }}
