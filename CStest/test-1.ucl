@@ -14,9 +14,10 @@ module main
     property jump_b: b!=5;
 
     control {
-        v = bmc(5);
+        v = concrete(5);
         check;
         print_results;
-        v.print_cex_json();
+        v.print_concrete_trace(a,b);
+        //v.print_cex_json();
     }
 }

@@ -72,7 +72,8 @@ object ConcreteSimulator {
 
         val emptyContext = collection.mutable.Map[Identifier, ConcreteValue]()
         var varContext = extendContextVar(emptyContext,module.vars)
-        varContext = extendContextJson(varContext)
+        printContext(varContext,List())
+        //varContext = extendContextJson(varContext)
         val preInitContext = varContext
         val postInitContext = module.init match {
             case Some(init) => initialize(preInitContext, init.body)
@@ -92,9 +93,10 @@ object ConcreteSimulator {
                     if (!terminate) {
                         newContext = simulate_stmt(newContext, next.body)
                         checkProperties(properties,newContext)
-                        trace(a) = newContext   
+                        trace(a) = newContext
+                        terminateInt = a;   
                     } else {
-                        terminateInt = a;
+                        //terminateInt = a;
                         if (!terminate_printed) {
                             printDebug(s"Failed on iteration ${a-1}")
                             terminate_printed = true
@@ -579,9 +581,15 @@ object ConcreteSimulator {
     def printResult(str: String){
         if(isPrintResult)
             println(str)}
+    /*
+    * @context : The context needed to be print
+    * @vars:     The picked variables inside the context
+    * if vars is Empty List, then all the vars.
+    */
     def printContext(context: scala.collection.mutable.Map[Identifier, ConcreteValue],vars: List[(Expr, String)]) : Unit = {
-        printDebug("Print Context")
+        printDebug("Call Print Context")
         if(vars.isEmpty){
+            //println("Vars is empty and print all variables")
             for((key,value)<-context){
                 println(key.toString+": "+value.toString)
             }
@@ -592,8 +600,9 @@ object ConcreteSimulator {
     def printConcretetTrace(trace:Map[BigInt,scala.collection.mutable.Map[Identifier, ConcreteValue]],exprs : List[(Expr, String)], arg : Option[Identifier]){
         UclidMain.printStatus("Generated Trace of length " + (terminateInt).toString())
         UclidMain.printStatus("=================================")
+        printDebug("The terminateInt is"+terminateInt.toString)
         for (a <- 0 to terminateInt) {
-            if(a<terminateInt){
+            if(a<=terminateInt){
                 UclidMain.printStatus("=================================")
                 UclidMain.printStatus("Step # "+a.toString)
                 printContext(trace(a),exprs)
