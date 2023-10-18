@@ -37,7 +37,7 @@ case class ConcreteEnum (ids:List[Identifier],value:Int) extends ConcreteValue{
 
 object ConcreteSimulator {
     var isPrintResult: Boolean = true;
-    var isPrintDebug: Boolean = false;
+    var isPrintDebug: Boolean = true;
     var needToPrintResults = false;
     var needToPrintTrace = false;
     var terminate: Boolean = false;
@@ -69,11 +69,11 @@ object ConcreteSimulator {
                 case _ => {}
             }
         }
-
+        val frame = 0
         val emptyContext = collection.mutable.Map[Identifier, ConcreteValue]()
         var varContext = extendContextVar(emptyContext,module.vars)
         printContext(varContext,List())
-        //varContext = extendContextJson(varContext)
+        varContext = extendContextJson(varContext, frame)
         val preInitContext = varContext
         val postInitContext = module.init match {
             case Some(init) => initialize(preInitContext, init.body)
@@ -462,9 +462,8 @@ object ConcreteSimulator {
         returnContext = returnContext.++(enumContext);
         returnContext
         }
-    def extendContextJson(context: scala.collection.mutable.Map[Identifier, ConcreteValue]): scala.collection.mutable.Map[Identifier, ConcreteValue] = {
+    def extendContextJson(context: scala.collection.mutable.Map[Identifier, ConcreteValue], frame:Int): scala.collection.mutable.Map[Identifier, ConcreteValue] = {
         val jsonString: String = Source.fromFile("cex.json").mkString
-
         // Parse JSON into case class
         implicit val formats: DefaultFormats.type = DefaultFormats
         
@@ -477,53 +476,59 @@ object ConcreteSimulator {
                 }
             }
 
-        def parseTrace(trace: JValue): Unit = trace match {
-            case JString(errorMessage) =>
-                printDebug(s"Error Message: $errorMessage")
-            case JArray(fields) =>
-                fields.foreach {
-                    case JObject(item) =>
-                        val myMap: collection.mutable.Map[String, ConcreteInt] = collection.mutable.Map()
-                        item.foreach {
-                            listItem => {
-                                var varName = listItem._1
-                                listItem._2 match {
-                                    case JArray(list) =>
-                                        list.foreach {
-                                            it =>
-                                            it match {
-                                                case JString(value) =>
-                                                    var varValue = ConcreteInt(BigInt(value))
-                                                    myMap += (varName -> varValue)
+        def parseTrace(trace: JValue, frame: Int): Unit = 
+            trace match {
+                case JObject(item) =>
+                    val tuple = item(1)._2
+                    println("tuple")
+                    println(tuple)
+                    val myMap: collection.mutable.Map[String, ConcreteInt] = collection.mutable.Map()
+
+                    tuple match {
+                        case JArray(list) =>
+                            println("list")
+                            println(list)
+                            list.foreach {
+                                it =>
+                                it match {
+                                    case JObject(it) => {
+                                        it.foreach {
+                                            listItem => {
+                                                var varName = listItem._1
+                                                listItem._2 match {
+                                                    case JArray(list) => 
+                                                        list.foreach {
+                                                            it =>
+                                                            it match {
+                                                                case JString(value) =>
+                                                                    var varValue = ConcreteInt(BigInt(value))
+                                                                    myMap += (varName -> varValue)
+                                                            }
+
+                                                        }
+                                                }
                                             }
                                         }
+                                    }
                                 }
-                                
                             }
-                            
-                        }
-                        printDebug("Final Map: " + myMap)
-                    
-                    case _ => printDebug("invalid obj format")
-                }
 
-            case _ =>
-                printDebug("Invalid trace format")
-            }
+                    }
+                    printDebug("Final Map: " + myMap)   
+        myMap
+        }
 
         val properties: Map[String, JValue] = json.extract[Map[String, JValue]]
-        properties.foreach {
-            case (propertyName, propertyJson) =>
-                val length: Int = (propertyJson \ "length").extract[Int]
-                val trace: JValue = (propertyJson \ "trace").extract[JValue]
-
-                printDebug(s"Property Name: $propertyName")
-                printDebug(s"Length: $length")
-                printDebug("Trace: ")
-                parseTrace(trace)
-                printDebug("")
-        }
-        context}
+        val propertyName = "property__jump_b__0"
+        val property = properties(propertyName)
+        val valueMap = parseTrace(property, frame)
+        println("context: ")
+        printContext(context,List())
+        
+        printDebug("")      
+        context
+        
+    }
     def cutContextVar (
         newContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
         vars: List[(Identifier, Type)],
