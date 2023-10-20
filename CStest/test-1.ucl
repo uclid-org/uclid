@@ -10,8 +10,8 @@ module main
         a' = a + 1;
         b' = b + 2;
     }
-    property jump_a: a!=3;
-    property jump_b: b!=5;
+    // property jump_a: a!=3;
+    // property jump_b: b!=5;
 
     control {
         v = concrete(5);

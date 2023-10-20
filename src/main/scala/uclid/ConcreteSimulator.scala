@@ -72,7 +72,7 @@ object ConcreteSimulator {
         val frame = 0
         val emptyContext = collection.mutable.Map[Identifier, ConcreteValue]()
         var varContext = extendContextVar(emptyContext,module.vars)
-        printContext(varContext,List())
+        // printContext(varContext,List())
         varContext = extendContextJson(varContext, frame)
         val preInitContext = varContext
         val postInitContext = module.init match {
@@ -476,18 +476,14 @@ object ConcreteSimulator {
                 }
             }
 
-        def parseTrace(trace: JValue, frame: Int): Unit = 
+        def parseTrace(trace: JValue, frame: Int): scala.collection.mutable.Map[String, ConcreteInt] = {
             trace match {
                 case JObject(item) =>
                     val tuple = item(1)._2
-                    println("tuple")
-                    println(tuple)
                     val myMap: collection.mutable.Map[String, ConcreteInt] = collection.mutable.Map()
 
                     tuple match {
                         case JArray(list) =>
-                            println("list")
-                            println(list)
                             list.foreach {
                                 it =>
                                 it match {
@@ -514,18 +510,40 @@ object ConcreteSimulator {
                             }
 
                     }
-                    printDebug("Final Map: " + myMap)   
-        myMap
+                    // printDebug("Final Map: " + myMap)  
+                    return myMap 
         }
+        
+
+        }
+            
 
         val properties: Map[String, JValue] = json.extract[Map[String, JValue]]
         val propertyName = "property__jump_b__0"
         val property = properties(propertyName)
         val valueMap = parseTrace(property, frame)
-        println("context: ")
-        printContext(context,List())
         
+        println("from json: ")
+        println(valueMap)
+        // printContext(valueMap, List())
+        
+        println("from module: ")
+        // printContext(context,List())
+
+        val finalContext : scala.collection.mutable.Map[String, ConcreteInt] = collection.mutable.Map()
+        
+        // for every variable in context, get the value from the valueMap
+        context.foreach { 
+            case (key, value) =>
+            // val newValue: Identifier = key.toIdentifier
+            val newvalue = valueMap(key.toString)
+            println(s"Key: $key, Value: $newvalue")
+            finalContext += (key.toString -> newvalue)
+        }
         printDebug("")      
+        println("finalContext: ")
+        println(finalContext)
+        // finalContext
         context
         
     }
