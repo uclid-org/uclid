@@ -481,32 +481,34 @@ object ConcreteSimulator {
                 case JObject(item) =>
                     val tuple = item(1)._2
                     val myMap: collection.mutable.Map[String, ConcreteInt] = collection.mutable.Map()
-
                     tuple match {
                         case JArray(list) =>
-                            list.foreach {
-                                it =>
-                                it match {
-                                    case JObject(it) => {
-                                        it.foreach {
-                                            listItem => {
-                                                var varName = listItem._1
-                                                listItem._2 match {
-                                                    case JArray(list) => 
-                                                        list.foreach {
-                                                            it =>
-                                                            it match {
-                                                                case JString(value) =>
-                                                                    var varValue = ConcreteInt(BigInt(value))
-                                                                    myMap += (varName -> varValue)
-                                                            }
+                            var i: Int = 0
+                            for (it <- list) {
+                                if (i == frame) {
+                                    it match {
+                                        case JObject(item2) => {
+                                            item2.foreach {
+                                                listItem => {
+                                                    var varName = listItem._1
+                                                    listItem._2 match {
+                                                        case JArray(list) => 
+                                                            list.foreach {
+                                                                item3 =>
+                                                                item3 match {
+                                                                    case JString(value) =>
+                                                                        var varValue = ConcreteInt(BigInt(value))
+                                                                        myMap += (varName -> varValue)
+                                                                }
 
-                                                        }
+                                                            }
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
+                                i = i + 1
                             }
 
                     }
@@ -522,29 +524,19 @@ object ConcreteSimulator {
         val propertyName = "property__jump_b__0"
         val property = properties(propertyName)
         val valueMap = parseTrace(property, frame)
-        
-        println("from json: ")
-        println(valueMap)
-        // printContext(valueMap, List())
-        
-        println("from module: ")
-        // printContext(context,List())
 
-        val finalContext : scala.collection.mutable.Map[String, ConcreteInt] = collection.mutable.Map()
+        val finalContext : scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map()
         
         // for every variable in context, get the value from the valueMap
         context.foreach { 
             case (key, value) =>
             // val newValue: Identifier = key.toIdentifier
             val newvalue = valueMap(key.toString)
-            println(s"Key: $key, Value: $newvalue")
-            finalContext += (key.toString -> newvalue)
+            finalContext += (key -> newvalue)
         }
         printDebug("")      
-        println("finalContext: ")
-        println(finalContext)
-        // finalContext
-        context
+        finalContext
+        // context
         
     }
     def cutContextVar (
