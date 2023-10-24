@@ -73,7 +73,7 @@ object ConcreteSimulator {
         val emptyContext = collection.mutable.Map[Identifier, ConcreteValue]()
         var varContext = extendContextVar(emptyContext,module.vars)
         // printContext(varContext,List())
-        varContext = extendContextJson(varContext, frame)
+        varContext = extendContextJson(varContext, frame, module.vars)
         val preInitContext = varContext
         val postInitContext = module.init match {
             case Some(init) => initialize(preInitContext, init.body)
@@ -462,7 +462,7 @@ object ConcreteSimulator {
         returnContext = returnContext.++(enumContext);
         returnContext
         }
-    def extendContextJson(context: scala.collection.mutable.Map[Identifier, ConcreteValue], frame:Int): scala.collection.mutable.Map[Identifier, ConcreteValue] = {
+    def extendContextJson(context: scala.collection.mutable.Map[Identifier, ConcreteValue], frame:Int, vars: List[(Identifier, Type)]): scala.collection.mutable.Map[Identifier, ConcreteValue] = {
         val jsonString: String = Source.fromFile("cex.json").mkString
         // Parse JSON into case class
         implicit val formats: DefaultFormats.type = DefaultFormats
@@ -475,12 +475,30 @@ object ConcreteSimulator {
                 case JString(value) => value
                 }
             }
-
-        def parseTrace(trace: JValue, frame: Int): scala.collection.mutable.Map[String, ConcreteInt] = {
+        def findValueforVar(value: String, vars: List[(Identifier, Type)], varName: Identifier): ConcreteValue = {
+            /*
+            This function will go through the list of variables to find and create the proper variable type for the identifier passed into varName.
+            */
+            for (variable <- vars) {
+                if (variable._1 == varName) {
+                    variable._2 match {
+                        case IntegerType() => {
+                            return ConcreteInt(BigInt(value))
+                        }
+                        case BooleanType() => {
+                            return ConcreteBool(value.toBoolean)
+                        }
+                    }
+                }
+                
+            }
+            return ConcreteInt(5)
+        }
+        def parseTrace(trace: JValue, frame: Int, vars: List[(Identifier, Type)]): scala.collection.mutable.Map[String, ConcreteValue] = {
             trace match {
                 case JObject(item) =>
                     val tuple = item(1)._2
-                    val myMap: collection.mutable.Map[String, ConcreteInt] = collection.mutable.Map()
+                    val myMap: collection.mutable.Map[String, ConcreteValue] = collection.mutable.Map()
                     tuple match {
                         case JArray(list) =>
                             var i: Int = 0
@@ -497,7 +515,7 @@ object ConcreteSimulator {
                                                                 item3 =>
                                                                 item3 match {
                                                                     case JString(value) =>
-                                                                        var varValue = ConcreteInt(BigInt(value))
+                                                                        var varValue: ConcreteValue = findValueforVar(value, vars, Identifier(varName))
                                                                         myMap += (varName -> varValue)
                                                                 }
 
@@ -523,7 +541,7 @@ object ConcreteSimulator {
         val properties: Map[String, JValue] = json.extract[Map[String, JValue]]
         val propertyName = "property__jump_b__0"
         val property = properties(propertyName)
-        val valueMap = parseTrace(property, frame)
+        val valueMap = parseTrace(property, frame, vars)
 
         val finalContext : scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map()
         
@@ -531,10 +549,12 @@ object ConcreteSimulator {
         context.foreach { 
             case (key, value) =>
             // val newValue: Identifier = key.toIdentifier
+            println(value)
             val newvalue = valueMap(key.toString)
             finalContext += (key -> newvalue)
         }
         printDebug("")      
+        printContext(finalContext, List())
         finalContext
         // context
         
