@@ -37,7 +37,7 @@ case class ConcreteEnum (ids:List[Identifier],value:Int) extends ConcreteValue{
 
 object ConcreteSimulator {
     var isPrintResult: Boolean = true;
-    var isPrintDebug: Boolean = true;
+    var isPrintDebug: Boolean = false;
     var needToPrintResults = false;
     var needToPrintTrace = false;
     var terminate: Boolean = false;
@@ -47,12 +47,15 @@ object ConcreteSimulator {
     var undetCount: Int = 0;
     var cntInt:Int = 0;
     var terminateInt: Int = 0;
-    
+    var readFromJson = false;
+    var jsonFileName = "Null";
+
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
         var printTraceCmd = module.cmds(0);
         lazy val properties = module.properties;
         UclidMain.printVerbose("HELLO IN EXECUTE")
         
+
         module.cmds.foreach {
             cmd => cmd.name.toString match {
                 case "concrete" => {
@@ -66,6 +69,12 @@ object ConcreteSimulator {
                     needToPrintTrace = true;
                     printTraceCmd = cmd;
                 }
+                case "read_from_json" =>{
+                    
+                    jsonFileName = cmd.args(0)._2;
+                    //println(jsonFileName)
+                    readFromJson = true;
+                }
                 case _ => {}
             }
         }
@@ -73,7 +82,10 @@ object ConcreteSimulator {
         val emptyContext = collection.mutable.Map[Identifier, ConcreteValue]()
         var varContext = extendContextVar(emptyContext,module.vars)
         // printContext(varContext,List())
-        varContext = extendContextJson(varContext, frame, module.vars)
+        
+        if(readFromJson)
+            varContext = extendContextJson(varContext, frame, module.vars)
+        
         val preInitContext = varContext
         val postInitContext = module.init match {
             case Some(init) => initialize(preInitContext, init.body)
@@ -463,7 +475,8 @@ object ConcreteSimulator {
         returnContext
         }
     def extendContextJson(context: scala.collection.mutable.Map[Identifier, ConcreteValue], frame:Int, vars: List[(Identifier, Type)]): scala.collection.mutable.Map[Identifier, ConcreteValue] = {
-        val jsonString: String = Source.fromFile("cex.json").mkString
+        val jsonString: String = Source.fromFile("cex.json").mkString;
+        //println("So, json file name is "+jsonFileName);
         // Parse JSON into case class
         implicit val formats: DefaultFormats.type = DefaultFormats
         

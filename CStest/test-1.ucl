@@ -15,6 +15,7 @@ module main
 
     control {
         v = concrete(5);
+        read_from_json("cex.json");
         check;
         print_results;
         // v.print_concrete_trace(a,b);

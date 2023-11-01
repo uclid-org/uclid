@@ -13,6 +13,7 @@ module main
     control {
         v = concrete(5);
         check;
+        //v.read_from_json("cex.json");
         v.print_concrete_trace(a);
     }
 }

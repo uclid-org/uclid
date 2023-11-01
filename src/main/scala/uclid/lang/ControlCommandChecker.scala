@@ -237,6 +237,8 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkNoParams(cmd, filename)
         checkNoResultVar(cmd, filename)
         checkHasArgObj(cmd, filename, context)
+      case "read_from_json" =>
+        checkNoParams(cmd, filename)
       case _ =>
         Utils.raiseParsingError("Unknown control command: " + cmd.name.toString, cmd.pos, filename)
     }
