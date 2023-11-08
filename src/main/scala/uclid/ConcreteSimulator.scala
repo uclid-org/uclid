@@ -157,9 +157,16 @@ object ConcreteSimulator {
             case AssignStmt(lhss, rhss) => {
                 val rhseval = rhss.map(rhs => evaluate_expr(context, rhs))
                 if (rhseval.size == 1) {
-                    lhss.foldLeft(context)((a, l) => update_lhs(a, l, rhseval(0)))
+                    lhss.foldLeft(context)((cont, left) => update_lhs(cont, left, rhseval(0)))
                 } else {
-                    throw new NotImplementedError(s"RHS must be singleton")
+                    //Leiqi:
+                    if(rhseval.size==lhss.size){
+                        for((lhssid,i)<-lhss.view.zipWithIndex){
+                            //println("Lhss elemnt "+lhssid+" index "+i)
+                        };
+                        //throw new NotImplementedError(s"Same size of right handside and left handside")
+                    }
+                    throw new NotImplementedError(s"RHS must be singleton "+" lhss "+lhss.toString+" rhss "+rhss)
                 }
             }
 

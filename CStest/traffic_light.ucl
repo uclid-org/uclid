@@ -44,9 +44,11 @@ module main
   instance light2 : traffic_light();
   
   init {
-    assume (light1.light != yellow);
-    assume (light2.light != yellow);
-    assume (light1.light != light2.light);
+    // assume (light1.light != yellow);
+    // assume (light2.light != yellow);
+    // assume (light1.light != light2.light);
+    // light1.light = green;
+    // light2.light = yellow;
   }
 
   next {
@@ -59,9 +61,11 @@ module main
   invariant steps_upper_bound  : (light1.step <= 1) && (light2.step <= 1);
   control {
     // v = induction(5);
-    v = unroll(20);
+    //v = bmc(20);
+    v = concrete(5);
     check;
     print_results;
+    v.print_concrete_trace(light1.light,light2.light);
     // v.print_cex(light1.light, light1.step, light2.light, light2.step);
   }
 }
