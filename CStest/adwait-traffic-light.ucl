@@ -1,0 +1,166 @@
+
+
+module main {
+
+
+
+    /**
+
+            ____________
+            |    |     |
+            |    |     |
+    ----------------------------
+            | NW |  NE |
+    --------|----------|--------
+            | SW |  SE |
+    ----------------------------
+            |    |     |
+            |    |     |
+            ____________
+
+    */
+
+
+    // Cars at (incoming/outgoing) locations?
+    var east_incoming : boolean;
+    // , east_outgoing : boolean;
+    var west_outgoing : boolean;
+    // west_incoming, 
+    var north_incoming : boolean;
+    // , north_outgoing
+    var south_outgoing : boolean;
+    // south_incoming, 
+
+    // Cars in intersection?
+    var intersection_ne : integer;
+    var intersection_nw : integer;
+    var intersection_se : integer;
+    var intersection_sw : integer;
+
+    // Traffic light states
+    var east_west_green : boolean;
+    var north_south_green : boolean;
+
+    // for MAX_TIMER < 2, we will get CEX
+    const MAX_TIMER : integer = 2;
+
+    var red_timer : integer;
+
+    // What should the direction of vehicle be?
+    var direction : boolean;
+    // Should the light change at this step?
+    var change_light : boolean;
+    
+    // true: EW, false: NS
+    var next_light : boolean;
+
+
+    // Car dynamics
+    procedure step_world () 
+        modifies intersection_ne, intersection_nw, intersection_se, intersection_sw;
+        modifies east_west_green, north_south_green;
+        modifies red_timer, next_light;
+    {        
+
+        call step_light();
+
+        if (intersection_sw > 0) {
+            intersection_sw = intersection_sw - 1;
+        }
+
+        if (intersection_nw > 0) {
+            intersection_nw = intersection_nw - 1;
+            if (direction) {
+                intersection_sw = intersection_sw + 1;
+            }
+        }
+
+        if (intersection_ne > 0) {
+            intersection_ne = intersection_ne - 1;
+            intersection_nw = intersection_nw + 1;
+        }
+
+        if (north_incoming && north_south_green) {
+            intersection_nw = intersection_nw + 1;
+        }
+
+        if (east_incoming && east_west_green) {
+            intersection_ne = intersection_ne + 1;
+        }
+    }
+
+    procedure step_light () 
+        modifies east_west_green, north_south_green;
+        modifies next_light, red_timer;
+    {
+
+        if (east_west_green && change_light) {
+            east_west_green = false;
+        } else {
+            if (north_south_green && change_light) {
+                north_south_green = false;
+            }
+        }
+
+        if (!east_west_green && !north_south_green) {
+            red_timer = red_timer + 1;
+            if (red_timer == MAX_TIMER) {
+                if (next_light) {
+                    east_west_green = true;
+                    next_light = false;
+                    red_timer = 0;
+                } else {
+                    north_south_green = true;
+                    next_light = true;
+                    red_timer = 0;
+                }
+            }
+        }
+    }
+
+    init {
+        north_south_green = true;
+        east_west_green = false;
+
+        east_incoming = false;
+        north_incoming = false;
+
+        next_light = true;
+        red_timer = 0;
+
+        // Initially no cars in intersection
+        intersection_ne = 0;
+        intersection_nw = 0;
+        intersection_se = 0;
+        intersection_sw = 0;
+    }
+
+    next {
+        havoc direction;
+        havoc change_light;
+        havoc north_incoming;
+        havoc east_incoming;
+
+        call step_world();
+    }
+
+    property no_collision : (intersection_ne <= 1 && intersection_nw <= 1 && intersection_se <= 1 && intersection_sw <= 1);
+
+
+    control {
+		v = concrete(10);
+		check;
+        print_results;
+		v.print_cex(
+            north_incoming,
+            east_incoming,
+            north_south_green,
+            east_west_green,
+            intersection_ne,
+            intersection_nw,
+            intersection_se,
+            intersection_sw
+        );
+    }
+
+}
