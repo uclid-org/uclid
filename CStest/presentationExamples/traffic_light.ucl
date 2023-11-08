@@ -1,0 +1,65 @@
+module main
+{
+  type light_t = enum { red, yellow, green };
+  //type light_t = traffic_light.light_t;
+  var light1: light_t;
+  var light2: light_t;
+  
+  procedure next_light1()
+    modifies light1;
+  {
+    case
+	    (light1 == green) : {
+	      light1 = yellow;
+	    }
+	    (light1 == yellow) : {
+	      light1 = red;
+	    }
+	    (light1 == red) : {
+	      light1 = green;
+	    }
+    esac
+  }
+
+  procedure next_light2()
+    modifies light2;
+  {
+    case
+	    (light2 == green) : {
+	      light2 = yellow;
+	    }
+	    (light2 == yellow) : {
+	      light2 = red;
+	    }
+	    (light2 == red) : {
+	      light2 = green;
+	    }
+    esac
+  }
+
+  init {
+    // assume (light1.light != yellow);
+    // assume (light2.light != yellow);
+    // assume (light1.light != light2.light);
+    light1 = green;
+    light2 = red;
+  }
+
+  next {
+    call next_light1();
+    call next_light2();
+  }
+  
+  invariant atleast_one_red: (light1 == red) || (light2 == red);
+  invariant atmost_one_green: (light1 != green) || (light2 != green);
+  // invariant steps_non_negative : (light1.step >= 0) && (light2.step >= 0);
+  // invariant steps_upper_bound  : (light1.step <= 1) && (light2.step <= 1);
+  control {
+    // v = induction(5);
+    v = concrete(20);
+    check;
+    print_results;
+    v.print_concrete_trace(light1,light2);
+    // v.print_cex(light1.light, light1.step, light2.light, light2.step);
+  }
+}

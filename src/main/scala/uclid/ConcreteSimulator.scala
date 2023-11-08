@@ -37,7 +37,7 @@ case class ConcreteEnum (ids:List[Identifier],value:Int) extends ConcreteValue{
 
 object ConcreteSimulator {
     var isPrintResult: Boolean = true;
-    var isPrintDebug: Boolean = false;
+    var isPrintDebug: Boolean = true;
     var needToPrintResults = false;
     var needToPrintTrace = false;
     var terminate: Boolean = false;
@@ -62,7 +62,6 @@ object ConcreteSimulator {
                     val cntLit = cmd.args(0)
                     val cnt = cntLit._1.asInstanceOf[IntLit].value
                     cntInt = cnt.intValue()
-                    terminateInt = cntInt;
                     needToPrintResults = true
                 }
                 case "print_concrete_trace" =>{
@@ -91,35 +90,49 @@ object ConcreteSimulator {
             case Some(init) => initialize(preInitContext, init.body)
             case None => preInitContext
         }
-        checkProperties(properties,postInitContext);
+        
+        //get more inforamtion
+        //it should be here
 
-        if (terminate) printResult("Terminated Early")
-        trace(0) = postInitContext;  
-        printDebug("Running Concrete Simulation for "+cntInt+ " steps")
-        var terminate_printed = false
-        val next_stmt = module.next match {
-            case Some(next) => 
-            {
-                var newContext = postInitContext
-                for (a <- 1 to cntInt) {
-                    if (!terminate) {
-                        newContext = simulate_stmt(newContext, next.body)
-                        checkProperties(properties,newContext)
-                        trace(a) = newContext
-                        terminateInt = a;   
-                    } else {
-                        //terminateInt = a;
-                        if (!terminate_printed) {
-                            printDebug(s"Failed on iteration ${a-1}")
-                            terminate_printed = true
-                        } 
-                    }
-                    
-                }
-                newContext
-            }
-            case _ => {}
+        //Get random value for all unknow value
+        //Get random value for unknow value when we hit that value
+
+
+        checkProperties(properties,postInitContext);
+        trace(0) = postInitContext; 
+
+        if (terminate) {
+            terminateInt = 0;
+            printResult("Terminated in step 0")
         }
+        
+        else{
+            printDebug("Running Concrete Simulation for "+cntInt+ " steps")
+            var terminate_printed = false
+            val next_stmt = module.next match {
+                case Some(next) => 
+                {
+                    var newContext = postInitContext
+                    for (a <- 1 to cntInt) {
+                        if (!terminate) {
+                            newContext = simulate_stmt(newContext, next.body)
+                            checkProperties(properties,newContext)
+                            trace(a) = newContext
+                            terminateInt = a;   
+                        } 
+                        else {
+                            if (!terminate_printed) {
+                                printDebug(s"Failed on iteration ${a-1}")
+                                terminate_printed = true
+                            }    
+                        }
+                    }
+                newContext
+                }
+                case _ => {}
+            }
+        }
+        
         
         if(needToPrintResults){
             UclidMain.printResult("%d assertions passed.".format(passCount))
@@ -423,8 +436,19 @@ object ConcreteSimulator {
                                 }
                             }
                         }
+                        case ConcreteEnum(ids,index1) =>{
+                            operand_1 match{
+                                case ConcreteEnum(ids2, index2) =>{
+                                    op match{
+                                        case EqualityOp() => ConcreteBool(index1 == index2)
+                                        case InequalityOp() => ConcreteBool(index1 != index2)
+                                        case _ => throw new NotImplementedError("Not implements the Operator for enum"+op.toString) 
+                                    }
+                                }
+                            }
+                        }
                         case _ => {
-                        throw new NotImplementedError("Does not support this type yet")
+                        throw new NotImplementedError("Does not support operation on this type yet")
                         }
                     }
                 }
@@ -570,8 +594,7 @@ object ConcreteSimulator {
         printContext(finalContext, List())
         finalContext
         // context
-        
-    }
+        }
     def cutContextVar (
         newContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
         vars: List[(Identifier, Type)],
@@ -648,7 +671,8 @@ object ConcreteSimulator {
     def printConcretetTrace(trace:Map[BigInt,scala.collection.mutable.Map[Identifier, ConcreteValue]],exprs : List[(Expr, String)], arg : Option[Identifier]){
         UclidMain.printStatus("Generated Trace of length " + (terminateInt).toString())
         UclidMain.printStatus("=================================")
-        printDebug("The terminateInt is"+terminateInt.toString)
+        printDebug("The terminateInt is "+terminateInt.toString)
+        printDebug("The trace's size is "+trace.size)
         for (a <- 0 to terminateInt) {
             if(a<=terminateInt){
                 UclidMain.printStatus("=================================")
