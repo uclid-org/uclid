@@ -93,7 +93,7 @@ module main
   }
 
   next {
-    assert false;
+    //assert false;
     case
 	  (step == 0) || (step == 1) : { op' = push; }
 	  (step == 2) || (step == 3) : { op' = pop; }
@@ -112,8 +112,10 @@ module main
   }
 
   control {
+    //v = bmc(5);
     v = concrete(5);
     check;
     print_results;
+    //v.print_concrete_trace();
   }
 }

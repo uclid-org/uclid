@@ -161,12 +161,17 @@ object ConcreteSimulator {
                 } else {
                     //Leiqi:
                     if(rhseval.size==lhss.size){
+                        var newContext = context;
                         for((lhssid,i)<-lhss.view.zipWithIndex){
+                            newContext = update_lhs(newContext,lhss(i),rhseval(i))
                             //println("Lhss elemnt "+lhssid+" index "+i)
                         };
+                        newContext
                         //throw new NotImplementedError(s"Same size of right handside and left handside")
                     }
-                    throw new NotImplementedError(s"RHS must be singleton "+" lhss "+lhss.toString+" rhss "+rhss)
+                    else{
+                        throw new NotImplementedError(s"RHS must be singleton "+" lhss "+lhss.toString+" rhss "+rhss)
+                    }
                 }
             }
 
@@ -184,8 +189,8 @@ object ConcreteSimulator {
             case AssertStmt(e, id) => {
                 if (!evaluateBoolExpr(context, e)){ 
                     failCount = failCount+1;
-                    terminate = true
-                    printResult("failed assert statement")
+                    terminate = true;
+                    printResult("failed assert statement on:\n "+stmt)
                 }else{
                     passCount = passCount+1;
                 }
