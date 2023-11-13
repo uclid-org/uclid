@@ -80,24 +80,16 @@ object ConcreteSimulator {
         val frame = 0
         val emptyContext = collection.mutable.Map[Identifier, ConcreteValue]()
         var varContext = extendContextVar(emptyContext,module.vars)
-        // printContext(varContext,List())
-        
-        if(readFromJson)
-            varContext = extendContextJson(varContext, frame, module.vars)
         
         val preInitContext = varContext
         val postInitContext = module.init match {
             case Some(init) => initialize(preInitContext, init.body)
             case None => preInitContext
         }
+
+        if(readFromJson)
+            postInitContext = extendContextJson(postInitContext, frame, module.vars)
         
-        //get more inforamtion
-        //it should be here
-
-        //Get random value for all unknow value
-        //Get random value for unknow value when we hit that value
-
-
         checkProperties(properties,postInitContext);
         trace(0) = postInitContext; 
 
@@ -311,7 +303,12 @@ object ConcreteSimulator {
         expr: lang.Expr) : ConcreteValue = {
         
         expr match {
-            case a : Identifier => context(a)
+            case a : Identifier => {
+                if(context.contains(a))
+                    context(a)
+                else
+                    throw new NotImplementedError("identifier does not exist in the context "+a.toString) 
+            }
             case BoolLit(b) => ConcreteBool(b)
             case IntLit(b) => ConcreteInt(b)
             case BitVectorLit(a,b) => ConcreteBV(a,b)

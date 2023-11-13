@@ -879,7 +879,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val DefineDecl : PackratParser[lang.DefineDecl] = positioned {
-      KwDefine ~> Id ~ IdTypeList ~ (":" ~> Type) ~ ("=" ~> Expr) <~ ";" ^^
+      KwDefine ~> Id ~  IdTypeList ~ ( ":" ~> Type) ~ ("=" ~> Expr) <~ ";" ^^
       {
         case id ~ idTypeList ~ retType ~ expr => {
           lang.DefineDecl(id, FunctionSig(idTypeList, retType), expr)
