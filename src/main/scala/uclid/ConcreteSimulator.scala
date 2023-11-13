@@ -96,11 +96,23 @@ object ConcreteSimulator {
             case None => preInitContext
         }
 
+        printResult("Finish simulation in Init Block")
+
         if(readFromJson)
             postInitContext = extendContextJson(postInitContext, frame, module.vars)
         
+
+        // if(isPrintDebug){
+        //     printDebug("This is the postInit Context")
+        //     printContext(postInitContext,List())
+        // }
+
         checkProperties(properties,postInitContext);
         trace(0) = postInitContext; 
+
+        
+
+            
 
         if (terminate) {
             terminateInt = 0;
@@ -117,6 +129,10 @@ object ConcreteSimulator {
                     for (a <- 1 to cntInt) {
                         if (!terminate) {
                             newContext = simulate_stmt(newContext, next.body)
+
+                            printResult("Finish simulation "+a+" step in next Block")
+                            printResult("Going to check property")
+
                             checkProperties(properties,newContext)
                             trace(a) = newContext
                             terminateInt = a;   
@@ -156,6 +172,7 @@ object ConcreteSimulator {
         stmt: Statement) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {
         stmt match {
             case AssignStmt(lhss, rhss) => {
+                printDebug("Simulate assign Stmt: "+stmt.toString)
                 val rhseval = rhss.map(rhs => evaluate_expr(context, rhs))
                 if (rhseval.size == 1) {
                     lhss.foldLeft(context)((cont, left) => update_lhs(cont, left, rhseval(0)))
@@ -188,6 +205,7 @@ object ConcreteSimulator {
                 context
             }
             case AssertStmt(e, id) => {
+                printDebug("Evaluate AssertStmt "+e.toString)
                 if (!evaluateBoolExpr(context, e)){ 
                     failCount = failCount+1;
                     terminate = true;
@@ -260,6 +278,7 @@ object ConcreteSimulator {
         }}
     def evaluateBoolExpr(context: scala.collection.mutable.Map[Identifier, ConcreteValue],
         cond: Expr) : Boolean = {
+            printDebug("Evaluate BoolExpr "+cond.toString)
             evaluate_expr(context,cond) match {
                 case ConcreteBool(b) => {
                     if (b) {
@@ -269,7 +288,8 @@ object ConcreteSimulator {
                     }
                 }
                 case ConcreteUndef() => {
-                    throw new Error("try to evalue value of "+ cond.toString + " But not value now")
+                    return true
+                    //throw new Error("try to evalue value of "+ cond.toString + " But not value now")
                 }
             }
         }
@@ -277,6 +297,7 @@ object ConcreteSimulator {
     def update_lhs (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         lhs: Lhs, v: ConcreteValue) : scala.collection.mutable.Map[Identifier, ConcreteValue] = {  
         // TODO: More updates to LHS (Adwait)
+        printDebug("Update Lhs: "+lhs.toString+" With Value "+v.toString)
         lhs match {
             case LhsId(id) => {
                 context(id) = v
@@ -300,7 +321,9 @@ object ConcreteSimulator {
                 context
             }
             case LhsRecordSelect(id,fieldid)=>{
+                printDebug("Update Record "+id.toString+"'s fieldid "+fieldid)
                 context(id) = updateRecordValue(fieldid,v,context(id))
+                //printContext(context,List())
                 context     
             }
             case _ => {
@@ -313,11 +336,16 @@ object ConcreteSimulator {
 
     def evaluate_expr (context: scala.collection.mutable.Map[Identifier, ConcreteValue], 
         expr: lang.Expr) : ConcreteValue = {
-        
+        //printDebug("Evaluate Expr: "+expr.toString)
         expr match {
             case a : Identifier => {
-                if(context.contains(a))
-                    context(a)
+                if(context.contains(a)){
+                    context(a) match {
+                        case ConcreteUndef() => throw new Error("Touch undefine value "+ a.toString)
+                        case _ => context(a)
+                    }    
+                }
+                    
                 else
                     throw new NotImplementedError("identifier does not exist in the context "+a.toString) 
             }
@@ -358,9 +386,12 @@ object ConcreteSimulator {
                             
                         }
                         case ConcreteArray(valuemap) => {
+                            printDebug("Read Value fomr ConcreteArray: "+valuemap.toString)
                             op match {
                                 case ArraySelect(indices) => {
                                     val eval_indices = indices.map(a => evaluate_expr(context,a)) // list of concrete expr
+                                    printDebug("\t With indices " + indices)
+                                    printDebug("\t With newMap " + eval_indices)
                                     valuemap(eval_indices)
                                 }
                                 case ArrayUpdate(indices, value) => {
@@ -455,6 +486,10 @@ object ConcreteSimulator {
                                         case EqualityOp() => ConcreteBool(int_0 == int_1)
                                         case _ => throw new NotImplementedError("Not implements the Operator for BV"+op.toString) 
                                     }
+                                }
+                                case _ => {
+                                    printContext(context,List());
+                                    throw new NotImplementedError("Operand_1 "+operands.tail.head.toString)
                                 }
                             }
                         }
@@ -659,6 +694,8 @@ object ConcreteSimulator {
     
     def checkProperties(properties: List[SpecDecl],context:scala.collection.mutable.Map[Identifier, ConcreteValue]){
         for(property <- properties){
+            printDebug("Check Property "+property.toString)
+            //printContext(context,List())
             if (!evaluateBoolExpr(context, property.expr)){ 
                     failCount = failCount+1;
                     terminate = true
@@ -674,18 +711,16 @@ object ConcreteSimulator {
     def printResult(str: String){
         if(isPrintResult)
             println(str)}
-    /*
-    * @context : The context needed to be print
-    * @vars:     The picked variables inside the context
-    * if vars is Empty List, then all the vars.
-    */
     def printContext(context: scala.collection.mutable.Map[Identifier, ConcreteValue],vars: List[(Expr, String)]) : Unit = {
-        printDebug("Call Print Context")
+        printDebug("\n\n\n\nCall Print Context")
         if(vars.isEmpty){
-            //println("Vars is empty and print all variables")
+            if(isPrintDebug)
+                println("Vars is empty and print all variables")
             for((key,value)<-context){
                 println(key.toString+": "+value.toString)
             }
+            if(isPrintDebug)
+                println("\n\n\n\n")
         }
         for (variable <- vars){
             println(variable._1+":  "+evaluate_expr(context,variable._1).toString)
