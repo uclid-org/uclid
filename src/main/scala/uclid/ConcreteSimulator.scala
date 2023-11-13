@@ -49,6 +49,7 @@ object ConcreteSimulator {
     var terminateInt: Int = 0;
     var readFromJson = false;
     var jsonFileName = "Null";
+    var inRandom = false;
 
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
         var printTraceCmd = module.cmds(0);
@@ -63,16 +64,22 @@ object ConcreteSimulator {
                     val cnt = cntLit._1.asInstanceOf[IntLit].value
                     cntInt = cnt.intValue()
                     needToPrintResults = true
+
+                    if(cmd.args.size==2){
+                        var (idArg,exprArg) = cmd.args(1);
+                        if(idArg.toString == "\"Random\""){
+                            printDebug("We are in gussing mod")
+                            inRandom = true;
+                        }
+                        if(idArg.toString == "\"Json\""){
+                            printDebug("We are in Json mod")
+                            readFromJson = true;
+                        }
+                    }
                 }
                 case "print_concrete_trace" =>{
                     needToPrintTrace = true;
                     printTraceCmd = cmd;
-                }
-                case "read_from_json" =>{
-                    
-                    jsonFileName = cmd.args(0)._2;
-                    //println(jsonFileName)
-                    readFromJson = true;
                 }
                 case _ => {}
             }
@@ -80,9 +87,11 @@ object ConcreteSimulator {
         val frame = 0
         val emptyContext = collection.mutable.Map[Identifier, ConcreteValue]()
         var varContext = extendContextVar(emptyContext,module.vars)
+        varContext = extendContextVar(varContext,module.inputs)
+        varContext = extendContextVar(varContext,module.outputs)
         
         val preInitContext = varContext
-        val postInitContext = module.init match {
+        var postInitContext = module.init match {
             case Some(init) => initialize(preInitContext, init.body)
             case None => preInitContext
         }
@@ -258,6 +267,9 @@ object ConcreteSimulator {
                     } else {
                         return false
                     }
+                }
+                case ConcreteUndef() => {
+                    throw new Error("try to evalue value of "+ cond.toString + " But not value now")
                 }
             }
         }
@@ -440,6 +452,7 @@ object ConcreteSimulator {
                                         case BVGEUOp(w) => ConcreteBool(unint_0 >= unint_1)
                                         case BVUremOp(w) => ConcreteBV(unint_0 % unint_1,w)
                                         case BVUDivOp(w) => ConcreteBV(unint_0 / unint_1,w)
+                                        case EqualityOp() => ConcreteBool(int_0 == int_1)
                                         case _ => throw new NotImplementedError("Not implements the Operator for BV"+op.toString) 
                                     }
                                 }
