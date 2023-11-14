@@ -17,7 +17,7 @@ module main {
     cnt, result.value = 1bv8, 1bv8;
   }
 
-  define double(arg : bv8) : bv8 = (arg + arg);
+  define Double(arg : bv8) : bv8 = (arg + arg);
 
   procedure exec_cmd() 
     returns (r : result_t)
@@ -37,7 +37,7 @@ module main {
     
   next {
     call (result') = exec_cmd();
-    cnt' = double(cnt);
+    cnt' = Double(cnt);
   }
 
   assume regindex_zero    : (r1 == 0bv3 && r2 == 0bv3);
