@@ -51,6 +51,8 @@ object ConcreteSimulator {
     var jsonFileName = "Null";
     var inRandom = false;
 
+    var unDefineCount: Int = 0;
+
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
         var printTraceCmd = module.cmds(0);
         lazy val properties = module.properties;
@@ -177,7 +179,6 @@ object ConcreteSimulator {
                 if (rhseval.size == 1) {
                     lhss.foldLeft(context)((cont, left) => update_lhs(cont, left, rhseval(0)))
                 } else {
-                    //Leiqi:
                     if(rhseval.size==lhss.size){
                         var newContext = context;
                         for((lhssid,i)<-lhss.view.zipWithIndex){
@@ -246,6 +247,7 @@ object ConcreteSimulator {
                             newcon_
                         })
                     }
+                    case _ => throw new Error("Does not support loop index of type "+ typ.toString)
                 }
             }
             case WhileStmt(cond, body, invariants) => {
@@ -341,7 +343,13 @@ object ConcreteSimulator {
             case a : Identifier => {
                 if(context.contains(a)){
                     context(a) match {
-                        case ConcreteUndef() => throw new Error("Touch undefine value "+ a.toString)
+                        
+                        //The value does not define here
+                        //But it might not influence the excutation right?
+                        case ConcreteUndef() => {
+                            unDefineCount = unDefineCount+1;
+                            context(a)
+                        }
                         case _ => context(a)
                     }    
                 }
