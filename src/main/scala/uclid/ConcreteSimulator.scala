@@ -47,11 +47,14 @@ object ConcreteSimulator {
     var undetCount: Int = 0;
     var cntInt:Int = 0;
     var terminateInt: Int = 0;
-    var readFromJson = false;
+    
     var jsonFileName = "Null";
-    var inRandom = false;
+    
 
     var unDefineCount: Int = 0;
+    var isRandom = false;
+    var isDefault = false;
+    var isReadFromJson = false;
 
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
         var printTraceCmd = module.cmds(0);
@@ -69,13 +72,17 @@ object ConcreteSimulator {
 
                     if(cmd.args.size==2){
                         var (idArg,exprArg) = cmd.args(1);
+                        if(idArg.toString == "\"Default\""){
+                            printDebug("We are in default init")
+                            isDefault = true;
+                        }
                         if(idArg.toString == "\"Random\""){
-                            printDebug("We are in gussing mod")
-                            inRandom = true;
+                            printDebug("We are in random init mod")
+                            isRandom = true;
                         }
                         if(idArg.toString == "\"Json\""){
                             printDebug("We are in Json mod")
-                            readFromJson = true;
+                            isReadFromJson = true;
                         }
                     }
                 }
@@ -100,22 +107,19 @@ object ConcreteSimulator {
 
         printResult("Finish simulation in Init Block")
 
-        if(readFromJson)
+        if(isReadFromJson)
             postInitContext = extendContextJson(postInitContext, frame, module.vars)
+
+        if(isDefault){
+            printDebug("Extend the Context with Deault value")
+            postInitContext = extendContextDefault(postInitContext,module.vars)
+        }
+            
         
-
-        // if(isPrintDebug){
-        //     printDebug("This is the postInit Context")
-        //     printContext(postInitContext,List())
-        // }
-
         checkProperties(properties,postInitContext);
         trace(0) = postInitContext; 
 
         
-
-            
-
         if (terminate) {
             terminateInt = 0;
             printResult("Terminated in step 0")
@@ -448,8 +452,10 @@ object ConcreteSimulator {
                             operand_1 match{
                                 case ConcreteBool(bool_1) => {
                                     op match{
-                                        case ConjunctionOp() => ConcreteBool(bool_0&&bool_1)
-                                        case DisjunctionOp() => ConcreteBool(bool_0||bool_1)
+                                        case EqualityOp() => ConcreteBool(bool_0 == bool_1)
+                                        case InequalityOp() => ConcreteBool(bool_0 != bool_1)
+                                        case ConjunctionOp() => ConcreteBool(bool_0 && bool_1)
+                                        case DisjunctionOp() => ConcreteBool(bool_0 || bool_1)
                                         case IffOp() => ConcreteBool(bool_0 == bool_1)
                                         case ImplicationOp() => ConcreteBool(!bool_0 || bool_1)
                                         case _ => throw new NotImplementedError("Not implements the Operator for Bool"+op.toString) 
@@ -505,12 +511,17 @@ object ConcreteSimulator {
                                         case BVUremOp(w) => ConcreteBV(unint_0 % unint_1,w)
                                         case BVUDivOp(w) => ConcreteBV(unint_0 / unint_1,w)
                                         case EqualityOp() => ConcreteBool(int_0 == int_1)
+                                        case InequalityOp() => ConcreteBool(int_0 != int_1)
                                         case _ => throw new NotImplementedError("Not implements the Operator for BV"+op.toString) 
                                     }
                                 }
+                                case ConcreteUndef() => {
+                                    undetCount = undetCount + 1;
+                                    throw new NotImplementedError("Runtime Panic on variable"+operands.tail.head.toString)
+                                }
                                 case _ => {
                                     printContext(context,List());
-                                    throw new NotImplementedError("Operand_1 "+operands.tail.head.toString)
+                                    throw new NotImplementedError("Operand_1 is"+operands.tail.head.toString)
                                 }
                             }
                         }
@@ -525,8 +536,12 @@ object ConcreteSimulator {
                                 }
                             }
                         }
+                        case ConcreteUndef() => {
+                            undetCount = undetCount + 1;
+                            throw new NotImplementedError("Runtime Panic on variable "+operands.head.toString)
+                        }
                         case _ => {
-                        throw new NotImplementedError("Does not support operation on this type yet")
+                            throw new NotImplementedError("Does not support operation on this type yet")
                         }
                     }
                 }
@@ -673,6 +688,58 @@ object ConcreteSimulator {
         finalContext
         // context
         }
+    
+    def extendContextDefault(context: scala.collection.mutable.Map[Identifier, ConcreteValue], vars: List[(Identifier, Type)]): scala.collection.mutable.Map[Identifier, ConcreteValue] = {
+        //Loop over the context and assign good value according its type
+        var retContext = context;
+        for ((key, value) <- context){         
+            value match{
+                case ConcreteUndef() =>{
+                    for((id,typ) <- vars){
+                        //if key is inside vars
+                        if(key == id){
+                            typ match{
+                                case IntegerType() =>
+                                    retContext(key) = ConcreteInt(0)
+                                case BooleanType() => 
+                                    retContext(key) = ConcreteBool(false)
+                                case BitVectorType(w) => 
+                                    retContext(key) = ConcreteBV(0,w)
+                                case _ => throw new NotImplementedError("Does not support type "+typ) 
+                            }
+                        }
+                    }
+                }
+                case ConcreteRecord(members) =>{
+                    for((id,typ) <- vars){
+                        //if key is inside vars
+                        if(key == id){
+                            typ match{
+                                case RecordType(members)=>{
+                                    var RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
+                                    for((mem_id,mem_typ)<-members){
+                                        //println("Record_id: "+mem_id.toString+"\t mem_typ"+mem_typ.toString)
+                                        //RecordMap(member._1)=ConcreteUndef();
+                                        mem_typ match{
+                                            case IntegerType() => RecordMap(mem_id) = ConcreteInt(0)
+                                            case BooleanType() => RecordMap(mem_id) = ConcreteBool(false)
+                                            case BitVectorType(w) => RecordMap(mem_id) = ConcreteBV(0,w)
+                                            case _ => throw new NotImplementedError("Does not implement support for this type\n")
+                                        }
+                                    }
+                                    retContext(key) = ConcreteRecord(RecordMap)
+                                }
+                            }
+                        }
+                    }
+                }
+                case _ =>{}
+            }    
+            
+        }
+            
+        retContext}
+
     def cutContextVar (
         newContext: scala.collection.mutable.Map[Identifier, ConcreteValue],
         vars: List[(Identifier, Type)],

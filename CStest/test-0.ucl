@@ -2,7 +2,7 @@ module main
 {
     var a : integer;
     init {
-        a = 0;
+        //a = 0;
     }
     next {
         a' = a + 1;
@@ -12,10 +12,14 @@ module main
 
     control {
         v = concrete(5);
-        v = concrete(5,"Panic");
-        v = concrete(5,"Default");
-        v = concrete(5,"Random");
-        v = concrete(5,"Json");
+        //v = concrete(5,"Panic");
+        //v = concrete(5,"Default");
+        // v = concrete(5,"Json","Leiqi.json");
+
+        
+        // v = concrete(5,"Random");
+        // v = concrete(5,"Fuzzing");
+        
         check;
         //v.read_from_json("cex.json");
         v.print_concrete_trace(a);

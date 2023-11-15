@@ -1,0 +1,21 @@
+module main
+{
+    var a : integer;
+    var t : record {
+        r1 : integer
+    };
+    init {
+    }
+    next {
+        a' = a + 1;
+        assert(t.r1 != a);
+    }
+    
+    property jump_a: a!=3;
+
+    control {
+        //v = concrete(5);
+        v = concrete(5,"Default");
+        check;
+    }
+}

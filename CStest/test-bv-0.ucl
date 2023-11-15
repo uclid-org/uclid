@@ -13,6 +13,10 @@ module main
         compare = a < b;
         c = ~a;
         d = -a;
+        compare = a == b;
+        assert(compare == false);
+        compare = a !=b;
+        assert(compare == true);
     }
     next {
         a' = a + 1bv4;
