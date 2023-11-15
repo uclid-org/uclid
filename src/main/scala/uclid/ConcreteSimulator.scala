@@ -247,6 +247,19 @@ object ConcreteSimulator {
                             newcon_
                         })
                     }
+                    case BitVectorType(w) => {
+                        val low_ = low match{
+                            case l: ConcreteBV  => l.value
+                        }
+                        val high_ = high match{
+                            case h: ConcreteBV => h.value
+                        }
+                        (low_ to high_).foldLeft(context)((con_, it) => {
+                            val newcon_ = simulate_stmt(con_.+(id -> ConcreteBV(it,w)), body)
+                            newcon_.-(id)
+                            newcon_
+                        })
+                    }
                     case _ => throw new Error("Does not support loop index of type "+ typ.toString)
                 }
             }
@@ -343,7 +356,7 @@ object ConcreteSimulator {
             case a : Identifier => {
                 if(context.contains(a)){
                     context(a) match {
-                        
+                        //Leiqi:
                         //The value does not define here
                         //But it might not influence the excutation right?
                         case ConcreteUndef() => {
