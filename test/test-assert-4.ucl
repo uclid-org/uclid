@@ -1,0 +1,22 @@
+module main {
+    var test1 : bv64;
+    var test2 : bv64;
+    
+    init {
+        test1 = 1000bv64;
+        test2 = 1000bv64;
+        assert (test1 == 3bv64);
+        assert (test2 == 4bv64);
+    }
+    
+    next {
+        
+    }
+    
+    control {
+        f = bmc(2);
+        check;
+        f.print_cex();
+        print_results;
+    }
+}

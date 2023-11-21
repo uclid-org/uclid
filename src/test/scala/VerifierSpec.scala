@@ -133,6 +133,13 @@ class VerifierSanitySpec extends AnyFlatSpec {
   "test-assert-3.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-assert-3.ucl", 0)
   }
+  "test-assert-4.ucl" should "fail to verify two assertions." in {
+    val output = SMTLIB2Spec.expectedFails("./test/test-assert-4.ucl", 2)
+    assert (output.contains("1000"))
+  }
+  "test-assert-5.ucl" should "fail to verify one assertions." in {
+    SMTLIB2Spec.expectedFails("./test/test-assert-5.ucl", 1)
+  }
   "test-primed-variables-1.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-primed-variables-1.ucl", 0)
   }

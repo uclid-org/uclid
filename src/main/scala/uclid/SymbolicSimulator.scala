@@ -1322,16 +1322,28 @@ class SymbolicSimulator (module : Module) {
     val simTable = res.assert.frameTable
     Utils.assert(simTable.size >= 1, "Must have at least one trace")
     val lastFrame = res.assert.iter
-    (0 to lastFrame).foreach{ case (i) => {
+    if(lastFrame==0){
       UclidMain.printStatus("=================================")
-      UclidMain.printStatus("Step #" + i.toString)
-      try{
-          printFrame(simTable, i, model, exprsToPrint, scope)
-      }  catch{
-            case _: Throwable => UclidMain.printError("error: unable to parse counterexample frame")
-      }
-      UclidMain.printStatus("=================================")
-    }}
+        UclidMain.printStatus("Step #0")
+        try{
+            printFrame(simTable, simTable.head.size-1, model, exprsToPrint, scope)
+        }  catch{
+              case _: Throwable => UclidMain.printError("error: unable to parse counterexample frame")
+        }
+        UclidMain.printStatus("=================================")
+    }
+    else{
+      (0 to lastFrame).foreach{ case (i) => {
+        UclidMain.printStatus("=================================")
+        UclidMain.printStatus("Step #" + i.toString)
+        try{
+            printFrame(simTable, i, model, exprsToPrint, scope)
+        }  catch{
+              case _: Throwable => UclidMain.printError("error: unable to parse counterexample frame")
+        }
+        UclidMain.printStatus("=================================")
+      }}
+    }
   }
 
   def printFrame(simTable : SimulationTable, frameNumber : Int, m : smt.Model, exprs : List[(Expr, String)], scope : Scope) {

@@ -1,6 +1,6 @@
 #! /bin/bash
 
-VERSION=4.8.8
+VERSION=4.12.2
 
 # HOW TO USE THIS SCRIPT?
 #
@@ -12,12 +12,23 @@ VERSION=4.8.8
 # path.  This latter step will have to be done repeatedly. (Or you can
 # include it in your bashrc.)
 
-wget https://github.com/Z3Prover/z3/releases/download/z3-$VERSION/z3-$VERSION-x64-osx-10.14.6.zip
-unzip z3-$VERSION-x64-osx-10.14.6.zip
+mac_arch=$(uname -m)
+
+if [ "$mac_arch" = "arm64" ]; then
+    FILE_TO_GET="z3-$VERSION-arm64-osx-11.0"
+else
+    FILE_TO_GET="z3-$VERSION-x64-osx-10.16"
+fi
+
+echo $FILE_TO_GET
+
+wget https://github.com/Z3Prover/z3/releases/download/z3-$VERSION/$FILE_TO_GET.zip
+unzip $FILE_TO_GET.zip
+rm $FILE_TO_GET.zip
 
 # rename folder to a generic name to make it easier to upgrade z3 versions
 rm -rf z3/
-mv z3-$VERSION-x64-osx-10.14.6/ z3/
+mv $FILE_TO_GET/ z3/
 
 cp z3/bin/com.microsoft.z3.jar lib/
 source setup-z3-macos.sh

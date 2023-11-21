@@ -59,31 +59,31 @@ import org.json4s.jackson.JsonMethods._
 class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
   override def evalAsString(e : Expr) : String = {
     interface.exprToZ3(e) match {
-      case z3ArrayExpr : z3.ArrayExpr => convertZ3ArrayString(z3ArrayExpr)
-      case z3Expr : z3.Expr => model.eval(z3Expr, true).toString
+      case z3ArrayExpr : z3.ArrayExpr[_, _] => convertZ3ArrayString(z3ArrayExpr)
+      case z3Expr : z3.Expr[_] => model.eval(z3Expr, true).toString
       case _ => throw new Utils.EvaluationError("Unable to evaluate expression: " + e.toString)
     }
   }
 
   override def evalAsJSON(e : Expr) : JValue = {
     interface.exprToZ3(e) match {
-      case z3ArrayExpr : z3.ArrayExpr => convertZ3ArrayJSON(z3ArrayExpr)
-      case z3Expr : z3.Expr => JString(model.eval(z3Expr, true).toString)
+      case z3ArrayExpr : z3.ArrayExpr[_, _] => convertZ3ArrayJSON(z3ArrayExpr)
+      case z3Expr : z3.Expr[_] => JString(model.eval(z3Expr, true).toString)
       case _ => throw new Utils.EvaluationError("Unable to evaluate expression: " + e.toString)
     }
   }
 
-  def convertZ3ArrayString(initExpr : z3.Expr) : String = {
+  def convertZ3ArrayString(initExpr : z3.Expr[_]) : String = {
 
     val array : Map[String, String] = Map.empty[String, String]
-    var e    : z3.Expr = model.eval(initExpr, true)
+    var e    : z3.Expr[_] = model.eval(initExpr, true)
     var bottom : String = ""
     var longest : Integer = 1
     var isNumeral : Boolean = false
 
 
     while (e.isStore()) {
-      val args : Array[z3.Expr] = e.getArgs()
+      val args : Array[z3.Expr[_]] = e.getArgs()
       if (!array.contains(args(1).toString)) {
         array += (args(1).toString -> args(2).toString)
       }
@@ -94,14 +94,14 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
     if (e.isConstantArray()) {
       bottom = e.getArgs()(0).toString
     } else if (e.isAsArray) {
-      var fd : z3.FuncDecl = e.getFuncDecl().getParameters()(0).getFuncDecl()
-      var fint : z3.FuncInterp = null
+      var fd : z3.FuncDecl[_] = e.getFuncDecl().getParameters()(0).getFuncDecl()
+      var fint : z3.FuncInterp[_] = null
     
       do {
         fint = model.getFuncInterp(fd)
 
         for (entry <- fint.getEntries()) {
-          val args : Array[z3.Expr] = entry.getArgs()
+          val args : Array[z3.Expr[_]] = entry.getArgs()
           if (!array.contains(args(0).toString)) {
             array += (args(0).toString -> entry.getValue().toString)
           }
@@ -134,17 +134,17 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
     return output + "-".formatted(s"\n\t%${longest}s : $bottom")
   }
 
-  def convertZ3ArrayJSON(initExpr : z3.Expr) : JValue = {
+  def convertZ3ArrayJSON(initExpr : z3.Expr[_]) : JValue = {
 
     val array : Map[String, String] = Map.empty[String, String]
-    var e    : z3.Expr = model.eval(initExpr, true)
+    var e    : z3.Expr[_] = model.eval(initExpr, true)
     var bottom : String = ""
     var longest : Integer = 1
     var isNumeral : Boolean = false
 
 
     while (e.isStore()) {
-      val args : Array[z3.Expr] = e.getArgs()
+      val args : Array[z3.Expr[_]] = e.getArgs()
       if (!array.contains(args(1).toString)) {
         array += (args(1).toString -> args(2).toString)
       }
@@ -155,14 +155,14 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
     if (e.isConstantArray()) {
       bottom = e.getArgs()(0).toString
     } else if (e.isAsArray) {
-      var fd : z3.FuncDecl = e.getFuncDecl().getParameters()(0).getFuncDecl()
-      var fint : z3.FuncInterp = null
+      var fd : z3.FuncDecl[_] = e.getFuncDecl().getParameters()(0).getFuncDecl()
+      var fint : z3.FuncInterp[_] = null
     
       do {
         fint = model.getFuncInterp(fd)
 
         for (entry <- fint.getEntries()) {
-          val args : Array[z3.Expr] = entry.getArgs()
+          val args : Array[z3.Expr[_]] = entry.getArgs()
           if (!array.contains(args(0).toString)) {
             array += (args(0).toString -> entry.getValue().toString)
           }
@@ -192,7 +192,7 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
 
   override def evaluate(e : Expr) : Expr = {
     interface.exprToZ3(e) match {
-      case z3Expr : z3.Expr =>
+      case z3Expr : z3.Expr[_] =>
         val value = model.eval(z3Expr, true)
         if (value.isIntNum()) {
           val bigInt = value.asInstanceOf[z3.IntNum].getBigInteger()
@@ -293,12 +293,12 @@ class Z3Interface() extends Context {
       }
     }
   })
-  val getArraySort = new Memo[(List[Type], Type), z3.ArraySort]((arrayType : (List[Type], Type)) => {
+  val getArraySort = new Memo[(List[Type], Type), z3.ArraySort[_, _]]((arrayType : (List[Type], Type)) => {
     val indexTypeIn = arrayType._1
     val z3IndexType = getArrayIndexSort(indexTypeIn)
     ctx.mkArraySort(z3IndexType, getZ3Sort(arrayType._2))
   })
-  val getEnumSort = new Memo[List[String], z3.EnumSort]((enumConstants : List[String]) => {
+  val getEnumSort = new Memo[List[String], z3.EnumSort[_]]((enumConstants : List[String]) => {
     ctx.mkEnumSort(getEnumName(), enumConstants :_ *)
   })
 
@@ -321,11 +321,11 @@ class Z3Interface() extends Context {
   }
 
   /** Create a Z3 tuple AST. */
-  def getTuple(values : List[z3.AST], tupleMemberTypes : List[Type]) : z3.Expr = {
+  def getTuple(values : List[z3.AST], tupleMemberTypes : List[Type]) : z3.Expr[z3.TupleSort] = {
     val tupleType = TupleType(tupleMemberTypes)
     val tupleSort = getZ3Sort(tupleType).asInstanceOf[z3.TupleSort]
     val tupleCons = tupleSort.mkDecl()
-    tupleCons.apply(typecastAST[z3.Expr](values).toSeq : _*)
+    tupleCons.apply(typecastAST[z3.Expr[_]](values).toSeq : _*)
   }
 
   /** Create a boolean literal. */
@@ -341,12 +341,12 @@ class Z3Interface() extends Context {
   val getBitVectorLit = new Memo[(BigInt, Int), z3.BitVecExpr]((arg) => ctx.mkBV(arg._1.toString, arg._2))
 
   /** Create an enum literal. */
-  val getEnumLit = new Memo[(String, EnumType), z3.Expr]((p) => getEnumSort(p._2.members).getConst(p._2.fieldIndex(p._1)))
+  val getEnumLit = new Memo[(String, EnumType), z3.Expr[_]]((p) => getEnumSort(p._2.members).getConst(p._2.fieldIndex(p._1)))
 
   /** Create a constant array literal. */
-  val getConstArray = new Memo[(Expr, ArrayType), z3.Expr]({
+  val getConstArray = new Memo[(Expr, ArrayType), z3.Expr[_]]({
     (p) => {
-      val value = exprToZ3(p._1).asInstanceOf[z3.Expr]
+      val value = exprToZ3(p._1).asInstanceOf[z3.Expr[_]]
       val sort = getArrayIndexSort(p._2.inTypes)
       val arr = ctx.mkConstArray(sort, value)
       arr
@@ -383,12 +383,12 @@ class Z3Interface() extends Context {
   }
 
   /** Convert an OperatorApplication into a Z3 AST.  */
-  def opToZ3(op : Operator, operands : List[Expr]) : z3.Expr  = {
+  def opToZ3(op : Operator, operands : List[Expr]) : z3.Expr[_]  = {
     lazy val args = operands.map((arg) => exprToZ3(arg))
     // These values need to be lazy so that they are only evaluated when the appropriate ctx.mk* functions
     // are called. If they were eager, the casts would fail at runtime.
-    lazy val exprArgs = typecastAST[z3.Expr](args)
-    lazy val arithArgs = typecastAST[z3.ArithExpr](args)
+    lazy val exprArgs = typecastAST[z3.Expr[_]](args)
+    lazy val arithArgs = typecastAST[z3.ArithExpr[_]](args)
     lazy val boolArgs = typecastAST[z3.BoolExpr](args)
     lazy val bvArgs = typecastAST[z3.BitVecExpr](args)
     lazy val intArgs = typecastAST[z3.IntExpr](args)
@@ -478,17 +478,17 @@ class Z3Interface() extends Context {
       case ITEOp                  => ctx.mkITE(exprArgs(0).asInstanceOf[z3.BoolExpr], exprArgs(1), exprArgs(2))
       case ForallOp(vs, patterns)           =>
         // val qTyps = vs.map((v) => getZ3Sort(v.typ)).toArray
-        val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
+        val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr[_]]).toArray
         val qPatterns = patterns.map { ps => {
-            val qs = ps.map(p => exprToZ3(p).asInstanceOf[z3.Expr])
+            val qs = ps.map(p => exprToZ3(p).asInstanceOf[z3.Expr[_]])
             ctx.mkPattern(qs : _*)
           }
         }.toArray
         ctx.mkForall(qVars, boolArgs(0), 1, qPatterns, null, getForallName(), getSkolemName())
       case ExistsOp(vs, patterns)           =>
-        val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr]).toArray
+        val qVars = vs.map((v) => symbolToZ3(v).asInstanceOf[z3.Expr[_]]).toArray
         val qPatterns = patterns.map { ps => {
-            val qs = ps.map(p => exprToZ3(p).asInstanceOf[z3.Expr])
+            val qs = ps.map(p => exprToZ3(p).asInstanceOf[z3.Expr[_]])
             ctx.mkPattern(qs : _*)
           }
         }.toArray
@@ -520,9 +520,9 @@ class Z3Interface() extends Context {
 
   /** Convert an smt.Expr object into a Z3 AST.  */
   val exprToZ3 : Memo[Expr, z3.AST] = new Memo[Expr, z3.AST]((e) => {
-    def toArrayIndex(index : List[Expr], indexType : List[Type]) : z3.Expr = {
+    def toArrayIndex(index : List[Expr], indexType : List[Type]) : z3.Expr[z3.TupleSort] = {
       if (index.size == 1) {
-        exprToZ3(index(0)).asInstanceOf[z3.Expr]
+        exprToZ3(index(0)).asInstanceOf[z3.Expr[z3.TupleSort]]
       } else {
         getTuple(index.map((arg) => exprToZ3(arg)), indexType)
       }
@@ -536,16 +536,16 @@ class Z3Interface() extends Context {
         val arrayType = e.typ.asInstanceOf[ArrayType]
         val arrayIndexType = arrayType.inTypes
         val arrayIndex = toArrayIndex(index, arrayIndexType)
-        ctx.mkSelect(exprToZ3(e).asInstanceOf[z3.ArrayExpr], arrayIndex)
+        ctx.mkSelect(exprToZ3(e).asInstanceOf[z3.ArrayExpr[z3.TupleSort, z3.TupleSort]], arrayIndex)
       case ArrayStoreOperation(e, index, value) =>
         val arrayType = e.typ.asInstanceOf[ArrayType]
         val arrayIndexType = arrayType.inTypes
         val arrayIndex = toArrayIndex(index, arrayIndexType)
-        val data = exprToZ3(value).asInstanceOf[z3.Expr]
-        ctx.mkStore(exprToZ3(e).asInstanceOf[z3.ArrayExpr], arrayIndex, data)
+        val data = exprToZ3(value).asInstanceOf[z3.Expr[z3.TupleSort]]
+        ctx.mkStore(exprToZ3(e).asInstanceOf[z3.ArrayExpr[z3.TupleSort, z3.TupleSort]], arrayIndex, data)
       case FunctionApplication(e, args) =>
-        val func = exprToZ3(e).asInstanceOf[z3.FuncDecl]
-        func.apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
+        val func = exprToZ3(e).asInstanceOf[z3.FuncDecl[_]]
+        func.apply(typecastAST[z3.Expr[_]](args.map(exprToZ3(_))).toSeq : _*)
       case Lambda(_,_) =>
         throw new Utils.RuntimeError("Lambdas in assertions should have been beta-reduced.")
       case IntLit(i) => getIntLit(i)
@@ -556,15 +556,15 @@ class Z3Interface() extends Context {
       case ConstArray(expr, typ) => getConstArray(expr, typ)
       case r : ConstRecord => 
         val prodSort = getProductSort(r.typ.asInstanceOf[ProductType])
-        prodSort.mkDecl().apply(typecastAST[z3.Expr](r.fieldvalues.map(f => exprToZ3(f._2))).toSeq : _*)
+        prodSort.mkDecl().apply(typecastAST[z3.Expr[_]](r.fieldvalues.map(f => exprToZ3(f._2))).toSeq : _*)
       case MakeTuple(args) =>
         val tupleSort = getTupleSort(args.map(_.typ))
-        tupleSort.mkDecl().apply(typecastAST[z3.Expr](args.map(exprToZ3(_))).toSeq : _*)
+        tupleSort.mkDecl().apply(typecastAST[z3.Expr[_]](args.map(exprToZ3(_))).toSeq : _*)
     }
     assertLogger.debug("expr: " + e.toString())
     assertLogger.debug("z3  : " + z3AST.toString())
     // z3AST
-    if (z3AST.isInstanceOf[z3.Expr]) z3AST.asInstanceOf[z3.Expr].simplify()
+    if (z3AST.isInstanceOf[z3.Expr[_]]) z3AST.asInstanceOf[z3.Expr[_]].simplify()
     else z3AST
   })
 
@@ -663,19 +663,19 @@ object FixedpointTest
     val symbolx = ctx.mkSymbol(0)
     val symboly = ctx.mkSymbol(1)
     val symbols2 = Array[z3.Symbol](symbolx, symboly)
-    val x = ctx.mkBound(0, sorts2(0)).asInstanceOf[z3.ArithExpr]
-    val y = ctx.mkBound(1, sorts2(1)).asInstanceOf[z3.ArithExpr]
+    val x = ctx.mkBound(0, sorts2(0)).asInstanceOf[z3.ArithExpr[_]]
+    val y = ctx.mkBound(1, sorts2(1)).asInstanceOf[z3.ArithExpr[_]]
     
-    def applyDecl(f : z3.FuncDecl, x : z3.ArithExpr, y : z3.ArithExpr) : z3.BoolExpr = {
+    def applyDecl(f : z3.FuncDecl[_], x : z3.ArithExpr[_], y : z3.ArithExpr[_]) : z3.BoolExpr = {
       f.apply(x, y).asInstanceOf[z3.BoolExpr]
     }
     var qId = 0
     var skId = 0
-    def createForall(sorts : Array[z3.Sort], symbols : Array[z3.Symbol], e : z3.Expr) = {
+    def createForall(sorts : Array[z3.Sort], symbols : Array[z3.Symbol], e : z3.Expr[z3.BoolSort]) = {
       qId += 1
       skId += 1
       ctx.mkForall(sorts, symbols, e,
-        0, Array[z3.Pattern](), Array[z3.Expr](), ctx.mkSymbol(qId), ctx.mkSymbol(skId))
+        0, Array[z3.Pattern](), Array[z3.Expr[_]](), ctx.mkSymbol(qId), ctx.mkSymbol(skId))
     }
     
     fp.registerRelation(invDecl)
