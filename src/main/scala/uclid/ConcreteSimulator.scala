@@ -11,22 +11,31 @@ import scala.io.Source
 
 
 
-sealed abstract class ConcreteValue
-case class ConcreteUndef () extends ConcreteValue
+sealed abstract class ConcreteValue{
+    def valueClone: ConcreteValue;
+}
+case class ConcreteUndef () extends ConcreteValue{
+    override def valueClone: ConcreteValue = new ConcreteUndef ();
+}
 case class ConcreteBool (value: Boolean) extends ConcreteValue{
     override def toString = value.toString
+    override def valueClone: ConcreteValue = new ConcreteBool(value);
 } 
 case class ConcreteInt (value: BigInt) extends ConcreteValue{
     override def toString = value.toString
+    override def valueClone: ConcreteValue = new ConcreteInt(value);
 } 
 case class ConcreteBV (value: BigInt, width: Int) extends ConcreteValue{
-    override def toString = value.toString+"bv"+width.toString
+    override def toString = value.toString+"bv"+width.toString;
+    override def valueClone: ConcreteValue = new ConcreteBV(value,width);
 } 
 case class ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue]) extends ConcreteValue{
-    override def toString = value.toString
+    override def toString = value.toString;
+    override def valueClone = new ConcreteArray(value.clone);
 } 
 case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends ConcreteValue{
-    override def toString = value.toString
+    override def toString = value.toString;
+    override def valueClone = new ConcreteRecord(value.clone);
 } 
 case class ConcreteEnum (ids:List[Identifier],value:Int) extends ConcreteValue{
     override def toString = {
@@ -35,6 +44,7 @@ case class ConcreteEnum (ids:List[Identifier],value:Int) extends ConcreteValue{
         else
             "undefined"
     }
+    override def valueClone = new ConcreteEnum(ids,value)
 }
 
 object ConcreteSimulator {
@@ -293,7 +303,9 @@ object ConcreteSimulator {
 
         def cloneObject: ConcreteContext ={
             var clone = new ConcreteContext();
-            clone.varMap = varMap;
+            for((key,value)<-varMap){
+                clone.varMap(key) = value.valueClone;
+            }
             clone}
 
         def reMoveExtraContextVar ( vars: List[(Identifier, Type)], oldContext: ConcreteContext) : Unit = {
@@ -397,6 +409,7 @@ object ConcreteSimulator {
         checkProperties(properties,concreteContext);
         trace(0) = concreteContext.cloneObject;
 
+        trace(0).printContext(List());
         
         if (terminate) {
             terminateInt = 0;
@@ -411,8 +424,9 @@ object ConcreteSimulator {
                 {
                     for (a <- 1 to cntInt) {
                         if (!terminate) {
-                            simulate_stmt(concreteContext, next.body)
 
+                            simulate_stmt(concreteContext, next.body)
+                        
                             printDebug("Finish simulation "+a+" step in next Block")
                             printDebug("Going to check property")
 
