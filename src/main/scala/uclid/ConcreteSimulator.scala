@@ -54,6 +54,17 @@ object ConcreteSimulator {
         var varMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
         var inputMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
         var outputMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
+
+        def contains(variable: Identifier): Boolean = {
+            varMap.contains(variable)}
+        def read(variable: Identifier): ConcreteValue = {
+            if(varMap.contains(variable))
+                varMap(variable)
+            else
+                inputMap(variable)}
+        def write (id:Identifier, value: ConcreteValue){
+            varMap(id) = value}
+
         def updateContextVar (lhs:Lhs, value: ConcreteValue){
             lhs match {
                 case LhsId(id) => {
@@ -84,8 +95,7 @@ object ConcreteSimulator {
             
             }}
 
-        def writeContextVar (id:Identifier, value: ConcreteValue){
-            varMap(id) = value}
+        
         
         def extendContextVar ( vars: List[(Identifier, Type)]) : Unit= {
             var returnContext = varMap;
@@ -148,10 +158,7 @@ object ConcreteSimulator {
                 println(variable._1+":  "+ConcreteSimulator.evaluate_expr(this,variable._1).toString)
             }}
         
-        def contains(variable: Identifier): Boolean = {
-            varMap.contains(variable)}
-        def read(variable: Identifier): ConcreteValue = {
-            varMap(variable)}
+        
 
         def extendContextJson(frame:Int, vars: List[(Identifier, Type)]): Unit= {
             // val jsonString: String = Source.fromFile("cex.json").mkString;
@@ -251,54 +258,55 @@ object ConcreteSimulator {
             // // context
             ;}
 
-        def extendContextDefault(vars: List[(Identifier, Type)]): Unit = {
-            // //Loop over the context and assign good value according its type
-            // var retContext = context;
-            // for ((key, value) <- context){         
-            //     value match{
-            //         case ConcreteUndef() =>{
-            //             for((id,typ) <- vars){
-            //                 //if key is inside vars
-            //                 if(key == id){
-            //                     typ match{
-            //                         case IntegerType() =>
-            //                             retContext(key) = ConcreteInt(0)
-            //                         case BooleanType() => 
-            //                             retContext(key) = ConcreteBool(false)
-            //                         case BitVectorType(w) => 
-            //                             retContext(key) = ConcreteBV(0,w)
-            //                         case _ => throw new NotImplementedError("Does not support type "+typ) 
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //         case ConcreteRecord(members) =>{
-            //             for((id,typ) <- vars){
-            //                 //if key is inside vars
-            //                 if(key == id){
-            //                     typ match{
-            //                         case RecordType(members)=>{
-            //                             var RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
-            //                             for((mem_id,mem_typ)<-members){
-            //                                 //println("Record_id: "+mem_id.toString+"\t mem_typ"+mem_typ.toString)
-            //                                 //RecordMap(member._1)=ConcreteUndef();
-            //                                 mem_typ match{
-            //                                     case IntegerType() => RecordMap(mem_id) = ConcreteInt(0)
-            //                                     case BooleanType() => RecordMap(mem_id) = ConcreteBool(false)
-            //                                     case BitVectorType(w) => RecordMap(mem_id) = ConcreteBV(0,w)
-            //                                     case _ => throw new NotImplementedError("Does not implement support for this type\n")
-            //                                 }
-            //                             }
-            //                             retContext(key) = ConcreteRecord(RecordMap)
-            //                         }
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //         case _ =>{}
-            //     }    
+        def assignVarDefault(vars: List[(Identifier, Type)]): Unit = {
+            //Loop over the context and assign good value according its type
+            var retContext = varMap;
+            for ((key, value) <- varMap){         
+                value match{
+                    case ConcreteUndef() =>{
+                        for((id,typ) <- vars){
+                            //if key is inside vars
+                            if(key == id){
+                                typ match{
+                                    case IntegerType() =>
+                                        retContext(key) = ConcreteInt(0)
+                                    case BooleanType() => 
+                                        retContext(key) = ConcreteBool(false)
+                                    case BitVectorType(w) => 
+                                        retContext(key) = ConcreteBV(0,w)
+                                    case _ => throw new NotImplementedError("Does not support type "+typ) 
+                                }
+                            }
+                        }
+                    }
+                    case ConcreteRecord(members) =>{
+                        for((id,typ) <- vars){
+                            //if key is inside vars
+                            if(key == id){
+                                typ match{
+                                    case RecordType(members)=>{
+                                        var RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
+                                        for((mem_id,mem_typ)<-members){
+                                            //println("Record_id: "+mem_id.toString+"\t mem_typ"+mem_typ.toString)
+                                            //RecordMap(member._1)=ConcreteUndef();
+                                            mem_typ match{
+                                                case IntegerType() => RecordMap(mem_id) = ConcreteInt(0)
+                                                case BooleanType() => RecordMap(mem_id) = ConcreteBool(false)
+                                                case BitVectorType(w) => RecordMap(mem_id) = ConcreteBV(0,w)
+                                                case _ => throw new NotImplementedError("Does not implement support for this type\n")
+                                            }
+                                        }
+                                        retContext(key) = ConcreteRecord(RecordMap)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    case _ =>{}
+                }    
                 
-            // }
+            }
+            varMap = retContext;
             ;}
 
         def cloneObject: ConcreteContext ={
@@ -316,16 +324,54 @@ object ConcreteSimulator {
                 }
             };}
 
+        def extendInputVar ( vars: List[(Identifier, Type)]) : Unit= {
+            var returnContext = inputMap;
+            var enumContext = collection.mutable.Map[Identifier, ConcreteValue]();
+            val newContext = collection.mutable.Map[Identifier, ConcreteValue](
+                vars.map(v => v._2 match {
+                    case IntegerType() => {
+                        (v._1, ConcreteUndef())
+                    }
+                    case BooleanType() => {
+                        (v._1, ConcreteUndef())
+                    }
+                    case BitVectorType(w) => {
+                        (v._1, ConcreteUndef())
+                    }
+                    //... fill in
+                    case ArrayType(inType, outType) => {
+                        // TODO: outType could be complex type like another array or record
+                        (v._1, ConcreteArray(scala.collection.mutable.Map[List[ConcreteValue], ConcreteValue]().withDefaultValue(ConcreteUndef())))
+                    }
+                    case RecordType(members) => {
+                        val RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
+                        for(member<-members){
+                            RecordMap(member._1)=ConcreteUndef();
+                        }
+                        (v._1, ConcreteRecord(RecordMap))
+                    }
+                    case EnumType(ids) => {
+                        for((id,i)<-ids.view.zipWithIndex){
+                            enumContext(id)=ConcreteEnum(ids,i)
+                        };
+                        (v._1,ConcreteEnum(ids,-1))
+                    }   
+                    case _ => {
+                        throw new NotImplementedError(v.toString+" has not been support yet!")
+                    }
+                }) : _*)
+                
+            returnContext = returnContext.++(newContext);
+            returnContext = returnContext.++(enumContext);
+            inputMap = returnContext;
+            }
+        
         // indentifier -> value range;
-        // inputMap: map;
-        // Init?:
-        // function: readValue;
-        // function: setValue;
     }
 
 
     var isPrintResult: Boolean = true;
-    var isPrintDebug: Boolean = false;
+    var isPrintDebug: Boolean = true;
     var needToPrintResults = false;
     var needToPrintTrace = false;
     var terminate: Boolean = false;
@@ -387,7 +433,7 @@ object ConcreteSimulator {
         val frame = 0
         var concreteContext:ConcreteContext = new ConcreteContext();
         concreteContext.extendContextVar(module.vars);
-        concreteContext.extendContextVar(module.inputs)
+        concreteContext.extendInputVar(module.inputs)
         concreteContext.extendContextVar(module.outputs)
         
         module.init match{
@@ -402,7 +448,7 @@ object ConcreteSimulator {
 
         if(isDefault){
             printDebug("Extend the Context with Deault value")
-            concreteContext.extendContextDefault(module.vars)
+            concreteContext.assignVarDefault(module.vars)
         }
             
         
@@ -529,7 +575,7 @@ object ConcreteSimulator {
                             case h : ConcreteInt => h.value
                         }
                         for(it <- low_ to high_){
-                            context.writeContextVar(id,ConcreteInt(it))
+                            context.write(id,ConcreteInt(it))
                             simulate_stmt(context,body)
                         }
                     }
@@ -541,7 +587,7 @@ object ConcreteSimulator {
                             case h: ConcreteBV => h.value
                         }
                         for(it <- low_ to high_){
-                            context.writeContextVar(id,ConcreteBV(it,w))
+                            context.write(id,ConcreteBV(it,w))
                             simulate_stmt(context,body)
                         }
                     }
@@ -581,24 +627,20 @@ object ConcreteSimulator {
 
     def evaluate_expr (context: ConcreteContext, 
         expr: lang.Expr) : ConcreteValue = {
-        //printDebug("Evaluate Expr: "+expr.toString)
+        printDebug("Evaluate Expr: "+expr.toString)
         expr match {
             case a : Identifier => {
-                if(context.contains(a)){
-                    context.read(a) match {
-                        //Leiqi:
-                        //The value does not define here
-                        //But it might not influence the excutation right?
-                        case ConcreteUndef() => {
-                            unDefineCount = unDefineCount+1;
-                            context.read(a)
-                        }
-                        case _ => context.read(a)
-                    }    
-                }
-                    
-                else
-                    throw new NotImplementedError("identifier does not exist in the context "+a.toString) 
+                context.read(a) match {
+                    case ConcreteUndef() => {
+                        //TODO:
+                        //Facing Panic
+                        // context.printContext(List())
+                        // throw new Error("Get accross undefine value of "+ a.toString)
+                        unDefineCount = unDefineCount+1;
+                        ConcreteUndef()
+                    }
+                    case _ => context.read(a)
+                }    
             }
             case BoolLit(b) => ConcreteBool(b)
             case IntLit(b) => ConcreteInt(b)
@@ -707,7 +749,7 @@ object ConcreteSimulator {
                                         case _ => throw new NotImplementedError("Not implements the Operator"+op.toString) 
                                     }
                                 }
-                                case _ => throw new NotImplementedError("Should not entry this line"+op.toString) 
+                                case _ => throw new NotImplementedError("add integer with undefine value"+op.toString) 
                             }
                         }    
                         case ConcreteBV(int_0, length) =>{
