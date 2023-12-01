@@ -65,7 +65,7 @@ object ConcreteSimulator {
         def write (id:Identifier, value: ConcreteValue){
             varMap(id) = value}
 
-        def updateContextVar (lhs:Lhs, value: ConcreteValue){
+        def updateVar (lhs:Lhs, value: ConcreteValue){
             lhs match {
                 case LhsId(id) => {
                     varMap(id) = value
@@ -85,9 +85,7 @@ object ConcreteSimulator {
                 }
                 case LhsRecordSelect(id,fieldid)=>{
                     printDebug("Update Record "+id.toString+"'s fieldid "+fieldid)
-                    //TODO:
-                    //Wait for implement
-                    //varMap(id) = updateRecordValue(fieldid,v,context(id))  
+                    varMap(id) = updateRecordValue(fieldid,value,varMap(id))  
                 }
                 case _ => {
                     throw new NotImplementedError(s"LHS Update for ${lhs}")
@@ -97,7 +95,7 @@ object ConcreteSimulator {
 
         
         
-        def extendContextVar ( vars: List[(Identifier, Type)]) : Unit= {
+        def extendVar ( vars: List[(Identifier, Type)]) : Unit= {
             var returnContext = varMap;
             var enumContext = collection.mutable.Map[Identifier, ConcreteValue]();
             val newContext = collection.mutable.Map[Identifier, ConcreteValue](
@@ -139,28 +137,38 @@ object ConcreteSimulator {
             varMap = returnContext;
             }
         
-        def removeContextVar(vars: List[(Identifier, Type)]): Unit = {
+        def removeVar(vars: List[(Identifier, Type)]): Unit = {
             for((variable_name,variable_type)<-vars){
                 varMap.-(variable_name)
             }}
-        def printContext(vars: List[(Expr, String)]) : Unit = {
-            printDebug("\n\n\n\nCall Print Context")
+        def printVar(vars: List[(Expr, String)]) : Unit = {
             if(vars.isEmpty){
-                if(isPrintDebug)
-                    println("Vars is empty and print all variables")
+                printDebug("\t Varmap:")
                 for((key,value)<-varMap){
                     println(key.toString+": "+value.toString)
                 }
                 if(isPrintDebug)
-                    println("\n\n\n\n")
+                    println("\n")
             }
             for (variable <- vars){
                 println(variable._1+":  "+ConcreteSimulator.evaluate_expr(this,variable._1).toString)
             }}
         
+         def printInput(vars: List[(Expr, String)]) : Unit = {
+            printDebug("\tInput map:")
+            if(vars.isEmpty){
+                for((key,value)<-inputMap){
+                    println(key.toString+": "+value.toString)
+                }
+                if(isPrintDebug)
+                    println("\n")
+            }
+            for (variable <- vars){
+                println(variable._1+":  "+ConcreteSimulator.evaluate_expr(this,variable._1).toString)
+            }}
         
 
-        def extendContextJson(frame:Int, vars: List[(Identifier, Type)]): Unit= {
+        def extendVarJson(frame:Int, vars: List[(Identifier, Type)]): Unit= {
             // val jsonString: String = Source.fromFile("cex.json").mkString;
             // //println("So, json file name is "+jsonFileName);
             // // Parse JSON into case class
@@ -253,7 +261,7 @@ object ConcreteSimulator {
             //     finalContext += (key -> newvalue)
             // }
             // printDebug("")      
-            // //printContext(finalContext, List())
+            // //printVar(finalContext, List())
             // finalContext
             // // context
             ;}
@@ -309,6 +317,56 @@ object ConcreteSimulator {
             varMap = retContext;
             ;}
 
+        def assignInputDefault(vars: List[(Identifier, Type)]): Unit = {
+            //Loop over the context and assign good value according its type
+            var retContext = inputMap;
+            for ((key, value) <- inputMap){         
+                value match{
+                    case ConcreteUndef() =>{
+                        for((id,typ) <- vars){
+                            //if key is inside vars
+                            if(key == id){
+                                typ match{
+                                    case IntegerType() =>
+                                        retContext(key) = ConcreteInt(0)
+                                    case BooleanType() => 
+                                        retContext(key) = ConcreteBool(false)
+                                    case BitVectorType(w) => 
+                                        retContext(key) = ConcreteBV(0,w)
+                                    case _ => throw new NotImplementedError("Does not support type "+typ) 
+                                }
+                            }
+                        }
+                    }
+                    case ConcreteRecord(members) =>{
+                        for((id,typ) <- vars){
+                            //if key is inside vars
+                            if(key == id){
+                                typ match{
+                                    case RecordType(members)=>{
+                                        var RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
+                                        for((mem_id,mem_typ)<-members){
+                                            //println("Record_id: "+mem_id.toString+"\t mem_typ"+mem_typ.toString)
+                                            //RecordMap(member._1)=ConcreteUndef();
+                                            mem_typ match{
+                                                case IntegerType() => RecordMap(mem_id) = ConcreteInt(0)
+                                                case BooleanType() => RecordMap(mem_id) = ConcreteBool(false)
+                                                case BitVectorType(w) => RecordMap(mem_id) = ConcreteBV(0,w)
+                                                case _ => throw new NotImplementedError("Does not implement support for this type\n")
+                                            }
+                                        }
+                                        retContext(key) = ConcreteRecord(RecordMap)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    case _ =>{}
+                }    
+                
+            }
+            inputMap = retContext;
+            ;}
         def cloneObject: ConcreteContext ={
             var clone = new ConcreteContext();
             for((key,value)<-varMap){
@@ -316,7 +374,7 @@ object ConcreteSimulator {
             }
             clone}
 
-        def reMoveExtraContextVar ( vars: List[(Identifier, Type)], oldContext: ConcreteContext) : Unit = {
+        def removeExtraVar ( vars: List[(Identifier, Type)], oldContext: ConcreteContext) : Unit = {
             for (id <-vars ){
                 varMap.-(id._1);
                 if(oldContext.varMap.contains(id._1)){
@@ -365,8 +423,32 @@ object ConcreteSimulator {
             returnContext = returnContext.++(enumContext);
             inputMap = returnContext;
             }
-        
-        // indentifier -> value range;
+
+        def updateRecordValue(fields: List[Identifier],value: ConcreteValue,recordValue: ConcreteValue): ConcreteRecord = {
+            if(fields.size == 1){
+                recordValue match{
+                    case ConcreteUndef() => ConcreteRecord(Map(fields.head->value))
+                    case ConcreteRecord(map) => {
+                        var newMap = map;
+                        newMap(fields.head) = value;
+                        ConcreteRecord(newMap)
+                    }
+                    
+                    case _ => throw new NotImplementedError(s"Should not touch here")
+                }
+            }
+            else{
+                // now, we have one recordValue and we have not touch the end of the Record
+                recordValue match{
+                    case ConcreteUndef() => ConcreteRecord(Map(fields.head->updateRecordValue(fields.tail,value,ConcreteUndef())))
+                    case ConcreteRecord(map) => {
+                        var newMap = map;
+                        newMap(fields.head) = updateRecordValue(fields.tail,value,map(fields.head));
+                        ConcreteRecord(newMap)
+                    }
+                    case _ => throw new NotImplementedError(s"Should not touch here")
+                }
+            }}
     }
 
 
@@ -432,10 +514,16 @@ object ConcreteSimulator {
         }
         val frame = 0
         var concreteContext:ConcreteContext = new ConcreteContext();
-        concreteContext.extendContextVar(module.vars);
+        concreteContext.extendVar(module.vars);
         concreteContext.extendInputVar(module.inputs)
-        concreteContext.extendContextVar(module.outputs)
+        concreteContext.extendVar(module.outputs)
         
+        if(isDefault){
+            printDebug("Extend the Context with Deault value")
+            concreteContext.assignVarDefault(module.vars)
+            concreteContext.assignInputDefault(module.inputs)
+        }
+
         module.init match{
             case Some(init) => simulate_stmt(concreteContext,init.body)
             case _ => {}
@@ -443,25 +531,29 @@ object ConcreteSimulator {
         
         printDebug("Finish simulation in Init Block")
 
-        if(isReadFromJson)
-            concreteContext.extendContextJson(frame, module.vars)
-
-        if(isDefault){
-            printDebug("Extend the Context with Deault value")
-            concreteContext.assignVarDefault(module.vars)
+        if(isPrintDebug){
+            printDebug("After simulation Init context:\n")
+            concreteContext.printVar(List())
+            concreteContext.printInput(List())
         }
-            
-        
+
+        if(isReadFromJson)
+            concreteContext.extendVarJson(frame, module.vars)
         checkProperties(properties,concreteContext);
         trace(0) = concreteContext.cloneObject;
+        
+        
 
-        trace(0).printContext(List());
+        if(isPrintDebug){
+            println("Print the Context after init block")
+            concreteContext.printVar(List())
+            concreteContext.printInput(List())
+        }
         
         if (terminate) {
             terminateInt = 0;
             printResult("Terminated in step 0")
         }
-        
         else{
             printDebug("Running Concrete Simulation for "+cntInt+ " steps")
             var terminate_printed = false
@@ -472,10 +564,15 @@ object ConcreteSimulator {
                         if (!terminate) {
 
                             simulate_stmt(concreteContext, next.body)
-                        
-                            printDebug("Finish simulation "+a+" step in next Block")
-                            printDebug("Going to check property")
 
+                            if(isPrintDebug){
+                                printDebug("Finish simulation "+a+" step in next Block")
+                                println("Print the Context after init block")
+                                concreteContext.printVar(List())
+                                concreteContext.printInput(List())
+                            }
+
+                            printDebug("Going to check property")
                             checkProperties(properties,concreteContext)
                             trace(a) = concreteContext.cloneObject;
                             terminateInt = a;   
@@ -512,35 +609,17 @@ object ConcreteSimulator {
                 printDebug("Simulate assign Stmt: "+stmt.toString)
                 val rhseval = rhss.map(rhs => evaluate_expr(context, rhs))
                 for((lhssid,i)<-lhss.view.zipWithIndex){
-                    context.updateContextVar(lhss(i),rhseval(i))
+                    context.updateVar(lhss(i),rhseval(i))
                 };
-
-
-                // if (rhseval.size == 1) {
-                //     lhss.foldLeft(context)((cont, left) => update_lhs(cont, left, rhseval(0)))
-                // } else {
-                //     if(rhseval.size==lhss.size){
-                //         var newContext = context;
-                //         for((lhssid,i)<-lhss.view.zipWithIndex){
-                //             newContext = update_lhs(newContext,lhss(i),rhseval(i))
-                //             //println("Lhss elemnt "+lhssid+" index "+i)
-                //         };
-                //         newContext
-                //         //throw new NotImplementedError(s"Same size of right handside and left handside")
-                //     }
-                //     else{
-                //         throw new NotImplementedError(s"RHS must be singleton "+" lhss "+lhss.toString+" rhss "+rhss)
-                //     }
-                // }
             }
             case BlockStmt(vars, stmts) => {
                 val flatVars : List[(Identifier, Type)] = vars.flatMap(v => v.ids.map(id => (id, v.typ)))
-                context.extendContextVar(flatVars)
+                context.extendVar(flatVars)
                 val oldContext = context.cloneObject;
                 for(s<-stmts){
                     simulate_stmt(context, s)
                 }
-                context.reMoveExtraContextVar(flatVars,oldContext)
+                context.removeExtraVar(flatVars,oldContext)
                 }
             
             case SkipStmt() => {}
@@ -565,7 +644,7 @@ object ConcreteSimulator {
                 println("in for loop")
                 var low = evaluate_expr(context, range._1)
                 var high = evaluate_expr(context, range._2)
-                context.extendContextVar(List((id,typ)))
+                context.extendVar(List((id,typ)))
                 typ match {
                     case IntegerType() => {
                         val low_ = low match {
@@ -593,7 +672,7 @@ object ConcreteSimulator {
                     }
                     case _ => throw new Error("Does not support loop index of type "+ typ.toString)
                 }
-                context.removeContextVar(List((id,typ)))}
+                context.removeVar(List((id,typ)))}
             case WhileStmt(cond, body, invariants) => {
                 while(evaluateBoolExpr(context, cond)){
                     simulate_stmt(context, body)
@@ -632,10 +711,9 @@ object ConcreteSimulator {
             case a : Identifier => {
                 context.read(a) match {
                     case ConcreteUndef() => {
-                        //TODO:
-                        //Facing Panic
-                        // context.printContext(List())
-                        // throw new Error("Get accross undefine value of "+ a.toString)
+                        printDebug("Here we hit a undefine value: "+a.toString)
+                        context.printVar(List())
+                        context.printInput(List())
                         unDefineCount = unDefineCount+1;
                         ConcreteUndef()
                     }
@@ -749,7 +827,7 @@ object ConcreteSimulator {
                                         case _ => throw new NotImplementedError("Not implements the Operator"+op.toString) 
                                     }
                                 }
-                                case _ => throw new NotImplementedError("add integer with undefine value"+op.toString) 
+                                case _ => throw new NotImplementedError("add integer with undefine value of "+ expr.toString) 
                             }
                         }    
                         case ConcreteBV(int_0, length) =>{
@@ -785,11 +863,14 @@ object ConcreteSimulator {
                                 }
                                 case ConcreteUndef() => {
                                     undetCount = undetCount + 1;
-                                    throw new NotImplementedError("Runtime Panic on variable"+operands.tail.head.toString)
+                                    printDebug("Here we hit a undefine value: "+operands.tail.head.toString)
+                                    context.printVar(List())
+                                    context.printInput(List())
+                                    throw new NotImplementedError("Runtime Panic on variable "+operands.tail.head.toString)
                                 }
                                 case _ => {
-                                    //printContext(context,List());
-                                    throw new NotImplementedError("Operand_1 is"+operands.tail.head.toString)
+                                    //printVar(context,List());
+                                    throw new NotImplementedError("Operand_1 is "+operands.tail.head.toString)
                                 }
                             }
                         }
@@ -806,6 +887,9 @@ object ConcreteSimulator {
                         }
                         case ConcreteUndef() => {
                             undetCount = undetCount + 1;
+                            printDebug("Here we hit a undefine value: "+operands.head.toString)
+                            context.printVar(List())
+                            context.printInput(List())
                             throw new NotImplementedError("Runtime Panic on variable "+operands.head.toString)
                         }
                         case _ => {
@@ -817,38 +901,11 @@ object ConcreteSimulator {
             }
             case _ => throw new NotImplementedError(s"Expression evaluation for ${expr}")
         }}
-    
-    def updateRecordValue(fields: List[Identifier],value: ConcreteValue,recordValue: ConcreteValue): ConcreteRecord = {
-        if(fields.size == 1){
-            recordValue match{
-                case ConcreteUndef() => ConcreteRecord(Map(fields.head->value))
-                case ConcreteRecord(map) => {
-                    var newMap = map;
-                    newMap(fields.head) = value;
-                    ConcreteRecord(newMap)
-                }
-                
-                case _ => throw new NotImplementedError(s"Should not touch here")
-            }
-        }
-        else{
-            // now, we have one recordValue and we have not touch the end of the Record
-            recordValue match{
-                case ConcreteUndef() => ConcreteRecord(Map(fields.head->updateRecordValue(fields.tail,value,ConcreteUndef())))
-                case ConcreteRecord(map) => {
-                    var newMap = map;
-                    newMap(fields.head) = updateRecordValue(fields.tail,value,map(fields.head));
-                    ConcreteRecord(newMap)
-                }
-                case _ => throw new NotImplementedError(s"Should not touch here")
-            }
-        }}
-
-    
+        
     def checkProperties(properties: List[SpecDecl],context:ConcreteContext){
         for(property <- properties){
             printDebug("Check Property "+property.toString)
-            //printContext(context,List())
+            //printVar(context,List())
             if (!evaluateBoolExpr(context, property.expr)){ 
                     failCount = failCount+1;
                     terminate = true
@@ -873,7 +930,7 @@ object ConcreteSimulator {
             if(a<=terminateInt){
                 UclidMain.printStatus("=================================")
                 UclidMain.printStatus("Step # "+a.toString)
-                trace(a).printContext(exprs)
+                trace(a).printVar(exprs)
                 UclidMain.printStatus("=================================")
             }
         }}
