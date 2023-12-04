@@ -54,6 +54,8 @@ object ConcreteSimulator {
         var varMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
         var inputMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
         var outputMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
+        //var assumeMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
+        var trueExpr: List[Expr]=List();
 
         def contains(variable: Identifier): Boolean = {
             varMap.contains(variable)}
@@ -448,12 +450,23 @@ object ConcreteSimulator {
                     }
                     case _ => throw new NotImplementedError(s"Should not touch here")
                 }
-            }}
+            }
+        }
+        def parseSetAssume(expr:Expr){
+            //so, we make the expr into the context,
+            //one way is to parse the expr into the Context all
+
+            //case OperatorApplication(op:Operator, operands:List[Expr])
+        }
+        def setAssumes(){
+            
+        }
     }
 
 
+
     var isPrintResult: Boolean = true;
-    var isPrintDebug: Boolean = true;
+    var isPrintDebug: Boolean = false;
     var needToPrintResults = false;
     var needToPrintTrace = false;
     var terminate: Boolean = false;
@@ -512,8 +525,12 @@ object ConcreteSimulator {
                 case _ => {}
             }
         }
+
         val frame = 0
         var concreteContext:ConcreteContext = new ConcreteContext();
+        
+        setAssumes(module.axioms,concreteContext);
+
         concreteContext.extendVar(module.vars);
         concreteContext.extendInputVar(module.inputs)
         concreteContext.extendVar(module.outputs)
@@ -539,11 +556,18 @@ object ConcreteSimulator {
 
         if(isReadFromJson)
             concreteContext.extendVarJson(frame, module.vars)
+
+
+        if(isPrintDebug){
+            println("Check the atomics declare")
+            println(module.axioms.toString)
+        }
+
+        checkAssumes(module.axioms,concreteContext);
         checkProperties(properties,concreteContext);
         trace(0) = concreteContext.cloneObject;
         
         
-
         if(isPrintDebug){
             println("Print the Context after init block")
             concreteContext.printVar(List())
@@ -902,6 +926,32 @@ object ConcreteSimulator {
             case _ => throw new NotImplementedError(s"Expression evaluation for ${expr}")
         }}
         
+    def checkAssumes(assumes: List[AxiomDecl],context:ConcreteContext){
+        for(assume<-assumes){
+            printDebug("Check Assume "+assume.toString)
+            //printVar(context,List())
+            if (!evaluateBoolExpr(context, assume.expr)){ 
+                    failCount = failCount+1;
+                    terminate = true
+                    printResult("failed assume statement")
+                }else{
+                    passCount = passCount+1;
+                }
+        }}
+    def setAssumes(assumes: List[AxiomDecl],context:ConcreteContext): Unit ={
+        printDebug("Start to set assume in Context")
+        for(assume<-assumes){
+            //we need to reparse the exper;
+            //We assume user use conjunctive normal form(CNF)
+            //transform any logic experssion into 
+            println(assume.expr.toString)
+            concreteContext.parseSetAssume(assume)
+        }
+        //TODO:
+        //if check failed, we should reassign the varibales again
+        // checkAssumes(assumes,context)
+    }
+
     def checkProperties(properties: List[SpecDecl],context:ConcreteContext){
         for(property <- properties){
             printDebug("Check Property "+property.toString)
