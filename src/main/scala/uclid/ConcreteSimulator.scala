@@ -54,8 +54,10 @@ object ConcreteSimulator {
         var varMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
         var inputMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
         var outputMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
-        //var assumeMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
-        var trueExpr: List[Expr]=List();
+        
+        //TODO:
+        //make assignment table to track value flow.
+        //var identifierValueRange: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
 
         def contains(variable: Identifier): Boolean = {
             varMap.contains(variable)}
@@ -65,7 +67,11 @@ object ConcreteSimulator {
             else
                 inputMap(variable)}
         def write (id:Identifier, value: ConcreteValue){
-            varMap(id) = value}
+            if(varMap.contains(id))
+                varMap(id)=value
+            else
+                inputMap(id)=value
+        }
 
         def updateVar (lhs:Lhs, value: ConcreteValue){
             lhs match {
@@ -452,15 +458,62 @@ object ConcreteSimulator {
                 }
             }
         }
-        def parseSetAssume(expr:Expr){
-            //so, we make the expr into the context,
+        def parseSetAssume(expr:Expr): Unit = {           //so, we make the expr into the context,
             //one way is to parse the expr into the Context all
-
-            //case OperatorApplication(op:Operator, operands:List[Expr])
-        }
-        def setAssumes(){
-            
-        }
+            printDebug("We are trying to assume "+expr.toString)
+            evaluate_expr(this,expr) match{
+                
+                case ConcreteBool(true)=>{}
+                case ConcreteBool(false)|ConcreteUndef()=>{
+                //if we hit assume evlation with the result
+                    expr match {
+                        case id:Identifier =>{
+                            write(id,ConcreteBool(true))
+                        }
+                        case OperatorApplication(op:Operator, operands:List[Expr])=>{
+                            if(operands.size==1){
+                                throw new Error("wait for implement")
+                            }
+                            else{
+                                val operand_0 = operands.head;
+                                val operand_1 = operands.tail.head
+                                op match{
+                                    case EqualityOp()=> {
+                                        operand_0 match{
+                                            case id:Identifier =>{
+                                                printDebug("Write "+id+" "+operand_1.toString)
+                                                write(id,evaluate_expr(this,operand_1))
+                                            }
+                                            case _ => {
+                                                throw new Error("Undefine ? "+operand_0)
+                                            }
+                                        }    
+                                    }
+                                    case InequalityOp() => {
+                                        throw new Error("Unimplemented")
+                                        //ConcreteBool(bool_0 != bool_1)
+                                    }
+                                    case ConjunctionOp() =>{ 
+                                        parseSetAssume(operand_0)
+                                        parseSetAssume(operand_1)
+                                    }
+                                    // case DisjunctionOp() => ConcreteBool(bool_0 || bool_1)
+                                    // case IffOp() => ConcreteBool(bool_0 == bool_1)
+                                    // case ImplicationOp() => ConcreteBool(!bool_0 || bool_1) 
+                                    case _ => {throw new Error("Unimplemented")}    
+                                }
+                            }
+                        }
+                        case _ => {
+                            throw new Error("Hit unimplemented code part")
+                        }
+                    }    
+                }
+                case _ => {
+                    throw new Error("Hit unimplemented code part")
+                }
+            }
+        }   
     }
 
 
@@ -529,12 +582,14 @@ object ConcreteSimulator {
         val frame = 0
         var concreteContext:ConcreteContext = new ConcreteContext();
         
-        setAssumes(module.axioms,concreteContext);
+        
 
         concreteContext.extendVar(module.vars);
         concreteContext.extendInputVar(module.inputs)
         concreteContext.extendVar(module.outputs)
         
+        setAssumes(module.axioms,concreteContext);
+
         if(isDefault){
             printDebug("Extend the Context with Deault value")
             concreteContext.assignVarDefault(module.vars)
@@ -665,7 +720,6 @@ object ConcreteSimulator {
                     simulate_stmt(context, elseblock)
                 }}
             case ForStmt(id, typ, range, body) => {
-                println("in for loop")
                 var low = evaluate_expr(context, range._1)
                 var high = evaluate_expr(context, range._2)
                 context.extendVar(List((id,typ)))
@@ -722,7 +776,8 @@ object ConcreteSimulator {
                     }
                 }
                 case ConcreteUndef() => {
-                    return true
+                    throw new Error("When Evaluation Bool value we hit a undefine value "+cond.toString)
+                    //return true
                     //throw new Error("try to evalue value of "+ cond.toString + " But not value now")
                 }
             }
@@ -735,9 +790,12 @@ object ConcreteSimulator {
             case a : Identifier => {
                 context.read(a) match {
                     case ConcreteUndef() => {
-                        printDebug("Here we hit a undefine value: "+a.toString)
-                        context.printVar(List())
-                        context.printInput(List())
+                        
+                        if(isPrintDebug){
+                            printDebug("Here we hit a undefine value: "+a.toString)
+                            context.printVar(List())
+                            context.printInput(List())
+                        }
                         unDefineCount = unDefineCount+1;
                         ConcreteUndef()
                     }
@@ -831,6 +889,15 @@ object ConcreteSimulator {
                                         case _ => throw new NotImplementedError("Not implements the Operator for Bool"+op.toString) 
                                     }
                                 }
+                                case ConcreteUndef() => {
+                                    undetCount = undetCount + 1;
+                                    if(isPrintDebug){
+                                        printDebug("Here we hit a undefine value: "+operands.head.toString)
+                                        context.printVar(List())
+                                        context.printInput(List())
+                                    }
+                                    ConcreteUndef()
+                                }
                                 case _ => throw new NotImplementedError("Should not reach here")
                             }
                         }
@@ -850,6 +917,15 @@ object ConcreteSimulator {
                                         case EqualityOp() => ConcreteBool(int_0 == int_1)
                                         case _ => throw new NotImplementedError("Not implements the Operator"+op.toString) 
                                     }
+                                }
+                                case ConcreteUndef() => {
+                                    undetCount = undetCount + 1;
+                                    if(isPrintDebug){
+                                        printDebug("Here we hit a undefine value: "+operands.head.toString)
+                                        context.printVar(List())
+                                        context.printInput(List())
+                                    }
+                                    ConcreteUndef()
                                 }
                                 case _ => throw new NotImplementedError("add integer with undefine value of "+ expr.toString) 
                             }
@@ -907,14 +983,25 @@ object ConcreteSimulator {
                                         case _ => throw new NotImplementedError("Not implements the Operator for enum"+op.toString) 
                                     }
                                 }
+                                case ConcreteUndef() => {
+                                    undetCount = undetCount + 1;
+                                    if(isPrintDebug){
+                                        printDebug("Here we hit a undefine value: "+operands.head.toString)
+                                        context.printVar(List())
+                                        context.printInput(List())
+                                    }
+                                    ConcreteUndef()
+                                }
                             }
                         }
                         case ConcreteUndef() => {
                             undetCount = undetCount + 1;
-                            printDebug("Here we hit a undefine value: "+operands.head.toString)
-                            context.printVar(List())
-                            context.printInput(List())
-                            throw new NotImplementedError("Runtime Panic on variable "+operands.head.toString)
+                            if(isPrintDebug){
+                                printDebug("Here we hit a undefine value: "+operands.head.toString)
+                                context.printVar(List())
+                                context.printInput(List())
+                            }
+                            ConcreteUndef()
                         }
                         case _ => {
                             throw new NotImplementedError("Does not support operation on this type yet")
@@ -934,6 +1021,10 @@ object ConcreteSimulator {
                     failCount = failCount+1;
                     terminate = true
                     printResult("failed assume statement")
+                    printResult("failed on "+assume.toString)
+                    context.printVar(List())
+                    context.printInput(List())
+                    
                 }else{
                     passCount = passCount+1;
                 }
@@ -944,8 +1035,7 @@ object ConcreteSimulator {
             //we need to reparse the exper;
             //We assume user use conjunctive normal form(CNF)
             //transform any logic experssion into 
-            println(assume.expr.toString)
-            concreteContext.parseSetAssume(assume)
+            context.parseSetAssume(assume.expr)
         }
         //TODO:
         //if check failed, we should reassign the varibales again
