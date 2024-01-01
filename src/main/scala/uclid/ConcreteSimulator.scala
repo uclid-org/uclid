@@ -70,9 +70,7 @@ object ConcreteSimulator {
             if(varMap.contains(id))
                 varMap(id)=value
             else
-                inputMap(id)=value
-        }
-
+                inputMap(id)=value}
         def updateVar (lhs:Lhs, value: ConcreteValue){
             lhs match {
                 case LhsId(id) => {
@@ -277,8 +275,10 @@ object ConcreteSimulator {
         def assignVarDefault(vars: List[(Identifier, Type)]): Unit = {
             //Loop over the context and assign good value according its type
             var retContext = varMap;
+            //check the varMap
             for ((key, value) <- varMap){         
                 value match{
+                    //if one var does not have value
                     case ConcreteUndef() =>{
                         for((id,typ) <- vars){
                             //if key is inside vars
@@ -318,6 +318,8 @@ object ConcreteSimulator {
                             }
                         }
                     }
+                    //TODO:
+                    //add support for Array
                     case _ =>{}
                 }    
                 
@@ -456,8 +458,7 @@ object ConcreteSimulator {
                     }
                     case _ => throw new NotImplementedError(s"Should not touch here")
                 }
-            }
-        }
+            }}
         def parseSetAssume(expr:Expr): Unit = {           //so, we make the expr into the context,
             //one way is to parse the expr into the Context all
             printDebug("We are trying to assume "+expr.toString)
@@ -512,8 +513,7 @@ object ConcreteSimulator {
                 case _ => {
                     throw new Error("Hit unimplemented code part")
                 }
-            }
-        }   
+            }}   
     }
 
 
@@ -601,8 +601,6 @@ object ConcreteSimulator {
             case _ => {}
         }
         
-        printDebug("Finish simulation in Init Block")
-
         if(isPrintDebug){
             printDebug("After simulation Init context:\n")
             concreteContext.printVar(List())
@@ -629,6 +627,9 @@ object ConcreteSimulator {
             concreteContext.printInput(List())
         }
         
+
+        printDebug("Finish simulation in Init Block")
+
         if (terminate) {
             terminateInt = 0;
             printResult("Terminated in step 0")
