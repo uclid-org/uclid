@@ -1205,38 +1205,12 @@ class SymbolicSimulator (module : Module) {
 
     if (config.smoke) {
 
-      var reachableLines : List[String] = Nil
-      var unreachableLines : List[String] = Nil
-      var undeterminedLines : List[String] = Nil
-
-      assertionResults.foreach { (p) =>
-        if (p.result.isTrue) {
-          unreachableLines = p.assert.name +: unreachableLines
-        } else if (p.result.isFalse) {
-          reachableLines = p.assert.name +: reachableLines
-        } else {
-          undeterminedLines = p.assert.name +: undeterminedLines
-        }
-      }
-
-      var reachableSet : Set[String] = reachableLines.toSet
-      var unreachableSet : Set[String] = unreachableLines.toSet
-      var undeterminedSet : Set[String] = undeterminedLines.toSet
-
-      unreachableSet = unreachableSet.diff(reachableSet)
-      undeterminedSet = undeterminedSet.diff(reachableSet)
-      undeterminedSet = undeterminedSet.diff(unreachableSet)
-      reachableSet = reachableSet.diff(unreachableSet)
-      reachableSet = reachableSet.diff(undeterminedSet)
-
-      reachableLines = reachableSet.toList.sorted
-      unreachableLines = unreachableSet.toList.sorted
-      undeterminedLines = undeterminedSet.toList.sorted
+      val (reachableLines, unreachableLines, undeterminedLines) = Utils.smokeTestCounter(assertionResults)
 
       UclidMain.printResult("%d smoke tests run.".format(assertionResults.size))
-      UclidMain.printResult("%d code blocks tested.".format(reachableSet.size + unreachableSet.size + undeterminedSet.size))
-      UclidMain.printResult("%d warnings.".format(unreachableSet.size))
-      UclidMain.printResult("%d tests inconclusive.".format(undeterminedSet.size))
+      UclidMain.printResult("%d code blocks tested.".format(reachableLines.size + unreachableLines.size + undeterminedLines.size))
+      UclidMain.printResult("%d warnings.".format(unreachableLines.size))
+      UclidMain.printResult("%d inconclusives.".format(undeterminedLines.size))
 
       unreachableLines.foreach { (l) =>
         if (l.contains("-")) {
