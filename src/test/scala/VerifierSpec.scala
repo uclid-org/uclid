@@ -42,7 +42,6 @@ package test
 
 import org.scalatest.flatspec.AnyFlatSpec
 import java.io.File
-import uclid.{lang => l}
 
 import org.json4s.jackson.JsonMethods._
 import org.json4s.JString
@@ -54,7 +53,7 @@ object VerifierSpec {
     val compileConfig = if (config.isDefined) config.get else ConfigCons.createConfig(filename)
     val modules = UclidMain.compile(compileConfig, lang.Identifier("main"), true)
     val instantiateConfig = UclidMain.Config() 
-    val mainModule = UclidMain.instantiate(instantiateConfig, modules, l.Identifier("main"))
+    val mainModule = UclidMain.instantiate(instantiateConfig, modules, lang.Identifier("main"))
     assert (mainModule.isDefined)
     // val config = UclidMain.Config("main", List("/usr/bin/z3", "-in", "-smt2"), List.empty)
     val results = UclidMain.execute(mainModule.get, instantiateConfig)
@@ -71,7 +70,7 @@ object VerifierSpec {
     val compileConfig = if (config.isDefined) config.get else UclidMain.Config(files=filenames.map(f => new File(f)))
     val modules = UclidMain.compile(compileConfig, lang.Identifier("main"), true)
     val instantiateConfig = UclidMain.Config()
-    val mainModule = UclidMain.instantiate(instantiateConfig, modules, l.Identifier("main"))
+    val mainModule = UclidMain.instantiate(instantiateConfig, modules, lang.Identifier("main"))
     assert (mainModule.isDefined)
     // val config = UclidMain.Config("main", List("/usr/bin/z3", "-in", "-smt2"), List.empty)
     val results = UclidMain.execute(mainModule.get, instantiateConfig)
@@ -666,7 +665,7 @@ object PrintCexSpec {
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
     val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
-    val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, l.Identifier("main"))
+    val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, lang.Identifier("main"))
     assert (mainModule.isDefined)
     val config = UclidMain.Config() 
     val results = UclidMain.execute(mainModule.get, config)
@@ -698,7 +697,7 @@ object PrintCexSpec {
       UclidMain.Config(files=List(new File(filename))),
       lang.Identifier("main"), true
     )
-    val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, l.Identifier("main"))
+    val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, lang.Identifier("main"))
     assert (mainModule.isDefined)
     val config = UclidMain.Config(smtSolver=List("z3", "-in"), jsonCEXfile=cexfile)
     val results = UclidMain.execute(mainModule.get, config)
@@ -726,7 +725,7 @@ object PrintCexSpec {
     UclidMain.clearStringOutput()
     UclidMain.clearJSONString()
     val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
-    val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, l.Identifier("main"))
+    val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, lang.Identifier("main"))
     assert (mainModule.isDefined)
     val config = UclidMain.Config(smtSolver=List("z3", "-in"))
     val results = UclidMain.execute(mainModule.get, config)

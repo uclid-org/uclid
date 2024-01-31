@@ -41,7 +41,6 @@ package uclid
 package test
 
 import org.scalatest.flatspec.AnyFlatSpec
-import uclid.{lang => l}
 import java.io.File
 
 class ParserSpec extends AnyFlatSpec {

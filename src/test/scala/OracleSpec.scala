@@ -42,7 +42,6 @@ package test
 
 import org.scalatest.flatspec.AnyFlatSpec
 import java.io.File
-import uclid.{lang => l}
 
 object OracleSpec {
   def expectedFails(filename: String, nFail : Int) : String = {
@@ -50,7 +49,7 @@ object OracleSpec {
     UclidMain.clearStringOutput()
     val config = UclidMain.Config().copy(smtSolver=List("delphi", "--smto"))
     val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
-    val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"))
+    val mainModule = UclidMain.instantiate(config, modules, lang.Identifier("main"))
     assert (mainModule.isDefined)
     val results = UclidMain.execute(mainModule.get, config)
     val outputString = UclidMain.stringOutput.toString()

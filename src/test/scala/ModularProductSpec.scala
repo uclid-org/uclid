@@ -41,7 +41,6 @@ package uclid
 package test
 
 import org.scalatest.flatspec.AnyFlatSpec
-import uclid.{lang => l}
 import java.io.File
 
 object ModularProductHelperSpec {
@@ -50,7 +49,7 @@ object ModularProductHelperSpec {
         UclidMain.clearStringOutput()
         val config = UclidMain.Config() 
         val modules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"), true)
-        val mainModule = UclidMain.instantiate(config, modules, l.Identifier("main"))
+        val mainModule = UclidMain.instantiate(config, modules, lang.Identifier("main"))
         assert (mainModule.isDefined)
         val results = UclidMain.execute(mainModule.get, config)
         val outputString = UclidMain.stringOutput.toString()

@@ -41,8 +41,6 @@ package uclid
 package test
 
 import org.scalatest.flatspec.AnyFlatSpec
-import uclid.{lang => l}
-import uclid.smt._
 
 import scala.io.Source
 
@@ -52,7 +50,7 @@ object SExprParserSpec {
     val buffSource = Source.fromFile(filename)
     try {
       val input = buffSource.getLines mkString "\n"
-      SExprParser.parseModel(input)
+      smt.SExprParser.parseModel(input)
     } finally {
       buffSource.close
     }

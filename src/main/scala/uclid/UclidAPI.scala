@@ -1,5 +1,3 @@
-package uclid
-
 /*
  * UCLID5 Verification and Synthesis Engine
  *
@@ -50,7 +48,7 @@ import lang.{Identifier, Module,  _}
 import com.typesafe.scalalogging.Logger
 
 object UclidAPI {
-  val logger = Logger("uclid.UclidAPI")
+  val logger = Logger("uclid.UclidMain")
 
   var mainVerbosity: Int = 1;
 
@@ -63,7 +61,8 @@ object UclidAPI {
    * @param files List of files that should parsed and analyzed.
    */
   case class APIConfig(
-      mainModule        : WModule = WModule(),
+      modules           : List[WModule] = List(WModule()),
+      mainModuleName    : String = "main",
       smtSolver         : List[String] = List.empty,
       smtFileGeneration : String = "",
       jsonCEXfile       : String = "",
@@ -80,10 +79,18 @@ object UclidAPI {
       verbose           : Int = 1, 
       testFixedpoint: Boolean = false
   )
+  object APIConfig {
+    def apply(modules: List[WModule], smtSolver: List[String]) : APIConfig = {
+      new APIConfig(modules, "main", smtSolver)
+    }
+    def apply(module: WModule, smtSolver: List[String]) : APIConfig = {
+      new APIConfig(List(module), module.name, smtSolver)
+    }
+  }
 
   def buildConfig (pconfig: APIConfig) : UclidMain.Config = {
     val config = new UclidMain.Config(
-        mainModuleName = pconfig.mainModule.name,
+        mainModuleName = pconfig.mainModuleName,
         smtSolver = pconfig.smtSolver,
         smtFileGeneration = pconfig.smtFileGeneration,
         jsonCEXfile = pconfig.jsonCEXfile,
@@ -100,11 +107,12 @@ object UclidAPI {
    */
   def solveProcedural(pconfig : APIConfig) : String = {
     val config = buildConfig(pconfig)
+    UclidMain.mainVerbosity = config.verbose
     UclidMain.enableStringOutput()
     UclidMain.clearStringOutput()
     try {
       val mainModuleName = Identifier(config.mainModuleName)
-      val modules = compile(config, pconfig.mainModule)
+      val modules = compile(config, pconfig.modules, mainModuleName)
       val mainModule = UclidMain.instantiate(config, modules, mainModuleName)
       mainModule match {
         case Some(m) =>
@@ -162,29 +170,15 @@ object UclidAPI {
 
 
   /** Parse modules, typecheck them, inline procedures, create LTL monitors, etc. */
-  def compile(config: UclidMain.Config, wmod : WModule, test : Boolean = false): List[Module] = {
+  def compile(config: UclidMain.Config, wmods : List[WModule], mainModuleName : Identifier, test : Boolean = false): List[Module] = {
     UclidMain.printVerbose("Compiling modules")
     type NameCountMap = Map[Identifier, Int]
-    val srcFiles : Seq[java.io.File] = config.files
-    var nameCnt : NameCountMap = Map().withDefaultValue(0)
-    val passManager = UclidMain.createCompilePassManager(config, test, wmod.name_)
+    // val srcFiles : Seq[java.io.File] = config.files
+    // var nameCnt : NameCountMap = Map().withDefaultValue(0)
+    val passManager = UclidMain.createCompilePassManager(config, test, mainModuleName)
 
     val filenameAdderPass = new AddFilenameRewriter(None)
-    // // Helper function to parse a single file.
-    // def parseFile(srcFile : String) : List[Module] = {
-    //   val file = scala.io.Source.fromFile(srcFile)
-    //   // TODO: parse line by line instead of loading the complete file into a string
-    //   val modules = UclidParser.parseModel(srcFile, file.mkString)
-    //   file.close()
-    //   filenameAdderPass.setFilename(srcFile)
-    //   modules.map(m => filenameAdderPass.visit(m, Scope.empty)).flatten
-    // }
-    val parsedModules = List(wmod.buildModule())
-
-    //     srcFiles.foldLeft(List.empty[Module]) {
-    //   (acc, srcFile) => acc ++ parseFile(srcFile.getPath())
-    // }
-
+    val parsedModules = wmods.map(_.buildModule())
     // combine all modules with the same name
     val combinedParsedModules = parsedModules
       .groupBy(_.id)
