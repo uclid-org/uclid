@@ -1,3 +1,7 @@
+// this queue inlines the procedures so it doesn't need pre/post conditions. 
+// It should verify but actually
+// the loop invariant isn't strong enough.
+
 module queue
 {
   type op_t = enum { push, pop, search };
@@ -59,7 +63,7 @@ module queue
     countP = count + 1;
   }
 
-  procedure [inline]popQ()
+  procedure [inline] popQ()
     returns (
         headP : integer,
         countP : integer)

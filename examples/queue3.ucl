@@ -1,3 +1,6 @@
+// This queue has no pre/post conditions and so fails to verify
+// can we synthesie the pre/post conditions
+
 module queue
 {
   type op_t = enum { push, pop, search };

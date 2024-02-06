@@ -1,3 +1,5 @@
+// this queue has pre and post conditions and passes verification
+
 module queue
 {
   type op_t = enum { push, pop, search };
