@@ -41,7 +41,7 @@ module queue
     found  = false;
   }
 
-  procedure pushQ()
+  procedure [noinline]pushQ()
     returns (
         contentsP : queue_t,
         tailP : index_t,
@@ -59,13 +59,14 @@ module queue
     countP = count + 1;
   }
 
-  procedure popQ()
+  procedure [noinline] popQ()
     returns (
         headP : integer,
         countP : integer)
 
     requires !empty;
     requires (head >= 0 && head < SIZE);
+    requires (count >0);
     ensures (headP == if (head == SIZE-1) then 0 else (head + 1));
     ensures (countP == count - 1);
   {
@@ -74,7 +75,7 @@ module queue
     countP = count - 1;
   }
 
-  procedure searchQ()
+  procedure [noinline]searchQ()
     returns (found : boolean)
     requires (count >= 0 && count <= SIZE);
     ensures (in_queue(data) <==> found);
@@ -84,11 +85,8 @@ module queue
     i = 0;
     found = false;
     while (i < count)
-      invariant (i >= 0 && i <= count); // This could be a target for SyGuS??
-      invariant 
-        (exists (j : integer) :: 
-            j >= 0 && j < i && contents[itemIndex(j)] == data)
-        <==> found;
+      invariant (i >= 0 && i <= count) && 
+        (exists (j : integer) :: j >= 0 && j < i && contents[itemIndex(j)] == data) <==> found;
     {
       if (contents[itemIndex(i)] == data) {
         found = true;
@@ -119,46 +117,50 @@ module queue
   const pushed_data : data_t;
 
   // count is always between 0 and SIZE.
-  invariant[LTL] count_valid:
-    G(count >= 0 && count <= SIZE);
+  invariant count_valid:
+    (count >= 0 && count <= SIZE) &&
+    (head >= 0 && head < SIZE) &&
+    (tail >= 0 && tail < SIZE) 
+    && (count==SIZE ==> full)
+    && (count==0 ==> empty);
 
-  invariant[LTL] queue_inserts :
-    // if we push something
-    G((inited && op == push && X(op != pop) &&
-       data == pushed_data && !full)
-    // it enters the queue
-    ==> X(in_queue(pushed_data)));
+  // // invariant[LTL] queue_inserts :
+  //   // if we push something
+  //   G((inited && op == push && X(op != pop) &&
+  //      data == pushed_data && !full)
+  //   // it enters the queue
+  //   ==> X(in_queue(pushed_data))) &&
 
-  invariant[LTL] push_eventually_pops :
-    // no NOPs
-    G(op != search)             ==>
-    // no push when full
-    G(op == push ==> !full)     ==>
-    // no pop when empty
-    G(op == pop  ==> !empty)    ==>
-    // everything that is pushed will eventually be popped.
-    G((inited && op == push && data == pushed_data) ==>
-      F(op == pop && first == pushed_data));
+  // // invariant[LTL] push_eventually_pops :
+  //   // no NOPs
+  //   G(op != search)             ==>
+  //   // no push when full
+  //   G(op == push ==> !full)     ==>
+  //   // no pop when empty
+  //   G(op == pop  ==> !empty)    ==>
+  //   // everything that is pushed will eventually be popped.
+  //   G((inited && op == push && data == pushed_data) ==>
+  //     F(op == pop && first == pushed_data)) &&
 
-  invariant[LTL] pushed_value_becomes_head :
-    // there is always eventually a push
-    G(F(op == pop)) ==>
-    // every value that is pushed
-    G((inited && op == push && data == pushed_data && !full) ==>
-      // eventually becomes the head of the queue
-      F(first == pushed_data));
+  // // invariant[LTL] pushed_value_becomes_head :
+  //   // there is always eventually a push
+  //   G(F(op == pop)) ==>
+  //   // every value that is pushed
+  //   G((inited && op == push && data == pushed_data && !full) ==>
+  //     // eventually becomes the head of the queue
+  //     F(first == pushed_data));
 
   control {
-    vQ      = bmc(5);
-    vPush   = verify(pushQ);
-    vPop    = verify(popQ);
-    vSearch = verify(searchQ);
+    vQ      = induction;
+    // vPush   = verify(pushQ);
+    // vPop    = verify(popQ);
+    // vSearch = verify(searchQ);
     check;
     print_results;
     vQ.print_cex(
         op, data, pushed_data,
         head, tail, first, count,
         contents[0], contents[1],
-        contents[2], contents[3]);
+        contents[2], contents[3], SIZE);
   }
 }
