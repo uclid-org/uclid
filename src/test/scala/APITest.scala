@@ -5,10 +5,7 @@ package test
 import lang._
 import WModule._
 
-import com.typesafe.scalalogging.Logger
-
 import org.scalatest.flatspec.AnyFlatSpec
-import scala.compat.Platform
 
 object SimpleModule extends WModule {
 
@@ -17,23 +14,17 @@ object SimpleModule extends WModule {
     val a = mkOutput("a", intType)
     val b = mkVar("b", intType)
 
-    var init = block(List(
-        a := Int(0),
-        b := Int(0)
-    ))
+    init {block(
+        a := 0,
+        b := 0
+    )}
 
-    var next = block(List(
-        a.p() := a + Int(1)
-    ))
+    next {block(
+        a.p() := a + 1
+    )}
 
     val prop1 = mkProperty (
-        "prop1", a === Int(0)
-    )
-
-    control = List(
-        bmc(4),
-        check,
-        print_result
+        "prop1", a === 0
     )
 }
 
@@ -42,14 +33,14 @@ object PlantA extends WModule with AGContract {
     val name: String = "plant1"
     val a = mkInput ("a", intType)
     val b = mkOutput ("b", intType)
-    var init = block(List(
-        b := Int(2)
-    ))
-    var next = block(List(
+    init {block(
+        b := 2
+    )}
+    next {block(
         b.p() := a + a
-    ))
-    val assume: WExpr = a > Int(0)
-    val guarantee: WExpr = b > Int(0)
+    )}
+    val assume: WExpr = a > 0
+    val guarantee: WExpr = b > 0
 }
 
 object PlantB extends WModule with AGContract {
@@ -57,14 +48,14 @@ object PlantB extends WModule with AGContract {
     val a = mkOutput ("a", intType)
     val b = mkInput ("b", intType)
 
-    var init = block(List(
-        a := Int(1)
-    ))
-    var next = block(List(
-        a.p() := ite(b > Int(0), b + Int(1), Int(0))
-    ))
-    val assume: WExpr = b > Int(0)
-    val guarantee: WExpr = a > Int(0)
+    init {block (
+        a := 1
+    )}
+    next {block (
+        a.p() := ite(b > 0, b + 1, 0)
+    )}
+    val assume: WExpr = b > 0
+    val guarantee: WExpr = a > 0
 }
 
 class APISpec extends AnyFlatSpec {

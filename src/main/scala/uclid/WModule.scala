@@ -1,5 +1,7 @@
 package uclid
 
+import scala.language.implicitConversions
+
 import scala.collection.mutable.MutableList
 import lang._
 
@@ -40,6 +42,10 @@ sealed abstract class WExpr {
     def | (that: WExpr) : WOpExpr = WOpExpr(OperatorApplication(BVOrOp(0), List(this.expr, that.expr)))
     def ^ (that: WExpr) : WOpExpr = WOpExpr(OperatorApplication(BVXorOp(0), List(this.expr, that.expr)))
 
+}
+
+object WExpr {
+    implicit def intToWLit (i: Int) : WExpr = WLit(IntLit(BigInt(i)))
 }
 
 case class WOpExpr (opexpr: Expr) extends WExpr {
@@ -112,9 +118,22 @@ abstract class WModule {
 
     var instances : MutableList[InstanceDecl] = MutableList()
 
-    var init : WStmt
+    var _init : WStmt = WStmt(List())
+    def init (stmt: WStmt) = (this._init = stmt)
 
-    var next : WStmt
+    var _next : WStmt = WStmt(List())    
+    def next (stmt: WStmt) = (this._next = stmt)
+
+    var _control : List[GenericProofCommand] = List()
+    def control (cmds: GenericProofCommand*) = (_control = cmds.toList)
+
+    def WExprToExpr (wexpr: WExpr) : Expr = wexpr match {
+        case wopexpr: WOpExpr => wopexpr.expr
+        case wlit: WLit => wlit.lit
+        case wid: WId => wid.id
+    }
+
+    def WStmtToStmt (wstmt: WStmt) : Statement = BlockStmt(List(), wstmt.stmt)
 
     def mkVar(name: String, typ: Type) : WId = {
         val newvar = StateVarsDecl(List(Identifier(name)), typ)
@@ -145,17 +164,6 @@ abstract class WModule {
         types.+=(newtype)
         (SynonymType(Identifier(name)), fields.map(x => WId(Identifier(x._1))))
     }
-
-
-    var control : List[GenericProofCommand] = List()
-
-    def WExprToExpr (wexpr: WExpr) : Expr = wexpr match {
-        case wopexpr: WOpExpr => wopexpr.expr
-        case wlit: WLit => wlit.lit
-        case wid: WId => wid.id
-    }
-
-    def WStmtToStmt (wstmt: WStmt) : Statement = BlockStmt(List(), wstmt.stmt)
     
     def mkProperty (name: String, expr: WExpr) : WSpec = {
         val newspec = SpecDecl(Identifier(name), WExprToExpr(expr), List.empty)
@@ -177,8 +185,8 @@ abstract class WModule {
     }
 
     def buildModule () : Module = {
-        val initblock = InitDecl(BlockStmt(List(), init.stmt))
-        val nextblock = NextDecl(BlockStmt(List(), next.stmt))
+        val initblock = InitDecl(BlockStmt(List(), _init.stmt))
+        val nextblock = NextDecl(BlockStmt(List(), _next.stmt))
         
         val decls = (types 
             ++ variables ++ inputs ++ outputs
@@ -187,11 +195,11 @@ abstract class WModule {
             ++ specs ++ axioms
         )
 
-        Module(Identifier(name), decls.toList, control, Annotation.default)
+        Module(Identifier(name), decls.toList, _control, Annotation.default)
     }
 
     def detestbenchify () : Unit = {
-        this.control = List()
+        this._control = List()
         this.specs = MutableList()
     }
 
@@ -205,8 +213,6 @@ object WModule {
     def apply () : WModule = {
         new WModule {
             val name = "main"
-            var init = WStmt(List())
-            var next = WStmt(List())
         }
     }
 
@@ -224,7 +230,7 @@ object WModule {
 
     def ite (ifexpr: WExpr, thenexpr: WExpr, elseexpr: WExpr) : WExpr = 
         WOpExpr(OperatorApplication(ITEOp(), List(ifexpr.expr, thenexpr.expr, elseexpr.expr)))
-    def block (stmts: List[WStmt]) : WStmt = WStmt(stmts.flatMap(_.stmt))
+    def block (stmts: WStmt*) : WStmt = WStmt(stmts.flatMap(_.stmt).toList)
 
     def bmc (k: Int) : GenericProofCommand = GenericProofCommand(Identifier("bmc"), List.empty, List((IntLit(k), k.toString())), None, None, None)
     def check : GenericProofCommand = GenericProofCommand(Identifier("check"), List.empty, List.empty, None, None, None)
@@ -236,8 +242,6 @@ object WModule {
     def mkEncapsulation (parentname : String, childs: List[(WModule, Int)]) : WModule = {
         val parent = new WModule () {
             val name = parentname
-            var init = WStmt(List())
-            var next = WStmt(List())
         }
 
         childs.foreach(x => {
@@ -267,8 +271,6 @@ object WModule {
 
         val parent = new WModule () {
             val name = parentname
-            var init = WStmt(List())
-            var next = WStmt(List())
         }
 
         // Check equivalence of inputs and outputs
@@ -303,10 +305,11 @@ object WModule {
             ++ child2.outputs.flatMap(x => x.ids.map(y => (WId(y), outputs2(y)))).toList
         )
 
-        parent.next = block(List(
-            next(i1),
-            next(i2)
-        ))
+        parent.next {
+            block(
+                next(i1), next(i2)
+            )
+        }
         
         val equiv_spec = parent.mkProperty("equiv", 
             child1_outs.map(x => outputs1(x._1) === outputs2(x._1)).reduce((x, y) => x && y)
@@ -325,8 +328,6 @@ object WModule {
     def mkAGModule (parentname: String, g_mod: WModule with AGContract, a_mod: WModule with AGContract) : WModule = {
         val parent = new WModule () {
             val name = parentname
-            var init = WStmt(List())
-            var next = WStmt(List())
         }
 
         // Check that the outputs of G match the inputs of A
