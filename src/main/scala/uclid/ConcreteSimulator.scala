@@ -2,13 +2,11 @@ package uclid
 
 import scala.util.parsing.combinator._
 import scala.collection.mutable._
-import lang.{Identifier, Module,  _}
-import uclid.Utils.ParserErrorList
-import com.typesafe.scalalogging.Logger
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
-import scala.io.Source
 
+import lang._
+import Utils.ParserErrorList
 
 
 sealed abstract class ConcreteValue{
@@ -37,73 +35,96 @@ case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends Concre
     override def toString = value.toString;
     override def valueClone = new ConcreteRecord(value.clone);
 } 
-case class ConcreteEnum (ids:List[Identifier],value:Int) extends ConcreteValue{
+case class ConcreteEnum (ids:List[Identifier], value: Int) extends ConcreteValue{
     override def toString = {
-        if(value>0)
-            ids(value).toString
-        else
-            "undefined"
+        if (value > 0) ids(value).toString
+        else "undefined"
     }
-    override def valueClone = new ConcreteEnum(ids,value)
+    override def valueClone = new ConcreteEnum(ids, value)
 }
 
 object ConcreteSimulator {
 
-    case class ConcreteContext()
-    {
-        var varMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
-        var inputMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
-        var outputMap: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
+    case class ConcreteContext() {
+        var varMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
+        var inputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
+        var outputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         
         //TODO:
         //make assignment table to track value flow.
         //var identifierValueRange: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
 
-        def contains(variable: Identifier): Boolean = {
-            varMap.contains(variable)}
-        def read(variable: Identifier): ConcreteValue = {
-            if(varMap.contains(variable))
-                varMap(variable)
-            else
-                inputMap(variable)}
-        def write (id:Identifier, value: ConcreteValue){
-            if(varMap.contains(id))
-                varMap(id)=value
-            else
-                inputMap(id)=value}
-        def updateVar (lhs:Lhs, value: ConcreteValue){
+        def contains (variable: Identifier) : Boolean = varMap.contains(variable)
+        
+        // Grab a variable from the varmap if it is a state element else grab it from the input map
+        def read (variable: Identifier) : ConcreteValue = {
+            if (varMap.contains(variable)) varMap(variable)
+            else if (inputMap.contains(variable)) inputMap(variable)
+            else throw new Error(f"Variable ${variable.toString} not found in context")
+        }
+        def write (variable: Identifier, value: ConcreteValue) {
+            if (varMap.contains(variable)) varMap(variable) = value
+            else if (inputMap.contains(variable)) inputMap(variable) = value
+            else throw new Error(f"Variable ${variable.toString} not found in context")
+        }
+
+        def updateRecordValue(fields: List[Identifier], value: ConcreteValue, 
+            recordValue: ConcreteValue) : ConcreteRecord = {
+            if (fields.size == 1) {
+                recordValue match {
+                    case ConcreteUndef() => ConcreteRecord(Map(fields.head -> value))
+                    case ConcreteRecord(map) => {
+                        map(fields.head) = value
+                        ConcreteRecord(map)
+                    }
+                    case _ => throw new NotImplementedError(s"UpdateRecord applied to non-Record type")
+                }
+            } else {
+                // now, we have one recordValue and we have not touch the end of the Record
+                recordValue match{
+                    case ConcreteUndef() => 
+                        ConcreteRecord(Map(fields.head->updateRecordValue(fields.tail, value, ConcreteUndef())))
+                    case ConcreteRecord(map) => {
+                        val newrec = updateRecordValue(fields.tail, value, map(fields.head))
+                        map(fields.head) = newrec
+                        ConcreteRecord(map)
+                    }
+                    case _ => throw new NotImplementedError(s"UpdateRecord applied to non-Record type")
+                }
+            }
+        }
+
+        def updateVar (lhs: Lhs, value: ConcreteValue) {
             lhs match {
                 case LhsId(id) => {
                     varMap(id) = value
                 }
-                case LhsArraySelect(id,indices)=>{
+                case LhsArraySelect(id, indices) => {
                     varMap(id) match {
-                        case ca:ConcreteArray => {
-                            val eval_indices = indices.map(a => evaluate_expr(this,a)) // list of concrete expr
+                        case ca: ConcreteArray => {
+                            // List of concrete indices expressions 
+                            val eval_indices = indices.map(a => evaluate_expr(this, a)) 
                             var old_map = ca.value // old array 
                             old_map(eval_indices) = value
                             val new_arr = ConcreteArray(old_map)
                             varMap(id) = new_arr
                         }
                         case _ => 
-                            throw new Error("attempting to do array select on a non-array object")
+                            throw new Error(f"Attempting ArraySelect on a non-array object ${id.name}")
                     }
                 }
-                case LhsRecordSelect(id,fieldid)=>{
-                    printDebug("Update Record "+id.toString+"'s fieldid "+fieldid)
-                    varMap(id) = updateRecordValue(fieldid,value,varMap(id))  
+                case LhsRecordSelect(id, fieldid) => {
+                    printDebug(s"Update: record ${id.toString}, fieldid ${fieldid}")
+                    varMap(id) = updateRecordValue(fieldid, value, varMap(id))  
                 }
                 case _ => {
                     throw new NotImplementedError(s"LHS Update for ${lhs}")
                 }
-            
-            }}
+            }
+        }
 
-        
-        
-        def extendVar ( vars: List[(Identifier, Type)]) : Unit= {
-            var returnContext = varMap;
-            var enumContext = collection.mutable.Map[Identifier, ConcreteValue]();
+        def extendVar (vars: List[(Identifier, Type)]) : Unit = {
+            var enumContext = collection.mutable.Map[Identifier, ConcreteValue]()
             val newContext = collection.mutable.Map[Identifier, ConcreteValue](
                 vars.map(v => v._2 match {
                     case IntegerType() => {
@@ -115,52 +136,48 @@ object ConcreteSimulator {
                     case BitVectorType(w) => {
                         (v._1, ConcreteUndef())
                     }
-                    //... fill in
+                    // TODO: ... fill in
                     case ArrayType(inType, outType) => {
                         // TODO: outType could be complex type like another array or record
                         (v._1, ConcreteArray(scala.collection.mutable.Map[List[ConcreteValue], ConcreteValue]().withDefaultValue(ConcreteUndef())))
                     }
                     case RecordType(members) => {
-                        val RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
-                        for(member<-members){
-                            RecordMap(member._1)=ConcreteUndef();
-                        }
-                        (v._1, ConcreteRecord(RecordMap))
+                        (v._1, ConcreteRecord(scala.collection.mutable.Map(members.map(m => (m._1, ConcreteUndef())): _*)))
                     }
                     case EnumType(ids) => {
-                        for((id,i)<-ids.view.zipWithIndex){
-                            enumContext(id)=ConcreteEnum(ids,i)
-                        };
-                        (v._1,ConcreteEnum(ids,-1))
+                        for ((id,i) <- ids.view.zipWithIndex) {
+                            enumContext(id) = ConcreteEnum(ids, i)
+                        }
+                        // TODO: Should this be ConcreteUndef?
+                        (v._1, ConcreteEnum(ids, -1))
                     }   
                     case _ => {
-                        throw new NotImplementedError(v.toString+" has not been support yet!")
+                        throw new NotImplementedError(v.toString + " has not been supported yet!")
                     }
-                }) : _*)
-                
-            returnContext = returnContext.++(newContext);
-            returnContext = returnContext.++(enumContext);
-            varMap = returnContext;
-            }
+                }) : _*
+            )
+            varMap = varMap.++(newContext);
+        }
         
-        def removeVar(vars: List[(Identifier, Type)]): Unit = {
-            for((variable_name,variable_type)<-vars){
+        def removeVar (vars: List[(Identifier, Type)]) : Unit = {
+            for ((variable_name, variable_type) <- vars) {
                 varMap.-(variable_name)
-            }}
-        def printVar(vars: List[(Expr, String)]) : Unit = {
-            if(vars.isEmpty){
-                printDebug("\t Varmap:")
-                for((key,value)<-varMap){
-                    println(key.toString+": "+value.toString)
+            }
+        }
+        def printVar (vars: List[(Expr, String)]) : Unit = {
+            if (vars.isEmpty) {
+                println("\tVarmap:")
+                for ((key,value) <- varMap){
+                    println(s"${key.toString}: ${value.toString}")
                 }
-                if(isPrintDebug)
-                    println("\n")
+                println("\n")
             }
             for (variable <- vars){
-                println(variable._1+":  "+ConcreteSimulator.evaluate_expr(this,variable._1).toString)
-            }}
+                println(variable._1 + ":  " + ConcreteSimulator.evaluate_expr(this,variable._1).toString)
+            }
+        }
         
-         def printInput(vars: List[(Expr, String)]) : Unit = {
+        def printInput (vars: List[(Expr, String)]) : Unit = {
             printDebug("\tInput map:")
             if(vars.isEmpty){
                 for((key,value)<-inputMap){
@@ -171,7 +188,8 @@ object ConcreteSimulator {
             }
             for (variable <- vars){
                 println(variable._1+":  "+ConcreteSimulator.evaluate_expr(this,variable._1).toString)
-            }}
+            }
+        }
         
 
         def extendVarJson(frame:Int, vars: List[(Identifier, Type)]): Unit= {
@@ -270,7 +288,8 @@ object ConcreteSimulator {
             // //printVar(finalContext, List())
             // finalContext
             // // context
-            ;}
+            ;
+        }
 
         def assignVarDefault(vars: List[(Identifier, Type)]): Unit = {
             //Loop over the context and assign good value according its type
@@ -324,8 +343,8 @@ object ConcreteSimulator {
                 }    
                 
             }
-            varMap = retContext;
-            ;}
+            varMap = retContext
+        }
 
         def assignInputDefault(vars: List[(Identifier, Type)]): Unit = {
             //Loop over the context and assign good value according its type
@@ -375,8 +394,8 @@ object ConcreteSimulator {
                 }    
                 
             }
-            inputMap = retContext;
-            ;}
+            inputMap = retContext
+        }
         def cloneObject: ConcreteContext ={
             var clone = new ConcreteContext();
             for((key,value)<-varMap){
@@ -390,7 +409,8 @@ object ConcreteSimulator {
                 if(oldContext.varMap.contains(id._1)){
                     varMap += (id._1->oldContext.varMap(id._1))
                 }
-            };}
+            }
+        }
 
         def extendInputVar ( vars: List[(Identifier, Type)]) : Unit= {
             var returnContext = inputMap;
@@ -432,36 +452,11 @@ object ConcreteSimulator {
             returnContext = returnContext.++(newContext);
             returnContext = returnContext.++(enumContext);
             inputMap = returnContext;
-            }
+        }
 
-        def updateRecordValue(fields: List[Identifier],value: ConcreteValue,recordValue: ConcreteValue): ConcreteRecord = {
-            if(fields.size == 1){
-                recordValue match{
-                    case ConcreteUndef() => ConcreteRecord(Map(fields.head->value))
-                    case ConcreteRecord(map) => {
-                        var newMap = map;
-                        newMap(fields.head) = value;
-                        ConcreteRecord(newMap)
-                    }
-                    
-                    case _ => throw new NotImplementedError(s"Should not touch here")
-                }
-            }
-            else{
-                // now, we have one recordValue and we have not touch the end of the Record
-                recordValue match{
-                    case ConcreteUndef() => ConcreteRecord(Map(fields.head->updateRecordValue(fields.tail,value,ConcreteUndef())))
-                    case ConcreteRecord(map) => {
-                        var newMap = map;
-                        newMap(fields.head) = updateRecordValue(fields.tail,value,map(fields.head));
-                        ConcreteRecord(newMap)
-                    }
-                    case _ => throw new NotImplementedError(s"Should not touch here")
-                }
-            }}
         def parseSetAssume(expr:Expr): Unit = {           //so, we make the expr into the context,
             //one way is to parse the expr into the Context all
-            printDebug("We are trying to assume "+expr.toString)
+            printDebug("We are trying to assume " + expr.toString)
             evaluate_expr(this,expr) match{
                 
                 case ConcreteBool(true)=>{}
