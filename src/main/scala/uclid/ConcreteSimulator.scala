@@ -27,6 +27,10 @@ case class ConcreteBV (value: BigInt, width: Int) extends ConcreteValue{
     override def toString = value.toString+"bv"+width.toString;
     override def valueClone: ConcreteValue = new ConcreteBV(value,width);
 } 
+
+// array1 = ...
+// array2 = array1 // invalid
+// array1[0] = 1;
 case class ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue]) extends ConcreteValue{
     override def toString = value.toString;
     override def valueClone = new ConcreteArray(value.clone);
@@ -193,6 +197,7 @@ object ConcreteSimulator {
         
 
         def extendVarJson(frame:Int, vars: List[(Identifier, Type)]): Unit= {
+            // TODO: grab values from JSON file that are mentioned in vars and copy into context.varMap(frame)
             // val jsonString: String = Source.fromFile("cex.json").mkString;
             // //println("So, json file name is "+jsonFileName);
             // // Parse JSON into case class
@@ -556,6 +561,8 @@ object ConcreteSimulator {
                             printDebug("We are in default init")
                             isDefault = true;
                         }
+                        // TODO: improve this to random without quotes
+                        // ""control { concrete (random) }"" and not ""control { concrete ("random") }""
                         if(idArg.toString == "\"Random\""){
                             printDebug("We are in random init mod")
                             isRandom = true;

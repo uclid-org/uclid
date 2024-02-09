@@ -75,6 +75,8 @@ object UclidMain {
       mainModuleName    : String = "main",
       smtSolver         : List[String] = List.empty,
       synthesizer       : List[String] = List.empty,
+      // TODO:
+      simulate          : Boolean = false,
       smtFileGeneration : String = "",
       jsonCEXfile       : String = "",
       sygusFormat       : Boolean = true,
@@ -110,6 +112,11 @@ object UclidMain {
       opt[String]('y', "synthesizer").valueName("<Cmd>").action{
         (exec, c) => c.copy(synthesizer = exec.split(" ").toList)
       }.text("Command line to invoke SyGuS synthesizer.")
+
+      // TODO: set defaults for simulation
+      opt[String]('c', "simulate").valueName("<Cmd>").action{
+        (exec, c) => c.copy(synthesizer = exec.split(" ").toList)
+      }.text("Perform concrete execution.")
 
       opt[String]('g', "smt-file-generation").action{
         (prefix, c) => c.copy(smtFileGeneration = prefix)
@@ -308,10 +315,12 @@ object UclidMain {
     // checks module instancs are instantiated correctly
     passManager.addPass(new ModuleInstanceChecker())
     passManager.addPass(new CaseEliminator())
-    // passManager.addPass(new ForLoopUnroller())
+    // TODO: check this conditional on the concrete command
+    if (!config.simulate) passManager.addPass(new ForLoopUnroller())
     // hyperproperties for procedures
     passManager.addPass(new ModularProductProgram())
-    // passManager.addPass(new WhileLoopRewriter())
+    // TODO: check this conditional on the concrete command
+    if (!config.simulate) passManager.addPass(new WhileLoopRewriter())
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
@@ -475,12 +484,19 @@ object UclidMain {
   /** Execute the control module.
    *
    */
+  // TODO: this depends on the concrete command
+  // passes depend on the simulate config flag
   def execute(module : Module, config : Config) : List[CheckResult] = {
     UclidMain.printVerbose("Begining execution")
-    var isConcrete = module.cmds.exists(p => p.name.toString == "concrete")   
+    // TODO: if both simulate is set and the "concrete" command is provided, we are fine,
+    // but if simulate is set and some command other than concrete is provided we should panic
+    if (config.simulate ^ module.cmds.exists(p => p.name.toString == "concrete")) {
+      UclidMain.printError("simulate command line argument can only be used with the concrete control command")
+    }
+    val isConcrete = config.simulate && module.cmds.exists(p => p.name.toString == "concrete")
     if (isConcrete) {
       UclidMain.printVerbose("Starting Concrete Simulation")
-      var concreteSimulator = ConcreteSimulator
+      val concreteSimulator = ConcreteSimulator
       val result = concreteSimulator.execute(module, config)
       return result
     } else {
