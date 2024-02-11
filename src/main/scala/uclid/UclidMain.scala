@@ -115,7 +115,7 @@ object UclidMain {
 
       // TODO: set defaults for simulation
       opt[String]('c', "simulate").valueName("<Cmd>").action{
-        (exec, c) => c.copy(synthesizer = exec.split(" ").toList)
+        (exec, c) => c.copy(simulate = true)
       }.text("Perform concrete execution.")
 
       opt[String]('g', "smt-file-generation").action{
