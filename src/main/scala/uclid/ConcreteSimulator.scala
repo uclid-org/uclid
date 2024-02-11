@@ -4,6 +4,8 @@ import scala.util.parsing.combinator._
 import scala.collection.mutable._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
+import scala.util.Random
+import scala.math._
 
 import lang._
 import Utils.ParserErrorList
@@ -28,9 +30,6 @@ case class ConcreteBV (value: BigInt, width: Int) extends ConcreteValue{
     override def valueClone: ConcreteValue = new ConcreteBV(value,width);
 } 
 
-// array1 = ...
-// array2 = array1 // invalid
-// array1[0] = 1;
 case class ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue]) extends ConcreteValue{
     override def toString = value.toString;
     override def valueClone = new ConcreteArray(value.clone);
@@ -48,29 +47,46 @@ case class ConcreteEnum (ids:List[Identifier], value: Int) extends ConcreteValue
 }
 
 object ConcreteSimulator {
+    //debug useful flag
+    var isPrintResult: Boolean = true;
+    var isPrintDebug: Boolean = false;
 
+
+    //cmds requirements
+    var isRandom = false;
+    var isDefault = false;
+    var isReadFromJson = false;
+    var jsonFileName = "Null";
+    var needToPrintResults = false;
+    var needToPrintTrace = false;
+    
+    
+    //runtime count data
+    var terminate: Boolean = false;
+    var trace = Map[BigInt,ConcreteContext]();
+    var passCount: Int = 0;
+    var failCount: Int = 0;
+    var undetCount: Int = 0;
+    var cntInt:Int = 0;
+    var terminateInt: Int = 0;
+    
+    //util
+    val random = new Random()
     case class ConcreteContext() {
         var varMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var inputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var outputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
-        
-        //TODO:
-        //make assignment table to track value flow.
-        //var identifierValueRange: scala.collection.mutable.Map[Identifier, ConcreteValue]=collection.mutable.Map();
-
-        def contains (variable: Identifier) : Boolean = varMap.contains(variable)
+        var assumeTable: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         
         // Grab a variable from the varmap if it is a state element else grab it from the input map
         def read (variable: Identifier) : ConcreteValue = {
             if (varMap.contains(variable)) varMap(variable)
             else if (inputMap.contains(variable)) inputMap(variable)
-            else throw new Error(f"Variable ${variable.toString} not found in context")
-        }
+            else throw new Error(f"Variable ${variable.toString} not found in context")}
         def write (variable: Identifier, value: ConcreteValue) {
             if (varMap.contains(variable)) varMap(variable) = value
             else if (inputMap.contains(variable)) inputMap(variable) = value
-            else throw new Error(f"Variable ${variable.toString} not found in context")
-        }
+            else throw new Error(f"Variable ${variable.toString} not found in context")}
 
         def updateRecordValue(fields: List[Identifier], value: ConcreteValue, 
             recordValue: ConcreteValue) : ConcreteRecord = {
@@ -95,8 +111,7 @@ object ConcreteSimulator {
                     }
                     case _ => throw new NotImplementedError(s"UpdateRecord applied to non-Record type")
                 }
-            }
-        }
+            }}
 
         def updateVar (lhs: Lhs, value: ConcreteValue) {
             lhs match {
@@ -124,8 +139,7 @@ object ConcreteSimulator {
                 case _ => {
                     throw new NotImplementedError(s"LHS Update for ${lhs}")
                 }
-            }
-        }
+            }}
 
         def extendVar (vars: List[(Identifier, Type)]) : Unit = {
             var enumContext = collection.mutable.Map[Identifier, ConcreteValue]()
@@ -160,14 +174,12 @@ object ConcreteSimulator {
                     }
                 }) : _*
             )
-            varMap = varMap.++(newContext);
-        }
+            varMap = varMap.++(newContext);}
         
         def removeVar (vars: List[(Identifier, Type)]) : Unit = {
             for ((variable_name, variable_type) <- vars) {
                 varMap.-(variable_name)
-            }
-        }
+            }}
         def printVar (vars: List[(Expr, String)]) : Unit = {
             if (vars.isEmpty) {
                 println("\tVarmap:")
@@ -178,8 +190,7 @@ object ConcreteSimulator {
             }
             for (variable <- vars){
                 println(variable._1 + ":  " + ConcreteSimulator.evaluate_expr(this,variable._1).toString)
-            }
-        }
+            }}
         
         def printInput (vars: List[(Expr, String)]) : Unit = {
             printDebug("\tInput map:")
@@ -192,8 +203,7 @@ object ConcreteSimulator {
             }
             for (variable <- vars){
                 println(variable._1+":  "+ConcreteSimulator.evaluate_expr(this,variable._1).toString)
-            }
-        }
+            }}
         
 
         def extendVarJson(frame:Int, vars: List[(Identifier, Type)]): Unit= {
@@ -293,8 +303,7 @@ object ConcreteSimulator {
             // //printVar(finalContext, List())
             // finalContext
             // // context
-            ;
-        }
+            ;}
 
         def assignVarDefault(vars: List[(Identifier, Type)]): Unit = {
             //Loop over the context and assign good value according its type
@@ -348,8 +357,58 @@ object ConcreteSimulator {
                 }    
                 
             }
-            varMap = retContext
-        }
+            varMap = retContext}
+
+        def assignVarRandom(vars: List[(Identifier, Type)]): Unit = {
+            //Loop over the context and assign good value according its type
+            var retContext = varMap;
+            for ((key, value) <- varMap){         
+                value match{
+                    case ConcreteUndef() =>{
+                        for((id,typ) <- vars){
+                            if(key == id){
+                                typ match{
+                                    case IntegerType() =>
+                                        retContext(key) = ConcreteInt(random.nextInt())
+                                    case BooleanType() => 
+                                        retContext(key) = ConcreteBool(random.nextBoolean())
+                                    case BitVectorType(w) => 
+                                        retContext(key) = ConcreteBV(random.nextInt(pow(2,w).toInt),w)
+                                    case _ => throw new NotImplementedError("Does not support type "+typ) 
+                                }
+                            }
+                        }
+                    }
+                    case ConcreteRecord(members) =>{
+                        for((id,typ) <- vars){
+                            //if key is inside vars
+                            if(key == id){
+                                typ match{
+                                    case RecordType(members)=>{
+                                        var RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
+                                        for((mem_id,mem_typ)<-members){
+                                            //println("Record_id: "+mem_id.toString+"\t mem_typ"+mem_typ.toString)
+                                            //RecordMap(member._1)=ConcreteUndef();
+                                            mem_typ match{
+                                                case IntegerType() => RecordMap(mem_id) = ConcreteInt(random.nextInt())
+                                                case BooleanType() => RecordMap(mem_id) = ConcreteBool(random.nextBoolean())
+                                                case BitVectorType(w) => RecordMap(mem_id) = ConcreteBV(random.nextInt(pow(2,w).toInt),w)
+                                                case _ => throw new NotImplementedError("Does not implement support for this type\n")
+                                            }
+                                        }
+                                        retContext(key) = ConcreteRecord(RecordMap)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    //TODO:
+                    //add support for Array
+                    case _ =>{}
+                }    
+                
+            }
+            varMap = retContext}
 
         def assignInputDefault(vars: List[(Identifier, Type)]): Unit = {
             //Loop over the context and assign good value according its type
@@ -399,12 +458,76 @@ object ConcreteSimulator {
                 }    
                 
             }
-            inputMap = retContext
-        }
+            inputMap = retContext}
+        
+        def assignInputRandom(vars: List[(Identifier, Type)]): Unit = {
+            //Loop over the context and assign good value according its type
+            var retContext = inputMap;
+            for ((key, value) <- inputMap){         
+                value match{
+                    case ConcreteUndef() =>{
+                        for((id,typ) <- vars){
+                            //if key is inside vars
+                            if(key == id){
+                                typ match{
+                                    case IntegerType() =>
+                                        retContext(key) = ConcreteInt(random.nextInt())
+                                    case BooleanType() => 
+                                        retContext(key) = ConcreteBool(random.nextBoolean())
+                                    case BitVectorType(w) => 
+                                        retContext(key) = ConcreteBV(random.nextInt(pow(2,w).toInt),w)
+                                    case _ => throw new NotImplementedError("Does not support type "+typ) 
+                                }
+                            }
+                        }
+                    }
+                    case ConcreteInt(i) =>
+                        retContext(key) = ConcreteInt(random.nextInt())
+                    case ConcreteBool(b) => 
+                        retContext(key) = ConcreteBool(random.nextBoolean())
+                    case ConcreteBV(i,w) => 
+                        retContext(key) = ConcreteBV(random.nextInt(pow(2,w).toInt),w)
+                    case ConcreteRecord(members) =>{
+                        for((id,typ) <- vars){
+                            //if key is inside vars
+                            if(key == id){
+                                typ match{
+                                    case RecordType(members)=>{
+                                        var RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
+                                        for((mem_id,mem_typ)<-members){
+                                            //println("Record_id: "+mem_id.toString+"\t mem_typ"+mem_typ.toString)
+                                            //RecordMap(member._1)=ConcreteUndef();
+                                            mem_typ match{
+                                                case IntegerType() =>
+                                                    RecordMap(mem_id) = ConcreteInt(random.nextInt())
+                                                case BooleanType() => 
+                                                    RecordMap(mem_id) = ConcreteBool(random.nextBoolean())
+                                                case BitVectorType(w) => 
+                                                    RecordMap(mem_id) = ConcreteBV(random.nextInt(pow(2,w).toInt),w)
+                                                case _ => throw new NotImplementedError("Does not implement support for this type\n")
+                                            }
+                                        }
+                                        retContext(key) = ConcreteRecord(RecordMap)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    case _ =>{}
+                }    
+                
+            }
+            inputMap = retContext}
         def cloneObject: ConcreteContext ={
             var clone = new ConcreteContext();
             for((key,value)<-varMap){
                 clone.varMap(key) = value.valueClone;
+            }
+            for((key,value)<-inputMap){
+                clone.inputMap(key) = value.valueClone;
+            }
+            for((key,value)<-outputMap){
+                clone.outputMap(key)= value.valueClone;
             }
             clone}
 
@@ -414,8 +537,7 @@ object ConcreteSimulator {
                 if(oldContext.varMap.contains(id._1)){
                     varMap += (id._1->oldContext.varMap(id._1))
                 }
-            }
-        }
+            }}
 
         def extendInputVar ( vars: List[(Identifier, Type)]) : Unit= {
             var returnContext = inputMap;
@@ -456,12 +578,9 @@ object ConcreteSimulator {
                 
             returnContext = returnContext.++(newContext);
             returnContext = returnContext.++(enumContext);
-            inputMap = returnContext;
-        }
+            inputMap = returnContext;}
 
-        def parseSetAssume(expr:Expr): Unit = {           //so, we make the expr into the context,
-            //one way is to parse the expr into the Context all
-            printDebug("We are trying to assume " + expr.toString)
+        def parseSetAssume(expr:Expr): Unit = {
             evaluate_expr(this,expr) match{
                 
                 case ConcreteBool(true)=>{}
@@ -501,7 +620,9 @@ object ConcreteSimulator {
                                     // case DisjunctionOp() => ConcreteBool(bool_0 || bool_1)
                                     // case IffOp() => ConcreteBool(bool_0 == bool_1)
                                     // case ImplicationOp() => ConcreteBool(!bool_0 || bool_1) 
-                                    case _ => {throw new Error("Unimplemented")}    
+                                    case _ => {
+
+                                    }    
                                 }
                             }
                         }
@@ -515,32 +636,7 @@ object ConcreteSimulator {
                 }
             }}   
     }
-
-
-
-    var isPrintResult: Boolean = true;
-    var isPrintDebug: Boolean = false;
-    var needToPrintResults = false;
-    var needToPrintTrace = false;
-    var terminate: Boolean = false;
-    var trace = Map[BigInt,ConcreteContext]();
-    var passCount: Int = 0;
-    var failCount: Int = 0;
-    var undetCount: Int = 0;
-    var cntInt:Int = 0;
-    var terminateInt: Int = 0;
     
-    var jsonFileName = "Null";
-    
-
-    var unDefineCount: Int = 0;
-    var isRandom = false;
-    var isDefault = false;
-    var isReadFromJson = false;
-
-
-
-
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
         var printTraceCmd = module.cmds(0);
         lazy val properties = module.properties;
@@ -582,10 +678,7 @@ object ConcreteSimulator {
         }
 
         val frame = 0
-        var concreteContext:ConcreteContext = new ConcreteContext();
-        
-        
-
+        var concreteContext:ConcreteContext = new ConcreteContext();        
         concreteContext.extendVar(module.vars);
         concreteContext.extendInputVar(module.inputs)
         concreteContext.extendVar(module.outputs)
@@ -596,6 +689,15 @@ object ConcreteSimulator {
             printDebug("Extend the Context with Deault value")
             concreteContext.assignVarDefault(module.vars)
             concreteContext.assignInputDefault(module.inputs)
+        }else{
+            if(isRandom){
+                printDebug("Extend the Context with Random value")
+                concreteContext.assignVarRandom(module.vars)
+                concreteContext.assignInputRandom(module.inputs)
+            }else{
+                 if(isReadFromJson)
+                    concreteContext.extendVarJson(frame, module.vars)
+            }
         }
 
         module.init match{
@@ -603,35 +705,10 @@ object ConcreteSimulator {
             case _ => {}
         }
         
-        if(isPrintDebug){
-            printDebug("After simulation Init context:\n")
-            concreteContext.printVar(List())
-            concreteContext.printInput(List())
-        }
-
-        if(isReadFromJson)
-            concreteContext.extendVarJson(frame, module.vars)
-
-
-        if(isPrintDebug){
-            println("Check the atomics declare")
-            println(module.axioms.toString)
-        }
-
         checkAssumes(module.axioms,concreteContext);
         checkProperties(properties,concreteContext);
         trace(0) = concreteContext.cloneObject;
         
-        
-        if(isPrintDebug){
-            println("Print the Context after init block")
-            concreteContext.printVar(List())
-            concreteContext.printInput(List())
-        }
-        
-
-        printDebug("Finish simulation in Init Block")
-
         if (terminate) {
             terminateInt = 0;
             printResult("Terminated in step 0")
@@ -644,17 +721,7 @@ object ConcreteSimulator {
                 {
                     for (a <- 1 to cntInt) {
                         if (!terminate) {
-
                             simulate_stmt(concreteContext, next.body)
-
-                            if(isPrintDebug){
-                                printDebug("Finish simulation "+a+" step in next Block")
-                                println("Print the Context after init block")
-                                concreteContext.printVar(List())
-                                concreteContext.printInput(List())
-                            }
-
-                            printDebug("Going to check property")
                             checkProperties(properties,concreteContext)
                             trace(a) = concreteContext.cloneObject;
                             terminateInt = a;   
@@ -714,7 +781,9 @@ object ConcreteSimulator {
                 }else{
                     passCount = passCount+1;
                 }}
-            case AssumeStmt(e, id) => throw new NotImplementedError(s"AssumeStmt not implemented")
+            case AssumeStmt(e, id) => {
+                context.parseSetAssume(e)
+            }
             case HavocStmt(havocable) => throw new NotImplementedError(s"HavocStmt not implemented")
             case IfElseStmt(cond, ifblock, elseblock) => {
                 if (evaluateBoolExpr(context, cond)) {
@@ -799,7 +868,6 @@ object ConcreteSimulator {
                             context.printVar(List())
                             context.printInput(List())
                         }
-                        unDefineCount = unDefineCount+1;
                         ConcreteUndef()
                     }
                     case _ => context.read(a)
@@ -1033,7 +1101,6 @@ object ConcreteSimulator {
                 }
         }}
     def setAssumes(assumes: List[AxiomDecl],context:ConcreteContext): Unit ={
-        printDebug("Start to set assume in Context")
         for(assume<-assumes){
             //we need to reparse the exper;
             //We assume user use conjunctive normal form(CNF)
