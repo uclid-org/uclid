@@ -6,6 +6,7 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import scala.util.Random
 import scala.math._
+import scala.collection.mutable.ArrayBuffer
 
 import lang._
 import Utils.ParserErrorList
@@ -76,7 +77,7 @@ object ConcreteSimulator {
         var varMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var inputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var outputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
-        var assumeTable: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
+        val assumeTable: ArrayBuffer[Expr] = ArrayBuffer.empty[Expr];
         
         // Grab a variable from the varmap if it is a state element else grab it from the input map
         def read (variable: Identifier) : ConcreteValue = {
@@ -309,53 +310,12 @@ object ConcreteSimulator {
             //Loop over the context and assign good value according its type
             var retContext = varMap;
             //check the varMap
-            for ((key, value) <- varMap){         
-                value match{
-                    //if one var does not have value
-                    case ConcreteUndef() =>{
-                        for((id,typ) <- vars){
-                            //if key is inside vars
-                            if(key == id){
-                                typ match{
-                                    case IntegerType() =>
-                                        retContext(key) = ConcreteInt(0)
-                                    case BooleanType() => 
-                                        retContext(key) = ConcreteBool(false)
-                                    case BitVectorType(w) => 
-                                        retContext(key) = ConcreteBV(0,w)
-                                    case _ => throw new NotImplementedError("Does not support type "+typ) 
-                                }
-                            }
-                        }
+            for ((key, value) <- varMap){     
+                for((id,typ) <- vars){
+                    if(key == id){
+                        retContext(key) = ganerateValue(value,typ)
                     }
-                    case ConcreteRecord(members) =>{
-                        for((id,typ) <- vars){
-                            //if key is inside vars
-                            if(key == id){
-                                typ match{
-                                    case RecordType(members)=>{
-                                        var RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
-                                        for((mem_id,mem_typ)<-members){
-                                            //println("Record_id: "+mem_id.toString+"\t mem_typ"+mem_typ.toString)
-                                            //RecordMap(member._1)=ConcreteUndef();
-                                            mem_typ match{
-                                                case IntegerType() => RecordMap(mem_id) = ConcreteInt(0)
-                                                case BooleanType() => RecordMap(mem_id) = ConcreteBool(false)
-                                                case BitVectorType(w) => RecordMap(mem_id) = ConcreteBV(0,w)
-                                                case _ => throw new NotImplementedError("Does not implement support for this type\n")
-                                            }
-                                        }
-                                        retContext(key) = ConcreteRecord(RecordMap)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    //TODO:
-                    //add support for Array
-                    case _ =>{}
-                }    
-                
+                }
             }
             varMap = retContext}
 
@@ -580,9 +540,12 @@ object ConcreteSimulator {
             returnContext = returnContext.++(enumContext);
             inputMap = returnContext;}
 
+        //TODO: a better parseAssume might be great
         def parseSetAssume(expr:Expr): Unit = {
+            assumeTable += expr;
+            //Expermential:
+            //Might introducing bugs
             evaluate_expr(this,expr) match{
-                
                 case ConcreteBool(true)=>{}
                 case ConcreteBool(false)|ConcreteUndef()=>{
                 //if we hit assume evlation with the result
@@ -635,6 +598,39 @@ object ConcreteSimulator {
                     throw new Error("Hit unimplemented code part")
                 }
             }}   
+        //Make function gathring value as we want
+        def ganerateValue(cValue:ConcreteValue,uclidType:Type): ConcreteValue={        
+                cValue match{
+                    case ConcreteUndef() =>{
+                        uclidType match{
+                            case IntegerType()      =>  ConcreteInt(0)
+                            case BooleanType()      =>  ConcreteBool(false)
+                            case BitVectorType(w)   =>  ConcreteBV(0,w)
+                            case _ => throw new NotImplementedError("Does not support type "+uclidType) 
+                        }
+                    }
+                    case ConcreteRecord(members) =>{
+                        uclidType match{
+                            case RecordType(members)=>{
+                                    var RecordMap = scala.collection.mutable.Map[Identifier, ConcreteValue]();
+                                    for((mem_id,mem_typ)<-members){
+                                        mem_typ match{
+                                            case IntegerType() => RecordMap(mem_id) = ConcreteInt(0)
+                                            case BooleanType() => RecordMap(mem_id) = ConcreteBool(false)
+                                            case BitVectorType(w) => RecordMap(mem_id) = ConcreteBV(0,w)
+                                            case _ => throw new NotImplementedError("Does not implement support for this type\n")
+                                        }
+                                    }
+                                    ConcreteRecord(RecordMap)
+                                }
+                            case _ => throw new NotImplementedError("Does not implement support for this type\n")
+                        }
+                    }
+                    //TODO:
+                    //add support for Array
+                    case _ => ConcreteUndef()
+                }    
+        }
     }
     
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
