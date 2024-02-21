@@ -57,7 +57,7 @@ case class ConcreteEnum (ids:List[Identifier], value: Int) extends ConcreteValue
 object ConcreteSimulator {
     //debug useful flag
     var isPrintResult: Boolean = true;
-    var isPrintDebug: Boolean = false;
+    var isPrintDebug: Boolean = true;
 
 
     //cmds requirements
@@ -89,7 +89,12 @@ object ConcreteSimulator {
         def read (variable: Identifier) : ConcreteValue = {
             if (varMap.contains(variable)) varMap(variable)
             else if (inputMap.contains(variable)) inputMap(variable)
-            else throw new Error(f"Variable ${variable.toString} not found in context")}
+            else{
+                printVar(List())
+                printInput(List())
+                throw new Error(f"Variable ${variable.toString} not found in context")
+                }
+            }
         def write (variable: Identifier, value: ConcreteValue) {
             if (varMap.contains(variable)) varMap(variable) = value
             else if (inputMap.contains(variable)) inputMap(variable) = value
@@ -155,6 +160,7 @@ object ConcreteSimulator {
                     }
                 }) : _*
             )
+            varMap = varMap.++(enumContext);
             varMap = varMap.++(newContext);}
         
         def removeVar (vars: List[(Identifier, Type)]) : Unit = {
@@ -477,7 +483,7 @@ object ConcreteSimulator {
                         runtimeMod match{
                             case Fuzzing => ConcreteBool(random.nextBoolean())
                             case Default => ConcreteBool(false)
-                            case _ => ConcreteUndef()
+                            case _ => ConcreteBool(b)
                         }
                     }
                     else
@@ -488,7 +494,7 @@ object ConcreteSimulator {
                         runtimeMod match{
                             case Fuzzing => ConcreteInt(random.nextInt())
                             case Default => ConcreteInt(0)
-                            case _ => ConcreteUndef()
+                            case _ => ConcreteInt(v)
                         }   
                     }
                     else
@@ -499,7 +505,7 @@ object ConcreteSimulator {
                          runtimeMod match{
                             case Fuzzing => ConcreteBV(random.nextInt(pow(2,w).toInt),w)
                             case Default => ConcreteBV(0,w)
-                            case _ => ConcreteUndef()
+                            case _ => ConcreteBV(v,w)
                         }
                     }    
                     else
@@ -542,8 +548,17 @@ object ConcreteSimulator {
                         case _ => throw new NotImplementedError("Does not implement support for this type\n")
                     }
                 }
-                //TODO:
-                //assign Variable for Array and enum
+                case ConcreteArray(varmap) =>{
+                    if(varmap.size==0){
+                        printDebug("undefined Array")
+                        runtimeMod match{
+                            case Fuzzing => ConcreteBV(random.nextInt(pow(2,w).toInt),w)
+                            case Default => ConcreteBV(0,w)
+                            case _ => ConcreteBV(v,w)
+                        }
+                    }
+                    
+                }
                 case _ => cValue
             }    
         }
@@ -659,7 +674,6 @@ object ConcreteSimulator {
             case Some(init) => simulate_stmt(concreteContext,init.body)
             case _ => {}
         }
-        
         checkAssumes(module.axioms,concreteContext);
         checkProperties(properties,concreteContext);
         trace(0) = concreteContext.cloneObject;
@@ -678,6 +692,8 @@ object ConcreteSimulator {
                         if (!terminate) {
                             concreteContext.assignUndefVar(module.inputs,true)
                             simulate_stmt(concreteContext, next.body)
+                            concreteContext.printVar(List())
+
                             checkProperties(properties,concreteContext)
                             trace(a) = concreteContext.cloneObject;
                             terminateInt = a;   
@@ -711,15 +727,21 @@ object ConcreteSimulator {
     def simulate_stmt (context: ConcreteContext, stmt: Statement): Unit = {
         stmt match {
             case AssignStmt(lhss, rhss) => {
-                printDebug("Simulate assign Stmt: "+stmt.toString)
+            
+                //println("Simulate assign Stmt: "+stmt.toString)
                 val rhseval = rhss.map(rhs => evaluate_expr(context, rhs))
                 for((lhssid,i)<-lhss.view.zipWithIndex){
+                    if(rhseval(i).isInstanceOf[ConcreteUndef]){
+                        context.printVar(List());
+                        //throw new Error("Assign value to Undef")
+                    }
                     context.updateVar(lhss(i),rhseval(i))
                 };
             }
             case BlockStmt(vars, stmts) => {
                 val flatVars : List[(Identifier, Type)] = vars.flatMap(v => v.ids.map(id => (id, v.typ)))
                 context.extendVar(flatVars)
+                context.assignUndefVar(flatVars,false)
                 val oldContext = context.cloneObject;
                 for(s<-stmts){
                     simulate_stmt(context, s)
@@ -818,12 +840,8 @@ object ConcreteSimulator {
             case a : Identifier => {
                 context.read(a) match {
                     case ConcreteUndef() => {
-                        
-                        if(isPrintDebug){
-                            printDebug("Here we hit a undefine value: "+a.toString)
-                            context.printVar(List())
-                            context.printInput(List())
-                        }
+
+                        throw new Error("touch undefine Variables "+ a.toString)
                         ConcreteUndef()
                     }
                     case _ => context.read(a)
@@ -833,6 +851,30 @@ object ConcreteSimulator {
             case IntLit(b) => ConcreteInt(b)
             case BitVectorLit(a,b) => ConcreteBV(a,b)
             case OperatorApplication(op:Operator, operands:List[Expr])=>{
+                if(op.isInstanceOf[ForallOp]){
+                    op match{
+                        case ForallOp(vs,patterns)=>{
+                            var retValue = true;
+                            if(vs.size>1){
+                                throw new Error("Does not support large forall")
+                            }
+                            var (id,typ) = vs.head;
+                            context.extendVar(List((id,typ)))
+                            typ match {
+                                case BitVectorType(w) => {
+                                    for(it <- 0 to (pow(2,w)-1).toInt){
+                                        context.write(id,ConcreteBV(it,w))
+                                        retValue = retValue && evaluateBoolExpr(context,operands.head)
+                                    }
+                                }
+                                case _ => throw new Error("Does not support loop index of type "+ typ.toString)
+                            }
+                            context.removeVar(List((id,typ)))
+                            return ConcreteBool(retValue)
+                        }
+                        case _ => throw new Error("Should not touch this line")
+                    }
+                }
                 val operand_0 = evaluate_expr(context,operands.head);
                 //if this is not binary operation
                 if(operands.tail.size==0){
@@ -866,12 +908,13 @@ object ConcreteSimulator {
                             
                         }
                         case ConcreteArray(valuemap) => {
-                            printDebug("Read Value fomr ConcreteArray: "+valuemap.toString)
+                            printDebug("Read Value from ConcreteArray: "+operands.head.toString)
                             op match {
                                 case ArraySelect(indices) => {
                                     val eval_indices = indices.map(a => evaluate_expr(context,a)) // list of concrete expr
                                     printDebug("\t With indices " + indices)
                                     printDebug("\t With newMap " + eval_indices)
+                                    printDebug("\t With Return Value "+valuemap(eval_indices).toString)
                                     valuemap(eval_indices)
                                 }
                                 case ArrayUpdate(indices, value) => {
