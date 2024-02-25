@@ -57,7 +57,7 @@ case class ConcreteEnum (ids:List[Identifier], value: Int) extends ConcreteValue
 object ConcreteSimulator {
     //debug useful flag
     var isPrintResult: Boolean = true;
-    var isPrintDebug: Boolean = true;
+    var isPrintDebug: Boolean = false;
 
 
     //cmds requirements
@@ -90,9 +90,8 @@ object ConcreteSimulator {
             if (varMap.contains(variable)) varMap(variable)
             else if (inputMap.contains(variable)) inputMap(variable)
             else{
-                printVar(List())
-                printInput(List())
-                throw new Error(f"Variable ${variable.toString} not found in context")
+
+                ConcreteUndef()
                 }
             }
         def write (variable: Identifier, value: ConcreteValue) {
@@ -548,16 +547,9 @@ object ConcreteSimulator {
                         case _ => throw new NotImplementedError("Does not implement support for this type\n")
                     }
                 }
-                case ConcreteArray(varmap) =>{
-                    if(varmap.size==0){
-                        printDebug("undefined Array")
-                        runtimeMod match{
-                            case Fuzzing => ConcreteBV(random.nextInt(pow(2,w).toInt),w)
-                            case Default => ConcreteBV(0,w)
-                            case _ => ConcreteBV(v,w)
-                        }
-                    }
-                    
+                case ConcreteArray(varMap) =>{
+                    println("We try random a value for varMap")
+                    cValue
                 }
                 case _ => cValue
             }    
@@ -692,7 +684,6 @@ object ConcreteSimulator {
                         if (!terminate) {
                             concreteContext.assignUndefVar(module.inputs,true)
                             simulate_stmt(concreteContext, next.body)
-                            concreteContext.printVar(List())
 
                             checkProperties(properties,concreteContext)
                             trace(a) = concreteContext.cloneObject;
@@ -725,6 +716,7 @@ object ConcreteSimulator {
 
 
     def simulate_stmt (context: ConcreteContext, stmt: Statement): Unit = {
+        printDebug("Simulate Stmt: "+stmt.toString)
         stmt match {
             case AssignStmt(lhss, rhss) => {
             
@@ -732,9 +724,11 @@ object ConcreteSimulator {
                 val rhseval = rhss.map(rhs => evaluate_expr(context, rhs))
                 for((lhssid,i)<-lhss.view.zipWithIndex){
                     if(rhseval(i).isInstanceOf[ConcreteUndef]){
-                        context.printVar(List());
+                        printDebug("We hit a undefine value when assigning "+rhseval(i).toString)
+                        // context.printVar(List());
                         //throw new Error("Assign value to Undef")
                     }
+                    printDebug("Assign "+lhss(i).toString+" "+rhseval(i).toString)
                     context.updateVar(lhss(i),rhseval(i))
                 };
             }
@@ -826,8 +820,6 @@ object ConcreteSimulator {
                     }
                 }
                 case ConcreteUndef() => {
-                    context.printVar(List())
-                    context.printInput(List())
                     throw new Error("When Evaluation Bool value we hit a undefine value "+cond.toString)
                 }
             }
@@ -840,8 +832,6 @@ object ConcreteSimulator {
             case a : Identifier => {
                 context.read(a) match {
                     case ConcreteUndef() => {
-
-                        throw new Error("touch undefine Variables "+ a.toString)
                         ConcreteUndef()
                     }
                     case _ => context.read(a)
