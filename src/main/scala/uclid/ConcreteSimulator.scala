@@ -80,6 +80,7 @@ object ConcreteSimulator {
     val random = new Random()
     case class ConcreteContext() {
         var varMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
+        var varTypeMap: scala.collection.mutable.Map[Identifier, Type] = collection.mutable.Map();
         var inputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var outputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
 
@@ -127,6 +128,9 @@ object ConcreteSimulator {
             }}
 
         def extendVar (vars: List[(Identifier, Type)]) : Unit = {
+            for((id,typ)<-vars){
+                varTypeMap(id)=typ
+            }
             var enumContext = collection.mutable.Map[Identifier, ConcreteValue]()
             val newContext = collection.mutable.Map[Identifier, ConcreteValue](
                 vars.map(v => v._2 match {
@@ -153,7 +157,10 @@ object ConcreteSimulator {
                         }
                         // TODO: Should this be ConcreteUndef?
                         (v._1, ConcreteEnum(ids, -1))
-                    }   
+                    }
+                    // case UninterpretedType(name) =>{
+                    //     throw new NotImplementedError(name.toString + " UninterpretedType has not been support yet")
+                    // }  
                     case _ => {
                         throw new NotImplementedError(v.toString + " has not been supported yet!")
                     }
@@ -268,7 +275,7 @@ object ConcreteSimulator {
 
         def assignUndefVar(vars: List[(Identifier, Type)],isInput: Boolean): Unit = {
             //TODO:
-            //to make sure the ganerateValue is not out of AssumeTable
+            //to make sure the generateValue is not out of AssumeTable
             if(isInput){
                 var retContext = inputMap;
                 for ((key, value) <- inputMap){     
@@ -277,9 +284,9 @@ object ConcreteSimulator {
                             //if we do not have recommend assign value and the random does work, do random again
                             var cnt: Int = 0;
 
-                            retContext(key) = ganerateValue(value,typ,isInput)
+                            retContext(key) = generateValue(value,typ,isInput)
                             while(!checkAssume() && (!assumeRecommendTable.contains(id))){
-                                retContext(key) = ganerateValue(value,typ,isInput)
+                                retContext(key) = generateValue(value,typ,isInput)
                                 cnt = cnt +1;
                                 if(cnt>100){
                                     println("Now the rTable is "+assumeRecommendTable.toString)
@@ -305,9 +312,9 @@ object ConcreteSimulator {
                             //if we do not have recommend assign value and the random does work, do random again
                             var cnt: Int = 0;
 
-                            retContext(key) = ganerateValue(value,typ,isInput)
+                            retContext(key) = generateValue(value,typ,isInput)
                             while(!checkAssume() && (!assumeRecommendTable.contains(id))){
-                                retContext(key) = ganerateValue(value,typ,isInput)
+                                retContext(key) = generateValue(value,typ,isInput)
                                 cnt = cnt +1;
                                 if(cnt>100){
                                     println("Now the rTable is "+assumeRecommendTable.toString)
@@ -345,6 +352,9 @@ object ConcreteSimulator {
             }}
 
         def extendInputVar ( vars: List[(Identifier, Type)]) : Unit= {
+            for((id,typ)<-vars){
+                varTypeMap(id)=typ
+            }
             var returnContext = inputMap;
             var enumContext = collection.mutable.Map[Identifier, ConcreteValue]();
             val newContext = collection.mutable.Map[Identifier, ConcreteValue](
@@ -449,7 +459,8 @@ object ConcreteSimulator {
 
         
         //function gathring value as we want
-        def ganerateValue(cValue:ConcreteValue,uclidType:Type,isInput:Boolean): ConcreteValue={        
+        def generateValue(cValue:ConcreteValue,uclidType:Type,isInput:Boolean): ConcreteValue={      
+            printDebug("We try to generate a Value for uclidType "+uclidType.toString)  
             cValue match{
                 case ConcreteUndef() =>{
                     uclidType match{
@@ -468,8 +479,9 @@ object ConcreteSimulator {
                             }
                         }
                         case BitVectorType(w)   =>  {
+                            printDebug("This is a BitVectorType and runTimemod is "+runtimeMod.toString)
                             runtimeMod match{
-                                case Fuzzing => ConcreteBV(random.nextInt(pow(2,w).toInt),w)
+                                case Fuzzing => return ConcreteBV(random.nextInt(pow(2,w).toInt),w)
                                 case Default => ConcreteBV(0,w)
                                 case _ => ConcreteUndef()
                             }
@@ -548,13 +560,32 @@ object ConcreteSimulator {
                     }
                 }
                 case ConcreteArray(varMap) =>{
-                    println("We try random a value for varMap")
                     cValue
                 }
                 case _ => cValue
-            }    
-        }
+            }    }
         
+        //In runtime, we hit a undefine value, we can generate a new value for it
+        def runtimeValue(id:Identifier,index:List[ConcreteValue]): ConcreteValue={
+            varTypeMap(id) match{
+                case ArrayType(inTypes,outType)=>{
+
+                    //So outType is a Uclid Type
+                    var newValue = generateValue(ConcreteUndef(),outType,false);
+                    printDebug("We make a fuzzing Value "+newValue.toString)
+                    varMap(id) match{
+                        case ConcreteArray(arraymap) =>{
+                            arraymap(index) = newValue
+                            return newValue
+                        }
+                        case _ => throw new Error("Should not touch this place")
+                    }
+                } 
+                case _ =>{
+                    ConcreteUndef()
+                }
+            }
+        }
         //private Functions
         def updateRecordValue(fields: List[Identifier], value: ConcreteValue, 
             recordValue: ConcreteValue) : ConcreteRecord = {
@@ -730,8 +761,7 @@ object ConcreteSimulator {
                     }
                     printDebug("Assign "+lhss(i).toString+" "+rhseval(i).toString)
                     context.updateVar(lhss(i),rhseval(i))
-                };
-            }
+                };}
             case BlockStmt(vars, stmts) => {
                 val flatVars : List[(Identifier, Type)] = vars.flatMap(v => v.ids.map(id => (id, v.typ)))
                 context.extendVar(flatVars)
@@ -754,8 +784,7 @@ object ConcreteSimulator {
                     passCount = passCount+1;
                 }}
             case AssumeStmt(e, id) => {
-                context.parseSetAssume(e)
-            }
+                context.parseSetAssume(e)}
             case HavocStmt(havocable) => throw new NotImplementedError(s"HavocStmt not implemented")
             case IfElseStmt(cond, ifblock, elseblock) => {
                 if (evaluateBoolExpr(context, cond)) {
@@ -905,7 +934,31 @@ object ConcreteSimulator {
                                     printDebug("\t With indices " + indices)
                                     printDebug("\t With newMap " + eval_indices)
                                     printDebug("\t With Return Value "+valuemap(eval_indices).toString)
-                                    valuemap(eval_indices)
+                                    if(valuemap(eval_indices).isInstanceOf[ConcreteUndef]){
+                                        //so the eval_indices
+
+                                        printDebug("we meet a undefine value in Array");
+                                        operands.head match{
+                                            case id:Identifier =>{
+                                                var fuzzingValue = context.runtimeValue(id,eval_indices)
+                                                printDebug("We try to make a fuzzing Value "+fuzzingValue.toString)
+                                                return fuzzingValue
+                                            }
+                                            case _ => throw new Error("Should not touch this line")
+                                        }
+                                    
+                                        // runtimeMod match{
+                                        //     case Fuzzing =>{
+
+                                        //     }
+                                        //     //TODO: if other mod, handle differently
+                                        //     case _ => valuemap(eval_indices)
+                                        // }
+                                        return valuemap(eval_indices)
+                                    }
+                                    else{
+                                        return valuemap(eval_indices)
+                                    }
                                 }
                                 case ArrayUpdate(indices, value) => {
                                     val eval_value = evaluate_expr(context, value)
@@ -1084,8 +1137,7 @@ object ConcreteSimulator {
             //We assume user use conjunctive normal form(CNF)
             //transform any logic experssion into 
             context.parseSetAssume(assume.expr)
-        }
-    }
+        }}
 
     def checkProperties(properties: List[SpecDecl],context:ConcreteContext){
         for(property <- properties){
