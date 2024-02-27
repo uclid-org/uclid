@@ -158,9 +158,11 @@ object ConcreteSimulator {
                         // TODO: Should this be ConcreteUndef?
                         (v._1, ConcreteEnum(ids, -1))
                     }
-                    // case UninterpretedType(name) =>{
-                    //     throw new NotImplementedError(name.toString + " UninterpretedType has not been support yet")
-                    // }  
+                    //TODO: support for UninterpretedType
+                    case UninterpretedType(name) =>{
+                        throw new NotImplementedError("UninterpretedType has not been support yet")
+                    }
+
                     case _ => {
                         throw new NotImplementedError(v.toString + " has not been supported yet!")
                     }
@@ -412,7 +414,8 @@ object ConcreteSimulator {
                         }
                         case OperatorApplication(op:Operator, operands:List[Expr])=>{
                             if(operands.size==1){
-                                throw new Error("wait for implement")
+                                // throw new Error("wait for implement expr "+expr.toString)
+                                //TODO: implement assume:（ forall)
                             }
                             else{
                                 val operand_0 = operands.head;
@@ -550,8 +553,14 @@ object ConcreteSimulator {
                                             case _ => RecordMap(mem_id) = ConcreteUndef()
                                         }
                                     }
-                                       
-                                    case _ => throw new NotImplementedError("Does not implement support for this type\n")
+                                    case EnumType (ids) =>{
+                                        runtimeMod match{
+                                            case Fuzzing => ConcreteEnum(ids,random.nextInt(ids.size))
+                                            case Default => ConcreteEnum(ids,0)
+                                            case _ => ConcreteEnum(ids,-1)
+                                        }
+                                    }   
+                                    case _ => throw new NotImplementedError("Does not implement support for type "+mem_typ.toString)
                                 }
                             }
                             ConcreteRecord(RecordMap)

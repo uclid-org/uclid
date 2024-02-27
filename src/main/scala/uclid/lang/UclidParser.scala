@@ -1244,7 +1244,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case id ~ (decls ~ None) => throw new Utils.SyntaxError("unpaired '{'",Some(id.pos),id.filename)
       }|
       KwModule ~> Id ~ ("{" ~> rep(Decl) ~ ( Error_CmdBlock.? ) <~ "}") ^^ {
-        case id ~ (decls ~ Some(cs)) => throw new Utils.SyntaxError("unpaired '{'",Some(id.pos),id.filename)
+        case id ~ (decls ~ Some(cs)) => throw new Utils.SyntaxError("Error Cmd Block",Some(id.pos),id.filename)
         case id ~ (decls ~ None) => throw new Utils.SyntaxError("unpaired '{'",Some(id.pos),id.filename)
       }|
       KwModule ~ Id ~ "{" ^^{
