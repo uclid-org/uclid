@@ -160,7 +160,7 @@ object ConcreteSimulator {
                     }
                     //TODO: support for UninterpretedType
                     case UninterpretedType(name) =>{
-                        throw new NotImplementedError("UninterpretedType has not been support yet")
+                        throw new NotImplementedError("UninterpretedType "+name.toString+" has not been support yet")
                     }
 
                     case _ => {
@@ -399,66 +399,107 @@ object ConcreteSimulator {
 
         def parseSetAssume(expr:Expr): Unit = {
             assumeTable += expr;
-            //Expermential:
-            //Might introducing bugs
-            //TODO:
-            //better recommend Table for assume
-            evaluate_expr(this,expr) match{
-                case ConcreteBool(true)=>{}
-                case ConcreteBool(false)|ConcreteUndef()=>{
-                //if we hit assume evlation with the result
-                    expr match {
-                        case id:Identifier =>{
-                            assumeRecommendTable(id) = ConcreteBool(true)
-                            write(id,ConcreteBool(true))
-                        }
-                        case OperatorApplication(op:Operator, operands:List[Expr])=>{
-                            if(operands.size==1){
-                                // throw new Error("wait for implement expr "+expr.toString)
-                                //TODO: implement assume:（ forall)
-                            }
-                            else{
-                                val operand_0 = operands.head;
-                                val operand_1 = operands.tail.head
-                                op match{
-                                    case EqualityOp()=> {
-                                        operand_0 match{
-                                            case id:Identifier =>{
-                                                printDebug("Write "+id+" "+operand_1.toString)
-                                                assumeRecommendTable(id) = evaluate_expr(this,operand_1)
-                                                write(id,evaluate_expr(this,operand_1))
-                                            }
-                                            case _ => {
-                                                throw new Error("Undefine ? "+operand_0)
-                                            }
-                                        }    
-                                    }
-                                    case InequalityOp() => {
-                                        throw new Error("Unimplemented")
-                                        //ConcreteBool(bool_0 != bool_1)
-                                    }
-                                    case ConjunctionOp() =>{ 
-                                        parseSetAssume(operand_0)
-                                        parseSetAssume(operand_1)
-                                    }
-                                    // case DisjunctionOp() => ConcreteBool(bool_0 || bool_1)
-                                    // case IffOp() => ConcreteBool(bool_0 == bool_1)
-                                    // case ImplicationOp() => ConcreteBool(!bool_0 || bool_1) 
-                                    case _ => {
-
-                                    }    
+            
+            expr match {
+                case id:Identifier =>{
+                    assumeRecommendTable(id) = ConcreteBool(true)
+                    write(id,ConcreteBool(true))
+                }
+                case OperatorApplication(op:Operator, operands:List[Expr])=>{
+                    if(operands.size==1){
+                        op match{
+                            case ForallOp(vs,patterns)=>{
+                                var retValue = true;
+                                if(vs.size>1){
+                                    throw new Error("Does not support large forall")
                                 }
+                                var (id,typ) = vs.head;
+                                extendVar(List((id,typ)))
+                                typ match {
+                                    case BitVectorType(w) => {
+                                        for(it <- 0 to (pow(2,w)-1).toInt){
+                                            write(id,ConcreteBV(it,w))
+                                            parseSetAssume(operands.head)
+                                            // we have opearnds.head(? regs[r] == 0bv8)
+                                            // retValue = retValue && evaluateBoolExpr(context,operands.head)
+                                        }
+                                    }
+                                    case _ => throw new Error("Does not support loop index of type "+ typ.toString)
+                                }
+                                removeVar(List((id,typ)))
                             }
+                            case _ => throw new Error("wait for support for expr "+expr.toString)
                         }
-                        case _ => {
-                            throw new Error("Hit unimplemented code part")
+                    }
+                    else{
+                        val operand_0 = operands.head;
+                        val operand_1 = operands.tail.head
+                        val operandValue_1 = evaluate_expr(this,operand_1)
+                        op match{
+                            case EqualityOp()=> {
+                                operand_0 match{
+                                    case id:Identifier =>{
+                                        printDebug("Write "+id+" "+operand_1.toString)
+                                        assumeRecommendTable(id) = evaluate_expr(this,operand_1)
+                                        write(id,evaluate_expr(this,operand_1))
+                                    }
+                                    case OperatorApplication(op:Operator, operands:List[Expr]) =>{
+                                        op match{
+                                            case ArraySelect(indices) => {
+                                                val eval_indices = indices.map(a => evaluate_expr(this,a)) // list of concrete expr
+                                                operands.head match{
+                                                    case id:Identifier =>{
+                                                        varMap(id) match {
+                                                            case ca: ConcreteArray => {
+                                                                // List of concrete indices expressions 
+                                                                var old_map = ca.value // old array 
+                                                                old_map(eval_indices) = operandValue_1
+                                                                val new_arr = ConcreteArray(old_map)
+                                                                varMap(id) = new_arr
+                                                            }
+                                                            case _ => 
+                                                                throw new Error(f"Attempting ArraySelect on a non-array object ${id.name}")
+                                                        }
+
+                                                    }
+                                                    case _ =>{}
+                                                }
+                                            }
+                                            case _=>{
+                                                throw new Error("Wait for support of Expr "+expr.toString)
+                                            }
+                                        }
+                                    }
+                                    // add support for array
+                                    case _ => {
+                                        throw new Error("Wait for support of Expr "+expr.toString)
+                                        //updateVar(operand_0,evaluate_expr(this,operand_1))
+                                    }
+                                }    
+                            }
+                            case InequalityOp() => {
+                                throw new Error("Unimplemented")
+                                //ConcreteBool(bool_0 != bool_1)
+                            }
+                            case ConjunctionOp() =>{ 
+                                parseSetAssume(operand_0)
+                                parseSetAssume(operand_1)
+                            }
+                            // case DisjunctionOp() => ConcreteBool(bool_0 || bool_1)
+                            // case IffOp() => ConcreteBool(bool_0 == bool_1)
+                            // case ImplicationOp() => ConcreteBool(!bool_0 || bool_1) 
+                            case _ => {
+
+                            }    
                         }
-                    }    
+                    }
                 }
                 case _ => {
                     throw new Error("Hit unimplemented code part")
                 }
-            }}
+            } 
+
+        }
 
         
         //function gathring value as we want
@@ -955,14 +996,6 @@ object ConcreteSimulator {
                                             }
                                             case _ => throw new Error("Should not touch this line")
                                         }
-                                    
-                                        // runtimeMod match{
-                                        //     case Fuzzing =>{
-
-                                        //     }
-                                        //     //TODO: if other mod, handle differently
-                                        //     case _ => valuemap(eval_indices)
-                                        // }
                                         return valuemap(eval_indices)
                                     }
                                     else{
@@ -1115,8 +1148,26 @@ object ConcreteSimulator {
                             undetCount = undetCount + 1;
                             ConcreteUndef()
                         }
+                        case ConcreteArray(value_0) => {
+                            operand_1 match{
+                                case ConcreteArray(value_1) =>{
+                                    op match{
+                                        case EqualityOp() => {
+                                            var checkflag = true;
+                                            for((index_0,v_0)<-value_0){
+                                                checkflag = checkflag && (value_1(index_0)==v_0)
+                                            }
+                                            ConcreteBool(checkflag)
+                                        }
+                                        case _ => {
+                                            throw new NotImplementedError("Invalid two operands"+expr)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         case _ => {
-                            throw new NotImplementedError("Does not support operation on this type yet")
+                            throw new NotImplementedError("Does not support operation on this type of Expr: "+expr)
                         }
                     }
                 }
@@ -1155,7 +1206,7 @@ object ConcreteSimulator {
             if (!evaluateBoolExpr(context, property.expr)){ 
                     failCount = failCount+1;
                     terminate = true
-                    printResult("failed assert statement")
+                    printResult("failed assert statement in"+property.toString)
                 }else{
                     passCount = passCount+1;
                 }
