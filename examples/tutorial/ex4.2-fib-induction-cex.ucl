@@ -1,0 +1,23 @@
+module main {
+  // Part 1: System description.
+  var a, b : integer;
+
+  init {
+    a = 0;
+    b = 1;
+  }
+  next {
+    a', b' = b, a + b;
+  }
+
+  // Part 2: System specification.
+  invariant a_le_b: a <= b;
+
+  // Part 3: Proof script.
+  control {
+    vobj = induction;
+    check;
+    print_results;
+    vobj.print_cex(a, b);
+  }
+}

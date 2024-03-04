@@ -1,0 +1,32 @@
+/* This benchmark requires the synthesis tool to reason about
+arrays and produce an invariant using array operations */
+
+module main
+{
+  var i: bv1;
+  var x : [bv1]bv2;
+ 
+
+ init
+ {
+   for i in range(0bv1, 1bv1) {
+    x[i] = 1bv2;
+   }
+ }
+
+  next
+  {
+    // do nothing
+  }
+
+  invariant always_positive: (forall (index : bv1) :: x[index] >= 1bv2);
+
+  synthesis function h(x : bv1, y : [bv1]bv2) : boolean;
+  property hole: h(i, x);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}

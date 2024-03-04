@@ -1,0 +1,16 @@
+module main
+{
+    var x : integer;
+
+    init {
+        x = 0;
+    }
+
+    next {
+        x' = x + 1;
+    }
+
+    control {
+        print(42);
+    }
+}

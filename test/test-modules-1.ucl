@@ -1,0 +1,43 @@
+module common {
+  type addr_t = bv8;
+  type word_t = bv8;
+  type mem_t = [addr_t]word_t;
+}
+
+module cpu {
+  type * = common.*;
+  
+  input mem : mem_t;
+  var pc : addr_t;
+  var inst : word_t;
+
+  init {
+      pc = 0bv8;
+  }
+
+  next {
+      inst' = mem[pc];
+      pc' = pc + 1bv8;
+  }
+}
+  
+module main {
+  type * = common.*;
+
+  var mem : mem_t;
+
+  instance c1 : cpu(mem : (mem));
+  instance c2 : cpu(mem : (mem));
+  next {
+    next (c1);
+    next (c2);
+  }
+  
+  property eq_pc : (c1.pc == c2.pc);
+  control {
+    print_module;
+    unroll(3);
+    check;
+    print_results;
+  }
+}

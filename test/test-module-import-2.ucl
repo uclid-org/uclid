@@ -1,0 +1,4 @@
+// Non-existant module1
+module main {
+    import module1;
+}

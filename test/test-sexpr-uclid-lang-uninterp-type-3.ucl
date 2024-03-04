@@ -1,0 +1,26 @@
+module main {
+
+    type UndefineType;
+    type database_t = [integer]UndefineType;
+
+    var database_1 : database_t;
+    var database_2 : database_t;
+
+    init {
+        assume (database_1[0] != database_1[1]);
+        assume (database_1[0] != database_1[2]);
+        assume (database_1[1] != database_1[2]);
+        assume (database_2[0] != database_2[1]);
+        assume (database_2[2] != database_2[3]);
+    }
+
+    invariant trivial : ((database_1[0] == database_2[2])&&(database_1[2]==database_2[3]));
+
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex_json(database_1,database_2);
+    }
+
+}

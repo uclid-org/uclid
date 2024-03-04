@@ -1,0 +1,14 @@
+/* 
+    Test where variable declarations, init and next blocks are in different declaring modules.
+    Extended test where the blocks are in different files, and the order of specifying files is important.
+
+    This is the second file; also checkout test/test-concat-modules-w-init-2-fa.ucl
+*/
+
+module A {
+
+    init {
+        y = x;
+        z = x;
+    }
+}

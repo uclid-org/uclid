@@ -1,0 +1,33 @@
+module main
+{
+  var x, y : integer;
+  init {
+    x = 0;
+    y = 1;
+  }
+  procedure do_something()
+    modifies x, y;
+  {
+    {
+      var z : integer;
+      z = 1;
+      x, y = x+y, y+z;
+    }
+  }
+  
+  next {
+    call do_something();
+  }
+  
+  invariant x_ge_0: x >= 0;
+  invariant y_ge_0: y >= 0;
+  invariant x_le_y: x <= y;
+  
+  control {
+    v = unroll(4);
+    check;
+    print_results;
+    v.print_cex(x, y);
+  }
+}
+

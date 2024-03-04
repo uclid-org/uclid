@@ -1,0 +1,50 @@
+module child
+{
+  var tail          : integer;
+  var initialized   : boolean;
+  input push_cmd    : boolean;
+
+  
+  
+  
+  procedure [noinline] push()
+    requires push_cmd;
+    ensures tail == old(tail) + 2;
+    modifies tail;
+  {
+    tail = tail + 1;
+  }
+}
+
+module main {
+
+  var t         : integer;
+  var initial  : boolean;
+  var push_cmd     : boolean;
+
+  instance chld : child(push_cmd : (push_cmd));
+
+  init {
+    t = 0;
+    initial = false;
+    push_cmd = true;
+  }
+
+  next {
+    initial' = true;
+    if (push_cmd) {
+      call chld.push();
+    }
+  }
+
+  //invariant push_affects_tail: child.initialized ==> (child.push_cmd ==> (child.tail == past(child.tail) + 1));
+
+
+  control {
+    print_module;
+    //v2 = unroll(2);
+    //check;
+    //print_results;
+  }
+}
+

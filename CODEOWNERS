@@ -1,0 +1,113 @@
+#
+# These owners will be the default owners for everything in the repo,
+# unless a later match takes precedence
+*       @polgreen
+
+
+# oracles
+/oracles/ @polgreen
+
+# tests
+/src/test/ @polgreen
+
+
+# SMT back ends: Federico
+/src/main/scala/uclid/smt/SMTLIB2Interface.scala @FedericoAureliano
+/src/main/scala/uclid/smt/SMTLIB2Language.scala @FedericoAureliano
+/src/main/scala/uclid/smt/Z3Interface.scala @FedericoAureliano
+/src/main/scala/uclid/smt/Context.scala @FedericoAureliano
+/src/main/scala/uclid/smt/Converter.scala @FedericoAureliano
+/src/main/scala/uclid/smt/Btor2.scala @ekiwi
+/src/main/scala/uclid/InteractiveProcess.scala @FedericoAureliano
+
+#dead?
+/src/main/scala/uclid/smt/Z3HornSolver.scala 
+/src/main/scala/uclid/LazySCSolver.scala 
+
+
+# Synthesis back end  Adwait
+/src/test/scala/SynthesisSpec.scala @adwait
+/src/main/scala/uclid/smt/SynthLibInterface.scala  @adwait
+/src/main/scala/uclid/smt/SyGuSIF2Language.scala  @adwait
+
+#parsers  Federico, Yatin, Kevin
+/src/main/scala/uclid/smt/SExprParser.scala @FedericoAureliano @ymanerka @kkmc
+/src/main/scala/uclid/UclidParser.scala @FedericoAureliano @ymanerka @kkmc
+/src/main/scala/uclid/UclidLexical.scala @FedericoAureliano @ymanerka @kkmc
+
+#uclid language/main data structures
+/src/main/scala/uclid/UclidLanguage.scala @adwait @polgreen
+/src/main/scala/uclid/AssertionTree.scala @adwait @polgreen
+
+
+# Uclid main work doing things
+/src/main/scala/uclid/UclidMain.scala  
+/src/main/scala/uclid/SymbolicSimulator.scala @polgreen @lsk567
+/src/main/scala/uclid/Hashable.scala 
+/src/main/scala/uclid/lang/PassManager.scala  
+/src/main/scala/uclid/lang/NodeCount.scala  
+/src/main/scala/uclid/lang/Scope.scala @ymanerka @adwait
+/src/main/scala/uclid/lang/ASTVistors.scala @adwait @polgreen
+/src/main/scala/uclid/lang/ASTVisitorUtils.scala @adwait @polgreen
+
+
+#utils
+/src/main/scala/uclid/Utils.scala 
+
+
+#bitvector
+/src/main/scala/uclid/smt/ExpressionAnalyzer.scala 
+/src/main/scala/uclid/lang/BitvectorSliceRewriter.scala
+
+
+#LTL pass (is big and complicated)
+PropertyRewriter.scala @lsk567
+
+
+# passes
+AddFilenameRewriter.scala
+BlockFlattener.scala
+CaseEliminator.scala
+ComputeInstanceTypes.scala
+ConstantLitRewriter.scala
+ControlCommandChecker.scala
+EnumTypeRenamer.scala @kkmc
+ExternalSymbolAnalysis.scala
+ExternalTypeRewriter.scala
+FiniteQuantsExpander.scala @ymanerka
+FuncExprRewriter.scala
+LoopUnroller.scala
+MacroChecker.scala @polgreen
+MacroRewriter.scala @polgreen
+ModSetAnalysis.scala @kkmc
+ModularProductProgram.scala
+ModuleCanonicalizer.scala
+ModuleCleaner.scala
+ModuleConstantsImportRewriter.scala
+ModuleDefinesImportCollector.scala
+ModuleFlattener.scala @ymanerka
+ModuleFunctionsImportRewriter.scala
+ModuleImportRewriter.scala @kkmc
+ModuleInstanceChecker.scala
+ModuleTypeChecker.scala
+ModuleTypeRewriter.scala
+ModuleTypesImportCollector.scala
+PrimedAssignmentChecker.scala
+PrimedHistoryRewriter.scala
+PrimedVariableEliminator.scala
+ProcedureChecker.scala @kkmc
+ProcedureInliner.scala  @kkmc @d0cd
+ProcedureModifiesRewriter.scala @kkmc @d0cd
+RedundantAssignmentEliminator.scala
+RewriteDefines.scala @ymanerka
+RewriteFreshLiterals.scala
+RewritePolymorphicSelect.scala
+SemanticAnalyzer.scala
+StatelessAxiomFinder.scala
+StatementScheduler.scala
+TaintPass.scala 
+TypeChecker.scala
+UninterpretedFunctionToArrayRenamer.scala @kkmc
+VerificationExpressionChecker.scala
+WhileLoopRewriter.scala
+

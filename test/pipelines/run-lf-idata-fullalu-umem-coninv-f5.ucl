@@ -1,0 +1,1396 @@
+module common {
+  /// Data types
+  type instr_t;  // Instruction fetched from memory
+  type word_t = integer;   // All 64-bit data: Integer
+  type cc_t;     // Condition codes
+
+  type mem_state_t; // State of memory
+  
+  // Instruction codes
+  type icode_t = enum { 
+          IHALT, INOP,
+          IRRMOVQ, IIRMOVQ, IRMMOVQ, IMRMOVQ,
+          IOPQ,
+	  IIADDQ,
+	  IJXX, ICALL, IRET,
+	  IPUSHQ, IPOPQ,
+          IBAD};
+  
+  // Operations and jump types (abbreviated)
+  type op_t = enum { ALUADD, ALUSUB, ALUAND, ALUXOR, FNONE, UNCOND, JOTHER };
+  
+  // Registers (abbreviated)
+  type reg_t = enum { RRAX, RRCX, RRDX, RRDX, RRBX, RRSP, RRBP, RRSI, RRDI, RNONE };
+  
+  // Exception types
+  type status_t = enum { SBUB, SAOK, SADR, SHLT, SINS };
+  
+  // Register file
+  type rf_t = [reg_t] word_t;
+
+  
+  // Uninterpreted functions & predicates
+  // Instruction fetch
+  function imem(pc: word_t) : instr_t;
+  function imem_error(pc: word_t) : boolean;
+  // Instruction decoding
+  function instr_icode(i: instr_t) : icode_t;
+  function instr_ifun(i: instr_t) : op_t;
+  function instr_rA(i:instr_t) : reg_t;
+  function instr_rB(i:instr_t) : reg_t;
+  function instr_valC(i:instr_t) : word_t;
+  function instr_newPC(i: word_t, need_regids: boolean, need_valC: boolean) : word_t;
+  // Base ALU function (special cases added)
+  function base_alufun(op: op_t, valA: word_t, valB: word_t) : word_t;
+  // Condition code computation
+  function cc_fun(op: op_t, valA: word_t, valB: word_t) : cc_t;
+  // Does branch/cmove condition hold? 
+  function base_cond_fun(cond: op_t, cc: cc_t) : boolean;
+  // Uninterpreted comparison
+  function word_greater(a : word_t, b : word_t) : boolean;
+
+  // Reading from memory
+  function dmem_read(m:mem_state_t, a:word_t) : word_t;
+  // Writing to memory
+  function dmem_write(m:mem_state_t, a:word_t, d:word_t) : mem_state_t;
+
+  // Out of bounds memory access
+  function dmem_error(a:word_t) : boolean;
+
+  // Initial states
+  const pc0 : word_t;
+  function rf0 (r : reg_t) : word_t;
+  const cc0 : cc_t;
+  const stat0 : status_t;
+  const mem0 : mem_state_t;
+
+}// UCLID5 model of PIPE processor
+
+module pipe_common {
+
+// Start of file ../common/types.ucl
+// Types shared between models
+
+  type instr_t = common.instr_t;
+  type word_t = common.word_t;
+  type cc_t = common.cc_t;
+  type mem_state_t = common.mem_state_t;
+  type icode_t = common.icode_t;
+  type op_t = common.op_t;
+  type reg_t = common.reg_t;
+  type status_t = common.status_t;
+  type rf_t = common.rf_t;
+// End of file ../common/types.ucl
+
+  // Shared constants
+  const WORDX  : word_t;
+
+  // Shared initial pipeline state
+
+  // Decode stage
+  const D_stat0 : status_t;
+  const D_icode0 : icode_t;
+  const D_ifun0 : op_t;
+  const D_rA0 : reg_t;
+  const D_rB0 : reg_t;
+  const D_valC0 : word_t;
+  const D_valP0 : word_t;
+
+  // Execute stage
+  const E_stat0 : status_t;
+  const E_icode0 : icode_t;
+  const E_ifun0 : op_t;
+  const E_valC0 : word_t;
+  const E_valA0 : word_t;
+  const E_valB0 : word_t;
+  const E_dstE0 : reg_t;
+  const E_dstM0 : reg_t;
+  const E_srcA0 : reg_t;
+  const E_srcB0 : reg_t;
+
+  // Memory stage
+  const M_stat0 : status_t;
+  const M_icode0 : icode_t;
+  const M_ifun0 : op_t;
+  const M_cnd0 : boolean;
+  const M_valE0 : word_t;
+  const M_valA0 : word_t;
+  const M_dstE0 : reg_t;
+  const M_dstM0 : reg_t;
+
+  // Writeback stage
+  const W_stat0 : status_t;
+  const W_icode0 : icode_t;
+  const W_valE0 : word_t;
+  const W_valM0 : word_t;
+  const W_dstE0 : reg_t;
+  const W_dstM0 : reg_t;
+}
+
+module pipe {
+
+  type instr_t = common.instr_t;
+  type word_t = common.word_t;
+  type cc_t = common.cc_t;
+  type mem_state_t = common.mem_state_t;
+  type icode_t = common.icode_t;
+  type op_t = common.op_t;
+  type reg_t = common.reg_t;
+  type status_t = common.status_t;
+  type rf_t = common.rf_t;
+
+  //// Inputs
+  input force_flush : boolean;
+  
+  //// State
+  // Programmer visible
+  var RF : rf_t;
+  var cc : cc_t;
+  var Stat : status_t;
+  var mem : mem_state_t;
+  // Architectural PC.  Replicated as F_predPC
+  var pc : word_t;
+
+  // Monitor pipeline state consistency
+  var pipe_state_ok : boolean;
+
+
+  // Fetch stage
+  var F_predPC : word_t;
+
+  // Decode stage
+  var D_stat : status_t;
+  var D_icode : icode_t;
+  var D_ifun : op_t;
+  var D_rA : reg_t;
+  var D_rB : reg_t;
+  var D_valC : word_t;
+  var D_valP : word_t;
+
+  // Execute stage
+  var E_stat : status_t;
+  var E_icode : icode_t;
+  var E_ifun : op_t;
+  var E_valC : word_t;
+  var E_valA : word_t;
+  var E_valB : word_t;
+  var E_dstE : reg_t;
+  var E_dstM : reg_t;
+  var E_srcA : reg_t;
+  var E_srcB : reg_t;
+
+  // Memory stage
+  var M_stat : status_t;
+  var M_icode : icode_t;
+  var M_ifun : op_t;
+  var M_Cnd : boolean;
+  var M_valE : word_t;
+  var M_valA : word_t;
+  var M_dstE : reg_t;
+  var M_dstM : reg_t;
+
+  // Writeback stage
+  var W_stat : status_t;
+  var W_icode : icode_t;
+  var W_valE : word_t;
+  var W_valM : word_t;
+  var W_dstE : reg_t;
+  var W_dstM : reg_t;
+
+  // Control signals
+  var F_bubble : boolean;
+  var F_stall : boolean;
+  var D_stall : boolean;
+  var D_bubble : boolean;
+  var E_stall : boolean;
+  var E_bubble : boolean;
+  var M_stall : boolean;
+  var M_bubble : boolean;
+  var W_stall : boolean;
+  var W_bubble : boolean;
+
+  // Internal signals
+
+  // Fetch stage
+  var instr : instr_t;
+  var imem_icode : icode_t;
+  var imem_ifun : op_t;
+  var imem_error : boolean;
+  var f_pc : word_t;
+  var f_icode : icode_t;
+  var f_ifun : op_t;
+  var instr_valid : boolean;
+  var f_stat : status_t;
+  var need_regids : boolean;
+  var need_valC : boolean;
+  var f_rA : reg_t;
+  var f_rB : reg_t;
+  var f_valC : word_t;
+  var f_valP : word_t;
+  var f_predPC : word_t;
+
+  // Decode stage
+  var d_srcA : reg_t;
+  var d_srcB : reg_t;
+  var d_dstE : reg_t;
+  var d_dstM : reg_t;
+  var d_rvalA : word_t;
+  var d_rvalB : word_t;
+  var d_valA : word_t;
+  var d_valB : word_t;
+  
+
+  // Execute stage
+  var aluA : word_t;
+  var aluB : word_t;
+  var alufun : op_t;
+  var set_cc : boolean;
+  var e_valA : word_t;
+  var e_Cnd : boolean;
+  var e_valE : word_t;
+  var e_dstE : reg_t;
+
+  // Memory stage
+  var mem_addr : word_t;
+  var mem_read : boolean;
+  var mem_write : boolean;
+  var dmem_error : boolean;
+  var m_valM : word_t;
+  var m_stat : status_t;
+
+  // Writeback stage
+  var w_dstE : reg_t;
+  var w_valE : word_t;
+  var w_dstM : reg_t;
+
+  // Control signals
+  var really_flush : boolean;
+
+
+  //// Include definitions generated from HCL
+// Start of file ../hcl/pipe-lf-ans.ucl
+////// Start of code generated by hcl2U
+define gen_f_pc() : common.word_t = 
+    (if (((M_icode == IJXX) && !M_Cnd)) then M_valA else if ((W_icode == 
+        IRET)) then W_valM else F_predPC);
+
+define gen_instr_valid() : boolean = 
+    (!imem_error && (imem_icode == INOP || imem_icode == IHALT || 
+        imem_icode == IRRMOVQ || imem_icode == IIRMOVQ || imem_icode == 
+        IRMMOVQ || imem_icode == IMRMOVQ || imem_icode == IOPQ || 
+        imem_icode == IJXX || imem_icode == ICALL || imem_icode == IRET || 
+        imem_icode == IPUSHQ || imem_icode == IPOPQ));
+
+define gen_f_icode() : common.icode_t = 
+    (if (!instr_valid) then INOP else imem_icode);
+
+define gen_f_ifun() : common.op_t = 
+    (if (imem_error) then FNONE else imem_ifun);
+
+define gen_f_stat() : common.status_t = 
+    (if (imem_error) then SADR else if (!instr_valid) then SINS else if ((
+        f_icode == IHALT)) then SHLT else SAOK);
+
+define gen_need_regids() : boolean = 
+    (f_icode == IRRMOVQ || f_icode == IOPQ || f_icode == IPUSHQ || f_icode
+       == IPOPQ || f_icode == IIRMOVQ || f_icode == IRMMOVQ || f_icode == 
+      IMRMOVQ);
+
+define gen_need_valC() : boolean = 
+    (f_icode == IIRMOVQ || f_icode == IRMMOVQ || f_icode == IMRMOVQ || 
+      f_icode == IJXX || f_icode == ICALL);
+
+define gen_f_predPC() : common.word_t = 
+    (if ((f_icode == IJXX || f_icode == ICALL)) then f_valC else f_valP);
+
+define gen_d_srcA() : common.reg_t = 
+    (if ((D_icode == IRRMOVQ || D_icode == IRMMOVQ || D_icode == IOPQ || 
+        D_icode == IPUSHQ)) then D_rA else if ((D_icode == IPOPQ || D_icode
+         == IRET)) then RRSP else RNONE);
+
+define gen_d_srcB() : common.reg_t = 
+    (if ((D_icode == IOPQ || D_icode == IRMMOVQ || D_icode == IMRMOVQ)
+      ) then D_rB else if ((D_icode == IPUSHQ || D_icode == IPOPQ || 
+        D_icode == ICALL || D_icode == IRET)) then RRSP else RNONE);
+
+define gen_d_dstE() : common.reg_t = 
+    (if ((D_icode == IRRMOVQ || D_icode == IIRMOVQ || D_icode == IOPQ)
+      ) then D_rB else if ((D_icode == IPUSHQ || D_icode == IPOPQ || 
+        D_icode == ICALL || D_icode == IRET)) then RRSP else RNONE);
+
+define gen_d_dstM() : common.reg_t = 
+    (if ((D_icode == IMRMOVQ || D_icode == IPOPQ)) then D_rA else RNONE);
+
+define gen_d_valA() : common.word_t = 
+    (if ((D_icode == ICALL || D_icode == IJXX)) then D_valP else if ((
+        d_srcA == RNONE)) then d_rvalA else if ((d_srcA == e_dstE)) then 
+      e_valE else if ((d_srcA == M_dstM)) then m_valM else if ((d_srcA == 
+        M_dstE)) then M_valE else if ((d_srcA == W_dstM)) then W_valM else 
+      if ((d_srcA == W_dstE)) then W_valE else d_rvalA);
+
+define gen_d_valB() : common.word_t = 
+    (if ((d_srcB == RNONE)) then d_rvalB else if ((d_srcB == e_dstE)) then 
+      e_valE else if ((d_srcB == M_dstM)) then m_valM else if ((d_srcB == 
+        M_dstE)) then M_valE else if ((d_srcB == W_dstM)) then W_valM else 
+      if ((d_srcB == W_dstE)) then W_valE else d_rvalB);
+
+define gen_aluA() : common.word_t = 
+    (if ((E_icode == IRRMOVQ || E_icode == IOPQ)) then E_valA else if ((
+        E_icode == IIRMOVQ || E_icode == IRMMOVQ || E_icode == IMRMOVQ)
+      ) then E_valC else if ((E_icode == ICALL || E_icode == IPUSHQ)) then 
+      CONSTM8() else if ((E_icode == IRET || E_icode == IPOPQ)) then 
+      CONST8() else CONST8());
+
+define gen_aluB() : common.word_t = 
+    (if ((E_icode == IRMMOVQ || E_icode == IMRMOVQ || E_icode == IOPQ || 
+        E_icode == ICALL || E_icode == IPUSHQ || E_icode == IRET || E_icode
+         == IPOPQ)) then E_valB else if ((E_icode == IRRMOVQ || E_icode == 
+        IIRMOVQ)) then CONST0() else CONST0());
+
+define gen_alufun() : common.op_t = 
+    (if ((E_icode == IOPQ)) then E_ifun else ALUADD);
+
+define gen_set_cc() : boolean = 
+    (((E_icode == IOPQ) && !(m_stat == SADR || m_stat == SINS || m_stat == 
+          SHLT)) && !(W_stat == SADR || W_stat == SINS || W_stat == SHLT));
+
+define gen_e_valA() : common.word_t = 
+    (if ((((E_srcA != RNONE) && (M_dstM == E_srcA)) && (E_icode == IPUSHQ
+           || E_icode == IRMMOVQ))) then m_valM else E_valA);
+
+define gen_e_dstE() : common.reg_t = 
+    (if (((E_icode == IRRMOVQ) && !e_Cnd)) then RNONE else E_dstE);
+
+define gen_mem_addr() : common.word_t = 
+    (if ((M_icode == IRMMOVQ || M_icode == IPUSHQ || M_icode == ICALL || 
+        M_icode == IMRMOVQ)) then M_valE else if ((M_icode == IPOPQ || 
+        M_icode == IRET)) then M_valA else M_valA);
+
+define gen_mem_read() : boolean = 
+    (M_icode == IMRMOVQ || M_icode == IPOPQ || M_icode == IRET);
+
+define gen_mem_write() : boolean = 
+    (M_icode == IRMMOVQ || M_icode == IPUSHQ || M_icode == ICALL);
+
+define gen_m_stat() : common.status_t = 
+    (if (dmem_error) then SADR else M_stat);
+
+define gen_w_dstE() : common.reg_t = 
+    W_dstE;
+
+define gen_w_valE() : common.word_t = 
+    W_valE;
+
+define gen_w_dstM() : common.reg_t = 
+    W_dstM;
+
+define gen_w_valM() : common.word_t = 
+    W_valM;
+
+define gen_Stat() : common.status_t = 
+    (if ((W_stat == SBUB)) then SAOK else W_stat);
+
+define gen_F_bubble() : boolean = 
+    0 != 0;
+
+define gen_F_stall() : boolean = 
+    (((E_icode == IMRMOVQ || E_icode == IPOPQ) && ((E_dstM == d_srcB) || ((
+              E_dstM == d_srcA) && ((d_srcA == RNONE) || !(D_icode == 
+                IRMMOVQ || D_icode == IPUSHQ))))) || (IRET == D_icode || 
+        IRET == E_icode || IRET == M_icode));
+
+define gen_D_stall() : boolean = 
+    (((E_icode == IMRMOVQ || E_icode == IPOPQ) && (E_icode == IMRMOVQ || 
+          E_icode == IPOPQ)) && ((E_dstM == d_srcB) || ((E_dstM == d_srcA)
+           && ((d_srcA == RNONE) || !(D_icode == IRMMOVQ || D_icode == 
+              IPUSHQ)))));
+
+define gen_D_bubble() : boolean = 
+    (((E_icode == IJXX) && !e_Cnd) || (!((E_icode == IMRMOVQ || E_icode == 
+            IPOPQ) && (E_dstM == d_srcA || E_dstM == d_srcB)) && (IRET == 
+          D_icode || IRET == E_icode || IRET == M_icode)));
+
+define gen_E_stall() : boolean = 
+    0 != 0;
+
+define gen_E_bubble() : boolean = 
+    (((E_icode == IJXX) && !e_Cnd) || ((E_icode == IMRMOVQ || E_icode == 
+          IPOPQ) && ((E_dstM == d_srcB) || ((E_dstM == d_srcA) && ((d_srcA
+                 == RNONE) || !(D_icode == IRMMOVQ || D_icode == IPUSHQ))))
+        ));
+
+define gen_M_stall() : boolean = 
+    0 != 0;
+
+define gen_M_bubble() : boolean = 
+    ((m_stat == SADR || m_stat == SINS || m_stat == SHLT) || (W_stat == 
+        SADR || W_stat == SINS || W_stat == SHLT));
+
+define gen_W_stall() : boolean = 
+    (W_stat == SADR || W_stat == SINS || W_stat == SHLT);
+
+define gen_W_bubble() : boolean = 
+    0 != 0;
+
+////// End of code generated by hcl2U
+// End of file ../hcl/pipe-lf-ans.ucl
+
+  //// Include functions shared between models
+// Start of file ../common/functions.ucl
+ //// Procedures
+
+ /// PC increment
+ procedure increment_PC(pc: word_t, need_regids: boolean, need_valC: boolean)
+   returns (new_pc : word_t)
+ {
+   var byte : word_t;
+   var word : word_t;
+   var zero, one, eight : word_t;
+   zero = 0;
+   one = 1;
+   eight = 8;
+   byte = if (need_regids) then one else zero;
+   word = if (need_valC) then eight else zero;
+   new_pc = pc + one + byte + word;
+ }
+
+ 
+
+ /// ALU
+  // Model operations as appropriate
+  procedure alu_operate(op: op_t, valA: word_t, valB: word_t)
+    returns (val : word_t)
+    {
+      case
+	(op == ALUADD) : { val = valA + valB; }
+	(op == ALUSUB) : { val = valA - valB; }
+	default : { val = common.base_alufun(op, valA, valB); }
+      esac;
+    }
+  define Greater(a : word_t, b : word_t) : boolean = (a > b);
+  define GreaterEqual(a : word_t, b : word_t) : boolean = (a >= b);
+  define Less(a : word_t, b : word_t) : boolean = (a < b);
+  define LessEqual(a : word_t, b : word_t) : boolean = (a <= b);
+
+
+ // Nullary functions to represent constant data values
+  define CONSTM8() : word_t = -8;
+  define CONST0()  : word_t =  0;
+  define CONST8()  : word_t =  8;
+
+// Memory read operations
+  define memory_read(m : mem_state_t, a : word_t) : word_t =  common.dmem_read(m, a);
+
+// Branch taken / not taken
+define cond_fun(cond: op_t, cc : cc_t) : boolean = (cond == UNCOND) || common.base_cond_fun(cond, cc);// End of file ../common/functions.ucl
+
+
+  procedure do_fetch()
+    modifies f_pc, instr, imem_error, imem_icode, imem_ifun, f_icode, instr_valid,
+    	     f_stat, f_ifun, need_regids, need_valC, f_rA, f_rB, f_valC,
+	     f_valP, f_predPC;
+  {
+    f_pc = gen_f_pc();
+    instr = common.imem(f_pc);
+    imem_error = common.imem_error(f_pc);
+    imem_icode = common.instr_icode(instr);
+    imem_ifun = common.instr_ifun(instr);
+    instr_valid = gen_instr_valid();
+    f_icode = gen_f_icode();
+    f_ifun = gen_f_ifun();
+    f_stat = gen_f_stat();
+    need_regids = gen_need_regids();
+    need_valC = gen_need_valC();
+    f_rA = common.instr_rA(instr);
+    f_rB =  common.instr_rB(instr);
+    f_valC = common.instr_valC(instr);
+    call (f_valP) = increment_PC(f_pc, need_regids, need_valC);
+    if (really_flush) {
+      // When flushing, use f_predPC to hold PC of current instruction
+      f_predPC = f_pc;
+    } else {
+      f_predPC = gen_f_predPC();
+    }
+  }
+
+  procedure do_decode()
+    modifies d_srcA, d_srcB, d_dstE, d_dstM,
+    	     d_rvalA, d_rvalB, d_valA, d_valB;
+  {
+    d_srcA = gen_d_srcA();
+    d_srcB = gen_d_srcB();
+    d_dstE = gen_d_dstE();
+    d_dstM = gen_d_dstM();
+    d_rvalA = RF[d_srcA];
+    d_rvalB = RF[d_srcB];
+    d_valA = gen_d_valA();
+    d_valB = gen_d_valB();
+  }
+
+  procedure do_execute()
+    modifies aluA, aluB, alufun, e_valE, set_cc, e_valA,
+    	     cc, e_Cnd, e_dstE;
+  {
+    aluA = gen_aluA();
+    aluB = gen_aluB();
+    alufun = gen_alufun();
+    call (e_valE) = alu_operate(alufun, aluA, aluB);
+    set_cc = gen_set_cc();
+    if (set_cc) {
+      cc = common.cc_fun(alufun, aluA, aluB);
+    }
+    e_valA = gen_e_valA();
+    e_Cnd = cond_fun(E_ifun, cc);
+    e_dstE = gen_e_dstE();
+  }
+
+  procedure do_memory()
+    modifies mem_addr, mem_read, mem_write, dmem_error,
+    	     m_valM, mem, m_stat;
+  {
+    mem_addr = gen_mem_addr();
+    mem_read = gen_mem_read();
+    mem_write = gen_mem_write();
+    dmem_error = (mem_read || mem_write) && common.dmem_error(mem_addr);
+    if (mem_read) {
+      m_valM = memory_read(mem, mem_addr);
+    } else {
+      m_valM = pipe_common.WORDX;
+    }
+    if (mem_write) {
+      mem = common.dmem_write(mem, mem_addr, M_valA);
+    }
+    m_stat = gen_m_stat();
+  }
+
+  procedure do_writeback()
+    modifies RF, Stat, w_dstE, w_dstM, w_valE;
+  {
+    w_dstE = gen_w_dstE();
+    w_dstM = gen_w_dstM();
+    w_valE = gen_w_valE();
+
+    if (w_dstE != RNONE) {
+      RF[w_dstE] = w_valE;
+    }
+    if (w_dstM != RNONE) {
+      RF[w_dstM] = W_valM;
+    }
+    Stat = gen_Stat();
+  }
+
+  procedure do_control()
+    modifies F_bubble, F_stall, D_bubble, D_stall,
+    	     E_bubble, E_stall, M_bubble, M_stall,
+	     W_bubble, W_stall;
+  {
+    F_bubble = gen_F_bubble();
+    F_stall = gen_F_stall();
+    D_stall = gen_D_stall();
+    D_bubble = (really_flush && !D_stall) || gen_D_bubble();
+    E_stall = gen_E_stall();
+    E_bubble = gen_E_bubble();
+    M_bubble = gen_M_bubble();
+    M_stall = gen_M_stall();
+    W_bubble = gen_W_bubble();
+    // Writeback will normally stall when W_stat set to SINS, SADR, or SHLT.
+    // When force_flushing pipeline, want to force instructions through
+    //W_stall = !force_flush && gen_W_stall();
+    W_stall = gen_W_stall();
+  }
+
+  // Register types
+  procedure word_register(initialize : boolean, stall : boolean, bubble : boolean,
+  	    	          in_value : word_t, reset_value : word_t, init_value : word_t, old_value : word_t)
+    returns (val : word_t)
+  {
+    if (initialize) {
+      val = init_value;
+    } else {
+      if (stall) {
+        val = old_value;
+      } else {
+        if (bubble) {
+          val = reset_value;
+        } else {
+          val = in_value;
+	}
+      } 
+    }
+  }
+
+  procedure icode_register(initialize : boolean, stall : boolean, bubble : boolean,
+                           in_value : icode_t, reset_value : icode_t, init_value : icode_t, old_value : icode_t)
+    returns (val : icode_t)
+  {
+    if (initialize) {
+      val = init_value;
+    } else {
+      if (stall) {
+        val = old_value;
+      } else {
+        if (bubble) {
+          val = reset_value;
+        } else {
+          val = in_value;
+	}
+      } 
+    }
+  }
+
+
+  procedure op_register(initialize : boolean, stall : boolean, bubble : boolean,
+  	                in_value : op_t, reset_value : op_t, init_value : op_t, old_value : op_t)
+    returns (val : op_t)
+  {
+    if (initialize) {
+      val = init_value;
+    } else {
+      if (stall) {
+        val = old_value;
+      } else {
+        if (bubble) {
+          val = reset_value;
+        } else {
+          val = in_value;
+	}
+      } 
+    }
+  }
+
+
+  procedure reg_register(initialize : boolean, stall : boolean, bubble : boolean,
+                         in_value : reg_t, reset_value : reg_t, init_value : reg_t, old_value : reg_t)
+    returns (val : reg_t)
+  {
+    if (initialize) {
+      val = init_value;
+    } else {
+      if (stall) {
+        val = old_value;
+      } else {
+        if (bubble) {
+          val = reset_value;
+        } else {
+          val = in_value;
+	}
+      } 
+    }
+  }
+
+
+  procedure status_register(initialize : boolean, stall : boolean, bubble : boolean,
+                            in_value : status_t, reset_value : status_t, init_value : status_t, old_value : status_t)
+    returns (val : status_t)
+  {
+    if (initialize) {
+      val = init_value;
+    } else {
+      if (stall) {
+        val = old_value;
+      } else {
+        if (bubble) {
+          val = reset_value;
+        } else {
+          val = in_value;
+	}
+      } 
+    }
+  }
+
+  procedure boolean_register(initialize : boolean, stall : boolean, bubble : boolean,
+                             in_value : boolean, reset_value : boolean, init_value : boolean, old_value : boolean)
+    returns (val : boolean)
+  {
+    if (initialize) {
+      val = init_value;
+    } else {
+      if (stall) {
+        val = old_value;
+      } else {
+        if (bubble) {
+          val = reset_value;
+        } else {
+          val = in_value;
+	}
+      } 
+    }
+  }
+
+
+  procedure do_F(initialize : boolean)
+    modifies pc, F_predPC;
+  {
+    call (pc) = word_register(initialize, F_stall, F_bubble, f_predPC, pipe_common.WORDX, common.pc0, pc);
+    F_predPC = pc;
+  }
+
+  procedure do_D(initialize : boolean)
+    modifies D_stat, D_icode, D_ifun, D_rA, D_rB, D_valC, D_valP;
+  {
+    call (D_stat) = status_register(initialize, D_stall, D_bubble, f_stat, SBUB, pipe_common.D_stat0, D_stat);
+    call (D_icode) = icode_register(initialize, D_stall, D_bubble, f_icode, INOP, pipe_common.D_icode0, D_icode);
+    call (D_ifun) = op_register(initialize, D_stall, D_bubble, f_ifun, FNONE, pipe_common.D_ifun0, D_ifun);
+    call (D_rA) = reg_register(initialize, D_stall, D_bubble, f_rA, RNONE, pipe_common.D_rA0, D_rA);
+    call (D_rB) = reg_register(initialize, D_stall, D_bubble, f_rB, RNONE, pipe_common.D_rB0, D_rB);
+    call (D_valC) = word_register(initialize, D_stall, D_bubble, f_valC, pipe_common.WORDX, pipe_common.D_valC0, D_valC);
+    call (D_valP) = word_register(initialize, D_stall, D_bubble, f_valP, pipe_common.WORDX, pipe_common.D_valP0, D_valP);
+  }
+
+  procedure do_E(initialize : boolean)
+    modifies E_stat, E_icode, E_ifun, E_valC, E_valA, E_valB,
+    	     E_dstE, E_dstM, E_srcA, E_srcB;
+  {
+    call (E_stat) = status_register(initialize, E_stall, E_bubble, D_stat, SBUB, pipe_common.E_stat0, E_stat);
+    call (E_icode) = icode_register(initialize, E_stall, E_bubble, D_icode, INOP, pipe_common.E_icode0, E_icode);
+    call (E_ifun) = op_register(initialize, E_stall, E_bubble, D_ifun, FNONE, pipe_common.E_ifun0, E_ifun);
+    call (E_valC) = word_register(initialize, E_stall, E_bubble, D_valC, pipe_common.WORDX, pipe_common.E_valC0, E_valC);
+    call (E_valA) = word_register(initialize, E_stall, E_bubble, d_valA, pipe_common.WORDX, pipe_common.E_valA0, E_valA);
+    call (E_valB) = word_register(initialize, E_stall, E_bubble, d_valB, pipe_common.WORDX, pipe_common.E_valB0, E_valB);
+    call (E_dstE) = reg_register(initialize, E_stall, E_bubble, d_dstE, RNONE, pipe_common.E_dstE0, E_dstE);
+    call (E_dstM) = reg_register(initialize, E_stall, E_bubble, d_dstM, RNONE, pipe_common.E_dstM0, E_dstM);
+    call (E_srcA) = reg_register(initialize, E_stall, E_bubble, d_srcA, RNONE, pipe_common.E_srcA0, E_srcA);
+    call (E_srcB) = reg_register(initialize, E_stall, E_bubble, d_srcB, RNONE, pipe_common.E_srcB0, E_srcB);
+  }
+
+  procedure do_M(initialize : boolean)
+    modifies M_stat, M_icode, M_ifun, M_Cnd, M_valE, M_valA, M_dstE, M_dstM;
+  {
+    call (M_stat) = status_register(initialize, M_stall, M_bubble, E_stat, SBUB, pipe_common.M_stat0, M_stat);
+    call (M_icode) = icode_register(initialize, M_stall, M_bubble, E_icode, INOP, pipe_common.M_icode0, M_icode);
+    call (M_ifun) = op_register(initialize, M_stall, M_bubble, E_ifun, FNONE, pipe_common.M_ifun0, M_ifun);
+    call (M_Cnd) = boolean_register(initialize, M_stall, M_bubble, e_Cnd, false, pipe_common.M_cnd0, M_Cnd);
+    call (M_valE) = word_register(initialize, M_stall, M_bubble, e_valE, pipe_common.WORDX, pipe_common.M_valE0, M_valE);    
+    call (M_valA) = word_register(initialize, M_stall, M_bubble, e_valA, pipe_common.WORDX, pipe_common.M_valA0, M_valA);
+    call (M_dstE) = reg_register(initialize, M_stall, M_bubble, e_dstE, RNONE, pipe_common.M_dstE0, M_dstE);
+    call (M_dstM) = reg_register(initialize, M_stall, M_bubble, E_dstM, RNONE, pipe_common.M_dstM0, M_dstM);
+  }
+
+  procedure do_W(initialize : boolean)
+    modifies W_stat, W_icode, W_valE, W_valM, W_dstE, W_dstM;
+  {
+    call (W_stat) = status_register(initialize, W_stall, W_bubble, m_stat, SBUB, pipe_common.W_stat0, W_stat);
+    call (W_icode) = icode_register(initialize, W_stall, W_bubble, M_icode, INOP, pipe_common.W_icode0, W_icode);
+    call (W_valE) = word_register(initialize, W_stall, W_bubble, M_valE, pipe_common.WORDX, pipe_common.W_valE0, W_valE);    
+    call (W_valM) = word_register(initialize, W_stall, W_bubble, m_valM, pipe_common.WORDX, pipe_common.W_valM0, W_valM);    
+    call (W_dstE) = reg_register(initialize, W_stall, W_bubble, M_dstE, RNONE, pipe_common.W_dstE0, W_dstE);
+    call (W_dstM) = reg_register(initialize, W_stall, W_bubble, M_dstM, RNONE, pipe_common.W_dstM0, W_dstM);
+  }
+
+  procedure do_pipe_registers(initialize : boolean)
+    modifies pc, F_predPC,
+             D_stat, D_icode, D_ifun, D_rA, D_rB, D_valC, D_valP,
+             E_stat, E_icode, E_ifun, E_valC, E_valA, E_valB,
+    	     E_dstE, E_dstM, E_srcA, E_srcB,
+             M_stat, M_icode, M_ifun, M_Cnd, M_valE, M_valA, M_dstE, M_dstM,
+             W_stat, W_icode, W_valE, W_valM, W_dstE, W_dstM;
+  {
+    // Do in reverse order to prevent combinational propagation between pipeline registers
+    call do_W(initialize);
+    call do_M(initialize);
+    call do_E(initialize);
+    call do_D(initialize);
+    call do_F(initialize);
+  }
+
+  procedure do_step()
+    modifies really_flush,
+    	     f_pc, instr, imem_error, imem_icode, imem_ifun, f_icode, instr_valid,
+    	     f_stat, f_ifun, need_regids, need_valC, f_rA, f_rB, f_valC,
+	     f_valP, f_predPC,
+             d_srcA, d_srcB, d_dstE, d_dstM,
+    	     d_rvalA, d_rvalB, d_valA, d_valB,
+             aluA, aluB, alufun, e_valE, set_cc, e_valA,
+    	     cc, e_Cnd, e_dstE,
+             mem_addr, mem_read, mem_write, dmem_error,
+    	     m_valM, mem, m_stat, w_dstE, w_dstM, w_valE,
+             RF, Stat,
+             F_bubble, F_stall, D_bubble, D_stall,
+    	     E_bubble, E_stall, M_bubble, M_stall,
+	     W_bubble, W_stall,
+             pc, F_predPC,
+             D_stat, D_icode, D_ifun, D_rA, D_rB, D_valC, D_valP,
+             E_stat, E_icode, E_ifun, E_valC, E_valA, E_valB,
+    	     E_dstE, E_dstM, E_srcA, E_srcB,
+             M_stat, M_icode, M_ifun, M_Cnd, M_valE, M_valA, M_dstE, M_dstM,
+             W_stat, W_icode, W_valE, W_valM, W_dstE, W_dstM;
+  {
+    really_flush =
+      force_flush;
+    // Out of order to enable combinational logic in writeback and execute
+    call do_writeback();
+    call do_fetch();
+    call do_memory();
+    call do_execute();
+    call do_decode();
+    call do_control();
+    call do_pipe_registers(false);    
+  }
+
+  /// Predicates capturing invariant properties of pipeline state.
+  define D_ok() : boolean =
+      (D_stat == SAOK ==> (D_icode != IHALT && D_icode != IBAD))
+   && (D_stat == SBUB ==> (D_icode == INOP))
+   && (D_stat == SHLT ==> (D_icode == IHALT))
+   && (D_stat == SINS ==> (D_icode == INOP))
+   && (D_stat == SADR ==> (D_icode == INOP));
+
+  define E_ok() : boolean =
+      (E_stat == SAOK ==> (E_icode != IHALT && E_icode != IBAD))
+   && (E_stat == SBUB ==> (E_dstM == RNONE  && E_dstE == RNONE && E_icode == INOP))
+   && (E_stat == SHLT ==> (E_dstM == RNONE  && E_dstE == RNONE && E_icode == IHALT))
+   && (E_stat == SINS ==> (E_dstM == RNONE  && E_dstE == RNONE && E_icode == INOP))
+   && (E_stat == SADR ==> (E_dstM == RNONE  && E_dstE == RNONE && E_icode == INOP));
+
+  define M_ok() : boolean =
+      (M_stat == SAOK ==> (M_icode != IHALT && M_icode != IBAD))
+   && (M_stat == SBUB ==> (M_dstM == RNONE  && M_dstE == RNONE && M_icode == INOP))
+   && (M_stat == SHLT ==> (M_dstM == RNONE  && M_dstE == RNONE && M_icode == IHALT))
+   && (M_stat == SINS ==> (M_dstM == RNONE  && M_dstE == RNONE && M_icode == INOP))
+   && (M_stat == SADR ==> (M_dstM == RNONE  && M_dstE == RNONE && M_icode == INOP));
+
+  define W_ok() : boolean =
+      (W_stat == SAOK ==> (W_icode != IHALT && W_icode != IBAD))
+   && (W_stat == SBUB ==> (W_dstM == RNONE  && W_dstE == RNONE && W_icode == INOP))
+   && (W_stat == SHLT ==> (W_dstM == RNONE  && W_dstE == RNONE && W_icode == IHALT))
+   && (W_stat == SINS ==> (W_dstM == RNONE  && W_dstE == RNONE && W_icode == INOP));
+
+  define ret_ok() : boolean =
+      (E_icode == IRET ==> (D_stat == SBUB))
+   && (M_icode == IRET ==> (D_stat == SBUB && E_stat == SBUB))
+   && (W_icode == IRET && W_stat == SAOK ==> (D_stat == SBUB && E_stat == SBUB && M_stat == SBUB));
+
+  define pipe_ok() : boolean =
+    D_ok() && E_ok() && M_ok() && W_ok() && ret_ok();
+
+  define sw_ok() : boolean =
+      (E_dstM == RNONE || E_dstE == RNONE) 
+   && (M_dstM == RNONE || M_dstE == RNONE) 
+   && (W_dstM == RNONE || W_dstE == RNONE);
+
+
+  //// Initialization
+  init {
+    call do_pipe_registers(true);
+    // Register RNONE has value 0
+    assume (forall (r : common.reg_t) ::
+      	     ((r == RNONE ==> RF[r] == CONST0()) &&
+    	      (r != RNONE ==> RF[r] == common.rf0(r))));
+    cc = common.cc0;
+    Stat = common.stat0;
+    mem = common.mem0;
+    pipe_state_ok = pipe_ok()
+    ;
+  }
+  //// Next step
+  next {
+    call do_step();
+    pipe_state_ok' = pipe_ok();
+  }
+}
+
+
+// UCLID5 model of SEQ processor
+
+module seq {
+  
+// Start of file ../common/types.ucl
+// Types shared between models
+
+  type instr_t = common.instr_t;
+  type word_t = common.word_t;
+  type cc_t = common.cc_t;
+  type mem_state_t = common.mem_state_t;
+  type icode_t = common.icode_t;
+  type op_t = common.op_t;
+  type reg_t = common.reg_t;
+  type status_t = common.status_t;
+  type rf_t = common.rf_t;
+// End of file ../common/types.ucl
+
+  input proj_impl : boolean;
+  input impl_pc : word_t;
+  input impl_RF : rf_t;
+  input impl_cc : cc_t;
+  input impl_Stat : status_t;
+  input impl_mem : mem_state_t;
+
+  // State
+  var pc : word_t;
+  var RF : rf_t;
+  var cc : cc_t;
+  var Stat : status_t;
+  var mem : mem_state_t;
+
+  // Internal signals
+  // Fetch stage
+  var instr : instr_t;
+  var imem_error : boolean;
+  var imem_icode : icode_t;
+  var imem_ifun : op_t;
+  var instr_valid : boolean;
+  var icode : icode_t;
+  var ifun : op_t;
+  var need_regids : boolean;
+  var need_valC : boolean;
+  var rA : reg_t;
+  var rB : reg_t;
+  var valC : word_t;
+  var valP : word_t;
+  // Decode stage
+  var dstE : reg_t;
+  var dstM : reg_t;
+  var srcA : reg_t;
+  var srcB : reg_t;
+  var valA : word_t;
+  var valB : word_t;
+  // Execute stage
+  var aluA : word_t;
+  var aluB : word_t;
+  var valE : word_t;
+  var Cnd : boolean;
+  // Memory stage
+  var valM : word_t;
+  var dmem_error : boolean;
+  var w_dstE : reg_t;
+  var w_dstM : reg_t;
+
+  // Include definitions generated from HCL
+// Start of file ../hcl/seq-std.ucl
+////// Start of code generated by hcl2U
+define gen_icode() : common.icode_t = 
+    (if (imem_error) then INOP else imem_icode);
+
+define gen_ifun() : common.op_t = 
+    (if (imem_error) then FNONE else imem_ifun);
+
+define gen_instr_valid() : boolean = 
+    (icode == INOP || icode == IHALT || icode == IRRMOVQ || icode == 
+      IIRMOVQ || icode == IRMMOVQ || icode == IMRMOVQ || icode == IOPQ || 
+      icode == IJXX || icode == ICALL || icode == IRET || icode == IPUSHQ
+       || icode == IPOPQ);
+
+define gen_need_regids() : boolean = 
+    (icode == IRRMOVQ || icode == IOPQ || icode == IPUSHQ || icode == IPOPQ
+       || icode == IIRMOVQ || icode == IRMMOVQ || icode == IMRMOVQ);
+
+define gen_need_valC() : boolean = 
+    (icode == IIRMOVQ || icode == IRMMOVQ || icode == IMRMOVQ || icode == 
+      IJXX || icode == ICALL);
+
+define gen_srcA() : common.reg_t = 
+    (if ((icode == IRRMOVQ || icode == IRMMOVQ || icode == IOPQ || icode
+         == IPUSHQ)) then rA else if ((icode == IPOPQ || icode == IRET)
+      ) then RRSP else RNONE);
+
+define gen_srcB() : common.reg_t = 
+    (if ((icode == IOPQ || icode == IRMMOVQ || icode == IMRMOVQ)) then rB
+       else if ((icode == IPUSHQ || icode == IPOPQ || icode == ICALL || 
+        icode == IRET)) then RRSP else RNONE);
+
+define gen_dstE() : common.reg_t = 
+    (if (((icode == IRRMOVQ) && Cnd)) then rB else if ((icode == IIRMOVQ
+         || icode == IOPQ)) then rB else if ((icode == IPUSHQ || icode == 
+        IPOPQ || icode == ICALL || icode == IRET)) then RRSP else RNONE);
+
+define gen_dstM() : common.reg_t = 
+    (if ((icode == IMRMOVQ || icode == IPOPQ)) then rA else RNONE);
+
+define gen_aluA() : common.word_t = 
+    (if ((icode == IRRMOVQ || icode == IOPQ)) then valA else if ((icode == 
+        IIRMOVQ || icode == IRMMOVQ || icode == IMRMOVQ)) then valC else 
+      if ((icode == ICALL || icode == IPUSHQ)) then CONSTM8() else if ((
+        icode == IRET || icode == IPOPQ)) then CONST8() else CONST8());
+
+define gen_aluB() : common.word_t = 
+    (if ((icode == IRMMOVQ || icode == IMRMOVQ || icode == IOPQ || icode
+         == ICALL || icode == IPUSHQ || icode == IRET || icode == IPOPQ)
+      ) then valB else if ((icode == IRRMOVQ || icode == IIRMOVQ)) then 
+      CONST0() else CONST0());
+
+define gen_alufun() : common.op_t = 
+    (if ((icode == IOPQ)) then ifun else ALUADD);
+
+define gen_set_cc() : boolean = 
+    (icode == IOPQ);
+
+define gen_mem_read() : boolean = 
+    (icode == IMRMOVQ || icode == IPOPQ || icode == IRET);
+
+define gen_mem_write() : boolean = 
+    (icode == IRMMOVQ || icode == IPUSHQ || icode == ICALL);
+
+define gen_mem_addr() : common.word_t = 
+    (if ((icode == IRMMOVQ || icode == IPUSHQ || icode == ICALL || icode
+         == IMRMOVQ)) then valE else if ((icode == IPOPQ || icode == IRET)
+      ) then valA else valA);
+
+define gen_mem_data() : common.word_t = 
+    (if ((icode == IRMMOVQ || icode == IPUSHQ)) then valA else if ((icode
+         == ICALL)) then valP else valP);
+
+define gen_Stat() : common.status_t = 
+    (if ((imem_error || dmem_error)) then SADR else if (!instr_valid) then 
+      SINS else if ((icode == IHALT)) then SHLT else SAOK);
+
+define gen_new_pc() : common.word_t = 
+    (if ((icode == ICALL)) then valC else if (((icode == IJXX) && Cnd)
+      ) then valC else if ((icode == IRET)) then valM else valP);
+
+////// End of code generated by hcl2U
+// End of file ../hcl/seq-std.ucl
+
+  //// Include functions shared between models
+// Start of file ../common/functions.ucl
+ //// Procedures
+
+ /// PC increment
+ procedure increment_PC(pc: word_t, need_regids: boolean, need_valC: boolean)
+   returns (new_pc : word_t)
+ {
+   var byte : word_t;
+   var word : word_t;
+   var zero, one, eight : word_t;
+   zero = 0;
+   one = 1;
+   eight = 8;
+   byte = if (need_regids) then one else zero;
+   word = if (need_valC) then eight else zero;
+   new_pc = pc + one + byte + word;
+ }
+
+ 
+
+ /// ALU
+  // Model operations as appropriate
+  procedure alu_operate(op: op_t, valA: word_t, valB: word_t)
+    returns (val : word_t)
+    {
+      case
+	(op == ALUADD) : { val = valA + valB; }
+	(op == ALUSUB) : { val = valA - valB; }
+	default : { val = common.base_alufun(op, valA, valB); }
+      esac;
+    }
+  define Greater(a : word_t, b : word_t) : boolean = (a > b);
+  define GreaterEqual(a : word_t, b : word_t) : boolean = (a >= b);
+  define Less(a : word_t, b : word_t) : boolean = (a < b);
+  define LessEqual(a : word_t, b : word_t) : boolean = (a <= b);
+
+
+ // Nullary functions to represent constant data values
+  define CONSTM8() : word_t = -8;
+  define CONST0()  : word_t =  0;
+  define CONST8()  : word_t =  8;
+
+// Memory read operations
+  define memory_read(m : mem_state_t, a : word_t) : word_t =  common.dmem_read(m, a);
+
+// Branch taken / not taken
+define cond_fun(cond: op_t, cc : cc_t) : boolean = (cond == UNCOND) || common.base_cond_fun(cond, cc);// End of file ../common/functions.ucl
+
+  procedure do_fetch()
+    modifies instr, imem_error, imem_icode, imem_ifun,
+    	     instr_valid, icode,
+             ifun, need_regids, need_valC, rA, rB, valC, valP;
+  {
+    instr = common.imem(pc);
+    imem_error = common.imem_error(pc);
+    imem_icode = common.instr_icode(instr);
+    imem_ifun = common.instr_ifun(instr);
+    icode = gen_icode();
+    instr_valid = gen_instr_valid();
+    ifun = gen_ifun();
+    need_regids = gen_need_regids();
+    need_valC = gen_need_valC();
+    rA = common.instr_rA(instr);
+    rB = common.instr_rB(instr);
+    valC = common.instr_valC(instr);
+    call (valP) = increment_PC(pc, need_regids, need_valC);
+  }
+
+  procedure do_decode()
+    modifies dstM, srcA, srcB, valA, valB;
+  {
+    dstM = gen_dstM();
+    srcA = gen_srcA();
+    srcB = gen_srcB();
+    valA = RF[srcA];
+    valB = RF[srcB];
+  }
+
+  procedure do_execute()
+    modifies aluA, aluB, valE, cc, Cnd, dstE;
+  {
+    aluA = gen_aluA();
+    aluB = gen_aluB();
+    call (valE) = alu_operate(gen_alufun(), aluA, aluB);
+    if (gen_set_cc()) {
+      cc = common.cc_fun(gen_alufun(), aluA, aluB);
+    }
+    Cnd = cond_fun(ifun, cc);
+    dstE = gen_dstE();
+  }
+
+  procedure do_memory()
+    modifies valM, mem, dmem_error, Stat;
+  {
+    var read, write : boolean;
+    read = gen_mem_read();
+    write = gen_mem_write();
+    dmem_error = (read || write) && common.dmem_error(gen_mem_addr());
+    if (read) {
+      valM = memory_read(mem, gen_mem_addr());
+    } else {
+      valM = CONST0();
+    }
+    if (write) {
+      mem = common.dmem_write(mem, gen_mem_addr(), gen_mem_data());
+    }
+    Stat = gen_Stat();
+  }
+
+  procedure do_writeback()
+    modifies RF, pc;
+  {
+    if (dstE != RNONE) {
+      RF[dstE] = valE;
+    }
+    if (dstM != RNONE) {
+      RF[dstM] = valM;
+    }
+    pc = gen_new_pc();
+  }
+
+
+  procedure do_step()
+    modifies instr, imem_error, imem_icode, imem_ifun,
+    	     instr_valid, icode,
+             ifun, need_regids, need_valC, rA, rB, valC, valP,
+	     dstE, dstM, srcA, srcB, valA, valB,
+	     aluA, aluB, valE, cc, Cnd, mem, valM,
+	     mem, dmem_error, Stat,
+	     RF, pc;
+  {
+    call do_fetch();
+    call do_decode();
+    call do_execute();
+    call do_memory();
+    call do_writeback();
+  }
+
+  // Initialize
+  init {
+  // Indeterminate initialization.  Actual initialization occurs
+  // when transfer state from implementation
+  }
+
+  next {
+    // Next state computation
+    if (proj_impl) {
+      pc' = impl_pc;
+      RF' = impl_RF;
+      cc' = impl_cc;
+      Stat' = impl_Stat;
+      mem' = impl_mem;
+    } else {
+      if (Stat == SAOK) {
+        call do_step();
+      }
+    }
+  }
+}
+// Burch & Dill verification of pipeline
+
+module main {
+
+// Start of file ../common/types.ucl
+// Types shared between models
+
+  type instr_t = common.instr_t;
+  type word_t = common.word_t;
+  type cc_t = common.cc_t;
+  type mem_state_t = common.mem_state_t;
+  type icode_t = common.icode_t;
+  type op_t = common.op_t;
+  type reg_t = common.reg_t;
+  type status_t = common.status_t;
+  type rf_t = common.rf_t;
+// End of file ../common/types.ucl
+
+  // Number of flushing steps
+  var nflush : integer;
+
+  var flush_pipeline : boolean;
+  var project_impl : boolean;
+
+  var step : integer;
+
+  // Capture consistency of pipeline at start
+  var pipe_state_ok0 : boolean;
+
+  // Capturing state
+
+  // Spec state after loaded from impl A
+  var S_pc0 : word_t;   
+  var S_rf0 : rf_t;
+  var S_cc0 : cc_t; 
+  var S_stat0 : status_t;
+  var S_mem0 : mem_state_t;  
+
+  // Spec state after 1 step
+  var S_pc1 : word_t;   
+  var S_rf1 : rf_t;
+  var S_cc1 : cc_t; 
+  var S_stat1 : status_t;
+  var S_mem1 : mem_state_t;  
+
+  // Impl B state after flushing
+  var I_pc : word_t;   
+  var I_rf : rf_t;
+  var I_cc : cc_t; 
+  var I_stat : status_t;
+  var I_mem : mem_state_t;  
+
+  // Instantiate SEQ module
+  instance spec : seq(proj_impl : (project_impl),
+                      impl_pc : (impl_B.pc),
+                      impl_RF : (impl_B.RF),
+                      impl_cc : (impl_B.cc),
+    	              impl_Stat : (impl_B.Stat),
+		      impl_mem : (impl_B.mem));
+
+  // Instantiate two PIPE modules
+  instance impl_A : pipe(force_flush : (flush_pipeline));
+  instance impl_B : pipe(force_flush : (flush_pipeline));
+
+  init {
+    step = 0;
+    // Standard pipeline requires flushing for 5 steps
+    nflush = 5;
+    flush_pipeline = false;
+    project_impl = false;
+    pipe_state_ok0 = impl_A.pipe_state_ok;
+  }
+  
+// Empty stages
+//  assume (pipe_common.D_stat0 == SAOK && pipe_common.D_icode0 == INOP
+//   	  && pipe_common.D_rA0 == RNONE && pipe_common.D_rB0 == RNONE);
+
+
+// Empty E statge
+//  assume (pipe_common.E_stat0 == SAOK && pipe_common.E_icode0 == INOP &&
+// 	  pipe_common.E_dstE0 == RNONE && pipe_common.E_dstM0 == RNONE);
+
+
+// Empty M stage
+//  assume (pipe_common.M_icode0 != IJXX &&
+//  	  pipe_common.M_stat0 == SAOK && pipe_common.M_icode0 == INOP &&
+// 	  pipe_common.M_dstE0 == RNONE && pipe_common.M_dstM0 == RNONE);
+
+
+// Empty W stage
+//  assume (pipe_common.W_icode0 != IRET &&
+//  	  pipe_common.W_stat0 == SBUB &&
+//  	  pipe_common.W_dstE0 == RNONE &&
+// 	  pipe_common.W_dstM0 == RNONE);
+
+// RET in W
+//  assume (pipe_common.W_icode0 == IRET &&
+//  	  pipe_common.W_stat0 == SAOK &&
+//  	  pipe_common.W_dstE0 == RRSP &&
+// 	  pipe_common.W_dstM0 == RNONE);
+
+
+// Decoding assumptions
+//  assume (pipe_common.D_icode0 == IRRMOVQ ==> pipe_common.D_rA0 != RNONE) &&
+//  	 (pipe_common.D_icode0 == IRRMOVQ ==> pipe_common.D_rB0 != RNONE) &&
+//  	 (pipe_common.D_icode0 == IIRMOVQ ==> pipe_common.D_rA0 == RNONE) &&
+//  	 (pipe_common.D_icode0 == IIRMOVQ ==> pipe_common.D_rB0 != RNONE);
+
+//  assume (pipe_common.E_icode0 == IRRMOVQ ==> pipe_common.E_dstE0 != RNONE) &&
+//  	 (pipe_common.E_icode0 == IRRMOVQ ==> pipe_common.E_srcA0 != RNONE) &&
+//  	 (pipe_common.E_icode0 == IIRMOVQ ==> pipe_common.E_dstE0 != RNONE) &&
+//  	 (pipe_common.E_icode0 == IIRMOVQ ==> pipe_common.E_srcA0 == RNONE);
+
+invariant correspondence :
+    (
+      step > nflush+3
+      && pipe_state_ok0
+    ) ==>
+	  ((S_stat0 == SAOK ==> I_pc == S_pc0) 
+	    && I_rf == S_rf0 && I_cc == S_cc0 && I_mem == S_mem0 && I_stat == S_stat0) ||
+	  ((S_stat0 == SAOK ==> I_pc == S_pc1) 
+	    && I_rf == S_rf1 && I_cc == S_cc1 && I_mem == S_mem1 && I_stat == S_stat1);
+
+
+  next {
+    step' = step + 1;
+    case
+      (step == 0): {
+        next(impl_A);   // step impl A module, normal step
+        flush_pipeline' = true;  // Prepare for flushing
+      }
+      (step >= 1 && step < nflush): {
+        next(impl_A);  // Flushing step
+	next(impl_B);  // Flushing step
+      }
+      (step == nflush): {
+        next(impl_A);  // Flushing step
+	next(impl_B);  // Flushing step
+	project_impl' = true;  // Prepare to transfer state
+      }
+      (step == nflush+1): {
+        // Capture starting spec state
+        I_pc' = impl_A.pc;
+        I_rf' = impl_A.RF;
+        I_cc' = impl_A.cc;
+        I_stat' = impl_A.Stat;
+        I_mem' = impl_A.mem;       
+
+        next(spec);    // Transfer state from impl B to spec
+	project_impl' = false;  // Enable spec operation
+      }
+      (step == nflush+2): {
+        // Capture starting spec state
+        S_pc0' = spec.pc;
+        S_rf0' = spec.RF;
+        S_cc0' = spec.cc;
+        S_stat0' = spec.Stat;
+        S_mem0' = spec.mem;       
+
+        next(spec);             	// Operate spec
+      }
+      (step == nflush+3): { 
+        // Capture updated spec state
+        S_pc1' = spec.pc;
+        S_rf1' = spec.RF;
+        S_cc1' = spec.cc;
+        S_stat1' = spec.Stat;
+        S_mem1' = spec.mem;       
+      }
+
+    esac;
+  }
+
+  control {
+    vobj = unroll(9);
+    check;
+    print_results;
+    vobj.print_cex(step,
+    flush_pipeline,
+    impl_A.pc, impl_A.Stat,
+    impl_A.F_predPC,
+    impl_A.D_stat, impl_A.D_icode, impl_A.D_ifun,
+    impl_A.E_stat, impl_A.E_icode, impl_A.E_dstE, impl_A.E_dstM, impl_A.E_srcA, impl_A.E_srcB,
+    impl_A.M_stat, impl_A.M_icode, impl_A.M_ifun, impl_A.M_valA, impl_A.M_dstE, impl_A.M_dstM,
+    impl_A.W_stat, impl_A.W_icode, impl_A.W_valM, impl_A.W_dstE, impl_A.W_dstM,
+    impl_B.pc, impl_B.Stat,
+    spec.pc,
+    spec.imem_error,
+    spec.icode, spec.valC, spec.Cnd, spec.valM, spec.valP,
+//    impl_A.RF, impl_B.RF, spec.RF,
+    I_stat, S_stat0, S_stat1, I_pc, S_pc0, S_pc1
+  );
+  }
+}

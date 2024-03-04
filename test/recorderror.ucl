@@ -1,0 +1,15 @@
+module main
+{
+  type node_t = record { user : integer };
+
+  init { }
+
+  procedure create_node(user : integer)
+    returns (node: node_t)
+  {
+      node.user = user;
+  }
+
+  next {
+  }
+}

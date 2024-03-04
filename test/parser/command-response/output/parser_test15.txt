@@ -1,0 +1,26 @@
+(model 
+  (define-fun initial_9___ucld_6_step_var () Int
+    1)
+  (define-fun state_1___ucld_5_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_11___ucld_7_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_1___ucld_6_step_var () Int
+    2)
+  (define-fun state_1___ucld_6_step_var () Int
+    0)
+  (define-fun initial_10___ucld_8_step_var () Int
+    0)
+  (define-fun state_1___ucld_7_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_12___ucld_5_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun state_1___ucld_8_step_var () Int
+    1)
+  (define-fun initial_2___ucld_8_step_var () Int
+    1)
+  (define-fun initial_4___ucld_5_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_3___ucld_7_light_unbound_output () _type_enum_1_
+    green)
+)

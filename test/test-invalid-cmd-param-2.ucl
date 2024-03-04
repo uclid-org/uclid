@@ -1,0 +1,11 @@
+module main {
+
+  init {}
+  next {}
+
+  control {
+    bmc[blahblahblah](1);
+    check;
+    print_results;
+  }
+}

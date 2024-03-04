@@ -1,0 +1,34 @@
+module main {
+  type addr_t = bv32;
+  type word_t = bv32;
+  
+  synthesis function pc_inv(a: addr_t, b: addr_t): boolean;
+  
+  var pc1, pc2: addr_t;
+
+  init {
+    //assume (pc1 == pc2);
+    pc1 = 1bv32;
+    pc2 = 1bv32;
+  }
+
+  next {
+    pc1' = 1bv32;
+    pc2' = pc1;
+  }
+
+  //------ OPTION 1 ----
+  invariant inv1: pc_inv(pc1, pc2);
+  invariant inv2: pc2 == 1bv32;
+  
+  // ----- OPTION 2 ----
+  //invariant inv2: pc2 == 1bv32 && pc_inv(pc1, pc2);
+  
+  control {
+    v = induction;
+    check;
+    print_results;
+    v.print_cex();
+  }
+}
+

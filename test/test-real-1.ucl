@@ -1,0 +1,23 @@
+module main {
+  // Part 1: System description.
+  var a, b : real;
+
+  init {
+    a = 0.0;
+    b = 1.1;
+  }
+  next {
+    a', b' = b, a + b;
+  }
+
+  // Part 2: System specification.
+  invariant a_le_b: a <= b;
+
+  // Part 3: Proof script.
+  control {
+    v = bmc(2);
+    check;
+    print_results;
+    v.print_cex;
+  }
+}

@@ -1,0 +1,55 @@
+/*int main(void) {
+  unsigned int x=0;
+  unsigned int y;
+
+  while (x < 99b) {
+    if (y % 2 == 0) {
+      x += 2;
+    } else {
+      x++;
+    }
+  }
+
+  __CPROVER_assert((x % 2) == (y % 2), "A");
+  return 0;
+}*/
+
+module main
+{
+  var x: bv32;
+  var y: bv32;
+
+
+ init
+ {
+   x=0bv32;
+ }
+
+  next
+  {
+  	if(x < 99bv32)
+  	{
+      if( (y%2bv32)==0bv32)
+      {
+        x'=x+2bv32;
+      }
+      else
+      {
+        x'=x+1bv32;
+      }
+  	}
+  }
+
+  invariant always_positive: ((x%2bv32)==(y%2bv32)) || (x < 99bv32);
+
+  synthesis function h(x : bv32, y : bv32) : boolean;
+  property hole: h(x, y);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}
+
+

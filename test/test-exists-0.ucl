@@ -1,0 +1,53 @@
+module main
+{
+  input i1, i2 : integer;
+  var index : integer;
+  var numbers : [integer]integer;
+  const some_int : integer;
+
+  procedure find_value(num : integer, numbersP : [integer]integer) returns (v : integer) {
+    v = 0;
+    for i in range(1, 10) {
+      if(numbersP[i] == num) {
+        v = i;
+      }
+    }
+  }
+
+  procedure swap_numbers() returns (numbersP : [integer]integer)
+  {
+    var tmp : integer;
+    
+    numbersP = numbers;
+    tmp = numbersP[i1];
+    numbersP[i1] = numbersP[i2];
+    numbersP[i2] = tmp;
+  }
+  
+  init {
+    assume (exists (i : integer) :: (i > 0) && (i < 11) && numbers[i] != some_int);
+    assume (index > 0 && index < 11);
+    assume (numbers[index] == some_int);
+  }
+
+  next {
+    assume ((i1 > 0) && (i1 < 11));
+    assume ((i2 > 0) && (i2 < 11));
+    assume (i1 != i2);
+
+    // noteToSelf(ReorderingTest);
+    call (numbers') = swap_numbers();
+    call (index') = find_value(some_int, numbers');
+  }
+
+  property ind_existence : (exists (i : integer) :: (i > 0) && (i < 11) && (numbers[i] == some_int));
+  property ind_inexistence : (exists (i : integer) :: (i > 0) && (i < 11) && (numbers[i] != some_int));
+  property ind_found : (index != 0);
+
+  control {
+    induction;
+    check;
+    print_results;
+    // print_cex(index, numbers[1], numbers[2], numbers[3], numbers[4], numbers[5], numbers[6], numbers[7], numbers[8], numbers[9], numbers[10], some_int);
+  }
+}

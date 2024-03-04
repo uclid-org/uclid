@@ -1,0 +1,4 @@
+module main
+{
+    var integer;
+}

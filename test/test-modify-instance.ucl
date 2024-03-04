@@ -1,0 +1,25 @@
+module A {
+    sharedvar a : integer;
+
+    procedure f()
+        modifies a;
+    {
+
+    }
+}
+
+module main {
+    var m : integer;
+
+    instance one : A (a : (m));
+
+    procedure g()
+        modifies one, m;
+    {
+        call () = one.f();
+    }
+
+    next {
+        call () = g();
+    }
+}

@@ -1,0 +1,30 @@
+module main {
+
+  	var capacity: integer;
+	var s: bv8;
+	var b: bv1;
+        var a: bv3;
+	var mem: [bv3]bv8;
+	init {
+		capacity = 100;
+		s = 255bv8;
+		b = s[1:1];
+		mem[0bv3] = 7bv8;
+		a = 0bv3; 
+	}
+
+	next {
+		capacity' = capacity - 1;
+		s' = s * 2bv8;
+		mem' = (mem[ a -> s ])[(a + 1bv3) -> (s + 1bv8)];		
+	}
+
+	invariant cap: capacity >= 0;
+
+	control {
+		f = induction;
+		check;
+		print_results; 
+		f.print_cex(capacity);
+	}
+}

@@ -1,0 +1,31 @@
+module main
+{
+    var n   : integer;
+    var sum : integer;
+
+    procedure update()
+      modifies n, sum;
+    {
+        n = n + 1;
+        sum = sum + n*n;
+    }
+
+    init {
+        n = 0;
+        sum = 0;
+    }
+
+    next {
+        call () = update();
+    }
+
+    invariant n_sum_non_negative: (sum >= 0 && n >= 0);
+    invariant sum_property : (6*sum) == (n*(n+1))*(2*n + 1);
+
+    control {
+        vobj = induction;
+        check;
+        print_results;
+        vobj.print_cex(n, sum);
+    }
+}

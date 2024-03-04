@@ -1,0 +1,47 @@
+/* This benchmark requires uclid to inline multiple functions */
+
+module main
+{
+  var i: integer;
+  var y: integer;
+
+ init
+ {
+   i=0;
+   call update_y();
+ }
+
+  next
+  {
+    call update_i();
+  }
+
+  invariant always_positive: (i>=0);
+
+procedure update_i()
+    modifies i;
+  {
+   if(y > 10)
+    {i=i+1;}
+    else
+    {i= i-1;}
+  }
+
+  procedure update_y()
+    modifies y;
+  {
+    y=11;
+  }
+
+
+  synthesis function h(x : integer, y : integer) : boolean;
+  property hole: h(i, y);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}
+
+

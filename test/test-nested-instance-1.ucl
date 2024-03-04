@@ -1,0 +1,51 @@
+module foo
+{
+  input a : integer;
+  output b : integer;
+  
+  next {
+    b' = a + 1;
+  }
+}
+
+module bar
+{
+  input x : integer;
+  input y : integer;
+  output z : integer;
+  
+  var xp, yp : integer;
+
+  instance foox : foo(a:(x), b:(xp));
+  instance fooy : foo(a:(y), b:(yp));
+  
+  next {
+    next(foox);
+    next(fooy);
+    z' = xp + yp;
+  }
+}
+
+module main
+{
+  input x   : integer;
+  output y  : integer;
+  var initd : boolean;
+  
+  instance bar1 : bar(x: (x), y: (x), z: (y));
+  
+  init { initd = false; } 
+
+  next {
+    initd' = true;
+    next(bar1);
+  }
+  
+  property b1: initd ==> (bar1.foox.a + 1 + bar1.fooy.a + 1 == y);
+
+  control {
+      v = unroll(5);
+      check;
+      print_results;
+  }
+}

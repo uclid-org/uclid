@@ -1,0 +1,23 @@
+//This test was created by @polgreen.
+module main {
+
+    type t = integer;
+    var a,b,c,d : t;
+    group myGroup : t = {a,b,c,d};
+
+    axiom test1 : finite_forall (thing : integer) in myGroup :: thing < 2;
+
+    init {
+    }
+
+    next {
+    }
+
+    property acyclic : false;
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

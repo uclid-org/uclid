@@ -1,0 +1,12 @@
+module main {
+  var factor1: integer;
+  var factor2: integer;
+  var factor3: integer;
+
+// should not parse
+  oracle function isPrime(x: integer): boolean;
+
+  axiom isPrime(factor1) && isPrime(factor2) && isPrime(factor3);
+  
+
+}

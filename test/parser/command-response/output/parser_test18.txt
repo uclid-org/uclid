@@ -1,0 +1,146 @@
+(model 
+  (define-fun initial_80___ucld_5_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_82___ucld_8_step_var () Int
+    0)
+  (define-fun initial_22___ucld_8_step_var () Int
+    0)
+  (define-fun initial_56___ucld_5_light_unbound_output () _type_enum_1_
+    yellow)
+  (define-fun initial_62___ucld_8_step_var () Int
+    0)
+  (define-fun initial_83___ucld_7_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_88___ucld_5_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_71___ucld_7_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_43___ucld_7_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_29___ucld_6_step_var () Int
+    0)
+  (define-fun initial_70___ucld_8_step_var () Int
+    1)
+  (define-fun initial_64___ucld_5_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_49___ucld_6_step_var () Int
+    0)
+  (define-fun initial_67___ucld_7_light_unbound_output () _type_enum_1_
+    yellow)
+  (define-fun initial_21___ucld_6_step_var () Int
+    0)
+  (define-fun initial_34___ucld_8_step_var () Int
+    0)
+  (define-fun initial_87___ucld_7_light_unbound_output () _type_enum_1_
+    yellow)
+  (define-fun initial_53___ucld_6_step_var () Int
+    0)
+  (define-fun initial_73___ucld_6_step_var () Int
+    0)
+  (define-fun initial_85___ucld_6_step_var () Int
+    1)
+  (define-fun initial_61___ucld_6_step_var () Int
+    0)
+  (define-fun initial_76___ucld_5_light_unbound_output () _type_enum_1_
+    yellow)
+  (define-fun initial_84___ucld_5_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_47___ucld_7_light_unbound_output () _type_enum_1_
+    yellow)
+  (define-fun initial_45___ucld_6_step_var () Int
+    1)
+  (define-fun initial_54___ucld_8_step_var () Int
+    0)
+  (define-fun initial_40___ucld_5_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_81___ucld_6_step_var () Int
+    0)
+  (define-fun initial_30___ucld_8_step_var () Int
+    1)
+  (define-fun initial_58___ucld_8_step_var () Int
+    1)
+  (define-fun initial_36___ucld_5_light_unbound_output () _type_enum_1_
+    yellow)
+  (define-fun initial_46___ucld_8_step_var () Int
+    0)
+  (define-fun initial_25___ucld_6_step_var () Int
+    1)
+  (define-fun initial_57___ucld_6_step_var () Int
+    1)
+  (define-fun initial_72___ucld_5_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_86___ucld_8_step_var () Int
+    0)
+  (define-fun initial_23___ucld_7_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_24___ucld_5_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_42___ucld_8_step_var () Int
+    0)
+  (define-fun initial_48___ucld_5_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_59___ucld_7_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_60___ucld_5_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_75___ucld_7_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_26___ucld_8_step_var () Int
+    0)
+  (define-fun initial_19___ucld_7_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_78___ucld_8_step_var () Int
+    1)
+  (define-fun initial_79___ucld_7_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_28___ucld_5_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_20___ucld_5_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_52___ucld_5_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_50___ucld_8_step_var () Int
+    1)
+  (define-fun initial_17___ucld_6_step_var () Int
+    1)
+  (define-fun initial_37___ucld_6_step_var () Int
+    1)
+  (define-fun initial_38___ucld_8_step_var () Int
+    1)
+  (define-fun initial_31___ucld_7_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_63___ucld_7_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_32___ucld_5_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_27___ucld_7_light_unbound_output () _type_enum_1_
+    yellow)
+  (define-fun initial_35___ucld_7_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_65___ucld_6_step_var () Int
+    1)
+  (define-fun initial_55___ucld_7_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_44___ucld_5_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_51___ucld_7_light_unbound_output () _type_enum_1_
+    red)
+  (define-fun initial_74___ucld_8_step_var () Int
+    0)
+  (define-fun initial_41___ucld_6_step_var () Int
+    0)
+  (define-fun initial_66___ucld_8_step_var () Int
+    0)
+  (define-fun initial_68___ucld_5_light_unbound_output () _type_enum_1_
+    green)
+  (define-fun initial_69___ucld_6_step_var () Int
+    0)
+  (define-fun initial_77___ucld_6_step_var () Int
+    1)
+  (define-fun initial_18___ucld_8_step_var () Int
+    1)
+  (define-fun initial_33___ucld_6_step_var () Int
+    0)
+  (define-fun initial_39___ucld_7_light_unbound_output () _type_enum_1_
+    green)
+)

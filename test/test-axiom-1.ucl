@@ -1,0 +1,22 @@
+module main
+{
+  input r1 : bv8;
+  axiom r1_assumed_zero: r1 == 0bv8;
+  var r2 : bv8;
+
+  init {
+      r2 = 0bv8;
+  }
+
+  next {
+      r2' = ~r1 + 1bv8;
+  }
+
+  property r2_is_zero: r2 == 0bv8;
+
+  control {
+    f = unroll(3);
+    check;
+    print_results;
+  }
+}

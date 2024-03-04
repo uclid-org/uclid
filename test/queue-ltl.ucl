@@ -1,0 +1,69 @@
+module queue {
+  output enq_ready : boolean;
+  input enq_valid : boolean;
+  input deq_ready : boolean;
+  output deq_valid : boolean;
+  var head_ptr : integer;
+  var tail_ptr : integer;
+  var head_ptr_next : integer;
+  var tail_ptr_next : integer;
+
+  init {
+    head_ptr = 0;
+    head_ptr_next = 0;
+    tail_ptr = 0;
+    tail_ptr_next = 0;
+    enq_ready = false;
+    deq_valid = false;
+  }
+
+  next {
+    tail_ptr' = tail_ptr_next;
+    head_ptr' = head_ptr_next;
+    enq_ready' = (tail_ptr' < head_ptr' + 10);
+    deq_valid' = (head_ptr' < tail_ptr');
+    head_ptr_next' = if (deq_ready' && deq_valid') then head_ptr' + 1 else head_ptr';
+    tail_ptr_next' = if (enq_ready' && enq_valid') then tail_ptr' + 1 else tail_ptr';
+  }
+}
+
+module main {
+
+  var enq_valid : boolean;
+  var deq_ready : boolean;
+
+  instance q : queue(enq_valid : (enq_valid'),
+                     deq_ready : (deq_ready'));
+
+  init {
+    enq_valid = false;
+    deq_ready = false;
+  }
+
+  next {
+    havoc enq_valid;
+    havoc deq_ready;
+    next(q);
+  }
+
+  // The desired (and true) property fails
+  property[LTL] queuelike : G(enq_valid ==> F(W(q.deq_valid, q.deq_valid && deq_ready)));
+
+  // This alternate property passes
+  //property[LTL] queuelike : G(enq_valid ==> F(q.deq_valid));
+
+  // This ancillary property passes, and expresses the 'irrevocable' spec assumed above
+  property[LTL] irrevocable : G(q.deq_valid ==> (deq_ready || X(q.deq_valid)));
+
+  control {
+    vobj = bmc[properties=[irrevocable, queuelike]](3);
+    check;
+    print_results;
+    vobj.print_cex(
+        q.enq_ready, q.deq_valid,
+        q.head_ptr, q.tail_ptr,
+        q.head_ptr_next, q.tail_ptr_next,
+        enq_valid, deq_ready
+        );
+  }
+}

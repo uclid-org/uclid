@@ -1,0 +1,28 @@
+module main {
+  
+  type measurement_t;
+
+  function hash(x : integer, t : measurement_t) : measurement_t;
+    
+  axiom collision_resistance : (forall (x1, x2 : integer, t1, t2 : measurement_t) :: 
+          (x1 == x2 && t1 == t2) <==> (hash(x1, t1) == hash(x2, t2)));
+
+  procedure test_hash(
+    x1, x2 : integer,
+    t1, t2 : measurement_t
+  )
+    returns (m1 : measurement_t, m2 : measurement_t)
+
+    ensures ((x1 == x2 && t1 == t2) <==> m1 == m2);
+  {
+    m1 = hash(x1, t1);
+    m2 = hash(x2, t2);
+  }
+
+  control {
+    verif_test_hash = verify(test_hash);
+    check;
+    print_results;
+    verif_test_hash.print_cex(x1, x2, t1, t2, m1, m2); 
+  }
+}

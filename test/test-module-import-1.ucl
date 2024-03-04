@@ -1,0 +1,13 @@
+module module1 {
+    define bar(x: integer): integer = x;
+}
+
+module module2 {
+    import module1;
+}
+
+// Conflicting bar definitions
+module main {
+    import module1;
+    import module2;
+}

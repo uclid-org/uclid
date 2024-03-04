@@ -1,0 +1,46 @@
+module main {
+  type rec_t = record { x : integer, y : integer };
+  
+  function h(rec : rec_t) : integer;
+  function f(g : integer) : integer;
+  
+  var x, y : integer;
+  var r    : rec_t;
+
+  procedure zero_r() returns (rp : rec_t)
+  {
+    rp.x = 0;
+    rp.y = 0;
+  }
+
+  init {
+    x = 0;
+    y = 0;
+    r.x = 0;
+    r.y = 0;
+  }
+
+  procedure next_r() returns (rp : rec_t)
+  {
+    rp.x = h(r);
+    rp.y = h(r);
+  }
+
+  next {
+    x' = f(x);
+    y' = f(y);
+    
+    call (r') = next_r();
+
+    // noteToSelf(ReorderingTest)
+	assert (f(r'.x) == f(r'.y));
+    assert (x' == y');
+  }
+  
+  control {
+    // print_module;
+    unroll (5);
+    check;
+    print_results;
+  }
+}

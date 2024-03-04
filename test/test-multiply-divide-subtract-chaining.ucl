@@ -1,0 +1,32 @@
+module main {
+	init {
+        // All assertions should pass
+
+        // Subtract with more than two operands
+        assert(100 - 20 - 10 == 70);
+        assert(400 - 100 - 200 - 50 - 50 == 0);
+
+        // Multiply with more than two operands
+        assert(10 * 5 * 2 == 100);
+        assert(2 * 3 * 4 * 10 * 5 == 1200);
+
+        // Divide with more than two operands
+        assert(100 / 3 / 2 == 16);
+        assert(100 / 6 / 3 / 2 == 2);
+
+        // Combine the operators
+        assert(100 + 4 + 2 - 10 - 40 * 10 * 3 == -1104);
+        assert(100 / 3 / 5 * 10 * 2 / 2 * 10 * 1 == 600);
+        assert(8 / 3 * 4 * 5 == 40);
+        assert(2 * 3 / 4 * 5 == 5);
+        assert(2 * 3 * 4 / 5 == 4);
+        assert(100 + 4 + 2 - 10 - 40 * 10 * 7 == -1104);
+	}
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+        // print_module;
+    }
+}

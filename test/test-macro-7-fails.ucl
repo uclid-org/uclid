@@ -1,0 +1,20 @@
+module main {
+    var x : integer;
+    var y : integer;
+
+    macro foo {
+        x = 0;
+        foo;
+    }
+
+    init {
+        y = 2;
+        foo;
+    }
+    
+    control {
+        unroll(0);
+        check;
+        print_results;
+    }
+}

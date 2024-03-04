@@ -1,0 +1,32 @@
+module main
+{
+  input value : integer;
+  var numbers : [integer]integer;
+  var sum, index : integer;
+  
+  init {
+    assume (forall (i : integer) :: numbers[i] == 0);
+    sum = 0;
+    index = 0;
+  }
+  
+  procedure next_value()
+    modifies sum, numbers, index;
+  {
+    sum = sum + value;
+    numbers[index] = value;
+    index = index + 1;
+  }
+  next {
+    call next_value();
+    assert ((numbers'[0] + numbers'[1] + numbers'[2] + numbers'[3]) == sum');
+  }
+  
+  control {
+    // print_module;
+    v = unroll (4);
+    check;
+    print_results;
+    v.print_cex(sum, value, numbers[0], numbers[1], numbers[2], numbers[3]);
+  }
+}

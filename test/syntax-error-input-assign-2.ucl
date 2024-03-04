@@ -1,0 +1,12 @@
+
+module sub
+{
+    input a : integer;
+    procedure foo() returns (a_new : integer)
+    {
+        a_new = a + 1;
+    }
+    next {
+        call (a') = foo();
+    }
+}

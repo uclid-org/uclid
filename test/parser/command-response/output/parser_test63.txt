@@ -1,0 +1,337 @@
+(model 
+  ;; universe for addr_t:
+  ;;   addr_t!val!2 addr_t!val!3 addr_t!val!0 addr_t!val!1 addr_t!val!6 addr_t!val!5 addr_t!val!4 
+  ;; -----------
+  ;; definitions for universe elements:
+  (declare-fun addr_t!val!2 () addr_t)
+  (declare-fun addr_t!val!3 () addr_t)
+  (declare-fun addr_t!val!0 () addr_t)
+  (declare-fun addr_t!val!1 () addr_t)
+  (declare-fun addr_t!val!6 () addr_t)
+  (declare-fun addr_t!val!5 () addr_t)
+  (declare-fun addr_t!val!4 () addr_t)
+  ;; cardinality constraint:
+  (forall ((x addr_t))
+          (or (= x addr_t!val!2)
+              (= x addr_t!val!3)
+              (= x addr_t!val!0)
+              (= x addr_t!val!1)
+              (= x addr_t!val!6)
+              (= x addr_t!val!5)
+              (= x addr_t!val!4)))
+  ;; -----------
+  ;; universe for regindex_t:
+  ;;   regindex_t!val!35 regindex_t!val!7 regindex_t!val!17 regindex_t!val!28 regindex_t!val!30 regindex_t!val!24 regindex_t!val!1 regindex_t!val!33 regindex_t!val!31 regindex_t!val!38 regindex_t!val!49 regindex_t!val!20 regindex_t!val!47 regindex_t!val!15 regindex_t!val!16 regindex_t!val!5 regindex_t!val!32 regindex_t!val!48 regindex_t!val!13 regindex_t!val!34 regindex_t!val!40 regindex_t!val!6 regindex_t!val!2 regindex_t!val!3 regindex_t!val!42 regindex_t!val!45 regindex_t!val!4 regindex_t!val!43 regindex_t!val!10 regindex_t!val!11 regindex_t!val!14 regindex_t!val!23 regindex_t!val!18 regindex_t!val!25 regindex_t!val!29 regindex_t!val!41 regindex_t!val!36 regindex_t!val!37 regindex_t!val!46 regindex_t!val!21 regindex_t!val!8 regindex_t!val!12 regindex_t!val!9 regindex_t!val!27 regindex_t!val!0 regindex_t!val!22 regindex_t!val!19 regindex_t!val!39 regindex_t!val!26 regindex_t!val!44 
+  ;; -----------
+  ;; definitions for universe elements:
+  (declare-fun regindex_t!val!35 () regindex_t)
+  (declare-fun regindex_t!val!7 () regindex_t)
+  (declare-fun regindex_t!val!17 () regindex_t)
+  (declare-fun regindex_t!val!28 () regindex_t)
+  (declare-fun regindex_t!val!30 () regindex_t)
+  (declare-fun regindex_t!val!24 () regindex_t)
+  (declare-fun regindex_t!val!1 () regindex_t)
+  (declare-fun regindex_t!val!33 () regindex_t)
+  (declare-fun regindex_t!val!31 () regindex_t)
+  (declare-fun regindex_t!val!38 () regindex_t)
+  (declare-fun regindex_t!val!49 () regindex_t)
+  (declare-fun regindex_t!val!20 () regindex_t)
+  (declare-fun regindex_t!val!47 () regindex_t)
+  (declare-fun regindex_t!val!15 () regindex_t)
+  (declare-fun regindex_t!val!16 () regindex_t)
+  (declare-fun regindex_t!val!5 () regindex_t)
+  (declare-fun regindex_t!val!32 () regindex_t)
+  (declare-fun regindex_t!val!48 () regindex_t)
+  (declare-fun regindex_t!val!13 () regindex_t)
+  (declare-fun regindex_t!val!34 () regindex_t)
+  (declare-fun regindex_t!val!40 () regindex_t)
+  (declare-fun regindex_t!val!6 () regindex_t)
+  (declare-fun regindex_t!val!2 () regindex_t)
+  (declare-fun regindex_t!val!3 () regindex_t)
+  (declare-fun regindex_t!val!42 () regindex_t)
+  (declare-fun regindex_t!val!45 () regindex_t)
+  (declare-fun regindex_t!val!4 () regindex_t)
+  (declare-fun regindex_t!val!43 () regindex_t)
+  (declare-fun regindex_t!val!10 () regindex_t)
+  (declare-fun regindex_t!val!11 () regindex_t)
+  (declare-fun regindex_t!val!14 () regindex_t)
+  (declare-fun regindex_t!val!23 () regindex_t)
+  (declare-fun regindex_t!val!18 () regindex_t)
+  (declare-fun regindex_t!val!25 () regindex_t)
+  (declare-fun regindex_t!val!29 () regindex_t)
+  (declare-fun regindex_t!val!41 () regindex_t)
+  (declare-fun regindex_t!val!36 () regindex_t)
+  (declare-fun regindex_t!val!37 () regindex_t)
+  (declare-fun regindex_t!val!46 () regindex_t)
+  (declare-fun regindex_t!val!21 () regindex_t)
+  (declare-fun regindex_t!val!8 () regindex_t)
+  (declare-fun regindex_t!val!12 () regindex_t)
+  (declare-fun regindex_t!val!9 () regindex_t)
+  (declare-fun regindex_t!val!27 () regindex_t)
+  (declare-fun regindex_t!val!0 () regindex_t)
+  (declare-fun regindex_t!val!22 () regindex_t)
+  (declare-fun regindex_t!val!19 () regindex_t)
+  (declare-fun regindex_t!val!39 () regindex_t)
+  (declare-fun regindex_t!val!26 () regindex_t)
+  (declare-fun regindex_t!val!44 () regindex_t)
+  ;; cardinality constraint:
+  (forall ((x regindex_t))
+          (or (= x regindex_t!val!35)
+              (= x regindex_t!val!7)
+              (= x regindex_t!val!17)
+              (= x regindex_t!val!28)
+              (= x regindex_t!val!30)
+              (= x regindex_t!val!24)
+              (= x regindex_t!val!1)
+              (= x regindex_t!val!33)
+              (= x regindex_t!val!31)
+              (= x regindex_t!val!38)
+              (= x regindex_t!val!49)
+              (= x regindex_t!val!20)
+              (= x regindex_t!val!47)
+              (= x regindex_t!val!15)
+              (= x regindex_t!val!16)
+              (= x regindex_t!val!5)
+              (= x regindex_t!val!32)
+              (= x regindex_t!val!48)
+              (= x regindex_t!val!13)
+              (= x regindex_t!val!34)
+              (= x regindex_t!val!40)
+              (= x regindex_t!val!6)
+              (= x regindex_t!val!2)
+              (= x regindex_t!val!3)
+              (= x regindex_t!val!42)
+              (= x regindex_t!val!45)
+              (= x regindex_t!val!4)
+              (= x regindex_t!val!43)
+              (= x regindex_t!val!10)
+              (= x regindex_t!val!11)
+              (= x regindex_t!val!14)
+              (= x regindex_t!val!23)
+              (= x regindex_t!val!18)
+              (= x regindex_t!val!25)
+              (= x regindex_t!val!29)
+              (= x regindex_t!val!41)
+              (= x regindex_t!val!36)
+              (= x regindex_t!val!37)
+              (= x regindex_t!val!46)
+              (= x regindex_t!val!21)
+              (= x regindex_t!val!8)
+              (= x regindex_t!val!12)
+              (= x regindex_t!val!9)
+              (= x regindex_t!val!27)
+              (= x regindex_t!val!0)
+              (= x regindex_t!val!22)
+              (= x regindex_t!val!19)
+              (= x regindex_t!val!39)
+              (= x regindex_t!val!26)
+              (= x regindex_t!val!44)))
+  ;; -----------
+  (define-fun initial_151_regs () (Array regindex_t (_ BitVec 32))
+    (lambda ((x!1 regindex_t)) #x00000000))
+  (define-fun initial_209_pc () addr_t
+    addr_t!val!3)
+  (define-fun initial_159_dmem () (Array addr_t (_ BitVec 32))
+    (lambda ((x!1 addr_t))
+  (ite (= x!1 addr_t!val!6)
+       #x00008000
+       (ite (= x!1 addr_t!val!5) #x00000000 #x00000400))))
+  (define-fun initial_156_inst () (_ BitVec 32)
+    #x00000000)
+  (define-fun initial_212_inst () (_ BitVec 32)
+    #x08000000)
+  (define-fun const___ucld_59_imode_enter_addr_common () addr_t
+    addr_t!val!0)
+  (define-fun initial_200_mode () _type_enum_1_
+    normal_mode)
+  (define-fun taint_147_const_isolated_rng_lo () Bool
+    true)
+  (define-fun input_2_imem () (Array addr_t (_ BitVec 32))
+    (lambda ((x!1 addr_t)) (ite (= x!1 addr_t!val!3) #x08000000 #x00000000)))
+  (define-fun havoc_204____ucld_4_modifies_regs () (Array regindex_t (_ BitVec 32))
+    (_ as-array k!1464))
+  (define-fun initial_207_regs () (Array regindex_t (_ BitVec 32))
+    (_ as-array k!1464))
+  (define-fun havoc_215____ucld_4_modifies_regs () (Array regindex_t (_ BitVec 32))
+    (_ as-array k!1464))
+  (define-fun initial_208_dmem () (Array addr_t (_ BitVec 32))
+    (lambda ((x!1 addr_t))
+  (ite (= x!1 addr_t!val!6)
+       #x00008000
+       (ite (= x!1 addr_t!val!5) #x00000000 #x00000400))))
+  (define-fun initial_155_mode () _type_enum_1_
+    normal_mode)
+  (define-fun taint_184_const_isolated_rng_hi () Bool
+    true)
+  (define-fun initial_163_inst () (_ BitVec 32)
+    #x00000000)
+  (define-fun taint_143_initial_142_inst () Bool
+    true)
+  (define-fun initial_152_dmem () (Array addr_t (_ BitVec 32))
+    (lambda ((x!1 addr_t))
+  (ite (= x!1 addr_t!val!6)
+       #x00000000
+       (ite (= x!1 addr_t!val!4) #x00000002 #x00000020))))
+  (define-fun taint_123_initial_121_regs () (Array regindex_t Bool)
+    (lambda ((x!1 regindex_t)) true))
+  (define-fun taint_195_input_3_imem () (Array addr_t Bool)
+    (lambda ((x!1 addr_t)) false))
+  (define-fun input_5_imem () (Array addr_t (_ BitVec 32))
+    (lambda ((x!1 addr_t)) (ite (= x!1 addr_t!val!3) #x08000000 #x00000000)))
+  (define-fun const_isolated_rng_hi () addr_t
+    addr_t!val!2)
+  (define-fun initial_198_pc () addr_t
+    addr_t!val!3)
+  (define-fun taint_122_initial_121_regs () Bool
+    true)
+  (define-fun initial_162_mode () _type_enum_1_
+    normal_mode)
+  (define-fun taint_139_const_isolated_rng_hi () Bool
+    true)
+  (define-fun const___ucld_55_k0_word_t_common () (_ BitVec 32)
+    #x00000000)
+  (define-fun taint_170_const___ucld_59_imode_enter_addr_common () Bool
+    true)
+  (define-fun initial_160_pc () addr_t
+    addr_t!val!3)
+  (define-fun initial_202_result () (_ BitVec 32)
+    #x00000000)
+  (define-fun taint_125_const___ucld_59_imode_enter_addr_common () Bool
+    true)
+  (define-fun taint_171_const___ucld_61_nmode_exit_addr_common () Bool
+    true)
+  (define-fun initial_158_regs () (Array regindex_t (_ BitVec 32))
+    (lambda ((x!1 regindex_t)) #x00000000))
+  (define-fun initial_201_inst () (_ BitVec 32)
+    #x00000000)
+  (define-fun const_isolated_rng_lo () addr_t
+    addr_t!val!1)
+  (define-fun input_4_imem () (Array addr_t (_ BitVec 32))
+    (lambda ((x!1 addr_t)) #x00000000))
+  (define-fun initial_211_mode () _type_enum_1_
+    normal_mode)
+  (define-fun taint_141_initial_140_mode () Bool
+    true)
+  (define-fun taint_132_const___ucld_55_k0_word_t_common () Bool
+    true)
+  (define-fun taint_177_const___ucld_55_k0_word_t_common () Bool
+    true)
+  (define-fun taint_145_initial_144_result () Bool
+    false)
+  (define-fun taint_129_initial_127_dmem () (Array addr_t Bool)
+    (lambda ((x!1 addr_t)) false))
+  (define-fun taint_168_initial_166_regs () (Array regindex_t Bool)
+    (lambda ((x!1 regindex_t)) false))
+  (define-fun taint_128_initial_127_dmem () Bool
+    false)
+  (define-fun taint_192_const_isolated_rng_lo () Bool
+    true)
+  (define-fun initial_197_dmem () (Array addr_t (_ BitVec 32))
+    (lambda ((x!1 addr_t))
+  (ite (= x!1 addr_t!val!6)
+       #x00000000
+       (ite (= x!1 addr_t!val!4) #x00000002 #x00000020))))
+  (define-fun taint_149_input_0_imem () Bool
+    false)
+  (define-fun taint_150_input_0_imem () (Array addr_t Bool)
+    (lambda ((x!1 addr_t)) false))
+  (define-fun taint_126_const___ucld_61_nmode_exit_addr_common () Bool
+    true)
+  (define-fun initial_213_result () (_ BitVec 32)
+    #x00000000)
+  (define-fun taint_131_initial_130_pc () Bool
+    true)
+  (define-fun initial_153_pc () addr_t
+    addr_t!val!3)
+  (define-fun taint_174_initial_172_dmem () (Array addr_t Bool)
+    (lambda ((x!1 addr_t)) false))
+  (define-fun const___ucld_61_nmode_exit_addr_common () addr_t
+    addr_t!val!3)
+  (define-fun initial_196_regs () (Array regindex_t (_ BitVec 32))
+    (_ as-array k!1464))
+  (define-fun k!1464 ((x!0 regindex_t)) (_ BitVec 32)
+    (ite (= x!0 regindex_t!val!11) #x00000000
+    (ite (= x!0 regindex_t!val!39) #x00000000
+    (ite (= x!0 regindex_t!val!44) #x00000000
+    (ite (= x!0 regindex_t!val!20) #x00000000
+    (ite (= x!0 regindex_t!val!45) #x00000000
+    (ite (= x!0 regindex_t!val!9) #x00000000
+    (ite (= x!0 regindex_t!val!36) #x00000000
+    (ite (= x!0 regindex_t!val!42) #x00000000
+    (ite (= x!0 regindex_t!val!23) #x00000000
+    (ite (= x!0 regindex_t!val!6) #x00000000
+    (ite (= x!0 regindex_t!val!40) #x00000000
+    (ite (= x!0 regindex_t!val!5) #x00000000
+    (ite (= x!0 regindex_t!val!38) #x00000000
+    (ite (= x!0 regindex_t!val!35) #x00000000
+    (ite (= x!0 regindex_t!val!32) #x00000000
+    (ite (= x!0 regindex_t!val!21) #x00000000
+    (ite (= x!0 regindex_t!val!15) #x00000000
+    (ite (= x!0 regindex_t!val!37) #x00000000
+    (ite (= x!0 regindex_t!val!22) #x00000000
+    (ite (= x!0 regindex_t!val!25) #x00000000
+    (ite (= x!0 regindex_t!val!19) #x00000000
+    (ite (= x!0 regindex_t!val!0) #x00000000
+    (ite (= x!0 regindex_t!val!47) #x00000000
+    (ite (= x!0 regindex_t!val!27) #x00000000
+    (ite (= x!0 regindex_t!val!2) #x00000000
+    (ite (= x!0 regindex_t!val!18) #x00000000
+    (ite (= x!0 regindex_t!val!34) #x00000000
+    (ite (= x!0 regindex_t!val!1) #x00000000
+    (ite (= x!0 regindex_t!val!13) #x00000000
+    (ite (= x!0 regindex_t!val!26) #x00000000
+    (ite (= x!0 regindex_t!val!49) #x00000000
+    (ite (= x!0 regindex_t!val!4) #x00000000
+    (ite (= x!0 regindex_t!val!24) #x00000000
+    (ite (= x!0 regindex_t!val!48) #x00000000
+    (ite (= x!0 regindex_t!val!28) #x00000000
+    (ite (= x!0 regindex_t!val!10) #x00000000
+    (ite (= x!0 regindex_t!val!33) #x00000000
+    (ite (= x!0 regindex_t!val!14) #x00000000
+    (ite (= x!0 regindex_t!val!46) #x00000000
+    (ite (= x!0 regindex_t!val!8) #x00000000
+    (ite (= x!0 regindex_t!val!43) #x00000000
+    (ite (= x!0 regindex_t!val!17) #x00000000
+    (ite (= x!0 regindex_t!val!12) #x00000000
+    (ite (= x!0 regindex_t!val!31) #x00000000
+    (ite (= x!0 regindex_t!val!29) #x00000000
+    (ite (= x!0 regindex_t!val!7) #x00000000
+    (ite (= x!0 regindex_t!val!41) #x00000000
+    (ite (= x!0 regindex_t!val!3) #x00000000
+    (ite (= x!0 regindex_t!val!30) #x00000000
+    (ite (= x!0 regindex_t!val!16) #x00000000
+      #x00000020)))))))))))))))))))))))))))))))))))))))))))))))))))
+  (define-fun const_inst2reg1 ((x!0 (_ BitVec 32))) regindex_t
+    (ite (= x!0 #x08000000) regindex_t!val!3
+      regindex_t!val!2))
+  (define-fun const_aluOp ((x!0 (_ BitVec 32))
+   (x!1 (_ BitVec 32))
+   (x!2 (_ BitVec 32))) (_ BitVec 32)
+    (ite (and (= x!0 #x08000000) (= x!1 #x00000000) (= x!2 #x00000000))
+      #x00000400
+      #x00000020))
+  (define-fun const_in_rng ((x!0 addr_t) (x!1 addr_t) (x!2 addr_t)) Bool
+    (let ((a!1 (ite (= x!0 addr_t!val!3)
+                    addr_t!val!3
+                    (ite (= x!0 addr_t!val!6)
+                         addr_t!val!6
+                         (ite (= x!0 addr_t!val!5) addr_t!val!5 addr_t!val!0)))))
+    (let ((a!2 (and (= (ite (= x!0 addr_t!val!4) addr_t!val!4 a!1) addr_t!val!0)
+                    (= x!1 addr_t!val!1)
+                    (= x!2 addr_t!val!2)))
+          (a!3 (and (= (ite (= x!0 addr_t!val!4) addr_t!val!4 a!1) addr_t!val!6)
+                    (= x!1 addr_t!val!1)
+                    (= x!2 addr_t!val!2))))
+      (or a!2 a!3))))
+  (define-fun const_inst2op ((x!0 (_ BitVec 32))) _type_enum_2_
+    op_nmode_exit)
+  (define-fun const_inst2reg0 ((x!0 (_ BitVec 32))) regindex_t
+    (ite (= x!0 #x00000000) regindex_t!val!1
+      regindex_t!val!0))
+  (define-fun const_inst2addr ((x!0 (_ BitVec 32))
+   (x!1 (_ BitVec 32))
+   (x!2 (_ BitVec 32))) addr_t
+    (ite (and (= x!0 #x08000000) (= x!1 #x00000000) (= x!2 #x00000000))
+      addr_t!val!5
+      addr_t!val!4))
+)

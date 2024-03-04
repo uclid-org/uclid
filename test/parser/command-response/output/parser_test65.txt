@@ -1,0 +1,28 @@
+(model 
+  (define-fun initial_24_initialized () Bool
+    false)
+  (define-fun initial_32_tail () Int
+    2)
+  (define-fun havoc_36____ucld_2_modifies_tail () Int
+    2)
+  (define-fun input_1_search_cmd () _type_record_1_
+    _type_record_1_)
+  (define-fun initial_29_value_found () Bool
+    false)
+  (define-fun input_1_push_cmd () _type_record_1_
+    (_make__type_record_1_ true 3))
+  (define-fun initial_33_numbers () (Array Int Int)
+    (lambda ((x!1 Int)) 3))
+  (define-fun initial_23_value_found () Bool
+    false)
+  (define-fun input_0_push_cmd () _type_record_1_
+    (_make__type_record_1_ true 3))
+  (define-fun input_0_search_cmd () _type_record_1_
+    _type_record_1_)
+  (define-fun initial_30_initialized () Bool
+    true)
+  (define-fun havoc_35____ucld_1_modifies_numbers () (Array Int Int)
+    (lambda ((x!1 Int)) 3))
+  (define-fun initial_26_tail () Int
+    0)
+)

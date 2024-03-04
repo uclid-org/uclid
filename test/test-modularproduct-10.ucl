@@ -1,0 +1,42 @@
+//Adjustment:
+//double is key word now
+//Change double to Mydouble
+module main
+{
+    function getScore (value: integer, y: boolean) : integer;
+
+    procedure Mydouble(x: integer) returns (res: integer)
+    ensures ( res == x*2);
+    ensures ( (x.1 == x.2) ==> (res.1 == res.2));
+    {
+        res = x * 2;
+    }
+
+    procedure compare(x: integer, y: integer) returns (res: integer)
+    ensures ( (res == 0) ==> (getScore(x, true) == getScore(y, true)));
+    ensures ( (res == 1) ==> (getScore(x, true) > getScore(y, true)));
+    ensures ( (res == -1) ==> (getScore(x, true) < getScore(y, true)));
+    ensures ( (x.1 == x.2 && y.1 == y.2) ==> (res.1 == res.2));
+    {
+        var xVal, yVal : integer;
+        res = 0;
+        call (xVal) = Mydouble(getScore(x, true));
+        call (yVal) = Mydouble(getScore(y, true));
+        if(xVal < yVal)
+        {
+            res = -1;
+        }
+        if(xVal > yVal)
+        {
+            res = 1;
+        }
+    }
+
+    control
+    {
+        v = verify(compare);
+        check;
+        v.print_cex(x,y,res);
+        print_results;
+    }
+}

@@ -1,0 +1,32 @@
+module main {
+  var x : integer;
+  var y : integer;
+  var n : integer;
+  
+  init {
+    x = 0;
+    y = 0;
+    n = 0;
+  }
+  
+  next {
+    // noteToSelf(ReorderingTest)
+    if (*) {
+      x' = x + 1;
+    } else {
+      y' = y + 1;
+    }
+    
+    n' = n + 1;
+  }
+  
+  property eq_nxy : (n == (x + y));
+  property le_xn  : (x <= n);
+  property le_yn  : (y <= n);
+
+  control {
+    unroll(3);
+    check;
+    print_results;
+  }
+}

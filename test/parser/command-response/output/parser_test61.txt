@@ -1,0 +1,93 @@
+(model 
+  ;; universe for addr_t:
+  ;;   addr_t!val!2 addr_t!val!3 addr_t!val!0 addr_t!val!1 addr_t!val!4 
+  ;; -----------
+  ;; definitions for universe elements:
+  (declare-fun addr_t!val!2 () addr_t)
+  (declare-fun addr_t!val!3 () addr_t)
+  (declare-fun addr_t!val!0 () addr_t)
+  (declare-fun addr_t!val!1 () addr_t)
+  (declare-fun addr_t!val!4 () addr_t)
+  ;; cardinality constraint:
+  (forall ((x addr_t))
+          (or (= x addr_t!val!2)
+              (= x addr_t!val!3)
+              (= x addr_t!val!0)
+              (= x addr_t!val!1)
+              (= x addr_t!val!4)))
+  ;; -----------
+  ;; universe for regindex_t:
+  ;;   regindex_t!val!0 
+  ;; -----------
+  ;; definitions for universe elements:
+  (declare-fun regindex_t!val!0 () regindex_t)
+  ;; cardinality constraint:
+  (forall ((x regindex_t)) (= x regindex_t!val!0))
+  ;; -----------
+  (define-fun taint_145_initial_144_result () Bool
+    false)
+  (define-fun initial_151_regs () (Array regindex_t (_ BitVec 32))
+    (lambda ((x!1 regindex_t)) #x00000000))
+  (define-fun taint_129_initial_127_dmem () (Array addr_t Bool)
+    (lambda ((x!1 addr_t)) false))
+  (define-fun taint_128_initial_127_dmem () Bool
+    false)
+  (define-fun taint_122_initial_121_regs () Bool
+    true)
+  (define-fun initial_155_mode () _type_enum_1_
+    normal_mode)
+  (define-fun initial_162_mode () _type_enum_1_
+    normal_mode)
+  (define-fun taint_139_const_isolated_rng_hi () Bool
+    true)
+  (define-fun initial_159_dmem () (Array addr_t (_ BitVec 32))
+    (lambda ((x!1 addr_t)) #x00000000))
+  (define-fun const___ucld_55_k0_word_t_common () (_ BitVec 32)
+    #x00000000)
+  (define-fun initial_156_inst () (_ BitVec 32)
+    #x00000000)
+  (define-fun initial_160_pc () addr_t
+    addr_t!val!0)
+  (define-fun initial_163_inst () (_ BitVec 32)
+    #x00000000)
+  (define-fun const___ucld_59_imode_enter_addr_common () addr_t
+    addr_t!val!1)
+  (define-fun taint_149_input_0_imem () Bool
+    false)
+  (define-fun taint_143_initial_142_inst () Bool
+    true)
+  (define-fun taint_150_input_0_imem () (Array addr_t Bool)
+    (lambda ((x!1 addr_t)) false))
+  (define-fun taint_126_const___ucld_61_nmode_exit_addr_common () Bool
+    true)
+  (define-fun taint_125_const___ucld_59_imode_enter_addr_common () Bool
+    true)
+  (define-fun taint_147_const_isolated_rng_lo () Bool
+    true)
+  (define-fun initial_158_regs () (Array regindex_t (_ BitVec 32))
+    (lambda ((x!1 regindex_t)) #x00000000))
+  (define-fun initial_152_dmem () (Array addr_t (_ BitVec 32))
+    (lambda ((x!1 addr_t)) (ite (= x!1 addr_t!val!4) #x00000001 #x00000000)))
+  (define-fun taint_123_initial_121_regs () (Array regindex_t Bool)
+    (lambda ((x!1 regindex_t)) true))
+  (define-fun const_isolated_rng_lo () addr_t
+    addr_t!val!2)
+  (define-fun taint_131_initial_130_pc () Bool
+    true)
+  (define-fun initial_153_pc () addr_t
+    addr_t!val!0)
+  (define-fun const_isolated_rng_hi () addr_t
+    addr_t!val!3)
+  (define-fun taint_141_initial_140_mode () Bool
+    true)
+  (define-fun taint_132_const___ucld_55_k0_word_t_common () Bool
+    true)
+  (define-fun const___ucld_61_nmode_exit_addr_common () addr_t
+    addr_t!val!0)
+  (define-fun const_in_rng ((x!0 addr_t) (x!1 addr_t) (x!2 addr_t)) Bool
+    (let ((a!1 (ite (= x!0 addr_t!val!0)
+                    addr_t!val!0
+                    (ite (= x!0 addr_t!val!4) addr_t!val!4 addr_t!val!1))))
+      (or (and (= a!1 addr_t!val!1) (= x!1 addr_t!val!2) (= x!2 addr_t!val!3))
+          (and (= a!1 addr_t!val!4) (= x!1 addr_t!val!2) (= x!2 addr_t!val!3)))))
+)

@@ -1,0 +1,23 @@
+module main {
+  var factor1: integer;
+  var factor2: integer;
+  var factor3: integer;
+
+// should parse
+  oracle function [isprime] isPrime(x: integer) : boolean;
+
+  axiom isPrime(factor1) && isPrime(factor2) && isPrime(factor3);
+  init{}
+  next{}
+
+  
+// this finds prime factors of 76 (invariant fails if prime factors are found)
+  invariant find_factors : (factor1*factor3)*factor2!=76;
+
+  control {
+    v = unroll(0);
+    check;
+    print_results;
+v.print_cex(factor1);
+  }
+}

@@ -1,0 +1,22 @@
+module main
+{
+  var i: integer;
+  const k: integer;
+ init
+ {
+   i=0;
+ }
+  next
+  {
+   i' = i+k;
+  }
+  invariant always_positive: (i>=0);
+  synthesis function h(x : integer, y : integer) : boolean;
+  invariant hole: h(i, k);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}

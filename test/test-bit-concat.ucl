@@ -1,0 +1,24 @@
+module main
+{
+  input x : bv8;
+  var copy_a : bv8;
+  var copy_b : bv8;
+
+  init {
+    copy_a = 0bv8;
+    copy_b = 0bv8;
+  }
+
+  next {
+    copy_a' = x[7:7] ++ x[6:0];
+    copy_b' = x[7:1] ++ x[0:0];
+  }
+
+  invariant[LTL] equiv_copies : G(copy_a == copy_b);
+
+  control {
+    bmc(5);
+    check;
+    print_results;
+  }
+}

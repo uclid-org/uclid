@@ -1,0 +1,12 @@
+module main {
+  input a : boolean;
+  output b : boolean;
+  var foo : boolean;
+  var bar : boolean;
+  next {
+    if (foo) {
+      bar' = a;
+      b' = bar';
+    }
+  }
+}

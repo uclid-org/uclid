@@ -1,0 +1,21 @@
+module main {
+
+    type utype_t    = record { uid : integer, color : boolean };
+    type database_t = [integer]utype_t;
+
+    var database : database_t;
+
+    init {
+        assume(database[0] == database[1]);
+        assume(database[0].uid == 2);
+    }
+
+    invariant trivial : database[0] == database[2];
+
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex_json(database);
+    }
+}

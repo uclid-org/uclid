@@ -1,0 +1,20 @@
+module main {
+    // should parse error on line 11
+
+    datatype list = cons(head: integer, tail: list) | nil();
+    datatype tree = | join(left: list, right: list) | leaf(node: integer);
+
+    var l1 : list;
+    var l2: list;
+
+    init {
+        l1 = l2.left;
+    }
+
+
+    control {
+        bmc(2);
+        check;
+        print_results;
+    }
+}

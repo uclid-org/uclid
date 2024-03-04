@@ -1,0 +1,12 @@
+module main
+{
+  var x : boolean;
+  init { x = true; }
+  next { }
+  invariant[LTL] x_true: G(x);
+  control {
+    v = bmc_LTL(5);
+    check;
+    print_results;
+  }
+}

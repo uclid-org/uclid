@@ -1,0 +1,35 @@
+module main {
+  // System description. 
+  var a, b   : integer;
+  const flag : boolean;
+
+  procedure set_init()
+    modifies a, b;
+  {
+    havoc a;
+    havoc b;
+    // embedded assumptions.
+    assume (a <= b);
+    assume (a >= 0 && b >= 0);
+    assume (flag);
+  }
+
+  init {
+    call set_init();
+  }
+  next {
+    a', b' = b, a + b;
+    if (flag) {
+      assert (a' <= b');
+    } else {
+      assert (false);
+    }
+  }
+
+  // Proof script.
+  control {
+    bmc (3);
+    check;
+    print_results;
+  }
+}

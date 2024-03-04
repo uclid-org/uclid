@@ -1,0 +1,25 @@
+module main {
+       type myenum = enum { green, red, yellow };
+    type myrec = record {
+        anint : integer,
+        abool : boolean
+    };
+
+    var rec1 : myrec;
+    var enum1 : myenum;
+
+	synthesis function myfun (x : integer) : boolean;
+    synthesis function myfunenum (x : myenum) : boolean;
+
+    init {}
+    next {}
+
+    property myprop : myfun(rec1.anint);
+    property myprop1 : myfunenum(enum1);
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

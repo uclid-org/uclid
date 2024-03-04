@@ -1,0 +1,32 @@
+/** This is an example to test UCLID5's invariant synthesis.
+  */
+
+module main
+{
+  var i: bv3;
+  var x : [bv3]integer;
+  var y: integer;  
+  init {
+   for i in range(0bv3, 7bv3) {
+    x[i] = 0;
+  }
+  y=0;
+ }
+  
+  next {
+ // for i in range(0bv3, 7bv3) {
+ //  x'[i]=x[i]+1;
+ // }
+ y'=y+1;
+}  
+  invariant always_positive: (forall (var_i : bv3) :: x[i] >= 0) ; 
+  
+  synthesis function h(x : bv3, y : [bv3]integer, z : integer) : boolean;
+  property hole: h(i, x, y);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}

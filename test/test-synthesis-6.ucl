@@ -1,0 +1,33 @@
+module main
+{
+  synthesis function h(x : integer, y : integer) : boolean;
+  var y, z, p : integer;
+
+  init {
+    assume (z >= y);
+  }
+
+  next {
+    havoc p;
+    if (*) {
+      y' = z';
+      z' = p;
+      assume (z' <= y);
+    } else {
+      y' = y;
+      z' = p;
+      assume (z' > y);
+    }
+  }
+  
+  invariant not_p : z >= y;
+  invariant hole : h(y, p);
+  
+  
+  control {
+    // print_module;
+    v = unroll(5);
+    check;
+    print_results;
+  }
+}

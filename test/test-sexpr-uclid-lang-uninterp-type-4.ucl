@@ -1,0 +1,26 @@
+module main {
+    type color;
+    type mapColor = [integer] color;
+    var map : mapColor;
+
+    init {
+        assume(map[0] != map[1]);
+        assume(map[0] != map[2]);
+        assume(map[0] != map[3]);
+        assume(map[0] != map[4]);
+        assume(map[1] != map[4]);
+        assume(map[1] != map[2]);
+        assume(map[2] != map[1]);
+        assume(map[2] != map[3]);
+        assume(map[3] != map[4]); 
+    }
+    
+    invariant graph : map[1]==map[3];
+
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex_json(map);
+    }
+}

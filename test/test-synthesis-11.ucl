@@ -1,0 +1,23 @@
+module main {
+   
+    type myrec = record {
+        anint : integer,
+        abool : boolean
+    };
+
+    var rec1 : myrec;
+	synthesis function myfun (x : integer) : boolean;
+
+    init {}
+
+    next {}
+
+    property myprop : myfun(rec1.anint);
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+
+}

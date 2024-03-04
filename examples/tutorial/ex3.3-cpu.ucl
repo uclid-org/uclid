@@ -1,0 +1,40 @@
+module main {
+
+  // Import types
+  type addr_t     = common.addr_t;
+  type mem_t      = common.mem_t;
+  type word_t     = common.word_t;
+  type op_t       = common.op_t;
+  type regindex_t = cpu.regindex_t;
+  
+  // instruction memory is the same for both CPUs.
+  var imem : mem_t;
+
+  // Create two instances of the CPU module.
+  instance cpu_i_1 : cpu(imem : (imem));
+  instance cpu_i_2 : cpu(imem : (imem));
+
+  init {
+  }
+
+  next {
+    // Invoke CPU 1 and CPU 2.
+    next (cpu_i_1);
+    next (cpu_i_2);
+  }
+  
+  // These are our properties.
+  invariant eq_regs : 
+    (forall (ri : regindex_t) :: cpu_i_1.regs[ri] == cpu_i_2.regs[ri]);
+  invariant eq_mem  : 
+    (forall (a : addr_t) :: cpu_i_1.dmem[a] == cpu_i_2.dmem[a]);
+  invariant eq_pc   : (cpu_i_1.pc == cpu_i_2.pc);
+  invariant eq_inst : (cpu_i_1.inst == cpu_i_2.inst);
+
+  // Proof script.
+  control {
+    bmc(3);
+    check;
+    print_results;
+  }
+}

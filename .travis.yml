@@ -1,0 +1,14 @@
+language: scala
+scala:
+    - 2.12.11
+jdk:
+    - oraclejdk11
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt
+before_script:
+  - source get-z3-linux.sh
+script: sbt ++$TRAVIS_SCALA_VERSION test
+
+

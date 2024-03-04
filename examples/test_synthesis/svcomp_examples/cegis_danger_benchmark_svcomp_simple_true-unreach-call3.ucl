@@ -1,0 +1,37 @@
+
+module main{
+	var x: bv32;
+	var N: bv32;
+
+	init{
+	x=0bv32;
+	call updateN();
+	}
+
+	next{
+	if(x < N)
+	 {
+	  x'=x+2bv32;
+	 }
+	}
+
+	procedure updateN()
+	modifies N;
+	{
+	  N = N - (65535bv32 * N/65535bv32));
+	}
+
+	invariant myinv: (x < N) || ((x&1)==0); 
+
+  synthesis function h(x : bv32, y : bv32) : boolean;
+  property hole: h(x, N);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}
+
+
+

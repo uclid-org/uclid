@@ -1,0 +1,47 @@
+/*
+unsigned int f(unsigned int z) {
+  return z + 2;
+}
+
+int main(void) {
+  unsigned int x = 0;
+
+  while (x < 0x0fffffff) {
+    x = f(x);
+  }
+
+  __CPROVER_assert(!(x % 2), "A");
+  return 0;
+}
+*/
+
+module main
+{
+  var x: bv32;
+  
+  init {
+    x=0bv32;
+  }
+
+  next {
+
+    if(x < 268435455bv32)
+    {
+      x' = x+2bv32;
+    }
+  }
+
+invariant my_invariant: (x < 268435455bv32)|| ((x%2bv32)!=0bv32);
+
+  synthesis function h(x : bv32) : boolean;
+  property hole: h(x);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}
+
+
+

@@ -1,0 +1,11 @@
+module test2 {
+
+	input testin : boolean;
+
+	init {
+	}
+
+	next {	
+	}
+
+}

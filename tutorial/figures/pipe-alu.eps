@@ -1,0 +1,3300 @@
+%!PS-Adobe-3.0 EPSF-2.0
+%%BoundingBox:  19 24 366 225 
+%%Title:  (pipe-alu.eps) 
+%%Creator: Canvas 6.0 
+%%CreationDate:  (Tuesday, March 28, 2000 16:20:14) 
+%%DocumentProcSets: Deneba_CanvasCustomColors 
+%%+ Deneba_CanvasGraphics 
+%%DocumentFonts:  Courier
+%%+ Courier
+%%DocumentNeededFonts:  Courier
+%%+ Courier
+%%DocumentProcessColors:  Black
+%% Copyright: (C) 1997-1998 Deneba Systems. All Rights Reserved 
+%%EndComments 
+%%BeginProlog 
+%%BeginResource: procset Deneba_CanvasGraphics
+%%Title: Deneba standard graphics
+%%Version: 1.0
+%%CreationDate: 10/1/94
+%%Copyright: (C) 1994 Deneba Systems. All Rights Reserved
+userdict /Deneba_CanvasGraphics 300 dict put
+Deneba_CanvasGraphics begin
+/invalidcolortable? true def   
+/level2 /languagelevel where {pop languagelevel 2 ge}{false} ifelse def
+/initialize
+{Deneba_CanvasGraphics
+{dup xcheck{bind}if pop pop}forall
+currentscreen /_sp exch def /_sa exch def /_sf exch def
+/DefaultScreen{_sf _sa /_sp load}def
+/DefaultScreenProc{ /_sp load}def
+/setstrokeadjust where{pop true}{false}ifelse
+{/sa /setstrokeadjust load def
+/li /lineto load def
+/mt /moveto load def
+/ct /curveto load def
+/lh { currentpoint exch pop lineto}bind def
+/lv { currentpoint pop exch lineto}bind def}
+{/sa{{currentdict StrokeAdjustDict ne{StrokeAdjustDict begin}if}{ currentdict StrokeAdjustDict eq{end}if}ifelse} bind def
+userdict /StrokeAdjustDict 100 dict put
+StrokeAdjustDict begin
+/_xl
+{transform
+.25 sub round .25 add exch
+.25 sub round .25 add exch
+itransform
+}bind def
+/li{ _xl lineto}bind def
+/mt{ _xl moveto}bind def
+/ct{ _xl curveto}bind def
+/lh { dup _xl pop currentpoint exch pop lineto}bind def
+/lv { dup _xl pop currentpoint pop exch lineto}bind def
+/rp{_xl/cv_b xdf/cv_r xdf
+_xl/cv_t xdf/cv_l xdf
+cv_l cv_t moveto
+cv_r cv_t lineto
+cv_r cv_b lineto
+cv_l cv_b lineto
+closepath
+}bind def
+end}ifelse}def
+/terminate
+{userdict /StrokeAdjustDict known {currentdict StrokeAdjustDict eq{end}if}if
+currentdict Deneba_CanvasGraphics eq{end}if}def
+/mxMax 8 def
+/mxStk [mxMax {matrix} repeat]def
+/mxIdx 0 def
+/stm{mxStk mxIdx get currentmatrix pop /mxIdx mxIdx 1 add store}def
+/rtm{/mxIdx mxIdx 1 sub store mxStk mxIdx get setmatrix}def
+/scl { 72 div exch 72 div exch scale } def
+/scli { 72 exch div exch 72 exch div exch scale } def
+/_cvmtx matrix def
+/_txtmtx matrix def
+/_initmtx matrix def
+/xdf{exch def}def
+/min{2 copy gt{exch}if pop}def
+/max{2 copy lt{exch}if pop}def
+/CVvec 256 array def
+/T true def
+/F false def
+/_id 0 def
+/_encodindex 0 def
+/_encodArr 10 array def
+/_fd 0 def
+/_textSave null def
+/_letterSpace 0 def
+/_spaceXtra 0 def
+/_PageSave null def
+/_penh 1.0 def
+/_penv 1.0 def
+/save0 null def
+/_w 0 def
+/_h 0 def
+/_ds 0 def
+/hct false def
+/pw 0 def
+/wdif 0 def
+/temp 0 def
+/currot 0 def
+/savehandler null def
+/ia 0 def
+/ix 0 def
+/ixn 1 def
+/MultipleDataSources false def 
+/debug
+{dup /$eps exch not def{/savehandler errordict /handleerror get def
+errordict
+/handleerror{$error begin
+newerror{/newerror false def
+showpage
+72 72 scale
+/Helvetica findfont .2 scalefont setfont
+.25 9.6 moveto
+(Error: )show
+errorname
+{dup type/stringtype ne
+{(converted error name will end up in this string)cvs}if
+show}exec
+.25 9.4 moveto
+(Offending Command: )show
+/command load
+{dup type/stringtype ne
+{(converted command name will end up in this string)cvs}if
+show}exec
+.25 9.2 moveto
+(Stack: )show
+ostack
+{.25 currentpoint .2 sub exch pop moveto
+dup type/stringtype ne{dup type/integertype eq
+1 index type/realtype eq or
+1 index type/nametype eq or
+not {type}if
+(converted stack will end up in this string)cvs}if
+show}forall
+showpage
+Deneba_CanvasGraphics /savehandler get exec}if
+end}put}if}def
+/lc{setlinecap}def
+/lj{setlinejoin}def
+/lm{setmiterlimit}def
+/lf{setflat}def
+/cp{closepath}def
+/np{newpath}def
+/$psz 30 array def
+/$pix 0 def
+/gs{gsave $psz dup $pix _penh put $pix 1 add _penv put /$pix $pix 2 add def}def
+/gr{grestore/$pix $pix 2 sub def $psz dup $pix get /_penh exch def $pix 1 add get /_penv exch def}def
+/li{lineto} def
+/lh{currentpoint exch pop lineto}def
+/lv{currentpoint pop exch lineto}def
+/mt{moveto} def
+/_cv_mh{currentpoint exch pop moveto}def
+/_cv_mv{currentpoint pop exch moveto}def
+/ct{curveto} def
+/rt{4 -2 roll moveto
+dup 0 exch rlineto
+exch 0 rlineto
+neg 0 exch rlineto
+closepath}def
+/_hr
+{
+{/@err false def currentflat dup{gsave{eoclip}stopped{grestore 2 mul dup setflat dup 200 ge{(%% Canvas:Clip failed\r)print /@err true def pop exit}if}{grestore setflat exit}ifelse}loop @err not {eoclip}if setflat}
+{/@err false def currentflat dup{gsave{clip}stopped{grestore 2 mul dup setflat dup 200 ge{(%% Canvas:Clip failed\r)print /@err true def pop exit}if}{grestore setflat exit}ifelse}loop @err not {clip}if setflat}
+}def
+/_cs null def
+/fg{$eps{systemdict /setgray get exec}{setgray}ifelse}def
+/setcmykcolor where {pop true}{false}ifelse
+{/f4{ setcmykcolor}def}{/f4{1 sub 4 1 roll 3{3 index add neg dup 0 lt{pop 0}if 3 1 roll}repeat setrgbcolor pop}def}ifelse
+/setcolorspace where {pop true}{false}ifelse
+{/scs{ dup setcolorspace /_cs exch def}def/f3{ _cs setcolorspace setcolor}def
+}{/f3{ setrgbcolor}def/scs{ pop}def}ifelse
+/$cc 5 array def
+/findcmykcustomcolor where {pop true}{false}ifelse
+not {/findcmykcustomcolor{$cc astore}def}if
+/setcustomcolor where {pop true}{false}ifelse
+not{/setcustomcolor{exch aload pop pop 4{4 index mul 4 1 roll}repeat setcmykcolor pop}def}if
+/fc{6 1 roll findcmykcustomcolor exch setcustomcolor}def
+/setseparationgray where {pop true}{false}ifelse
+not{/setseparationgray {systemdict /setgray get exec} def}if
+/sg{ setseparationgray}def
+/sp{/_penv xdf/_penh xdf}def
+/rp
+{/cv_b xdf/cv_r xdf
+/cv_t xdf/cv_l xdf
+cv_l cv_t moveto
+cv_r cv_t lineto
+cv_r cv_b lineto
+cv_l cv_b lineto
+closepath}def
+/rr{/yradius xdf
+/xradius xdf
+/cv_b xdf
+/cv_r xdf
+/cv_t xdf
+/cv_l xdf
+cv_l xradius add cv_t moveto
+cv_r xradius sub cv_t lineto
+_cvmtx currentmatrix pop
+currentpoint translate
+xradius yradius scale
+1 0 1 1 1 arcto 4{pop}repeat
+_cvmtx setmatrix
+cv_r cv_b yradius sub lineto
+_cvmtx currentmatrix pop
+currentpoint translate
+xradius yradius scale
+0 1 -1 1 1 arcto 4{pop}repeat
+_cvmtx setmatrix
+cv_l xradius add cv_b lineto
+_cvmtx currentmatrix pop
+currentpoint translate
+xradius yradius scale
+-1 0 -1 -1 1 arcto 4{pop}repeat
+_cvmtx setmatrix
+cv_l cv_t yradius add lineto
+_cvmtx currentmatrix pop
+currentpoint translate
+xradius yradius scale
+0 -1 1 -1 1 arcto 4{pop}repeat
+_cvmtx setmatrix
+closepath}def
+/ep{_cvmtx currentmatrix pop
+translate
+scale
+1 0 moveto
+0 0 1 0 360 arc
+closepath
+_cvmtx setmatrix}def
+/wd{_cvmtx currentmatrix pop
+translate
+scale
+0 0 moveto
+0 0 1 5 -2 roll arcn
+closepath
+_cvmtx setmatrix}def
+/as{_cvmtx currentmatrix pop
+translate
+scale
+0 0 1 5 -2 roll arcn
+_cvmtx setmatrix}def
+/ds
+{_penv _penh ne dup{stm _penh dup 0 le{pop 1}if _penv dup 0 le{pop 1}if scale}{_penh setlinewidth}ifelse stroke {rtm}if}def
+/df{fill}def
+/de{eofill}def
+/_gstk 5 array def
+/_gstkc 0 def
+/_gst{ 9 dict begin level2{/_ccs currentcolorspace def /_cc [currentcolor] def}{/_cc [currentrgbcolor]def}ifelse {currentpoint}stopped {/_cp null def}{ 2 array astore /_cp exch def}ifelse /_cf currentfont def
+/_clw currentlinewidth def /_clc currentlinecap def /_clj currentlinejoin def /_cml currentmiterlimit def currentdict end}def
+/hs{newpath gsave stm}def
+/hc{/_hr load exch get exec newpath}def
+/he{_gstk _gstkc _gst put /_gstkc _gstkc 1 add store 
+grestore rtm /_gstkc _gstkc 1 sub store _gstk _gstkc get level2{dup /_ccs get setcolorspace dup /_cc get aload pop setcolor}{dup /_cc get aload pop setrgbcolor}ifelse dup /_cp get dup null eq 
+not{aload pop moveto}{pop}ifelse dup /_cf get setfont
+dup/_clw get setlinewidth dup/_clc get setlinecap dup/_clj get setlinejoin dup/_cml get setmiterlimit pop}def
+/id{ /_id xdf}def
+/_imatrix{_w 0 0 _h _id 0 ne{neg 0 _h}{0 0}ifelse _cvmtx astore}def
+% Copyright (C) 1990, 1991 by Adobe Systems Incorporated.
+% All rights reserved.
+level2 { save /dontloadlevel1 xdf }if
+/startnoload{{/noload save def} if}def
+/endnoload{{noload restore}if }def
+/testsystemdict{where{systemdict eq{true}{false}ifelse}{false}ifelse}def
+/ncolors 1 def
+/colorimage where{pop true}{false}ifelse{/ncolors 0
+statusdict begin 
+/processcolors where{pop pop processcolors}{/deviceinfo where{pop deviceinfo /Colors known
+{pop {deviceinfo /Colors get}}if}if}ifelse end def
+ncolors 0 ne{/colorimage testsystemdict
+/setcolortransfer testsystemdict
+/currentcolortransfer testsystemdict
+/currentcmykcolor testsystemdict
+and and and not{/ncolors 0 def}if}if}if
+ncolors dup 1 ne exch dup 3 ne exch 4 ne and and {/ncolors 0 def}if
+ncolors 1 eq dup dup not startnoload
+{/doclutimage{[{255 mul round cvi bwclut exch get 255 div} /exec load dup currenttransfer exch] 
+cvx bind settransfer _w _h 8 _imatrix _ds image}def}if
+not endnoload
+ncolors dup 3 eq exch 4 eq or
+dup dup not startnoload
+{/nullproc{{}}def/concatutil{/exec load
+7 -1 roll /exec load}def
+/defsubclut
+{1 add getinterval def}def
+/spconcattransfer   
+{/Dclut exch def/Cclut exch def/Bclut exch def/Aclut exch def/ncompute exch ld
+currentcolortransfer
+[{Aclut ncompute}concatutil] cvx
+[{Bclut ncompute}concatutil] cvx
+[{Cclut ncompute}concatutil] cvx
+[{Dclut ncompute}concatutil] cvx
+setcolortransfer}def
+/setuprgbcluts
+{/bit3x rgbclut length 3 sub def
+/bit1x bit3x 3 idiv def/rclut rgbclut def
+/gclut rclut 1 bit3x defsubclut/bclut rclut 2 bit3x defsubclut}def}if not  
+endnoload ncolors 3 eq dup dup not startnoload
+{/3compute{exch bit3x mul
+round cvi get 255 div}def
+/doclutimage{%/rgbclut xdf pop 
+setuprgbcluts/3compute rclut gclut bclut dup
+spconcattransfer _w _h 8 _imatrix
+[/_ds load /exec load /dup load dup]cvx
+nullproc nullproc true 3 colorimage}def}if not endnoload ncolors 4 eq dup dup not startnoload
+{/stuffclut{cmykindex 3 -1 roll put}def
+/ftoint{1 exch sub 255 mul round cvi}def
+/4compute { exch bit4x mul round cvi get 255 div } def
+/computecmykclut{setuprgbcluts/bit4x rgbclut length 3 idiv 4 mul 4 sub def
+/cmykclut bit4x 4 add string def
+/cclut cmykclut def
+/mclut cclut 1 bit4x defsubclut
+/yclut cclut 2 bit4x defsubclut
+/kclut cclut 3 bit4x defsubclut
+/cmykindex 0 def
+0 1 bit1x
+{dup /cmykindex exch bit1x exch sub 4 mul def
+3 mul dup rclut exch get 255 div exch dup gclut exch get 255 div
+exch bclut exch get 255 div
+setrgbcolor currentcmykcolor
+ftoint kclut stuffclut
+ftoint yclut stuffclut
+ftoint mclut stuffclut
+ftoint cclut stuffclut
+}for}def
+/doclutimage{invalidcolortable?{computecmykclut}if
+/4compute cclut mclut yclut kclut spconcattransfer
+_w _h 8 _imatrix[/_ds load /exec load/dup load dup dup] cvx 
+nullproc nullproc nullproc true 4 colorimage}def}if
+not endnoload
+ncolors 0 eq
+dup dup not startnoload
+{/colorexpand{mystringexp 0 rgbclut
+3 copy
+7 -1 roll
+{3 mul 3 getinterval putinterval exch 3 add exch 3 copy}forall
+pop pop pop pop pop}def
+/createexpandstr{/mystringexp exch st0 length mul string def}def
+/doclutimage{/rgbclut xdf pop 3 createexpandstr _w _h 8 _imatrix
+[/_ds load /exec load /colorexpand load /exec load] cvx
+false 3 colorimage}def}if not endnoload
+level2 { dontloadlevel1 restore }if
+level2 not{ save /dontloadlevel2 xdf }if
+/rgbclut 0 def
+/doclutimage{/hival 255 def 
+[/Indexed /DeviceRGB hival rgbclut] setcolorspace
+_imagedict dup begin 
+/Width _w def 
+/Height _h def  
+/Decode [0 hival] def  
+/ImageMatrix _imatrix def
+/BitsPerComponent 8 def 
+/Interpolate false def
+end image}def
+level2 not{ dontloadlevel2 restore }if
+%%EndProcSet
+/_imagedict 15 dict begin /ImageType 1 def/BitsPerComponent 8 def/Interpolate false def currentdict end def
+/hascolor true def
+/level2 systemdict /languagelevel known
+{languagelevel 2 ge}{false}ifelse def
+/foureq {4 index eq 8 1 roll
+4 index eq 8 1 roll
+4 index eq 8 1 roll
+4 index eq 8 1 roll
+pop pop pop pop and and and} def
+/setupbands{gsave
+/_settransfer systemdict /settransfer get def
+/_currenttransfer systemdict /currenttransfer get def
+/_image systemdict /image get def
+/blank 0 _currenttransfer exec
+1 _currenttransfer exec eq def
+/negative blank{0 _currenttransfer exec 0.5 lt}
+{0 _currenttransfer exec 1 _currenttransfer exec gt}ifelse def
+/inverted? negative def
+/_currentgray systemdict /currentgray get def
+hascolor{/$b 0 def} {/$b 5 def} ifelse
+/setcmykcolor where{pop 1 0 0 0 setcmykcolor _currentgray 1 exch sub
+0 1 0 0 setcmykcolor _currentgray 1 exch sub
+0 0 1 0 setcmykcolor _currentgray 1 exch sub
+0 0 0 1 setcmykcolor _currentgray 1 exch sub
+4 {4 copy} repeat
+1 0 0 0 foureq{/$b 1 store}if
+0 1 0 0 foureq{/$b 2 store}if
+0 0 1 0 foureq{/$b 3 store}if
+0 0 0 1 foureq{/$b 4 store}if
+0 0 0 0 foureq{/$b 6 store}if}if
+blank{/$b 6 store}if
+$b 0 eq $b 5 eq or{/$dt 0 def}if/$dt -1 def grestore}def
+/doimage{
+level2{image}{begin
+Width Height BitsPerComponent ImageMatrix
+Decode length 2 eq
+{/DataSource load end image}{
+Decode length 6 eq
+{MultipleDataSources{DataSource 0 get DataSource 1 get DataSource 2 get}{/DataSource load}ifelse
+MultipleDataSources 3 end DSIColorImage}{
+Decode length 8 eq{MultipleDataSources{DataSource 0 get DataSource 1 get
+DataSource 2 get DataSource 3 get}{/DataSource load}ifelse
+MultipleDataSources 4 end DSIColorImage}if}ifelse
+}ifelse
+}ifelse}def
+/dt{/rgbclut xdf /bwclut xdf}def
+/cl{$i setmatrix translate scale
+/_w _imagedict /Width get def
+/_h _imagedict /Height get def
+/_ds _imagedict /DataSource get def
+doclutimage} def
+/cd{$i setmatrix translate scale
+level2{_imagedict /ColorSpace get setcolorspace}if
+/_w _imagedict /Width get def
+/_h _imagedict /Height get def
+/_ds _imagedict /DataSource get def
+_imagedict begin
+/ImageMatrix _imatrix def
+currentdict end
+doimage} def
+/im{$i setmatrix translate scale 
+level2{/DeviceGray setcolorspace 0 setgray}if
+/_w _imagedict /Width get def
+/_h _imagedict /Height get def
+/_ds _imagedict /DataSource get def
+_imagedict begin
+%/Decode [0 1] def  
+%/Width _w def
+%/Height _h def
+/ImageMatrix _imatrix def
+currentdict end 
+doimage }def
+/colorimage where{pop/DSIColorImage {colorimage} def}{/DSIColorImage{
+/$nc xdf pop /proc0 xdf 3 index 2 index mul 7 add 8 div cvi string /st1 xdf
+$nc 3 eq{{proc0 dup/st0 xdf 0 exch 3 exch length 3 sub
+{dup st0 exch get .3 mul 1 index 1 add st0 exch get .59 mul add 1 index 2 add st0 exch get .11 mul add
+cvi exch 3 div cvi exch st1 3 1 roll put}for st1}}{{proc0 dup/st0 xdf 0 exch 4 exch length 4 sub{dup
+st0 exch get .3 mul
+1 index 1 add st0 exch get .59 mul add
+1 index 2 add st0 exch get .11 mul add
+1 index 3 add st0 exch get add dup 255.0 gt{pop 255.0}if
+255.0 exch sub cvi
+exch 4 div cvi exch
+st1 3 1 roll put}for st1}}ifelse
+image}def}ifelse
+/OPIimage{image}def
+/$i matrix def
+/bi{scale translate $i currentmatrix pop translate scale setupbands}def
+/ei{$i setmatrix}def
+/ik{$i setmatrix translate scale 
+/_w _imagedict /Width get def
+/_h _imagedict /Height get def
+/_ds _imagedict /DataSource get def
+_w _h false _imatrix 5 -1 roll _ds imagemask}def
+/rs{2 copy translate
+3 -1 roll neg rotate
+neg exch neg exch translate
+}def
+/cs{_cvmtx astore concat} def
+/fd{/_fd xdf}def
+/_fontMatrix{1 0 0 _fd 0 ne{-1 0 0}{1 0 0}ifelse _cvmtx astore}def
+/$cvfontdict 150 dict begin  /Symbol {/Symbol /Symbol /Symbol -1} def currentdict end def
+/rfp{/_encodindex xdf
+FontDirectory 3 index known
+not{
+dup FontDirectory exch known{exch pop}{pop}ifelse
+ findfont dup length 1 add dict begin{1 index/FID ne{def}{pop pop}ifelse}forall
+dup /FontName exch def FontType 0 ne{/Encoding Encoding 256 array copy def
+_encodindex 0 ge{0 _encodArr _encodindex get{dup type/nametype eq{Encoding 2 index 2 index put pop 1 add}
+{exch pop}ifelse}forall pop}if}if
+dup
+currentdict end
+definefont pop}{pop pop}ifelse} def
+/rf{3 index 6 1 roll
+counttomark array astore cvx exch pop
+$cvfontdict 3 1 roll put}def
+/cvsf{$cvfontdict exch get exec rfp findfont ftSize 0 0 ftSize _fd 0 ne{-1 mul}if 0 0 _cvmtx astore 
+makefont setfont}def
+/mf{3 -1 roll $cvfontdict exch get exec rfp
+findfont 3 1 roll exch ftSize mul exch ftSize mul 0 exch 0 exch _fd 0 ne{-1 mul}if 0 0 _cvmtx astore makefont setfont}def
+/wrk1 ( ) def
+/wdict 16 dict def
+/Work75 75 string def
+/Nmk{Work75 cvs dup}def
+/Npt{put cvn}def
+/dhOdh{Nmk 2 79 Npt}def
+/dhBdh{Nmk 2 111 Npt}def
+/dhSdh{Nmk 2 83 Npt}def
+/sfWidth{gsave 0 0 moveto 0 0 lineto 0 0 lineto 0 0 lineto closepath clip stringwidth grestore}def
+/fts{/ftSize exch def}def
+/mkFT{dup/FontType get 0 eq{dup maxlength dict begin
+{1 index/FID ne 2 index /UniqueID ne and{def}{pop pop}ifelse}forall
+currentdict end
+dup/FDepVector 2 copy get
+[exch 6 index exch 6 index exch{mkFT 3 1 roll}forall pop pop] put dup}{/tempFT 12 dict def
+tempFT begin
+/FontMatrix [1 0 0 1 0 0] def
+/FontType 3 def
+dup/Encoding get/Encoding exch def
+/proc2 2 index def
+dup/ft1 exch def
+/ft2 1 array def
+/FontBBox [0 0 1 1] def
+/BuildChar{Deneba_CanvasGraphics begin
+exch dup/ftdt xdf begin
+wdict begin
+/chr xdf/chrst wrk1 dup 0 chr put def
+ft2 0 get null eq{ft1 dup length 2 add dict begin
+{1 index/FID ne 2 index /UniqueID ne and{def}{pop pop}ifelse}forall
+/PaintType 2 def/StrokeWidth .024 0 FontMatrix idtransform pop def
+currentdict end
+/q exch definefont
+ft2 exch 0 exch put}if
+ftdt/proc2 get exec end end end}def end tempFT}ifelse
+3 index exch
+definefont exch pop}def
+/mb{dup dhBdh
+FontDirectory 1 index known 1 index $cvfontdict exch known and
+{exch pop}{dup 2 index
+$cvfontdict exch get
+exec
+rfp
+findfont{boldproc}exch
+mkFT
+pop pop pop
+dup 3 -1 roll
+mark 3 1 roll dup -1
+counttomark array astore cvx
+exch pop
+$cvfontdict
+exch 2 index exch put}ifelse}def
+/mo{dup dhOdh
+FontDirectory 1 index known 1 index $cvfontdict exch known and
+{exch pop}{dup 2 index
+$cvfontdict exch get
+exec
+rfp
+findfont{outproc} exch
+mkFT pop pop pop
+dup 3 -1 roll
+mark 3 1 roll dup -1
+counttomark array astore cvx 		
+exch pop
+$cvfontdict 
+exch 2 index exch put}ifelse}def
+/ms{
+dup dhSdh
+FontDirectory 1 index known 1 index $cvfontdict exch known and
+{exch pop}{dup 2 index
+$cvfontdict exch get
+exec
+rfp
+findfont{ShadChar} exch
+mkFT
+pop pop pop
+dup 3 -1 roll
+mark 3 1 roll dup -1
+counttomark array astore cvx 		
+exch pop
+$cvfontdict 
+exch 2 index exch put}ifelse}def
+/outproc{ft1 setfont
+gsave chrst sfWidth grestore
+setcharwidth dblsh}def
+/boldproc{ft1 setfont
+gsave
+chrst sfWidth 1 index 0 ne{exch .05 add exch}if
+grestore
+setcharwidth
+ft1 /PaintType get 2 ne
+{0 0 moveto gsave ft2 0 get setfont chrst show grestore chrst show}
+{0 0 moveto gsave chrst show grestore .05 0 moveto chrst show}ifelse}def
+/dblsh{currentcolor currentcolorspace 1.0 setgray
+chrst 0 0 moveto show setcolorspace setcolor
+ft2 0 get setfont chrst 0 0 moveto show}def
+/ShadChar{
+ft1 setfont
+gsave
+chrst sfWidth 1 index 0 ne{exch .05 add exch}if
+grestore
+setcharwidth
+chrst .06 0 moveto show
+0 .05 translate dblsh}def
+/ts{show}def
+/ta{/_letterSpace xdf/_spaceXtra xdf}def
+/tf{/_textWidth xdf
+/_numSpaces xdf
+/_stringLength xdf
+dup	stringwidth pop
+_letterSpace _stringLength 1 sub mul add
+_spaceXtra _numSpaces mul add
+_textWidth exch sub /wdif xdf
+_spaceXtra 0 32
+wdif _stringLength div
+_letterSpace add
+0 6 -1 roll awidthshow}def
+/pb{/_PageSave save def/showpage{}def}def
+/pe{_PageSave restore}def
+/pm{_pm currentmatrix pop}def
+/_pm matrix def
+/ps{showpage _pm setmatrix}def
+level2{/ef {gsave 6 array astore concat dup execform grestore}def}
+{/ef{gsave 6 array astore concat newpath dup begin Matrix concat
+BBox dup dup 0 get exch 1 get moveto
+dup dup 0 get exch 3 get lineto
+dup dup 2 get exch 3 get lineto
+dup 2 get exch 1 get lineto closepath
+clip newpath PaintProc end grestore}def}ifelse
+/bc{save 11 1 roll 10 dict begin /BBox 5 1 roll 4 array astore def
+/Matrix 7 1 roll 6 array astore def /FormType 1 def/PaintProc{/pp get exec}def}def
+/ec{pop restore}def
+/printvm{1 vmreclaim vmstatus pop exch pop (                         )cvs print (\n)print flush}def
+/setoverprint where {pop}{/setoverprint{pop}def}ifelse
+/initfonts{level2{$cvfontdict dup { pop 1 index exch undef}forall pop}if
+$cvfontdict begin /Symbol {/Symbol /Symbol /Symbol -1}def end}def
+/sstr { /$sstrs exch def /$sstr exch def /$sstry exch def /$sstrx exch def /Courier findfont $sstrs 
+scalefont setfont $sstrx $sstry mt stm 1 -1 scale $sstr show rtm } def
+
+/DSIBeginPaintProc{/pp mark{currentfile token not{}if dup/DSIEndPaintProc
+	eq{pop counttomark array astore cvx bind /exec load]cvx def DSIEndPaintProc exit}
+	{counttomark 300 gt{counttomark array astore cvx bind /exec load}if}ifelse}loop}def
+/DSIEndPaintProc{currentdict end}def
+/DSIBeginPaintSubProc {save 11 1 roll 10 dict dup /pD exch def begin 
+	/BBox 5 1 roll 4 array astore def /Matrix 7 1 roll 6 array astore def 
+	/FormType 1 def /PaintProc { /pp get exec } def /pp} def
+/DSIEndPaintSubProc {bind def end pD} def
+
+/iaa {/ix ix ixn add def} def
+/ias2 {/igap exch def /_st0 ia ix igap add get def _st0} def
+/ias {/st0 ia ix get def iaa st0} def
+/i85s {0 ias2 /ASCII85Decode filter st0 readstring pop iaa} def
+/irles {0 ias2 /ASCII85Decode filter /RunLengthDecode filter st0 readstring pop iaa} def
+
+
+initialize
+end
+%%EndResource
+%%IncludeFont: TimesNewRomanPS-ItalicMT
+%%IncludeFont: CourierNewPSMT
+Deneba_CanvasGraphics begin
+
+_encodArr 0
+[
+39/quotesingle 96/grave
+128/bullet/bullet/quotesinglbase/florin/quotedblbase/ellipsis/dagger/daggerdbl/circumflex/perthousand/Scaron/guilsinglleft/OE/bullet/bullet/bullet
+/bullet/quoteleft/quoteright/quotedblleft/quotedblright/bullet/endash/emdash/tilde/trademark
+/scaron
+/guilsinglright/oe/bullet/bullet/Ydieresis
+/bullet/exclamdown/cent/sterling/currency/yen/brokenbar/section/dieresis/copyright/ordfeminine/guillemotleft/logicalnot/hyphen/registered/macron
+/degree/plusminus/twosuperior/threesuperior/acute/mu/paragraph/periodcentered/cedilla/onesuperior/ordmasculine/guillemotright/onequarter/onehalf/threequarters/questiondown
+/Agrave/Aacute/Acircumflex/Atilde/Adieresis
+/Aring
+/AE/Ccedilla/Egrave/Eacute/Egrave/Edieresis/Igrave/Iacute/Icircumflex/Idieresis
+/Eth/Ntilde/Ograve/Oacute/Ocircumflex/Otilde/Odieresis/multiply/Oslash/Ugrave/Uacute/Ucircumflex/Udieresis/Yacute/Thorn/germandbls
+/agrave/aacute/acircumflex/atilde/adieresis
+/aring
+/ae/ccedilla/egrave/eacute/ecircumflex/edieresis
+/igrave
+/iacute
+/icircumflex
+/idieresis
+/eth/ntilde/ograve/oacute/ocircumflex/otilde/odieresis/divide/oslash/ugrave/uacute/ucircumflex/udieresis/yacute/thorn/ydieresis
+] put
+
+_encodArr 1
+[
+39/quotesingle 96/grave
+128/Adieresis/Aring/Ccedilla/Eacute/Ntilde/Odieresis/Udieresis/aacute
+/agrave/acircumflex/adieresis/atilde/aring/ccedilla/eacute/egrave
+/ecircumflex/edieresis/iacute/igrave/icircumflex/idieresis/ntilde/oacute
+/ograve/ocircumflex/odieresis/otilde/uacute/ugrave/ucircumflex/udieresis
+/dagger/degree/cent/sterling/section/bullet/paragraph/germandbls
+/registered/copyright/trademark/acute/dieresis/notequal/AE/Oslash
+/infinity/plusminus/lessequal/greaterequal/yen/mu/partialdiff/summation
+/product/pi/integral/ordfeminine/ordmasculine/Omega/ae/oslash
+/questiondown/exclamdown/logicalnot/radical/florin/approxequal/Delta/guillemotleft
+/guillemotright/ellipsis/blank/Agrave/Atilde/Otilde/OE/oe
+/endash/emdash/quotedblleft/quotedblright/quoteleft/quoteright/divide/lozenge
+/ydieresis/Ydieresis/fraction/currency/guilsinglleft/guilsinglright/fi/fl
+/daggerdbl/periodcentered/quotesinglbase/quotedblbase/perthousand/Acircumflex/Ecircumflex/Aacute
+/Edieresis/Egrave/Iacute/Icircumflex/Idieresis/Igrave/Oacute/Ocircumflex
+/apple/Ograve/Uacute/Ucircumflex/Ugrave/dotlessi/circumflex/tilde
+/macron/breve/dotaccent/ring/cedilla/hungarumlaut/ogonek/caron
+] put
+mark /___FN2-2 /Times-Italic dup  0 rf
+mark /___FN3 /Courier dup  0 rf
+F debug
+0 id
+1 fd
+0 249 translate
+300 -300 scli
+%%EndSetup 
+/DeviceCMYK scs
+0.8359 0.7188 0.7188 0.9297 f4
+0.1250 0.1250 sp
+ 1 lc
+T sa
+stm
+%% DSIBeginObject: # 1 - Ref: 5, Bezier
+0 0 0 0 f4
+np
+145.4996 229.4994 mt
+249.7494 229.4994 li
+249.7494 395.999 li
+145.4996 395.999 li
+145.4996 229.4994 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 2 - Ref: 3, Polygon
+0 0 0 1. f4
+3.7500 3.7500 sp
+ 0 lc
+50.0 lm
+ 0 lj
+np
+145.4996 229.4994 mt
+249.7494 229.4994 li
+249.7494 395.999 li
+145.4996 395.999 li
+145.4996 229.4994 li
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 3 - Ref: 6, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+165.9635 326.7887 mt
+0 0.001 ta
+(pPC) 3 0 66.75 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 4 - Ref: 9, Bezier
+0 0 0 0 f4
+np
+270.7493 146.2497 mt
+270.7493 168.7496 237.7494 187.4995 197.2495 187.4995 ct
+157.4996 187.4995 124.4997 168.7496 124.4997 146.2497 ct
+124.4997 122.9997 157.4996 104.2498 197.2495 104.2498 ct
+237.7494 104.2498 270.7493 122.9997 270.7493 146.2497 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 5 - Ref: 8, Bezier
+0 0 0 1. f4
+np
+270.7493 146.2497 mt
+270.7493 168.7496 237.7494 187.4995 197.2495 187.4995 ct
+157.4996 187.4995 124.4997 168.7496 124.4997 146.2497 ct
+124.4997 122.9997 157.4996 104.2498 197.2495 104.2498 ct
+237.7494 104.2498 270.7493 122.9997 270.7493 146.2497 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 6 - Ref: 10, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+138.9996 160.2891 mt
+0 0.0007 ta
+(newPC) 5 0 108.37 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 7 - Ref: 12, Bezier
+0 0 0 0 f4
+np
+478.4988 250.4994 mt
+478.4988 272.9994 455.2489 291.7493 426.749 291.7493 ct
+398.249 291.7493 374.2491 272.9994 374.2491 250.4994 ct
+374.2491 227.2494 398.249 208.4995 426.749 208.4995 ct
+455.2489 208.4995 478.4988 227.2494 478.4988 250.4994 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 8 - Ref: 11, Bezier
+0 0 0 1. f4
+np
+478.4988 250.4994 mt
+478.4988 272.9994 455.2489 291.7493 426.749 291.7493 ct
+398.249 291.7493 374.2491 272.9994 374.2491 250.4994 ct
+374.2491 227.2494 398.249 208.4995 426.749 208.4995 ct
+455.2489 208.4995 478.4988 227.2494 478.4988 250.4994 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 9 - Ref: 13, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+392.4991 264.5389 mt
+0 0.0006 ta
+(src1) 4 0 64.50 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 10 - Ref: 15, Bezier
+0 0 0 0 f4
+np
+541.4987 208.4995 mt
+665.9984 208.4995 li
+665.9984 416.999 li
+541.4987 416.999 li
+541.4987 208.4995 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 11 - Ref: 14, Polygon
+0 0 0 1. f4
+np
+541.4987 208.4995 mt
+665.9984 208.4995 li
+665.9984 416.999 li
+541.4987 416.999 li
+541.4987 208.4995 li
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 12 - Ref: 16, Text
+stm
+37.4999 fts
+/___FN2-2 1.0999 1. mf
+0 0 0 1. f4
+F sa
+561.2487 319.797 mt
+0 0.0007 ta
+(pRF) 3 0 66.75 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 13 - Ref: 18, Bezier
+0 0 0 1. f4
+np
+478.4988 456.7489 mt
+710.9983 456.7489 li
+710.9983 460.4989 li
+478.4988 460.4989 li
+478.4988 456.7489 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 14 - Ref: 19, Bezier
+0 0 0 1. f4
+np
+728.9982 456.7489 mt
+709.4983 465.7489 li
+709.4983 447.7489 li
+728.9982 456.7489 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 15 - Ref: 20, Bezier
+0 0 0 0 f4
+np
+478.4988 458.9989 mt
+478.4988 481.4988 455.2489 500.2488 426.749 500.2488 ct
+398.249 500.2488 374.2491 481.4988 374.2491 458.9989 ct
+374.2491 435.7489 398.249 416.999 426.749 416.999 ct
+455.2489 416.999 478.4988 435.7489 478.4988 458.9989 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 16 - Ref: 17, Bezier
+0 0 0 1. f4
+np
+478.4988 458.9989 mt
+478.4988 481.4988 455.2489 500.2488 426.749 500.2488 ct
+398.249 500.2488 374.2491 481.4988 374.2491 458.9989 ct
+374.2491 435.7489 398.249 416.999 426.749 416.999 ct
+455.2489 416.999 478.4988 435.7489 478.4988 458.9989 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 17 - Ref: 21, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+392.4991 473.0383 mt
+0 0.0006 ta
+(src2) 4 0 64.50 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 18 - Ref: 23, Bezier
+0 0 0 1. f4
+np
+518.2488 458.9989 mt
+518.2488 374.9991 li
+518.2488 373.4991 li
+524.2488 373.4991 li
+524.2488 377.2491 li
+522.7488 377.2491 li
+522.7488 458.9989 li
+518.2488 458.9989 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 19 - Ref: 24, Bezier
+0 0 0 1. f4
+np
+541.4987 373.4991 mt
+522.7488 382.4991 li
+522.7488 364.4991 li
+541.4987 373.4991 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 20 - Ref: 25, Bezier
+0 0 0 1. f4
+np
+480.7488 143.9996 mt
+713.2482 143.9996 li
+713.2482 148.4996 li
+480.7488 148.4996 li
+480.7488 143.9996 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 21 - Ref: 26, Bezier
+0 0 0 1. f4
+np
+730.4982 143.9996 mt
+711.7483 152.9996 li
+711.7483 134.9996 li
+730.4982 143.9996 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 22 - Ref: 27, Bezier
+0 0 0 0 f4
+np
+480.7488 146.2497 mt
+480.7488 168.7496 457.4989 187.4995 428.999 187.4995 ct
+400.499 187.4995 376.4991 168.7496 376.4991 146.2497 ct
+376.4991 122.9997 400.499 104.2498 428.999 104.2498 ct
+457.4989 104.2498 480.7488 122.9997 480.7488 146.2497 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 23 - Ref: 22, Bezier
+0 0 0 1. f4
+np
+480.7488 146.2497 mt
+480.7488 168.7496 457.4989 187.4995 428.999 187.4995 ct
+400.499 187.4995 376.4991 168.7496 376.4991 146.2497 ct
+376.4991 122.9997 400.499 104.2498 428.999 104.2498 ct
+457.4989 104.2498 480.7488 122.9997 480.7488 146.2497 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 24 - Ref: 28, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+409.749 160.2891 mt
+0 0.0014 ta
+(op) 2 0 37.50 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 25 - Ref: 30, Bezier
+0 0 0 1. f4
+np
+478.4988 560.9986 mt
+710.9983 560.9986 li
+710.9983 564.7486 li
+478.4988 564.7486 li
+478.4988 560.9986 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 26 - Ref: 31, Bezier
+0 0 0 1. f4
+np
+728.9982 560.9986 mt
+709.4983 569.9986 li
+709.4983 551.9986 li
+728.9982 560.9986 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 27 - Ref: 32, Bezier
+0 0 0 0 f4
+np
+478.4988 562.4986 mt
+478.4988 585.7486 455.2489 604.4985 426.749 604.4985 ct
+398.249 604.4985 374.2491 585.7486 374.2491 562.4986 ct
+374.2491 539.9987 398.249 521.2488 426.749 521.2488 ct
+455.2489 521.2488 478.4988 539.9987 478.4988 562.4986 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 28 - Ref: 29, Bezier
+0 0 0 1. f4
+np
+478.4988 562.4986 mt
+478.4988 585.7486 455.2489 604.4985 426.749 604.4985 ct
+398.249 604.4985 374.2491 585.7486 374.2491 562.4986 ct
+374.2491 539.9987 398.249 521.2488 426.749 521.2488 ct
+455.2489 521.2488 478.4988 539.9987 478.4988 562.4986 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 29 - Ref: 33, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+395.499 577.2881 mt
+0 0.0006 ta
+(dest) 4 0 60.37 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 30 - Ref: 35, Bezier
+0 0 0 0 f4
+np
+728.9982 187.4995 mt
+853.4979 187.4995 li
+853.4979 312.7492 li
+728.9982 312.7492 li
+728.9982 187.4995 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 31 - Ref: 34, Polygon
+0 0 0 1. f4
+np
+728.9982 187.4995 mt
+853.4979 187.4995 li
+853.4979 312.7492 li
+728.9982 312.7492 li
+728.9982 187.4995 li
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 32 - Ref: 37, Bezier
+0 0 0 1. f4
+np
+665.9984 243.7494 mt
+701.9983 243.7494 li
+701.9983 256.4994 li
+665.9984 256.4994 li
+665.9984 243.7494 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 33 - Ref: 38, Bezier
+0 0 0 1. f4
+np
+728.9982 250.4994 mt
+699.7483 263.9994 li
+699.7483 236.9994 li
+728.9982 250.4994 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 34 - Ref: 39, Bezier
+0 0 0 1. f4
+np
+665.9984 368.9991 mt
+701.9983 368.9991 li
+701.9983 381.749 li
+665.9984 381.749 li
+665.9984 368.9991 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 35 - Ref: 40, Bezier
+0 0 0 1. f4
+np
+728.9982 375.7491 mt
+699.7483 388.4991 li
+699.7483 362.2491 li
+728.9982 375.7491 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 36 - Ref: 41, Bezier
+0 0 0 0 f4
+np
+728.9982 104.2498 mt
+853.4979 104.2498 li
+853.4979 187.4995 li
+728.9982 187.4995 li
+728.9982 104.2498 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 37 - Ref: 36, Polygon
+0 0 0 1. f4
+np
+728.9982 104.2498 mt
+853.4979 104.2498 li
+853.4979 187.4995 li
+728.9982 187.4995 li
+728.9982 104.2498 li
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 38 - Ref: 43, Bezier
+0 0 0 0 f4
+np
+728.9982 312.7492 mt
+853.4979 312.7492 li
+853.4979 437.9989 li
+728.9982 437.9989 li
+728.9982 312.7492 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 39 - Ref: 42, Polygon
+0 0 0 1. f4
+np
+728.9982 312.7492 mt
+853.4979 312.7492 li
+853.4979 437.9989 li
+728.9982 437.9989 li
+728.9982 312.7492 li
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 40 - Ref: 45, Bezier
+0 0 0 0 f4
+np
+728.9982 437.9989 mt
+853.4979 437.9989 li
+853.4979 521.2488 li
+728.9982 521.2488 li
+728.9982 437.9989 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 41 - Ref: 44, Polygon
+0 0 0 1. f4
+np
+728.9982 437.9989 mt
+853.4979 437.9989 li
+853.4979 521.2488 li
+728.9982 521.2488 li
+728.9982 437.9989 li
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 42 - Ref: 47, Bezier
+0 0 0 0 f4
+np
+728.9982 521.2488 mt
+853.4979 521.2488 li
+853.4979 604.4985 li
+728.9982 604.4985 li
+728.9982 521.2488 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 43 - Ref: 46, Polygon
+0 0 0 1. f4
+np
+728.9982 521.2488 mt
+853.4979 521.2488 li
+853.4979 604.4985 li
+728.9982 604.4985 li
+728.9982 521.2488 li
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 44 - Ref: 48, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+758.8584 160.253 mt
+0 0.0005 ta
+(eOP) 3 0 66.37 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 45 - Ref: 49, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+738.9982 264.5027 mt
+0 0.0005 ta
+(eARG1) 5 0 108.00 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 46 - Ref: 50, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+738.9982 389.7525 mt
+0 0.0005 ta
+(eARG2) 5 0 108.00 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 47 - Ref: 51, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+741.9982 494.0022 mt
+0 0.0007 ta
+(eSRC2) 5 0 102.00 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 48 - Ref: 52, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+740.4982 577.252 mt
+0 0.0006 ta
+(eDEST) 5 0 106.12 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 49 - Ref: 54, Bezier
+0 0 0 0 f4
+np
+1187.2471 187.4995 mt
+1197.7471 187.4995 li
+1226.247 187.4995 1249.497 211.4995 1249.497 239.9994 ct
+1249.497 385.4991 li
+1249.497 413.999 1226.247 437.9989 1197.7471 437.9989 ct
+1176.7471 437.9989 li
+1148.2472 437.9989 1124.2473 413.999 1124.2473 385.4991 ct
+1124.2473 239.9994 li
+1124.2473 211.4995 1148.2472 187.4995 1176.7471 187.4995 ct
+1187.2471 187.4995 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 50 - Ref: 53, Polygon
+0 0 0 1. f4
+np
+1187.2471 187.4995 mt
+1197.7471 187.4995 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 51 - Ref: 55, Bezier
+0 0 0 1. f4
+np
+1197.7471 187.4995 mt
+1226.247 187.4995 1249.497 211.4995 1249.497 239.9994 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 52 - Ref: 56, Polygon
+0 0 0 1. f4
+np
+1249.497 239.9994 mt
+1249.497 385.4991 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 53 - Ref: 57, Bezier
+0 0 0 1. f4
+np
+1249.497 385.4991 mt
+1249.497 413.999 1226.247 437.9989 1197.7471 437.9989 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 54 - Ref: 58, Polygon
+0 0 0 1. f4
+np
+1197.7471 437.9989 mt
+1176.7471 437.9989 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 55 - Ref: 59, Bezier
+0 0 0 1. f4
+np
+1176.7471 437.9989 mt
+1148.2472 437.9989 1124.2473 413.999 1124.2473 385.4991 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 56 - Ref: 60, Polygon
+0 0 0 1. f4
+np
+1124.2473 385.4991 mt
+1124.2473 239.9994 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 57 - Ref: 61, Bezier
+0 0 0 1. f4
+np
+1124.2473 239.9994 mt
+1124.2473 211.4995 1148.2472 187.4995 1176.7471 187.4995 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 58 - Ref: 62, Polygon
+0 0 0 1. f4
+np
+1176.7471 187.4995 mt
+1187.2471 187.4995 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 59 - Ref: 63, Text
+stm
+41.6666 fts
+/___FN2-2 1.0999 1. mf
+0 0 0 1. f4
+F sa
+1155.9972 310.797 mt
+0 0 ta
+(alu) 3 0 55.42 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 60 - Ref: 65, Bezier
+0 0 0 0 f4
+np
+728.9982 604.4985 mt
+853.4979 604.4985 li
+853.4979 687.7483 li
+728.9982 687.7483 li
+728.9982 604.4985 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 61 - Ref: 64, Polygon
+0 0 0 1. f4
+np
+728.9982 604.4985 mt
+853.4979 604.4985 li
+853.4979 687.7483 li
+728.9982 687.7483 li
+728.9982 604.4985 li
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 62 - Ref: 66, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+750.2482 660.5018 mt
+0 0.0007 ta
+(eWRT) 4 0 90.75 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 63 - Ref: 68, Bezier
+0 0 0 1. f4
+np
+350.9992 148.4996 mt
+335.2492 148.4996 li
+335.2492 560.9986 li
+356.9991 560.9986 li
+356.9991 564.7486 li
+330.7492 564.7486 li
+330.7492 562.4986 li
+330.7492 143.9996 li
+332.9992 143.9996 li
+350.9992 143.9996 li
+350.9992 148.4996 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 64 - Ref: 69, Bezier
+0 0 0 1. f4
+np
+372.7491 146.2497 mt
+349.4992 136.4996 li
+349.4992 155.9996 li
+372.7491 146.2497 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 65 - Ref: 70, Bezier
+0 0 0 1. f4
+np
+374.2491 560.9986 mt
+355.4992 569.9986 li
+355.4992 551.9986 li
+374.2491 560.9986 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 66 - Ref: 71, Bezier
+0 0 0 1. f4
+np
+294.7493 143.9996 mt
+332.9992 143.9996 li
+332.9992 148.4996 li
+294.7493 148.4996 li
+294.7493 143.9996 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 67 - Ref: 72, Bezier
+0 0 0 1. f4
+np
+272.2493 146.2497 mt
+296.2493 155.9996 li
+296.2493 136.4996 li
+272.2493 146.2497 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 68 - Ref: 73, Bezier
+0 0 0 1. f4
+np
+332.9992 248.2494 mt
+356.9991 248.2494 li
+356.9991 252.7494 li
+332.9992 252.7494 li
+332.9992 248.2494 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 69 - Ref: 74, Bezier
+0 0 0 1. f4
+np
+374.2491 248.2494 mt
+355.4992 257.2494 li
+355.4992 239.2494 li
+374.2491 248.2494 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 70 - Ref: 75, Bezier
+0 0 0 1. f4
+np
+332.9992 456.7489 mt
+356.9991 456.7489 li
+356.9991 460.4989 li
+332.9992 460.4989 li
+332.9992 456.7489 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 71 - Ref: 76, Bezier
+0 0 0 1. f4
+np
+374.2491 456.7489 mt
+355.4992 465.7489 li
+355.4992 447.7489 li
+374.2491 456.7489 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 72 - Ref: 77, Bezier
+0 0 0 1. f4
+np
+124.4997 148.4996 mt
+84.7498 148.4996 li
+84.7498 310.4993 li
+127.4997 310.4993 li
+127.4997 314.9993 li
+80.9998 314.9993 li
+80.9998 312.7492 li
+80.9998 143.9996 li
+83.2498 143.9996 li
+124.4997 143.9996 li
+124.4997 148.4996 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 73 - Ref: 78, Bezier
+0 0 0 1. f4
+np
+145.4996 311.2492 mt
+125.9997 319.4992 li
+125.9997 301.4993 li
+145.4996 311.2492 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 74 - Ref: 79, Bezier
+0 0 0 1. f4
+np
+249.7494 310.4993 mt
+314.9993 310.4993 li
+314.9993 314.9993 li
+249.7494 314.9993 li
+249.7494 310.4993 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 75 - Ref: 80, Bezier
+0 0 0 1. f4
+np
+332.9992 312.7492 mt
+313.4993 321.7492 li
+313.4993 303.7492 li
+332.9992 312.7492 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 76 - Ref: 81, Bezier
+0 0 0 1. f4
+np
+339.7491 146.2497 mt
+339.7491 149.9996 336.7492 152.9996 332.9992 152.9996 ct
+329.2492 152.9996 326.2492 149.9996 326.2492 146.2497 ct
+326.2492 142.4996 329.2492 139.4996 332.9992 139.4996 ct
+336.7492 139.4996 339.7491 142.4996 339.7491 146.2497 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 77 - Ref: 67, Bezier
+0 0 0 1. f4
+np
+339.7491 146.2497 mt
+339.7491 149.9996 336.7492 152.9996 332.9992 152.9996 ct
+329.2492 152.9996 326.2492 149.9996 326.2492 146.2497 ct
+326.2492 142.4996 329.2492 139.4996 332.9992 139.4996 ct
+336.7492 139.4996 339.7491 142.4996 339.7491 146.2497 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 78 - Ref: 83, Bezier
+0 0 0 1. f4
+np
+339.7491 312.7492 mt
+339.7491 316.4993 336.7492 319.4992 332.9992 319.4992 ct
+329.2492 319.4992 326.2492 316.4993 326.2492 312.7492 ct
+326.2492 308.9993 329.2492 305.9993 332.9992 305.9993 ct
+336.7492 305.9993 339.7491 308.9993 339.7491 312.7492 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 79 - Ref: 82, Bezier
+0 0 0 1. f4
+np
+339.7491 312.7492 mt
+339.7491 316.4993 336.7492 319.4992 332.9992 319.4992 ct
+329.2492 319.4992 326.2492 316.4993 326.2492 312.7492 ct
+326.2492 308.9993 329.2492 305.9993 332.9992 305.9993 ct
+336.7492 305.9993 339.7491 308.9993 339.7491 312.7492 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 80 - Ref: 85, Bezier
+0 0 0 1. f4
+np
+339.7491 458.9989 mt
+339.7491 462.7489 336.7492 465.7489 332.9992 465.7489 ct
+329.2492 465.7489 326.2492 462.7489 326.2492 458.9989 ct
+326.2492 455.2489 329.2492 451.4989 332.9992 451.4989 ct
+336.7492 451.4989 339.7491 455.2489 339.7491 458.9989 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 81 - Ref: 84, Bezier
+0 0 0 1. f4
+np
+339.7491 458.9989 mt
+339.7491 462.7489 336.7492 465.7489 332.9992 465.7489 ct
+329.2492 465.7489 326.2492 462.7489 326.2492 458.9989 ct
+326.2492 455.2489 329.2492 451.4989 332.9992 451.4989 ct
+336.7492 451.4989 339.7491 455.2489 339.7491 458.9989 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 82 - Ref: 89, Bezier
+0 0 0 1. f4
+np
+527.2487 458.9989 mt
+527.2487 462.7489 524.2488 465.7489 520.4987 465.7489 ct
+516.7488 465.7489 513.7488 462.7489 513.7488 458.9989 ct
+513.7488 455.2489 516.7488 451.4989 520.4987 451.4989 ct
+524.2488 451.4989 527.2487 455.2489 527.2487 458.9989 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 83 - Ref: 88, Bezier
+0 0 0 1. f4
+np
+527.2487 458.9989 mt
+527.2487 462.7489 524.2488 465.7489 520.4987 465.7489 ct
+516.7488 465.7489 513.7488 462.7489 513.7488 458.9989 ct
+513.7488 455.2489 516.7488 451.4989 520.4987 451.4989 ct
+524.2488 451.4989 527.2487 455.2489 527.2487 458.9989 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 84 - Ref: 91, Bezier
+0 0 0 0 f4
+np
+1020.7475 333.7492 mt
+1057.4974 333.7492 li
+1071.7474 333.7492 1082.9973 344.9992 1082.9973 359.2491 ct
+1082.9973 475.4988 li
+1082.9973 488.9988 1071.7474 500.2488 1057.4974 500.2488 ct
+983.2476 500.2488 li
+968.9976 500.2488 957.7477 488.9988 957.7477 475.4988 ct
+957.7477 359.2491 li
+957.7477 344.9992 968.9976 333.7492 983.2476 333.7492 ct
+1020.7475 333.7492 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 85 - Ref: 90, Polygon
+0 0 0 1. f4
+np
+1020.7475 333.7492 mt
+1057.4974 333.7492 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 86 - Ref: 92, Bezier
+0 0 0 1. f4
+np
+1057.4974 333.7492 mt
+1071.7474 333.7492 1082.9973 344.9992 1082.9973 359.2491 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 87 - Ref: 93, Polygon
+0 0 0 1. f4
+np
+1082.9973 359.2491 mt
+1082.9973 475.4988 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 88 - Ref: 94, Bezier
+0 0 0 1. f4
+np
+1082.9973 475.4988 mt
+1082.9973 488.9988 1071.7474 500.2488 1057.4974 500.2488 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 89 - Ref: 95, Polygon
+0 0 0 1. f4
+np
+1057.4974 500.2488 mt
+983.2476 500.2488 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 90 - Ref: 96, Bezier
+0 0 0 1. f4
+np
+983.2476 500.2488 mt
+968.9976 500.2488 957.7477 488.9988 957.7477 475.4988 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 91 - Ref: 97, Polygon
+0 0 0 1. f4
+np
+957.7477 475.4988 mt
+957.7477 359.2491 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 92 - Ref: 98, Bezier
+0 0 0 1. f4
+np
+957.7477 359.2491 mt
+957.7477 344.9992 968.9976 333.7492 983.2476 333.7492 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 93 - Ref: 99, Polygon
+0 0 0 1. f4
+np
+983.2476 333.7492 mt
+1020.7475 333.7492 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 94 - Ref: 100, Text
+stm
+41.6666 fts
+/___FN3 cvsf
+0 0 0 1. f4
+F sa
+975.9976 433.8952 mt
+0 0.0002 ta
+(FWD) 3 0 75.00 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 95 - Ref: 102, Bezier
+0 0 0 1. f4
+np
+853.4979 368.9991 mt
+931.4977 368.9991 li
+931.4977 381.749 li
+853.4979 381.749 li
+853.4979 368.9991 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 96 - Ref: 103, Bezier
+0 0 0 1. f4
+np
+957.7477 375.7491 mt
+929.2477 388.4991 li
+929.2477 362.2491 li
+957.7477 375.7491 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 97 - Ref: 104, Bezier
+0 0 0 1. f4
+np
+853.4979 477.7488 mt
+940.4977 477.7488 li
+940.4977 481.4988 li
+853.4979 481.4988 li
+853.4979 477.7488 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 98 - Ref: 105, Bezier
+0 0 0 1. f4
+np
+957.7477 477.7488 mt
+938.9977 486.7488 li
+938.9977 468.7489 li
+957.7477 477.7488 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 99 - Ref: 106, Bezier
+0 0 0 1. f4
+np
+1059.7474 749.9982 mt
+1059.7474 521.2488 li
+1064.2474 521.2488 li
+1064.2474 749.9982 li
+1059.7474 749.9982 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 100 - Ref: 107, Bezier
+0 0 0 1. f4
+np
+1060.4974 500.2488 mt
+1068.7474 519.7488 li
+1050.7474 519.7488 li
+1060.4974 500.2488 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 101 - Ref: 108, Bezier
+0 0 0 1. f4
+np
+853.4979 243.7494 mt
+1097.9973 243.7494 li
+1097.9973 256.4994 li
+853.4979 256.4994 li
+853.4979 243.7494 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 102 - Ref: 109, Bezier
+0 0 0 1. f4
+np
+1124.2473 250.4994 mt
+1095.7473 263.9994 li
+1095.7473 236.9994 li
+1124.2473 250.4994 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 103 - Ref: 110, Bezier
+0 0 0 1. f4
+np
+1082.9973 368.9991 mt
+1097.9973 368.9991 li
+1097.9973 381.749 li
+1082.9973 381.749 li
+1082.9973 368.9991 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 104 - Ref: 111, Bezier
+0 0 0 1. f4
+np
+1124.2473 375.7491 mt
+1095.7473 388.4991 li
+1095.7473 362.2491 li
+1124.2473 375.7491 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 105 - Ref: 112, Bezier
+0 0 0 0 f4
+np
+1291.4969 250.4994 mt
+1415.9965 250.4994 li
+1415.9965 374.9991 li
+1291.4969 374.9991 li
+1291.4969 250.4994 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 106 - Ref: 101, Polygon
+0 0 0 1. f4
+np
+1291.4969 250.4994 mt
+1415.9965 250.4994 li
+1415.9965 374.9991 li
+1291.4969 374.9991 li
+1291.4969 250.4994 li
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 107 - Ref: 113, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+1311.9968 326.7526 mt
+0 0.0007 ta
+(wVAL) 4 0 91.87 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 108 - Ref: 115, Bezier
+0 0 0 1. f4
+np
+1251.7469 306.7492 mt
+1266.7469 306.7492 li
+1266.7469 318.7492 li
+1251.7469 318.7492 li
+1251.7469 306.7492 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 109 - Ref: 116, Bezier
+0 0 0 1. f4
+np
+1292.9969 312.7492 mt
+1264.4969 326.2492 li
+1264.4969 299.2493 li
+1292.9969 312.7492 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 110 - Ref: 117, Bezier
+0 0 0 0 f4
+np
+1291.4969 521.2488 mt
+1415.9965 521.2488 li
+1415.9965 604.4985 li
+1291.4969 604.4985 li
+1291.4969 521.2488 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 111 - Ref: 114, Polygon
+0 0 0 1. f4
+np
+1291.4969 521.2488 mt
+1415.9965 521.2488 li
+1415.9965 604.4985 li
+1291.4969 604.4985 li
+1291.4969 521.2488 li
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 112 - Ref: 118, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+1296.5802 577.252 mt
+0 0.0008 ta
+(wDEST) 5 0 114.75 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 113 - Ref: 120, Bezier
+0 0 0 0 f4
+np
+1291.4969 604.4985 mt
+1415.9965 604.4985 li
+1415.9965 687.7483 li
+1291.4969 687.7483 li
+1291.4969 604.4985 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 114 - Ref: 119, Polygon
+0 0 0 1. f4
+np
+1291.4969 604.4985 mt
+1415.9965 604.4985 li
+1415.9965 687.7483 li
+1291.4969 687.7483 li
+1291.4969 604.4985 li
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 115 - Ref: 121, Text
+stm
+37.4999 fts
+/___FN2-2 cvsf
+0 0 0 1. f4
+F sa
+1308.2468 660.5018 mt
+0 0.001 ta
+(wWRT) 4 0 99.37 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 116 - Ref: 123, Bezier
+0 0 0 1. f4
+np
+853.4979 560.9986 mt
+1273.4969 560.9986 li
+1273.4969 564.7486 li
+853.4979 564.7486 li
+853.4979 560.9986 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 117 - Ref: 124, Bezier
+0 0 0 1. f4
+np
+1291.4969 563.2486 mt
+1271.9969 571.4986 li
+1271.9969 554.2487 li
+1291.4969 563.2486 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 118 - Ref: 122, CompositePath
+0 0 0 1. f4
+np
+853.4979 644.2484 mt
+878.9979 644.2484 li
+878.9979 647.9984 li
+853.4979 647.9984 li
+853.4979 644.2484 li
+cp
+890.9978 644.2484 mt
+916.4978 644.2484 li
+916.4978 647.9984 li
+890.9978 647.9984 li
+890.9978 644.2484 li
+cp
+928.4977 644.2484 mt
+953.9977 644.2484 li
+953.9977 647.9984 li
+928.4977 647.9984 li
+928.4977 644.2484 li
+cp
+965.9976 644.2484 mt
+991.4976 644.2484 li
+991.4976 647.9984 li
+965.9976 647.9984 li
+965.9976 644.2484 li
+cp
+1003.4975 644.2484 mt
+1028.9975 644.2484 li
+1028.9975 647.9984 li
+1003.4975 647.9984 li
+1003.4975 644.2484 li
+cp
+1040.9974 644.2484 mt
+1066.4974 644.2484 li
+1066.4974 647.9984 li
+1040.9974 647.9984 li
+1040.9974 644.2484 li
+cp
+1078.4974 644.2484 mt
+1103.9973 644.2484 li
+1103.9973 647.9984 li
+1078.4974 647.9984 li
+1078.4974 644.2484 li
+cp
+1115.9973 644.2484 mt
+1141.4972 644.2484 li
+1141.4972 647.9984 li
+1115.9973 647.9984 li
+1115.9973 644.2484 li
+cp
+1153.4972 644.2484 mt
+1178.9971 644.2484 li
+1178.9971 647.9984 li
+1153.4972 647.9984 li
+1153.4972 644.2484 li
+cp
+1190.9971 644.2484 mt
+1216.4971 644.2484 li
+1216.4971 647.9984 li
+1190.9971 647.9984 li
+1190.9971 644.2484 li
+cp
+1228.497 644.2484 mt
+1253.997 644.2484 li
+1253.997 647.9984 li
+1228.497 647.9984 li
+1228.497 644.2484 li
+cp
+1265.9969 644.2484 mt
+1273.4969 644.2484 li
+1273.4969 647.9984 li
+1265.9969 647.9984 li
+1265.9969 644.2484 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 119 - Ref: 138, Bezier
+0 0 0 1. f4
+np
+1291.4969 644.2484 mt
+1271.9969 653.2484 li
+1271.9969 635.2485 li
+1291.4969 644.2484 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 120 - Ref: 139, Bezier
+0 0 0 1. f4
+np
+605.9985 440.9989 mt
+605.9985 748.4982 li
+1476.7464 748.4982 li
+1476.7464 564.7486 li
+1415.9965 564.7486 li
+1415.9965 560.9986 li
+1480.4964 560.9986 li
+1480.4964 562.4986 li
+1480.4964 752.2481 li
+1478.9964 752.2481 li
+601.4985 752.2481 li
+601.4985 749.9982 li
+601.4985 440.9989 li
+605.9985 440.9989 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 121 - Ref: 140, Bezier
+0 0 0 1. f4
+np
+603.7485 418.499 mt
+593.9985 442.4989 li
+613.4985 442.4989 li
+603.7485 418.499 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 122 - Ref: 141, Bezier
+0 0 0 1. f4
+np
+1068.7474 749.9982 mt
+1068.7474 754.4982 1065.7474 757.4982 1061.9974 757.4982 ct
+1058.2474 757.4982 1055.2474 754.4982 1055.2474 749.9982 ct
+1055.2474 746.2482 1058.2474 743.2482 1061.9974 743.2482 ct
+1065.7474 743.2482 1068.7474 746.2482 1068.7474 749.9982 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 123 - Ref: 126, Bezier
+0 0 0 1. f4
+np
+1068.7474 749.9982 mt
+1068.7474 754.4982 1065.7474 757.4982 1061.9974 757.4982 ct
+1058.2474 757.4982 1055.2474 754.4982 1055.2474 749.9982 ct
+1055.2474 746.2482 1058.2474 743.2482 1061.9974 743.2482 ct
+1065.7474 743.2482 1068.7474 746.2482 1068.7474 749.9982 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 124 - Ref: 142, CompositePath
+0 0 0 1. f4
+np
+647.2484 440.9989 mt
+647.2484 465.7489 li
+643.4984 465.7489 li
+643.4984 440.9989 li
+647.2484 440.9989 li
+cp
+647.2484 478.4988 mt
+647.2484 503.2488 li
+643.4984 503.2488 li
+643.4984 478.4988 li
+647.2484 478.4988 li
+cp
+647.2484 515.9987 mt
+647.2484 540.7487 li
+643.4984 540.7487 li
+643.4984 515.9987 li
+647.2484 515.9987 li
+cp
+647.2484 553.4986 mt
+647.2484 578.2486 li
+643.4984 578.2486 li
+643.4984 553.4986 li
+647.2484 553.4986 li
+cp
+647.2484 590.9985 mt
+647.2484 615.7485 li
+643.4984 615.7485 li
+643.4984 590.9985 li
+647.2484 590.9985 li
+cp
+647.2484 628.4985 mt
+647.2484 653.2484 li
+643.4984 653.2484 li
+643.4984 628.4985 li
+647.2484 628.4985 li
+cp
+647.2484 665.9984 mt
+647.2484 690.7483 li
+643.4984 690.7483 li
+643.4984 665.9984 li
+647.2484 665.9984 li
+cp
+647.2484 703.4983 mt
+647.2484 706.4983 li
+665.2484 706.4983 li
+665.2484 710.9983 li
+643.4984 710.9983 li
+643.4984 708.7483 li
+643.4984 703.4983 li
+647.2484 703.4983 li
+cp
+677.9983 706.4983 mt
+702.7483 706.4983 li
+702.7483 710.9983 li
+677.9983 710.9983 li
+677.9983 706.4983 li
+cp
+715.4983 706.4983 mt
+740.2482 706.4983 li
+740.2482 710.9983 li
+715.4983 710.9983 li
+715.4983 706.4983 li
+cp
+752.9982 706.4983 mt
+777.7481 706.4983 li
+777.7481 710.9983 li
+752.9982 710.9983 li
+752.9982 706.4983 li
+cp
+790.4981 706.4983 mt
+815.248 706.4983 li
+815.248 710.9983 li
+790.4981 710.9983 li
+790.4981 706.4983 li
+cp
+827.998 706.4983 mt
+852.7479 706.4983 li
+852.7479 710.9983 li
+827.998 710.9983 li
+827.998 706.4983 li
+cp
+865.4979 706.4983 mt
+890.2478 706.4983 li
+890.2478 710.9983 li
+865.4979 710.9983 li
+865.4979 706.4983 li
+cp
+902.9978 706.4983 mt
+927.7478 706.4983 li
+927.7478 710.9983 li
+902.9978 710.9983 li
+902.9978 706.4983 li
+cp
+940.4977 706.4983 mt
+965.2477 706.4983 li
+965.2477 710.9983 li
+940.4977 710.9983 li
+940.4977 706.4983 li
+cp
+977.9976 706.4983 mt
+1002.7476 706.4983 li
+1002.7476 710.9983 li
+977.9976 710.9983 li
+977.9976 706.4983 li
+cp
+1015.4975 706.4983 mt
+1040.2475 706.4983 li
+1040.2475 710.9983 li
+1015.4975 710.9983 li
+1015.4975 706.4983 li
+cp
+1052.9974 706.4983 mt
+1077.7474 706.4983 li
+1077.7474 710.9983 li
+1052.9974 710.9983 li
+1052.9974 706.4983 li
+cp
+1090.4973 706.4983 mt
+1115.2473 706.4983 li
+1115.2473 710.9983 li
+1090.4973 710.9983 li
+1090.4973 706.4983 li
+cp
+1127.9973 706.4983 mt
+1152.7472 706.4983 li
+1152.7472 710.9983 li
+1127.9973 710.9983 li
+1127.9973 706.4983 li
+cp
+1165.4972 706.4983 mt
+1190.2471 706.4983 li
+1190.2471 710.9983 li
+1165.4972 710.9983 li
+1165.4972 706.4983 li
+cp
+1202.9971 706.4983 mt
+1227.747 706.4983 li
+1227.747 710.9983 li
+1202.9971 710.9983 li
+1202.9971 706.4983 li
+cp
+1240.497 706.4983 mt
+1265.2469 706.4983 li
+1265.2469 710.9983 li
+1240.497 710.9983 li
+1240.497 706.4983 li
+cp
+1277.9969 706.4983 mt
+1302.7468 706.4983 li
+1302.7468 710.9983 li
+1277.9969 710.9983 li
+1277.9969 706.4983 li
+cp
+1315.4968 706.4983 mt
+1340.2467 706.4983 li
+1340.2467 710.9983 li
+1315.4968 710.9983 li
+1315.4968 706.4983 li
+cp
+1352.9967 706.4983 mt
+1377.7467 706.4983 li
+1377.7467 710.9983 li
+1352.9967 710.9983 li
+1352.9967 706.4983 li
+cp
+1390.4966 706.4983 mt
+1415.2466 706.4983 li
+1415.2466 710.9983 li
+1390.4966 710.9983 li
+1390.4966 706.4983 li
+cp
+1427.9965 706.4983 mt
+1434.7465 706.4983 li
+1434.7465 692.9983 li
+1439.2465 692.9983 li
+1439.2465 710.9983 li
+1436.9965 710.9983 li
+1427.9965 710.9983 li
+1427.9965 706.4983 li
+cp
+1434.7465 680.2483 mt
+1434.7465 655.4984 li
+1439.2465 655.4984 li
+1439.2465 680.2483 li
+1434.7465 680.2483 li
+cp
+1433.9965 647.9984 mt
+1415.9965 647.9984 li
+1415.9965 644.2484 li
+1433.9965 644.2484 li
+1433.9965 647.9984 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 125 - Ref: 175, Bezier
+0 0 0 1. f4
+np
+644.9984 418.499 mt
+635.9984 442.4989 li
+654.7484 442.4989 li
+644.9984 418.499 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 126 - Ref: 144, CompositePath
+0 0 0 1. f4
+np
+976.4976 708.7483 mt
+976.4976 683.9983 li
+980.9976 683.9983 li
+980.9976 708.7483 li
+976.4976 708.7483 li
+cp
+976.4976 671.2484 mt
+976.4976 646.4984 li
+980.9976 646.4984 li
+980.9976 671.2484 li
+976.4976 671.2484 li
+cp
+976.4976 633.7485 mt
+976.4976 608.9985 li
+980.9976 608.9985 li
+980.9976 633.7485 li
+976.4976 633.7485 li
+cp
+976.4976 596.2486 mt
+976.4976 571.4986 li
+980.9976 571.4986 li
+980.9976 596.2486 li
+976.4976 596.2486 li
+cp
+976.4976 558.7487 mt
+976.4976 533.9987 li
+980.9976 533.9987 li
+980.9976 558.7487 li
+976.4976 558.7487 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 127 - Ref: 182, Bezier
+0 0 0 1. f4
+np
+977.2476 500.2488 mt
+985.4976 519.7488 li
+967.4976 519.7488 li
+977.2476 500.2488 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 128 - Ref: 183, Bezier
+0 0 0 1. f4
+np
+985.4976 708.7483 mt
+985.4976 712.4983 982.4976 715.4983 978.7476 715.4983 ct
+974.9976 715.4983 971.9976 712.4983 971.9976 708.7483 ct
+971.9976 704.9983 974.9976 701.9983 978.7476 701.9983 ct
+982.4976 701.9983 985.4976 704.9983 985.4976 708.7483 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 129 - Ref: 177, Bezier
+0 0 0 1. f4
+np
+985.4976 708.7483 mt
+985.4976 712.4983 982.4976 715.4983 978.7476 715.4983 ct
+974.9976 715.4983 971.9976 712.4983 971.9976 708.7483 ct
+971.9976 704.9983 974.9976 701.9983 978.7476 701.9983 ct
+982.4976 701.9983 985.4976 704.9983 985.4976 708.7483 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 130 - Ref: 185, Bezier
+0 0 0 1. f4
+np
+568.4986 443.9989 mt
+568.4986 785.9981 li
+1514.2463 785.9981 li
+1514.2463 318.7492 li
+1415.9965 318.7492 li
+1415.9965 306.7492 li
+1526.9963 306.7492 li
+1526.9963 312.7492 li
+1526.9963 797.9981 li
+1520.2463 797.9981 li
+555.7487 797.9981 li
+555.7487 791.9981 li
+555.7487 443.9989 li
+568.4986 443.9989 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 131 - Ref: 187, Bezier
+0 0 0 1. f4
+np
+561.7487 416.999 mt
+545.9986 446.2489 li
+578.2486 446.2489 li
+561.7487 416.999 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 132 - Ref: 188, Bezier
+0 0 0 1. f4
+np
+1031.9974 791.9981 mt
+1031.9974 798.748 1026.7475 803.248 1020.7475 803.248 ct
+1013.9975 803.248 1008.7476 798.748 1008.7476 791.9981 ct
+1008.7476 785.9981 1013.9975 780.7481 1020.7475 780.7481 ct
+1026.7475 780.7481 1031.9974 785.9981 1031.9974 791.9981 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 133 - Ref: 186, Bezier
+0 0 0 1. f4
+np
+1031.9974 791.9981 mt
+1031.9974 798.748 1026.7475 803.248 1020.7475 803.248 ct
+1013.9975 803.248 1008.7476 798.748 1008.7476 791.9981 ct
+1008.7476 785.9981 1013.9975 780.7481 1020.7475 780.7481 ct
+1026.7475 780.7481 1031.9974 785.9981 1031.9974 791.9981 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 134 - Ref: 190, Bezier
+0 0 0 1. f4
+np
+1013.9975 791.9981 mt
+1013.9975 527.2487 li
+1026.7475 527.2487 li
+1026.7475 791.9981 li
+1013.9975 791.9981 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 135 - Ref: 191, Bezier
+0 0 0 1. f4
+np
+1020.7475 500.2488 mt
+1034.2475 529.4987 li
+1007.2476 529.4987 li
+1020.7475 500.2488 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 136 - Ref: 192, Bezier
+0 0 0 1. f4
+np
+501.7488 250.4994 mt
+501.7488 794.9981 li
+497.2488 794.9981 li
+497.2488 250.4994 li
+501.7488 250.4994 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 137 - Ref: 193, Bezier
+0 0 0 1. f4
+np
+499.4988 812.998 mt
+490.4988 793.4981 li
+508.4987 793.4981 li
+499.4988 812.998 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 138 - Ref: 194, Bezier
+0 0 0 1. f4
+np
+917.9978 562.4986 mt
+917.9978 896.2478 li
+917.9978 898.4978 li
+725.9983 898.4978 li
+725.9983 893.9978 li
+914.2478 893.9978 li
+914.2478 562.4986 li
+917.9978 562.4986 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 139 - Ref: 195, Bezier
+0 0 0 1. f4
+np
+707.9983 896.2478 mt
+727.4982 887.2478 li
+727.4982 905.2478 li
+707.9983 896.2478 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 140 - Ref: 196, Bezier
+0 0 0 1. f4
+np
+506.2488 250.4994 mt
+506.2488 254.2494 503.2488 257.2494 499.4988 257.2494 ct
+495.7488 257.2494 492.7488 254.2494 492.7488 250.4994 ct
+492.7488 246.7494 495.7488 243.7494 499.4988 243.7494 ct
+503.2488 243.7494 506.2488 246.7494 506.2488 250.4994 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 141 - Ref: 189, Bezier
+0 0 0 1. f4
+np
+506.2488 250.4994 mt
+506.2488 254.2494 503.2488 257.2494 499.4988 257.2494 ct
+495.7488 257.2494 492.7488 254.2494 492.7488 250.4994 ct
+492.7488 246.7494 495.7488 243.7494 499.4988 243.7494 ct
+503.2488 243.7494 506.2488 246.7494 506.2488 250.4994 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 142 - Ref: 198, Bezier
+0 0 0 1. f4
+np
+923.2478 562.4986 mt
+923.2478 566.9986 920.2478 569.9986 916.4978 569.9986 ct
+912.7478 569.9986 908.9978 566.9986 908.9978 562.4986 ct
+908.9978 558.7487 912.7478 555.7487 916.4978 555.7487 ct
+920.2478 555.7487 923.2478 558.7487 923.2478 562.4986 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 143 - Ref: 197, Bezier
+0 0 0 1. f4
+np
+923.2478 562.4986 mt
+923.2478 566.9986 920.2478 569.9986 916.4978 569.9986 ct
+912.7478 569.9986 908.9978 566.9986 908.9978 562.4986 ct
+908.9978 558.7487 912.7478 555.7487 916.4978 555.7487 ct
+920.2478 555.7487 923.2478 558.7487 923.2478 562.4986 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 144 - Ref: 199, CompositePath
+0 0 0 1. f4
+np
+897.7478 646.4984 mt
+897.7478 666.7484 li
+893.2478 666.7484 li
+893.2478 646.4984 li
+897.7478 646.4984 li
+cp
+897.7478 679.4983 mt
+897.7478 700.4983 li
+893.2478 700.4983 li
+893.2478 679.4983 li
+897.7478 679.4983 li
+cp
+897.7478 712.4983 mt
+897.7478 733.4982 li
+893.2478 733.4982 li
+893.2478 712.4983 li
+897.7478 712.4983 li
+cp
+897.7478 746.2482 mt
+897.7478 767.2481 li
+893.2478 767.2481 li
+893.2478 746.2482 li
+897.7478 746.2482 li
+cp
+897.7478 779.2481 mt
+897.7478 800.248 li
+893.2478 800.248 li
+893.2478 779.2481 li
+897.7478 779.2481 li
+cp
+897.7478 812.998 mt
+897.7478 833.998 li
+893.2478 833.998 li
+893.2478 812.998 li
+897.7478 812.998 li
+cp
+897.7478 845.9979 mt
+897.7478 854.2479 li
+897.7478 856.4979 li
+882.7478 856.4979 li
+882.7478 852.7479 li
+893.2478 852.7479 li
+893.2478 845.9979 li
+897.7478 845.9979 li
+cp
+870.7479 856.4979 mt
+849.7479 856.4979 li
+849.7479 852.7479 li
+870.7479 852.7479 li
+870.7479 856.4979 li
+cp
+836.998 856.4979 mt
+815.998 856.4979 li
+815.998 852.7479 li
+836.998 852.7479 li
+836.998 856.4979 li
+cp
+803.9981 856.4979 mt
+782.9981 856.4979 li
+782.9981 852.7479 li
+803.9981 852.7479 li
+803.9981 856.4979 li
+cp
+770.2481 856.4979 mt
+749.2482 856.4979 li
+749.2482 852.7479 li
+770.2481 852.7479 li
+770.2481 856.4979 li
+cp
+737.2482 856.4979 mt
+725.9983 856.4979 li
+725.9983 852.7479 li
+737.2482 852.7479 li
+737.2482 856.4979 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 145 - Ref: 213, Bezier
+0 0 0 1. f4
+np
+707.9983 854.2479 mt
+727.4982 845.2479 li
+727.4982 863.2479 li
+707.9983 854.2479 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 146 - Ref: 214, Bezier
+0 0 0 1. f4
+np
+902.2478 646.4984 mt
+902.2478 650.2484 899.2478 653.2484 895.4978 653.2484 ct
+891.7478 653.2484 888.7478 650.2484 888.7478 646.4984 ct
+888.7478 642.7484 891.7478 638.9984 895.4978 638.9984 ct
+899.2478 638.9984 902.2478 642.7484 902.2478 646.4984 ct
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 147 - Ref: 201, Bezier
+0 0 0 1. f4
+np
+902.2478 646.4984 mt
+902.2478 650.2484 899.2478 653.2484 895.4978 653.2484 ct
+891.7478 653.2484 888.7478 650.2484 888.7478 646.4984 ct
+888.7478 642.7484 891.7478 638.9984 895.4978 638.9984 ct
+899.2478 638.9984 902.2478 642.7484 902.2478 646.4984 ct
+cp
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 148 - Ref: 215, CompositePath
+0 0 0 1. f4
+np
+664.4984 812.998 mt
+664.4984 791.9981 li
+668.2484 791.9981 li
+668.2484 812.998 li
+664.4984 812.998 li
+cp
+664.4984 779.2481 mt
+664.4984 758.9982 li
+668.2484 758.9982 li
+668.2484 779.2481 li
+664.4984 779.2481 li
+cp
+664.4984 746.2482 mt
+664.4984 725.2482 li
+668.2484 725.2482 li
+668.2484 746.2482 li
+664.4984 746.2482 li
+cp
+664.4984 713.2482 mt
+664.4984 692.2483 li
+668.2484 692.2483 li
+668.2484 713.2482 li
+664.4984 713.2482 li
+cp
+664.4984 679.4983 mt
+664.4984 658.4984 li
+668.2484 658.4984 li
+668.2484 679.4983 li
+664.4984 679.4983 li
+cp
+666.7484 644.9984 mt
+687.7483 644.9984 li
+687.7483 648.7484 li
+666.7484 648.7484 li
+666.7484 644.9984 li
+cp
+700.4983 644.9984 mt
+711.7483 644.9984 li
+711.7483 648.7484 li
+700.4983 648.7484 li
+700.4983 644.9984 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 149 - Ref: 224, Bezier
+0 0 0 1. f4
+np
+728.9982 646.4984 mt
+710.2483 655.4984 li
+710.2483 637.4984 li
+728.9982 646.4984 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 150 - Ref: 217, CompositePath
+0 0 0 1. f4
+np
+487.4988 869.2479 mt
+466.4989 869.2479 li
+466.4989 864.7479 li
+487.4988 864.7479 li
+487.4988 869.2479 li
+cp
+454.4989 869.2479 mt
+433.4989 869.2479 li
+433.4989 864.7479 li
+454.4989 864.7479 li
+454.4989 869.2479 li
+cp
+420.749 869.2479 mt
+400.499 869.2479 li
+400.499 864.7479 li
+420.749 864.7479 li
+420.749 869.2479 li
+cp
+387.749 869.2479 mt
+366.7491 869.2479 li
+366.7491 864.7479 li
+387.749 864.7479 li
+387.749 869.2479 li
+cp
+353.9992 869.2479 mt
+333.7492 869.2479 li
+333.7492 864.7479 li
+353.9992 864.7479 li
+353.9992 869.2479 li
+cp
+320.9992 869.2479 mt
+299.9993 869.2479 li
+299.9993 864.7479 li
+320.9992 864.7479 li
+320.9992 869.2479 li
+cp
+287.9993 869.2479 mt
+266.9994 869.2479 li
+266.9994 864.7479 li
+287.9993 864.7479 li
+287.9993 869.2479 li
+cp
+254.2494 869.2479 mt
+233.2494 869.2479 li
+233.2494 864.7479 li
+254.2494 864.7479 li
+254.2494 869.2479 li
+cp
+221.2495 869.2479 mt
+208.4995 869.2479 li
+206.2495 869.2479 li
+206.2495 858.7479 li
+210.7495 858.7479 li
+210.7495 864.7479 li
+221.2495 864.7479 li
+221.2495 869.2479 li
+cp
+206.2495 845.9979 mt
+206.2495 825.748 li
+210.7495 825.748 li
+210.7495 845.9979 li
+206.2495 845.9979 li
+cp
+206.2495 812.998 mt
+206.2495 791.9981 li
+210.7495 791.9981 li
+210.7495 812.998 li
+206.2495 812.998 li
+cp
+206.2495 779.2481 mt
+206.2495 758.9982 li
+210.7495 758.9982 li
+210.7495 779.2481 li
+206.2495 779.2481 li
+cp
+206.2495 746.2482 mt
+206.2495 725.2482 li
+210.7495 725.2482 li
+210.7495 746.2482 li
+206.2495 746.2482 li
+cp
+206.2495 713.2482 mt
+206.2495 692.2483 li
+210.7495 692.2483 li
+210.7495 713.2482 li
+206.2495 713.2482 li
+cp
+206.2495 679.4983 mt
+206.2495 658.4984 li
+210.7495 658.4984 li
+210.7495 679.4983 li
+206.2495 679.4983 li
+cp
+206.2495 646.4984 mt
+206.2495 625.4985 li
+210.7495 625.4985 li
+210.7495 646.4984 li
+206.2495 646.4984 li
+cp
+206.2495 612.7485 mt
+206.2495 591.7486 li
+210.7495 591.7486 li
+210.7495 612.7485 li
+206.2495 612.7485 li
+cp
+206.2495 579.7486 mt
+206.2495 558.7487 li
+210.7495 558.7487 li
+210.7495 579.7486 li
+206.2495 579.7486 li
+cp
+206.2495 545.9986 mt
+206.2495 525.7487 li
+210.7495 525.7487 li
+210.7495 545.9986 li
+206.2495 545.9986 li
+cp
+206.2495 512.9987 mt
+206.2495 491.9988 li
+210.7495 491.9988 li
+210.7495 512.9987 li
+206.2495 512.9987 li
+cp
+206.2495 479.2488 mt
+206.2495 458.9989 li
+210.7495 458.9989 li
+210.7495 479.2488 li
+206.2495 479.2488 li
+cp
+206.2495 446.2489 mt
+206.2495 425.249 li
+210.7495 425.249 li
+210.7495 446.2489 li
+206.2495 446.2489 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 151 - Ref: 248, Bezier
+0 0 0 1. f4
+np
+208.4995 395.999 mt
+217.4995 415.499 li
+199.4995 415.499 li
+208.4995 395.999 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 152 - Ref: 249, Bezier
+0 0 0 0 f4
+np
+582.7486 812.998 mt
+683.2483 812.998 li
+696.7483 812.998 707.9983 824.248 707.9983 837.7479 ct
+707.9983 912.7478 li
+707.9983 926.2478 696.7483 937.4977 683.2483 937.4977 ct
+482.9988 937.4977 li
+469.4988 937.4977 458.2489 926.2478 458.2489 912.7478 ct
+458.2489 837.7479 li
+458.2489 824.248 469.4988 812.998 482.9988 812.998 ct
+582.7486 812.998 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 153 - Ref: 226, Polygon
+0 0 0 1. f4
+np
+582.7486 812.998 mt
+683.2483 812.998 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 154 - Ref: 250, Bezier
+0 0 0 1. f4
+np
+683.2483 812.998 mt
+696.7483 812.998 707.9983 824.248 707.9983 837.7479 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 155 - Ref: 251, Polygon
+0 0 0 1. f4
+np
+707.9983 837.7479 mt
+707.9983 912.7478 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 156 - Ref: 252, Bezier
+0 0 0 1. f4
+np
+707.9983 912.7478 mt
+707.9983 926.2478 696.7483 937.4977 683.2483 937.4977 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 157 - Ref: 253, Polygon
+0 0 0 1. f4
+np
+683.2483 937.4977 mt
+482.9988 937.4977 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 158 - Ref: 254, Bezier
+0 0 0 1. f4
+np
+482.9988 937.4977 mt
+469.4988 937.4977 458.2489 926.2478 458.2489 912.7478 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 159 - Ref: 255, Polygon
+0 0 0 1. f4
+np
+458.2489 912.7478 mt
+458.2489 837.7479 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 160 - Ref: 256, Bezier
+0 0 0 1. f4
+np
+458.2489 837.7479 mt
+458.2489 824.248 469.4988 812.998 482.9988 812.998 ct
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 161 - Ref: 257, Polygon
+0 0 0 1. f4
+np
+482.9988 812.998 mt
+582.7486 812.998 li
+ds
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 162 - Ref: 258, Text
+stm
+41.6666 fts
+/___FN3 cvsf
+0 0 0 1. f4
+F sa
+515.4987 892.8941 mt
+0 0.0002 ta
+(STALL) 5 0 125.00 tf
+T sa
+rtm
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 163 - Ref: 260, Bezier
+0 0 0 1. f4
+np
+478.4988 248.2494 mt
+523.4987 248.2494 li
+523.4987 252.7494 li
+478.4988 252.7494 li
+478.4988 248.2494 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 164 - Ref: 261, Bezier
+0 0 0 1. f4
+np
+541.4987 248.2494 mt
+521.9987 257.2494 li
+521.9987 239.2494 li
+541.4987 248.2494 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 165 - Ref: 262, Bezier
+0 0 0 1. f4
+np
+853.4979 143.9996 mt
+1187.2471 143.9996 li
+1189.4971 143.9996 li
+1189.4971 170.2496 li
+1184.9971 170.2496 li
+1184.9971 148.4996 li
+853.4979 148.4996 li
+853.4979 143.9996 li
+cp
+de
+%%DSIEndObject
+rtm
+stm
+%% DSIBeginObject: # 166 - Ref: 263, Bezier
+0 0 0 1. f4
+np
+1187.2471 187.4995 mt
+1178.2471 168.7496 li
+1196.2471 168.7496 li
+1187.2471 187.4995 li
+cp
+de
+%%DSIEndObject
+rtm
+gs
+gr
+gs
+gr
+terminate
+showpage

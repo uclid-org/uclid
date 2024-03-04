@@ -1,0 +1,48 @@
+/*
+int main(void) {
+  unsigned int x;
+  unsigned int y = x;
+
+  while (x < 1024) {
+    x++;
+    y++;
+  }
+
+  __CPROVER_assert(x == y, "A");
+  return 0;
+}
+*/
+
+module main
+{
+  var x: bv32;
+  var y: bv32;
+
+  init{
+  	y=x;
+  }
+
+
+  next{
+  	if(x < 1024bv32)
+  	{
+  		x'=x+1bv32;
+  		y'=y+1bv32;
+  	}
+  }
+
+  invariant my_invariant: (x==y)||(x < 1024bv32);
+
+  synthesis function h(x : bv32, y : bv32) : boolean;
+  property hole: h(x, y);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+
+}
+
+
+

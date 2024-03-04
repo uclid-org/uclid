@@ -1,0 +1,30 @@
+module synthfun {
+
+    synthesis function iszero (x : integer) : boolean
+    grammar zero_grammar(x);
+
+    init {}
+    next {}
+
+}
+
+module main {
+    synthesis function * = synthfun.*;
+
+    grammar zero_grammar (x : integer) : boolean = {
+        (start : boolean) ::= (if (cond) then btype else btype);
+        (cond : boolean) ::= (x == 0);
+        (btype : boolean) ::= true | false;
+    }
+
+    init {}
+    next {}
+
+    property myprop : iszero(0) && !iszero(1);
+    
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

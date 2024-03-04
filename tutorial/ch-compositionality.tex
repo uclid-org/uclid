@@ -1,0 +1,83 @@
+\chapter{Compositional Modeling and Abstraction}
+\label{ch:compositional}
+
+This chapter describes \uclid{}'s features for compositional and modular verification, and the use of abstraction.
+
+We will use a running example of a CPU model constructed in \uclid{} and use bounded unrolling of the model's transition relation to prove that the execution of this CPU is deterministic: i.e. we show that given two identical instruction memories, the state updates performed by this CPU will be identical.
+
+\section{Common Type Definitions Across Modules}
+
+Example~\ref{ex:cpu-common} shows a module that defines only type synonyms. Such a module can be used to share type definitions across other modules. The types declared in Example~\ref{ex:cpu-common} are \emph{imported} in lines~2-5 of module \codelike{cpu} declared in Example~\ref{ex:cpu-cpu}.
+
+\label{sec:cpu-model}
+\begin{uclidlisting}[htbp]
+%\begin{lstlisting}[language=uclid,style=uclidstyle]
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.1-cpu.ucl}
+    \caption{Module \codelike{common} of the CPU model}
+    \label{ex:cpu-common}
+\end{uclidlisting}
+
+\begin{uclidlisting}[htbp]
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.2-cpu.ucl}
+    \caption{The \codelike{cpu} module in the CPU model}
+    \label{ex:cpu-cpu}
+\end{uclidlisting}
+
+
+\begin{uclidlisting}[htbp]
+    \lstinputlisting[language=uclid,style=uclidstyle]{../examples/tutorial/ex3.3-cpu.ucl}
+    \caption{Module \codelike{main} in the CPU model}
+    \label{ex:cpu-main}
+\end{uclidlisting}
+
+
+Isolating commonly used types into a single module in this manner allows the construction of large models parameterized by this types. These common types can be changed and the ramifications of these changes on the model's behavior can be studied easily.
+
+\section{Uninterpreted Functions and Types}
+A convenient mechanism for abstraction in \uclid{} is through the use of uninterpreted functions and types. This is one of the novel modeling
+aspects for transition systems introduced by the original UCLID system~\cite{bryant-cav02}.
+
+\subsection{Uninterpreted Types}
+Example~\ref{ex:cpu-cpu} shows the use of the \emph{uninterpreted type}: \codelike{regindex_t} on line~6. The index type to the register is an \emph{abstract} type, as opposed to a specific type (e.g. \codelike{bv3}). This allows us to reason about an abstract register file that has an undefined (and unbounded) number of entries, as opposed to proving facts about some specific register file implementation, potentially enabling more general proofs about system behavior.
+
+\subsection{Uninterpreted Functions}
+Values belonging to an uninterpreted type can be created using \emph{uninterpreted functions}. The functions \codelike{inst2op}, \codelike{inst2reg0}, \codelike{inst2reg1}, \codelike{inst2imm} and \codelike{inst2addr} on lines~15-19 of Example~\ref{ex:cpu-cpu} are all examples of uninterpreted functions. An uninterpreted function $f$ is a symbol about which we know nothing, except that it is a function; i.e. $\forall x_1, x_2.~ x_1 = x_2 \implies f(x_1) = f(x_2)$.
+
+As an example, in the context of processor verification,
+uninterpreted functions allow us to reason about an abstract CPU model without considering specific instruction encodings or decoder models. This could potentially lead to more general proofs as well as more scalable automated proofs. 
+
+
+\section{Module Instantiation and Scheduling}
+
+Modules are instantiated using the \keyword{instance} keyword. Lines 14~and~15 of Example~\ref{ex:cpu-main} show two instantiations of the module \codelike{cpu}. For each instance, the module input \codelike{imem} is mapped to the state variable \codelike{imem} of module \codelike{main}.
+
+Scheduling of instantiated modules is explicit and synchronous. The two \keyword{next} statements on lines 22~and~23 of Example~\ref{ex:cpu-main} invoke the next state transitions of the two instances of the \codelike{cpu} module.
+
+Asynchronous and partially synchronous composition can be 
+modeled by explicitly encoding a scheduler into the \uclid{} model
+that specifies when the \codelike{next} block of each module
+is executed.
+
+\subsection{Accessing Members of Instances}
+
+The state variables, types, etc. of an instantiated module are accessed using the \codelike{.} operator. The four invariants on lines 27-32 of Example~\ref{ex:cpu-main}, refer to the registers, memory, pc and instruction variables of the two instantiated modules. These invariants state that both instances must have identical values for these state variables.
+
+
+\section{Running \uclid{}}
+
+Executing \uclid{} on the complete CPU model shows that CPU is in fact deterministic. 
+
+\begin{Verbatim}[frame=single, samepage=true]
+$ uclid ex3.1-cpu.ucl ex3.2-cpu.ucl ex3.3-cpu.ucl 
+Successfully parsed 3 and instantiated 1 module(s).
+16 assertions passed.
+0 assertions failed.
+0 assertions indeterminate.
+Finished execution for module: main.
+\end{Verbatim}
+
+Note the files \codelike{ex3.1-cpu.ucl}, \codelike{ex3.2-cpu.ucl} and \codelike{ex3.3-cpu.ucl} contains three modules. Each of these modules could potentially have \keyword{control} blocks. Which \uclid{} is invoked on this model, it executes only the \keyword{control} block of the \codelike{main} module.  If we had included a \keyword{control} block for the \codelike{alu} module and wished to verify properties of this module, we would have to invoke \uclid{} on this specific module using the \codelike{--main} command-line option.
+
+% Moved to next chapter
+%\subsection{Exercise: Inductive Proof of CPU model}
+%Prove determinism of the CPU model using induction rather than bounded model checking. You will need to add strengthening inductive invariants relating the two CPU instances.

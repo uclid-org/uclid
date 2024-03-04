@@ -1,0 +1,33 @@
+module main{
+	var x: bv32;
+	var y: bv32;
+
+	init{
+	x=0bv32;
+	y=1bv32;
+	}
+
+	next{
+	if(x<6bv32)
+	 {
+	  x'=x+1bv32;
+	  y'=y*2bv32;
+	 }
+	}
+
+// y%3 == 1 or x < 6
+	invariant my_invariant: (x < 6bv32) || ((y %_u 3bv32)==1bv32);
+
+  synthesis function h(x : bv32, y : bv32) : boolean;
+  property hole: h(x, y);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}
+
+
+
+

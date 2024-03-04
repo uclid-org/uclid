@@ -1,0 +1,82 @@
+module fsm_d
+{
+  type state_t = enum { A1, B1, C1 };
+  var st : state_t;
+
+  init {
+    st = A1;
+  }
+
+  next {
+    case
+      (st == A1): {
+        st' = B1;
+      }
+      (st == B1): {
+        if (*) {
+          st' = C1;
+        } else {
+          st' = A1;
+        }
+      }
+      (st == C1): {
+        st' = A1;
+      }
+    esac
+  }
+}
+
+module fsm_nd
+{
+  type state_t = enum { A2, B2, C2 };
+  var st : state_t;
+
+  init {
+    st = A2;
+  }
+
+  next {
+    case
+      (st == A2): {
+        st' = B2;
+      }
+      (st == B2): {
+        st' = C2;
+      }
+      (st == C2): {
+        st' = A2;
+      }
+    esac
+  }
+}
+
+module main
+{
+  type state1_t = fsm_d.state_t;
+  type state2_t = fsm_nd.state_t;
+
+  instance fsm1_i : fsm_d();
+  instance fsm2_i : fsm_nd();
+
+  var turn : boolean;
+
+  next {
+    havoc turn;
+
+    if (turn) {
+      next(fsm1_i);
+    } else {
+      next(fsm2_i);
+    }
+  }
+
+  property[LTL] eventually_C1: G(F(turn))  ==> F(fsm1_i.st == C1);
+  property[LTL] eventually_C2: G(F(!turn)) ==> F(fsm2_i.st == C2);
+
+  control {
+    r = bmc(5);
+    check;
+    print_results;
+    // r.print_cex(fsm1_i.st, fsm2_i.st);
+  }
+}

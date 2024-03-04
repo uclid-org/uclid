@@ -1,0 +1,14 @@
+module main
+{
+    type addr_t = bv32;
+}
+
+module instantiator
+{
+    type addr_t = main.addr_t;
+
+    function arr1_e(i: addr_t): boolean;
+
+    assume (arr1_e(0bv32));
+}
+

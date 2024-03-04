@@ -1,0 +1,11 @@
+// checks we can parse a file without a control block
+// in the main module without throwing ugly errors
+module main {
+  var y: integer;
+
+  procedure foo()
+    modifies y;
+  {
+    y = 0;
+  }
+}

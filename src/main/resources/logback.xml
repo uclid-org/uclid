@@ -1,0 +1,58 @@
+<configuration>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- encoders are assigned the type
+         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+    <encoder>
+      <pattern>[%logger{36}] %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <logger name="uclid.AssertionTree" level="OFF"/>
+  <logger name="uclid.UclidMain" level="OFF"/>
+  <logger name="uclid.InteractiveProcess" level="OFF"/>
+  <logger name="uclid.lang.ASTRewriter" level="OFF"/>
+  <logger name="uclid.lang.ExprRewriterPass" level="OFF"/>
+  <logger name="uclid.lang.BlockFlattenerPass" level="OFF"/>
+  <logger name="uclid.lang.ModularProductProgramPass" level="OFF"/>
+  <logger name="uclid.lang.ConstantLitRewriterPass" level="OFF"/>
+  <logger name="uclid.lang.ExpressionTypeCheckerPass" level="OFF"/>
+  <logger name="uclid.lang.FindProcedureDependency" level="OFF"/>
+  <logger name="uclid.lang.InlineProcedurePass" level="OFF"/>
+  <logger name="uclid.lang.LazySCSolver" level="OFF"/>
+  <logger name="uclid.lang.LTLPropertyRewriterPass" level="OFF"/>
+  <logger name="uclid.lang.ModuleFlattenerPass" level="OFF"/>
+  <logger name="uclid.lang.ModuleInstanceCheckerPass" level="OFF"/>
+  <logger name="uclid.lang.ModuleInstantiatorPass" level="OFF"/>
+  <logger name="uclid.lang.ModuleTypesImportCollector" level="OFF"/>
+  <logger name="uclid.lang.PassManager" level="OFF"/>
+  <logger name="uclid.lang.PrimedVariableEliminatorPass" level="OFF"/>
+  <logger name="uclid.lang.ProcedureCheckerPass" level="OFF"/>
+  <logger name="uclid.lang.RedundantAssignmentEliminatorPass" level="OFF"/>
+  <logger name="uclid.lang.StatelessAxiomFinderPass" level="OFF"/>
+  <logger name="uclid.lang.StatementScheduler" level="OFF"/>
+  <logger name="uclid.lang.StatementSchedulerPass" level="OFF"/>
+  <logger name="uclid.lang.VariableDependencyFinder" level="OFF"/>
+  <logger name="uclid.lang.VerificationExpressionCheckerPass" level="OFF"/>
+  <logger name="uclid.lang.VerificationExpressionPass" level="OFF"/>
+  <logger name="uclid.lang.FiniteQuantsExpanderPass" level="OFF"/>
+  <logger name="uclid.smt.Z3HornSolver" level="OFF"/>
+  <logger name="uclid.smt.SExprLexical" level="OFF"/>
+  <logger name="uclid.smt.SMTLIB2Base" level="OFF"/>
+  <logger name="uclid.smt.SMTLIB2Interface" level="OFF"/>
+  <logger name="uclid.smt.SyGuSInterface" level="OFF"/>
+  <logger name="uclid.smt.Z3Interface.assert" level="OFF"/>
+  <logger name="uclid.smt.Z3Interface.check" level="OFF"/>
+  <logger name="uclid.SymbolicSimulator.assert" level="OFF"/>
+  <logger name="uclid.SymbolicSimulator.frame" level="OFF"/>
+  <logger name="uclid.SymbolicSimulator" level="OFF"/>
+  <logger name="uclid.SymbolicSimulator.verifyProc" level="OFF"/>
+  <logger name="uclid.Utils.schedule" level="OFF"/>
+  <logger name="uclid.Utils.topoSort" level="OFF"/>
+  <logger name="uclid.smt.SynthLibInterface" level="OFF"/>
+  
+
+  <root level="debug">
+    <appender-ref ref="STDOUT" />
+  </root>
+</configuration>

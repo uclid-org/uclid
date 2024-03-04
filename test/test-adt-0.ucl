@@ -1,0 +1,23 @@
+module main {
+    // should pass
+
+    datatype list = cons(head: integer, tail: list) | nil() ;
+
+    var l : list;
+
+    init {
+        l = nil();
+    }
+    
+    next {
+        l' = cons(1, l);
+    }
+
+    invariant test : l.head == 1;
+
+    control {
+        induction;
+        check;
+        print_results;
+    }
+}

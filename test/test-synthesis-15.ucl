@@ -1,0 +1,25 @@
+module synthfun {
+
+    synthesis function extmax (x : integer, y : integer) : integer;
+
+    init {}
+    next {}
+
+}
+
+module main {
+    synthesis function * = synthfun.*;
+    var x : integer;
+    var y : integer;
+
+    init {}
+    next {}
+
+    property myprop : extmax(x, y) >= x && extmax(x, y) >= y;
+    
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

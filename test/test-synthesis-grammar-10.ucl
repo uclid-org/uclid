@@ -1,0 +1,24 @@
+// This test should pass
+module main {
+
+    type I = enum {a, b, c};
+
+    grammar max_grammar (x : integer, y : I) : integer = {
+        (start : integer) ::= x | (if (cond) then start else start);
+        (cond : boolean) ::= true | false | (y == a);
+    }
+
+    synthesis function choose (x : integer, y : I) : integer
+    grammar max_grammar(x, y);
+    
+    init {}
+    next {}
+
+    property myprop : choose(1, a) > 0 && choose(1, b) > 0;
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

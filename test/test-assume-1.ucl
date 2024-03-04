@@ -1,0 +1,30 @@
+module main
+{
+  var n, np : integer;
+  
+  init {
+    n = 0;
+  }
+
+  procedure compute_next_n() returns (m : integer)
+    modifies n;
+  {
+    havoc m;
+    case
+      (n == 0) : { assume (m == 1); }
+      (n == 1) : { assume (m == 0); }
+    esac
+    n = m;
+  }
+
+  next {
+    call (np') = compute_next_n();
+    assert (n == 5);
+  }
+  
+  control {
+    unroll(5);
+    check;
+    print_results;
+  }
+}

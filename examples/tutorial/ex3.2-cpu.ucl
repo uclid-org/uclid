@@ -1,0 +1,53 @@
+module cpu {
+  type addr_t = common.addr_t;
+  type mem_t  = common.mem_t;
+  type word_t = common.word_t;
+  type op_t   = common.op_t;
+  type regindex_t; // type of register file.
+  type regs_t = [regindex_t]word_t;
+
+  input imem         : mem_t; // program memory.
+  var dmem           : mem_t; // data memory.
+  var regs           : regs_t;
+  var pc             : addr_t;
+  var inst, result   : word_t;
+
+  function inst2op   (i : word_t) : op_t;
+  function inst2reg0 (i : word_t) : regindex_t;
+  function inst2reg1 (i : word_t) : regindex_t;
+  function inst2imm  (i : word_t) : word_t;
+  function inst2addr (i : word_t) : addr_t;
+
+  procedure exec_inst(inst : word_t, pc : addr_t)
+    returns (result : word_t, pc_next : addr_t)
+    modifies regs, dmem;
+  {
+    var op           : op_t;
+    var r0ind, r1ind : regindex_t;
+    var r0, r1       : word_t;
+
+    op = inst2op(inst);
+    r0ind, r1ind = inst2reg0(inst), inst2reg1(inst);
+    r0, r1 = regs[r0ind], regs[r1ind];
+    case
+      (op == op_mov)     : { result = inst2imm(inst); }
+      (op == op_add)     : { result = r0 + r1; }
+      (op == op_sub)     : { result = r0 - r1; }
+      (op == op_load)    : { result = dmem[inst2addr(inst)]; }
+      (op == op_store)   : { result = r0; dmem[inst2addr(inst)] = r0; }
+    esac
+    pc_next = pc + 1bv8;
+    regs[r0ind] = result;
+  }
+
+  init {
+    assume (forall (r : regindex_t) :: regs[r] == 0bv8);
+    assume (forall (a : addr_t) :: dmem[a] == 0bv8);
+    pc, inst = 0bv8, 0bv8;
+  }
+
+  next {
+    inst' = imem[pc];
+    call (result', pc') = exec_inst(inst, pc);
+  }
+}

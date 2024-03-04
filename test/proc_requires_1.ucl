@@ -1,0 +1,48 @@
+module main {
+
+    var a, b, c, d : integer;
+
+    procedure works()
+        modifies a,b;
+        requires a > b;
+        ensures b > a && old(a) > old(b);
+    {
+        var temp : integer;
+
+        temp = a;
+        a = b;
+        b = temp;
+    }
+
+    procedure doesnt_work()
+        modifies c,d;
+        requires c > d;
+        ensures d > c;
+    {
+        var temp : integer;
+
+        temp = c;
+        c = d;
+        d = temp;
+    }
+
+    next {
+        assume (a > b);
+        assume (c > d);
+
+        call works();
+        call doesnt_work();
+    }
+
+
+    control {
+        v1 = induction(1);
+        v2 = verify(works);
+        v3 = verify(doesnt_work);
+        check;
+        print_results;
+        v1.print_cex();
+        v2.print_cex();
+        v3.print_cex();
+    }
+}

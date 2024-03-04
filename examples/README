@@ -1,0 +1,35 @@
+The examples from the tutorial are in the tutorial/ subfolder.
+
+The names correspond to the example numbers in the tutorial.
+
+tutorials/
+  - ex1.1-fib-model.ucl
+  - ex2.1-alu.ucl
+  - ex3.1-fib-induction.ucl
+  - ex3.2-fib-induction-cex.ucl
+  - ex3.3-fib-induction-proof.ucl
+  - CPU model:
+    + ex4.1-cpu.ucl
+    + ex4.2-cpu.ucl
+    + ex4.3-cpu.ucl
+
+cpu_induction.ucl
+- This is an extension of the the CPU model from Chapter 4 of the tutorial. It
+  adds an isolated mode of execution to the CPU, and proves non-interference 
+  between isolated mode and normal mode using an inductive argument.
+
+setuid.ucl
+- This is a model based on the automaton in the paper:
+  Setuid Demystified. Chen, Wagen and Dean [Usenix Security 2002].
+
+setuid_fixed.ucl
+ - This is a "fixed" version of the setuid model.
+
+two-safety.ucl
+ - This is an example of verifying a simple hyperproperty (a 2-safety property)
+   by self-composition. It is based on an example in Chapter 17 of Lee & Seshia.
+
+simple-datapath.ucl
+  - This is an example from the original UCLID work on processor verification (Bryant, Lahiri, Seshia, CAV'02),
+    showing Burch-Dill style correspondence (refinement) checking.
+

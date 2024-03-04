@@ -1,0 +1,11 @@
+module main {
+  init {}
+  next {}
+
+  control {
+    x=induction(1);
+    check;
+    print_results;
+    j.print_cex();
+  }
+}

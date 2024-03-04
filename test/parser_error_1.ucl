@@ -1,0 +1,6 @@
+module main
+{
+  type num_t = integer;
+  
+  var numbers : [boolean, num_t]integer;
+}

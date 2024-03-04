@@ -1,0 +1,20 @@
+module main {
+    // should parse error on line 11
+
+    datatype list = cons(head: integer, tail: list) | nil();
+
+
+    var l1 : list;
+    var l2: list;
+
+    init {
+        l1 = cons(l2, l2);
+    }
+
+
+    control {
+        bmc(2);
+        check;
+        print_results;
+    }
+}

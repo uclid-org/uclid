@@ -1,0 +1,41 @@
+module sub {
+	input  x : integer;
+    output y : integer;
+    output ready : boolean;
+
+    init {
+        ready = false;
+    }
+    next {
+        y' = x + 10;
+        ready' = true;
+    }
+}
+
+module main {
+    var m : integer;
+    var n : integer;
+    var sub_ready : boolean;
+
+	instance sub_i : sub(x : (m), y : (n), ready : (sub_ready));
+
+	init { 
+        m = 0;
+    }
+
+	next {
+        m' = m + 1;
+        assert (sub_ready' && sub_i.x == m);
+        next (sub_i);
+        assert (n' == m + 10);
+	}
+
+	control {
+        // print_module;
+		v = unroll(2);
+		check;
+		print_results;
+        v.print_cex;
+	}
+
+}

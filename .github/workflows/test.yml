@@ -1,0 +1,178 @@
+name: Uclid CI
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+
+jobs:
+  test-ubuntu:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Cache Z3
+      id: cache-z3
+      uses: actions/cache@v1
+      with:
+        path: z3/
+        key: ${{ runner.os }}-z3-${{ hashFiles('get-z3-linux.sh') }}-1
+
+    - name: Download Z3
+      if: steps.cache-z3.outputs.cache-hit != 'true'
+      run: ./get-z3-linux.sh
+       
+    - name: Add Z3 to Path
+      run: |
+       ls $GITHUB_WORKSPACE/z3/bin/
+       echo "$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_PATH
+       echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_ENV
+
+    - name: Print Z3 Version
+      run: z3 --version
+
+    - name: Cache CVC5
+      id: cache-cvc5
+      uses: actions/cache@v1
+      with:
+        path: cvc5/
+        key: ${{ runner.os }}-cvc5-${{ hashFiles('get-cvc5-linux.sh') }}-1
+
+    - name: Download cvc5
+      if: steps.cache-cvc5.outputs.cache-hit != 'true'
+      run: ./get-cvc5-linux.sh
+ 
+    - name: Add CVC5 to Path
+      run: |
+       ls $GITHUB_WORKSPACE/cvc5/bin/
+       echo "$GITHUB_WORKSPACE/cvc5/bin/" >> $GITHUB_PATH
+
+    - name: Print CVC5 Version
+      run: cvc5 --version
+
+    # - name: Cache Delphi
+    #   id: cache-delphi
+    #   uses: actions/cache@v1
+    #   with:
+    #     path: delphi/
+    #     key: ${{ runner.os }}-delphi-${{ hashFiles('get-delphi-linux.sh') }}-1
+
+    - name: Download delphi
+      # if: steps.cache-delphi.outputs.cache-hit != 'true'
+      run: ./get-delphi-linux.sh
+
+    - name: Add delphi to Path
+      run: |
+       ls $GITHUB_WORKSPACE/delphi/bin/
+       echo "$GITHUB_WORKSPACE/delphi/bin/" >> $GITHUB_PATH
+    
+    - name: Add oracles to Path
+      run: |
+       ls $GITHUB_WORKSPACE/oracles/
+       echo "$GITHUB_WORKSPACE/oracles/" >> $GITHUB_PATH
+    
+    - name: Set up JDK 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+        
+    - name: Cache SBT ivy cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.ivy2/cache
+        key: ${{ runner.os }}-sbt-ivy-cache-${{ hashFiles('**/build.sbt') }}
+
+    - name: Cache SBT
+      uses: actions/cache@v1
+      with:
+        path: ~/.sbt
+        key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
+
+    - name: Compile
+      run: sbt compile
+
+    - name: Test
+      run: sbt "set fork:=true" test
+
+    - name: Package
+      run: sbt universal:packageBin
+
+  test-macos:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: olafurpg/setup-scala@v10
+      with:
+        java-version: openjdk@1.11
+
+    - name: Cache Z3
+      id: cache-z3
+      uses: actions/cache@v1
+      with:
+        path: z3/
+        key: ${{ runner.os }}-z3-${{ hashFiles('get-z3-macos.sh') }}-1
+
+    - name: Download Z3
+      if: steps.cache-z3.outputs.cache-hit != 'true'
+      run: ./get-z3-macos.sh
+       
+    - name: Add Z3 to Path
+      run: |
+       ls $GITHUB_WORKSPACE/z3/bin/
+       echo "$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_PATH
+       echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_ENV
+       ./setup-z3-macos.sh
+  
+    - name: Print Z3 Version
+      run: z3 --version 
+
+    - name: Cache CVC5
+      id: cache-cvc5
+      uses: actions/cache@v1
+      with:
+        path: cvc5/
+        key: ${{ runner.os }}-cvc5-${{ hashFiles('get-cvc5-macos.sh') }}-1
+    
+    - name: Download cvc5
+      if: steps.cache-cvc5.outputs.cache-hit != 'true'
+      run: ./get-cvc5-macos.sh
+ 
+    - name: Add CVC5 to Path
+      run: |
+       ls $GITHUB_WORKSPACE/cvc5/bin/
+       echo "$GITHUB_WORKSPACE/cvc5/bin/" >> $GITHUB_PATH
+
+    - name: Print CVC5 Version
+      run: cvc5 --version
+
+    # - name: Cache delphi
+    #   id: cache-delphi
+    #   uses: actions/cache@v1
+    #   with:
+    #     path: delphi/
+    #     key: ${{ runner.os }}-delphi-${{ hashFiles('get-delphi-macos.sh') }}-1
+
+    - name: Download delphi
+      # if: steps.cache-delphi.outputs.cache-hit != 'true'
+      run: ./get-delphi-macos.sh
+
+    - name: Add delphi to Path
+      run: |
+       ls $GITHUB_WORKSPACE/delphi/bin/
+       echo "$GITHUB_WORKSPACE/delphi/bin/" >> $GITHUB_PATH
+    - name: Add oracles to Path
+      run: |
+       ls $GITHUB_WORKSPACE/oracles/
+       echo "$GITHUB_WORKSPACE/oracles/" >> $GITHUB_PATH
+
+    - name: Compile
+      run: sbt compile
+
+    - name: Test UCLID
+      run: sbt "set fork:=true" test
+
+    - name: Package UCLID
+      run: sbt universal:packageBin

@@ -1,0 +1,9 @@
+module main
+{
+  var x, y : integer;
+  define x_eq_y() : boolean = (x == y) + 0;
+  
+  control {
+    print_module;
+  }
+}

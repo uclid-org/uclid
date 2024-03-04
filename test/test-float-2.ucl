@@ -1,0 +1,32 @@
+module main
+{
+  var x : float;
+  var y : float;
+  var z : float;
+  var w : float;
+  var q : float;
+
+  init {
+    x = 0.0float;
+    y = 0.0float; // test assign
+    assume(z==w); // test assume
+
+  }
+
+  next {
+    // x' = y / 1.0float;
+    // y' = y / 1.0float;
+    assert(q' < q); // should fail
+  }
+
+  invariant myinv: x==y; // should fail induction
+  invariant inv2: z>=w; // should fail
+  invariant inv3: w<=z;  // should fail
+
+
+  control {
+    f = induction;
+    check;
+    print_results;
+  }
+}

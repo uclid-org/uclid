@@ -1,0 +1,29 @@
+module main {
+  type state_t = enum { s1, s2, s3 };
+  var state : state_t;
+  
+  init {
+    state = s1;
+  }
+  
+  next {
+	case
+	  (state == s1) : { state' = s2; }
+	  (state == s2) : { state' = s3; }
+	  (state == s3) : { state' = s1; }
+	esac
+  }
+  
+  property[LTL] sX  : G((state == s1) ==> X(state == s2)) &&
+    				  G((state == s2) ==> X(state == s3)) &&
+  					  G((state == s3) ==> X(state == s1));
+  
+  property[LTL] sXX : G((state == s1) ==> X(state == s2)) &&
+  					  G((state == s2) ==> X(state == s3)) &&
+  					  G((state == s3) ==> X(state == s1));
+  control {
+    f = bmc[properties=[sX, sXX]](6);
+    check;
+    print_results;
+  } 
+}

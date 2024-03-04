@@ -1,0 +1,6 @@
+module main {
+    control {
+        v1 = induction(1);
+        v2 = verify(
+    }
+}

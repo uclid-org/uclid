@@ -1,0 +1,143 @@
+module main {
+  type bit_t = bv1;
+  type word_t = bv4;
+  
+  input x, y  : word_t;
+  output s, s1, s2, s3, s4 : word_t;
+  output c1, c2, c3, c4 : bit_t;
+  
+  procedure incr(w : integer) returns (u: integer) {
+    u = w + 1;
+  }
+  
+  procedure half_adder0(a : bit_t, b : bit_t) returns (s : bit_t, c_out : bit_t) {
+    s = a ^ b;
+    c_out = (a & b);
+  }
+  
+  procedure half_adder1(a : bit_t, b : bit_t) returns (s : bit_t, c_out : bit_t) {
+    var cnt : integer;
+    
+  	if (a == 1bv1 && b == 0bv1) {
+  	  s = 1bv1;
+  	} else {
+      if (a == 0bv1 && b == 1bv1) {
+  	    s = 1bv1;
+  	  } else {
+  	    s = 0bv1;
+  	  }
+  	}
+  	cnt = 0;
+  	if ((a&b) == 1bv1) {
+  	  cnt = cnt + 1;
+  	}
+  	
+  	if (cnt == 1) {
+  	  c_out = 1bv1;
+  	} else {
+  	  c_out = 0bv1;
+  	}
+  }
+
+  procedure full_adder0(a : bit_t, b : bit_t, c_in : bit_t) returns (s : bit_t, c_out : bit_t) {
+	s = a ^ b ^ c_in;
+	c_out = (a & b) | (b & c_in) | (c_in & a);
+  }
+  
+  procedure full_adder1(a : bit_t, b : bit_t, c_in : bit_t) returns (s : bit_t, c_out : bit_t) {
+    var cnt : integer;
+	s = a ^ b ^ c_in;
+	cnt = 0;
+	
+	if (a == 1bv1) {
+	  call (cnt) = incr(cnt);
+	}
+	
+	if (b == 1bv1) {
+	  call (cnt) = incr(cnt);
+	}
+	
+	if (c_in == 1bv1) {
+	  call (cnt) = incr(cnt);
+	}
+
+	if (cnt >= 2) {
+	  c_out = 1bv1;
+	} else {
+	  c_out = 0bv1;
+	}
+  }
+
+  procedure full_adder2(a : bit_t, b : bit_t, c_in : bit_t) returns (s : bit_t, c_out : bit_t) {
+    var s1 : bit_t;
+    var c1 : bit_t;
+    var c2 : bit_t;
+    
+	call (s1, c1) = half_adder0(a, b);
+	call (s, c2) = half_adder0(s1, c_in);
+	c_out = c1 | c2;
+  }
+
+  procedure full_adder3(a : bit_t, b : bit_t, c_in : bit_t) returns (s : bit_t, c_out : bit_t) {
+    var s1 : bit_t;
+    var c1 : bit_t;
+    var c2 : bit_t;
+    
+	call (s1, c1) = half_adder1(a, b);
+	call (s, c2) = half_adder1(s1, c_in);
+	c_out = c1 | c2;
+  }
+
+  procedure four_bit_adder0(a : word_t, b : word_t) returns (s : word_t, c_out : bit_t) {
+    var carry : bv5;
+    carry = 0bv5; 
+    for i in range(0, 3)  {
+      call (s[i:i], carry[i+1:i+1]) = full_adder0(a[i:i], b[i:i], carry[i:i]);
+    }
+    c_out = carry[4:4];
+  }
+  procedure four_bit_adder1(a : word_t, b : word_t) returns (s : word_t, c_out : bit_t) {
+    var carry : bv5;
+    carry = 0bv5; 
+    for i in range(0, 3)  {
+      call (s[i:i], carry[i+1:i+1]) = full_adder1(a[i:i], b[i:i], carry[i:i]);
+    }
+    c_out = carry[4:4];
+  }
+  procedure four_bit_adder2(a : word_t, b : word_t) returns (s : word_t, c_out : bit_t) {
+    var carry : bv5;
+    carry = 0bv5; 
+    for i in range(0, 3)  {
+      call (s[i:i], carry[i+1:i+1]) = full_adder2(a[i:i], b[i:i], carry[i:i]);
+    }
+    c_out = carry[4:4];
+  }
+  procedure four_bit_adder3(a : word_t, b : word_t) returns (s : word_t, c_out : bit_t) {
+    var carry : bv5;
+    carry = 0bv5; 
+    for i in range(0, 3)  {
+      call (s[i:i], carry[i+1:i+1]) = full_adder3(a[i:i], b[i:i], carry[i:i]);
+    }
+    c_out = carry[4:4];
+  }
+
+  next {
+    // noteToSelf(ReorderingTest)
+  	s' = x + y;
+  	call (s1', c1') = four_bit_adder0(x, y);
+  	call (s2', c2') = four_bit_adder1(x, y);
+  	call (s3', c3') = four_bit_adder2(x, y);
+  	call (s4', c4') = four_bit_adder3(x, y);
+  	assert (s' == s1');
+  	assert (s' == s2');
+  	assert (s' == s3');
+  	assert (s' == s4');
+  	assert (c1' == c2' && c2' == c3' && c3' == c4');
+  }
+  
+  control {
+  	unroll (3);
+  	check;
+  	print_results;
+  }
+}  

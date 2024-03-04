@@ -1,0 +1,32 @@
+
+module main{
+	var x: bv32;
+
+	init
+	{
+	 x=268435440bv32; 
+	}
+
+   next{
+   if(x > 0bv32)
+    {
+     x'=x-2bv32;
+    }
+   }
+
+   invariant myinv: (x > 0bv32) || ((x&1bv32)==0bv32);
+  synthesis function h(x : bv32) : boolean;
+  property hole: h(x);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+
+}
+
+
+
+
+

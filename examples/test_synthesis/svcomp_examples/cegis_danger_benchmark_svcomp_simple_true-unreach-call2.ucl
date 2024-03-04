@@ -1,0 +1,27 @@
+module main{
+	var x: bv32;
+
+	init{
+
+	}
+	next{
+	if(x < 268435455bv32)
+	 {
+	  x'=x+1bv32;
+	 }
+	}
+
+invariant my_invariant: (x < 268435455bv32) || (x >= 268435455bv32);
+  synthesis function h(x : bv32) : boolean;
+  property hole: h(x);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}
+
+
+
+

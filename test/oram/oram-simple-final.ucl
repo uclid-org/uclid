@@ -1,0 +1,333 @@
+(*===========================================================
+ * Model of Oblivious RAM (Path ORAM) proposed by Stefanov et al.
+ * (as described in sample C# code)
+ *===========================================================
+ *)
+
+
+(* Models a Path ORAM where the binary tree has depth L=3, so 15 nodes/buckets 
+ * Also each bucket has 1 element, to simplify the model
+ * Number of leaves is 8 (2^L)
+ *)
+
+(*-------------------------------------------------------------------------*)
+MODEL oram
+
+(* global type declarations *)
+(* typedef optype : enum{READ, WRITE}; UNUSED RIGHT NOW *)
+
+(*-------------------------------------------------------------------------*)
+(* global constants *)
+CONST
+
+RANDOM : BITVECFUNC[3]; (* "randomly" generates a LEAF INDEX *)
+
+ARB_BLOCK : BITVECFUNC[16]; (* yields arbitrary block ID *)
+
+test_block_id : BITVEC[16];
+
+(*-------------------------------------------------------------------------*)
+MODULE O
+
+INPUT
+
+id_input : BITVEC[16]; (* Block IDs are 16 bit wide *)
+(* op_input : optype; *)
+
+
+VAR
+
+(* STATE VARIABLES *)
+position_map_state : BITVECFUNC[3]; (* maps block ID to leaf position *)
+cache_state : PRED[1]; (* maps block ID to a Boolean flag indicating whether or not that block is in the cache *)
+
+buckets_state : BITVECFUNC[16]; (* maps node ID to a single bucket location that can store one block *)
+
+arb_ctr : BITVEC[32]; (* used in arbitrary value generator *)
+
+(*OUTPUTS*)
+
+(* no outputs for now *)
+
+
+CONST
+
+(* For use as indices of Lambda expressions *)
+a : BITVEC[16];
+i : BITVEC[16];
+j : BITVEC[4];
+
+init_cache_state : PRED[1];
+init_buckets_state : BITVECFUNC[16];
+init_position_map : BITVECFUNC[3];
+
+DEFINE
+
+(* Constants *)
+
+zero_bit := (0x0 # [0:0]);
+one_bit := (0x1 # [0:0]);
+
+LEAFCOUNT := (0x08 # [3:0]);
+
+ucl_hex_1_4bit := (0x01 # [3:0]);
+
+(* Remap block *)
+
+oldPosition := position_map_state(id_input);
+
+newPosition := RANDOM(id_input); (* FIXME: it should be based on a generator of arbitrary values *)
+
+
+(* Read path *)
+
+oldPosition_4bits := (zero_bit @ oldPosition);
+
+bucketIndex3 := (LEAFCOUNT -_4 ucl_hex_1_4bit) +_4 oldPosition_4bits;
+
+bucket_level3 := buckets_state(bucketIndex3); (* this is the blockId *)
+
+(* enforce this condition to hold -- the block present at 
+ * the leaf level is id_input.
+ *)
+input_block_is_at_leaf := (id_input = bucket_level3);
+
+bucketIndex2 := ((bucketIndex3 -_4 ucl_hex_1_4bit) >>_4 1); (* logical right shift *)
+
+bucket_level2 := buckets_state(bucketIndex2); (* this is the blockId *)
+
+bucketIndex1:= ((bucketIndex2 -_4 ucl_hex_1_4bit) >>_4 1); (* logical right shift *)
+
+bucket_level1 := buckets_state(bucketIndex1); (* this is the blockId *)
+
+bucketIndex0 := ((bucketIndex1 -_4 ucl_hex_1_4bit) >>_4 1); (* logical right shift *)
+
+bucket_level0 := buckets_state(bucketIndex0); (* this is the blockId *)
+
+
+inter_cache_state := Lambda(i).
+  case
+    (* the reads in the "Read path" phase *)
+    i = bucket_level0 : true;
+    i = bucket_level1 : true;
+    i = bucket_level2 : true;
+    i = bucket_level3 : true;
+    default : cache_state(i);
+  esac;
+
+
+(* Search cache for block to set new position 
+ * ---> 
+ * This is NOT modeled currently because a block simply
+ * has its ID and nothing else, not the position.
+ * The position is set directly in the position map.
+ *)
+
+nxt_position_map_state := Lambda(a).
+  case
+	(a = id_input) : newPosition;
+	default : position_map_state(a);
+  esac;
+
+(* Sort cache 
+ * --->
+ * This step is also NOT modeled due to our simplistic model of the cache 
+ * as a Boolean array
+ *)
+
+
+(* Write path *)
+
+(*
+ Eject arbitrarily chosen blocks from cache and fill path to
+ oldPosition with them -- i.e. use those to update buckets_state
+ at locations bucketIndex0--bucketIndex3.
+*)
+wr_bucket_level0 := ARB_BLOCK(arb_ctr);
+wr_bucket_level1 := ARB_BLOCK(wr_bucket_level0);
+wr_bucket_level2 := ARB_BLOCK(wr_bucket_level1);
+wr_bucket_level3 := ARB_BLOCK(wr_bucket_level2);
+
+(* enforce this condition to hold -- i.e., we are evicting 
+ * blocks that are present in the local cache AND they
+ * map to the path prefix to the leaf oldPosition
+ *)
+blocks_present_in_cache := 
+    inter_cache_state(wr_bucket_level0)  
+  & inter_cache_state(wr_bucket_level1) & ((nxt_position_map_state(wr_bucket_level1) >>_3 2) = (oldPosition >>_3 2)) 
+  & inter_cache_state(wr_bucket_level2) & ((nxt_position_map_state(wr_bucket_level2) >>_3 1) = (oldPosition >>_3 1))  
+  & inter_cache_state(wr_bucket_level3) & (nxt_position_map_state(wr_bucket_level3) = oldPosition);
+
+
+ASSIGN
+
+init[arb_ctr] := 0x00000000;
+next[arb_ctr] := arb_ctr +_32 0x00000001;
+
+init[cache_state] := Lambda(i). init_cache_state(i);
+next[cache_state] := Lambda(i).
+  case
+    (* writes made last in the "Write path" phase come first in this update *)
+    i = wr_bucket_level0 & cache_state(i) : false;
+    i = wr_bucket_level1 & cache_state(i) : false;
+    i = wr_bucket_level2 & cache_state(i) : false;
+    i = wr_bucket_level3 & cache_state(i) : false;
+    (* then the reads in the "Read path" phase *)
+    default : inter_cache_state(i);
+(*
+    i = bucket_level0 : true;
+    i = bucket_level1 : true;
+    i = bucket_level2 : true;
+    i = bucket_level3 : true;
+    default : cache_state(i);
+*)
+  esac;
+
+
+init[position_map_state] := Lambda(a). init_position_map(a);
+next[position_map_state] := Lambda(a). nxt_position_map_state(a);
+(*
+  case
+	(a = id_input) : newPosition;
+	default : position_map_state(a);
+  esac;
+*)
+
+init[buckets_state] := Lambda(j). init_buckets_state(j);
+next[buckets_state] := Lambda(j).
+  case
+    j = bucketIndex0 : wr_bucket_level0;
+    j = bucketIndex1 : wr_bucket_level1;
+    j = bucketIndex2 : wr_bucket_level2;
+    j = bucketIndex3 : wr_bucket_level3;
+    default : buckets_state(j);
+  esac;
+
+
+(*====================================================*)
+CONTROL
+
+EXTVAR
+
+id_input : BITVEC[16] := test_block_id;
+
+STOREVAR
+
+(*
+init_inv : TRUTH;
+next_inv : TRUTH;
+*)
+init_inv : PRED[1];
+next_inv : PRED[1];
+assertion : TRUTH;
+
+store_map_b : BITVEC[3];
+store_bucketId : BITVEC[4];
+
+store_bucketlevel3 : BITVEC[16];
+
+store_oldPos4bits : BITVEC[4];
+
+store_precond : TRUTH;
+
+VAR
+
+
+CONST
+
+a : BITVEC[16]; 
+b : BITVEC[16]; 
+
+i : BITVEC[3];
+
+DEFINE
+
+zero_bit := (0x0 # [0:0]);
+one_bit := (0x1 # [0:0]);
+
+LEAFCOUNT := (0x08 # [3:0]);
+
+ucl_hex_1_4bit := (0x01 # [3:0]);
+
+pre_cond := O.input_block_is_at_leaf & O.blocks_present_in_cache;
+
+a_pos := O.position_map_state(a);
+
+a_pos_4bits := (zero_bit @ a_pos);
+
+bucketIndex3 := (LEAFCOUNT -_4 ucl_hex_1_4bit) +_4 a_pos_4bits;
+
+bucket_level3 := O.buckets_state(bucketIndex3); (* this is the blockId *)
+
+bucketIndex2 := ((bucketIndex3 -_4 ucl_hex_1_4bit) >>_4 1); (* logical right shift *)
+
+bucket_level2 := O.buckets_state(bucketIndex2); (* this is the blockId *)
+
+bucketIndex1:= ((bucketIndex2 -_4 ucl_hex_1_4bit) >>_4 1); (* logical right shift *)
+
+bucket_level1 := O.buckets_state(bucketIndex1); (* this is the blockId *)
+
+bucketIndex0 := ((bucketIndex1 -_4 ucl_hex_1_4bit) >>_4 1); (* logical right shift *)
+
+bucket_level0 := O.buckets_state(bucketIndex0); (* this is the blockId *)
+
+
+inv := Lambda(a). O.cache_state(a) | (a = bucket_level0) 
+                | (a = bucket_level1) | (a = bucket_level2) | (a = bucket_level3);
+
+
+EXEC
+
+initialize;
+
+init_inv := Lambda(b). inv(b);
+
+store_map_b := O.oldPosition;
+(* store_map_b := O.init_position_map(b); *)
+
+store_bucketId := O.bucketIndex3;
+
+store_bucketlevel3 := O.bucket_level3;
+
+store_oldPos4bits := O.oldPosition_4bits;
+
+store_precond := pre_cond;
+
+simulate(1);
+
+next_inv := Lambda(b). inv(b);
+
+(* THE MAIN PROPERTY TO BE CHECKED *)
+decide(FORALL(a) (init_inv(a)) => FORALL(b) (store_precond => next_inv(b)));
+
+
+(*
+VARIOUS AUXILIARY PROPERTIES -- SANITY CHECKS
+decide(O.bucketIndex0 = 0x0); (* VALID *)
+decide(bucketIndex0 = 0x0); (* VALID *)
+decide(O.bucketIndex1 = 0x1 | O.bucketIndex1 = 0x2); (* VALID *)
+decide(O.bucketIndex2 >=u 0x3 & O.bucketIndex2 <=u 0x6); (* VALID *)
+decide(O.bucketIndex3 >=u 0x7 & O.bucketIndex3 <=u 0xe); (* valid *)
+*)
+
+
+(* DEBUG PRINTS *)
+
+print("oldPosition:");
+printexpr(store_map_b); 
+
+print("O.bucketIndex3 is:");
+printexpr(store_bucketId);
+
+print("O.bucket_level3 is:");
+printexpr(store_bucketlevel3);
+
+print("O.oldPosition_4bits is:");
+printexpr(store_oldPos4bits);
+
+
+
+
+
+
+

@@ -1,0 +1,44 @@
+module alu  {
+  input a : bv4;
+  output result : bv4;
+
+  next {
+    havoc result;
+  }
+}
+
+module main {
+  var regs   : [bv2]bv4;
+  var res    : bv4;
+  var r0     : bv4;
+  var r1     : bv4;
+  var index  : bv2;
+
+  instance alu_i : alu (a : (r0'), result : (res));
+
+  procedure next_inst()
+    returns (r0ind : bv2)
+    modifies r0, r1;
+  {
+    r0 = regs[r0ind];
+    havoc r1;
+  }
+
+  procedure set_regs(index : bv2, res : bv4)
+    modifies regs;
+  {
+  }
+
+  next {
+    call (index') = next_inst();
+    next (alu_i);
+    call set_regs(index', res');
+  }
+  
+  control {
+    v = unroll(3);
+    check;
+    print_results;
+    
+  }
+}

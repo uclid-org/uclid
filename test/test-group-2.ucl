@@ -1,0 +1,24 @@
+module main {
+    group myGroup : integer = {0, 1, 2, 3};
+    group myGroup2 : integer = {4, 5, 6, 7};
+
+    //Should pass
+    property test1 : finite_forall (int1 : integer) in myGroup ::
+                        finite_exists (int2 : integer) in myGroup :: int1 == int2;
+
+    //Should fail.
+    property test2 : finite_forall (int1 : integer) in myGroup ::
+                        finite_exists (int2 : integer) in myGroup2 :: int1 == int2;
+
+    init {
+    }
+
+    next {
+    }
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

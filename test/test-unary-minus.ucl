@@ -1,0 +1,30 @@
+module main
+{
+    var x : integer;
+    var y : integer;
+    var z : integer;
+
+    init {
+        x = -1;
+        y = -1;
+        z =  1;
+    }
+
+    next {
+        x' = -(x + y);
+        y' = -y;
+
+        z' = z + 1;
+    }
+
+    invariant xz : if (y == 1) then x == z else -x == z;
+    invariant yy : y == -1 || y == 1;
+
+    control {
+        v = induction(1);
+        check;
+        print_results;
+        v.print_cex(x, y, z);
+    }
+}
+

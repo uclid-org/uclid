@@ -1,0 +1,43 @@
+/* This benchmark requires the synthesis tool to reason about
+arrays but the invariant does not require array operations  */
+
+module main
+{
+  var i: bv1;
+  var x : [bv1]bv32;
+  var y: bv32;
+
+ init
+ {
+   y = 10bv32;
+   for i in range(0bv1, 1bv1) {
+    x[i] = 10bv32;
+   }
+ }
+
+  next
+  {
+    call update();
+  }
+
+  invariant y_always_positive: (y>=10bv32);
+
+procedure update()
+    modifies x, y;
+  {
+   // trivially true. Overflow prevented
+   if(x[i]==10bv32 && y<20bv32)
+   {
+     y=y+1bv32;
+   }
+  }
+
+  synthesis function h(x : bv1, y : bv32, z : [bv1]bv32) : boolean;
+  property hole: h(i, y, x);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}

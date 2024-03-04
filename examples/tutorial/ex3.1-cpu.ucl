@@ -1,0 +1,10 @@
+// This module declares types that are used in the rest of the model.
+module common {
+  // addresses are uninterpreted types.
+  type addr_t = bv8;
+  type word_t = bv8;
+  // memory
+  type mem_t = [addr_t]word_t;
+  // CPU operation.
+  type op_t   = enum { op_mov, op_add, op_sub, op_load, op_store };
+}

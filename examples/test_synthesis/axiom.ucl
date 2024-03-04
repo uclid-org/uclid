@@ -1,0 +1,31 @@
+module main
+{
+  var i: integer;
+  var y: integer;
+  axiom ( y + i >= 10);
+ init
+ {
+   i=0;
+ }
+  next
+  {
+    call update();
+  }
+  invariant always_positive: (i>=0);
+procedure update()
+    modifies i;
+  {
+   if(y >= 10)
+    {i=i+1;}
+    else
+     {i=i-1;}
+  }
+  synthesis function h(x : integer, y : integer) : boolean;
+  property hole: h(i, y);
+
+  control {
+    induction;
+    check;
+    print_results;
+  }
+}

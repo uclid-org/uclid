@@ -1,0 +1,41 @@
+module main {
+
+  input  a, b  : integer;
+  input  valid : boolean;
+  output sum   : integer;
+  output ready : boolean;
+  
+  var a_past, b_past : integer;
+  var ready_next : boolean;
+  var stepcnt : integer;
+  var inited : boolean;
+  
+  init {
+    a_past = 0;
+    b_past = 0;
+    ready_next = false;
+
+    inited  = false;
+    stepcnt = 0;
+  }
+  
+  next {
+    // noteToSelf(OrderingTest);
+    sum' = old(a) + b_past;
+    ready' = ready_next;
+    if (!inited) {
+      stepcnt' = stepcnt + 1;
+      if (stepcnt' > 1) {
+        inited' = true;
+      }
+    }
+    assert (inited && history(valid, 1)) ==> (a_past == history(a, 1));
+    assert (inited && old(valid)) ==> (a_past == old(a));
+    assert (old(valid) == history(valid, 1));
+    if (valid) {
+      a_past' = a;
+      b_past' = b;
+    }
+    ready_next' = valid;
+  }
+}

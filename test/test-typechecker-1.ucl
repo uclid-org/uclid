@@ -1,0 +1,22 @@
+// Test that a havoc statement that refers to an non-existent variable results in a compiler error.
+
+module main {
+  var a : integer;
+  var b : integer;
+  procedure fib(x: integer, y: integer) returns (z:integer, w:integer) { 
+    z, w = y, x + y;
+    havoc k;
+  }
+  init {
+    a = 0;
+    b = 1;
+  }
+  next {
+    call (a', b') = fib(a, b);
+  }
+
+  control {
+    initialize;
+  	simulate (5);
+  }
+}

@@ -1,0 +1,77 @@
+module abstract_cache {
+  type cache_set_index_t = integer;
+  type cache_way_index_t = integer;
+  type cache_tag_t       = integer;
+
+  type cache_valid_map_t = [cache_set_index_t, cache_way_index_t]boolean;
+  type cache_tag_map_t   = [cache_set_index_t, cache_way_index_t]cache_tag_t;
+
+  var cache_valid_map : cache_valid_map_t;
+  var cache_tag_map   : cache_tag_map_t;
+
+  procedure update_cache_valid_map()
+    ensures (cache_valid_map != old(cache_valid_map));
+    modifies cache_valid_map;
+  {
+    havoc cache_valid_map;
+    assume cache_valid_map != old(cache_valid_map);
+  }
+
+  procedure update_cache_tag_map()
+    ensures (cache_tag_map != old(cache_tag_map));
+    modifies cache_tag_map;
+  {
+    havoc cache_tag_map;
+    assume cache_tag_map != old(cache_tag_map);
+  }
+}
+
+
+module abstract_cpu {
+
+  instance cache : abstract_cache();
+
+  procedure havoc_cache_valid_map()
+    ensures (cache.cache_valid_map != old(cache.cache_valid_map));
+    modifies cache;
+  {
+    call cache.update_cache_valid_map();
+  }
+
+  procedure [inline] havoc_cache_tag_map()
+    ensures (cache.cache_tag_map != old(cache.cache_tag_map));
+    modifies cache;
+  {
+    call cache.update_cache_tag_map();
+  }
+
+  procedure [noinline] havoc_whole_cache()
+    modifies cache;
+  {
+    call havoc_cache_valid_map();
+    call havoc_cache_tag_map();
+  }
+}
+
+
+module main {
+
+  instance cpu : abstract_cpu();
+
+  procedure cache_mod()
+    modifies cpu;
+    ensures (cpu.cache.cache_valid_map == old(cpu.cache.cache_valid_map));
+  {
+    call cpu.havoc_cache_tag_map();
+  }
+
+  control {
+    mod = verify(cache_mod);
+    check;
+    print_results;
+  }
+
+}
+
+
+

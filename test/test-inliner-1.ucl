@@ -1,0 +1,41 @@
+module main {
+  type word_t = bv4;
+  type bit_t = bv1;
+
+  var r1, r2 : word_t;
+  input arg0, arg1 : word_t;
+  
+  procedure full_adder(a : bit_t, b : bit_t, c_in : bit_t) returns (s : bit_t, c_out : bit_t) {
+	s = a ^ b ^ c_in;
+	c_out = (a & b) | (b & c_in) | (c_in & a);
+  }
+  
+  procedure add_unrolled(a : word_t, b : word_t) returns (sum : word_t) {
+    var cout : word_t;
+  	call (sum[0:0], cout[0:0]) = full_adder(a[0:0], b[0:0], 0bv1);
+  	call (sum[1:1], cout[1:1]) = full_adder(a[1:1], b[1:1], cout[0:0]);
+  	call (sum[2:2], cout[2:2]) = full_adder(a[2:2], b[2:2], cout[1:1]);
+  	call (sum[3:3], cout[3:3]) = full_adder(a[3:3], b[3:3], cout[2:2]);
+  }
+  
+  procedure add_forloop(a : word_t, b : word_t) returns (sum : word_t) {
+    var cout : bv5;
+    cout[0:0] = 0bv1;
+    for i in range(0, 3)  {
+      call (sum[i:i], cout[i+1:i+1]) = full_adder(a[i:i], b[i:i], cout[i:i]); 
+    }
+  }
+  
+  next {
+    // noteToSelf(ReorderingTest);
+  	call (r1') = add_unrolled(arg0, arg1);
+  	call (r2') = add_forloop(arg0, arg1);
+  	assert (r1' == r2');
+  }
+  
+  control {
+  	unroll (3);
+  	check;
+  	print_results;
+  }
+}

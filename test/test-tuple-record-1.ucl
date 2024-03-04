@@ -1,0 +1,53 @@
+module main {
+  type rec = record { a : integer, b : integer, c : boolean };
+  type struct = record { c1 : rec, c2 : rec };
+  
+  var s : struct;
+  input n : integer;
+  
+  procedure zero() returns (s : rec) {
+    s.a = 0;
+    s.b = 0;
+    s.c = false;
+  }
+  
+  procedure updateV1(r : rec, n : integer) returns (s : rec) {
+    s.a = r.a + 1;
+    s.b = r.b + n;
+    s.c = s.a == s.b;
+  }
+  
+  procedure updateV2(r : rec, n : integer) returns (s : rec) {
+    s.a = r.a + 1;
+    s.b = r.b + n;
+    s.c = (s.a == s.b);
+  }
+
+  init {
+    call (s.c1) = zero();
+    call (s.c2) = zero();
+  }
+
+  procedure set_next_s()
+    modifies s;
+  {
+    call (s.c1) = updateV1(s.c1, n);
+    call (s.c2) = updateV2(s.c2, n);
+  }
+  next {
+    assume (n <= 2);
+    call set_next_s();
+
+
+    // noteToSelf(ReorderingTest)
+    assert s'.c1.a == s'.c2.a;
+    assert s'.c1.b == s'.c2.b;
+    assert s'.c1.c == s'.c2.c;
+  }
+  
+  control {
+    unroll (3);
+    check;
+    print_results;
+  }
+}

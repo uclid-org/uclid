@@ -1,0 +1,268 @@
+module main {
+
+    // TYPES ================================================
+    type word_t       = cpu_common.word_t;
+    type addr_t       = cpu_common.addr_t;
+    type mem_t        = cpu_common.mem_t;
+    type op_t         = cpu_common.op_t;
+    type pregs_t      = cpu_common.pregs_t;
+    type pregsready_t = cpu_common.pregsready_t;
+    type cache_addr_t = cpu_common.cache_addr_t;
+    type brlvl_t      = cpu_common.brlvl_t;
+    type pregind_t    = cpu_common.pregind_t;
+    type robind_t     = cpu_common.robind_t;
+
+    // VARIABLES ============================================
+
+    // CPU variables
+    var pc1, pc2           : addr_t;
+    var branch_level1, branch_level2 : brlvl_t;
+    var imem1, imem2          : mem_t;
+    var pregs1, pregs2        : pregs_t;
+    var pregsready1, pregsready2   : pregsready_t;
+    var flush1, flush2         : boolean;
+    var return_addr1, return_addr2   : addr_t;
+    // Cache
+    var cache1, cache2       : [cache_addr_t]addr_t;
+    var cache_valid1, cache_valid2 : [cache_addr_t]boolean;
+    // ROB state
+    var rob_full1, rob_full2 : boolean;
+    // Renamer instruction variables for next stage
+    var rn_pc1, rn_pc2     : addr_t;
+    var rn_op1, rn_op2     : op_t;
+    var rn_pdind1, rn_pdind2  : pregind_t;
+    var rn_psind1, rn_psind2  : pregind_t;
+    var rn_ptind1, rn_ptind2  : pregind_t;
+    var rn_imm1, rn_imm2    : word_t;
+    var rn_spec1, rn_spec2   : boolean;
+    var rn_brlvl1, rn_brlvl2  : brlvl_t;
+    // Instruction to pass onto execute stage
+    var executing1, executing2 : boolean;
+    var exe_pc1, exe_pc2    : addr_t;
+    var exe_op1, exe_op2    : op_t;
+    var exe_pdind1, exe_pdind2 : pregind_t;
+    var exe_psind1, exe_psind2 : pregind_t;
+    var exe_ptind1, exe_ptind2 : pregind_t;
+    var exe_imm1, exe_imm2   : word_t;
+    var exe_spec1, exe_spec2  : boolean;
+    var exe_ld_ready1, exe_ld_ready2 : boolean;
+    var exe_brlvl1, exe_brlvl2 : brlvl_t;
+
+    // // ROB 2 ================================
+    // // CPU variables
+    // var pc2           : addr_t;
+    // var branch_level2 : brlvl_t;
+    // var imem2          : mem_t;
+    // var pregs2        : pregs_t;
+    // var pregsready2   : pregsready_t;
+    // var flush2         : boolean;
+    // var return_addr2   : addr_t;
+    // // Cache
+    // var cache2       : [cache_addr_t]addr_t;
+    // var cache_valid2 : [cache_addr_t]boolean;
+    // // ROB state
+    // var rob_full2 : boolean;
+    // // Renamer instruction variables for next stage
+    // var rn_pc2     : addr_t;
+    // var rn_op2     : op_t;
+    // var rn_pdind2  : pregind_t;
+    // var rn_psind2  : pregind_t;
+    // var rn_ptind2  : pregind_t;
+    // var rn_imm2    : word_t;
+    // var rn_spec2   : boolean;
+    // var rn_brlvl2  : brlvl_t;
+    // // Instruction to pass onto execute stage
+    // var executing2 : boolean;
+    // var exe_pc2    : addr_t;
+    // var exe_op2    : op_t;
+    // var exe_pdind2 : pregind_t;
+    // var exe_psind2 : pregind_t;
+    // var exe_ptind2 : pregind_t;
+    // var exe_imm2   : word_t;
+    // var exe_spec2  : boolean;
+    // var exe_ld_ready2 : boolean;
+    // var exe_brlvl2 : brlvl_t;
+
+    var exec_entry1, exec_entry2 : robind_t;
+
+    var counter : integer;
+
+    // REORDER BUFFERS ========================================
+
+    // ROB 1 =====================================
+    instance rob1 : reorder_buffer(pc           : (pc1),
+                                   branch_level : (branch_level1),
+                                   pregs        : (pregs1),
+                                   pregsready   : (pregsready1),
+                                   cache        : (cache1),
+                                   cache_valid  : (cache_valid1),
+                                   pc_in        : (rn_pc1),
+                                   op_in        : (rn_op1),
+                                   pdind_in     : (rn_pdind1),
+                                   psind_in     : (rn_psind1),
+                                   ptind_in     : (rn_ptind1),
+                                   imm_in       : (rn_imm1),
+                                   speculate    : (rn_spec1),
+                                   brlvl_in     : (rn_brlvl1),
+                                   rob_full     : (rob_full1),
+                                   executing    : (executing1),
+                                   exe_pc       : (exe_pc1),
+                                   exe_op       : (exe_op1),
+                                   exe_pdind    : (exe_pdind1),
+                                   exe_psind    : (exe_psind1),
+                                   exe_ptind    : (exe_ptind1),
+                                   exe_imm      : (exe_imm1),
+                                   exe_spec     : (exe_spec1),
+                                   exe_brlvl    : (exe_brlvl1),
+                                   exe_ld_ready : (exe_ld_ready1),
+                                   flush        : (flush1),
+                                   exec_entry   : (exec_entry1));
+    // ROB 2 =====================================
+    instance rob2 : reorder_buffer(pc           : (pc2),
+                                   branch_level : (branch_level2),
+                                   pregs        : (pregs2),
+                                   pregsready   : (pregsready2),
+                                   cache        : (cache2),
+                                   cache_valid  : (cache_valid2),
+                                   pc_in        : (rn_pc2),
+                                   op_in        : (rn_op2),
+                                   pdind_in     : (rn_pdind2),
+                                   psind_in     : (rn_psind2),
+                                   ptind_in     : (rn_ptind2),
+                                   imm_in       : (rn_imm2),
+                                   speculate    : (rn_spec2),
+                                   brlvl_in     : (rn_brlvl2),
+                                   rob_full     : (rob_full2),
+                                   executing    : (executing2),
+                                   exe_pc       : (exe_pc2),
+                                   exe_op       : (exe_op2),
+                                   exe_pdind    : (exe_pdind2),
+                                   exe_psind    : (exe_psind2),
+                                   exe_ptind    : (exe_ptind2),
+                                   exe_imm      : (exe_imm2),
+                                   exe_spec     : (exe_spec2),
+                                   exe_brlvl    : (exe_brlvl2),
+                                   exe_ld_ready : (exe_ld_ready2),
+                                   flush        : (flush2),
+                                   exec_entry   : (exec_entry2));
+
+	init {
+        // INITIALIZE INPUTS
+        assume (pc1 == pc2);
+        assume (branch_level1 == branch_level2);
+        assume (forall (a : addr_t) :: imem1[a] == imem2[a]);
+        assume (forall (pi : pregind_t) :: pregs1[pi] == pregs2[pi]);
+        assume (forall (pi : pregind_t) :: pregsready1[pi] == pregsready2[pi]);
+        assume (flush1 == flush2);
+        assume (return_addr1 == return_addr2);
+        assume (forall (ca : cache_addr_t) :: cache1[ca] == cache2[ca]);
+        assume (forall (ca : cache_addr_t) :: cache_valid1[ca] == cache_valid2[ca]);
+        assume (rob_full1 == rob_full2);
+        assume (rn_pc1 == rn_pc2);
+        assume (rn_op1 == rn_op2);
+        assume (rn_pdind1 == rn_pdind2);
+        assume (rn_psind1 == rn_psind2);
+        assume (rn_ptind1 == rn_ptind2);
+        assume (rn_imm1 == rn_imm2);
+        assume (rn_spec1 == rn_spec2);
+        assume (rn_brlvl1 == rn_brlvl2);
+        assume (executing1 == executing2);
+        assume (exe_pc1 == exe_pc2);
+        assume (exe_op1 == exe_op2);
+        assume (exe_pdind1 == exe_pdind2);
+        assume (exe_psind1 == exe_psind2);
+        assume (exe_ptind1 == exe_ptind2);
+        assume (exe_imm1 == exe_imm2);
+        assume (exe_spec1 == exe_spec2);
+        assume (exe_ld_ready1 == exe_ld_ready2);
+        assume (exe_brlvl1 == exe_brlvl2);
+
+        // INITIALIZE STATE VARIABLES
+        assume(forall (robi : robind_t) :: rob1.pcs[robi] == rob1.pcs[robi]);
+        assume(forall (robi : robind_t) :: rob1.ops[robi] == rob1.ops[robi]);
+        assume(forall (robi : robind_t) :: rob1.pdinds[robi] == rob1.pdinds[robi]);
+        assume(forall (robi : robind_t) :: rob1.psinds[robi] == rob1.psinds[robi]);
+        assume(forall (robi : robind_t) :: rob1.ptinds[robi] == rob1.ptinds[robi]);
+        assume(forall (robi : robind_t) :: rob1.imms[robi] == rob1.imms[robi]);
+        assume(forall (robi : robind_t) :: rob1.finished[robi] == rob1.finished[robi]);
+        assume(forall (robi : robind_t) :: rob1.speculated[robi] == rob1.speculated[robi]);
+        assume(forall (robi : robind_t) :: rob1.brlvl[robi] == rob1.brlvl[robi]); 
+        assume(rob1.head == rob2.head);
+        assume(rob1.tail == rob2.tail);  
+        assume(rob1.exec_entry == rob2.exec_entry); 
+        assume(rob1.flush_entry == rob2.flush_entry);
+        assume(rob1.ndetpick == rob2.ndetpick);
+
+        counter = 0;
+
+    }
+
+    next {
+        assume(rob1.ndetpick == false);
+        assume(rob2.ndetpick == false);
+        // assume(rob1.exec_entry == rob2.exec_entry);
+        next(rob1);
+        next(rob2);
+        // counter' = counter + 1;
+        // if (counter' == 1) {
+        //     assert(false);
+        // }
+    }
+    
+    axiom (rob1.exec_entry == rob2.exec_entry);
+
+    // INPUT INVARIANTS
+    invariant eq_pc : (pc1 == pc2);
+    invariant eq_brlvl : (branch_level1 == branch_level2);
+    invariant eq_imem : (forall (a : addr_t) :: imem1[a] == imem2[a]);
+    invariant eq_pregs : (forall (pi : pregind_t) :: pregs1[pi] == pregs2[pi]);
+    invariant eq_pregsready : (forall (pi : pregind_t) :: pregsready1[pi] == pregsready2[pi]);
+    invariant eq_flush : (flush1 == flush2);
+    invariant eq_ra : (return_addr1 == return_addr2);
+    invariant eq_ca : (forall (ca : cache_addr_t) :: cache1[ca] == cache2[ca]);
+    invariant eq_ca_va : (forall (ca : cache_addr_t) :: cache_valid1[ca] == cache_valid2[ca]);
+    invariant eq_rob_full : (rob_full1 == rob_full2);
+    invariant eq_rn_pc : (rn_pc1 == rn_pc2);
+    invariant eq_rn_op : (rn_op1 == rn_op2);
+    invariant eq_rn_pd : (rn_pdind1 == rn_pdind2);
+    invariant eq_rn_ps : (rn_psind1 == rn_psind2);
+    invariant eq_rn_pt : (rn_ptind1 == rn_ptind2);
+    invariant eq_rn_imm : (rn_imm1 == rn_imm2);
+    invariant eq_rn_spec : (rn_spec1 == rn_spec2);
+    invariant eq_rn_brlvl : (rn_brlvl1 == rn_brlvl2);
+    invariant eq_exec : (executing1 == executing2);
+    invariant eq_exe_pc : (exe_pc1 == exe_pc2);
+    invariant eq_exe_op : (exe_op1 == exe_op2);
+    invariant eq_exe_pd : (exe_pdind1 == exe_pdind2);
+    invariant eq_exe_ps : (exe_psind1 == exe_psind2);
+    invariant eq_exe_pt : (exe_ptind1 == exe_ptind2);
+    invariant eq_exe_imm : (exe_imm1 == exe_imm2);
+    invariant eq_exe_spec : (exe_spec1 == exe_spec2);
+    invariant eq_exe_ready : (exe_ld_ready1 == exe_ld_ready2);
+    invariant eq_exe_brlvl : (exe_brlvl1 == exe_brlvl2);
+
+    // STATE VARIABLE INVARIANTS
+    invariant eq_pcs : (forall (robi : robind_t) :: rob1.pcs[robi] == rob1.pcs[robi]);
+    invariant eq_ops : (forall (robi : robind_t) :: rob1.ops[robi] == rob1.ops[robi]);
+    invariant eq_pdinds : (forall (robi : robind_t) :: rob1.pdinds[robi] == rob1.pdinds[robi]);
+    invariant eq_psinds : (forall (robi : robind_t) :: rob1.psinds[robi] == rob1.psinds[robi]);
+    invariant eq_ptinds : (forall (robi : robind_t) :: rob1.ptinds[robi] == rob1.ptinds[robi]);
+    invariant eq_imms : (forall (robi : robind_t) :: rob1.imms[robi] == rob1.imms[robi]);
+    invariant eq_finished : (forall (robi : robind_t) :: rob1.finished[robi] == rob1.finished[robi]);
+    invariant eq_speculated : (forall (robi : robind_t) :: rob1.speculated[robi] == rob1.speculated[robi]);
+    invariant eq_brlvls : (forall (robi : robind_t) :: rob1.brlvl[robi] == rob1.brlvl[robi]); 
+    invariant eq_head : (rob1.head == rob2.head);
+    invariant eq_tail : (rob1.tail == rob2.tail);  
+    invariant eq_exec_entries : (rob1.exec_entry == rob2.exec_entry); 
+    invariant eq_flush_entries : (rob1.flush_entry == rob2.flush_entry);
+    // invariant eq_ndetpicks : (rob1.ndetpick == rob2.ndetpick);
+
+	control {
+        // v = unroll(2);
+        v = induction(1);
+        check;
+        print_results;
+        v.print_cex(rob1.exec_entry,
+                    rob2.exec_entry);
+	}
+}

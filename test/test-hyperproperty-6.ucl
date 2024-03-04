@@ -1,0 +1,29 @@
+module a
+{
+    var x, y : integer;
+
+    init {
+      y = x + 1;
+    }
+
+    next {
+      y' = y + 1;
+    }
+}
+
+
+module main
+{
+    instance a_mod : a();
+
+    hyperaxiom[2] x_eq: a_mod.x.1 == a_mod.x.2;
+    hyperinvariant[2] det_xy: a_mod.y.1 == a_mod.y.2;
+
+    control {
+        v = unroll(5);
+        check;
+        print_results;
+        v.print_cex(a_mod.x, a_mod.y);
+    }
+}
+

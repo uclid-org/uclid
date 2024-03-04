@@ -1,0 +1,78 @@
+module child
+{
+
+  var nums : [integer]integer;
+  var x    : integer; 
+
+  procedure add(a : integer, b : integer) returns (c : integer)
+    requires (a >= 0 && a < 10);
+    requires (b >= 0 && b < 10);
+    ensures c == a + b;
+    ensures (c >= 0 && c < 18);
+  {
+    c = a + b;
+  }
+
+  procedure [noinline] sum(n : integer) returns (numbers : [integer]integer)
+    requires (n > 0);
+    requires (n < 5);
+    ensures (forall (i : integer) :: (i > 0 && i < n) ==> numbers[i] == i+1);
+    ensures (x == old(x) + 1);
+    ensures (forall (i : integer) :: (i > 0 && i < n) ==> (nums[i] == numbers[i]));
+    modifies x;
+    modifies nums;
+  {
+    for i in range(1, 5) {
+      if (i < n) {
+        call (numbers[i]) = add(i, 1);
+        nums[i] = numbers[i]; //Comment this line out for a failing condition.
+      }
+    }
+    x = x + 1;
+  }
+
+  control {
+    add_verif = verify(add);
+    sum_verif = verify(sum);
+    check;
+    print_results;
+  }
+
+}
+
+
+module main
+{
+
+  instance chld : child();
+
+  // Note that the below postconditions all pass since we assume them by
+  // noinlining.
+  procedure child_sum(w : integer)
+    returns (numbers : [integer]integer)
+    requires (w > 0);
+    requires (w < 5);
+    ensures (forall (i : integer) :: (i > 0 && i < w) ==> numbers[i] == i+1);
+    ensures (chld.x == old(chld.x) + 1);
+    ensures (forall (i : integer) :: (chld.nums[i] == numbers[i]));
+    ensures (forall (i : integer) :: (i > 0 && i < w) ==> (chld.nums[i] == numbers[i]));
+
+    modifies chld;
+  {
+    call (numbers) = chld.sum(4); //Set this to 4 to pass all tests
+    assert(false);
+  }
+    
+
+
+  control {
+    child_sum_verif = verify(child_sum);
+    check;
+    print_results;
+    child_sum_verif.print_cex(w, numbers[1], numbers[2], numbers[3], numbers[4], numbers[5]);
+  }
+
+
+
+
+}

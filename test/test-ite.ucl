@@ -1,0 +1,31 @@
+module main
+{
+  var n : integer;
+  var s : integer;
+  var b : boolean;
+  
+  init {
+    b = false;
+    n = 0;
+    s = 0;
+  }
+  
+  next {
+    n' = if (b) then (n + 1) else (n + 2);
+    // noteToSelf(ReorderingTest)
+    if (b) {
+      s' = s + 1;
+    } else {
+      s' = s + 2;
+    }
+  }
+  
+  invariant[LTL] s_eq_n : G(s == n);
+  invariant[LTL] s_eq_n_plus_1 : G(s == (n+1));
+
+  control {
+    bmc(5);
+    check;
+    print_results;
+  }
+}

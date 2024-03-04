@@ -1,0 +1,35 @@
+module main
+{
+  type plaintext_t;
+  type ciphertext_t;
+  type key_t;
+
+  const pt       : plaintext_t;
+  var   ct       : ciphertext_t;
+  var   sk       : key_t; // secret key
+
+  input ik       : key_t; // input key
+  var   dt       : plaintext_t; // "decoded" text
+
+  function enc(k : key_t, pt : plaintext_t)  : ciphertext_t;
+  function dec(k : key_t, ct : ciphertext_t) : plaintext_t;
+
+  axiom dec_enc : 
+    (forall (k1, k2 : key_t, p : plaintext_t) ::
+        (dec(k2, enc(k1, p)) == p) <==> (k1 == k2));
+
+  init {
+    ct = enc(sk, pt);
+  }
+
+  next {
+    dt' = dec(ik, ct);
+    assert (dt' == pt) ==> (ik == sk);
+  }
+
+  control {
+    v = unroll(5);
+    check;
+    print_results;
+  }
+}

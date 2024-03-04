@@ -1,0 +1,23 @@
+module common {
+    define and (a, b : boolean) : boolean = a && b;
+}
+
+module main {
+    define * = common.*;
+
+    init {
+    }
+
+    next {
+    }
+
+    property p1 : (and(true, false) == false); // should pass
+    property p2 : (and(true, true) == true); // should pass
+    property p3 : (and(true, false) == true); // should fail
+
+    control {
+        v = unroll(0);
+        check;
+        print_results;
+    }
+}

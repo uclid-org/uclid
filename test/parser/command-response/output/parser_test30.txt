@@ -1,0 +1,6 @@
+(model 
+  (define-fun initial_4_n () Int
+    1)
+  (define-fun initial_3_m () Int
+    2)
+)

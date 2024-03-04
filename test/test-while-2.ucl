@@ -1,0 +1,53 @@
+
+module main
+{
+  var numbers: [integer]integer;
+  var tail : integer;
+
+  input push_value   : integer;
+  input search_value : integer;
+  output value_found : boolean;
+
+  init {
+    tail = 0;
+  }
+
+  next {
+    call push();
+    call (value_found') = search();
+  }
+
+  procedure push()
+    modifies numbers, tail;
+  {
+    numbers[tail] = push_value;
+    tail = tail + 1;
+  }
+
+  procedure search()
+    returns (found : boolean)
+    requires (tail >= 0);
+    ensures (exists (idx : integer) :: idx >= 0 && idx < tail && numbers[idx] == search_value) <==> found;
+  {
+    var i : integer;
+
+    i = 0;
+    found = false;
+    while (i < tail)
+      invariant (i >= 0 && i <= tail);
+      invariant (exists (idx : integer) :: idx >= 0 && idx < i && numbers[idx] == search_value) <==> found;
+    {
+      if (numbers[i] == search_value) {
+        found = false;
+      }
+      i = i + 1;
+    }
+  }
+
+  control {
+    v = verify(search);
+    check;
+    print_results;
+    // v.print_cex(numbers, i, search_value, found, tail);
+  }
+}

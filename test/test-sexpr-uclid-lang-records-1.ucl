@@ -1,0 +1,26 @@
+module main {
+
+    type cache_t = record { valid : boolean, value : integer };
+
+    var cache   : cache_t;
+    var cache1  : cache_t;
+
+    init {
+        cache.valid = true;
+        cache.value = 10;
+        cache1 = cache[value := 2022];
+    }
+
+    next {
+        havoc cache1;
+    }
+
+    invariant trivial  : cache1.value == 2022 && cache1.value < 2;
+
+    control {
+        v = bmc(1);
+        check;
+        print_results;
+        v.print_cex_json(cache1);
+    }
+}

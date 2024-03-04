@@ -1,0 +1,33 @@
+module main {
+	var regFile : [bv5]bv32;
+	
+    input   wr_addr_in : bv5;
+    input   wr_data_in : bv32;
+
+    input   rd_addr_in : bv5;
+    output  rd_data_out : bv32;
+
+	init {
+        assume (forall (i : bv5) :: regFile[i] == 0bv32);
+	}
+
+    procedure write_regFile (addr : bv5, data : bv32) 
+        modifies regFile;
+    {
+        regFile[addr] = data;
+    }
+
+	next {	
+		rd_data_out' = regFile[rd_addr_in];
+        call write_regFile(wr_addr_in, wr_data_in);
+	}
+
+	property r0 : regFile[0bv5] == 0bv32;
+ 
+	control {
+		v = bmc(5);
+		check;
+        print_results;
+		v.print_cex_json(regFile);
+	}
+}

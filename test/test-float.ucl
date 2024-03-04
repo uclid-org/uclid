@@ -1,0 +1,28 @@
+module main
+{
+  var x : fp5_11; // this should parse
+  var y : single; // this is syntactic sugar for a IEEE single and should 
+  // parse and convert into an FP with the appropriate exponent and significand size
+  var z : double; // this is syntactic sugar for IEEE double
+  var w : half; // this is syntactic sugar for IEEE half
+  init {
+    x = 0.0fp5_11; // should parse
+    y = 0.0single;
+    y = 0.0half;
+    y = 0.0double;
+  }
+
+// TODO_leiqi: add some tests for floating point arithmetic
+// test-float-3.ucl
+// test-float-4.ucl
+
+  next {
+    y' = y+3.4single;
+    x' = x*3.4half;
+  }
+  control {
+    f = induction;
+    check;
+    print_results;
+ }
+}
