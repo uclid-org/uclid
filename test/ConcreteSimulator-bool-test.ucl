@@ -1,0 +1,17 @@
+module main
+{
+  var n : boolean;
+  init {
+    n = false;
+  }
+  next {
+    n' = true;
+  }
+
+  control {
+    v = bmc(5);
+    check;
+    print_results;
+    v.print_cex(n);
+  }
+}
