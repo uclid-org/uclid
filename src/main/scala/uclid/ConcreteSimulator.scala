@@ -41,6 +41,10 @@ case class ConcreteBV (value: BigInt, width: Int) extends ConcreteValue{
 case class ConcreteArray (value: Map[List[ConcreteValue], ConcreteValue]) extends ConcreteValue{
     override def toString = value.toString;
     override def valueClone = new ConcreteArray(value.clone);
+}
+case class ConcreteFunction (value: Map[List[ConcreteValue], ConcreteValue]) extends ConcreteValue{
+    override def toString = value.toString;
+    override def valueClone = new ConcreteArray(value.clone);
 } 
 case class ConcreteRecord (value: Map[Identifier, ConcreteValue]) extends ConcreteValue{
     override def toString = value.toString;
@@ -81,6 +85,7 @@ object ConcreteSimulator {
     case class ConcreteContext() {
         var varMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var varTypeMap: scala.collection.mutable.Map[Identifier, Type] = collection.mutable.Map();
+        //var functionMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var inputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var outputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
 
@@ -91,7 +96,6 @@ object ConcreteSimulator {
             if (varMap.contains(variable)) varMap(variable)
             else if (inputMap.contains(variable)) inputMap(variable)
             else{
-
                 ConcreteUndef()
                 }
             }
@@ -100,6 +104,7 @@ object ConcreteSimulator {
             else if (inputMap.contains(variable)) inputMap(variable) = value
             else throw new Error(f"Variable ${variable.toString} not found in context")}
         def updateVar (lhs: Lhs, value: ConcreteValue) {
+            printDebug("Update "+lhs.toString+" With Value "+value.toString)
             lhs match {
                 case LhsId(id) => {
                     varMap(id) = value
@@ -170,7 +175,14 @@ object ConcreteSimulator {
             )
             varMap = varMap.++(enumContext);
             varMap = varMap.++(newContext);}
-        
+        def extendFunction(functionDecls:List[uclid.lang.FunctionDecl]):Unit ={
+            for(functionDecls<-functionDecls){
+                val id = functionDecls.id
+                val funcArg = functionDecls.sig.args
+                val retType = functionDecls.sig.retType
+                varTypeMap(id) = retType;
+                varMap(id) = ConcreteFunction(scala.collection.mutable.Map[List[ConcreteValue], ConcreteValue]().withDefaultValue(ConcreteUndef()))
+            }}
         def removeVar (vars: List[(Identifier, Type)]) : Unit = {
             for ((variable_name, variable_type) <- vars) {
                 varMap.-(variable_name)
@@ -530,6 +542,13 @@ object ConcreteSimulator {
                                 case _ => ConcreteUndef()
                             }
                         }
+                        case EnumType (ids) =>{
+                            runtimeMod match{
+                                case Fuzzing => ConcreteEnum(ids,random.nextInt(ids.size))
+                                case Default => ConcreteEnum(ids,0)
+                                case _ => ConcreteEnum(ids,-1)
+                            }
+                        } 
                         case _ => throw new NotImplementedError("Does not support type "+uclidType) 
                     }
                 }
@@ -630,9 +649,18 @@ object ConcreteSimulator {
                         }
                         case _ => throw new Error("Should not touch this place")
                     }
-                } 
+                }
                 case _ =>{
-                    ConcreteUndef()
+                    //it can be function call as well
+                    varMap(id) match{
+                        case ConcreteFunction(functionMap) =>{
+                            var newValue = generateValue(ConcreteUndef(),varTypeMap(id),false);
+                            functionMap(index) = newValue
+                            varMap(id) = ConcreteFunction(functionMap)
+                            newValue
+                        }
+                        case _ => ConcreteUndef()
+                    }
                 }
             }
         }
@@ -737,6 +765,7 @@ object ConcreteSimulator {
         concreteContext.extendVar(module.vars);
         concreteContext.extendInputVar(module.inputs)
         concreteContext.extendVar(module.outputs)
+        concreteContext.extendFunction(module.functions)
         
         setAssumes(module.axioms,concreteContext);
 
@@ -899,6 +928,7 @@ object ConcreteSimulator {
                     }
                 }
                 case ConcreteUndef() => {
+                    context.printVar(List())
                     throw new Error("When Evaluation Bool value we hit a undefine value "+cond.toString)
                 }
             }
@@ -1171,7 +1201,29 @@ object ConcreteSimulator {
                         }
                     }
                 }
-                
+                }
+            case FuncApplication(expr,args)=>{
+                expr match{
+                    case id: Identifier =>{
+                        val eval_args = args.map(a => evaluate_expr(context,a)) // list of concrete expr
+                        context.read(id) match{
+                            case ConcreteFunction(valueMap)=>{
+                                var retValue = valueMap(eval_args)
+                                if(retValue.isInstanceOf[ConcreteUndef]){
+                                    retValue = context.runtimeValue(id,eval_args)
+                                    printDebug("We make a fuzzing Value for Function "+retValue.toString)
+                                }
+                                retValue
+                            }
+                            case _ =>{
+                                ConcreteUndef()
+                            }
+                        }
+                    }
+                    case _ => {
+                      throw new NotImplementedError(s"Expression evaluation for ${expr}")  
+                    }
+                }
             }
             case _ => throw new NotImplementedError(s"Expression evaluation for ${expr}")
         }}
