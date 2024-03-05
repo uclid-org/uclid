@@ -154,6 +154,20 @@ object ConcreteSimulator {
                         (v._1, ConcreteArray(scala.collection.mutable.Map[List[ConcreteValue], ConcreteValue]().withDefaultValue(ConcreteUndef())))
                     }
                     case RecordType(members) => {
+                        for ((memberId,memberType)<-members){
+                            memberType match{
+                                case EnumType(ids) => {
+                                    for ((id,i) <- ids.view.zipWithIndex) {
+                                        enumContext(id) = ConcreteEnum(ids, i)
+                                    }
+                                    // TODO: Should this be ConcreteUndef?
+                                    (v._1, ConcreteEnum(ids, -1))
+                                }
+                                case _ => {
+
+                                }
+                            }
+                        };
                         (v._1, ConcreteRecord(scala.collection.mutable.Map(members.map(m => (m._1, ConcreteUndef())): _*)))
                     }
                     case EnumType(ids) => {
@@ -299,14 +313,15 @@ object ConcreteSimulator {
                             var cnt: Int = 0;
 
                             retContext(key) = generateValue(value,typ,isInput)
-                            while(!checkAssume() && (!assumeRecommendTable.contains(id))){
-                                retContext(key) = generateValue(value,typ,isInput)
-                                cnt = cnt +1;
-                                if(cnt>100){
-                                    println("Now the rTable is "+assumeRecommendTable.toString)
-                                    throw new Error("inifinte Loop for getting value of "+key.toString)
-                                }
-                            }
+                            // while(!checkAssume() && (!assumeRecommendTable.contains(id))){
+                            //     retContext(key) = generateValue(value,typ,isInput)
+                            //     cnt = cnt +1;
+                            //     if(cnt>10){
+                            //         println("Now the rTable is "+assumeRecommendTable.toString)
+                            //         println("Now the assume Table is "+assumeTable.toString)
+                            //         throw new Error("inifinte Loop for getting value of "+key.toString)
+                            //     }
+                            // }
                             //random does not work and we have recommend value
                             if(!checkAssume()&assumeRecommendTable.contains(id)){
                                 retContext(key) = assumeRecommendTable(id)
@@ -327,14 +342,15 @@ object ConcreteSimulator {
                             var cnt: Int = 0;
 
                             retContext(key) = generateValue(value,typ,isInput)
-                            while(!checkAssume() && (!assumeRecommendTable.contains(id))){
-                                retContext(key) = generateValue(value,typ,isInput)
-                                cnt = cnt +1;
-                                if(cnt>100){
-                                    println("Now the rTable is "+assumeRecommendTable.toString)
-                                    throw new Error("inifinte Loop for getting value of "+key.toString)
-                                }
-                            }
+                            // while(!checkAssume() && (!assumeRecommendTable.contains(id))){
+                            //     retContext(key) = generateValue(value,typ,isInput)
+                            //     cnt = cnt +1;
+                            //     if(cnt>100){
+                            //         println("Now the rTable is "+assumeRecommendTable.toString)
+                            //         println("Now the assume Table is "+assumeTable.toString)
+                            //         throw new Error("inifinte Loop for getting value of "+key.toString)
+                            //     }
+                            // }
                             //random does not work and we have recommend value
                             if(!checkAssume()&assumeRecommendTable.contains(id)){
                                 retContext(key) = assumeRecommendTable(id)
@@ -835,8 +851,10 @@ object ConcreteSimulator {
                 for((lhssid,i)<-lhss.view.zipWithIndex){
                     if(rhseval(i).isInstanceOf[ConcreteUndef]){
                         printDebug("We hit a undefine value when assigning "+rhseval(i).toString)
-                        // context.printVar(List());
-                        //throw new Error("Assign value to Undef")
+                        //Leiqi:
+                        //Comment this will reduce some erro
+                        //context.printVar(List());
+                        throw new Error("Assign value to Undef")
                     }
                     printDebug("Assign "+lhss(i).toString+" "+rhseval(i).toString)
                     context.updateVar(lhss(i),rhseval(i))
@@ -1071,14 +1089,27 @@ object ConcreteSimulator {
                                         case DisjunctionOp() => ConcreteBool(bool_0 || bool_1)
                                         case IffOp() => ConcreteBool(bool_0 == bool_1)
                                         case ImplicationOp() => ConcreteBool(!bool_0 || bool_1)
-                                        case _ => throw new NotImplementedError("Not implements the Operator for Bool"+op.toString) 
+                                        case _ => throw new NotImplementedError("Not implements the Operator for Bool"+operands.tail.head.toString) 
                                     }
                                 }
                                 case ConcreteUndef() => {
-                                    undetCount = undetCount + 1;
-                                    ConcreteUndef()
+                                    throw new NotImplementedError("touch undefine value of "+ operands.tail.head.toString)
                                 }
-                                case _ => throw new NotImplementedError("Should not reach here")
+                                case _ => {
+                                    op match{
+                                        case ITEOp() => {
+                                            val opreand_2 = evaluate_expr(context,operands.tail.tail.head);
+                                            if(bool_0){
+                                                operand_1
+                                            }
+                                            else{
+                                                opreand_2
+                                            }                                            
+                                        }
+                                        case _ => throw new Error("Bad type match for expr "+expr.toString)
+                                    }
+
+                                }
                             }
                         }
                         case ConcreteInt(int_0) => {
@@ -1138,7 +1169,7 @@ object ConcreteSimulator {
                                         case BVUDivOp(w) => ConcreteBV(unint_0 / unint_1,w)
                                         case EqualityOp() => ConcreteBool(int_0 == int_1)
                                         case InequalityOp() => ConcreteBool(int_0 != int_1)
-                                        case _ => throw new NotImplementedError("Not implements the Operator for BV"+op.toString) 
+                                        case _ => throw new NotImplementedError("Not implements the Operator for BV "+op.toString) 
                                     }
                                 }
                                 case ConcreteUndef() => {
@@ -1175,8 +1206,7 @@ object ConcreteSimulator {
                             }
                         }
                         case ConcreteUndef() => {
-                            undetCount = undetCount + 1;
-                            ConcreteUndef()
+                            throw new NotImplementedError("touch undefine value of "+ operands.head.toString)
                         }
                         case ConcreteArray(value_0) => {
                             operand_1 match{
