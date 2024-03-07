@@ -102,7 +102,8 @@ object ConcreteSimulator {
         def write (variable: Identifier, value: ConcreteValue) {
             if (varMap.contains(variable)) varMap(variable) = value
             else if (inputMap.contains(variable)) inputMap(variable) = value
-            else throw new Error(f"Variable ${variable.toString} not found in context")}
+            // else throw new Error(f"Variable ${variable.toString} not found in context")
+        }
         def updateVar (lhs: Lhs, value: ConcreteValue) {
             printDebug("Update "+lhs.toString+" With Value "+value.toString)
             lhs match {
@@ -505,8 +506,10 @@ object ConcreteSimulator {
                                     }
                                 }    
                             }
+                            //TODO:
+                            //wait for better plan
                             case InequalityOp() => {
-                                throw new Error("Unimplemented")
+                                // throw new Error("Unimplemented")
                                 //ConcreteBool(bool_0 != bool_1)
                             }
                             case ConjunctionOp() =>{ 
@@ -854,7 +857,7 @@ object ConcreteSimulator {
                         //Leiqi:
                         //Comment this will reduce some erro
                         //context.printVar(List());
-                        throw new Error("Assign value to Undef")
+                        //throw new Error("Assign value to Undef")
                     }
                     printDebug("Assign "+lhss(i).toString+" "+rhseval(i).toString)
                     context.updateVar(lhss(i),rhseval(i))
@@ -945,9 +948,14 @@ object ConcreteSimulator {
                         return false
                     }
                 }
+                //TODO:
+                //make better check on this part
                 case ConcreteUndef() => {
-                    context.printVar(List())
-                    throw new Error("When Evaluation Bool value we hit a undefine value "+cond.toString)
+                    //if we hit undef value, just give a false
+                    //println("Hit a Undef Boolean")
+                    true
+                    // context.printVar(List())
+                    // throw new Error("When Evaluation Bool value we hit a undefine value "+cond.toString)
                 }
             }
         }
@@ -1175,9 +1183,10 @@ object ConcreteSimulator {
                                 case ConcreteUndef() => {
                                     undetCount = undetCount + 1;
                                     printDebug("Here we hit a undefine value: "+operands.tail.head.toString)
-                                    context.printVar(List())
-                                    context.printInput(List())
-                                    throw new NotImplementedError("Runtime Panic on variable "+operands.tail.head.toString)
+                                    // context.printVar(List())
+                                    // context.printInput(List())
+                                    ConcreteUndef()
+                                    //throw new NotImplementedError("Runtime Panic on variable "+operands.tail.head.toString)
                                 }
                                 case _ => {
                                     //printVar(context,List());
@@ -1206,7 +1215,7 @@ object ConcreteSimulator {
                             }
                         }
                         case ConcreteUndef() => {
-                            throw new NotImplementedError("touch undefine value of "+ operands.head.toString)
+                            ConcreteUndef()
                         }
                         case ConcreteArray(value_0) => {
                             operand_1 match{
