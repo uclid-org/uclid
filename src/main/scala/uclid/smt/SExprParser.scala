@@ -74,6 +74,13 @@ trait SExprTokens extends Tokens {
     val value = BigInt(chars, base)
     override def toString = value.toString()
   }
+
+  case class RealLit(chars: String, base: Int) extends SExprToken {
+    val integral = BigInt(chars.split('.')(0), base)
+    val fractional = chars.split('.')(1)
+    override def toString = chars
+  }
+
   /** Bitvector types. */
   case class BitVectorLit(chars: String, base: Int, width: Int) extends SExprToken {
     val value = BigInt(chars, base)
@@ -93,6 +100,8 @@ class SExprLexical extends Lexical with SExprTokens {
   override def token: Parser[Token] =
     ( { '#' ~ 'x' ~> hexDigit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 16, 4*chars.length) } }
     | { '#' ~ 'b' ~> bit.+ ^^ { case chars => BitVectorLit(chars.mkString(""), 2, chars.length) } }
+    | { digit.+ ~ ( '.' ~> digit.+ ) ^^ {case ids ~ fds => RealLit(ids.mkString("") + "." + fds.mkString(""), 10) } }
+    | { '-' ~> (digit.+ ~ ( '.' ~> digit.+ )) ^^ {case ids ~ fds => RealLit("-" + ids.mkString("") + "." + fds.mkString(""), 10) } }
     | { digit.+ ^^ { case ds => IntegerLit(ds.mkString(""), 10) } }
     | { '-' ~> digit.+ ^^ { case ds => IntegerLit("-" + ds.mkString(""), 10) } }
     | { symbolStartChar ~ rep(symbolChar) ^^ { case s ~ ss => processIdent((s :: ss).mkString("")) } }
@@ -147,7 +156,7 @@ class SExprLexical extends Lexical with SExprTokens {
 /** This is a re-implementation of the Scala libraries StdTokenParsers with StdToken replaced by UclidToken. */
 trait SExprTokenParsers extends TokenParsers {
   type Tokens <: SExprTokens
-  import lexical.{Keyword, Symbol, QuotedLiteral, IntegerLit, BitVectorLit, BoolLit}
+  import lexical.{Keyword, Symbol, QuotedLiteral, IntegerLit, RealLit, BitVectorLit, BoolLit}
 
   protected val keywordCache = mutable.HashMap[String, Parser[String]]()
 
@@ -169,6 +178,9 @@ trait SExprTokenParsers extends TokenParsers {
   /** A parser which matches an integer literal */
   def integerLit: Parser[IntegerLit] =
     elem("integer", _.isInstanceOf[IntegerLit]) ^^ (_.asInstanceOf[IntegerLit])
+
+  def realLit: Parser[RealLit] =
+    elem("real", _.isInstanceOf[RealLit]) ^^ (_.asInstanceOf[RealLit])
 
   /** A parser which matches a bitvector literal */
   def bitvectorLit: Parser[BitVectorLit] =
@@ -314,6 +326,9 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val IntegerLit : PackratParser[(smt.IntLit, String)] =
     integerLit ^^ { iLit => (smt.IntLit(iLit.value), iLit.chars) }
 
+  lazy val RealLit : PackratParser[(smt.RealLit, String)] =
+    realLit ^^ { rLit => (smt.RealLit(rLit.integral, rLit.fractional), rLit.chars) }
+
   lazy val BitVectorLit : PackratParser[(smt.BitVectorLit, String)] =
     bitvectorLit ^^ { bvLit => bvLit.base match {
         case 2  => (smt.BitVectorLit(bvLit.value, bvLit.numBits), "#b" ++ bvLit.chars) 
@@ -389,6 +404,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     BitVectorLit | 
     BoolLit |
     IntegerLit |
+    RealLit |
     QualIdentifier |
     "(" ~> Operator ~ Expr.+ <~ ")" ^^ { 
       case op ~ args => (
@@ -508,6 +524,9 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
   lazy val UclidIntegerLit : PackratParser[(lang.IntLit, String)] =
     integerLit ^^ { iLit => (lang.IntLit(iLit.value), iLit.chars) }
 
+  lazy val UclidRealLit : PackratParser[(lang.RealLit, String)] =
+    realLit ^^ { rLit => (lang.RealLit(rLit.integral, rLit.fractional), rLit.chars) }
+
   lazy val UclidBitVectorLit : PackratParser[(lang.BitVectorLit, String)] =
     bitvectorLit ^^ { bvLit => (lang.BitVectorLit(bvLit.value, bvLit.numBits),
         bvLit.base match {
@@ -573,6 +592,7 @@ object SExprParser extends SExprTokenParsers with PackratParsers {
     UclidBitVectorLit |
     UclidBoolLit |
     UclidIntegerLit |
+    UclidRealLit |
     UclidQualIdentifier |
     "(" ~> UclidOperator ~ UclidExpr.+ <~ ")" ^^ {
       case op ~ args => (lang.OperatorApplication(op._1, args.map(a => a._1)), joinWithSpace(op._2, args.map(a => a._2).mkString(" ")))
