@@ -776,7 +776,7 @@ class PrintCexSpec extends AnyFlatSpec {
     }
     val str1 = ((json \ "property__trivial__1" \ "trace")(1) \ "cache1")(0)
     str1 match {
-      case JString(s) => assert(s.equals("const_record(_rec_valid := false, _rec_value := 0)"))
+      case JString(s) => assert(s.equals("const-record [_rec_valid := false, _rec_value := 0]"))
       case _ => assert(false)
     }
   }
@@ -789,7 +789,7 @@ class PrintCexSpec extends AnyFlatSpec {
     }
     val str1 = ((json \ "property__trivial__1" \ "trace")(1) \ "cache1")(0)
     str1 match {
-      case JString(s) => assert(s.equals("const_record(_rec_valid := false, _rec_value := const(0bv32, [bv4]bv32))"))
+      case JString(s) => assert(s.equals("const-record [_rec_valid := false, _rec_value := const(0bv32, [bv4]bv32)]"))
       case _ => assert(false)
     }
   }
@@ -813,7 +813,7 @@ class PrintCexSpec extends AnyFlatSpec {
     val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-mixed-1.ucl"))
     val str0 = ((json \ "property__trivial__1" \ "trace")(1) \ "database")(0)
     str0 match {
-      case JString(s) => assert(s.equals("(const(const_record(_rec_uid := 2, _rec_color := false), [integer]utype_t))[2 -> const_record(_rec_uid := 3, _rec_color := false)]"))
+      case JString(s) => assert(s.equals("(const(const-record [_rec_uid := 2, _rec_color := false], [integer]utype_t))[2 -> const-record [_rec_uid := 3, _rec_color := false]]"))
       case _ => assert(false)
     }
   }
@@ -829,7 +829,7 @@ class PrintCexSpec extends AnyFlatSpec {
     val json = parse(PrintCexSpec.checkSExprToUclidLang("./test/test-sexpr-uclid-lang-mixed-3.ucl"))
     val str0 = ((json \ "property__trivial__1" \ "trace")(1) \ "database")(0)
     str0 match {
-      case JString(s) => assert(s.equals("(const(const_record(_rec_uid := 2, _rec_color := RED), [integer]utype_t))[2 -> const_record(_rec_uid := 3, _rec_color := RED)]"))
+      case JString(s) => assert(s.equals("(const(const-record [_rec_uid := 2, _rec_color := RED], [integer]utype_t))[2 -> const-record [_rec_uid := 3, _rec_color := RED]]"))
       case _ => assert(false)
     }
   }
