@@ -40,14 +40,14 @@ object ASTConcreteEvaluator
                   case _ => throw new Utils.UnimplementedException("Unimplemented operator application evaluation")
                 }
               }
-              case _ => throw new Utils.UnimplementedException("Unimplemented operator application evaluation")
+              case _ => e // Unimplemented operator application evaluation
             }
           }
           case ConstRecord(fields) => ConstRecord(fields)
           case Symbol(id, typ) => {
             val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.name == id.toString)
             definitions.size match {
-              case 0 => throw new Utils.RuntimeError("No definition found in the assignment model!")
+              case 0 => e // No definition found, return the symbol. Should raise some error here
               case 1 => {
                 val valueExpr = definitions.head._1.asInstanceOf[lang.DefineDecl].expr
                 Converter.exprToSMT(valueExpr, lang.Scope.empty)
