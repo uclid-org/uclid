@@ -397,7 +397,10 @@ class SMTLIB2Model(stringModel : String) extends Model {
     val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.toString() contains e.toString())
     Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
-      case 0 => JString(e.toString())
+      case 0 => ASTConcreteEvaluator.evalExpr(Some(e), modelUclid) match {
+        case Some(eP) => JString(eP.toString)
+        case None => JString(e.toString())
+      }
       case 1 => evalAsUclid(e) match {
           case Some(eP) => JString(eP.toString)
           case None => JString(definitions(0)._2)

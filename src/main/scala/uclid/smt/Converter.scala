@@ -328,6 +328,21 @@ object Converter {
         case _ =>
            throw new Utils.RuntimeError("Should never get here.")
       }
+      case lang.QualifiedIdentifierApplication(qid, exprs) => {
+        lang.ULContext.stripMkTupleFunction(qid.toString) match {
+          case Some(s) => {
+            lang.ULContext.postTypeMap.get(s).get match {
+              case lang.RecordType(fields) => {
+                val exprsInSMT = exprs.map(e => _exprToSMT(e, scope, past, idToSMT))
+                val recordFields = fields.map(f => f._1.toString)
+                smt.ConstRecord(recordFields zip exprsInSMT)
+              }
+              case _ => throw new Utils.RuntimeError("Type conversion for " + s + " not supported in QualifiedIdentifierApplication.")
+            }
+          }
+          case None => throw new Utils.RuntimeError(qid.toString + " not found in postTypeMap.")
+        }
+      }
       // Unimplemented operators.
       case lang.Lambda(_,_) =>
         throw new Utils.UnimplementedException("Lambdas are not yet implemented.")
@@ -336,7 +351,7 @@ object Converter {
         throw new Utils.RuntimeError("Should never get here. FreshLits must have been rewritten by this point.")
       case lang.ExternalIdentifier(_, _) =>
         throw new Utils.RuntimeError("Should never get here. ExternalIdentifiers must have been rewritten by this point.")
-      case lang.QualifiedIdentifierApplication(_, _) | lang.QualifiedIdentifier(_, _) | lang.IndexedIdentifier(_, _) => 
+      case lang.QualifiedIdentifier(_, _) | lang.IndexedIdentifier(_, _) => 
         throw new Utils.RuntimeError("ERROR: Qualified and Indexed Identifiers are currently not supported")
       case lang.LetExpr(_, _) =>
         throw new Utils.UnimplementedException("ERROR: SMT expr generation for QualifiedIdentifier and IndexedIdentifier is currently not supported")

@@ -900,7 +900,7 @@ case class UninterpretedTypeLiteral(value : String) extends Expr{
 }
 
 case class ConstRecord(fieldvalues: List[(Identifier, Expr)]) extends Expr {
-  override def toString = "const_record(%s)".format(
+  override def toString = "const-record [%s]".format(
     fieldvalues.map(a => "%s := %s".format(a._1.toString, a._2.toString)).mkString(", ")
   )
 }
