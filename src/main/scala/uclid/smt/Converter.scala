@@ -83,6 +83,8 @@ object Converter {
         lang.UninterpretedType(lang.Identifier(name))
       case smt.IntType =>
         lang.IntegerType()
+      case smt.RealType =>
+        lang.RealType()
       case smt.BoolType =>
         lang.BooleanType()
       case smt.BitVectorType(w) =>
