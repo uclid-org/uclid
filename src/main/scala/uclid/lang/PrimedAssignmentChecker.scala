@@ -39,7 +39,7 @@
 package uclid
 package lang
 
-import uclid.lang.Scope.BlockVar
+import lang.Scope.BlockVar
 
 class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
 {

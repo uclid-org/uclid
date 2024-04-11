@@ -39,7 +39,7 @@
 package uclid
 package smt
 import scala.util.matching.Regex
-import uclid.lang.Identifier
+import lang.Identifier
 
 sealed trait Type extends Hashable {
   override val hashBaseId = 22575 // Random number. Not super important, must just be unique for each abstract base class.

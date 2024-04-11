@@ -44,11 +44,11 @@ import scala.collection.mutable.{Map => MutableMap}
 import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
-import uclid.lang.Identifier
+import lang.Identifier
 
 import org.json4s._
-import _root_.uclid.lang.Scope
-import _root_.uclid.lang.ExpressionEnvironment
+import lang.Scope
+import lang.ExpressionEnvironment
 
 trait SMTLIB2Base {
   val smtlib2BaseLogger = Logger(classOf[SMTLIB2Base])

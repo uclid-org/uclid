@@ -45,8 +45,8 @@ import scala.collection.mutable.{Map => MutableMap}
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
 import scala.reflect.ClassTag
-import uclid.smt.SynonymMap
-import uclid.smt.Converter
+import smt.SynonymMap
+import smt.Converter
 
 object PrettyPrinter
 {
