@@ -88,6 +88,37 @@ class VerifierSanitySpec extends AnyFlatSpec {
   "test-assert-1.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-assert-1.ucl", 0)
   }
+  "test-adt-0.ucl" should "verify all but one assertion." in {
+    VerifierSpec.expectedFails("./test/test-adt-0.ucl", 1)
+  }
+  "test-adt-1.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-adt-1.ucl", 0)
+  }
+  "test-adt-2.ucl" should "fail to verify 6 assertions." in {
+    VerifierSpec.expectedFails("./test/test-adt-2.ucl", 6)
+  }
+  "test-adt-3.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-adt-3.ucl", 0)
+  }
+  "test-adt-4.ucl" should "fail to verify 2 assertions." in {
+    VerifierSpec.expectedFails("./test/test-adt-4.ucl", 2)
+  }
+
+  "test-adt-7-testingacyclicality.ucl" should "fail to verify 3 assertions." in {
+    VerifierSpec.expectedFails("./test/test-adt-7-testingacyclicality.ucl", 3)
+  }
+  "test-adt-8-testingacyclicality.ucl" should "fail to verify 3 assertions." in {
+    VerifierSpec.expectedFails("./test/test-adt-8-testingacyclicality.ucl", 3)
+  }
+  "test-adt-14-goodselecting.ucl" should "fail to verify 2 assertions." in {
+    VerifierSpec.expectedFails("./test/test-adt-14-goodselecting.ucl", 2)
+  }
+  "test-adt-16-multiplemodules.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-adt-16-multiplemodules.ucl", 0)
+  }
+  "test-adt-17-procedures.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-adt-17-procedures.ucl", 0)
+  }
   "test-array-0.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-array-0.ucl", 0)
   }

@@ -1,0 +1,33 @@
+module aux {
+    datatype tree = | join(left: tree, right: tree) | leaf(node: integer);
+
+}
+
+module main {
+    // parse error at line 10 but only if we includ line 8
+    type * = aux.*;
+
+    datatype tree = | join(left: tree, right: tree) | leaf(node: integer);
+
+    var t1 : tree;
+    var t2 : tree;
+
+
+    init {
+        t1 = join(leaf(1), leaf(1));
+        t2 = leaf(1);
+    }
+    
+    next {
+        t1' = join(t1, t1);
+        t2' = join(t2, t2);
+    }
+
+    invariant test : t1.left == t2;
+
+    control {
+        bmc(5);
+        check;
+        print_results;
+    }
+}

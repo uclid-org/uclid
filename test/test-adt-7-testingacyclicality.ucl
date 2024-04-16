@@ -1,0 +1,19 @@
+module main {
+
+    datatype list = cons(head: integer, tail: list) | nil();
+
+    var l : list;
+
+    init {
+        l = nil();
+    }
+    
+
+    invariant test : l.tail == l && l == nil();
+
+    control {
+        bmc(2);
+        check;
+        print_results;
+    }
+}

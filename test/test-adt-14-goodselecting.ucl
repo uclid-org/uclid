@@ -1,0 +1,26 @@
+module main {
+    // should fail
+
+    datatype list = cons(head: integer, tail: list) | nil();
+    datatype tree = | join(left: tree, right: tree) | leaf(node: integer);
+
+    var l1 : tree;
+    var l2: tree;
+
+    init {
+        l1 = l2.left;
+        havoc l2;
+    }
+
+    next { 
+        l1' = l2.left;
+    }
+
+    invariant test : l1 == leaf(1);
+
+    control {
+        induction;
+        check;
+        print_results;
+    }
+}

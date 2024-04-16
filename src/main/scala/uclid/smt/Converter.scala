@@ -69,6 +69,15 @@ object Converter {
         smt.RecordType(fields.map((f) => (f._1.toString, typeToSMT(f._2))))
       case lang.EnumType(ids) =>
         smt.EnumType(ids.map(_.name))
+      case dt : lang.DataType =>
+        smt.DataType(dt.id.name, dt.constructors.map(c => ConstructorType(c._1.name, c._2.map(s => {
+          s._2 match {
+            case lang.SynonymType(id2) if id2 == dt.id => (s._1.name, smt.SelfReferenceType(id2.name))
+            case _ => (s._1.name, typeToSMT(s._2))
+          }
+        }), smt.SelfReferenceType(dt.id.name))))
+      case lang.ConstructorType(id, inTypes, outTyp) =>
+        smt.ConstructorType(id.name, inTypes.map(t => (t._1.name, typeToSMT(t._2))), typeToSMT(outTyp))
       case lang.SynonymType(_) =>
         throw new Utils.UnimplementedException("Synonym types must have been eliminated by now.")
       case lang.UndefinedType() | lang.ProcedureType(_, _) | lang.ExternalType(_, _) |
@@ -99,6 +108,8 @@ object Converter {
         lang.RecordType(fields.map((f) => (lang.Identifier(f._1), smtToType(f._2))))
       case smt.EnumType(ids) =>
         lang.EnumType(ids.map(lang.Identifier(_)))
+      case dt: smt.DataType =>
+        lang.DataType(lang.Identifier(dt.id), dt.cstors.map(cstor => (lang.Identifier(cstor.id), cstor.inTypes.map(slctor => (lang.Identifier(slctor._1), smtToType(slctor._2))))))
       case _ =>
         throw new AssertionError("Type '" + typ.toString + "' not expected here.")
     }

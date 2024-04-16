@@ -75,7 +75,8 @@ trait SMTLIB2Base {
     counterId += 1
     "_let_" + counterId.toString() + "_"
   }
-  def generateInputDataTypes(t : Type) : (List[String]) = {
+
+    def generateInputDataTypes(t : Type) : (List[String]) = {
     t match {
       case MapType(inputTyp, _) =>
         inputTyp.foldLeft(List.empty[String]) {
@@ -96,8 +97,8 @@ trait SMTLIB2Base {
         t match {
           case EnumType(members) =>
             val typeName = getTypeName(t.typeNamePrefix)
-            val memStr = Utils.join(members.map(s => "[" + s + "]"), " ")
-            val declDatatype = "(declare-datatype [%s 0] (%s))".format(typeName, memStr)
+            val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
+            val declDatatype = "(declare-datatypes ((%s 0)) (%s))".format(typeName, memStr)
             typeMap = typeMap.addSynonym(typeName, t)
             // throw new RuntimeException("need a stack trace!")
             (typeName, List(declDatatype))
@@ -123,11 +124,26 @@ trait SMTLIB2Base {
               }
             }
             val fieldString = (fieldNames zip fieldTypes).map(p => "(%s %s)".format(p._1.toString(), p._2.toString()))
-            val nameString = "([%s 0])".format(typeName)
+            val nameString = "((%s 0))".format(typeName)
             val argString = "[" + Utils.join(mkTupleFn :: fieldString, " ") + "]"
             val newType = "(declare-datatypes %s ((%s)))".format(nameString, argString)
             typeMap = typeMap.addSynonym(typeName, t)
             (typeName, newType :: newTypes1)
+          case dt : DataType =>
+            val typeName = dt.id
+            val nameString = "((%s 0))".format(typeName)
+            val constructorsString = Utils.join(dt.cstors.map(c => {
+              val sels = Utils.join(c.inTypes.map(s => {
+                val inner = generateDatatype(s._2) 
+                val sel = "(%s %s)".format(Context.getFieldName(s._1), inner._1)
+                sel
+              }), " ")
+              val constru = "(%s %s)".format(c.id, sels)
+              constru
+            }), " ")
+            val newType = "(declare-datatypes %s ((%s)))".format(nameString, constructorsString)
+            typeMap = typeMap.addSynonym(typeName, t)
+            (typeName, newType :: List.empty)
           case BoolType => 
             typeMap = typeMap.addSynonym("Bool", t)
             ("Bool", List.empty)
@@ -154,11 +170,23 @@ trait SMTLIB2Base {
               }
             }
             (typeStr, newTypes)
+          case ConstructorType(id, inTypes, outType) =>
+            val (typeStr, newTypes1) = generateDatatype(outType)
+            val (_, newTypes) = inTypes.foldRight((List.empty[String], newTypes1)) {
+              (typ, acc) => {
+                val (typeStr, newTypes2) = generateDatatype(typ._2)
+                (acc._1 :+ typeStr, acc._2 ++ newTypes2)
+              }
+            }
+            (typeStr, newTypes)
           case UninterpretedType(typeName) => 
             // TODO: sorts with arity greater than 1? Does uclid allow such a thing?
             val declDatatype = "(declare-sort %s 0)".format(typeName)
             typeMap = typeMap.addSynonym(typeName, t)
             (typeName, List(declDatatype))
+          case SelfReferenceType(name) => 
+            typeMap = typeMap.addSynonym(name, t)
+            (name, List.empty)
           case _ => 
             throw new Utils.UnimplementedException("TODO: Implement more types in SMTLIB2Interface.generateDatatype: " + t.toString());
         }
@@ -424,11 +452,13 @@ class SMTLIB2Interface(args: List[String], var disableLetify: Boolean=false) ext
   var synthDeclCommands : String = ""
 
   def generateDeclaration(sym: Symbol) = {
-    val (typeName, newTypes) = generateDatatype(sym.typ)
-    Utils.assert(newTypes.size == 0, "No new types are expected here.")
-    val inputTypes = generateInputDataTypes(sym.typ).mkString(" ")
-    val cmd = "(declare-fun %s (%s) %s)".format(sym, inputTypes, typeName)
-    writeCommand(cmd)
+    if (!sym.typ.isInstanceOf[ConstructorType]) {
+      val (typeName, newTypes) = generateDatatype(sym.typ)
+      Utils.assert(newTypes.size == 0, "No new types are expected here.")
+      val inputTypes = generateInputDataTypes(sym.typ).mkString(" ")
+      val cmd = "(declare-fun %s (%s) %s)".format(sym, inputTypes, typeName)
+      writeCommand(cmd)
+    }
   }
 
   /**

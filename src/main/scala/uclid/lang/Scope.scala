@@ -257,7 +257,16 @@ case class Scope (
         case instD : InstanceDecl =>
           Scope.addToMap(mapAcc, Scope.Instance(instD))
         case ProcedureDecl(id, sig, _, _, _, _, _) => Scope.addToMap(mapAcc, Scope.Procedure(id, sig.typ))
-        case TypeDecl(id, typ) => Scope.addToMap(mapAcc, Scope.TypeSynonym(id, typ))
+        case TypeDecl(id, typ) => {
+          typ match {
+            case DataType(id, constructors) => {
+              constructors.foldLeft(mapAcc)((out, c) => {
+                Scope.addToMap(out, Scope.Function(c._1, ConstructorType(c._1, c._2, typ)))
+              })
+            }
+            case _ => mapAcc
+          }
+        }
         case StateVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.StateVar(id, typ)))
         case InputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.InputVar(id, typ)))
         case OutputVarsDecl(ids, typ) => ids.foldLeft(mapAcc)((acc, id) => Scope.addToMap(acc, Scope.OutputVar(id, typ)))
@@ -317,7 +326,18 @@ case class Scope (
           val m1 = sig.args.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
           val m2 = Scope.addTypeToMap(m1, sig.retType, Some(m))
           m2
-        case TypeDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
+        case TypeDecl(_, typ) => {
+          typ match {
+            case DataType(id, constructors) => {
+              constructors.foldLeft(mapAcc)((acc, c) => {
+                val m1 = c._2.foldLeft(mapAcc)((mapAcc2, operand) => Scope.addTypeToMap(mapAcc2, operand._2, Some(m)))
+                val m2 = Scope.addTypeToMap(m1, typ, Some(m))
+                m2
+              })
+            }
+            case _ => mapAcc
+          }
+        }
         case StateVarsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case InputVarsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
         case OutputVarsDecl(_, typ) => Scope.addTypeToMap(mapAcc, typ, Some(m))
