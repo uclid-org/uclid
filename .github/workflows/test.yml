@@ -121,7 +121,7 @@ jobs:
        
     - name: Add Z3 to Path
       run: |
-       ls $GITHUB_WORKSPACE/z3/bin/
+       sudo mkdir -p /usr/local/lib
        echo "$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_PATH
        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_ENV
        ./setup-z3-macos.sh
