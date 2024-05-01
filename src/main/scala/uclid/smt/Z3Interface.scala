@@ -293,6 +293,28 @@ class Z3Interface() extends Context {
       }
     }
   })
+
+  val getDataSort = new Memo[(String, List[ConstructorType]), z3.DatatypeSort[_]]((dt: (String, List[ConstructorType])) => {
+    val constructors : Array[z3.Constructor[_]] = (dt._2.map(c => {
+      val name = c.id
+      val recognizer = "is-" + c.id
+      val fieldNames = c.inTypes.map(pair => pair._1).toArray
+      val sorts = c.inTypes.map(pair => 
+        pair._2 match {
+          case SelfReferenceType(name) => null
+          case t => getZ3Sort(t)
+        }).toArray
+      val sortRefs = c.inTypes.map(pair => 
+        pair._2 match {
+          case SelfReferenceType(name) => 0
+          case t => 1
+        }).toArray
+      ctx.mkConstructor(name, recognizer, fieldNames, sorts, sortRefs)
+    }).toArray)
+    ctx.mkDatatypeSort(dt._1, constructors.asInstanceOf[Array[com.microsoft.z3.Constructor[Any]]])
+  })
+
+
   val getArraySort = new Memo[(List[Type], Type), z3.ArraySort[_, _]]((arrayType : (List[Type], Type)) => {
     val indexTypeIn = arrayType._1
     val z3IndexType = getArrayIndexSort(indexTypeIn)
@@ -314,8 +336,9 @@ class Z3Interface() extends Context {
       case TupleType(ts)        => getTupleSort(ts)
       case RecordType(rs)       => getRecordSort(rs)
       case ArrayType(rs, d)     => getArraySort(rs, d)
+      case DataType(id, cstors) => getDataSort((id, cstors))
       case EnumType(ids)        => getEnumSort(ids)
-      case SynonymType(_, _) | MapType(_, _) | UndefinedType =>
+      case SynonymType(_, _) | MapType(_, _) | UndefinedType | SelfReferenceType(_) | ConstructorType(_, _, _) =>
         throw new Utils.RuntimeError("Must not use getZ3Sort to convert type: " + typ.toString() + ".")
     }
   }
@@ -357,6 +380,7 @@ class Z3Interface() extends Context {
     abstract class ExprSort
     case class VarSort(sort : z3.Sort) extends ExprSort
     case class MapSort(ins : List[Type], out : Type) extends ExprSort
+    case class ConstructorSort(name: String, out : Type) extends ExprSort
 
     val exprSort = (sym.typ) match {
       case UninterpretedType(name) => VarSort(getUninterpretedSort(name))
@@ -370,7 +394,9 @@ class Z3Interface() extends Context {
       case MapType(ins, out) => MapSort(ins, out)
       case ArrayType(ins, out) => VarSort(getArraySort(ins, out))
       case EnumType(ids) => VarSort(getEnumSort(ids))
-      case SynonymType(_, _) | UndefinedType =>
+      case DataType(id, cstors) => VarSort(getDataSort(id, cstors))
+      case ConstructorType(id, _, outTyp) => ConstructorSort(id, outTyp)
+      case SynonymType(_, _) | UndefinedType | SelfReferenceType(_) =>
         throw new Utils.RuntimeError("Must not use symbolToZ3 on: " + sym.typ.toString() + ".")
     }
 
@@ -379,6 +405,9 @@ class Z3Interface() extends Context {
         ctx.mkConst(sym.id, s)
       case MapSort(ins, out) =>
         ctx.mkFuncDecl(sym.id, ins.map(getZ3Sort _).toArray, getZ3Sort(out))
+      case ConstructorSort(name, out) =>
+        val adt = getZ3Sort(out).asInstanceOf[z3.DatatypeSort[_]]
+        adt.getConstructors().find(c => c.getName().toString() == name).get
     }
   }
 
@@ -493,11 +522,18 @@ class Z3Interface() extends Context {
           }
         }.toArray
         ctx.mkExists(qVars, boolArgs(0), 1, qPatterns, null, getExistsName(), getSkolemName())
-      case RecordSelectOp(fld)    =>
+      case RecordSelectOp(fld) if operands(0).typ.isInstanceOf[ProductType] =>
         val prodType = operands(0).typ.asInstanceOf[ProductType]
         val fieldIndex = prodType.fieldIndex(fld)
         val prodSort = getProductSort(prodType)
         prodSort.getFieldDecls()(fieldIndex).apply(exprArgs(0))
+      case RecordSelectOp(fld) if operands(0).typ.isInstanceOf[DataType] =>
+        // find the right selector to apply based on fld and dataType
+        val dataType = operands(0).typ.asInstanceOf[DataType]
+        val z3adt = getDataSort(dataType.id, dataType.cstors)
+        val sel = z3adt.getAccessors().flatMap(a => a).find(a => a.getName().toString() == fld).get
+        // apply it and return the result
+        sel.apply(exprArgs(0))
       case RecordUpdateOp(fld) =>
         val prodType = operands(0).typ.asInstanceOf[ProductType]
         val fieldIndex = prodType.fieldIndex(fld)

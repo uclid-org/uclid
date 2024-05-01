@@ -123,6 +123,9 @@ trait ReadOnlyPass[T] {
   def applyOnEnumType(d : TraversalDirection.T, enumT : EnumType, in : T, context : Scope) : T = { in }
   def applyOnTupleType(d : TraversalDirection.T, tupleT : TupleType, in : T, context : Scope) : T = { in }
   def applyOnRecordType(d : TraversalDirection.T, recordT : RecordType, in : T, context : Scope) : T = { in }
+  def applyOnDataType(d : TraversalDirection.T, dataT : DataType, in : T, context : Scope) : T = { in }
+  def applyOnConstructor(d : TraversalDirection.T, constructor : ConstructorType, in : T, context : Scope) : T = { in }
+  def applyOnSelector(d : TraversalDirection.T, selector : (Identifier, Type), in : T, context : Scope) : T = { in }
   def applyOnMapType(d : TraversalDirection.T, mapT : MapType, in : T, context : Scope) : T = { in }
   def applyOnProcedureType(d : TraversalDirection.T, procT : ProcedureType, in : T, context : Scope) : T = { in }
   def applyOnArrayType(d : TraversalDirection.T, arrayT : ArrayType, in : T, context : Scope) : T = { in }
@@ -229,6 +232,9 @@ trait RewritePass {
   def rewriteIntType(intT : IntegerType, context : Scope) : Option[IntegerType] = { Some(intT)  }
   def rewriteBitVectorType(bvT : BitVectorType, context : Scope) : Option[BitVectorType] = { Some(bvT)  }
   def rewriteEnumType(enumT : EnumType, context : Scope) : Option[EnumType] = { Some(enumT)  }
+  def rewriteSelector(sel : (Identifier, Type), context : Scope) : Option[(Identifier, Type)] = { Some(sel)  }
+  def rewriteConstructor(cstor : ConstructorType, context : Scope) : Option[ConstructorType] = { Some(cstor)  }
+  def rewriteDataType(dataT : DataType, context : Scope) : Option[DataType] = { Some(dataT)  }
   def rewriteTupleType(tupleT : TupleType, context : Scope) : Option[TupleType] = { Some(tupleT)  }
   def rewriteRecordType(recordT : RecordType, context : Scope) : Option[RecordType] = { Some(recordT)  }
   def rewriteMapType(mapT : MapType, context : Scope) : Option[MapType] = { Some(mapT)  }
@@ -652,6 +658,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case groupT : GroupType => visitGroupType(groupT, result, context)
       case floatT: FloatType => visitFloatType(floatT, result, context)
       case realT: RealType => visitRealType(realT, result, context)
+      case dataT: DataType => visitDataType(dataT, result, context)
+      case constT: ConstructorType => visitConstructor(constT, result, context)
     }
     result = pass.applyOnType(TraversalDirection.Up, typ, result, context)
     return result
@@ -764,6 +772,39 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     var result: T  = in
     result = pass.applyOnRealType(TraversalDirection.Down, realT, result, context)
     result = pass.applyOnRealType(TraversalDirection.Up, realT, result, context)
+    return result
+  }
+
+  def visitConstructor(cstor : ConstructorType, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnConstructor(TraversalDirection.Down, cstor, result, context)
+    result = visitIdentifier(cstor.id, result, context)
+    result = cstor.inTypes.foldLeft(result)((r, sel) => visitSelector(sel, r, context))
+    result = pass.applyOnConstructor(TraversalDirection.Up, cstor, result, context)
+    return result
+  }
+
+  def visitSelector(sel : (Identifier, Type), in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnSelector(TraversalDirection.Down, sel, result, context)
+    result = visitIdentifier(sel._1, result, context)
+    result = visitType(sel._2, result, context)
+    result = pass.applyOnSelector(TraversalDirection.Up, sel, result, context)
+    return result
+  }
+
+  def visitDataType(dataT : DataType, in: T, context: Scope): T  = {
+    var result: T  = in
+    result = pass.applyOnDataType(TraversalDirection.Down, dataT, result, context)
+    result = visitIdentifier(dataT.id, result, context)
+    result = dataT.constructors.foldLeft(result)((r, constructor) => {
+      val r2 = visitIdentifier(constructor._1, r, context)
+      constructor._2.foldLeft(r2)((r, s) => {
+        val r3 = visitIdentifier(s._1, r, context)
+        visitType(s._2, r3, context)
+      })
+    })
+    result = pass.applyOnDataType(TraversalDirection.Up, dataT, result, context)
     return result
   }
 
@@ -1731,6 +1772,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case groupT : GroupType => visitGroupType(groupT, context)
       case floatT : FloatType => visitFloatType(floatT, context)
       case realT : RealType => visitRealType(realT, context)
+      case dataT : DataType => visitDataType(dataT, context)
+      case cstor : ConstructorType => visitConstructor(cstor, context)
     }).flatMap(pass.rewriteType(_, context))
     return ASTNode.introducePos(setPosition, setFilename, typP, typ.position)
   }
@@ -1833,6 +1876,55 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitRealType(realT : RealType, context : Scope) : Option[Type] = {
     val realTP = pass.rewriteRealType(realT, context)
     return ASTNode.introducePos(setPosition, setFilename, realTP, realT.position)
+  }
+
+  def visitSelector(sel : (Identifier, Type), context : Scope) : Option[(Identifier, Type)] = {
+    val selId = visitIdentifier(sel._1, context)
+    val selType = visitType(sel._2, context)
+    (selId, selType) match {
+      case (Some(selId), Some(selType)) =>
+        pass.rewriteSelector((selId, selType), context)
+      case _ =>
+        None
+    }
+  }
+
+  def visitConstructor(cstor : ConstructorType, context : Scope) : Option[ConstructorType] = {
+    val cstorId = visitIdentifier(cstor.id, context)
+    val cstorSelectors = cstor.inTypes.map((sel => visitSelector(sel, context)))
+    (cstorId, cstorSelectors) match {
+      case (Some(cstorId), cstorSelectors) if cstorSelectors.forall( s => s.isDefined) =>
+        pass.rewriteConstructor(ConstructorType(cstorId, cstorSelectors.map(s => s.get), cstor.outTyp), context)
+      case _ =>
+        None
+    }
+  }
+
+  def visitDataType(dataT : DataType, context: Scope): Option[Type]  = {
+    val id = visitIdentifier(dataT.id, context)
+    val cstors = dataT.constructors.map((cstor => {
+      val cid = visitIdentifier(cstor._1, context)
+      val cs = cstor._2.map(s => {
+        val sid = visitIdentifier(s._1, context)
+        val st = visitType(s._2, context)
+        if (sid.isDefined && st.isDefined) {
+          Some((sid.get, st.get))
+        } else {
+          None
+        }
+      })
+      if (cid.isDefined && cs.forall( s => s.isDefined)) {
+        Some((cid.get, cs.map(s => s.get)))
+      } else {
+        None
+      }
+    }))
+    val dt = if (cstors.forall( s => s.isDefined) && id.isDefined) {
+      pass.rewriteDataType(DataType(id.get, cstors.map(s => s.get)), context)
+    } else {
+      None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, dt, dataT.position)
   }
 
   def visitExternalType(extT : ExternalType, context : Scope) : Option[Type] = {
