@@ -1,0 +1,26 @@
+module main {
+    // should throw a parse error on line 4
+    datatype myRecord = | rec(A: integer, B: integer, C: integer);
+    datatype myRecord = | rec2(E: integer, F: integer, G: integer);    
+
+    var t1 : myRecord;
+    var t2 : myRecord;
+
+
+    init {
+        t1 = rec(1, 2, 3);
+        t2 = rec(3, 1, 2);
+    }
+    
+    next {
+        t2' = t2;
+    }
+
+    invariant test : t1 != t2;
+
+    control {
+        bmc(5);
+        check;
+        print_results;
+    }
+}
