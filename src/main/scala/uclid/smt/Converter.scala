@@ -69,8 +69,17 @@ object Converter {
         smt.RecordType(fields.map((f) => (f._1.toString, typeToSMT(f._2))))
       case lang.EnumType(ids) =>
         smt.EnumType(ids.map(_.name))
-      case lang.SynonymType(_) =>
-        throw new Utils.UnimplementedException("Synonym types must have been eliminated by now.")
+      case dt : lang.DataType =>
+        smt.DataType(dt.id.name, dt.constructors.map(c => ConstructorType(c._1.name, c._2.map(s => {
+          s._2 match {
+            case lang.SynonymType(id2) if id2 == dt.id => (s._1.name, smt.SelfReferenceType(id2.name))
+            case _ => (s._1.name, typeToSMT(s._2))
+          }
+        }), smt.SelfReferenceType(dt.id.name))))
+      case lang.ConstructorType(id, inTypes, outTyp) =>
+        smt.ConstructorType(id.name, inTypes.map(t => (t._1.name, typeToSMT(t._2))), typeToSMT(outTyp))
+      case t : lang.SynonymType =>
+        throw new Utils.UnimplementedException("Synonym types must have been eliminated by now. " + t + " from " + t.pos + " was not!")
       case lang.UndefinedType() | lang.ProcedureType(_, _) | lang.ExternalType(_, _) |
            lang.ModuleInstanceType(_) | lang.ModuleType(_, _, _, _, _, _, _, _, _) | lang.GroupType(_) =>
         throw new AssertionError("Type '" + typ.toString + "' not expected here.")
@@ -99,6 +108,8 @@ object Converter {
         lang.RecordType(fields.map((f) => (lang.Identifier(f._1), smtToType(f._2))))
       case smt.EnumType(ids) =>
         lang.EnumType(ids.map(lang.Identifier(_)))
+      case dt: smt.DataType =>
+        lang.DataType(lang.Identifier(dt.id), dt.cstors.map(cstor => (lang.Identifier(cstor.id), cstor.inTypes.map(slctor => (lang.Identifier(slctor._1), smtToType(slctor._2))))))
       case _ =>
         throw new AssertionError("Type '" + typ.toString + "' not expected here.")
     }
@@ -351,7 +362,7 @@ object Converter {
         throw new Utils.RuntimeError("Should never get here. FreshLits must have been rewritten by this point.")
       case lang.ExternalIdentifier(_, _) =>
         throw new Utils.RuntimeError("Should never get here. ExternalIdentifiers must have been rewritten by this point.")
-      case lang.QualifiedIdentifier(_, _) | lang.IndexedIdentifier(_, _) => 
+      case lang.QualifiedIdentifierApplication(_, _) | lang.QualifiedIdentifier(_, _) | lang.IndexedIdentifier(_, _) => 
         throw new Utils.RuntimeError("ERROR: Qualified and Indexed Identifiers are currently not supported")
       case lang.LetExpr(_, _) =>
         throw new Utils.UnimplementedException("ERROR: SMT expr generation for QualifiedIdentifier and IndexedIdentifier is currently not supported")
