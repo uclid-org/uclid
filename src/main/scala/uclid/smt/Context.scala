@@ -196,10 +196,33 @@ abstract trait Context {
             val typeName = uniqueNamer("EnumType", None)
             val synMapP = synMap.addSynonym(typeName, enumType)
             (synMapP.get(typeName).get, synMapP)
+          case dataType : DataType =>
+            // create new type
+            var smap = synMap
+            val newConstructors = dataType.cstors.map(c => {
+              val (newsels, m) = flattenFieldList(c.inTypes.map(s => (s._1, s._2)), smap)
+              smap = m
+              ConstructorType(c.id, newsels.map(s => (s._1, s._2)), dataType)
+            })
+            val newDataType = DataType(dataType.id, newConstructors)
+
+            val synMapP = smap.addSynonym(dataType.id, newDataType)
+            (synMapP.get(dataType.id).get, synMapP)
+          case ConstructorType(id, inTypes, outTyp) => 
+            // create new type
+            val (newInTypes, synMapP1) = flattenTypeList(inTypes.map(s => s._2), synMap)
+            val (newOut, synMapP2) = flatten(outTyp, synMapP1)
+            val newConstructorType = ConstructorType(id, inTypes.map(s => s._1).zip(newInTypes), newOut)
+            // add to map
+            val typeName = uniqueNamer("ConstructorType", None)
+            val synMapP = synMapP2.addSynonym(typeName, newConstructorType)
+            (synMapP.get(typeName).get, synMapP)
           case synTyp : SynonymType =>
             val (newType, synMapP1) = flatten(synTyp.typ, synMap)
             val synMapP = synMapP1.addSynonym(synTyp.name, newType)
             (newType, synMapP)
+          case selfTyp : SelfReferenceType =>
+            (selfTyp, synMap)
           case UndefinedType =>
             throw new Utils.AssertionError("Undefined types are not expected here.")
         }

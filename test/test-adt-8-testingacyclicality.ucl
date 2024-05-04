@@ -1,0 +1,16 @@
+module main {
+    // should fail
+
+    datatype list = cons(head: integer, tail: list) | nil();
+
+    var l1 : list;
+    var l2: list;
+
+    invariant test : l1.tail == l2 && l2.tail == l1 && l1 != nil() && l2 != nil();
+
+    control {
+        bmc(2);
+        check;
+        print_results;
+    }
+}

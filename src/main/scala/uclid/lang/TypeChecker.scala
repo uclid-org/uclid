@@ -98,6 +98,7 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
         TupleType(fieldTypes.map(simplifyType(_, visited, m)))
       case RecordType(fields) =>
         RecordType(fields.map((f) => (f._1, simplifyType(f._2, visited, m))))
+      case dt: DataType => dt
       case MapType(inTypes, outType) =>
         MapType(inTypes.map(simplifyType(_, visited, m)), simplifyType(outType, visited, m))
       case ArrayType(inTypes, outType) =>
@@ -585,6 +586,14 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               selectFromInstance.pos = opapp.op.pos
               polyOpMap.put(opapp.op.astNodeId, selectFromInstance)
               fldT.get
+            case dt : DataType =>
+              val allSels = dt.constructors.flatMap(c => c._2) 
+              val typOption = allSels.find((p) => p._1 == field).flatMap(e => Some(e._2))
+              checkTypeError(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in " + dt.toString(), opapp.pos, c.filename)
+              val recordSelect = RecordSelect(field)
+              recordSelect.pos = opapp.op.pos
+              polyOpMap.put(opapp.op.astNodeId, recordSelect)
+              typOption.get
             case _ =>
               checkTypeError(false, "Argument to select operator must be of type record or instance", opapp.pos, c.filename)
               new UndefinedType()
@@ -602,6 +611,11 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
               val indexI = indexS.toInt
               checkTypeError(indexI >= 1 && indexI <= tupType.numFields, "Invalid tuple index: " + indexS, opapp.pos, c.filename)
               tupType.fieldTypes(indexI-1)
+            case dt : DataType =>
+              val allSels = dt.constructors.flatMap(c => c._2) 
+              val typOption = allSels.find((p) => p._1 == field).flatMap(e => Some(e._2))
+              checkTypeError(!typOption.isEmpty, "Field '" + field.toString + "' does not exist in " + dt.toString(), opapp.pos, c.filename)
+              typOption.get
             case _ =>
               checkTypeError(false, "Argument to select operator must be of type record", opapp.pos, c.filename)
               new UndefinedType()
@@ -692,6 +706,14 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
     def funcAppType(fapp : FuncApplication) : Type = {
       val funcType1 = typeOf(fapp.e, c)
       lazy val typeErrorMsg = "Cannot apply %s, which is of type %s".format(fapp.e.toString, funcType1.toString)
+
+      if (funcType1.isInstanceOf[ConstructorType]) {
+        val funcType = funcType1.asInstanceOf[ConstructorType]
+        val argTypes = fapp.args.map(typeOf(_, c))
+        checkTypeError(funcType.inTypes.map(s => s._2) == argTypes, "Argument type error in application", fapp.pos, c.filename)
+        return funcType.outTyp
+      }
+
       checkTypeError(funcType1.isInstanceOf[MapType], typeErrorMsg, fapp.pos, c.filename)
       val funcType = funcType1.asInstanceOf[MapType]
       val argTypes = fapp.args.map(typeOf(_, c))
