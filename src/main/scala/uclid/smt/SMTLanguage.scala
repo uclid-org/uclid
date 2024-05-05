@@ -219,6 +219,17 @@ case class ConstructorType(id: String, inTypes: List[(String, Type)], outTyp: Ty
   override val typeNamePrefix = "constructor"
 }
 
+case class TesterType(id: String, inType: Type) extends Type {
+  override val hashId = 114
+  override val hashCode = computeHash(id, inType)
+  override val md5hashCode = computeMD5Hash(id, inType)
+  override def toString = {
+    "tester " + id  + " " + inType
+  }
+  override def isMap = true
+  override val typeNamePrefix = "tester"
+}
+
 case class SelfReferenceType(name: String) extends Type {
   override val hashId = 112
   override val hashCode = computeHash(name)
@@ -671,6 +682,7 @@ case class RecordSelectOp(name : String) extends Operator {
         val sels = cstors.flatMap(c => c.inTypes)
         sels.find(p => p._1 == name).get._2
       }
+      case _ => throw new Utils.UnimplementedException("RecordSelectOp for type: " + args(0).typ)
     }
   }
 }
@@ -1020,10 +1032,11 @@ case class LetExpression(letBindings : List[(Symbol, Expr)], expr : Expr) extend
 //For uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class FunctionApplication(e: Expr, args: List[Expr])
   extends Expr ({
-    if (e.typ.isInstanceOf[ConstructorType]) {
-      e.typ.asInstanceOf[ConstructorType].outTyp
-    } else {
-      e.typ.asInstanceOf[MapType].outType
+    e.typ match {
+      case MapType(inTypes, outType) => e.typ.asInstanceOf[MapType].outType
+      case ConstructorType(id, inTypes, outTyp) => e.typ.asInstanceOf[ConstructorType].outTyp
+      case TesterType(id, inType) => BoolType
+      case _ => throw new Utils.AssertionError("FunctionApplication: Expected function type, got " + e.typ)
     }
   })
 {

@@ -336,7 +336,7 @@ class Z3Interface() extends Context {
       case ArrayType(rs, d)     => getArraySort(rs, d)
       case EnumType(ids)        => getEnumSort(ids)
       case DataType(id, cstors) => getDataSort((id, cstors))
-      case SynonymType(_, _) | MapType(_, _) | UndefinedType  | SelfReferenceType(_) | ConstructorType(_, _, _) =>
+      case SynonymType(_, _) | MapType(_, _) | UndefinedType  | SelfReferenceType(_) | ConstructorType(_, _, _) | TesterType(_, _) =>
         throw new Utils.RuntimeError("Must not use getZ3Sort to convert type: " + typ.toString() + ".")
     }
   }
@@ -379,6 +379,7 @@ class Z3Interface() extends Context {
     case class VarSort(sort : z3.Sort) extends ExprSort
     case class MapSort(ins : List[Type], out : Type) extends ExprSort
     case class ConstructorSort(name: String, out : Type) extends ExprSort
+    case class TesterSort(name: String, inType : Type) extends ExprSort
 
 
     val exprSort = (sym.typ) match {
@@ -395,6 +396,7 @@ class Z3Interface() extends Context {
       case EnumType(ids) => VarSort(getEnumSort(ids))
       case DataType(id, cstors) => VarSort(getDataSort(id, cstors))
       case ConstructorType(id, _, outTyp) => ConstructorSort(id, outTyp)
+      case TesterType(id, inType) => TesterSort(id, inType)
       case SynonymType(_, _) | UndefinedType | SelfReferenceType(_) =>
         throw new Utils.RuntimeError("Must not use symbolToZ3 on: " + sym.typ.toString() + ".")
     }
@@ -407,6 +409,12 @@ class Z3Interface() extends Context {
       case ConstructorSort(name, out) =>
         val adt = getZ3Sort(out).asInstanceOf[z3.DatatypeSort[_]]
         adt.getConstructors().find(c => c.getName().toString() == name).get
+      case TesterSort(name, inType) =>
+        val adt = getZ3Sort(inType).asInstanceOf[z3.DatatypeSort[_]]
+        val recognizers = adt.getRecognizers()
+        val constructors = adt.getConstructors().map(c => c.getName().toString())
+        val index = constructors.indexWhere(c => "is_" + c == name)
+        recognizers(index)
     }
   }
 

@@ -177,6 +177,9 @@ trait SMTLIB2Base {
               }
             }
             (typeStr, newTypes)
+          case TesterType(id, inType) => 
+            val (typeStr, newTypes) = generateDatatype(inType)
+            (typeStr, newTypes)
           case UninterpretedType(typeName) => 
             // TODO: sorts with arity greater than 1? Does uclid allow such a thing?
             val declDatatype = "(declare-sort %s 0)".format(typeName)
@@ -450,7 +453,7 @@ class SMTLIB2Interface(args: List[String], var disableLetify: Boolean=false) ext
   var synthDeclCommands : String = ""
 
   def generateDeclaration(sym: Symbol) = {
-    if (!sym.typ.isInstanceOf[ConstructorType]) {
+    if (!sym.typ.isInstanceOf[ConstructorType] && !sym.typ.isInstanceOf[TesterType]) {
       val (typeName, newTypes) = generateDatatype(sym.typ)
       Utils.assert(newTypes.size == 0, "No new types are expected here.")
       val inputTypes = generateInputDataTypes(sym.typ).mkString(" ")

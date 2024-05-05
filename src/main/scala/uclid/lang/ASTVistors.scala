@@ -125,6 +125,7 @@ trait ReadOnlyPass[T] {
   def applyOnRecordType(d : TraversalDirection.T, recordT : RecordType, in : T, context : Scope) : T = { in }
   def applyOnDataType(d : TraversalDirection.T, dataT : DataType, in : T, context : Scope) : T = { in }
   def applyOnConstructor(d : TraversalDirection.T, constructor : ConstructorType, in : T, context : Scope) : T = { in }
+  def applyOnTester(d : TraversalDirection.T, tester : TesterType, in : T, context : Scope) : T = { in }
   def applyOnSelector(d : TraversalDirection.T, selector : (Identifier, Type), in : T, context : Scope) : T = { in }
   def applyOnMapType(d : TraversalDirection.T, mapT : MapType, in : T, context : Scope) : T = { in }
   def applyOnProcedureType(d : TraversalDirection.T, procT : ProcedureType, in : T, context : Scope) : T = { in }
@@ -234,6 +235,7 @@ trait RewritePass {
   def rewriteEnumType(enumT : EnumType, context : Scope) : Option[EnumType] = { Some(enumT)  }
   def rewriteSelector(sel : (Identifier, Type), context : Scope) : Option[(Identifier, Type)] = { Some(sel)  }
   def rewriteConstructor(cstor : ConstructorType, context : Scope) : Option[ConstructorType] = { Some(cstor)  }
+  def rewriteTester(tester : TesterType, context : Scope) : Option[TesterType] = { Some(tester)  }
   def rewriteDataType(dataT : DataType, context : Scope) : Option[DataType] = { Some(dataT)  }
   def rewriteTupleType(tupleT : TupleType, context : Scope) : Option[TupleType] = { Some(tupleT)  }
   def rewriteRecordType(recordT : RecordType, context : Scope) : Option[RecordType] = { Some(recordT)  }
@@ -660,6 +662,7 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case realT: RealType => visitRealType(realT, result, context)
       case dataT: DataType => visitDataType(dataT, result, context)
       case constT: ConstructorType => visitConstructor(constT, result, context)
+      case testerT: TesterType => visitTester(testerT, result, context)
     }
     result = pass.applyOnType(TraversalDirection.Up, typ, result, context)
     return result
@@ -781,6 +784,15 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = visitIdentifier(cstor.id, result, context)
     result = cstor.inTypes.foldLeft(result)((r, sel) => visitSelector(sel, r, context))
     result = pass.applyOnConstructor(TraversalDirection.Up, cstor, result, context)
+    return result
+  }
+
+  def visitTester(tester : TesterType, in : T, context : Scope) : T = {
+    var result : T = in
+    result = pass.applyOnTester(TraversalDirection.Down, tester, result, context)
+    result = visitIdentifier(tester.id, result, context)
+    result = visitType(tester.inType, result, context)
+    result = pass.applyOnTester(TraversalDirection.Up, tester, result, context)
     return result
   }
 
@@ -1776,6 +1788,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case realT : RealType => visitRealType(realT, context)
       case dataT : DataType => visitDataType(dataT, context)
       case cstor : ConstructorType => visitConstructor(cstor, context)
+      case tester : TesterType => visitTester(tester, context)
     }).flatMap(pass.rewriteType(_, context))
     return ASTNode.introducePos(setPosition, setFilename, typP, typ.position)
   }
@@ -1897,6 +1910,18 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     (cstorId, cstorSelectors) match {
       case (Some(cstorId), cstorSelectors) if cstorSelectors.forall( s => s.isDefined) =>
         pass.rewriteConstructor(ConstructorType(cstorId, cstorSelectors.map(s => s.get), cstor.outTyp), context)
+      case _ =>
+        None
+    }
+  }
+
+
+  def visitTester(tester : TesterType, context : Scope) : Option[TesterType] = {
+    val testerId = visitIdentifier(tester.id, context)
+    val testerInType = visitType(tester.inType, context)
+    (testerId, testerInType) match {
+      case (Some(testerId), Some(testerInType)) =>
+        pass.rewriteTester(TesterType(testerId, testerInType), context)
       case _ =>
         None
     }

@@ -261,7 +261,9 @@ case class Scope (
           typ match {
             case DataType(id, constructors) => {
               constructors.foldLeft(mapAcc)((out, c) => {
-                Scope.addToMap(out, Scope.Function(c._1, ConstructorType(c._1, c._2, typ)))
+                val withCs = Scope.addToMap(out, Scope.Function(c._1, ConstructorType(c._1, c._2, typ)))
+                val testerName = Identifier("is_" + c._1.name)
+                Scope.addToMap(withCs, Scope.Function(testerName, TesterType(testerName, typ)))
               })
             }
             case _ => mapAcc

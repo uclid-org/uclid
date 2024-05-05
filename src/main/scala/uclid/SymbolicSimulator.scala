@@ -119,7 +119,14 @@ class SymbolicSimulator (module : Module) {
     new smt.Symbol("state_" + step + "_" + name, t)
   }
   def newConstantSymbol(name: String, t: smt.Type) = {
-    new smt.Symbol("const_" + name, t)
+    t match {
+      case smt.TesterType(id, inType) => {
+        val constructorName = name.substring("is_".length())
+        new smt.Symbol("(_ is " + constructorName + ")", t)
+      }
+      case smt.ConstructorType(id, inTypes, outTyp) => new smt.Symbol(name, t)
+      case _ => new smt.Symbol("const_" + name, t)
+    }
   }
   def newOracleSymbol(name: String, t: FunctionSig, binary : String) = {
     new smt.OracleSymbol("oracle_" + name, t, binary)

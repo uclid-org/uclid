@@ -78,6 +78,8 @@ object Converter {
         }), smt.SelfReferenceType(dt.id.name))))
       case lang.ConstructorType(id, inTypes, outTyp) =>
         smt.ConstructorType(id.name, inTypes.map(t => (t._1.name, typeToSMT(t._2))), typeToSMT(outTyp))
+      case lang.TesterType(id, inType) =>
+        smt.TesterType(id.name, typeToSMT(inType))
       case t : lang.SynonymType =>
         throw new Utils.UnimplementedException("Synonym types must have been eliminated by now. " + t + " from " + t.pos + " was not!")
       case lang.UndefinedType() | lang.ProcedureType(_, _) | lang.ExternalType(_, _) |
