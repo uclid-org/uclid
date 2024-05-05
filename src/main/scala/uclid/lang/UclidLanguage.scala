@@ -1220,6 +1220,11 @@ case class ConstructorType(id: Identifier, inTypes: List[(Identifier, Type)], ou
   override def isMap = true
 }
 
+case class TesterType(id: Identifier, inType: Type) extends Type {
+  override def toString = id + " " + inType.toString()
+  override def isMap = true
+}
+
 case class ProcedureType(inTypes : List[Type], outTypes: List[Type]) extends Type {
   override def toString =
     "procedure (" + Utils.join(inTypes.map(_.toString), ", ") + ") returns " +

@@ -714,6 +714,13 @@ class ExpressionTypeCheckerPass extends ReadOnlyPass[Set[Utils.TypeError]]
         return funcType.outTyp
       }
 
+      if (funcType1.isInstanceOf[TesterType]) {
+        val funcType = funcType1.asInstanceOf[TesterType]
+        val argType = fapp.args.map(typeOf(_, c)).head
+        checkTypeError(funcType.inType == argType, "Argument type error in application", fapp.pos, c.filename)
+        return BooleanType()
+      }
+
       checkTypeError(funcType1.isInstanceOf[MapType], typeErrorMsg, fapp.pos, c.filename)
       val funcType = funcType1.asInstanceOf[MapType]
       val argTypes = fapp.args.map(typeOf(_, c))

@@ -119,6 +119,12 @@ class VerifierSanitySpec extends AnyFlatSpec {
   "test-adt-17-procedures.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-adt-17-procedures.ucl", 0)
   }
+  "test-adt-18.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-adt-18.ucl", 1)
+  }
+  "test-adt-19.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-adt-19.ucl", 0)
+  }
   "test-array-0.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-array-0.ucl", 0)
   }

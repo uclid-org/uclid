@@ -217,6 +217,14 @@ abstract trait Context {
             val typeName = uniqueNamer("ConstructorType", None)
             val synMapP = synMapP2.addSynonym(typeName, newConstructorType)
             (synMapP.get(typeName).get, synMapP)
+          case TesterType(id, inType) => 
+            // create new type
+            val (newIn, synMapP1) = flatten(inType, synMap)
+            val newTesterType = TesterType(id, newIn)
+            // add to map
+            val typeName = uniqueNamer("TesterType", None)
+            val synMapP = synMapP1.addSynonym(typeName, newTesterType)
+            (synMapP.get(typeName).get, synMapP)
           case synTyp : SynonymType =>
             val (newType, synMapP1) = flatten(synTyp.typ, synMap)
             val synMapP = synMapP1.addSynonym(synTyp.name, newType)
