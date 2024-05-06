@@ -1220,6 +1220,9 @@ case class ConstructorType(id: Identifier, inTypes: List[(Identifier, Type)], ou
   override def isMap = true
 }
 
+// Every tester $t$ corresponds to exactly one constructor $c$ of an ADT inType.
+// $t$ is a predicate that takes a term $x$ of type inType and returns true iff
+// $x$ was built using constructor $c$.
 case class TesterType(id: Identifier, inType: Type) extends Type {
   override def toString = id + " " + inType.toString()
   override def isMap = true
