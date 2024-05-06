@@ -1949,6 +1949,15 @@ case class Module(id: Identifier, decls: List[Decl], var cmds : List[GenericProo
   // module functions.
   lazy val functions : List[FunctionDecl] =
     decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
+
+  // module adts.
+  lazy val adts: List[DataType] = 
+    decls.flatMap(d => {
+      d match {
+        case TypeDecl(_, DataType(id, constructors)) => Some(DataType(id, constructors))
+        case _ => None
+      }
+    })
   
   // module synthesis function imports.
   lazy val synthFuncImportDecls : List[ModuleSynthFunctionsImportDecl] = decls.collect {

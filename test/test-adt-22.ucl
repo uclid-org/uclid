@@ -1,0 +1,13 @@
+module main {
+    datatype myEnum = A() | B();
+
+    var x: myEnum;
+
+    init {
+        // is_D is not declared
+        if (is_D(x)) {
+            // C is not declared
+            x = C();
+        }
+    }
+}

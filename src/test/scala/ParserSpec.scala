@@ -133,6 +133,41 @@ class ParserSpec extends AnyFlatSpec {
         assert (p.errors.size > 0)
     }
   }
+  "test-adt-20.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-adt-20.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserError =>
+        assert (p.getMessage().contains("Function redeclaration error in module"))
+    }
+  }
+  "test-adt-21.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-adt-21.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserError =>
+        assert (p.getMessage().contains("Function redeclaration error in module"))
+    }
+  }
+  "test-adt-22.ucl" should "not parse successfully." in {
+    try {
+      val filename = "test/test-adt-22.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size > 0)
+    }
+  }
   "test-type1.ucl" should "not parse successfully." in {
     try {
       val filename = "test/test-type1.ucl"
