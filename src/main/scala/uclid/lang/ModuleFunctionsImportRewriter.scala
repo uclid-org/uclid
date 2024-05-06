@@ -120,10 +120,15 @@ class ModuleFunctionsImportRewriter extends ASTAnalyzer("ModuleFunctionsImportRe
 
     // Add functions from this module
     val initMap = new HashMap[Identifier, Identifier]()
-    module.functions.foreach { f => 
-      initMap.get(f.id) match {
-        case Some(_) => throw new Utils.ParserError(s"Function redeclaration error in module: ${module.id} for ${f.id}", None, None)
-        case None => initMap += ((f.id, module.id))
+
+    val funcNames = module.functions.map(f => f.id)
+    val constructorNames = module.adts.flatMap(d => d.constructors.map(c => c._1))
+    val testerNames = constructorNames.map(c => Identifier("is_" + c.name))
+
+    (funcNames ++ constructorNames ++ testerNames).foreach { f => 
+      initMap.get(f) match {
+        case Some(_) => throw new Utils.ParserError(s"Function redeclaration error in module: ${module.id} for ${f}", None, None)
+        case None => initMap += ((f, module.id))
       }
     }
     val funcMap = visitModule(module, initMap, modScope).filterNot(p => p._2 ==module.id)
