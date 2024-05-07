@@ -36,7 +36,7 @@ class IntroduceFreshHavocsPass extends RewritePass {
     st.cond match {
       case f : FreshLit =>
         val havoc = HavocStmt(HavocableFreshLit(f))
-        Some(BlockStmt(List.empty, List(havoc, st)))
+        Some(BlockStmt(List.empty, List(havoc, st), true))
       case _ =>
         Some(st)
     }

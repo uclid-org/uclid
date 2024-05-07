@@ -1868,7 +1868,7 @@ class SymbolicSimulator (module : Module) {
       case AssignStmt(lhss,rhss) =>
         val es = rhss.map(i => evaluate(i, symbolTable, frameTable, frameNumber, scope));
         return simulateAssign(lhss, es, symbolTable, label)
-      case BlockStmt(vars, stmts) =>
+      case BlockStmt(vars, stmts, _ ) =>
         val declaredVars = vars.flatMap(vs => vs.ids.map(v => (v, vs.typ)))
         val initSymbolTable = symbolTable
         val localSymbolTable = declaredVars.foldLeft(initSymbolTable) { 
@@ -1929,7 +1929,7 @@ class SymbolicSimulator (module : Module) {
       }
     case AssignStmt(lhss,rhss) =>
       return lhss.map(lhs => lhs.ident).toSet
-    case BlockStmt(vars, stmts) =>
+    case BlockStmt(vars, stmts, _) =>
       val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(id => id)).toSet
       return writeSets(stmts) -- declaredVars
     case IfElseStmt(e,then_branch,else_branch) =>

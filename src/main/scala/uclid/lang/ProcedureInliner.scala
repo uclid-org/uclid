@@ -211,7 +211,7 @@ trait NewProcedureInlinerPass extends RewritePass {
           AssumeStmt(exprP, None)
         }
       }
-      BlockStmt(List.empty, modifyHavocs ++ postconditionAssumes)
+      BlockStmt(List.empty, modifyHavocs ++ postconditionAssumes, true)
     }
     val stmtsP = if (callStmt.callLhss.size > 0) {
       val returnAssign = AssignStmt(callStmt.callLhss, retIds)
@@ -219,7 +219,7 @@ trait NewProcedureInlinerPass extends RewritePass {
     } else {
       argAssigns ++ modifyInitAssigns ++ oldAssigns  ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
     }
-    BlockStmt(varsToDeclare, stmtsP)
+    BlockStmt(varsToDeclare, stmtsP, true)
   }
 }
 
