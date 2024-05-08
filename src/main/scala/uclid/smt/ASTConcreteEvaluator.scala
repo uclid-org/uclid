@@ -1,7 +1,6 @@
 package uclid
 package smt
 
-import uclid.lang
 
 object ASTConcreteEvaluator
 {
