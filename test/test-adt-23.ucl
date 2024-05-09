@@ -1,0 +1,17 @@
+module main {
+    type t = record {a: integer, b: integer};
+    datatype option_t = Some(value: t) | None();
+
+    var x: option_t;
+    var y: t;
+
+    init {
+        assert x.value == y;
+    }
+
+    control {
+        bmc(0);
+        check;
+        print_results;
+    }
+}
