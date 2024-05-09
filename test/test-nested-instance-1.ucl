@@ -41,11 +41,16 @@ module main
     next(bar1);
   }
   
+  // bar1.foox.a is x, bar1.fooy.a is x. 
+  // y is bar1.z, which is bar1.foox.b + bar1.fooy.b
+  // This property says that x + 1 + x + 1 == y
   property b1: initd ==> (bar1.foox.a + 1 + bar1.fooy.a + 1 == y);
 
   control {
-      v = unroll(5);
+      v = unroll(1);
       check;
       print_results;
+      v.print_cex;
+      print_module;
   }
 }

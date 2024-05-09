@@ -390,7 +390,7 @@ object UclidMain {
               val newInitDecl = initAccDecls match {
                 case Some(initAcc) => initModuleDecls match {
                   case Some(initMod) => List(InitDecl(BlockStmt(List[BlockVarsDecl](), 
-                    List(initAcc.asInstanceOf[InitDecl].body, initMod.asInstanceOf[InitDecl].body))))
+                    List(initAcc.asInstanceOf[InitDecl].body, initMod.asInstanceOf[InitDecl].body), true)))
                   case None => List(initAcc)
                 }
                 case None => initModuleDecls match {
@@ -468,6 +468,9 @@ object UclidMain {
     passManager.addPass(new ModuleTypeChecker())
     // optimisation, has previously been called
     passManager.addPass(new SemanticAnalyzer())
+    // reorder statements if necessary. 
+    // Pass MUST be run after variable renamers
+    //passManager.addPass(new BlockSorter())
     // known bugs in the following passes
     if (config.enumToNumeric) passManager.addPass(new EnumTypeAnalysis())
     if (config.enumToNumeric) passManager.addPass(new EnumTypeRenamer("BV"))

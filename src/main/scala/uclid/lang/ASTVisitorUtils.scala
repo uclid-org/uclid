@@ -177,6 +177,48 @@ class ExprRewriter(name: String, rewrites : Map[Expr, Expr])
   }
 }
 
+// used to rewrite only the read expressions
+class ReadSetExprRewriter(name: String, rewrites : Map[Expr, Expr])
+  extends ASTRewriter(name, new ExprRewriterPass(rewrites))
+{
+  def rewriteExpr(e : Expr, context : Scope) : Expr = {
+    e match {
+      case OperatorApplication(OldOperator(), _) => e
+      case OperatorApplication(HistoryOperator(), _) => e
+      case _ => visitExpr(e, context).get
+    }
+  }
+
+  def rewriteStatements(stmts : List[Statement], context : Scope) : List[Statement] = {
+    return stmts.flatMap(visitStatement(_, context))
+  }
+
+  def rewriteStatement(stmt : Statement, context : Scope) : Option[Statement] = {
+    visitStatement(stmt, context)
+  }
+
+  // do nothing for the LHS
+  override def visitLhs(lhs: Lhs, context: Scope): Option[Lhs] = Some(lhs)
+
+  override def visitOperatorApp(opapp : OperatorApplication, context : Scope) : Option[Expr] = {
+    
+    opapp match {
+      case OperatorApplication(HistoryOperator(), _) => {
+        Some(opapp)
+      }
+      case OperatorApplication(OldOperator(), _) => Some(opapp)
+      case _ => {
+        val opAppP = visitOperator(opapp.op, context).flatMap((op) => {
+          pass.rewriteOperatorApp(OperatorApplication(op, opapp.operands.map(visitExpr(_, context + opapp)).flatten), context)
+        })
+        return ASTNode.introducePos(true, true, opAppP, opapp.position)  }
+    }
+  }
+
+}
+
+
+
 // This class has been modified to handle the abstract class: ModifiableEntity.
 class OldExprRewriterPass(rewrites : Map[ModifiableEntity, Identifier]) extends RewritePass
 {

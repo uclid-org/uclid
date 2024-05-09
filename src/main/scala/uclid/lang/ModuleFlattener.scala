@@ -356,7 +356,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // add initialization for the instance.
   override def rewriteInit(init : InitDecl, context : Scope) : Option[InitDecl] = {
     newModule.init match {
-      case Some(initD) => Some(InitDecl(BlockStmt(List.empty, List(initD.body) ++ List(init.body))))
+      case Some(initD) => Some(InitDecl(BlockStmt(List.empty, List(initD.body) ++ List(init.body), true)))
       case None => Some(init)
     }
   }
@@ -381,7 +381,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // rewrite module.
   override def rewriteModuleCall(modCall : ModuleCallStmt, context : Scope) : Option[Statement] = {
     if (modCall.id == inst.instanceId) {
-      Some(BlockStmt(List.empty, newNextStatements))
+      Some(BlockStmt(List.empty, newNextStatements, false))
     } else {
       Some(modCall)
     }
@@ -572,7 +572,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
           AssumeStmt(exprP, None)
         }
       }
-      BlockStmt(List.empty, modifyHavocs ++ postconditionAssumes)
+      BlockStmt(List.empty, modifyHavocs ++ postconditionAssumes, true)
     }
     val stmtsP = if (callStmt.callLhss.size > 0) {
       val returnAssign = AssignStmt(callStmt.callLhss, retIds)
@@ -580,7 +580,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     } else {
       modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
     }
-    BlockStmt(varsToDeclare, stmtsP)
+    BlockStmt(varsToDeclare, stmtsP, true)
   }
 
   /*

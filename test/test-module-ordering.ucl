@@ -1,0 +1,45 @@
+module test {
+  input a : integer;
+  output b : integer;
+
+  init {
+    b = 0;
+  }
+
+  next {
+    b' = a+1;
+  }
+}
+
+module main {
+  var x: integer;
+  var y: integer;
+
+  // test1 reads in x and updates y'=x+1
+  instance test1 : test(a : (x), b: (y));
+  // test2 reads in y and updates x'=y+1
+  instance test2 : test(a : (y), b: (x));
+  
+  init {
+    x = 0;
+    y = 0;
+
+  }
+
+  next {
+    // both assertions should pass regardless of the ordering of these statements
+    next(test1);
+    next(test2);
+  }
+
+  invariant test1_lt2: test1.b < 2;
+  invariant test2lt2: test2.b < 2;
+
+  control {
+    print_module;
+    v = bmc(1);
+    check;
+    print_results;
+    v.print_cex;
+  }
+}

@@ -442,8 +442,8 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
   def guardedAssignment(guardVar : Identifier, copyVar : Identifier, origVars : List[(Identifier, Type)], newVars : List[(Identifier, Type)]) : Statement = {
-    val thenBlock = BlockStmt(List.empty, AssignStmt(List(LhsId(copyVar)), List(BoolLit(true))) :: assignToVars(newVars, origVars))
-    val ifStmt = IfElseStmt(andExpr(guardVar, notExpr(copyVar)), thenBlock, BlockStmt(List.empty, List.empty))
+    val thenBlock = BlockStmt(List.empty, AssignStmt(List(LhsId(copyVar)), List(BoolLit(true))) :: assignToVars(newVars, origVars), true)
+    val ifStmt = IfElseStmt(andExpr(guardVar, notExpr(copyVar)), thenBlock, BlockStmt(List.empty, List.empty, true))
     ifStmt
   }
 
@@ -605,8 +605,8 @@ class LTLPropertyRewriterPass extends RewritePass {
                         hasFailedAssignments ++ pendingAssignments ++
                         hasAcceptedAssignments ++ hasAcceptedTraceAssignments
     // new init/next.
-    val newInitDecl = InitDecl(BlockStmt(List.empty, List(module.init.get.body) ++ postInitStmts ++ postNextStmts))
-    val newNextDecl = NextDecl(BlockStmt(List.empty, preNextStmts ++ List(module.next.get.body) ++ postNextStmts))
+    val newInitDecl = InitDecl(BlockStmt(List.empty, List(module.init.get.body) ++ postInitStmts ++ postNextStmts, true))
+    val newNextDecl = NextDecl(BlockStmt(List.empty, preNextStmts ++ List(module.next.get.body) ++ postNextStmts, false))
     // new safety properties.
     val newSafetyProperties = (ltlSpecs zip safetyExprs).map {
       p => {
