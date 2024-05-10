@@ -1,0 +1,51 @@
+/**
+    This test was failing datatype generation as the record is hidden in the 
+        array type.
+    
+    The fix was to have generateDatatypes also track the intermediate type names 
+        generated along the way, and to perform dependency analysis taking into 
+        account these intermediate names.
+**/
+
+module common {
+
+    type flag_t = enum { A, B };
+
+    type arr_t = [bv3]a_t;
+
+    type a_t = record { f : flag_t };
+
+}
+
+module main {
+
+    type * = common.*;
+
+    var a :  arr_t;
+
+    var f : flag_t;
+
+    procedure [noinline] p1 ()
+        modifies a;
+        ensures (a[0bv3].f == B);
+    {}
+    
+    init {        
+        call p1();
+    }
+
+    next {
+        if (!(a[0bv3].f == B)) {
+            havoc a;
+        }
+    }
+
+    invariant dummy : (a[0bv3].f == B);
+
+    control {
+        v = bmc(2);
+        check;
+        print_results;
+    }
+
+}
