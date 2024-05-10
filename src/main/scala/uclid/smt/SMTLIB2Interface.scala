@@ -87,11 +87,11 @@ trait SMTLIB2Base {
         List.empty[String]
     }
   }
-  def generateDatatype(t : Type) : (String, List[String]) = {
+  def generateDatatype(t : Type) : (String, List[String], List[String]) = {
     smtlib2BaseLogger.debug("generateDatatype: {}; contained = {}", t.toString(), typeMap.contains(t).toString())
-    val (resultName, newTypes) = typeMap.get(t) match {
+    val (resultName, newTypeNames, newTypes) : (String, List[String], List[String]) = typeMap.get(t) match {
       case Some(synTyp) =>
-        (synTyp.name, List.empty)
+        (synTyp.name, List.empty, List.empty)
       case None =>
         t match {
           case EnumType(members) =>
@@ -99,26 +99,27 @@ trait SMTLIB2Base {
             val memStr = Utils.join(members.map(s => "(" + s + ")"), " ")
             val declDatatype = "(declare-datatypes ((%s 0)) ((%s)))".format(typeName, memStr)
             typeMap = typeMap.addSynonym(typeName, t)
-            (typeName, List(declDatatype))
+            (typeName, List(typeName), List(declDatatype))
           case ArrayType(indexTypes, elementType) =>
-            val (indexTypeName, newTypes1) = if (indexTypes.size == 1) {
+            val (indexTypeName, newTypeNames1, newTypes1) = if (indexTypes.size == 1) {
               generateDatatype(indexTypes(0))
             } else {
               val indexTuple = TupleType(indexTypes)
               generateDatatype(indexTuple)
             }
-            val (elementTypeName, newTypes2) = generateDatatype(elementType)
+            val (elementTypeName, newTypeNames2, newTypes2) = generateDatatype(elementType)
             val arrayTypeName = "(Array %s %s)".format(indexTypeName, elementTypeName)
             typeMap = typeMap.addSynonym(arrayTypeName, t)
-            (arrayTypeName, newTypes1 ++ newTypes2)
+            (arrayTypeName, newTypeNames1 ++ newTypeNames2, newTypes1 ++ newTypes2)
           case productType : ProductType =>
             val typeName = getTypeName(productType.typeNamePrefix)
             val mkTupleFn = Context.getMkTupleFunction(typeName)
             val fieldNames = productType.fieldNames.map(f => Context.getFieldName(f))
-            val (fieldTypes, newTypes1) = productType.fieldTypes.foldRight(List.empty[String], List.empty[String]) {
+            val (fieldTypes, newTypeNames1, newTypes1) = productType.fieldTypes
+              .foldRight(List.empty[String], List.empty[String], List.empty[String]) {
               (fld, acc) => {
-                val (fldNameI, newTypesI) = generateDatatype(fld)
-                (fldNameI :: acc._1, newTypesI ++ acc._2)
+                val (fldNameI, newTypeNamesI, newTypesI) = generateDatatype(fld)
+                (fldNameI :: acc._1, newTypeNamesI ++ acc._2, newTypesI ++ acc._3)
               }
             }
             val fieldString = (fieldNames zip fieldTypes).map(p => "(%s %s)".format(p._1.toString(), p._2.toString()))
@@ -126,7 +127,7 @@ trait SMTLIB2Base {
             val argString = "(" + Utils.join(mkTupleFn :: fieldString, " ") + ")"
             val newType = "(declare-datatypes %s ((%s)))".format(nameString, argString)
             typeMap = typeMap.addSynonym(typeName, t)
-            (typeName, newType :: newTypes1)
+            (typeName, typeName :: newTypeNames1, newType :: newTypes1)
           case dt : DataType =>
             val typeName = dt.id
             val nameString = "((%s 0))".format(typeName)
@@ -141,59 +142,63 @@ trait SMTLIB2Base {
             }), " ")
             val newType = "(declare-datatypes %s ((%s)))".format(nameString, constructorsString)
             typeMap = typeMap.addSynonym(typeName, t)
-            (typeName, newType :: List.empty)
+            (typeName, typeName :: Nil, newType :: List.empty)
           case BoolType => 
             typeMap = typeMap.addSynonym("Bool", t)
-            ("Bool", List.empty)
+            ("Bool", List.empty, List.empty)
           case IntType =>
             typeMap = typeMap.addSynonym("Int", t)
-            ("Int", List.empty)
+            ("Int", List.empty, List.empty)
           case RealType =>
             typeMap = typeMap.addSynonym("Real", t)
-            ("Real", List.empty)
+            ("Real", List.empty, List.empty)
           case BitVectorType(n) => 
             val typeStr = "(_ BitVec %d)".format(n)
             typeMap = typeMap.addSynonym(typeStr, t)
-            (typeStr, List.empty)
+            (typeStr, List.empty, List.empty)
           case FltType(e,s) => 
             val typeStr = "(_ FloatingPoint "+ e.toString +" "+ s.toString+")"
             typeMap = typeMap.addSynonym(typeStr, t)
-            (typeStr, List.empty)
+            (typeStr, List.empty, List.empty)
           case MapType(inTypes, outType) =>
-            val (typeStr, newTypes1) = generateDatatype(outType)
-            val (_, newTypes) = inTypes.foldRight((List.empty[String], newTypes1)) {
-              (typ, acc) => {
-                val (typeStr, newTypes2) = generateDatatype(typ)
-                (acc._1 :+ typeStr, acc._2 ++ newTypes2)
-              }
+            val (typeStr, newTypeNames1, newTypes1) = generateDatatype(outType)
+            val (_, newTypeNames, newTypes) = inTypes
+              .foldRight((List.empty[String], newTypeNames1, newTypes1)) {
+                (typ, acc) => {
+                  val (typeStr, newTypeNames2, newTypes2) = generateDatatype(typ)
+                  (acc._1 :+ typeStr, acc._2 ++ newTypeNames2, acc._3 ++ newTypes2)
+                }
             }
-            (typeStr, newTypes)
+            (typeStr, newTypeNames, newTypes)
           case ConstructorType(id, inTypes, outType) =>
-            val (typeStr, newTypes1) = generateDatatype(outType)
-            val (_, newTypes) = inTypes.foldRight((List.empty[String], newTypes1)) {
-              (typ, acc) => {
-                val (typeStr, newTypes2) = generateDatatype(typ._2)
-                (acc._1 :+ typeStr, acc._2 ++ newTypes2)
+            val (typeStr, newTypeNames1, newTypes1) = generateDatatype(outType)
+            val (_, newTypeNames, newTypes) = inTypes
+              .foldRight((List.empty[String], newTypeNames1, newTypes1)) {
+                (typ, acc) => {
+                  val (typeStr, newTypeNames2, newTypes2) = generateDatatype(typ._2)
+                  (acc._1 :+ typeStr, acc._2 ++ newTypeNames2, acc._3 ++ newTypes2)
+                }
               }
-            }
-            (typeStr, newTypes)
+            (typeStr, newTypeNames, newTypes)
           case TesterType(id, inType) => 
-            val (typeStr, newTypes) = generateDatatype(inType)
-            (typeStr, newTypes)
+            val (typeStr, newTypeNames, newTypes) = generateDatatype(inType)
+            (typeStr, newTypeNames, newTypes)
           case UninterpretedType(typeName) => 
             // TODO: sorts with arity greater than 1? Does uclid allow such a thing?
             val declDatatype = "(declare-sort %s 0)".format(typeName)
             typeMap = typeMap.addSynonym(typeName, t)
-            (typeName, List(declDatatype))
+            (typeName, typeName::Nil, List(declDatatype))
           case SelfReferenceType(name) => 
             typeMap = typeMap.addSynonym(name, t)
-            (name, List.empty)
+            (name, List.empty, List.empty)
           case _ => 
             throw new Utils.UnimplementedException("TODO: Implement more types in SMTLIB2Interface.generateDatatype: " + t.toString());
         }
     }
     smtlib2BaseLogger.debug("generateDatatype: {}; newTypes: {}", t.toString(), newTypes.toString())
-    (resultName, newTypes)
+    Utils.assert(newTypes.size == newTypeNames.size, 
+      "Catastrophic failure in generateDatatype: Mismatch in new typenames and new types.")
+    (resultName, newTypeNames, newTypes)
   }
 
   case class TranslatedExpr(order : Int, expr : String, name : Option[String]) {
@@ -253,7 +258,7 @@ trait SMTLIB2Base {
             (id, memo, false)
           case ConstArray(expr, typ) =>
             val (eP, memoP) = translateExpr(expr, memo, shouldLetify)
-            val (typName, newTypes) = generateDatatype(typ)
+            val (typName, newTypeNames, newTypes) = generateDatatype(typ)
             assert (newTypes.size == 0)
             val str = "((as const %s) %s)".format(typName, eP.exprString())
             (str, memoP, shouldLetify)
@@ -317,7 +322,7 @@ trait SMTLIB2Base {
             }
           case MakeTuple(args) =>
             val tupleType = TupleType(args.map(_.typ))
-            val (tupleTypeName, newTypes) = generateDatatype(tupleType)
+            val (tupleTypeName, newTypeNames, newTypes) = generateDatatype(tupleType)
             assert (newTypes.size == 0)
             val (trArgs, memoP1) = translateExprs(args, memo, shouldLetify)
             ("(" + Context.getMkTupleFunction(tupleTypeName) + " " + exprString(trArgs) + ")", memoP1, true)
@@ -454,7 +459,7 @@ class SMTLIB2Interface(args: List[String], var disableLetify: Boolean=false) ext
 
   def generateDeclaration(sym: Symbol) = {
     if (!sym.typ.isInstanceOf[ConstructorType] && !sym.typ.isInstanceOf[TesterType]) {
-      val (typeName, newTypes) = generateDatatype(sym.typ)
+      val (typeName, newTypeNames, newTypes) = generateDatatype(sym.typ)
       Utils.assert(newTypes.size == 0, "No new types are expected here.")
       val inputTypes = generateInputDataTypes(sym.typ).mkString(" ")
       val cmd = "(declare-fun %s (%s) %s)".format(sym, inputTypes, typeName)
@@ -476,7 +481,7 @@ class SMTLIB2Interface(args: List[String], var disableLetify: Boolean=false) ext
   }
 
   def generateOracleDeclaration(sym: OracleSymbol) = {
-    val (typeName, newTypes) = generateDatatype(sym.typ)
+    val (typeName, newTypeNames, newTypes) = generateDatatype(sym.typ)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
 
     val inputTypes = generateInputDataTypes(sym.typ)
@@ -530,8 +535,8 @@ class SMTLIB2Interface(args: List[String], var disableLetify: Boolean=false) ext
     val declCommands = new ListBuffer[(String, String)]()
     Context.findTypes(e).filter(typ => !typeMap.contains(typ)).foreach {
       newType => {
-        val (name, newTypes) = generateDatatype(newType)
-        newTypes.foreach(typ => declCommands.append((name, typ)))
+        val (name, newTypeNames, newTypes) = generateDatatype(newType)
+        (newTypeNames zip newTypes).foreach({case (n, typ) => declCommands.append((n, typ))})
       }
     }
 
