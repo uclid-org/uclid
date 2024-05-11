@@ -138,7 +138,7 @@ trait SMTLIB2Base {
                     .foldRight("", List.empty[String], List.empty[String]){
                       (s, _acc) => {
                       val (fldName, newTypeNames, newTypes) = generateDatatype(s._2)
-                      (_acc._1 + " " + "(%s %s)".format(Context.getFieldName(s._1), fldName),
+                      ("(%s %s)".format(Context.getFieldName(s._1), fldName)  + " " + _acc._1,
                         _acc._2 ++ newTypeNames, _acc._3 ++ newTypes)
                     }
                   }

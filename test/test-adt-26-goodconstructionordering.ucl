@@ -1,0 +1,29 @@
+
+
+module main {
+
+    datatype adt_t = A (ia : integer, ba : bv4) | B (ib : integer, bb : boolean);
+
+    var adt1 : adt_t;
+    var adt2 : adt_t;
+
+    init {
+        adt1 = B(10, true);
+        adt2 = A(10, 4bv4);
+    }
+
+    next {
+        adt1' = B(adt1.ib+1, adt1.bb);
+        adt2' = A(adt2.ia+1, adt2.ba);
+    }
+
+    property match: adt1.ib == adt2.ia;
+
+    control {
+        v = bmc(2);
+        check;
+        print_results;
+        v.print_cex_json();
+    }
+
+}
