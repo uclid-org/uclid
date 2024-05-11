@@ -173,6 +173,28 @@ class ParserSpec extends AnyFlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
+  "test-adt-27-badconstructionordering.ucl" should "not parse successfully." in {
+    try {
+      val filename = "test/test-adt-27-badconstructionordering.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size > 0)
+    }
+  }
+  "test-adt-28-fieldreuse.ucl" should "not parse successfully." in {
+    try {
+      val filename = "test/test-adt-28-fieldreuse.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size > 0)
+    }
+  }
   "test-type1.ucl" should "not parse successfully." in {
     try {
       val filename = "test/test-type1.ucl"
