@@ -131,18 +131,25 @@ trait SMTLIB2Base {
           case dt : DataType =>
             val typeName = dt.id
             val nameString = "((%s 0))".format(typeName)
-            val constructorsString = Utils.join(dt.cstors.map(c => {
-              val sels = Utils.join(c.inTypes.map(s => {
-                val inner = generateDatatype(s._2) 
-                val sel = "(%s %s)".format(Context.getFieldName(s._1), inner._1)
-                sel
-              }), " ")
-              val constru = "(%s %s)".format(c.id, sels)
-              constru
-            }), " ")
+            val (consNames : String, newTypesNames1 : List[String], newTypes1 : List[String]) = dt.cstors
+              .foldRight("", List.empty[String], List.empty[String]) {
+                (c, acc) => {
+                  val (_consNames : String, _newTypesNames1 : List[String], _newTypes1: List[String]) = c.inTypes
+                    .foldRight("", List.empty[String], List.empty[String]){
+                      (s, _acc) => {
+                      val (fldName, newTypeNames, newTypes) = generateDatatype(s._2)
+                      (_acc._1 + " " + "(%s %s)".format(Context.getFieldName(s._1), fldName),
+                        _acc._2 ++ newTypeNames, _acc._3 ++ newTypes)
+                    }
+                  }
+                  (acc._1 + " " + s"(${c.id} ${_consNames})",  
+                    acc._2 ++ _newTypesNames1, acc._3 ++ _newTypes1)
+                }
+            }
+            val constructorsString = consNames
             val newType = "(declare-datatypes %s ((%s)))".format(nameString, constructorsString)
             typeMap = typeMap.addSynonym(typeName, t)
-            (typeName, typeName :: Nil, newType :: List.empty)
+            (typeName, typeName :: newTypesNames1, newType :: newTypes1)
           case BoolType => 
             typeMap = typeMap.addSynonym("Bool", t)
             ("Bool", List.empty, List.empty)

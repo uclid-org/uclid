@@ -168,8 +168,8 @@ class ParserSpec extends AnyFlatSpec {
         assert (p.errors.size > 0)
     }
   }
-  "test-adt-23.ucl" should "parse successfully" in {
-    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-adt-23.ucl"), lang.Identifier("main"))
+  "test-adt-24.ucl" should "parse successfully" in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-adt-24.ucl"), lang.Identifier("main"))
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }

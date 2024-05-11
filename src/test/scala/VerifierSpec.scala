@@ -128,6 +128,9 @@ class VerifierSanitySpec extends AnyFlatSpec {
   "test-adt-23-datatypegeneration.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-adt-23-datatypegeneration.ucl", 0)
   }
+  "test-adt-25.ucl" should "verify successfully." in {
+    VerifierSpec.expectedFails("./test/test-adt-25.ucl", 0)
+  }
   "test-array-0.ucl" should "verify successfully." in {
     VerifierSpec.expectedFails("./test/test-array-0.ucl", 0)
   }
