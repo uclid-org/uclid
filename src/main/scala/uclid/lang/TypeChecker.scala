@@ -98,7 +98,13 @@ class TypeSynonymFinderPass extends ReadOnlyPass[Unit]
         TupleType(fieldTypes.map(simplifyType(_, visited, m)))
       case RecordType(fields) =>
         RecordType(fields.map((f) => (f._1, simplifyType(f._2, visited, m))))
-      case dt: DataType => dt
+      case dt: DataType => 
+        DataType(dt.id, dt.constructors.map(c => (c._1, c._2.map(s => (s._1, {
+          s._2 match {
+            case SynonymType(id) if id == dt.id => s._2
+            case _ => simplifyType(s._2, visited, m)
+          }
+        })))))
       case MapType(inTypes, outType) =>
         MapType(inTypes.map(simplifyType(_, visited, m)), simplifyType(outType, visited, m))
       case ArrayType(inTypes, outType) =>
