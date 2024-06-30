@@ -761,6 +761,12 @@ class ParserSpec extends AnyFlatSpec {
     assert (instantiatedModules.size == 1)
   }
 
+  "test-rewrite-polymorphic-select.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-rewrite-polymorphic-select.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+
   "test-array-record.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-array-record.ucl"), lang.Identifier("main"))
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
