@@ -111,7 +111,7 @@ class ModuleTypeCheckerPass extends ReadOnlyPass[Set[ModuleError]]
 
           ret
 
-        case BlockStmt(_, _) =>
+        case BlockStmt(_, _, _) =>
           in
         case IfElseStmt(cond, _, _) =>
           val cType = exprTypeChecker.typeOf(cond, context)

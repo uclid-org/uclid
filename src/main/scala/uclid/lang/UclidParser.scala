@@ -592,33 +592,39 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         { case macroId => lang.MacroCallStmt(macroId) } |
       KwNext ~ "(" ~> Id <~ ")" ~ ";" ^^
         { case id => lang.ModuleCallStmt(id) } |
-      KwIf ~ "(" ~ "*" ~ ")" ~> ((BlkStmt|Error_BlkStmt) <~ KwElse) ~ (BlkStmt|Error_BlkStmt) ^^
+      KwIf ~ "(" ~ "*" ~ ")" ~> ((ProceduralBlkStmt|Error_BlkStmt) <~ KwElse) ~ (ProceduralBlkStmt|Error_BlkStmt) ^^
         { case tblk ~ fblk => lang.IfElseStmt(lang.FreshLit(lang.BooleanType()), tblk, fblk) } |
-      KwIf ~ "(" ~ "*" ~ ")" ~> (BlkStmt|Error_BlkStmt) ^^
-        { case blk => IfElseStmt(lang.FreshLit(lang.BooleanType()), blk, BlockStmt(List.empty, List.empty)) } |
-      KwIf ~ "(" ~> (Expr <~ ")") ~ (BlkStmt|Error_BlkStmt) ~ (KwElse ~> (BlkStmt|Error_BlkStmt)) ^^
+      KwIf ~ "(" ~ "*" ~ ")" ~> (ProceduralBlkStmt|Error_BlkStmt) ^^
+        { case blk => IfElseStmt(lang.FreshLit(lang.BooleanType()), blk, BlockStmt(List.empty, List.empty, true)) } |
+      KwIf ~ "(" ~> (Expr <~ ")") ~ (ProceduralBlkStmt|Error_BlkStmt) ~ (KwElse ~> (ProceduralBlkStmt|Error_BlkStmt)) ^^
         { case e ~ f ~ g => IfElseStmt(e,f,g)} |
-      KwIf ~> (Expr ~ (BlkStmt|Error_BlkStmt)) ^^
-        { case e ~ f => IfElseStmt(e, f, BlockStmt(List.empty, List.empty)) } |
+      KwIf ~> (Expr ~ (ProceduralBlkStmt|Error_BlkStmt)) ^^
+        { case e ~ f => IfElseStmt(e, f, BlockStmt(List.empty, List.empty, true)) } |
       KwCase ~> rep(CaseBlockStmt) <~ KwEsac ^^
         { case i => CaseStmt(i) } |
-      KwFor ~> (Id ~ (KwIn ~> (RangeLit|Error_RangeLit)) ~ (BlkStmt|Error_BlkStmt)) ^^
+      KwFor ~> (Id ~ (KwIn ~> (RangeLit|Error_RangeLit)) ~ (ProceduralBlkStmt|Error_BlkStmt)) ^^
         { case id ~ r ~ body => ForStmt(id, r._1.typeOf, r, body) } |
-      KwFor ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> RangeExpr) ~ (BlkStmt|Error_BlkStmt) ^^
+      KwFor ~ "(" ~> (IdType <~ ")") ~ (KwIn ~> RangeExpr) ~ (ProceduralBlkStmt|Error_BlkStmt) ^^
         { case idtyp ~ range ~ body => ForStmt(idtyp._1, idtyp._2, range, body) } |
-      KwWhile ~> ("(" ~> Expr <~ ")") ~ rep((Invariant|Error_Invariant)) ~ (BlkStmt|Error_BlkStmt) ^^
+      KwWhile ~> ("(" ~> Expr <~ ")") ~ rep((Invariant|Error_Invariant)) ~ (ProceduralBlkStmt|Error_BlkStmt) ^^
         { case expr ~ invs ~ body => WhileStmt(expr, body, invs) } |
-      (BlkStmt|Error_BlkStmt) |
+      (ProceduralBlkStmt|Error_BlkStmt) |
       ";" ^^ { case _ => SkipStmt() }
     }
     
     lazy val CaseBlockStmt: PackratParser[(Expr, Statement)] =
-      (Expr ~ ":" ~ (BlkStmt|Error_BlkStmt)) ^^ { case e ~ ":" ~ ss => (e,ss) } |
-      (KwDefault ~ ":" ~> (BlkStmt|Error_BlkStmt)) ^^ { case ss => (BoolLit(true), ss) }
+      (Expr ~ ":" ~ (ProceduralBlkStmt|Error_BlkStmt)) ^^ { case e ~ ":" ~ ss => (e,ss) } |
+      (KwDefault ~ ":" ~> (ProceduralBlkStmt|Error_BlkStmt)) ^^ { case ss => (BoolLit(true), ss) }
 
     lazy val BlkStmt: PackratParser[lang.BlockStmt] = positioned{
       "{" ~> rep (BlockVarsDecl) ~ rep ((Statement|Error_Statement)) <~ "}" ^^ {
-        case vars ~ stmts => lang.BlockStmt(vars, stmts)
+        case vars ~ stmts => lang.BlockStmt(vars, stmts, false)
+      }
+    }
+
+    lazy val ProceduralBlkStmt: PackratParser[lang.BlockStmt] = positioned{
+      "{" ~> rep (BlockVarsDecl) ~ rep ((Statement|Error_Statement)) <~ "}" ^^ {
+        case vars ~ stmts => lang.BlockStmt(vars, stmts, true)
       }
     }
 
@@ -681,7 +687,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     
     lazy val ProcedureDecl : PackratParser[lang.ProcedureDecl] = positioned {
       KwProcedure ~> ProcedureAnnotationList.? ~ Id ~ IdTypeList ~ (KwReturns ~> IdTypeList) ~
-      rep(ProcedureVerifExpr) ~ (BlkStmt|Error_BlkStmt) ^^
+      rep(ProcedureVerifExpr) ~ (ProceduralBlkStmt|Error_BlkStmt) ^^
         { case annotOpt ~ id ~ args ~ outs ~ verifExprs ~ body =>
           val annotations = annotOpt match {
             case Some(ids) => ProcedureAnnotations(ids.toSet)
@@ -694,7 +700,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
           lang.ProcedureDecl(id, lang.ProcedureSig(args,outs),
                              body, requiresList, ensuresList, modifiesList.toSet, annotations) } |
       // procedure with no return value
-      KwProcedure ~> ProcedureAnnotationList.? ~ Id ~ IdTypeList ~ rep(ProcedureVerifExpr) ~ (BlkStmt|Error_BlkStmt) ^^
+      KwProcedure ~> ProcedureAnnotationList.? ~ Id ~ IdTypeList ~ rep(ProcedureVerifExpr) ~ (ProceduralBlkStmt|Error_BlkStmt) ^^
         { case annotOpt ~ id ~ args ~ verifExprs ~ body =>
           val annotations = annotOpt match {
             case Some(ids) => ProcedureAnnotations(ids.toSet)
@@ -907,7 +913,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val InitDecl : PackratParser[lang.InitDecl] = positioned {
-      KwInit ~> (BlkStmt|Error_BlkStmt) ^^
+      KwInit ~> (ProceduralBlkStmt|Error_BlkStmt) ^^
         { case b => lang.InitDecl(b) }
     }
 

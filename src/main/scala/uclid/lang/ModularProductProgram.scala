@@ -113,7 +113,7 @@ class ModularProductProgramPass extends RewritePass {
         def findRequiredActivationVariables(stmts: List[Statement], currentScope: Int, context: Scope): Unit = {
             if(!stmts.isEmpty) {
                 stmts.head match {
-                    case BlockStmt(vars, blockstmts) =>
+                    case BlockStmt(vars, blockstmts, _ ) =>
                         findRequiredActivationVariables(blockstmts, currentScope, context + vars)
                     case IfElseStmt(_, ifblock, elseblock) => 
                         val activationVarsDecl1 = createActivationVariables(k,helperObj.mapOfActivationVariables,helperObj.maxScope+1)
@@ -228,7 +228,7 @@ class ModularProductProgramPass extends RewritePass {
                         case WhileStmt(_, body, _) => 
                             collectRenamedVariablesFromBlockVars(body.asInstanceOf[BlockStmt].vars)
                             collectRenamedVariablesFromBlockBody(body.asInstanceOf[BlockStmt].stmts)
-                        case BlockStmt(vars, blockstmts) =>
+                        case BlockStmt(vars, blockstmts, _) =>
                             collectRenamedVariablesFromBlockVars(vars)
                             collectRenamedVariablesFromBlockBody(blockstmts)
                         case _ =>   
@@ -309,7 +309,7 @@ class ModularProductProgramPass extends RewritePass {
                             addDeclarationsToMap(maxblock, body.asInstanceOf[BlockStmt].vars)
                             collectInsideBlockVarsUtil(body.asInstanceOf[BlockStmt].stmts)
 
-                        case BlockStmt(vars, blockstmts) =>
+                        case BlockStmt(vars, blockstmts, _) =>
                             
                             maxblock += 1
                             addDeclarationsToMap(maxblock, vars)
@@ -491,8 +491,8 @@ class ModularProductProgramPass extends RewritePass {
                                     val renamedExpression = getRenamedExpr(expr, context, k)
                                     val newAssumeStatement = AssumeStmt(renamedExpression, id)
                                     ASTNode.introducePos(true, true, newAssumeStatement, stmts.head.position)
-                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssumeStatement.asInstanceOf[Statement]))
-                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssumeStatement.asInstanceOf[Statement]),true)
+                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()),true)
                                     val modularStmt = IfElseStmt(andCondition, trueBlockStmt, falseBlockStmt)
                                     newbody += modularStmt
                                 }
@@ -505,8 +505,8 @@ class ModularProductProgramPass extends RewritePass {
                                         val renamedExpression = getRenamedExpr(expr, context, i)
                                         val newAssumeStatement = AssumeStmt(renamedExpression, id)
                                         ASTNode.introducePos(true, true, newAssumeStatement, stmts.head.position)
-                                        val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssumeStatement.asInstanceOf[Statement]))
-                                        val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                        val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssumeStatement.asInstanceOf[Statement]),true)
+                                        val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()),true)
                                         val modularStmt = IfElseStmt(checkActVarCondition, trueBlockStmt, falseBlockStmt)
                                         newbody += modularStmt  
                                     }
@@ -521,8 +521,8 @@ class ModularProductProgramPass extends RewritePass {
                                         val renamedExpression = getRenamedExpr(expr, context, i)
                                         val newAssumeStatement = AssumeStmt(renamedExpression, id)
                                         ASTNode.introducePos(true, true, newAssumeStatement, stmts.head.position)
-                                        val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssumeStatement.asInstanceOf[Statement]))
-                                        val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                        val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssumeStatement.asInstanceOf[Statement]),true)
+                                        val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()),true)
                                         val modularStmt = IfElseStmt(checkActVarCondition, trueBlockStmt, falseBlockStmt)
                                         newbody += modularStmt  
                                     }  
@@ -552,8 +552,8 @@ class ModularProductProgramPass extends RewritePass {
                                     val renamedExpression = getRenamedExpr(expr, context, k)
                                     val newAssertStatement = AssertStmt(renamedExpression, id)
                                     ASTNode.introducePos(true, true, newAssertStatement, stmts.head.position)
-                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssertStatement.asInstanceOf[Statement]))
-                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssertStatement.asInstanceOf[Statement]), true)
+                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()), true)
                                     val modularStmt = IfElseStmt(andCondition, trueBlockStmt, falseBlockStmt)
                                     newbody += modularStmt
                                 }
@@ -566,8 +566,8 @@ class ModularProductProgramPass extends RewritePass {
                                         val renamedExpression = getRenamedExpr(expr, context, i)
                                         val newAssertStatement = AssertStmt(renamedExpression, id)
                                         ASTNode.introducePos(true, true, newAssertStatement, stmts.head.position)
-                                        val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssertStatement.asInstanceOf[Statement]))
-                                        val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                        val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssertStatement.asInstanceOf[Statement]), true)
+                                        val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()),true)
                                         val modularStmt = IfElseStmt(checkActVarCondition, trueBlockStmt, falseBlockStmt)
                                         newbody += modularStmt  
                                     }
@@ -582,8 +582,8 @@ class ModularProductProgramPass extends RewritePass {
                                         val renamedExpression = getRenamedExpr(expr, context, i)
                                         val newAssertStatement = AssertStmt(renamedExpression, id)
                                         ASTNode.introducePos(true, true, newAssertStatement, stmts.head.position)
-                                        val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssertStatement.asInstanceOf[Statement]))
-                                        val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                        val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssertStatement.asInstanceOf[Statement]),true)
+                                        val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()),true)
                                         val modularStmt = IfElseStmt(checkActVarCondition, trueBlockStmt, falseBlockStmt)
                                         newbody += modularStmt  
                                     }  
@@ -635,8 +635,8 @@ class ModularProductProgramPass extends RewritePass {
                                 val actVarArray = helperObj.mapOfActivationVariables(currentScope)
                                 val actVarCond = actVarArray(i)
                                 val emptyVarsList: List[BlockVarsDecl] = List()
-                                val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssignStmt.asInstanceOf[Statement] ))
-                                val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssignStmt.asInstanceOf[Statement] ),true)
+                                val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()),true)
                                 val modularStmt = IfElseStmt(actVarCond, trueBlockStmt, falseBlockStmt)
                                 ASTNode.introducePos(true, true, modularStmt, stmts.head.position)
                                 newbody += modularStmt
@@ -652,8 +652,8 @@ class ModularProductProgramPass extends RewritePass {
                                     val actVarArray = helperObj.mapOfActivationVariables(currentScope)
                                     val actVarCond = actVarArray(i)
                                     val emptyVarsList: List[BlockVarsDecl] = List()
-                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(havocstmt.asInstanceOf[Statement] ))
-                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(havocstmt.asInstanceOf[Statement] ),true)
+                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()),true)
                                     val modularStmt = IfElseStmt(actVarCond, trueBlockStmt, falseBlockStmt)
                                     ASTNode.introducePos(true, true, modularStmt, stmts.head.position)
                                     newbody += modularStmt
@@ -666,8 +666,8 @@ class ModularProductProgramPass extends RewritePass {
                                     val actVarArray = helperObj.mapOfActivationVariables(currentScope)
                                     val actVarCond = actVarArray(i)
                                     val emptyVarsList: List[BlockVarsDecl] = List()
-                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(havocstmt.asInstanceOf[Statement] ))
-                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(havocstmt.asInstanceOf[Statement] ),true)
+                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()),true)
                                     val modularStmt = IfElseStmt(actVarCond, trueBlockStmt, falseBlockStmt)
                                     ASTNode.introducePos(true, true, modularStmt, stmts.head.position)
                                     newbody += modularStmt
@@ -677,7 +677,7 @@ class ModularProductProgramPass extends RewritePass {
                         }
                             
                         
-                        case BlockStmt(blockvars, blockstmts) =>
+                        case BlockStmt(blockvars, blockstmts,isProc) =>
                             val ctx = context + blockvars
                             var newblockvars: List[BlockVarsDecl] = List()
                             helperObj.mapOfRenamedVarDecls get blocknum match {
@@ -688,7 +688,7 @@ class ModularProductProgramPass extends RewritePass {
                             val newblockstmts = ListBuffer[Statement]()
                             blocknum+=1
                             translateBody(currentScope, blockstmts, newblockstmts, ctx)
-                            val newBlock = BlockStmt(newblockvars, newblockstmts.toList)
+                            val newBlock = BlockStmt(newblockvars, newblockstmts.toList, isProc)
                             ASTNode.introducePos(true, true, newBlock, stmts.head.position)
                             newbody += newBlock
 
@@ -792,7 +792,7 @@ class ModularProductProgramPass extends RewritePass {
                             helperObj.maxScope+=1
                             translateBody(helperObj.maxScope, List(body), whilebody, context)
                             val emptyVarsList: List[BlockVarsDecl] = List()
-                            val whilebodyblock = BlockStmt(emptyVarsList, whilebody.toList)
+                            val whilebodyblock = BlockStmt(emptyVarsList, whilebody.toList, true)
                             if(!body.asInstanceOf[BlockStmt].stmts.isEmpty)
                                 ASTNode.introducePos(true, true, whilebodyblock, body.asInstanceOf[BlockStmt].stmts.head.position)
                             val newWhileStatement = WhileStmt(orCondition, whilebodyblock, newinvariants.toList)
@@ -855,8 +855,8 @@ class ModularProductProgramPass extends RewritePass {
                                     }
                                     //creatingIfStmt1
                                     val emptyVarsList: List[BlockVarsDecl] = List()
-                                    val trueBlockStmt1 = BlockStmt(emptyVarsList,trueStmtBlock1.toList)
-                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                    val trueBlockStmt1 = BlockStmt(emptyVarsList,trueStmtBlock1.toList, true)
+                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()), true)
                                     val statement1 = IfElseStmt(checkActVarCondition, trueBlockStmt1, falseBlockStmt)
                                     newIfStatements1 += statement1
                                 }
@@ -899,8 +899,8 @@ class ModularProductProgramPass extends RewritePass {
         
                                     //creatingIfStmt2
                                     val emptyVarsList: List[BlockVarsDecl] = List()
-                                    val trueBlockStmt2 = BlockStmt(emptyVarsList,trueStmtBlock2.toList)
-                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                    val trueBlockStmt2 = BlockStmt(emptyVarsList,trueStmtBlock2.toList, true)
+                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()), true)
                                     val statement2 = IfElseStmt(checkActVarCondition, trueBlockStmt2, falseBlockStmt)
                                     newIfStatements2 += statement2
             
@@ -912,8 +912,8 @@ class ModularProductProgramPass extends RewritePass {
                                 modularStatements += procCallStmt
                                 modularStatements ++= newIfStatements2
                                 val emptyVarsList: List[BlockVarsDecl] = List()
-                                val trueBlockStmt = BlockStmt(emptyVarsList,modularStatements.toList)
-                                val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                val trueBlockStmt = BlockStmt(emptyVarsList,modularStatements.toList, true)
+                                val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()), true)
                                 val modularStmt = IfElseStmt(orCondition, trueBlockStmt, falseBlockStmt)
                                 newbody += modularStmt
                                 helperObj.maxVarScope += (numberOfParameters + numberOfReturnParameters)
@@ -931,8 +931,8 @@ class ModularProductProgramPass extends RewritePass {
                                         variable => LhsId(getRenamedExpr(variable.ident.asInstanceOf[Expr], context, i).asInstanceOf[Identifier]))
                                     val newargs = args.map(getRenamedExpr(_, context, i))
                                     val procCallStmt = ProcedureCallStmt(id, newlhss, newargs.toList, instId)
-                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(procCallStmt))
-                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
+                                    val trueBlockStmt = BlockStmt(emptyVarsList,List(procCallStmt), true)
+                                    val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()), true)
                                     val newStmt = IfElseStmt(actVarCheckCondition, trueBlockStmt, falseBlockStmt)
                                     newbody += newStmt
                                 }
@@ -973,7 +973,7 @@ class ModularProductProgramPass extends RewritePass {
         val newdecls = getLocalVarDeclarations(proc.body.asInstanceOf[BlockStmt].vars)
         val procIdentifier = Identifier(proc.id.name + "$" + k.toString())
         val newbody = translateProcedure()
-        val procBody = BlockStmt(newVarDeclarations.toList ::: newdecls, newbody.toList)
+        val procBody = BlockStmt(newVarDeclarations.toList ::: newdecls, newbody.toList, true)
         ProcedureDecl(procIdentifier, procSignature, procBody, newRequiresList.distinct.toList, newEnsuresList.distinct.toList, newModifiesList, proc.annotations)
 
     }
@@ -1118,8 +1118,8 @@ class ModularProductProgramPass extends RewritePass {
                         val newelseblock = ListBuffer[Statement]()
                         removeHyperSelectsFromBody(ifblock.asInstanceOf[BlockStmt].stmts, newifblock)
                         removeHyperSelectsFromBody(elseblock.asInstanceOf[BlockStmt].stmts, newelseblock)
-                        val trueblock = BlockStmt(ifblock.asInstanceOf[BlockStmt].vars, newifblock.toList)
-                        val falseblock = BlockStmt(elseblock.asInstanceOf[BlockStmt].vars, newelseblock.toList)
+                        val trueblock = BlockStmt(ifblock.asInstanceOf[BlockStmt].vars, newifblock.toList, true)
+                        val falseblock = BlockStmt(elseblock.asInstanceOf[BlockStmt].vars, newelseblock.toList, true)
                         val newIfStatement = IfElseStmt(cond, trueblock, falseblock)
                         newstmts += newIfStatement
 
@@ -1144,7 +1144,7 @@ class ModularProductProgramPass extends RewritePass {
                         }
                         val newwhilebody = ListBuffer[Statement]()
                         removeHyperSelectsFromBody(body.asInstanceOf[BlockStmt].stmts, newwhilebody)
-                        val newwhilebodyblock = BlockStmt(body.asInstanceOf[BlockStmt].vars, newwhilebody.toList)
+                        val newwhilebodyblock = BlockStmt(body.asInstanceOf[BlockStmt].vars, newwhilebody.toList, true)
                         val newwhilestmt = WhileStmt(cond, newwhilebodyblock, newinvariants.toList)
                         newstmts += newwhilestmt.asInstanceOf[Statement]
 
@@ -1160,7 +1160,7 @@ class ModularProductProgramPass extends RewritePass {
         removeFromEnsures(oldProc.ensures, true, newEnsuresList)
         val newbody = ListBuffer[Statement]()
         removeHyperSelectsFromBody(oldProc.body.asInstanceOf[BlockStmt].stmts, newbody)
-        val newbodyblock = BlockStmt(oldProc.body.asInstanceOf[BlockStmt].vars, newbody.toList)
+        val newbodyblock = BlockStmt(oldProc.body.asInstanceOf[BlockStmt].vars, newbody.toList, true)
         new ProcedureDecl(oldProc.id, oldProc.sig, newbodyblock , newRequiresList.distinct.toList, newEnsuresList.distinct.toList, oldProc.modifies, oldProc.annotations )
 
     }
