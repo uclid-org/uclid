@@ -45,10 +45,12 @@ import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
 import lang.Identifier
-
 import org.json4s._
 import lang.Scope
 import lang.ExpressionEnvironment
+
+import scala.annotation.tailrec
+import scala.collection.mutable
 
 trait SMTLIB2Base {
   val smtlib2BaseLogger = Logger(classOf[SMTLIB2Base])
@@ -539,24 +541,46 @@ class SMTLIB2Interface(args: List[String], var disableLetify: Boolean=false) ext
   }
 
   override def preassert(e: Expr) {
-    val declCommands = new ListBuffer[(String, String)]()
+    val declCommands = new mutable.HashMap[String, String]()
     Context.findTypes(e).filter(typ => !typeMap.contains(typ)).foreach {
       newType => {
         val (name, newTypeNames, newTypes) = generateDatatype(newType)
-        (newTypeNames zip newTypes).foreach({case (n, typ) => declCommands.append((n, typ))})
+        (newTypeNames zip newTypes).foreach({case (n, typ) => declCommands += (n -> typ)})
       }
     }
 
-    // Figure out which type depends on which other type and then declare them in the right order.
-    def dependsOn(d1: (String, String), d2: (String, String)) : Boolean = {
-      return d2._2.contains(d1._1)
-    }
-    val declCommandsSorted = declCommands.toList.sortWith(dependsOn)
-    declCommandsSorted.foreach{
-      decl => {
-        writeCommand(decl._2)
+    val dependsGraph = new mutable.HashMap[String, List[String]]()
+    declCommands.foreach(d1 => declCommands.foreach(d2 => {
+      if (d1._1 != d2._1 && d1._2.contains(d2._1)) {
+        // d1 depends on d2
+        val d1deps = dependsGraph.getOrElse(d1._1, List())
+        dependsGraph.update(d1._1, d2._1 :: d1deps)
       }
+    }))
+
+    @tailrec
+    def reduce(toWrite: Map[String, String], written: Set[String]): Unit = {
+      if (toWrite.isEmpty) {
+        return
+      }
+      val change = new ListBuffer[String]()
+      toWrite.foreach(d => {
+        val depends = dependsGraph.getOrElse(d._1, List())
+        val dependsFiltered = depends.filter(d => !written.contains(d))
+        if (dependsFiltered == List()) {
+          writeCommand(d._2)
+          change.append(d._1)
+        }
+      })
+      if (change.isEmpty) {
+        throw new Utils.AssertionError(s"Didn't make progress writing declarations. The following are not declared: ${toWrite.keys}")
+      }
+      val newToWrite = toWrite.filter(d => !change.contains(d._1));
+      val newWritten = written ++ change
+      reduce(newToWrite, newWritten)
     }
+
+    reduce(declCommands.toMap, Set.empty)
   }
 
   override def check(produceModel: Boolean = true) : SolverResult = {
