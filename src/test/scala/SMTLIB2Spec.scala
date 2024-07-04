@@ -445,6 +445,9 @@ class SMTLIB2Spec extends AnyFlatSpec {
   "issue-187b.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/issue-187b.ucl", 0)
   }
+  "issue-253.ucl" should "verify all assertions." in {
+    SMTLIB2Spec.expectedFails("./test/issue-253.ucl", 0)
+  }
   "test-redundant-assign.ucl" should "verify all assertions." in {
     SMTLIB2Spec.expectedFails("./test/test-redundant-assign.ucl", 0)
   }
