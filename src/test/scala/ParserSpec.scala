@@ -45,6 +45,11 @@ import uclid.{lang => l}
 import java.io.File
 
 class ParserSpec extends AnyFlatSpec {
+  "test-typecheck-empty-tester.ucl" should "parse successfully" in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-typecheck-empty-tester.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
   "test-adt-5-reusingdatatypename.ucl" should "not parse successfully." in {
     try {
       val filename = "test/test-adt-5-reusingdatatypename.ucl"
