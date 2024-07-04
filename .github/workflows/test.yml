@@ -115,13 +115,15 @@ jobs:
         path: z3/
         key: ${{ runner.os }}-z3-${{ hashFiles('get-z3-macos.sh') }}-1
 
+    - name: Create path for Z3
+      run: sudo mkdir -p /usr/local/lib
+
     - name: Download Z3
       if: steps.cache-z3.outputs.cache-hit != 'true'
       run: ./get-z3-macos.sh
        
     - name: Add Z3 to Path
       run: |
-       sudo mkdir -p /usr/local/lib
        echo "$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_PATH
        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/z3/bin/" >> $GITHUB_ENV
        ./setup-z3-macos.sh
