@@ -1,0 +1,17 @@
+module main {
+    type t;
+    datatype a = A(x: t);
+
+    var y: a;
+    var z: t;
+
+    init {
+        assert y.x == z;
+    }
+
+    control {
+        bmc(0);
+        check;
+        print_results;
+    }
+}
