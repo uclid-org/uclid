@@ -45,6 +45,7 @@ import scala.collection.mutable.{Set => MutableSet}
 import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.Logger
 import lang.Identifier
+
 import org.json4s._
 import lang.Scope
 import lang.ExpressionEnvironment
@@ -549,10 +550,16 @@ class SMTLIB2Interface(args: List[String], var disableLetify: Boolean=false) ext
       }
     }
 
+    def dependsOn(d1: (String, String), d2: (String, String)) : Boolean = {
+      // if the exact name is found in the body of the declaration, then it depends on it.
+      val body1 = d1._2.replaceAll("[()]", " ")
+      val name2 = s" ${d2._1} "
+      d1 != d2 && body1.contains(name2)
+    }
+
     val dependsGraph = new mutable.HashMap[String, List[String]]()
     declCommands.foreach(d1 => declCommands.foreach(d2 => {
-      if (d1._1 != d2._1 && d1._2.contains(d2._1)) {
-        // d1 depends on d2
+      if (dependsOn(d1, d2)) {
         val d1deps = dependsGraph.getOrElse(d1._1, List())
         dependsGraph.update(d1._1, d2._1 :: d1deps)
       }
