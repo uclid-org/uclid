@@ -201,8 +201,8 @@ case object UndefinedType extends Type {
 
 case class DataType(id : String, cstors : List[ConstructorType]) extends Type {
   override val hashId = 111
-  override val hashCode = finalize(hashId, 0)
-  override val md5hashCode = computeMD5Hash
+  override val hashCode = computeHash(id, cstors)
+  override val md5hashCode = computeMD5Hash(id, cstors)
   override def toString = "data " + cstors // TODO
   override val typeNamePrefix = "data"
   override def isUndefined = true
