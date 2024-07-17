@@ -1,0 +1,7 @@
+module main {
+    type r = record {y: integer};
+
+    init {
+        assert forall (x: r) :: x.y > 0;
+    }
+}

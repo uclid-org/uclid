@@ -45,6 +45,17 @@ import uclid.{lang => l}
 import java.io.File
 
 class ParserSpec extends AnyFlatSpec {
+  "test-typecheck-empty-tester.ucl" should "not typecheck." in {
+    try {
+      val filename = "test/test-typecheck-empty-tester.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 1)
+    }
+  }
   "test-adt-5-reusingdatatypename.ucl" should "not parse successfully." in {
     try {
       val filename = "test/test-adt-5-reusingdatatypename.ucl"
@@ -194,6 +205,11 @@ class ParserSpec extends AnyFlatSpec {
       case p : Utils.TypeErrorList =>
         assert (p.errors.size > 0)
     }
+  }
+  "test-record-rename.ucl" should "parse successfully" in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-record-rename.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
   }
   "test-type1.ucl" should "not parse successfully." in {
     try {
@@ -757,6 +773,12 @@ class ParserSpec extends AnyFlatSpec {
 
   "longcomment.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(ConfigCons.createConfig("test/longcomment.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+
+  "test-rewrite-polymorphic-select.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-rewrite-polymorphic-select.ucl"), lang.Identifier("main"))
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
