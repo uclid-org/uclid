@@ -1,0 +1,13 @@
+module main {
+    type r = record {y: integer};
+
+    init {
+        assert forall (x: r) :: x.y > 0;
+    }
+
+    control {
+        unroll(0);
+        check;
+        print_results;
+    }
+}
