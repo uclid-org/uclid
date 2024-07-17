@@ -278,7 +278,9 @@ class RewritePolymorphicSelectPass extends RewritePass {
       case  Some(Scope.ProcedureInputArg(_,_)) | Some(Scope.StateVar(_,_)) | Some(Scope.ProcedureOutputArg(_,_))|
             Some(Scope.BlockVar(_,_)) | Some(Scope.FunctionArg(_,_)) | Some(Scope.LambdaVar(_,_))|
             Some(Scope.InputVar(_,_)) | Some(Scope.OutputVar(_,_)) | Some(Scope.SharedVar(_,_)) |
-            Some(Scope.ConstantVar(_,_)) | Some(Scope.SelectorField(_)) | Some(Scope.Function(_,_))
+            Some(Scope.ConstantVar(_,_)) | Some(Scope.SelectorField(_)) | Some(Scope.Function(_,_))|
+            Some(Scope.ExistsVar(_,_)) | Some(Scope.ForallVar(_,_)) | Some(Scope.SpecVar(_,_,_))|
+            Some(Scope.AxiomVar(_,_,_))
               =>{
                 if(id.toString.startsWith("_") && id.toString.substring(1).forall(Character.isDigit))
                   false
