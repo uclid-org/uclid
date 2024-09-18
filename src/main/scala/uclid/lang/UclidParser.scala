@@ -566,7 +566,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val Statement: PackratParser[Statement] = positioned {
       KwSkip <~ ";" ^^ { case _ => SkipStmt() } |
-      KwAssert ~> Expr <~ ";" ^^ { case e => AssertStmt(e, None) } |
+      KwAssert ~> Expr <~ ";" ^^ { case e => AssertStmt(e, None, None) } |
       KwAssume ~> Expr <~ ";" ^^ { case e => AssumeStmt(e, None) } |
       KwHavoc ~> Id <~ ";" ^^ { case id => HavocStmt(HavocableId(id)) } |
       Lhs ~ rep("," ~> Lhs) ~ "=" ~ Expr ~ rep("," ~> Expr) <~ ";" ^^

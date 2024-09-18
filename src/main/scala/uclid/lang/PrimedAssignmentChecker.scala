@@ -103,7 +103,7 @@ class PrimedAssignmentCheckerPass extends ReadOnlyPass[Set[ModuleError]]
         case IfElseStmt(_, _, _)  | MacroCallStmt(_)    |
              ForStmt(_, _, _, _)  | WhileStmt(_, _, _)  |
              CaseStmt(_)          | SkipStmt()          |
-             AssertStmt(_, _)     | AssumeStmt(_, _)    |
+             AssertStmt(_, _, _)  | AssumeStmt(_, _)    |
              HavocStmt(_)         | BlockStmt(_, _)     => 
           in
         case ModuleCallStmt(_) =>

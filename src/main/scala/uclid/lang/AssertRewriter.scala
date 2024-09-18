@@ -31,46 +31,35 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author : Alejandro Sanchez Ocegueda
- * 
- * Inserts an 'assert false' statement at the end of each (nonempty) basic block.
- * This is a sanity check for unreachable code.
- * Note: Smoke testing should not be used with LTL properties yet.
- * 
+ * Author : Pei-Wei Chen
+ *
+ * A couple of AST-handling utilities.
+ *   (i) ASTRewriterPass: Rewrite AssertStmt with modifiesVarStmt
  */
-
 package uclid
 package lang
 
-class SmokeInsertPass() extends RewritePass {
-  
-  var smokeCount = 1
-  override def rewriteBlock(st : BlockStmt, ctx : Scope) : Option[Statement] = {
+import com.typesafe.scalalogging.Logger
 
-    if (st.stmts.length == 1) {
-      val line = st.stmts(0).pos.line
-      var assertFalse = AssertStmt(BoolLit(false), Some(Identifier(s"line %d".format(line))), None)
-      assertFalse.setPos(st.stmts(0).pos)
-      val newstmts = st.stmts :+ assertFalse 
-      smokeCount += 1
-      Some(BlockStmt(st.vars, newstmts))
-    } else if (st.stmts.length > 1) {
-      val topLine = st.stmts(0).pos.line
-      val bottomLine = st.stmts(st.stmts.length-1).pos.line
-      var assertFalse = AssertStmt(BoolLit(false), Some(Identifier(s"lines %d-%d".format(topLine, bottomLine))), None)
-      assertFalse.setPos(st.stmts(st.stmts.length-1).pos)
-      val newstmts = st.stmts :+ assertFalse 
-      smokeCount += 1
-      Some(BlockStmt(st.vars, newstmts))
-    } else {
-      Some(st)
-    }
-
-  } 
-    
+class AssertRewriterPass(modifiesVarStmt: List[AssignStmt]) extends RewritePass
+{
+  override def rewriteAssert(st : AssertStmt, context : Scope) : Option[Statement] = {
+    return Some(AssertStmt(st.e, st.id, Some(modifiesVarStmt)))
+  }
 }
 
+object AssertRewriter {
+  var i = 0
+  def getName() : String = {
+    i += 1
+    "AssertRewriter:" + i.toString()
+  }
+}
 
-class SmokeInserter() extends ASTRewriter(
-  "SmokerInserter", new SmokeInsertPass()
-)
+class AssertRewriter(modifiesVarStmt : List[AssignStmt])
+  extends ASTRewriter(AssertRewriter.getName(), new AssertRewriterPass(modifiesVarStmt))
+{
+  def rewriteStatement(stmt : Statement, context : Scope) : Option[Statement] = {
+    visitStatement(stmt, context)
+  }
+}

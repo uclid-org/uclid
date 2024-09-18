@@ -214,6 +214,15 @@ class OldExprRewriterPass(rewrites : Map[ModifiableEntity, Identifier]) extends 
       case _ => Some(opapp)
     }
   }
+  
+  override def rewriteAssert(st : AssertStmt, context : Scope) : Option[Statement] = {
+    val exprP = rewriteExpr(st.e, context).get
+    val modifiesVarStmtP = st.modifiesVarStmt match {
+      case None => None
+      case Some(mvs) => Some(mvs.map(rewriteStatement(_, context).get.asInstanceOf[AssignStmt]))
+    }
+    return Some(AssertStmt(exprP, st.id, modifiesVarStmtP))
+  }
 }
 
 object OldExprRewriter {

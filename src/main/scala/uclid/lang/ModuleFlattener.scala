@@ -542,11 +542,14 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     val modifyHavocs : List[HavocStmt] = modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
     // statements updating the state variables at the end.
     val modifyFinalAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(getModifyLhs(p._1)), List(p._2)))
+    val modifyFinalAssignsWithoutPrime : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._1)), List(p._2)))
+    // rewriter for assert statements.
+    val assertRewriter = new AssertRewriter(modifyFinalAssignsWithoutPrime)
     // create precondition asserts
     val preconditionAsserts : List[Statement] = proc.requires.map {
       (req) => {
         val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(req, context), context)
-        val node = AssertStmt(exprP, Some(Identifier("precondition")))
+        val node = AssertStmt(exprP, Some(Identifier("precondition")), Some(modifyFinalAssignsWithoutPrime))
         ASTNode.introducePos(true, true, node, req.position)
       }
     }
@@ -555,7 +558,7 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
       proc.ensures.map {
         (ens) => {
           val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
-          val node = AssertStmt(exprP, Some(Identifier("postcondition")))
+          val node = AssertStmt(exprP, Some(Identifier("postcondition")), Some(modifyFinalAssignsWithoutPrime))
         ASTNode.introducePos(true, true, node, ens.position)
         }
       }
@@ -564,7 +567,8 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
     // body of the procedure.
     val bodyP = if (proc.shouldInline) {
-      oldRewriter.rewriteStatement(rewriter.rewriteStatement(proc.body, Scope.empty).get, context).get
+      val bodyTmp = oldRewriter.rewriteStatement(rewriter.rewriteStatement(proc.body, Scope.empty).get, context).get
+      assertRewriter.rewriteStatement(bodyTmp, context).get
     } else {
       val postconditionAssumes : List[Statement] = proc.ensures.map {
         (ens) => {

@@ -181,11 +181,14 @@ trait NewProcedureInlinerPass extends RewritePass {
     val modifyHavocs : List[HavocStmt] = modifyPairs.map(p => HavocStmt(HavocableId(p._2)))
     // statements updating the state variables at the end.
     val modifyFinalAssigns : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(getModifyLhs(p._1.id)), List(p._2)))
+    val modifyFinalAssignsWithoutPrime : List[AssignStmt] = modifyPairs.map(p => AssignStmt(List(LhsId(p._1.id)), List(p._2)))
+    // rewriter object for asserts.
+    val assertRewriter = new AssertRewriter(modifyFinalAssignsWithoutPrime)
     // create precondition asserts
     val preconditionAsserts : List[Statement] = proc.requires.map {
       (req) => {
         val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(req, context), context)
-        val node = AssertStmt(exprP, Some(Identifier("precondition")))
+        val node = AssertStmt(exprP, Some(Identifier("precondition_" + proc.id.toString)), Some(modifyFinalAssignsWithoutPrime))
         ASTNode.introducePos(true, true, node, req.position)
       }
     }
@@ -194,7 +197,7 @@ trait NewProcedureInlinerPass extends RewritePass {
       proc.ensures.map {
         (ens) => {
           val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
-          val node = AssertStmt(exprP, Some(Identifier("postcondition")))
+          val node = AssertStmt(exprP, Some(Identifier("postcondition_" + proc.id.toString)), Some(modifyFinalAssignsWithoutPrime))
         ASTNode.introducePos(true, true, node, ens.position)
         }
       }
@@ -203,8 +206,10 @@ trait NewProcedureInlinerPass extends RewritePass {
     }
     // body of the procedure.
     val bodyP = if (proc.shouldInline) {
-      oldRewriter.rewriteStatement(rewriter.rewriteStatement(proc.body, Scope.empty).get, context).get
+      val bodyTmp = oldRewriter.rewriteStatement(rewriter.rewriteStatement(proc.body, Scope.empty).get, context).get
+      assertRewriter.rewriteStatement(bodyTmp, context).get
     } else {
+      // TODO: maybe add assertRewriter here?
       val postconditionAssumes : List[Statement] = proc.ensures.map {
         (ens) => {
           val exprP = oldRewriter.rewriteExpr(rewriter.rewriteExpr(ens, context), context)
@@ -217,7 +222,7 @@ trait NewProcedureInlinerPass extends RewritePass {
       val returnAssign = AssignStmt(callStmt.callLhss, retIds)
       argAssigns ++ modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP, returnAssign) ++ postconditionAsserts ++ modifyFinalAssigns
     } else {
-      argAssigns ++ modifyInitAssigns ++ oldAssigns  ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
+      argAssigns ++ modifyInitAssigns ++ oldAssigns ++ preconditionAsserts ++ List(bodyP) ++ postconditionAsserts ++ modifyFinalAssigns
     }
     BlockStmt(varsToDeclare, stmtsP)
   }

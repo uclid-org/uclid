@@ -1316,8 +1316,13 @@ case class SkipStmt() extends Statement {
   override val hasCall = false
   override val hasInternalCall = false
 }
-case class AssertStmt(e: Expr, id : Option[Identifier]) extends Statement {
-  override def toLines = List("assert " + e + "; // " + position.toString)
+case class AssertStmt(e: Expr, id : Option[Identifier], modifiesVarStmt: Option[List[AssignStmt]]) extends Statement {
+  override def toLines = {
+    (modifiesVarStmt match {
+      case None => Nil
+      case Some(stmtList) => stmtList.map("// " + _.toString)
+    }) ++ List("assert " + e + "; // " + position.toString)
+  }
   override val hasCall = false
   override val hasInternalCall = false
 }

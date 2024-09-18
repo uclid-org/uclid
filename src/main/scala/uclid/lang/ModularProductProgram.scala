@@ -528,7 +528,7 @@ class ModularProductProgramPass extends RewritePass {
                                     }  
                             }
 
-                        case AssertStmt(expr, id) => 
+                        case AssertStmt(expr, id, modifiesVarStmt) => 
                             val activationVariableArray = helperObj.mapOfActivationVariables(currentScope)
                             val emptyVarsList: List[BlockVarsDecl] = List()
                             expr match {
@@ -550,7 +550,8 @@ class ModularProductProgramPass extends RewritePass {
                                         andCondition = Operator.and(andCondition, checkActVarCondition)
                                     }
                                     val renamedExpression = getRenamedExpr(expr, context, k)
-                                    val newAssertStatement = AssertStmt(renamedExpression, id)
+                                    // TODO: the modifiesVarStmt probably breaks the cex printing
+                                    val newAssertStatement = AssertStmt(renamedExpression, id, None)
                                     ASTNode.introducePos(true, true, newAssertStatement, stmts.head.position)
                                     val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssertStatement.asInstanceOf[Statement]))
                                     val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
@@ -564,7 +565,7 @@ class ModularProductProgramPass extends RewritePass {
                                         val currentActVarName = activationVariableArray(i)
                                         val checkActVarCondition = currentActVarName.asInstanceOf[Expr]
                                         val renamedExpression = getRenamedExpr(expr, context, i)
-                                        val newAssertStatement = AssertStmt(renamedExpression, id)
+                                        val newAssertStatement = AssertStmt(renamedExpression, id, None)
                                         ASTNode.introducePos(true, true, newAssertStatement, stmts.head.position)
                                         val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssertStatement.asInstanceOf[Statement]))
                                         val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
@@ -580,7 +581,7 @@ class ModularProductProgramPass extends RewritePass {
                                         val currentActVarName = activationVariableArray(i)
                                         val checkActVarCondition = currentActVarName.asInstanceOf[Expr]
                                         val renamedExpression = getRenamedExpr(expr, context, i)
-                                        val newAssertStatement = AssertStmt(renamedExpression, id)
+                                        val newAssertStatement = AssertStmt(renamedExpression, id, None)
                                         ASTNode.introducePos(true, true, newAssertStatement, stmts.head.position)
                                         val trueBlockStmt = BlockStmt(emptyVarsList,List(newAssertStatement.asInstanceOf[Statement]))
                                         val falseBlockStmt = BlockStmt(emptyVarsList, List(SkipStmt()))
@@ -1098,7 +1099,7 @@ class ModularProductProgramPass extends RewritePass {
                                 newstmts += oldstmts.head
                         }
 
-                    case AssertStmt(expr, _) =>
+                    case AssertStmt(expr, _, _) =>
                         expr match {
                             case OperatorApplication(op, operands) =>
                                 val hasHyperSelect = isHyperSelectPresent(op, operands)

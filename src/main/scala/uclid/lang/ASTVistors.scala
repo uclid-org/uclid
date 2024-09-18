@@ -1929,7 +1929,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val idP = st.id.flatMap(id => visitIdentifier(id, context))
     val envP = if (context.environment == ProceduralEnvironment) ProceduralAssertEnvironment else AssertEnvironment
     val stP = visitExpr(st.e, context.withEnvironment(envP)).flatMap((e) => {
-      pass.rewriteAssert(AssertStmt(e, idP), context)
+      pass.rewriteAssert(AssertStmt(e, idP, st.modifiesVarStmt), context)
     })
     return ASTNode.introducePos(setPosition, setFilename, stP, st.position)
   }

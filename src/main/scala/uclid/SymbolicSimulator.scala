@@ -1825,15 +1825,23 @@ class SymbolicSimulator (module : Module) {
     frameLog.debug("symbolTable: %s".format(symbolTable.toString()))
     s match {
       case SkipStmt() => return symbolTable
-      case AssertStmt(e, id) =>
+      case AssertStmt(e, id, modifiesVarStmt) =>
+        val symbolTableP = modifiesVarStmt match {
+          case None => symbolTable
+          case Some(stmtList) => simulateStmtList(stmtList, symbolTable, scope)
+        }
         val frameTableP = frameTable.clone()
-        frameTableP += symbolTable
+        if (frameNumber == 0) {
+          frameTableP(0) = symbolTableP
+        } else {
+          frameTableP += symbolTableP
+        }
         val simTable = ArrayBuffer(frameTableP)
         val assertionName : String = id match {
           case None => "assertion"
           case Some(i) => i.toString()
         }
-        val assertExpr = evaluate(e,symbolTable, frameTable, frameNumber, scope)
+        val assertExpr = evaluate(e,symbolTableP, frameTable, frameNumber, scope)
         val assert = AssertInfo(
                 assertionName, label, simTable.clone(),
                 scope, frameNumber, pathCondExpr,
@@ -1914,7 +1922,7 @@ class SymbolicSimulator (module : Module) {
 
   def writeSet(stmt: Statement) : Set[Identifier] = stmt match {
     case SkipStmt() => Set.empty
-    case AssertStmt(e, id) => Set.empty
+    case AssertStmt(e, id, modifiesVarStmt) => Set.empty
     case AssumeStmt(e, id) => Set.empty
     case HavocStmt(h) => 
       h match {
