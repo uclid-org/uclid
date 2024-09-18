@@ -903,6 +903,7 @@ case class ConstRecord(fieldvalues: List[(Identifier, Expr)]) extends Expr {
   override def toString = "const-record [%s]".format(
     fieldvalues.map(a => "%s := %s".format(a._1.toString, a._2.toString)).mkString(", ")
   )
+  override def codegenUclidLang: Option[Expr] = Some(this)
 }
 
 case class Tuple(values: List[Expr]) extends Expr {

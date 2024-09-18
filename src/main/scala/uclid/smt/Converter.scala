@@ -379,6 +379,8 @@ object Converter {
       case smt.IntLit(n) => lang.IntLit(n)
       case smt.BooleanLit(b) => lang.BoolLit(b)
       case smt.BitVectorLit(bv, w) => lang.BitVectorLit(bv, w)
+      case smt.ConstRecord(fs) => 
+        lang.ConstRecord(fs.map(f => (lang.Identifier(f._1), toExpr(f._2))))
       case opapp : smt.OperatorApplication =>
         val op = opapp.op
         val args = opapp.operands

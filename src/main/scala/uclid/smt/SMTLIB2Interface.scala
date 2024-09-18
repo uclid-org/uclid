@@ -360,7 +360,7 @@ class SMTLIB2Model(stringModel : String) extends Model {
   }
 
   override def evalAsString(e : Expr) : String = {
-    val definitions = model.functions.filter(fun => fun._1.asInstanceOf[DefineFun].id.toString() contains e.toString())
+    val definitions = model.functions.filter(fun => fun._1.asInstanceOf[DefineFun].id.toString == e.toString)
     Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
       case 0 =>
@@ -380,7 +380,7 @@ class SMTLIB2Model(stringModel : String) extends Model {
     * On failure returns None.
     */
   def evalAsUclid (e : Expr) : Option[lang.Expr] = {
-    val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.toString() contains e.toString())
+    val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.toString == e.toString)
     Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
       case 0 => None
@@ -394,17 +394,18 @@ class SMTLIB2Model(stringModel : String) extends Model {
     *   If that fails, it returns the SMTLIB string.
     */
   override def evalAsJSON (e : Expr) : JValue = {
-    val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.toString() contains e.toString())
+    val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.toString == e.toString)
     Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
-      case 0 => ASTConcreteEvaluator.evalExpr(Some(e), modelUclid) match {
-        case Some(eP) => JString(eP.toString)
-        case None => JString(e.toString())
-      }
-      case 1 => evalAsUclid(e) match {
-          case Some(eP) => JString(eP.toString)
-          case None => JString(definitions(0)._2)
+      case 0 | 1 => ASTConcreteEvaluator.evalExpr(Some(e), modelUclid) match {
+        case Some(eP) => Converter.smtToExpr(eP).codegenUclidLang match {
+          case Some(e1) => { JString(e1.toString) }
+          case None => JString("unknown: " + e.toString)
         }
+        case None => {
+          JString("unknown: " + e.toString)
+        }
+      }
       case _ =>
         throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
     }
