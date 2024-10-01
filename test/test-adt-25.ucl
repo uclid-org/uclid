@@ -1,0 +1,33 @@
+
+
+module main {
+
+    type e_t = enum {X, Y, Z};
+
+    datatype adt_t = 
+        A (a: e_t) | B (b : e_t, c: e_t);
+
+
+    var adt1 : adt_t;
+    var adt2 : adt_t;
+
+    init {
+        adt1 = A(Y);
+        adt2 = B(Y, Y);
+    }
+
+    next {
+        adt1' = A(adt2.b);
+        adt2' = B(adt1.a, adt2.c);
+    }
+
+    property match: adt1.a == adt2.b;
+
+    control {
+        v = bmc(2);
+        check;
+        print_results;
+        v.print_cex_json();
+    }
+
+}

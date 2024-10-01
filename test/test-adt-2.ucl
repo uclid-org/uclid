@@ -1,0 +1,34 @@
+module main {
+    // should fail
+    // TODO: fix parser so we don't have to write A() with brackets for constants
+
+    datatype myEnum = A() | B();
+
+    var t1 : myEnum;
+    var t2 : myEnum;
+
+
+    init {
+        t1 = A();
+        t2 = B();
+    }
+    
+    next {
+        case
+            (t1 == A()) : {t1' = B();}
+            (t1 == B()) : {t1' = A();}
+        esac
+        case
+            (t2 == A()) : {t2' = B();}
+            (t2 == B()) : {t2' = A();}
+        esac
+    }
+
+    invariant test : t1 == t2;
+
+    control {
+        bmc(5);
+        check;
+        print_results;
+    }
+}

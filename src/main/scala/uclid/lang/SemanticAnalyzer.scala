@@ -88,7 +88,27 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
     if (d == TraversalDirection.Down) {
       // val moduleIds = module.decls.filter((d) => d.declNames.isDefined).map((d) => (d.declName.get, d.position))
       val moduleIds = module.decls.flatMap((d) => d.declNames.map((n) => (n, d.position)))
-      SemanticAnalyzerPass.checkIdRedeclaration(moduleIds, in)
+      val selectorIds = module.decls.flatMap((d) => {
+        d match {
+          case TypeDecl(id, typ) => typ match {
+            case DataType(id, constructors) => constructors.flatMap((c) => c._2.map(s => (s._1, s._1.position)))
+            case _ => List()
+          }
+          case _ => List()
+        }
+      })
+      val constructorIds = module.decls.flatMap((d) => {
+        d match {
+          case TypeDecl(id, typ) => typ match {
+            case DataType(id, constructors) => constructors.map((c) => (c._1, c._1.position))
+            case _ => List()
+          }
+          case _ => List()
+        }
+      })
+      SemanticAnalyzerPass.checkIdRedeclaration(moduleIds, in) ++
+      SemanticAnalyzerPass.checkIdRedeclaration(selectorIds, in) ++
+      SemanticAnalyzerPass.checkIdRedeclaration(constructorIds, in)
     } else { in }
   }
   override def applyOnProcedure(d : TraversalDirection.T, proc : ProcedureDecl, in : List[ModuleError], context : Scope) : List[ModuleError] = {
@@ -114,6 +134,16 @@ class SemanticAnalyzerPass extends ReadOnlyPass[List[ModuleError]] {
     if (d == TraversalDirection.Down) {
       val fieldNames = recordT.members.map((f) => (f._1, f._1.position))
       SemanticAnalyzerPass.checkIdRedeclaration(fieldNames, in)
+    } else {
+      in
+    }
+  }
+  override def applyOnDataType(d : TraversalDirection.T, dataT : DataType, in : List[ModuleError], context : Scope) : List[ModuleError] = {
+    if (d == TraversalDirection.Down) {
+      val cstor_ids = dataT.constructors.map(x => (x._1, x._1.position)).toSeq
+      val selector_ids = dataT.constructors.flatMap(x => x._2.map(y => (y._1, y._1.position))).toSeq
+      SemanticAnalyzerPass.checkIdRedeclaration(cstor_ids, in)
+      SemanticAnalyzerPass.checkIdRedeclaration(selector_ids, in)
     } else {
       in
     }

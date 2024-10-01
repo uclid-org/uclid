@@ -45,7 +45,7 @@ package uclid
 import scala.util.parsing.combinator._
 import scala.collection.immutable._
 import lang.{Identifier, Module,  _}
-import uclid.Utils.ParserErrorList
+import Utils.ParserErrorList
 import com.typesafe.scalalogging.Logger
 
 /** This is the main class for Uclid.

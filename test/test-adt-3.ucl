@@ -1,0 +1,26 @@
+module main {
+    // should pass
+    datatype myRecord = | rec(A: integer, B: integer, C: integer);
+
+    var t1 : myRecord;
+    var t2 : myRecord;
+
+
+    init {
+        t1 = rec(1, 2, 3);
+        t2 = rec(3, 2, 1);
+    }
+    
+    next {
+        t1' = rec(t1.C, t1.A, t1.B);
+        t2' = rec(t2.C, t2.A, t2.B);
+    }
+
+    invariant test : t1 != t2;
+
+    control {
+        induction;
+        check;
+        print_results;
+    }
+}

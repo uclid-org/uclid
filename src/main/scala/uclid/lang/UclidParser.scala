@@ -141,6 +141,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwSingle = "single"
     lazy val KwDouble = "double"
     lazy val KwEnum = "enum"
+    lazy val KwData = "datatype"
     lazy val KwRecord = "record"
     lazy val KwReturns = "returns"
     lazy val KwAssume = "assume"
@@ -212,7 +213,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       "false", "true", "bv", "fp", KwProcedure, KwBoolean, KwInteger, KwReal, KwHalf, KwSingle, KwDouble , KwReturns,
       KwAssume, KwAssert, KwSharedVar, KwVar, KwHavoc, KwCall, KwImport,
       KwIf, KwThen, KwElse, KwCase, KwEsac, KwFor, KwIn, KwRange, KwWhile,
-      KwInstance, KwInput, KwOutput, KwConst, KwConstRecord, KwModule, KwType, KwEnum,
+      KwInstance, KwInput, KwOutput, KwConst, KwConstRecord, KwModule, KwType, KwEnum, KwData,
       KwRecord, KwSkip, KwDefine, KwFunction, KwOracle, KwControl, KwInit,
       KwNext, KwLambda, KwModifies, KwProperty, KwDefineAxiom,
       KwForall, KwExists, KwFiniteForall, KwFiniteExists, KwGroup, KwDefault, KwSynthesis, KwGrammar, KwRequires,
@@ -501,6 +502,14 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwRecord ~> ("{" ~> IdType) ~ rep("," ~> IdType) <~ "}" ^^ { case id ~ ids => lang.RecordType(id::ids) }
     }
 
+    lazy val Constructor : PackratParser[(lang.Identifier, List[(lang.Identifier, lang.Type)])] = {
+      Id ~ ("(" ~> (IdType ~ rep("," ~> IdType)).? <~ ")").? ^^ { case name ~ sels => sels match {
+        case Some(None) => (name, List.empty[(Identifier, Type)])
+        case Some(Some(pair)) => (name, pair._1::pair._2)
+        case None => throw new Utils.SyntaxError("Missing parentheses after constructor "+ name,Some(name.pos),name.filename)
+      }}
+    }
+
     lazy val MapType : PackratParser[lang.MapType] = positioned {
       PrimitiveType ~ rep ("*" ~> PrimitiveType) ~ ("->" ~> Type) ^^ { case t ~ ts ~ rt => lang.MapType(t :: ts, rt)}
     }
@@ -701,7 +710,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
 
     lazy val TypeDecl : PackratParser[lang.TypeDecl] = positioned {
       KwType ~> Id ~ ("=" ~> Type) <~ ";" ^^ { case id ~ t => lang.TypeDecl(id,t) } |
-      KwType ~> Id <~ ";" ^^ { case id => lang.TypeDecl(id, lang.UninterpretedType(id)) }
+      KwType ~> Id <~ ";" ^^ { case id => lang.TypeDecl(id, lang.UninterpretedType(id)) } | 
+      KwData ~> Id ~ ("=" ~> "|".? ~> Constructor) ~ rep("|" ~> Constructor) <~ ";" ^^ {case dtname ~ ctr ~ ctrs => lang.TypeDecl(dtname, DataType(dtname, ctr :: ctrs))}
     }
 
     lazy val ModuleImportDecl : PackratParser[lang.ModuleImportDecl] = positioned {

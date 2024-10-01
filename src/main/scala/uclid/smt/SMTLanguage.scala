@@ -39,7 +39,7 @@
 package uclid
 package smt
 import scala.util.matching.Regex
-import uclid.lang.Identifier
+import lang.Identifier
 
 sealed trait Type extends Hashable {
   override val hashBaseId = 22575 // Random number. Not super important, must just be unique for each abstract base class.
@@ -197,6 +197,46 @@ case object UndefinedType extends Type {
   override def toString = "undefined"
   override val typeNamePrefix = "undefined"
   override def isUndefined = true
+}
+
+case class DataType(id : String, cstors : List[ConstructorType]) extends Type {
+  override val hashId = 111
+  override val hashCode = computeHash(id, cstors)
+  override val md5hashCode = computeMD5Hash(id, cstors)
+  override def toString = "data " + cstors // TODO
+  override val typeNamePrefix = "data"
+  override def isUndefined = true
+}
+
+case class ConstructorType(id: String, inTypes: List[(String, Type)], outTyp: Type) extends Type {
+  override val hashId = 113
+  override val hashCode = computeHash(id, inTypes)
+  override val md5hashCode = computeMD5Hash(id, inTypes)
+  override def toString = {
+    "constructor " + id  + " " + inTypes // TODO add selectors to the toString
+  }
+  override def isMap = true
+  override val typeNamePrefix = "constructor"
+}
+
+case class TesterType(id: String, inType: Type) extends Type {
+  override val hashId = 114
+  override val hashCode = computeHash(id, inType)
+  override val md5hashCode = computeMD5Hash(id, inType)
+  override def toString = {
+    "tester " + id  + " " + inType
+  }
+  override def isMap = true
+  override val typeNamePrefix = "tester"
+}
+
+case class SelfReferenceType(name: String) extends Type {
+  override val hashId = 112
+  override val hashCode = computeHash(name)
+  override val md5hashCode = computeMD5Hash(name)
+  override def toString = "self %s".format(name)
+  override def isSynonym = true
+  val typeNamePrefix = "self"
 }
 
 trait Operator extends Hashable {
@@ -635,7 +675,15 @@ case class RecordSelectOp(name : String) extends Operator {
     Utils.assert(args(0).typ.asInstanceOf[ProductType].hasField(name), "Field '" + name + "' does not exist in product type.")
   }
   def resultType(args: List[Expr]) : Type = {
-    args(0).typ.asInstanceOf[ProductType].fieldType(name).get
+    args(0).typ match {
+      case t: TupleType => t.asInstanceOf[ProductType].fieldType(name).get
+      case r: RecordType => r.asInstanceOf[ProductType].fieldType(name).get
+      case DataType(id, cstors) => {
+        val sels = cstors.flatMap(c => c.inTypes)
+        sels.find(p => p._1 == name).get._2
+      }
+      case _ => throw new Utils.UnimplementedException("RecordSelectOp for type: " + args(0).typ)
+    }
   }
 }
 case class RecordUpdateOp(name: String) extends Operator {
@@ -983,7 +1031,14 @@ case class LetExpression(letBindings : List[(Symbol, Expr)], expr : Expr) extend
 
 //For uninterpreted function symbols or anonymous functions defined by Lambda expressions
 case class FunctionApplication(e: Expr, args: List[Expr])
-  extends Expr (e.typ.asInstanceOf[MapType].outType)
+  extends Expr ({
+    e.typ match {
+      case MapType(inTypes, outType) => e.typ.asInstanceOf[MapType].outType
+      case ConstructorType(id, inTypes, outTyp) => e.typ.asInstanceOf[ConstructorType].outTyp
+      case TesterType(id, inType) => BoolType
+      case _ => throw new Utils.AssertionError("FunctionApplication: Expected function type, got " + e.typ)
+    }
+  })
 {
   override val hashId = 311
   override val hashCode = computeHash(args, e)

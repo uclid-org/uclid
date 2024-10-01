@@ -1,0 +1,25 @@
+module main {
+    // should fail every third step
+    datatype myRecord = | rec(A: integer, B: integer, C: integer);
+
+    var t1 : myRecord;
+    var t2 : myRecord;
+
+
+    init {
+        t1 = rec(1, 2, 3);
+        t2 = rec(3, 1, 2);
+    }
+    
+    next {
+        t2' = rec(t2.C, t2.A, t2.B);
+    }
+
+    invariant test : t1 != t2;
+
+    control {
+        bmc(5);
+        check;
+        print_results;
+    }
+}

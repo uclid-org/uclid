@@ -45,6 +45,172 @@ import uclid.{lang => l}
 import java.io.File
 
 class ParserSpec extends AnyFlatSpec {
+  "test-typecheck-empty-tester.ucl" should "not typecheck." in {
+    try {
+      val filename = "test/test-typecheck-empty-tester.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 1)
+    }
+  }
+  "test-adt-5-reusingdatatypename.ucl" should "not parse successfully." in {
+    try {
+      val filename = "test/test-adt-5-reusingdatatypename.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+    }
+  }
+  "test-adt-6-reusingselectorname.ucl" should "not parse successfully." in {
+    try {
+      val filename = "test/test-adt-6-reusingselectorname.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+    }
+  }
+  "test-adt-9-badconstructing.ucl" should "not typecheck." in {
+    try {
+      val filename = "test/test-adt-9-badconstructing.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 1)
+    }
+  }
+  "test-adt-10-badconstructing.ucl" should "not typecheck." in {
+    try {
+      val filename = "test/test-adt-10-badconstructing.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size == 1)
+    }
+  }
+  "test-adt-11-badconstructing.ucl" should "not typecheck." in {
+    try {
+      val filename = "test/test-adt-11-badconstructing.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size > 0)
+    }
+  }
+  "test-adt-12-badselecting.ucl" should "not typecheck." in {
+    try {
+      val filename = "test/test-adt-12-badselecting.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size > 0)
+    }
+  }
+  "test-adt-13-badselecting.ucl" should "not parse successfully." in {
+    try {
+      val filename = "test/test-adt-13-badselecting.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+    }
+  }
+  "test-adt-15-multiplemodules.ucl" should "not parse successfully." in {
+    try {
+      val filename = "test/test-adt-15-multiplemodules.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size > 0)
+    }
+  }
+  "test-adt-20.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-adt-20.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserError =>
+        assert (p.getMessage().contains("Function redeclaration error in module"))
+    }
+  }
+  "test-adt-21.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-adt-21.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserError =>
+        assert (p.getMessage().contains("Function redeclaration error in module"))
+    }
+  }
+  "test-adt-22.ucl" should "not parse successfully." in {
+    try {
+      val filename = "test/test-adt-22.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size > 0)
+    }
+  }
+  "test-adt-24.ucl" should "parse successfully" in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-adt-24.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+  "test-adt-27-badconstructionordering.ucl" should "not parse successfully." in {
+    try {
+      val filename = "test/test-adt-27-badconstructionordering.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size > 0)
+    }
+  }
+  "test-adt-28-fieldreuse.ucl" should "not parse successfully." in {
+    try {
+      val filename = "test/test-adt-28-fieldreuse.ucl"
+      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
+      assert (fileModules.size == 1)
+    }
+    catch {
+      case p : Utils.TypeErrorList =>
+        assert (p.errors.size > 0)
+    }
+  }
+  "test-record-rename.ucl" should "parse successfully" in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-record-rename.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
   "test-type1.ucl" should "not parse successfully." in {
     try {
       val filename = "test/test-type1.ucl"
@@ -607,6 +773,12 @@ class ParserSpec extends AnyFlatSpec {
 
   "longcomment.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(ConfigCons.createConfig("test/longcomment.ucl"), lang.Identifier("main"))
+    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
+    assert (instantiatedModules.size == 1)
+  }
+
+  "test-rewrite-polymorphic-select.ucl" should "parse successfully." in {
+    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-rewrite-polymorphic-select.ucl"), lang.Identifier("main"))
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }

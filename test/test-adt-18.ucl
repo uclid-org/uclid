@@ -1,0 +1,13 @@
+module main {
+    datatype tree = join(left: tree, right: tree) | leaf(node: integer);
+
+    var t1 : tree;
+
+    invariant test : is_leaf(t1);
+
+    control {
+        induction;
+        check;
+        print_results;
+    }
+}

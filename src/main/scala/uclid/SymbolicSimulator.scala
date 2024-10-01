@@ -48,7 +48,7 @@ import vcd.VCD
 import scala.util.Try
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import com.typesafe.scalalogging.Logger
-import uclid.smt.Z3Interface
+import smt.Z3Interface
 
 import scala.collection.mutable.{Map => MutableMap}
 import org.scalactic.source.Position
@@ -58,8 +58,8 @@ import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import scala.collection.mutable
-import uclid.smt.SMTLIB2Interface
-import uclid.smt.Context
+import smt.SMTLIB2Interface
+import smt.Context
 
 object UniqueIdGenerator {
   var i : Int = 0;
@@ -119,7 +119,14 @@ class SymbolicSimulator (module : Module) {
     new smt.Symbol("state_" + step + "_" + name, t)
   }
   def newConstantSymbol(name: String, t: smt.Type) = {
-    new smt.Symbol("const_" + name, t)
+    t match {
+      case smt.TesterType(id, inType) => {
+        val constructorName = name.substring("is_".length())
+        new smt.Symbol("(_ is " + constructorName + ")", t)
+      }
+      case smt.ConstructorType(id, inTypes, outTyp) => new smt.Symbol(name, t)
+      case _ => new smt.Symbol("const_" + name, t)
+    }
   }
   def newOracleSymbol(name: String, t: FunctionSig, binary : String) = {
     new smt.OracleSymbol("oracle_" + name, t, binary)

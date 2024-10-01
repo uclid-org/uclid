@@ -1,0 +1,8 @@
+module main {
+  type r1 = record {x: integer};
+  type r2 = record {y: r1};
+  function z(i: integer): r2;
+  init {
+    assume(z(100).y.x == 0);
+  }
+}

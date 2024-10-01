@@ -1,0 +1,7 @@
+module main {
+  datatype some_adt = some_ctr();
+
+  init {
+    assert is_some_ctr();
+  }
+}

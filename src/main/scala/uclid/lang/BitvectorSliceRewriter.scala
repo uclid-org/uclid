@@ -57,8 +57,8 @@
 package uclid
 package lang
 
-import uclid.smt.{Converter => Converter}
-import uclid.smt.{ExpressionAnalyzer => ExpressionAnalyzer}
+import smt.{Converter => Converter}
+import smt.{ExpressionAnalyzer => ExpressionAnalyzer}
 
 class BitVectorSliceFindWidthPass extends RewritePass {
   def rewriteSlice(slice : VarBitVectorSlice, ctx : Scope) : VarBitVectorSlice = {

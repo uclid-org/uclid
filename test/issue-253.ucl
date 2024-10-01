@@ -1,0 +1,19 @@
+module main {
+    datatype adt1 = A() | B();
+    datatype adt2 = C() | D();
+
+    var y: adt1;
+    var x: adt2;
+
+    init {
+        assert y == B();
+        assert x == C();
+    }
+
+
+    control {
+        bmc(0);
+        check;
+        print_results;
+    }
+}

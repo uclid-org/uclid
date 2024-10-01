@@ -20,6 +20,19 @@ class RewriteRecordSelectPass extends RewritePass {
     }
   }
 
+  override def rewriteDataType(dataT : DataType, context : Scope) : Option[DataType] = { 
+    Some(DataType(dataT.id, dataT.constructors.map(c => (c._1, c._2.map(s => {
+      if(!hasRecPrefix(s))
+      {
+        (Identifier(recordPrefix+s._1.toString), s._2)
+      }
+      else
+      {
+        UclidMain.printDebugRewriteRecord("we have not rewritten this selector " + dataT.toString )
+        s
+      }
+    })))))
+  }
 }
 
 class RewriteRecordSelect extends ASTRewriter(

@@ -39,7 +39,7 @@
 
 package uclid
 
-import uclid.lang._
+import lang._
 import com.typesafe.scalalogging.Logger
 import scala.collection.mutable.ListBuffer
 

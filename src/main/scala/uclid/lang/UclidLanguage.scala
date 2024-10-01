@@ -45,8 +45,8 @@ import scala.collection.mutable.{Map => MutableMap}
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
 import scala.reflect.ClassTag
-import uclid.smt.SynonymMap
-import uclid.smt.Converter
+import smt.SynonymMap
+import smt.Converter
 
 object PrettyPrinter
 {
@@ -1202,6 +1202,33 @@ case class MapType(inTypes: List[Type], outType: Type) extends Type {
   override def isMap = true
 }
 
+case class DataType(id : Identifier, constructors: List[(Identifier, List[(Identifier, Type)])]) extends Type {
+  override def toString = {
+    id.name + " = | " + constructors.map(c => c.toString()).mkString(" | ")
+  }
+
+  override def equals(other: Any) = other match {
+      case that: DataType => that.id.name == this.id.name
+      case that: SynonymType => that.id.name == this.id.name
+      case _ => false
+    }
+  
+    override def matches(t2: Type): Boolean = this.equals(t2)
+}
+
+case class ConstructorType(id: Identifier, inTypes: List[(Identifier, Type)], outTyp: Type) extends Type {
+  override def toString = id + " {" + inTypes.map(s => s._1 + ": " + s._2.toString()).mkString(" ") + "}"
+  override def isMap = true
+}
+
+// Every tester $t$ corresponds to exactly one constructor $c$ of an ADT inType.
+// $t$ is a predicate that takes a term $x$ of type inType and returns true iff
+// $x$ was built using constructor $c$.
+case class TesterType(id: Identifier, inType: Type) extends Type {
+  override def toString = id + " " + inType.toString()
+  override def isMap = true
+}
+
 case class ProcedureType(inTypes : List[Type], outTypes: List[Type]) extends Type {
   override def toString =
     "procedure (" + Utils.join(inTypes.map(_.toString), ", ") + ") returns " +
@@ -1222,6 +1249,7 @@ case class SynonymType(id: Identifier) extends Type {
   override def toString = id.toString
   override def equals(other: Any) = other match {
     case that: SynonymType => that.id.name == this.id.name
+    case that: DataType => that.id.name == this.id.name
     case _ => false
   }
   override def codegenUclidLang: Option[Type] = ULContext.smtToLangSynonym(id.name)
@@ -1930,6 +1958,15 @@ case class Module(id: Identifier, decls: List[Decl], var cmds : List[GenericProo
   // module functions.
   lazy val functions : List[FunctionDecl] =
     decls.filter(_.isInstanceOf[FunctionDecl]).map(_.asInstanceOf[FunctionDecl])
+
+  // module adts.
+  lazy val adts: List[DataType] = 
+    decls.flatMap(d => {
+      d match {
+        case TypeDecl(_, DataType(id, constructors)) => Some(DataType(id, constructors))
+        case _ => None
+      }
+    })
   
   // module synthesis function imports.
   lazy val synthFuncImportDecls : List[ModuleSynthFunctionsImportDecl] = decls.collect {

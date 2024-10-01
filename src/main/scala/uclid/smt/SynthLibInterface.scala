@@ -81,7 +81,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   var synthVariables : SynthVarSet = MutableSet.empty
 
   override def generateOracleDeclaration(sym: OracleSymbol) = {
-    val (typeName, newTypes) = generateDatatype(sym.typ)
+    val (typeName, newTypeNames, newTypes) = generateDatatype(sym.typ)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
 
     val inputTypes = generateInputDataTypes(sym.typ)
@@ -93,7 +93,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   }
 
   override def generateDeclaration(sym: Symbol) = {
-    val (typeName, newTypes) = generateDatatype(sym.typ)
+    val (typeName, newTypeNames, newTypes) = generateDatatype(sym.typ)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
     
     var inputTypes = ""
@@ -132,7 +132,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   }
 
   def generateSynthDeclaration(sym: SynthSymbol) = {
-    val (typeName, newTypes) = generateDatatype(sym.typ)
+    val (typeName, newTypeNames, newTypes) = generateDatatype(sym.typ)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
 
     val inputTypes = generateInputDataTypes(sym.typ)
@@ -150,7 +150,7 @@ class SynthLibInterface(args: List[String], sygusSyntax : Boolean) extends SMTLI
   }
 
   def generateDefines(sym: DefineSymbol) = {
-    val (typeName, newTypes) = generateDatatype(sym.typ)
+    val (typeName, newTypeNames, newTypes) = generateDatatype(sym.typ)
     Utils.assert(newTypes.size == 0, "No new types are expected here.")
     val inputTypes = generateInputDataTypes(sym.typ)
     val inputNames = sym.symbolTyp.args.map( a => a._1.toString())
