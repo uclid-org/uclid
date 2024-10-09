@@ -230,6 +230,12 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkHasOneIdentifierArg(cmd, filename)
         checkHasMacroBody(cmd, filename)
         checkHasValidMacroIdentifier(cmd, filename, context)
+      case "concrete" =>
+        checkNoArgObj(cmd, filename)
+      case "print_concrete_trace" =>
+        checkNoParams(cmd, filename)
+        checkNoResultVar(cmd, filename)
+        checkHasArgObj(cmd, filename, context)
       case _ =>
         Utils.raiseParsingError("Unknown control command: " + cmd.name.toString, cmd.pos, filename)
     }

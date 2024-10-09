@@ -75,6 +75,7 @@ object UclidMain {
       mainModuleName    : String = "main",
       smtSolver         : List[String] = List.empty,
       synthesizer       : List[String] = List.empty,
+      simulate          : Boolean = false,
       smtFileGeneration : String = "",
       jsonCEXfile       : String = "",
       sygusFormat       : Boolean = true,
@@ -112,6 +113,10 @@ object UclidMain {
       opt[String]('y', "synthesizer").valueName("<Cmd>").action{
         (exec, c) => c.copy(synthesizer = exec.split(" ").toList)
       }.text("Command line to invoke SyGuS synthesizer.")
+
+      opt[String]('c', "simulate").valueName("<Cmd>").action{
+        (exec, c) => c.copy(simulate = true)
+      }.text("Perform concrete execution.")
 
       opt[String]('g', "smt-file-generation").action{
         (prefix, c) => c.copy(smtFileGeneration = prefix)
@@ -323,10 +328,10 @@ object UclidMain {
     passManager.addPass(new ModuleInstanceChecker())
     passManager.addPass(new CaseEliminator())
 
-    passManager.addPass(new ForLoopUnroller())
+    if (!config.simulate) passManager.addPass(new ForLoopUnroller())
     // hyperproperties for procedures
     passManager.addPass(new ModularProductProgram())
-    passManager.addPass(new WhileLoopRewriter())
+    if (!config.simulate) passManager.addPass(new WhileLoopRewriter())
     passManager.addPass(new BitVectorSliceConstify())
     passManager.addPass(new VariableDependencyFinder())
     passManager.addPass(new StatementScheduler())
@@ -497,20 +502,29 @@ object UclidMain {
    *
    */
   def execute(module : Module, config : Config) : List[CheckResult] = {
-    UclidMain.printVerbose("Begining execution")
-    var symbolicSimulator = new SymbolicSimulator(module)
-    var solverInterface = if (config.smtSolver.size > 0) {
-      logger.debug("args: {}", config.smtSolver)
-      new smt.SMTLIB2Interface(config.smtSolver, config.noLetify)
-    } else if (config.synthesizer.size > 0) {
-      new smt.SynthLibInterface(config.synthesizer, config.sygusFormat)
+    val isConcrete = config.simulate && module.cmds.exists(p => p.name.toString == "concrete")
+    if (isConcrete) {
+      UclidMain.printVerbose("Begining Concrete Simulation")
+      val concreteSimulator = ConcreteSimulator
+      val result = concreteSimulator.execute(module, config)
+      return result
     } else {
-      new smt.Z3Interface()
+      UclidMain.printVerbose("Begining Symbolic Simulation")
+      var symbolicSimulator = new SymbolicSimulator(module)
+      var solverInterface = if (config.smtSolver.size > 0) {
+        logger.debug("args: {}", config.smtSolver)
+        new smt.SMTLIB2Interface(config.smtSolver, config.noLetify)
+      } else if (config.synthesizer.size > 0) {
+        new smt.SynthLibInterface(config.synthesizer, config.sygusFormat)
+      } else {
+        new smt.Z3Interface()
+      }
+      solverInterface.filePrefix = config.smtFileGeneration
+      val result = symbolicSimulator.execute(solverInterface, config)
+      solverInterface.finish()
+      return result
     }
-    solverInterface.filePrefix = config.smtFileGeneration
-    val result = symbolicSimulator.execute(solverInterface, config)
-    solverInterface.finish()
-    return result
+    
   }
 
   /** Splits a list of proof commands into blocks based on whether they modify the module */
