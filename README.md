@@ -27,7 +27,9 @@ For bug reports, first preference is for you to file a GitHub issue. For help us
 
 ## UCLID5 Tutorial/Publication
 
-The [tutorial](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf) has a gentle introduction to using UCLID5.
+The [tutorial document](https://github.com/uclid-org/uclid/blob/master/tutorial/tutorial.pdf) has a gentle introduction to using UCLID5.
+
+A set of tutorial lectures on UCLID5 can be found [here](https://people.eecs.berkeley.edu/~sseshia/uclid5-tutorial/).
 
 
 ## Versions
