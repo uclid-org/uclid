@@ -45,6 +45,14 @@ object ASTConcreteEvaluator
                   case _ => None
                 }
               }
+              case DisjunctionOp => {
+                val bools = concrete_operands.map(_.asInstanceOf[BooleanLit].value)
+                Some(BooleanLit(bools.reduce(_ || _)))
+              }
+              case ConjunctionOp => {
+                val bools = concrete_operands.map(_.asInstanceOf[BooleanLit].value)
+                Some(BooleanLit(bools.reduce(_ && _)))
+              }
               case EqualityOp => {
                 val op1 = concrete_operands(0)
                 val op2 = concrete_operands(1)
