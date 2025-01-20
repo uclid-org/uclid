@@ -438,17 +438,18 @@ class SMTLIB2Model(stringModel : String) extends Model {
     *   If that fails, it returns the SMTLIB string.
     */
   override def evalAsJSON (e : Expr) : JValue = {
-    val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.toString == e.toString)
+    // val definitions = modelUclid.functions.filter(fun => fun._1.asInstanceOf[lang.DefineDecl].id.toString == e.toString)
+    // Note: Skipping the above line as toString takes too long for some expressions 
+    // that may expand to a huge string but simple to evaluate.
+    val definitions = List.empty 
     Utils.assert(definitions.size < 2, "More than one definition found!")
     definitions.size match {
       case 0 | 1 => ASTConcreteEvaluator.evalExpr(Some(e), modelUclid) match {
         case Some(eP) => Converter.smtToExpr(eP).codegenUclidLang match {
           case Some(e1) => { JString(e1.toString) }
-          case None => JString("unknown: " + e.toString)
+          case None => JString("unknown: " + e.toString.slice(0, 100))
         }
-        case None => {
-          JString("unknown: " + e.toString)
-        }
+        case None => JString("unknown: " + e.toString.slice(0, 100))
       }
       case _ =>
         throw new Utils.RuntimeError("Found more than one definition in the assignment model!")
