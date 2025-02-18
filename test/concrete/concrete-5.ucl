@@ -1,0 +1,32 @@
+module main
+{
+    var a : bv4;
+    var b : bv4;
+    var c : bv4;
+    var d : bv4;
+    var e : bv4;
+    var compare: boolean;
+    init {
+        a = 0bv4;
+        b = 10bv4;
+        a = 16bv4-b; // a should be 6
+        compare = a < b;
+        c = ~a;
+        d = -a;
+        compare = a == b;
+        assert(compare == false);
+        compare = a !=b;
+        assert(compare == true);
+    }
+    next {
+        a' = a + 1bv4;
+    }
+    property jump_a: a!=3bv4;
+
+    control {
+        v = concrete(5);
+        check;
+        print_results;
+        //v.print_cex(n);
+    }
+}

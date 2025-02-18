@@ -1,3 +1,41 @@
+/*
+ * UCLID5 Verification and Synthesis Engine
+ *
+ * Copyright (c) 2017.
+ * Sanjit A. Seshia, Rohit Sinha and Pramod Subramanyan.
+ *
+ * All Rights Reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *
+ * this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ *
+ * documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Author: Adwait Godbole, Anirudh Chaudhary, Leiqi Ye 
+ *
+ * UCLID concrete simulator
+ *
+ */
 package uclid
 
 import scala.util.parsing.combinator._
@@ -7,6 +45,8 @@ import org.json4s.jackson.JsonMethods._
 import scala.util.Random
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
+import scala.util.parsing.input.NoPosition
+import scala.collection.mutable.ListBuffer
 
 import lang._
 import Utils.ParserErrorList
@@ -63,13 +103,11 @@ object ConcreteSimulator {
     var isPrintResult: Boolean = true;
     var isPrintDebug: Boolean = false;
 
-
     //cmds requirements
     var runtimeMod: CmdsMod = Panic;
     var jsonFileName = "Null";
     var needToPrintResults = false;
     var needToPrintTrace = false;
-    
     
     //runtime count data
     var terminate: Boolean = false;
@@ -204,103 +242,7 @@ object ConcreteSimulator {
             }}
     
         def extendVarJson(frame:Int, vars: List[(Identifier, Type)]): Unit= {
-            // TODO: grab values from JSON file that are mentioned in vars and copy into context.varMap(frame)
-            // val jsonString: String = Source.fromFile("cex.json").mkString;
-            // //println("So, json file name is "+jsonFileName);
-            // // Parse JSON into case class
-            // implicit val formats: DefaultFormats.type = DefaultFormats
-            
-            // // Parse JSON into a JValue, provided by the json4s class
-            // val json: JValue = parse(jsonString)
-
-            // def parseArray(array: List[JValue]): List[String] = {
-            //     array.collect {
-            //         case JString(value) => value
-            //         }
-            //     }
-            // def findValueforVar(value: String, vars: List[(Identifier, Type)], varName: Identifier): ConcreteValue = {
-            //     /*
-            //     This function will go through the list of variables to find and create the proper variable type for the identifier passed into varName.
-            //     */
-            //     for (variable <- vars) {
-            //         if (variable._1 == varName) {
-            //             variable._2 match {
-            //                 case IntegerType() => {
-            //                     return ConcreteInt(BigInt(value))
-            //                 }
-            //                 case BooleanType() => {
-            //                     return ConcreteBool(value.toBoolean)
-            //                 }
-            //             }
-            //         }
-                    
-            //     }
-            //     return ConcreteInt(5)
-            // }
-            // def parseTrace(trace: JValue, frame: Int, vars: List[(Identifier, Type)]): scala.collection.mutable.Map[String, ConcreteValue] = {
-            //     trace match {
-            //         case JObject(item) =>
-            //             val tuple = item(1)._2
-            //             val myMap: collection.mutable.Map[String, ConcreteValue] = collection.mutable.Map()
-            //             tuple match {
-            //                 case JArray(list) =>
-            //                     var i: Int = 0
-            //                     for (it <- list) {
-            //                         if (i == frame) {
-            //                             it match {
-            //                                 case JObject(item2) => {
-            //                                     item2.foreach {
-            //                                         listItem => {
-            //                                             var varName = listItem._1
-            //                                             listItem._2 match {
-            //                                                 case JArray(list) => 
-            //                                                     list.foreach {
-            //                                                         item3 =>
-            //                                                         item3 match {
-            //                                                             case JString(value) =>
-            //                                                                 var varValue: ConcreteValue = findValueforVar(value, vars, Identifier(varName))
-            //                                                                 myMap += (varName -> varValue)
-            //                                                         }
-
-            //                                                     }
-            //                                             }
-            //                                         }
-            //                                     }
-            //                                 }
-            //                             }
-            //                         }
-            //                         i = i + 1
-            //                     }
-
-            //             }
-            //             // printDebug("Final Map: " + myMap)  
-            //             return myMap 
-            // }
-            
-
-            // }
-                
-
-            // val properties: Map[String, JValue] = json.extract[Map[String, JValue]]
-            // val propertyName = "property__jump_b__0"
-            // val property = properties(propertyName)
-            // val valueMap = parseTrace(property, frame, vars)
-
-            // val finalContext : scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map()
-            
-            // // for every variable in context, get the value from the valueMap
-            // context.foreach { 
-            //     case (key, value) =>
-            //     // val newValue: Identifier = key.toIdentifier
-            //     println(value)
-            //     val newvalue = valueMap(key.toString)
-            //     finalContext += (key -> newvalue)
-            // }
-            // printDebug("")      
-            // //printVar(finalContext, List())
-            // finalContext
-            // // context
-            ;}
+        ;}
 
         def assignUndefVar(vars: List[(Identifier, Type)],isInput: Boolean): Unit = {
             //TODO:
@@ -314,16 +256,6 @@ object ConcreteSimulator {
                             var cnt: Int = 0;
 
                             retContext(key) = generateValue(value,typ,isInput)
-                            // while(!checkAssume() && (!assumeRecommendTable.contains(id))){
-                            //     retContext(key) = generateValue(value,typ,isInput)
-                            //     cnt = cnt +1;
-                            //     if(cnt>10){
-                            //         println("Now the rTable is "+assumeRecommendTable.toString)
-                            //         println("Now the assume Table is "+assumeTable.toString)
-                            //         throw new Error("inifinte Loop for getting value of "+key.toString)
-                            //     }
-                            // }
-                            //random does not work and we have recommend value
                             if(!checkAssume()&assumeRecommendTable.contains(id)){
                                 retContext(key) = assumeRecommendTable(id)
                             }
@@ -742,12 +674,18 @@ object ConcreteSimulator {
             }}
     }
     
+    //proofResult
+    var proofResults: ListBuffer[CheckResult] = ListBuffer[CheckResult]()
+
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
+        // proofResults.clear();
+        // module = module_in;
+        terminate = false;
+        proofResults.clear();
         var printTraceCmd = module.cmds(0);
         lazy val properties = module.properties;
         UclidMain.printVerbose("HELLO IN EXECUTE")
         
-
         module.cmds.foreach {
             cmd => cmd.name.toString match {
                 case "concrete" => {
@@ -792,11 +730,11 @@ object ConcreteSimulator {
         concreteContext.assignUndefVar(module.inputs,true)
 
         module.init match{
-            case Some(init) => simulate_stmt(concreteContext,init.body)
+            case Some(init) => simulate_stmt(concreteContext,init.body,0,module)
             case _ => {}
         }
-        checkAssumes(module.axioms,concreteContext);
-        checkProperties(properties,concreteContext);
+        checkAssumes(module.axioms,concreteContext,0,module);
+        checkProperties(properties,concreteContext,0,module);
         trace(0) = concreteContext.cloneObject;
         
         if (terminate) {
@@ -812,9 +750,9 @@ object ConcreteSimulator {
                     for (a <- 1 to cntInt) {
                         if (!terminate) {
                             concreteContext.assignUndefVar(module.inputs,true)
-                            simulate_stmt(concreteContext, next.body)
+                            simulate_stmt(concreteContext, next.body,a,module)
 
-                            checkProperties(properties,concreteContext)
+                            checkProperties(properties,concreteContext,a,module)
                             trace(a) = concreteContext.cloneObject;
                             terminateInt = a;   
                         } 
@@ -830,7 +768,6 @@ object ConcreteSimulator {
             }
         }
         
-        
         if(needToPrintResults){
             UclidMain.printResult("%d assertions passed.".format(passCount))
             UclidMain.printResult("%d assertions failed.".format(failCount))
@@ -840,11 +777,11 @@ object ConcreteSimulator {
                 printConcretetTrace(trace, printTraceCmd.args, printTraceCmd.argObj)
             }
         }
-        
-        return List()}
+        // print(proofResults.toList)
+        return proofResults.toList}
 
 
-    def simulate_stmt (context: ConcreteContext, stmt: Statement): Unit = {
+    def simulate_stmt (context: ConcreteContext, stmt: Statement, iter: Int, module: Module): Unit = {
         printDebug("Simulate Stmt: "+stmt.toString)
         stmt match {
             case AssignStmt(lhss, rhss) => {
@@ -868,7 +805,7 @@ object ConcreteSimulator {
                 context.assignUndefVar(flatVars,false)
                 val oldContext = context.cloneObject;
                 for(s<-stmts){
-                    simulate_stmt(context, s)
+                    simulate_stmt(context, s,iter,module)
                 }
                 context.removeExtraVar(flatVars,oldContext)
                 }
@@ -878,19 +815,21 @@ object ConcreteSimulator {
                 printDebug("Evaluate AssertStmt "+e.toString)
                 if (!evaluateBoolExpr(context, e)){ 
                     failCount = failCount+1;
+                    proofResults.append(generate_results(stmt.toString,iter,false,module))
                     terminate = true;
                     printResult("failed assert statement on:\n "+stmt)
                 }else{
                     passCount = passCount+1;
+                    proofResults.append(generate_results(stmt.toString,iter,true,module))
                 }}
             case AssumeStmt(e, id) => {
                 context.parseSetAssume(e)}
             case HavocStmt(havocable) => throw new NotImplementedError(s"HavocStmt not implemented")
             case IfElseStmt(cond, ifblock, elseblock) => {
                 if (evaluateBoolExpr(context, cond)) {
-                    simulate_stmt(context, ifblock)
+                    simulate_stmt(context, ifblock,iter,module)
                 } else {
-                    simulate_stmt(context, elseblock)
+                    simulate_stmt(context, elseblock,iter,module)
                 }}
             case ForStmt(id, typ, range, body) => {
                 var low = evaluate_expr(context, range._1)
@@ -900,25 +839,29 @@ object ConcreteSimulator {
                     case IntegerType() => {
                         val low_ = low match {
                             case l: ConcreteInt => l.value
+                            case _ =>throw new NotImplementedError(s"Should not touch this line")
                         }                        
                         val high_ = high match {
                             case h : ConcreteInt => h.value
+                            case _ => throw new NotImplementedError(s"Should not touch this line")
                         }
                         for(it <- low_ to high_){
                             context.write(id,ConcreteInt(it))
-                            simulate_stmt(context,body)
+                            simulate_stmt(context,body,iter,module)
                         }
                     }
                     case BitVectorType(w) => {
                         val low_ = low match{
                             case l: ConcreteBV  => l.value
+                            case _ => throw new NotImplementedError(s"Should not touch this line")
                         }
                         val high_ = high match{
                             case h: ConcreteBV => h.value
+                            case _ => throw new NotImplementedError(s"Should not touch this line")
                         }
                         for(it <- low_ to high_){
                             context.write(id,ConcreteBV(it,w))
-                            simulate_stmt(context,body)
+                            simulate_stmt(context,body,iter,module)
                         }
                     }
                     case _ => throw new Error("Does not support loop index of type "+ typ.toString)
@@ -926,7 +869,7 @@ object ConcreteSimulator {
                 context.removeVar(List((id,typ)))}
             case WhileStmt(cond, body, invariants) => {
                 while(evaluateBoolExpr(context, cond)){
-                    simulate_stmt(context, body)
+                    simulate_stmt(context, body,iter,module)
                 }}
             case CaseStmt(body) => throw new NotImplementedError("We have not implemented Case stmt")
             case ProcedureCallStmt(id, callLhss, args, instanceId, moduleId) => {
@@ -957,6 +900,7 @@ object ConcreteSimulator {
                     // context.printVar(List())
                     // throw new Error("When Evaluation Bool value we hit a undefine value "+cond.toString)
                 }
+                case _ => throw new NotImplementedError("Should not touch this line")
             }
         }
 
@@ -1212,6 +1156,9 @@ object ConcreteSimulator {
                                     }
                                     ConcreteUndef()
                                 }
+                                case _ => {
+                                    throw new NotImplementedError("Operand_1 is "+operands.tail.head.toString)
+                                }
                             }
                         }
                         case ConcreteUndef() => {
@@ -1232,6 +1179,9 @@ object ConcreteSimulator {
                                             throw new NotImplementedError("Invalid two operands"+expr)
                                         }
                                     }
+                                }
+                                case _ => {
+                                    throw new NotImplementedError("Invalid two operands"+expr)
                                 }
                             }
                         }
@@ -1267,10 +1217,11 @@ object ConcreteSimulator {
             case _ => throw new NotImplementedError(s"Expression evaluation for ${expr}")
         }}
         
-    def checkAssumes(assumes: List[AxiomDecl],context:ConcreteContext){
+    def checkAssumes(assumes: List[AxiomDecl],context:ConcreteContext,iter:Int, module: Module){
         for(assume<-assumes){
             if (!evaluateBoolExpr(context, assume.expr)){ 
                     failCount = failCount+1;
+                    proofResults.append(generate_results(assume.toString,iter,false,module))
                     terminate = true
                     printResult("failed assume statement")
                     printResult("failed on "+assume.toString)
@@ -1280,6 +1231,7 @@ object ConcreteSimulator {
                     
                 }else{
                     passCount = passCount+1;
+                    proofResults.append(generate_results(assume.toString,iter,true,module))
                 }
         }}
     def setAssumes(assumes: List[AxiomDecl],context:ConcreteContext): Unit ={
@@ -1290,16 +1242,18 @@ object ConcreteSimulator {
             context.parseSetAssume(assume.expr)
         }}
 
-    def checkProperties(properties: List[SpecDecl],context:ConcreteContext){
+    def checkProperties(properties: List[SpecDecl],context:ConcreteContext,iter:Int, module: Module){
         for(property <- properties){
             printDebug("Check Property "+property.toString)
             //printVar(context,List())
             if (!evaluateBoolExpr(context, property.expr)){ 
                     failCount = failCount+1;
+                    proofResults.append(generate_results(property.toString,iter,false,module))
                     terminate = true
                     printResult("failed assert statement in"+property.toString)
                 }else{
                     passCount = passCount+1;
+                    proofResults.append(generate_results(property.toString,iter,true,module))
                 }
         }}
     def printDebug(str: String){
@@ -1322,4 +1276,18 @@ object ConcreteSimulator {
                 UclidMain.printStatus("=================================")
             }
         }}
+
+    def generate_results(name:String, iter:Int, assert_result:Boolean, module: Module): CheckResult = {
+            CheckResult(AssertInfo
+            (name, "Concrete", 
+            ArrayBuffer.empty,
+            Scope.empty, 
+            iter, 
+            smt.BooleanLit(true), 
+            smt.BooleanLit(true), 
+            List.empty, 
+            ASTPosition(module.filename, NoPosition)), 
+            smt.SolverResult(Some(assert_result),None));
+        }
+
 }
