@@ -15,7 +15,7 @@ jobs:
 
     - name: Cache Z3
       id: cache-z3
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: z3/
         key: ${{ runner.os }}-z3-${{ hashFiles('get-z3-linux.sh') }}-1
@@ -35,7 +35,7 @@ jobs:
 
     - name: Cache CVC5
       id: cache-cvc5
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: cvc5/
         key: ${{ runner.os }}-cvc5-${{ hashFiles('get-cvc5-linux.sh') }}-1
@@ -54,7 +54,7 @@ jobs:
 
     # - name: Cache Delphi
     #   id: cache-delphi
-    #   uses: actions/cache@v1
+    #   uses: actions/cache@v4
     #   with:
     #     path: delphi/
     #     key: ${{ runner.os }}-delphi-${{ hashFiles('get-delphi-linux.sh') }}-1
@@ -79,16 +79,21 @@ jobs:
         java-version: 11
         
     - name: Cache SBT ivy cache
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: ~/.ivy2/cache
         key: ${{ runner.os }}-sbt-ivy-cache-${{ hashFiles('**/build.sbt') }}
 
     - name: Cache SBT
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: ~/.sbt
         key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
+    
+    - name: Set up SBT
+      uses: coursier/setup-action@v1
+      with:
+        apps: sbt
 
     - name: Compile
       run: sbt compile
@@ -110,7 +115,7 @@ jobs:
 
     - name: Cache Z3
       id: cache-z3
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: z3/
         key: ${{ runner.os }}-z3-${{ hashFiles('get-z3-macos.sh') }}-1
@@ -133,7 +138,7 @@ jobs:
 
     - name: Cache CVC5
       id: cache-cvc5
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: cvc5/
         key: ${{ runner.os }}-cvc5-${{ hashFiles('get-cvc5-macos.sh') }}-1
@@ -152,7 +157,7 @@ jobs:
 
     # - name: Cache delphi
     #   id: cache-delphi
-    #   uses: actions/cache@v1
+    #   uses: actions/cache@v4
     #   with:
     #     path: delphi/
     #     key: ${{ runner.os }}-delphi-${{ hashFiles('get-delphi-macos.sh') }}-1
