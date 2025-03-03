@@ -504,7 +504,7 @@ object UclidMain {
   def execute(module : Module, config : Config) : List[CheckResult] = {
     val isConcrete = config.simulate && module.cmds.exists(p => p.name.toString == "concrete")
     if (isConcrete) {
-      UclidMain.printVerbose("Begining Concrete Simulation")
+      UclidMain.printVerbose("Beginning Concrete Simulation")
       val concreteSimulator = ConcreteSimulator
       val result = concreteSimulator.execute(module, config)
       return result
