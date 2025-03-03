@@ -50,6 +50,7 @@
   <logger name="uclid.Utils.schedule" level="OFF"/>
   <logger name="uclid.Utils.topoSort" level="OFF"/>
   <logger name="uclid.smt.SynthLibInterface" level="OFF"/>
+  <logger name="ConcreteSimulator" level="OFF"/>
   
 
   <root level="debug">

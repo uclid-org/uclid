@@ -47,6 +47,7 @@ import scala.math._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.parsing.input.NoPosition
 import scala.collection.mutable.ListBuffer
+import com.typesafe.scalalogging.Logger
 
 import lang._
 import Utils.ParserErrorList
@@ -58,10 +59,19 @@ case object Default extends CmdsMod
 case object Json extends CmdsMod
 case object Panic extends CmdsMod
 
+/*
+    TODO:
+    1. ArrayType
+    2. UninterpretedType
+    3. FunctionCall
+    4. evaluateBoolExpr
+*/
 
 sealed abstract class ConcreteValue{
     def valueClone: ConcreteValue;
 }
+//This defines the concrete value which the simulator do not know yet
+//if one variable is never assigned, we will use this value for the variable
 case class ConcreteUndef () extends ConcreteValue{
     override def valueClone: ConcreteValue = new ConcreteUndef ();
 }
@@ -99,9 +109,7 @@ case class ConcreteEnum (ids:List[Identifier], value: Int) extends ConcreteValue
 }
 
 object ConcreteSimulator {
-    //debug useful flag
-    var isPrintResult: Boolean = true;
-    var isPrintDebug: Boolean = false;
+    val defaultLog = Logger("ConcreteSimulator") 
 
     //cmds requirements
     var runtimeMod: CmdsMod = Panic;
@@ -123,7 +131,7 @@ object ConcreteSimulator {
     case class ConcreteContext() {
         var varMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var varTypeMap: scala.collection.mutable.Map[Identifier, Type] = collection.mutable.Map();
-        //var functionMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
+        var functionMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var inputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var outputMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
 
@@ -140,10 +148,10 @@ object ConcreteSimulator {
         def write (variable: Identifier, value: ConcreteValue) {
             if (varMap.contains(variable)) varMap(variable) = value
             else if (inputMap.contains(variable)) inputMap(variable) = value
-            // else throw new Error(f"Variable ${variable.toString} not found in context")
+            else throw new Error(f"Variable ${variable.toString} not found in context")
         }
         def updateVar (lhs: Lhs, value: ConcreteValue) {
-            printDebug("Update "+lhs.toString+" With Value "+value.toString)
+            defaultLog.debug("Update "+lhs.toString+" With Value "+value.toString)
             lhs match {
                 case LhsId(id) => {
                     varMap(id) = value
@@ -163,7 +171,7 @@ object ConcreteSimulator {
                     }
                 }
                 case LhsRecordSelect(id, fieldid) => {
-                    printDebug(s"Update: record ${id.toString}, fieldid ${fieldid}")
+                    defaultLog.debug(s"Update: record ${id.toString}, fieldid ${fieldid}")
                     varMap(id) = updateRecordValue(fieldid, value, varMap(id))  
                 }
                 case _ => {
@@ -187,9 +195,8 @@ object ConcreteSimulator {
                     case BitVectorType(w) => {
                         (v._1, ConcreteUndef())
                     }
-                    // TODO: ... fill in
+                    // TODO: 1.ArrayType
                     case ArrayType(inType, outType) => {
-                        // TODO: outType could be complex type like another array or record
                         (v._1, ConcreteArray(scala.collection.mutable.Map[List[ConcreteValue], ConcreteValue]().withDefaultValue(ConcreteUndef())))
                     }
                     case RecordType(members) => {
@@ -199,7 +206,6 @@ object ConcreteSimulator {
                                     for ((id,i) <- ids.view.zipWithIndex) {
                                         enumContext(id) = ConcreteEnum(ids, i)
                                     }
-                                    // TODO: Should this be ConcreteUndef?
                                     (v._1, ConcreteEnum(ids, -1))
                                 }
                                 case _ => {
@@ -213,10 +219,10 @@ object ConcreteSimulator {
                         for ((id,i) <- ids.view.zipWithIndex) {
                             enumContext(id) = ConcreteEnum(ids, i)
                         }
-                        // TODO: Should this be ConcreteUndef?
                         (v._1, ConcreteEnum(ids, -1))
                     }
-                    //TODO: support for UninterpretedType
+                    //TODO:
+                    //2. UninterpretedType
                     case UninterpretedType(name) =>{
                         throw new NotImplementedError("UninterpretedType "+name.toString+" has not been support yet")
                     }
@@ -245,8 +251,6 @@ object ConcreteSimulator {
         ;}
 
         def assignUndefVar(vars: List[(Identifier, Type)],isInput: Boolean): Unit = {
-            //TODO:
-            //to make sure the generateValue is not out of AssumeTable
             if(isInput){
                 var retContext = inputMap;
                 for ((key, value) <- inputMap){     
@@ -265,26 +269,13 @@ object ConcreteSimulator {
                 inputMap = retContext
             }
             else{
-                    //Loop over the context and assign good value according its type
                 var retContext = varMap;
-                //check the varMap
                 for ((key, value) <- varMap){     
                     for((id,typ) <- vars){
                         if(key == id){
                             //if we do not have recommend assign value and the random does work, do random again
                             var cnt: Int = 0;
-
                             retContext(key) = generateValue(value,typ,isInput)
-                            // while(!checkAssume() && (!assumeRecommendTable.contains(id))){
-                            //     retContext(key) = generateValue(value,typ,isInput)
-                            //     cnt = cnt +1;
-                            //     if(cnt>100){
-                            //         println("Now the rTable is "+assumeRecommendTable.toString)
-                            //         println("Now the assume Table is "+assumeTable.toString)
-                            //         throw new Error("inifinte Loop for getting value of "+key.toString)
-                            //     }
-                            // }
-                            //random does not work and we have recommend value
                             if(!checkAssume()&assumeRecommendTable.contains(id)){
                                 retContext(key) = assumeRecommendTable(id)
                             }
@@ -331,7 +322,6 @@ object ConcreteSimulator {
                     case BitVectorType(w) => {
                         (v._1, ConcreteUndef())
                     }
-                    //... fill in
                     case ArrayType(inType, outType) => {
                         // TODO: outType could be complex type like another array or record
                         (v._1, ConcreteArray(scala.collection.mutable.Map[List[ConcreteValue], ConcreteValue]().withDefaultValue(ConcreteUndef())))
@@ -381,15 +371,13 @@ object ConcreteSimulator {
                                         for(it <- 0 to (pow(2,w)-1).toInt){
                                             write(id,ConcreteBV(it,w))
                                             parseSetAssume(operands.head)
-                                            // we have opearnds.head(? regs[r] == 0bv8)
-                                            // retValue = retValue && evaluateBoolExpr(context,operands.head)
                                         }
                                     }
-                                    case _ => throw new Error("Does not support loop index of type "+ typ.toString)
+                                    case _ => throw new Error("Concrete simulator does not support loop index of type"+ typ.toString)
                                 }
                                 removeVar(List((id,typ)))
                             }
-                            case _ => throw new Error("wait for support for expr "+expr.toString)
+                            case _ => throw new Error("Concrete simulator does not support expr" + expr.toString)
                         }
                     }
                     else{
@@ -400,7 +388,7 @@ object ConcreteSimulator {
                             case EqualityOp()=> {
                                 operand_0 match{
                                     case id:Identifier =>{
-                                        printDebug("Write "+id+" "+operand_1.toString)
+                                        defaultLog.debug("Write "+id+" "+operand_1.toString)
                                         assumeRecommendTable(id) = evaluate_expr(this,operand_1)
                                         write(id,evaluate_expr(this,operand_1))
                                     }
@@ -411,8 +399,7 @@ object ConcreteSimulator {
                                                 operands.head match{
                                                     case id:Identifier =>{
                                                         varMap(id) match {
-                                                            case ca: ConcreteArray => {
-                                                                // List of concrete indices expressions 
+                                                            case ca: ConcreteArray => { 
                                                                 var old_map = ca.value // old array 
                                                                 old_map(eval_indices) = operandValue_1
                                                                 val new_arr = ConcreteArray(old_map)
@@ -427,32 +414,24 @@ object ConcreteSimulator {
                                                 }
                                             }
                                             case _=>{
-                                                throw new Error("Wait for support of Expr "+expr.toString)
+                                                throw new Error("Concrete simulator does not support "+expr.toString)
                                             }
                                         }
                                     }
-                                    // add support for array
                                     case _ => {
-                                        throw new Error("Wait for support of Expr "+expr.toString)
-                                        //updateVar(operand_0,evaluate_expr(this,operand_1))
+                                        throw new Error("Concrete simulator does not support"+expr.toString)
                                     }
                                 }    
                             }
-                            //TODO:
-                            //wait for better plan
                             case InequalityOp() => {
-                                // throw new Error("Unimplemented")
-                                //ConcreteBool(bool_0 != bool_1)
+                                throw new Error("Unimplemented")
                             }
                             case ConjunctionOp() =>{ 
                                 parseSetAssume(operand_0)
                                 parseSetAssume(operand_1)
                             }
-                            // case DisjunctionOp() => ConcreteBool(bool_0 || bool_1)
-                            // case IffOp() => ConcreteBool(bool_0 == bool_1)
-                            // case ImplicationOp() => ConcreteBool(!bool_0 || bool_1) 
                             case _ => {
-
+                                throw new Error("Unimplemented")
                             }    
                         }
                     }
@@ -463,11 +442,10 @@ object ConcreteSimulator {
             } 
 
         }
-
         
         //function gathring value as we want
         def generateValue(cValue:ConcreteValue,uclidType:Type,isInput:Boolean): ConcreteValue={      
-            printDebug("We try to generate a Value for uclidType "+uclidType.toString)  
+            defaultLog.debug("We try to generate a Value for uclidType "+uclidType.toString)
             cValue match{
                 case ConcreteUndef() =>{
                     uclidType match{
@@ -486,7 +464,7 @@ object ConcreteSimulator {
                             }
                         }
                         case BitVectorType(w)   =>  {
-                            printDebug("This is a BitVectorType and runTimemod is "+runtimeMod.toString)
+                            defaultLog.debug("This is a BitVectorType and runTimemod is "+runtimeMod.toString)
                             runtimeMod match{
                                 case Fuzzing => return ConcreteBV(random.nextInt(pow(2,w).toInt),w)
                                 case Default => ConcreteBV(0,w)
@@ -589,10 +567,8 @@ object ConcreteSimulator {
         def runtimeValue(id:Identifier,index:List[ConcreteValue]): ConcreteValue={
             varTypeMap(id) match{
                 case ArrayType(inTypes,outType)=>{
-
-                    //So outType is a Uclid Type
                     var newValue = generateValue(ConcreteUndef(),outType,false);
-                    printDebug("We make a fuzzing Value "+newValue.toString)
+                    defaultLog.debug("We make a fuzzing Value "+newValue.toString)
                     varMap(id) match{
                         case ConcreteArray(arraymap) =>{
                             arraymap(index) = newValue
@@ -602,7 +578,6 @@ object ConcreteSimulator {
                     }
                 }
                 case _ =>{
-                    //it can be function call as well
                     varMap(id) match{
                         case ConcreteFunction(functionMap) =>{
                             var newValue = generateValue(ConcreteUndef(),varTypeMap(id),false);
@@ -661,30 +636,24 @@ object ConcreteSimulator {
             }}
         
         def printInput (vars: List[(Expr, String)]) : Unit = {
-            printDebug("\tInput map:")
             if(vars.isEmpty){
                 for((key,value)<-inputMap){
                     println(key.toString+": "+value.toString)
                 }
-                if(isPrintDebug)
-                    println("\n")
             }
             for (variable <- vars){
                 println(variable._1+":  "+ConcreteSimulator.evaluate_expr(this,variable._1).toString)
             }}
     }
     
-    //proofResult
     var proofResults: ListBuffer[CheckResult] = ListBuffer[CheckResult]()
 
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
-        // proofResults.clear();
-        // module = module_in;
         terminate = false;
         proofResults.clear();
         var printTraceCmd = module.cmds(0);
         lazy val properties = module.properties;
-        UclidMain.printVerbose("HELLO IN EXECUTE")
+        UclidMain.printVerbose("Starting concrete simulator")
         
         module.cmds.foreach {
             cmd => cmd.name.toString match {
@@ -699,8 +668,6 @@ object ConcreteSimulator {
                         if(idArg.toString == "\"Default\""){
                             runtimeMod = Default;
                         }
-                        // TODO: improve this to random without quotes
-                        // ""control { concrete (random) }"" and not ""control { concrete ("random") }""
                         if(idArg.toString == "\"Random\""){
                             runtimeMod = Fuzzing;
                         }
@@ -742,7 +709,7 @@ object ConcreteSimulator {
             printResult("Terminated in step 0")
         }
         else{
-            printDebug("Running Concrete Simulation for "+cntInt+ " steps")
+            defaultLog.debug("Running Concrete Simulation for "+cntInt+ " steps")
             var terminate_printed = false
             val next_stmt = module.next match {
                 case Some(next) => 
@@ -758,7 +725,7 @@ object ConcreteSimulator {
                         } 
                         else {
                             if (!terminate_printed) {
-                                printDebug(s"Failed on iteration ${a-1}")
+                                defaultLog.debug(s"Failed on iteration ${a-1}")
                                 terminate_printed = true
                             }    
                         }
@@ -777,26 +744,19 @@ object ConcreteSimulator {
                 printConcretetTrace(trace, printTraceCmd.args, printTraceCmd.argObj)
             }
         }
-        // print(proofResults.toList)
         return proofResults.toList}
 
 
     def simulate_stmt (context: ConcreteContext, stmt: Statement, iter: Int, module: Module): Unit = {
-        printDebug("Simulate Stmt: "+stmt.toString)
+        defaultLog.debug("Simulate Stmt: "+stmt.toString)
         stmt match {
             case AssignStmt(lhss, rhss) => {
-            
-                //println("Simulate assign Stmt: "+stmt.toString)
                 val rhseval = rhss.map(rhs => evaluate_expr(context, rhs))
                 for((lhssid,i)<-lhss.view.zipWithIndex){
                     if(rhseval(i).isInstanceOf[ConcreteUndef]){
-                        printDebug("We hit a undefine value when assigning "+rhseval(i).toString)
-                        //Leiqi:
-                        //Comment this will reduce some erro
-                        //context.printVar(List());
-                        //throw new Error("Assign value to Undef")
+                        defaultLog.debug("We hit a undefine value when assigning "+rhseval(i).toString)
                     }
-                    printDebug("Assign "+lhss(i).toString+" "+rhseval(i).toString)
+                    defaultLog.debug("Assign "+lhssid.toString+" "+rhseval(i).toString)
                     context.updateVar(lhss(i),rhseval(i))
                 };}
             case BlockStmt(vars, stmts) => {
@@ -812,7 +772,7 @@ object ConcreteSimulator {
             
             case SkipStmt() => {}
             case AssertStmt(e, id) => {
-                printDebug("Evaluate AssertStmt "+e.toString)
+                defaultLog.debug("Evaluate AssertStmt "+e.toString)
                 if (!evaluateBoolExpr(context, e)){ 
                     failCount = failCount+1;
                     proofResults.append(generate_results(stmt.toString,iter,false,module))
@@ -880,9 +840,10 @@ object ConcreteSimulator {
                 throw new NotImplementedError(s"ModuleCallStmt not implemented")}
             case _ => throw new NotImplementedError("We have not implemented Stmt "+ stmt.toString)
         }}
+    
     def evaluateBoolExpr(context: ConcreteContext,
         cond: Expr) : Boolean = {
-            printDebug("Evaluate BoolExpr "+cond.toString)
+            defaultLog.debug("Evaluate BoolExpr "+cond.toString)
             evaluate_expr(context,cond) match {
                 case ConcreteBool(b) => {
                     if (b) {
@@ -891,14 +852,8 @@ object ConcreteSimulator {
                         return false
                     }
                 }
-                //TODO:
-                //make better check on this part
                 case ConcreteUndef() => {
-                    //if we hit undef value, just give a false
-                    //println("Hit a Undef Boolean")
                     true
-                    // context.printVar(List())
-                    // throw new Error("When Evaluation Bool value we hit a undefine value "+cond.toString)
                 }
                 case _ => throw new NotImplementedError("Should not touch this line")
             }
@@ -906,7 +861,7 @@ object ConcreteSimulator {
 
     def evaluate_expr (context: ConcreteContext, 
         expr: lang.Expr) : ConcreteValue = {
-        printDebug("Evaluate Expr: "+expr.toString)
+        defaultLog.debug("Evaluate Expr: "+expr.toString)
         expr match {
             case a : Identifier => {
                 context.read(a) match {
@@ -970,28 +925,24 @@ object ConcreteSimulator {
                                 case BVLRightShiftBVOp(w) => ConcreteBV((int_0>>w) & ((1 << length) - 1), length)
                                 case BVARightShiftBVOp(w) => ConcreteBV((int_0>>w) & ((1 << length) - 1) | (((1 << length) - 1)<<w & ((1 << length) - 1)), length)
                                 case ConstExtractOp(slide) => ConcreteBV((int_0&((1 << (slide.hi+1) - 1)))>>slide.lo, slide.hi-slide.lo+1)
-                                // case ConstBitVectorSlice(hi,lo) => ConcreteBV((int_0&((1 << (hi-lo)) - 1))>>lo, length)
-                                // case VarBitVectorSlice(hi, lo, wd)
                                 case _ => throw new NotImplementedError("Not implements unary operation "+op.toString+" for BV\n")
                             }
                             
                         }
                         case ConcreteArray(valuemap) => {
-                            printDebug("Read Value from ConcreteArray: "+operands.head.toString)
+                            defaultLog.debug("Read Value from ConcreteArray: "+operands.head.toString)
                             op match {
                                 case ArraySelect(indices) => {
                                     val eval_indices = indices.map(a => evaluate_expr(context,a)) // list of concrete expr
-                                    printDebug("\t With indices " + indices)
-                                    printDebug("\t With newMap " + eval_indices)
-                                    printDebug("\t With Return Value "+valuemap(eval_indices).toString)
+                                    defaultLog.debug("\t With indices " + indices)
+                                    defaultLog.debug("\t With newMap " + eval_indices)
+                                    defaultLog.debug("\t With Return Value "+valuemap(eval_indices).toString)
                                     if(valuemap(eval_indices).isInstanceOf[ConcreteUndef]){
-                                        //so the eval_indices
-
-                                        printDebug("we meet a undefine value in Array");
+                                        defaultLog.debug("we meet a undefine value in Array");
                                         operands.head match{
                                             case id:Identifier =>{
                                                 var fuzzingValue = context.runtimeValue(id,eval_indices)
-                                                printDebug("We try to make a fuzzing Value "+fuzzingValue.toString)
+                                                defaultLog.debug("We try to make a fuzzing Value "+fuzzingValue.toString)
                                                 return fuzzingValue
                                             }
                                             case _ => throw new Error("Should not touch this line")
@@ -1010,7 +961,6 @@ object ConcreteSimulator {
                                     ConcreteArray(old_map)   
                                     
                                 }
-                                // TODO: Any additional unary array operators should be handled here
                                 case _ => throw new NotImplementedError("Not implements unary operation for ConcreteArray "+"op: "+op + "operands: "+ operands+ "operand_0"+ operand_0)
                             }
                         }
@@ -1083,11 +1033,6 @@ object ConcreteSimulator {
                                 }
                                 case ConcreteUndef() => {
                                     undetCount = undetCount + 1;
-                                    if(isPrintDebug){
-                                        printDebug("Here we hit a undefine value: "+operands.head.toString)
-                                        context.printVar(List())
-                                        context.printInput(List())
-                                    }
                                     ConcreteUndef()
                                 }
                                 case _ => throw new NotImplementedError("add integer with undefine value of "+ expr.toString) 
@@ -1126,14 +1071,9 @@ object ConcreteSimulator {
                                 }
                                 case ConcreteUndef() => {
                                     undetCount = undetCount + 1;
-                                    printDebug("Here we hit a undefine value: "+operands.tail.head.toString)
-                                    // context.printVar(List())
-                                    // context.printInput(List())
                                     ConcreteUndef()
-                                    //throw new NotImplementedError("Runtime Panic on variable "+operands.tail.head.toString)
                                 }
                                 case _ => {
-                                    //printVar(context,List());
                                     throw new NotImplementedError("Operand_1 is "+operands.tail.head.toString)
                                 }
                             }
@@ -1149,11 +1089,6 @@ object ConcreteSimulator {
                                 }
                                 case ConcreteUndef() => {
                                     undetCount = undetCount + 1;
-                                    if(isPrintDebug){
-                                        printDebug("Here we hit a undefine value: "+operands.head.toString)
-                                        context.printVar(List())
-                                        context.printInput(List())
-                                    }
                                     ConcreteUndef()
                                 }
                                 case _ => {
@@ -1200,7 +1135,7 @@ object ConcreteSimulator {
                                 var retValue = valueMap(eval_args)
                                 if(retValue.isInstanceOf[ConcreteUndef]){
                                     retValue = context.runtimeValue(id,eval_args)
-                                    printDebug("We make a fuzzing Value for Function "+retValue.toString)
+                                    defaultLog.debug("We make a fuzzing Value for Function "+retValue.toString)
                                 }
                                 retValue
                             }
@@ -1236,16 +1171,12 @@ object ConcreteSimulator {
         }}
     def setAssumes(assumes: List[AxiomDecl],context:ConcreteContext): Unit ={
         for(assume<-assumes){
-            //we need to reparse the exper;
-            //We assume user use conjunctive normal form(CNF)
-            //transform any logic experssion into 
             context.parseSetAssume(assume.expr)
         }}
 
     def checkProperties(properties: List[SpecDecl],context:ConcreteContext,iter:Int, module: Module){
         for(property <- properties){
-            printDebug("Check Property "+property.toString)
-            //printVar(context,List())
+            defaultLog.debug("Check Property "+property.toString)
             if (!evaluateBoolExpr(context, property.expr)){ 
                     failCount = failCount+1;
                     proofResults.append(generate_results(property.toString,iter,false,module))
@@ -1256,18 +1187,13 @@ object ConcreteSimulator {
                     proofResults.append(generate_results(property.toString,iter,true,module))
                 }
         }}
-    def printDebug(str: String){
-        if(isPrintDebug)
-            println(str)}
 
     def printResult(str: String){
-        if(isPrintResult)
-            println(str)}
+        println(str)}
+    
     def printConcretetTrace(trace:Map[BigInt,ConcreteContext],exprs : List[(Expr, String)], arg : Option[Identifier]){
         UclidMain.printStatus("Generated Trace of length " + (terminateInt).toString())
         UclidMain.printStatus("=================================")
-        printDebug("The terminateInt is "+terminateInt.toString)
-        printDebug("The trace's size is "+trace.size)
         for (a <- 0 to terminateInt) {
             if(a<=terminateInt){
                 UclidMain.printStatus("=================================")
