@@ -1,3 +1,7 @@
+/*
+Test-conctete-0:
+1. test of property failure
+*/
 module main
 {
     var a : integer;
@@ -8,7 +12,6 @@ module main
     }
     next {
         a' = a + 1;
-    //    assert(a !=3);
     }
     property jump_a: a!=3;
 
