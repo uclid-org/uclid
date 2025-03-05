@@ -1,3 +1,9 @@
+/* 
+  concrete-1.ucl
+  1. test of type of enum
+  2. test of procedure with modifies
+  3. test of assert
+*/
 module main
 {
     type color_t = enum { red, blue };

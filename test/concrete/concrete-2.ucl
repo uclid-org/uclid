@@ -1,3 +1,9 @@
+/*
+  concrete-2.ucl
+  1. test of array
+  2. test of assert
+  3. test of touching undefine variable
+*/
 module main
 {
   type num_t = integer;
@@ -7,11 +13,16 @@ module main
   init {
     numbers[true] = 0;
     zero = numbers[true];
+    
+    // assert(read == 0);
   }
 
   next {
+    zero' = zero + read;
   }
   
+  // property p1: read == 1;
+
   control {
     v = concrete (5);
     check;

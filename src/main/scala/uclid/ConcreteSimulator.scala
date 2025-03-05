@@ -65,6 +65,7 @@ case object Panic extends CmdsMod
     2. UninterpretedType
     3. FunctionCall
     4. evaluateBoolExpr
+    5. Json input support
 */
 
 sealed abstract class ConcreteValue{
@@ -125,9 +126,10 @@ object ConcreteSimulator {
     var undetCount: Int = 0;
     var cntInt:Int = 0;
     var terminateInt: Int = 0;
-    
+    var proofResults: ListBuffer[CheckResult] = ListBuffer[CheckResult]()
     //util
     val random = new Random()
+    
     case class ConcreteContext() {
         var varMap: scala.collection.mutable.Map[Identifier, ConcreteValue] = collection.mutable.Map();
         var varTypeMap: scala.collection.mutable.Map[Identifier, Type] = collection.mutable.Map();
@@ -143,13 +145,11 @@ object ConcreteSimulator {
             else if (inputMap.contains(variable)) inputMap(variable)
             else{
                 ConcreteUndef()
-                }
-            }
+            }}
         def write (variable: Identifier, value: ConcreteValue) {
             if (varMap.contains(variable)) varMap(variable) = value
             else if (inputMap.contains(variable)) inputMap(variable) = value
-            else throw new Error(f"Variable ${variable.toString} not found in context")
-        }
+            else throw new Error(f"Variable ${variable.toString} not found in context")}
         def updateVar (lhs: Lhs, value: ConcreteValue) {
             defaultLog.debug("Update "+lhs.toString+" With Value "+value.toString)
             lhs match {
@@ -247,9 +247,7 @@ object ConcreteSimulator {
                 varMap.-(variable_name)
             }}
     
-        def extendVarJson(frame:Int, vars: List[(Identifier, Type)]): Unit= {
-        ;}
-
+        def extendVarJson(frame:Int, vars: List[(Identifier, Type)]): Unit= {;}
         def assignUndefVar(vars: List[(Identifier, Type)],isInput: Boolean): Unit = {
             if(isInput){
                 var retContext = inputMap;
@@ -439,9 +437,7 @@ object ConcreteSimulator {
                 case _ => {
                     throw new Error("Hit unimplemented code part")
                 }
-            } 
-
-        }
+            } }
         
         //function gathring value as we want
         def generateValue(cValue:ConcreteValue,uclidType:Type,isInput:Boolean): ConcreteValue={      
@@ -588,8 +584,7 @@ object ConcreteSimulator {
                         case _ => ConcreteUndef()
                     }
                 }
-            }
-        }
+            }}
         //private Functions
         def updateRecordValue(fields: List[Identifier], value: ConcreteValue, 
             recordValue: ConcreteValue) : ConcreteRecord = {
@@ -643,11 +638,9 @@ object ConcreteSimulator {
             }
             for (variable <- vars){
                 println(variable._1+":  "+ConcreteSimulator.evaluate_expr(this,variable._1).toString)
-            }}
-    }
+            }}}
     
-    var proofResults: ListBuffer[CheckResult] = ListBuffer[CheckResult]()
-
+    
     def execute (module: Module, config: UclidMain.Config) : List[CheckResult] = {
         terminate = false;
         proofResults.clear();
@@ -853,7 +846,8 @@ object ConcreteSimulator {
                     }
                 }
                 case ConcreteUndef() => {
-                    true
+                    terminate = true
+                    return false
                 }
                 case _ => throw new NotImplementedError("Should not touch this line")
             }
