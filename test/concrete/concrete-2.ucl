@@ -3,6 +3,7 @@
   1. test of array
   2. test of assert
   3. test of touching undefine variable
+  4. Should throw an Error on touch undefine variable (read)
 */
 module main
 {

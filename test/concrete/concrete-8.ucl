@@ -1,25 +1,41 @@
+/*
+Test-conctete-8:
+1. test of property failure
+2. test of static array
+*/
 module main
 {
-    var a : integer;
-    init {
-        a = 0;
-        if (a < 1) {
-            a = 1;
-        } 
-    }
-    next {
-        if (a < 1) {
-            a' = 0;
-        } else {
-            a' = 2;
-        }
-    }
-    property jump_a: a!=2;
+  type num_t = integer;
+  var numbers : [boolean, num_t]integer;
+  var zero : integer;
+  var read: integer;
+  var a: integer;
 
-    control {
-        v = concrete(5);
-        check;
-        print_results;
-        //v.print_cex(n);
+  procedure f()
+    modifies numbers;
+    modifies a;
+    {
+        numbers[true, 0] = numbers[true, 0] + 1;
+        a = a + 1;
     }
+
+  init {
+    numbers[true, 0] = 1;
+    a = 0;
+    read = numbers[true,0];
+  }
+
+  property check_0: (numbers[true,0]!=2);
+
+  next {
+    call f();
+  }
+  
+  control {
+    v = concrete (5);
+    check;
+    // v.print_concrete_trace(a,numbers);
+    //print_results;
+    //v.print_cex(numbers);
+  }
 }

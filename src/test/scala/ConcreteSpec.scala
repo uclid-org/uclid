@@ -58,6 +58,16 @@ object ConcreteSpec {
     assert (results.count((e) => e.result.isUndefined) == 0)
     outputString
   }
+  def expectedError(filename: String, nFail: Int): Unit = {
+    try {
+      expectedFails(filename, nFail)
+    } catch {
+      case e: Error => 
+        println(s"Test passed: caught expected Error - ${e.getMessage}")
+      case _: Throwable => 
+        throw new AssertionError("Expected an Error, but a different exception was thrown.")
+    }
+  }
 }
 class ConcreteSpec extends AnyFlatSpec {
     "concrete-0.ucl" should "fail one assertion." in {
@@ -66,14 +76,14 @@ class ConcreteSpec extends AnyFlatSpec {
     "concrete-1.ucl" should "pass." in {
         ConcreteSpec.expectedFails("./test/concrete/concrete-1.ucl", 0)
     }
-    "concrete-2.ucl" should "pass." in {
-        ConcreteSpec.expectedFails("./test/concrete/concrete-2.ucl", 0)
+    "concrete-2.ucl" should "catch runtime error" in {
+        ConcreteSpec.expectedError("./test/concrete/concrete-2.ucl", 0)
     }
     "concrete-3.ucl" should "fail one assertion." in {
         ConcreteSpec.expectedFails("./test/concrete/concrete-3.ucl", 1)
     }
-    "concrete-4.ucl" should "pass." in {
-        ConcreteSpec.expectedFails("./test/concrete/concrete-4.ucl", 0)
+    "concrete-4.ucl" should "fail one assertion." in {
+        ConcreteSpec.expectedFails("./test/concrete/concrete-4.ucl", 1)
     }
     "concrete-5.ucl" should "pass." in {
         ConcreteSpec.expectedFails("./test/concrete/concrete-5.ucl", 0)
@@ -81,8 +91,8 @@ class ConcreteSpec extends AnyFlatSpec {
     "concrete-6.ucl" should "fail one assertion." in {
         ConcreteSpec.expectedFails("./test/concrete/concrete-6.ucl", 1)
     }
-    "concrete-7.ucl" should "pass." in {
-        ConcreteSpec.expectedFails("./test/concrete/concrete-7.ucl", 0)
+    "concrete-7.ucl" should "fail two assertion." in {
+        ConcreteSpec.expectedFails("./test/concrete/concrete-7.ucl", 2)
     }
     "concrete-8.ucl" should "pass." in {
         ConcreteSpec.expectedFails("./test/concrete/concrete-8.ucl", 1)
@@ -90,7 +100,7 @@ class ConcreteSpec extends AnyFlatSpec {
     "concrete-9.ucl" should "fail one assertion." in {
         ConcreteSpec.expectedFails("./test/concrete/concrete-9.ucl", 1)
     }
-    "concrete-10.ucl" should "fail one assertion." in {
-        ConcreteSpec.expectedFails("./test/concrete/concrete-10.ucl", 1)
+    "concrete-10.ucl" should "pass." in {
+        ConcreteSpec.expectedFails("./test/concrete/concrete-10.ucl", 0)
     }
 }

@@ -1,27 +1,27 @@
+/*
+Test-conctete-7:
+1. test of property failure
+2. test of concrete's Fuzzing
+3. test of avoid of property
+4. test of print trace
+*/
 module main
 {
     var a : integer;
     var b : integer;
     init {
-        a = -1;
     }
-
     next 
     {
-        case
-        (a <= 0) : 
-        {a' = 6;}
-        
-        (a < 0) :
-        {a' = 5;}
-        esac
     }
-    property jump_a: a!=3;
+    property positive_a: a>0;
+    property negative_a: a<0;
+    property zero_a: a==0;
 
     control {
-        v = concrete(5);
+        v = concrete(5,"Fuzzing");
         check;
         print_results;
-        //v.print_cex(n);
+        v.print_concrete_trace();
     }
 }

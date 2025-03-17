@@ -620,7 +620,6 @@ object ConcreteSimulator {
         //Debuging Functions
         def printVar (vars: List[(Expr, String)]) : Unit = {
             if (vars.isEmpty) {
-                println("\tVarmap:")
                 for ((key,value) <- varMap){
                     println(s"${key.toString}: ${value.toString}")
                 }
@@ -661,7 +660,7 @@ object ConcreteSimulator {
                         if(idArg.toString == "\"Default\""){
                             runtimeMod = Default;
                         }
-                        if(idArg.toString == "\"Random\""){
+                        if(idArg.toString == "\"Fuzzing\""){
                             runtimeMod = Fuzzing;
                         }
                         if(idArg.toString == "\"Json\""){
@@ -1026,8 +1025,11 @@ object ConcreteSimulator {
                                     }
                                 }
                                 case ConcreteUndef() => {
-                                    undetCount = undetCount + 1;
-                                    ConcreteUndef()
+                                    runtimeMod match{
+                                        case Fuzzing => ConcreteInt(random.nextInt())
+                                        case Default => ConcreteInt(0)
+                                        case _ => throw new Error("Hit undefine value of "+operands.tail.head.toString)
+                                    }
                                 }
                                 case _ => throw new NotImplementedError("add integer with undefine value of "+ expr.toString) 
                             }
@@ -1064,8 +1066,11 @@ object ConcreteSimulator {
                                     }
                                 }
                                 case ConcreteUndef() => {
-                                    undetCount = undetCount + 1;
-                                    ConcreteUndef()
+                                    runtimeMod match{
+                                        case Fuzzing => ConcreteBV(random.nextInt(pow(2,length).toInt),length)
+                                        case Default => ConcreteBV(0,length)
+                                        case _ => throw new Error("Hit undefine value of "+operands.tail.head.toString)
+                                    }
                                 }
                                 case _ => {
                                     throw new NotImplementedError("Operand_1 is "+operands.tail.head.toString)
@@ -1082,8 +1087,11 @@ object ConcreteSimulator {
                                     }
                                 }
                                 case ConcreteUndef() => {
-                                    undetCount = undetCount + 1;
-                                    ConcreteUndef()
+                                    runtimeMod match {
+                                        case Fuzzing => ConcreteEnum(ids,random.nextInt(ids.size))
+                                        case Default => ConcreteEnum(ids,0)
+                                        case _ => throw new Error("Hit undefine value of "+operands.tail.head.toString)
+                                    }
                                 }
                                 case _ => {
                                     throw new NotImplementedError("Operand_1 is "+operands.tail.head.toString)
@@ -1139,11 +1147,11 @@ object ConcreteSimulator {
                         }
                     }
                     case _ => {
-                      throw new NotImplementedError(s"Expression evaluation for ${expr}")  
+                        ConcreteUndef()  
                     }
                 }
             }
-            case _ => throw new NotImplementedError(s"Expression evaluation for ${expr}")
+            case _ => ConcreteUndef()
         }}
         
     def checkAssumes(assumes: List[AxiomDecl],context:ConcreteContext,iter:Int, module: Module){

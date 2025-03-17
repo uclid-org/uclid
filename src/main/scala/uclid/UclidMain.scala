@@ -114,7 +114,7 @@ object UclidMain {
         (exec, c) => c.copy(synthesizer = exec.split(" ").toList)
       }.text("Command line to invoke SyGuS synthesizer.")
 
-      opt[String]('c', "simulate").valueName("<Cmd>").action{
+      opt[Unit]('c', "simulate").action{
         (exec, c) => c.copy(simulate = true)
       }.text("Perform concrete execution.")
 
