@@ -1,3 +1,8 @@
+/*
+  concrete-3.ucl
+  1. test of branch
+  2. test of assert(false)
+*/
 module main
 {
   var flag : boolean;

@@ -1,19 +1,23 @@
+/*
+Test-conctete-4:
+1. test of property failure
+2. test of concrete's Default
+3. test of avoid of property
+*/
 module main
 {
-  var flag : boolean;
-  
-  init { flag = true; }
-  next {
-    if (flag) {
-      skip;
-    } else {
-      assert (false);
+    var a : integer;
+    var b : integer;
+    init {
+        b = 1;
     }
-  }
-  
-  control {
-    v = concrete(5);
-    check;
-    print_results;
-  }
+    next {
+        a' = a + 1;
+    }
+    property jump_a: a!=3;
+
+    control {
+        v = concrete(5,"Default");
+        check;
+    }
 }

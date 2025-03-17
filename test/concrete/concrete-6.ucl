@@ -1,8 +1,13 @@
+/*
+Test-conctete-6:
+1. test of property failure
+2. test of concrete's Default
+3. test of avoid of property
+*/
 module main
 {
     var a : integer;
     init {
-        a = 0;
     }
     next {
         a' = a + 1;
@@ -10,7 +15,7 @@ module main
     }
 
     control {
-        v = concrete(5);
+        v = concrete(5,"Default");
         check;
         print_results;
         //v.print_cex(n);

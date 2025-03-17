@@ -1,3 +1,7 @@
+/*
+Test-conctete-5:
+1. test of BV operation
+*/
 module main
 {
     var a : bv4;
