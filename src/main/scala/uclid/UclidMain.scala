@@ -509,7 +509,7 @@ object UclidMain {
       val result = concreteSimulator.execute(module, config)
       return result
     } else {
-      UclidMain.printVerbose("Begining Symbolic Simulation")
+      UclidMain.printVerbose("Beginning Symbolic Simulation")
       var symbolicSimulator = new SymbolicSimulator(module)
       var solverInterface = if (config.smtSolver.size > 0) {
         logger.debug("args: {}", config.smtSolver)
