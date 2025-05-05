@@ -64,7 +64,7 @@ class ModSetRewriterPass() extends RewritePass {
      *  @param modSetMap The modifies set map inferred by the ModSetAnalysis pass. Should contain a map from procedures to thier inferred modifies sets.
      */
     def getStmtModSet(stmt: Statement, modSetMap: Map[Identifier, Set[ModifiableEntity]], varIdSet: Set[Identifier], locVarIdSet: Set[Identifier]): Set[ModifiableEntity] = stmt match {
-      case BlockStmt(vars, stmts) => {
+      case BlockStmt(vars, stmts,_) => {
         val locVarIdSetP = vars.foldLeft(locVarIdSet)((acc, bvd) => acc ++ bvd.ids.toSet)
         stmts.foldLeft(Set.empty[ModifiableEntity])((acc, stmt) => acc ++ getStmtModSet(stmt, modSetMap, varIdSet, locVarIdSetP))
       }

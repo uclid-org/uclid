@@ -530,6 +530,9 @@ class ModuleVerifSpec extends AnyFlatSpec {
   "test-module-import-0.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-module-import-0.ucl", 0)
   }
+  "test-module-ordering.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-module-ordering.ucl", 0)
+  }
   "test-type-import.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-type-import.ucl", 0)
   }

@@ -112,10 +112,10 @@ class TaintNextPass extends RewritePass {
   // Takes a statement as input and adds taint expressions to the statements recursively
   def addTaintToStatement(statement: Statement, precondition: List[Expr]): List[Statement] = {
     statement match {
-      case BlockStmt(vars, stmts) => {
+      case BlockStmt(vars, stmts, isProc) => {
         val taint_vars = get_taint_vars(vars)
         val new_stmts = stmts.map(st => addTaintToStatement(st, precondition)).flatten
-        List(BlockStmt(taint_vars ++ vars, new_stmts))
+        List(BlockStmt(taint_vars ++ vars, new_stmts, isProc))
       }
       case HavocStmt(havocable) => {
         havocable match {

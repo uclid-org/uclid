@@ -81,7 +81,7 @@ class MacroReplacerPass(macroId : Identifier, newMacroBody : BlockStmt) extends 
         case _ =>
       }
     }
-    BlockStmt(st.vars, leftStmts)
+    BlockStmt(st.vars, leftStmts, false)
   }
 }
 

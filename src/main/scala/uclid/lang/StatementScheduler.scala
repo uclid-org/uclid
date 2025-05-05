@@ -63,7 +63,7 @@ object StatementScheduler {
           case LhsId(_) | LhsNextId(_) => Some(lhs.ident)
           case _ => None 
         }).flatten.toSet
-      case BlockStmt(vars, stmts) =>
+      case BlockStmt(vars, stmts, _) =>
         val declaredVars = vars.flatMap(vs => vs.ids.map(v => v)).toSet
         writeSets(stmts, context + vars) -- declaredVars
       case IfElseStmt(_, ifblock, elseblock) =>
@@ -124,7 +124,7 @@ object StatementScheduler {
           case HavocableInstanceId(_) => Set.empty
         }
       case AssignStmt(lhss, _) => lhss.map(lhs => lhs.ident).toSet
-      case BlockStmt(vars, stmts) =>
+      case BlockStmt(vars, stmts, _) =>
         val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(v => v)).toSet
         writeSetIds(stmts, context + vars) -- declaredVars
       case IfElseStmt(_, ifblock, elseblock) =>
@@ -205,7 +205,7 @@ object StatementScheduler {
         }
         readSets(rhss, prime)++readSets(arrayIndices.flatten, prime)
       }
-      case BlockStmt(vars, stmts) =>
+      case BlockStmt(vars, stmts, _ ) =>
         val declaredVars : Set[Identifier] = vars.flatMap(vs => vs.ids.map(v => v)).toSet
         readSets(stmts, context + vars, prime) -- declaredVars
       case IfElseStmt(cond, ifblock, elseblock) =>
@@ -355,16 +355,16 @@ class StatementSchedulerPass extends RewritePass {
     logger.debug("stmt dep graph: {}", stmtDepGraph.toString())
     val sortedOrder = Utils.schedule(nodeIds, stmtDepGraph)
     logger.debug("sortedOrder: {}", sortedOrder.toString())
-    BlockStmt(blkStmt.vars, sortedOrder.map(id => stmtIdToStmtMap.get(id).get))
+    BlockStmt(blkStmt.vars, sortedOrder.map(id => stmtIdToStmtMap.get(id).get), blkStmt.isProcedural)
   }
   override def rewriteNext(next : NextDecl, context : Scope) : Option[NextDecl] = {
-    val bodyP = reorderStatements(BlockStmt(List.empty, List(next.body)), context).stmts
+    val bodyP = reorderStatements(BlockStmt(List.empty, List(next.body), false), context).stmts
     logger.debug(Utils.join(bodyP.flatMap(st => st.toLines), "\n"))
-    Some(NextDecl(BlockStmt(List.empty, bodyP)))
+    Some(NextDecl(BlockStmt(List.empty, bodyP, false)))
   }
   override def rewriteBlock(blk : BlockStmt, context : Scope) : Option[Statement] = {
     if (context.environment == SequentialEnvironment) {
-      val stmtsP = reorderStatements(BlockStmt(blk.vars, blk.stmts), context + blk.vars)
+      val stmtsP = reorderStatements(BlockStmt(blk.vars, blk.stmts, blk.isProcedural), context + blk.vars)
       Some(stmtsP)
     } else {
       Some(blk)

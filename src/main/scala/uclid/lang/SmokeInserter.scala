@@ -53,7 +53,7 @@ class SmokeInsertPass() extends RewritePass {
       assertFalse.setPos(st.stmts(0).pos)
       val newstmts = st.stmts :+ assertFalse 
       smokeCount += 1
-      Some(BlockStmt(st.vars, newstmts))
+      Some(BlockStmt(st.vars, newstmts, st.isProcedural))
     } else if (st.stmts.length > 1) {
       val topLine = st.stmts(0).pos.line
       val bottomLine = st.stmts(st.stmts.length-1).pos.line
@@ -61,7 +61,7 @@ class SmokeInsertPass() extends RewritePass {
       assertFalse.setPos(st.stmts(st.stmts.length-1).pos)
       val newstmts = st.stmts :+ assertFalse 
       smokeCount += 1
-      Some(BlockStmt(st.vars, newstmts))
+      Some(BlockStmt(st.vars, newstmts, st.isProcedural))
     } else {
       Some(st)
     }

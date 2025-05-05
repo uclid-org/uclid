@@ -1364,11 +1364,11 @@ case class AssignStmt(lhss: List[Lhs], rhss: List[Expr]) extends Statement {
   override val hasCall = false
   override val hasInternalCall = false
 }
-case class BlockStmt(vars: List[BlockVarsDecl], stmts: List[Statement]) extends Statement {
+case class BlockStmt(vars: List[BlockVarsDecl], stmts: List[Statement], isProcedural: Boolean) extends Statement {
   override def hasStmtBlock = true
   override val hasLoop = stmts.exists(st => st.hasLoop)
   override def toLines = { 
-      List("{ //" ) ++
+      List("{ // sequential code =" + isProcedural.toString()) ++
       vars.map(PrettyPrinter.indent(1) + _.toString()) ++
       stmts.flatMap(_.toLines).map(PrettyPrinter.indent(1) + _) ++
       List("}")

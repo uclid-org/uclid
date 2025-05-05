@@ -1,10 +1,11 @@
 /*
-    KNOWNBUG: Instance procedure calls from next block use new value.
+    PREVIOUS BUG: Instance procedure calls from next block use new value.
     - When calling proc1(), proc2() from sub module, things are as expected.
     - When calling proc1(), followed by proc2() from main module, 
         proc2 picks up the modified value of x, leading to an assertion failure.
-
     Some issue with the inlining procedure from ModuleInstantiatorPass.
+
+    If the bug is fixed, this test should pass
 */
 
 
@@ -35,20 +36,10 @@ module sub
 
     next
     {
-        // call () = proc2();
+        // call () = proc2(); 
         // call () = proc1();
         // step' = step + 1;    
     }
-
-    // invariant a : (step == 1) ==> (y == 1);
-    
-    // control
-    // {
-    //     vobj = bmc(4);
-    //     check;
-    //     print_results;
-    //     vobj.print_cex(x, y, step);
-    // }
 }
 
 module main {

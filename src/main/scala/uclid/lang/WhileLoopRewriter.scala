@@ -64,8 +64,9 @@ class WhileLoopRewriterPass extends RewritePass {
     }
     val finishAssump = AssumeStmt(Operator.not(cond), None)
     val ifBody = havocStmts ++ assumeStmts ++ List(body) ++ assertStmts
-    val ifElseStmt = IfElseStmt(cond, BlockStmt(List.empty, ifBody), BlockStmt(List.empty, List.empty))
-    Some(BlockStmt(List.empty, initialAsserts ++ List(ifElseStmt, finishAssump)))
+    // BlockStatement containing while loop must be procedural code
+    val ifElseStmt = IfElseStmt(cond, BlockStmt(List.empty, ifBody, true), BlockStmt(List.empty, List.empty, true))
+    Some(BlockStmt(List.empty, initialAsserts ++ List(ifElseStmt, finishAssump), true))
   }
 }
 
