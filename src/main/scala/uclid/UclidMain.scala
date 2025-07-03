@@ -389,21 +389,10 @@ object UclidMain {
           (acc, module) => {
             val declsP = {
               val nonInitAccDecls = acc.decls.filter(p => !p.isInstanceOf[InitDecl])
-              val initAccDecls = acc.decls.filter(p => p.isInstanceOf[InitDecl]).headOption
+              val initAccDecls = acc.decls.filter(p => p.isInstanceOf[InitDecl])
               val nonInitModuleDecls = module.decls.filter(p => !p.isInstanceOf[InitDecl])
-              val initModuleDecls = module.decls.filter(p => p.isInstanceOf[InitDecl]).headOption
-              val newInitDecl = initAccDecls match {
-                case Some(initAcc) => initModuleDecls match {
-                  case Some(initMod) => List(InitDecl(BlockStmt(List[BlockVarsDecl](), 
-                    List(initAcc.asInstanceOf[InitDecl].body, initMod.asInstanceOf[InitDecl].body))))
-                  case None => List(initAcc)
-                }
-                case None => initModuleDecls match {
-                  case Some(initMod) => List(initMod)
-                  case None => List[Decl]()
-                }
-              }
-              newInitDecl ++ nonInitAccDecls ++ nonInitModuleDecls
+              val initModuleDecls = module.decls.filter(p => p.isInstanceOf[InitDecl])
+              initAccDecls ++ initModuleDecls ++ nonInitAccDecls ++ nonInitModuleDecls
             }
             val cmdsP = (acc.cmds ++ module.cmds)
             Utils.assert(module.notes.size == 1 && module.notes.head.asInstanceOf[InstanceVarMapAnnotation].iMap.size == 0, "Expected module to initially have empty annotations.")

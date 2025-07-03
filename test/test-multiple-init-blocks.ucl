@@ -1,0 +1,25 @@
+// should throw an error because there are multiple init blocks in the module
+module main {
+  var x : integer;
+
+  init {
+    x = 0;
+  }
+
+  init {
+    x = 1;
+  }
+
+  next{
+
+  }
+
+  invariant prop_eq: x == 0;
+
+  control {
+    v = bmc(5);
+    check;
+    print_results;
+  }
+
+}

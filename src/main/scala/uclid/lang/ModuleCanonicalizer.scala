@@ -42,9 +42,28 @@ package lang
 
 class ModuleCanonicalizerPass extends RewritePass {
   override def rewriteModule(moduleIn : Module, ctx : Scope) : Option[Module] = {
+    // Currently we only allow one init and one next block in a module.
+    // we could alternatively, combine multiple init (or next) blocks into a single init (or next) block.
+    var errors: List[(String, lang.ASTPosition)] = List.empty
+    val initdecls = moduleIn.decls.filter(_.isInstanceOf[InitDecl]).map(_.asInstanceOf[InitDecl])
+    if(initdecls.size > 1) {
+      val msg = "Module has multiple init blocks. This is not allowed."
+      val position = initdecls(1).position
+      errors = errors :+ (msg, position)
+    }
+    val nextdecls = moduleIn.decls.filter(_.isInstanceOf[NextDecl]).map(_.asInstanceOf[NextDecl])
+    if(nextdecls.size > 1) {
+      val msg = "Module has multiple next blocks. This is not allowed."
+      val position = nextdecls(1).position
+      errors = errors :+ (msg, position)
+    }
+    if(errors.nonEmpty) {
+      throw throw new Utils.ParserErrorList(errors)
+    }
+
     val initP = moduleIn.init match {
       case None => Some(InitDecl(SkipStmt()))
-      case Some(_) => None
+      case Some(_) =>  None
     }
     val nextP = moduleIn.next match {
       case None => Some(NextDecl(SkipStmt()))
