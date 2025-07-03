@@ -1,0 +1,26 @@
+// should throw an error because there are multiple next blocks in the module
+module main {
+  var x : integer;
+  var y : integer;
+
+  init {
+    x = 0;
+    y = 0;
+  }
+
+  next {
+    x' = x + 1;
+  }
+
+  next {
+    y' = y + 2;
+  }
+    invariant prop_eq: x != 0;
+
+  control {
+    v = bmc(5);
+    check;
+    print_results;
+    v.print_cex(x);
+  }
+}

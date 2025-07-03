@@ -258,6 +258,28 @@ class ParserSpec extends AnyFlatSpec {
         assert (p.errors.size == 5)
     }
   }
+  "test-multiple-init-blocks.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-multiple-init-blocks.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+    }
+  }
+  "test-multiple-next-blocks.ucl" should "not parse successfully." in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-multiple-next-blocks.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+    }
+  }
   "test-typechecker-6.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-typechecker-6.ucl"), lang.Identifier("main"))
