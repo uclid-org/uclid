@@ -1,8 +1,12 @@
 /* 
-    Test where variable declarations, init and next blocks are in different declaring modules.
-    Extended test where the blocks are in different files, and the order of specifying files is important.
+   EDIT: this is now disabled because the order of the init blocks is nondeterministic
+   when concatenating init blocks within the same file. 
+   Duplicate init blocks are no longer allowed.
+   
+  Test where variable declarations, init and next blocks are in different declaring modules.
+  Extended test where the blocks are in different files, and the order of specifying files is important.
 
-    This is the first file; also checkout test/test-concat-modules-w-init-2-fb.ucl
+  This is the first file; also checkout test/test-concat-modules-w-init-2-fb.ucl
 */
 module A {
     var x, y, z: integer;
