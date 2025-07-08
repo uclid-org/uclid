@@ -977,16 +977,19 @@ class PrintCexSpec extends AnyFlatSpec {
     VerifierSpec.expectedFails("./test/test-record-naming-16.ucl", 2)
   }
 }
-class ModuleConcatSpec extends AnyFlatSpec {
-  "test-concat-modules-w-init-2-fab.ucl" should "verify all assertions." in {
-    VerifierSpec.expectedFailsMultipleFiles(List(
-      "test/test-concat-modules-w-init-2-fa.ucl", "test/test-concat-modules-w-init-2-fb.ucl"
-    ), 0)
-  }
-  "test-concat-modules-w-init-2-fba.ucl" should "fail to verify assertion." in {
-    VerifierSpec.expectedFailsMultipleFiles(List(
-      "test/test-concat-modules-w-init-2-fb.ucl", "test/test-concat-modules-w-init-2-fa.ucl"
-    ), 2)
-  }
-}
+// Now disabled as multiple init blocks are no longer supported
+// because the order of concatenation is not deterministic if both blocks are in the same module.
+
+// class ModuleConcatSpec extends AnyFlatSpec {
+//   "test-concat-modules-w-init-2-fab.ucl" should "verify all assertions." in {
+//     VerifierSpec.expectedFailsMultipleFiles(List(
+//       "test/test-concat-modules-w-init-2-fa.ucl", "test/test-concat-modules-w-init-2-fb.ucl"
+//     ), 0)
+//   }
+//   "test-concat-modules-w-init-2-fba.ucl" should "fail to verify assertion." in {
+//     VerifierSpec.expectedFailsMultipleFiles(List(
+//       "test/test-concat-modules-w-init-2-fb.ucl", "test/test-concat-modules-w-init-2-fa.ucl"
+//     ), 2)
+//   }
+// }
 

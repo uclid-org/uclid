@@ -211,18 +211,6 @@ class ParserSpec extends AnyFlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
-  "test-type1.ucl" should "not parse successfully." in {
-    try {
-      val filename = "test/test-type1.ucl"
-      val fileModules = UclidMain.compile(ConfigCons.createConfig(filename), lang.Identifier("main"))
-      assert (fileModules.size == 1)
-    }
-    catch {
-      case p : Utils.ParserErrorList =>
-        assert (p.errors.size == 1)
-        assert (p.errors(0)._1.contains("Redeclaration of identifier 'test'."))
-    }
-  }
   "test-typechecker-0.ucl" should "not parse successfully." in {
     try {
       val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-typechecker-0.ucl"), lang.Identifier("main"))
@@ -436,26 +424,34 @@ class ParserSpec extends AnyFlatSpec {
     val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
     assert (instantiatedModules.size == 1)
   }
-  "test-concat-modules-w-init-1.ucl" should "parse successfully" in {
-    val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-concat-modules-w-init-1.ucl"), lang.Identifier("main"))
-    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
-    assert (instantiatedModules.size == 1)
+  // multiple inits not allowed
+  "test-concat-modules-w-init-1.ucl" should "not parse successfully" in {
+    try {
+      val fileModules = UclidMain.compile(ConfigCons.createConfig("test/test-concat-modules-w-init-1.ucl"), lang.Identifier("main"))
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.exists(p => p._1.contains("Module has multiple init blocks.")))
+    }
   }
-  "test-concat-modules-w-init-2-fab.ucl" should "parse successfully" in {
-    val fileModules = UclidMain.compile(UclidMain.Config(files=List(
+  "test-concat-modules-w-init-2-fab.ucl" should "not parse successfully" in {
+    try{
+      val fileModules = UclidMain.compile(UclidMain.Config(files=List(
       new File("test/test-concat-modules-w-init-2-fa.ucl"), new File("test/test-concat-modules-w-init-2-fb.ucl"))
     ), lang.Identifier("main"))
-    assert (fileModules.size == 2)
-    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
-    assert (instantiatedModules.size == 1)
-  }
-  "test-concat-modules-w-init-2-fba.ucl" should "parse successfully" in {
-    val fileModules = UclidMain.compile(UclidMain.Config(files=List(
-      new File("test/test-concat-modules-w-init-2-fb.ucl"), new File("test/test-concat-modules-w-init-2-fa.ucl"))
-    ), lang.Identifier("main"))
-    assert (fileModules.size == 2)
-    val instantiatedModules = UclidMain.instantiateModules(UclidMain.Config(), fileModules, lang.Identifier("main"))
-    assert (instantiatedModules.size == 1)
+      // should never get here.
+      assert (false);
+    }
+    catch {
+      // this list has all the errors from parsing
+      case p : Utils.ParserErrorList =>
+        assert (p.errors.size == 1)
+        assert (p.errors.exists(p => p._1.contains("Module has multiple init blocks")))
+    }
   }
   "test-mod-set-analysis-0.ucl" should "parse successfully." in {
     val fileModules = UclidMain.compile(ConfigCons.createConfigWithMSA("test/test-mod-set-analysis-0.ucl"), lang.Identifier("main"))
