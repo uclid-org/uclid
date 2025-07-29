@@ -40,6 +40,9 @@ package uclid
 package lang
 
 import com.typesafe.scalalogging.Logger
+// below imports are necessary for spot string conversion function
+import scala.collection.mutable.Stack 
+import scala.collection.mutable.ArrayBuffer
 
 class LTLOperatorArgumentCheckerPass extends ReadOnlyPass[Set[ModuleError]] {
   type T = Set[ModuleError]
@@ -474,6 +477,94 @@ class LTLPropertyRewriterPass extends RewritePass {
     }
   }
 
+  // prepare a given LTL formula string for use by spot by wrapping the contents of any parentheses pair in quotes if the content
+  // contains a character that Spot would not be able to handle (ie, any comparison or arithmatic operators, as well as []).
+  // For now we will default to any NON-alphanumeric character (except "()").
+  def rewriteFormulaForSpot(formula: String): String = {
+    /**  Process is as follows:
+      *  1: get a list of all parentheses and their depths
+      *  2: sort parentheses pairs in order of ascending depth
+      *  3: For each pair, iterate over all chars in the range.
+      *     - keep track of local depth variable
+      *     - if there exists forbidden character at 0 local depth, add paren indices to "needs quotes" list
+      *  4: construct the new string by iterating through the old one and inserting new quotes as need be.
+      */
+
+    // list of all characters which require the surrounding area to be quoted
+    // TODO: figure out if '-' is actually valid -- if so it will need to be handled differently. 
+    val forbiddenChars = "+-/*%<>=[]".toCharArray()
+
+    // TODO: Stack is depreicated -- replace this with ArrayDeque and change pop/push methods accordingly. 
+    var pOpenIndices = Stack[Int]()
+    // the tuple stores index of '(', index of ')', and the depth of the pair
+    var pPairIndices = ArrayBuffer[(Int, Int, Int)]()
+    // First, build a collection of all parenthesis pairs in the set. 
+    for(i <- 0 until formula.length) {
+      if(formula(i) == '(') {
+        pOpenIndices.push(i)
+      }
+      else if(formula(i) == ')') {
+        val oIndex = pOpenIndices.pop()
+        val depth = pOpenIndices.length
+
+        pPairIndices += ((oIndex, i, depth))
+      }
+    }
+    // sort the pairs from outermost to innermost (ascending depth order).
+    // If we find a non-boolean operator in one depth level, that means that all other expressions in deeper
+    // levels will need to be in the quote too, so we move from shallow to deep depths.
+    val sortedIndices = pPairIndices.sortBy(_._3)
+    // we need to keep track of already quoted ranges so we do not put quotes inside of quotes.
+    // we could technically refactor the system to use a parenthesis tree to not need this.
+    var quotedRanges = ArrayBuffer[(Int, Int)]()
+    var insertIndices = ArrayBuffer[Int]() // indices at which to insert double quotes (we insert before the char)
+    for((openIndex, closedIndex, depth) <- sortedIndices) {
+      // check to see if we're in an already quoted region. If we are, skip checking this set.
+      val isInsideQuoted: Option[(Int, Int)] = quotedRanges.find {
+        case ((otherOpen, otherClosed)) => otherOpen < openIndex && otherClosed > closedIndex
+      }
+      if(isInsideQuoted.isEmpty) {
+        // Check to see if the range needs to be quoted. If we ever need to change the 
+        // logic for HOW we decide to quote something out, this is where that change needs to be made. 
+        var needsQuotes = false
+        var localDepth: Int = 0
+        for(i <- openIndex + 1 until closedIndex) {
+          val charToEval: Char = formula(i)
+          if(charToEval == '(') localDepth+=1
+          else if(charToEval == ')') localDepth-=1
+          // we only want to check for forbidden characters at our current depth.
+          else if(localDepth == 0 && forbiddenChars.contains(formula(i))) {
+            needsQuotes = true // TODO: Find a way to properly break out of this condition
+            // my guess would be to convert this for loop into another find call -- those things are awesome
+          }
+        }
+        if(needsQuotes) {
+          insertIndices += openIndex +1 // we add 1 since openIndex is the index of the '('
+          insertIndices += closedIndex
+          quotedRanges += ((openIndex, closedIndex))
+        }
+      }
+    }
+    // Now that we know where to insert quotes, create the new string
+    val sortedInsertIndices = insertIndices.sorted
+    val toReturn = new StringBuilder()
+    var insertionPointer = 0
+    // length +1 is so that we add any necessary quotes at the end of the string
+    for(i <- 0 until formula.length + 1) {
+      // as long as we have quotes to print, do those
+      while(insertionPointer < sortedInsertIndices.length && sortedInsertIndices(insertionPointer) == i) {
+        toReturn.append('"')
+        insertionPointer += 1
+      }
+      // only add the original formula's character until all necessary preceeding quotes have been added.
+      if(i < formula.length) {
+        toReturn.append(formula(i))
+      }
+    }
+    // ta da
+    return toReturn.result()
+  }
+
   def rewriteSpecs(module : Module, ctx : Scope, ltlSpecs : List[SpecDecl], otherSpecs : List[SpecDecl]) : Module = {
 
     val monitors = ltlSpecs.map {
@@ -484,6 +575,17 @@ class LTLPropertyRewriterPass extends RewritePass {
         createMonitorExpressions(s.id, nnf, ctx)
       }
     }
+
+    for(s<- ltlSpecs) {
+      val nnf = convertToNNF(not(s.expr))
+      println("Ofek Debug: \n\t EXP: " + s.expr.toString() + "\n\t NNF: " + nnf.toString())
+      println("\t Quoted: " + rewriteFormulaForSpot(s.expr.toString()))
+    }
+    for(m<- module.vars) {
+      println("Ofek Debug: Module name: " + m._1 + " , type: " + m._2)
+    }
+    println("Ofek Debug: Done printing expressions.")
+   
 
     // create a copy of the state variables and non-deterministically assign the current state to it.
     val allPendingVars = monitors.flatMap(s => s.pendingVars.map(s => (s, BooleanType())))
@@ -505,6 +607,9 @@ class LTLPropertyRewriterPass extends RewritePass {
         val hasFailedExpr : Expr = monitor.failedVars.foldLeft(hasFailedVar.asInstanceOf[Expr])((acc, f) => orExpr(acc, f))
         (hasFailedVar, hasFailedExpr)
       }
+    }
+    for(m<- hasFaileds) {
+      println("Ofek Debug: Module name: " + m._1 + " , type: " + m._2);
     }
     // create the "PENDING" variables.
     val pendings = (ltlSpecs zip monitors).map {
