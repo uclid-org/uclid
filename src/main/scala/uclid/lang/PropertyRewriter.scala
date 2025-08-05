@@ -492,26 +492,39 @@ class LTLPropertyRewriterPass extends RewritePass {
       *  4: construct the new string by iterating through the old one and inserting new quotes as need be.
       */
 
+    
+
     // list of all characters which require the surrounding area to be quoted
     // TODO: figure out if '-' is actually valid -- if so it will need to be handled differently. 
-    val forbiddenChars = "+-/*%<>=[]".toCharArray()
+    val forbiddenChars = "+-/*%<>=".toCharArray()
+    /**
+      * returns an intervals of tuples describing ranges of a single parenthesis set.
+      * returns tuple(int, int, int), where int 1 is index of openChar instance, int 2 is index of closeChar,
+      * and int 3 is absolute depth
+      */ 
+    def getParenRanges(openChar: Char, closeChar: Char): ArrayBuffer[(Int, Int, Int)] = {
+      // TODO: Stack is depreicated -- replace this with ArrayDeque and change pop/push methods accordingly. 
+      var openIndices = Stack[Int]()
+      // the tuple stores index of '(', index of ')', and the depth of the pair
+      var pairIndices = ArrayBuffer[(Int, Int, Int)]()
+      // First, build a collection of all parenthesis pairs in the set. 
+      for(i <- 0 until formula.length) {
+        if(formula(i) == openChar) {
+          openIndices.push(i)
+        }
+        else if(formula(i) == closeChar) {
+          val oIndex = openIndices.pop()
+          val depth = openIndices.length
 
-    // TODO: Stack is depreicated -- replace this with ArrayDeque and change pop/push methods accordingly. 
-    var pOpenIndices = Stack[Int]()
-    // the tuple stores index of '(', index of ')', and the depth of the pair
-    var pPairIndices = ArrayBuffer[(Int, Int, Int)]()
-    // First, build a collection of all parenthesis pairs in the set. 
-    for(i <- 0 until formula.length) {
-      if(formula(i) == '(') {
-        pOpenIndices.push(i)
+          pairIndices += ((oIndex, i, depth))
+        }
       }
-      else if(formula(i) == ')') {
-        val oIndex = pOpenIndices.pop()
-        val depth = pOpenIndices.length
-
-        pPairIndices += ((oIndex, i, depth))
-      }
+      return pairIndices
     }
+
+    val pPairIndices = getParenRanges('(',')')
+    val bPairIndices = getParenRanges('[',']')
+
     // sort the pairs from outermost to innermost (ascending depth order).
     // If we find a non-boolean operator in one depth level, that means that all other expressions in deeper
     // levels will need to be in the quote too, so we move from shallow to deep depths.
@@ -525,25 +538,33 @@ class LTLPropertyRewriterPass extends RewritePass {
       val isInsideQuoted: Option[(Int, Int)] = quotedRanges.find {
         case ((otherOpen, otherClosed)) => otherOpen < openIndex && otherClosed > closedIndex
       }
-      if(isInsideQuoted.isEmpty) {
+      if(isInsideQuoted.isEmpty) { // ie, if we are in an unquoted region
         // Check to see if the range needs to be quoted. If we ever need to change the 
         // logic for HOW we decide to quote something out, this is where that change needs to be made. 
-        var needsQuotes = false
         var localDepth: Int = 0
+        var hasForbiddenChar = false
+        var isVector = closedIndex < formula.length -1 && formula(closedIndex+1)=='[' // is ) followed by [
         for(i <- openIndex + 1 until closedIndex) {
           val charToEval: Char = formula(i)
           if(charToEval == '(') localDepth+=1
           else if(charToEval == ')') localDepth-=1
           // we only want to check for forbidden characters at our current depth.
-          else if(localDepth == 0 && forbiddenChars.contains(formula(i))) {
-            needsQuotes = true // TODO: Find a way to properly break out of this condition
-            // my guess would be to convert this for loop into another find call -- those things are awesome
-          }
+          hasForbiddenChar = localDepth == 0 && forbiddenChars.contains(formula(i))
         }
-        if(needsQuotes) {
-          insertIndices += openIndex +1 // we add 1 since openIndex is the index of the '('
-          insertIndices += closedIndex
-          quotedRanges += ((openIndex, closedIndex))
+        if(hasForbiddenChar || isVector) {
+          val newOpen = if (isVector) openIndex else openIndex + 1
+          var newClosed = closedIndex
+          if(isVector) {
+            // find the closing ] to the [ following this paren set
+            while(newClosed < formula.length -1 && formula(newClosed+1)=='[') {
+              // keep searching for the next ] as long as a [ is right after our range
+              newClosed = bPairIndices.find(p=> p._1 == newClosed+1).map(_._2).getOrElse(formula.length)
+            }
+            newClosed += 1 // we need to put the quote after the final ]
+          }
+          insertIndices += newOpen
+          insertIndices += newClosed
+          quotedRanges += ((newOpen, newClosed))
         }
       }
     }
@@ -625,16 +646,30 @@ class LTLPropertyRewriterPass extends RewritePass {
         _.filter(s => !s.equals(" ") && !s.equals(""))
     )
 
+    val initialState: Option[BigInt] = getDataFromField("Start").map(iSt => BigInt(iSt.toInt))
+    // the set of all acceptance sets and each of their covered states
+    val accceptSets: Option[Array[ArrayBuffer[BigInt]]] = getDataFromField("Acceptance").map(
+      // Acceptance field is in the form "[#acceptsets] [acceptconds]", so we isolate the number
+      asc => Array.fill(asc.split(" ")(0).toInt)(ArrayBuffer[BigInt]())
+    )
+
     // get list of transitions -- we want to have a list of lists -- each element in top level
     // list corresponds to a list of all transitions originating from a specific state.
-    // keep track of current state
-    //val transStrings: Array[String] = body.split("State: ")
+    // while traversing states, we also need to ID which belong to each accept set and add them accordingly
+    val transStrings: Array[String] = body.split("State: ")
+    val transitions = transStrings.map(s => s.split('\n')).map(s => {
+        /**
+            example of s:
+            State: 0 {0}
+            [0] 0
+            [!0] 1
+          */
+    })
 
     /**
       * 1: Define the state variables
       */
     val stateId = Identifier(spec.id + "_state")
-    val initialState: Option[BigInt] = getDataFromField("Start").map(iSt => BigInt(iSt.toInt))
     // Set up a list of identifiers for each atomic
     val atomicIDs: Option[List[Identifier]] = atomics.map(_.map(a=> Identifier(a))).map(_.toList)
     // create the state variables from the Identifiers
