@@ -184,6 +184,8 @@ object UclidMain {
       val mainModule = instantiate(config, modules, mainModuleName)
       mainModule match {
         case Some(m) =>
+          //println(m.init.getOrElse(null).toString())
+          //println(m.next.getOrElse(null).toString())
           if(!m.cmds.isEmpty)
           {
             // Split the control block commands to blocks on commands that modify the module
