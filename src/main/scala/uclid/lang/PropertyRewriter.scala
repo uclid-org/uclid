@@ -632,7 +632,7 @@ class LTLPropertyRewriterPass extends RewritePass {
              | label-expr "|" label-expr
      * atomics is the list of AP vars used by the module
     */
-    class SpotCondMiniParser(atomics: Array[Identifier]) extends RegexParsers {
+    class SpotCondMiniParser(atomics: Array[Expr]) extends RegexParsers {
       override val whiteSpace: Regex = """[ ]+""".r
       val unsigInt: Regex = """[0-9]+""".r
 
@@ -768,7 +768,6 @@ class LTLPropertyRewriterPass extends RewritePass {
         case None => sys.error("Error during Spot to UCLID module translation: Variable " + id + " found in LTL spec but not in module")
       }
     ))).map(_.toList)
-    moduleVarIdentifiers.map(_.foreach(elem => println("Ofek Debug: " + elem.toString())))
     // the set of all acceptance sets and each of their covered states
     // ASSUME: All acceptance sets must be visited infinitely often
     // initialize the accept sets array
@@ -799,19 +798,13 @@ class LTLPropertyRewriterPass extends RewritePass {
       */
     // variable representing the current state in the automata that we are at
     val stateId = Identifier(spec.id + "_current_state")
-    // Set up a list of identifiers for each atomic
-    val atomicIDs: Option[Array[Identifier]] = atomicStrings.map(_.map(a=> Identifier(a)))
-    // create the state variables from the Identifiers -- all atomics are booleans or boolean expressions
-    val atomicVarsDecl: Option[Decl] = atomicIDs.map(_.toList).map(InputVarsDecl(_, BooleanType()))
     
     /**
      * 2: Module Init Block 
      */
     // initialize the module -- make all AP's havocs and set stateId var to initialState value
-    val initAtomics = atomicIDs.map(_.map(id => HavocStmt(HavocableId(id)))).map(_.toList)
     val initStateVar = initialState.map(s => AssignStmt(List(LhsId(stateId)), List(IntLit(s))))
     // put the two statements together in a block stmt and define as the init!
-    // val initDecl = initAtomics.flatMap(iHavocs => initStateVar.map(iState => InitDecl(BlockStmt(Nil, iHavocs ++ List(iState)))))
 
     val initDecl : Option[InitDecl] =
     for {         
@@ -821,7 +814,7 @@ class LTLPropertyRewriterPass extends RewritePass {
     /**
       * 3: Module Next Block (writing this is going to hurt. A lot. Oh well~)
       */
-    val spotParser = atomicIDs.map( aIds => new SpotCondMiniParser(aIds))
+    val spotParser = atomicExpressions.map( aIds => new SpotCondMiniParser(aIds))
     /**
       * The transition function -- A list of the lists of transitions for each state
       * Each transition consists of the condition required, as well as the set of states that transition connects to
@@ -900,11 +893,10 @@ class LTLPropertyRewriterPass extends RewritePass {
 
     val moduleDecls : Option[List[Decl]] =
     for {
-      atomicVarsDecl <- atomicVarsDecl          // Option[StateVarsDecl]
       initDecl   <- initDecl                // Option[InitDecl]
       inputVarDecls <- inputVarDecls
       nextDecl <- nextDecl
-    } yield inputVarDecls ++ List[Decl](atomicVarsDecl, initDecl, nextDecl)  // both are Decl, list type is Decl
+    } yield inputVarDecls ++ List[Decl](initDecl, nextDecl)  // both are Decl, list type is Decl
 
     val spotModule: Option[Module] = moduleDecls.map(mDecls => Module(
       id = Identifier("LTL_Formula_" + spec.id),
