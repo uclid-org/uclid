@@ -51,13 +51,14 @@ class LTLAutomataGeneratorPass extends RewritePass {
   
   override def rewriteModule(module: Module, ctx: Scope): Option[Module] = {
     val moduleSpecs = module.decls.collect{ case spec : SpecDecl => spec }
-    val ltlSpecs = moduleSpecs.filter(s => s.params.exists(d => d == LTLExprDecorator))
+    val ltlSpecs = moduleSpecs.filter(s => ExprDecorator.isLTLProperty(s.params))
+    val toReturn = createModulefromHOA(module, ltlSpecs(0))
     if (ltlSpecs.size == 0) {
       Some(module)
     } else {
-      return createModulefromHOA(module, ltlSpecs(0))
+      
+      return Some(module)
     }
-    return None
   }
 
   /**
