@@ -379,13 +379,15 @@ class LTLAutomataGeneratorPass extends RewritePass {
       * 1: Define the state variables
       */
     // variable representing the current state in the automata that we are at
-    val stateId = Identifier(spec.id + "_current_state")
+    val currentState = Identifier(spec.id + "_current_state")
+    val currentStateVarDecl = StateVarsDecl(List(currentState), IntegerType())
+    
     
     /**
      * 2: Module Init Block 
      */
-    // initialize the module -- make all AP's havocs and set stateId var to initialState value
-    val initStateVar = initialState.map(s => AssignStmt(List(LhsId(stateId)), List(IntLit(s))))
+    // initialize the module -- make all AP's havocs and set currentState var to initialState value
+    val initStateVar = initialState.map(s => AssignStmt(List(LhsId(currentState)), List(IntLit(s))))
     // put the two statements together in a block stmt and define as the init!
 
     val initDecl : Option[InitDecl] =
@@ -422,12 +424,12 @@ class LTLAutomataGeneratorPass extends RewritePass {
     // if a state's corresponding bit is 1, there exists a traverable transition from the current state to that state.
     val transitionBits = Identifier("validTransitions")
     val transitionBitsDecl = numStates.map(n => BlockVarsDecl(List(transitionBits), BitVectorType(n)))
-    val nextState = OperatorApplication(GetNextValueOp(), List(stateId))
+    val nextState = OperatorApplication(GetNextValueOp(), List(currentState))
     val updateTransitionBits: Option[List[Statement]] = transitionsRaw.map(tRaw => tRaw.zipWithIndex.map{ case(stateTrans, stateNum) => 
       // now we are doing per state checks
       
       // current_state == [some state #]
-      val stateComparison = OperatorApplication(EqualityOp(), List(stateId, IntLit(stateNum)))
+      val stateComparison = OperatorApplication(EqualityOp(), List(currentState, IntLit(stateNum)))
       val perStateTransition: List[IfElseStmt] = stateTrans.map{ case(cond, dests) => 
         // now it's per edge
         // list of statements that turn on all destinations of the edge
@@ -437,8 +439,6 @@ class LTLAutomataGeneratorPass extends RewritePass {
         ))
         IfElseStmt(cond, BlockStmt(Nil, enableTransitions), SkipStmt())
       }
-      // update next stateID and check it is in a valid next state
-      // assume 0 <= nextState < numStates
       BlockStmt(Nil, perStateTransition)
       
     })
@@ -457,7 +457,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
       )
     , None)
     // statement to update the next state havoc
-    val updateState = List[Statement](HavocStmt(HavocableNextId(stateId)))
+    val updateState = List[Statement](HavocStmt(HavocableNextId(currentState)))
 
     val nextDecl: Option[NextDecl] =
     for {
@@ -476,7 +476,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
       initDecl   <- initDecl                // Option[InitDecl]
       inputVarDecls <- inputVarDecls
       nextDecl <- nextDecl
-    } yield inputVarDecls ++ List[Decl](initDecl, nextDecl)  // both are Decl, list type is Decl
+    } yield inputVarDecls ++ List[Decl](currentStateVarDecl, initDecl, nextDecl)  // all are Decl, list type is Decl
 
     val spotModule: Option[Module] = moduleDecls.map(mDecls => Module(
       id = Identifier("LTL_Formula_" + spec.id),
