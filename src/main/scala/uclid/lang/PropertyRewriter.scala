@@ -413,6 +413,10 @@ class LTLPropertyRewriterPass extends RewritePass {
   }
 
   override def rewriteModule(module: Module, ctx: Scope): Option[Module] = {
+
+    System.err.println("WARNING: PropertyRewriter's rewriteModule has been suppressed, as its functionality is being replaced with the LTLAutomataGenerator pass.")
+    Some(module)
+    // Since we are currently changing the LTL verification system to use the automata theoretic approach instead of the monitor based approach
     val moduleSpecs = module.decls.collect{ case spec : SpecDecl => spec }
     val ltlSpecs = moduleSpecs.filter(s => s.params.exists(d => d == LTLExprDecorator))
     if (ltlSpecs.size == 0) {
