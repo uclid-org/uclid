@@ -487,6 +487,9 @@ class LTLPropertyRewriterPass extends RewritePass {
 
   def rewriteSpecs(module : Module, ctx : Scope, ltlSpecs : List[SpecDecl], otherSpecs : List[SpecDecl]) : Module = {
 
+    System.err.println("WARNING: PropertyRewriter rewriteSpecs skipped due to conflict with LTLAutomataGenerator.")
+    return module
+
     val monitors = ltlSpecs.map {
       (s) => {
         val nnf = convertToNNF(not(s.expr))
