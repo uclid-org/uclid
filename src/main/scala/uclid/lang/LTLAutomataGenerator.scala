@@ -422,15 +422,80 @@ class LTLAutomataGeneratorPass extends RewritePass {
       * 1: Define the state and input variables
       */
     
-    // variable representing the current state in the automata that we are at
-    // For each variable we found in our atomic expressions, find its corresponding type by searching for it
-    // in the vars field of our main module. Feed that type, along with the var name, into a new Input Vars Decl. 
-    val inputVarDecls: Option[List[InputVarsDecl]] = hoaData.moduleVarIdentifiers.map(_.map(id => InputVarsDecl(List(id), 
-      module.vars.find(v => v._1 == id) match {
-        case Some(t) => t._2
-        case None => sys.error("Error during Spot to UCLID module translation: Variable " + id + " found in LTL spec but not in module")
+    // Tool for getting the types of a var in a module given its identifier. 
+    // used in order to get all of the imported elements needed in the automata module
+    object VariableIdentifier {
+      // these are the possible types that need to be handled
+      sealed trait SymbolKind
+      case object Input        extends SymbolKind
+      case object Output       extends SymbolKind
+      case object StateVar     extends SymbolKind
+      case object SharedVar    extends SymbolKind
+      case object ConstantLit  extends SymbolKind
+      case object Constant     extends SymbolKind
+      case object Function     extends SymbolKind
+      case object SynthFunc    extends SymbolKind
+      case object Instance     extends SymbolKind
+      case object CustomType   extends SymbolKind   // would use "Type" here but it's reserved.
+      case object Unknown      extends SymbolKind   // bound variable, etc.
+
+      // returns a SymbolKind indicating the Type of node in module "m" has the id "id"
+      def classify(id : Identifier, m : Module) : SymbolKind = {
+        val mt = m.moduleType
+
+        if      (mt.inputMap      contains id) Input
+        else if (mt.outputMap     contains id) Output
+        else if (mt.sharedVarMap  contains id) SharedVar
+        else if (mt.varMap        contains id) StateVar
+        else if (mt.constLitMap   contains id) ConstantLit
+        else if (mt.constantMap   contains id) Constant
+        else if (mt.funcMap       contains id) Function
+        else if (mt.synthFuncMap  contains id) SynthFunc
+        else if (mt.instanceMap   contains id) Instance
+        else if (m.typeDeclarationMap contains id) CustomType // TypeDecl is used already and Type is reserved word...
+        else                                        Unknown
       }
-    ))).map(_.toList)
+
+      def toImportDecl(id: Identifier, origin: Module): Option[Decl] = {
+        val mt = origin.moduleType
+        classify(id, origin) match {
+          // all "var" types need to be fed as Inputs
+          case Input | Output | StateVar | SharedVar =>
+            mt.typeOf(id) match {
+              case Some(t) => Some(InputVarsDecl(List(id), t))
+              case None => {
+                System.err.println("Error: Variable " + id.toString() + " has no type.")
+                None
+              }
+            }
+          // we can just declare constants outright
+          case ConstantLit => // constant literals (ex: 'const k = 5')
+            Some(ConstantLitDecl(id, mt.constLitMap(id)))
+          case Constant => // named constant -- don't really know how this differs from ConstantLit
+            Some(ConstantsDecl(List(id), mt.constantMap(id)))
+          // functions will need to be imported
+          case Function => 
+            Some(ModuleFunctionsImportDecl(origin.id))
+          case SynthFunc =>
+            Some(ModuleSynthFunctionsImportDecl(origin.id))
+          // we can just copy type declarations
+          case CustomType =>
+            Some(TypeDecl(id, origin.typeDeclarationMap(id)))
+          // TODO: If there is any type missing, add it here.
+          case Instance | Unknown => None
+        }
+      }
+    }
+
+    // list of input var, function import, constant and type def declarations
+    // should handle everything that we need from the TS module in order to run everything smoothly
+    val compatVarDecls: Option[List[Decl]] = hoaData.moduleVarIdentifiers.map( ids => 
+      ids.map(id => VariableIdentifier.toImportDecl(id, module)).toList
+    ).flatMap{ list => 
+      if(list.forall(_.isDefined)) Some(list.flatten)
+      else None  
+    }
+
     val currentState = Identifier(spec.id + "_current_state")
     val currentStateVarDecl = StateVarsDecl(List(currentState), IntegerType())
     
@@ -511,7 +576,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
     val moduleDecls : Option[List[Decl]] =
     for {
       initDecl   <- initDecl                // Option[InitDecl]
-      inputVarDecls <- inputVarDecls
+      inputVarDecls <- compatVarDecls
       nextDecl <- nextDecl
     } yield inputVarDecls ++ List[Decl](currentStateVarDecl, initDecl, nextDecl)  // all are Decl, list type is Decl
 
