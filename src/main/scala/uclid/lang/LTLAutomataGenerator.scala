@@ -291,8 +291,9 @@ class LTLAutomataGeneratorPass extends RewritePass {
     val numStates: Option[Int] = getDataFromField("States").map(_.toInt)
 
     // the initial state for the automata
-    // TODO: This needs to be converted into a set of initial states
-    val initialState: Option[Int] = getDataFromField("Start").map(iSt => iSt.toInt)
+    val initialStates: Option[Set[Int]] = getDataFromField("Start").map( statesStr => 
+      statesStr.split("&").map(_.toInt).toSet 
+    )
     
     // Array of AP's that the automata uses
     // TODO: Make sure you can actually split the strings this way -- this seems off
@@ -419,7 +420,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
     val hoaData = new HOAData(module, spotTGBA)
 
     /**
-      * 1: Define the state and input variables
+      * 1: Define the state and input variables, function imports, constant decls, etc.
       */
     
     // Tool for getting the types of a var in a module given its identifier. 
@@ -502,18 +503,29 @@ class LTLAutomataGeneratorPass extends RewritePass {
     
     /**
      * 2: Module Init Block 
+     *   TLDR: nondeterministically select the init state from the set of possible init states
      */
-    // initialize the module -- make all AP's havocs and set currentState var to initialState value
-    val initStateVar = hoaData.initialState.map(s => AssignStmt(List(LhsId(currentState)), List(IntLit(s))))
-    // put the two statements together in a block stmt and define as the init!
+    
+    // init state setting
+    val initStateHavoc = HavocStmt(HavocableId(currentState))
+    // assume initial currentState == [initStates(0)] or == initStates(1) or ...
+    // this is literally a giant conjunction of equality checks. We could use a bitvector like in the next block
+    // but that's going to be messier (probably)
+    val initStateAssume: Option[AssumeStmt] = hoaData.initialStates.map(states => 
+      AssumeStmt(OperatorApplication(ConjunctionOp(), states.map(s => 
+        OperatorApplication(EqualityOp(), List(currentState, IntLit(s)))
+      ).toList), None)
+    )
 
     val initDecl : Option[InitDecl] =
-    for {         
-      iState   <- initStateVar                
-    } yield    InitDecl(BlockStmt(Nil, List(iState)))// both are Decl, list type is Decl
+    for {            
+      initStateAssume  <- initStateAssume          
+    } yield    InitDecl(BlockStmt(Nil, List(initStateHavoc, initStateAssume)))// both are Decl, list type is Decl
 
     /**
       * 3: Module Next Block (this one is a bit confusing)
+      *   TLDR: evaluate all of the conditions for edges. Keep track of the destinations we can go to using a bitvector
+      *   and then nondeterministically select the next state from set of possible destinations
       */
     
 
