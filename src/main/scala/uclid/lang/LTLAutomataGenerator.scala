@@ -194,87 +194,67 @@ object SpotInterface {
 
 class LTLAutomataGeneratorPass extends RewritePass {
   
+  /** 
+   * Outputs a rewritten version of origin such that every variable declaration in it that shares an Identifier with
+   * an Input var in the automata module is rewritten as either an output or a sharedvar (former if statevar, latter if input)
+   * 
+   * Designed to prepare a main module for being linked to an automata module. 
+  */
+  def connectModules(origin: Module, automata: Module): Module = {
+    println("Ofek Debug: " + origin.decls.length)
+    /**
+      * Steps:
+      * 1: Identify all variables in the automata module that need to be copied in.
+      *   (look for all 'input' vars, module function imports, module synth function imports)
+      *   (maps of these can be found in origin.moduleType)
+      * 2: Switch all 'vars' that we need from main module into an output-okay form.
+      *   (if a needed var is a normal var, make it an output var)
+      *   (if a needed var is an input var, make it a shared var)
+      *   (if a needed var is already an output var, leave it as-is)
+      * 3: Something, something, functions. Somehow we need to be able to do this, but I don't know how.
+      */
+
+      // 1: Get set of needed identifiers in automata module
+      val wantedIdentifiers: List[Identifier] = automata.inputs.map(_._1)
+
+      // 2: We need to create a new Module to assign to the old one that will have the necessary vars set as outputs
+      //    We can access the decls -- for each decl that has an identifier that we want, change it to Output or Shared.
+      //    If the decl is not one we need, we'll leave it as-is.
+      //    We will only need to modify wanted vars in Input or State var decls -- Output and Shared are already outputting
+      val newDecls: List[Decl] = origin.decls.flatMap {
+        case StateVarsDecl(ids, typ) => 
+          val (convert, keep) = ids.partition(wantedIdentifiers contains)
+          val keepDecls = if(keep.nonEmpty) Some(StateVarsDecl(keep, typ)) else None
+          val convertedDecls = if(convert.nonEmpty) Some(OutputVarsDecl(convert, typ)) else None
+          List(keepDecls, convertedDecls).flatten // return combined list
+        case InputVarsDecl(ids, typ) => 
+          val (convert, keep) = ids.partition(wantedIdentifiers contains)
+          val keepDecls = if(keep.nonEmpty) Some(SharedVarsDecl(keep, typ)) else None
+          val convertedDecls = if(convert.nonEmpty) Some(InputVarsDecl(convert, typ)) else None
+          List(keepDecls, convertedDecls).flatten // return combined list
+        case otherDecl => List(otherDecl)
+      }
+
+      // Now return the original module but with the new decls...
+      val toReturn = Module(origin.id, newDecls, origin.cmds, origin.notes)
+      println("Ofek Debug -- post connection module: " + toReturn.toString())
+      return toReturn
+  }
+
   override def rewriteModule(module: Module, ctx: Scope): Option[Module] = {
     val moduleSpecs = module.decls.collect{ case spec : SpecDecl => spec }
     val ltlSpecs = moduleSpecs.filter(s => ExprDecorator.isLTLProperty(s.params))
-    val toReturn = createModulefromHOA(module, ltlSpecs(0))
+    // create one automata module for each LTL property we want to follow.
     if (ltlSpecs.size == 0) {
+      println("Ofek Debug: No LTL properties found in module " + module.id.toString() + ". Skipping automata generation...")
       Some(module)
     } else {
+      val automataModules = ltlSpecs.map(s => constructAutomataModule(module, s))
+      automataModules(0).map(aM => connectModules(module, aM))
       return Some(module)
     }
   }
 
-  /** 
-   * A small scale parser designed to turn a Spot conditional to a BlockStmt we can use in Next Block
-   * label-expr ::= BOOLEAN | INT | ANAME | "!" label-expr
-           | "(" label-expr ")"
-            | label-expr "&" label-expr
-            | label-expr "|" label-expr
-    * atomics is the list of AP vars used by the module
-  */
-  class SpotCondMiniParser(atomics: Array[Expr]) extends RegexParsers {
-    override val whiteSpace: Regex = """[ ]+""".r
-    val unsigInt: Regex = """[0-9]+""".r
-
-    private def boolLit: Parser[Expr] = ("t"|"f") ^^ {b => BoolLit(b=="t")}
-
-    // translate numeric values to corresponding atomics
-    private def intAtom : Parser[Expr] = unsigInt ^^ { num => 
-      val idx = num.toInt
-      if(idx > -1 && idx < atomics.length) atomics(idx)
-      else sys.error(s"AP number $num not declared in AP: Line")
-    }
-
-    // recall precedence is ! > () > & > | 
-    // handle !, ()
-    private def atom: Parser[Expr] = 
-      "!" ~> atom ^^ {e=> Operator.not(e)} |
-      "(" ~> expr <~ ")" | intAtom | boolLit
-
-    // & operator
-    private def conj: Parser[Expr] = 
-      rep1sep(atom, "&") ^^ {_.reduceLeft(Operator.and)}
-    // | operator
-    private def expr: Parser[Expr] =
-      rep1sep(conj, "|") ^^ {_.reduceLeft(Operator.or)}
-
-    def parse(condition: String) : Expr = {
-      parseAll(expr, condition) match {
-        case this.Success(res, _) => res
-        case this.NoSuccess(msg, next) =>
-          sys.error(s"parse error at ${next.pos}: $msg")
-      }
-    }
-  }
-
-  /** Utility that converts a string containing exactly one UCLID-5
-  * expression into the corresponding AST node (`Expr`).
-  *
-  * Throws `Utils.SyntaxError` if the text is not a legal expression.
-  * WARNING/TODO: This is an AI-written function. It still needs to be checked.
-  */
-  object ExprParser {
-    def apply(text: String,
-              fileName: String = "<input>"): Expr = {
-
-      /* 1. Tokenise the input with the lexical analyser that already
-      *    belongs to UclidParser.  Note the required `new` in front of
-      *    `lexical.Scanner`.                                           */
-      val scanner = new UclidParser.lexical.Scanner(text)
-
-      /* 2. Packrat combinators need a `PackratReader`.                  */
-      val tokens  = new UclidParser.PackratReader(scanner)
-
-      /* 3. Parse the complete token stream with the `Expr` non-terminal
-      *    (`phrase` insists that the whole input is consumed).         */
-      UclidParser.phrase(UclidParser.Expr)(tokens) match {
-        case UclidParser.Success(ast, _) => ast               // <- the Expr
-        case UclidParser.NoSuccess(msg, next) =>
-          throw new Utils.SyntaxError(msg, Some(next.pos), Some(fileName))
-      }
-    }
-  }
 
   /**
    * Class containing the raw state, conditional, and transition data used to make the automata.
@@ -402,22 +382,166 @@ class LTLAutomataGeneratorPass extends RewritePass {
       go(e)
     }
 
-    
+    /** 
+     * A small scale parser designed to turn a Spot conditional to a BlockStmt we can use in Next Block
+     * label-expr ::= BOOLEAN | INT | ANAME | "!" label-expr
+            | "(" label-expr ")"
+            | label-expr "&" label-expr
+            | label-expr "|" label-expr
+     * atomics is the list of AP vars used by the module
+     */
+    class SpotCondMiniParser(atomics: Array[Expr]) extends RegexParsers {
+      override val whiteSpace: Regex = """[ ]+""".r
+      val unsigInt: Regex = """[0-9]+""".r
+
+      private def boolLit: Parser[Expr] = ("t"|"f") ^^ {b => BoolLit(b=="t")}
+
+      // translate numeric values to corresponding atomics
+      private def intAtom : Parser[Expr] = unsigInt ^^ { num => 
+        val idx = num.toInt
+        if(idx > -1 && idx < atomics.length) atomics(idx)
+        else sys.error(s"AP number $num not declared in AP: Line")
+      }
+
+      // recall precedence is ! > () > & > | 
+      // handle !, ()
+      private def atom: Parser[Expr] = 
+        "!" ~> atom ^^ {e=> Operator.not(e)} |
+        "(" ~> expr <~ ")" | intAtom | boolLit
+
+      // & operator
+      private def conj: Parser[Expr] = 
+        rep1sep(atom, "&") ^^ {_.reduceLeft(Operator.and)}
+      // | operator
+      private def expr: Parser[Expr] =
+        rep1sep(conj, "|") ^^ {_.reduceLeft(Operator.or)}
+
+      def parse(condition: String) : Expr = {
+        parseAll(expr, condition) match {
+          case this.Success(res, _) => res
+          case this.NoSuccess(msg, next) =>
+            sys.error(s"parse error at ${next.pos}: $msg")
+        }
+      }
+    }
+
+    /** Utility that converts a string containing exactly one UCLID-5
+    * expression into the corresponding AST node (`Expr`).
+    *
+    * Throws `Utils.SyntaxError` if the text is not a legal expression.
+    * WARNING/TODO: This is an AI-written function. It still needs to be checked.
+    */
+    object ExprParser {
+      def apply(text: String,
+                fileName: String = "<input>"): Expr = {
+
+        /* 1. Tokenise the input with the lexical analyser that already
+        *    belongs to UclidParser.  Note the required `new` in front of
+        *    `lexical.Scanner`.                                           */
+        val scanner = new UclidParser.lexical.Scanner(text)
+
+        /* 2. Packrat combinators need a `PackratReader`.                  */
+        val tokens  = new UclidParser.PackratReader(scanner)
+
+        /* 3. Parse the complete token stream with the `Expr` non-terminal
+        *    (`phrase` insists that the whole input is consumed).         */
+        UclidParser.phrase(UclidParser.Expr)(tokens) match {
+          case UclidParser.Success(ast, _) => ast               // <- the Expr
+          case UclidParser.NoSuccess(msg, next) =>
+            throw new Utils.SyntaxError(msg, Some(next.pos), Some(fileName))
+        }
+      }
+    }
   }
 
-  def createModulefromHOA(module: Module, spec: SpecDecl): Option[Module] = {
+  /** 
+   * Class with methods that, given an Identifier, return the corresponding type of that Identifier in the module 
+   * 'origin', if it exists. Also contains method to write a declaration that takes the Identifier as an 
+   * input var of the right type
+  */
+  class VariableIdentifier(origin: Module) {
+    // these are the possible types that need to be handled
+    sealed trait SymbolKind
+    case object Input        extends SymbolKind
+    case object Output       extends SymbolKind
+    case object StateVar     extends SymbolKind
+    case object SharedVar    extends SymbolKind
+    case object ConstantLit  extends SymbolKind
+    case object Constant     extends SymbolKind
+    case object Function     extends SymbolKind
+    case object SynthFunc    extends SymbolKind
+    case object Instance     extends SymbolKind
+    case object CustomType   extends SymbolKind   // would use "Type" here but it's reserved.
+    case object Unknown      extends SymbolKind   // bound variable, etc.
+
+    // returns a SymbolKind indicating the Type of node in module "m" has the id "id"
+    def classify(id : Identifier) : SymbolKind = {
+      val mt = origin.moduleType
+
+      if      (mt.inputMap      contains id) Input
+      else if (mt.outputMap     contains id) Output
+      else if (mt.sharedVarMap  contains id) SharedVar
+      else if (mt.varMap        contains id) StateVar
+      else if (mt.constLitMap   contains id) ConstantLit
+      else if (mt.constantMap   contains id) Constant
+      else if (mt.funcMap       contains id) Function
+      else if (mt.synthFuncMap  contains id) SynthFunc
+      else if (mt.instanceMap   contains id) Instance
+      else if (origin.typeDeclarationMap contains id) CustomType // TypeDecl is used already and Type is reserved word...
+      else                                        Unknown
+    }
+
+    def toImportDecl(id: Identifier): Option[Decl] = {
+      val mt = origin.moduleType
+      classify(id) match {
+        // all "var" types need to be fed as Inputs
+        case Input | Output | StateVar | SharedVar =>
+          mt.typeOf(id) match {
+            case Some(t) => Some(InputVarsDecl(List(id), t))
+            case None => {
+              System.err.println("Error: Variable " + id.toString() + " has no type.")
+              None
+            }
+          }
+        // we can just declare constants outright
+        case ConstantLit => // constant literals (ex: 'const k = 5')
+          Some(ConstantLitDecl(id, mt.constLitMap(id)))
+        case Constant => // named constant -- don't really know how this differs from ConstantLit
+          Some(ConstantsDecl(List(id), mt.constantMap(id)))
+        // functions will need to be imported
+        case Function => 
+          Some(ModuleFunctionsImportDecl(origin.id))
+        case SynthFunc =>
+          Some(ModuleSynthFunctionsImportDecl(origin.id))
+        // we can just copy type declarations
+        case CustomType =>
+          Some(TypeDecl(id, origin.typeDeclarationMap(id)))
+        // TODO: If there is any type missing, add it here.
+        case Instance | Unknown => None
+      }
+    }
+  }
+
+  /** 
+   * Constructs a UCLID representation of a generalized nondeterministic Buchi Automata based on an LTL spec
+   * originModule - the UCLID module which contains the formula we want to check
+   * spec - an LTL Spec describing the property that originModule should follow.
+  */
+  def constructAutomataModule(originModule: Module, spec: SpecDecl): Option[Module] = {
 
     val spotTGBA: String = SpotInterface.runLTL2TGBA(spec.expr)
 
     // Top level process is as follows:
     // 0: parse HOA format -- isolate substrings with info on states, transitions, acceptance, etc
-    // 1: Create the state variable declarations (will be list of BooleanTypes, since Spot only deals with bools)
+    // 1: Define variables
+      // 1a: Define automata-specific vars (current_state)
+      // 1b: identify vars/funcs the module needs to compute the AP's and define their imports/inputs
     // 2: Define the init block using InitDecl (just define the inital states for all bools)
     // 3: Create the next block using NextDecl (use the transition portion of Spot Output)
     // 4: assemble the module
 
     // Step 0 -- we do this using the HOAData class.
-    val hoaData = new HOAData(module, spotTGBA)
+    val hoaData = new HOAData(originModule, spotTGBA)
 
     /**
       * 1: Define the state and input variables, function imports, constant decls, etc.
@@ -425,73 +549,12 @@ class LTLAutomataGeneratorPass extends RewritePass {
     
     // Tool for getting the types of a var in a module given its identifier. 
     // used in order to get all of the imported elements needed in the automata module
-    object VariableIdentifier {
-      // these are the possible types that need to be handled
-      sealed trait SymbolKind
-      case object Input        extends SymbolKind
-      case object Output       extends SymbolKind
-      case object StateVar     extends SymbolKind
-      case object SharedVar    extends SymbolKind
-      case object ConstantLit  extends SymbolKind
-      case object Constant     extends SymbolKind
-      case object Function     extends SymbolKind
-      case object SynthFunc    extends SymbolKind
-      case object Instance     extends SymbolKind
-      case object CustomType   extends SymbolKind   // would use "Type" here but it's reserved.
-      case object Unknown      extends SymbolKind   // bound variable, etc.
-
-      // returns a SymbolKind indicating the Type of node in module "m" has the id "id"
-      def classify(id : Identifier, m : Module) : SymbolKind = {
-        val mt = m.moduleType
-
-        if      (mt.inputMap      contains id) Input
-        else if (mt.outputMap     contains id) Output
-        else if (mt.sharedVarMap  contains id) SharedVar
-        else if (mt.varMap        contains id) StateVar
-        else if (mt.constLitMap   contains id) ConstantLit
-        else if (mt.constantMap   contains id) Constant
-        else if (mt.funcMap       contains id) Function
-        else if (mt.synthFuncMap  contains id) SynthFunc
-        else if (mt.instanceMap   contains id) Instance
-        else if (m.typeDeclarationMap contains id) CustomType // TypeDecl is used already and Type is reserved word...
-        else                                        Unknown
-      }
-
-      def toImportDecl(id: Identifier, origin: Module): Option[Decl] = {
-        val mt = origin.moduleType
-        classify(id, origin) match {
-          // all "var" types need to be fed as Inputs
-          case Input | Output | StateVar | SharedVar =>
-            mt.typeOf(id) match {
-              case Some(t) => Some(InputVarsDecl(List(id), t))
-              case None => {
-                System.err.println("Error: Variable " + id.toString() + " has no type.")
-                None
-              }
-            }
-          // we can just declare constants outright
-          case ConstantLit => // constant literals (ex: 'const k = 5')
-            Some(ConstantLitDecl(id, mt.constLitMap(id)))
-          case Constant => // named constant -- don't really know how this differs from ConstantLit
-            Some(ConstantsDecl(List(id), mt.constantMap(id)))
-          // functions will need to be imported
-          case Function => 
-            Some(ModuleFunctionsImportDecl(origin.id))
-          case SynthFunc =>
-            Some(ModuleSynthFunctionsImportDecl(origin.id))
-          // we can just copy type declarations
-          case CustomType =>
-            Some(TypeDecl(id, origin.typeDeclarationMap(id)))
-          // TODO: If there is any type missing, add it here.
-          case Instance | Unknown => None
-        }
-      }
-    }
-
+    
     // list of input var, function import, constant and type def declarations
     // should handle everything that we need from the TS module in order to run everything smoothly
+    val mapper = new VariableIdentifier(originModule)
     val compatVarDecls: Option[List[Decl]] = hoaData.moduleVarIdentifiers.map( ids => 
-      ids.map(id => VariableIdentifier.toImportDecl(id, module)).toList
+      ids.map(id => mapper.toImportDecl(id)).toList
     ).flatMap{ list => 
       if(list.forall(_.isDefined)) Some(list.flatten)
       else None  
@@ -499,7 +562,6 @@ class LTLAutomataGeneratorPass extends RewritePass {
 
     val currentState = Identifier(spec.id + "_current_state")
     val currentStateVarDecl = StateVarsDecl(List(currentState), IntegerType())
-    
     
     /**
      * 2: Module Init Block 
@@ -528,14 +590,13 @@ class LTLAutomataGeneratorPass extends RewritePass {
       *   and then nondeterministically select the next state from set of possible destinations
       */
     
-
     // we keep the set of valid transitions from the current state as a local bit vector, where each bit 
     // in the vector represents a state.
     // if a state's corresponding bit is 1, there exists a traverable transition from the current state to that state.
     val transitionBits = Identifier("validTransitions")
     val transitionBitsDecl = hoaData.numStates.map(n => BlockVarsDecl(List(transitionBits), BitVectorType(n)))
+    // top level loop iterates through each state. Lower level loop iterates through each state's transitions (and conds)
     val updateTransitionBits: Option[List[Statement]] = hoaData.transitionsRaw.map(tRaw => tRaw.zipWithIndex.map{ case(stateTrans, stateNum) => 
-      // now we are doing per state checks -- we need one set of checks for each state
       
       // Only run state n's checks if we're on state n.
       val stateComparison = OperatorApplication(EqualityOp(), List(currentState, IntLit(stateNum)))
@@ -579,7 +640,6 @@ class LTLAutomataGeneratorPass extends RewritePass {
       transitionBitsDecl <- transitionBitsDecl    
       updateTransitionBits <- updateTransitionBits         
     } yield    NextDecl(BlockStmt(List(transitionBitsDecl), updateTransitionBits ++ updateState ++ isInRangeAssumes ++ List(isValidTransitionAssume)))
-    
     
     /**
       * 4: Module Assembly
