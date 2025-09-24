@@ -366,6 +366,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
         else Array[Int]()
         setsWithState.foreach(aSet => sets(aSet) += stateNum)
       })
+      if(sets.size > 1) System.err.println("ERROR: Spot output contains more than 1 acceptance set!\n" + spotTGBA)
       sets
     })
 
@@ -516,7 +517,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
    * 'origin', if it exists. Also contains method to write a declaration that takes the Identifier as an 
    * input var of the right type
   */
-  class VariableIdentifier(origin: Module) {
+  class VariableTypeIdentifier(origin: Module) {
     // these are the possible types that need to be handled
     sealed trait SymbolKind
     case object Input        extends SymbolKind
@@ -595,6 +596,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
       // 1b: identify vars/funcs the module needs to compute the AP's and define their imports/inputs
     // 2: Define the init block using InitDecl (just define the inital states for all bools)
     // 3: Create the next block using NextDecl (use the transition portion of Spot Output)
+    // 3.5: Create property for the automaton to follow (never hit an accept state)
     // 4: assemble the module
 
     // Step 0 -- we do this using the HOAData class.
@@ -609,7 +611,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
     
     // list of input var, function import, constant and type def declarations
     // should handle everything that we need from the TS module in order to run everything smoothly
-    val mapper = new VariableIdentifier(originModule)
+    val mapper = new VariableTypeIdentifier(originModule)
     val compatVarDecls: Option[List[Decl]] = hoaData.moduleVarIdentifiers.map( ids => 
       ids.map(id => mapper.toImportDecl(id)).toList
     ).flatMap{ list => 
@@ -698,7 +700,23 @@ class LTLAutomataGeneratorPass extends RewritePass {
       updateTransitionBits <- updateTransitionBits         
     } yield    NextDecl(BlockStmt(List(transitionBitsDecl), updateTransitionBits ++ updateState ++ isInRangeAssumes ++ List(isValidTransitionAssume)))
     
+
     /**
+      * 3.5: Spec Properties -- we want the automata to never have current state be a state in the acceptance set.
+      */
+    // Giant OR conjunction? Giant OR conjunction.
+    // Essentially: currentState == acceptSet[0] || currentState == acceptSet[1] || ... and so on.
+    // could probably do this using a bitvector, but then we would need to preconstruct and the UCLID tutorial is not specific on 
+    // how the endian-ness of inputs to bitvectors works. This should work fine... probably.
+    val isInAcceptStateExpression: Option[Expr] = hoaData.acceptSets.map( sets => 
+      OperatorApplication(ConjunctionOp(), sets(0).map(state => 
+        OperatorApplication(EqualityOp(), List(currentState, IntLit(state)))
+      ).toList)
+    )
+    // ~F(isInAcceptStateExpression)
+    val neverHitAcceptStateExpression: Option[Expr] = isInAcceptStateExpression.map(e => OperatorApplication(NegationOp(), List(OperatorApplication(FinallyTemporalOp(), List(e)))))
+    val neverHitAcceptStateSpecDecl: Option[SpecDecl] = neverHitAcceptStateExpression.map(e => SpecDecl(Identifier(originModule.id.toString() + "__" + spec.toString() + "__automata_property"), e, List()))
+    /**sdfsd
       * 4: Module Assembly
       */
     // Note that the module decls list is an ordered list -- ordering of these decls matters.
@@ -707,7 +725,8 @@ class LTLAutomataGeneratorPass extends RewritePass {
       initDecl   <- initDecl                // Option[InitDecl]
       inputVarDecls <- compatVarDecls
       nextDecl <- nextDecl
-    } yield inputVarDecls ++ List[Decl](currentStateVarDecl, initDecl, nextDecl)  // all are Decl, list type is Decl
+      neverHitAcceptStateSpecDecl <- neverHitAcceptStateSpecDecl
+    } yield inputVarDecls ++ List[Decl](currentStateVarDecl, initDecl, nextDecl, neverHitAcceptStateSpecDecl)  // all are Decl, list type is Decl
 
     val spotModule: Option[Module] = moduleDecls.map(mDecls => Module(
       id = Identifier("LTL_Formula_" + spec.id),
