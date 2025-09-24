@@ -712,7 +712,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
     val spotModule: Option[Module] = moduleDecls.map(mDecls => Module(
       id = Identifier("LTL_Formula_" + spec.id),
       decls = mDecls,
-      cmds = Nil,
+      cmds = originModule.cmds,
       notes = Annotation.default
     ))
     // println("Ofek Debug: Completed Module: " + spotModule.getOrElse(Nil).toString())
