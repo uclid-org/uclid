@@ -258,7 +258,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
    * Designed to prepare a main module for being linked to an automata module. 
   */
   def connectModules(origin: Module, automata: Module): Module = {
-    println("Ofek Debug: " + origin.decls.length)
+    // println("Ofek Debug: " + origin.decls.length)
     /**
       * Steps:
       * 1: Identify all variables in the automata module that need to be copied in.
@@ -715,7 +715,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
     )
     // ~F(isInAcceptStateExpression)
     val neverHitAcceptStateExpression: Option[Expr] = isInAcceptStateExpression.map(e => OperatorApplication(NegationOp(), List(OperatorApplication(FinallyTemporalOp(), List(e)))))
-    val neverHitAcceptStateSpecDecl: Option[SpecDecl] = neverHitAcceptStateExpression.map(e => SpecDecl(Identifier(originModule.id.toString() + "__" + spec.toString() + "__automata_property"), e, List()))
+    val neverHitAcceptStateSpecDecl: Option[SpecDecl] = neverHitAcceptStateExpression.map(e => SpecDecl(Identifier(originModule.id.toString() + "__" + spec.id.toString() + "__automata_property"), e, List()))
     /**sdfsd
       * 4: Module Assembly
       */
@@ -734,7 +734,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
       cmds = originModule.cmds,
       notes = Annotation.default
     ))
-    // println("Ofek Debug: Completed Module: " + spotModule.getOrElse(Nil).toString())
+    println("Ofek Debug: Completed Module: " + spotModule.getOrElse(Nil).toString())
     return spotModule
     
   }
