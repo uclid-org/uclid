@@ -194,6 +194,63 @@ object SpotInterface {
 
 class LTLAutomataGeneratorPass extends RewritePass {
   
+  def createSynchronousProduct(main: Module, automataModules: List[Module]): List[Module] = {
+    // plan?
+    // 1: Prep main module by repeatedly calling our prep function
+
+    // 2: collect each input var among child modules and convert it into a state var decl for parent mod
+    // 3: create instances of all automata modules with their inputs mapped to parent vars
+    // 4: create instance of main module with out with outputs mapped to parent vars
+
+    // 5: Set up the next block:
+        //  I don't think we actually need a custom next block for this -- once the vars are properly assigned 
+        //  their next blocks should automatically handle this kind of stuff...
+    
+    val preppedMain: Module = {
+      var toUse = main
+      for(a <- automataModules) {
+        toUse = connectModules(toUse, a)
+      }
+      toUse
+    }
+
+    // Note: For now we use the suffix '_instance' to denote an instance of one of the automata modules
+    // and '_pipe' to denote a shared var in the parent module meant to pipe values between all the modules.
+
+    // input collection -- flatMap into (Identifier, Type) pairs, then convert into var decls
+    val sharedVars = automataModules.flatMap(_.inputs)
+    val sharedVarDecls: List[StateVarsDecl] = sharedVars.map(inp => StateVarsDecl(List(Identifier(inp._1.toString() + "_pipe")), inp._2))
+    // create automata instances
+    val instanceDecls: List[InstanceDecl] = automataModules.map(aM => InstanceDecl(
+      instanceId = Identifier(aM.id.toString() + "_instance"), 
+      moduleId = aM.id,
+      arguments = aM.inputs.map(_._1).map(id => (id, Some(id))),
+      instType = None,
+      modType = None
+    ))
+    // create main module instance
+    val mainDecl = InstanceDecl(
+      instanceId = Identifier(main.id.toString() + "_instance"),
+      moduleId = main.id,
+      arguments = sharedVars.map(_._1).map(id => (id, Some(Identifier(id.toString() + "_pipe")))),
+      instType = None,
+      modType = None
+    )
+
+    val moduleDecls : List[Decl] = sharedVarDecls ++ instanceDecls ++ List(mainDecl)
+
+    val completedModule: Module = Module(
+      id = Identifier("the-one-true-module"),
+      decls = moduleDecls,
+      cmds = Nil,
+      notes = Annotation.default
+    )
+    // println("Ofek Debug: Completed Module: " + completedModule.toString())
+    
+    return List(completedModule, main) ++ automataModules
+
+  }
+
   /** 
    * Outputs a rewritten version of origin such that every variable declaration in it that shares an Identifier with
    * an Input var in the automata module is rewritten as either an output or a sharedvar (former if statevar, latter if input)
@@ -237,7 +294,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
 
       // Now return the original module but with the new decls...
       val toReturn = Module(origin.id, newDecls, origin.cmds, origin.notes)
-      println("Ofek Debug -- post connection module: " + toReturn.toString())
+      // println("Ofek Debug -- post connection module: " + toReturn.toString())
       return toReturn
   }
 
@@ -250,7 +307,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
       Some(module)
     } else {
       val automataModules = ltlSpecs.map(s => constructAutomataModule(module, s))
-      automataModules(0).map(aM => connectModules(module, aM))
+      automataModules.map(_.map(aM => connectModules(module, aM)))
       return Some(module)
     }
   }
@@ -658,7 +715,7 @@ class LTLAutomataGeneratorPass extends RewritePass {
       cmds = Nil,
       notes = Annotation.default
     ))
-    println("Ofek Debug: Completed Module: " + spotModule.getOrElse(Nil).toString())
+    // println("Ofek Debug: Completed Module: " + spotModule.getOrElse(Nil).toString())
     return spotModule
     
   }
