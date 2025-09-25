@@ -1,6 +1,6 @@
 #! /bin/bash
 
-wget https://github.com/polgreen/delphi/releases/download/0.1/delphi_mac
+wget https://github.com/polgreen/delphi/releases/download/0.2/delphi_mac
 
 mkdir -p delphi/bin/
 mv delphi_mac delphi/bin/delphi
