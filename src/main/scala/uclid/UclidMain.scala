@@ -180,7 +180,20 @@ object UclidMain {
   def main(config : Config) {
     try {
       val mainModuleName = Identifier(config.mainModuleName)
-      val modules = compile(config, mainModuleName)
+      val compiledModules = compile(config, mainModuleName)
+      val automataModules: List[Module] = LTLAutomataGenerator.generateAllAutomata(compiledModules, mainModuleName)
+      val modules = compiledModules ++ automataModules
+
+      // TODO: Look through passes in Instantiate Modules, examine every pass after flatten, see if anything there can cause issues.
+      
+      // OK, this is where we need to do our thing. mainModuleName-named module exists in modules.
+      /**
+        * We need to:
+        * 1: use LTL Automata Generator to build ltl spec automatas OF the negations of each formula
+        * 2: use the module connector system to modify main to have the necessaey vars shared
+        * 3: Create a new "true main" module and set it as the new main
+        */
+        // 1: making new modules
       val mainModule = instantiate(config, modules, mainModuleName)
       mainModule match {
         case Some(m) =>
@@ -450,6 +463,8 @@ object UclidMain {
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ProcedureModifiesRewriter())
+    // TODO: Put LTLConnectorPass here
+    passManager.addPass(new LTLAutomataConnector(mainModuleName))
     // flattens modules into main
     passManager.addPass(new ModuleFlattener(mainModuleName))
     // gets rid of modules apart from main
@@ -457,9 +472,8 @@ object UclidMain {
     // Expands (grounds) finite_forall and finite_exists quantifiers
     passManager.addPass(new FiniteQuantsExpander())
     if (!config.smoke) {
-      passManager.addPass(new LTLOperatorRewriter())
-      passManager.addPass(new LTLPropertyRewriter())
-      passManager.addPass(new LTLAutomataGenerator())
+      // passManager.addPass(new LTLOperatorRewriter())
+      // passManager.addPass(new LTLPropertyRewriter())
     }
     passManager.addPass(new Optimizer())
     // optimisation, has previously been called
