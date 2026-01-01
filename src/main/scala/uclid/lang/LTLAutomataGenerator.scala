@@ -723,7 +723,7 @@ object LTLAutomataGenerator {
         ))
         IfElseStmt(cond, BlockStmt(Nil, enableTransitions), SkipStmt())
       }
-      BlockStmt(Nil, perStateTransition)
+      IfElseStmt(stateComparison, BlockStmt(Nil, perStateTransition), SkipStmt())
       
     })
 
@@ -741,11 +741,11 @@ object LTLAutomataGenerator {
       OperatorApplication( EqualityOp(), 
         List( 
           BitVectorLit(1,1), 
-          OperatorApplication(VarExtractOp(VarBitVectorSlice(nextState, nextState, Some(1))), List(transitionBits))
+          OperatorApplication(VarExtractOp(VarBitVectorSlice(IntLit(1), IntLit(1), Some(1))), List(transitionBits))
         )
       )
     , None)
-    // statement to update the next state havoc
+    // statement to update the next state havoc -- TODO: Rename to havocState
     val updateState = List[Statement](HavocStmt(HavocableId(currentState)))
 
     val nextDecl: Option[NextDecl] =
@@ -770,10 +770,9 @@ object LTLAutomataGenerator {
     )
     // TODO: Similarly to earlier usage of Disjunction Ops, we need to put an extra 'false' in here in case there is only one acceptState.
     // Similarly to above, this hack must be cleansed with fire at the earliest convenience. 
-    // TODO: Same with below Disjunction usage. AAAARGH
 
     // ~(isInAcceptStateExpression)
-    val neverHitAcceptStateExpression: Option[Expr] = isInAcceptStateExpression.map(e => OperatorApplication(NegationOp(), List(OperatorApplication(DisjunctionOp(), List(e) ++ List(BoolLit(false))))))
+    val neverHitAcceptStateExpression: Option[Expr] = isInAcceptStateExpression.map(e => OperatorApplication(NegationOp(), List(e)))
     val neverHitAcceptStateSpecDecl: Option[SpecDecl] = neverHitAcceptStateExpression.map(e => SpecDecl(Identifier(originModule.id.toString() + "__" + spec.id.toString() + "__automata_property"), e, List()))
     /**sdfsd
       * 4: Module Assembly

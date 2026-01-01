@@ -175,13 +175,22 @@ object UclidMain {
     config
   }
 
+  // New Function: generates a list of AutomataModules from the main module, then runs the compile pass on them to rewrite any weird... stuff.
+  def getCompiledAutomataModules(compiledModules: List[Module], config: Config, mainModuleName: lang.Identifier, test: Boolean = false): List[Module] = {
+    val passManager = createCompilePassManager(config, test, mainModuleName)
+    val automataModules: List[Module] = LTLAutomataGenerator.generateAllAutomata(compiledModules, mainModuleName).map(
+      m => passManager.run(List(m))(0)
+    )
+    return automataModules
+  }
+
   /** This version of 'main' does all the real work.
    */
   def main(config : Config) {
     try {
       val mainModuleName = Identifier(config.mainModuleName)
       val compiledModules = compile(config, mainModuleName)
-      val automataModules: List[Module] = LTLAutomataGenerator.generateAllAutomata(compiledModules, mainModuleName)
+      val automataModules: List[Module] = getCompiledAutomataModules(compiledModules, config, mainModuleName)
       val modules = compiledModules ++ automataModules
 
       // TODO: Look through passes in Instantiate Modules, examine every pass after flatten, see if anything there can cause issues.
