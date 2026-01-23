@@ -30,3 +30,4 @@ tasks
 lib/libz3java.so
 /z3-*
 *.json
+/z3
