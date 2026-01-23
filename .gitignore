@@ -32,3 +32,4 @@ lib/libz3java.so
 *.json
 /z3
 lib/
+lib/com.microsoft.z3.jar
