@@ -31,4 +31,4 @@ lib/libz3java.so
 /z3-*
 *.json
 /z3
-/lib
+lib/
