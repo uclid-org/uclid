@@ -15,6 +15,12 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
 libraryDependencies += "com.github.scopt" %% "scopt" % "3.7.1"
 libraryDependencies += "org.json4s" %% "json4s-jackson" % "4.0.3"
 
+fork in run := true
+javaOptions in run += s"-Djava.library.path=${baseDirectory.value}/z3/bin"
+
+fork in Test := true
+javaOptions in Test += s"-Djava.library.path=${baseDirectory.value}/z3/bin"
+
 // do not require tests before building a fat JAR
 test in assembly := {}
 

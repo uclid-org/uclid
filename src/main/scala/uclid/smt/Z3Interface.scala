@@ -664,6 +664,29 @@ class Z3Interface() extends Context {
     throw new Utils.UnimplementedException("Can't use an SMT solver for synthesis!")
   }
 
+  /** Store mapping from Z3 BoolExpr to smt.Expr for unsat core retrieval. */
+  var assumptionMap: scala.collection.immutable.Map[z3.BoolExpr, Expr] = scala.collection.immutable.Map.empty
+
+  override def checkAssumptions(assumptions: List[Expr]): SolverResult = {
+    val z3Assumptions = assumptions.map(e => exprToZ3(e).asInstanceOf[z3.BoolExpr])
+    assumptionMap = z3Assumptions.zip(assumptions).toMap
+    val z3Result = solver.check(z3Assumptions: _*)
+    z3Result match {
+      case z3.Status.SATISFIABLE =>
+        val z3Model = solver.getModel()
+        SolverResult(Some(true), Some(new Z3Model(this, z3Model)))
+      case z3.Status.UNSATISFIABLE =>
+        SolverResult(Some(false), None)
+      case _ =>
+        SolverResult(None, None)
+    }
+  }
+
+  override def getUnsatCore(): List[Expr] = {
+    val core = solver.getUnsatCore()
+    core.toList.map(e => assumptionMap(e))
+  }
+
   override def finish() {
     ctx.close()
   }

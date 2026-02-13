@@ -230,6 +230,11 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkHasOneIdentifierArg(cmd, filename)
         checkHasMacroBody(cmd, filename)
         checkHasValidMacroIdentifier(cmd, filename, context)
+      case "ic3" =>
+        checkPropertiesValid(Identifier("properties"), cmd, context, filename)
+        checkParamsValid(cmd, filename, List(Identifier("properties")))
+        checkNoArgs(cmd, filename)
+        checkNoArgObj(cmd, filename)
       case "concrete" =>
         checkNoArgObj(cmd, filename)
       case "print_concrete_trace" =>

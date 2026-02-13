@@ -244,6 +244,12 @@ abstract trait Context {
   def preassert(e: Expr)
   def check(produceModel: Boolean = true) : SolverResult
   def checkSynth() : SolverResult
+  def checkAssumptions(assumptions: List[Expr]): SolverResult = {
+    throw new Utils.UnimplementedException("checkAssumptions not implemented.")
+  }
+  def getUnsatCore(): List[Expr] = {
+    throw new Utils.UnimplementedException("getUnsatCore not implemented.")
+  }
   def finish()
 
   def addOption(option: String, value: Context.SolverOption)

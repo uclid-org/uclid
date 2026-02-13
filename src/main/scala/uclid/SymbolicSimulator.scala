@@ -358,9 +358,24 @@ class SymbolicSimulator (module : Module) {
             UclidMain.printStats(f"symbolic simulation for verify took $delta%.1f ms")
             check(solver, config, cmd);
             needToPrintResults=true
+          case "ic3" =>
+            val label : String = cmd.resultVar match {
+              case Some(l) => l.toString
+              case None    => "ic3"
+            }
+            val properties = extractProperties(Identifier("properties"), cmd.params)
+            val propertyFilter = createNoLTLFilter(properties)
+            solver match {
+              case z3Solver: smt.Z3Interface =>
+                val engine = new IC3Engine(module, z3Solver)
+                proofResults = engine.run(propertyFilter, label)
+              case _ =>
+                throw new Utils.RuntimeError("IC3 engine requires the Z3 solver backend.")
+            }
+            needToPrintResults = true
           case "check" => {
             // deprecated command: do nothing because we checked after every verification command
-          } 
+          }
           case "print" =>
             UclidMain.printStatus(cmd.args(0)._1.asInstanceOf[StringLit].value)
           case "print_results" =>
