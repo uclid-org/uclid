@@ -734,29 +734,32 @@ object LTLAutomataGenerator {
   def constructTransitionBuilderProcedure(
       hoaData: HOAData,
       currentStateIdentifier: Identifier,
-      transitionBitsIdentifier: Identifier,
       procName: Identifier
   ): Option[ProcedureDecl] = {
     // 1. Identifiers
     val argName = Identifier("current_state")
-    val retName = Identifier("r")
+    val returnBitsId = Identifier("transition_bits_return")
 
     // 2. Procedure Signature
     // ProcedureSig(inParams: List[(Identifier,Type)], outParams: List[(Identifier,Type)])
     val params: Option[List[(Identifier, Type)]] =
       hoaData.moduleVarIdentifiers.map(_.map(id => (id, BooleanType())).toList)
-    val sig = params.map(p =>
-      ProcedureSig(
-        inParams = p,
-        outParams = List()
-      )
+    // Construct the procedure header!
+    // Params is the set of atomics that Spot Identified (they are vars passed into the module)
+    // the output param is the transition bitvector that we're going to build
+    val sig: Option[ProcedureSig] = for {
+      params <- params
+      numStates <- hoaData.numStates
+    } yield ProcedureSig(
+      inParams = params,
+      outParams = List(
+        (returnBitsId, BitVectorType(numStates))
+      ) // List((returnBitsId, BitVectorType(numStates)))
     )
 
     // 3. Modifies Set
     // Must be a Set of ModifiableEntity (usually ModifiableId)
-    val modifiesSet = Set[ModifiableEntity](
-      ModifiableId(transitionBitsIdentifier)
-    )
+    val modifiesSet = Set[ModifiableEntity]()
 
     // 4. Preconditions (Requires) & Postconditions (Ensures) -- Empty for now
     val reqs = List(
@@ -781,7 +784,7 @@ object LTLAutomataGenerator {
                 AssignStmt(
                   List(
                     LhsSliceSelect(
-                      transitionBitsIdentifier,
+                      returnBitsId,
                       ConstBitVectorSlice(ds, ds)
                     )
                   ),
@@ -934,8 +937,7 @@ object LTLAutomataGenerator {
       constructTransitionBuilderProcedure(
         hoaData,
         currentState,
-        transitionBits,
-        updateTransitionBitsId
+        transitionBits
       )
     // call the update Transition Bits function
     val updateTransitionBitsCall: Option[ProcedureCallStmt] =
@@ -943,7 +945,7 @@ object LTLAutomataGenerator {
         ProcedureCallStmt(
           id =
             updateTransitionBitsId, // this is the ID defined in the function.
-          callLhss = List.empty[Lhs],
+          callLhss = List(LhsId(transitionBits)),
           args = varIDs.toList,
           instanceId = None,
           moduleId = None
