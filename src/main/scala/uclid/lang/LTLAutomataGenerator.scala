@@ -34,7 +34,7 @@
  * Author: Ofek Shani
  *
  * Compute the GNBA's correspoinding to each LTL formula in a module and combine them in lockstep with the TS
- * 
+ *
  * This approach is based on the automata-theoretic approach to LTL verification. Process is as follows:
  * For each LTL formula in the inputted Transition System (TS), construct a Generalized Nondeterministic Buchi Automata
  * (GNBA) representing its negation (aka a GNBA for the formula's forbidden cases).
@@ -372,7 +372,8 @@ object SpotInterface {
   def runLTL2TGBA(formula: Expr): String = {
 
     val spotFormula = rewriteFormulaForSpot(formula.toString())
-    val spotCommand: Seq[String] = Seq("ltl2tgba", "-B", "-f", spotFormula)
+    val spotCommand: Seq[String] =
+      Seq("/home/oshani/usr/bin/ltl2tgba", "-B", "-f", spotFormula)
     val processBuilder: ProcessBuilder = spotCommand
     println(
       "Ofek Debug: converted " + formula.toString() + " to " + spotFormula
@@ -496,7 +497,7 @@ object LTLAutomataGenerator {
 
     // A set of all variable Identifers in the TS module that are used by the AP's
     // to obtain: extract all of the variavles in the atomics, and get their types from the module, create all the var decls for them
-    val moduleVarIdentifiers = atomicExpressions
+    val moduleVarIdentifiers: Option[Set[Identifier]] = atomicExpressions
       .map(_.map(getIdentifiersInExpression(_)))
       .map(_.reduce(_ union _))
 
@@ -716,6 +717,116 @@ object LTLAutomataGenerator {
     }
   }
 
+  /** @brief
+    *   Constructs the Procedure block that updates the value of the transition
+    *   bits. Modifies transitionBits such that bit "i" is a 1 if and only if
+    *   there exists a valid (and take-able) transition to... ... the i-th state
+    *   from the current state.
+    * @param hoaData:
+    *   the HOAData instance being used to genereate the automata module.
+    * @param currentStateIdentifier:
+    *   The identifier assigned to the currentState variable in the automata.
+    * @param transitionBitsIdentifier:
+    *   The identifier of the transitionBits data structure we need to fill in.
+    * @param procName
+    *   The identifier to assign the procedure name ID to.
+    */
+  def constructTransitionBuilderProcedure(
+      hoaData: HOAData,
+      currentStateIdentifier: Identifier,
+      transitionBitsIdentifier: Identifier,
+      procName: Identifier
+  ): Option[ProcedureDecl] = {
+    // 1. Identifiers
+    val argName = Identifier("current_state")
+    val retName = Identifier("r")
+
+    // 2. Procedure Signature
+    // ProcedureSig(inParams: List[(Identifier,Type)], outParams: List[(Identifier,Type)])
+    val params: Option[List[(Identifier, Type)]] =
+      hoaData.moduleVarIdentifiers.map(_.map(id => (id, BooleanType())).toList)
+    val sig = params.map(p =>
+      ProcedureSig(
+        inParams = p,
+        outParams = List()
+      )
+    )
+
+    // 3. Modifies Set
+    // Must be a Set of ModifiableEntity (usually ModifiableId)
+    val modifiesSet = Set[ModifiableEntity](
+      ModifiableId(transitionBitsIdentifier)
+    )
+
+    // 4. Preconditions (Requires) & Postconditions (Ensures) -- Empty for now
+    val reqs = List(
+    )
+    val ens = List(
+    )
+
+    val updateTransitionBits: Option[List[Statement]] =
+      hoaData.transitionsRaw.map(tRaw =>
+        tRaw.zipWithIndex.map { case (stateTrans, stateNum) =>
+
+          // Only run state n's checks if we're on state n.
+          val stateComparison = OperatorApplication(
+            EqualityOp(),
+            List(currentStateIdentifier, IntLit(stateNum))
+          )
+          val perStateTransition: List[IfElseStmt] =
+            stateTrans.map { case (cond, dests) =>
+              // now it's per edge
+              // list of statements that turn on all destinations of the edge
+              val enableTransitions = dests.map(ds =>
+                AssignStmt(
+                  List(
+                    LhsSliceSelect(
+                      transitionBitsIdentifier,
+                      ConstBitVectorSlice(ds, ds)
+                    )
+                  ),
+                  List(BitVectorLit(1, 1))
+                )
+              )
+              IfElseStmt(cond, BlockStmt(Nil, enableTransitions), SkipStmt())
+            }
+          IfElseStmt(
+            stateComparison,
+            BlockStmt(Nil, perStateTransition),
+            SkipStmt()
+          )
+
+        }
+      )
+
+    val body: Option[BlockStmt] = updateTransitionBits.map(f =>
+      BlockStmt(
+        vars = List.empty,
+        stmts = f
+      )
+    )
+
+    // 6. Annotations (e.g., [inline] or [noinline])
+    // ProcedureAnnotations(ids : Set[Identifier])
+    val anns = ProcedureAnnotations(Set.empty)
+
+    val procedureToReturn: Option[ProcedureDecl] =
+      for {
+        sig <- sig
+        body <- body
+      } yield ProcedureDecl(
+        id = procName,
+        sig = sig,
+        body = body,
+        requires = reqs,
+        ensures = ens,
+        modifies = modifiesSet,
+        annotations = anns
+      )
+
+    return procedureToReturn
+  }
+
   /** Constructs a UCLID representation of a generalized nondeterministic Buchi
     * Automata based on an LTL spec originModule - the UCLID module which
     * contains the formula we want to check spec - an LTL Spec describing the
@@ -812,37 +923,31 @@ object LTLAutomataGenerator {
     val transitionBitsDecl = hoaData.numStates.map(n =>
       BlockVarsDecl(List(transitionBits), BitVectorType(n))
     )
-    // top level loop iterates through each state. Lower level loop iterates through each state's transitions (and conds)
-    val updateTransitionBits: Option[List[Statement]] =
-      hoaData.transitionsRaw.map(tRaw =>
-        tRaw.zipWithIndex.map { case (stateTrans, stateNum) =>
 
-          // Only run state n's checks if we're on state n.
-          val stateComparison = OperatorApplication(
-            EqualityOp(),
-            List(currentState, IntLit(stateNum))
-          )
-          val perStateTransition: List[IfElseStmt] =
-            stateTrans.map { case (cond, dests) =>
-              // now it's per edge
-              // list of statements that turn on all destinations of the edge
-              val enableTransitions = dests.map(ds =>
-                AssignStmt(
-                  List(
-                    LhsSliceSelect(transitionBits, ConstBitVectorSlice(ds, ds))
-                  ),
-                  List(BitVectorLit(1, 1))
-                )
-              )
-              IfElseStmt(cond, BlockStmt(Nil, enableTransitions), SkipStmt())
-            }
-          IfElseStmt(
-            stateComparison,
-            BlockStmt(Nil, perStateTransition),
-            SkipStmt()
-          )
-
-        }
+    // define the update Transition Bits Function
+    val updateTransitionBitsId: Identifier = Identifier(
+      "get_next_states"
+    )
+    // Defines the procedure that updates the transition bits
+    // - This must be added outside of the next block
+    val updateTransitionBitsDefinition: Option[ProcedureDecl] =
+      constructTransitionBuilderProcedure(
+        hoaData,
+        currentState,
+        transitionBits,
+        updateTransitionBitsId
+      )
+    // call the update Transition Bits function
+    val updateTransitionBitsCall: Option[ProcedureCallStmt] =
+      hoaData.moduleVarIdentifiers.map(varIDs =>
+        ProcedureCallStmt(
+          id =
+            updateTransitionBitsId, // this is the ID defined in the function.
+          callLhss = List.empty[Lhs],
+          args = varIDs.toList,
+          instanceId = None,
+          moduleId = None
+        )
       )
 
     // Now assign the next state. We use a havoc that is limited by 2 assumes:
@@ -884,11 +989,13 @@ object LTLAutomataGenerator {
       for {
         isInRangeAssumes <- isInRangeAssumes
         transitionBitsDecl <- transitionBitsDecl
-        updateTransitionBits <- updateTransitionBits
+        updateTransitionBitsCall <- updateTransitionBitsCall
       } yield NextDecl(
         BlockStmt(
           List(transitionBitsDecl),
-          updateTransitionBits ++ updateState ++ isInRangeAssumes ++ List(
+          List(
+            updateTransitionBitsCall
+          ) ++ updateState ++ isInRangeAssumes ++ List(
             isValidTransitionAssume
           )
         )
@@ -940,9 +1047,11 @@ object LTLAutomataGenerator {
         inputVarDecls <- compatVarDecls
         nextDecl <- nextDecl
         neverHitAcceptStateSpecDecl <- neverHitAcceptStateSpecDecl
+        updateTransitionBitsDefinition <- updateTransitionBitsDefinition
       } yield inputVarDecls ++ List[Decl](
         currentStateVarDecl,
         initDecl,
+        updateTransitionBitsDefinition,
         nextDecl,
         neverHitAcceptStateSpecDecl
       ) // all are Decl, list type is Decl
