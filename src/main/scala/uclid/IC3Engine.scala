@@ -55,6 +55,16 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
     }
   }.toList
 
+  // Reverse map: internal symbol name -> user-level variable name (for pretty-printing).
+  val symbolToName: Map[String, String] = initSymbolTable.flatMap { case (id, expr) =>
+    scope.get(id) match {
+      case Some(Scope.StateVar(_, _)) | Some(Scope.OutputVar(_, _)) |
+           Some(Scope.SharedVar(_, _)) | Some(Scope.InputVar(_, _)) =>
+        Some(expr.asInstanceOf[smt.Symbol].id -> id.name)
+      case _ => None
+    }
+  }.toMap
+
   type Clause = smt.Expr
   val frames: ArrayBuffer[ArrayBuffer[Clause]] = ArrayBuffer()
 
@@ -412,6 +422,18 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
     None
   }
 
+  /** Rename internal symbol names to user-level variable names in an expression. */
+  def prettifyExpr(expr: smt.Expr): smt.Expr = {
+    smt.Context.rewriteExpr(expr, (e: smt.Expr) => e match {
+      case s: smt.Symbol =>
+        symbolToName.get(s.id) match {
+          case Some(name) => smt.Symbol(name, s.symbolTyp)
+          case None => s
+        }
+      case other => other
+    }, MutableMap.empty)
+  }
+
   /** Pretty-print the inductive invariant from the fixpoint frame. */
   def printInductiveInvariant(fixpointFrame: Int): Unit = {
     val clauses = frames(fixpointFrame).distinct
@@ -420,7 +442,7 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
       UclidMain.printResult("  true")
     } else {
       clauses.foreach { clause =>
-        UclidMain.printResult("  " + clause.toString)
+        UclidMain.printResult("  " + prettifyExpr(clause).toString)
       }
     }
   }
