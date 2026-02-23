@@ -15,6 +15,10 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
 libraryDependencies += "com.github.scopt" %% "scopt" % "3.7.1"
 libraryDependencies += "org.json4s" %% "json4s-jackson" % "4.0.3"
 
+// Fork the JVM for run/test so that javaOptions take effect. The java.library.path
+// setting is needed for Z3 JNI native library loading (libz3java). While the setup
+// scripts (setup-z3-linux.sh, etc.) set LD_LIBRARY_PATH for shell use, java.library.path
+// must be set at JVM startup to locate native libraries when running via sbt.
 fork in run := true
 javaOptions in run += s"-Djava.library.path=${baseDirectory.value}/z3/bin"
 

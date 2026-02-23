@@ -667,6 +667,8 @@ class Z3Interface() extends Context {
   /** Store mapping from Z3 BoolExpr to smt.Expr for unsat core retrieval. */
   var assumptionMap: scala.collection.immutable.Map[z3.BoolExpr, Expr] = scala.collection.immutable.Map.empty
 
+  /** SMT-LIB standard check-sat-assuming via Z3's solver.check(assumptions...).
+   *  Used by IC3 for incremental consecution and generalization queries. */
   override def checkAssumptions(assumptions: List[Expr]): SolverResult = {
     val z3Assumptions = assumptions.map(e => exprToZ3(e).asInstanceOf[z3.BoolExpr])
     assumptionMap = z3Assumptions.zip(assumptions).toMap
@@ -682,6 +684,7 @@ class Z3Interface() extends Context {
     }
   }
 
+  /** SMT-LIB standard get-unsat-core: maps Z3 core back to smt.Expr via assumptionMap. */
   override def getUnsatCore(): List[Expr] = {
     val core = solver.getUnsatCore()
     core.toList.map(e => assumptionMap(e))

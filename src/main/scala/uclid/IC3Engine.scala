@@ -296,9 +296,12 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
         return Some(k)
       }
 
-      if (propagate(k)) {
-        log.debug("IC3: fixpoint reached, property proved")
-        return None
+      propagate(k) match {
+        case Some(fixpointFrame) =>
+          log.debug("IC3: fixpoint reached, property proved")
+          printInductiveInvariant(fixpointFrame)
+          return None
+        case None => // continue
       }
 
       k += 1
@@ -379,8 +382,9 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
     true // unreachable
   }
 
-  /** Propagate clauses forward and check for fixpoint. */
-  def propagate(k: Int): Boolean = {
+  /** Propagate clauses forward and check for fixpoint.
+   *  Returns Some(i) if fixpoint found (frames(i) ⊆ frames(i+1)), None otherwise. */
+  def propagate(k: Int): Option[Int] = {
     for (i <- 1 until k) {
       val clausesToPush = ArrayBuffer[Clause]()
       frames(i).foreach { clause =>
@@ -402,43 +406,65 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
         }
       }
       if (frames(i).forall(c => frames(i + 1).contains(c))) {
-        return true
+        return Some(i)
       }
     }
-    false
+    None
+  }
+
+  /** Pretty-print the inductive invariant from the fixpoint frame. */
+  def printInductiveInvariant(fixpointFrame: Int): Unit = {
+    val clauses = frames(fixpointFrame).distinct
+    UclidMain.printResult("IC3: Inductive invariant (frame %d):".format(fixpointFrame))
+    if (clauses.isEmpty) {
+      UclidMain.printResult("  true")
+    } else {
+      clauses.foreach { clause =>
+        UclidMain.printResult("  " + clause.toString)
+      }
+    }
   }
 
   /** Run IC3 on all properties matching the filter. */
   def run(propertyFilter: (Identifier, List[ExprDecorator]) => Boolean, label: String = "ic3"): List[CheckResult] = {
-    val frameTbl = ArrayBuffer(initSymbolTable)
+    // IC3 requires real solver responses (not SMT file dumps). Disable SMT file
+    // generation on the shared solver during IC3 execution.
+    val savedFilePrefix = solver.filePrefix
+    solver.filePrefix = ""
 
-    module.properties.flatMap { prop =>
-      if (propertyFilter(prop.id, prop.params) && !ExprDecorator.isLTLProperty(prop.params)) {
-        val propExpr = symSim.evaluate(prop.expr, initSymbolTable, frameTbl, 0, scope)
-        val cexDepth = checkProperty(propExpr)
+    try {
+      val frameTbl = ArrayBuffer(initSymbolTable)
 
-        val (solverResult, assertFrameTable, assertIter) = cexDepth match {
-          case None =>
-            // Property proved.
-            (smt.SolverResult(Some(true), None), ArrayBuffer(frameTbl), 0)
-          case Some(depth) =>
-            // CEX found — build concrete trace via BMC unrolling.
-            val (stepSymTables, model) = buildCexTrace(depth, propExpr)
-            val cexFrameTbl: ArrayBuffer[SymbolicSimulator.SymbolTable] = stepSymTables
-            (smt.SolverResult(Some(false), Some(model)), ArrayBuffer(cexFrameTbl), depth)
+      module.properties.flatMap { prop =>
+        if (propertyFilter(prop.id, prop.params) && !ExprDecorator.isLTLProperty(prop.params)) {
+          val propExpr = symSim.evaluate(prop.expr, initSymbolTable, frameTbl, 0, scope)
+          val cexDepth = checkProperty(propExpr)
+
+          val (solverResult, assertFrameTable, assertIter) = cexDepth match {
+            case None =>
+              // Property proved.
+              (smt.SolverResult(Some(true), None), ArrayBuffer(frameTbl), 0)
+            case Some(depth) =>
+              // CEX found — build concrete trace via BMC unrolling.
+              val (stepSymTables, model) = buildCexTrace(depth, propExpr)
+              val cexFrameTbl: ArrayBuffer[SymbolicSimulator.SymbolTable] = stepSymTables
+              (smt.SolverResult(Some(false), Some(model)), ArrayBuffer(cexFrameTbl), depth)
+          }
+
+          val assertInfo = AssertInfo(
+            prop.name, label,
+            assertFrameTable, scope, assertIter,
+            smt.BooleanLit(true), propExpr,
+            prop.params, prop.expr.position
+          )
+
+          Some(CheckResult(assertInfo, solverResult))
+        } else {
+          None
         }
-
-        val assertInfo = AssertInfo(
-          prop.name, label,
-          assertFrameTable, scope, assertIter,
-          smt.BooleanLit(true), propExpr,
-          prop.params, prop.expr.position
-        )
-
-        Some(CheckResult(assertInfo, solverResult))
-      } else {
-        None
       }
+    } finally {
+      solver.filePrefix = savedFilePrefix
     }
   }
 }
