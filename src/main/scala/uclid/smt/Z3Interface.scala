@@ -197,6 +197,11 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
         if (value.isIntNum()) {
           val bigInt = value.asInstanceOf[z3.IntNum].getBigInteger()
           smt.IntLit(bigInt)
+        } else if (value.isInstanceOf[z3.BitVecNum]) {
+          val bvNum = value.asInstanceOf[z3.BitVecNum]
+          val bigInt = bvNum.getBigInteger()
+          val width = e.typ.asInstanceOf[BitVectorType].width
+          smt.BitVectorLit(bigInt, width)
         } else if (value.isBool()) {
           val boolValue = value.asInstanceOf[z3.BoolExpr].getBoolValue()
           if (boolValue == Z3_lbool.Z3_L_TRUE) {

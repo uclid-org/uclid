@@ -1,0 +1,25 @@
+/* Test IC3: property should fail (bitvector overflow).
+ * x starts at 1bv3, increments by 1bv3 each step.
+ * After 7 steps, x wraps from 7bv3 to 0bv3 due to 3-bit overflow.
+ * The invariant x >_u 0bv3 should be violated.
+ */
+module main {
+  var x : bv3;
+
+  init {
+    x = 1bv3;
+  }
+
+  next {
+    x' = x + 1bv3;
+  }
+
+  invariant x_pos : x >_u 0bv3;
+
+  control {
+    v = ic3;
+    check;
+    print_results;
+    v.print_cex;
+  }
+}
