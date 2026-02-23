@@ -716,6 +716,9 @@ class IC3VerifSpec extends AnyFlatSpec {
   "test-ic3-2.ucl" should "verify all assertions." in {
     VerifierSpec.expectedFails("./test/test-ic3-2.ucl", 0)
   }
+  "test-ic3-bv-fail.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-ic3-bv-fail.ucl", 1)
+  }
 }
 
 object PrintCexSpec {
