@@ -706,6 +706,17 @@ class HyperPropertySpec extends AnyFlatSpec {
     VerifierSpec.expectedFails("./test/test-hyperproperty-7.ucl", 0)
   }
 }
+class IC3VerifSpec extends AnyFlatSpec {
+  "test-ic3-0.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-ic3-0.ucl", 0)
+  }
+  "test-ic3-1.ucl" should "fail to verify 1 assertion." in {
+    VerifierSpec.expectedFails("./test/test-ic3-1.ucl", 1)
+  }
+  "test-ic3-2.ucl" should "verify all assertions." in {
+    VerifierSpec.expectedFails("./test/test-ic3-2.ucl", 0)
+  }
+}
 
 object PrintCexSpec {
   def checkPrintCex(filename: String, n : Int) {
