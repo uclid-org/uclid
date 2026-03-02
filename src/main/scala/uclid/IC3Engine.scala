@@ -114,7 +114,27 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
   }
 
   /**
-   * Try to generalize a primed integer equality (v' == c) to a sign-based inequality.
+   * Check if a candidate generalization preserves the UNSAT consecution check.
+   * Returns true if the candidate can replace the original literal.
+   */
+  private def checkGeneralizationCandidate(
+    candidate: smt.Expr,
+    otherAssumptions: List[smt.Expr],
+    frame: Int
+  ): Boolean = {
+    val newAssumptions = candidate :: otherAssumptions
+    solver.push()
+    if (frame == 0) solver.assert(initFormula) else assertFrame(frame)
+    solver.assert(negate(unprime(candidate)))
+    solver.assert(transFormula)
+    val result = solver.checkAssumptions(newAssumptions)
+    solver.pop()
+    result.isFalse
+  }
+
+  /**
+   * Try to generalize a primed equality (v' == c) to a sign-based inequality.
+   * Handles integers, reals, and bitvectors.
    * E.g., if c < 0, try v' < 0 instead of v' == c.
    * Returns the generalized literal if successful, otherwise the original.
    */
@@ -125,28 +145,32 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
     cube: smt.Expr
   ): smt.Expr = {
     primedLit match {
+      // Integer generalization: (sym == intConst) -> (sym < 0) or (sym > 0)
       case smt.OperatorApplication(smt.EqualityOp, List(sym: smt.Symbol, smt.IntLit(value))) =>
+        if (value == 0) return primedLit
         val zero = smt.IntLit(BigInt(0))
         val candidate = if (value < 0) {
           smt.OperatorApplication(smt.IntLTOp, List(sym, zero))
-        } else if (value > 0) {
+        } else {
           smt.OperatorApplication(smt.IntGTOp, List(sym, zero))
-        } else {
-          return primedLit // value == 0, keep as is
         }
-        // Check if replacing this literal still gives UNSAT
-        val newAssumptions = candidate :: otherAssumptions
-        solver.push()
-        if (frame == 0) {
-          solver.assert(initFormula)
+        if (checkGeneralizationCandidate(candidate, otherAssumptions, frame)) candidate else primedLit
+
+      // Real number generalization: (sym == realConst) -> (sym < 0.0) or (sym > 0.0)
+      case smt.OperatorApplication(smt.EqualityOp, List(sym: smt.Symbol, smt.RealLit(integral, fractional))) =>
+        val isZero = integral == 0 && fractional.forall(_ == '0')
+        if (isZero) return primedLit
+        val zero = smt.RealLit(BigInt(0), "0")
+        val candidate = if (integral < 0) {
+          smt.OperatorApplication(smt.RealLTOp, List(sym, zero))
         } else {
-          assertFrame(frame)
+          // integral > 0, or integral == 0 with non-zero fractional part (positive)
+          smt.OperatorApplication(smt.RealGTOp, List(sym, zero))
         }
-        solver.assert(negate(unprime(candidate)))
-        solver.assert(transFormula)
-        val result = solver.checkAssumptions(newAssumptions)
-        solver.pop()
-        if (result.isFalse) candidate else primedLit
+        if (checkGeneralizationCandidate(candidate, otherAssumptions, frame)) candidate else primedLit
+
+      // Bitvector: no sign-based generalization — finite domain works well with
+      // concrete equalities and unsat core minimization.
       case _ => primedLit
     }
   }
@@ -276,8 +300,20 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
     (stepSymTables, result.model.get)
   }
 
-  /** Main IC3 algorithm. Returns None if proved, Some(depth) if CEX found at given depth. */
-  def checkProperty(propExpr: smt.Expr): Option[Int] = {
+  /** Result type for the IC3 algorithm. */
+  sealed trait IC3Result
+  case object IC3Proved extends IC3Result
+  case class IC3Cex(depth: Int) extends IC3Result
+  case object IC3Unknown extends IC3Result
+
+  class IC3ObligationLimitExceeded extends RuntimeException("IC3: exceeded obligation limit")
+
+  /** Maximum number of frames before IC3 gives up and reports UNKNOWN. */
+  val MAX_FRAMES = 100
+  val MAX_OBLIGATIONS = 1000
+
+  /** Main IC3 algorithm. Returns IC3Proved, IC3Cex(depth), or IC3Unknown. */
+  def checkProperty(propExpr: smt.Expr): IC3Result = {
     log.debug("IC3: checking property")
 
     // Step 1: Check init ∧ ¬P
@@ -288,7 +324,7 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
     solver.pop()
     if (initCheck.isTrue) {
       log.debug("IC3: property violated in initial state")
-      return Some(0)
+      return IC3Cex(0)
     }
 
     frames.clear()
@@ -296,36 +332,48 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
     frames += ArrayBuffer() // F[1]
 
     var k = 1
-    val MAX_FRAMES = 500
 
-    while (k < MAX_FRAMES) {
-      log.debug(s"IC3: working on frame $k")
+    try {
+      while (k < MAX_FRAMES) {
+        log.debug(s"IC3: working on frame $k")
 
-      if (!strengthen(k, propExpr)) {
-        log.debug("IC3: counterexample found")
-        return Some(k)
+        if (!strengthen(k, propExpr)) {
+          log.debug("IC3: counterexample found")
+          return IC3Cex(k)
+        }
+
+        propagate(k) match {
+          case Some(fixpointFrame) =>
+            log.debug("IC3: fixpoint reached, property proved")
+            printInductiveInvariant(fixpointFrame)
+            return IC3Proved
+          case None => // continue
+        }
+
+        k += 1
+        frames += ArrayBuffer()
       }
 
-      propagate(k) match {
-        case Some(fixpointFrame) =>
-          log.debug("IC3: fixpoint reached, property proved")
-          printInductiveInvariant(fixpointFrame)
-          return None
-        case None => // continue
-      }
-
-      k += 1
-      frames += ArrayBuffer()
+      UclidMain.printResult("IC3: exceeded maximum frame depth (%d), result is UNKNOWN".format(MAX_FRAMES))
+      IC3Unknown
+    } catch {
+      case _: IC3ObligationLimitExceeded =>
+        UclidMain.printResult("IC3: exceeded obligation limit (%d), result is UNKNOWN".format(MAX_OBLIGATIONS))
+        IC3Unknown
     }
-
-    throw new Utils.RuntimeError("IC3: exceeded maximum number of frames")
   }
 
-  /** Strengthen frame k by blocking all bad cubes. Returns false if CEX found. */
+  /** Strengthen frame k by blocking all bad cubes. Returns false if CEX found.
+   *  Returns true if frame is strengthened. Throws if obligation limit exceeded. */
   def strengthen(k: Int, propExpr: smt.Expr): Boolean = {
     val obligations = ListBuffer[ProofObligation]()
+    var iterations = 0
 
     while (true) {
+      iterations += 1
+      if (iterations > MAX_OBLIGATIONS) {
+        throw new IC3ObligationLimitExceeded()
+      }
       if (obligations.isEmpty) {
         // Check for bad cubes: F[k] ∧ ¬P SAT?
         solver.push()
@@ -460,17 +508,20 @@ class IC3Engine(module: Module, solver: smt.Z3Interface) {
       module.properties.flatMap { prop =>
         if (propertyFilter(prop.id, prop.params) && !ExprDecorator.isLTLProperty(prop.params)) {
           val propExpr = symSim.evaluate(prop.expr, initSymbolTable, frameTbl, 0, scope)
-          val cexDepth = checkProperty(propExpr)
+          val ic3Result = checkProperty(propExpr)
 
-          val (solverResult, assertFrameTable, assertIter) = cexDepth match {
-            case None =>
+          val (solverResult, assertFrameTable, assertIter) = ic3Result match {
+            case IC3Proved =>
               // Property proved.
               (smt.SolverResult(Some(true), None), ArrayBuffer(frameTbl), 0)
-            case Some(depth) =>
+            case IC3Cex(depth) =>
               // CEX found — build concrete trace via BMC unrolling.
               val (stepSymTables, model) = buildCexTrace(depth, propExpr)
               val cexFrameTbl: ArrayBuffer[SymbolicSimulator.SymbolTable] = stepSymTables
               (smt.SolverResult(Some(false), Some(model)), ArrayBuffer(cexFrameTbl), depth)
+            case IC3Unknown =>
+              // Exceeded maximum frame depth — result is inconclusive.
+              (smt.SolverResult(None, None), ArrayBuffer(frameTbl), 0)
           }
 
           val assertInfo = AssertInfo(

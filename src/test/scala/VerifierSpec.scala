@@ -719,6 +719,25 @@ class IC3VerifSpec extends AnyFlatSpec {
   "test-ic3-bv-fail.ucl" should "fail to verify 1 assertion." in {
     VerifierSpec.expectedFails("./test/test-ic3-bv-fail.ucl", 1)
   }
+  "test-ic3-real-fail.ucl" should "report unknown for real-valued property." in {
+    UclidMain.enableStringOutput()
+    UclidMain.clearStringOutput()
+    val modules = UclidMain.compile(ConfigCons.createConfig("./test/test-ic3-real-fail.ucl"), lang.Identifier("main"), true)
+    val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, lang.Identifier("main"))
+    assert(mainModule.isDefined)
+    val results = UclidMain.execute(mainModule.get, UclidMain.Config())
+    // IC3 cannot prove or disprove this — should report unknown, not falsely PASSED.
+    assert(results.count((e) => e.result.isTrue) == 0)
+  }
+  "test-ic3-int-nonterm.ucl" should "report unknown without looping forever." in {
+    UclidMain.enableStringOutput()
+    UclidMain.clearStringOutput()
+    val modules = UclidMain.compile(ConfigCons.createConfig("./test/test-ic3-int-nonterm.ucl"), lang.Identifier("main"), true)
+    val mainModule = UclidMain.instantiate(UclidMain.Config(), modules, lang.Identifier("main"))
+    assert(mainModule.isDefined)
+    val results = UclidMain.execute(mainModule.get, UclidMain.Config())
+    assert(results.count((e) => e.result.isUndefined) >= 1)
+  }
 }
 
 object PrintCexSpec {

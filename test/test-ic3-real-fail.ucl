@@ -1,0 +1,27 @@
+/* Test IC3: real-valued property that should fail.
+ * x starts at 0.0, y at 5.0; x' = x + y, y' = y - 2.0.
+ * x goes: 0, 5, 8, 9, 8, 5, 0, -7 => fails at step 7.
+ */
+module main {
+  var x : real;
+  var y : real;
+
+  init {
+    x = 0.0;
+    y = 5.0;
+  }
+
+  next {
+    x' = x + y;
+    y' = y - 2.0;
+  }
+
+  invariant x_pos : x >= 0.0;
+
+  control {
+    v = ic3;
+    check;
+    print_results;
+    v.print_cex;
+  }
+}
