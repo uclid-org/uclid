@@ -1,0 +1,21 @@
+/* Test IC3: property should fail (x < 5 eventually violated). */
+module main {
+  var x : integer;
+
+  init {
+    x = 0;
+  }
+
+  next {
+    x' = x + 1;
+  }
+
+  invariant x_lt_5 : x < 5;
+
+  control {
+    v = ic3;
+    check;
+    print_results;
+    v.print_cex;
+  }
+}

@@ -197,6 +197,43 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
         if (value.isIntNum()) {
           val bigInt = value.asInstanceOf[z3.IntNum].getBigInteger()
           smt.IntLit(bigInt)
+        } else if (value.isInstanceOf[z3.RatNum]) {
+          // Z3 returns RatNum for real-valued expressions.
+          val ratNum = value.asInstanceOf[z3.RatNum]
+          val num = BigInt(ratNum.getNumerator().getBigInteger())
+          val den = BigInt(ratNum.getDenominator().getBigInteger())
+          // Z3 normalizes rationals so denominator is always positive.
+          val negative = num < 0
+          val absNum = num.abs
+          val integral = absNum / den
+          val remainder = absNum % den
+          if (remainder == BigInt(0)) {
+            smt.RealLit(if (negative) -integral else integral, "0")
+          } else if (negative && integral == BigInt(0)) {
+            // Value is between -1 and 0 (e.g., -0.5). RealLit cannot represent
+            // negative zero in BigInt, so use (0.0 - positive_value).
+            val precision = 34
+            val scale = BigInt(10).pow(precision)
+            val fracDigits = (remainder * scale) / den
+            val fracStr = fracDigits.toString().reverse.padTo(precision, '0').reverse.replaceAll("0+$", "")
+            val frac = if (fracStr.isEmpty) "0" else fracStr
+            val posLit = smt.RealLit(BigInt(0), frac)
+            smt.OperatorApplication(smt.RealSubOp, List(smt.RealLit(BigInt(0), "0"), posLit))
+          } else {
+            // Compute fractional decimal digits via scaled long division.
+            val precision = 34
+            val scale = BigInt(10).pow(precision)
+            val fracDigits = (remainder * scale) / den
+            // Left-pad with zeros to get correct decimal place values.
+            val fracStr = fracDigits.toString().reverse.padTo(precision, '0').reverse.replaceAll("0+$", "")
+            val frac = if (fracStr.isEmpty) "0" else fracStr
+            smt.RealLit(if (negative) -integral else integral, frac)
+          }
+        } else if (value.isInstanceOf[z3.BitVecNum]) {
+          val bvNum = value.asInstanceOf[z3.BitVecNum]
+          val bigInt = bvNum.getBigInteger()
+          val width = e.typ.asInstanceOf[BitVectorType].width
+          smt.BitVectorLit(bigInt, width)
         } else if (value.isBool()) {
           val boolValue = value.asInstanceOf[z3.BoolExpr].getBoolValue()
           if (boolValue == Z3_lbool.Z3_L_TRUE) {
@@ -206,7 +243,19 @@ class Z3Model(interface: Z3Interface, val model : z3.Model) extends Model {
           } else {
             throw new Utils.RuntimeError("Unable to get model value for: " + e.toString)
           }
+        } else if (e.typ.isInstanceOf[EnumType]) {
+          // Z3 enum constants are named after the enum member strings.
+          val enumTyp = e.typ.asInstanceOf[EnumType]
+          val valueStr = value.toString()
+          if (enumTyp.members.contains(valueStr)) {
+            smt.EnumLit(valueStr, enumTyp)
+          } else {
+            throw new Utils.RuntimeError(
+              "Unknown enum value '" + valueStr + "' for type " + enumTyp.toString + " in: " + e.toString)
+          }
         } else {
+          // Unsupported types (arrays, records, tuples, maps, uninterpreted, etc.)
+          // throw RuntimeError so callers like IC3Engine.extractConcreteCube can skip gracefully.
           throw new Utils.RuntimeError("Unable to get model value for: " + e.toString)
         }
     }
@@ -662,6 +711,32 @@ class Z3Interface() extends Context {
 
   override def checkSynth() : SolverResult = {
     throw new Utils.UnimplementedException("Can't use an SMT solver for synthesis!")
+  }
+
+  /** Store mapping from Z3 BoolExpr to smt.Expr for unsat core retrieval. */
+  var assumptionMap: scala.collection.immutable.Map[z3.BoolExpr, Expr] = scala.collection.immutable.Map.empty
+
+  /** SMT-LIB standard check-sat-assuming via Z3's solver.check(assumptions...).
+   *  Used by IC3 for incremental consecution and generalization queries. */
+  override def checkAssumptions(assumptions: List[Expr]): SolverResult = {
+    val z3Assumptions = assumptions.map(e => exprToZ3(e).asInstanceOf[z3.BoolExpr])
+    assumptionMap = z3Assumptions.zip(assumptions).toMap
+    val z3Result = solver.check(z3Assumptions: _*)
+    z3Result match {
+      case z3.Status.SATISFIABLE =>
+        val z3Model = solver.getModel()
+        SolverResult(Some(true), Some(new Z3Model(this, z3Model)))
+      case z3.Status.UNSATISFIABLE =>
+        SolverResult(Some(false), None)
+      case _ =>
+        SolverResult(None, None)
+    }
+  }
+
+  /** SMT-LIB standard get-unsat-core: maps Z3 core back to smt.Expr via assumptionMap. */
+  override def getUnsatCore(): List[Expr] = {
+    val core = solver.getUnsatCore()
+    core.toList.map(e => assumptionMap(e))
   }
 
   override def finish() {

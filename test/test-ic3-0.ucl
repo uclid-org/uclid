@@ -1,0 +1,20 @@
+/* Test IC3: property should hold (simple counter, x >= 0). */
+module main {
+  var x : integer;
+
+  init {
+    x = 0;
+  }
+
+  next {
+    x' = x + 1;
+  }
+
+  invariant x_non_neg : x >= 0;
+
+  control {
+    ic3;
+    check;
+    print_results;
+  }
+}

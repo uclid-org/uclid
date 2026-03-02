@@ -1,0 +1,23 @@
+/* Test IC3: property requires strengthening (y <= x, not 1-inductive). */
+module main {
+  var x : integer;
+  var y : integer;
+
+  init {
+    x = 1;
+    y = 1;
+  }
+
+  next {
+    y' = y + 1;
+    x' = x + y';
+  }
+
+  invariant y_le_x : y <= x;
+
+  control {
+    ic3;
+    check;
+    print_results;
+  }
+}

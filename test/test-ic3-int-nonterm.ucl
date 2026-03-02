@@ -1,0 +1,27 @@
+/* Test IC3: integer property that previously caused non-termination.
+ * x starts at 0, y at 5; x' = x + y, y' = y - 10.
+ * IC3 should report unknown (max depth exceeded) rather than loop forever.
+ */
+module main {
+  var x : integer;
+  var y : integer;
+
+  init {
+    x = 0;
+    y = 5;
+  }
+
+  next {
+    x' = x + y;
+    y' = y - 10;
+  }
+
+  invariant x_pos : x >= 0;
+
+  control {
+    v = ic3;
+    check;
+    print_results;
+    v.print_cex;
+  }
+}

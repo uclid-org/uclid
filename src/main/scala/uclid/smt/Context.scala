@@ -244,6 +244,16 @@ abstract trait Context {
   def preassert(e: Expr)
   def check(produceModel: Boolean = true) : SolverResult
   def checkSynth() : SolverResult
+  /** SMT-LIB standard check-sat-assuming: check satisfiability under the given assumptions.
+   *  Used by IC3 for incremental solving and cube generalization. */
+  def checkAssumptions(assumptions: List[Expr]): SolverResult = {
+    throw new Utils.UnimplementedException("checkAssumptions not implemented.")
+  }
+  /** SMT-LIB standard get-unsat-core: retrieve the subset of assumptions responsible for UNSAT.
+   *  Used by IC3 for clause generalization via minimal unsat cores. */
+  def getUnsatCore(): List[Expr] = {
+    throw new Utils.UnimplementedException("getUnsatCore not implemented.")
+  }
   def finish()
 
   def addOption(option: String, value: Context.SolverOption)
