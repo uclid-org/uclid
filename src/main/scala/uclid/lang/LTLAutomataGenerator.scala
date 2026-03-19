@@ -592,19 +592,30 @@ object LTLAutomataGenerator {
     */
   class VariableTypeIdentifier(origin: Module) {
     // these are the possible types that need to be handled
-    sealed trait SymbolKind
-    case object Input extends SymbolKind
-    case object Output extends SymbolKind
-    case object StateVar extends SymbolKind
-    case object SharedVar extends SymbolKind
-    case object ConstantLit extends SymbolKind
-    case object Constant extends SymbolKind
-    case object Function extends SymbolKind
-    case object SynthFunc extends SymbolKind
-    case object Instance extends SymbolKind
-    case object CustomType
-        extends SymbolKind // would use "Type" here but it's reserved.
-    case object Unknown extends SymbolKind // bound variable, etc.
+    sealed trait SymbolKind {
+      // Whether or not the type requires an explicit declaration.
+      // if false, then this type can "safely" be None.
+      def needsDecl: Boolean
+    }
+    // These require an explicit 'input' or 'const' declaration
+    case object Input extends SymbolKind { val needsDecl = true }
+    case object Output extends SymbolKind { val needsDecl = true }
+    case object StateVar extends SymbolKind { val needsDecl = true }
+    case object SharedVar extends SymbolKind { val needsDecl = true }
+    case object ConstantLit extends SymbolKind { val needsDecl = true }
+    case object Constant extends SymbolKind { val needsDecl = true }
+
+    // These are handled by wildcard imports (type * = main.*; etc)
+    case object EnumConstant extends SymbolKind { val needsDecl = false }
+    case object CustomType extends SymbolKind { val needsDecl = false }
+    case object Function extends SymbolKind { val needsDecl = false }
+    case object SynthFunc extends SymbolKind { val needsDecl = false }
+
+    // These should be ignored or are errors
+    case object Instance extends SymbolKind { val needsDecl = false }
+    case object Unknown extends SymbolKind { val needsDecl = false }
+
+    
 
     // returns a SymbolKind indicating the Type of node in module "m" has the id "id"
     def classify(id: Identifier): SymbolKind = {
@@ -621,25 +632,39 @@ object LTLAutomataGenerator {
       else if (mt.instanceMap contains id) Instance
       else if (origin.typeDeclarationMap contains id)
         CustomType // TypeDecl is used already and Type is reserved word...
+      else if ((Scope.empty + origin).get(id).exists(_.isInstanceOf[Scope.EnumIdentifier])) EnumConstant
       else Unknown
+    }
+
+    def findTypeDeclForEnumConstant(id: Identifier): Option[TypeDecl] = {
+      origin.decls.collectFirst {
+        case td @ TypeDecl(_, EnumType(ids)) if ids.contains(id) => td
+      }
+    }
+
+    def getOriginalType(id: Identifier): Type = {
+      origin.decls.collectFirst {
+        case d: InputVarsDecl if d.ids.contains(id) => d.typ
+        case d: StateVarsDecl if d.ids.contains(id) => d.typ
+        case d: OutputVarsDecl if d.ids.contains(id) => d.typ
+        case d: SharedVarsDecl if d.ids.contains(id) => d.typ
+        case d: ConstantsDecl if d.ids.contains(id) => d.typ
+      }.getOrElse(origin.moduleType.typeOf(id).get)
     }
 
     // Given an ID of something in the main module, this will return a statement that can be used to copy it to somewhere else.
     // This will return a decl (input/shared var decl, constlit, import) depending on the var with the given ID.
     def toImportDecl(id: Identifier): Option[Decl] = {
       val mt = origin.moduleType
-      classify(id) match {
+      val kind = classify(id)
+      // if we don't need a Decl for this type, then we can safely return none!
+      if (!kind.needsDecl) return None
+
+      kind match {
         // all "var" types need to be fed as Inputs
         case Input | Output | StateVar | SharedVar =>
-          mt.typeOf(id) match {
-            case Some(t) => Some(InputVarsDecl(List(id), t))
-            case None    => {
-              System.err.println(
-                "Error: Variable " + id.toString() + " has no type."
-              )
-              None
-            }
-          }
+          val t = getOriginalType(id)
+          Some(InputVarsDecl(List(id), t))
         // we can just declare constants outright
         case ConstantLit => // constant literals (ex: 'const k = 5')
           Some(ConstantLitDecl(id, mt.constLitMap(id)))
@@ -650,13 +675,12 @@ object LTLAutomataGenerator {
           Some(ModuleFunctionsImportDecl(origin.id))
         case SynthFunc =>
           Some(ModuleSynthFunctionsImportDecl(origin.id))
-        // we can just copy type declarations
-        case CustomType =>
-          Some(TypeDecl(id, origin.typeDeclarationMap(id)))
         // TODO: If there is any type missing, add it here.
-        case Instance | Unknown => None
+        case _ => None
       }
     }
+
+    
   }
 
   /** @brief
@@ -787,7 +811,7 @@ object LTLAutomataGenerator {
   ): Option[Module] = {
 
     val spotTGBA: String = SpotInterface.runLTL2TGBA(spec.expr)
-    print("Ofek Debug: Origin Module")
+    // print("Ofek Debug: Origin Module")
     print(originModule.toString())
     // Top level process is as follows:
     // 0: parse HOA format -- isolate substrings with info on states, transitions, acceptance, etc
@@ -815,12 +839,17 @@ object LTLAutomataGenerator {
     // BIIIIG TODO: if we use enums, they are considered Identifiers and rolled into here.
       // we need a way to differentiate enumeration values from normal Identifiers, and treat them differently
     val mapper = new VariableTypeIdentifier(originModule)
+    val typeImportDecl = ModuleTypesImportDecl(originModule.id)
     val compatVarDecls: Option[List[Decl]] = hoaData.moduleVarIdentifiers
-      .map(ids => ids.map(id => mapper.toImportDecl(id)).toList)
-      .flatMap { list =>
-        if (list.forall(_.isDefined)) Some(list.flatten)
-        else None
-      }
+      .map(ids => ids.flatMap{id => 
+        val decl = mapper.toImportDecl(id)
+        val kind = mapper.classify(id)
+        if(decl.isEmpty && kind.needsDecl) {
+          System.err.println(s"Error: Failed to generate required declaration for ${id} (Kind: ${kind})")
+        }
+        decl // the return stmt
+      }.toList.distinct)
+      
 
     val currentState = Identifier(spec.id + "_current_state")
     val currentStateVarDecl = StateVarsDecl(List(currentState), IntegerType())
@@ -996,7 +1025,7 @@ object LTLAutomataGenerator {
         nextDecl <- nextDecl
         neverHitAcceptStateSpecDecl <- neverHitAcceptStateSpecDecl
         updateTransitionBitsDefinition <- updateTransitionBitsDefinition
-      } yield inputVarDecls ++ List[Decl](
+      } yield List[Decl](typeImportDecl) ++ inputVarDecls ++ List[Decl](
         currentStateVarDecl,
         initDecl,
         updateTransitionBitsDefinition,
