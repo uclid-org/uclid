@@ -16,7 +16,7 @@ Elizabeth Polgreen, Kevin Cheang, Pranav Gaddamadugu, Adwait Godbole, Kevin Laeu
 Sanjit A. Seshia and Pramod Subramanyan. <font color="blue">UCLID5: Integrating Modeling, Verification, Synthesis and Learning.</font> [\[HTML\]](https://people.eecs.berkeley.edu/~sseshia/pubs/b2hd-seshia-memocode18.html)
 *Proceedings of the 16th ACM-IEEE International Conference on Formal Methods and Models for System Design (MEMOCODE 2018)*, Beijing, China. October 2018.
 
-For questions and feeback please contact elizabeth.polgreen [at] ed.ac.uk.
+For questions and feedback please contact elizabeth.polgreen [at] ed.ac.uk.
 
 
 ## Contact us
@@ -34,20 +34,20 @@ A set of tutorial lectures on UCLID5 can be found [here](https://people.eecs.ber
 
 ## Versions
 
-Get the [latest release](https://github.com/uclid-org/uclid/releases), or get the latest development version `git clone https://github.com/uclid-ord/uclid`.
+Get the [latest release](https://github.com/uclid-org/uclid/releases), or get the latest development version `git clone https://github.com/uclid-org/uclid`.
 
 # Installation
 
 ## Prerequisites:
 To use the prebuilt binaries, UCLID5 requires:
-- [Z3 version 4.12.2](https://github.com/Z3Prover/z3/releases/tag/z3-4.12.1) with the Java bindings
+- [Z3 version 4.12.2](https://github.com/Z3Prover/z3/releases/tag/z3-4.12.2) with the Java bindings
 - [OpenJDK](https://openjdk.java.net/) version 8,9,10 or 11
 
 To compile from source, UCLID5 requires all of the above plus:
 - [SBT version 1.0 or greater.](https://www.scala-sbt.org/download.html)
 
 The following are optional requirements but several CI tests will fail without them:
-- (optional) [CVC5](https://github.com/cvc5/cvc5) version 0.0.4 is the SyGuS-IF compliant solver used for synthesis tests in the CI.
+- (optional) [CVC5](https://github.com/cvc5/cvc5) version 1.0.3 is the SyGuS-IF compliant solver used for synthesis tests in the CI.
 - (optional) [Delphi](https://github.com/polgreen/delphi) is used for verification modulo oracles tests in the CI.
 
 
@@ -59,7 +59,7 @@ The following are optional requirements but several CI tests will fail without t
 #### SBT (only required to build from source)
 - Install instructions for SBT are available at http://www.scala-sbt.org/1.0/docs/Setup.html
 #### External solvers
-- For easy install of prerequisite solvers on Linux, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC5/Delphi for use with uclid5. This script will download [Z3 version 4.12.2.](https://github.com/Z3Prover/z3/releases/tag/z3-4.12.1)/[CVC5 1.0.3](https://github.com/cvc5/cvc5/releases/tag/cvc5-1.0.3)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
+- For easy install of prerequisite solvers on Linux, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC5/Delphi for use with uclid5. This script will download [Z3 version 4.12.2.](https://github.com/Z3Prover/z3/releases/tag/z3-4.12.2)/[CVC5 1.0.3](https://github.com/cvc5/cvc5/releases/tag/cvc5-1.0.3)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
 ~~~
     $ source get-z3-linux.sh
     $ source get-cvc5-linux.sh #(optional but some CI synthesis tests will fail without CVC5)
@@ -97,7 +97,7 @@ java11
 -  `brew install sbt`
 
 #### External solvers
-- For easy install of prerequisites on macOS, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC5/Delphi for use with uclid5. This script will download [Z3 version 4.12.2.](https://github.com/Z3Prover/z3/releases/tag/z3-4.12.1)/[CVC5 1.0.3](https://github.com/cvc5/cvc5/releases/tag/cvc5-1.0.3)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
+- For easy install of prerequisites on macOS, run the following scripts from the root directory of the UCLID5 source repository. These scripts set up Z3/CVC5/Delphi for use with uclid5. This script will download [Z3 version 4.12.2.](https://github.com/Z3Prover/z3/releases/tag/z3-4.12.2)/[CVC5 1.0.3](https://github.com/cvc5/cvc5/releases/tag/cvc5-1.0.3)/[Delphi](https://github.com/polgreen/delphi/releases/tag/0.1) binaries from GitHub.
 ~~~
     $ source get-z3-macos.sh
     $ source get-cvc5-macos.sh #(optional but some CI synthesis tests will fail without CVC5)
